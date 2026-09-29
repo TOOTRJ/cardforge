@@ -183,8 +183,50 @@ const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].ma
 const EMBLEM = "img/frames/token/emblem/frame.png";
 
 /**
+ * The emblem's name pill, toned onto the prints (owner evidence
+ * 2026-09-29: our pill read luma 94–97 against the prints' 54–60, the name's
+ * ink included). Why: CC's pack draws frame.png ALONE — packEmblem.js has no
+ * darkening layer and creator-23.js does nothing for version 'emblem' — and
+ * that file paints the pill as a light gradient, luma ~140 at the ends to
+ * ~50 at the centre (median 90 over the name band, rows 128–199 ×
+ * 150–1349), where the six M20-design prints (TFDN #24 / #25, TM20 #11,
+ * TDSK #17, TBLB #30, TFRA #16; Scryfall PNGs at 1500 × 2100) print a dark
+ * pill, luma ~97 at the ends and 45–60 across its length. The silver
+ * around it is within the prints' range, so only the pill is toned.
+ *
+ * The pill's body — rows [fromY, toY): under CC's top highlight (105–110,
+ * kept), above its lower lip (211–216, kept); the pixels 4-connected to
+ * `seed` whose luma is ≥ `minLuma`, which the pill's dark outline bounds —
+ * has its colour multiplied by `gain`, piecewise-linear in the distance from
+ * the pill's centre (`centreX`), fitted by least squares on the prints'
+ * per-pixel median with their name ink masked out: mean |Δluma| 40.3 → 5.2,
+ * the band's median 90 → 52 (the prints' 52). CC leaves a 30 px band down
+ * the pill's middle at α 242 (the spark's ray drawn on through the bar,
+ * showing the art under it); the prints' pill is opaque, so the toned body
+ * is. Native px of the pack (1500 × 2100).
+ */
+export const EMBLEM_NAME_PILL_TONE = {
+  seed: { x: 750, y: 160 },
+  fromY: 111,
+  toY: 211,
+  minLuma: 30,
+  centreX: 749.5,
+  /** [distance from centreX in px, gain] — held at the last knot past it. */
+  gain: [
+    [0, 0.8],
+    [100, 0.6],
+    [200, 0.64],
+    [300, 0.54],
+    [400, 0.52],
+    [500, 0.58],
+    [600, 0.66],
+    [700, 0.83],
+  ],
+};
+
+/**
  * template → { colors: colour → layers, plates?, symbols?, shield?, recut?,
- * excluded?, pack?, transforms?, notes }.
+ * tone?, excluded?, pack?, transforms?, notes }.
  * `plates` are written at native size to <template>/pt/<colour>.png;
  * `symbols` (a basic land's mana-symbol disc, TODO 3.24) the same way to
  * <template>/symbol/<colour>.png, for the colours listed only.
@@ -193,6 +235,8 @@ const EMBLEM = "img/frames/token/emblem/frame.png";
  * `recut` moves a band of each composite down before the downscale
  * (recutBand; the textless tokens, TOKEN_TEXTLESS_RECUT; the text-box
  * tokens, TOKEN_REGULAR_RECUT).
+ * `tone` multiplies one outlined region of each composite by a gain before
+ * the downscale (toneRegion; the emblem's name pill, EMBLEM_NAME_PILL_TONE).
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
@@ -394,12 +438,14 @@ export const CC_TEMPLATES = {
   // a stray coloured card on the frame still draws it); never offered.
   emblem: {
     colors: perColor(() => [layer(EMBLEM)]),
+    tone: EMBLEM_NAME_PILL_TONE,
     pack: "packEmblem.js 'Planeswalker Emblems'",
-    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    transforms: toneTransform(EMBLEM_NAME_PILL_TONE),
     notes: [
       "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
       "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
       "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
+      "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
     ],
   },
 };
@@ -412,6 +458,12 @@ function recutTransform(r) {
 /** How provenance describes the textless tokens' re-cut (TOKEN_TEXTLESS_RECUT). */
 function textlessRecutTransform(r) {
   return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows, the shadow's last ${r.blendBottom} rows faded into the texture (premultiplied); corners rounded to the importer radius`;
+}
+
+/** How provenance describes the emblem's pill tone (EMBLEM_NAME_PILL_TONE). */
+function toneTransform(t) {
+  const gains = t.gain.map(([d, g]) => `${g} at ${d}`).join(", ");
+  return `native 1500x2100, pixels copied 1:1 (no resample) but for the name pill's body: rows ${t.fromY}–${t.toY - 1}, the pixels 4-connected to (${t.seed.x}, ${t.seed.y}) with luma ≥ ${t.minLuma} (inside the pill's dark outline), colour multiplied by a gain piecewise-linear in the distance from x ${t.centreX} (${gains} px) and made opaque; corners rounded to the importer radius`;
 }
 
 /** Templates deliberately NOT imported yet, and why. */
@@ -510,6 +562,78 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
     if (y < fromY + blend) mix(y, y, src, (y - fromY + 1) / (blend + 1));
     else if (y >= toY + shift - blendBottom) mix(y, src, y, (y - (toY + shift - blendBottom) + 1) / (blendBottom + 1));
     else buf.copy(out, y * row, src * row, (src + 1) * row);
+  }
+  return out;
+}
+
+/** Rec. 601 luma of the 8-bit RGBA pixel at byte offset `o`. */
+function lumaAt(buf, o) {
+  return 0.299 * buf[o] + 0.587 * buf[o + 1] + 0.114 * buf[o + 2];
+}
+
+/** A piecewise-linear gain ([[d, g], …], d ascending) at distance `d`,
+ *  held at the first / last knot outside them. */
+export function gainAt(knots, d) {
+  if (d <= knots[0][0]) return knots[0][1];
+  for (let i = 1; i < knots.length; i += 1) {
+    const [d1, g1] = knots[i];
+    if (d <= d1) {
+      const [d0, g0] = knots[i - 1];
+      return g0 + ((g1 - g0) * (d - d0)) / (d1 - d0);
+    }
+  }
+  return knots[knots.length - 1][1];
+}
+
+/**
+ * Tone one region of an 8-bit RGBA image (EMBLEM_NAME_PILL_TONE): the pixels
+ * 4-connected to `seed` within rows [fromY, toY) whose luma is ≥ `minLuma`
+ * — a dark outline bounds the region — get their colour multiplied by
+ * gainAt(gain, |x − centreX|) (rounded, clamped to 255) and alpha 255.
+ * Everything else is copied as it is. Returns a new buffer.
+ */
+export function toneRegion(buf, width, height, { seed, fromY, toY, minLuma, centreX, gain }) {
+  const knotsOk =
+    Array.isArray(gain) &&
+    gain.length > 0 &&
+    gain.every(([d, g], i) => Number.isFinite(d) && Number.isFinite(g) && g >= 0 && (i === 0 || d > gain[i - 1][0]));
+  if (
+    !(fromY >= 0) ||
+    !(toY > fromY) ||
+    toY > height ||
+    !knotsOk ||
+    !(seed.x >= 0 && seed.x < width && seed.y >= fromY && seed.y < toY)
+  ) {
+    throw new Error(`toneRegion: bad tone ${JSON.stringify({ seed, fromY, toY, minLuma, gain, width, height })}`);
+  }
+  const out = Buffer.from(buf);
+  const start = seed.y * width + seed.x;
+  if (lumaAt(buf, start * 4) < minLuma) {
+    throw new Error(`toneRegion: the seed (${seed.x}, ${seed.y}) is darker than luma ${minLuma} — not inside the region`);
+  }
+  const taken = new Uint8Array(width * height);
+  const stack = [start];
+  taken[start] = 1;
+  while (stack.length) {
+    const p = stack.pop();
+    const x = p % width;
+    const y = (p - x) / width;
+    const o = p * 4;
+    const g = gainAt(gain, Math.abs(x - centreX));
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
+    out[o + 3] = 255;
+    for (const [nx, ny] of [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ]) {
+      if (nx < 0 || nx >= width || ny < fromY || ny >= toY) continue;
+      const q = ny * width + nx;
+      if (taken[q] || lumaAt(buf, q * 4) < minLuma) continue;
+      taken[q] = 1;
+      stack.push(q);
+    }
   }
   return out;
 }

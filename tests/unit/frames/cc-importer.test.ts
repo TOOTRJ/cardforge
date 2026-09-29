@@ -7,6 +7,7 @@ import {
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
+  EMBLEM_NAME_PILL_TONE,
   SHIELD_BOX,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
@@ -14,11 +15,13 @@ import {
   compositeLayers,
   cutThroughMask,
   describeLayer,
+  gainAt,
   recutBand,
   roundCorners,
   roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
+  toneRegion,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { applyCardCornerMask, cardCornerRadiusPx } from "@/lib/cards/card-corner";
@@ -42,6 +45,7 @@ type Def = {
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
   recut?: { fromY: number; toY: number; shift: number; blend: number; blendBottom?: number };
+  tone?: typeof EMBLEM_NAME_PILL_TONE;
   excluded?: Record<string, string>;
   pack?: string;
   transforms?: string;
@@ -119,6 +123,29 @@ describe("Card Conjurer recipe", () => {
     }
     expect(sourceFilesFor(def as never)).toEqual(["img/frames/token/emblem/frame.png"]);
     expect(def.transforms).toMatch(/1:1 \(no resample\)/);
+  });
+
+  // Owner evidence 2026-09-29: the name pill read luma 94–97 against the
+  // prints' 54–60. CC's pack draws frame.png alone (no darkening layer), and
+  // its pill is a light gradient: the recipe tones the pill's body onto the
+  // prints, and the provenance says how.
+  it("tones the emblem's name pill onto the prints: its body only, inside the outline, opaque (4.52)", () => {
+    const def = templates.emblem;
+    expect(def.tone).toBe(EMBLEM_NAME_PILL_TONE);
+    // Under CC's top highlight (105–110), above its lower lip (211–216).
+    expect([EMBLEM_NAME_PILL_TONE.fromY, EMBLEM_NAME_PILL_TONE.toY]).toEqual([111, 211]);
+    expect(EMBLEM_NAME_PILL_TONE.seed).toEqual({ x: 750, y: 160 });
+    // Darker everywhere, least at the centre and the ends, as fitted.
+    for (const [, g] of EMBLEM_NAME_PILL_TONE.gain) {
+      expect(g).toBeGreaterThan(0.5);
+      expect(g).toBeLessThan(0.85);
+    }
+    expect(def.transforms).toMatch(/but for the name pill's body: rows 111–210/);
+    expect(def.notes.some((n) => /name pill's body is toned onto the prints/.test(n))).toBe(true);
+    // No other template tones anything.
+    for (const [template, other] of Object.entries(templates)) {
+      if (template !== "emblem") expect(other.tone, template).toBeUndefined();
+    }
   });
 
   it("sources tokens from CC's textless bordered pack (its geometry matches M15TOKEN)", () => {
@@ -381,6 +408,110 @@ describe("pixel operations", () => {
     });
   });
 
+  describe("toneRegion (4.52: the emblem's name pill onto the prints)", () => {
+    /** A W × H image: a grey (luma `fill`) region ringed by a black outline
+     *  at x 1 / W − 2 and y 1 / H − 2, silver (200) outside it, alpha 240
+     *  inside the ring. */
+    const pill = (w: number, h: number, fill = 100) => {
+      const buf = Buffer.alloc(w * h * 4);
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const ring = x === 1 || x === w - 2 || y === 1 || y === h - 2;
+          const inside = x > 1 && x < w - 2 && y > 1 && y < h - 2;
+          const v = ring ? 0 : inside ? fill : 200;
+          buf.set([v, v, v, inside ? 240 : 255], (y * w + x) * 4);
+        }
+      }
+      return buf;
+    };
+    const at = (buf: Buffer, w: number, x: number, y: number) => Array.from(buf.subarray((y * w + x) * 4, (y * w + x) * 4 + 4));
+
+    it("multiplies the outlined region's colour by the gain at |x − centreX|, and makes it opaque", () => {
+      const w = 12;
+      const h = 8;
+      const out = toneRegion(pill(w, h), w, h, {
+        seed: { x: 6, y: 4 },
+        fromY: 0,
+        toY: h,
+        minLuma: 30,
+        centreX: 6,
+        gain: [
+          [0, 0.5],
+          [4, 0.9],
+        ],
+      });
+      // At the centre ×0.5; 2 px out halfway along the knots, ×0.7; 4 px
+      // and past it held at ×0.9.
+      expect(at(out, w, 6, 4)).toEqual([50, 50, 50, 255]);
+      expect(at(out, w, 4, 3)).toEqual([70, 70, 70, 255]);
+      expect(at(out, w, 8, 5)).toEqual([70, 70, 70, 255]);
+      expect(at(out, w, 2, 2)).toEqual([90, 90, 90, 255]);
+      // The outline and the silver outside it: untouched.
+      expect(at(out, w, 1, 4)).toEqual([0, 0, 0, 255]);
+      expect(at(out, w, 0, 4)).toEqual([200, 200, 200, 255]);
+      expect(at(out, w, 6, 0)).toEqual([200, 200, 200, 255]);
+    });
+
+    it("stays inside its rows and never leaks past a closed outline", () => {
+      const w = 12;
+      const h = 8;
+      const src = pill(w, h);
+      const out = toneRegion(src, w, h, {
+        seed: { x: 6, y: 4 },
+        fromY: 3,
+        toY: 5,
+        minLuma: 30,
+        centreX: 6,
+        gain: [[0, 0.5]],
+      });
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const toned = y >= 3 && y < 5 && x > 1 && x < w - 2;
+          expect(at(out, w, x, y), `${x},${y}`).toEqual(toned ? [50, 50, 50, 255] : at(src, w, x, y));
+        }
+      }
+    });
+
+    it("leaks through a gap in the outline — the outline is the region's only bound", () => {
+      const w = 12;
+      const h = 8;
+      const src = pill(w, h);
+      // Open the ring at (1, 4): the silver beside it (x 0, rows 2–5, which
+      // the ring's rows 1 and 6 close off) joins the region.
+      src.set([100, 100, 100, 255], (4 * w + 1) * 4);
+      const out = toneRegion(src, w, h, { seed: { x: 6, y: 4 }, fromY: 0, toY: h, minLuma: 30, centreX: 6, gain: [[0, 0.5]] });
+      expect(at(out, w, 0, 2)).toEqual([100, 100, 100, 255]);
+      expect(at(out, w, 0, 0)).toEqual([200, 200, 200, 255]);
+    });
+
+    it("refuses a seed outside the region or its rows, and bad knots; never touches the source", () => {
+      const w = 12;
+      const h = 8;
+      const src = pill(w, h);
+      const copy = Buffer.from(src);
+      const tone = { seed: { x: 6, y: 4 }, fromY: 0, toY: h, minLuma: 30, centreX: 6, gain: [[0, 0.5]] as [number, number][] };
+      expect(() => toneRegion(src, w, h, { ...tone, seed: { x: 1, y: 4 } })).toThrow(/darker than luma 30/);
+      expect(() => toneRegion(src, w, h, { ...tone, fromY: 5 })).toThrow(/bad tone/);
+      expect(() => toneRegion(src, w, h, { ...tone, toY: h + 1 })).toThrow(/bad tone/);
+      expect(() => toneRegion(src, w, h, { ...tone, gain: [] })).toThrow(/bad tone/);
+      expect(() => toneRegion(src, w, h, { ...tone, gain: [[4, 0.5], [0, 0.6]] })).toThrow(/bad tone/);
+      toneRegion(src, w, h, tone);
+      expect(src.equals(copy)).toBe(true);
+    });
+
+    it("gainAt is piecewise-linear and held past the end knots", () => {
+      const knots: [number, number][] = [
+        [10, 0.4],
+        [20, 0.8],
+        [40, 0.6],
+      ];
+      expect(gainAt(knots, 0)).toBe(0.4);
+      expect(gainAt(knots, 15)).toBeCloseTo(0.6, 12);
+      expect(gainAt(knots, 30)).toBeCloseTo(0.7, 12);
+      expect(gainAt(knots, 99)).toBe(0.6);
+    });
+  });
+
   it("shows an upper layer only through its mask's ALPHA — mask colour is irrelevant (CC's source-in)", () => {
     // 2×1: red base; blue overlay through a mask that is opaque RED at x=0
     // (like CC's title mask) and transparent at x=1.
@@ -576,6 +707,11 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].notes, template).toEqual(templates[template].notes);
     }
     expect(provenance.m15.recut).toBeUndefined();
+    // The emblem records its pill tone and what it did to the pixels (4.52).
+    expect(provenance.emblem.tone).toEqual(EMBLEM_NAME_PILL_TONE);
+    expect(provenance.emblem.transforms).toBe(templates.emblem.transforms);
+    expect(provenance.emblem.notes).toEqual(templates.emblem.notes);
+    expect(provenance.m15.tone).toBeUndefined();
   });
 
   it("never commits the build folder", () => {
