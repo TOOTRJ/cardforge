@@ -1377,6 +1377,187 @@ describe("3b.15 the token type picker", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 4.49 (b), owner decision 5 — the token text box follows the text: on the
+// token kind the arch wears its text-box variation while the card has rules
+// or flavour text and the textless one while it has none, until the user
+// picks a variation by hand (it sticks).
+// ---------------------------------------------------------------------------
+
+describe("4.49 (b) the token text box follows the text", () => {
+  const WITH_TEXT_BOX = [
+    ...VERIFIED,
+    ...["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"].flatMap((t) =>
+      EVERY_COLOUR.map((k) => frameComboKey(t, k)),
+    ),
+  ];
+  const flavour = () => screen.getByPlaceholderText("A coil of fire, bound by oath.") as HTMLTextAreaElement;
+  async function typeFlavour(value: string) {
+    await act(async () => {
+      fireEvent.change(flavour(), { target: { value } });
+    });
+  }
+  async function back(times = 1) {
+    for (let i = 0; i < times; i += 1) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+      });
+    }
+  }
+  async function toggleToken(label: RegExp) {
+    const chip = Array.from(document.querySelectorAll("[aria-label='Token types'] button")).find((el) =>
+      label.test(el.textContent ?? ""),
+    ) as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(chip);
+    });
+  }
+
+  it("a new token wears the text box while it has text, and the textless arch while it has none", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_TEXT_BOX });
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m15token");
+    await clickNext(2); // Card → Identity → Text
+    await typeFlavour("Enemies of the heir, beware.");
+    expect(preview().template).toBe("m15tokentext");
+    // More text: still the box.
+    await typeFlavour("Enemies of the heir, beware. All of them.");
+    expect(preview().template).toBe("m15tokentext");
+    // Blank is no text.
+    await typeFlavour("   ");
+    expect(preview().template).toBe("m15token");
+    await typeFlavour("Vigilance, of a sort.");
+    expect(preview().template).toBe("m15tokentext");
+    // The Artifact word dresses the box, and leaving takes both back.
+    await back(2);
+    await toggleToken(/^Artifact/);
+    expect(preview().template).toBe("m15tokenartifacttext");
+    expect(chipIn("Frame variations", /^Token \(2014–2019\), text box/).getAttribute("aria-checked")).toBe("true");
+    expect(chipIn("Frame variations", /^Standard/).getAttribute("aria-checked")).toBe("false");
+    await clickNext(2);
+    await typeFlavour("");
+    expect(preview().template).toBe("m15tokenartifact");
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
+  it("a variation picked by hand sticks, whatever the text does after", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_TEXT_BOX });
+    await pickKind(/^Token/);
+    await clickNext(2);
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m15tokentext");
+    await back(2);
+    // The textless arch over the text: its scrim keeps the text.
+    await clickChip("Frame variations", /^Standard/);
+    expect(preview().template).toBe("m15token");
+    await clickNext(2);
+    await typeFlavour("");
+    await typeFlavour("A knight, again.");
+    expect(preview().template).toBe("m15token");
+    // The text box picked by hand stays through a card with no text.
+    await back(2);
+    await clickChip("Frame variations", /^Token \(2014–2019\), text box/);
+    expect(preview().template).toBe("m15tokentext");
+    await clickNext(2);
+    await typeFlavour("");
+    expect(preview().template).toBe("m15tokentext");
+  });
+
+  it("a card turned into a token with text lands on the text box", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_TEXT_BOX });
+    await pickKind(/^Creature/);
+    await clickNext(2);
+    await typeFlavour("It came from the sea.");
+    await back(2);
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m15tokentext");
+  });
+
+  it("an idea for a token with text lands on the text box", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_TEXT_BOX });
+    await applyIdea({
+      title: "Knight",
+      card_type: "token",
+      supertype: "Creature",
+      subtypes_text: "Knight",
+      color_identity: ["white"],
+      rules_text: "Vigilance",
+      flavor_text: "",
+      power: "2",
+      toughness: "2",
+    });
+    expect(preview().cardType).toBe("token");
+    expect(preview().template).toBe("m15tokentext");
+  });
+
+  it("a text box not verified in the colour keeps the textless arch and says so", async () => {
+    renderForm({ mode: "create" }); // m15tokentext isn't verified here
+    await pickKind(/^Token/);
+    await clickNext(2);
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m15token");
+    expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(
+      /text box isn't verified in colorless yet — keeping M15 \(2015\) Token\./,
+    );
+  });
+
+  it("a saved token given its first line of text moves to the box while editing", async () => {
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: WITH_TEXT_BOX,
+      card: savedCard({
+        title: "Soldier",
+        card_type: "token",
+        supertype: "Creature",
+        subtypes: ["Soldier"],
+        power: "1",
+        toughness: "1",
+        cost: null,
+        rules_text: null,
+        flavor_text: null,
+        color_identity: ["white"],
+        frame_style: { finish: "regular", template: "m15token" },
+      }),
+    });
+    expect(preview().template).toBe("m15token");
+    await goToText();
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15tokentext");
+    await typeFlavour("");
+    expect(preview().template).toBe("m15token");
+  });
+
+  it("a saved token whose frame disagrees with its text keeps it (a choice that sticks)", async () => {
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: WITH_TEXT_BOX,
+      card: savedCard({
+        title: "Knight",
+        card_type: "token",
+        supertype: "Creature",
+        subtypes: ["Knight"],
+        power: "2",
+        toughness: "2",
+        cost: null,
+        rules_text: null,
+        flavor_text: null,
+        color_identity: ["white"],
+        // An empty text box, picked by hand.
+        frame_style: { finish: "regular", template: "m15tokentext" },
+      }),
+    });
+    await goToText();
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m15tokentext");
+  });
+
+  async function goToText() {
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // The leave dialog's "Save as draft" on /create?deckCard= or ?backFor= used
 // to return before the link step: the card saved, but never landed in the
 // deck (or on the front card). The link now runs first, then the navigation

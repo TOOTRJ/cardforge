@@ -173,13 +173,17 @@ from (values
   -- token frame with no P/T ("Token Artifact — Treasure"), an enchantment
   -- creature ("Token Enchantment Creature — Glimmer") and a Copy with no
   -- type word at all (a bare "Token"). Public, so a preview shows the type
-  -- line on each card page's "Card details".
+  -- line on each card page's "Card details". All three print text, so they
+  -- sit on the text-box token frames, where the creator puts them (TODO
+  -- 4.49 (b)); migration 0129 moves such rows, but seeds run after the
+  -- migrations, so the row says it itself. The Beast has no text and keeps
+  -- the textless frame.
   ('c0000000-0000-4000-a000-000000000023'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Treasure', 'treasure-token', null, array['colorless'], 'Artifact', 'token', array['Treasure'], 'common',
-     E'{T}, Sacrifice this token: Add one mana of any color.', null, null, null, null, 23, 'm15tokenartifact', 'regular', 'public', null, array['tokens'], null, 'token', 5),
+     E'{T}, Sacrifice this token: Add one mana of any color.', null, null, null, null, 23, 'm15tokenartifacttext', 'regular', 'public', null, array['tokens'], null, 'token', 5),
   ('c0000000-0000-4000-a000-000000000024'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Glimmer', 'glimmer-token', null, array['white'], 'Enchantment Creature', 'token', array['Glimmer'], 'common',
-     E'Flying', null, '1', '1', null, 24, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 5),
+     E'Flying', null, '1', '1', null, 24, 'm15tokentext', 'regular', 'public', null, array['tokens'], null, 'token', 5),
   ('c0000000-0000-4000-a000-000000000025'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Copy', 'copy-token', null, array['colorless'], null, 'token', array[]::text[], 'common',
-     E'This token stands in for a copy of another permanent.', null, null, null, null, 25, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 5),
+     E'This token stands in for a copy of another permanent.', null, null, null, null, 25, 'm15tokentext', 'regular', 'public', null, array['tokens'], null, 'token', 5),
   -- dev_free — drafts, one public card, one remix draft ---------------------
   ('c0000000-0000-4000-a000-000000000019'::uuid, 'd0000000-0000-4000-a000-000000000003'::uuid, 'Hedge Witch''s Familiar', 'hedge-witchs-familiar', '{G}', array['green'], null, 'creature', array['Cat'], 'common',
      E'Deathtouch', 'It brings her things. She has stopped asking where from.', '1', '1', null, 19, 'm15', 'regular', 'public', null, array['cats'], null, 'normal', 14),

@@ -27,6 +27,7 @@ import {
   isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
+  tokenFrameFor,
   type CardKind,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
@@ -194,6 +195,32 @@ export function importFrameCandidates(input: {
       ].filter((t): t is FrameTemplate => Boolean(t)),
     ),
   );
+}
+
+/**
+ * The frame a token saved away from the creator lands on once its final text
+ * is known (TODO 4.49 (b), owner decision 5): the one its type words and text
+ * pick (tokenFrameFor — rules or flavour text → the text-box arch, none → the
+ * textless one) when that is published in the card's colour, else the frame
+ * it had, never an unpublished pair. Any other kind's frame, and a token on
+ * any other frame, is returned as it is. The AI deck remix saves through it:
+ * the printing's frame follows the PRINTED text (the signature registry), but
+ * the remix saves the AI's flavour.
+ */
+export function autoTokenTextBoxFrame(input: {
+  template: FrameTemplate;
+  cardType: CardType | null | undefined;
+  supertype?: string | null;
+  rulesText?: string | null;
+  flavorText?: string | null;
+  colorIdentity: readonly ColorIdentity[];
+  verifiedKeys: ReadonlySet<string>;
+}): FrameTemplate {
+  const kind = kindFromCard(input.cardType, input.template);
+  const wanted = tokenFrameFor(kind, input.template, input);
+  if (wanted === input.template) return wanted;
+  const colorKey = pickFrameColorKey([...input.colorIdentity]);
+  return isFrameComboAvailable(wanted, colorKey, input.verifiedKeys) ? wanted : input.template;
 }
 
 /**

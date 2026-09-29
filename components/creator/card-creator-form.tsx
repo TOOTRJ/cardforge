@@ -139,6 +139,7 @@ import {
   DEFAULT_FRAME_TEMPLATE,
 } from "@/types/card";
 import {
+  hasRulesBoxText,
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
@@ -177,8 +178,10 @@ import {
   toNonbasicLandIdentity,
   planKindChange,
   followTokenName,
+  followTokenTextBox,
   supertypeEnteringToken,
   supertypeLeavingToken,
+  textBoxFrameFor,
   typeWordFrameFor,
   KIND_DEFS,
   type CardKind,
@@ -896,6 +899,74 @@ export function CardCreatorForm({
     setValue,
     verifiedFrameKeys,
   ]);
+  // The text box follows the text (TODO 4.49 (b), owner decision 5): on the
+  // token kind the 2014–19 arch wears its text-box variation while the card
+  // has rules or flavour text and the textless one while it has none. Real
+  // edits only (isDirty) — and while revising too: the text is not locked
+  // there, and a saved token given its first flavour line belongs in the box
+  // as much as a new one. Entering the token kind (never while revising: the
+  // type is locked) picks the one the text wants; after that the frame
+  // follows only while it is the one the text picked (followTokenTextBox): a
+  // variation picked by hand in the setup panel's Variations — or a stored
+  // card whose frame disagrees with its text — sticks. A Frame-section pick
+  // of the arch goes back to automatic. An import or an AI fill that names
+  // its frame decides it itself (settleTokenTextFollow). Never an unverified
+  // combo: the card keeps its frame and says so.
+  const tokenTextPresent = hasRulesBoxText({
+    rulesText: watched.rules_text,
+    flavorText: watched.flavor_text,
+  });
+  const lastTokenTextRef = useRef({ kind, text: tokenTextPresent });
+  const manualTokenFrameRef = useRef(false);
+  useEffect(() => {
+    const prev = lastTokenTextRef.current;
+    if (prev.kind === kind && prev.text === tokenTextPresent) return;
+    lastTokenTextRef.current = { kind, text: tokenTextPresent };
+    if (!isDirty || kind !== "token") return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    let next: FrameTemplate | null;
+    if (prev.kind !== "token") {
+      manualTokenFrameRef.current = false;
+      next = textBoxFrameFor(kind, current, tokenTextPresent);
+    } else {
+      next = followTokenTextBox({
+        kind,
+        template: current,
+        hasText: tokenTextPresent,
+        manual: manualTokenFrameRef.current,
+      });
+    }
+    if (!next || next === current) return;
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) {
+      toast.info(
+        `${describeFrame(next)} isn't verified in ${colorWord(colorKey)} yet — keeping ${describeFrame(current)}.`,
+      );
+      return;
+    }
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [
+    kind,
+    tokenTextPresent,
+    isDirty,
+    getValues,
+    setValue,
+    verifiedFrameKeys,
+  ]);
+  /** An import or an AI fill that wrote the card's frame AND its text:
+   *  that frame stands — the follow starts again from here, automatic (or,
+   *  for the admin walk-through's combo under test, `manual`). */
+  const settleTokenTextFollow = ({ manual = false }: { manual?: boolean } = {}) => {
+    lastTokenTextRef.current = {
+      kind: kindFromCard(getValues("card_type"), getValues("frame_style.template")),
+      text: hasRulesBoxText({
+        rulesText: getValues("rules_text"),
+        flavorText: getValues("flavor_text"),
+      }),
+    };
+    manualTokenFrameRef.current = manual;
+  };
+
   // Name follows the subtypes: a printed token is named after them
   // ("Soldier") unless it has a proper name, so an empty title — or the one
   // this wrote last — follows the Subtypes field until the user types one.
@@ -1636,6 +1707,10 @@ export function CardCreatorForm({
     }
 
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
+    // The import chose the frame for the printing's own text (the signature
+    // registry's text-box arch, or the chooser's pick): the text box's
+    // follow starts from there (TODO 4.49 (b)).
+    settleTokenTextFollow();
     // Pop the user back to Identity so they can see the seeded fields.
     goToStepKey("identity");
     return notice;
@@ -1766,6 +1841,9 @@ export function CardCreatorForm({
         });
       }
       setValue("frame_style.template", walkthrough.template, { shouldDirty: true });
+      // The combo under test is the frame: the text box never follows the
+      // seed's text, or an edit of it, away from it (TODO 4.49 (b)).
+      settleTokenTextFollow({ manual: true });
       clearErrors("frame_style");
       // A reference printing is validated against its colour when pinned
       // (0.8); say so if this one still lands elsewhere rather than walking
@@ -1843,6 +1921,9 @@ export function CardCreatorForm({
 
   /** Pour a fill result into the form — only the keys present are touched. */
   const applyFill = (fill: CardFillResult) => {
+    // The job picked the frame for the text it wrote (resolveGeneratedFrame:
+    // a token's text box included) — that frame stands, below.
+    let filledFrame = false;
     if (fill.card_type && !isRevise) {
       applyKindProgrammatic(kindFromCard(fill.card_type, undefined));
       if (fill.frame_template) {
@@ -1863,6 +1944,7 @@ export function CardCreatorForm({
           setValue("frame_style.template", resolution.template, {
             shouldDirty: true,
           });
+          filledFrame = true;
           if (resolution.status === "frame-switched") {
             toast.info(
               `${describeFrame(resolution.fromTemplate)} isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`,
@@ -1915,6 +1997,7 @@ export function CardCreatorForm({
     if (fill.deck_id && mode === "create") {
       setValue("deck_id", fill.deck_id, { shouldDirty: true });
     }
+    if (filledFrame) settleTokenTextFollow();
   };
 
   const handleAiFill = async (options: AiFillOptions): Promise<void> => {
@@ -2793,7 +2876,12 @@ export function CardCreatorForm({
                 colorIdentity={watched.color_identity}
                 verifiedFrameKeys={verifiedFrameKeys}
                 frameSubstitution={frameSubstitution}
-                onFramePick={() => setFrameSubstitution(null)}
+                onFramePick={({ variation }) => {
+                  setFrameSubstitution(null);
+                  // A variation picked by hand sticks (owner decision 5); a
+                  // frame picked in the Frame section follows the text again.
+                  manualTokenFrameRef.current = variation;
+                }}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
                 landMode={
