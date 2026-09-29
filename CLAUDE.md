@@ -229,12 +229,16 @@ Rules and gotchas:
   "Token" first on every template. P/T: `showsPowerToughness(type, subtypes,
   supertype)` for inputs and the AI (a token needs Creature or a Vehicle /
   Spacecraft subtype), `printsPowerToughness` in both renderers (keeps a
-  stored word-less token's P/T; 0128 gave them "Creature" + a null stamp).
+  stored word-less token's P/T; 0128 gave them "Creature" + a null stamp,
+  and gave it to P/T tokens saying Artifact / Enchantment without Creature
+  or a Vehicle / Spacecraft subtype; `formSupertypeOf` reads the same word).
   The Artifact word picks `m15tokenartifact` (`typeWordFrameFor`; no
-  "Artifact Token" chip); new tokens save as common (creator AND AI jobs),
-  chips hidden. `m15token` / `m15tokenartifact` = the 2014–19 arch prints
-  only (M20+ = 4.48): P/T on M15's plates, type line left from 8.54 %W, own
-  `symbolRect`. A later bump whose slots move on fewer templates than its
+  "Artifact Token" chip); new tokens AND a token's remix save as common
+  (creator AND AI jobs), chips hidden. `m15token` / `m15tokenartifact` = the
+  2014–19 arch prints only (M20+ = 4.48): masters RE-CUT 8 px onto the prints
+  (`TOKEN_TEXTLESS_RECUT` in the CC importer; the profile rides it through
+  `TOKEN_RECUT_PX`), P/T on M15's plates, type line left from 8.54 %W, own
+  `symbolRect` centred on the moved pill. A later bump whose slots move on fewer templates than its
   bakes change on lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
   "Tokens").

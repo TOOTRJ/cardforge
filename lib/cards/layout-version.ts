@@ -484,10 +484,12 @@ import type { CardType } from "@/types/card";
 //              the symbol box centred on the moved pill again, 84.77 %H
 //              (CC's 84.39 + 8 px; tall glyphs sat on CC's bottom bevel).
 //              Against the 15 textless pins (HD px, ours − print mean): P/T
-//              digits' centre +0.6 x / −1.3 y, plate +0.3 (was −2.7),
-//              symbol centre −0.5 (was −8.3), type line +4 px from the left,
-//              symbol right edge ±1 px (DOM, KLD); the alignment score
-//              (lib/frames/align.ts) 94.47 → 94.99 %. Nothing above y 1640
+//              digits' centre +0.6 x / −1.3 y, plate +0.7 (median −0.5; was
+//              −2.7), symbol centre −0.1 (was −8.3), type baseline 1800 on
+//              all 15 (prints 1800.4), type line +4 px from the left, symbol
+//              right edge ±1 px (DOM, KLD); the symbol's ink 5–9 px clear of
+//              the pill's bottom bevel (it reached 1–3 px into it); the
+//              alignment score (lib/frames/align.ts) 94.47 → 94.99 %. Nothing above y 1640
 //              moves (the name, rules scrim — 4.49 (b) and 4.53 are open)
 //              but the art's scale. Every card on m15token /
 //              m15tokenartifact changes (every one has a type line and a
