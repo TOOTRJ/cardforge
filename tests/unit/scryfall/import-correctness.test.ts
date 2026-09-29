@@ -670,19 +670,19 @@ describe("the signature registry's landings (TODO 1.4)", () => {
   });
 
   it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
-    // Production has verified both full-art basics in w/u/b/r/g (seed.sql
-    // doesn't list them yet), so add them here.
-    const withFullArt = new Set([
-      ...PROD_VERIFIED,
-      frameComboKey("m15fullartland", "w"),
-      frameComboKey("fullartland", "w"),
-    ]);
+    // Built explicitly both ways, so the test holds whether or not seed.sql
+    // (which mirrors production) lists the full-art basics as verified yet.
+    const fullArtKeys = ["m15fullartland", "fullartland"].flatMap((t) =>
+      ["w", "u", "b", "r", "g", "c", "m"].map((c) => frameComboKey(t as FrameTemplate, c)),
+    );
+    const withFullArt = new Set([...PROD_VERIFIED, ...fullArtKeys]);
+    const withoutFullArt = new Set([...PROD_VERIFIED].filter((k) => !fullArtKeys.includes(k)));
     expect(landing(signature("fdn-282"), withFullArt)).toEqual({ template: "m15fullartland", colorKey: "w", status: "exact" });
     // A borderless basic lands on the land frame (1.18: FRA #382's art_crop
     // is the 626×457 window, `full_art` or not); the creator offers the
     // borderless full-art basic.
     expect(landing(signature("fra-382"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "exact" });
-    expect(landing(signature("fdn-282"))).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
+    expect(landing(signature("fdn-282"), withoutFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
     expect(landing(signature("unf-235"), withFullArt)).toEqual({ template: "m15land", colorKey: "w", status: "frame-switched" });
   });
 
