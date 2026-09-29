@@ -339,8 +339,9 @@ What a frame gives it:
 `date<2019-07-12`); the M20+ full-art prints wait for 4.48 / 4.50. At v34
 (`M15TOKEN` in `lib/cards/template-layout.ts`):
 
-- the P/T is M15's slot as a whole — CC's plate box, the value box, 0.05 W
-  dark ink — on M15's own plates: `m15/pt/{color}` on `m15token`,
+- the P/T is M15's slot — CC's plate box 0.13 %H lower (88.61 %H, where the
+  prints put the plate; `TOKEN_PLATE_PRINT_DY_PCT`), M15's value box
+  unmoved, 0.05 W dark ink — on M15's own plates: `m15/pt/{color}` on `m15token`,
   `m15artifact/pt/{color}` on `m15tokenartifact` (CC's silver plate for
   `c`, the colour's own otherwise, as TC18 #7 prints). Both plates are in
   `PLATE_INK` already, so the rules layout keeps its lines off them;
@@ -348,8 +349,9 @@ What a frame gives it:
   (`fit: "measured"`), its baseline on the prints' 1800 HD px
   (`TOKEN_TYPE_PRINT_DY`);
 - the set symbol has its own `symbolRect` (right edge 92.13 %W, centre
-  84.39 %H, M15's 86 px box with the ink fit). Its colour stays the card's
-  rarity (new tokens save as common);
+  84.78 %H — the 15 prints' mean, not CC's 84.39, which sat 8 px above
+  them; `TOKEN_SYMBOL_CENTRE_PCT` — M15's 86 px box with the ink fit). Its
+  colour stays the card's rarity (new tokens save as common);
 - still to come: the bordered text box `m15tokentext` / `m15tokenartifacttext`
   (4.49 (b) — the rules scrim is today's), the gold small-caps name and the
   art slot (4.53).

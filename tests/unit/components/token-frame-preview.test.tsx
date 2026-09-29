@@ -63,8 +63,10 @@ function tagsAt(html: string, r: Rect): string[] {
 describe("CardPreview — 2014–19 token frame (TODO 4.49 (a) + (d))", () => {
   it.each(["m15token", "m15tokenartifact"] as const)("%s: the P/T on M15's plate, in the bake's boxes", (template) => {
     const pt = getFrameProfile(template).pt!;
-    // CC's plate box and M15's value box (4.18) — what the bake measures.
-    expect(pt.plateRect).toEqual({ topPct: 88.48, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 });
+    // CC's plate box 0.13 %H lower, onto the prints' plate (2.7 px at HD),
+    // and M15's value box (4.18) unmoved — what the bake measures.
+    expect(pt.plateRect).toEqual({ topPct: 88.61, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 });
+    expect(getFrameProfile("m15").pt!.plateRect).toEqual({ topPct: 88.48, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 });
     expect(pt.rect).toEqual(getFrameProfile("m15").pt!.rect);
     const html = markup(template, template === "m15tokenartifact" ? { colorIdentity: [] } : {});
     const plate = tagsAt(html, pt.plateRect!).filter((tag) => tag.startsWith("<img"));
@@ -104,8 +106,10 @@ describe("CardPreview — 2014–19 token frame (TODO 4.49 (a) + (d))", () => {
       expect(p.type.rect.leftPct).toBe(8.54);
       expect(band[0]).toContain("justify-content:space-between");
       expect(band[0]).not.toContain("justify-content:center");
-      // The symbol: CC's box, right-aligned and centred in it — 92.13 %W,
-      // 84.39 %H — holding the icon, and none inline in the band.
+      // The symbol: CC's box, on the prints (right edge 92.13 %W, centre
+      // 84.78 %H), right-aligned and centred in it, holding the icon, and
+      // none inline in the band.
+      expect(p.symbolRect).toEqual({ topPct: 82.73, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
       const symbolBox = tagsAt(html, p.symbolRect!);
       expect(symbolBox).toHaveLength(1);
       expect(symbolBox[0]).toContain("align-items:center;justify-content:flex-end");

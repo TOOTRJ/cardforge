@@ -9,11 +9,17 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 // TODO 4.49 (a) + (d) on REAL bakes, at HD and at the 750 px default: the
 // 2014–19 token frames (m15token / m15tokenartifact) print the P/T on M15's
 // plate, the type line left-aligned from 8.54 %W, and the set symbol
-// right-anchored at 92.13 %W, centred on 84.39 %H — where the prints put
-// them (TDOM #3, TM19 #6, TBFZ #1, TKLD #2, TC18 #7 …; Scryfall PNGs at
-// 1500 × 2100). Until layout v33 the value sat on the band's edge with no
-// plate (MSE's 88.6–94.8 %H rect: the digits ran into the black border) and
-// the type line and symbol were centred together.
+// right-anchored at 92.13 %W, centred on 84.78 %H — where the prints put
+// them. Until layout v33 the value sat on the band's edge with no plate
+// (MSE's 88.6–94.8 %H rect: the digits ran into the black border) and the
+// type line and symbol were centred together.
+//
+// PRINT is what the fifteen textless 4.49 pins print (TDOM #3/#4/#9/#11,
+// TM19 #6/#8/#12, TBFZ #1/#7, TWAR #5, TMH1 #8/#18, TEMN #1, TKLD #2,
+// TC18 #7; Scryfall PNGs at 1500 × 2100), the mean over the fifteen, in HD
+// px. Our positions must land within ±2 px of it (±1.5 px at 750). CC's own
+// symbol box (84.39 %H) centred 8.3 px above the prints and its plate box
+// (88.48 %H) 2.7 px above them.
 //
 // The masters live in the frames bucket (never in git): the bake is served a
 // flat mid-grey card and a WHITE plate, so the plate, the dark digits, the
@@ -121,6 +127,22 @@ const black = (l: number) => l < 8;
 const white = (l: number) => l > 200;
 
 const TEMPLATES = ["m15token", "m15tokenartifact"] as const;
+
+const PRINT = {
+  /** The digits' ink centre (1287.5–1294 × 1923–1932.5). */
+  digits: { x: 1291.0, y: 1929.8 },
+  /** The set symbol's ink centre, y (1775.5–1784.5; DOM, M19, BFZ, WAR,
+   *  MH1, EMN, KLD and C18 glyphs). */
+  symbolY: 1781.0,
+  /** The plate's box top: each print's plate profile (rim, inner line,
+   *  bottom bevel over x 1255–1335) aligned to CC's plate master by
+   *  correlation — 2.7 px below CC's 1858.1 on average (−3.5 to +5.5 print
+   *  to print, as the prints are cut). */
+  plateTop: 1860.8,
+};
+/** ±2 px at HD; at 750, ±1.5 of its own px (the 750 bake sets the digits on
+ *  its own whole-px grid: "10/10" lands 1 px right of half its HD place). */
+const near = (s: number) => (s === 1 ? 2 : 1.5);
 const PRESETS = [
   ["hd", 1],
   ["default", 0.5],
@@ -133,19 +155,22 @@ describe("2014–19 token frame on real bakes (TODO 4.49 (a) + (d))", () => {
       const b = await bake(token(template, { power: "10", toughness: "10" }), preset);
       const pt = getFrameProfile(template).pt!;
       const plate = pt.plateRect!;
-      // The plate: drawn over exactly CC's box (75.73 / 88.48 / 18.8 × 7.33 %).
+      // The plate: drawn over exactly its box — CC's (75.73 / 88.48 / 18.8 ×
+      // 7.33 %) 0.13 %H lower — whose top is where the prints' plate is.
       const box = inkBox(b, { x0: 1000 * s, y0: 1780 * s, x1: 1500 * s, y1: 2100 * s }, white)!;
       expect(box, "plate drawn").not.toBeNull();
       expect(Math.abs(box.x0 - (plate.leftPct / 100) * b.w)).toBeLessThanOrEqual(1);
       expect(Math.abs(box.x1 - ((plate.leftPct + plate.widthPct) / 100) * b.w)).toBeLessThanOrEqual(1);
       expect(Math.abs(box.y0 - (plate.topPct / 100) * b.h)).toBeLessThanOrEqual(1);
       expect(Math.abs(box.y1 - ((plate.topPct + plate.heightPct) / 100) * b.h)).toBeLessThanOrEqual(1);
-      // The digits: dark ink on the plate's face, centred where fifteen
-      // 2014–19 token prints centre theirs (1291 × 1930 px at HD, ±3).
+      expect(Math.abs(box.y0 - PRINT.plateTop * s), "plate top vs the prints").toBeLessThanOrEqual(near(s));
+      // The digits: dark ink on the plate's face, centred where the fifteen
+      // prints centre theirs. They stay in M15's value box: the plate moved,
+      // not them.
       const digits = inkBox(b, box, dark)!;
       expect(digits, "digits drawn").not.toBeNull();
-      expect(Math.abs((digits.x0 + digits.x1) / 2 - 1291 * s)).toBeLessThanOrEqual(3 * s + 0.5);
-      expect(Math.abs((digits.y0 + digits.y1) / 2 - 1930 * s)).toBeLessThanOrEqual(3 * s + 0.5);
+      expect(Math.abs((digits.x0 + digits.x1) / 2 - PRINT.digits.x * s)).toBeLessThanOrEqual(near(s));
+      expect(Math.abs((digits.y0 + digits.y1) / 2 - PRINT.digits.y * s)).toBeLessThanOrEqual(near(s));
       // …inside the face's ink span and the plate master's body (its ink,
       // lib/cards/plate-ink.ts), not on the band's edge: the old slot's
       // digits ran into the black border at ~1948 px, off any plate.
@@ -172,7 +197,7 @@ describe("2014–19 token frame on real bakes (TODO 4.49 (a) + (d))", () => {
   }, 60_000);
 
   it.each(TEMPLATES.flatMap((t) => PRESETS.map(([p, s]) => [t, p, s] as const)))(
-    "%s @%s: the type line starts at x 8.54 and the symbol is right-anchored at x 92.13, centred on y 84.39 (card percent)",
+    "%s @%s: the type line starts at x 8.54 and the symbol is right-anchored at x 92.13, centred on y 84.78 (card percent)",
     async (template, preset, s) => {
       const b = await bake(token(template, { supertype: "Token Creature", cardType: null }), preset);
       const p = getFrameProfile(template);
@@ -187,14 +212,15 @@ describe("2014–19 token frame on real bakes (TODO 4.49 (a) + (d))", () => {
       expect(line.x0).toBeGreaterThanOrEqual(left - 1);
       expect(line.x0).toBeLessThanOrEqual(left + 4 * s);
       // The symbol: an uploaded icon fills M15's 86 px box, its right edge on
-      // 92.13 %W and its centre on 84.39 %H (the TDOM #3 print: DOM's ink at
-      // 1315–1382 px).
-      const icon = inkBox(b, { x0: 1150 * s, y0, x1: b.w, y1 }, black)!;
+      // 92.13 %W (the DOM prints' ink ends at 1379–1382 px) and its centre on
+      // 84.78 %H — where the prints centre their symbols.
+      const icon = inkBox(b, { x0: 1150 * s, y0, x1: b.w, y1: y1 + 20 * s }, black)!;
       expect(icon, "symbol drawn").not.toBeNull();
       const side = SET_SYMBOL_BOX_PCT * b.w;
       expect(Math.abs(icon.x1 - 0.9213 * b.w)).toBeLessThanOrEqual(1);
       expect(Math.abs(icon.x1 - icon.x0 - side)).toBeLessThanOrEqual(1);
-      expect(Math.abs((icon.y0 + icon.y1) / 2 - 0.8439 * b.h)).toBeLessThanOrEqual(1);
+      expect(Math.abs((icon.y0 + icon.y1) / 2 - 0.8478 * b.h)).toBeLessThanOrEqual(1);
+      expect(Math.abs((icon.y0 + icon.y1) / 2 - PRINT.symbolY * s), "symbol centre vs the prints").toBeLessThanOrEqual(near(s));
       expect(Math.abs(icon.y1 - icon.y0 - side)).toBeLessThanOrEqual(1);
       // …and the line stays clear of it.
       expect(line.x1).toBeLessThan(icon.x0);
