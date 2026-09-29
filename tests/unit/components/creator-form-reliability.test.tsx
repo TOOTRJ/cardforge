@@ -13,6 +13,7 @@ import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
 
@@ -1100,7 +1101,9 @@ describe("frame request log", () => {
             JSON.stringify({
               ok: true,
               card: { name: card.name, scryfall_uri: null },
-              patch: mapScryfallToFormPatch(card),
+              // What the route sends: the match finalized against the
+              // verified combos (an unverified exact frame is nearest).
+              patch: finalizeImportMatch(mapScryfallToFormPatch(card), new Set(VERIFIED)),
             }),
             { status: 200 },
           );
@@ -1142,10 +1145,30 @@ describe("frame request log", () => {
       collectorNumber: "435",
       scryfallId: sheoldred.id,
       status: "nearest",
+      cause: "missing",
       template: "m15",
       artFlag: "window-cropped",
       source: "deck_prefill",
     });
+  });
+
+  it("logs an exact frame that isn't verified in the card's colour as 'unverified' (D1)", async () => {
+    // Heliod THB #259 is exact on Nyx (owner decision A3); Nyx isn't in this
+    // test's verified list, so the route sends it as nearest and the card
+    // lands on the M15 standard.
+    const heliod = (signaturePrintings as unknown as Record<string, ScryfallCard>)["thb-259"];
+    actions.recordFrameRequestAction.mockResolvedValue({ ok: true });
+    prefill(heliod);
+    await waitFor(() => expect(actions.recordFrameRequestAction).toHaveBeenCalledTimes(1));
+    expect(actions.recordFrameRequestAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        signature: "showcase/thb/constellation",
+        status: "nearest",
+        cause: "unverified",
+        template: "m15",
+        source: "deck_prefill",
+      }),
+    );
   });
 
   it("a log call that fails (offline) never blocks the import, and its rejection is handled", async () => {

@@ -4,8 +4,9 @@
 -- exactly: the frame signature registry (lib/scryfall/frame-signatures.ts)
 -- answered `nearest` or `unsupported`, or its `exact` frame isn't verified
 -- in the card's colour yet. The admin page /admin/frame-requests counts the
--- rows per signature + set, and that order decides which frames get built
--- next (frames plan 4.7 / 4.11, the borderless and full-art families).
+-- rows per signature + set in two groups — "Missing frames" (build next,
+-- frames plan 4.7 / 4.11) and "Not yet verified" (verify next) — most
+-- distinct users first, then requests (owner decisions D1 / D4, 2026-09-29).
 --
 --   signature        a registry rule key (FRAME_SIGNATURE_KEYS) — validated
 --                    in the app (lib/frames/frame-requests.ts), not here, so
@@ -14,6 +15,11 @@
 --   set_code /       the printing imported (Scryfall set + collector number,
 --   collector_number scryfall_id) — a sample link on the admin page
 --   status           nearest | unsupported (an exact import writes nothing)
+--   cause            WHY the row is logged (D1): 'missing' = the registry has
+--                    no exact frame (its nearest / unsupported answer);
+--                    'unverified' = its exact frame exists but isn't verified
+--                    in the card's colour (withVerification downgraded it to
+--                    nearest — the CHECK below holds that)
 --   template         the frame the card landed on
 --   art_flag         TODO 1.18: the imported art_crop is the M15 window on a
 --                    borderless printing ('window-cropped') or carries printed
@@ -22,8 +28,9 @@
 --
 -- Writes: ONLY through record_frame_request(), which stamps auth.uid() and
 -- skips silently once the caller wrote 30 rows in the last hour (a user
--- clicking through printings can't flood the log). No insert/update/delete
--- policies: the API roles can't write the table directly.
+-- clicking through printings can't flood the log; kept by the owner, D3).
+-- No insert/update/delete policies: the API roles can't write the table
+-- directly. No prune job: the log is small and kept for good (D2).
 -- Reads: admins. The select policy lets an admin session read rows; the
 -- admin page reads the aggregate through admin_frame_request_counts()
 -- (service role, called after the is_admin check — like admin_funnel_counts).
@@ -39,10 +46,15 @@ create table if not exists public.frame_requests (
   collector_number text check (collector_number is null or char_length(collector_number) <= 16),
   scryfall_id uuid,
   status text not null check (status in ('nearest', 'unsupported')),
+  cause text not null check (cause in ('missing', 'unverified')),
   template text check (template is null or char_length(template) <= 40),
   art_flag text check (art_flag is null or art_flag in ('window-cropped', 'frame-in-crop')),
   source text not null default 'import' check (source in ('import', 'deck_prefill')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- An exact frame waiting for verification is only ever downgraded to
+  -- nearest; an unsupported printing is always 'missing'.
+  constraint frame_requests_unverified_is_nearest
+    check (cause <> 'unverified' or status = 'nearest')
 );
 
 create index if not exists frame_requests_signature_created_idx
@@ -70,6 +82,7 @@ create or replace function public.record_frame_request(
   p_collector text,
   p_scryfall_id uuid,
   p_status text,
+  p_cause text,
   p_template text,
   p_art_flag text,
   p_source text
@@ -100,6 +113,10 @@ begin
   if p_status is null or p_status not in ('nearest', 'unsupported') then
     raise exception 'record_frame_request: bad status' using errcode = '22023';
   end if;
+  if p_cause is null or p_cause not in ('missing', 'unverified')
+     or (p_cause = 'unverified' and p_status <> 'nearest') then
+    raise exception 'record_frame_request: bad cause' using errcode = '22023';
+  end if;
   if p_template is not null and char_length(p_template) > 40 then
     raise exception 'record_frame_request: bad template' using errcode = '22023';
   end if;
@@ -122,22 +139,25 @@ begin
 
   insert into public.frame_requests (
     user_id, signature, label, set_code, collector_number, scryfall_id,
-    status, template, art_flag, source
+    status, cause, template, art_flag, source
   ) values (
     v_uid, p_signature, p_label, p_set, p_collector, p_scryfall_id,
-    p_status, p_template, p_art_flag, p_source
+    p_status, p_cause, p_template, p_art_flag, p_source
   );
 end;
 $$;
 
--- The admin page's one read: requests per signature + set since p_since
--- (null = all time), most requested first. label / status / template and
--- the sample printing come from the group's latest row.
+-- The admin page's one read: requests per signature + set + cause since
+-- p_since (null = all time), most distinct users first, then most requests,
+-- then the latest (D4). The page splits the groups by cause (D1). label /
+-- status / template and the sample printing come from the group's latest
+-- row.
 create or replace function public.admin_frame_request_counts(p_since timestamptz default null)
 returns table (
   signature text,
   label text,
   set_code text,
+  cause text,
   status text,
   template text,
   n bigint,
@@ -156,6 +176,7 @@ as $$
     r.signature,
     (array_agg(r.label order by r.created_at desc))[1] as label,
     r.set_code,
+    r.cause,
     (array_agg(r.status order by r.created_at desc))[1] as status,
     (array_agg(r.template order by r.created_at desc))[1] as template,
     count(*)::bigint as n,
@@ -171,8 +192,8 @@ as $$
     ) as art_flags
   from public.frame_requests r
   where p_since is null or r.created_at >= p_since
-  group by r.signature, r.set_code
-  order by count(*) desc, max(r.created_at) desc
+  group by r.signature, r.set_code, r.cause
+  order by count(distinct r.user_id) desc, count(*) desc, max(r.created_at) desc
   limit 500
 $$;
 
@@ -184,9 +205,9 @@ revoke all on public.frame_requests from anon;
 revoke insert, update, delete, truncate, references, trigger
   on public.frame_requests from authenticated;
 
-revoke all on function public.record_frame_request(text, text, text, text, uuid, text, text, text, text)
+revoke all on function public.record_frame_request(text, text, text, text, uuid, text, text, text, text, text)
   from public, anon;
-grant execute on function public.record_frame_request(text, text, text, text, uuid, text, text, text, text)
+grant execute on function public.record_frame_request(text, text, text, text, uuid, text, text, text, text, text)
   to authenticated;
 
 revoke all on function public.admin_frame_request_counts(timestamptz)

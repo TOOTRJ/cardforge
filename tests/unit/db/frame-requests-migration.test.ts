@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   FRAME_REQUEST_ART_FLAGS,
+  FRAME_REQUEST_CAUSES,
   FRAME_REQUEST_SOURCES,
   FRAME_REQUEST_STATUSES,
 } from "@/lib/frames/frame-requests";
@@ -27,7 +28,8 @@ const body = sql
   .replace(/\s+/g, " ")
   .toLowerCase();
 
-const RECORD_SIG = "public.record_frame_request(text, text, text, text, uuid, text, text, text, text)";
+const RECORD_SIG =
+  "public.record_frame_request(text, text, text, text, uuid, text, text, text, text, text)";
 const COUNTS_SIG = "public.admin_frame_request_counts(timestamptz)";
 
 describe("0123_frame_requests.sql", () => {
@@ -77,12 +79,31 @@ describe("0123_frame_requests.sql", () => {
   it("checks the same vocabularies as the app", () => {
     const list = (values: readonly string[]) => `(${values.map((v) => `'${v}'`).join(", ")})`;
     expect(body).toContain(`status in ${list(FRAME_REQUEST_STATUSES)}`);
+    expect(body).toContain(`cause text not null check (cause in ${list(FRAME_REQUEST_CAUSES)})`);
     expect(body).toContain(`source in ${list(FRAME_REQUEST_SOURCES)}`);
     expect(body).toContain(`art_flag in ${list(FRAME_REQUEST_ART_FLAGS)}`);
     // …in the function's own validation too.
     expect(body).toContain(`p_status not in ${list(FRAME_REQUEST_STATUSES)}`);
+    expect(body).toContain(`p_cause not in ${list(FRAME_REQUEST_CAUSES)}`);
     expect(body).toContain(`p_source not in ${list(FRAME_REQUEST_SOURCES)}`);
     expect(body).toContain(`p_art_flag not in ${list(FRAME_REQUEST_ART_FLAGS)}`);
+  });
+
+  it("stores why a row is logged, and an unverified frame only as nearest (D1)", () => {
+    expect(body).toMatch(
+      /constraint frame_requests_unverified_is_nearest check \(cause <> 'unverified' or status = 'nearest'\)/,
+    );
+    expect(body).toContain("(p_cause = 'unverified' and p_status <> 'nearest')");
+    expect(body).toMatch(/insert into public\.frame_requests \([^)]*\bcause\b[^)]*\) values \([^)]*\bp_cause\b/);
+  });
+
+  it("counts per signature + set + cause, most distinct users first, then requests (D1, D4)", () => {
+    const counts = body.slice(body.indexOf("create or replace function public.admin_frame_request_counts"));
+    expect(counts).toMatch(/returns table \( signature text, label text, set_code text, cause text,/);
+    expect(counts).toContain("group by r.signature, r.set_code, r.cause");
+    expect(counts).toContain(
+      "order by count(distinct r.user_id) desc, count(*) desc, max(r.created_at) desc limit 500",
+    );
   });
 
   it("caps the columns where the app's schema does", () => {

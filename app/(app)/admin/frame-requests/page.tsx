@@ -15,8 +15,11 @@ import {
 // Admin — the most-requested missing frames (TODO 1.6). Every Scryfall
 // import whose printing PipGlyph can't reproduce exactly writes a
 // frame_requests row (migration 0123); this page counts them per frame
-// signature + set so the frame factory builds the most-wanted ones first
-// (frames plan 4.7 / 4.11). Its own route, apart from /admin/frame-compare.
+// signature + set, most distinct users first, in two groups: missing frames
+// for the frame factory to build (frames plan 4.7 / 4.11) and exact frames
+// not yet verified in the card's colour (owner decisions D1 / D4,
+// 2026-09-29). Its own route, apart from /admin/frame-compare; the admin
+// rail and the avatar menu both link it.
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
@@ -42,7 +45,7 @@ export default async function AdminFrameRequestsPage({
       <PageHeader
         eyebrow="Admin"
         title="Most-requested missing frames"
-        description="Imports PipGlyph couldn’t reproduce exactly, per frame signature and set: the registry’s nearest or unsupported answer, or an exact frame not yet verified in the card’s colour. Build from the top."
+        description="Imports PipGlyph couldn’t reproduce exactly, per frame signature and set, most distinct users first: frames PipGlyph doesn’t have yet (build from the top), and exact frames not yet verified in the card’s colour (verify them)."
         actions={
           <>
             <Badge variant="primary">

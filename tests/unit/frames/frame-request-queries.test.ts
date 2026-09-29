@@ -26,6 +26,7 @@ import {
   getFrameRequestSummary,
   mapFrameRequestRows,
   parseFrameRequestWindow,
+  sortFrameRequestRows,
   windowSince,
 } from "@/lib/frames/frame-request-queries";
 
@@ -34,6 +35,7 @@ const RPC_ROWS = [
     signature: "borderless/standard+crown",
     label: "Borderless frame",
     set_code: "dmu",
+    cause: "missing",
     status: "nearest",
     template: "m15",
     n: "3",
@@ -47,6 +49,7 @@ const RPC_ROWS = [
     signature: "borderless/poster",
     label: "Artist-lettered borderless poster",
     set_code: "spg",
+    cause: "missing",
     status: "unsupported",
     template: "m15",
     n: 1,
@@ -90,9 +93,11 @@ describe("getFrameRequestSummary", () => {
     expect(summary?.error).toBeNull();
     expect(summary?.rows[0]).toMatchObject({
       signature: "borderless/standard+crown",
+      cause: "missing",
       count: 3,
       users: 2,
       forGood: false,
+      inRegistry: true,
       blockedBy: "4.6",
       artFlags: ["window-cropped"],
       sampleUrl: "https://scryfall.com/card/dmu/435",
@@ -129,6 +134,40 @@ describe("getFrameRequestSummary", () => {
   });
 });
 
+describe("the page's order (D4)", () => {
+  const rows = mapFrameRequestRows([
+    { ...RPC_ROWS[0], signature: "future", n: 9, users: 1, last_seen: "2026-09-27T00:00:00.000Z" },
+    { ...RPC_ROWS[0], signature: "japan-showcase", n: 2, users: 2, last_seen: "2026-09-20T00:00:00.000Z" },
+    { ...RPC_ROWS[0], signature: "borderless/planeswalker", n: 5, users: 1, last_seen: "2026-09-26T00:00:00.000Z" },
+    { ...RPC_ROWS[0], signature: "borderless/poster", n: 5, users: 1, last_seen: "2026-09-27T12:00:00.000Z" },
+  ]);
+
+  it("puts distinct users first, then requests, then the latest", () => {
+    expect(sortFrameRequestRows(rows).map((row) => row.signature)).toEqual([
+      "japan-showcase", // 2 users beat 9 requests from one
+      "future",
+      "borderless/poster", // 5 requests each: the later one first
+      "borderless/planeswalker",
+    ]);
+    // Pure: the input keeps its order.
+    expect(rows[0].signature).toBe("future");
+  });
+
+  it("is the order the summary hands the page, whatever order the RPC returned", async () => {
+    mocks.getCurrentProfile.mockResolvedValue({ is_admin: true });
+    mocks.isAdminConfigured.mockReturnValue(true);
+    mocks.rpc.mockResolvedValue({
+      data: [
+        { ...RPC_ROWS[0], signature: "future", n: 9, users: 1 },
+        { ...RPC_ROWS[0], signature: "japan-showcase", n: 2, users: 2 },
+      ],
+      error: null,
+    });
+    const summary = await getFrameRequestSummary("30");
+    expect(summary?.rows.map((row) => row.signature)).toEqual(["japan-showcase", "future"]);
+  });
+});
+
 describe("window helpers", () => {
   it("parses the window param, defaulting to 30 days", () => {
     expect(parseFrameRequestWindow("90")).toBe("90");
@@ -141,6 +180,24 @@ describe("window helpers", () => {
     const now = Date.parse("2026-09-28T00:00:00.000Z");
     expect(windowSince("30", now)).toBe("2026-08-29T00:00:00.000Z");
     expect(windowSince("all", now)).toBeNull();
+  });
+
+  it("maps the cause, and reads anything but 'unverified' as missing (D1)", () => {
+    const [unverified, missing, junk] = mapFrameRequestRows([
+      { ...RPC_ROWS[0], cause: "unverified" },
+      { ...RPC_ROWS[0], cause: "missing" },
+      { ...RPC_ROWS[0], cause: "stale" },
+    ]);
+    expect([unverified.cause, missing.cause, junk.cause]).toEqual(["unverified", "missing", "missing"]);
+  });
+
+  it("flags a signature the registry doesn't know (D6)", () => {
+    const [known, retired] = mapFrameRequestRows([
+      RPC_ROWS[0],
+      { ...RPC_ROWS[0], signature: "retired/seed-example" },
+    ]);
+    expect(known.inRegistry).toBe(true);
+    expect(retired).toMatchObject({ inRegistry: false, forGood: false, blockedBy: null });
   });
 
   it("keeps an unknown template's raw key as its label", () => {

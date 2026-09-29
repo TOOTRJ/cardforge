@@ -6,9 +6,11 @@ import importPrintings from "../scryfall/fixtures/import-printings.json";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import { FRAME_SIGNATURE_KEYS } from "@/lib/scryfall/frame-signatures";
+import { FRAME_SIGNATURE_KEYS, type FrameMatch } from "@/lib/scryfall/frame-signatures";
+import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import {
   artFlagForImport,
+  frameRequestCause,
   frameRequestFromImport,
   frameRequestSchema,
   isForGoodSignature,
@@ -38,6 +40,7 @@ describe("frameRequestFromImport", () => {
       collectorNumber: "435",
       scryfallId: SIGNATURE["dmu-435"].id,
       status: "nearest",
+      cause: "missing",
       template: "m15",
       artFlag: "window-cropped",
       source: "import",
@@ -56,14 +59,58 @@ describe("frameRequestFromImport", () => {
     ).toBeNull();
   });
 
-  it("logs an exact frame that isn't verified in the card's colour as nearest", () => {
+  it("logs an exact frame that isn't verified in the card's colour as nearest, cause 'unverified' (D1)", () => {
     const patch = patchOf("dom-168");
     const row = frameRequestFromImport(patch, {
       artImported: false,
       source: "import",
       verifiedKeys: new Set([frameComboKey("m15", "r")]),
     });
-    expect(row).toMatchObject({ signature: "era/2015", status: "nearest", artFlag: null });
+    expect(row).toMatchObject({
+      signature: "era/2015",
+      status: "nearest",
+      cause: "unverified",
+      artFlag: null,
+    });
+  });
+
+  it("keeps the cause of a patch the named route already finalized (the real import path)", () => {
+    // /api/scryfall/named downgrades the unverified exact match before the
+    // form sees it; the form's own finalization must not lose why.
+    const heliod = finalizeImportMatch(patchOf("thb-259"), new Set([frameComboKey("m15", "w")]));
+    expect(heliod.frame_match).toMatchObject({ status: "nearest", template: "nyx", unverified: true });
+    for (const verifiedKeys of [undefined, new Set([frameComboKey("m15", "w")])]) {
+      expect(
+        frameRequestFromImport(heliod, { artImported: false, source: "import", verifiedKeys }),
+      ).toMatchObject({ signature: "showcase/thb/constellation", status: "nearest", cause: "unverified" });
+    }
+    // Verified in white, it is exact: nothing to log.
+    const verified = finalizeImportMatch(patchOf("thb-259"), new Set([frameComboKey("nyx", "w")]));
+    expect(frameRequestFromImport(verified, { artImported: false, source: "import" })).toBeNull();
+  });
+
+  it("files the registry's own nearest and unsupported answers as 'missing', verified or not", () => {
+    const everything = new Set([frameComboKey("m15", "b"), frameComboKey("m15borderless", "b")]);
+    for (const verifiedKeys of [undefined, new Set<string>(), everything]) {
+      expect(
+        frameRequestFromImport(patchOf("dmu-435"), { artImported: false, source: "import", verifiedKeys })
+          ?.cause,
+      ).toBe("missing");
+    }
+    expect(
+      frameRequestFromImport(patchOf("fut-18"), {
+        artImported: false,
+        source: "import",
+        verifiedKeys: new Set(),
+      }),
+    ).toMatchObject({ status: "unsupported", cause: "missing" });
+    // A 2003-frame textless promo is nearest by the registry's own answer
+    // (A9), before and after its later frame is verified.
+    for (const verifiedKeys of [new Set<string>(), new Set([frameComboKey("m15textless", "w")])]) {
+      expect(
+        frameRequestFromImport(patchOf("p07-1"), { artImported: false, source: "import", verifiedKeys }),
+      ).toMatchObject({ status: "nearest", cause: "missing" });
+    }
   });
 
   it("logs unsupported printings, deck pre-fills and where the card really landed", () => {
@@ -95,10 +142,41 @@ describe("frameRequestFromImport", () => {
       const row = frameRequestFromImport(patchOf(key), { artImported: true, source: "import" });
       if (!row) continue;
       logged += 1;
+      expect(row.cause, key).toBe("missing"); // no verification ran: the registry's own answer
       const parsed = frameRequestSchema.safeParse(row);
       expect(parsed.success, `${key}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
     }
     expect(logged).toBeGreaterThan(50);
+  });
+
+  it("with nothing verified, every fixture printing is logged, the exact ones as 'unverified'", () => {
+    const keys = [...Object.keys(SIGNATURE), ...Object.keys(IMPORTS)];
+    let unverified = 0;
+    for (const key of keys) {
+      const patch = patchOf(key);
+      if (!patch.frame_match) continue;
+      const row = frameRequestFromImport(patch, {
+        artImported: false,
+        source: "import",
+        verifiedKeys: new Set(),
+      });
+      expect(row, key).not.toBeNull();
+      expect(row!.cause, key).toBe(patch.frame_match.status === "exact" ? "unverified" : "missing");
+      if (row!.cause === "unverified") unverified += 1;
+      expect(frameRequestSchema.safeParse(row).success, key).toBe(true);
+    }
+    expect(unverified).toBeGreaterThan(10);
+  });
+});
+
+describe("frameRequestCause (D1)", () => {
+  it("is 'unverified' only for a match withVerification downgraded", () => {
+    const nearest: Pick<FrameMatch, "status" | "unverified"> = { status: "nearest" };
+    expect(frameRequestCause({ ...nearest, unverified: true })).toBe("unverified");
+    expect(frameRequestCause(nearest)).toBe("missing");
+    expect(frameRequestCause({ status: "unsupported" })).toBe("missing");
+    // A stray flag on an unsupported match can't make it "verify next".
+    expect(frameRequestCause({ status: "unsupported", unverified: true })).toBe("missing");
   });
 });
 
@@ -155,6 +233,9 @@ describe("frameRequestSchema", () => {
       { setCode: "DMU" },
       { setCode: "d" },
       { status: "exact" },
+      { cause: "stale" },
+      { cause: null },
+      { status: "unsupported", cause: "unverified" },
       { source: "api" },
       { artFlag: "blurry" },
       { scryfallId: "not-a-uuid" },
@@ -192,33 +273,104 @@ describe("registry facts for the admin page", () => {
 
 describe("supabase/seeds/21_frame_requests.sql", () => {
   const sql = readFileSync(join(process.cwd(), "supabase/seeds/21_frame_requests.sql"), "utf8");
-  const rows = [
-    ...sql.matchAll(
-      /\('fa000000-[^']+', null, '([^']+)', '([^']+)', '([a-z0-9]+)', '([^']+)', '([0-9a-f-]{36})', '(nearest|unsupported)', '([a-z0-9]+)', (null|'[a-z-]+'), '(import|deck_prefill)'/g,
+  const devData = readFileSync(join(process.cwd(), "supabase/seeds/10_dev_data.sql"), "utf8");
+  const DEV_USERS = new Set(
+    [...devData.matchAll(/'(d0000000-[0-9a-f-]{27})'::uuid, '[a-z]+@dev\.pipglyph\.test'/g)].map(
+      (m) => m[1],
     ),
-  ];
+  );
+  // One value tuple per line: quoted literals, null, or the created_at
+  // expression (matched first, so its quoted interval isn't read as a field).
+  const TOKEN = /now\(\) - interval '([^']+)'|'([^']*)'|\b(null)\b/g;
+  const tuples = [...sql.matchAll(/^\s*\(('fa000000-[^\n]*)\),?$/gm)].map((m) =>
+    [...m[1].matchAll(TOKEN)].map((t) => (t[1] !== undefined ? `-${t[1]}` : t[3] ? null : t[2])),
+  );
+  const rows = tuples.map(
+    ([id, userId, signature, label, set, collector, scryfallId, status, cause, template, artFlag, source, age]) => ({
+      id: id!,
+      userId,
+      signature: signature!,
+      label,
+      set,
+      collector,
+      scryfallId,
+      status,
+      cause,
+      template,
+      artFlag,
+      source,
+      age,
+    }),
+  );
+  const RETIRED = "retired/seed-example";
 
   it("seeds a handful of rows, every one in the shape this test reads", () => {
-    expect(rows.length).toBeGreaterThanOrEqual(8);
+    expect(rows.length).toBeGreaterThanOrEqual(12);
     expect(rows.length).toBe(sql.match(/\('fa000000-/g)?.length);
+    for (const tuple of tuples) expect(tuple, String(tuple[0])).toHaveLength(13);
+    expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length);
+    expect(DEV_USERS.size).toBe(5);
+    for (const row of rows) {
+      expect(["nearest", "unsupported"], row.id).toContain(row.status);
+      expect(["import", "deck_prefill"], row.id).toContain(row.source);
+      expect([null, "window-cropped", "frame-in-crop"], row.id).toContain(row.artFlag);
+      expect(row.age, row.id).toMatch(/^-\d+ days?$/);
+    }
   });
 
-  it("uses real signatures, with the label and status the registry gives that printing", () => {
+  it("fills both groups (D1), from dev accounts that exist, and ranks by distinct users (D4)", () => {
+    expect(rows.filter((row) => row.cause === "missing").length).toBeGreaterThanOrEqual(3);
+    expect(rows.filter((row) => row.cause === "unverified").length).toBeGreaterThanOrEqual(2);
+    for (const row of rows) {
+      expect(["missing", "unverified"], row.id).toContain(row.cause);
+      if (row.cause === "unverified") expect(row.status, row.id).toBe("nearest");
+      expect(row.userId === null || DEV_USERS.has(row.userId), row.id).toBe(true);
+    }
+    // Some group has more distinct users but fewer requests than another —
+    // so the page's order (users first) differs from a requests order.
+    const groups = new Map<string, { users: Set<string>; n: number }>();
+    for (const row of rows) {
+      const key = `${row.signature}|${row.set}|${row.cause}`;
+      const group = groups.get(key) ?? { users: new Set<string>(), n: 0 };
+      group.n += 1;
+      if (row.userId) group.users.add(row.userId);
+      groups.set(key, group);
+    }
+    const all = [...groups.values()];
+    expect(all.some((a) => all.some((b) => a.users.size > b.users.size && a.n < b.n))).toBe(true);
+  });
+
+  it("uses real signatures, with the label, status and cause the registry gives that printing", () => {
     const byId = new Map(
       [...Object.values(SIGNATURE), ...Object.values(IMPORTS)].map((card) => [card.id, card]),
     );
-    for (const [, signature, label, set, collector, id, status] of rows) {
-      expect(FRAME_SIGNATURE_KEYS).toContain(signature);
-      const card = byId.get(id);
-      expect(card, `${set} #${collector} is a fixture printing`).toBeTruthy();
-      expect(card!.set).toBe(set);
-      expect(card!.collector_number).toBe(collector);
-      const match = mapScryfallToFormPatch(card!).frame_match!;
-      expect({ signature: match.signature, label: match.exactLabel, status: match.status }).toEqual({
-        signature,
-        label,
-        status,
+    for (const row of rows.filter((r) => r.signature !== RETIRED)) {
+      expect(FRAME_SIGNATURE_KEYS).toContain(row.signature);
+      const card = byId.get(row.scryfallId!);
+      expect(card, `${row.set} #${row.collector} is a fixture printing`).toBeTruthy();
+      expect(card!.set).toBe(row.set);
+      expect(card!.collector_number).toBe(row.collector);
+      const patch = mapScryfallToFormPatch(card!);
+      const match = patch.frame_match!;
+      expect({ signature: match.signature, label: match.exactLabel }).toEqual({
+        signature: row.signature,
+        label: row.label,
       });
+      if (row.cause === "unverified") {
+        // The registry says exact; the import logs it while that frame isn't
+        // verified in the card's colour.
+        expect(match.status, row.id).toBe("exact");
+        expect(
+          frameRequestFromImport(patch, { artImported: false, source: "import", verifiedKeys: new Set() }),
+        ).toMatchObject({ status: "nearest", cause: "unverified" });
+      } else {
+        expect(match.status, row.id).toBe(row.status);
+      }
     }
+  });
+
+  it("plants exactly one key no rule has, so the page's flag (D6) has a row", () => {
+    const retired = rows.filter((row) => !FRAME_SIGNATURE_KEYS.includes(row.signature));
+    expect(retired.map((row) => row.signature)).toEqual([RETIRED]);
   });
 });

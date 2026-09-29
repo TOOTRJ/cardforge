@@ -34,6 +34,7 @@ const ROW = {
   collectorNumber: "435",
   scryfallId: "8df6603a-38c1-4d18-8b84-6211e9a7cc09",
   status: "nearest",
+  cause: "missing",
   template: "m15",
   artFlag: "window-cropped",
   source: "import",
@@ -57,6 +58,7 @@ describe("recordFrameRequestAction", () => {
       p_collector: "435",
       p_scryfall_id: "8df6603a-38c1-4d18-8b84-6211e9a7cc09",
       p_status: "nearest",
+      p_cause: "missing",
       p_template: "m15",
       p_art_flag: "window-cropped",
       p_source: "import",
@@ -72,11 +74,22 @@ describe("recordFrameRequestAction", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it("refuses other bad input (template, set code, status) and junk", async () => {
+  it("passes the cause through: an exact frame waiting for verification (D1)", async () => {
+    expect(await recordFrameRequestAction({ ...ROW, cause: "unverified" })).toEqual({ ok: true });
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      "record_frame_request",
+      expect.objectContaining({ p_status: "nearest", p_cause: "unverified" }),
+    );
+  });
+
+  it("refuses other bad input (template, set code, status, cause) and junk", async () => {
     for (const bad of [
       { ...ROW, template: "notaframe" },
       { ...ROW, setCode: "DROP TABLE" },
       { ...ROW, status: "exact" },
+      { ...ROW, cause: undefined },
+      { ...ROW, cause: "verified" },
+      { ...ROW, status: "unsupported", cause: "unverified" },
       null,
       "borderless/standard",
     ]) {

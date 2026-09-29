@@ -74,6 +74,12 @@ export type FrameMatch = {
    *  the textless frame isn't verified (owner decision A9, 2026-09-29).
    *  withVerification (lib/creator/frame-resolve.ts) swaps it in. */
   onceVerified?: FrameTemplate;
+  /** Set by withVerification only: the registry answered `exact`, but that
+   *  frame isn't verified in the card's colour yet, so the match was
+   *  downgraded to `nearest`. The frame request log files it under "Not yet
+   *  verified" instead of "Missing frames" (TODO 1.6, owner decision D1
+   *  2026-09-29). Never set by a registry rule. */
+  unverified?: true;
 };
 
 /** The facts the registry reads that need the importer's own rules — the

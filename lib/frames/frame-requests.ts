@@ -4,6 +4,7 @@ import { isUuid } from "@/lib/ids";
 import {
   FRAME_SIGNATURE_RULES,
   isKnownFrameSignature,
+  type FrameMatch,
 } from "@/lib/scryfall/frame-signatures";
 import { withVerification } from "@/lib/creator/frame-resolve";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
@@ -14,8 +15,12 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 // Scryfall import whose printing PipGlyph can't reproduce exactly writes one
 // frame_requests row — the registry's signature and label, the printing, the
 // frame the card landed on and, when the art came along, what that art is
-// (TODO 1.18). /admin/frame-requests counts them per signature + set, and
-// that order decides which frames get built next (frames plan 4.7 / 4.11).
+// (TODO 1.18) — and WHY it was logged: no exact frame ('missing': the
+// registry's nearest or unsupported answer), or an exact frame not verified
+// in the card's colour yet ('unverified', owner decision D1 2026-09-29).
+// /admin/frame-requests counts them per signature + set in those two groups,
+// most distinct users first, and that order decides which frames get built
+// (frames plan 4.7 / 4.11) or verified next.
 //
 // Pure and client-safe: the creator builds the row here and hands it to
 // recordFrameRequestAction (lib/frames/frame-request-actions.ts), which
@@ -24,6 +29,20 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 
 export const FRAME_REQUEST_STATUSES = ["nearest", "unsupported"] as const;
 export type FrameRequestStatus = (typeof FRAME_REQUEST_STATUSES)[number];
+
+/** Why a row is logged (owner decision D1, 2026-09-29): */
+export const FRAME_REQUEST_CAUSES = ["missing", "unverified"] as const;
+/** 'missing' — the registry has no exact frame for this printing (its
+ *  nearest or unsupported answer): something to BUILD. 'unverified' — the
+ *  registry's exact frame exists but isn't verified in the card's colour
+ *  (withVerification downgraded it): something to VERIFY. Always
+ *  `nearest`. */
+export type FrameRequestCause = (typeof FRAME_REQUEST_CAUSES)[number];
+
+export const FRAME_REQUEST_CAUSE_LABELS: Record<FrameRequestCause, string> = {
+  missing: "Missing frames",
+  unverified: "Not yet verified",
+};
 
 export const FRAME_REQUEST_SOURCES = ["import", "deck_prefill"] as const;
 /** The import dialog, or the /create?deckCard pre-fill. */
@@ -43,6 +62,8 @@ export type FrameRequestInput = {
   collectorNumber: string | null;
   scryfallId: string | null;
   status: FrameRequestStatus;
+  /** Why it is logged; 'unverified' only with status 'nearest'. */
+  cause: FrameRequestCause;
   /** The frame the card landed on. */
   template: FrameTemplate | null;
   artFlag: FrameRequestArtFlag | null;
@@ -55,24 +76,32 @@ export const FRAME_REQUEST_SET_PATTERN = /^[a-z0-9]{2,10}$/;
 
 /** The action's validation — the DB CHECKs, plus the app's vocabularies (a
  *  registry signature, a PipGlyph template) that the table can't know. */
-export const frameRequestSchema = z.object({
-  signature: z
-    .string()
-    .min(1)
-    .max(120)
-    .refine((value) => isKnownFrameSignature(value), "Unknown frame signature."),
-  label: z.string().trim().min(1).max(160),
-  setCode: z.string().regex(FRAME_REQUEST_SET_PATTERN).nullable(),
-  collectorNumber: z.string().trim().min(1).max(16).nullable(),
-  scryfallId: z
-    .string()
-    .refine((value) => isUuid(value), "Not a Scryfall id.")
-    .nullable(),
-  status: z.enum(FRAME_REQUEST_STATUSES),
-  template: z.enum(FRAME_TEMPLATE_VALUES).nullable(),
-  artFlag: z.enum(FRAME_REQUEST_ART_FLAGS).nullable(),
-  source: z.enum(FRAME_REQUEST_SOURCES),
-});
+export const frameRequestSchema = z
+  .object({
+    signature: z
+      .string()
+      .min(1)
+      .max(120)
+      .refine((value) => isKnownFrameSignature(value), "Unknown frame signature."),
+    label: z.string().trim().min(1).max(160),
+    setCode: z.string().regex(FRAME_REQUEST_SET_PATTERN).nullable(),
+    collectorNumber: z.string().trim().min(1).max(16).nullable(),
+    scryfallId: z
+      .string()
+      .refine((value) => isUuid(value), "Not a Scryfall id.")
+      .nullable(),
+    status: z.enum(FRAME_REQUEST_STATUSES),
+    cause: z.enum(FRAME_REQUEST_CAUSES),
+    template: z.enum(FRAME_TEMPLATE_VALUES).nullable(),
+    artFlag: z.enum(FRAME_REQUEST_ART_FLAGS).nullable(),
+    source: z.enum(FRAME_REQUEST_SOURCES),
+  })
+  // An unverified exact frame is only ever downgraded to nearest (the
+  // table's frame_requests_unverified_is_nearest CHECK).
+  .refine((row) => row.cause !== "unverified" || row.status === "nearest", {
+    message: "An unverified frame is logged as nearest.",
+    path: ["cause"],
+  });
 
 type PatchForRequest = Pick<
   ScryfallImportPatch,
@@ -114,7 +143,10 @@ export function artFlagForImport(
  * log: the final match is exact (the static registry match, finalized
  * against the verified combos when `verifiedKeys` is given — the
  * /api/scryfall/named route already did that for its own patch), or the
- * patch carries no match (an older cached patch).
+ * patch carries no match (an older cached patch). The row's cause comes
+ * from that finalization: withVerification marks the exact frames it
+ * downgraded `unverified`; any other inexact answer is the registry's own
+ * ('missing').
  */
 export function frameRequestFromImport(
   patch: PatchForRequest,
@@ -143,10 +175,18 @@ export function frameRequestFromImport(
     collectorNumber: collector && collector.length <= 16 ? collector : null,
     scryfallId: isUuid(patch.source_scryfall_id) ? patch.source_scryfall_id : null,
     status: match.status,
+    cause: frameRequestCause(match),
     template: options.landedTemplate ?? match.landOn ?? match.template,
     artFlag: artFlagForImport(patch, options.artImported),
     source: options.source,
   };
+}
+
+/** Why an inexact (finalized) match is logged — see FrameRequestCause. */
+export function frameRequestCause(
+  match: Pick<FrameMatch, "status" | "unverified">,
+): FrameRequestCause {
+  return match.unverified === true && match.status === "nearest" ? "unverified" : "missing";
 }
 
 const RULE_BY_KEY = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));

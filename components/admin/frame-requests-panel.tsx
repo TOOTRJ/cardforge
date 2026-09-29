@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, ListOrdered } from "lucide-react";
+import { ArrowDown, BadgeCheck, ExternalLink, Hammer, ListOrdered, type LucideIcon } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,14 +11,21 @@ import {
   type FrameRequestRow,
   type FrameRequestSummary,
 } from "@/lib/frames/frame-request-queries";
-import type { FrameRequestArtFlag } from "@/lib/frames/frame-requests";
+import {
+  FRAME_REQUEST_CAUSE_LABELS,
+  type FrameRequestArtFlag,
+} from "@/lib/frames/frame-requests";
 
 // ---------------------------------------------------------------------------
 // /admin/frame-requests (TODO 1.6): every import PipGlyph couldn't reproduce
-// exactly, per frame signature + set, most requested first — the order the
-// missing frames get built in (frames plan 4.7 / 4.11). Families PipGlyph
-// will never build (posters, The Zeta Set, substitute and art cards) sit collapsed
-// at the bottom: no count changes their answer. Server component.
+// exactly, per frame signature + set, in two groups (owner decision D1,
+// 2026-09-29): "Missing frames" — the registry has no exact frame, so build
+// it (frames plan 4.7 / 4.11) — and "Not yet verified" — the exact frame
+// exists but isn't verified in the card's colour, so verify it. Each is
+// sorted by distinct users, then requests (D4). A row whose signature isn't
+// a registry key is flagged (D6). Families PipGlyph will never build
+// (posters, The Zeta Set, substitute and art cards) sit collapsed at the
+// bottom: no count changes their answer. Server component.
 // ---------------------------------------------------------------------------
 
 const ART_FLAG_LABEL: Record<FrameRequestArtFlag, string> = {
@@ -33,6 +40,11 @@ const ART_FLAG_TITLE: Record<FrameRequestArtFlag, string> = {
     "Scryfall's art includes parts of the printed frame (TODO 1.18)",
 };
 
+const NOT_IN_REGISTRY_TITLE =
+  "No rule in lib/scryfall/frame-signatures.ts has this key: a renamed or removed rule, or a row written straight through the RPC with an invented key. It no longer groups with new imports.";
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 export function FrameRequestsPanel({
   summary,
   now,
@@ -43,8 +55,9 @@ export function FrameRequestsPanel({
 }) {
   const open = summary.rows.filter((row) => !row.forGood);
   const forGood = summary.rows.filter((row) => row.forGood);
-  const signatures = new Set(open.map((row) => row.signature)).size;
-  const openRequests = open.reduce((sum, row) => sum + row.count, 0);
+  const missing = open.filter((row) => row.cause === "missing");
+  const unverified = open.filter((row) => row.cause === "unverified");
+  const unknown = summary.rows.filter((row) => !row.inRegistry).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,10 +82,7 @@ export function FrameRequestsPanel({
             );
           })}
         </nav>
-        <span className="text-xs text-muted">
-          {openRequests} request{openRequests === 1 ? "" : "s"} for {signatures} missing frame
-          {signatures === 1 ? "" : "s"}
-        </span>
+        <span className="text-xs text-muted">Most distinct users first, then most requests</span>
       </div>
 
       {summary.error ? (
@@ -81,7 +91,13 @@ export function FrameRequestsPanel({
         </p>
       ) : null}
 
-      {open.length === 0 ? (
+      {unknown > 0 ? (
+        <p className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {`${plural(unknown, "row")} ${unknown === 1 ? "carries a signature" : "carry signatures"} the registry doesn’t know — flagged “not in registry” below.`}
+        </p>
+      ) : null}
+
+      {summary.rows.length === 0 ? (
         <SurfaceCard className="p-4">
           <EmptyState
             icon={ListOrdered}
@@ -90,9 +106,43 @@ export function FrameRequestsPanel({
           />
         </SurfaceCard>
       ) : (
-        <SurfaceCard className="p-0">
-          <RequestTable rows={open} now={now} caption="Most-requested missing frames" />
-        </SurfaceCard>
+        <>
+          <RequestGroup
+            id="missing-frames"
+            icon={Hammer}
+            title={FRAME_REQUEST_CAUSE_LABELS.missing}
+            noun="missing frame"
+            description={
+              <>
+                The registry&rsquo;s nearest or unsupported answer: PipGlyph has no frame for these
+                printings yet. Build from the top.
+              </>
+            }
+            rows={missing}
+            now={now}
+          />
+          <RequestGroup
+            id="not-yet-verified"
+            icon={BadgeCheck}
+            title={FRAME_REQUEST_CAUSE_LABELS.unverified}
+            noun="unverified frame"
+            description={
+              <>
+                The registry names an exact frame, but it isn&rsquo;t verified in the card&rsquo;s
+                colour yet, so these imports landed on the nearest one. Verify it in{" "}
+                <Link
+                  href="/admin/frame-compare"
+                  className="text-primary-bright underline-offset-2 hover:underline"
+                >
+                  Frame compare
+                </Link>{" "}
+                and the next import is exact.
+              </>
+            }
+            rows={unverified}
+            now={now}
+          />
+        </>
       )}
 
       {forGood.length > 0 ? (
@@ -106,6 +156,54 @@ export function FrameRequestsPanel({
         </details>
       ) : null}
     </div>
+  );
+}
+
+function RequestGroup({
+  id,
+  icon: Icon,
+  title,
+  noun,
+  description,
+  rows,
+  now,
+}: {
+  id: string;
+  icon: LucideIcon;
+  title: string;
+  /** "missing frame" → "4 requests for 2 missing frames". */
+  noun: string;
+  description: React.ReactNode;
+  rows: FrameRequestRow[];
+  now?: number;
+}) {
+  const requests = rows.reduce((sum, row) => sum + row.count, 0);
+  const signatures = new Set(rows.map((row) => row.signature)).size;
+  const headingId = `${id}-heading`;
+  return (
+    <SurfaceCard as="section" aria-labelledby={headingId} className="p-0">
+      <div className="flex flex-col gap-1 px-4 pt-4 pb-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-gold-strong" aria-hidden />
+            <h2 id={headingId} className="font-display text-base font-semibold text-foreground">
+              {title}
+            </h2>
+          </div>
+          <span className="text-xs text-muted">
+            {plural(requests, "request")} for {plural(signatures, noun)}
+          </span>
+        </div>
+        <p className="text-sm text-muted">{description}</p>
+      </div>
+      {rows.length === 0 ? (
+        <p className="border-t border-border/40 px-4 py-4 text-sm text-subtle">
+          None in this window.
+        </p>
+      ) : (
+        <RequestTable rows={rows} now={now} caption={title} />
+      )}
+    </SurfaceCard>
   );
 }
 
@@ -129,8 +227,13 @@ function RequestTable({
             <th scope="col" className="px-4 py-2 font-medium">Printing is</th>
             <th scope="col" className="px-2 py-2 font-medium">Set</th>
             <th scope="col" className="px-2 py-2 font-medium">Status</th>
+            <th scope="col" aria-sort="descending" className="px-2 py-2 text-right font-medium">
+              <span className="inline-flex items-center gap-0.5">
+                <ArrowDown className="h-3 w-3" aria-hidden />
+                Users
+              </span>
+            </th>
             <th scope="col" className="px-2 py-2 text-right font-medium">Requests</th>
-            <th scope="col" className="px-2 py-2 text-right font-medium">Users</th>
             <th scope="col" className="px-2 py-2 font-medium">Last seen</th>
             <th scope="col" className="px-2 py-2 font-medium">Landed on</th>
             <th scope="col" className="px-2 py-2 font-medium">Art</th>
@@ -140,14 +243,20 @@ function RequestTable({
         <tbody>
           {rows.map((row) => (
             <tr
-              key={`${row.signature}|${row.setCode ?? ""}`}
+              key={`${row.signature}|${row.setCode ?? ""}|${row.cause}`}
               data-signature={row.signature}
+              data-cause={row.cause}
               className="border-t border-border/40 align-top"
             >
               <td className="px-4 py-2">
                 <div className="font-medium text-foreground">{row.label}</div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-subtle">
                   <code>{row.signature}</code>
+                  {row.inRegistry ? null : (
+                    <Badge variant="danger" title={NOT_IN_REGISTRY_TITLE} className="whitespace-nowrap">
+                      not in registry
+                    </Badge>
+                  )}
                   {row.blockedBy ? <span>· TODO {row.blockedBy}</span> : null}
                 </div>
               </td>
@@ -159,8 +268,8 @@ function RequestTable({
                   {row.status}
                 </Badge>
               </td>
-              <td className="px-2 py-2 text-right tabular-nums text-foreground">{row.count}</td>
-              <td className="px-2 py-2 text-right tabular-nums text-muted">{row.users}</td>
+              <td className="px-2 py-2 text-right tabular-nums text-foreground">{row.users}</td>
+              <td className="px-2 py-2 text-right tabular-nums text-muted">{row.count}</td>
               <td className="whitespace-nowrap px-2 py-2 text-muted">
                 <time dateTime={row.lastSeen} title={formatShortDate(row.lastSeen)}>
                   {formatRelativeTime(row.lastSeen, now)}

@@ -971,7 +971,8 @@ export type Database = {
         Relationships: [];
       };
       // Migration 0123 — the "most-requested missing frames" log (TODO 1.6).
-      // Written only through record_frame_request(); admins read.
+      // Written only through record_frame_request(); admins read. `cause`:
+      // 'missing' | 'unverified' (D1).
       frame_requests: {
         Row: {
           id: string;
@@ -982,6 +983,7 @@ export type Database = {
           collector_number: string | null;
           scryfall_id: string | null;
           status: string;
+          cause: string;
           template: string | null;
           art_flag: string | null;
           source: string;
@@ -996,6 +998,7 @@ export type Database = {
           collector_number?: string | null;
           scryfall_id?: string | null;
           status: string;
+          cause: string;
           template?: string | null;
           art_flag?: string | null;
           source?: string;
@@ -1010,6 +1013,7 @@ export type Database = {
           collector_number?: string | null;
           scryfall_id?: string | null;
           status?: string;
+          cause?: string;
           template?: string | null;
           art_flag?: string | null;
           source?: string;
@@ -1853,6 +1857,7 @@ export type Database = {
           p_collector: string | null;
           p_scryfall_id: string | null;
           p_status: string;
+          p_cause: string;
           p_template: string | null;
           p_art_flag: string | null;
           p_source: string;
@@ -1865,6 +1870,7 @@ export type Database = {
           signature: string;
           label: string;
           set_code: string | null;
+          cause: string;
           status: string;
           template: string | null;
           n: number;

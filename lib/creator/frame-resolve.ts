@@ -245,12 +245,13 @@ export function resolveImportFrame(input: {
  *     A9) takes that frame when it is;
  *   • `exact` only when PipGlyph's frame is verified in the card's colour —
  *     an unverified frame is never an exact match to a user, so it becomes
- *     `nearest`, "not yet verified in <colour>".
+ *     `nearest`, "not yet verified in <colour>", marked `unverified` (the
+ *     frame request log's "Not yet verified" cause, TODO 1.6 D1).
  * Nearest and unsupported matches otherwise pass through unchanged. Pure.
  */
 export function withVerification<
   T extends Pick<FrameMatch, "status" | "template" | "reason"> &
-    Partial<Pick<FrameMatch, "onceVerified">>,
+    Partial<Pick<FrameMatch, "onceVerified" | "unverified">>,
 >(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
   let finalized = match;
   if (match.onceVerified && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey))) {
@@ -263,6 +264,9 @@ export function withVerification<
     ...finalized,
     status: "nearest",
     reason: `not yet verified in ${colorWord(colorKey)}`,
+    // The frame request log's cause (TODO 1.6, D1): the frame exists, it
+    // only waits for verification — a nearest answer can't say that alone.
+    unverified: true,
   };
 }
 

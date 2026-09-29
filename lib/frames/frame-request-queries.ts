@@ -10,14 +10,17 @@ import {
   scryfallPrintingUrl,
   signatureBlockedBy,
   type FrameRequestArtFlag,
+  type FrameRequestCause,
   type FrameRequestStatus,
 } from "@/lib/frames/frame-requests";
+import { isKnownFrameSignature } from "@/lib/scryfall/frame-signatures";
 
 // ---------------------------------------------------------------------------
 // /admin/frame-requests reads (TODO 1.6, migration 0123): the requests per
-// signature + set over a window, most requested first. The RPC is
-// EXECUTE-granted to service_role only; the is_admin check here is what
-// stands between a signed-in user and it (null → the page 404s).
+// signature + set + cause over a window, most distinct users first, then
+// most requests (owner decision D4, 2026-09-29). The RPC is EXECUTE-granted
+// to service_role only; the is_admin check here is what stands between a
+// signed-in user and it (null → the page 404s).
 // ---------------------------------------------------------------------------
 
 export const FRAME_REQUEST_WINDOWS = ["30", "90", "all"] as const;
@@ -41,6 +44,9 @@ export type FrameRequestRow = {
   label: string;
   setCode: string | null;
   status: FrameRequestStatus;
+  /** Why these imports were logged (D1): no exact frame, or an exact frame
+   *  not yet verified in the card's colour. */
+  cause: FrameRequestCause;
   count: number;
   users: number;
   lastSeen: string;
@@ -56,6 +62,11 @@ export type FrameRequestRow = {
   blockedBy: string | null;
   /** PipGlyph will never build this family (collapsed by default). */
   forGood: boolean;
+  /** The signature is a key of today's registry. False for a renamed or
+   *  removed rule, or a row written straight through the RPC with an
+   *  invented key (the table can't check the registry) — the page flags it
+   *  (D6). */
+  inRegistry: boolean;
 };
 
 export type FrameRequestSummary = {
@@ -70,6 +81,7 @@ type RpcRow = {
   signature: string;
   label: string;
   set_code: string | null;
+  cause: string;
   status: string;
   template: string | null;
   n: number | string;
@@ -90,6 +102,7 @@ export function mapFrameRequestRows(rows: readonly RpcRow[]): FrameRequestRow[] 
     label: row.label,
     setCode: row.set_code,
     status: row.status === "unsupported" ? "unsupported" : "nearest",
+    cause: row.cause === "unverified" ? "unverified" : "missing",
     count: Number(row.n) || 0,
     users: Number(row.users) || 0,
     lastSeen: row.last_seen,
@@ -103,7 +116,20 @@ export function mapFrameRequestRows(rows: readonly RpcRow[]): FrameRequestRow[] 
     sampleUrl: scryfallPrintingUrl(row.set_code, row.sample_collector),
     blockedBy: signatureBlockedBy(row.signature),
     forGood: isForGoodSignature(row.signature),
+    inRegistry: isKnownFrameSignature(row.signature),
   }));
+}
+
+/** The page's order (D4): most distinct users, then most requests, then the
+ *  latest. The RPC already sorts this way (its 500-row limit needs it);
+ *  this keeps the panel honest about it. Pure: returns a new array. */
+export function sortFrameRequestRows(rows: readonly FrameRequestRow[]): FrameRequestRow[] {
+  return [...rows].sort(
+    (a, b) =>
+      b.users - a.users ||
+      b.count - a.count ||
+      Date.parse(b.lastSeen) - Date.parse(a.lastSeen),
+  );
 }
 
 export function windowSince(range: FrameRequestWindow, now = Date.now()): string | null {
@@ -136,7 +162,7 @@ export async function getFrameRequestSummary(
       // The shared dev DB has no migration 0123 until it merges.
       return empty("Couldn't read the request log (is migration 0123 applied here?).");
     }
-    const rows = mapFrameRequestRows((data ?? []) as RpcRow[]);
+    const rows = sortFrameRequestRows(mapFrameRequestRows((data ?? []) as RpcRow[]));
     return {
       window: range,
       rows,

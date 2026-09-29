@@ -37,6 +37,7 @@ export async function recordFrameRequestAction(
       p_collector: row.collectorNumber,
       p_scryfall_id: row.scryfallId,
       p_status: row.status,
+      p_cause: row.cause,
       p_template: row.template,
       p_art_flag: row.artFlag,
       p_source: row.source,
