@@ -153,6 +153,38 @@ export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs 
   return { ok: false, status };
 }
 
+/**
+ * Download a public object WHOLE and keep it only when its bytes are the
+ * manifest's: { ok: true, bytes, status } or { ok: false, status }. A 404
+ * is final; a 400/429/5xx, a timeout, a dropped connection or bytes with
+ * the wrong sha256 (a truncated body) are retried with the same backoff as
+ * objectStatus. `status` on a miss is the last HTTP status, "timeout",
+ * "network" or "sha256 mismatch". scripts/frames-fetch.mjs uses it to give
+ * CI the bucket masters (TODO 7.6); the sha is what makes a fallback origin
+ * (the dev bucket) as trustworthy as production.
+ */
+export async function fetchVerified(url, expectedSha256, { tries = 4, baseDelayMs = 500, timeoutMs = 60_000 } = {}) {
+  let status = "network";
+  for (let attempt = 1; attempt <= tries; attempt += 1) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      status = String(res.status);
+      if (res.ok) {
+        const bytes = Buffer.from(await res.arrayBuffer());
+        if (sha256(bytes) === expectedSha256) return { ok: true, bytes, status };
+        status = "sha256 mismatch";
+      } else {
+        await res.body?.cancel().catch(() => {});
+        if (res.status === 404) return { ok: false, status };
+      }
+    } catch (err) {
+      status = err?.name === "TimeoutError" || err?.name === "AbortError" ? "timeout" : "network";
+    }
+    if (attempt < tries) await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** (attempt - 1)));
+  }
+  return { ok: false, status };
+}
+
 /** True when a public object exists at the expected size — objectStatus().ok
  *  with a SHORT budget (3 tries, 0.3 s → 0.6 s): publish / promote /
  *  restore-dev check objects that are usually missing, and they re-verify

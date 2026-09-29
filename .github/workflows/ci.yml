@@ -3,6 +3,8 @@
 #   checks  typecheck + lint + unit tests with coverage floors + `next build`
 #           (~5 min). The build is the only thing that catches a cookie read
 #           on a `dynamic = "error"` page or an undefined Satori style value.
+#           The unit tests run on the bucket frame masters too, fetched from
+#           production's PUBLIC frames bucket (scripts/frames-fetch.mjs).
 #   frames  every object in lib/frames/frame-manifest.json is readable from
 #           PRODUCTION's frames bucket (frames plan 4.2, docs/FRAMES.md) — a
 #           PR that adds frames stays red until the owner runs
@@ -42,7 +44,37 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      # The Card Conjurer-derived frames live in the frames bucket, never in
+      # git (docs/FRAMES.md): fetch every PNG in the frame manifest from
+      # PRODUCTION's public bucket — sha256-checked against the manifest; the
+      # dev bucket is asked only for a PR's frames not promoted yet — so the
+      # tests that read bucket masters (the art-window coverage 7.6, the edge
+      # contract 7.7, the square corners, the plate ink) run on them instead
+      # of skipping. Cached by the manifest's hash (saved right after the
+      # fetch, so a red test run keeps it); never committed (.gitignore).
+      - name: Restore bucket frames
+        id: frames-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .frames-cache
+          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          restore-keys: frames-
+      # A hung storage read fails this step in 10 min instead of eating the
+      # job's 25 (fetchVerified retries each file 4× with a 60 s timeout).
+      - name: Fetch bucket frames
+        timeout-minutes: 10
+        run: >-
+          node scripts/frames-fetch.mjs --out .frames-cache
+          --fallback-origin https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames
+      - name: Save bucket frames
+        if: steps.frames-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .frames-cache
+          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
       - run: npm run test:coverage
+        env:
+          FRAMES_BUILD_DIR: .frames-cache
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

@@ -117,6 +117,29 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   when a local build is present (`FRAMES_BUILD_DIR`, else `.frames-build`,
   checked against the manifest's sha256). A new template declares its edges
   there first; today's known failures are listed as expected failures.
+- **Art-window coverage (TODO 7.6).** Right after the edge contract, the
+  importer flood-fills each master's see-through window (α < 16) from the
+  centre of every art slot its profile paints (`artSlot`, and a second
+  face's `secondFace.artSlot` turned by its `rotation`) and asks the slot to
+  cover it with ≥ 0.05 % of the card to spare, and every translucent frame
+  part (α < 250 — a text box or type bar the art shows through) with a
+  pixel under the slot to stay inside it, give or take a 0.2 % anti-aliased
+  rim; on a see-through master (`underFrameArt`, 4.17) the under-frame rect
+  must cover the window and every pixel the frame lets ≥ 2 % through. A
+  see-through pixel no art covers shows the bake's #101015 (a seam where a
+  translucent box runs past the art). `lib/frames/art-window.ts` holds the
+  check and its known failures, each with the TODO item that fixes it and a
+  `maxMissPx` bound it may not get worse than; the
+  importer reads the profiles through `scripts/lib/ts-alias-hooks.mjs`, and
+  a violation makes it exit non-zero. CI runs it on every master
+  (`tests/unit/render/art-window-coverage.test.ts`): the checks job fetches
+  the manifest's PNGs from production's PUBLIC bucket first
+  (`node scripts/frames-fetch.mjs`, sha256-checked, cached by the
+  manifest's hash, the dev bucket only for a PR's frames not promoted yet)
+  and sets `FRAMES_BUILD_DIR`, so the bucket halves of the edge contract,
+  the square corners and the plate ink run there too. Locally:
+  `node scripts/frames-fetch.mjs` (into the gitignored `.frames-cache`),
+  then `FRAMES_BUILD_DIR=.frames-cache npm run test:unit`.
 - **Never committed.** Card Conjurer's site was shut down after a Wizards of
   the Coast cease-and-desist, and the fork has no licence file. The converted
   frames only ever go to the bucket.
