@@ -5,23 +5,25 @@
 //
 // One dialog covering every "get the card off the screen" path:
 //
-//   PNG          — render of the card (free: 750 px with the PipGlyph mark;
-//                  paid: clean 1500 × 2100), with a Rounded / Square switch
-//                  for EVERY viewer (TODO 3.26, owner decision 2026-09-27):
-//                  Rounded (the default) cuts the card's corner transparent,
-//                  like the card in the gallery; Square is the full
-//                  rectangle with the corner in the border's colour, for
-//                  printing. Both ask the png route by name (corners=…).
+//   Image        — render of the card (free: 750 px with the PipGlyph mark;
+//                  paid: clean 1500 × 2100) as a PNG or a JPEG (TODO 6.18),
+//                  with a Rounded / Square switch for EVERY viewer (TODO
+//                  3.26, owner decision 2026-09-27): Rounded (the default)
+//                  cuts the card's corner transparent, like the card in the
+//                  gallery; Square is the full rectangle with the corner in
+//                  the border's colour, for printing. Both ask the png route
+//                  by name (corners=…). A JPEG has no transparency, so it is
+//                  always Square (format=jpeg; the switch shows it).
 //   Single PDF   — 2.5"×3.5" page sized exactly to the card; sleeve-ready. (Plus+)
 //   3×3 Letter   — 9 copies on US Letter with corner crop marks. (Pro)
 //   3×3 A4       — 9 copies on A4 with corner crop marks. (Pro)
 //
 // A free viewer gets exactly ONE live option — the low-resolution
-// watermarked PNG — and sees the other formats greyed out (owner decision
-// 2026-09-15); the upgrade CTA sits on the PNG panel. Paid tabs are gated by
-// the viewer's plan (enforced server-side too). Available formats are plain
-// anchors with `download` so the browser saves the file without a
-// client-side fetch.
+// watermarked image (PNG or JPEG) — and sees the other formats greyed out
+// (owner decision 2026-09-15); the upgrade CTA sits on the Image panel. Paid
+// tabs are gated by the viewer's plan (enforced server-side too). Available
+// formats are plain anchors with `download` so the browser saves the file
+// without a client-side fetch.
 // ---------------------------------------------------------------------------
 
 import { useState, type ReactNode } from "react";
@@ -52,15 +54,32 @@ import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { PremiumBadge } from "@/components/billing/premium-badge";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { cardPngHref, type CardCorners } from "@/lib/cards/output-corners";
+import {
+  cardImageFilename,
+  cardJpegHref,
+  effectiveCorners,
+  type CardImageFormat,
+} from "@/lib/cards/output-format";
 import { cn } from "@/lib/utils";
 
-const CORNER_OPTIONS: ChipOption<CardCorners>[] = [
-  { value: "round", label: "Rounded" },
-  { value: "square", label: "Square" },
+const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
+  { value: "png", label: "PNG" },
+  { value: "jpeg", label: "JPEG" },
 ];
 
+const FORMAT_LABEL: Record<CardImageFormat, string> = { png: "PNG", jpeg: "JPEG" };
+
+/** A JPEG can't be rounded: Rounded is shown but not selectable. */
+function cornerOptions(format: CardImageFormat): ChipOption<CardCorners>[] {
+  return [
+    { value: "round", label: "Rounded", disabled: format === "jpeg" },
+    { value: "square", label: "Square" },
+  ];
+}
+
 /** One line under the switch — tier-aware: only a paid viewer has the PDF. */
-function cornersHint(isPaid: boolean): string {
+function cornersHint(isPaid: boolean, format: CardImageFormat): string {
+  if (format === "jpeg") return "JPEG has no transparency, so it's always Square — a smaller file.";
   return isPaid
     ? "Rounded for sharing; choose Square (or the PDF) to print."
     : "Rounded for sharing; choose Square to print.";
@@ -73,7 +92,7 @@ type DownloadModalProps = {
    *  "Download" button styled as an outline button. */
   trigger?: ReactNode;
   /** Tab to open first. Defaults to "single" since one card on one page
-   *  is the most common pick (free users always start on PNG). */
+   *  is the most common pick (free users always start on Image). */
   defaultTab?: DownloadTab;
   /** Viewer entitlement. PDF needs a paid plan; sheets need Pro. Defaults to
    *  the free experience. */
@@ -98,18 +117,25 @@ export function DownloadModal({
   downloadDiffersFromGallery = false,
 }: DownloadModalProps) {
   const upgrade = useUpgradeModal();
-  // The PNG's corner — Rounded first, like the card in the gallery.
-  const [corners, setCorners] = useState<CardCorners>("round");
+  // PNG first; its corner Rounded first, like the card in the gallery. A
+  // JPEG is always square — the PNG's choice is kept for switching back.
+  const [format, setFormat] = useState<CardImageFormat>("png");
+  const [pngCorners, setPngCorners] = useState<CardCorners>("round");
+  const corners = effectiveCorners(format, pngCorners);
+  const preset = isPaid ? "hd" : "default";
   const base = `/api/cards/${cardId}`;
-  // Free users start on the PNG tab — the one format they can actually use.
+  // Free users start on the Image tab — the one format they can actually use.
   const initialTab: DownloadTab = isPaid ? defaultTab : "png";
   const links: Record<DownloadTab, { href: string; filename: string }> = {
     // The server clamps a free viewer to 750 px anyway; asking for it
-    // outright keeps the URL honest about what they get. The corner is
-    // always named: the route's default is square (older callers).
+    // outright keeps the URL honest about what they get. A PNG always names
+    // its corner: the route's default is square (older callers).
     png: {
-      href: cardPngHref(cardId, { preset: isPaid ? "hd" : "default", corners }),
-      filename: corners === "square" ? `${cardSlug}-square.png` : `${cardSlug}.png`,
+      href:
+        format === "jpeg"
+          ? cardJpegHref(cardId, { preset })
+          : cardPngHref(cardId, { preset, corners }),
+      filename: cardImageFilename(cardSlug, { format, corners }),
     },
     single: { href: `${base}/pdf?layout=card`, filename: `${cardSlug}.pdf` },
     letter: {
@@ -144,7 +170,7 @@ export function DownloadModal({
             <TabsList ariaLabel="Download format">
               <TabsTrigger value="png">
                 <FileImage className="h-3.5 w-3.5" aria-hidden />
-                PNG
+                Image
               </TabsTrigger>
               <TabsTrigger
                 value="single"
@@ -191,11 +217,21 @@ export function DownloadModal({
             ) : null}
 
             <TabsContent value="png" className="mt-5">
-              <CornersSwitch value={corners} onChange={setCorners} isPaid={isPaid} />
+              <FormatSwitch value={format} onChange={setFormat} />
+              <CornersSwitch
+                value={corners}
+                onChange={setPngCorners}
+                isPaid={isPaid}
+                format={format}
+              />
               {isPaid ? (
                 <DownloadPanel
-                  title="High-resolution PNG"
-                  description="Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
+                  title={`High-resolution ${FORMAT_LABEL[format]}`}
+                  description={
+                    format === "jpeg"
+                      ? "Clean, full-resolution (1500 × 2100) render with square corners, in a smaller file than the PNG."
+                      : "Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
+                  }
                   href={links.png.href}
                   filename={links.png.filename}
                 />
@@ -206,19 +242,19 @@ export function DownloadModal({
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="font-display text-sm font-semibold text-foreground">
-                      Low-resolution PNG
+                      Low-resolution {FORMAT_LABEL[format]}
                     </h3>
                     <p className="text-xs leading-5 text-muted">
                       750 × 1050 with the PipGlyph mark — fine for sharing and
                       playtesting. Plus and Pro download a clean, print-ready
-                      1500 × 2100 PNG.
+                      1500 × 2100 image.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button asChild variant="outline">
                       <a href={links.png.href} download={links.png.filename}>
                         <Download className="h-4 w-4" aria-hidden /> Download
-                        free PNG
+                        free {FORMAT_LABEL[format]}
                       </a>
                     </Button>
                     <Button
@@ -272,26 +308,50 @@ export function DownloadModal({
   );
 }
 
-/** The PNG's Rounded / Square switch — every viewer, free included. */
+/** PNG or JPEG (TODO 6.18) — every viewer, free included. */
+function FormatSwitch({
+  value,
+  onChange,
+}: {
+  value: CardImageFormat;
+  onChange: (next: CardImageFormat) => void;
+}) {
+  return (
+    <div className="mb-4 flex flex-col gap-1.5" data-testid="download-format">
+      <span className="text-xs font-medium text-foreground">File type</span>
+      <ChipGroup
+        ariaLabel="File type"
+        options={FORMAT_OPTIONS}
+        value={value}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+/** The image's Rounded / Square switch — every viewer, free included. A
+ *  JPEG shows Square with Rounded disabled. */
 function CornersSwitch({
   value,
   onChange,
   isPaid,
+  format,
 }: {
   value: CardCorners;
   onChange: (next: CardCorners) => void;
   isPaid: boolean;
+  format: CardImageFormat;
 }) {
   return (
     <div className="mb-4 flex flex-col gap-1.5" data-testid="download-corners">
       <span className="text-xs font-medium text-foreground">Corners</span>
       <ChipGroup
         ariaLabel="Corners"
-        options={CORNER_OPTIONS}
+        options={cornerOptions(format)}
         value={value}
         onChange={onChange}
       />
-      <p className="text-[11px] leading-4 text-subtle">{cornersHint(isPaid)}</p>
+      <p className="text-[11px] leading-4 text-subtle">{cornersHint(isPaid, format)}</p>
     </div>
   );
 }
