@@ -58,6 +58,12 @@ The borderless research of the same day adds 0.25, 1.16–1.18, 3.23,
 4.32–4.38, 5.7 and 7.7 (all open; order at the end of this section).
 The full-art research (2026-09-26) adds 0.26, 1.19, 3.24 and 4.39–4.44 (all
 open; order at the end of this section).
+The token research (2026-09-29, owner request: creature, artifact and
+enchantment tokens and emblems; Scryfall pulls 2026-09-28) adds 1.23, 3b.15,
+4.48–4.54 and 6.23 (all open; 4.49 is a P0 live bug; order at the end of this
+section), with the owner's nine decisions of 2026-09-29 recorded in the
+items. #396 (merged 2026-09-29) resolves every 2015-frame token `exact` on
+the arch frame; 1.23 says what changes there.
 
 Owner decisions this plan is built on (2026-09-24): first target the ~35
 high-value frames, then expand by the import request log · Card Conjurer (CC)
@@ -320,8 +326,13 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - **A6 — owner step:** re-verify m15snow w/b/g and m15token/c in the
         walk-through against the printings that ARE those frames — Search for
         Glory KHM #27 (w), Priest of the Haunted Edge KHM #104 (b), Sculptor
-        of Winter KHM #193 (g), Cadet TFRA #1 (c) — then retire their
+        of Winter KHM #193 (g), Eldrazi TBFZ #1 (c) — then retire their
         allowlist rows (`tests/unit/cards/frame-reference-signatures.test.ts`).
+        (Corrected 2026-09-29 by the token research: this first named Cadet
+        TFRA #1, an M20-design print, not the see-through arch frame
+        `m15token` draws. The allowlist row's text still names TFRA #1 until
+        1.23. 4.49 re-pins the token combos and resets their ticks, so its
+        walk-through covers m15token/c.)
         m15devoid/c stays verified against Kozilek's Channeler BFZ #10.
       - **A7 — a new small supabase PR** (branch
         `chore/seed-verified-frames`, its TODO 7.9) mirrors production's
@@ -354,6 +365,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       `textless` and `border_color` to the label so each look keeps a
       representative, and badge full-art printings. For Plains, 17 of the
       newest 30 printings are full art.
+      **Token research 2026-09-29:** 1.23 adds a "Tokens & emblems" search scope to this dialog. Scryfall's `include_extras` is sent only there, or as a fallback when a plain search finds nothing. The printings list (#399) is unchanged.
 - [ ] **1.6 [P1] `frame_requests` table + admin panel** — written on every
       nearest/unsupported outcome (signature label, set, count, last seen);
       "most-requested missing frames" decides the order of 4.7/4.11.
@@ -389,7 +401,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       `lib/render/card-image.tsx`:884).
       **Card Conjurer audit 2026-09-25:** Take every new symbol (h/half, paw, 100, 1000000, c/p, loyalty-*, ci-*, chaos, planeswalker) from mana-font 1.18, not CC's img/manaSymbols. CC's set is narrower: half.svg is never loaded and there is no {C/P}. {E}, {TK}, {A}, {CHAOS}, {PW} and the inline loyalty icons render as bare glyphs in text ink, with no disc, in both renderers. Print (KLD Aether Hub) has no disc; today {E} sits on the grey colourless disc (`lib/cards/rules-text.ts`:253-257, mana.css `.ms-cost`). Parity test.
       **Needs Lane A (2026-09-28, Phase 1 lane split):** the tokenizer and both renderers draw every one of these symbols, and moving {E} off its disc alters existing bakes — a renderer change with its `CARD_LAYOUT_VERSION` bump and `VERSION_ROLLOUT` policy, so it ships with the render lane, not the import lane.
-- [x] (done 2026-09-28 — feat/import-mapper-fixes: card titles to 150 characters — `CARD_TITLE_MAX` (`lib/validation/card.ts`) for the front title and the second face's, mirrored by the card_fill job's pinned title (`app/api/ai/jobs/route.ts`) and the remix's "(remix)" prefill (`lib/creator/revise.ts`); deck, challenge and news titles stay 120. Migration `0122_card_title_150.sql` (merge order, 2026-09-29: main's 0120 is the automatic re-bake (#398), #395's frame preview is 0121 and #400's `frame_requests` 0123, so this PR merges after #395 and before #400 — Supabase applies versions in order) drops and re-adds `cards_title_length` as 1–150 and changes no grants; a test holds the CHECK to the constant. The longest printed name, "Our Market Research Shows That Players Like Really Long Card Names…" (141 characters, **Unhinged** #107 — not Unfinity), imports and validates. `/api/scryfall/named`: an empty parameter is absent (`?id=&exact=Lightning%20Bolt` looks up the name), two non-empty ones are a 400, and `getCardByNameResult` (`lib/scryfall/client.ts`) tells Scryfall's "ambiguous" 404 from a plain 404, a 400 and an upstream failure — "Several cards match “bolt” — type more of the name." (404), "No card named “x”." (404), 400, 502; only a found card is logged. `getCardByName` (card or null) stays for the decklist importer, which now gets null instead of an exception on a network failure. Scryfall's error bodies captured 2026-09-28 in `tests/unit/scryfall/fixtures/named-errors.json`) **1.12 [P3] Title schema to 150 chars; proxy edge cases** (`?id=&exact=`,
+- [x] (done 2026-09-28 — feat/import-mapper-fixes: card titles to 150 characters — `CARD_TITLE_MAX` (`lib/validation/card.ts`) for the front title and the second face's, mirrored by the card_fill job's pinned title (`app/api/ai/jobs/route.ts`) and the remix's "(remix)" prefill (`lib/creator/revise.ts`); deck, challenge and news titles stay 120. Migration `0122_card_title_150.sql` (merge order, 2026-09-29: main's 0120 is the automatic re-bake (#398), #395's frame preview is 0121 and #400's `frame_requests` 0123, so this PR merges after #395 and before #400 — Supabase applies versions in order) drops and re-adds `cards_title_length` as 1–150 and changes no grants; a test holds the CHECK to the constant. The longest printed name, "Our Market Research Shows That Players Like Really Long Card Names…" (141 characters, **Unhinged** #107 — not Unfinity), imports and validates. `/api/scryfall/named`: an empty parameter is absent (`?id=&exact=Lightning%20Bolt` looks up the name), two non-empty ones are a 400, and `getCardByNameResult` (`lib/scryfall/client.ts`) tells Scryfall's "ambiguous" 404 from a plain 404, a 400 and an upstream failure — "Several cards match “bolt” — type more of the name." (404), "No card named “x”." (404), 400, 502; only a found card is logged. `getCardByName` (card or null) stays for the decklist importer, which now gets null instead of an exception on a network failure. Scryfall's error bodies captured 2026-09-28 in `tests/unit/scryfall/fixtures/named-errors.json`. **Token research 2026-09-29:** Scryfall's `/cards/named?exact=Treasure` answers F17 #11 "Dinosaur // Treasure", a DFC promo, not the Treasure token. 1.23 handles token names; keep this route's contract as it is) **1.12 [P3] Title schema to 150 chars; proxy edge cases** (`?id=&exact=`,
       Scryfall 400 vs ambiguous 404 messages).
 - [ ] **1.13 [P2] Refresh `ABILITY_WORDS`** (`lib/cards/rules-text.ts`:33) with
       the 2024–2026 words + a test against Scryfall's `catalog/ability-words`.
@@ -421,6 +433,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - This closes 1,131 more silent "exact"s (survey `stopgap.txt`).
       - Fixtures: BFZ #250 (→ m15land, toast), ONE #262 (toast), SCH #3 (textless → m15, toast), T2XM #4 (no toast).
       - Once 4.39 is verified for that colour, add a "Use Full-Art Basic" action.
+      **Token research 2026-09-29:** "Skip tokens on `frame: 2015`: those 171 already land on `m15token`, which is the right family" is wrong for the M20 design. T2XM #4 and TM20 #2 belong to the full-art family (4.48), not the 2014–19 arch that `m15token` draws. The T2XM #4 fixture changes from "no toast" to a toast. 1.23 removes the exception in `printingTreatmentFromScryfall`.
 - [x] (done 2026-09-28 — shipped in feat/import-frame-signatures, in the order below with the full-art amendment. Exact: the dark-box standard → m15borderless / m15borderlessartifact (the import still lands on the bordered frame, 1.18's decision, via `landOn`), BLB woodland, LTR ring, TLA/TLE elemental. An edge-to-edge match (m15borderless, m15borderlessartifact, fullartland) ALWAYS lands on its bordered frame, `full_art` or not: measured 2026-09-28, the `art_crop` of full-art borderless printings is the window too (FRA #382, CMM #702, SPG #119, TLE #1 626×457; MH3 #326 571×460). Nearest: the crown, the nickname line, the Nyx starfield, a vehicle, a colour indicator, a two-colour pinline and the light box (4.37) on the standard family; planeswalkers → m15pw (4.33); nonbasic lands → m15land (4.34); basics → fullartland (FRA #382–396's dark bars; other borderless basics — landing on m15land with 'Use Borderless Full-Art Basic' offered once verified, as 4.39 has it) or m15textlessland (textless); double-faced cards (5.7, checked before the kind so ZNR #284 names it); layout cards (4.38); tokens (4.37); textless non-basics → m15textless (4.35); text on the art (source material, TDM clan, 4.36); the other showcases and set frames (4.11). Posters are unsupported for good; MP2 / UST / BOT unsupported (UST's five textless basics go to the basic rule). **Correction, checked by eye on the scans:** BLB #295–336 is ONE woodland run in WUBRG + gold order (#315 and #316 print the same vine frame; so do #326 and #331), and the anime frame is only the raised-foil legends #343–355 — BLB #316 resolves `exact` bloomburrow, not anime. WOT #64 is the standard frame (confirmed). TLE #305–317 print the TLA elemental frame.) **1.17 [P0] Borderless families in the signature registry (feeds 1.4)** (borderless research 2026-09-25) — 1.1 parses the fields; this item is the borderless half of 1.4's resolver. Every borderless printing is `frame: 2015` (`-frame:2015` returns 0). None is a battle, and none carries `extendedart` (0 each).
 
       Resolve in this order:
@@ -486,7 +499,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - **Window-shaped crops.** Other full-art printings still get the 626×457 window (SCH #3, MID #268, DSK #389, SLZ #46). Covering a 1500×2100 slot scales the tall crops about 2.6–3.2× and the window crops about 4.6×.
       - **What to do.** Show the Art-step note with "…and includes parts of the printed frame", and log `art: frame-in-crop` on the 1.6 row.
       - **Decided 2026-09-26 (owner approved the full-art recommendations)**: warn only (the alternative was auto-trimming by a per-family inset table, which is heuristic and wrong on one-offs).
-- [x] (done 2026-09-28 — shipped in feat/import-frame-signatures, in the order below: substitute cards rejected (`reject`); SLZ and black posters unsupported for good, nearest M15; the Japan showcase nearest M15 (white run: 4.30 too); 1997/2003 tokens nearest m15token, 2015 full-art tokens exact; full-art basics by border, set list and design, never by `full_art` alone — FDN #282 / HOB #194 exact m15fullartland, ONE / MOM nearest (the 4.39 amendment), split bar (4.40, incl. ZEN / J14 on the 2003 frame), plain bar (4.41), coloured borders (4.30), per-set designs (4.11) and SLD black basics nearest m15fullartland; textless non-basics nearest m15textless / m15textlessland (4.42, 4.43), the TRK LCARS lands unsupported; any other bordered full-art printing nearest M15, "full-art one-off"; the look-alikes by set + range: ZNR #290–313 → fullart, ZNE / EXP → expeditionland (never by set_type alone: MUL, STA, EOS, WOT and SPG are `masterpiece` too). **Landing change:** a black-bordered (or yellow/white-bordered) full-art basic now lands on m15fullartland once that combo is verified (it landed on m15land, with a "Use Full-Art Basic" offer for the 2022 design only; their `art_crop` is the taller full-art crop) — kept by the owner 2026-09-29 (A2). A 2003-frame textless promo (P07 #1) names the 2003 frame (modern) as its nearest until m15textless is verified in its colour, then m15textless (owner decision A9 2026-09-29, `onceVerified`: it lands on modern/w as before the registry); Future Sight textless printings keep m15textless (`textless/future`)) **1.19 [P0] Full-art and textless families in the signature registry (feeds 1.4; runs after 1.17)** (full-art research 2026-09-26) — 1.17 resolves `border_color: borderless`. This item is the same resolver for every other printing Scryfall flags `full_art` or `textless`.
+- [x] (done 2026-09-28 — shipped in feat/import-frame-signatures, in the order below: substitute cards rejected (`reject`); SLZ and black posters unsupported for good, nearest M15; the Japan showcase nearest M15 (white run: 4.30 too); 1997/2003 tokens nearest m15token, 2015 full-art tokens exact; full-art basics by border, set list and design, never by `full_art` alone — FDN #282 / HOB #194 exact m15fullartland, ONE / MOM nearest (the 4.39 amendment), split bar (4.40, incl. ZEN / J14 on the 2003 frame), plain bar (4.41), coloured borders (4.30), per-set designs (4.11) and SLD black basics nearest m15fullartland; textless non-basics nearest m15textless / m15textlessland (4.42, 4.43), the TRK LCARS lands unsupported; any other bordered full-art printing nearest M15, "full-art one-off"; the look-alikes by set + range: ZNR #290–313 → fullart, ZNE / EXP → expeditionland (never by set_type alone: MUL, STA, EOS, WOT and SPG are `masterpiece` too). **Landing change:** a black-bordered (or yellow/white-bordered) full-art basic now lands on m15fullartland once that combo is verified (it landed on m15land, with a "Use Full-Art Basic" offer for the 2022 design only; their `art_crop` is the taller full-art crop) — kept by the owner 2026-09-29 (A2). A 2003-frame textless promo (P07 #1) names the 2003 frame (modern) as its nearest until m15textless is verified in its colour, then m15textless (owner decision A9 2026-09-29, `onceVerified`: it lands on modern/w as before the registry); Future Sight textless printings keep m15textless (`textless/future`). **Token research 2026-09-29:** 1.23 replaces two lines here: step 4's "`frame: 2015` → `m15token`, already exact (171 printings, e.g. T2XM #4 Cat)" and the Scale list's "only the tokens (T2XM #4, TZEN #3) → `m15token`". The new rule: released 2019-07-12 or later → 4.48; earlier → 4.49. The T2XM #4 fixture resolves to 4.48 (`nearest` `m15token` until 4.48 is verified). #396 (merged 2026-09-29) shipped step 4 as "2015 full-art tokens exact" and closed this item; 1.23 corrects that) **1.19 [P0] Full-art and textless families in the signature registry (feeds 1.4; runs after 1.17)** (full-art research 2026-09-26) — 1.17 resolves `border_color: borderless`. This item is the same resolver for every other printing Scryfall flags `full_art` or `textless`.
 
       **Scale.** 1,449 paper full-art printings are not borderless. 1,302 of them would still import as the bordered standard with a false "exact" after 1.16 as written (survey `stopgap.txt`; the 1.16 amendment above closes this). Run through the real mapper (`lib/scryfall/import-mapper.ts`:237-259; `today/resolve-results.txt`, `survey/mapper/mapper-results.txt`), today:
       - BFZ #250, ZNR #266, NEO #293 and ONE #262 → `m15land`; (2026-09-26: ONE / MOM print an older bar geometry than `m15fullartland`'s master — `nearest`; FDN #282 is the `exact` fixture, see 4.39)
@@ -545,6 +558,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
 
       `showsPowerToughness` (`card-display.ts`:49) is false for card type land, so Dryad Arbor loses its 1/1. Fix both in the renderers — for example store where the card type sits among the type words, or print Token / a layout kind's card type first — plus P/T when the supertype says Creature. A renderer change: `CARD_LAYOUT_VERSION` bump + a `VERSION_ROLLOUT` policy (owner's call). Fixtures: all five are in `tests/unit/scryfall/fixtures/import-printings.json` (dsc-273, tmsh-27, mh2-259, fin-1, ths-42).
       **Needs Lane A (2026-09-28, Phase 1 lane split):** `buildTypeLine`'s word order and `showsPowerToughness` are renderer paths (`lib/cards/card-display.ts`, read by both renderers), so the fix needs a `CARD_LAYOUT_VERSION` bump and a `VERSION_ROLLOUT` policy — the render lane's. The import side is done: it already keeps every word, in printed order, in `supertype` (1.3), and since 1.21 a layout kind keeps its printed card type too.
+      **Token research 2026-09-29:** the token half ("Token" first) moves to 3b.15 and ships with it as its own card-scoped sweep. Dryad Arbor, Urza's Saga, Bident and Summon: Bahamut stay here.
 - [x] (done 2026-09-28 — feat/import-mapper-fixes: `LAYOUT_KIND_CARD_TYPES` + `importedCardTypeForKind` (`lib/creator/card-kinds.ts`), decided from the profiles and the masters: adventure → creature, enchantment, artifact, land, instant, sorcery (its master paints no P/T box — the plate is M15's overlay, drawn only for a P/T type — and it has no loyalty/defense slot; Scryfall prints 8 enchantment, 8 artifact, 5 FIN Town land and 1 sorcery adventurers, captured 2026-09-28); flip → creature, enchantment, token (WOE's Role tokens are "Token Enchantment" flips); saga → enchantment; split / aftermath → instant, sorcery. The import applies the kind with that card type (`applyKindProgrammatic(kind, cardType)` in `handleScryfallImport`), so the P/T / loyalty gating and the default watermark follow it; the kind is unchanged (the layout template decides it) and the save's kind gate accepts it. Virtue of Loyalty WOE #38 → Adventure, Enchantment; Commit // Memory AKH #211 → Aftermath, Instant; Beck // Call DGM #123 → Split, Sorcery (fixtures captured 2026-09-28). The adventure frame CAN draw a non-creature, so Virtue is an Enchantment. Tests: `tests/unit/creator/layout-kind-card-types.test.ts` (the table held to the profiles' stat slots), the form through the deck-remix prefill in `tests/unit/components/creator-form-reliability.test.tsx`. Not changed: the order the renderers print the words in (1.20, Lane A)) **1.21 [P2] A layout kind keeps the printed card type** (import-correctness review 2026-09-26) — the creator writes the layout kind's card type (`applyKindProgrammatic`, `KIND_DEFS[kind].cardType`) and never the patch's, although the mapper reads the right one (`parseTypeLine` with the kind's card type preferred). Wrong since before 1.3:
       - Virtue of Loyalty WOE #38 ("Enchantment // Instant — Adventure") imports as a Creature;
       - Commit // Memory AKH #211 (front "Instant") imports as a Sorcery;
@@ -556,6 +570,40 @@ Open decisions are marked **[decide]**; none blocks its phase.
       **Owner decisions 2026-09-29 (Lane-B answers B3, B4 — "recommendations"):**
       - **B3 — CHANGED, done on the same branch:** an AI deck remix of a two-part layout card renames BOTH halves, and the two names read as one card. It used to name the front only, so Bonecrusher Giant // Stomp became "<new name> // Stomp". The identity call (`generateRemixIdentity`, `lib/ai/remix.ts`) is still ONE model call; for a remix that carries a second half (`scryfallRemixMechanics` sets `back_face` only on a landed adventure / split / aftermath / flip frame) its schema also requires `second_title` and `second_flavor_text`, and its prompt adds the layout's relationship (`SECOND_HALF_RELATIONSHIP`: an adventure is the subject's deed, a split card a matched pair, an aftermath what follows, a flip the same being's new form), bans reusing either original name, its proper nouns or a keyword, and lists the original names (with a legendary's own name, "Dokai") as reserved. A one-faced card sends the request it always sent (pinned by a test). `applyRemixNames` (`lib/ai/remix-names.ts`, pure) writes the names: the rules text of both halves follows both renames ("Stomp deals 2 damage" → "<new> deals 2 damage"; a legendary's short name too — the part before the comma, or a legendary "X the Y"'s X via `shortNameOf`: Goka the Unjust's oracle reads "Goka deals 4 damage", Jaraku the Interloper's "Remove a ki counter from Jaraku"; a one-word name that is also a rules word, like Exile, is left alone), the half's flavour is the AI's only where the printing's half had flavour, and a missing second name, or EITHER new name keeping EITHER original name or a legendary's own name (`reusesSourceName` over the same list the prompt reserves: "Kuon's Echo" after Kuon, Ogre Ascendant // Kuon's Essence, a swapped "Ice // Fire"), fails the step BEFORE the art — the credit wrapper refunds it, as for any failed step. The guard is two-part only; a one-faced remix is named as before. The step label reads "<front> // <back>". **One-faced remixes change too:** their rules text now follows the new name wherever the oracle still names the card — spells and legendaries ("Lightning Bolt deals 3 damage to any target." → "<new name> deals 3 damage…", "Whenever Ragavan deals combat damage…"). A non-legendary permanent's current oracle says "this creature" (Juggernaut LEA: "This creature attacks each combat if able."), so it has nothing to rename. Credits, settlement and the number of AI calls are unchanged. A live dry run of the identity call (2026-09-28, no DB) named Bonecrusher Giant // Stomp → "Ragewing Colossus // Thunderous Charge", Fire // Ice → "Ember // Frost", Commit // Memory → "Erase // Begin Anew", Budoka Gardener // Dokai, Weaver of Life → "Keeper of the Grove // Verdant Sage, Life's Channel" (an earlier prompt kept "Dokai" and named a half "Trample" — hence the reserved list and the guard; the dry run's rules text was hand-written in the pre-2024 wording, so its renamed fronts show a rename the current oracle — "this creature" — doesn't need). Tests: `tests/unit/ai/remix-names.test.ts`, `tests/unit/ai/remix-identity.test.ts`, `tests/unit/ai/deck-remix-step-frame.test.ts`. Not covered: a remix of the user's OWN two-part card (`entry.card_id`) still copies neither its frame nor its second half (it prints one-faced on its type's default frame), so it has one name — a follow-up with its own frame-gate question.
       - **B4 — kept as built:** the dev DB and every preview branch mirror production's verified frames, where adventure, split, aftermath and flip are unverified, so on a preview a layout card (import or remix) lands on M15 with its printed type; the layout frame appears only where it is verified. B3's two-part naming therefore can't be seen on a preview until one of those frames is verified there; the unit tests cover it.
+- [ ] **1.23 [P1] Token and emblem imports: find them by name, land on the right design and kind** (token research 2026-09-29; owner request; owner decisions 2026-09-29) — Checked against the mapper at `fab0437`, PR #396 (`feat/import-frame-signatures`, 1.4/1.17/1.19; merged 2026-09-29, re-checked on `2d488b5`) and Scryfall (2026-09-28/29):
+      - **Since #396, every 2015-frame token resolves `exact` on the arch frame.** The registry (`lib/scryfall/frame-signatures.ts`, rule `era/2015`, family `m15` → `m15token` / `m15tokenartifact`) resolves every `frame: 2015` token `exact`, so an M20-design token (TM20 #2, T2XM #4: every token since 2019-07-12) is called exact on a design it isn't, and #396 closed 1.19 with "2015 full-art tokens exact". This item changes in that registry:
+        - a `token/m20` rule before `era/2015`: `released_at` ≥ 2019-07-12 (a `plst` reprint by its prefix, below) → `nearest` `m15token`, `blockedBy` 4.48, and 4.48's templates via `onceVerified` once they are verified;
+        - the `nyx` gap on the token kind names 4.51, not 4.7 (`m15nyx` is a non-token frame); `crown` and `two-colour` already name 4.6;
+        - `no-card-type` stops catching `layout: emblem` (the emblem rules below replace its `unsupported`);
+        - the allowlist row `m15token/c#0` in `tests/unit/cards/frame-reference-signatures.test.ts` says "re-verify against Cadet TFRA #1", as 1.4's owner step A6 did until this research corrected it. TFRA #1 is an M20-design print (Reality Fracture, 2026-10-02), not the see-through arch `c` that `m15token` draws. The target is TBFZ #1 Eldrazi (4.49's pins): change the row's text, and 4.49's re-pin moves Cadet off `m15token/c`.
+      - **Search can't find a token or an emblem by name.** `searchCards` (`lib/scryfall/client.ts`, `unique: cards`, `order: name`) sends no `include_extras`: `!"Treasure"` and "Kaito Cunning Infiltrator Emblem" find nothing, `t:token !"Treasure"` finds 5, and the printings lookup by `oracleid:` does return them (TFDN #24). Don't send `include_extras` on every query. Measured 2026-09-29, it puts 4, 6 and 7 extras (tokens, an art card, a `front_card`, a vanguard) into the first 12 typeahead results for "Soldier", "Treasure" and "Angel". With it, `!"Treasure"` returns F17 #11 "Dinosaur // Treasure" (a DFC promo) first and FJ22 #36 (`front_card`) fifth; its only single-faced Treasure token is TFRA #15. Instead:
+        - send it only from a "Tokens & emblems" scope in the import dialog, or as a second request when the plain query finds nothing;
+        - drop the `art_series`, `front_card`, `planar`, `scheme` and `vanguard` layouts and the DFC promo tokens (F17, F18) from those results;
+        - let 1.5's printings list (#399) pick the printing;
+        - `/api/scryfall/named?exact=Treasure` also answers F17 #11 Dinosaur // Treasure: pick tokens through the search and the printings list, and keep that route's contract as #397 left it (1.12).
+      - **An emblem import keeps the previous kind.** "Emblem" is neither a card type nor in `KNOWN_SUPERTYPES` (`lib/scryfall/import-mapper.ts`), so `kindFromScryfall` returns undefined and the form keeps its kind (a Creature titled "Kaito, Cunning Infiltrator Emblem"); since #396 the registry answers `unsupported` (`no-card-type`, nearest `m15`). Map `layout: emblem` (140 of the 141 printings) to the emblem kind (6.23):
+        - title = Scryfall's name minus the trailing " Emblem";
+        - keep a subtype only where the printing prints one: `frame: 2015` released before 2019-07-12 (M15 → MH1, "Emblem — Ajani"), set `tafr` ("Emblem — Ellywick"), or a `plst` reprint whose collector prefix names a pre-M20 set. Checked by eye 2026-09-29: plst TSOI-18 and TORI-12/13/14 print "Emblem — X", while TSTX-8 and TKHM-21 print "Emblem". Scryfall's `type_line` is Oracle, not print: TFDN #25 Vivien Reid prints "Emblem", but Scryfall says "Emblem — Vivien";
+        - the M20 design → `exact` `emblem` (4.52) once verified. The 2014–19 look (the same date / `plst` rule) → `nearest` `emblem` (4.52's P3 variant). The 13 `frame: 2003` emblems (TDKA #3, TM13 #11, TTHS #11 …) → `nearest` `emblem`, `blockedBy` 4.43;
+        - one-offs → `unsupported`, logged (1.6): TLTR #H13 The Ring (`double_faced_token`), TACR #7, TFIN #24 and WFIN #1 (full bleed), MB2 #513 (playtest).
+      - **Token designs, by printing** (replaces 1.19 step 4). `frame: 2015` covers two designs, and `full_art` can't split them: Scryfall sets it on 57 of the 58 vanilla tokens from M20's first year, but on only 4 token printings in all of 2024.
+        1. `released_at` ≥ 2019-07-12 (M20 on) → the full-art family (4.48). A `plst` reprint follows its collector prefix's set: pin the 11 pre-M20 prefix sets seen in `plst` (TAKH, TBNG, TC17, TGRN, TISD, TNPH, TORI, TSHM, TSOI, TUMA, TXLN; 22 of its 71 token and emblem printings), held by a test against a Scryfall fixture. Height follows 4.48's rule (Scryfall has no field for it). Use the artifact templates (4.50) when the type line says Artifact, and Nyx per 4.51.
+        2. Earlier `frame: 2015` (M15 2014-07-18 → MH1 2019-05-30) → the 2014–19 frame (4.49): `m15token`, `m15tokentext` when the printing has rules text, and the artifact versions for Artifact.
+        3. `frame: 1997/2003` (303 printings) → `nearest` `m15token` until 4.10 / 4.43. 1.4's `token/old-frame` rule (#396) already does this.
+        4. `border_color: borderless` (19: WONE, WMOM, SLD) → 4.37, `nearest` 4.48 textless (#396 names `m15token`). Silver (11 on the 2015 frame) and white (4) → `nearest`, plus 4.30.
+        5. `layout: double_faced_token` (41, e.g. TMOM #16 Incubator // Phyrexian) → the front face, with a toast until 5.5. `layout: flip` Roles (6: TWOE #15–17, TWOC #1–2, plst TWOE-17) → the front Role only, logged `unsupported` (1.6). **Owner 2026-09-29:** Roles stay unsupported and no two-Role layout is planned (4.51). This replaces what main does with them since #397: 1.21's flip table keeps `token` (B2), so a Role imports on the flip kind today.
+        6. Two colours (a gradient on M20+ prints) and Legendary (a floating crown) → `nearest` until 4.6 (#396's gaps).
+      - **Type words.** "Token Creature — Soldier" keeps `card_type` token with "Creature" in `supertype` (1.3). 3b.15's picker reads the same words, so an import lights the right toggles.
+      - **Copy tokens.** 38 printings are named "Copy", with the type line "Token", no P/T, colourless, in the M20 design (T2XM #31, 2020 → TMSC #1 / #17, 2026). TFDN #26 prints the italic line "This token can be used to represent a copy of something else." They import as the token kind with no type words (owner 2026-09-29: a token may have no type toggle on, 3b.15), on 4.48's `c` with the regular box.
+      - **Other token types** → `nearest` on the token kind, logged (1.6):
+        - "Token Planeswalker — Jace" (TFRA #5, loyalty abilities; Reality Fracture, 2026-10-02);
+        - "Token Land" (TDSK #16, TECL #11);
+        - "Token Land Creature" (TBRO #3, TM3C #19, TFRA #9).
+      - **The toast exception goes.** `printingTreatmentFromScryfall` skips full-art and textless 2015 tokens because they "land on `m15token`, which is that family's own frame" (`import-mapper.ts`:420-445 at `2d488b5`; #396 and #397 kept it, and the open #399–#401 don't touch it). That is wrong for the M20+ prints (T2XM #4, TM20 #2): until 4.48 is verified, they toast like any other `nearest`.
+      - **Fixtures:**
+        - tokens: TDOM #3 (2014–19 textless) · TDOM #2 (2014–19 text box) · TXLN #7 (2014–19 artifact) · TM20 #2 and T2XM #4 (M20 textless, no longer `exact` on `m15token`) · TFDN #27 (regular box) · TLCI #17 and TBLB #5 (tall) · TFDN #23 (colourless artifact) · TDSK #7 (coloured artifact) · TDSK #4 (Nyx, pinned) · TKHM #1 (plain colourless enchantment) · TFDN #26 (Copy) · TMKM #13 (legendary, `nearest`) · TMKM #10 (two colours, `nearest`) · TMOM #16 (DFC) · TWOE #15 (Role) · TFRA #5 (token planeswalker) · TLRW #3 (2003 token, `nearest`);
+        - emblems: TFDN #24 ("Emblem"), TFDN #25 ("Emblem", Oracle "— Vivien"), TAFR #16 ("Emblem — Ellywick"), TM15 #13 ("Emblem — Ajani"), plst TORI-14 ("Emblem — Chandra", 2014–19 look), plst TSTX-8 ("Emblem"), TDKA #3 (2003 emblem, `nearest`).
+      - **Depends on:** the search half ships alone (with 3b.15). The design rules build on 1.4's registry (#396, merged 2026-09-29) and need 4.48–4.52 for `exact`. The emblem half needs 6.23.
 
 ### Phase 2 — Admin walk-through of the stepper (3–5 days)
 
@@ -826,6 +874,51 @@ Owner decisions 2026-09-28 (the nine PR questions, PR #395):
 - [ ] **3b.14 [P3] Layout kinds keep a card-type choice** (Card Conjurer audit 2026-09-25) — The adventure kind hard-codes creature (`lib/creator/card-kinds.ts`:156-161,539-560), so the 23 non-creature adventures (e.g. WOE Virtue enchantments) can't be typed correctly and always show the P/T editor. In CC the P/T plate is an optional layer (`packAdventure.js`:13-21).
 
       Adventure (and Prepare from 4.27, and flip) offer creature / enchantment / artifact / instant-sorcery on the Identity step. Stats and the P/T plate follow `card_type` (`lib/cards/card-display.ts`:142-156). Import keeps the front face's type for layout `adventure`.
+- [ ] **3b.15 [P1] Token type picker: Creature, Artifact, Enchantment (and Emblem), with "Token" first on the type line** (token research 2026-09-29; owner request; owner decisions 2026-09-29; takes over 6.4's "automatic Token prefix" and 1.20's token half) — The token kind has no type choice today:
+      - Its only type words are the free Supertype field under "More options — supertype, subtypes" (placeholder "Legendary", `components/creator/panels/identity-panel.tsx`). So tokens print no type word: none of the 5 public tokens with a P/T has one (2026-09-25 snapshot).
+      - The Artifact look is a frame variation unrelated to the type.
+      - An enchantment token can't wear Nyx, and there is no emblem.
+      - The AI makes every token a 2/2 creature.
+
+      The picker ships first, on today's frames:
+      - **Picker.** The token kind gets:
+        - toggles Creature · Artifact · Enchantment. Creature is on for a new token. None on is allowed (owner 2026-09-29): it prints the bare "Token" of the Copy token (TFDN #26);
+        - Legendary;
+        - an "Emblem" choice that switches to the emblem kind (6.23). **Owner 2026-09-29:** Emblem sits here, inside the Token kind next to Creature / Artifact / Enchantment, not as its own entry in the kind picker; an emblem is still stored as its own card type.
+
+        Each toggle writes and removes only its own word in `supertype` (the pattern of 1.7's borrowed variation), in printed order: Legendary, Snow, then Enchantment, Artifact, Creature ("Token Legendary Artifact Creature — Construct", TNEO #14; "Token Enchantment Artifact Creature — Golem", TEOC #13). An import sets the toggles from its type line and keeps any other words (Land, 1.23).
+      - **Frame follows the type.**
+        - Artifact → the artifact templates (4.50; `m15tokenartifact` today).
+        - Enchantment → Nyx when its toggle is on (4.51; on by default).
+        - Both → artifact bars with the Nyx pill.
+        - No colour → `c`.
+
+        The "Artifact Token" frame chip stops being a separate choice (stored cards keep it).
+      - **Stats.** P/T only with Creature or a Vehicle/Spacecraft subtype. `showsPowerToughness` (`lib/cards/card-display.ts`:49) is true for every token today, so a Treasure offers P/T inputs. It gains the supertype. Update every caller (at `2d488b5`): `components/cards/card-preview.tsx`:655, `lib/render/card-image.tsx`:455, `lib/cards/stat-fit.ts`:197, `lib/creator/steps.ts`:115, `components/creator/card-creator-form.tsx`:2046. A stored token with a P/T and no type word keeps printing it (and gains "Creature", below).
+      - **AI.** `lib/ai/mtg-rules.ts` treats every token as a creature, so an AI-made Treasure or Shard gets a 2/2 whatever the picker says:
+        - the lint at :286 ("Creatures and tokens need both power and toughness.");
+        - `autofixCard` at :407, which sets a missing P/T to 2/2.
+
+        Both must read the Creature word or a Vehicle/Spacecraft subtype, as `showsPowerToughness` does. The AI fill and ideas dialogs (`components/creator/ai-fill-dialog.tsx`, `components/creator/card-ideas-dialog.tsx`) write the same words for a token.
+      - **Type line.** Print "Token" first, then the words: "Token Creature — Soldier", "Token Artifact — Treasure", "Token Enchantment Creature — Glimmer", "Token Legendary Creature — Wolf", and a bare "Token" for a Copy (the M15-on wording; MTG wiki "Token"). Today `buildTypeLine` prints the supertype, then the card type: "Creature Token — Soldier", "Token — Soldier" with no words, and "Emblem Token" when someone types Emblem.
+      - **Rollout (its own sweep, not 4.49's).** A renderer change on stored cards:
+        - a `CARD_LAYOUT_VERSION` bump, template-scoped to `m15token` / `m15tokenartifact` (and `alphatoken` until 4.54 retires it);
+        - card-scoped (a `VERSION_SCOPES` predicate, as v29) to the token rows whose printed line changes: a word in `supertype`, plus the P/T rows that gain "Creature" (below);
+        - `VERSION_ROLLOUT: "sweep"`, which the automatic re-bake (0120) picks up after deploy;
+        - the before/after sheet of the changed public cards goes first.
+
+        **Verification (owner 2026-09-29):** only the wording changes and no slot moves, so the bump joins `VERIFICATION_NEUTRAL_VERSIONS` and the 14 token ticks stay. If 4.49 is ready the same week, the two share one bump; a shared bump follows 4.49's rule and resets the ticks.
+
+        **Stored tokens (owner 2026-09-29):** "Token" goes first on every stored token. The ones with a P/T and no type word (the 5 public ones; count private rows first) gain "Creature" in `supertype`, written in the same release before the sweep re-bakes them, so they print "Token Creature — Soldier" and the picker shows the toggle on. The 22 public cards typed "Basic" on the token frame will read "Token Basic — Wastes".
+      - **Name.** Printed tokens are named after their subtypes ("Soldier") unless they have a proper name (TMKM #13 Voja Fenstalker). Fill the name from the subtypes until the user types one.
+      - **Rarity (owner 2026-09-29).** Tokens print a black set symbol and a T in the collector line (4.9); emblems print an E. New tokens and emblems default to common, and the token and emblem kinds hide the rarity chips. Stored rarity is kept, so no bake changes for it: 14 of the 29 public tokens are uncommon (10) or rare (4), and 12 of those are one account's land cards on the token frame.
+      - **Seeds and copy.** A token of each type (creature, Treasure, enchantment creature, Copy) in `supabase/seeds/*.sql` for previews; the FAQ of `content/articles/designing-custom-mtg-tokens.mdx`.
+      - **Depends on:**
+        - 1.20: this item does its token half;
+        - 4.50 / 4.51 for the dresses;
+        - 6.23 for the Emblem choice.
+
+      Acceptance: unit tests for the words each toggle writes and removes, and for the printed line of 1.23's token fixtures (TFDN #26 prints "Token"). A Treasure shows no P/T input, and the AI lint and autofix leave it without one. E2E: an artifact token and an enchantment creature token.
 
 ### Phase 4 — The frame factory (6–10 weeks, incremental)
 
@@ -905,6 +998,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       11. One bump: 4.16–4.20 (artifact recipe, art under the frame, P/T plate box, planeswalker rail, title/type sizes), the M15 artSlot = CC artBounds change and the token profile fixes all change published pixels. Ship them in 4.4's single platform-correction sweep (0.20), not as separate 'newer look' badges. Re-measure title/type after Beleren2016 if 4.8 rides along.
       12. 800 ppi: only 6 of 4.4's 9 templates get 2010 px masters; m15pw and both token templates are 1500×2100 in CC too. Don't announce 6.1b as sharp for them; gate the option on manifest nativeSize, and on 6.10 for the art. (Note at `267f46c`: the swap published every master at 1500×2100 (the importer downscales once) and the P/T plates at 377×206, so no 2010 px master exists anywhere yet; 6.1b needs a second, native-size master set.)
       13. Storage: 4.2 is still in progress on feat/frame-storage (lib/frames/frame-manifest.json is empty; migration 0116 creates the bucket). CC masters must reach the production `frames` bucket through frames-promote before 4.4 merges, and must never be committed to the public repo. (Done: #377 merged; the manifest lists the 9 CC templates; "Frames published" is green on `main`.)
+      **Token research 2026-09-29:** leftover (1) is the token print match. The P/T plate and the left-aligned type line and symbol are 4.49 (P0); the gold small-caps title and the art slot are 4.53.
 - [ ] **4.5 [P1] Treatment × kind overlay model** — per-kind overlays (P/T
       plate, vehicle plate, loyalty rail + shield, defense badge, chapter rail,
       class/leveler bars later) as separate assets composed at render time via
@@ -968,6 +1062,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - "textless" → 4.37 (borderless) and 4.42 (black border).
       - "full-art lands (generic first, per-set later)" → 4.39 (generic), then 4.40–4.41 and 4.11's per-set line.
       - CC FullArtNew / M15ClearTextboxes / UBFull (a translucent box over the art) match no printed family → 4.44.
+      **Token research 2026-09-29:** "'Tokens' moves to 4.22 and 'emblems' to 6.4" is out of date. Tokens are now 4.48–4.51, 4.53 and 3b.15, and emblems are 4.52 and 6.23. The token kind's Nyx is 4.51's dress, not this item's `m15nyx`.
 - [ ] **4.8 [P1] Era typography** — Magic Medieval for 1993–2002 titles, Matrix
       Bold for 2003–2014, Beleren Small Caps for the artist, a Gotham-class
       font for the collector line; `font` on the profile; registered in the
@@ -1080,6 +1175,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - Dungeon (needs a room-graph editor) last.
       Future Sight: CC's art is also 744 px, so take whichever of CC and MSE scores better.
       **Card Conjurer audit 2026-09-25:** (critic, P3) Also: Playtest (Mystery Booster), Colorshifted / Planar Chaos, Full Text (no art), "The List" stamp, Nyx tokens, Jumpstart front cards. CC's Flesh and Blood and Pokémon groups are out of scope.
+      **Token research 2026-09-29:** "Nyx tokens" is 4.51.
 - [x] (shipped in #378 (recipe) + #380 (live, layout v24 sweep): m15artifact and m15tokenartifact are CC's artifact frame + border with the colour's pinline/title/type/rules and the colour P/T plate; checked against Phyrexian Metamorph and in the owner's side-by-side. Left for later: two-colour artifacts still use the gold `m` frame until 4.6; the stale "colour border + silver interior" descriptions remain in `types/card.ts`:272-274, the `m15artifact` note in `lib/cards/frame-references.json` and the `scripts/build-artifact-blend.mjs` header, now a dead script for this template) **4.16 [P0] Coloured artifacts: artifact outer frame, colour interior (CC's recipe)** (Card Conjurer audit 2026-09-25) — Every coloured `m15artifact` frame is inverted today (verified, all 7 colours in `supabase/seed.sql`). `scripts/build-artifact-blend.mjs` gives the colour's outer border with a silver title bar and text box: sampled `public/frames/m15artifact/r.png` has a red side (202,82,41) and a silver title (203,212,217). Real Embercleave (ELD) and Phyrexian Metamorph (2XM) scans have a silver artifact outer frame (side 209,226,246 / 167,173,195) with colour-tinted type bar and text box. Cursed Mirror and Esper Sentinel match. That is exactly CC's `cardFrameProperties` + `autoM15NewFrame` (`creator-23.js`:577-747,1038-1110).
 
       Build m15artifact in the 4.3 importer:
@@ -1169,6 +1265,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       Delete the scrim. Import picks the variant from the Oracle line count. References: Treasure (txln) and Treasure (tmsh). **[decide]** which family is the default token look.
       **Full-art research 2026-09-26:** the 171 M15 full-art tokens (T2XM #4, TM20 #2) already resolve `exact` on `m15token` (CC 'Textless (Bordered M15)'), so there is nothing to build for them. The 80 2003-era full-art tokens are 4.43.
+      **Token research 2026-09-29:** superseded by 4.48 (the full-art family) and 4.49 (`m15tokentext`, the bordered text-box variant). The pack mapping is off by one: CC's 'Short' pack is the printed regular box, and CC's 'Regular' matches no print (0 of 116 measured). CC's 'Regular (Bordered M15)' also sits ~3 %H above the prints (4.49). Its "Full-art research" paragraph is wrong: T2XM #4 and TM20 #2 are the M20 design, `nearest` on `m15token` until 4.48 (1.23). Its open decision (the default token look) is answered in 4.48: owner 2026-09-29, new tokens default to the full-art family once it is verified.
 - [ ] (partly 2026-09-25: the mechanism shipped in #382 (layout v27) as `inkByColorKey` on TextSlot/StatSlot (`slotInk()` / `footerInk()`, both renderers; per-colour ink + shadow, emboss in em) and 4.31 extended it to the title and type line (`bandTextStyle()`); the 1993 half is done (below). Still open: 1997 retro/retroland white title, type line, P/T + artist with a black drop shadow and the centred `Illus.` footer, and the 2003 footer ink per colour (white on black, land and colourless)) **4.23 [P1] Era text treatment (1993/1997/2003)** (Card Conjurer audit 2026-09-25) — 1993 (Alpha) is done (v25/v27 and 4.31): agclassic letters the P/T and artist line in embossed silver on every frame colour but white, and the name and type line too on the black frame and the colourless artifact card (owner decision 2026-09-25; dark elsewhere, where the silver read no better), alphaland its P/T and artist line on every key (`ALPHA_INK` / `ALPHA_BAND_INK` / `ALPHA_LAND_INK` in `lib/cards/template-layout.ts`); alphatoken is ours (Alpha printed no tokens) and keeps its own light-on-dark name. The 1997 profile (RETRO) still prints title, type, P/T and artist in dark ink, and its comments claim printed P/T is dark, which is wrong. Real 1997 cards (LGN White Knight, SCG Enrage, TOR Shambling Swarm) print them white with a black drop shadow, even on white cards. The 1997 footer is a centred `Illus. <artist>` over the © line. The 2003 footer is white on black, land and colourless frames (CC `pack8th.js`:55-68), but ours (MODERN) is dark for every colour.
 
       Fix:
@@ -1294,6 +1391,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         alphatoken P/T prints white on the cream text box. Neither has an
         `inkSpanPct` yet — measure one when the rects are fixed (found with
         3.18, 2026-09-25).
+        **Token research 2026-09-29:** "Token P/T on the border" is 4.49 (a). The 2026-09-25 snapshot has 5 public tokens with a P/T, not 8; 4.49 recounts. The alphatoken P/T goes away with 4.54 (retired, owner 2026-09-29).
       - [x] **Foil on planeswalkers** (owner decision, round-2 review): each
         ability stripe carries its own sheen (`FoilStripeSheen`, masked by the
         stripe colour) between the stripe and the badge + text, in both
@@ -1484,6 +1582,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **Textless** (CC `TextlessGenericShowcase`, 8 colours). Also resolves 4.35's m15textless choice (a).
       - **Tokens** (CC `TokenTextlessBorderless`, 10 frames incl. C and snow, no bottom bar, art 0/0/100/100). Only 19 paper borderless tokens exist (WONE/WMOM JP promos, SLD); the real token work is 4.22.
       **Full-art research 2026-09-26:** the textless variant: CC `TextlessGenericShowcase` has W/U/B/R/G/M/A/C frames plus P/T plates (`packTextlessGenericShowcase.js`), and it needs 3.24's `textless` flag. The black-bordered textless promos are 4.42.
+      **Token research 2026-09-29:** its tokens bullet becomes a borderless skin of 4.48 (CC `TokenTextlessBorderless`), still P3. Until then, 1.23 sends the 19 borderless tokens `nearest` to 4.48 textless.
 - [ ] **4.38 [P3] Borderless layout cards (saga, adventure, room/class/case, mutate)** (borderless research 2026-09-25) — Paper counts: 71 sagas, 36 adventures, 11 class/case/room, 19 mutate. Examples: TDM #383 Awaken the Honored Dead, WOE #298 Kellan, DSK #334. Neither CC nor MSE has a borderless frame for these, and MSE's module masks `borders/744x1039/m15/{saga,walker}/borderless.png` are unused shape references only. Derive each from the CC layout frames (4.21) plus a 1500 px borderless border mask, with owner visual sign-off. Log each as `unsupported` (1.6) until it ships, and order by the log. Borderless battles: never; 0 have been printed.
 - [x] (done 2026-09-26 — feat/new-frames. **Owner, before merge:** `npm run frames:promote` with this manifest; the private-row count on fullartland before the v30 sweep (below); then verify per colour. CC 'Fullart Basics (2022)' is in the frames bucket and `public/frames/fullartland` is deleted. `m15fullartland` (NEW, label 'Full-Art Basic Land'): art 3.94/2.81/92.14 × 89.29 inside the black ring, mark and footer in the border. `fullartland` (re-sourced, label 'Borderless Full-Art Basic Land'): borderless with light bars (the importer SUBTRACTS the Border mask's coverage — alpha × (1 − mask alpha) left the ring's anti-aliased inner edge as a 1 px line of α 10–14 at x 59 / x 1439 / y 60 / y 1933, up to 64 in its corners, a faint rounded rectangle over the art: owner evidence 2026-09-26; re-imported and re-published to the dev bucket, still v30), brand mark on the pill, footer in ON_ART_OUTLINE (drawn as copies in the bake, 3.23). Both put a basic's symbol in the frame's disc (`basicSymbol` = CC's box with CC's `s?.png`, bucket `<template>/symbol/*`), take CC's title and type boxes and sizes (title 8.54/5.4/80.46 × 4.6 at 0.0533 W, type 18.87/85.1/65.13 × 4.2 at 0.0453 W — the print review measured M15's inherited slots 7–9 px right and ~6 % small on the name, 10–12 px left, 6 px low and 5 % small on the type line; with CC's, both land within 1–2 px of 17 prints at their width), the set symbol right-anchored at 92.13 / centred 87.39 at the print's size (`symbolSizePct` 0.065; 78–91 px of ink printed, 57–60 before), and take basic lands only. Layout v30 (fullartland only, sweep): 0 public cards (anonymous read 2026-09-26, 736 public); **merged #389 + frames promoted 2026-09-27; the owner's admin count returned NO rows (no card of any visibility on fullartland), so the v30 sweep had nothing to re-bake and was skipped** — private rows needed the owner's admin count, by kind — a nonbasic or a pre-0.26 creature left on fullartland re-bakes with an empty disc and its rules on the art: `select visibility, card_type, coalesce(trim(supertype), '') as supertype, count(*) from cards where frame_style->>'template' = 'fullartland' group by 1, 2, 3 order by 4 desc;` (anything but basic lands → move those cards to m15land first). References (print review): `m15fullartland` = FDN #282/284/286/288/290 + TDM #272 · DSK #273 · DFT #274 · TDM #275 · DSK #276 (within 2 px, colours within 7 levels); ONE #262–266 and MOM #282–290 print an older (2023) bar geometry — 6–13 px off, colours up to 43 levels — and are `nearest` only; `c` = FIN #309, the one printed left-disc Wastes (black-bordered; its bars print darker than CC's `l`: owner sign-off on the tone); `fullartland` = FRA #382–396 (dark bars: `nearest`), no borderless Wastes. 7.7 passes, plus a two-bar fixture. Imports still land on `m15land`; once verified the creator offers 'Use Full-Art Basic' for a 2022-design basic only (`FULL_ART_BASIC_2022_SETS`, 4.39's set list, SPM/SOS excluded — ZNR/BFZ are 4.40, SPM/PLG25 4.41) and 'Use Borderless Full-Art Basic' for a borderless full-art basic that prints text (FRA #382–396, and 1.17's other borderless basics; `printing_detail` carries `full_art` / `textless` / set), never for a textless one (UNF, EOE: `m15textlessland`, 4.35). **Owner verification list:** m15fullartland w/u/b/r/g + c (Wastes; the bar tone), fullartland w/u/b/r/g (geometry only — the refs' bars are dark; c has no reference). Never verify the `m` keys (no multicolour basic). Still open: snow skins, 1.19's `exact` (fixtures FDN #282 and HOB #194 — ONE #262 is `nearest`), the UB triangle stamp (4.9), and the m key is still verifiable in the admin checklist (0.26's leftover)) **4.39 [P1] Full-art basic lands from CC 'Fullart Basics (2022)': a new black-bordered `m15fullartland`, and `fullartland` (borderless) re-sourced** (full-art research 2026-09-26) — Basic lands are the biggest full-art family and the likeliest full-art import:
       - 675 of the 2,325 paper full-art printings (29 %): 575 black-bordered, 89 borderless, 10 yellow, 1 white (re-checked live).
@@ -1583,6 +1682,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **Future Sight textless:** FUT 5, MB2 3 plus 1. MSE `magic-future-textless` (375 px) only. Park it with 4.15's Future Sight.
 
       References: P07 #1 Wrath of God · P10 #1 Lightning Bolt; TLRW #3 Kithkin Soldier · TZEN #3 Kor Soldier; ZEN #230 · J14 #1★ Plains; FUT #19 Blade of the Sixth Pride · MB2 #194 Kobolds of Kher Keep.
+      **Token research 2026-09-29:** 1.23 sends every 1997/2003-frame token (303 printings) `nearest` `m15token` with `blockedBy` 4.43, as 1.4's `token/old-frame` rule (#396) does. `alphatoken` is retired (4.54, owner 2026-09-29), not rebuilt as an old-border token frame; the old-border tokens stay here and with 4.10.
 - [ ] **4.44 [P3] 'Clear text box' full art: a PipGlyph look, not a printing** (full-art research 2026-09-26) — Card Conjurer's own 'Full Art' frames are the look its users know as "full art":
       - `packFullArtNew.js`: `m15/new/fullart/*`, 2010×2814, black ring; art 6.2/11.29/87.6×80.96 under a translucent type bar and box (α ≈ 0.60);
       - `m15/clearTextbox/*` and `ub/full/*`, both at 1500.
@@ -1594,6 +1694,201 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [x] (done 2026-09-27 — feat/edge-frame-thumbs, stacked on #389: `FrameThumb` (`components/creator/frame-pickers.tsx`, the one frame tile: the Card step's type, frame and colour chips; no admin list shows it, since the frame-review checklist shows reference scans and frame-compare full previews) draws a sample art in the profile's art slot with the master on a layer above it, for the frames `artFillsCard` names (`lib/cards/template-layout.ts`, from the profiles, no list): `artReachesCardEdge` (m15borderless, m15borderlessartifact, fullartland) or a full-art basic inside its ring (a `basicSymbol` slot on a window of 85 % or more each way: m15fullartland). The sample is the app's own built-in banner `/defaults/banners/banner-05.webp` (a misty valley; its centre slice is bright and low-chroma, so the frame's bars carry the colour; already in `public/`, 64 KB, loaded only by a tile that draws it). Every other tile is unchanged: across all 40 templates × 7 colours + the artifact dress + a split identity, 324 of 360 tile markups are byte-identical and all 576 other-template tile screenshots pixel-identical in both themes; the four's mean luma goes from 22–37 to 102–140 (dark theme). No card, preview or bake change, so no layout bump (a test pins that the card preview never draws the sample). Tests: `tests/unit/components/frame-thumb-sample-art.test.tsx`. **Widened by owner decision 2026-09-27** (feat/edge-frame-thumbs-six): the six other near-black tiles draw the sample too — Anime `bloomanime` (dark-theme mean luma 17.8), Nyx (24.7), M15 Textless (33.2) and Textless Land (33.8), the ZNR hedron `fullart` (37.6) and Ghostfire (39.1). No geometric rule picks exactly those (M15 planeswalker at 42.4, the two tokens at 42.7 / 46.8 and Expedition Land at 46.8 sit between them on window size and brightness), so they opt in by name: `FrameProfile.pickerSampleArt: true` on their `PROFILES` entries (not on the FULLART → M15TEXTLESS → M15TEXTLESSLAND bases, so nothing that spreads them inherits it), read only by `FrameThumb` (`artFillsCard(profile) || profile.pickerSampleArt`); `artFillsCard` still names the four. m15pw, m15token, m15tokenartifact and expeditionland keep their tiles as they are. The six go from 18–39 to 88–137 (dark theme); the 180 changed tile markups and 360 changed screenshots (of 1200 / 2400, both themes) are exactly the six's, every other tile is byte- and pixel-identical. No card, preview or bake change, so no layout bump; tests pin the exact 10 sampled templates of the 40 and that only the tile reads the flag) **4.45 [P2] Picker thumbnails for edge-to-edge frames** (owner approved 2026-09-27, round 6) — Borderless, Borderless Artifact and both full-art basic frames read as near-black tiles in the frame picker, because their masters are see-through where the art goes. Draw those tiles over a neutral sample art (both the picker and any admin list that shows the tile); no card changes.
 - [ ] **4.46 [P2] Wide Keyrune set symbols at the print's size** (4.20 print check, 2026-09-28; **owner round 8: do it next, as a per-set table of printed symbol heights — it also fixes glyphs that print SMALL, e.g. FDN 88 px vs its 64 px print**) — Layout v32 fits a Keyrune glyph to CC's symbol box by its ink height, capped at box × `KEYRUNE_EM_PER_BOX` (0.065 W on M15; owner decision 2026-09-28). Compact glyphs print at 0.93–1.07 of the print's height (DOM, BFZ, KTK, TLA, SPM, IKO; against the keyline-inclusive height DOM #33 1.01, DOM #254 1.06, BFZ 1.03–1.08); medium-wide ones at FIN 0.88, EOE 0.83–0.85, MSC 0.86; wide ones at 0.51–0.62, capped by box × `KEYRUNE_EM_PER_BOX` at a 97.5 px font (M20 / M21 / SLD 39–41 px tall, DSK / NEO 47, OTJ / WOE 52–53, MH3 61, LTR 63 — the prints: M20 74–83 × 140–165 px, DSK 85 × 150, OTJ 83). Prints set a wide symbol against the box's width (0.12 W = 180 px), not its height: let the width cap drive a wide glyph (font = min(box ÷ ink height, 0.12 W ÷ ink width), dropping the box × `KEYRUNE_EM_PER_BOX` term for it — **[decide]**, it changes the owner's 2026-09-28 formula) and print-check per glyph class; the ink boxes are already in `lib/cards/keyrune-metrics.ts`. Measure a symbol over the whole bar interior: an inset window clips an M15 symbol at 84 px, and prints measure 84–88 px on compact glyphs. Only 19 public cards use Keyrune.
 - [ ] **4.47 [P2] Planeswalker set symbol 16–20 px left of the prints** (4.20 print review, 2026-09-28) — `M15PW.symbolRect` (79 / 12 %W) puts the symbol's right edge at 1363–1365 px at HD; the printed walkers put it at 1379–1385. v32 didn't move it, but its type line now stops a print's gap before the symbol, so the offset costs type-line room (2 of the 7 public walker type lines shrink). Move the rect ≈ 1.1 %W right (left 80.1), re-measure the walkers' type lines, and show it beside a print (frame-swap sign-off) with its own template-scoped bump.
+- [ ] **4.48 [P1] Creature tokens: the current full-art token frame (M20, 2019 → today) from Card Conjurer's token family** (token research 2026-09-29; owner request; owner decisions 2026-09-29; supersedes 4.22's full-art half) — Core Set 2020 (2019-07-12) moved tokens to a full-art frame (WotC's M20 token preview; MTG wiki "Token"):
+      - About three quarters of token printings since 2014 use this look. Scryfall 2026-09-28 (`t:token game:paper`, unique=prints, include_extras): 2,484 printings have a black border, `frame: 2015` and a set other than The List, and 1,879 of them were released from 2019-07-12 on. The other 605 are the 2014–19 arch design, the only one PipGlyph draws (4.49).
+      - Card Conjurer lists this family first and files the arch under 'Older Tokens' (`groupToken-2.js`).
+      - MSE's M15 pack marks its arch-only `magic-m15-token` Deprecated and offers M20 in `magic-m15-mainframe-tokens`.
+
+      The work:
+      - **Anatomy** (checked on TFDN #6–#30, TMKM, TLCI, TBLB):
+        - art to the black border (CC art 4/2.86/92×89.53);
+        - name in a rounded pill at 4.5–11.0 %H, centred, in Beleren Small Caps. The pill is the token's colour; the ink is dark on white (and snow) and white on blue, black, red, green, gold and colourless. A few Universes Beyond sets print pale pills with dark ink (e.g. TPIP #8, TWHO #15); those are not a target;
+        - type pill in a light tint of the colour: "Token Creature — Soldier", left-aligned from 8.54 %W, dark ink. The set symbol is right-anchored at 92.13 %W, in black (tokens print no rarity colour);
+        - translucent text box tinted with the colour, dark ink, text vertically centred. ONE short line is centred ("Flying", TFDN #7; "This token can't block.", TFDN #30); two or more lines are left-aligned (4.49's `rules.alignSingleLine`);
+        - P/T on the M15 plate (prints 78.1–94.0 %W × 89.5–94.5 %H): `plateRect` 75.73/88.48/18.8×7.33 with CC's m15PT* plates, value 79.28/90.2/13.67×3.72 (4.18);
+        - collector line with a T (4.9); brand mark in the black border.
+      - **Three printed heights.** The type-bar tops on 116 prints cluster at 81, 67 and 56 %H:
+        - textless: type bar 81.4–87.7 %H, no box (TFDN #6);
+        - regular: type bar 67.0–73.5, box to 92.7 (TFDN #7, TFDN #27). This is CC's **'Short'** pack (the master is opaque from 66.9 %H);
+        - tall: type bar 56.0–62.2 (TLCI #17 Map, TBLB #5, TC19 #6). This is CC's 'Tall' pack (from 55.7).
+        - CC's 'Regular' pack (from 64.0) matches no print (0 of 116), so don't ship it. 4.22's "1–2 lines → short, 3–4 → regular" mapping is off by one pack.
+      - **Source.** CC `packTokenTextless-1.js`, `packTokenShort-1.js` and `packTokenTall-1.js` @2fcddba:
+        - masters `img/frames/token/{textless,short,tall}/tokenFrame{W,U,B,R,G,M,A,L}{Textless,Short,Tall}.png` and `frameC.png` (`snow.png` in textless and tall only), 1500×2100, with the token Pinline/Type/Rules masks;
+        - plates `m15/regular/m15PT*.png`;
+        - a new run of the 4.3 importer into the frames bucket (never git), with provenance in `lib/cards/frame-sources.json` and corners cut at 3.26's radius;
+        - 7.7 (`border` on all four edges) and 7.6 on every colour;
+        - CC text seeds: title 8.54/5.22 at 0.0381 H (= `TITLE_SIZE_PCT` 0.0533 W); type 0.0324 H (= `TYPE_SIZE_PCT`); set symbol centre y 84.39 (textless), 70.24 (regular), 59.10 (tall); rules 8.6/74.24/82.8×17.67 (regular), 8.6/63.03/82.8×28.75 (tall).
+      - **Colour keys.**
+        - w/u/b/r/g from CC W–G; `m` (three or more colours) from CC M (TDMU #20, TTDM #15); `c` from CC `frameC` (charcoal pill, box α≈166: TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn).
+        - Two colours print a left-to-right blend of both across the pills, box and P/T rim, not gold (TMKM #10 UW, TVOW #15 GW, TFRC #11 GW). Build a gradient composite through the CC masks with 4.6's machinery; `nearest` `m` until then.
+        - Legendary tokens (50 M20+ printings, 40 of them "Token Legendary Creature — …": TMKM #13, TFDN #13) take CC's floating crown (4.6); `nearest` until then.
+      - **Model (owner 2026-09-29).** These are new templates for the token kind only. Heights are variations, like 4.37's box sizes, and artifact gets its OWN templates: suggested keys `m20token` (textless), `m20tokentext` (regular box) and `m20tokentall`, plus `m20tokenartifact`, `…text` and `…tall`. The keys live in `frame_style`, `frame_reviews` and the bucket, so fix them once. This matches `m15tokenartifact` on the arch and 1.4's registry pick (`token` → Artifact ? artifact frame : token frame), and lets the 0.13 gate withdraw a broken artifact template on its own. Nyx and snow (8 printings between them) stay dresses picked from the type words inside the colour's tick, and the 2.4 sign-off view renders them before the tick.
+
+        Never in `PREMIUM_FRAME_TEMPLATES`.
+      - **Renderer.** Both renderers, with parity:
+        - 4.49's `rules.alignSingleLine: "center"`;
+        - per-colour title ink is `inkByColorKey` (shipped, 4.31);
+        - the textless height takes 3.24's `textless` flag;
+        - small caps wait for 4.8 (Beleren Bold until then).
+      - **Height (owner 2026-09-29): automatic, with a manual choice that sticks.** New cards and imports take the smallest printed height whose text fits at the rules standard size (3.29's real-wrap fit): no rules or flavour → textless; otherwise regular; otherwise tall (prints: ≤ ~178 characters regular, ≥ ~160 tall). The creator follows the text as it changes until the user picks a height; from then on their choice stays. (4.37's borderless box sizes stay manual-only: those are different printings, these one design.)
+      - **Creator (owner 2026-09-29).** Once this family is built and verified, NEW tokens default to it: the token kind's standard (`ERA_TYPE_FRAME.m15.token`) becomes this family. `m15token` stays available as the "Token (2014–2019)" option, and existing cards keep their frame. The type picker is 3b.15.
+      - **Import.** Verifying these templates turns 1.23's `token/m20` rule from `nearest` to `exact` (`onceVerified`).
+      - **References (0.11), 2 per colour:**
+        - W TFDN #6 Soldier · TFDN #27 Cat;
+        - U TFDN #12 Ninja · TFDN #8 Drake;
+        - B TFDN #15 Zombie · TFDN #30 Rat;
+        - R TFDN #18 Goblin · TFDN #16 Dragon;
+        - G TFDN #20 Raccoon · TDSK #12 Spider;
+        - M TDMU #20 Sand Warrior · TTDM #15 Reliquary Dragon;
+        - C TEOE #1 Sliver · TMH3 #38 Eldrazi Spawn;
+        - tall TBLB #5 · TLCI #17;
+        - first year TM20 #2 · TC19 #26.
+
+        Move the M20+ printings out of `m15token`'s registry to here (TFDN #8, TSOC #12, TFRC #5, TBLB #5, Cadet TFRA #1, …; 4.49).
+      - **Rollout.** New templates with no cards: no layout bump, no sweep. Owner `frames:promote` before merge; verify per colour (0.9 → 2.2 → 2.4).
+      - **Depends on:** 4.3 (a new pack run), 4.2, 4.18, 4.20, 3.24, 7.7, 4.49 (`alignSingleLine`); 4.8 (small caps), 4.6 (two colours, crown) and 4.9 (T) for the last details; 1.23 for `exact` imports.
+
+      Acceptance: 7.7 passes on every master. 3.11 parity cases: textless; one centred line; five left-aligned lines; tall. 1.23's TM20 #2 and TFDN #27 resolve `exact` once verified.
+- [ ] **4.49 [P0] Token P/T on the plate, a real text box, a left-aligned type line: today's token frame (the 2014–19 arch, `m15token` / `m15tokenartifact`)** (token research 2026-09-29; owner request; owner decisions 2026-09-29; takes over 4.4's leftover (1) with 4.53, 4.22's bordered text-box bullet and 4.31's "Token P/T on the border") — Our only token frame is CC 'Textless (Bordered M15)', the M15 (2014-07-18) → MH1 (2019-05-30) design: a black name bar with a gold rim, an arched art window and a cream type pill. Baked beside TDOM #3, TDOM #2, TXLN #10 and TFDN #8 (`tokens/reader-state/compare-ours-vs-print.png`), three faults put a wrong card on published pages today:
+      - **(a) P/T on the frame's edge.**
+        - There is no plate. The rect (MSE's 88.6–94.8 %H, `M15TOKEN.pt`) puts the digits at 1900–1946 px, the last rows of the colour band, touching the black border at ~1948 px (`tokens/final/verify/pt-crops.png`, W and U).
+        - Prints use the M15 plate at 78.1–93.6 %W × 89.7–94.6 %H: `plateRect` 75.73/88.48/18.8×7.33 with CC's m15PT{w,u,b,r,g,m,a,c}, M15's value box (4.18) and dark ink.
+        - 4.31 counts 8 public tokens with a P/T; the 2026-09-25 snapshot has 5. Recount live rows.
+      - **(b) Abilities on a scrim.** Rules print white on a 50 % black box over the art at 60.5–72.5 %H (`rules.backdropHex`). No printed token does that, and long text clips: our TBLB #5 Warren Warleader (207 characters) loses its second mode, and the public Prize Pig and Ave carry 205 and 264. Prints shorten the arch and add a cream text box (TDOM #2 Knight, TM19 #1 Angel, TC17 #9 Cat Dragon, TXLN #7/#10 Treasure, TC16 #9 Thopter). The fix:
+        - **New template `m15tokentext`** ("Token (2014–2019), text box"), from CC 'Regular (Bordered M15)': `packTokenRegularM15.js`, frames `token/m15/regular/{w,u,b,r,g,m,a,l}.png`; seeds art 7.67/12.48/84.76×51.43, type 65.0, rules 8.6/71.43/82.8×20.48, symbol centre 67.43.
+          - `c` is built like today's see-through `m15token` c.
+          - The artifact version (CC `a`) is its own template, `m15tokenartifacttext` (4.48's model, owner 2026-09-29: artifact tokens get their own templates).
+        - **Measure first: CC's master sits ~3 %H above every print.** On the master, the art window ends at 63.9 %H and the type pill runs 64.6–70.2. TXLN #10, TDOM #2, TM19 #1 and TC17 #9 all end the art at ~67.0 and print the pill at 67.6–73.3 (Scryfall PNGs, 2026-09-29: `tokens/final/verify/cc-m15regular-ruler.png`, `arch-typebar-ruler.png`). This is the same offset as 4.48's CC 'Regular' pack. Prints win:
+          - re-cut the master's lower band (window edge, pill, box) ~2.9 %H lower in the importer, as a PipGlyph composite of CC pixels (bucket, provenance);
+          - score it against those four prints;
+          - if that slips, CC's master as-is still ends the clipping; record the offset in the template's provenance note until the re-cut.
+        - **One line is centred** (TDOM #2 "Vigilance", TM19 #1): add `rules.alignSingleLine: "center"`, both renderers, with parity. It centres the rules when the shared wrap (`wrapRulesText`) gives one line; 4.48 and 4.52 reuse it.
+        - **Stored cards.** 28 of the 29 public `m15token` cards print rules text:
+          - once `m15tokentext` is verified on production, move the stored `m15token` rows with rules or flavour text to it (migration ≥ 0124, no grants change; count private rows first);
+          - delete the scrim in the same release, never before, or those cards lose their text;
+          - new cards pick the variant by 4.48's height rule (automatic, a manual choice sticks).
+        - **Tall box.** The arch's tall box (TAKH #1, TDOM #7, TC18 #10; type bar 56.1–62.2) has no CC source: P3, by the 1.6 log. Until then, long text shrinks to fit (3.29).
+      - **(d) Type line and set symbol.** The type line moves from centred to left, from 8.54 %W. The set symbol is right-anchored at 92.13 %W and black, centred at 84.39 %H (textless) and 67.43 (text box; re-measure after the re-cut). The DOM pill prints its baseline at 1799.9 px, ours at 1796.6 (4.21's note).
+      - **Registry (0.11): re-pin before anyone re-verifies** (this includes 1.4's owner step A6).
+        - 16 of the 20 `m15token` references and all 13 `m15tokenartifact` references are M20+ prints; they move to 4.48 / 4.50.
+        - The curated `m15token` `c` is an ARTIFACT (TXLN #7 Treasure).
+        - So these combos were ticked against another design. A re-pin alone stales only the recorded 2.4 sign-off score, not the tick; this item's bump resets the ticks (Rollout).
+
+        The pins, by template:
+        - `m15token` (textless prints only):
+          - W TDOM #3 Soldier · TM19 #6 Soldier;
+          - U TBFZ #7 Octopus · TWAR #5 Wizard;
+          - B TM19 #8 Zombie · TDOM #4 Cleric;
+          - R TDOM #9 Goblin · TMH1 #8 Elemental;
+          - G TDOM #11 Saproling · TM19 #12 Beast;
+          - C TBFZ #1 Eldrazi · TEMN #1 Eldrazi Horror (the see-through grey frame over the art that our `c` draws);
+          - M none: both 3+-colour arch tokens (TC17 #9, TWAR #16) have text. Own tick after a walk (2.4, decision 1).
+        - `m15tokentext`:
+          - W TDOM #2 Knight · TM19 #1 Angel;
+          - U TM15 #4 Squid · TC16 #7 Bird;
+          - B TM19 #7 Bat · TWAR #6 Assassin;
+          - R TM19 #9 Dragon · TSOI #6 Devil;
+          - G TM15 #10 Insect · TXLN #5 Dinosaur;
+          - M TC17 #9 Cat Dragon · TWAR #16 Citizen;
+          - C TBFZ #2 Eldrazi Scion · TOGW #1 Eldrazi Scion.
+        - `m15tokenartifact` (textless): c TKLD #2 Construct · TMH1 #18 Golem; u TC18 #7 Myr.
+        - `m15tokenartifacttext`:
+          - c TXLN #7 Treasure · TSOI #11 Clue · TM19 #14 Thopter;
+          - u TC16 #9 Thopter · TC18 #8 Thopter. These have a blue pinline on the silver frame: check the coloured recipe (colour through Title + Type + Pinline in `scripts/lib/cc-frames.mjs`) against them.
+        - Artifact w/b/r/g/m have no printing: own tick after a walk.
+      - **Rollout.**
+        - A renderer and master change on existing cards: a `CARD_LAYOUT_VERSION` bump, template-scoped to `m15token` / `m15tokenartifact`, with `VERSION_ROLLOUT: "sweep"` (0.20), after the frame-swap before/after sheet of every combo existing cards use.
+        - The 2026-09-25 production snapshot has 29 public token cards, all on `m15token`:
+          - 23 are one account's land cards on the token frame (21 typed "Basic" with Wastes / Mountain / Swamp);
+          - 1 more types "Basic — Wastes";
+          - 5 are tokens with a P/T and no type word.
+        - Count private rows first (admin query, by template).
+        - **Verification (owner 2026-09-29): this bump RESETS the 14 `m15token` / `m15tokenartifact` ticks** (7 colours each; it does not join `VERIFICATION_NEUTRAL_VERSIONS`): slots move, and the old ticks were made against the wrong design. `lib/cards/frame-verification-state.ts` stales them on the bump; re-verify every colour in the walk-through (2.2 → 2.4) against the re-pinned references above.
+        - Shares one bump with 3b.15's wording change or 4.53 when they are ready together (the shared bump resets the ticks).
+      - **Depends on:** 4.18 (shipped), 4.3 (the Regular M15 pack run and the re-cut), 3b.15 for the words (not blocking).
+
+      Acceptance: TDOM #3, TDOM #2 and TM19 #1 beside our bakes; 7.6 passes. 3.11 parity cases: P/T on the plate; one centred line and five lines on `m15tokentext`. No stored card loses its rules text.
+- [ ] **4.50 [P1] Artifact tokens: the artifact look in both token frames** (token research 2026-09-29; owner request; owner decisions 2026-09-29) — Every printed artifact token wears an artifact look, in both designs. Today it is a frame variation (`m15tokenartifact`) with no link to the type line.
+      - **Model (owner 2026-09-29, 4.48):** artifact tokens get their own templates in both families: `m15tokenartifact` and `m15tokenartifacttext` (4.49) on the arch, `m20tokenartifact`, `…text` and `…tall` (4.48) in the full-art family, picked from the Artifact type word. Nyx and snow stay dresses inside a colour's tick.
+      - **Wording.** "Token Artifact — Treasure" (Food, Clue, Blood, Map, Powerstone, Gold, Junk, Lander, Incubator, Equipment, Vehicle …), "Token Artifact Creature — Thopter", "Token Legendary Artifact — Equipment" (TAFR #2), "Token Snow Artifact" (TKHM #17), and a bare "Token Artifact" with no subtype (TM15 #12 Land Mine, TIKO #9 Feather).
+      - **Counts.** Scryfall 2026-09-28 (`t:token game:paper`, front face says Artifact): 546 printings, 278 noncreature and 268 creature. Since M20, 231 of the 236 noncreature ones are colourless (black border, `frame: 2015`, released ≥ 2019-07-12, not `plst`, single-faced). The 5 coloured ones are TIKO #9 and TMOC #23 Feather, TFRA #11 Heartwood, TAFR #2 and SLD #1018 Icingdeath.
+      - **Stats and text.** Noncreature artifacts print no P/T, except Vehicles, which print it on the plate (TDFT #12 Vehicle 3/2). Predefined tokens always carry their rules (Treasure 53 characters, Food 48, Clue 39, Blood 60; Map 287 → the tall box, TLCI #17).
+      - **M20+ look.**
+        - Colourless: silver-blue metallic pills with white name ink, a light blue-grey type pill and box, dark ink (TFDN #23 Treasure, TFDN #22 Food, TMKM #14 Clue, TVOW #17 Blood, TEOC #14 Golem, TMOM #19 Thopter).
+        - Coloured: the SAME silver pills and box, with the colour on the pill rims, the pinline, the bottom strip and the P/T rim (TDSK #7 Toy W, TSOC #8 Phyrexian Myr U, TMH3 #18 Phyrexian Wurm B, TMOC #25 Gremlin R). TIKO #9 Feather also tints its box. No mono-green artifact token was printed.
+        - Two colours → a gradient rim (TLCI #13 Golem UW), 4.6.
+      - **2014–19 look.** CC's silver-blue artifact frame (TXLN #7, TSOI #11, TM19 #14, TM15 #12). Coloured ones add a colour pinline (TC18 #7 Myr, TC16 #9 Thopter). That is today's `m15tokenartifact` and its text version; 4.49 re-pins both.
+      - **Source.** M20+: CC `tokenFrameA{Textless,Short,Tall}.png` for colourless. Coloured = the `A` master plus the colour master through CC's token Pinline mask, and the colour's m15PT plate. This is NOT 4.16's `m15artifact` recipe (colour title, type and rules): token pills stay silver. Score it against TDSK #7 and TSOC #8.
+      - **Creator.** "Artifact" in 3b.15's picker picks the artifact template; there is no separate frame choice. P/T only with Creature or a Vehicle/Spacecraft subtype (`showsPowerToughness` already knows Vehicle). Import: 1.23 (1.3 already routes Token + Artifact to `m15tokenartifact`).
+      - **References:**
+        - c TFDN #23 · TMKM #14 (text), TEOC #14 (textless creature), TLCI #17 (tall);
+        - w TDSK #7; u TSOC #8; b TMH3 #18; r TMOC #25;
+        - m TNEO #14 Mechtitan (five colours, legendary: `nearest` until 4.6);
+        - g none;
+        - Vehicle: TDFT #12.
+      - **Later (P3, by the 1.6 log):**
+        - the snow dress (CC snow masters; TKHM #17);
+        - land tokens (5: "Token Land" TDSK #16, TECL #11; "Token Land Creature" TBRO #3, TM3C #19, TFRA #9);
+        - the DFC Incubator (TMOM #16) with 5.5;
+        - whether a Vehicle token takes 4.6's vehicle treatment (check TDFT #12 first).
+      - **Depends on:** 4.48 (templates and model), 4.49, 3b.15; 4.6 for two colours and crowns.
+- [ ] **4.51 [P2] Enchantment tokens: the Nyx dress** (token research 2026-09-29; owner request; owner decisions 2026-09-29; replaces 4.15's "Nyx tokens") — The enchantment token itself is 3b.15's picker on the plain frames (P1); this item adds the dress some prints wear. There are 32 enchantment token printings: 26, plus 6 WOE/WOC Roles (TWOE #15–17, TWOC #1–2, plst TWOE-17). 19 of them are from M20 on, 6 of those Roles.
+      - **Wording.**
+        - "Token Enchantment — Aura" (TC18 #4 Mask, TNEC #6 Smoke Blessing, TPIP #8 Settlement, TWHO #15 Mark of the Rani, TSOC #3 Contract);
+        - "Token Enchantment — Shard" (TKHM #1, TDSK #2);
+        - "Token Enchantment Creature — Glimmer" (TDSK #4; also TDSK #10 Horror, TNEC #1 Shrine, TCMM #62 Cleric);
+        - "Token Enchantment Artifact Creature — Golem" (TEOC #13).
+      - **M20+ Nyx.** A starfield inside the NAME PILL only. The type pill and box stay plain, and the pill keeps its colour tone:
+        - white: TDSK #4 Glimmer and TSOC #3 Contract (a light pill with stars, dark ink);
+        - black: TDSK #10 Horror;
+        - colourless: TEOC #13 Golem and SLD #1835 Shrine (a dark starry pill, white ink).
+
+        All five are from September 2024 or later.
+      - **Plain (no Nyx).** TKHM #1 Shard (2021, a lavender colourless pill), TNEC #1 and #6 (2022), TCMM #62 and TWHO #15 (2023), TPIP #8 (2024-03), and TDSK #2 Shard, from the same set as the Nyx Glimmer. So Nyx is an optional dress, not a rule. Colourless enchantments print the colourless `C` frame.
+      - **2014–19.** TC15 #23 Spirit (WB) wears a Nyx-textured frame. The 2013–14 Theros tokens (11) used the 2003 frame (4.10 / 4.43).
+      - **Roles (owner 2026-09-29): unsupported.** 6 printings, a third of the M20-era enchantment tokens; each card holds two Roles, one upside down, and there is no CC or MSE master. 1.23 imports the front Role and logs the printing (1.6); no two-Role layout is planned.
+      - **Source.**
+        - M20+: neither CC nor MSE ships a master, so composite our own: the colour's 4.48 master plus a Nyx starfield through CC's Title mask. Use the strength MSE uses (`magic-m15-mainframe-tokens`, `m20/nyx_mask.png`, about 60 % grey), with the starfield from MSE `magic-modules` `trims/nyx`. It holds CC pixels, so it goes in the bucket. Owner visual sign-off beside TDSK #4, TDSK #10, TSOC #3 and TEOC #13 (check TSOC #3's type pill).
+        - 2014–19: CC ships them: `token/m15/{textless,regular}/nyx/{w,u,b,r,g,m,a}.png` (`packTokenTextlessM15.js` / `packTokenRegularM15.js`:22-28), no `c`. The regular ones carry 4.49's ~3 %H offset.
+      - **Creator (owner 2026-09-29).** "Enchantment" in 3b.15's picker, plus a "Nyx" toggle that is ON by default (the 2024+ prints and MSE's auto-Nyx); off gives the plain 2021–23 look. Enchantment + Artifact → the artifact template with the Nyx pill (TEOC #13). Today Nyx is refused on tokens: `SHOWCASE_KIND_RESTRICTION.nyx` is `["enchantment", "creature"]` (the creature since #396's A3). This dress is a master key of the token frames, not the `nyx` showcase template.
+      - **Import (1.23).**
+        - Nyx when `frame_effects ∋ enchantment` (TEOC #13, TSOC #3) or on a pinned list: TDSK #4, TDSK #10, SLD #1835 (Scryfall flags none of the three). Plain otherwise.
+        - 1.4's `nyx` gap (#396) names 4.7 (`m15nyx`, a non-token frame); on the token kind it must name this item.
+      - **Depends on:** 4.48, 4.49, 3b.15; the owner's sign-off on the composite.
+- [ ] **4.52 [P1] Emblems: the emblem frame (M20 design) from Card Conjurer's 'Planeswalker Emblems'** (token research 2026-09-29; owner request; owner decisions 2026-09-29; ships with 6.23) — CR 114: an emblem has no colour, types, mana cost, rarity or P/T. 141 have been printed (Scryfall `t:emblem`, 2026-09-28). Every one is on a colourless silver frame, whatever the planeswalker's colour, with the art in a planeswalker-spark cut-out. Three looks:
+      - **2012–13 (2003 frame):** a gold-rimmed plaque reading "EMBLEM / Sorin, Lord of Innistrad", no type line, centred text (TDKA #3, the first emblem; TM13 #11; TTHS #11; 13 printings) → P3 with 4.43 / 4.10.
+      - **M15 → MH1 (52 printings, plus 4 The List reprints):** a black bar reading "EMBLEM", rippled silver, type bar 68.4–74.2 %H reading "Emblem — Ajani" (TM15 #13, TBFZ #13, TKLD #10, TWAR #19, TMH1 #20; plst TORI-14) → the P3 variant below.
+      - **M20 → today, the standard.** 76 of the 141 were released from 2019-07-12 on; 4 of those are the plst reprints above.
+        - The name pill carries the SOURCE's name ("Kaito, Cunning Infiltrator") in white Beleren Small Caps on dark grey, with silver light rays behind the spark.
+        - The type bar sits at 67.5–73.4 %H and reads just "Emblem". AFR alone re-added the subtype (TAFR #16 "Emblem — Ellywick"); later sets dropped it again (MTG wiki "Emblem"). The set symbol is black, at its right.
+        - The text box runs to ~92.7 %H: one line centred, several lines left-aligned. 2019–21 prints centred every line (TM20 #11, TKHM #20).
+        - Collector letter E (4.9). A non-planeswalker source uses the same frame (TMOC #44 Teferi's Talent).
+      - **Source (owner 2026-09-29): Card Conjurer's emblem frame, today's look only.** CC `packEmblem.js` @2fcddba: one master, `img/frames/token/emblem/frame.png`, 1500×2100, the M20 design, through the same pipeline as the other M15 frames (the 4.3 importer, frames bucket, provenance). Seeds: art 14.2/4.96/71.6×85.48 (the spark cut-out is transparent at 11.67–66.38 %H); title 8.54/5.22 at 0.0381 H, white, centred; type 8.54/68.0, left, dark; rules 8.6/74.43/82.8×17.48; set symbol right edge 92.13, centre 70.43. Measure the box bottom on TFDN #25: CC's box measures 73.86–90.24 %H on the master, while prints run to ~92.7.
+      - **Profile.** Template `emblem`, one colour key `c` (the kind forces colourless). No cost, P/T or loyalty. 4.49's `rules.alignSingleLine: "center"`. Brand mark and footer in the black border.
+      - **References:**
+        - c TFDN #25 Vivien Reid (curated; it prints "Emblem" though Scryfall says "Emblem — Vivien") · TFDN #24 Kaito, Cunning Infiltrator;
+        - checks: TM20 #11 (the first M20 emblem), TDSK #17 (one line, centred), TBLB #30 (two lines, left), TFRA #16 (the newest; Reality Fracture, 2026-10-02).
+      - **Import.** 1.23 maps `layout: emblem` here and replaces 1.4's `no-card-type` `unsupported` for emblems.
+      - **Later (P3; owner 2026-09-29: only if people ask, by the 1.6 log):**
+        - the 2014–19 "EMBLEM" look as an `m15emblem` variant, from MSE `magic-m15-emblem` frame type `m15` or CC's master with the title bar redrawn. References TM15 #13 and TKLD #10 (its lower half already matches CC's geometry);
+        - the 2003 plaque, with 4.43.
+      - **Not planned:** the Universes Beyond full-bleed emblems (TACR #7, TFIN #24, WFIN #1), The Ring (TLTR #H13), the Mystery Booster playtest emblem (MB2 #513).
+      - **Rollout.** A new template with no cards: no bump. `frames:promote`, then verify `emblem/c`. Add it to `supabase/seed.sql`'s frame_reviews block only once production has verified it (the seed mirrors production).
+      - **Depends on:** 6.23 (the card type and kind; ship together), 4.3, 4.49 (`alignSingleLine`), 4.8 (small caps), 4.9 (E).
+- [ ] **4.53 [P1] Today's token frame, the rest of the print match: gold small-caps name and the art slot** (token research 2026-09-29; owner request; the rest of 4.4's leftover (1)) — What 4.49 leaves on `m15token` / `m15tokentext` / `m15tokenartifact` / `m15tokenartifacttext`:
+      - **(c) Name:** light Beleren Bold → gold `#fde367` (CC) Beleren Small Caps (4.8), centred. The gold ink can go first.
+      - **(e) Art slot:** CC artBounds 7.67/12.48/84.76×68.43 (today 6.5/12/87×69), with 7.6's coverage test (7.6 lists a 0.24 %H hairline here).
+      - **Rollout.** A template-scoped sweep, sharing 4.49's bump when ready together. Verification as 4.49 (owner 2026-09-29, decided for the frame fix it was split from): the art slot and the name move, so it resets the token ticks; in 4.49's bump they reset once.
+      - **Depends on:** 4.49, 4.8 (small caps).
+- [ ] **4.54 [P3] Retire `alphatoken`** (token research 2026-09-29; owner decision 2026-09-29: retire it, don't rebuild it) — `alphatoken` is a PipGlyph invention: no 1993-frame token was printed (the `lib/cards/frame-references.json` note; 0 in Scryfall's `t:token`). It prints a tiny type line and a P/T that lands on the cream text box (4.31). It has no references and no tick, so the creator hides it, and 1.4's `alpha` family (#396) still names it for a 1993-frame token (none exist). The real old-border tokens (303 printings on the 1997 and 2003 frames) stay with 4.10 / 4.43.
+      - **Count first:** an admin query by template (`frame_style->>'template' = 'alphatoken'`, every visibility). The 2026-09-25 snapshot's 29 public tokens are all on `m15token`, so any rows are private.
+      - **Move the stored cards** to the 2014–19 token frame: `m15token` in the same colour, or `m15tokentext` for rows with rules or flavour text once 4.49 has shipped it. A migration (next free number, ≥ 0124; no grants change) that also marks them for the platform re-bake (a null stamp, picked up by the automatic re-bake, 0120), after the frame-swap before/after sheet. No migration if the count is 0.
+      - **Code:**
+        - drop the Classic era's token frame (`ERA_TYPE_FRAME.classic.token`, `types/card.ts`), so the picker disables Classic for tokens as it does for planeswalkers;
+        - the registry's `alpha` family picks `m15token` for a token (`lib/scryfall/frame-signatures.ts`);
+        - a legacy `alphatoken` in a draft or remix reads as `m15token` (0.25's `RETIRED_CARD_FINISHES` pattern);
+        - remove the profile (`ALPHATOKEN`, `lib/cards/template-layout.ts`), the git master (`public/frames/alphatoken/`) and its rows in `lib/frames/edge-contract.ts`, `scripts/lib/frame-corners.mjs`, `lib/cards/frame-references.json`, `scripts/find-frame-references.mjs`, `scripts/import-mse-profiles.mjs` and `scripts/visual-audit.mjs`; take it out of 4.23's and 4.24's notes. `lib/cards/layout-version.ts` keeps it in its frozen historical scopes.
+      - Never verify it before it goes.
 
 ### Phase 5 — Two-sided cards end to end (3–4 weeks; needs 4.3 and 4.5)
 
@@ -1626,6 +1921,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       seed the DFC kind; icons from the `*dfc` frame effects; back colour from
       the back face.
 - [ ] **5.5 [P2] DFC sagas + battle backs, double-sided tokens.**
+      **Token research 2026-09-29:** 41 printings are `layout: double_faced_token` (e.g. TMOM #16 Incubator // Phyrexian). Until this ships, 1.23 imports the front face with a toast.
 - [ ] **5.6 [P3] Meld.**
       **Card Conjurer audit 2026-09-25:** Source from MSE `magic-m15-meld-3in1`; CC has no meld frame.
 - [ ] **5.7 [P2] Borderless transform + MDFC faces** (borderless research 2026-09-25) — 149 non-showcase transform/MDFC printings, e.g. ZNR #284 Branchloft Pathway and MOM #292 Elesh Norn. CC has only the light look: `TransformBorderlessFront/Back` (8 front + 7 back, `groupDFC.js`:10-11) and `ModalBorderless` (7 + 7, no L, `groupModal-1.js`:3). About 70 % of the real ones are `inverted` (survey sample: 74 of 103). Derive the dark look from CC `m15/borderless` plus 5.1's DFC icon, flipside strip and back-face treatment. Needs 5.1–5.3 and 4.32. Import signature: `border_color: borderless` + `*dfc` effects (5.4).
@@ -1674,6 +1970,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **6.4 [P2] Tokens** — automatic "Token" prefix + reminder line, emblem
       kind, token generator from a card's rules text (P3).
       **Card Conjurer audit 2026-09-25:** Emblem = CC `packEmblem`: one colourless 1500×2100 frame (art 14.2/4.96/71.6×85.48, type 68.0, rules 74.43–91.91), type line 'Emblem — <subtype>', no cost or P/T. Seed it from a walker's −N ability via a 'Create emblem from this ability' action in `components/creator/panels/loyalty-editor.tsx`. Monarch/Initiative/Day-Night markers become P3 presets. Token text-length layouts moved to 4.22.
+      **Token research 2026-09-29:** the "Token" prefix moves to 3b.15, and the emblem kind to 6.23 / 4.52. This item keeps the token generator from a card's rules text (P3) and the Monarch / Initiative / Day-Night presets.
 - [x] (done 2026-09-26 — feat/quick-wins. **Decided 2026-09-26 (owner): turn on Foil and Etched; Showcase as found.** Foil and Etched are selectable in the creator's Finish picker (Publish → Advanced) and free on every plan (`PREMIUM_FINISHES` stays empty); the frame gate stays per template + colour, so a verified combo saves in any finish. No migration and no layout bump: a new foil/etched card bakes at the current version, so no badge and no sweep. The finish stays locked on edit/remix (the locked summary now says so). Showcase stays "Soon", as found: its bake is byte-identical to a regular one, and only the preview slants the title (a faux italic; Satori has no italic Beleren) — ship it with a real treatment or remove it. Translucent rules backdrops — the verified `m15token` / `m15tokenartifact` scrims among them — carry the foil since layout v29 (4.31, #386), so a new foil token shows its sheen. Still open: etched is faint at display size on the M15 family (about 2.5 % of pixels move by more than 8/255) and nearly vanishes on see-through frames (3.23) — an owner call whether to strengthen it in a later finish-scoped bump; the public card page's "Card details" block doesn't list the finish.) **6.5 [P2] Foil/etched finishes: ship or remove** **[decide]**; if
       shipped, align preview and bake (`panels/effects-panel.tsx`:26).
       (progress 2026-09-25 — fix/frame-review-followups, layout v26: ETCHED
@@ -1794,6 +2091,25 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **6.20 [P3] Deck card with QR in the Pro deck export** (Card Conjurer audit 2026-09-25) — In the Pro deck export (ZIP + sheets), add a card-sized 'deck card' built from the deck cover, title, colour-identity pips, format/bracket and a server-rendered QR SVG pointing to `/deck/<user>/<slug>`. Place it on the first print sheet. CC's Deck Cover + QR template (`packCustomDeckCover.js`, `versionQRCode.js`) is the model. It is a cheap traffic loop from printed decks.
 - [ ] **6.21 [P3] Custom colour tint **[decide]**** (Card Conjurer audit 2026-09-25) — CC's per-layer HSL / colour overlay is a frequent ask (a 'sixth colour'). Offer an HSL tint on the colour layers only, labelled custom/unverified, never on a verified combo's defaults.
 - [ ] **6.22 [P2] The card PDF squashes a landscape card** (3.26 review, 2026-09-27) — `lib/render/card-pdf.ts` draws every render into a portrait 180 × 252 pt box (`drawImage(img, { width: CARD_W_PT, height: CARD_H_PT })`, the single card and each 3×3 sheet cell), so a Battle or Split bake (2100 × 1500) prints squeezed to 5:7. Rotate it 90° into the portrait slot (a printed Battle is a portrait card turned sideways) or give it a landscape page; the Pro deck export's PDF goes through the same module (`buildDeckPdf`). Test with a real landscape bake.
+- [ ] **6.23 [P1] Emblem card type and kind** (token research 2026-09-29; owner request; owner decisions 2026-09-29; takes over 6.4's emblem bullet; ships with 4.52) — Nothing exists: no card type, kind, DB value, frame or import mapping. Typing "Emblem" on a token prints "Emblem Token" with a P/T slot, and an import keeps the previous kind (1.23).
+      - **Data.** Migration ≥ 0124 (0122 is #397's, merged; 0123 is open #400's), `NNNN_emblem_card_type.sql`: drop and re-add `cards_card_type_valid` (0018) with 'emblem', stating its grants (no new objects, none changed).
+        - `cards.layout` already admits 'emblem' (0019 `cards_layout_valid`, with 'token' and 'double_faced_token'). Decide whether an emblem writes it.
+        - Then update:
+          - `CARD_TYPE_VALUES` and the labels (`types/card.ts`; the zod enum in `lib/validation/card.ts` reads it);
+          - `types/supabase.ts` (hand-maintained);
+          - `TYPE_HUB_COPY` (`lib/cards/hubs.ts`, a `Record<CardType, …>`, so typecheck asks for copy). `HUB_TYPES` adds `/gallery/type/emblem`, indexed only above its threshold;
+          - the type icons (`components/creator/field-group.tsx`);
+          - `ERA_TYPE_FRAME.m15.emblem = "emblem"` (4.52).
+      - **Kind.** A `KindDef` `emblem` (card type emblem, preview `emblem`). **Owner 2026-09-29:** it is reached from the Token kind's picker (3b.15: Emblem next to Creature / Artifact / Enchantment), not listed as its own entry in the kind picker; the emblem is still stored as its own card type.
+        - Fields: name (the source's name, e.g. "Kaito, Cunning Infiltrator"; the placeholder says so), rules text, art, artist, set icon.
+        - Hidden: cost and the Pips step, colour (forced colourless), P/T, loyalty, supertype, rarity (new emblems are common, owner 2026-09-29; the E letter comes with 4.9).
+        - An optional subtype prints "Emblem — Kaito" (the AFR and 2014–19 style). It is off by default, so the line reads "Emblem".
+      - **Seed from a planeswalker.** A "Create emblem" action on a loyalty row whose text says `You get an emblem with "…"` (`components/creator/panels/loyalty-editor.tsx`) opens `/create` with a draft emblem: name = the walker's name, rules = the quoted text (like the `?backFor=` / `?deckCard=` seeds).
+      - **Import:** 1.23. **AI:** keep emblems out of the AI dialogs' card-type lists until asked. In `lib/ai/mtg-rules.ts`, the no-cost warning at :278 exempts only land and token: add emblem.
+      - **Copy and seeds.** The token hub already promises emblems (`lib/cards/hubs.ts`). Add "How do I make an emblem?" to the token article's FAQ, and one emblem to `supabase/seeds/*.sql`.
+      - **Depends on:** 4.52 (its frame), 3b.15 (where it is offered).
+
+      Acceptance: an emblem saves with no cost, P/T or colour and prints "Emblem"; 1.23's emblem fixtures pass; the migration applies on the PR's Supabase preview branch.
 
 ### Phase 7 — Ops and QA (continuous)
 
@@ -1827,6 +2143,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       Fix those with 4.21 and the M15-family `artSlot` = CC artBounds (4.4). Translucent frames (4.17) are asserted differently.
       **Full-art research 2026-09-26:** check every colour of every master. The `expeditionland` b/g defect slipped through because the earlier checks sampled one colour.
+      **Token research 2026-09-29:** the `m15token` hairline goes with 4.53 (e)'s art slot.
 - [x] (done 2026-09-26 — wf/nf-renderer + feat/new-frames: `lib/frames/edge-contract.ts` holds the table and the checker — the table sits there rather than in the test so `scripts/import-cc-frames.mjs` runs the same check after its downscale and exits non-zero on a violation or an undeclared template; `tests/unit/frames/edge-contract.test.ts` checks every git master, and every bucket master when a local build matches the manifest's sha256 (`FRAMES_BUILD_DIR`, else `.frames-build`), with today's failures as `it.fails`. The check found four more ring templates the side-band survey missed — avatar, bloomburrow, lotr and tarkirdraconic (transparent bottom band and lower sides) — listed as known failures beside 7.7's list, for 4.35 / 4.11 (owner decision A8 2026-09-29: the signature registry caps every known failure but alphaland's corner specks at `nearest` until it is fixed — see 4.35). It passes on all 14 borderless masters (`m15borderless`: bar 7.76 % H, fins up the sides from 78.67 % H, measured on all nine CC masters), on `m15fullartland` (border; CC `textless/2022` rings are α 1.00) and on the re-sourced `fullartland` (art on every edge, plus its two bars)) **7.7 [P1] Edge-contract test (borderless-safe 7.6)** (borderless research 2026-09-25) — 7.6 asserts the frame is opaque outside the art window; an edge-to-edge treatment needs the opposite check. The manifest (4.1; a table in the test until then) declares each edge as `border`, `art` or `bar`, the same vocabulary as 6.1a's bleed recipe. For every template × colour master:
       - `border` → frame α ≥ 0.99 in the outer 2 % band;
       - `art` → the artSlot touches that edge (0 or 100 %) and the frame is α ≤ 0.05 there outside declared bars;
@@ -1871,6 +2188,20 @@ unused, so none needs a badge. 3.24's scoped sweep re-bakes only private cards
 on fullartland/m15textless*, if any exist. (2026-09-26: 3.24 and 4.39 done in
 feat/new-frames — v30 scoped to fullartland; owner: `frames:promote` before
 merge, the private-row count on fullartland before the sweep, verification.)
+
+Tokens (research 2026-09-29, owner request; owner decisions 2026-09-29): 4.49
+(P0) and 3b.15 first, in parallel. 4.49's P/T plate and left type line can go
+out as their own sweep (it resets the 14 token ticks, re-verified against the
+new pins); `m15tokentext` follows once its re-cut master is verified on
+production, and the stored text rows move to it (the scrim goes with them) in
+the release after. 3b.15 ships the picker on today's frames with its own
+verification-neutral wording sweep (one bump with 4.49 if they land together;
+that bump resets the ticks), and 1.23's search half with it. Then 4.52 + 6.23
+together (a new card type and frame, no sweep); then 4.48 + 4.50 (new
+templates, no sweep; new tokens default to the full-art family once they are
+verified) and 4.53 with or after them; 4.51 last (a composite the owner signs
+off by eye); 4.54 (retire `alphatoken`) any time after its row count. 1.23's
+design rules build on 1.4's registry (#396, merged 2026-09-29).
 
 ## Billing audit follow-ups (2026-09-24)
 
