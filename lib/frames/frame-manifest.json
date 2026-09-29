@@ -2,6 +2,104 @@
   "version": 1,
   "bucket": "frames",
   "files": {
+    "emblem/b.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/b.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/c.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/c.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/g.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/g.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/m.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/m.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/r.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/r.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/u.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/u.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/w.png": {
+      "hash": "556c4dd8816d",
+      "sha256": "556c4dd8816decadc3f23e1f25974e779160fce7e2e05c8bf328ddf739bf1839",
+      "bytes": 1501233,
+      "width": 1500,
+      "height": 2100
+    },
+    "emblem/w.webp": {
+      "hash": "6e1f44df882a",
+      "sha256": "6e1f44df882a6a56f9d310de182aa7427f52aa2ead55d50e2beab4127e19018f",
+      "bytes": 70930,
+      "width": 1500,
+      "height": 2100
+    },
     "fullartland/b.png": {
       "hash": "d8d32fa8ce52",
       "sha256": "d8d32fa8ce52743898b38d7c95348f6b04e79f4694f87af0274491f450bb4496",

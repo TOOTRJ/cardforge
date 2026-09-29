@@ -161,6 +161,13 @@ from (values
   -- after the migrations, so the row says it itself.
   ('c0000000-0000-4000-a000-000000000015'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Beast', 'beast-token', null, array['green'], 'Creature', 'token', array['Beast'], 'common',
      null, null, '4', '4', null, 15, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 4),
+  -- The emblem Veyra's −7 leaves behind (TODO 6.23 / 4.52): its own card
+  -- type on the emblem frame — the walker's name, "Emblem", colourless and
+  -- common, no cost or stats (migration 0130 admits the type; seeds run
+  -- after the migrations). The app never writes cards.layout, so neither
+  -- does this row.
+  ('c0000000-0000-4000-a000-000000000026'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Veyra, Stormbound', 'veyra-stormbound-emblem', null, array['colorless'], null, 'emblem', array[]::text[], 'common',
+     E'Instant and sorcery spells you cast cost {2} less to cast.', null, null, null, null, 11, 'emblem', 'regular', 'public', null, array['emblems'], null, 'normal', 11),
   -- dev_pro — a few polished cards + a remix ---------------------------------
   ('c0000000-0000-4000-a000-000000000016'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Archivist of Lost Hours', 'archivist-of-lost-hours', '{2}{U}', array['blue'], null, 'creature', array['Human','Wizard'], 'rare',
      E'Flash\nWhen Archivist of Lost Hours enters, return target instant card from your graveyard to your hand.', null, '2', '2', null, 16, 'm15', 'showcase', 'public', null, array['spellslinger'], null, 'normal', 18),

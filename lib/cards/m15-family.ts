@@ -38,6 +38,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // so they joined without a bump.
   "m15tokentext",
   "m15tokenartifacttext",
+  // The emblem (TODO 4.52, CC 'Planeswalker Emblems'): a new template, no
+  // stored card, so it joined without a bump.
+  "emblem",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

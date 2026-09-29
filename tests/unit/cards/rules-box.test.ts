@@ -62,7 +62,9 @@ function textReaching(input: (text: string) => RulesLayoutInput, keepOut: Rect):
 
 describe("the main box on every template", () => {
   it("gives M15 and its skins the prints' margins (4 / 0 HD px), split its border's, the text-box tokens theirs, every other box its default", () => {
-    const TOKEN_TEXT = ["m15tokentext", "m15tokenartifacttext"];
+    // …and 4.52's emblem: TFDN #24 / TBLB #30 start their lines at x
+    // 131–133 in its 129 px box, the same 2 px.
+    const TOKEN_TEXT = ["m15tokentext", "m15tokenartifacttext", "emblem"];
     const withPrintMargins = FRAME_TEMPLATE_VALUES.filter(
       (t) => t !== "split" && !TOKEN_TEXT.includes(t) && getFrameProfile(t).rules.padPx,
     );

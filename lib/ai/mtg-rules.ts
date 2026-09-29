@@ -285,7 +285,8 @@ export function lintCardDesign(card: LintableCard): LintResult {
   if (type === "land" && parsed !== null && parsed.symbols.length > 0) {
     errors.push({ field: "cost", message: "Lands don't have a mana cost — use \"—\"." });
   }
-  if (type !== "land" && type !== "token" && isNoCost(card.cost)) {
+  // A land, a token and an emblem (CR 114, TODO 6.23) have no mana cost.
+  if (type !== "land" && type !== "token" && type !== "emblem" && isNoCost(card.cost)) {
     warnings.push({
       field: "cost",
       message: "Nonland card with no mana cost — intentional (e.g. suspend-only) or a mistake?",

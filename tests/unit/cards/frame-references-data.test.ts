@@ -55,6 +55,9 @@ const DOCUMENTED_NULLS = new Set([
   // either (4.49 (b)).
   "m15tokenartifacttext/w", "m15tokenartifacttext/b", "m15tokenartifacttext/r", "m15tokenartifacttext/g",
   "m15tokenartifacttext/m",
+  // The emblem (TODO 4.52): colourless by rule (CR 114) — every printed one
+  // is on the one silver frame, so only `c` has printings.
+  "emblem/w", "emblem/u", "emblem/b", "emblem/r", "emblem/g", "emblem/m",
   "adventure/c",
   "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
   "aftermath/c",

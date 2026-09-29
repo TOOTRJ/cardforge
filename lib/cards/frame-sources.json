@@ -1,4 +1,44 @@
 {
+  "emblem": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packEmblem.js 'Planeswalker Emblems'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/token/emblem/frame.png"
+      ],
+      "u": [
+        "img/frames/token/emblem/frame.png"
+      ],
+      "b": [
+        "img/frames/token/emblem/frame.png"
+      ],
+      "r": [
+        "img/frames/token/emblem/frame.png"
+      ],
+      "g": [
+        "img/frames/token/emblem/frame.png"
+      ],
+      "c": [
+        "img/frames/token/emblem/frame.png"
+      ],
+      "m": [
+        "img/frames/token/emblem/frame.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/token/emblem/frame.png"
+    ],
+    "notes": [
+      "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
+      "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
+      "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there"
+    ]
+  },
   "fullartland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

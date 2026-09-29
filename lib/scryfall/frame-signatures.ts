@@ -832,7 +832,78 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "unsupported",
       template: "m15",
-      reason: "PipGlyph doesn't make this kind of card (emblems, planes, schemes)",
+      reason: "PipGlyph doesn't make this kind of card (planes, schemes, vanguards)",
+    },
+  },
+
+  // --- 6.23 / 4.52: emblems (layout `emblem`, the emblem kind) -------------
+  // 141 printed (Scryfall `t:emblem`, 2026-09-29). The one-offs PipGlyph
+  // won't build (4.52's "not planned", logged for 1.6): the Universes
+  // Beyond full-bleed emblems (TACR #7, TFIN #24, WFIN #1), The Ring's two
+  // faces (TLTR #H13, `double_faced_token`) and the Mystery Booster playtest
+  // card (MB2 #513). They import on the emblem kind, nearest its frame.
+  {
+    key: "emblem/one-off",
+    exactLabel: ({ card }) =>
+      (card.layout ?? "").toLowerCase() === "double_faced_token"
+        ? "Double-faced emblem"
+        : (card.promo_types ?? []).includes("playtest")
+          ? "Playtest emblem"
+          : "Universes Beyond full-bleed emblem",
+    match: {
+      kinds: ["emblem"],
+      anyOf: [{ layouts: ["double_faced_token"] }, { promosAny: ["universesbeyond", "playtest"] }],
+    },
+    outcome: {
+      status: "unsupported",
+      template: "emblem",
+      reason: "PipGlyph doesn't make this one-off emblem design; the import uses its emblem frame",
+    },
+  },
+  // The first emblems (DKA 2012 → BNG / MD1 2014; 13 printings) print a
+  // gold-rimmed "EMBLEM" plaque on the 2003 frame: 4.43 with the old
+  // borders (4.52, P3).
+  {
+    key: "emblem/old-frame",
+    exactLabel: ({ frame }) => `${frame} frame emblem`,
+    match: { kinds: ["emblem"], frames: ["1993", "1997", "2003"] },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "PipGlyph has no emblem frame for this border era yet",
+      blockedBy: "4.43",
+    },
+  },
+  // M15 → MH1 (2014-07-18 → 2019-05-30, and The List's pre-M20 prefixes:
+  // isM20DesignPrinting, the tokens' rule) print a black "EMBLEM" bar and
+  // "Emblem — Ajani": 4.52's later variant (P3, only if people ask).
+  {
+    key: "emblem/2014-19",
+    exactLabel: "2014–19 emblem frame",
+    match: { kinds: ["emblem"], frames: ["2015"], m20Design: false },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "PipGlyph draws today's emblem frame, not the 2014–19 one with the EMBLEM bar",
+      blockedBy: "4.52",
+    },
+  },
+  // M20 on (2019-07-12): today's emblem — the source's name in the dark
+  // bar, the spark cut-out, "Emblem" on the type bar. This is 4.52's frame.
+  {
+    key: "emblem/m20",
+    exactLabel: "Emblem frame",
+    match: { kinds: ["emblem"], frames: ["2015"], m20Design: true },
+    outcome: { status: "exact", template: "emblem" },
+  },
+  {
+    key: "emblem/other",
+    exactLabel: ({ frame }) => (frame ? `${frame} frame emblem` : "Emblem"),
+    match: { kinds: ["emblem"] },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "Scryfall reports a frame PipGlyph doesn't know",
     },
   },
   {

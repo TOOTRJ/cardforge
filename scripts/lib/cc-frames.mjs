@@ -174,6 +174,14 @@ const basics2022Frame = (k) => `${BASICS_2022}/${k === "c" ? "l" : k}.png`;
  *  is no multicolour basic land. */
 const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${BASICS_2022}/s${k}.png`]));
 
+// --- 4.52 'Planeswalker Emblems' — CC packEmblem.js: ONE master, the M20
+// design (2019-07-12 on: TM20 #11, TFDN #24 / #25, TBLB #30, TDSK #17,
+// TFRA #16). 1500×2100 native, opaque black border; the planeswalker spark
+// is clear (α 0) from 11.67 to 66.38 %H and its tail runs on down through
+// the type bar and the text box as 80 % white (α 204), so the art shows
+// faintly under it as the prints show it (CC's artBounds run to 90.44 %H).
+const EMBLEM = "img/frames/token/emblem/frame.png";
+
 /**
  * template → { colors: colour → layers, plates?, symbols?, shield?, recut?,
  * excluded?, pack?, transforms?, notes }.
@@ -376,6 +384,22 @@ export const CC_TEMPLATES = {
       "light bars, as on the 263 bordered printings (owner decision 2026-09-26): FRA #382–396 print dark bars and resolve nearest",
       "colourless (Wastes) = the pack's 'Colorless Frame' l.png + the colourless disc sc.png (owner visual sign-off before it is verified)",
       "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered",
+    ],
+  },
+  // 4.52 — the emblem (M20 design, today's look). CR 114: an emblem has no
+  // colour, and every printed one is on this silver frame whatever the
+  // planeswalker's colour; the emblem kind forces colourless, so `c` is
+  // the one key with a reference. The other six keys are the same master,
+  // built so each key has one (the 7-master contract every template ships:
+  // a stray coloured card on the frame still draws it); never offered.
+  emblem: {
+    colors: perColor(() => [layer(EMBLEM)]),
+    pack: "packEmblem.js 'Planeswalker Emblems'",
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    notes: [
+      "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
+      "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
+      "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
     ],
   },
 };

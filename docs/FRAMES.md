@@ -56,7 +56,10 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
   `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot;
 - the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
   m15tokentext and its artifact dress m15tokenartifacttext, re-cut onto the
-  prints (below).
+  prints (below);
+- the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
+  copied 1:1 into every colour key (an emblem is colourless; see "Emblems"
+  below).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -482,6 +485,44 @@ a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the
 walk-through. A stale tick stays verified, so the creator keeps offering
 the frames; the wording alone stales no tick anywhere.
 
+## Emblems (TODO 4.52 + 6.23)
+
+CR 114: an emblem has no colour, mana cost, types, rarity or P/T, and every
+one printed since M20 (2019-07-12) is on one silver frame — the source
+planeswalker's name in a dark bar, the art in a planeswalker-spark cut-out,
+a type bar reading "Emblem", a light text box. The `emblem` template is Card
+Conjurer's 'Planeswalker Emblems' master as it is (`CC_TEMPLATES.emblem`, no
+re-cut: its bars, box and border sit within 3 px of eight prints), one
+master for every colour key (only `c` has references: TFDN #25 Vivien Reid,
+TFDN #24, TDSK #17).
+
+- **Profile** (`EMBLEM` in `lib/cards/template-layout.ts`, an M15-family
+  member): no cost or stat slot; the name white and centred, the type line
+  left from 8.54 %W on the pill's interior, each moved onto the prints'
+  baseline (`EMBLEM_TITLE_PRINT_DY`, `EMBLEM_TYPE_PRINT_DY`); CC's symbol
+  box; the rules in CC's box made 10 px wider on the right so ONE centred
+  line lands where the prints centre it (`alignSingleLine`), two or more
+  from the left.
+- **Art.** The window is Scryfall's emblem `art_crop` box
+  (`EMBLEM_SCRYFALL_CROP_PX`): for an emblem that crop is cut from the
+  printed card around the spark, so an imported emblem's art registers
+  with the print. It is grown up to 232 px to take in the spark's
+  anti-aliased tips. CC's tall artBounds is the `underFrameArt` layer,
+  which the spark's tail (80 % white through the type bar and the box)
+  shows faintly, as the prints do.
+- **Kind.** The emblem is its own card type (migration 0130) and kind
+  (`KIND_DEFS.emblem`), reached from the token kind's "Token type" section
+  (the Emblem choice), never a kind chip of its own. It wears the emblem
+  frame and nothing else, and the emblem frame dresses nothing else
+  (`templateRefusesKind`, so the server's kind gate refuses both ways). The
+  card actions store every emblem colourless with no cost, supertype or
+  stats (`lib/cards/emblem.ts`); `buildTypeLine` prints "Emblem", or
+  "Emblem — Kaito" with the optional subtype.
+- **New and unverified.** The Emblem choice shows "Soon" until `emblem/c`
+  is verified; the walk-through reaches it
+  (`/create?previewFrames=emblem&kind=emblem&template=emblem&color=c&seed=reference`).
+  No stored card sits on it, so it shipped without a layout bump.
+
 ## Which printing is which frame (TODO 1.4)
 
 A Scryfall import knows which PipGlyph frame reproduces THIS printing from
@@ -531,6 +572,16 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   emblems" scope or the no-match fallback its Cards scope asks for
   (`fallback=tokens`; `lib/scryfall/search-scope.ts`, Scryfall's
   `include_extras`).
+- **Emblems (TODO 1.23 / 6.23).** "Emblem" is the emblem card type, so
+  every `layout: emblem` printing imports on the emblem kind (the title
+  without Scryfall's " Emblem", colourless, common; a subtype only on the
+  2014–19 look and AFR, `emblemPrintsSubtype`). The M20 design is
+  `emblem/m20`, exact on the emblem frame; the 2014–19 EMBLEM bar
+  (`emblem/2014-19`, the tokens' date / List-prefix rule) and the 2003
+  plaque (`emblem/old-frame`) are nearest it; the Universes Beyond
+  full-bleed emblems, The Ring's two faces and MB2's playtest card are
+  `emblem/one-off`, unsupported and logged. Every one of the 141 is held by
+  `tests/unit/scryfall/emblem-imports.test.ts`.
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or

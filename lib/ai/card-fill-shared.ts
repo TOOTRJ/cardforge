@@ -161,10 +161,11 @@ export function fillPromptNote(
   if (!has("title") && locked.title) pinned.push(`title "${locked.title}"`);
   if (!has("card_type")) {
     // A token's line as it prints — "Token Artifact — Treasure" (TODO
-    // 3b.15) — so the designer keeps its type words.
+    // 3b.15) — so the designer keeps its type words; an emblem's "Emblem"
+    // (TODO 6.23).
     const typeLine =
-      locked.card_type === "token"
-        ? buildTypeLine({ supertype: locked.supertype, cardType: "token", subtypes: locked.subtypes })
+      locked.card_type === "token" || locked.card_type === "emblem"
+        ? buildTypeLine({ supertype: locked.supertype, cardType: locked.card_type, subtypes: locked.subtypes })
         : [
             locked.supertype,
             locked.card_type,

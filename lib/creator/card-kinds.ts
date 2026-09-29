@@ -66,6 +66,10 @@ export const CARD_KIND_VALUES = [
   "planeswalker",
   "battle",
   "token",
+  // The emblem (TODO 6.23): reached from the token kind's picker, never a
+  // chip of its own in the kind picker (KIND_PICKER_KINDS), stored as its
+  // own card type.
+  "emblem",
   // Layout kinds — structural M15 layouts promoted to first-class picks.
   "saga",
   "adventure",
@@ -156,6 +160,12 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     cardType: "token",
     layoutTemplates: null,
     previewTemplate: "m15token",
+  },
+  emblem: {
+    label: "Emblem",
+    cardType: "emblem",
+    layoutTemplates: null,
+    previewTemplate: "emblem",
   },
   saga: {
     label: "Saga",
@@ -312,6 +322,61 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
     (t) => FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]] === "showcase",
   );
 
+// ---------------------------------------------------------------------------
+// The emblem (TODO 6.23 + 4.52). CR 114: an emblem is its own object — no
+// colour, mana cost, types, rarity or stats — and every printed one sits on
+// the emblem frame. So the emblem kind wears the emblem frame and nothing
+// else (no other era, skin or showcase), and the emblem frame dresses
+// nothing else: templateRefusesKind refuses both ways, so the server's kind
+// gate does too.
+// ---------------------------------------------------------------------------
+
+/** Kinds that wear only their own frames, and those frames. */
+const KIND_OWN_TEMPLATES: Partial<Record<CardKind, readonly FrameTemplate[]>> = {
+  emblem: ["emblem"],
+};
+
+/** Own template → the one kind it dresses (built from KIND_OWN_TEMPLATES). */
+const OWN_TEMPLATE_KIND: ReadonlyMap<FrameTemplate, CardKind> = new Map(
+  (Object.entries(KIND_OWN_TEMPLATES) as [CardKind, readonly FrameTemplate[]][]).flatMap(
+    ([kind, templates]) => templates.map((t) => [t, kind] as const),
+  ),
+);
+
+/** The kinds the Card step's kind picker lists as chips. The emblem is not
+ *  one of them (owner 2026-09-29): the token kind's picker offers it. */
+export const KIND_PICKER_KINDS: readonly CardKind[] = CARD_KIND_VALUES.filter(
+  (kind) => kind !== "emblem",
+);
+
+/** The kind-picker chip that stands for `kind`: an emblem sits under Token. */
+export function kindPickerChip(kind: CardKind): CardKind {
+  return kind === "emblem" ? "token" : kind;
+}
+
+/** The token and emblem kinds hide the rarity chips (owner 2026-09-29): a
+ *  token prints a black set symbol and a T, an emblem an E (4.9), never a
+ *  rarity. A new one (and a remix) saves as common; a stored one keeps its
+ *  rarity. */
+export function kindHidesRarity(kind: CardKind): boolean {
+  return kind === "token" || kind === "emblem";
+}
+
+/** What a card becomes on entering the emblem kind (TODO 6.23): an emblem
+ *  has no colour (the frame is silver whatever the walker's colour), cost,
+ *  supertype, stats or rarity (common, the chips hidden). The name, rules,
+ *  art, subtypes (an optional "Emblem — Kaito") and set icon stay. */
+export const EMBLEM_ENTRY_VALUES = {
+  color_identity: ["colorless"],
+  cost: "",
+  supertype: "",
+  power: "",
+  toughness: "",
+  loyalty: "",
+  defense: "",
+  rarity: "common",
+} as const;
+
 // Kinds a frame can only draw through a stat overlay its profile must carry:
 // a planeswalker needs the loyalty shield and the ability rows
 // (`loyaltyRows`), a battle its defense shield. Of the frames that dress
@@ -321,7 +386,8 @@ const STAT_OVERLAY_KINDS: readonly CardKind[] = ["planeswalker", "battle"];
 const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
   (kind) =>
     RAW_KIND_DEFS[kind].layoutTemplates === null &&
-    !STAT_OVERLAY_KINDS.includes(kind),
+    !STAT_OVERLAY_KINDS.includes(kind) &&
+    !KIND_OWN_TEMPLATES[kind],
 );
 
 // Type-specific showcase treatments: real expeditions / full-art basics are
@@ -365,6 +431,11 @@ export function templateRefusesKind(
   template: FrameTemplate,
   kind: CardKind,
 ): boolean {
+  // The emblem kind and its frame belong to each other only (TODO 6.23).
+  const own = KIND_OWN_TEMPLATES[kind];
+  if (own) return !own.includes(template);
+  const owner = OWN_TEMPLATE_KIND.get(template);
+  if (owner) return owner !== kind;
   const allowed = SHOWCASE_KIND_RESTRICTION[template];
   return allowed !== undefined && !allowed.includes(kind);
 }
@@ -544,10 +615,12 @@ export function withoutTypeWord(
 // import's Basic). None on is allowed — the bare "Token" of a Copy (TFDN
 // #26, owner 2026-09-29). Creature is on for a new token.
 //
-// Seam for 6.23: an "Emblem" choice sits here too (owner 2026-09-29: inside
-// the Token kind, next to the types — not its own kind chip), switching the
-// card to the emblem kind, which stores its own card type. It is not built
-// until that kind exists: no dead button.
+// The "Emblem" choice sits here too (TODO 6.23, owner 2026-09-29: inside
+// the Token kind, next to the types — not its own kind chip): it switches
+// the card to the emblem kind (KIND_PICKER_KINDS leaves it out of the kind
+// chips, kindPickerChip lights Token for it), which stores its own card
+// type; turning it off returns to the token kind. It is a kind change, not a
+// word: TOKEN_PICKER_WORDS stays the four type words.
 // ---------------------------------------------------------------------------
 
 /** The picker's toggles, in display order (the type chips, then Legendary). */
@@ -742,6 +815,17 @@ export function framesForKind(
       template: t,
       era: eraForTemplate(t),
       group: "layout" as const,
+      availableColorKeys: colors(t),
+    }));
+  }
+  // The emblem wears its own frame and nothing else (TODO 6.23): no other
+  // era, skin or showcase treatment.
+  const own = KIND_OWN_TEMPLATES[kind];
+  if (own) {
+    return own.map((t) => ({
+      template: t,
+      era: eraForTemplate(t),
+      group: "standard" as const,
       availableColorKeys: colors(t),
     }));
   }

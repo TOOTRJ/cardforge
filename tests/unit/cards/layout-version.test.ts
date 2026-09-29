@@ -395,6 +395,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15borderless", "m15borderlessartifact", "m15fullartland",
   // TODO 4.49 (b)'s text-box tokens.
   "m15tokentext", "m15tokenartifacttext",
+  // TODO 4.52's emblem.
+  "emblem",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -704,9 +706,9 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     const { M15_FAMILY_TEMPLATES } = await import("@/lib/cards/m15-family");
     // The family changed? Don't edit the frozen v32 list: ship the change in
     // its own bump, and record it here (the family = v32's list ± it).
-    // + 4.49 (b)'s text-box tokens: NEW templates, no card ever baked on
-    // them before, so they joined without a bump.
-    const joinedLater = ["m15tokentext", "m15tokenartifacttext"];
+    // + 4.49 (b)'s text-box tokens and 4.52's emblem: NEW templates, no
+    // card ever baked on them before, so they joined without a bump.
+    const joinedLater = ["m15tokentext", "m15tokenartifacttext", "emblem"];
     expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
     for (const t of joinedLater) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
     expect(new Set(V32_M15_FAMILY_TEMPLATES).size).toBe(V32_M15_FAMILY_TEMPLATES.length);

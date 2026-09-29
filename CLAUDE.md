@@ -284,6 +284,22 @@ Rules and gotchas:
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
   "Tokens").
+- Emblems (TODO 4.52 + 6.23, migration 0130): `card_type` 'emblem' and the
+  `emblem` kind, reached ONLY through the token kind's Emblem choice
+  (`KIND_PICKER_KINDS` leaves it out of the kind chips; `kindPickerChip`
+  lights Token). The kind wears the `emblem` frame alone and the frame
+  dresses nothing else (`templateRefusesKind` both ways, so the server's
+  kind gate too); every save is colourless with no cost, supertype or stats
+  (`withEmblemShape` / `withEmblemUpdateShape`, `lib/cards/emblem.ts`), new
+  ones common, rarity chips hidden (`kindHidesRarity`); `buildTypeLine`
+  prints "Emblem" (+ " — subtype"). The frame is CC's one master, 1:1, in
+  every colour key (only `c` is referenced); its art window is Scryfall's
+  emblem `art_crop` box (a crop of the printed card), CC's tall artBounds
+  the `underFrameArt` layer the spark's 80 % tail shows. Imports: "Emblem"
+  is the emblem card type (title minus " Emblem", subtype only on the
+  2014–19 look / AFR); registry `emblem/m20` exact, `emblem/2014-19` /
+  `emblem/old-frame` nearest, `emblem/one-off` unsupported. Emblems stay out
+  of the AI's design types (a fill may only PIN one).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

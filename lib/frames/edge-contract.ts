@@ -108,6 +108,8 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The text-box tokens (TODO 4.49 (b), CC 'Regular (Bordered M15)', re-cut).
   m15tokentext: ALL_BORDER,
   m15tokenartifacttext: ALL_BORDER,
+  // The emblem (TODO 4.52, CC 'Planeswalker Emblems').
+  emblem: ALL_BORDER,
   m15artifact: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,

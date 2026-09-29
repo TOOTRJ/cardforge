@@ -186,6 +186,8 @@ import {
   type KindChangePatch,
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
+// The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
+import { EMBLEM_ENTRY_VALUES, kindHidesRarity } from "@/lib/creator/card-kinds";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1209,6 +1211,15 @@ export function CardCreatorForm({
       });
       setValue("rarity", "common", { shouldDirty: true });
     }
+    // An emblem has no colour, cost, supertype, stats or rarity (TODO 6.23):
+    // they clear on the way in; the name, rules, art and subtypes stay.
+    if (nextKind === "emblem" && prevKind !== "emblem") {
+      for (const [field, value] of Object.entries(EMBLEM_ENTRY_VALUES)) {
+        setValue(field as keyof FormValues, (Array.isArray(value) ? [...value] : value) as never, {
+          shouldDirty: true,
+        });
+      }
+    }
   };
   const handleKindSelect = (next: CardKind) => {
     if (next === kind) return;
@@ -2231,7 +2242,7 @@ export function CardCreatorForm({
     // REMIX of a token (owner 2026-09-29): it saves a new card, and its
     // parent's rarity can't be seen or changed there. A stored token keeps
     // its rarity (edits never send a hidden change).
-    const tokenRarity = submitKind === "token" && !isEdit;
+    const tokenRarity = kindHidesRarity(submitKind) && !isEdit;
 
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
@@ -2564,7 +2575,7 @@ export function CardCreatorForm({
   // A new token (or a token's remix) previews as it saves: common (TODO
   // 3b.15; see onSubmit).
   const rarityForPreview =
-    kind === "token" && !isEdit
+    kindHidesRarity(kind) && !isEdit
       ? "common"
       : watched.rarity === ""
         ? null
@@ -2818,7 +2829,7 @@ export function CardCreatorForm({
             {stepKey === "identity" ? (
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
-                <IdentityPanel revise={isRevise} token={kind === "token"} />
+                <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
                 <ArtPanel
                   userId={userId}
                   importedArtOrigin={importedArtOrigin}
@@ -2867,7 +2878,7 @@ export function CardCreatorForm({
                     the token kind hides the chips (owner 2026-09-29) — a
                     new token (and a token's remix) is common, a stored one
                     keeps its rarity. */}
-                {kind !== "token" ? <RarityPanel /> : null}
+                {!kindHidesRarity(kind) ? <RarityPanel /> : null}
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land

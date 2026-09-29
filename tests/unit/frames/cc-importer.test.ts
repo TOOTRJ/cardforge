@@ -55,6 +55,7 @@ const TEXT_BOX_TOKENS = ["m15tokentext", "m15tokenartifacttext"];
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
     expect(Object.keys(templates).sort()).toEqual([
+      "emblem",
       "fullartland",
       "m15",
       "m15artifact",
@@ -102,6 +103,22 @@ describe("Card Conjurer recipe", () => {
     ]);
     expect(templates.m15artifact.colors.c).toHaveLength(1);
     expect(templates.m15tokenartifact.colors.c).toHaveLength(1);
+  });
+
+  // TODO 4.52: the emblem is CC's one 'Planeswalker Emblems' master, 1:1 — no
+  // re-cut (its bars, box and spark sit within 3 px of TFDN #24 / #25, TBLB
+  // #30, TDSK #17, TFRA #16) — for every colour key: an emblem is colourless
+  // (CR 114) and each key keeps a master.
+  it("builds the emblem from CC's one emblem master, the same file for every key, no re-cut (TODO 4.52)", () => {
+    const def = templates.emblem;
+    expect(def.recut).toBeUndefined();
+    expect(def.plates).toBeUndefined();
+    expect(def.pack).toBe("packEmblem.js 'Planeswalker Emblems'");
+    for (const k of COLORS) {
+      expect(def.colors[k], k).toEqual([{ src: "img/frames/token/emblem/frame.png" }]);
+    }
+    expect(sourceFilesFor(def as never)).toEqual(["img/frames/token/emblem/frame.png"]);
+    expect(def.transforms).toMatch(/1:1 \(no resample\)/);
   });
 
   it("sources tokens from CC's textless bordered pack (its geometry matches M15TOKEN)", () => {
