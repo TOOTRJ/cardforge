@@ -58,8 +58,8 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
   m15tokentext and its artifact dress m15tokenartifacttext, re-cut onto the
   prints (below);
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
-  copied 1:1 into every colour key (an emblem is colourless; see "Emblems"
-  below).
+  in every colour key (an emblem is colourless), its name pill toned and its
+  spark ray's shadow held onto the prints (see "Emblems" below).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -557,10 +557,22 @@ CR 114: an emblem has no colour, mana cost, types, rarity or P/T, and every
 one printed since M20 (2019-07-12) is on one silver frame — the source
 planeswalker's name in a dark bar, the art in a planeswalker-spark cut-out,
 a type bar reading "Emblem", a light text box. The `emblem` template is Card
-Conjurer's 'Planeswalker Emblems' master as it is (`CC_TEMPLATES.emblem`, no
-re-cut: its bars, box and border sit within 3 px of eight prints), one
+Conjurer's 'Planeswalker Emblems' master (`CC_TEMPLATES.emblem`: its bars,
+box and border sit within 3 px of eight prints, so nothing moves), one
 master for every colour key (only `c` has references: TFDN #25 Vivien Reid,
-TFDN #24, TDSK #17).
+TFDN #24, TDSK #17), with two touches onto the prints:
+
+- **The name pill, toned** (`EMBLEM_NAME_PILL_TONE`, `toneRegion`). CC's pack
+  draws `frame.png` alone — no darkening layer — and its pill is a light
+  gradient (median luma 90 over the name band) where the prints print a dark
+  one (52). The pill's body (inside its dark outline, under CC's highlight)
+  is multiplied by a gain fitted on the six M20 prints, by distance from the
+  pill's centre, and made opaque.
+- **The spark ray's shadow, held** (`EMBLEM_RAY_SHADOW_RECUT`, `recutBand`
+  with a column window and a held fill). The art window starts at 250.4 px
+  (below); CC's centre ray is clear from 245 under its black shadow, and
+  those rows showed the under-frame layer at another scale. The ray keeps its
+  shadow down to 250 and fades it out over the window's own picture.
 
 - **Profile** (`EMBLEM` in `lib/cards/template-layout.ts`, an M15-family
   member): no cost or stat slot; the name white and centred, the type line
@@ -569,13 +581,14 @@ TFDN #24, TDSK #17).
   box; the rules in CC's box made 10 px wider on the right so ONE centred
   line lands where the prints centre it (`alignSingleLine`), two or more
   from the left.
-- **Art.** The window is Scryfall's emblem `art_crop` box
+- **Art.** The window is Scryfall's emblem `art_crop` box exactly
   (`EMBLEM_SCRYFALL_CROP_PX`): for an emblem that crop is cut from the
   printed card around the spark, so an imported emblem's art registers
-  with the print. It is grown up to 232 px to take in the spark's
-  anti-aliased tips. CC's tall artBounds is the `underFrameArt` layer,
-  which the spark's tail (80 % white through the type bar and the box)
-  shows faintly, as the prints do.
+  with the print at its printed size (grown to take in the ray's tip, it
+  drew the art 1.6–1.8 % larger — the ray's shadow covers the tip now).
+  CC's tall artBounds is the `underFrameArt` layer, which the spark's tail
+  (80 % white through the type bar and the box) shows faintly, as the
+  prints do.
 - **Kind.** The emblem is its own card type (migration 0130) and kind
   (`KIND_DEFS.emblem`), reached from the token kind's "Token type" section
   (the Emblem choice), never a kind chip of its own. It wears the emblem
@@ -584,6 +597,11 @@ TFDN #24, TDSK #17).
   card actions store every emblem colourless with no cost, supertype or
   stats (`lib/cards/emblem.ts`); `buildTypeLine` prints "Emblem", or
   "Emblem — Kaito" with the optional subtype.
+- **Page name** (owner decision 2026-09-29). The card prints the walker's
+  name; its page and address say "Emblem" as Scryfall's do ("Kaito, Cunning
+  Infiltrator Emblem", …/kaito-cunning-infiltrator-emblem): `cardPageName`
+  for the new card's slug, `<title>`, OG / Twitter, JSON-LD name, heading
+  and oEmbed.
 - **New and unverified.** The Emblem choice shows "Soon" until `emblem/c`
   is verified; the walk-through reaches it
   (`/create?previewFrames=emblem&kind=emblem&template=emblem&color=c&seed=reference`).

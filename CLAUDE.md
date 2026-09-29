@@ -306,10 +306,15 @@ Rules and gotchas:
   kind gate too); every save is colourless with no cost, supertype or stats
   (`withEmblemShape` / `withEmblemUpdateShape`, `lib/cards/emblem.ts`), new
   ones common, rarity chips hidden (`kindHidesRarity`); `buildTypeLine`
-  prints "Emblem" (+ " — subtype"). The frame is CC's one master, 1:1, in
-  every colour key (only `c` is referenced); its art window is Scryfall's
-  emblem `art_crop` box (a crop of the printed card), CC's tall artBounds
-  the `underFrameArt` layer the spark's 80 % tail shows. Imports: "Emblem"
+  prints "Emblem" (+ " — subtype"). The frame is CC's one master in every
+  colour key (only `c` is referenced), its name pill toned and its spark
+  ray's shadow held onto the prints (`EMBLEM_NAME_PILL_TONE`,
+  `EMBLEM_RAY_SHADOW_RECUT` in the CC importer); its art window is
+  Scryfall's emblem `art_crop` box EXACTLY (a crop of the printed card, at
+  the prints' scale — never grown), CC's tall artBounds the `underFrameArt`
+  layer the spark's 80 % tail shows. Its page and new slug say "Emblem"
+  (`cardPageName`: "Kaito, Cunning Infiltrator Emblem", …-emblem, like
+  Scryfall) while the card prints the walker's name. Imports: "Emblem"
   is the emblem card type (title minus " Emblem", subtype only on the
   2014–19 look / AFR); registry `emblem/m20` exact, `emblem/2014-19` /
   `emblem/old-frame` nearest, `emblem/one-off` unsupported. Emblems stay out
