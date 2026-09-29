@@ -45,10 +45,11 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tdom-2", "exact", "m15tokentext", "era/2015", undefined],
     ["tdom-11", "exact", "m15token", "era/2015", undefined],
     ["txln-7", "exact", "m15tokenartifacttext", "era/2015", undefined],
-    // …except the arch's TALL text box (4.49 (b)'s P3, no CC source):
-    // pinned (TALL_BOX_TOKEN_PINS), nearest the regular box and logged.
-    ["takh-1", "nearest", "m15tokentext", "era/2015+tall-box", "4.49"],
-    ["tsoi-11", "nearest", "m15tokenartifacttext", "era/2015+tall-box", "4.49"],
+    // …except the arch's TALL text box (4.55, P3 — split out of 4.49 (b),
+    // owner 2026-09-29; no CC source): pinned (TALL_BOX_TOKEN_PINS),
+    // nearest the regular box and logged, blocked by its own item.
+    ["takh-1", "nearest", "m15tokentext", "era/2015+tall-box", "4.55"],
+    ["tsoi-11", "nearest", "m15tokenartifacttext", "era/2015+tall-box", "4.55"],
     // From M20 (2019-07-12) on: the full-art design PipGlyph doesn't draw
     // yet (4.48) — nearest the arch, the artifact arch for an Artifact, and
     // its text-box variant when the printing has text (4.49 (b): a box, not

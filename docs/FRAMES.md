@@ -448,13 +448,13 @@ textless dress it landed on before (`TEXT_BOX_TOKEN_FALLBACK` in
 `lib/creator/frame-resolve.ts`: m15token, m15tokenartifact for a Treasure).
 No stored card moves (a later migration, once verified: 4.49 (b)'s "Stored
 cards"), no layout bump (new templates), and the scrim on m15token stays.
-TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: 4.49's
-P3) and is not a reference. The registry pins the 21 arch printings with
+TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: its own
+item, 4.55, P3) and is not a reference. The registry pins the 21 arch printings with
 the tall box (`TALL_BOX_TOKEN_PINS`: every black-bordered pre-M20 arch token
 with rules text measured against this master — Amonkhet / Hour of
 Devastation's embalmed and eternalized cards, the SOI Clues, TDOM #7, TC18
 #4 / #10 / #19, TRIX #1, TUST #18): the `tall-box` gap answers `nearest` the
-regular box with `blockedBy` 4.49, so the import lands there (the text
+regular box with `blockedBy` 4.55, so the import lands there (the text
 shrinks to fit) and the 1.6 log counts the demand, instead of calling the
 regular box exact.
 

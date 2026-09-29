@@ -188,7 +188,7 @@ const NYX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = {
 
 /** The 2014–19 arch tokens that print the TALL text box — the type pill at
  *  ~56–62 %H over a box twice the regular one's, not m15tokentext's pill at
- *  67–73.5 %H (TODO 4.49 (b): no Card Conjurer source, P3 by the 1.6 log).
+ *  67–73.5 %H (TODO 4.55: no Card Conjurer source, P3 by the 1.6 log).
  *  Scryfall has no field for the box height and text length doesn't tell
  *  (the SOI Clue's 39 characters print tall), so they are pinned: every
  *  black-bordered pre-M20 arch token with rules text (316 printings, the
@@ -709,13 +709,13 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't draw the Nyx dress on its token frames yet",
     blockedBy: "4.51",
   },
-  // The arch token's tall text box (TODO 4.49 (b), P3): the import lands on
-  // the regular box, the text shrinking to fit (3.29), and the 1.6 log
-  // counts the demand.
+  // The arch token's tall text box (TODO 4.55, P3 — split out of 4.49 (b),
+  // owner 2026-09-29): the import lands on the regular box, the text
+  // shrinking to fit (3.29), and the 1.6 log counts the demand.
   "tall-box": {
     match: { kinds: ["token"], collectorIds: TALL_BOX_TOKEN_PINS },
     reason: "PipGlyph doesn't have the tall text box of this token frame yet",
-    blockedBy: "4.49",
+    blockedBy: "4.55",
   },
   nyx: {
     match: { effectsAny: ["enchantment"], notKinds: ["token"] },
