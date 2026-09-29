@@ -874,6 +874,19 @@ const M15_TYPE_DY = keepBaseline(0.0435, TYPE_SIZE_PCT);
  *  type line down instead (TOKEN_TYPE_PRINT_DY). */
 const CC_M15_TYPE_PRINT_DY = -0.0028;
 const CC_M15_TYPE_DY = M15_TYPE_DY + CC_M15_TYPE_PRINT_DY;
+/** The art slot of the Card Conjurer M15 masters (TODO 4.4 (2), layout v35):
+ *  their window is 116–1384 × 238–1165 px on every colour of m15, land,
+ *  snow land, artifact, snow and devoid, 1–1.6 px wider and taller on every
+ *  side than the inherited MSE slot 7.8/11.4/84.4 × 44.0 (117–1383 ×
+ *  239.4–1163.4), so a #101015 hairline framed every such card's art. CC's
+ *  own artBounds (packM15RegularNew.js: 7.67/11.29/84.76 × 44.29 →
+ *  115.05–1386.45 × 237.09–1167.18) cover it but for the top: 0.91 px of
+ *  overscan there, and the art-window check (TODO 7.6) asks 1.05 px. So:
+ *  CC's left, width and bottom edge, the top 0.04 % higher (11.25 %,
+ *  236.25 px). Overscan 0.95 / 2.45 / 1.75 / 2.18 px (left, right, top,
+ *  bottom). Only on the profiles that draw those masters, NOT on M15, whose
+ *  slot the MSE-framed adventure spreads (as with CC_M15_COST_DY). */
+const CC_M15_ART_SLOT: Rect = { topPct: 11.25, leftPct: 7.67, widthPct: 84.76, heightPct: 44.33 };
 
 // ---------------------------------------------------------------------------
 // Profiles. Coordinates measured from the 1500×2100 white frame PNGs by
@@ -1001,11 +1014,12 @@ const M15: FrameProfile = {
 //     (migration 0114). The band keeps its 77.5% width; keep the right edge
 //     with M15 (14 + 77.5 = 91.5 ≈ 8.5 + 83).
 // A Card Conjurer master (4.4): the type line sits on the prints' baseline
-// (CC_M15_TYPE_DY).
+// (CC_M15_TYPE_DY), the art on CC's window (CC_M15_ART_SLOT, layout v35).
 const M15LAND: FrameProfile = {
   ...M15,
   label: "M15 Land",
   hideCost: true,
+  artSlot: CC_M15_ART_SLOT,
   title: {
     ...M15.title,
     rect: { ...M15.title.rect, leftPct: 8.4, widthPct: 77.5 },
@@ -1470,12 +1484,14 @@ const M15TOKENTEXT: FrameProfile = {
 // (owner review 2026-09-25). Lift them 0.55 %H on the CC-framed profiles —
 // NOT on M15 itself, whose geometry the older MSE-framed families spread.
 // The same profiles put the type line on the prints' baseline
-// (CC_M15_TYPE_DY, layout v32).
+// (CC_M15_TYPE_DY, layout v32) and the art on CC's window (CC_M15_ART_SLOT,
+// layout v35).
 const CC_M15_COST_DY = -0.0077;
 const M15ARTIFACT: FrameProfile = {
   ...M15,
   label: "M15 Artifact",
   costDy: CC_M15_COST_DY,
+  artSlot: CC_M15_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
 };
@@ -1483,12 +1499,23 @@ const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
   costDy: CC_M15_COST_DY,
+  artSlot: CC_M15_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15snow/pt/{color}.png" },
 };
 
-/** Inside the black border — where the art runs under see-through frames. */
-const UNDER_FRAME_RECT = { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 };
+/** Where the art runs under see-through frames: from the black border's
+ *  inner edge (TODO 4.17a, layout v35) — 55.5–1444.5 × 56.7–2016 px. The
+ *  see-through body of CC's colourless M15 / devoid / token / planeswalker
+ *  masters starts at the border's inner edge, 58–59 px in (α 7–89 between the
+ *  border and the title bar); v24's 4/4/92 × 92 started 84 px down and left
+ *  a 25 px #101015 band above every such title bar. The prints' border ends
+ *  2.69–2.88 %H down and 3.76–4.16 %W in (BFZ #10/#15/#57, OGW #13, TBFZ
+ *  #1/#2, DOM #1, M21 #1, STX #4, measured 2026-09-29), so this starts at or
+ *  outside every one of them; the bottom stays at 96 %, under the opaque
+ *  bottom border. The art-window check (lib/frames/art-window.ts) holds it
+ *  to the window and the whole see-through body with 0.05 % to spare. */
+const UNDER_FRAME_RECT: Rect = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
 // Devoid re-dresses the M15 frame; the Eldrazi type bar sits 0.1% higher
 // than the plain frame's and the set symbol lives in its own box
 // (production override 2026-07-14, folded 2026-09-25).
@@ -1496,6 +1523,7 @@ const M15DEVOID: FrameProfile = {
   ...M15,
   label: "M15 Devoid (Eldrazi)",
   costDy: CC_M15_COST_DY,
+  artSlot: CC_M15_ART_SLOT,
   // Every devoid frame is see-through (CC text box alpha ~179): the art
   // runs under the whole frame like printed devoid cards (4.17).
   underFrameArt: { rect: UNDER_FRAME_RECT },
@@ -2672,10 +2700,17 @@ const EXPEDITIONLAND: FrameProfile = {
 
 // Nyx constellation — M15 layout at 750×1046 with a starfield border and a
 // baked-in translucent dark text box (light ink).
+// The art runs under the WHOLE translucent type bar and text box, as on the
+// Theros Beyond Death constellation prints (THB #258 Daxos, #259 Heliod,
+// #268 Klothys — one picture from the window to the box's bottom; owner
+// decision 2026-09-29, TODO 4.17b, layout v35). The box (α ≈ 128) runs
+// 110–1391 × 1319–1946 px; the slot used to end at 81.2 % (1705 px), so the
+// box's top showed the art and its last 241 px #101015 — a seam across the
+// rules text. It now ends at 93 % (1953 px), under the opaque bottom border.
 const NYX: FrameProfile = {
   ...M15,
   label: "Nyx Constellation",
-  artSlot: { topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 70 },
+  artSlot: { topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 },
   title: { ...M15.title, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
   type: { ...M15.type, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
   rules: { ...M15.rules, colorHex: INK_LIGHT },
@@ -2685,10 +2720,15 @@ const NYX: FrameProfile = {
 // Zendikar Rising showcase (the hedron frame; key `fullart` for history, not
 // full art) — a tall art window inside the border, floating title bar, and a
 // baked-in translucent text box in the bottom quarter.
+// The art fills the whole translucent text box (α ≈ 179, 59–1442 ×
+// 1239–1946 px): the slot used to end at 91.2 % (1915 px), leaving a 31 px
+// #101015 strip along the box's bottom (TODO 4.17b, layout v35); it ends at
+// 93 % (1953 px) now, under the opaque bottom border. (The ZNR prints paint
+// that box as an opaque hedron panel — a re-source question, not this fix.)
 const FULLART: FrameProfile = {
   ...M15,
   label: "Zendikar Rising Hedron",
-  artSlot: { topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 88.3 },
+  artSlot: { topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 90.1 },
   title: {
     ...M15.title,
     rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 5 },
@@ -2831,11 +2871,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
   // spread M15 don't inherit it.
-  // The CC cost lift and type-line baseline (CC_M15_COST_DY /
-  // CC_M15_TYPE_DY) are set here too, for the same reason.
+  // The CC cost lift, type-line baseline and art slot (CC_M15_COST_DY /
+  // CC_M15_TYPE_DY / CC_M15_ART_SLOT) are set here too, for the same reason.
   m15: {
     ...M15,
     costDy: CC_M15_COST_DY,
+    artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
   },
@@ -2865,7 +2906,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
-  m15pw: M15PW,
+  // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
+  // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through
+  // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35).
+  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,

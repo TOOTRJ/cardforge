@@ -281,9 +281,9 @@ describe("artWindowVerdict: the known-failure table", () => {
   it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
     expect(artWindowVerdict("modern", "w", miss(1.65))).toEqual({ fails: [], fixed: false });
     expect(artWindowVerdict("modern", "w", miss(2.5)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.10\): misses by 2\.5 px > 2: /)]);
-    // Per-key bounds: m15/c's see-through band, the other colours' hairline.
-    expect(artWindowVerdict("m15", "c", miss(26)).fails).toEqual([]);
-    expect(artWindowVerdict("m15", "w", miss(26)).fails).toHaveLength(1);
+    // Per-key bounds: expeditionland b/g's missing ring, u/r's 2.5 px apex.
+    expect(artWindowVerdict("expeditionland", "b", miss(300)).fails).toEqual([]);
+    expect(artWindowVerdict("expeditionland", "u", miss(300)).fails).toHaveLength(1);
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
@@ -344,6 +344,75 @@ describe("see-through masters (4.17): the under-frame art covers the window and 
   });
 });
 
+// Layout v35 (4.4 (2), 4.17a, 4.17b), on synthetic 1500 × 2100 masters cut to
+// the Card Conjurer masters' measured windows and see-through bodies — so the
+// profiles are held to them where the bucket masters aren't fetched too.
+describe("layout v35 covers the Card Conjurer masters' measured art windows", { timeout: 20_000 }, () => {
+  const W = 1500;
+  const H = 2100;
+  type Box = [x0: number, x1: number, y0: number, y1: number];
+  /** Opaque, the card corner cut, a clear window and (optionally) a
+   *  see-through body (α 26) around it — px boxes, x1/y1 exclusive. */
+  const master = (window: Box, body: Box | null = null) => {
+    const buf = new Uint8Array(W * H * 4);
+    const inside = (b: Box, x: number, y: number) => x >= b[0] && x < b[1] && y >= b[2] && y < b[3];
+    for (let y = 0; y < H; y += 1) {
+      for (let x = 0; x < W; x += 1) {
+        buf[(y * W + x) * 4 + 3] = inside(window, x, y) ? 0 : body && inside(body, x, y) ? 26 : 255;
+      }
+    }
+    applyCardCornerMask(buf, W, H);
+    return buf;
+  };
+  // Measured 2026-09-29 on every colour of the bucket masters (sha-checked).
+  const M15_WINDOW: Box = [116, 1384, 238, 1165];
+
+  it("covers the CC M15 window 116–1384 × 238–1165 on every profile that draws it (was a 1–1.6 px hairline)", () => {
+    const m = master(M15_WINDOW);
+    for (const template of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid"]) {
+      const slots = slotsFor(template, "w");
+      // m15devoid's coloured masters are see-through too: their body below.
+      if (template === "m15devoid") continue;
+      expect(artWindowViolations(m, W, H, slots), template).toEqual([]);
+      expect(slotPixelBox(getFrameProfile(template).artSlot, 0, W, H), template).toEqual({
+        x0: expect.closeTo(115.05, 6),
+        x1: expect.closeTo(1386.45, 6),
+        y0: expect.closeTo(236.25, 6),
+        y1: expect.closeTo(1167.18, 6),
+      });
+    }
+    // The inherited MSE slot 7.8/11.4/84.4 × 44.0 (v34) misses it on every side.
+    const v34 = [{ name: "artSlot", rect: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 } }];
+    expect(artWindowViolations(m, W, H, v34)).toEqual([expect.stringMatching(/left 117 > 115\.25, right 1383 < 1384\.75, top 239\.4 > 236\.95, bottom 1163\.4 < 1166\.05$/)]);
+    // The MSE-framed adventure keeps M15's own slot (its master is 4.21's).
+    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 });
+  });
+
+  it("runs the art under every see-through master from the border's inner edge (was a 25 px band above the title bar)", () => {
+    const cases: [template: string, key: string, window: Box, body: Box][] = [
+      ["m15", "c", M15_WINDOW, [58, 1443, 59, 1938]],
+      ["m15devoid", "c", M15_WINDOW, [58, 1443, 59, 1938]],
+      ["m15devoid", "w", M15_WINDOW, [59, 1441, 89, 1938]],
+      ["m15token", "c", [111, 1389, 259, 1709], [59, 1441, 59, 1949]],
+      ["m15tokentext", "c", [111, 1389, 259, 1409], [59, 1441, 59, 1949]],
+      // 4.17b: CC's colourless planeswalker had no under-frame art at all.
+      ["m15pw", "c", [106, 1393, 212, 1159], [60, 1440, 60, 1932]],
+    ];
+    for (const [template, key, window, body] of cases) {
+      const m = master(window, body);
+      expect(underFrameArtRect(getFrameProfile(template), key), `${template}/${key}`).toEqual({ topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 });
+      expect(artWindowViolations(m, W, H, slotsFor(template, key)), `${template}/${key}`).toEqual([]);
+      // v24's rect 4/4/92 × 92 (60–1440 × 84–2016) left the band (the
+      // coloured devoid body starts at 89 px: there, 1–2 px down each side).
+      const v34 = artWindowSlotsOf(getFrameProfile(template), { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 });
+      const band = body[2] < 84 ? /doesn't cover the see-through frame .*top 84 > / : /doesn't cover the see-through frame .*: left 60 > \d/;
+      expect(artWindowViolations(m, W, H, v34), `${template}/${key} at v34`).toEqual([expect.stringMatching(band)]);
+    }
+    // Only the see-through master of a coloured planeswalker family.
+    for (const key of ["w", "u", "b", "r", "g", "m"]) expect(underFrameArtRect(getFrameProfile("m15pw"), key), key).toBeNull();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The known-failure table.
 // ---------------------------------------------------------------------------
@@ -377,19 +446,15 @@ describe("the art-window known failures", () => {
   it("lists today's failures — the TODO's list, and what checking every colour of every master found", () => {
     expect(Object.keys(ART_WINDOW_KNOWN_FAILURES).sort()).toEqual(
       [
-        // 7.6's list (2026-09-25): split, lotr, flip, battle, lotrscroll, the
-        // saga hairline and the M15 family's (then MSE, now CC) windows.
+        // 7.6's list (2026-09-25): split, lotr, flip, battle, lotrscroll and
+        // the saga hairline. (The M15 family's windows — then MSE, now CC —
+        // were covered by layout v35, 4.4 (2).)
         "split",
         "lotr",
         "flip",
         "battle",
         "lotrscroll",
         "saga",
-        "m15",
-        "m15artifact",
-        "m15land",
-        "m15snow",
-        "m15snowland",
         // Found on 2026-09-29.
         "adventure",
         "aftermath",
@@ -399,28 +464,25 @@ describe("the art-window known failures", () => {
         "bloomburrow",
         "expeditionland",
         "extendedart",
-        "m15devoid",
         "m15fullartland",
         "m15textless",
         "m15textlessland",
-        "m15token",
         "m15tokenartifact",
-        "m15tokentext",
         "modern",
         "modernland",
         "tarkirdraconic",
         "tarkirghostfire",
-        // The translucent-region rule (4.17b), found in the skeptic pass.
-        "fullart",
-        "m15pw",
-        "nyx",
       ].sort(),
     );
     // Two of the TODO's list pass today: alphaland (its window was re-cut
     // with Phase B) and m15token's coloured masters (4.49's re-cut).
     expect(ART_WINDOW_KNOWN_FAILURES.alphaland).toBeUndefined();
     for (const key of ["w", "u", "b", "r", "g", "m"]) expect(isKnownArtWindowFailure("m15token", key), key).toBe(false);
-    expect(isKnownArtWindowFailure("m15token", "c")).toBe(true);
+    // Layout v35 struck the CC M15 family (4.4 (2)), the see-through
+    // masters (4.17a) and the translucent seams (4.17b).
+    for (const template of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "m15token", "m15tokentext", "m15pw", "nyx", "fullart"]) {
+      expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
+    }
     expect(isKnownArtWindowFailure("expeditionland", "w")).toBe(false);
     expect(isKnownArtWindowFailure("expeditionland", "b")).toBe(true);
   });

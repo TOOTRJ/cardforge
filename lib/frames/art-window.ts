@@ -23,15 +23,17 @@
 // inside it, give or take TRANSLUCENT_RIM_PCT (a window's or a bar's
 // anti-aliased rim). One that runs on past the slot shows the art through
 // part of it and #101015 through the rest — a hard seam across the text box
-// (nyx at 81.2 %, fullart's last 31 px, m15pw/c's sides and type bar).
+// (until layout v35: nyx at 81.2 %, fullart's last 31 px, m15pw/c's sides
+// and type bar — TODO 4.17b).
 //
-// See-through frames (TODO 4.17: `underFrameArt` — the colourless M15 and
-// token masters, every devoid one) are asserted differently: the art runs
-// under the whole frame there, so it is the under-frame rect, not the art
-// slot, that must cover the window — and every pixel the see-through frame
-// lets ≥ 2 % through (α < SEE_THROUGH_FRAME_ALPHA_MAX, anywhere on the card
-// but the corner cut) — with the same overscan. (The exact crop still sits
-// in the art slot; the frame's opaque window border hides the seam.)
+// See-through frames (TODO 4.17: `underFrameArt` — the colourless M15,
+// token and planeswalker masters, every devoid one) are asserted
+// differently: the art runs under the whole frame there, so it is the
+// under-frame rect, not the art slot, that must cover the window — and
+// every pixel the see-through frame lets ≥ 2 % through (α <
+// SEE_THROUGH_FRAME_ALPHA_MAX, anywhere on the card but the corner cut) —
+// with the same overscan. (The exact crop still sits in the art slot; the
+// frame's opaque window border hides the seam.)
 //
 // This module imports only the import-free lib/cards/card-corner.ts, with an
 // explicit .ts specifier, like edge-contract.ts: scripts/import-cc-frames.mjs
@@ -435,49 +437,15 @@ export type ArtWindowKnownFailure = {
  * Template × colour masters whose art windows escape their art today, and
  * the TODO items that fix each (measured 2026-09-29 on every git master
  * and every bucket master at the manifest's sha256; px on a 1500 × 2100
- * master, 2100 × 1500 for the landscape split and battle). The test asserts
+ * master, 2100 × 1500 for the landscape split and battle). Layout v35 struck
+ * the CC M15 family's hairline (4.4 (2)), the see-through masters' band
+ * (4.17a) and the nyx / fullart / m15pw-c seams (4.17b). The test asserts
  * each one STILL fails, and by no more than `maxMissPx` (today's worst miss
  * rounded up to the next half pixel, +0.1 px) — so fixing one turns it red
  * until it is struck from this list, and a master that gets worse behind
  * its entry turns it red too. Never loosen the check instead.
  */
 export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFailure>> = {
-  // The Card Conjurer M15 family: CC's window is 1 px wider on each side
-  // and 1.4 / 1.6 px taller than the inherited artSlot 7.8/11.4/84.4×44.0.
-  m15: {
-    keys: "all",
-    todo: ["4.4", "4.17a"],
-    why:
-      "w/u/b/r/g/m: window 116–1384 × 238–1165 vs slot 117–1383 × 239.4–1163.4 — a 1–1.6 px hairline on every side " +
-      "(4.4 (2): artSlot = CC artBounds 7.67/11.29/84.76×44.29); c: see-through, as m15devoid (4.17a)",
-    maxMissPx: { w: 3, u: 3, b: 3, r: 3, g: 3, m: 3, c: 26.5 },
-  },
-  m15artifact: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  m15land: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  m15snow: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  m15snowland: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  // See-through masters (4.17): UNDER_FRAME_RECT 4/4/92×92 starts at 84 px
-  // down, but the see-through body runs from the border's inner edge at
-  // 59 px — a 25 px band above the title bar (and 1–2 px down each side)
-  // shows #101015 through a frame that is α 7–89 there.
-  m15devoid: {
-    keys: "all",
-    todo: ["4.17a"],
-    why: "see-through body 58–1443 × 59–1938 vs under-frame art 60–1440 × 84–2016: a 25 px dark band above the title bar",
-    maxMissPx: { w: 2, u: 2, b: 2, r: 2, g: 2, m: 2, c: 26.5 },
-  },
-  m15token: {
-    keys: ["c"],
-    todo: ["4.17a"],
-    why: "c: see-through body 59–1441 × 59–1949 vs under-frame art 60–1440 × 84–2016: a 25 px dark band above the title bar",
-    maxMissPx: 26.5,
-  },
-  m15tokentext: {
-    keys: ["c"],
-    todo: ["4.17a"],
-    why: "c: see-through body 59–1441 × 59–1949 vs under-frame art 60–1440 × 84–2016: a 25 px dark band above the title bar",
-    maxMissPx: 26.5,
-  },
   m15tokenartifact: {
     keys: ["w", "u", "b", "r", "g", "m"],
     todo: ["4.53"],
@@ -553,26 +521,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   modern: { keys: "all", todo: ["4.10"], why: "window bottom 1163–1164 px vs slot 1163.4: 0.4 px of overscan to 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   modernland: { keys: "all", todo: ["4.10"], why: "window bottom 1164 px vs slot 1163.4: 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   alphatoken: { keys: "all", todo: ["4.54"], why: "window 162–1339 × 187–1295 vs slot 150–1350 × 189–1291.5: 2 px top, 3.5 px bottom (4.54 retires it)", maxMissPx: 5 },
-  // Translucent frame parts the art only partly shows through (the region
-  // rule above; 4.17b): a hard seam where the art slot ends.
-  nyx: {
-    keys: "all",
-    todo: ["4.17b"],
-    why: "the translucent text box 110–1391 × 1319–1946 (α ≈ 135) runs 240.8 px past the slot's bottom at 1705.2 (81.2 %): art through its top, #101015 through the rest",
-    maxMissPx: 241,
-  },
-  fullart: {
-    keys: "all",
-    todo: ["4.17b"],
-    why: "the translucent text box ends at 1945–1946 px, the slot at 1915.2 (91.2 %): a 30–31 px #101015 strip along its bottom",
-    maxMissPx: 31,
-  },
-  m15pw: {
-    keys: ["c"],
-    todo: ["4.17b"],
-    why: "c: CC's colourless planeswalker is see-through like m15/c (α ≈ 180), but has no under-frame art: the body 60–1440 × 60–1932 runs 40–148 px past the slot and the type bar 87–1413 13.5 / 16.5 px past its sides",
-    maxMissPx: { c: 148 },
-  },
 };
 
 export function isKnownArtWindowFailure(template: string, key: string): boolean {

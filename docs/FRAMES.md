@@ -95,12 +95,26 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   re-scored independently in the skeptic pass, which also measured CC's
   band 60–65 px above the prints and the re-cut within ±2 px). Provenance
   records the re-cut (`recut`, `transforms`).
-- **See-through frames.** CC's colourless M15 frame, every devoid frame and
-  the colourless creature token are see-through, like the printed cards. The
-  profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);
-  the window keeps its exact crop. The colourless token is a PipGlyph
-  composite of CC's silver token frame at reduced opacity, because CC's
-  bordered token pack has no colourless frame.
+- **See-through frames.** CC's colourless M15 frame, every devoid frame, the
+  colourless creature tokens (both token frames) and the colourless
+  planeswalker are see-through, like the printed cards. The profile's
+  `underFrameArt` draws the art under the whole frame (TODO 4.17); the
+  window keeps its exact crop. Since layout v35 (4.17a) that art starts at
+  the black border's inner edge (`UNDER_FRAME_RECT` 3.7/2.7/92.6 × 93.3 —
+  the prints' border ends 2.69–2.88 %H down, 3.76–4.16 %W in); v24's
+  4/4/92 × 92 left a 25 px #101015 band above every see-through title bar.
+  The colourless token is a PipGlyph composite of CC's silver token frame at
+  reduced opacity, because CC's bordered token pack has no colourless frame.
+  Where a see-through master's art slot ends under a translucent part
+  rather than at the window's opaque outline (m15pw `c`: the slot runs 5 px
+  past the window into the silver), the slot's crop and the under-frame
+  art's meet in a faint seam — the two layers are cropped separately.
+- **The CC M15 art slot.** The CC-framed M15 profiles (m15, land, snow land,
+  artifact, snow, devoid) draw the art in `CC_M15_ART_SLOT`
+  (7.67/11.25/84.76 × 44.33, layout v35, 4.4 (2)): CC's artBounds with the
+  top 0.04 % higher for 7.6's overscan. Their window is 116–1384 ×
+  238–1165 px on every colour; the inherited MSE slot left a 1–1.6 px
+  hairline on every side. The MSE-framed adventure keeps M15's own slot.
 - **Output.** 1500×2100 PNGs with transparent corners cut at the one card
   corner (64.5 px, see "The card corner" below), WebP siblings, P/T plates
   at native size, and (full-art basics) the 168 px mana symbols. The borderless and full-art masters are native 1500×2100
@@ -139,7 +153,13 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   and sets `FRAMES_BUILD_DIR`, so the bucket halves of the edge contract,
   the square corners and the plate ink run there too. Locally:
   `node scripts/frames-fetch.mjs` (into the gitignored `.frames-cache`),
-  then `FRAMES_BUILD_DIR=.frames-cache npm run test:unit`.
+  then `FRAMES_BUILD_DIR=.frames-cache npm run test:unit`. The frame-compare
+  editor holds a saved layout to the same rule: an override that moves an
+  `artSlot` (or `secondFace.artSlot`) is checked on every master the
+  template paints — the bake's own masters, bucket ones at the manifest's
+  sha256 (`lib/frames/art-window-override.ts`) — with CI's verdict (a known
+  failure may stay, no worse than its bound), and a failing draft is
+  refused with the finding before anything is written.
 - **Never committed.** Card Conjurer's site was shut down after a Wizards of
   the Coast cease-and-desist, and the fork has no licence file. The converted
   frames only ever go to the bucket.
@@ -547,6 +567,50 @@ a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the
 14 legacy ones do too) and are re-verified against the new pins in the
 walk-through. A stale tick stays verified, so the creator keeps offering
 the frames; the wording alone stales no tick anywhere.
+
+## Art under and around the frame (TODO 4.4 (2), 4.17a, 4.17b, layout v35)
+
+One correction round for every place the bake showed its #101015 ground where
+the print shows art (found by 7.6's art-window check; owner decisions
+2026-09-29). Only where the ART is painted moves — no text, bar, pip, symbol
+or plate — so v35 is verification-neutral (as v31–v33) and a "sweep":
+
+- **The CC M15 art slot (4.4 (2)).** `CC_M15_ART_SLOT` 7.67/11.25/84.76 ×
+  44.33 on m15, m15land, m15snowland, m15artifact, m15snow and m15devoid
+  (115.05–1386.45 × 236.25–1167.18 px): the masters' window 116–1384 ×
+  238–1165 with 0.95 / 2.45 / 1.75 / 2.18 px to spare (was a 1–1.6 px
+  hairline on every side, ≈ 10,000 px of #101015 around every such art).
+  CC's own artBounds top (11.29 %) left 0.91 px, short of 7.6's 1.05.
+- **Under-frame art from the border (4.17a).** `UNDER_FRAME_RECT`
+  3.7/2.7/92.6 × 93.3 on every see-through master (m15/c, m15devoid, m15token
+  /c, m15tokentext/c, m15pw/c): the see-through body runs from 58–59 px; the
+  art started at 84 px (a 25 px band above the title bar, 34,000–34,400 px
+  per master).
+- **Nyx (4.17b, owner decision).** The art runs under the whole translucent
+  type bar and text box, one picture as on the THB constellation prints
+  (#258 Daxos, #259 Heliod, #268 Klothys: art to 91.9 %H, the box's light rim
+  to 92.7 %): `artSlot` 6/11.2/88 × 81.8, to 93 % (was 70, ending at 81.2 %:
+  the box's last 241 px were #101015 — a seam across the rules text). The
+  window's crop comes from the taller slot, so a landscape picture sits
+  about 17 % larger in the window than before.
+- **fullart (4.17b).** `artSlot` 4/2.9/92 × 90.1, to 93 % (was 88.3: a 31 px
+  dark strip along the translucent box's bottom). The ZNR prints paint that
+  box as an opaque hedron panel; our MSE master's is translucent (α 179) — a
+  re-source question, not this fix.
+- **m15pw `c` (4.17b).** CC's colourless planeswalker is see-through (α ≈ 180
+  body, translucent type bar; DOM #1 Karn, M21 #1 Ugin) and had no
+  under-frame art: 334,000 px of it showed #101015. It gets
+  `underFrameArt { colors: ["c"] }` with 4.17a's rect.
+
+Scope (`VERSION_SCOPES[35]`, frozen `V35_ART_SLOT_TEMPLATES` /
+`V35_SEE_THROUGH_C_TEMPLATES`): every card on the six CC M15 profiles, nyx and
+fullart (the legacy templates drawn as m15 included; with no art the empty
+art box moves too), and on m15token / m15tokentext / m15pw only a colourless
+card with art. Production, anonymous read 2026-09-29: 738 of 824 public /
+unlisted cards (m15 610, m15land 49, m15artifact 37, m15devoid 19, m15snow 13,
+m15tokentext 9 of 33, m15pw 1 of 7; none on m15snowland, m15token, nyx,
+fullart). The visual matrix changed 163 of 849 cases, all inside the scope,
+and the scope holds no unchanged case.
 
 ## Which printing is which frame (TODO 1.4)
 
