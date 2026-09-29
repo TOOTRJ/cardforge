@@ -33,11 +33,15 @@ const state = vi.hoisted(() => ({
   generateTextCalls: [] as unknown[],
 }));
 
-function storageClient() {
+// The user's cookie-bound client reads and writes rows only; every storage
+// write goes through the service role (lib/media/user-storage.ts, 0126).
+function dbClient() {
   const db = chainClient(() => ({ data: null, error: null }));
+  return { from: db.client.from, rpc: db.client.rpc };
+}
+
+function storageClient() {
   return {
-    from: db.client.from,
-    rpc: db.client.rpc,
     storage: {
       from: (bucket: string) => ({
         upload: async (path: string, body: unknown, opts: { contentType?: string }) => {
@@ -52,8 +56,12 @@ function storageClient() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => storageClient(),
+  createClient: async () => dbClient(),
   getCurrentUser: async () => ({ id: "11111111-1111-4111-8111-111111111111" }),
+}));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => storageClient(),
+  isAdminConfigured: () => true,
 }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/moderation/image-scan", () => ({

@@ -6,18 +6,18 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isUserStorageConfigured } from "@/lib/media/user-storage";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { cardRenderPath } from "@/lib/cards/storage-paths";
 import {
   BAKE_SELECT_COLUMNS,
   rowToPreviewData,
   type CardRowForBake,
-  removeRenderObject,
+  removeRenderObjects,
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
-import { renderThumbPath } from "@/lib/cards/render-thumb";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
@@ -34,7 +34,14 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 // Path layout: card-renders/{owner_id}/{card_id}.png
 //   * single object per card, overwritten on every save
 //   * cache-busted via a `?v={timestamp}` query string on the stored URL
-//   * RLS (migration 0021) restricts writes to the card owner
+//   * the objects are written (and removed) with the SERVICE ROLE, in the
+//     verified owner's folder only (lib/cards/bake-core.ts through
+//     lib/media/user-storage.ts): users hold no storage write policy since
+//     migration 0126, so nobody can upload their own picture over the bake
+//   * the row's pointer to them (rendered_image_url / rendered_thumb_url /
+//     rendered_at / layout_version) is written with the service role too:
+//     0126's cards_guard_render_columns trigger lets an API role only CLEAR
+//     those columns, so nobody can point their card at another picture
 // ---------------------------------------------------------------------------
 
 type BakeRenderResult =
@@ -86,8 +93,9 @@ async function bakeCardRender(
   // `after()` — a post-response context where Supabase's `auth.getUser()` can
   // trigger a token refresh whose rotated cookies are dropped, which silently
   // invalidates the user's session (logging them out after a save). Reading
-  // rows/storage with the request-scoped client below never refreshes auth, so
-  // avoiding the auth call here keeps the deferred bake session-safe.
+  // rows with the request-scoped client below never refreshes auth (storage
+  // goes through the service role), so avoiding the auth call here keeps the
+  // deferred bake session-safe.
   if (!ownerId) {
     return { ok: false, error: "Missing owner." };
   }
@@ -110,7 +118,9 @@ async function bakeCardRender(
     return { ok: false, error: "Not the card owner." };
   }
 
-  const path = cardRenderPath(ownerId, card.id);
+  // The card row was read above and belongs to `ownerId` (the caller's
+  // authenticated user): bake-core writes and removes in that user's
+  // card-renders folder only.
 
   // A private card must not leave its render in the public-read card-renders
   // bucket — that PNG is the full card image. Skip the bake and remove any
@@ -118,10 +128,17 @@ async function bakeCardRender(
   // fall back to the live <CardPreview>; publishing again re-bakes on save.
   // (Art is intentionally NOT removed here — remixes copy art_url, so the art
   // object can be shared; its random-id path is also never publicly exposed.)
+  // removeRenderObjects logs loudly when it can't delete — including when the
+  // service-role key is missing, which it checks itself: this runs BEFORE the
+  // storage check below, so a missing key never skips the privacy clean-up
+  // silently.
   if (card.visibility === "private") {
-    await removeRenderObject(supabase, path);
-    await removeRenderObject(supabase, renderThumbPath(path));
+    await removeRenderObjects(ownerId, [card.id]);
     return { ok: true, renderedImageUrl: null, renderedThumbUrl: null };
+  }
+
+  if (!isUserStorageConfigured()) {
+    return { ok: false, error: "Render storage is unavailable (SUPABASE_SECRET_KEY is not set)." };
   }
 
   const pipOverrides = await getPipOverrides(card.owner_id);
@@ -170,7 +187,7 @@ async function bakeCardRender(
     return { ok: false, error: "Superseded by a newer save.", superseded: true };
   }
 
-  const uploaded = await uploadRenderObjects(supabase, path, pngBytes, cardId);
+  const uploaded = await uploadRenderObjects(ownerId, card.id, pngBytes);
   if (!uploaded.ok) return uploaded;
   return { ...uploaded, bakedFrom: card.updated_at };
 }
@@ -205,7 +222,9 @@ export async function bakeAndPersistCardRender(
     // Clear any previously-baked render so viewers fall back to the
     // always-correct live <CardPreview> instead of an out-of-date PNG that
     // no longer matches the just-saved card. (No-op for a brand-new card,
-    // whose render columns are already null.)
+    // whose render columns are already null.) The owner's own client may
+    // CLEAR the render columns (0126's guard only refuses a new pointer), so
+    // this works even without the service-role key.
     const { error: clearErr } = await supabase
       .from("cards")
       .update({
@@ -226,7 +245,15 @@ export async function bakeAndPersistCardRender(
   // Overlap guard, part 2 (compare-and-set): only the bake that rendered the
   // row as it currently is may write its URL. `bakedFrom` is the updated_at
   // the bake read; a newer save changed it, so a stale bake matches no row.
-  let query = supabase
+  //
+  // Who writes: a URL only through the SERVICE ROLE — migration 0126's
+  // cards_guard_render_columns refuses an API role that sets a render column
+  // to anything but NULL (the owner used to be able to PATCH their card at
+  // any picture). The row is pinned to the verified owner as well as the id.
+  // A private card's result carries no URL; that clear goes through the
+  // owner's client like the failure path above.
+  const writer = result.renderedImageUrl ? createAdminClient() : supabase;
+  let query = writer
     .from("cards")
     .update({
       // null for private cards (no public render); a URL otherwise.
@@ -238,7 +265,8 @@ export async function bakeAndPersistCardRender(
       // changes (see lib/cards/layout-version.ts).
       layout_version: result.renderedImageUrl ? CARD_LAYOUT_VERSION : null,
     })
-    .eq("id", cardId);
+    .eq("id", cardId)
+    .eq("owner_id", ownerId);
   if (result.bakedFrom) query = query.eq("updated_at", result.bakedFrom);
   const { data: written, error: updateErr } = await query.select("id");
 

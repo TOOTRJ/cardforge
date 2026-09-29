@@ -28,6 +28,7 @@ const state = vi.hoisted(() => ({
   verified: [] as string[],
   existing: null as unknown,
   client: null as unknown,
+  admin: {} as unknown,
   deckAdds: 0,
   activity: 0,
 }));
@@ -40,7 +41,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentProfile: async () => state.profile,
 }));
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({}),
+  createAdminClient: () => state.admin,
   isAdminConfigured: () => true,
 }));
 vi.mock("@/lib/cards/frame-reviews", () => ({
@@ -267,8 +268,9 @@ describe("updateCardsVisibilityAction — frame previews in the batch", () => {
       return { data: rows, error: null };
     });
     const removed: string[][] = [];
-    state.client = {
-      ...stub.client,
+    state.client = stub.client;
+    // Render objects are removed with the service role (migration 0126).
+    state.admin = {
       storage: {
         from: () => ({
           remove: async (paths: string[]) => {
@@ -351,13 +353,17 @@ describe("updateCardsVisibilityAction — frame previews in the batch", () => {
   });
 
   it("making cards private includes the previews (nothing to skip)", async () => {
-    const { stub } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true)]);
+    const { stub, removed } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true)]);
     expect(await updateCardsVisibilityAction([ORDINARY, PREVIEW], "private")).toEqual({
       ok: true,
       count: 2,
       skippedPreviews: 0,
     });
     expect(updatedIds(stub)).toEqual([ORDINARY, PREVIEW]);
+    // Both public render objects of both cards, in the caller's folder.
+    expect(removed).toEqual([
+      [ORDINARY, PREVIEW].flatMap((id) => [`${USER}/${id}.png`, `${USER}/${id}.thumb.webp`]),
+    ]);
   });
 
   it("the ownership check still refuses the whole batch first", async () => {

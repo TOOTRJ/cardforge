@@ -9,6 +9,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import {
+  fileNameInFolder,
+  isUserStorageConfigured,
+  userFolder,
+} from "@/lib/media/user-storage";
+import {
   isDefaultProfileMedia,
   type ProfileMediaKind,
 } from "@/lib/profile/default-media";
@@ -21,8 +26,11 @@ import { randomId } from "@/lib/ids";
 // bucket under `{owner_id}/{kind}.{ext}`, and writes the public URL onto
 // the corresponding profiles column (avatar_url or banner_url).
 //
-// Two kinds share one bucket so we can pin a single set of RLS policies
-// and a single 8 MB cap. Per-kind size hints (banner is much wider) are a
+// Objects are written and removed with the service role, only ever inside
+// the signed-in user's own folder (lib/media/user-storage.ts — users hold no
+// storage write policy since migration 0126).
+//
+// Two kinds share one bucket so we can pin a single 8 MB cap. Per-kind size hints (banner is much wider) are a
 // UI/UX detail enforced on the client; the server's job is "no bigger than
 // MAX_BYTES, no non-image formats."
 // ---------------------------------------------------------------------------
@@ -81,10 +89,18 @@ export async function uploadProfileMediaServerAction(
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
   }
+  if (!isUserStorageConfigured()) {
+    return { ok: false, error: "Uploads aren't available right now." };
+  }
 
   const user = await getCurrentUser();
   if (!user) {
     return { ok: false, error: "Sign in to upload media." };
+  }
+  // `kind` arrives from the browser and names the stored file: only the two
+  // known kinds get that far.
+  if (kind !== "avatar" && kind !== "banner") {
+    return { ok: false, error: "Unknown image kind." };
   }
 
   const file = formData.get("file");
@@ -135,15 +151,11 @@ export async function uploadProfileMediaServerAction(
   }
 
   const ext = EXTENSION_BY_FORMAT[format] ?? "bin";
-  // Random filename per upload so we never hit ON-CONFLICT-UPDATE on
-  // storage.objects — Postgres applies the UPDATE policy in that path on
-  // top of INSERT, and upsert mode through the storage RLS layer was
-  // throwing "new row violates row-level security policy" even for the
-  // very first upload. Matches the proven card-art pattern exactly. The
-  // previous object (if any) is deleted just below so the bucket doesn't
-  // accumulate dead files per user.
-  const id = randomId();
-  const path = `${user.id}/${kind}-${id}.${ext}`;
+  // Random filename per upload (a new public URL, so no CDN copy of the old
+  // image can answer for it). The previous object (if any) is deleted just
+  // below so the bucket doesn't accumulate dead files per user.
+  const name = `${kind}-${randomId()}.${ext}`;
+  const media = userFolder("profile-media", user.id);
   const supabase = await createClient();
 
   // Remember the previous object for this kind; it is deleted only AFTER
@@ -159,22 +171,19 @@ export async function uploadProfileMediaServerAction(
     (existingProfile as Record<string, string | null> | null)?.[
       kind === "avatar" ? "avatar_url" : "banner_url"
     ] ?? null;
-  const previousPath = previousUrl ? extractBucketPath(previousUrl, "profile-media") : null;
+  const previousName = ownMediaName(user.id, previousUrl);
 
-  const { error: uploadErr } = await supabase.storage
-    .from("profile-media")
-    .upload(path, stored, {
-      cacheControl: "3600",
-      contentType: CONTENT_TYPE_BY_FORMAT[format] ?? "application/octet-stream",
-      upsert: false,
-    });
+  const { error: uploadErr } = await media.upload(name, stored, {
+    cacheControl: "3600",
+    contentType: CONTENT_TYPE_BY_FORMAT[format] ?? "application/octet-stream",
+    upsert: false,
+  });
 
   if (uploadErr) {
     return { ok: false, error: uploadErr.message };
   }
 
-  const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
-  const publicUrl = data.publicUrl;
+  const publicUrl = media.publicUrl(name);
 
   // NSFW auto-scan, same as card art (lib/cards/upload-art-server.ts) — the
   // profile copy of this pipeline predates the scan and never got it, so an
@@ -182,7 +191,7 @@ export async function uploadProfileMediaServerAction(
   // open on a missing key; a positive flag removes the object and rejects.
   const scan = await scanImageUrl(publicUrl);
   if (scan.flagged) {
-    await supabase.storage.from("profile-media").remove([path]);
+    await media.remove([name]);
     return {
       ok: false,
       error: "That image was flagged by our content filter and can't be used.",
@@ -201,15 +210,14 @@ export async function uploadProfileMediaServerAction(
   if (updateErr) {
     // The new object is orphaned but the profile still shows the OLD image —
     // remove the new one so nothing dangles.
-    await supabase.storage.from("profile-media").remove([path]);
+    await media.remove([name]);
     return { ok: false, error: updateErr.message };
   }
 
   // Best-effort cleanup of the previous object, now that the row points at
-  // the new one. (A stale object in the user's own folder isn't a security
-  // concern — RLS prevents cross-user access — just storage.)
-  if (previousPath && previousPath !== path) {
-    await supabase.storage.from("profile-media").remove([previousPath]);
+  // the new one — only ever an object in this user's own folder.
+  if (previousName && previousName !== name) {
+    await media.remove([previousName]);
   }
 
   // Bust both the settings page (so the form re-renders the new URL) and
@@ -220,13 +228,22 @@ export async function uploadProfileMediaServerAction(
   return { ok: true, publicUrl };
 }
 
-/** Bucket object behind the profile's current avatar/banner, if it is one of
- *  ours (a default path or an OAuth avatar has nothing to delete). */
-async function removeStoredMedia(
+/** File name of the object behind a stored avatar/banner URL — only when it
+ *  sits in `userId`'s own profile-media folder. A default path, an OAuth
+ *  avatar, or a URL pointing into ANOTHER user's folder (profiles.avatar_url
+ *  is the owner's to write) is null: the service role never deletes it. */
+function ownMediaName(userId: string, url: string | null): string | null {
+  const path = url ? extractBucketPath(url, "profile-media") : null;
+  return path ? fileNameInFolder(userId, path) : null;
+}
+
+/** The file name behind the profile's current avatar/banner, if it is one of
+ *  the user's own uploads (see ownMediaName). */
+async function storedMediaName(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   kind: ProfileMediaKind,
-) {
+): Promise<string | null> {
   const column = kind === "avatar" ? "avatar_url" : "banner_url";
   const { data } = await supabase
     .from("profiles")
@@ -234,9 +251,7 @@ async function removeStoredMedia(
     .eq("id", userId)
     .maybeSingle();
   const currentUrl = (data as Record<string, string | null> | null)?.[column] ?? null;
-  const path = currentUrl ? extractBucketPath(currentUrl, "profile-media") : null;
-  if (path) await supabase.storage.from("profile-media").remove([path]);
-  return currentUrl;
+  return ownMediaName(userId, currentUrl);
 }
 
 async function revalidateProfile(
@@ -265,12 +280,19 @@ export async function chooseDefaultProfileMediaAction(
   }
 
   const supabase = await createClient();
-  await removeStoredMedia(supabase, user.id, kind);
+  const previousName = await storedMediaName(supabase, user.id, kind);
   const { error } = await supabase
     .from("profiles")
     .update(kind === "avatar" ? { avatar_url: path } : { banner_url: path })
     .eq("id", user.id);
   if (error) return { ok: false, error: "Couldn't save that image. Please try again." };
+
+  // The uploaded image goes only once the row no longer points at it (a
+  // failed update must not leave the profile on a deleted object).
+  // Best-effort: without service-role storage the file is merely orphaned.
+  if (previousName && isUserStorageConfigured()) {
+    await userFolder("profile-media", user.id).remove([previousName]);
+  }
 
   await revalidateProfile(supabase, user.id);
   return { ok: true, publicUrl: path };

@@ -35,6 +35,7 @@ import {
 } from "@/lib/decks/card-actions";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 import {
   DECK_BOARD_LABELS,
   DECK_BOARD_VALUES,
@@ -75,7 +76,9 @@ export function DeckCardModal({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const proxyImage = card?.rendered_image_url ?? null;
+  // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
+  // written before migration 0126 could point the card anywhere.
+  const proxyImage = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
   const originalImage = entry.image_url;
   const hasBoth = Boolean(proxyImage && originalImage);
   // Adjust-during-render (not an effect): re-sync the flip state when the
@@ -548,7 +551,7 @@ function LinkCardPicker({
               onClick={() => onPick(card.id)}
               className="group flex w-full flex-col gap-1 rounded-md border border-border/60 p-1.5 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
             >
-              {card.rendered_image_url ? (
+              {isStoredRenderUrl(card.rendered_image_url) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={card.rendered_image_url}

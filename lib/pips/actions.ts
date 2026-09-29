@@ -8,6 +8,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import {
   isCustomPipSymbol,
@@ -24,7 +25,9 @@ import {
 //
 // Storage path is deterministic — custom-pips/{userId}/{symbol}.png with
 // upsert — so replacing a pip never orphans objects; the row's image_url
-// carries a ?v= cache-buster so CDNs pick up replacements.
+// carries a ?v= cache-buster so CDNs pick up replacements. Objects are
+// written and removed with the service role, only inside the signed-in
+// user's folder (lib/media/user-storage.ts; no user write policy since 0126).
 // ---------------------------------------------------------------------------
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -51,6 +54,9 @@ export async function saveCustomPipAction(
 ): Promise<CustomPipActionResult> {
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
+  }
+  if (!isUserStorageConfigured()) {
+    return { ok: false, error: "Uploads aren't available right now." };
   }
 
   const user = await getCurrentUser();
@@ -96,7 +102,8 @@ export async function saveCustomPipAction(
     return { ok: false, error: "That doesn't look like a valid image." };
   }
 
-  const path = `${user.id}/${symbol}.png`;
+  const name = `${symbol}.png`;
+  const pips = userFolder("custom-pips", user.id);
   const supabase = await createClient();
 
   // Moderate BEFORE touching the canonical object. The canonical path is
@@ -106,48 +113,41 @@ export async function saveCustomPipAction(
   // kept pointing at it. Stage the bytes under a pending name, scan THAT
   // (versioned, so a cached copy of an older pending upload can't answer
   // for the new bytes), and only then write the real object.
-  const pendingPath = `${user.id}/${symbol}.pending.png`;
-  const { error: stageError } = await supabase.storage
-    .from("custom-pips")
-    .upload(pendingPath, pngBytes, {
-      cacheControl: "0",
-      contentType: "image/png",
-      upsert: true,
-    });
+  const pendingName = `${symbol}.pending.png`;
+  const { error: stageError } = await pips.upload(pendingName, pngBytes, {
+    cacheControl: "0",
+    contentType: "image/png",
+    upsert: true,
+  });
   if (stageError) {
     return { ok: false, error: stageError.message };
   }
-  const pendingUrl = `${supabase.storage.from("custom-pips").getPublicUrl(pendingPath).data.publicUrl}?v=${Date.now()}`;
+  const pendingUrl = `${pips.publicUrl(pendingName)}?v=${Date.now()}`;
 
   // NSFW auto-scan — fails open (a moderation hiccup never blocks uploads);
   // a positive flag drops the staged bytes and leaves the current pip alone.
   const scan = await scanImageUrl(pendingUrl);
   if (scan.flagged) {
-    await supabase.storage.from("custom-pips").remove([pendingPath]);
+    await pips.remove([pendingName]);
     return {
       ok: false,
       error: "That image was flagged by our content filter and can't be used.",
     };
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from("custom-pips")
-    .upload(path, pngBytes, {
-      cacheControl: "3600",
-      contentType: "image/png",
-      upsert: true,
-    });
-  await supabase.storage.from("custom-pips").remove([pendingPath]);
+  const { error: uploadError } = await pips.upload(name, pngBytes, {
+    cacheControl: "3600",
+    contentType: "image/png",
+    upsert: true,
+  });
+  await pips.remove([pendingName]);
   if (uploadError) {
     return { ok: false, error: uploadError.message };
   }
 
-  const { data: urlData } = supabase.storage
-    .from("custom-pips")
-    .getPublicUrl(path);
   // Deterministic path + upsert means CDNs may hold the previous bytes —
   // version the URL the same way bake-render.ts versions card renders.
-  const imageUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+  const imageUrl = `${pips.publicUrl(name)}?v=${Date.now()}`;
 
   const { error: upsertError } = await supabase
     .from("custom_pips")
@@ -190,11 +190,13 @@ export async function deleteCustomPipAction(
   }
 
   // Best-effort object cleanup — the row is the source of truth, so a
-  // failed remove only leaves an unreferenced file behind.
-  await supabase.storage
-    .from("custom-pips")
-    .remove([`${user.id}/${symbol}.png`])
-    .catch(() => {});
+  // failed remove (or no service-role storage) only leaves an unreferenced
+  // file behind.
+  if (isUserStorageConfigured()) {
+    await userFolder("custom-pips", user.id)
+      .remove([`${symbol}.png`])
+      .catch(() => {});
+  }
 
   finishPipChange(user.id, symbol);
   return { ok: true, symbol, imageUrl: null };

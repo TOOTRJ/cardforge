@@ -12,6 +12,7 @@ import type { DeckItem } from "@/lib/decks/queries";
 import type { DeckBoard } from "@/types/deck";
 import { DECK_BOARD_LABELS } from "@/types/deck";
 import { cn } from "@/lib/utils";
+import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 
 // ---------------------------------------------------------------------------
 // DeckCardList — the deck's card list grouped by board, then by type bucket.
@@ -247,7 +248,9 @@ function EntryRow({
 }) {
   const { entry, card } = item;
   const state = deckEntryState(entry);
-  const proxyImage = card?.rendered_image_url ?? null;
+  // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
+  // written before migration 0126 could point the card anywhere.
+  const proxyImage = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
   const thumb =
     (showProxies ? proxyImage : entry.image_url) ??
     proxyImage ??
