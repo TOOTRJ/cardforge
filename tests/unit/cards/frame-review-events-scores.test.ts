@@ -75,34 +75,75 @@ describe("latestScoreEvents", () => {
 });
 
 describe("latestScoreEventsForTemplates (TODO 4.12's treatment panel)", () => {
-  it("picks the newest scored event per template and colour from a light read, then loads only those rows", async () => {
-    const candidates = [
-      { id: "a1", template: "m15borderless", color_key: "w", created_at: "2026-09-29T12:00:00Z", overall: null }, // failed tick
-      { id: "a2", template: "m15borderless", color_key: "w", created_at: "2026-09-29T11:00:00Z", overall: 7 },
-      { id: "a3", template: "m15borderless", color_key: "w", created_at: "2026-09-29T10:00:00Z", overall: 9 },
-      { id: "b1", template: "m15borderlessartifact", color_key: "w", created_at: "2026-09-29T09:00:00Z", overall: 4 },
-    ];
-    const full = [
-      { ...row("w", "score", "2026-09-29T11:00:00Z", { overall: 7, slots: {} }), id: "a2", template: "m15borderless" },
-      { ...row("w", "verify", "2026-09-29T09:00:00Z", { overall: 4 }), id: "b1", template: "m15borderlessartifact" },
-    ];
-    const stub = chainClient((_table, calls): ChainAnswer => {
+  /** PostgREST answers at most max_rows (1000 on every project) whatever
+   *  .limit() asks for. */
+  const MAX_ROWS = 1000;
+
+  /** A "database" of candidate rows (newest first): a light read answers the
+   *  rows of the template(s) it filters on, capped like PostgREST; the id
+   *  read answers the full rows. */
+  function eventsDb(candidates: Array<{ id: string; template: string; color_key: string; overall: unknown }>) {
+    const full = (id: string) => {
+      const c = candidates.find((r) => r.id === id)!;
+      return {
+        ...row(c.color_key, "score", "2026-09-29T00:00:00Z", { overall: c.overall, slots: {} }),
+        id: c.id,
+        template: c.template,
+      };
+    };
+    return chainClient((_table, calls): ChainAnswer => {
       const byId = calls.find((c) => c.method === "in" && c.args[0] === "id");
-      return { data: byId ? full : candidates, error: null };
+      if (byId) return { data: (byId.args[1] as string[]).map(full), error: null };
+      const one = calls.find((c) => c.method === "eq" && c.args[0] === "template")?.args[1] as string | undefined;
+      const many = calls.find((c) => c.method === "in" && c.args[0] === "template")?.args[1] as string[] | undefined;
+      const wanted = (t: string) => (one !== undefined ? t === one : (many ?? []).includes(t));
+      const limit = (calls.find((c) => c.method === "limit")?.args[0] as number | undefined) ?? MAX_ROWS;
+      return { data: candidates.filter((r) => wanted(r.template)).slice(0, Math.min(limit, MAX_ROWS)), error: null };
     });
+  }
+
+  it("picks the newest scored event per template and colour from light reads, then loads only those rows", async () => {
+    const stub = eventsDb([
+      { id: "a1", template: "m15borderless", color_key: "w", overall: null }, // failed tick
+      { id: "a2", template: "m15borderless", color_key: "w", overall: 7 },
+      { id: "a3", template: "m15borderless", color_key: "w", overall: 9 },
+      { id: "b1", template: "m15borderlessartifact", color_key: "w", overall: 4 },
+    ]);
     state.client = stub.client;
 
     const latest = await latestScoreEventsForTemplates(["m15borderless", "m15borderlessartifact"]);
-    const [light, heavy] = stub.forTable("frame_review_events");
-    // The candidate read leaves the score body out.
-    expect(light.calls.find((c) => c.method === "select")?.args[0]).not.toMatch(/score_json,|score_json$/);
-    expect(light.calls.find((c) => c.method === "in" && c.args[0] === "template")?.args[1]).toEqual([
+    const reads = stub.forTable("frame_review_events");
+    const light = reads.filter((r) => !r.calls.some((c) => c.method === "in" && c.args[0] === "id"));
+    const heavy = reads.filter((r) => r.calls.some((c) => c.method === "in" && c.args[0] === "id"));
+    // One light read per template, each without the score body.
+    expect(light.map((r) => r.calls.find((c) => c.method === "eq" && c.args[0] === "template")?.args[1])).toEqual([
       "m15borderless",
       "m15borderlessartifact",
     ]);
-    expect(heavy.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["a2", "b1"]);
+    for (const read of light) {
+      expect(read.calls.find((c) => c.method === "select")?.args[0]).not.toMatch(/score_json,|score_json$/);
+    }
+    expect(heavy).toHaveLength(1);
+    expect(heavy[0].calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["a2", "b1"]);
     expect(latest.get("m15borderless")?.get("w")).toMatchObject({ id: "a2", scoreJson: { overall: 7, slots: {} } });
-    expect(latest.get("m15borderlessartifact")?.get("w")).toMatchObject({ id: "b1", action: "verify" });
+    expect(latest.get("m15borderlessartifact")?.get("w")).toMatchObject({ id: "b1" });
+  });
+
+  it("a busy template's history can't crowd a quiet template's newest score out (max_rows)", async () => {
+    // m15 was scored over and over since m15borderless was last scored: more
+    // newer rows than one PostgREST answer holds.
+    const busy = Array.from({ length: MAX_ROWS + 50 }, (_, i) => ({
+      id: `m${i}`,
+      template: "m15",
+      color_key: "wubrgcm"[i % 7],
+      overall: 5,
+    }));
+    const quiet = { id: "q1", template: "m15borderless", color_key: "u", overall: 8 };
+    state.client = eventsDb([...busy, quiet]).client;
+
+    const latest = await latestScoreEventsForTemplates(["m15", "m15borderless"]);
+    expect(latest.get("m15")?.size).toBe(7);
+    expect(latest.get("m15borderless")?.get("u")).toMatchObject({ id: "q1", scoreJson: { overall: 8 } });
   });
 
   it("no templates, no read; an error reads as no scores", async () => {

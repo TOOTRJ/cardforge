@@ -277,6 +277,17 @@ describe("consensusNudge — one nudge for the template", () => {
     expect(consensusNudge([])).toBeNull();
   });
 
+  it("half the colours is not a majority, even when the median moves", () => {
+    // Median dy of [0, 0, 0.4, 0.4] is 0.2 — but only 2 of 4 agree.
+    expect(
+      consensusNudge([slot(10, 6, 0, 0.4), slot(10, 6, 0, 0.4), slot(10, 10, 0, 0), slot(10, 10, 0, 0)]),
+    ).toBeNull();
+    // One more colour on its side is.
+    expect(
+      consensusNudge([slot(10, 6, 0, 0.4), slot(10, 6, 0, 0.4), slot(10, 6, 0, 0.4), slot(10, 10, 0, 0)]),
+    ).toMatchObject({ dxPct: 0, dyPct: 0.4, agree: 3, of: 4 });
+  });
+
   it("moves under the threshold round to 'stays'", () => {
     expect(consensusNudge([slot(10, 9, 0.04, 0), slot(10, 9, 0.04, 0), slot(10, 9, 0.04, 0)])).toBeNull();
   });

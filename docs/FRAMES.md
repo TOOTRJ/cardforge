@@ -632,10 +632,11 @@ check an unverified frame the way a user would meet it, before publishing it:
   nudges with a **Template nudge** column (the move most colours agree on —
   one layout override moves every colour; apply it in Compare → Edit
   layout), and every colour **side by side** (our live render next to its
-  printing). When the template's frame set has other frames, the
-  **Treatment** panel scores all of them in one job and pools the slots they
-  draw on the same rect into one nudge. The job never ticks: publishing is
-  still the checkbox or Publish.
+  printing; each printing is looked up once per server instance and reused
+  for 30 min, and a lookup unanswered after 8 s shows the sample). When the
+  template's frame set has other frames, the **Treatment** panel scores all
+  of them in one job and pools the slots they draw on the same rect into one
+  nudge. The job never ticks: publishing is still the checkbox or Publish.
 
 Nothing here changes a stored bake or a renderer.
 

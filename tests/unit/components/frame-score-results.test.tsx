@@ -35,12 +35,19 @@ vi.mock("@/lib/scryfall/reference-preview", () => ({ buildFrameComparePayload: p
 import { FrameSlotTable, type SlotTableColumn } from "@/components/admin/frame-slot-table";
 import { slotTableColumns, type SignOffColourView } from "@/components/admin/frame-template-signoff";
 import { FrameColoursSideBySide } from "@/components/admin/frame-colours-side-by-side";
-import { FrameSignOffSideBySide } from "@/components/admin/frame-signoff-side-by-side";
+import {
+  FrameSignOffSideBySide,
+  LOOKUP_TIMEOUT_MS,
+  LOOKUP_TTL_MS,
+  __resetSideBySideLookupsForTests,
+} from "@/components/admin/frame-signoff-side-by-side";
 import type { LiveComboResult } from "@/components/admin/score-batch-store";
 
 afterEach(() => {
   cleanup();
   payloads.build.mockReset();
+  __resetSideBySideLookupsForTests();
+  vi.useRealTimers();
 });
 
 const s = (score: number, best: number, dxPct: number, dyPct: number) => ({ score, best, dxPct, dyPct });
@@ -234,5 +241,72 @@ describe("every colour side by side", () => {
     // No reference at all → sample, no lookup.
     expect(screen.getByTestId("side-by-side-b").textContent).toMatch(/No real printing/);
     expect(payloads.build).toHaveBeenCalledTimes(2);
+  });
+  const twoReferences = () =>
+    new Map([
+      ["w", { name: "Ref W", set: "tst", scryfallId: "ref-w" }],
+      ["u", { name: "Ref U", set: "tst", scryfallId: "ref-u" }],
+    ]) as never;
+
+  it("a lookup that hangs falls back to the sample instead of holding the section", async () => {
+    vi.useFakeTimers();
+    payloads.build.mockImplementation((id: string) =>
+      id === "ref-u"
+        ? new Promise(() => {}) // Scryfall never answers
+        : Promise.resolve({ preview: { title: `Card ${id}` }, scanUrl: `https://cards.scryfall.io/png/${id}.png` }),
+    );
+    let element: Awaited<ReturnType<typeof FrameSignOffSideBySide>> | null = null;
+    const pending = FrameSignOffSideBySide({
+      template: "saga",
+      references: twoReferences(),
+      overrides: {} as never,
+      scores: new Map(),
+    }).then((e) => (element = e));
+    await vi.advanceTimersByTimeAsync(LOOKUP_TIMEOUT_MS - 100);
+    expect(element).toBeNull();
+    await vi.advanceTimersByTimeAsync(200);
+    // Settled by the timeout alone — no await on the lookup that never ends.
+    expect(element).not.toBeNull();
+    await pending;
+    vi.useRealTimers();
+    render(element!);
+    expect(screen.getByTestId("side-by-side-w").textContent).toMatch(/Card ref-w/);
+    const u = screen.getByTestId("side-by-side-u");
+    expect(u.textContent).toMatch(/sample content/);
+    expect(u.textContent).toMatch(/Couldn't load the printing/);
+  });
+
+  it("a refresh reuses the lookups that succeeded (only today's overrides are new); failures are asked again", async () => {
+    payloads.build.mockImplementation(async (id: string) => {
+      if (id === "ref-u") throw new Error("Scryfall down");
+      return { preview: { title: `Card ${id}` }, scanUrl: `https://cards.scryfall.io/png/${id}.png` };
+    });
+    const renderWith = async (overrides: unknown) => {
+      cleanup();
+      render(
+        await FrameSignOffSideBySide({
+          template: "saga",
+          references: twoReferences(),
+          overrides: overrides as never,
+          scores: new Map(),
+        }),
+      );
+    };
+    await renderWith({ saga: { title: { sizePct: 0.05 } } });
+    expect(payloads.build).toHaveBeenCalledTimes(2);
+
+    const edited = { saga: { title: { sizePct: 0.06 } } };
+    await renderWith(edited);
+    // ref-w came from the memo; ref-u (failed) was looked up again.
+    expect(payloads.build.mock.calls.map((c) => c[0])).toEqual(["ref-w", "ref-u", "ref-u"]);
+    const w = screen.getByTestId("side-by-side-w");
+    expect(w.textContent).toMatch(/Card ref-w/);
+    expect(w.querySelector("[data-testid=card-preview]")?.getAttribute("data-overrides")).toBe(JSON.stringify(edited));
+
+    // Past the TTL it asks Scryfall again.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + LOOKUP_TTL_MS + 1);
+    await renderWith(edited);
+    expect(payloads.build.mock.calls.filter((c) => c[0] === "ref-w")).toHaveLength(2);
   });
 });
