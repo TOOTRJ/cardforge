@@ -1079,6 +1079,68 @@ export type Database = {
         };
         Relationships: [];
       };
+      // migration 0120 — the automatic re-bake's lease, breaker and summary
+      // (service-role only; lib/cards/auto-rebake.ts).
+      render_sweep_state: {
+        Row: {
+          id: number;
+          lease_holder: string | null;
+          lease_token: string | null;
+          lease_expires_at: string | null;
+          lease_acquired_at: string | null;
+          yield_requested_at: string | null;
+          paused: boolean;
+          paused_reason: string | null;
+          paused_at: string | null;
+          strikes: Json;
+          poison: Json;
+          in_flight: Json;
+          last_run: Json | null;
+          idle: Json | null;
+          last_checked_at: string | null;
+          revalidate_pending: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          lease_holder?: string | null;
+          lease_token?: string | null;
+          lease_expires_at?: string | null;
+          lease_acquired_at?: string | null;
+          yield_requested_at?: string | null;
+          paused?: boolean;
+          paused_reason?: string | null;
+          paused_at?: string | null;
+          strikes?: Json;
+          poison?: Json;
+          in_flight?: Json;
+          last_run?: Json | null;
+          idle?: Json | null;
+          last_checked_at?: string | null;
+          revalidate_pending?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          lease_holder?: string | null;
+          lease_token?: string | null;
+          lease_expires_at?: string | null;
+          lease_acquired_at?: string | null;
+          yield_requested_at?: string | null;
+          paused?: boolean;
+          paused_reason?: string | null;
+          paused_at?: string | null;
+          strikes?: Json;
+          poison?: Json;
+          in_flight?: Json;
+          last_run?: Json | null;
+          idle?: Json | null;
+          last_checked_at?: string | null;
+          revalidate_pending?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       scryfall_calls: {
         Row: {
           action: string;
@@ -1852,6 +1914,19 @@ export type Database = {
           thread_count: number;
           unread_from_user: number;
         }[];
+      };
+      // migration 0120 — the shared sweep lease (service-role only).
+      acquire_render_sweep_lease: {
+        Args: { p_holder: string; p_token: string; p_ttl_seconds: number };
+        Returns: { acquired: boolean; holder: string | null; expires_at: string | null }[];
+      };
+      release_render_sweep_lease: {
+        Args: { p_token: string; p_park_seconds?: number };
+        Returns: boolean;
+      };
+      request_render_sweep_yield: {
+        Args: Record<string, never>;
+        Returns: boolean;
       };
     };
     Enums: {

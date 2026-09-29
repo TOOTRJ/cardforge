@@ -23,12 +23,19 @@
 //                bakes from a server without it).
 //   CRON_SECRET  required when REBAKE_URL points at production
 //   BATCH        cards per request (default 8, max 25)
+//   REBAKE_RETRIES  retries per request after a network failure (default 5;
+//                0 = stop on the first error). A dropped connection waits
+//                until the in-flight batch must have finished on the server
+//                (scripts/lib/rebake-request.mjs), so a retry never bakes
+//                alongside it; a 401 / 400 still stops at once.
 //
 // Cards with nothing pending are stamped current without a render; cards
 // whose only pending bumps are owner opt-in are left alone (badge intact)
 // and reported as such. After the run the script re-plans and verifies
 // nothing is left, then spot-checks a few re-baked renders exist.
 // ---------------------------------------------------------------------------
+
+import { postWithRetry, RebakeRequestError } from "./lib/rebake-request.mjs";
 
 const URL_ = process.env.REBAKE_URL ?? "http://localhost:3000/api/admin/rebake";
 const SECRET = process.env.CRON_SECRET ?? "";
@@ -37,6 +44,9 @@ const SCOPE = process.env.SCOPE ?? "";
 const VERSION = process.env.VERSION ?? "";
 const BEFORE = process.env.BEFORE ?? new Date().toISOString();
 const CONFIRM = process.env.CONFIRM === "yes";
+const RETRIES = Number.isInteger(Number(process.env.REBAKE_RETRIES)) && Number(process.env.REBAKE_RETRIES) >= 0
+  ? Number(process.env.REBAKE_RETRIES)
+  : 5;
 
 if (!["version", "sweep", "legacy-art"].includes(SCOPE)) {
   console.error("✗ SCOPE is required: version (with VERSION=N) | sweep | legacy-art");
@@ -56,13 +66,14 @@ const scopeQs =
 const headers = SECRET ? { Authorization: `Bearer ${SECRET}` } : {};
 
 async function call(extra) {
-  const res = await fetch(`${URL_}?limit=${BATCH}${scopeQs}${extra}`, { method: "POST", headers });
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body?.ok) {
-    console.error(`✗ HTTP ${res.status}: ${body?.error ?? "no body"}`);
+  try {
+    return await postWithRetry(`${URL_}?limit=${BATCH}${scopeQs}${extra}`, { headers, retries: RETRIES });
+  } catch (err) {
+    console.error(`✗ ${err instanceof Error ? err.message : String(err)}`);
+    if (!(err instanceof RebakeRequestError)) console.error(err);
+    console.error("  Safe to rerun: the sweep re-plans from what is still pending.");
     process.exit(1);
   }
-  return body;
 }
 
 const plan = await call("&dry=1");

@@ -155,6 +155,26 @@ Rules and gotchas:
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
   `scripts/backfill-render-thumbs.mjs` fills thumbs for older bakes.
+- Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
+  deploy"): `/api/cron/auto-rebake` (`vercel.json`, every 5 min, production
+  only; `lib/cards/auto-rebake.ts`) re-bakes what a "sweep" bump or a null
+  stamp left behind — `runRebakeBatch` scope `sweep`, ≤240 s per run, never
+  without `NEXT_PUBLIC_BILLING_ENABLED`; idle = one head count below
+  `latestSweepVersion()`. ONE lease (`render_sweep_state`, service-role only —
+  it names unlisted cards; `lib/cards/sweep-lease.ts`) is shared with
+  `POST /api/admin/rebake` (the script, which still works) and
+  `/api/admin/rebake-marked`: a manual call makes the cron yield after its
+  batch and parks the lease between calls; still busy after 2 min → 503 +
+  Retry-After, never 409. A card failing 3 runs goes on the poison list
+  (skipped until "Retry"; dropped once it no longer owes a re-bake); a run
+  that dies (maxDuration, OOM) is detected by the next one, which strikes the
+  batch it left in `in_flight`. The breaker (whole batch / 10 new failures /
+  hung batch / batch query failing 3 runs / 2 dead runs / a run pushing the
+  poison list past 50) pauses it and sends every admin a
+  `render_sweep_paused` notification; `/admin/renders` = status + Pause /
+  Resume / Retry. A migration that nulls stamps for a CODE fix ships with a
+  sweep bump (or pause first): the old deployment's cron can re-bake them
+  with the old code before the new deploy is live.
 - ONE card corner (layout v31, TODO 3.26): `lib/cards/card-corner.ts`
   (`CARD_CORNER_OF_SHORT_SIDE` 0.043 of the SHORT side — 64.5 px at HD in
   both orientations, never `Math.round`ed; no imports). The bake cuts it

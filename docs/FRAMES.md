@@ -363,7 +363,90 @@ Nothing here changes a stored bake or a renderer.
 
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged. After the deploy,
-run the sweep.
+the automatic re-bake sweeps the affected cards on its own (next section).
+
+## Re-bakes after a deploy (automatic)
+
+Nobody runs a sweep by hand any more. `/api/cron/auto-rebake`
+(`vercel.json`, every 5 minutes, production only; `lib/cards/auto-rebake.ts`)
+re-bakes every published card that a `"sweep"` bump, a frame-layout save or a
+migration left on an older render.
+
+- **What it runs.** The same batch as the manual script (`runRebakeBatch`,
+  scope `sweep`): opt-in-only cards are left alone with their owner badge,
+  a card whose only pending bumps are scoped out is just stamped, and the
+  overlap guards still apply. Batches of 8 until a batch finds nothing, or
+  until about 240 s have gone (`maxDuration` is 300 s). The next run carries
+  on. A 700-card sweep takes roughly an hour.
+- **When idle** it costs a state read, one head count and a timestamp
+  write. The count covers published cards that were never baked, have no
+  stamp, or are stamped below the newest sweep version
+  (`latestSweepVersion()`). If only opt-in leftovers remain,
+  the count is remembered and the scan is skipped for up to 6 hours.
+- **Never clean.** It refuses (412, and records it) unless
+  `NEXT_PUBLIC_BILLING_ENABLED` is `true`. `ALLOW_UNWATERMARKED_SWEEP` does
+  not apply to it.
+- **One sweeper at a time.** One lease (`render_sweep_state`, migration 0120;
+  `lib/cards/sweep-lease.ts`) is shared by the cron,
+  `POST /api/admin/rebake` (the script) and `POST /api/admin/rebake-marked`
+  (the compare page's "Re-bake now"). A manual call that finds the cron
+  running asks it to stop after its current batch and waits. Between two
+  manual calls the lease stays parked for the manual run, so the cron stays
+  out until the run ends. If the lease is still busy after 2 minutes, the
+  manual route answers `503` with `Retry-After: 60` and says why. The
+  script's retry helper (`scripts/lib/rebake-request.mjs`) backs off and
+  retries a 503. The compare page shows it next to "Try again". Never
+  `409`: the script treats that as fatal.
+- **Failures.** A card that fails is skipped for the rest of that run. After
+  it fails in 3 runs it goes on the **poison list**: every later run skips
+  it and the pending count leaves it out. "Retry these cards" gives each
+  one more try. An entry whose card no longer needs a re-bake (the owner
+  saved it again, unpublished or deleted it) leaves the list on the next
+  working run.
+- **A run that dies.** A run killed at the 300 s limit or out of memory
+  writes nothing. It records the batch it is baking first (`in_flight`), so
+  the next run gives each of those cards a strike: a card that kills the
+  renderer ends up on the poison list like one that fails.
+- **Time limit.** No batch starts if it would end past 240 s. A batch still
+  running at 280 s keeps the lease (it may still write) and ends the run.
+  If it had been running for 2 minutes or more, that is a **hung** batch
+  (breaker). A shorter one was just a slow last batch (an "overrun"): the
+  next run carries on.
+- **Breaker.** It pauses the automatic sweep and sends every admin a
+  `render_sweep_paused` notification (a toast and a bell entry) when any of
+  these happens:
+  - a whole batch of first-time failures re-bakes nothing (≥ 3 cards);
+  - 10 cards fail for the first time in one run;
+  - a batch hangs (see above);
+  - the batch query fails 3 runs in a row (a blip heals itself; code that
+    reads a column its migration hasn't added yet doesn't);
+  - 2 runs in a row die before finishing;
+  - one run pushes the poison list past 50 cards. It trips once, when the
+    list crosses 50, so Resume lets the sweep carry on past cards you
+    can't fix yet.
+
+  A known-bad card that fails again doesn't count.
+- **Watching it.** `/admin/renders` (Admin → Re-bakes) shows the status, a
+  pending estimate, the last run (re-baked / stamped / failed / remaining /
+  why it stopped), the pause reason, the cards that keep failing, and
+  **Pause / Resume / Retry**. Resuming clears the breaker. Vercel logs carry
+  one line per run: `[auto-rebake] v32 stop=… rebaked=… failed=…`.
+- **The manual script still works** (`scripts/rebake-renders.mjs`, which also
+  has the `version` and `legacy-art` scopes). Use it for a one-off. It
+  takes turns with the cron through the lease.
+- **Previews never run crons.** On a preview, `/admin/renders` shows the
+  branch's state. To run one invocation by hand, call the route with the
+  Preview `CRON_SECRET` (`curl -H "Authorization: Bearer …"
+  <preview>/api/cron/auto-rebake`).
+
+**Gotcha: a migration that marks cards for a CODE fix.** Say a PR ships a
+renderer fix together with a migration that sets `layout_version = null`
+(0118 did this). On merge, the migration can reach production minutes before
+the new deployment does. In that window, the old deployment's cron could
+re-bake those cards with the OLD code and stamp them current. So ship such a
+fix with a `"sweep"` bump that covers those cards, and the new code will
+re-bake them again. Or pause the automatic re-bake before merging and resume
+it once the deploy is live.
 
 ## Owner setup (once)
 
