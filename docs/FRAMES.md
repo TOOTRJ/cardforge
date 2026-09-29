@@ -276,7 +276,7 @@ needs the combo verified in the card's colour (`withVerification`,
   a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
   test fails until some rule can reach it.
 - **Signature ids are stored.** Every import that isn't exact writes a
-  `frame_requests` row keyed by its signature (TODO 1.6, migration 0120,
+  `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`), and `/admin/frame-requests` counts them
   per signature + set to decide what to build next. Never rename a rule's
   key: old rows would stop grouping with new ones. Split a rule under a new

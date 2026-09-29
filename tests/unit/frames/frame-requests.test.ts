@@ -190,8 +190,8 @@ describe("registry facts for the admin page", () => {
   });
 });
 
-describe("supabase/seeds/20_frame_requests.sql", () => {
-  const sql = readFileSync(join(process.cwd(), "supabase/seeds/20_frame_requests.sql"), "utf8");
+describe("supabase/seeds/21_frame_requests.sql", () => {
+  const sql = readFileSync(join(process.cwd(), "supabase/seeds/21_frame_requests.sql"), "utf8");
   const rows = [
     ...sql.matchAll(
       /\('fa000000-[^']+', null, '([^']+)', '([^']+)', '([a-z0-9]+)', '([^']+)', '([0-9a-f-]{36})', '(nearest|unsupported)', '([a-z0-9]+)', (null|'[a-z-]+'), '(import|deck_prefill)'/g,

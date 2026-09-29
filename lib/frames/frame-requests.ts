@@ -10,7 +10,7 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 
 // ---------------------------------------------------------------------------
-// The "most-requested missing frames" log (TODO 1.6, migration 0120): every
+// The "most-requested missing frames" log (TODO 1.6, migration 0123): every
 // Scryfall import whose printing PipGlyph can't reproduce exactly writes one
 // frame_requests row — the registry's signature and label, the printing, the
 // frame the card landed on and, when the art came along, what that art is

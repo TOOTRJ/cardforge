@@ -14,7 +14,7 @@ import {
 // ---------------------------------------------------------------------------
 // Admin — the most-requested missing frames (TODO 1.6). Every Scryfall
 // import whose printing PipGlyph can't reproduce exactly writes a
-// frame_requests row (migration 0120); this page counts them per frame
+// frame_requests row (migration 0123); this page counts them per frame
 // signature + set so the frame factory builds the most-wanted ones first
 // (frames plan 4.7 / 4.11). Its own route, apart from /admin/frame-compare.
 // ---------------------------------------------------------------------------

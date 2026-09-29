@@ -14,7 +14,7 @@ import {
 } from "@/lib/frames/frame-requests";
 
 // ---------------------------------------------------------------------------
-// /admin/frame-requests reads (TODO 1.6, migration 0120): the requests per
+// /admin/frame-requests reads (TODO 1.6, migration 0123): the requests per
 // signature + set over a window, most requested first. The RPC is
 // EXECUTE-granted to service_role only; the is_admin check here is what
 // stands between a signed-in user and it (null → the page 404s).
@@ -133,8 +133,8 @@ export async function getFrameRequestSummary(
     });
     if (error) {
       console.warn("getFrameRequestSummary: rpc error", error.message);
-      // The shared dev DB has no migration 0120 until it merges.
-      return empty("Couldn't read the request log (is migration 0120 applied here?).");
+      // The shared dev DB has no migration 0123 until it merges.
+      return empty("Couldn't read the request log (is migration 0123 applied here?).");
     }
     const rows = mapFrameRequestRows((data ?? []) as RpcRow[]);
     return {

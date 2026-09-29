@@ -970,7 +970,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Migration 0120 — the "most-requested missing frames" log (TODO 1.6).
+      // Migration 0123 — the "most-requested missing frames" log (TODO 1.6).
       // Written only through record_frame_request(); admins read.
       frame_requests: {
         Row: {
@@ -1842,7 +1842,7 @@ export type Database = {
           downloads: number;
         }[];
       };
-      // Migration 0120 — frame requests (TODO 1.6). record_frame_request is
+      // Migration 0123 — frame requests (TODO 1.6). record_frame_request is
       // the authenticated write (auth.uid() stamped, 30/hour cap);
       // admin_frame_request_counts is service_role only.
       record_frame_request: {

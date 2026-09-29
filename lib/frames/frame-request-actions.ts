@@ -4,14 +4,14 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { frameRequestSchema } from "@/lib/frames/frame-requests";
 
 // ---------------------------------------------------------------------------
-// Write one frame_requests row (TODO 1.6, migration 0120) — the creator calls
+// Write one frame_requests row (TODO 1.6, migration 0123) — the creator calls
 // this, fire-and-forget, after an import whose printing PipGlyph can't
 // reproduce exactly. The row goes through record_frame_request() with the
 // USER's own session (it stamps auth.uid() and caps a user at 30 rows an
 // hour); never the admin client.
 //
 // Never throws, and returns a small result only for tests: a failed log must
-// never disturb an import (on a database without migration 0120 — the shared
+// never disturb an import (on a database without migration 0123 — the shared
 // dev DB until merge — the RPC simply doesn't exist).
 //
 // Only async functions are exported ("use server"); the input type and its

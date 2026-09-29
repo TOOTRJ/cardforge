@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // /admin/frame-requests reads (TODO 1.6): who gets data, which window the RPC
 // is asked for, and how its rows become the panel's rows. The SQL itself is
-// migration 0120 (tests/unit/db/frame-requests-migration.test.ts).
+// migration 0123 (tests/unit/db/frame-requests-migration.test.ts).
 // ---------------------------------------------------------------------------
 
 const mocks = vi.hoisted(() => ({
@@ -120,7 +120,7 @@ describe("getFrameRequestSummary", () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { message: "function does not exist" } });
     const failed = await getFrameRequestSummary("30");
     expect(failed?.rows).toEqual([]);
-    expect(failed?.error).toMatch(/migration 0120/);
+    expect(failed?.error).toMatch(/migration 0123/);
 
     mocks.isAdminConfigured.mockReturnValue(false);
     const unconfigured = await getFrameRequestSummary("30");

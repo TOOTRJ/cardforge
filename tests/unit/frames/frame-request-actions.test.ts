@@ -91,7 +91,7 @@ describe("recordFrameRequestAction", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it("never throws: an RPC error (no migration 0120 on this database) is a quiet failure", async () => {
+  it("never throws: an RPC error (no migration 0123 on this database) is a quiet failure", async () => {
     mocks.rpc.mockResolvedValue({
       data: null,
       error: { message: "Could not find the function public.record_frame_request" },

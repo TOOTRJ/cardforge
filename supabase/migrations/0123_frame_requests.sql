@@ -1,4 +1,4 @@
--- 0120 — frame_requests: the "most-requested missing frames" log (TODO 1.6).
+-- 0123 — frame_requests: the "most-requested missing frames" log (TODO 1.6).
 --
 -- One row per Scryfall import whose printing PipGlyph can't reproduce
 -- exactly: the frame signature registry (lib/scryfall/frame-signatures.ts)

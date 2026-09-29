@@ -2,9 +2,9 @@ import { test, expect } from "@playwright/test";
 import { e2eCredentials, signIn } from "./helpers/sign-in";
 
 // ---------------------------------------------------------------------------
-// /admin/frame-requests (TODO 1.6) through the real stack: migration 0120's
+// /admin/frame-requests (TODO 1.6) through the real stack: migration 0123's
 // admin_frame_request_counts() read by the seeded ADMIN e2e user, over the
-// rows supabase/seeds/20_frame_requests.sql plants on every seeded database.
+// rows supabase/seeds/21_frame_requests.sql plants on every seeded database.
 // Read-only. Needs the seeded local stack (.env.e2e); CI runs it.
 // ---------------------------------------------------------------------------
 

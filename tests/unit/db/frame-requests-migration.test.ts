@@ -8,7 +8,7 @@ import {
 } from "@/lib/frames/frame-requests";
 
 // ---------------------------------------------------------------------------
-// Migration 0120 (TODO 1.6) as text: it states its grants (branches don't
+// Migration 0123 (TODO 1.6) as text: it states its grants (branches don't
 // auto-grant; production auto-grants everything, so the revokes matter), it
 // never hands the table to an API role wholesale, only admins read, the one
 // write is the auth.uid()-stamped function, and its CHECK vocabularies match
@@ -17,7 +17,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const sql = readFileSync(
-  join(process.cwd(), "supabase/migrations/0120_frame_requests.sql"),
+  join(process.cwd(), "supabase/migrations/0123_frame_requests.sql"),
   "utf8",
 );
 const body = sql
@@ -30,7 +30,7 @@ const body = sql
 const RECORD_SIG = "public.record_frame_request(text, text, text, text, uuid, text, text, text, text)";
 const COUNTS_SIG = "public.admin_frame_request_counts(timestamptz)";
 
-describe("0120_frame_requests.sql", () => {
+describe("0123_frame_requests.sql", () => {
   it("never grants all", () => {
     expect(body).not.toMatch(/grant all/);
   });

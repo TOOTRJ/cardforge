@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
--- 20_frame_requests.sql — synthetic "most-requested missing frames" rows
--- (migration 0120, TODO 1.6) so /admin/frame-requests has something to show
+-- 21_frame_requests.sql — synthetic "most-requested missing frames" rows
+-- (migration 0123, TODO 1.6) so /admin/frame-requests has something to show
 -- on a preview branch, the dev database and the local stack.
 --
 -- Runs after 10_dev_data.sql (config.toml → [db.seed] sql_paths, filename
