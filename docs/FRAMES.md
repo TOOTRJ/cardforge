@@ -270,6 +270,14 @@ number. Each rule has a stable signature id and resolves to `exact`,
 needs the combo verified in the card's colour (`withVerification`,
 `lib/creator/frame-resolve.ts`).
 
+The import dialog (TODO 1.5) shows every printing's finalized match as a
+badge (✓ Exact · ≈ Nearest · ✕ Not available — `/api/scryfall/printings`)
+and, for anything but an exact match that lands on its own frame, asks for
+a frame before the import (`lib/creator/import-frame-choice.ts`): the kind's
+published frames in the card's colour, the import's own landing preselected.
+So a newly verified frame shows up in the chooser and turns its printings'
+badges to Exact the moment its `frame_reviews` row is ticked.
+
 - **A new frame** gets a rule for the printings it reproduces (a set +
   collector range for a showcase run; never `full_art` alone), a fixture
   printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and

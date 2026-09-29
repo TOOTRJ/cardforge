@@ -118,14 +118,32 @@ test.describe("Scryfall search → import", () => {
     ).toHaveValue("Lightning Bolt");
   });
 
-  // TODO 1.16 stopgap: a borderless printing lands on the bordered frame —
-  // the dialog says so before the import and the creator toasts the frame
-  // the card actually got, instead of a silent "exact". The notice is the
-  // FRONT toast (it follows the dialog's own "Seeded form with …").
-  async function importBorderlessSheoldred(
-    page: Page,
-    frameTemplate: string,
-  ) {
+  // TODO 1.5 (with 1.18's owner decision): a printing whose frame PipGlyph
+  // doesn't have — here a borderless Sheoldred, whose Scryfall art is only
+  // the bordered window — asks for a frame in the dialog before the import
+  // (it replaced 1.16's heads-up and treatment toast). The bordered M15 is
+  // preselected; the Card step then says the frame was substituted.
+  const cardStep = (page: Page) =>
+    page
+      .getByRole("navigation", { name: /card editor steps/i })
+      .getByRole("button", { name: /^card$/i });
+
+  const frameOption = (page: Page, label: RegExp) =>
+    page
+      .getByRole("radiogroup", { name: "Frame for the import" })
+      .getByRole("radio", { name: label });
+
+  async function searchAndPick(page: Page, query: string, option: RegExp) {
+    await signIn(page);
+    await page.goto("/create");
+    await page.getByRole("button", { name: /^search a real card/i }).click();
+    await page.locator('input[aria-label="Search Scryfall"]').fill(query);
+    await page.getByRole("option", { name: option }).click();
+  }
+
+  test("a borderless printing asks for a frame; the bordered M15 is preselected", async ({
+    page,
+  }) => {
     const id = "8df6603a-38c1-4d18-8b84-6211e9a7cc09"; // DMU #435
     await page.route("**/api/scryfall/search**", async (route) => {
       await route.fulfill({
@@ -162,13 +180,22 @@ test.describe("Scryfall search → import", () => {
             thumb_url: null,
             scryfall_uri: null,
           },
-          // What lib/scryfall/import-mapper.ts emits for DMU #435 (with the
-          // frame the test asks for).
+          // What lib/scryfall/import-mapper.ts emits for DMU #435, with the
+          // match finalized by /api/scryfall/named.
           patch: {
             title: "Sheoldred, the Apocalypse",
             cost: "{2}{B}{B}",
             kind: "creature",
-            frame_template: frameTemplate,
+            frame_template: "m15",
+            frame_match: {
+              status: "nearest",
+              template: "m15borderless",
+              exactLabel: "Borderless frame",
+              reason: "PipGlyph doesn't draw the legendary crown yet",
+              signature: "borderless/standard+crown",
+              landOn: "m15",
+              blockedBy: "4.6",
+            },
             printing_treatment: "borderless",
             card_type: "creature",
             supertype: "Legendary",
@@ -183,46 +210,35 @@ test.describe("Scryfall search → import", () => {
       });
     });
 
-    await signIn(page);
-    await page.goto("/create");
-    await page.getByRole("button", { name: /^search a real card/i }).click();
-    await page.locator('input[aria-label="Search Scryfall"]').fill("Sheoldred");
-    await page.getByRole("option", { name: /sheoldred/i }).click();
+    await searchAndPick(page, "Sheoldred", /sheoldred/i);
 
-    await expect(
-      page.getByText(/This printing is borderless, which PipGlyph doesn't offer yet/),
-    ).toBeVisible();
+    const chooser = page.getByTestId("import-frame-chooser");
+    await expect(chooser).toContainText(/Borderless frame .*— pick one of these/);
+    await expect(chooser).toContainText(
+      "Scryfall's art for this printing is cropped to the bordered window.",
+    );
+    await expect(frameOption(page, /^M15 \(2015\) Standard/)).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    // 1.16's heads-up is retired: the chooser covers it.
+    await expect(page.getByText(/which PipGlyph doesn't offer yet/)).toHaveCount(0);
+
     // Keep the run offline: no art import.
     await page.getByRole("checkbox", { name: /also import artwork/i }).uncheck();
     await page.getByRole("button", { name: /use as starting point/i }).click();
-  }
 
-  const frontToast = (page: Page) =>
-    page.locator('[data-sonner-toast][data-front="true"]');
-
-  test("names a borderless printing's substituted frame", async ({ page }) => {
-    await importBorderlessSheoldred(page, "m15");
-    await expect(frontToast(page)).toHaveText(
-      "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.",
+    await cardStep(page).click();
+    await expect(page.getByTestId("frame-substituted")).toHaveText(
+      "Frame substituted (imported Borderless frame)",
     );
   });
 
-  test("names the frame the card landed on, not the one the printing wanted", async ({
-    page,
-  }) => {
-    // modern is verified in white only (supabase/seed.sql), so a black card
-    // asking for it lands on M15 Standard; the notice names M15.
-    await importBorderlessSheoldred(page, "modern");
-    await expect(frontToast(page)).toHaveText(
-      "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.",
-    );
-  });
-
-  // TODO 1.4: the frame signature registry. Bident of Thassa THS #42 prints
-  // Theros's 2003 Nyx frame, whose nearest PipGlyph frame is Nyx
-  // (frame_match); Nyx isn't verified in blue (supabase/seed.sql), so the
-  // import falls forward to M15 and the creator says which frame it wanted.
-  test("an import asks for its signature's frame and names the fallback", async ({
+  // TODO 1.4 + 1.5: Bident of Thassa THS #42 prints Theros's 2003 Nyx frame,
+  // whose nearest PipGlyph frame is Nyx (frame_match); Nyx isn't verified in
+  // blue (supabase/seed.sql), so the chooser names what the printing is and
+  // preselects the M15 standard the import falls forward to.
+  test("an import asks for its signature's frame and preselects the fallback", async ({
     page,
   }) => {
     const id = "85e45d14-a501-40b9-af0a-720ecd20dad7"; // THS #42
@@ -285,18 +301,23 @@ test.describe("Scryfall search → import", () => {
       });
     });
 
-    await signIn(page);
-    await page.goto("/create");
-    await page.getByRole("button", { name: /^search a real card/i }).click();
-    await page.locator('input[aria-label="Search Scryfall"]').fill("Bident");
-    await page.getByRole("option", { name: /bident of thassa/i }).click();
+    await searchAndPick(page, "Bident", /bident of thassa/i);
+
+    await expect(page.getByTestId("import-frame-chooser")).toContainText(
+      "PipGlyph doesn't have the Nyx frame (2003) yet — pick one of these",
+    );
+    await expect(frameOption(page, /^M15 \(2015\) Standard/)).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     await page.getByRole("checkbox", { name: /also import artwork/i }).uncheck();
     await page.getByRole("button", { name: /use as starting point/i }).click();
 
-    await expect(
-      page.getByText(
-        "This printing's Nyx Constellation frame isn't available in blue yet — using M15 (2015) Standard.",
-      ),
-    ).toBeVisible();
+    // The user picked it, so no after-the-fact toast; the Card step says it.
+    await expect(page.getByText(/isn't available in blue yet/)).toHaveCount(0);
+    await cardStep(page).click();
+    await expect(page.getByTestId("frame-substituted")).toHaveText(
+      "Frame substituted (imported Nyx frame (2003))",
+    );
   });
 });

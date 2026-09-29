@@ -1,0 +1,345 @@
+"use client";
+
+import { ExternalLink, ImageDown, Info, Loader2, XCircle } from "lucide-react";
+import { InlinePips } from "@/components/cards/inline-pips";
+import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { Badge } from "@/components/ui/badge";
+import {
+  PrintingFilterChips,
+  PrintingStatusBadge,
+  PrintingsGrid,
+} from "@/components/creator/import/printings-grid";
+import { ImportFrameChooser } from "@/components/creator/import/frame-chooser";
+import type { UsePrintingsResult } from "@/components/creator/import/use-printings";
+import type {
+  ImportFrameChoice,
+  ImportFramePlan,
+} from "@/lib/creator/import-frame-choice";
+import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
+
+// ---------------------------------------------------------------------------
+// The import dialog's detail pane (TODO 1.5): the selected printing, what the
+// import will populate, every printing of the card (filterable, with the
+// Exact / Nearest / Not available status), and — when the match isn't
+// exact — the inline frame chooser before commit. Stays mounted while
+// another printing loads (a busy overlay), so the grid keeps its scroll
+// (TODO 1.9).
+// ---------------------------------------------------------------------------
+
+export type NamedResponse = {
+  ok: true;
+  card: {
+    id: string;
+    name: string;
+    oracle_id: string | null;
+    set: string | null;
+    set_name: string | null;
+    print_url: string | null;
+    thumb_url: string | null;
+    scryfall_uri: string | null;
+    image_status: string | null;
+  };
+  patch: ScryfallImportPatch;
+};
+
+/** "…and the frame (an exact match: M15 (2015) frame)" — the overwrite
+ *  note names what the import does with the frame (TODO 1.5). */
+export function frameOverwriteCopy(patch: Pick<ScryfallImportPatch, "frame_match">): string {
+  const match = patch.frame_match;
+  if (!match || match.reject) return "the frame";
+  if (match.status === "exact" && !match.landOn) {
+    return `the frame (an exact match: ${match.exactLabel})`;
+  }
+  return `the frame (nearest to ${match.exactLabel} — your pick above)`;
+}
+
+export function ImportDetail({
+  data,
+  busy,
+  importArt,
+  onImportArtChange,
+  printings,
+  view,
+  onViewChange,
+  onSelectPrinting,
+  pendingPrintingId,
+  plan,
+  frameChoice,
+  onFrameChoiceChange,
+  locked,
+}: {
+  data: NamedResponse;
+  /** Another printing is loading: overlay, keep everything mounted. */
+  busy: boolean;
+  importArt: boolean;
+  onImportArtChange: (next: boolean) => void;
+  /** Null when the card has no oracle id (Scryfall's reversible cards). */
+  printings: UsePrintingsResult | null;
+  view: PrintingView;
+  onViewChange: (next: PrintingView) => void;
+  onSelectPrinting: (printing: PrintingSummary) => void;
+  pendingPrintingId: string | null;
+  plan: ImportFramePlan;
+  frameChoice: ImportFrameChoice | null;
+  onFrameChoiceChange: (next: ImportFrameChoice) => void;
+  /** The import is committing: nothing may change under it. */
+  locked: boolean;
+}) {
+  const { card, patch } = data;
+  const match = patch.frame_match;
+  return (
+    <div className="relative flex flex-col gap-4 p-5" aria-busy={busy}>
+      {busy ? (
+        <div
+          className="absolute inset-x-0 top-0 z-10 flex h-40 items-start justify-center pt-16"
+          role="status"
+        >
+          <span className="inline-flex items-center gap-2 rounded-md border border-border bg-surface/90 px-3 py-1.5 text-xs text-muted shadow-md">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Loading printing…
+          </span>
+        </div>
+      ) : null}
+      <div className={`grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)] ${busy ? "opacity-60" : ""}`}>
+        <div className="flex flex-col gap-2">
+          {card.print_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.print_url}
+              alt={`Print of ${card.name}`}
+              className="w-full rounded-lg border border-border/60 shadow-md"
+            />
+          ) : (
+            <div className="aspect-[5/7] w-full rounded-lg bg-elevated" />
+          )}
+          {card.image_status === "lowres" ? (
+            <p className="text-[11px] leading-4 text-subtle">
+              Low-resolution scan — search for another printing for sharper
+              art.
+            </p>
+          ) : card.image_status === "placeholder" ||
+            card.image_status === "missing" ? (
+            <p className="text-[11px] leading-4 text-subtle">
+              Scryfall only has a placeholder image for this printing — art
+              import is unavailable.
+            </p>
+          ) : null}
+          {card.scryfall_uri ? (
+            <a
+              href={card.scryfall_uri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 self-start text-[11px] uppercase tracking-wider text-primary-bright underline-offset-2 hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" aria-hidden /> View on Scryfall
+            </a>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
+              {card.name}
+            </h3>
+            <p className="text-xs uppercase tracking-wider text-subtle">
+              {card.set_name ?? card.set ?? "Unknown set"}
+            </p>
+            {match ? (
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+                <PrintingStatusBadge
+                  match={{
+                    status: match.status,
+                    exactLabel: match.exactLabel,
+                    template: match.template,
+                    reason: match.reason,
+                    landOn: match.landOn,
+                    reject: match.reject,
+                  }}
+                />
+                <span>{match.exactLabel}</span>
+              </p>
+            ) : null}
+          </div>
+
+          <PatchPreview patch={patch} />
+        </div>
+      </div>
+
+      {printings ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
+            Printings · each sets the frame
+          </span>
+          <PrintingFilterChips value={view} onChange={onViewChange} disabled={locked} />
+          <PrintingsGrid
+            printings={printings.printings}
+            activeId={card.id}
+            onSelect={onSelectPrinting}
+            loading={printings.loading}
+            loadingMore={printings.loadingMore}
+            hasMore={printings.hasMore}
+            onLoadMore={printings.loadMore}
+            total={printings.total}
+            error={printings.error}
+            pendingId={pendingPrintingId}
+          />
+        </div>
+      ) : null}
+
+      {plan.mode === "reject" ? (
+        <p
+          role="alert"
+          className="inline-flex items-start gap-2 rounded-md border border-danger/40 bg-danger/10 p-3 text-xs leading-5 text-foreground"
+        >
+          <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger" aria-hidden />
+          <span>
+            <strong>Not available</strong> — {plan.reason} ({plan.exactLabel}). Pick another
+            printing.
+          </span>
+        </p>
+      ) : plan.mode === "choose" ? (
+        <ImportFrameChooser
+          plan={plan}
+          value={frameChoice}
+          onChange={onFrameChoiceChange}
+          colorIdentity={patch.color_identity}
+          type={{ cardType: patch.card_type, supertype: patch.supertype }}
+          disabled={locked || busy}
+        />
+      ) : null}
+
+      <label className="inline-flex cursor-pointer items-start gap-2 rounded-md border border-border/60 bg-elevated/40 p-3 text-xs leading-5 text-muted">
+        <input
+          type="checkbox"
+          checked={importArt}
+          onChange={(event) => onImportArtChange(event.target.checked)}
+          disabled={locked}
+          className="mt-0.5 accent-primary"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="inline-flex items-center gap-1.5 text-foreground">
+            <ImageDown className="h-3.5 w-3.5" aria-hidden /> Also import
+            artwork
+          </span>
+          <span>
+            Server downloads the art crop into your card-art bucket. You
+            can replace it later.
+          </span>
+        </span>
+      </label>
+
+      <p className="inline-flex items-start gap-2 rounded-md border border-border/60 bg-elevated/40 p-3 text-xs leading-5 text-muted">
+        <Info
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-bright"
+          aria-hidden
+        />
+        <span>
+          Importing <strong>overwrites the card you&apos;re currently
+          editing</strong> — name, text, type, colors, and{" "}
+          {frameOverwriteCopy(patch)} are all replaced.
+        </span>
+      </p>
+
+      <Disclaimer />
+    </div>
+  );
+}
+
+function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
+  const rows: Array<{ label: string; value: React.ReactNode }> = [];
+  if (patch.cost) {
+    rows.push({
+      label: "Cost",
+      value: <ManaCostGlyphs cost={patch.cost} size="sm" />,
+    });
+  }
+  if (patch.card_type) {
+    rows.push({
+      label: "Type",
+      value: (
+        <span className="capitalize">
+          {[patch.supertype, patch.card_type, patch.subtypes_text ? `— ${patch.subtypes_text}` : null]
+            .filter(Boolean)
+            .join(" ")}
+        </span>
+      ),
+    });
+  }
+  if (patch.rarity) {
+    rows.push({ label: "Rarity", value: <span className="capitalize">{patch.rarity}</span> });
+  }
+  if (patch.color_identity && patch.color_identity.length > 0) {
+    rows.push({
+      label: "Colors",
+      value: (
+        <span className="capitalize">{patch.color_identity.join(" · ")}</span>
+      ),
+    });
+  }
+  if (patch.rules_text) {
+    rows.push({
+      label: "Rules",
+      value: (
+        <InlinePips
+          text={patch.rules_text}
+          className="block whitespace-pre-line text-foreground/85"
+        />
+      ),
+    });
+  }
+  if (patch.flavor_text) {
+    rows.push({
+      label: "Flavor",
+      value: (
+        <span className="italic text-subtle">{patch.flavor_text}</span>
+      ),
+    });
+  }
+  if (patch.power || patch.toughness) {
+    rows.push({
+      label: "P/T",
+      value: `${patch.power ?? "—"} / ${patch.toughness ?? "—"}`,
+    });
+  }
+  if (patch.artist_credit) {
+    rows.push({ label: "Artist", value: patch.artist_credit });
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[11px] uppercase tracking-wider text-subtle">
+        Will populate
+      </span>
+      <dl className="flex flex-col gap-1.5 rounded-md border border-border/40 bg-background/30 p-3 text-xs leading-5">
+        {rows.length === 0 ? (
+          <span className="text-subtle">No fields to populate.</span>
+        ) : (
+          rows.map((row) => (
+            <div key={row.label} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3">
+              <dt className="text-[11px] uppercase tracking-wider text-subtle">
+                {row.label}
+              </dt>
+              <dd className="text-foreground/90">{row.value}</dd>
+            </div>
+          ))
+        )}
+      </dl>
+    </div>
+  );
+}
+
+function Disclaimer() {
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] leading-5 text-muted">
+      <Badge variant="accent" className="shrink-0">
+        Heads up
+      </Badge>
+      <p>
+        Imported text and artwork are the property of their respective
+        rights holders. PipGlyph surfaces them so you can riff on real
+        designs — rewrite the rules text and swap the art before
+        publishing publicly to keep your card original.
+      </p>
+    </div>
+  );
+}
