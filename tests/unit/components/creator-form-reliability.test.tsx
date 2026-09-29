@@ -1160,6 +1160,65 @@ describe("3b.15 the token type picker", () => {
     expect(payload.toughness).toBeUndefined();
   });
 
+  it("the Identity step's Supertype field shows and edits only the words the picker doesn't own", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await toggle(/^Legendary/);
+    expect(preview().supertype).toBe("Legendary Creature");
+    await clickNext(); // Card → Identity
+    const field = () => screen.getByPlaceholderText("Snow") as HTMLInputElement;
+    // Not "Legendary Creature": those two are the picker's.
+    expect(field().value).toBe("");
+    expect(screen.queryByPlaceholderText("Legendary")).toBeNull();
+    await act(async () => {
+      fireEvent.change(field(), { target: { value: "Basic Snow " } });
+    });
+    // Merged in printed order with the picker's words; the text stays the
+    // user's (a trailing space and all) while they type.
+    expect(preview().supertype).toBe("Basic Legendary Snow Creature");
+    expect(field().value).toBe("Basic Snow ");
+    // A picker word typed here waits for the blur, then moves to its toggle.
+    await act(async () => {
+      fireEvent.change(field(), { target: { value: "Snow enchantment" } });
+    });
+    expect(preview().supertype).toBe("Legendary Snow Creature");
+    await act(async () => {
+      fireEvent.blur(field());
+    });
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Creature");
+    expect(field().value).toBe("Snow");
+    // The picker shows it; its toggles leave the field's words alone.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    expect(tokenChip(/^Enchantment/).getAttribute("aria-pressed")).toBe("true");
+    await toggle(/^Creature/);
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact");
+    expect(preview().template).toBe("m15tokenartifact");
+    await clickNext();
+    expect(field().value).toBe("Snow");
+    // Leaving and re-entering the field without typing writes nothing.
+    await act(async () => {
+      fireEvent.focus(field());
+      fireEvent.blur(field());
+    });
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact");
+  });
+
+  it("every other kind keeps its plain Supertype field", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Creature/);
+    await clickNext();
+    expect(screen.queryByPlaceholderText("Snow")).toBeNull();
+    const field = screen.getByPlaceholderText("Legendary") as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(field, { target: { value: "Legendary Snow" } });
+    });
+    expect(preview().supertype).toBe("Legendary Snow");
+    expect(field.value).toBe("Legendary Snow");
+  });
+
   it("a stored token from before the picker opens as a Creature token with its P/T", async () => {
     renderForm({
       mode: "edit",
