@@ -165,7 +165,7 @@ export type PowerToughnessFace = {
  * gate on this: it has a value and its type shows one (showsPowerToughness).
  * A token with a value and no type word at all also prints it: before the
  * picker (TODO 3b.15) every token was a creature, so a stored one written
- * then keeps its P/T. Migration 0124 gives those rows "Creature"; this keeps
+ * then keeps its P/T. Migration 0128 gives those rows "Creature"; this keeps
  * one written by an older client after it (or before it ran) printing too.
  */
 export function printsPowerToughness(face: PowerToughnessFace): boolean {

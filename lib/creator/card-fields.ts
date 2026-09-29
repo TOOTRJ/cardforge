@@ -137,7 +137,7 @@ function backFaceFormValuesFrom(
 /**
  * The supertype the form edits for a stored card. A token from before the
  * type picker (TODO 3b.15) with a P/T and no type word was a creature — every
- * token was — so it reads as "Creature", the word migration 0124 writes: its
+ * token was — so it reads as "Creature", the word migration 0128 writes: its
  * P/T inputs show, the picker's Creature toggle is on, and a remix saves the
  * word. Every other card's supertype is as stored.
  */

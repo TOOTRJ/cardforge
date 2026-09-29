@@ -480,7 +480,7 @@ import type { CardType } from "@/types/card";
 //              symbol).
 //            * "Token" first on the type line (TODO 3b.15; buildTypeLine):
 //              "Basic Token — Wastes" → "Token Basic — Wastes", "Token —
-//              Soldier" → "Token Creature — Soldier" once migration 0124 gives
+//              Soldier" → "Token Creature — Soldier" once migration 0128 gives
 //              a word-less P/T token its "Creature"; a token prints its P/T
 //              only with Creature or a Vehicle / Spacecraft subtype
 //              (printsPowerToughness — a stored word-less token keeps its
@@ -788,7 +788,7 @@ function v33PrintsText(card: ScopeCard): boolean {
  * empty (a word: the line now prints "Token" first — "Basic Token — Wastes"
  * → "Token Basic — Wastes"; a Treasure's stray P/T goes too; a blank one of
  * spaces is trimmed away), and a token with a P/T
- * and no word, which migration 0124 gives "Creature" ("Token — Soldier" → "Token
+ * and no word, which migration 0128 gives "Creature" ("Token — Soldier" → "Token
  * Creature — Soldier") — counted whether the sweep reaches the row before or
  * after the migration, so it is never stamped current on the old line. A
  * back face typed token with a non-empty supertype is its own line too. Any token template

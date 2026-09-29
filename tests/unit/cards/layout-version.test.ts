@@ -969,7 +969,7 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
     for (const t of ALL) {
       // "Basic Token — Wastes" → "Token Basic — Wastes".
       expect(classifyForSweep(at(t, token({ supertype: "Basic", subtypes: ["Wastes"] }))), t).toBe("rebake");
-      // "Token — Soldier" + 1/1 → "Token Creature — Soldier" (0124's word), before and after the migration.
+      // "Token — Soldier" + 1/1 → "Token Creature — Soldier" (0128's word), before and after the migration.
       expect(classifyForSweep(at(t, token({ subtypes: ["Soldier"], power: "1", toughness: "1" }))), t).toBe("rebake");
       expect(classifyForSweep(at(t, token({ supertype: "Creature", subtypes: ["Soldier"], power: "1", toughness: "1" }))), t).toBe("rebake");
       // A Treasure loses its stray P/T and prints "Token Artifact — Treasure".

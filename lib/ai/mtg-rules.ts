@@ -434,7 +434,7 @@ export function autofixCard<T extends LintableCard>(card: T): T {
   const type = fixed.card_type;
   // A token with a P/T and no type word was designed as a creature token
   // (every token was one before TODO 3b.15): it gains "Creature", as
-  // migration 0124 does for stored ones. A token that names another type
+  // migration 0128 does for stored ones. A token that names another type
   // (a Treasure) keeps it and loses the stats.
   if (
     type === "token" &&

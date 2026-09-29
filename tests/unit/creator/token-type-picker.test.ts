@@ -235,7 +235,7 @@ describe("stored tokens from before the picker", () => {
       ...patch,
     }) as unknown as Card;
 
-  it("a token with a P/T and no type word reads as a Creature token (the word 0124 writes)", () => {
+  it("a token with a P/T and no type word reads as a Creature token (the word 0128 writes)", () => {
     expect(formSupertypeOf(card({}))).toBe("Creature");
     expect(formSupertypeOf(card({ supertype: "Legendary" }))).toBe("Legendary Creature");
     expect(defaultValuesFor(card({}), []).supertype).toBe("Creature");
