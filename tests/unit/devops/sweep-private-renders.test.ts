@@ -14,6 +14,7 @@ import {
   planPrivateRenders,
   rendersByCard,
 } from "@/scripts/lib/private-renders.mjs";
+import { limitStorage } from "@/scripts/lib/storage-calls.mjs";
 import { loadState, readManifest, reconcilePending } from "@/scripts/lib/storage-orphans.mjs";
 import { emptyDb, fakeStorage, fakeSupabase, type Obj, type Row, type StoredObject } from "./helpers/fake-supabase";
 import { fakeApp } from "./helpers/fake-app";
@@ -284,6 +285,50 @@ describe("applyPrivateRenders", () => {
     ]);
   });
 
+  // Skeptic review of the incident fix: the window between the visibility
+  // re-read and the remove is what keeps a card published meanwhile safe, so
+  // a busy remove must not be re-sent seconds later on the old re-read.
+  it("a busy remove is sent again only after the lookups and the visibility read are repeated: a card published during the wait keeps its renders, new bake included", async () => {
+    const s = await setup([withPointer(PRIVATE, "private"), withPointer(FLIPS, "private")], [...both(U1, PRIVATE), ...both(U1, FLIPS)], {}, { busyRemove: 1 });
+    const flipsPng = `card-renders/${U1}/${FLIPS}.png`;
+    const sleep = async () => {
+      // While we wait, the owner publishes FLIPS and its bake writes a new PNG.
+      s.db.rows.get(FLIPS)!.visibility = "public";
+      s.storage.store.set(flipsPng, { ...s.storage.store.get(flipsPng)!, etag: '"etag-new-bake"' });
+    };
+    const result = await s.run({ storage: limitStorage(s.storage, { sleep }) });
+    expect(result).toMatchObject({ deleted: 2, failed: [] });
+    expect(result.skipped.map((k: { path: string; why: string }) => [k.path, k.why])).toEqual([
+      [`${U1}/${FLIPS}.png`, "new bytes since the listing (a bake) — the next run judges it again"],
+      [`${U1}/${FLIPS}.thumb.webp`, "its card is public now — never touched"],
+    ]);
+    expect(s.storage.store.get(flipsPng)?.etag).toBe('"etag-new-bake"');
+    expect(s.storage.store.has(`card-renders/${U1}/${FLIPS}.thumb.webp`)).toBe(true);
+    expect([...s.storage.store.keys()].filter((k) => k.includes(PRIVATE))).toEqual([]);
+    expect(s.events).toEqual([
+      "clear 2",
+      `info ${PRIVATE}.png`,
+      `info ${PRIVATE}.thumb.webp`,
+      `info ${FLIPS}.png`,
+      `info ${FLIPS}.thumb.webp`,
+      "read 2",
+      "remove 4", // busy: nothing removed
+      // After the backoff: every object looked up again, the visibility read again, and only then the remove.
+      `info ${PRIVATE}.png`,
+      `info ${PRIVATE}.thumb.webp`,
+      `info ${FLIPS}.png`,
+      `info ${FLIPS}.thumb.webp`,
+      "read 2",
+      "remove 2",
+      `info ${PRIVATE}.png`,
+      `info ${PRIVATE}.thumb.webp`,
+      `info ${FLIPS}.png`,
+      `info ${FLIPS}.thumb.webp`,
+      `purge ${PRIVATE}`,
+    ]);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 2 });
+  });
+
   it("purges the CDN copies of each batch's cards whose renders are gone — noted in the state file before the remove, taken off once purged", async () => {
     const s = await setup(
       [PRIVATE, PRIVATE2].map((id) => withPointer(id, "private")),
@@ -403,6 +448,27 @@ describe("applyPrivateRenders", () => {
     expect(result.deleted).toBe(1);
     expect(result.failed).toEqual([{ bucket: "card-renders", paths: [`${U1}/${PRIVATE}.thumb.webp`], error: "delete not confirmed" }]);
     expect(loadState(s.statePath).pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/${PRIVATE}.thumb.webp`]);
+  });
+
+  // Incident 2026-09-29 (the orphan sweep's `--batch-size 100`): every lookup
+  // of a batch went out at once and storage ran out of database connections.
+  // A batch of 100 private cards is 200 lookups before the remove and 200
+  // after it.
+  it("a batch of 100 cards against a storage that refuses a 5th call at once: every render removed and confirmed, never more than 4 in flight", async () => {
+    const ids = Array.from({ length: 100 }, (_, i) => `eeeeeeee-eeee-4eee-8eee-${String(i).padStart(12, "0")}`);
+    const s = await setup(
+      ids.map((id) => withPointer(id, "private")),
+      ids.flatMap((id) => both(U1, id)),
+      {},
+      { maxConcurrent: 4 },
+    );
+    const result = await s.run({ batchSize: 100 });
+    expect(result.skipped).toEqual([]);
+    expect(result.failed).toEqual([]);
+    expect(result).toMatchObject({ deleted: 200, purged: 100 });
+    expect(s.storage.store.size).toBe(0);
+    expect(s.storage.stats).toMatchObject({ peak: 4, refused: 0 });
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, purgePending: [] });
   });
 });
 

@@ -246,7 +246,7 @@ of deleted accounts. Run it from an up-to-date `main` checkout:
 ```bash
 node scripts/sweep-storage-orphans.mjs                  # dev (.env.local), dry run
 node scripts/sweep-storage-orphans.mjs --target prod    # prod, dry run (hidden-prompt key)
-node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
+node scripts/sweep-storage-orphans.mjs --target prod --apply \
   --backup-dir ~/.pipglyph/sweep-backups/$(date +%F)
 ```
 
@@ -309,23 +309,38 @@ app on another database than `--target` stops the run with nothing done.
 - **`--apply`** (type "yes"): batches of 25 (`--batch-size`, max 100).
   **Every batch re-reads the whole database** (every text/JSON column of
   every table, `notifications`, `funnel_events` and `ai_generation_jobs`
-  included), so N orphans cost N / batch-size full reads — on production
-  pass `--batch-size 100` (the prompt prints the number of full reads before
-  you type "yes"). Per batch: `--backup-dir` copies each object
-  (recommended for the first production run — storage has no undo; a copy
-  that doesn't match the listed MD5 eTag keeps the object; the directory is
-  refused inside any git working tree, since this repo is public and the
-  copies are users' images — keep them under `~/.pipglyph/`), then a fresh
-  full database scan for the batch's keys and card ids, then a lookup of
-  every object at once right before the delete (gone, another eTag/size, or
-  recently changed → kept). After the delete every object is looked up again
+  included), so N orphans cost N / batch-size full reads (the prompt prints
+  the number before you type "yes") — about 2 s each on production
+  (2026-09-29: 36 tables, 6.6k rows), so keep the default 25; a smaller
+  batch also keeps the stretch between a batch's re-scan and its delete
+  short. **Storage calls are capped separately:** every listing page,
+  lookup, download and remove, in every mode, goes through one limiter —
+  at most `--storage-concurrency` in flight (default 4, max 8;
+  `scripts/lib/storage-calls.mjs`) — and a call storage answers "busy"
+  ("Too many connections", 429, 5xx, no answer) is retried with backoff
+  (4 tries, about 1 s / 2 s / 4 s apart) before it counts as failed; a
+  busy REMOVE is sent again only for the objects a fresh lookup (and, for
+  `--private-renders`, a fresh visibility read) still clears, never on the
+  checks made before the wait. Incident 2026-09-29: the first production run used `--batch-size 100`
+  (this runbook's advice then), fired each batch's 100 lookups at once and,
+  after 193 deletes, ran storage out of database connections (7 deletes
+  unconfirmed; nothing lost — the next run settles them). Per batch:
+  `--backup-dir` copies each object (recommended for the first production
+  run — storage has no undo; a copy that doesn't match the listed MD5 eTag
+  keeps the object; the directory is refused inside any git working tree,
+  since this repo is public and the copies are users' images — keep them
+  under `~/.pipglyph/`), then a fresh full database scan for the batch's
+  keys and card ids, then a lookup of every object (a few at a time, see
+  above) right before the delete (gone, another eTag/size, or recently
+  changed → kept). After the delete every object is looked up again
   and only what storage reports gone is appended to
   `~/.pipglyph/sweep-storage-orphans.<project>.manifest.jsonl` (bucket, path,
   size, eTag, last change, reason, copy); an object it can't confirm stays in
   the state file with its copy and the next run settles it. `--limit n`
-  deletes at most n per run. Accepted race: a custom pip re-uploaded in the
-  milliseconds between that last lookup and the delete (its name is fixed,
-  `{uid}/{SYMBOL}.png`) is deleted — the user saves the pip again.
+  deletes at most n per run. Accepted race: a custom pip re-uploaded
+  between its last lookup and the delete (its name is fixed,
+  `{uid}/{SYMBOL}.png`) is deleted — under a second at the default batch
+  size, a few seconds if storage is busy; the user saves the pip again.
 - **Listed for review, never deleted by the orphan sweep** — each list has
   its own mode (owner decisions 2026-09-29; own state + manifest,
   `~/.pipglyph/sweep-storage-orphans.<project>.<mode>.json` /
