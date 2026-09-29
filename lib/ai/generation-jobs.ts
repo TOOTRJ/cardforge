@@ -57,6 +57,7 @@ import {
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
 import type {
+  CardBackFace,
   CardType,
   ColorIdentity,
   FrameTemplate,
@@ -65,6 +66,8 @@ import type {
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -1367,6 +1370,8 @@ async function executeDeckRemixStep(
     parent_card_id?: string;
     source_scryfall_id?: string;
     frame_template?: string;
+    /** A layout frame's second half (TODO 1.22), Scryfall entries only. */
+    back_face?: CardBackFace;
     art_url?: string | null;
   };
   let mechanics: Mechanics;
@@ -1398,26 +1403,21 @@ async function executeDeckRemixStep(
     if (!scry) {
       return { ...step, status: "failed", error: "Couldn't resolve the printing." };
     }
-    const patch = mapScryfallToFormPatch(scry);
+    // The frame resolves like the creator import (TODO 1.22): the
+    // printing's frame when it is published in the card's colour, else its
+    // card type's standard; a layout kind on its layout template with the
+    // printed card type. Nothing published in the colour fails the step
+    // plainly, before any credit-costing art is generated.
+    const resolved = scryfallRemixMechanics(
+      mapScryfallToFormPatch(scry),
+      entry.name,
+      new Set(await getVerifiedFrameKeys()),
+    );
+    if (!resolved.ok) {
+      return { ...step, status: "failed", error: resolved.error };
+    }
     mechanics = {
-      title: patch.title ?? entry.name,
-      cost: patch.cost,
-      card_type: patch.card_type,
-      supertype: patch.supertype,
-      subtypes: (patch.subtypes_text ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      rarity: patch.rarity,
-      color_identity: patch.color_identity,
-      rules_text: patch.rules_text,
-      flavor_text: patch.flavor_text,
-      power: patch.power,
-      toughness: patch.toughness,
-      loyalty: patch.loyalty,
-      defense: patch.defense,
-      source_scryfall_id: patch.source_scryfall_id,
-      frame_template: patch.frame_template,
+      ...resolved.mechanics,
       // Real-card art is NEVER restyled — we don't touch the scan. Fresh
       // art is generated from the identity's text description instead.
       art_url: null,
@@ -1427,6 +1427,9 @@ async function executeDeckRemixStep(
   }
 
   // ---- New identity (mechanics untouched) ----
+  // A two-part layout card is renamed on BOTH halves in the same call
+  // (owner decision B3, 2026-09-29): the second half rides along only when
+  // the landed frame paints it (scryfallRemixMechanics).
   let identity;
   try {
     identity = await generateRemixIdentity({
@@ -1441,12 +1444,25 @@ async function executeDeckRemixStep(
         power: mechanics.power ?? null,
         toughness: mechanics.toughness ?? null,
       },
+      secondHalf: mechanics.back_face
+        ? {
+            layout: remixSecondHalfLayout(mechanics.frame_template),
+            face: mechanics.back_face,
+          }
+        : null,
       style: plan.style,
       theme: plan.theme ?? undefined,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Remix failed.";
     return { ...step, status: "failed", error: detail };
+  }
+  // The new names on the card: the rules text follows them (no source name
+  // left on a renamed card), and a second half without a new name fails
+  // here — before the art is paid for.
+  const named = applyRemixNames(mechanics, identity);
+  if (!named.ok) {
+    return { ...step, status: "failed", error: named.error };
   }
 
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
@@ -1515,7 +1531,7 @@ async function executeDeckRemixStep(
   }
   const result = await createCardAction(
     {
-      title: identity.title,
+      title: named.title,
       game_system_id: gameSystemId,
       cost: mechanics.cost,
       color_identity: (mechanics.color_identity ?? ["colorless"]) as never,
@@ -1523,7 +1539,7 @@ async function executeDeckRemixStep(
       card_type: mechanics.card_type as never,
       subtypes: mechanics.subtypes,
       rarity: mechanics.rarity as never,
-      rules_text: mechanics.rules_text,
+      rules_text: named.rules_text,
       flavor_text: identity.flavor_text ?? undefined,
       power: mechanics.power,
       toughness: mechanics.toughness,
@@ -1533,6 +1549,7 @@ async function executeDeckRemixStep(
       frame_style: mechanics.frame_template
         ? { template: mechanics.frame_template }
         : undefined,
+      back_face: named.back_face,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,
       // Art is guaranteed above; remixed cards ship public like the deck.
@@ -1559,7 +1576,9 @@ async function executeDeckRemixStep(
     ...step,
     status: "done",
     card_id: result.cardId,
-    label: identity.title,
+    label: named.back_face
+      ? `${named.title} // ${named.back_face.title}`
+      : named.title,
     error: undefined,
   };
 }

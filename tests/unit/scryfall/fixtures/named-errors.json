@@ -1,0 +1,21 @@
+{
+  "ambiguous": {
+    "object": "error",
+    "code": "not_found",
+    "type": "ambiguous",
+    "status": 404,
+    "details": "Too many cards match ambiguous name “bolt”. Add more words to refine your search."
+  },
+  "not_found": {
+    "object": "error",
+    "code": "not_found",
+    "status": 404,
+    "details": "No cards found matching “Zzyzx Qwerty Nonexistent”"
+  },
+  "bad_request": {
+    "object": "error",
+    "code": "bad_request",
+    "status": 400,
+    "details": "You must provide a `fuzzy` or `exact` parameter"
+  }
+}
