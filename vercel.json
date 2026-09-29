@@ -23,7 +23,7 @@
     },
     {
       "path": "/api/cron/auto-rebake",
-      "schedule": "*/10 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -308,7 +308,7 @@ the automatic re-bake sweeps the affected cards on its own (next section).
 ## Re-bakes after a deploy (automatic)
 
 Nobody runs a sweep by hand any more. `/api/cron/auto-rebake`
-(`vercel.json`, every 10 minutes, production only; `lib/cards/auto-rebake.ts`)
+(`vercel.json`, every 5 minutes, production only; `lib/cards/auto-rebake.ts`)
 re-bakes every published card that a `"sweep"` bump, a frame-layout save or a
 migration left on an older render.
 

@@ -39,7 +39,7 @@ export function AutoRebakeToggle({ paused }: { paused: boolean }) {
     <Button
       size="sm"
       disabled={pending}
-      onClick={() => run(resumeAutoRebakeAction, "Automatic re-bake resumed — the next run starts within 10 minutes.")}
+      onClick={() => run(resumeAutoRebakeAction, "Automatic re-bake resumed — the next run starts within 5 minutes.")}
       data-testid="auto-rebake-resume"
     >
       {pending ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />}

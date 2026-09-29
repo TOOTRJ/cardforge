@@ -4,10 +4,11 @@ import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // vercel.json's crons: every scheduled path is a real GET route, and the
-// automatic re-bake (lib/cards/auto-rebake.ts) is registered every 10
-// minutes — often enough that a sweep finishes within the hour after a
-// deploy, with each invocation's ~240 s budget well inside the gap (no two
-// invocations can overlap; the shared lease would refuse one anyway).
+// automatic re-bake (lib/cards/auto-rebake.ts) is registered every 5
+// minutes (owner, 2026-09-28) — a ~700-card sweep finishes in about half an
+// hour after a deploy. Each invocation stops itself (~240 s budget, 280 s hard
+// stop) before the next one starts; a run that overran to maxDuration could
+// meet the next one, and the shared lease refuses the second (it skips).
 // ---------------------------------------------------------------------------
 
 type Cron = { path: string; schedule: string };
@@ -18,8 +19,8 @@ function routeFile(path: string): string {
 }
 
 describe("vercel.json crons", () => {
-  it("registers the automatic re-bake every 10 minutes", () => {
-    expect(crons).toContainEqual({ path: "/api/cron/auto-rebake", schedule: "*/10 * * * *" });
+  it("registers the automatic re-bake every 5 minutes", () => {
+    expect(crons).toContainEqual({ path: "/api/cron/auto-rebake", schedule: "*/5 * * * *" });
     expect(crons.filter((c) => c.path === "/api/cron/auto-rebake")).toHaveLength(1);
   });
 
@@ -39,6 +40,11 @@ describe("vercel.json crons", () => {
     const maxDuration = Number(src.match(/export const maxDuration = (\d+);/)?.[1]);
     expect(AUTO_REBAKE_BUDGET_MS).toBeLessThan(AUTO_REBAKE_HARD_STOP_MS);
     expect(AUTO_REBAKE_HARD_STOP_MS).toBeLessThan(maxDuration * 1000);
-    expect(maxDuration * 1000).toBeLessThan(10 * 60 * 1000);
+    // The run stops itself before the next invocation; maxDuration may equal the
+    // gap (the lease, TTL above maxDuration, keeps an overrun from overlapping).
+    expect(AUTO_REBAKE_HARD_STOP_MS).toBeLessThan(5 * 60 * 1000);
+    expect(maxDuration * 1000).toBeLessThanOrEqual(5 * 60 * 1000);
+    const { SWEEP_LEASE_TTL_SECONDS } = await import("@/lib/cards/sweep-lease");
+    expect(SWEEP_LEASE_TTL_SECONDS).toBeGreaterThan(maxDuration);
   });
 });

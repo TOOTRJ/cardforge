@@ -79,7 +79,7 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
       ? { label: "Running now", variant: "primary" as const, Icon: Loader2 }
       : leaseLive
         ? { label: "Manual re-bake active", variant: "accent" as const, Icon: TimerReset }
-        : { label: "On — every 10 minutes", variant: "default" as const, Icon: CircleCheck };
+        : { label: "On — every 5 minutes", variant: "default" as const, Icon: CircleCheck };
 
   return (
     <div className="flex flex-col gap-6" data-testid="auto-rebake-panel">
@@ -243,7 +243,7 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
       <SurfaceCard className="flex flex-col gap-2 p-5 text-sm leading-6 text-muted sm:p-6">
         <h2 className="font-display text-base font-semibold text-foreground">How it works</h2>
         <p>
-          Every 10 minutes production checks whether any published card is still on an older render
+          Every 5 minutes production checks whether any published card is still on an older render
           (a &ldquo;sweep&rdquo; layout bump, or a frame-layout change that marked it). If so it
           re-bakes them in batches for about four minutes, then continues in the next run. Opt-in
           looks are never touched — owners keep their &ldquo;newer look&rdquo; badge.

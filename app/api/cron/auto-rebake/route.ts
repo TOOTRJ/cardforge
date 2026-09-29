@@ -6,9 +6,9 @@ import { runAutoRebake } from "@/lib/cards/auto-rebake";
 
 // ---------------------------------------------------------------------------
 // /api/cron/auto-rebake — the automatic re-bake (lib/cards/auto-rebake.ts).
-// Every 10 minutes on production (vercel.json): re-bakes the published cards
+// Every 5 minutes on production (vercel.json): re-bakes the published cards
 // a "sweep" layout bump (or a null stamp) left on an older render, in
-// batches, for up to ~240 s per invocation, then again 10 minutes later
+// batches, for up to ~240 s per invocation, then again 5 minutes later
 // until nothing is pending. Costs a couple of queries when idle.
 //
 // Shares ONE lease with the manual drivers (POST /api/admin/rebake +

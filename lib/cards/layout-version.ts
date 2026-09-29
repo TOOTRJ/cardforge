@@ -17,7 +17,7 @@ import type { CardType } from "@/types/card";
 //   * SWEEP bumps (and frame-geometry changes) are platform work. Owners
 //     never see a badge or a notification for them (TODO 0.20, owner
 //     decision 2026-09-25); the automatic re-bake (/api/cron/auto-rebake,
-//     every 10 minutes on production — lib/cards/auto-rebake.ts) re-bakes
+//     every 5 minutes on production — lib/cards/auto-rebake.ts) re-bakes
 //     the affected cards after the deploy, and downloads keep serving the
 //     stored bake until then only when no correction is pending
 //     (lib/render/stored-render.ts).

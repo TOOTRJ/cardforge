@@ -28,7 +28,7 @@ import {
 } from "@/lib/cards/auto-rebake-state";
 
 // ---------------------------------------------------------------------------
-// The automatic re-bake — what GET /api/cron/auto-rebake runs every 10
+// The automatic re-bake — what GET /api/cron/auto-rebake runs every 5
 // minutes on production (vercel.json). After a deploy with a "sweep" layout
 // bump (lib/cards/layout-version.ts VERSION_ROLLOUT), or a migration /
 // frame-layout save that nulls stamps, it re-bakes the affected published
@@ -51,7 +51,7 @@ import {
 //      A count equal to the last "nothing actionable" fingerprint (same
 //      layout version, under IDLE_RECHECK_MS old) is idle too — opt-in-only
 //      leftovers are counted but never re-baked, so without it an opt-in
-//      bump would cost a full scan every 10 minutes.
+//      bump would cost a full scan every 5 minutes.
 //   4. Take the lease, then batches of AUTO_REBAKE_BATCH until a batch finds
 //      nothing to do or AUTO_REBAKE_BUDGET_MS (240 s; the route's
 //      maxDuration is 300) would be crossed by the next batch. Between
@@ -531,7 +531,7 @@ export async function runAutoRebake(
   }
 
   // A clean finish with nothing waiting for a retry: remember the count so
-  // opt-in-only leftovers don't cost a scan every 10 minutes.
+  // opt-in-only leftovers don't cost a scan every 5 minutes.
   const poisonedNow = new Set(outcome.poisoned.map((p) => p.id));
   const retryPending = failed.some((f) => !poisonedNow.has(f.id));
   const idle: IdleFingerprint | null =
