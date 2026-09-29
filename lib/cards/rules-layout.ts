@@ -1,0 +1,930 @@
+// ---------------------------------------------------------------------------
+// The ONE rules-text layout (layout v33, TODO 3.29). A pure module — no React,
+// no font parsing — that decides, for a rules box and its text:
+//
+//   * the size: the largest step of the even HD-px ladder
+//     (lib/cards/typography.ts RULES_SIZE_PX) at which the text fits;
+//   * every line break, rules AND flavor — computed once and checked against
+//     BOTH bake targets, so the live preview, the 750 px bake (OG images,
+//     live free downloads) and the HD bake draw the same lines;
+//   * every vertical position: line boxes at the prints' 0.98 em pitch,
+//     fixed paragraph and flavor gaps, the vAlign offset, and the headroom a
+//     first line's accented capital needs inside the box's clip.
+//
+// Both renderers DRAW its lines — neither wraps rules or flavor text itself:
+// each line a `nowrap` flex row of its runs (explicit line height, runs
+// `flexShrink: 0`, word gaps as `marginLeft` after the first run), in the
+// target's whole px from metricsFor(). The preview draws the HD target's px
+// in cqw (px × 100 / RULES_HD_WIDTH), so its geometry is the HD bake's.
+//
+// Units: "HD px" are px of the stored HD bake — a 1500 px wide portrait card,
+// 2100 px landscape (one physical scale). The 750 px bake ("default", the
+// RENDER_PRESETS key) is exactly half: its font is the HD px ÷ 2 (an even
+// ladder size is a whole px there too), and it rounds its own line height,
+// gaps, pips and padding, the way Satori lays out on the pixel grid.
+//
+// Width model — Satori's (node_modules/satori src/text/index.ts): a text
+// node measures its advances (each face's own glyph, lib/cards/rules-
+// metrics.ts — Latin-1 and Extended-A included; a character the face lacks
+// budgeted a full em) and reports Math.ceil of them to Yoga, so a run's
+// words each take their CEILED width (wordWidthPx); pips and gaps are whole
+// px. The preview gives every word span that same ceiled width, so its runs
+// start where the bake's do (the browser would set a word at its exact
+// advances and drift up to 9 HD px left along a line). So a line this
+// module accepts at a target is at most as wide as its column, drawn, in
+// every renderer — and drawn in the same place.
+//
+// Height model: a line box of L px puts its baseline (L − 0.999 × size) / 2 +
+// 0.774 × size below its top (MPlantin's hhea; Satori rounds it to the px,
+// and the web font's metric overrides make every browser use hhea too).
+// Letters ink at most 0.70 em above and 0.20 em below it; an accented
+// capital up to 0.905 em above — ≈ 0.1 em past a 0.98 em line box's top,
+// which the box's `overflow: hidden` would cut on a full box with the
+// prints' margins (M15's has none vertically). The layout reserves that
+// headroom (insetTop) instead. Sideways likewise: a line's first glyph can
+// ink left of its origin (an italic "f" 0.13 em, a pip's hard shadow) and
+// its last right of its advance (a roman "f" 0.10 em), past a 4 px margin —
+// the layout keeps that side headroom (sideInsets) in the interior, so the
+// clip never cuts a letter. A keep-out (a stat badge the card draws) is
+// judged glyph by glyph — each glyph's own ink where it sits on the line
+// (an "x" dips 0.01 em, a "y" 0.20) — never by the line's band, which held
+// "tokens." a few px above a P/T plate a size down.
+//
+// Positions at the 750 px bake: the same lines, but each target rounds its
+// OWN px — the line pitch (0.98 of the target's font, rounded: 0.962–0.974
+// em at 750 from 52 to 76 px and 1.0 em from 42 to 50, against HD's
+// 0.974–0.986), the word gap, each word's ceiled box. Line tops at 750
+// drift from HD's (halved) by up to 6 HD px on a public card that fits, and
+// a line's later words by up to 20 HD px sideways; each image is consistent
+// in itself. (Deriving the 750 positions from HD's instead would re-fit
+// every card at 750 — a taller 750 block steps some cards down — so v33
+// keeps the per-target rounding the fit checked; layout v33 review.)
+// ---------------------------------------------------------------------------
+
+import { plateInkRect } from "@/lib/cards/plate-ink";
+import {
+  MPLANTIN_LINE_METRICS,
+  rulesTextGlyphsEm,
+  rulesTextInkEm,
+  rulesTextSideInkEm,
+  rulesTextWidthEm,
+} from "@/lib/cards/rules-metrics";
+import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
+import { STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
+import {
+  RULES_BOX_PAD_PX,
+  RULES_HD_WIDTH,
+  RULES_SIZE_PX,
+  RULES_TEXT,
+  orientationFromAspect,
+  rulesPctToPx,
+  rulesPxToPct,
+  type CardOrientation,
+} from "@/lib/cards/typography";
+
+// ---------------------------------------------------------------------------
+// Targets and metrics
+// ---------------------------------------------------------------------------
+
+/** The render targets a layout must fit: the HD bake (which the preview's
+ *  geometry equals) and the 750 px bake — RENDER_PRESETS' keys. */
+export type RulesTarget = "hd" | "default";
+export const RULES_TARGETS: readonly RulesTarget[] = ["hd", "default"];
+
+/** Target px per HD px. */
+export const RULES_TARGET_SCALE: Readonly<Record<RulesTarget, number>> = { hd: 1, default: 0.5 };
+
+/** The target a bake `cardWidth` px wide draws (RENDER_PRESETS): the HD
+ *  bake at RULES_HD_WIDTH, the 750 px one (1050 landscape) below it. */
+export function rulesTargetFor(cardWidth: number, orientation: CardOrientation): RulesTarget {
+  return cardWidth >= RULES_HD_WIDTH[orientation] ? "hd" : "default";
+}
+
+/** The bake's hard shadow under an inline pip (lib/render/card-image.tsx
+ *  ManaGem): max(1, round(disc × this)) down, and max(1, round(disc × 0.06))
+ *  to the left (the preview's .ms-shadow: 0.07 / 0.06 of 1.3 em). */
+const PIP_SHADOW_DOWN = 0.07;
+const PIP_SHADOW_LEFT = 0.06;
+
+/** One size's rules metrics at one target, in that target's whole px (the
+ *  font excepted: an odd HD size is a half px at 750 — the ladder is even). */
+export type RulesMetrics = {
+  target: RulesTarget;
+  /** Target px per HD px. */
+  scale: number;
+  /** The size in HD px this was computed for. */
+  sizePx: number;
+  fontPx: number;
+  /** Line box height = the line pitch (RULES_TEXT.lineHeight × font). */
+  linePx: number;
+  /** Gap between two runs on a line (a word space). */
+  wordGapPx: number;
+  /** Inline pip disc diameter, and the hairline between adjacent pips. */
+  pipPx: number;
+  pipGapPx: number;
+  /** How far a pip's hard shadow reaches below its disc, and left of it. */
+  pipShadowPx: number;
+  pipShadowLeftPx: number;
+  /** Line box to line box between two paragraphs. */
+  paragraphGapPx: number;
+  /** Rules → flavor: above the bar and again below it. */
+  flavorGapPx: number;
+  /** Rules → flavor with no bar. */
+  flavorGapNoBarPx: number;
+  /** The flavor bar's thickness: 1 px at every target (TODO 3.19). */
+  barPx: number;
+  /** A blank source line's height. */
+  blankLinePx: number;
+  /** Baseline below a line box's top, per face (whole px, as Satori sets
+   *  it; the browser's is within half a px). */
+  baselinePx: { regular: number; italic: number };
+};
+
+/** Whole target px of an HD px value. */
+function targetPx(hdPx: number, scale: number): number {
+  return Math.round(hdPx * scale);
+}
+
+/**
+ * The whole-px rules metrics of `sizePx` (HD px) at `target`: what that
+ * renderer draws, and what this module lays out with. `lineHeight` is the
+ * slot's (a profile override) or RULES_TEXT's.
+ */
+export function metricsFor(
+  sizePx: number,
+  lineHeight: number = RULES_TEXT.lineHeight,
+  target: RulesTarget = "hd",
+): RulesMetrics {
+  const scale = RULES_TARGET_SCALE[target];
+  const fontPx = sizePx * scale;
+  const linePx = Math.round(fontPx * lineHeight);
+  const pipPx = Math.round(fontPx * RULES_TEXT.pipDiscEm);
+  const baseline = (face: { ascent: number; descent: number }) =>
+    Math.round(face.ascent * fontPx + (linePx - (face.ascent + face.descent) * fontPx) / 2);
+  return {
+    target,
+    scale,
+    sizePx,
+    fontPx,
+    linePx,
+    wordGapPx: Math.round(fontPx * RULES_TEXT.wordGapEm),
+    pipPx,
+    pipGapPx: Math.max(1, Math.round(fontPx * RULES_TEXT.pipGapEm)),
+    pipShadowPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_DOWN)),
+    pipShadowLeftPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_LEFT)),
+    paragraphGapPx: targetPx(RULES_TEXT.paragraphGapPx, scale),
+    flavorGapPx: targetPx(RULES_TEXT.flavorGapPx, scale),
+    flavorGapNoBarPx: targetPx(RULES_TEXT.flavorGapNoBarPx, scale),
+    barPx: 1,
+    blankLinePx: Math.round(fontPx * RULES_TEXT.blankLineEm),
+    baselinePx: { regular: baseline(MPLANTIN_LINE_METRICS.regular), italic: baseline(MPLANTIN_LINE_METRICS.italic) },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Runs, lines and blocks
+// ---------------------------------------------------------------------------
+
+/** One drawn line: its unbreakable runs (groupTightRuns) and its width at
+ *  each target, as that target draws it. */
+export type RulesLine = {
+  runs: RulesItem[][];
+  widthPx: Readonly<Record<RulesTarget, number>>;
+};
+
+/** A paragraph of rules text, a blank source line, or the flavor text (every
+ *  flavor source line, wrapped, at the same pitch — the attribution line
+ *  included). A layout has at most one flavor block, last. */
+export type RulesBlock =
+  | { kind: "rules"; lines: RulesLine[] }
+  | { kind: "blank"; lines: [] }
+  | { kind: "flavor"; lines: RulesLine[] };
+
+/** A word's box as `m`'s target draws it: its advances (italic for any
+ *  emphasis) CEILED to the px — Satori's text measure. The bake's word gets
+ *  this width from Satori; the preview gives its word span this width
+ *  explicitly (the browser would lay it out at the exact advances, and every
+ *  run after it would start up to a px per word left of the bake's). */
+export function wordWidthPx(item: Extract<RulesItem, { t: "w" }>, m: Pick<RulesMetrics, "fontPx">): number {
+  return Math.ceil(rulesTextWidthEm(item.v, Boolean(item.em)) * m.fontPx - 1e-6);
+}
+
+/** A run's width as `m`'s target draws it: each word its box (wordWidthPx),
+ *  each pip a whole-px disc, adjacent pips a hairline apart. */
+export function runWidthPx(run: readonly RulesItem[], m: RulesMetrics): number {
+  let w = 0;
+  run.forEach((item, i) => {
+    if (item.t === "m") {
+      w += m.pipPx + (i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0);
+    } else {
+      w += wordWidthPx(item, m);
+    }
+  });
+  return w;
+}
+
+/** The runs a flavor source line breaks into: its words, italic. */
+function flavorRuns(line: string): RulesItem[][] {
+  return line
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((v) => [{ t: "w", v, em: "flavor" }]);
+}
+
+/** Greedy line breaking over `runs`, checked at every target: a run moves to
+ *  a new line when the line it would join is wider than its column at ANY
+ *  target (each with its own whole-px gaps and pips — at s = 50, 58, 66 and
+ *  74 the 750 bake's word gap, doubled, is a px wider than the HD one). A run
+ *  wider than the column gets a line of its own. */
+function breakRuns(
+  runs: readonly RulesItem[][],
+  metrics: Readonly<Record<RulesTarget, RulesMetrics>>,
+  columns: Readonly<Record<RulesTarget, number>>,
+): RulesLine[] {
+  const lines: RulesLine[] = [];
+  let current: RulesItem[][] = [];
+  let width: Record<RulesTarget, number> = { hd: 0, default: 0 };
+  for (const run of runs) {
+    const next = { hd: 0, default: 0 };
+    let overflows = false;
+    for (const t of RULES_TARGETS) {
+      const m = metrics[t];
+      next[t] = width[t] + (current.length > 0 ? m.wordGapPx : 0) + runWidthPx(run, m);
+      if (next[t] > columns[t]) overflows = true;
+    }
+    if (current.length > 0 && overflows) {
+      lines.push({ runs: current, widthPx: width });
+      current = [run];
+      width = { hd: runWidthPx(run, metrics.hd), default: runWidthPx(run, metrics.default) };
+    } else {
+      current.push(run);
+      width = next;
+    }
+  }
+  if (current.length > 0) lines.push({ runs: current, widthPx: width });
+  return lines;
+}
+
+/**
+ * The blocks `rulesText` and `flavorText` break into at `sizePx` in a column
+ * `columns[target]` px wide at each target — the rules paragraphs (source
+ * lines; a blank one is a "blank" block), then the flavor. Texts are trimmed
+ * first; blank flavor lines are dropped (as both renderers always did).
+ */
+export function breakRulesText(
+  rulesText: string | null | undefined,
+  flavorText: string | null | undefined,
+  sizePx: number,
+  columns: Readonly<Record<RulesTarget, number>>,
+  lineHeight: number = RULES_TEXT.lineHeight,
+): RulesBlock[] {
+  return breakParsed(parseText(rulesText, flavorText), sizePx, columns, lineHeight);
+}
+
+/**
+ * breakRulesText for paragraphs already tokenized (tokenizeRulesText), for a
+ * caller that sets their emphasis itself — the saga's intro is italic
+ * throughout (lib/cards/saga-rail.ts). An empty paragraph is a blank block.
+ */
+export function breakRulesParagraphs(
+  paragraphs: readonly (readonly RulesItem[])[],
+  sizePx: number,
+  columns: Readonly<Record<RulesTarget, number>>,
+  lineHeight: number = RULES_TEXT.lineHeight,
+): RulesBlock[] {
+  const rules = paragraphs.map((items) => (items.length === 0 ? null : groupTightRuns([...items])));
+  return breakParsed({ rules, flavor: [] }, sizePx, columns, lineHeight);
+}
+
+/** A card's text as runs, once for every ladder step: each rules paragraph's
+ *  runs (null for a blank source line), then each flavor source line's. */
+type ParsedText = { rules: (RulesItem[][] | null)[]; flavor: RulesItem[][][] };
+
+function parseText(rulesText: string | null | undefined, flavorText: string | null | undefined): ParsedText {
+  const rules = rulesText?.trim() ?? "";
+  return {
+    rules: rules ? tokenizeRulesText(rules).map((items) => (items.length === 0 ? null : groupTightRuns(items))) : [],
+    flavor: (flavorText?.trim() ?? "")
+      .split(/\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map(flavorRuns),
+  };
+}
+
+function breakParsed(
+  parsed: ParsedText,
+  sizePx: number,
+  columns: Readonly<Record<RulesTarget, number>>,
+  lineHeight: number,
+): RulesBlock[] {
+  const metrics = { hd: metricsFor(sizePx, lineHeight, "hd"), default: metricsFor(sizePx, lineHeight, "default") };
+  const blocks: RulesBlock[] = parsed.rules.map((runs) =>
+    runs === null ? { kind: "blank", lines: [] } : { kind: "rules", lines: breakRuns(runs, metrics, columns) },
+  );
+  if (parsed.flavor.length > 0) {
+    blocks.push({ kind: "flavor", lines: parsed.flavor.flatMap((runs) => breakRuns(runs, metrics, columns)) });
+  }
+  return blocks;
+}
+
+// ---------------------------------------------------------------------------
+// The box
+// ---------------------------------------------------------------------------
+
+/** A rules box's padding in HD px: `x` / `y` both sides, or each side. */
+export type RulesPadPx =
+  | { x: number; y: number }
+  | { left: number; right: number; top: number; bottom: number };
+
+type Sides = { left: number; right: number; top: number; bottom: number };
+
+function sides(pad: RulesPadPx): Sides {
+  return "x" in pad ? { left: pad.x, right: pad.x, top: pad.y, bottom: pad.y } : pad;
+}
+
+/** A card-relative rect as Yoga lays out `slotBox(rect)` at a target: its
+ *  edges rounded to the px (so the width is the difference of rounded edges,
+ *  not the rounded width). */
+export function rectPx(rect: Rect, orientation: CardOrientation, aspect: number, target: RulesTarget) {
+  const width = RULES_HD_WIDTH[orientation] * RULES_TARGET_SCALE[target];
+  // 1500 × 7/5 is 2099.9999…: the card's height is a whole px.
+  const height = Math.round(width * aspect);
+  const x0 = (rect.leftPct / 100) * width;
+  const y0 = (rect.topPct / 100) * height;
+  const left = Math.round(x0);
+  const top = Math.round(y0);
+  const right = Math.round(x0 + (rect.widthPct / 100) * width);
+  const bottom = Math.round(y0 + (rect.heightPct / 100) * height);
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+export type RulesLayoutInput = {
+  rulesText: string | null | undefined;
+  flavorText?: string | null | undefined;
+  /** The box both renderers draw (card-relative percents) — in its OWN frame
+   *  for a rotated second face (the rect before the renderer turns it). */
+  rect: Rect;
+  /** Card height ÷ card width: 7/5 portrait, 5/7 landscape. */
+  aspect: number;
+  /** The slot's size (fraction of card width): the ladder's ceiling,
+   *  snapped DOWN to the even HD-px grid. */
+  sizePct: number;
+  /** The slot's line height (a profile override); RULES_TEXT's otherwise. */
+  lineHeight?: number;
+  /** The box's padding in HD px (default RULES_BOX_PAD_PX). A function of
+   *  the size for boxes whose column depends on it (the walker rows' badge
+   *  rail); a walker's last-row shield inset is extra `right` padding. */
+  padPx?: RulesPadPx | ((sizePx: number) => RulesPadPx);
+  /** Vertical alignment of the block in the box; default "start". */
+  vAlign?: SlotAlign;
+  /** Whether a flavor block after rules text gets the 1 px bar (M15-era
+   *  frames) or the no-bar gap. Default true. */
+  divider?: boolean;
+  /** Rects (card-relative percents, in the box's frame — see
+   *  keepOutInBoxFrame) no line's ink may enter: the stat badges the card
+   *  DRAWS (statKeepOuts). A size where one does steps down. */
+  keepOuts?: readonly Rect[];
+};
+
+/** One target's verdict on a layout. */
+export type RulesTargetCheck = {
+  /** Block height (insets included) − interior height; ≤ 0 fits. */
+  overflowPx: number;
+  /** A line's ink enters a keep-out. */
+  keepOutHit: boolean;
+  /** A single run is wider than the column (it can't wrap). */
+  overwideRun: boolean;
+  fits: boolean;
+};
+
+export type RulesLayout = {
+  /** Size in HD px (even on the ladder). */
+  sizePx: number;
+  /** The size as the profile unit (fraction of card width). */
+  sizePct: number;
+  orientation: CardOrientation;
+  lineHeight: number;
+  blocks: RulesBlock[];
+  /** Drawn at this size, the text overflows its box or runs into a keep-out
+   *  at some target. fitRulesLayout returns a clipped layout only at the
+   *  floor (it clips there, as it always has — the box keeps overflow
+   *  hidden). */
+  clipped: boolean;
+  checks: Readonly<Record<RulesTarget, RulesTargetCheck>>;
+  /** Headroom kept beside the lines at each target, whole px: how far a
+   *  line's first glyph inks left of its start (an italic "f", "j", "p"; a
+   *  pip's hard shadow) or its last glyph right of its end (a roman "f", an
+   *  italic "W") past the box's padding on that side — so the box's clip
+   *  never cuts it. Part of the interior's inset (RulesPlacement). */
+  sideInsets: Readonly<Record<RulesTarget, SideInset>>;
+  /** What the positions are computed from. */
+  input: RulesLayoutInput;
+};
+
+/** Headroom beside the lines, whole target px. */
+export type SideInset = { left: number; right: number };
+const NO_SIDE_INSET: SideInset = { left: 0, right: 0 };
+
+function padFor(input: RulesLayoutInput, sizePx: number): Sides {
+  const pad = typeof input.padPx === "function" ? input.padPx(sizePx) : (input.padPx ?? RULES_BOX_PAD_PX);
+  return sides(pad);
+}
+
+// ---------------------------------------------------------------------------
+// Placement — where each line lands at a target
+// ---------------------------------------------------------------------------
+
+export type RulesLinePlacement = {
+  /** Index into layout.blocks, and of the line within its block. */
+  block: number;
+  line: number;
+  /** The line box, card-absolute target px (top may be fractional: a
+   *  centred block's offset is not rounded here; Yoga rounds each box). */
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  /** Ink reach of this line's glyphs and pips, card-absolute: above and
+   *  below, and left of its start / right of its end (a glyph past its
+   *  advance, a pip's shadow). */
+  inkTop: number;
+  inkBottom: number;
+  inkLeft: number;
+  inkRight: number;
+};
+
+export type RulesPlacement = {
+  target: RulesTarget;
+  metrics: RulesMetrics;
+  /** The box (the clip) and its interior: the box less its padding and the
+   *  side headroom (RulesLayout.sideInsets) — where the lines start, and the
+   *  column they break in. */
+  box: { left: number; top: number; width: number; height: number };
+  interior: { left: number; top: number; width: number; height: number };
+  /** Headroom reserved above the first line / below the last so their ink
+   *  stays inside the box: the ink's reach past the line box less the
+   *  padding on that side, whole px. The renderers draw these as padding on
+   *  the text column. */
+  insetTop: number;
+  insetBottom: number;
+  /** Lines + gaps, without the insets. */
+  blockHeight: number;
+  /** Top of the inset-top spacer (the vAlign offset applied). */
+  top: number;
+  lines: RulesLinePlacement[];
+  /** Blank blocks' boxes (a paragraph break's height). */
+  blanks: { block: number; top: number; height: number }[];
+  /** The flavor bar (1 px), when one is drawn. */
+  bar: { top: number; left: number; width: number } | null;
+};
+
+/** The ink reach of one line, relative to its line box's top. */
+function lineInk(line: RulesLine, m: RulesMetrics): { top: number; bottom: number } {
+  let top = Infinity;
+  let bottom = -Infinity;
+  for (const run of line.runs) {
+    for (const item of run) {
+      if (item.t === "m") {
+        top = Math.min(top, (m.linePx - m.pipPx) / 2);
+        bottom = Math.max(bottom, (m.linePx + m.pipPx) / 2 + m.pipShadowPx);
+      } else {
+        const ink = rulesTextInkEm(item.v);
+        const baseline = item.em ? m.baselinePx.italic : m.baselinePx.regular;
+        top = Math.min(top, baseline - ink.ascent * m.fontPx);
+        bottom = Math.max(bottom, baseline + ink.descent * m.fontPx);
+      }
+    }
+  }
+  return Number.isFinite(top) ? { top, bottom } : { top: 0, bottom: 0 };
+}
+
+/** How far one line's ink reaches past its start (left) and its end (right):
+ *  its first item's (a word's first glyph past its origin, a pip's shadow)
+ *  and its last word's last glyph past its advance. */
+function lineSideInk(line: RulesLine, m: RulesMetrics): SideInset {
+  const firstRun = line.runs[0];
+  const lastRun = line.runs[line.runs.length - 1];
+  const first = firstRun?.[0];
+  const last = lastRun?.[lastRun.length - 1];
+  const left = !first
+    ? 0
+    : first.t === "m"
+      ? m.pipShadowLeftPx
+      : rulesTextSideInkEm(first.v, Boolean(first.em)).left * m.fontPx;
+  const right = !last || last.t === "m" ? 0 : rulesTextSideInkEm(last.v, Boolean(last.em)).right * m.fontPx;
+  return { left, right };
+}
+
+/** The side headroom `blocks` need at `m`'s target past the padding `pad`
+ *  (target px): the most any line's ink reaches beyond it, whole px. */
+function sideInsetNeeded(blocks: readonly RulesBlock[], m: RulesMetrics, pad: Sides): SideInset {
+  let left = 0;
+  let right = 0;
+  for (const b of blocks) {
+    for (const line of b.lines) {
+      const ink = lineSideInk(line, m);
+      left = Math.max(left, Math.ceil(ink.left - pad.left - 1e-6));
+      right = Math.max(right, Math.ceil(ink.right - pad.right - 1e-6));
+    }
+  }
+  return { left, right };
+}
+
+/** A padding in HD px at a target, whole px. */
+function targetPad(pad: Sides, scale: number): Sides {
+  return {
+    left: targetPx(pad.left, scale),
+    right: targetPx(pad.right, scale),
+    top: targetPx(pad.top, scale),
+    bottom: targetPx(pad.bottom, scale),
+  };
+}
+
+/** The gap drawn before block `i`: none before the first; the flavor gap
+ *  (bar or not) before a flavor block that follows rules; the paragraph gap
+ *  otherwise. */
+function gapBefore(blocks: readonly RulesBlock[], i: number, m: RulesMetrics, divider: boolean): number {
+  if (i === 0) return 0;
+  if (blocks[i].kind === "flavor") return divider ? 2 * m.flavorGapPx + m.barPx : m.flavorGapNoBarPx;
+  return m.paragraphGapPx;
+}
+
+/** Lines + gaps of `blocks` at `m`, without insets. */
+function blocksHeight(blocks: readonly RulesBlock[], m: RulesMetrics, divider: boolean): number {
+  let h = 0;
+  blocks.forEach((b, i) => {
+    h += gapBefore(blocks, i, m, divider) + (b.kind === "blank" ? m.blankLinePx : b.lines.length * m.linePx);
+  });
+  return h;
+}
+
+function placeBlocks(
+  blocks: readonly RulesBlock[],
+  sizePx: number,
+  input: RulesLayoutInput,
+  target: RulesTarget,
+  side: SideInset,
+): RulesPlacement {
+  const orientation = orientationFromAspect(input.aspect);
+  const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
+  const m = metricsFor(sizePx, lineHeight, target);
+  const divider = input.divider ?? true;
+  const box = rectPx(input.rect, orientation, input.aspect, target);
+  const p = targetPad(padFor(input, sizePx), m.scale);
+  const interior = {
+    left: box.left + p.left + side.left,
+    top: box.top + p.top,
+    width: box.width - p.left - p.right - side.left - side.right,
+    height: box.height - p.top - p.bottom,
+  };
+  const blockHeight = blocksHeight(blocks, m, divider);
+
+  // The ink past the first line box's top and the last one's bottom, beyond
+  // what the padding on that side absorbs.
+  const lined = blocks.filter((b) => b.lines.length > 0);
+  const first = lined[0]?.lines[0];
+  const lastBlock = lined[lined.length - 1];
+  const last = lastBlock?.lines[lastBlock.lines.length - 1];
+  const firstInk = first ? lineInk(first, m) : { top: 0, bottom: 0 };
+  const lastInk = last ? lineInk(last, m) : { top: 0, bottom: 0 };
+  const firstIsTop = blocks[0]?.kind !== "blank";
+  const insetTop = first && firstIsTop ? Math.max(0, Math.ceil(-firstInk.top - p.top - 1e-6)) : 0;
+  const insetBottom =
+    last && blocks[blocks.length - 1]?.lines.length ? Math.max(0, Math.ceil(lastInk.bottom - m.linePx - p.bottom - 1e-6)) : 0;
+
+  const total = insetTop + blockHeight + insetBottom;
+  const align = input.vAlign ?? "start";
+  const offset =
+    align === "center" ? (interior.height - total) / 2 : align === "end" ? interior.height - total : 0;
+  const top = interior.top + offset;
+
+  const lines: RulesLinePlacement[] = [];
+  const blanks: RulesPlacement["blanks"] = [];
+  let bar: RulesPlacement["bar"] = null;
+  let y = top + insetTop;
+  blocks.forEach((b, bi) => {
+    const gap = gapBefore(blocks, bi, m, divider);
+    if (b.kind === "flavor" && bi > 0 && divider) {
+      bar = { top: y + m.flavorGapPx, left: interior.left, width: interior.width };
+    }
+    y += gap;
+    if (b.kind === "blank") {
+      blanks.push({ block: bi, top: y, height: m.blankLinePx });
+      y += m.blankLinePx;
+      return;
+    }
+    b.lines.forEach((line, li) => {
+      const ink = lineInk(line, m);
+      const sideInk = lineSideInk(line, m);
+      lines.push({
+        block: bi,
+        line: li,
+        top: y,
+        left: interior.left,
+        width: line.widthPx[target],
+        height: m.linePx,
+        inkTop: y + ink.top,
+        inkBottom: y + ink.bottom,
+        inkLeft: interior.left - sideInk.left,
+        inkRight: interior.left + line.widthPx[target] + sideInk.right,
+      });
+      y += m.linePx;
+    });
+  });
+  return {
+    target,
+    metrics: m,
+    box: { left: box.left, top: box.top, width: box.width, height: box.height },
+    interior,
+    insetTop,
+    insetBottom,
+    blockHeight,
+    top,
+    lines,
+    blanks,
+    bar,
+  };
+}
+
+type InkBox = { left: number; right: number; top: number; bottom: number };
+
+/**
+ * Where one line's glyphs and pips put ink, each its own box, relative to
+ * its line box's top-left at `m`'s target: every word at its drawn place
+ * (runs `wordGapPx` apart, each word its ceiled box, pips whole-px discs a
+ * hairline apart — as both renderers set them), each glyph with its OWN ink
+ * (rules-metrics.ts rulesTextGlyphsEm: an "x" dips 0.01 em, a "y" 0.20),
+ * each pip its disc and hard shadow. Every box stays inside the line's own
+ * band (lineInk, and its side ink), so a keep-out judged glyph by glyph is
+ * hit only where the band was — never more (layout v33 review).
+ */
+function lineInkBoxes(line: RulesLine, m: RulesMetrics): InkBox[] {
+  const band = lineInk(line, m);
+  const side = lineSideInk(line, m);
+  const bandRight = line.widthPx[m.target] + side.right;
+  const clamp = (b: InkBox): InkBox => ({
+    left: Math.max(b.left, -side.left),
+    right: Math.min(b.right, bandRight),
+    top: Math.max(b.top, band.top),
+    bottom: Math.min(b.bottom, band.bottom),
+  });
+  const boxes: InkBox[] = [];
+  let x = 0;
+  line.runs.forEach((run, ri) => {
+    if (ri > 0) x += m.wordGapPx;
+    run.forEach((item, i) => {
+      if (item.t === "m") {
+        if (i > 0 && run[i - 1].t === "m") x += m.pipGapPx;
+        boxes.push(
+          clamp({
+            left: x - m.pipShadowLeftPx,
+            right: x + m.pipPx,
+            top: (m.linePx - m.pipPx) / 2,
+            bottom: (m.linePx + m.pipPx) / 2 + m.pipShadowPx,
+          }),
+        );
+        x += m.pipPx;
+        return;
+      }
+      const italic = Boolean(item.em);
+      const baseline = italic ? m.baselinePx.italic : m.baselinePx.regular;
+      for (const g of rulesTextGlyphsEm(item.v, italic)) {
+        boxes.push(
+          clamp({
+            left: x + (g.x - g.left) * m.fontPx,
+            right: x + (g.x + g.advance + g.right) * m.fontPx,
+            top: baseline - g.ascent * m.fontPx,
+            bottom: baseline + g.descent * m.fontPx,
+          }),
+        );
+      }
+      x += wordWidthPx(item, m);
+    });
+  });
+  return boxes;
+}
+
+/** Whether a placed line's ink enters keep-out `k` (target px): its band
+ *  first, then glyph by glyph. */
+function lineHitsKeepOut(l: RulesLinePlacement, line: RulesLine, m: RulesMetrics, k: InkBox): boolean {
+  if (!(l.inkRight > k.left && l.inkLeft < k.right && l.inkBottom > k.top && l.inkTop < k.bottom)) return false;
+  return lineInkBoxes(line, m).some(
+    (b) => l.left + b.right > k.left && l.left + b.left < k.right && l.top + b.bottom > k.top && l.top + b.top < k.bottom,
+  );
+}
+
+function checkPlacement(
+  placed: RulesPlacement,
+  blocks: readonly RulesBlock[],
+  input: RulesLayoutInput,
+): RulesTargetCheck {
+  const { interior } = placed;
+  const overflowPx = placed.insetTop + placed.blockHeight + placed.insetBottom - interior.height;
+  const orientation = orientationFromAspect(input.aspect);
+  const keepOuts = (input.keepOuts ?? []).map((r) => rectPx(r, orientation, input.aspect, placed.target));
+  const keepOutHit = placed.lines.some((l) =>
+    keepOuts.some((k) => lineHitsKeepOut(l, blocks[l.block].lines[l.line], placed.metrics, k)),
+  );
+  const overwideRun = blocks.some((b) =>
+    b.lines.some((l) => l.runs.length === 1 && l.widthPx[placed.target] > interior.width),
+  );
+  return { overflowPx, keepOutHit, overwideRun, fits: overflowPx <= 0 && !keepOutHit && !overwideRun };
+}
+
+/** The column each target breaks lines against: the box's interior width
+ *  (its padding and side headroom off). */
+function columnsFor(
+  input: RulesLayoutInput,
+  sizePx: number,
+  side: Readonly<Record<RulesTarget, SideInset>>,
+): Record<RulesTarget, number> {
+  const orientation = orientationFromAspect(input.aspect);
+  const pad = padFor(input, sizePx);
+  const column = (target: RulesTarget) => {
+    const p = targetPad(pad, RULES_TARGET_SCALE[target]);
+    const width = rectPx(input.rect, orientation, input.aspect, target).width;
+    return width - p.left - p.right - side[target].left - side[target].right;
+  };
+  return { hd: column("hd"), default: column("default") };
+}
+
+/**
+ * The layout of `input`'s text at `sizePx` (HD px): its lines at both
+ * targets' columns, and whether it fits there — `clipped` when it overflows
+ * the box, runs into a keep-out or holds a run wider than the column at any
+ * target.
+ */
+export function layoutRulesAt(input: RulesLayoutInput, sizePx: number): RulesLayout {
+  return layoutParsedAt(input, sizePx, parseText(input.rulesText, input.flavorText));
+}
+
+/** How many times the side headroom may grow while the lines settle. */
+const SIDE_INSET_ROUNDS = 6;
+
+function layoutParsedAt(input: RulesLayoutInput, sizePx: number, parsed: ParsedText): RulesLayout {
+  const orientation = orientationFromAspect(input.aspect);
+  const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
+  const metrics = { hd: metricsFor(sizePx, lineHeight, "hd"), default: metricsFor(sizePx, lineHeight, "default") };
+  const pad = padFor(input, sizePx);
+  const pads = { hd: targetPad(pad, RULES_TARGET_SCALE.hd), default: targetPad(pad, RULES_TARGET_SCALE.default) };
+  // The side headroom depends on which words start and end the lines, and
+  // the lines on the column it leaves: break, measure what the lines' ink
+  // needs past the padding, and break again narrower until nothing needs
+  // more (it only grows, and at most to the widest overhang).
+  let side: Record<RulesTarget, SideInset> = { hd: NO_SIDE_INSET, default: NO_SIDE_INSET };
+  let blocks = breakParsed(parsed, sizePx, columnsFor(input, sizePx, side), lineHeight);
+  for (let round = 0; round < SIDE_INSET_ROUNDS; round += 1) {
+    const need = {
+      hd: sideInsetNeeded(blocks, metrics.hd, pads.hd),
+      default: sideInsetNeeded(blocks, metrics.default, pads.default),
+    };
+    if (!RULES_TARGETS.some((t) => need[t].left > side[t].left || need[t].right > side[t].right)) break;
+    const grow = (t: RulesTarget) => ({
+      left: Math.max(side[t].left, need[t].left),
+      right: Math.max(side[t].right, need[t].right),
+    });
+    side = { hd: grow("hd"), default: grow("default") };
+    blocks = breakParsed(parsed, sizePx, columnsFor(input, sizePx, side), lineHeight);
+  }
+  const checks = {
+    hd: checkPlacement(placeBlocks(blocks, sizePx, input, "hd", side.hd), blocks, input),
+    default: checkPlacement(placeBlocks(blocks, sizePx, input, "default", side.default), blocks, input),
+  };
+  return {
+    sizePx,
+    sizePct: rulesPxToPct(sizePx, orientation),
+    orientation,
+    lineHeight,
+    blocks,
+    clipped: !(checks.hd.fits && checks.default.fits),
+    checks,
+    sideInsets: side,
+    input,
+  };
+}
+
+/** The ladder for a slot size: its HD px snapped down to the even grid, then
+ *  every RULES_SIZE_PX.stepPx below it to the floor. A ceiling under the
+ *  floor is its own (only) step. */
+export function rulesLadderPx(sizePct: number, orientation: CardOrientation = "portrait"): number[] {
+  const ceiling = rulesPctToPx(sizePct, orientation);
+  if (ceiling <= RULES_SIZE_PX.floor) return [ceiling];
+  const ladder: number[] = [];
+  for (let s = ceiling; s >= RULES_SIZE_PX.floor; s -= RULES_SIZE_PX.stepPx) ladder.push(s);
+  return ladder;
+}
+
+/**
+ * The largest ladder size at which `input`'s text fits at BOTH targets —
+ * the block (with its ink headroom) within the box's interior, no line's
+ * ink in a keep-out, no run wider than the column — with no safety margin:
+ * the lines are exact. Nothing fits → the floor's layout, `clipped`.
+ * Empty text → the ceiling, nothing to draw.
+ */
+export function fitRulesLayout(input: RulesLayoutInput): RulesLayout {
+  const ladder = rulesLadderPx(input.sizePct, orientationFromAspect(input.aspect));
+  const parsed = parseText(input.rulesText, input.flavorText);
+  let layout = layoutParsedAt(input, ladder[0], parsed);
+  for (const sizePx of ladder.slice(1)) {
+    if (!layout.clipped) return layout;
+    layout = layoutParsedAt(input, sizePx, parsed);
+  }
+  return layout;
+}
+
+/** Where every line of `layout` lands at `target` (see RulesPlacement). */
+export function linePositions(layout: RulesLayout, target: RulesTarget): RulesPlacement {
+  return placeBlocks(layout.blocks, layout.sizePx, layout.input, target, layout.sideInsets[target]);
+}
+
+/** Whether any line of `layout` puts ink inside `rect` (card percents, in
+ *  the box's own frame) at `target` — glyph by glyph, the way the fit judges
+ *  a keep-out. */
+export function inkEntersRect(layout: RulesLayout, rect: Rect, target: RulesTarget): boolean {
+  const placed = linePositions(layout, target);
+  const k = rectPx(rect, layout.orientation, layout.input.aspect, target);
+  return placed.lines.some((l) => lineHitsKeepOut(l, layout.blocks[l.block].lines[l.line], placed.metrics, k));
+}
+
+/** The height `layout`'s text takes at `target`: its lines and gaps plus the
+ *  ink headroom reserved above and below. */
+export function blockHeightPx(layout: RulesLayout, target: RulesTarget): number {
+  const placed = linePositions(layout, target);
+  return placed.insetTop + placed.blockHeight + placed.insetBottom;
+}
+
+// ---------------------------------------------------------------------------
+// Keep-outs
+// ---------------------------------------------------------------------------
+
+/**
+ * Where a stat badge the card draws puts ink, in card percents: a plate
+ * master's measured ink over the plate's box (lib/cards/plate-ink.ts — the
+ * box itself for a plate the table doesn't know), the drawn badge inside its
+ * rect (STAT_BADGE_INSET — the battle's defense disc), else the value's rect
+ * (a value printed straight on the art or the frame).
+ */
+export function statInkRect(slot: StatSlot): Rect {
+  const plateBox = slot.plateRect ?? slot.rect;
+  if (slot.plateAssetPathTemplate) return plateInkRect(slot.plateAssetPathTemplate, plateBox) ?? plateBox;
+  if (slot.badgeColorHex) {
+    const dx = (slot.rect.widthPct * STAT_BADGE_INSET.xPct) / 100;
+    const dy = (slot.rect.heightPct * STAT_BADGE_INSET.yPct) / 100;
+    return {
+      leftPct: slot.rect.leftPct + dx,
+      topPct: slot.rect.topPct + dy,
+      widthPct: slot.rect.widthPct - 2 * dx,
+      heightPct: slot.rect.heightPct - 2 * dy,
+    };
+  }
+  return slot.rect;
+}
+
+/**
+ * The stat badges a rules box must keep its ink out of, for a card that
+ * DRAWS them — each only when its show flag is set (the renderers' showPT /
+ * showLoyalty / showDefense): the P/T plate, the loyalty shield (only when a
+ * walker's text is drawn in the plain box — its ability rows keep clear of
+ * it themselves) and the battle's defense badge. Each is where the badge
+ * puts ink (statInkRect): a plate's measured ink, the drawn disc, or the
+ * value's rect.
+ */
+export function statKeepOuts(
+  layout: Pick<FrameProfile, "pt" | "loyalty" | "defense">,
+  show: { pt?: boolean; loyalty?: boolean; defense?: boolean },
+): Rect[] {
+  const ink = (slot: StatSlot | undefined) => (slot ? statInkRect(slot) : null);
+  return [show.pt ? ink(layout.pt) : null, show.loyalty ? ink(layout.loyalty) : null, show.defense ? ink(layout.defense) : null].filter(
+    (r): r is Rect => r !== null,
+  );
+}
+
+/**
+ * A keep-out given in card coordinates, in the frame of a box the renderer
+ * turns by `rotationDeg` (clockwise, about the box's centre — a flip face's
+ * 180°, aftermath's 90°): the rect that, turned with the box, covers it. The
+ * layout of a rotated face is computed in its own (unturned) frame.
+ */
+export function keepOutInBoxFrame(keepOut: Rect, box: Rect, rotationDeg: number, aspect: number): Rect {
+  const turns = ((Math.round(rotationDeg / 90) % 4) + 4) % 4;
+  if (turns === 0) return keepOut;
+  // Physical units (card width = 100): a quarter turn swaps the axes.
+  const h = 100 * aspect;
+  const cx = box.leftPct + box.widthPct / 2;
+  const cy = ((box.topPct + box.heightPct / 2) / 100) * h;
+  const corners = [
+    [keepOut.leftPct, (keepOut.topPct / 100) * h],
+    [keepOut.leftPct + keepOut.widthPct, ((keepOut.topPct + keepOut.heightPct) / 100) * h],
+  ].map(([x, y]) => {
+    // Undo a clockwise turn (y down): rotate counter-clockwise by 90° × turns.
+    let dx = x - cx;
+    let dy = y - cy;
+    for (let i = 0; i < turns; i += 1) [dx, dy] = [dy, -dx];
+    return [cx + dx, cy + dy];
+  });
+  const [x0, x1] = [Math.min(corners[0][0], corners[1][0]), Math.max(corners[0][0], corners[1][0])];
+  const [y0, y1] = [Math.min(corners[0][1], corners[1][1]), Math.max(corners[0][1], corners[1][1])];
+  return { leftPct: x0, topPct: (y0 / h) * 100, widthPct: x1 - x0, heightPct: ((y1 - y0) / h) * 100 };
+}

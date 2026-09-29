@@ -255,8 +255,76 @@ Every frame outside the family keeps the old code paths byte-for-byte: no
 `fit` flag (the character estimate and the CSS ellipsis) and no box or ink
 fit (the symbol drawn at `type.sizePct × 1.1`, or at an override's
 `symbolSizePct`, which stays a font size there). Bringing a frame into the
-family is a layout bump of its own. Rules text is not part of this standard: it keeps the
-9 pt ceiling and its fit (the recalibration is TODO 3.29).
+family is a layout bump of its own. Rules text is not part of this standard: it has its
+own layout (below).
+
+## Rules text and the stat plates (TODO 3.29, layout v33)
+
+Every rules box — the main box on every template, the adventure page, the
+flip / split / aftermath second faces — is laid out by ONE pure module,
+`lib/cards/rules-layout.ts`, fed by `lib/cards/rules-box.ts`, and both
+renderers draw its lines (`RulesBox` in the preview, `RulesBoxBake` in
+the bake); neither wraps text itself. The planeswalker ability rows
+(`lib/cards/loyalty-rows.ts`) and the saga rail's text
+(`lib/cards/saga-rail.ts`) are broken by the same module and drawn by
+`RulesLines` / `RulesLinesBake`.
+
+How rules text is sized and set:
+
+- **Size**: the largest step of the even HD-px ladder (`RULES_SIZE_PX`:
+  76 = the prints' 9 pt at 63 mm, 68, 64, down to the 42 px floor in 2 px
+  steps) at which the text fits at BOTH bakes — the HD one (whose px the
+  preview draws in cqw) and the 750 px one (OG images, live free
+  downloads), each with its own whole-px gaps and pips. No safety factor:
+  lines are measured with MPlantin's own advances (`lib/cards/rules-metrics.ts`,
+  every glyph through Latin Extended-A; a character a face lacks is budgeted
+  a full em). Text that doesn't fit at the floor clips, set from the box's
+  top so the clip takes the tail, never the first line.
+- **Spacing**: 0.98 em line pitch (rules, flavor and attribution alike), a
+  fixed 24 HD px between abilities, 30 px either side of the 1 px flavor bar
+  (42 px on a frame without one).
+- **Positions per bake**: the lines are the same at 750 and HD, but each
+  rounds its own px, so the 750 bake's pitch is 0.962–0.974 em (1.0 em from
+  42 to 50 px) against HD's 0.974–0.986, and its line tops drift up to 6 HD
+  px (a later word up to 20 HD px sideways) from HD's, halved. The preview
+  draws each word in its ceiled box (`wordWidthPx`), so its words sit where
+  the HD bake's do; the MPlantin `@font-face` rules carry the face's hhea as
+  metric overrides, so Windows browsers set the same line box as macOS.
+
+What a frame gives it:
+
+- the rules slot's rect, its ceiling (`rulesPxToPct(RULES_SIZE_PX.*)`, never
+  a point literal), `vAlign`, `flavorDivider`, and its padding in HD px
+  (`TextSlot.padPx`; default 9 / 18, M15 and its skins the prints' 4 / 0 —
+  a 0.98 em line box already holds the air above the ascenders, and an
+  accented first capital gets its own headroom);
+- a planeswalker frame's `loyaltyRows.maxSizePct`: the walker ceiling (64 px
+  on m15pw) for the ability rows and a walker drawn in the plain box; any
+  other card on the frame keeps the rules slot's own size (68 px). The row
+  anatomy (badge, rail, padding) is drawn at one size, `LOYALTY_ROW_SIZE_PX`
+  (46 px: the text starts at x 275, where the walker prints start theirs),
+  whatever the text's size;
+- keep-outs: a line never runs into a stat badge the card draws — judged
+  glyph by glyph, each glyph's own ink where it sits (a word without a
+  descender just above a P/T plate is clear of it). A plate's ink comes
+  from `lib/cards/plate-ink.ts`, measured on the plate masters by
+  `scripts/measure-plate-ink.mjs` (alpha ≥ 128, every colour, as fractions
+  of the plate image — so it follows the plate's box wherever a profile or an
+  override puts it). A NEW plate (`plateAssetPathTemplate`) needs its entry
+  there — `tests/unit/cards/plate-ink.test.ts` fails until it has one — and a
+  replaced plate a re-run:
+
+  ```bash
+  FRAMES_BUILD_DIR=… node scripts/measure-plate-ink.mjs
+  ```
+
+  Bucket plates are read from the local build (sha256-checked against the
+  manifest), git plates from `public/frames`; paste the printed rows into
+  `PLATE_INK`, and the bucket plates' manifest hashes (the script prints
+  them too) into the test's `MEASURED_ON` — CI has no bucket frames, so that
+  pin is what fails when a promoted plate replaces one the table was
+  measured on. A value printed on the art (no plate) keeps its rect clear, a
+  drawn badge (the battle's defense) its disc.
 
 ## Shipping a frame change
 

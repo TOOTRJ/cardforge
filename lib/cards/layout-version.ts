@@ -1,5 +1,6 @@
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
+import { basicLandManaKey } from "@/lib/cards/watermark";
 import type { CardType } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -357,9 +358,99 @@ import type { CardType } from "@/types/card";
 //            grows: no card predicate narrows it), "sweep".
 //            VERIFICATION-NEUTRAL (owner decision 2026-09-28): the round-8
 //            print sign-off stands in for re-ticking the family's combos.
+//   33     — rules text laid out by its real lines at the prints' spacing
+//            (TODO 3.29, owner-approved 2026-09-28). ONE pure layout,
+//            lib/cards/rules-layout.ts, decides the size, every line break
+//            (rules AND flavor) and every vertical position, and both
+//            renderers draw its lines:
+//            * the fit measures MPlantin's real advances (≈ 0.43 em a
+//              letter, not the old 0.5 em average; each face's own glyph
+//              through Latin Extended-A — «», ß, Œ, the italic ě… — a
+//              character a face lacks budgeted a full em) with no safety
+//              factor, breaking each line where it fits BOTH bakes — the
+//              750 px and the HD, each with its own whole-px gaps and pips
+//              (the HD geometry is the preview's, every preview word in the
+//              ceiled box Satori gives it) — so the editor, the OG image and
+//              the stored PNG draw the same lines, the words in the same
+//              places (each bake rounds its own px: the 750 bake's pitch is
+//              0.962–0.974 em, 1.0 from 42 to 50 px, against HD's 0.974–
+//              0.986, its lines up to 6 HD px and a later word up to 20 HD
+//              px from HD's halved);
+//            * the prints' spacing: 0.98 em line pitch for rules, flavor and
+//              attribution alike (was 1.06 + 0.09 = 1.15 em), a FIXED 24 HD px
+//              between abilities (was 0.45 em + the bake's 0.09 em), 30 px
+//              either side of the flavor hairline (42 px with none; was
+//              0.55 em each side);
+//            * an even HD-px ladder (lib/cards/typography.ts RULES_SIZE_PX):
+//              ceilings 76 (the prints' 9 pt at 63 mm — was 75), 68 (8 pt —
+//              was 66.67), 64 (7.5 pt — was 62.5; and every planeswalker's
+//              text, whose prints set at most that — was 8 pt, 66.67 — while
+//              any other card on the planeswalker frame keeps 68), steps of
+//              2 px to the 42 px floor; tokens take the 76 px standard (the
+//              prints set 9 pt);
+//            * keep-outs: a size where a line's ink would run into a drawn
+//              stat badge (the P/T plate's measured ink, lib/cards/
+//              plate-ink.ts; a plain-box walker's loyalty shield — its old
+//              0.78 / 0.88 fit rect is gone; the battle's defense disc)
+//              steps down — judged glyph by glyph (a word with no
+//              descender just above the plate is clear of it); a first
+//              line's accented capital, and a line's first or last glyph
+//              drawn past its advance (an italic f, j or p, a roman f, a
+//              pip's shadow), get the headroom their ink needs, so the box's
+//              clip never cuts a letter; a text that doesn't fit even at the
+//              floor is set from the box's top, so the clip takes its tail,
+//              never its first line (a centred box cut both ends);
+//            * M15 and its skins print to the prints' margins (4 / 0 HD px,
+//              was 9 / 18); every other box keeps 9 / 18 HD px on both
+//              orientations (a landscape box's was 40 % more), the adventure
+//              page 9 / 15, a second face 18 / 12;
+//            * the bake's flavor hairline is a 1 px box, not a border: Satori
+//              clips a border with a clip path of its own, so on text
+//              clipped at the floor the bar escaped the box and drew a line
+//              across the frame below it (same pixels everywhere else);
+//            * the tokenizer glues only what touches: "{B} equal" and
+//              "(remix) deals" were drawn "ⓑequal", "(remix)deals" (54 of the
+//              731 public cards measured), and "{T}:" inside a reminder now
+//              stays whole (16 more);
+//            * ability words refreshed from Scryfall's catalog (TODO 1.13,
+//              the committed fixture of 2026-09-28: 48 → 69 words — Eerie,
+//              Void, Survival… — "Descend 4" and a curly apostrophe read);
+//            * planeswalker ability rows sized by each ability's real lines
+//              (0.98 em, the 24 px gap, 10 HD px of row padding — whole px at
+//              both bakes, no safety) on the ladder from 64 px: no row ever
+//              overlaps the next (the old estimate's rows did, and clipped
+//              long walkers at 5 pt); the row anatomy — badge, rail, padding
+//              — keeps ONE size (46 px's ems: the text starts at x 275, the
+//              walker prints' 274–276) whatever the text's; the last row
+//              still wraps short of the loyalty shield only when its lines,
+//              where their row puts them, would reach it (the 7 public
+//              walkers: 5 → 5.5–6.7 pt, Jace 7.5 → 7.6 pt at 63 mm);
+//            * saga chapter and intro text through the same line drawing at
+//              TODAY'S size, rows and badges (real pips, reminder italics,
+//              U+2212) — its geometry is TODO 4.21's; an intro too tall for
+//              the rail (a saga typed with no chapter markers) is clipped
+//              at the rail's foot instead of running over the type line.
+//            Public cards (731 cached, real bakes): the main box's median
+//            58 → 72 HD px; 569 of 706 grow ≥ 0.5 pt, 463 ≥ 1 pt; 336 print
+//            at 76; none shrinks at either bake; 21 still clip at the floor
+//            (15 token lands in the 12 %-high token box, 6 long M15 cards).
+//            Every template draws rules text (no template scope). Card-scoped
+//            (VERSION_SCOPES[33], v33PrintsText): a card whose bake prints
+//            rules, flavor, loyalty or chapter text — rules_text /
+//            flavor_text, face_content's loyalty abilities, saga chapters or
+//            intro, a back face's text — never a card on a frame that prints
+//            no text box (FrameProfile.textless; none at v33 — the "M15
+//            Textless" frames print their text on the art) nor a basic
+//            land's (it prints none). "sweep" (owner decision
+//            2026-09-28). VERIFICATION-NEUTRAL (owner decision 2026-09-28): no
+//            slot, bar or rect moves, but text inside the rules boxes does
+//            (M15's box padding, walker row edges and badges, split's right
+//            half honouring vAlign), so the alignment scores stored with
+//            frame_reviews ticks would change on a re-score; the round-9
+//            print sign-off stands in for re-ticking.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 32;
+export const CARD_LAYOUT_VERSION = 33;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -415,6 +506,8 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // (v31, the one corner radius, changes every template's bake: unscoped.)
   // v32: one M15-era title / type size (4.20) — the M15 family as it stood.
   32: V32_M15_FAMILY_TEMPLATES,
+  // (v33, the rules layout, reaches every template that prints text: no
+  // template list — VERSION_SCOPES[33] narrows it by what the card prints.)
 };
 
 /**
@@ -425,10 +518,14 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
  * move text (the M15 family's name, type line and set-symbol sizes), but
  * the owner signs it off on the round-8 print comparison instead of
  * re-ticking every family combo (owner decision 2026-09-28, TODO 4.20).
+ * v33 moves no slot either, only text inside the rules boxes (the rules
+ * layout, TODO 3.29) — the alignment scores a tick stored would change on a
+ * re-score — and the owner signs it off on the round-9 print comparison
+ * (owner decision 2026-09-28).
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33];
 
 /** TEMPLATE_SCOPED_VERSIONS with every verification-neutral bump scoped to
  *  no template — the map lib/cards/frame-verification-state.ts judges a
@@ -460,8 +557,13 @@ export type ScopeCard = {
   loyalty?: string | null;
   defense?: string | null;
   /** The raw `back_face` jsonb (a flip card's P/T; a flip / split back
-   *  face's name and type line). */
+   *  face's name and type line; v33: a back face's rules and flavor text). */
   back_face?: unknown;
+  // v33: the text a bake prints in its rules box, walker rows or saga rail.
+  rules_text?: string | null;
+  flavor_text?: string | null;
+  /** The raw `face_content` jsonb (loyalty abilities, saga chapters). */
+  face_content?: unknown;
 };
 
 // v29 — the templates on which EVERY card's bake changed: their footer is
@@ -534,6 +636,77 @@ function v29Changed(card: ScopeCard): boolean {
   );
 }
 
+// v33 — the templates that print no rules box, rows or rail at v33
+// (FrameProfile.textless: none yet — the "M15 Textless" frames print their
+// text straight on the art), and those that draw a saga's chapter rail
+// (FrameProfile.chapters) in its place. Frozen like the v29 / v32 lists: v33
+// is history once it ships (a test pins them to the profiles as they stand).
+const V33_TEXTLESS_TEMPLATES: readonly string[] = [];
+const V33_CHAPTER_TEMPLATES: readonly string[] = ["saga"];
+
+function v33HasText(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/** Whether a `face_content` jsonb holds something the v33 layout draws: a
+ *  loyalty ability (its row and badge are sized by the rules text size, so
+ *  one with no text changes too), a saga chapter's text or the saga's
+ *  intro. A chapter with no text keeps today's row, badge and size. */
+function v33FaceContentPrints(faceContent: unknown): boolean {
+  if (!faceContent || typeof faceContent !== "object") return false;
+  const { loyalty, saga } = faceContent as { loyalty?: unknown; saga?: unknown };
+  const abilities = loyalty && typeof loyalty === "object" ? (loyalty as { abilities?: unknown }).abilities : undefined;
+  if (Array.isArray(abilities) && abilities.length > 0) return true;
+  if (!saga || typeof saga !== "object") return false;
+  const { intro, chapters } = saga as { intro?: unknown; chapters?: unknown };
+  return (
+    v33HasText(intro) ||
+    (Array.isArray(chapters) &&
+      chapters.some((ch) => Boolean(ch) && typeof ch === "object" && v33HasText((ch as { text?: unknown }).text)))
+  );
+}
+
+/**
+ * Whether layout v33 (the rules layout, TODO 3.29) changed a card's bake:
+ * it prints rules, flavor, loyalty or chapter text — its rules_text or
+ * flavor_text in the rules box, walker rows or saga rail; face_content's
+ * loyalty abilities, saga chapters or intro; a back face's rules or flavor
+ * text (the adventure page, a flip / split / aftermath half). Never a card
+ * on a frame that prints no text box (V33_TEXTLESS_TEMPLATES), nor a basic
+ * land's text (the rules box prints none for it — a saga's chapter rail
+ * still would). Any column a term needs that the row doesn't carry →
+ * affected.
+ */
+function v33PrintsText(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  if (V33_TEXTLESS_TEMPLATES.includes(template)) return false;
+  if ([card.rules_text, card.flavor_text, card.face_content, card.back_face].some((v) => v === undefined)) return true;
+  if (v33FaceContentPrints(card.face_content)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  if (back && (v33HasText(back.rules_text) || v33HasText(back.flavor_text))) return true;
+  if (!v33HasText(card.rules_text) && !v33HasText(card.flavor_text)) return false;
+  if (V33_CHAPTER_TEMPLATES.includes(template)) return true;
+  if ([card.card_type, card.supertype, card.subtypes, card.title].some((v) => v === undefined)) return true;
+  // The renderers' isBasicLand (lib/cards/watermark.ts): its text is never drawn.
+  return (
+    basicLandManaKey({
+      cardType: card.card_type,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
+      title: card.title,
+      rulesText: card.rules_text,
+    }) === null
+  );
+}
+
+/** The frozen v33 template lists, for the test that pins them to the
+ *  profiles. */
+export const V33_SCOPE_TEMPLATES = {
+  textless: V33_TEXTLESS_TEMPLATES,
+  chapters: V33_CHAPTER_TEMPLATES,
+} as const;
+
 /**
  * Bumps that changed the output of only SOME cards regardless of template,
  * keyed by the version they introduced: the predicate says whether a card's
@@ -556,6 +729,8 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   28: (card) => card.frame_style === undefined || finishOfFrameStyle(card.frame_style) === "foil",
   // v29 — the round-5 leftovers: every track's scope, OR'd (v29Changed).
   29: v29Changed,
+  // v33 — the rules layout: every card that prints text (v33PrintsText).
+  33: v33PrintsText,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -666,6 +841,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   30: "sweep", // fullartland re-sourced from Card Conjurer (4.39) — a frame swap, never an owner badge
   31: "sweep", // one corner radius (3.26): the bake's rounded corner, every card — a correction, never a badge
   32: "sweep", // one M15-era title / type size (4.20): the family's print sizes — a platform correction, never a badge
+  33: "sweep", // rules text by its real lines at the prints' spacing (3.29) — a measurement correction, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

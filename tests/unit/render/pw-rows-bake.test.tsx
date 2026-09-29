@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { parseLoyaltyAbilities } from "@/lib/cards/card-display";
-import { LOYALTY_ROW, layoutProfileLoyaltyRows, loyaltyRowEdgesPx } from "@/lib/cards/loyalty-rows";
+import { layoutProfileLoyaltyRows, loyaltyRowsDrawing } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { DETACHED_COST_GAP_PCT, fitTitleBand, titleBandRoomPct } from "@/lib/cards/title-band";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
@@ -139,28 +139,31 @@ describe("m15pw ability rows + title — real bakes", () => {
   }
   const lum = ([r, g, b]: readonly [number, number, number]) => 0.299 * r + 0.587 * g + 0.114 * b;
 
-  /** The rows as both renderers draw them, in this bake's pixels. */
+  /** The rows as both renderers draw them, in this bake's pixels (the 750
+   *  px target of lib/cards/loyalty-rows.ts loyaltyRowsDrawing). */
   function rowGeometry(rules: string) {
     const rect = P.rules.rect;
-    const { sizePct, rowFractions, lastRowInsetPct } = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(rules), H / W);
+    const rows = layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(rules), H / W);
+    const draw = loyaltyRowsDrawing(rows, "default");
     const top = Math.round((rect.topPct / 100) * H);
-    const size = Math.round(sizePct * W); // the bake's fpx
+    const size = rows.sizePx / 2; // this bake draws exactly half the HD px
     const left = Math.round((rect.leftPct / 100) * W);
     const right = Math.round(((rect.leftPct + rect.widthPct) / 100) * W);
-    const padX = Math.round(size * LOYALTY_ROW.padXEm);
+    const { padX, rail } = draw.row;
     return {
+      rows,
       size,
-      edges: loyaltyRowEdgesPx(rowFractions, (rect.heightPct / 100) * H).map((e) => top + e),
+      edges: draw.edges.map((e) => top + e),
       left,
       right,
       bottom: Math.round(((rect.topPct + rect.heightPct) / 100) * H),
       padX,
-      // Where the ability text starts: the row padding, the badge box and its
-      // gap, each rounded like LoyaltyRowsBake rounds them.
-      textLeft:
-        left + padX + Math.round(size * LOYALTY_ROW.badgeWidthEm) + Math.round(size * LOYALTY_ROW.badgeGapEm),
-      // Where the LAST ability's text column ends: short of the shield.
-      lastTextRight: right - padX - Math.round(lastRowInsetPct * W),
+      // Where the ability text starts: the row's badge rail (its padding, the
+      // badge box and its gap).
+      textLeft: left + rail,
+      // Where the LAST ability's text column ends: short of the shield when
+      // it would reach it.
+      lastTextRight: left + rail + draw.text[draw.text.length - 1].column,
       plateLeft: Math.round((P.loyalty!.plateRect!.leftPct / 100) * W),
       plateTop: Math.round((P.loyalty!.plateRect!.topPct / 100) * H),
     };
@@ -225,11 +228,11 @@ describe("m15pw ability rows + title — real bakes", () => {
     const { edges, textLeft } = rowGeometry(WALKER_115);
     const heights = edges.slice(1).map((e, i) => e - edges[i]);
     expect(Math.abs(heights[0] - heights[1])).toBeLessThanOrEqual(1);
-    expect(heights[2]).toBeGreaterThan(2.5 * heights[0]);
+    expect(heights[2]).toBeGreaterThan(2 * heights[0]);
 
     // At the layout's text size: each row's text starts where the badge rail
-    // at that size ends (the rail is 3.2 em, so half a point off moves it
-    // ~7 px here).
+    // at that size ends (the rail is 3.2 em, so a step off moves it ~3 px
+    // here).
     for (let r = 0; r < 3; r += 1) {
       const [y0, y1] = [edges[r] + 2, edges[r + 1] - 2];
       let start = -1;
@@ -267,7 +270,7 @@ describe("m15pw ability rows + title — real bakes", () => {
     // the reviewed branch). Printed walkers wrap the last ability short of
     // the loyalty box; both renderers do (TODO 4.19).
     const reaches =
-      "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for any number of creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
+      "+1: Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.\n−3: Return target creature card from your graveyard to your hand.\n−7: Search your library for up to three creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card.";
     const bakeBreaks =
       "Spells your opponents cast that target Probe cost {2} more to cast.\n+1: Draw a card, then discard a card.\n−3: Return target creature card with mana value 3 or less from your graveyard to the battlefield. It gains haste until end of turn.\n−9: You get an emblem with \"At the beginning of your end step, create three 2/2 black Zombie creature tokens.\"";
     const caps4 =
@@ -288,12 +291,13 @@ describe("m15pw ability rows + title — real bakes", () => {
     // beside it is short, so its column keeps the row's width: its first
     // line runs on past where a narrowed column would end.
     const clears =
-      "+1: Draw a card.\n−3: Destroy target creature. Its controller loses 2 life.\n−8: You get an emblem with \"Creatures you control get +2/+2 and have flying, vigilance and first strike.\"";
-    // And one that clears the shield only half a point below the size its
-    // full-width rows first fit at: it steps down instead of narrowing.
-    const stepsDown =
-      "+1: Create a 1/1 white Soldier creature token.\n−4: Exile target nonland permanent. Its controller creates a 2/2 colorless Robot artifact creature token.\n−8: You get an emblem with \"Whenever you cast a spell, exile the top card of your library. You may play it this turn. At the beginning of your end step, return all creature cards exiled with Probe to the battlefield.\"";
-    for (const rules of [clears, stepsDown, WALKER_115]) {
+      "+1: Draw a card, then discard a card.\n−2: Draw a card.\n−10: Search your library for any number of creature cards, put them onto the battlefield, then shuffle. They gain haste. Exile them at the beginning of the next end step.";
+    // And a walker whose ultimate clears the shield a few steps below the
+    // size its full-width rows first fit at: it steps down instead of
+    // narrowing.
+    const smallerClears =
+      "+1: Scry 1.\n−2: Draw a card.\n−8: You get an emblem with At the beginning of your upkeep exile the top three cards of your library Until end of turn you may play those cards and you may spend mana as though it were mana of any.";
+    for (const rules of [clears, smallerClears]) {
       expect(layoutProfileLoyaltyRows(P, parseLoyaltyAbilities(rules), H / W).lastRowInsetPct, rules).toBe(0);
       expectNothingUnderTheShield(await bake({ rulesText: rules, loyalty: null }), rules);
     }

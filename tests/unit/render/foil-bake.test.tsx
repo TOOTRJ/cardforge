@@ -439,7 +439,7 @@ describe("foil finish — m15pw stand-in (real bakes)", () => {
     const stripes = (hex: string) => ({ m15pw: { loyaltyRows: { stripeAHex: hex, stripeBHex: hex } } });
     if (rulesText === PW_RULES_115) {
       const [a, , c] = pwRowRects(rulesText);
-      expect(c.heightPct).toBeGreaterThan(2.5 * a.heightPct);
+      expect(c.heightPct).toBeGreaterThan(2 * a.heightPct);
     }
     // Clear stripes show the card-wide sheen over the white art; opaque white
     // ones hide it and show their own at full strength. Same rainbow in the

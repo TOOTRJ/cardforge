@@ -6,7 +6,7 @@ import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { measuredLinePreviewPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
-import { RULES_TEXT, ptToPct } from "@/lib/cards/typography";
+import { RULES_SIZE_PX, rulesPxToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
 // The live-preview half of TODO 0.22: aftermath's bottom half turns 90°
@@ -68,7 +68,7 @@ describe("CardPreview — aftermath's second half", () => {
     expect(layout.title.sizePct).toBe(m15.title.sizePct);
     expect(layout.type.sizePct).toBe(m15.type.sizePct);
     expect(layout.costSizePct).toBe(m15.costSizePct);
-    expect(layout.rules.sizePct).toBe(ptToPct(RULES_TEXT.standardPt));
+    expect(layout.rules.sizePct).toBe(rulesPxToPct(RULES_SIZE_PX.standard)); // 76 px, layout v33
   });
 
   // happy-dom drops `cqw` font sizes from element.style, so these read the
@@ -108,7 +108,7 @@ describe("CardPreview — aftermath's second half", () => {
     const [topCost, bottomCost] = halves([...body.querySelectorAll('[aria-label="Cost {4}{U}{U}"]')]);
     const [topRules, bottomRules] = halves(
       [...body.querySelectorAll("div")].filter(
-        // RulesBody lays each word out as its own box, so match the letters.
+        // RulesBox lays each word out as its own box, so match the letters.
         (el) =>
           /font-family:"MPlantin"/.test(el.getAttribute("style") ?? "") &&
           fontSize(el) &&
@@ -121,7 +121,7 @@ describe("CardPreview — aftermath's second half", () => {
     expect(fontSize(topType)).toBe("4.530cqw");
     expect(fontSize(bottomType)).toBe(fontSize(topType));
     expect(fontSize(bottomCost)).toBe(fontSize(topCost));
-    expect(fontSize(topRules)).toBe(`${(ptToPct(9) * 100).toFixed(3)}cqw`);
+    expect(fontSize(topRules)).toBe(`${(rulesPxToPct(RULES_SIZE_PX.standard) * 100).toFixed(3)}cqw`);
     expect(fontSize(bottomRules)).toBe(fontSize(topRules));
   });
 
