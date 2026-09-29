@@ -666,8 +666,8 @@ export type FrameStyle = {
   /** Which frame PNG asset to layer behind the card sections. */
   template?: FrameTemplate;
   /** The printed legendary crown (TODO 4.6a) — an ADDITION, so it is opt-in
-   *  per card (owner rule 2026-09-29, PR #418's docs/FRAMES.md "Additions
-   *  vs corrections"): the renderers draw it only when this is `true`, the
+   *  per card (owner rule 2026-09-29, docs/FRAMES.md "Additions vs
+   *  corrections"): the renderers draw it only when this is `true`, the
    *  card is Legendary and its template draws one (lib/cards/anatomy.ts).
    *  Absent = off: every card stored before the crown shipped keeps its
    *  look. A new card starts `true`; the save drops the switch where its

@@ -299,10 +299,10 @@ Rules and gotchas:
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
   "Tokens").
-- Printed pieces a card SWITCHES ON (TODO 4.6.0; owner rule 2026-09-29,
-  #418: additions are opt-in per card): `frame_style.crown` /
-  `frame_style.twoColor`, drawn only when `=== true` (`lib/cards/anatomy.ts`)
-  — absent = the card's old look, so declaring a piece changes no stored
+- Printed pieces a card SWITCHES ON (TODO 4.6.0; the additions rule above):
+  `frame_style.crown` / `frame_style.twoColor`, drawn only when `=== true`
+  (`lib/cards/anatomy.ts`) — absent = the card's old look, so declaring a
+  piece changes no stored
   card and needs no bump or sweep. New cards start on (`NEW_CARD_ANATOMY`;
   `createCardAction` stamps `newCardFrameStyle`), every save drops a switch
   its template can't draw (`normalizeAnatomy`), imports follow the printing

@@ -2,8 +2,7 @@
 // Frame anatomy — the printed pieces a card switches on one by one (TODO
 // 4.6.0): the legendary crown (4.6a) and the two-colour frame (4.6b).
 //
-// THE OWNER RULE (2026-09-29, PR #418: docs/FRAMES.md "Additions vs
-// corrections"):
+// THE OWNER RULE (2026-09-29, docs/FRAMES.md "Additions vs corrections"):
 // these are ADDITIONS, so each is OPT-IN PER CARD, stored as card data in
 // `frame_style` (FrameStyle.crown / FrameStyle.twoColor):
 //   • the renderers draw a piece only when its switch is `true` — absent and
