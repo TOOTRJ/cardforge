@@ -1,4 +1,4 @@
-import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
+import { ownStorageHosts } from "@/lib/media/storage-hosts";
 // ---------------------------------------------------------------------------
 // render-cdn — map a stored card-render URL (Supabase Storage, `card-renders`
 // bucket) onto this deployment's `/render-cdn/<owner>/<object>?v=…` path,
@@ -20,19 +20,6 @@ import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 const RENDER_CDN_PREFIX = "/render-cdn";
 
 const BUCKET_PATH = "/storage/v1/object/public/card-renders/";
-
-function ownStorageHosts(): Set<string> {
-  const hosts = new Set<string>(LEGACY_SUPABASE_HOSTS);
-  const configured = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (configured) {
-    try {
-      hosts.add(new URL(configured).host);
-    } catch {
-      // ignore a malformed env value
-    }
-  }
-  return hosts;
-}
 
 /** The object key inside the card-renders bucket (`{owner}/{file}`) when
  *  `url` is a public URL of that bucket on one of our storage hosts; null

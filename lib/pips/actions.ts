@@ -9,6 +9,11 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import {
   isCustomPipSymbol,
@@ -47,7 +52,7 @@ const REBAKE_SWEEP_CAP = 40;
 
 export type CustomPipActionResult =
   | { ok: true; symbol: CustomPipSymbol; imageUrl: string | null }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function saveCustomPipAction(
   formData: FormData,
@@ -63,6 +68,10 @@ export async function saveCustomPipAction(
   if (!user) {
     return { ok: false, error: "Sign in to customize pips." };
   }
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts) — one
+  // pip is one upload, however many objects it stages.
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const symbolRaw = formData.get("symbol");
   if (typeof symbolRaw !== "string" || !isCustomPipSymbol(symbolRaw)) {

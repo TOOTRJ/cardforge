@@ -16,6 +16,7 @@ import {
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { PipOverrides } from "@/lib/pips/override";
+import { drawableCardMedia } from "@/lib/cards/drawable-media";
 import { makeRenderThumb } from "@/lib/cards/render-thumb";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 
@@ -63,7 +64,11 @@ export function rowToPreviewData(
   pipOverrides: PipOverrides | null = null,
   profileOverrides: FrameProfileOverridesMap | null = null,
 ): CardPreviewData {
-  return {
+  // Only the pictures CardPreview would draw (lib/cards/drawable-media.ts,
+  // migration 0127): every server render of a stored card — the bake, the
+  // sweep, the PNG / PDF / share image — drops the same ones the live
+  // preview does.
+  return drawableCardMedia({
     pipOverrides,
     profileOverrides,
     title: card.title,
@@ -91,7 +96,7 @@ export function rowToPreviewData(
     // a rules_text parsing fallback (lib/cards/face-content.ts).
     faceContent: (card.face_content as FaceContent | null) ?? null,
     watermark: (card.watermark as CardWatermark | null) ?? null,
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------

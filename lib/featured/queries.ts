@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/schemas";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // Featured creators — admin-curated via profiles.featured_at (0052). Reads
@@ -134,8 +135,9 @@ export async function listFeaturedCreators(
     out.push({
       username: p.username as string,
       displayName: p.display_name,
-      avatarUrl: p.avatar_url,
-      bannerUrl: p.banner_url,
+      // Only drawable profile pictures (migration 0127, lib/media/media-urls.ts).
+      avatarUrl: profileMediaSrc("avatar", p.avatar_url, p.id),
+      bannerUrl: profileMediaSrc("banner", p.banner_url, p.id),
       accentColor: p.accent_color,
       bio: p.bio,
       socials: SOCIAL_PLATFORMS.flatMap((platform) => {

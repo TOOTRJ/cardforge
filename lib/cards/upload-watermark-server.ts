@@ -9,6 +9,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Custom design-watermark upload — a near-copy of upload-art-server.ts with
@@ -26,7 +31,7 @@ const ALLOWED_DECLARED_MIME_TYPES = new Set(["image/png", "image/webp"]);
 
 export type UploadWatermarkResult =
   | { ok: true; publicUrl: string }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function uploadWatermarkServerAction(
   formData: FormData,
@@ -41,6 +46,9 @@ export async function uploadWatermarkServerAction(
   if (!user) {
     return { ok: false, error: "Sign in to upload a watermark." };
   }
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts).
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const file = formData.get("file");
   if (!(file instanceof File)) {

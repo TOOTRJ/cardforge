@@ -7,6 +7,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { getUnreadNotificationCount } from "@/lib/notifications/queries";
 import { getMessageNavState } from "@/lib/messages/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,8 @@ export default async function AppGroupLayout({
               id: user.id,
               username: profile?.username ?? null,
               displayName: profile?.display_name ?? null,
-              avatarUrl: profile?.avatar_url ?? null,
+              // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+              avatarUrl: profileMediaSrc("avatar", profile?.avatar_url, user.id),
               isPaid: entitlements?.isPaid ?? false,
               credits: entitlements?.credits ?? 0,
               creditsUsed,

@@ -3,6 +3,7 @@ import "server-only";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { NotificationPayload } from "./describe";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // All reads go through the user's RLS-scoped session, so a user only ever sees
 // their own notifications. actor/card are FK'd to auth.users/cards (no direct
@@ -148,7 +149,8 @@ export async function hydrate(
       profilesById.set(p.id, {
         username: p.username,
         display_name: p.display_name,
-        avatar_url: p.avatar_url,
+        // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+        avatar_url: profileMediaSrc("avatar", p.avatar_url, p.id),
       });
     }
   }
