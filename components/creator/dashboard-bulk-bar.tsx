@@ -24,13 +24,16 @@ import {
   deleteCardsAction,
   updateCardsVisibilityAction,
 } from "@/lib/cards/actions";
+import { bulkVisibilityMessage } from "@/lib/cards/bulk-visibility-copy";
 import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // DashboardBulkBar — sticky bottom bar shown when ≥1 card is selected.
 // Renders two bulk actions: change visibility, delete.
 // Both call into server actions that pre-flight ownership and
-// abort the whole batch on any cross-user attempt.
+// abort the whole batch on any cross-user attempt. Making cards public or
+// unlisted skips an admin's frame previews (the server decides) and the
+// toast names how many it skipped.
 // ---------------------------------------------------------------------------
 
 type DashboardBulkBarProps = {
@@ -59,9 +62,9 @@ export function DashboardBulkBar({
         toast.error(result.error);
         return;
       }
-      toast.success(
-        `${result.count} card${result.count === 1 ? "" : "s"} → ${visibility}.`,
-      );
+      // A publish / unlist skips an admin's frame previews (they stay
+      // private) and says so; any other batch keeps the short wording.
+      toast.success(bulkVisibilityMessage(visibility, result.count, result.skippedPreviews));
       onSuccess();
       router.refresh();
     });
