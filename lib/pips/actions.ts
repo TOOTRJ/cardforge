@@ -2,13 +2,17 @@
 
 import "server-only";
 
-import { after } from "next/server";
-import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
-import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
+import { deleteCustomPipRow, finishPipChange, removeCustomPipObject } from "@/lib/pips/remove-pip";
 import {
   isCustomPipSymbol,
   type CustomPipSymbol,
@@ -24,7 +28,9 @@ import {
 //
 // Storage path is deterministic — custom-pips/{userId}/{symbol}.png with
 // upsert — so replacing a pip never orphans objects; the row's image_url
-// carries a ?v= cache-buster so CDNs pick up replacements.
+// carries a ?v= cache-buster so CDNs pick up replacements. Objects are
+// written and removed with the service role, only inside the signed-in
+// user's folder (lib/media/user-storage.ts; no user write policy since 0126).
 // ---------------------------------------------------------------------------
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -36,15 +42,9 @@ const ALLOWED_DECLARED_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
-// How many of the owner's affected baked thumbnails the post-response sweep
-// refreshes, newest first. Detail pages and exports always render live; a
-// long tail of very old gallery thumbnails catches up on next save or via
-// scripts/rebake-renders.mjs.
-const REBAKE_SWEEP_CAP = 40;
-
 export type CustomPipActionResult =
   | { ok: true; symbol: CustomPipSymbol; imageUrl: string | null }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function saveCustomPipAction(
   formData: FormData,
@@ -52,11 +52,18 @@ export async function saveCustomPipAction(
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
   }
+  if (!isUserStorageConfigured()) {
+    return { ok: false, error: "Uploads aren't available right now." };
+  }
 
   const user = await getCurrentUser();
   if (!user) {
     return { ok: false, error: "Sign in to customize pips." };
   }
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts) — one
+  // pip is one upload, however many objects it stages.
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const symbolRaw = formData.get("symbol");
   if (typeof symbolRaw !== "string" || !isCustomPipSymbol(symbolRaw)) {
@@ -96,7 +103,8 @@ export async function saveCustomPipAction(
     return { ok: false, error: "That doesn't look like a valid image." };
   }
 
-  const path = `${user.id}/${symbol}.png`;
+  const name = `${symbol}.png`;
+  const pips = userFolder("custom-pips", user.id);
   const supabase = await createClient();
 
   // Moderate BEFORE touching the canonical object. The canonical path is
@@ -106,48 +114,41 @@ export async function saveCustomPipAction(
   // kept pointing at it. Stage the bytes under a pending name, scan THAT
   // (versioned, so a cached copy of an older pending upload can't answer
   // for the new bytes), and only then write the real object.
-  const pendingPath = `${user.id}/${symbol}.pending.png`;
-  const { error: stageError } = await supabase.storage
-    .from("custom-pips")
-    .upload(pendingPath, pngBytes, {
-      cacheControl: "0",
-      contentType: "image/png",
-      upsert: true,
-    });
+  const pendingName = `${symbol}.pending.png`;
+  const { error: stageError } = await pips.upload(pendingName, pngBytes, {
+    cacheControl: "0",
+    contentType: "image/png",
+    upsert: true,
+  });
   if (stageError) {
     return { ok: false, error: stageError.message };
   }
-  const pendingUrl = `${supabase.storage.from("custom-pips").getPublicUrl(pendingPath).data.publicUrl}?v=${Date.now()}`;
+  const pendingUrl = `${pips.publicUrl(pendingName)}?v=${Date.now()}`;
 
   // NSFW auto-scan — fails open (a moderation hiccup never blocks uploads);
   // a positive flag drops the staged bytes and leaves the current pip alone.
   const scan = await scanImageUrl(pendingUrl);
   if (scan.flagged) {
-    await supabase.storage.from("custom-pips").remove([pendingPath]);
+    await pips.remove([pendingName]);
     return {
       ok: false,
       error: "That image was flagged by our content filter and can't be used.",
     };
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from("custom-pips")
-    .upload(path, pngBytes, {
-      cacheControl: "3600",
-      contentType: "image/png",
-      upsert: true,
-    });
-  await supabase.storage.from("custom-pips").remove([pendingPath]);
+  const { error: uploadError } = await pips.upload(name, pngBytes, {
+    cacheControl: "3600",
+    contentType: "image/png",
+    upsert: true,
+  });
+  await pips.remove([pendingName]);
   if (uploadError) {
     return { ok: false, error: uploadError.message };
   }
 
-  const { data: urlData } = supabase.storage
-    .from("custom-pips")
-    .getPublicUrl(path);
   // Deterministic path + upsert means CDNs may hold the previous bytes —
   // version the URL the same way bake-render.ts versions card renders.
-  const imageUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+  const imageUrl = `${pips.publicUrl(name)}?v=${Date.now()}`;
 
   const { error: upsertError } = await supabase
     .from("custom_pips")
@@ -179,82 +180,16 @@ export async function deleteCustomPipAction(
   }
   const symbol = symbolRaw;
 
+  // The shared remove (lib/pips/remove-pip.ts — the flagged-file rescan
+  // removes a pip the same way): the row, then the object, then the caches
+  // and the re-bake of the owner's cards that draw it.
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("custom_pips")
-    .delete()
-    .eq("owner_id", user.id)
-    .eq("symbol", symbol);
+  const { error } = await deleteCustomPipRow(supabase, user.id, symbol);
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error };
   }
-
-  // Best-effort object cleanup — the row is the source of truth, so a
-  // failed remove only leaves an unreferenced file behind.
-  await supabase.storage
-    .from("custom-pips")
-    .remove([`${user.id}/${symbol}.png`])
-    .catch(() => {});
+  await removeCustomPipObject(user.id, symbol);
 
   finishPipChange(user.id, symbol);
   return { ok: true, symbol, imageUrl: null };
-}
-
-// ---------------------------------------------------------------------------
-// Shared post-change plumbing: refresh the RSC caches that feed overrides to
-// the editor/preview, then sweep the owner's affected baked thumbnails AFTER
-// the response is sent (next/server `after`) so the upload click stays fast.
-// ---------------------------------------------------------------------------
-
-function finishPipChange(ownerId: string, symbol: CustomPipSymbol) {
-  revalidatePath("/create");
-  revalidatePath("/dashboard");
-  revalidatePath("/settings");
-
-  after(async () => {
-    try {
-      await rebakeCardsUsingSymbol(ownerId, symbol);
-    } catch (error) {
-      console.error("[custom-pips] rebake sweep failed", error);
-    }
-  });
-}
-
-/**
- * Re-bake the owner's most recently updated cards whose front or back cost
- * uses the changed symbol as a pure color pip. Capped + best-effort: a
- * failure on one card never blocks the rest (bakeAndPersistCardRender
- * already swallows per-card render errors).
- */
-async function rebakeCardsUsingSymbol(
-  ownerId: string,
-  symbol: CustomPipSymbol,
-): Promise<void> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("cards")
-    .select("id, cost, rules_text, back_face")
-    .eq("owner_id", ownerId)
-    .order("updated_at", { ascending: false })
-    .limit(400);
-  if (error || !data) return;
-
-  // The renderers draw custom pips in the cost AND inline in rules text
-  // ({T}: Add {R}), on both faces — a sweep that only looked at the cost
-  // left every rules-text pip on the old icon until the card was resaved.
-  const token = `{${symbol}}`;
-  const affected = data
-    .filter((row) => {
-      if (row.cost?.includes(token) || row.rules_text?.includes(token)) return true;
-      const back = row.back_face as { cost?: string; rules_text?: string } | null;
-      return (
-        (typeof back?.cost === "string" && back.cost.includes(token)) ||
-        (typeof back?.rules_text === "string" && back.rules_text.includes(token))
-      );
-    })
-    .slice(0, REBAKE_SWEEP_CAP);
-
-  for (const row of affected) {
-    await bakeAndPersistCardRender(row.id, ownerId);
-  }
 }

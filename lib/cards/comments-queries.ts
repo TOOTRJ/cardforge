@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { CardCommentWithAuthor } from "@/types/card";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // Comments queries
@@ -48,7 +49,8 @@ export async function listCommentsForCard(
       profileById.set(p.id, {
         username: p.username,
         display_name: p.display_name,
-        avatar_url: p.avatar_url,
+        // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+        avatar_url: profileMediaSrc("avatar", p.avatar_url, p.id),
       });
     }
 

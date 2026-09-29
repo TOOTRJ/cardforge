@@ -12,8 +12,10 @@ import printings from "../scryfall/fixtures/import-printings.json";
 // payloads are real (trimmed) Scryfall printings.
 // ---------------------------------------------------------------------------
 
+const USER_ID = "0f5c3a52-1b1e-4c55-9d7e-2f3a4b5c6d7e";
+
 const state = vi.hoisted(() => ({
-  user: { id: "user-1" } as { id: string } | null,
+  user: null as { id: string } | null,
   check: vi.fn(),
   log: vi.fn(),
   byId: vi.fn(),
@@ -24,7 +26,16 @@ const state = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => state.user,
-  createClient: async () => ({
+}));
+// The import lands in the caller's card-art folder through the service role
+// (lib/media/user-storage.ts — users hold no storage write policy, 0126).
+vi.mock("@/lib/supabase/admin", () => ({
+  isAdminConfigured: () => true,
+  createAdminClient: () => ({
+    // The upload limit (0127, fail-closed) answers "allowed"; the storage
+    // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
+    rpc: async () => ({ data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null }),
+    from: () => ({ upsert: async () => ({ error: null }) }),
     storage: {
       from: () => ({
         upload: state.upload,
@@ -64,7 +75,7 @@ function post(body: unknown) {
 const ID = "11bf83bb-c95b-4b4f-9a56-ce7a1816307a";
 
 beforeEach(() => {
-  state.user = { id: "user-1" };
+  state.user = { id: USER_ID };
   state.check.mockReset().mockResolvedValue({ ok: true });
   state.log.mockReset().mockResolvedValue(undefined);
   state.byId.mockReset();
@@ -105,7 +116,7 @@ describe("POST /api/scryfall/import-art — the quota is charged after the image
     state.byId.mockResolvedValue(card("isd-51"));
     const res = await post({ scryfallId: ID, mode: "art-back" });
     expect(res.status).toBe(200);
-    expect(state.log).toHaveBeenCalledWith("user-1", "import_art");
+    expect(state.log).toHaveBeenCalledWith(USER_ID, "import_art");
     expect(state.image).toHaveBeenCalledWith(
       expect.stringContaining("/art_crop/back/"),
     );
@@ -156,5 +167,25 @@ describe("POST /api/scryfall/import-art — the requested face's artist", () => 
   it("an adventure (one image) names its front face's artist", async () => {
     state.byId.mockResolvedValue(card("eld-115"));
     expect((await (await post({ scryfallId: ID, mode: "art" })).json()).artist).toBe("Victor Adame Minguez");
+  });
+});
+
+describe("POST /api/scryfall/import-art — where the art lands (migration 0126)", () => {
+  it("in the caller's own card-art folder, under a name the server made up, via the service role", async () => {
+    state.byId.mockResolvedValue(card("dmr-215"));
+    const res = await post({ scryfallId: ID, mode: "art", path: "someone-else/x.jpg", userId: "someone-else" });
+    expect(res.status).toBe(200);
+    expect(state.upload).toHaveBeenCalledTimes(1);
+    const [key, , options] = state.upload.mock.calls[0];
+    expect(key).toMatch(new RegExp(`^${USER_ID}/[0-9a-f-]{36}\\.jpg$`));
+    expect(options).toMatchObject({ contentType: "image/jpeg", upsert: false });
+    expect((await res.json()).publicUrl).toBe(`https://cdn.example/card-art/${key}`);
+  });
+
+  it("a signed-out caller never reaches storage", async () => {
+    state.user = null;
+    const res = await post({ scryfallId: ID, mode: "art" });
+    expect(res.status).toBe(401);
+    expect(state.upload).not.toHaveBeenCalled();
   });
 });

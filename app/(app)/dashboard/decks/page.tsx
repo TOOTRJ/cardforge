@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listMyDecks } from "@/lib/decks/queries";
 import { DECK_FORMAT_LABELS, coverObjectPosition } from "@/types/deck";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 export const metadata: Metadata = {
   title: "Decks",
@@ -73,6 +74,8 @@ function DeckTile({
       ? Math.round((deck.remixed_count / deck.cards_count) * 100)
       : 0;
 
+  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
+  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
   return (
     <Link
       href={`/deck/${deck.slug}`}
@@ -80,10 +83,10 @@ function DeckTile({
     >
       <SurfaceCard className="flex h-full flex-col gap-3 overflow-hidden p-0 transition-colors group-hover:border-border-strong">
         <div className="relative aspect-video w-full overflow-hidden bg-elevated">
-          {deck.cover_url ? (
+          {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={deck.cover_url}
+              src={coverUrl}
               alt={`${deck.title} cover`}
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
               style={{

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
+import { LEGACY_SUPABASE_HOSTS } from "@/lib/media/storage-hosts";
 import {
   CARD_FINISH_VALUES,
   CARD_TYPE_VALUES,
@@ -38,14 +39,10 @@ export const isSafeImageUrl = (value: string): boolean =>
  *  server-side is an SSRF sink — restrict to our storage bucket + Scryfall's
  *  CDN (plus loopback in dev for the local stack). Everything else — internal
  *  services, cloud metadata endpoints, arbitrary hosts — is refused. */
-/** Storage hosts this project has EVER minted public URLs on. The Supabase
- *  URL moved to the custom domain in 2026-07, but every `*_url` stored
- *  before then still points at the project's original hostname, which
- *  Supabase serves forever (see next.config.ts LEGACY_SUPABASE_HOSTNAME).
- *  Leaving it off this list made every re-bake of an older card fetch a
- *  transparent pixel instead of its art — black art boxes in the gallery
- *  (2026-09-16). */
-export const LEGACY_SUPABASE_HOSTS: readonly string[] = ["zkwkisxoqdhdchqyjwdc.supabase.co"];
+/** Storage hosts this project has EVER minted public URLs on — see
+ *  lib/media/storage-hosts.ts (client-safe; re-exported here for the
+ *  existing importers). */
+export { LEGACY_SUPABASE_HOSTS };
 
 function allowedServerImageFetchHosts(): Set<string> {
   const hosts = new Set<string>(["cards.scryfall.io", "api.scryfall.com", ...LEGACY_SUPABASE_HOSTS]);

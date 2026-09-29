@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
-import { notifyIndexNow } from "@/lib/seo/indexnow";
+import { revalidateDeckPaths } from "@/lib/decks/revalidate";
 import { redirect } from "next/navigation";
 import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -12,6 +11,7 @@ import { getDeckById } from "@/lib/decks/queries";
 import type { DeckInsert, DeckUpdate } from "@/types/supabase";
 import type { ZodIssue } from "zod";
 import { isUuid } from "@/lib/ids";
+import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
 
 // ---------------------------------------------------------------------------
 // Result shapes — discriminated unions so callers pattern-match without throwing.
@@ -76,25 +76,6 @@ function slugCandidate(desired: string, attempt: number): string {
   return `${desired.slice(0, 80 - suffix.length).replace(/-+$/, "")}${suffix}`;
 }
 
-function revalidateDeckPaths(slug: string, ownerUsername?: string | null) {
-  revalidatePath("/dashboard/decks");
-  revalidatePath("/decks"); // public browse (live from PR 2 of the decks series)
-  revalidatePath("/dashboard");
-  revalidatePath(`/deck/${slug}`);
-  revalidatePath(`/deck/${slug}/edit`);
-  if (ownerUsername) {
-    revalidatePath(`/profile/${ownerUsername}`);
-  }
-  // Tell IndexNow engines the deck URL changed (or now 404s) — best-effort,
-  // off the request path. A private deck 404s for them, which is the point.
-  after(() =>
-    notifyIndexNow([
-      `/deck/${slug}`,
-      ...(ownerUsername ? [`/profile/${ownerUsername}`] : []),
-    ]),
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Create
 // ---------------------------------------------------------------------------
@@ -146,6 +127,10 @@ export async function createDeckAction(
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
+  if (!row && mediaUrlViolationField(lastError)) {
+    // Migration 0127: a cover that isn't one of the user's own uploads.
+    return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+  }
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not create deck." };
   }
@@ -227,6 +212,10 @@ export async function updateDeckAction(
     if (error?.code !== UNIQUE_VIOLATION) break;
   }
 
+  if (!row && mediaUrlViolationField(lastError)) {
+    // Migration 0127: a cover that isn't one of the user's own uploads.
+    return { ok: false, fieldErrors: { cover_url: MEDIA_URL_NOT_ALLOWED_MESSAGE } };
+  }
   if (!row) {
     return { ok: false, formError: lastError ?? "Could not update deck." };
   }

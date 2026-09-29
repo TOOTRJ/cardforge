@@ -15,6 +15,7 @@ import {
   type PipOverrides,
 } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
+import { drawableCardMedia } from "@/lib/cards/drawable-media";
 import {
   FrameLayer,
   frameImageUrl,
@@ -279,40 +280,44 @@ type AdventureData = {
   rulesText: string | null;
 };
 
-export function CardPreview({
-  title,
-  cost,
-  cardType,
-  supertype,
-  subtypes,
-  rarity,
-  colorIdentity,
-  rulesText,
-  flavorText,
-  power,
-  toughness,
-  loyalty,
-  defense,
-  artistCredit,
-  artUrl,
-  artPosition,
-  frameStyle,
-  setIconUrl,
-  setIconCode,
-  faceContent,
-  watermark,
-  backFace,
-  pipOverrides,
-  profileOverrides,
-  footerWatermark,
-  brandMark = isBillingEnabled(),
-  face,
-  onFaceChange,
-  flipOnClick = false,
-  backCard,
-  className,
-  staticInEditor = false,
-}: CardPreviewProps) {
+export function CardPreview(rawProps: CardPreviewProps) {
+  // Only pictures lib/media/media-urls.ts accepts (migration 0127): a row
+  // written before it could point its art, icon, watermark or pips at any
+  // host. The bake drops the same ones (lib/cards/drawable-media.ts).
+  const {
+    title,
+    cost,
+    cardType,
+    supertype,
+    subtypes,
+    rarity,
+    colorIdentity,
+    rulesText,
+    flavorText,
+    power,
+    toughness,
+    loyalty,
+    defense,
+    artistCredit,
+    artUrl,
+    artPosition,
+    frameStyle,
+    setIconUrl,
+    setIconCode,
+    faceContent,
+    watermark,
+    backFace,
+    pipOverrides,
+    profileOverrides,
+    footerWatermark,
+    brandMark = isBillingEnabled(),
+    face,
+    onFaceChange,
+    flipOnClick = false,
+    backCard,
+    className,
+    staticInEditor = false,
+  } = drawableCardMedia(rawProps);
   const template = normalizeFrameTemplate(frameStyle?.template);
   const layout = resolveFrameProfile(template, profileOverrides);
   const finish: CardFinish = frameStyle?.finish ?? "regular";

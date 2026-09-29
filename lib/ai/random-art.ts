@@ -1,7 +1,8 @@
 import "server-only";
 
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -20,15 +21,16 @@ export type PersistArtResult =
 
 /**
  * Upload generated image bytes to the signed-in user's `card-art` folder.
- * Shared by every AI art flow (random card, remix, decks). The path
- * layout matches the human-upload flow so the bucket's RLS write policy
- * (`auth.uid()::text = (storage.foldername(name))[1]`) accepts it.
+ * Shared by every AI art flow (random card, remix, decks). Written with the
+ * service role into the folder of the user this call authenticated
+ * (lib/media/user-storage.ts — users hold no storage write policy since
+ * migration 0126), with the same layout as the human-upload flow.
  */
 export async function persistGeneratedArt(
   bytes: Uint8Array,
   contentType: string,
 ): Promise<PersistArtResult> {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !isUserStorageConfigured()) {
     return { ok: false, error: "Supabase isn't configured." };
   }
   const user = await getCurrentUser();
@@ -47,22 +49,16 @@ export async function persistGeneratedArt(
       contentType.split(";")[0].trim()
     ] ?? "png";
 
-  const id = randomId();
-  const path = `${user.id}/ai-${id}.${extension}`;
-
-  const supabase = await createClient();
-  const { error: uploadError } = await supabase.storage
-    .from("card-art")
-    .upload(path, bytes, {
-      cacheControl: "3600",
-      contentType: contentType.split(";")[0].trim(),
-      upsert: false,
-    });
+  const name = `ai-${randomId()}.${extension}`;
+  const art = userFolder("card-art", user.id);
+  const { error: uploadError } = await art.upload(name, bytes, {
+    cacheControl: "3600",
+    contentType: contentType.split(";")[0].trim(),
+    upsert: false,
+  });
   if (uploadError) {
     return { ok: false, error: uploadError.message };
   }
-
-  const { data } = supabase.storage.from("card-art").getPublicUrl(path);
 
   // No post-generation moderation scan here (owner decision, 2026-07-10):
   // the image PROVIDERS already refuse unsafe generations upstream, and our
@@ -71,5 +67,5 @@ export async function persistGeneratedArt(
   // watermarks, pips) keep their scan; the report flow remains the backstop
   // for anything AI-generated.
 
-  return { ok: true, publicUrl: data.publicUrl };
+  return { ok: true, publicUrl: art.publicUrl(name) };
 }

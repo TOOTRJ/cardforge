@@ -1,6 +1,7 @@
 import type { ArtPosition, Card, FrameStyle } from "@/types/card";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
+import { drawableCardMedia } from "@/lib/cards/drawable-media";
 
 // Map a persisted Card row to the flat props <CardPreview> consumes. Used
 // wherever a whole card needs to render — notably the v2 back face, where a
@@ -9,7 +10,8 @@ export function cardToPreviewData(
   card: Card,
   profileOverrides: FrameProfileOverridesMap | null = null,
 ): CardPreviewData {
-  return {
+  // Only the pictures CardPreview would draw (lib/cards/drawable-media.ts).
+  return drawableCardMedia({
     profileOverrides,
     title: card.title,
     cost: card.cost,
@@ -32,5 +34,5 @@ export function cardToPreviewData(
     setIconCode: card.set_icon_code,
     faceContent: card.face_content ?? null,
     watermark: card.watermark ?? null,
-  };
+  });
 }

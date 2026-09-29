@@ -1,15 +1,20 @@
 "use server";
 
 import { z } from "zod";
+import { after } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
+import { purgeHiddenCards } from "@/lib/cards/revalidate";
 
 // Permanent account deletion. Hard-deletes the auth user (which cascades every
 // user-owned DB row — profile, cards, decks, comments, likes, reports, ledger)
-// and best-effort removes the user's storage folders (objects aren't cascaded).
+// and best-effort removes the user's storage folders (objects aren't cascaded),
+// then purges the caches that could still show the cards — the list pages and
+// the CDN copies of each card's share image and /render-cdn bake (tag
+// card-<id>, lib/cards/cache-purge.ts) — like deleting the cards one by one.
 
 const ACCOUNT_BUCKETS = [
   "card-art",
@@ -62,6 +67,33 @@ async function cancelStripeSubscriptions(
 }
 
 export type DeleteAccountResult = { ok: true } | { ok: false; error: string };
+
+const CARD_ID_PAGE = 1000;
+
+/** Every card id the user owns, paged until an empty page (so a max-rows cap
+ *  below the page size can't end the list early). A read error ends the list
+ *  where it got to — the purge is best-effort. */
+async function ownedCardIds(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (let from = 0; ; ) {
+    const { data, error } = await admin
+      .from("cards")
+      .select("id")
+      .eq("owner_id", userId)
+      .order("id", { ascending: true })
+      .range(from, from + CARD_ID_PAGE - 1);
+    if (error) {
+      console.error(`[account] Could not list ${userId}'s cards for the cache purge: ${error.message}`);
+      return ids;
+    }
+    if (!data || data.length === 0) return ids;
+    ids.push(...data.map((row) => row.id));
+    from += data.length;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Custom export watermark — the short footer mark paid users can print on
@@ -144,6 +176,11 @@ export async function deleteAccountAction(input: {
     };
   }
 
+  // The cards' ids, for the purge once they are gone (the cascade takes the
+  // rows with it). Best-effort like the storage cleanup: a failed read only
+  // leaves the CDN copies to age out.
+  const cardIds = await ownedCardIds(admin, user.id);
+
   // Storage cleanup next (best-effort — objects are not cascade-deleted with
   // the DB rows). Layout is flat: {userId}/{file} in every bucket.
   for (const bucket of ACCOUNT_BUCKETS) {
@@ -168,6 +205,12 @@ export async function deleteAccountAction(input: {
       error: "Couldn't delete your account. Please try again or contact support.",
     };
   }
+
+  // The renders are gone from storage and the rows from the database: drop
+  // every cached copy of the cards (pages, share images, /render-cdn bakes)
+  // — after the response, since a big library is many purge calls (16 tags
+  // each). No auth call in there (the session is being signed out).
+  if (cardIds.length > 0) after(() => purgeHiddenCards(cardIds));
 
   // Clear the now-orphaned session cookie so the browser is logged out.
   try {

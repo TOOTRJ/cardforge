@@ -43,7 +43,7 @@ describe("CardPreview — set symbol size", () => {
       "width:5.740cqw;height:5.740cqw",
     );
     expect(
-      styleOf(markup("m15", { setIconUrl: "https://example.test/icon.png" }), /img[^>]*alt="Set icon"/),
+      styleOf(markup("m15", { setIconUrl: "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/set-covers/11111111-1111-4111-8111-111111111111/icon.png" }), /img[^>]*alt="Set icon"/),
     ).toContain("width:5.740cqw;height:5.740cqw");
   });
 

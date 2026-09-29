@@ -8,9 +8,8 @@ import {
   getCurrentUser,
 } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { cardRenderPath } from "@/lib/cards/storage-paths";
-import { renderThumbPath } from "@/lib/cards/render-thumb";
-import { purgeHiddenCard, revalidateCardPaths } from "@/lib/cards/revalidate";
+import { revalidateCardPaths } from "@/lib/cards/revalidate";
+import { hideCard } from "@/lib/moderation/hide-card";
 import {
   reportDetailsSchema,
   reportReasonSchema,
@@ -228,45 +227,12 @@ export async function resolveCardReportsAction(input: {
   const nowIso = new Date().toISOString();
 
   if (input.action === "hide") {
-    const { data: card } = await admin
-      .from("cards")
-      .select("owner_id, slug")
-      .eq("id", input.cardId)
-      .maybeSingle();
-    if (!card) return { ok: false, error: "Card not found — it may already be deleted." };
-
-    // Every step used to be fire-and-forget: a rejected update still produced
-    // "Card hidden" and actioned the reports while the card stayed public.
-    const { error: hideError } = await admin
-      .from("cards")
-      .update({ visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null })
-      .eq("id", input.cardId);
-    if (hideError) return { ok: false, error: `Couldn't hide the card: ${hideError.message}` };
-
-    // Both public render objects (the thumb used to be left behind).
-    const png = cardRenderPath(card.owner_id, input.cardId);
-    const { error: removeError } = await admin.storage
-      .from("card-renders")
-      .remove([png, renderThumbPath(png)]);
-    if (removeError) {
-      console.error(`[moderation] hid ${input.cardId} but could not delete its render: ${removeError.message}`);
-    }
-
-    const { error: reportsError } = await admin
-      .from("card_reports")
-      .update({ status: "actioned", resolved_at: nowIso, resolved_by: profile.id })
-      .eq("card_id", input.cardId)
-      .eq("status", "pending");
-    if (reportsError) {
-      return { ok: false, error: `Card hidden, but the reports weren't marked: ${reportsError.message}` };
-    }
-
-    // Same purge the owner's private flip gets: card page, profile, gallery,
-    // discovery surfaces AND the CDN copy of the share image.
-    await purgeHiddenCard(
-      { id: input.cardId, slug: card.slug },
-      await lookupUsername(admin, card.owner_id),
-    );
+    // The one moderation hide (lib/moderation/hide-card.ts): private + render
+    // pointer cleared, both render objects removed, the pending reports
+    // actioned, then the purge — pages AND the CDN copies (share image,
+    // /render-cdn bake). The flagged-file rescan hides a card the same way.
+    const hidden = await hideCard(admin, input.cardId, { resolvedBy: profile.id });
+    if (!hidden.ok) return { ok: false, error: hidden.error };
   } else {
     const { error } = await admin
       .from("card_reports")

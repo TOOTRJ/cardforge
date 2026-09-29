@@ -4,11 +4,10 @@ import { resolveBakeArt } from "@/lib/cards/bake-render";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
-import { cardRenderPath } from "@/lib/cards/storage-paths";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import {
   BAKE_SELECT_COLUMNS,
-  removeRenderObject,
+  removeRenderObjects,
   rowToPreviewData,
   type CardRowForBake,
   uploadRenderObjects,
@@ -227,7 +226,6 @@ export async function runRebakeBatch(
   const overrideStamps = await readOverrideStamps(supabase);
 
   for (const { row, verdict } of batch) {
-    const path = cardRenderPath(row.owner_id, row.id);
     try {
       if (verdict === "stamp") {
         // Conditional on the stamp we classified: a layout save that nulled
@@ -277,7 +275,9 @@ export async function runRebakeBatch(
         continue;
       }
 
-      const uploaded = await uploadRenderObjects(supabase, path, pngBytes, row.id);
+      // The owner's card-renders folder (bake-core → lib/media/user-storage.ts):
+      // the key is `{row.owner_id}/{row.id}.png` and its thumb, nothing else.
+      const uploaded = await uploadRenderObjects(row.owner_id, row.id, pngBytes);
       if (!uploaded.ok) throw new Error(uploaded.error);
       const { renderedImageUrl } = uploaded;
       // Part 2 (compare-and-set): only the row as rendered may take the URL.
@@ -297,9 +297,15 @@ export async function runRebakeBatch(
       if (updateErr) throw new Error(`Row update failed: ${updateErr.message}`);
       if (!written || written.length === 0) {
         // Lost the race. If the card went private meanwhile, the objects we
-        // just uploaded must not stay public (the unpublish deleted its own).
+        // just uploaded must not stay public (the unpublish deleted its own)
+        // — nor a CDN copy of them: between our upload and this remove, the
+        // card's /render-cdn URL could have been filled from the new bytes,
+        // after the unpublish had already purged its tag.
         const { data: now } = await supabase.from("cards").select("visibility").eq("id", row.id).maybeSingle();
-        if (!now || now.visibility === "private") await removeRenderObject(supabase, path);
+        if (!now || now.visibility === "private") {
+          await removeRenderObjects(row.owner_id, [row.id]);
+          await purgeCardCdnCache([row.id]);
+        }
         superseded.push(row.id);
         continue;
       }

@@ -210,7 +210,7 @@ describe("foil finish — preview", () => {
         colorIdentity={["white"]}
         power="2"
         toughness="2"
-        artUrl="https://art.example/a.png"
+        artUrl="https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/a.png"
         artPosition={{ focalX: 0.3, focalY: 0.5, scale: 1.25 }}
         frameStyle={{ template: "m15", finish: "foil" }}
       />,
@@ -226,7 +226,7 @@ describe("foil finish — preview", () => {
     const cardSvg = card.closest("svg") as SVGSVGElement;
     expect(cardSvg.style.zIndex).toBe("6");
     const cardImages = Array.from(card.querySelectorAll("image")).map((i) => i.getAttribute("href"));
-    expect(cardImages).toEqual(["https://art.example/a.png", "https://b.example/frames/m15/w.222222222222.webp"]);
+    expect(cardImages).toEqual(["https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/a.png", "https://b.example/frames/m15/w.222222222222.webp"]);
     expect(Array.from(plate.querySelectorAll("image")).map((i) => i.getAttribute("href"))).toEqual([
       "https://b.example/frames/m15/pt/w.444444444444.webp",
     ]);

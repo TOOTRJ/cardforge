@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // deleteAccountAction — the order matters: refuse unless the user typed
 // DELETE; stop Stripe billing FIRST (a deleted subscriber must never keep
 // paying); best-effort storage cleanup; hard-delete the auth user; sign the
-// browser out. Stripe refusing to cancel keeps the account intact.
+// browser out. Stripe refusing to cancel keeps the account intact. Once the
+// account is gone, every one of its cards' cached copies is purged (pages,
+// share images and /render-cdn bakes — tag card-<id>), after the response.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({
@@ -20,6 +22,13 @@ const s = vi.hoisted(() => ({
   cancelled: [] as string[],
   signOut: vi.fn(async () => ({ error: null })),
   deleteUser: vi.fn(),
+  /** The user's card ids, as the cards table answers them (paged). */
+  cardIds: [] as string[],
+  cardsError: null as null | { message: string },
+  cardPages: [] as Array<[number, number]>,
+  purged: [] as string[][],
+  afterTasks: [] as Array<() => unknown>,
+  seq: [] as string[],
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -29,16 +38,34 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => s.configured,
   createAdminClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({ maybeSingle: async () => ({ data: { stripe_customer_id: s.customerId } }) }),
-      }),
-    }),
+    from: (table: string) =>
+      table === "cards"
+        ? {
+            select: () => ({
+              eq: () => ({
+                order: () => ({
+                  range: async (from: number, to: number) => {
+                    s.cardPages.push([from, to]);
+                    s.seq.push("read:cards");
+                    if (s.cardsError) return { data: null, error: s.cardsError };
+                    // A server cap of 2 rows: the list must still be complete.
+                    return { data: s.cardIds.slice(from, Math.min(to + 1, from + 2)).map((id) => ({ id })), error: null };
+                  },
+                }),
+              }),
+            }),
+          }
+        : {
+            select: () => ({
+              eq: () => ({ maybeSingle: async () => ({ data: { stripe_customer_id: s.customerId } }) }),
+            }),
+          },
     storage: {
       from: (bucket: string) => ({
         list: async () => ({ data: s.files[bucket] ?? [] }),
         remove: async (paths: string[]) => {
           s.removed.push([bucket, paths]);
+          s.seq.push(`remove:${bucket}`);
           return { error: null };
         },
       }),
@@ -60,6 +87,13 @@ vi.mock("@/lib/stripe/client", () => ({
 }));
 vi.mock("@/lib/billing/entitlements", () => ({ getEntitlements: vi.fn() }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => true }));
+vi.mock("next/server", () => ({ after: (task: () => unknown) => void s.afterTasks.push(task) }));
+vi.mock("@/lib/cards/revalidate", () => ({
+  purgeHiddenCards: async (ids: string[]) => {
+    s.purged.push(ids);
+    s.seq.push("purge");
+  },
+}));
 
 import { deleteAccountAction } from "@/lib/account/actions";
 
@@ -76,8 +110,21 @@ beforeEach(() => {
   s.removed = [];
   s.cancelled = [];
   s.signOut.mockClear();
-  s.deleteUser.mockReset().mockImplementation(async () => ({ error: s.deleteError }));
+  s.deleteUser.mockReset().mockImplementation(async () => {
+    s.seq.push("deleteUser");
+    return { error: s.deleteError };
+  });
+  s.cardIds = [];
+  s.cardsError = null;
+  s.cardPages = [];
+  s.purged = [];
+  s.afterTasks = [];
+  s.seq = [];
 });
+
+const runAfterTasks = async () => {
+  for (const task of s.afterTasks.splice(0)) await task();
+};
 
 describe("deleteAccountAction", () => {
   it("needs a signed-in user and the literal confirmation", async () => {
@@ -132,5 +179,38 @@ describe("deleteAccountAction", () => {
     });
     expect(s.cancelled).toEqual([]);
     expect(s.signOut).not.toHaveBeenCalled();
+  });
+
+  it("purges every card's cached copies once the account is gone — after the response, the whole list however the server pages it", async () => {
+    s.cardIds = ["c1", "c2", "c3", "c4", "c5"];
+    expect(await deleteAccountAction({ confirm: "DELETE" })).toEqual({ ok: true });
+    // Read before the cascade takes the rows; nothing purged inside the request.
+    expect(s.seq.indexOf("read:cards")).toBeLessThan(s.seq.indexOf("deleteUser"));
+    expect(s.purged).toEqual([]);
+    await runAfterTasks();
+    expect(s.purged).toEqual([["c1", "c2", "c3", "c4", "c5"]]);
+    // Paged until an empty page, never trusting a short page to be the last.
+    expect(s.cardPages.map(([from]) => from)).toEqual([0, 2, 4, 5]);
+    expect(s.seq.at(-1)).toBe("purge");
+  });
+
+  it("purges nothing when the account survives, or when there are no cards; a failed card read doesn't stop the deletion", async () => {
+    s.cardIds = ["c1"];
+    s.deleteError = { message: "auth down" };
+    expect((await deleteAccountAction({ confirm: "DELETE" })).ok).toBe(false);
+    await runAfterTasks();
+    expect(s.purged).toEqual([]);
+
+    s.deleteError = null;
+    s.cardIds = [];
+    expect(await deleteAccountAction({ confirm: "DELETE" })).toEqual({ ok: true });
+    await runAfterTasks();
+    expect(s.purged).toEqual([]);
+
+    s.cardsError = { message: "read failed" };
+    s.cardIds = ["c1"];
+    expect(await deleteAccountAction({ confirm: "DELETE" })).toEqual({ ok: true });
+    await runAfterTasks();
+    expect(s.purged).toEqual([]);
   });
 });

@@ -14,9 +14,11 @@
 //       ALSO copies that user's PUBLIC cards from production into the target,
 //       owned by dev_admin. Production is only ever READ, anonymously, through
 //       the same public API a logged-out visitor uses — no production secret
-//       is involved and nothing is written there. Each card's art + stored
-//       render + thumbnail are re-hosted in the TARGET's own storage, so the
-//       dev database never depends on production afterwards.
+//       is involved and nothing is written there. Each card's pictures (art,
+//       second-face art, custom watermark, set icon — scripts/lib/seed-card-
+//       media.mjs) + stored render + thumbnail are re-hosted in the TARGET's
+//       own storage, so the dev database never depends on production
+//       afterwards.
 //
 //   --env-file <path>   read the TARGET from another env file (default
 //                       .env.local) — e.g. .env.e2e for the local Docker stack,
@@ -29,6 +31,7 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { PRODUCTION_SUPABASE_HOSTS, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
+import { rehostCardMedia } from "./lib/seed-card-media.mjs";
 
 const args = process.argv.slice(2);
 function flag(name) {
@@ -187,9 +190,17 @@ async function rehost(sourceUrl, bucket, objectPath) {
   }
 }
 
-function extensionOf(url, fallback) {
-  const match = /\.([a-z0-9]{3,4})(?:\?|$)/i.exec(new URL(url).pathname);
-  return match ? match[1].toLowerCase() : fallback;
+// The target accepts picture URLs only on its own storage origin (migration
+// 0127 public.storage_origins; the app registers it on its first upload,
+// lib/media/storage-origin.ts) — register it here too, so the copied cards
+// can be remixed before anyone has uploaded anything. Best effort: an older
+// target without the table just says so.
+{
+  const origin = new URL(targetUrl).origin;
+  const { error } = await target
+    .from("storage_origins")
+    .upsert({ origin, note: "registered by scripts/seed-dev.mjs" }, { onConflict: "origin", ignoreDuplicates: true });
+  if (error) console.warn(`  (couldn't register ${origin} in storage_origins: ${error.message})`);
 }
 
 // Columns that must NOT travel: identity, ownership, cross-table links that
@@ -211,9 +222,7 @@ for (const source of sourceCards) {
   row.slug = source.slug;
 
   const renderPath = `${DEV_ADMIN_ID}/${source.id}.png`;
-  row.art_url = source.art_url
-    ? await rehost(source.art_url, "card-art", `${DEV_ADMIN_ID}/${source.id}.${extensionOf(source.art_url, "webp")}`)
-    : null;
+  Object.assign(row, await rehostCardMedia(source, DEV_ADMIN_ID, rehost));
   row.rendered_image_url = await rehost(source.rendered_image_url, "card-renders", renderPath);
   row.rendered_thumb_url = await rehost(
     source.rendered_thumb_url,

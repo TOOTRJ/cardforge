@@ -4,17 +4,24 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Custom design-watermark upload — a near-copy of upload-art-server.ts with
 // a tighter contract: 2 MB cap and transparency-capable formats only
 // (png / webp), since a watermark without an alpha channel would stamp an
 // opaque rectangle over the rules box. Stored in the existing card-art
-// bucket under the caller's folder (same RLS ownership policy); the bake
+// bucket under the caller's folder (written with the service role, the
+// folder forced from the session — lib/media/user-storage.ts); the bake
 // fetches the public URL like art.
 // ---------------------------------------------------------------------------
 
@@ -24,7 +31,7 @@ const ALLOWED_DECLARED_MIME_TYPES = new Set(["image/png", "image/webp"]);
 
 export type UploadWatermarkResult =
   | { ok: true; publicUrl: string }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function uploadWatermarkServerAction(
   formData: FormData,
@@ -32,10 +39,16 @@ export async function uploadWatermarkServerAction(
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
   }
+  if (!isUserStorageConfigured()) {
+    return { ok: false, error: "Uploads aren't available right now." };
+  }
   const user = await getCurrentUser();
   if (!user) {
     return { ok: false, error: "Sign in to upload a watermark." };
   }
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts).
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
@@ -83,34 +96,30 @@ export async function uploadWatermarkServerAction(
   }
 
   const ext = format === "webp" ? "webp" : "png";
-  const objectPath = `${user.id}/wm-${randomUUID()}.${ext}`;
-  const supabase = await createClient();
+  const name = `wm-${randomUUID()}.${ext}`;
+  const art = userFolder("card-art", user.id);
 
-  const { error: uploadError } = await supabase.storage
-    .from("card-art")
-    .upload(objectPath, stored, {
-      cacheControl: "31536000",
-      contentType: `image/${ext}`,
-      upsert: false,
-    });
+  const { error: uploadError } = await art.upload(name, stored, {
+    cacheControl: "31536000",
+    contentType: `image/${ext}`,
+    upsert: false,
+  });
   if (uploadError) {
     return { ok: false, error: uploadError.message };
   }
 
-  const { data: urlData } = supabase.storage
-    .from("card-art")
-    .getPublicUrl(objectPath);
+  const publicUrl = art.publicUrl(name);
 
   // NSFW auto-scan — fails open (a moderation hiccup never blocks uploads);
   // a positive flag removes the object and rejects.
-  const scan = await scanImageUrl(urlData.publicUrl);
+  const scan = await scanImageUrl(publicUrl);
   if (scan.flagged) {
-    await supabase.storage.from("card-art").remove([objectPath]);
+    await art.remove([name]);
     return {
       ok: false,
       error: "That image was flagged by our content filter and can't be used.",
     };
   }
 
-  return { ok: true, publicUrl: urlData.publicUrl };
+  return { ok: true, publicUrl };
 }

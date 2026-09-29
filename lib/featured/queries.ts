@@ -7,12 +7,28 @@ import {
   type SocialPlatformKey,
 } from "@/lib/auth/schemas";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // Featured creators — admin-curated via profiles.featured_at (0052). Reads
 // are viewer-independent (public client, no cookies) so the gallery and
 // challenges pages keep their static/ISR rendering.
 // ---------------------------------------------------------------------------
+
+/** A featured card's tile image: its WebP thumb, else its HD PNG — and only a
+ *  bake in our card-renders bucket (lib/cards/render-cdn.ts). These tiles are
+ *  raw <img>s on the homepage, gallery and challenges pages; a row written
+ *  before migration 0126 (when an owner could PATCH the render columns) could
+ *  point anywhere. null = the card has no drawable render and is skipped. */
+export function featuredImageOf(card: {
+  rendered_image_url: string | null;
+  rendered_thumb_url?: string | null;
+}): string | null {
+  if (isStoredRenderUrl(card.rendered_thumb_url)) return card.rendered_thumb_url;
+  if (isStoredRenderUrl(card.rendered_image_url)) return card.rendered_image_url;
+  return null;
+}
 
 /** A showcase card's baked image. `landscape` (a 7:5 Battle/Split render)
  *  picks the card corner class — a 5:7 radius on a 7:5 image is an ellipse. */
@@ -95,23 +111,23 @@ export async function listFeaturedCreators(
     const pinned = (p.pinned_card_ids ?? []).slice(0, 3);
     const cards: FeaturedCardImage[] = pinned
       .map((id: string) => pinnedById.get(id))
-      .filter((c): c is NonNullable<typeof c> =>
-        Boolean(c?.rendered_image_url),
-      )
+      .filter((c): c is NonNullable<typeof c> => Boolean(c && featuredImageOf(c)))
       .map((c) => ({
         slug: c.slug,
         title: c.title,
-        imageUrl: (c.rendered_thumb_url ?? c.rendered_image_url) as string,
+        imageUrl: featuredImageOf(c) as string,
         landscape: isLandscapeFrame(c.frame_style),
       }));
 
     for (const c of fallbackByOwner.get(p.id) ?? []) {
       if (cards.length >= 3) break;
       if (cards.some((x) => x.slug === c.slug)) continue;
+      const imageUrl = featuredImageOf(c);
+      if (!imageUrl) continue;
       cards.push({
         slug: c.slug,
         title: c.title,
-        imageUrl: (c.rendered_thumb_url ?? c.rendered_image_url) as string,
+        imageUrl,
         landscape: isLandscapeFrame(c.frame_style),
       });
     }
@@ -119,8 +135,9 @@ export async function listFeaturedCreators(
     out.push({
       username: p.username as string,
       displayName: p.display_name,
-      avatarUrl: p.avatar_url,
-      bannerUrl: p.banner_url,
+      // Only drawable profile pictures (migration 0127, lib/media/media-urls.ts).
+      avatarUrl: profileMediaSrc("avatar", p.avatar_url, p.id),
+      bannerUrl: profileMediaSrc("banner", p.banner_url, p.id),
       accentColor: p.accent_color,
       bio: p.bio,
       socials: SOCIAL_PLATFORMS.flatMap((platform) => {
@@ -172,7 +189,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
       (r) =>
         r.card &&
         r.card.visibility === "public" &&
-        Boolean(r.card.rendered_image_url),
+        Boolean(featuredImageOf(r.card)),
     ) as { slot: number; card: NonNullable<{
       slug: string;
       title: string;
@@ -199,7 +216,7 @@ export async function listFeaturedHomeCards(): Promise<FeaturedHomeCard[]> {
         slot: r.slot,
         slug: r.card.slug,
         title: r.card.title,
-        imageUrl: (r.card.rendered_thumb_url ?? r.card.rendered_image_url) as string,
+        imageUrl: featuredImageOf(r.card) as string,
         landscape: isLandscapeFrame(r.card.frame_style),
         owner: { username: owner.username, displayName: owner.display_name },
       };

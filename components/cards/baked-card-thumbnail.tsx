@@ -2,7 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
-import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
+import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 
 // ---------------------------------------------------------------------------
 // BakedCardThumbnail — the canonical way to render a *saved* card in any
@@ -20,6 +20,14 @@ import { toRenderCdnUrl } from "@/lib/cards/render-cdn";
 // path existed, or the bake transiently failed), we fall back to the live
 // React preview. The next time the card is saved, the PNG will be baked
 // and this fallback won't fire again.
+//
+// Only a bake in OUR card-renders bucket is drawn (isStoredRenderUrl,
+// lib/cards/render-cdn.ts). Since migration 0126 only the service role can
+// set these columns, but a row written before it — when an owner could PATCH
+// their card through PostgREST — might point anywhere: an outside host (a
+// viewer-IP tracking pixel, an unmoderated picture) or a raw upload in
+// card-art (no watermark). Such a URL is treated as no render at all (the
+// live preview), and a thumb that isn't ours is skipped for the PNG.
 //
 // Landscape frames (Battle) are 7:5. Every gallery grid is a uniform 5:7
 // tile, so a landscape card is letterboxed — centered in the portrait tile
@@ -78,8 +86,10 @@ export function BakedCardThumbnail({
   priority = false,
 }: BakedCardThumbnailProps) {
   const isLandscape = isLandscapeFrame(previewData.frameStyle);
+  const pngUrl = isStoredRenderUrl(renderedImageUrl) ? renderedImageUrl : null;
+  const thumbUrl = pngUrl && isStoredRenderUrl(renderedThumbUrl) ? renderedThumbUrl : null;
 
-  if (!renderedImageUrl) {
+  if (!pngUrl) {
     // Live-preview fallback. Portrait cards fill the cell; landscape (Battle)
     // cards are centered in a portrait tile so they don't break the grid.
     if (isLandscape) {
@@ -100,10 +110,10 @@ export function BakedCardThumbnail({
   const label = alt ?? (title?.trim() || "Card");
   // The #101015 backdrop sits directly behind the image (see the header): it
   // only ever shows through a rounded bake's transparent corner sliver.
-  const image = renderedThumbUrl ? (
+  const image = thumbUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={toRenderCdnUrl(renderedThumbUrl) ?? renderedThumbUrl}
+      src={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
       alt={label}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}
@@ -112,7 +122,7 @@ export function BakedCardThumbnail({
     />
   ) : (
     <Image
-      src={renderedImageUrl}
+      src={pngUrl}
       alt={label}
       fill
       sizes={sizes}

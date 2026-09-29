@@ -31,6 +31,8 @@ const state = vi.hoisted(() => ({
   scores: new Map<string, unknown>(),
   reviews: new Map<string, unknown>(),
   removed: [] as string[],
+  /** Removes and CDN purges, in order. */
+  seq: [] as string[],
 }));
 
 vi.mock("server-only", () => ({}));
@@ -46,9 +48,14 @@ vi.mock("@/lib/cards/frame-profile-overrides", () => ({
 vi.mock("@/lib/cards/frame-reviews", () => ({ getFrameReviews: async () => state.reviews }));
 vi.mock("@/lib/frames/score-combo", () => ({ scoreFrameCombo: async () => state.score }));
 vi.mock("@/lib/cards/bake-core", () => ({
-  removeRenderObject: async (_client: unknown, path: string) => {
-    state.removed.push(path);
+  removeRenderObjects: async (ownerId: string, cardIds: string[]) => {
+    for (const id of cardIds) state.removed.push(`${ownerId}/${id}.png`, `${ownerId}/${id}.thumb.webp`);
+    state.seq.push(`remove ${cardIds.join(",")}`);
+    return { error: null };
   },
+}));
+vi.mock("@/lib/cards/cache-purge", () => ({
+  purgeCardCdnCache: async (cardIds: string[]) => void state.seq.push(`purge ${cardIds.join(",")}`),
 }));
 vi.mock("@/lib/cards/frame-review-events", async () => {
   const actual = await vi.importActual<typeof import("@/lib/cards/frame-review-events")>(
@@ -305,5 +312,7 @@ describe("deleteFramePreviewCardAction", () => {
     expect(del && called(del.calls, "eq", "frame_preview")).toBe(true);
     expect(state.removed).toHaveLength(2);
     expect(state.removed[0]).toContain(CARD);
+    // …and any CDN copy of them (share image, /render-cdn bake), after the remove.
+    expect(state.seq.slice(-2)).toEqual([`remove ${CARD}`, `purge ${CARD}`]);
   });
 });

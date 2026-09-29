@@ -46,6 +46,7 @@ import {
   type DeckFormat,
 } from "@/types/deck";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 type Params = { slug: string };
 
@@ -127,6 +128,8 @@ export default async function DeckDetailPage({
   if (!deck) notFound();
 
   const isOwner = Boolean(user && user.id === deck.owner_id);
+  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
+  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
   const isPublic = deck.visibility === "public";
   const likedByViewer = user ? await viewerLikesDeck(deck.id) : false;
 
@@ -176,10 +179,10 @@ export default async function DeckDetailPage({
       <SurfaceCard className="overflow-hidden p-0">
         <div className="grid gap-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="relative aspect-video w-full overflow-hidden bg-elevated md:h-full md:min-h-full">
-            {deck.cover_url ? (
+            {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={deck.cover_url}
+                src={coverUrl}
                 alt={`${deck.title} cover`}
                 className="absolute inset-0 h-full w-full object-cover"
                 style={{
@@ -197,7 +200,7 @@ export default async function DeckDetailPage({
                 label="Change cover"
                 className="absolute bottom-3 right-3 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur hover:bg-background"
               >
-                <Pencil className="h-3.5 w-3.5" aria-hidden /> {deck.cover_url ? "Change cover" : "Add cover"}
+                <Pencil className="h-3.5 w-3.5" aria-hidden /> {coverUrl ? "Change cover" : "Add cover"}
               </DeckToolButton>
             ) : null}
           </div>
@@ -287,7 +290,7 @@ export default async function DeckDetailPage({
           format={deck.format}
           ownerUsername={deck.owner?.username ?? null}
           isOwner={isOwner}
-          hasCover={Boolean(deck.cover_url)}
+          hasCover={Boolean(coverUrl)}
         />
       </Suspense>
     </div>

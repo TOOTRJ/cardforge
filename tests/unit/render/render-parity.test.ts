@@ -398,26 +398,45 @@ describe("art guard", () => {
   });
 
   it("refuses a missing, refused or unfetchable art and passes a resolved data URL through", async () => {
+    // Our card-art bucket (the legacy project host is always ours), so the
+    // media guard (0127) lets each through to the fetch.
+    const art = (name: string) =>
+      `https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/${name}.png`;
+    const fetched: string[] = [];
     vi.doMock("@/lib/render/art-source", () => ({
       TRANSPARENT_PIXEL_DATA_URL: "data:image/gif;base64,TRANSPARENT",
-      resolveRenderableImage: async (url: string) =>
-        url === "https://ok.example/art.png"
+      resolveRenderableImage: async (url: string) => {
+        fetched.push(url);
+        return url === art("ok")
           ? "data:image/png;base64,REAL"
-          : url === "https://refused.example/art.png"
+          : url === art("refused")
             ? "data:image/gif;base64,TRANSPARENT"
-            : url === "https://down.example/art.png"
+            : url === art("down")
               ? url
-              : null,
+              : null;
+      },
     }));
     const { resolveBakeArt } = await import("@/lib/cards/bake-render");
     expect(await resolveBakeArt(null)).toEqual({ ok: true, artUrl: null });
-    expect(await resolveBakeArt("https://ok.example/art.png")).toEqual({
+    expect(await resolveBakeArt(art("ok"))).toEqual({
       ok: true,
       artUrl: "data:image/png;base64,REAL",
     });
-    for (const url of ["https://refused.example/art.png", "https://down.example/art.png", "https://gone.example/art.png"]) {
+    for (const url of [art("refused"), art("down"), art("gone")]) {
       expect((await resolveBakeArt(url)).ok, url).toBe(false);
     }
+    // Art the live preview won't draw (migration 0127: an outside host,
+    // Scryfall, another bucket) is refused before any fetch — never baked
+    // art-less, never fetched.
+    fetched.length = 0;
+    for (const url of [
+      "https://ok.example/art.png",
+      "https://cards.scryfall.io/art_crop/front/1/2/x.jpg",
+      "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/profile-media/11111111-1111-4111-8111-111111111111/a.png",
+    ]) {
+      expect(await resolveBakeArt(url), url).toMatchObject({ ok: false });
+    }
+    expect(fetched).toEqual([]);
     vi.doUnmock("@/lib/render/art-source");
   });
 });

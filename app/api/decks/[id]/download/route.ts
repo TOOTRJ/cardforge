@@ -13,6 +13,7 @@ import { DECK_BOARD_LABELS, DECK_FORMAT_LABELS, isDeckFormat } from "@/types/dec
 import { getSiteBaseUrl } from "@/lib/site-url";
 import type { DeckExportManifest } from "@/lib/decks/export-client";
 import { isUuid } from "@/lib/ids";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // /api/decks/[id]/download — the pieces of a Pro whole-deck export.
@@ -82,12 +83,15 @@ export async function GET(
   }
 
   const part = request.nextUrl.searchParams.get("part") ?? "manifest";
-  const hasCover = Boolean(deck.cover_url && isAllowedServerImageFetchUrl(deck.cover_url));
+  // Only a cover we store (migration 0127, lib/media/media-urls.ts), and
+  // only from a host the server may fetch.
+  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
+  const hasCover = Boolean(coverUrl && isAllowedServerImageFetchUrl(coverUrl));
 
   if (part === "cover") {
     if (!hasCover) return NextResponse.json({ error: "No cover" }, { status: 404 });
     try {
-      const response = await fetch(deck.cover_url as string, { cache: "no-store" });
+      const response = await fetch(coverUrl as string, { cache: "no-store" });
       if (!response.ok) return NextResponse.json({ error: "Cover unavailable" }, { status: 502 });
       const type = response.headers.get("content-type") ?? "image/png";
       return new NextResponse(Buffer.from(await response.arrayBuffer()), {
