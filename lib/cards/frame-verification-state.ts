@@ -15,8 +15,14 @@ import {
 // LATER bump that touches their template still stales them (TODO 4.49); the
 // next tick stamps them. A verification-neutral bump
 // (VERIFICATION_NEUTRAL_VERSIONS: v31's corner cut moves no slot; v32's M15
-// family sizes are signed off on the round-8 print comparison instead)
-// never stales a tick.
+// family sizes and v33's rules layout are signed off on the round-8 / 9 print
+// comparisons instead) never stales a tick. A bump whose slots move on fewer
+// templates than its bakes change on is judged by its slot templates
+// (layout-version.ts VERIFICATION_TEMPLATE_SCOPES): v34 stales the m15token /
+// m15tokenartifact ticks (4.49 moved their P/T, type line and symbol) and no
+// other — the token wording that reaches every template moves no slot. A
+// stale tick stays VERIFIED (the creator still offers the combo); the admin
+// pages show "needs re-verification" until it is ticked again.
 //
 // Pure: the page and the checklist derive their badges from it, tests pin
 // the rules.

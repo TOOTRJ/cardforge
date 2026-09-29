@@ -331,6 +331,52 @@ What a frame gives it:
   measured on. A value printed on the art (no plate) keeps its rect clear, a
   drawn badge (the battle's defense) its disc.
 
+## Tokens: the 2014–19 frame and the type words (TODO 4.49, 3b.15, layout v34)
+
+`m15token` / `m15tokenartifact` draw the 2014–19 arch token (M15 → MH1,
+2014-07-18 → 2019-05-30). Their references are those prints only
+(`frame-references.json`; `scripts/find-frame-references.mjs` stops at M20,
+`date<2019-07-12`); the M20+ full-art prints wait for 4.48 / 4.50. At v34
+(`M15TOKEN` in `lib/cards/template-layout.ts`):
+
+- the P/T is M15's slot as a whole — CC's plate box, the value box, 0.05 W
+  dark ink — on M15's own plates: `m15/pt/{color}` on `m15token`,
+  `m15artifact/pt/{color}` on `m15tokenartifact` (CC's silver plate for
+  `c`, the colour's own otherwise, as TC18 #7 prints). Both plates are in
+  `PLATE_INK` already, so the rules layout keeps its lines off them;
+- the type line runs left-aligned from 8.54 %W to the set symbol, fitted
+  (`fit: "measured"`), its baseline on the prints' 1800 HD px
+  (`TOKEN_TYPE_PRINT_DY`);
+- the set symbol has its own `symbolRect` (right edge 92.13 %W, centre
+  84.39 %H, M15's 86 px box with the ink fit). Its colour stays the card's
+  rarity (new tokens save as common);
+- still to come: the bordered text box `m15tokentext` / `m15tokenartifacttext`
+  (4.49 (b) — the rules scrim is today's), the gold small-caps name and the
+  art slot (4.53).
+
+A token's card types are WORDS in `supertype` (`card_type` stays `token`):
+"Creature", "Artifact", "Enchantment", plus "Legendary", toggled by the token
+kind's picker in printed order (`withSupertypeWord` /
+`withoutSupertypeWord`); none on is a Copy's bare "Token". `buildTypeLine`
+prints "Token" first ("Token Artifact — Treasure", "Token Basic — Wastes") on
+every template. `showsPowerToughness(cardType, subtypes, supertype)` (the
+creator's inputs, the AI lint) is true for a token only with Creature or a
+Vehicle / Spacecraft subtype; the renderers gate on `printsPowerToughness`,
+which also keeps a stored word-less token's P/T (migration 0124 gave those
+rows "Creature"). The frame follows the Artifact word
+(`typeWordFrameFor`): there is no separate "Artifact Token" chip, and stored
+cards keep their template.
+
+The bump is card-scoped (`VERSION_SCOPES[34]`): every card on the two token
+frames, plus a token whose printed line changes on any other template
+(`tokenTypeLineChanged` — alphatoken, the showcases, flip's Roles; a
+template list would AND those away). It is NOT verification-neutral: the
+m15token / m15tokenartifact ticks go stale (`VERIFICATION_TEMPLATE_SCOPES`;
+a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the
+14 legacy ones do too) and are re-verified against the new pins in the
+walk-through. A stale tick stays verified, so the creator keeps offering
+the frames; the wording alone stales no tick anywhere.
+
 ## Which printing is which frame (TODO 1.4)
 
 A Scryfall import knows which PipGlyph frame reproduces THIS printing from

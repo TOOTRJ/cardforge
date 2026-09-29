@@ -63,7 +63,8 @@ enchantment tokens and emblems; Scryfall pulls 2026-09-28) adds 1.23, 3b.15,
 4.48–4.54 and 6.23 (all open; 4.49 is a P0 live bug; order at the end of this
 section), with the owner's nine decisions of 2026-09-29 recorded in the
 items. #396 (merged 2026-09-29) resolves every 2015-frame token `exact` on
-the arch frame; 1.23 says what changes there.
+the arch frame; 1.23 says what changes there. (2026-09-29: 4.49 (a) + (d) and
+3b.15 built as layout v34 on `feat/token-v34`; the rest is open.)
 
 Owner decisions this plan is built on (2026-09-24): first target the ~35
 high-value frames, then expand by the import request log · Card Conjurer (CC)
@@ -1031,6 +1032,16 @@ Owner decisions 2026-09-28 (the nine PR questions, PR #395):
 
       Acceptance: unit tests for the words each toggle writes and removes, and for the printed line of 1.23's token fixtures (TFDN #26 prints "Token"). A Treasure shows no P/T input, and the AI lint and autofix leave it without one. E2E: an artifact token and an enchantment creature token.
 
+      **Status 2026-09-29 (`feat/token-v34`): built, except the Emblem choice; ships in layout v34, one bump with 4.49 (so the 14 token ticks reset, owner decision 7).**
+        - Picker (`components/creator/panels/card-setup-panel.tsx`, model in `lib/creator/card-kinds.ts`): Creature · Artifact · Enchantment + Legendary, each writing only its own word (`withSupertypeWord` / `withoutSupertypeWord`, printed order); none on = "Token". A new token gets Creature and common rarity, the chips hidden; leaving the kind takes its type words.
+        - Type line: `buildTypeLine` prints "Token" first everywhere (both renderers, Card details + JSON-LD, OG, My Cards, locked summary, AI fill pin, ideas chips); 1.23's 23 fixture lines round-trip.
+        - Stats: `showsPowerToughness(cardType, subtypes, supertype)` for inputs / steps / the AI; `printsPowerToughness` for both renderers, stat-fit and Card details (a stored word-less token keeps its P/T).
+        - Frame follows the Artifact word (`typeWordFrameFor`; real edits only, never an unverified combo — a toast instead); the "Artifact Token" chip is gone from the setup panel, the AI fill dialog, random frames and the kind-change fallback. Enchantment stays on `m15token` until 4.51.
+        - AI: lint + autofix read the word (a Treasure keeps no P/T; a given one is an error and autofix drops it; a word-less P/T token gains Creature; Vehicles keep their P/T); the design prompt teaches the words.
+        - Migration `0124_token_creature_word.sql`: a token with a P/T and no Creature/Artifact/Enchantment word gains "Creature" (8 public rows; idempotent; no stamp change, no grants). Seeds: a Treasure, a Glimmer and a Copy (dev_pro). FAQ in `designing-custom-mtg-tokens.mdx`. E2E `tests/e2e/token-types.spec.ts`.
+        - The v34 scope reaches a token's wording on EVERY template (not the template list above: a token can sit on alphatoken, a showcase or flip, and a list would AND them away). Public production: 32 tokens, all on `m15token` (30 change their words, all 32 their frame).
+        - Left: the Emblem choice (a code seam in `card-kinds.ts`; 6.23 + 4.52); the Nyx toggle (4.51); the artifact templates' text versions (4.50 / 4.49 (b)). AI jobs that save cards directly (random card, deck generation) still keep the designer's rarity for a token.
+
 ### Phase 4 — The frame factory (6–10 weeks, incremental)
 
 4.1–4.3 are the machine, 4.4 the first product, 4.5–4.9 the capabilities the
@@ -1918,13 +1929,16 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - Shares one bump with 3b.15's wording change or 4.53 when they are ready together (the shared bump resets the ticks).
       - **Depends on:** 4.18 (shipped), 4.3 (the Regular M15 pack run and the re-cut), 3b.15 for the words (not blocking).
 
-      **Status 2026-09-29 (`wf/token-frame`): (a), (d) and the registry re-pin are built; (b) is open.**
-        - (a) `M15TOKEN.pt` is M15's slot: CC's plate box, the 4.18 value box, its ink span, 0.05 W, dark ink. The plates are M15's own: `m15/pt/{color}` on `m15token`, `m15artifact/pt/{color}` on `m15tokenartifact` (CC m15PTa for `c`, the colour's plate otherwise, as TC18 #7 prints). The plate draws only when `showsPowerToughness` and a value.
+      **Status 2026-09-29 (`feat/token-v34`): (a), (d) and the registry re-pin are built and ship in layout v34, one bump with 3b.15; (b) is open.**
+        - (a) `M15TOKEN.pt` is M15's slot: CC's plate box, the 4.18 value box, its ink span, 0.05 W, dark ink. The plates are M15's own: `m15/pt/{color}` on `m15token`, `m15artifact/pt/{color}` on `m15tokenartifact` (CC m15PTa for `c`, the colour's plate otherwise, as TC18 #7 prints). The plate draws only when the face prints its P/T (`printsPowerToughness`, 3b.15).
         - (d) The type band runs from 8.54 %W to 92.13 %W, start-aligned, with the measured fit, and its baseline moves 1796 → 1800 px (`TOKEN_TYPE_PRINT_DY`; 15 prints: 1797–1803, mean 1800.4). The set symbol has its own `symbolRect` (80.13 / 82.34 / 12 × 4.1: right edge 92.13, centre 84.39). The symbol colour stays the card's rarity (3b.15's rarity decision).
         - Measured against the prints (HD px, ours − print). The P/T digits' centre is within ±2 x and −1.4 y on average (15 prints). The plate sits 8–9 px above the prints (TDOM #3 −9, TKLD #2 −8, TM19 #6 −8) and within 1.5 px horizontally. The type line starts +4 px (129 vs 124–126). The symbol's right edge is within ±1 px (DOM, KLD); other sets differ by glyph. The symbol's centre is 3–11 px above the prints (CC's 84.39 %H vs the prints' ~84.76).
         - Registry: re-pinned as listed. `m15token/m` and `m15tokenartifact` w/b/r/g/m are documented nulls, and the allowlist row `m15token/c#0` is retired.
         - Public rows (anonymous read, 2026-09-29): 32 on `m15token`, 22 of them typed "Basic", and 0 on `m15tokenartifact`. 8 print a P/T, not 5. Private rows still need the owner's count.
-        - Still owed at the bump: all 14 production ticks are legacy (`verified_layout_version` null, 2026-07-08), and a legacy tick never went stale. `LEGACY_TICK_LAYOUT_VERSION` (33, `lib/cards/frame-verification-state.ts`) judges them at v33, so the v34 bump stales them.
+        - Ticks: all 14 production ticks are legacy (`verified_layout_version` null, 2026-07-08), and a legacy tick never went stale. `LEGACY_TICK_LAYOUT_VERSION` (33, `lib/cards/frame-verification-state.ts`) judges them at v33, and v34 lists the two token frames in `VERIFICATION_TEMPLATE_SCOPES`, so all 14 show "needs re-verification" after the deploy (still verified: the creator keeps offering them) and no other template's tick moves. **Owner:** re-verify the 14 in the walk-through against the new pins.
+        - v34 (the shared bump, `lib/cards/layout-version.ts`): `VERSION_SCOPES[34]` = every card on `m15token` / `m15tokenartifact` OR a token whose printed line changes on any other template (3b.15), no template list; "sweep"; not verification-neutral. Real HD bakes, v33 (main `02fe649`) vs v34: all 731 cached public cards → exactly the 32 on `m15token` change, the same 32 the scope selects; the 32 fresh production rows (26 stamped v33 bake pixel-identical to their stored PNG) change only below y 1725 (type band, symbol, plate); no title, art, rules or footer pixel moves; all 8 P/T values land inside the plate's ink; no type line is cut ("Token Creature — bokoblin et squelette" fits at 63.4 px). The template matrix (40 templates × 27 rows, 7 of them tokens): 244 of 1,080 bakes change, exactly the 244 the scope selects — all 54 on the two token frames and, on the other 38 templates (alphatoken included), only the token rows whose words change; no non-token row, no word-less token without a P/T.
+        - **Before the sweep (owner):** the private-row count on `m15token` / `m15tokenartifact` / `alphatoken` and of private tokens on other templates (the anonymous read sees 0 outside `m15token`); the frame-swap before/after sheet of the 32 public cards is in the PR.
+        - Open: (b) the bordered text box (`m15tokentext` / `m15tokenartifacttext`, the re-cut master, `rules.alignSingleLine`) — the 15 public token lands still clip their rules at the 42 px floor in today's 12 %-high box, unchanged by v34; 4.53 (gold small-caps name, art slot).
 
       Acceptance: TDOM #3, TDOM #2 and TM19 #1 beside our bakes; 7.6 passes. 3.11 parity cases: P/T on the plate; one centred line and five lines on `m15tokentext`. No stored card loses its rules text.
 - [ ] **4.50 [P1] Artifact tokens: the artifact look in both token frames** (token research 2026-09-29; owner request; owner decisions 2026-09-29) — Every printed artifact token wears an artifact look, in both designs. Today it is a frame variation (`m15tokenartifact`) with no link to the type line.
@@ -2324,6 +2338,10 @@ templates, no sweep; new tokens default to the full-art family once they are
 verified) and 4.53 with or after them; 4.51 last (a composite the owner signs
 off by eye); 4.54 (retire `alphatoken`) any time after its row count. 1.23's
 design rules build on 1.4's registry (#396, merged 2026-09-29).
+(2026-09-29: 4.49 (a) + (d) and 3b.15 (all but the Emblem choice) built
+together on `feat/token-v34` — ONE layout bump, v34, card-scoped, "sweep",
+resetting the 14 token ticks; migration 0124. Next: 1.23's search half, then
+4.52 + 6.23.)
 
 ## Billing audit follow-ups (2026-09-24)
 
