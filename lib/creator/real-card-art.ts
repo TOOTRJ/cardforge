@@ -38,7 +38,10 @@ const ARTIST_CREDIT_MAX = 120;
 export type RealCardArt = {
   /** The crop in the user's card-art bucket (the route's `publicUrl`). */
   publicUrl: string;
-  /** The printing's artist, or null when Scryfall names none. */
+  /** The route's `artist`: the requested face's own credit since TODO 1.8
+   *  (`scryfallFaceArtist` — Fire // Ice's front art is David Martin, not
+   *  the card-level "David Martin & Franz Vohwinkel"), or null when Scryfall
+   *  names none. */
   artist: string | null;
 };
 
