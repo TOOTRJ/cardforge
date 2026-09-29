@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { AppEndpointError } from "@/scripts/lib/app-endpoint.mjs";
 import {
   RENDER_POINTER_COLUMNS,
   applyPrivateRenders,
@@ -15,11 +16,15 @@ import {
 } from "@/scripts/lib/private-renders.mjs";
 import { loadState, readManifest, reconcilePending } from "@/scripts/lib/storage-orphans.mjs";
 import { emptyDb, fakeStorage, fakeSupabase, type Obj, type Row, type StoredObject } from "./helpers/fake-supabase";
+import { fakeApp } from "./helpers/fake-app";
 
 // ---------------------------------------------------------------------------
 // TODO 3.14b, owner decision 2026-09-29 (c): `sweep-storage-orphans.mjs
 // --private-renders` removes the card-renders PNG + thumb of cards whose row
-// says PRIVATE, and clears their render pointer the way going private does.
+// says PRIVATE, clears their render pointer the way going private does, and
+// (owner answer 2026-09-29) purges the CDN copies of their /render-cdn URLs
+// through the app — only a function on Vercel can — after storage confirmed
+// each card's objects gone; a purge that fails is kept for the next run.
 // Only on positive evidence (review 2026-09-29): a card missing from the
 // answer — deleted, or left out of a short read — is never touched here (a
 // deleted card's render is the orphan sweep's). The objects are looked up,
@@ -159,6 +164,16 @@ describe("applyPrivateRenders", () => {
     const events: string[] = [];
     const db = cardsDb(cards, events, hooks);
     const storage = trackedStorage(objects, events, storageOpts);
+    /** The app endpoint's purge (scripts/lib/app-endpoint.mjs), in the same event log. */
+    let purgeFails = false;
+    const app = {
+      url: "http://127.0.0.1:1/api/admin/storage-sweep",
+      async purgeCards(ids: string[]) {
+        events.push(`purge ${ids.join(",")}`);
+        if (purgeFails) throw new AppEndpointError("HTTP 503 — purge refused");
+        return { purged: ids.length, vercel: true };
+      },
+    };
     const statePath = path.join(tmp, "state.json");
     const manifestPath = path.join(tmp, "manifest.jsonl");
     const state = loadState(statePath);
@@ -166,8 +181,8 @@ describe("applyPrivateRenders", () => {
     const plan = await planPrivateRenders(cardsDb(cards.map((c) => ({ ...c })), []), objects);
     const doomed = plan.filter((c: { state: string }) => c.state === "private");
     const run = (extra: Record<string, unknown> = {}) =>
-      applyPrivateRenders({ db, storage, cards: doomed, state, statePath, manifestPath, target: "dev.example", run: "r1", ...extra });
-    return { db, storage, events, statePath, manifestPath, state, plan, doomed, run };
+      applyPrivateRenders({ db, storage, cards: doomed, app: app as never, state, statePath, manifestPath, target: "dev.example", run: "r1", ...extra });
+    return { db, storage, events, statePath, manifestPath, state, plan, doomed, run, failPurges: (v: boolean) => (purgeFails = v) };
   }
   const withPointer = (id: string, visibility: string): Card => ({
     id,
@@ -195,11 +210,13 @@ describe("applyPrivateRenders", () => {
     expect(s.db.rows.get(PUBLIC)).toEqual(pub);
     const manifest = readManifest(s.manifestPath);
     expect(manifest[0]).toMatchObject({ table: "cards", cleared: ["rendered_image_url", "rendered_thumb_url", "rendered_at"], ids: [PRIVATE] });
-    expect(manifest.slice(1).map((e: { path: string; reason: string; card: string }) => [e.path, e.reason, e.card])).toEqual([
+    expect(manifest.slice(1, 3).map((e: { path: string; reason: string; card: string }) => [e.path, e.reason, e.card])).toEqual([
       [`${U1}/${PRIVATE}.png`, "render of a private card", PRIVATE],
       [`${U1}/${PRIVATE}.thumb.webp`, "render of a private card", PRIVATE],
     ]);
-    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 2, bytes: 1100 });
+    // …then the CDN purge of that card, through the app.
+    expect(manifest.slice(3)).toMatchObject([{ purged: [PRIVATE] }]);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 2, bytes: 1100, purgePending: [] });
   });
 
   it("a short visibility answer never deletes: a PUBLIC card left out of the read is not a deleted card here", async () => {
@@ -260,7 +277,54 @@ describe("applyPrivateRenders", () => {
       "remove 2",
       `info ${PRIVATE}.png`,
       `info ${PRIVATE}.thumb.webp`,
+      // The CDN purge comes last — after storage confirmed the objects gone,
+      // so a request in between can't refill the CDN from them — and only
+      // for the card whose renders went.
+      `purge ${PRIVATE}`,
     ]);
+  });
+
+  it("purges the CDN copies of each batch's cards whose renders are gone — noted in the state file before the remove, taken off once purged", async () => {
+    const s = await setup(
+      [PRIVATE, PRIVATE2].map((id) => withPointer(id, "private")),
+      [...both(U1, PRIVATE), ...both(U1, PRIVATE2)],
+    );
+    let pendingAtRemove: string[] | undefined;
+    const remove = s.storage.remove;
+    s.storage.remove = async (bucket: string, paths: string[]) => {
+      pendingAtRemove = loadState(s.statePath).purgePending;
+      return remove(bucket, paths);
+    };
+    const result = await s.run({ batchSize: 1 });
+    expect(result).toMatchObject({ deleted: 4, purged: 2, purgeFailed: false });
+    expect(s.events.filter((e) => e.startsWith("purge"))).toEqual([`purge ${PRIVATE}`, `purge ${PRIVATE2}`]);
+    expect(pendingAtRemove).toEqual([PRIVATE2]);
+    expect(loadState(s.statePath).purgePending).toEqual([]);
+    expect(readManifest(s.manifestPath).filter((e: { purged?: string[] }) => e.purged)).toMatchObject([
+      { purged: [PRIVATE], cdn: "purged (tag card-<id>)" },
+      { purged: [PRIVATE2], cdn: "purged (tag card-<id>)" },
+    ]);
+  });
+
+  it("a failed purge keeps the renders going but leaves the cards pending (and stops asking the app this run)", async () => {
+    const s = await setup(
+      [PRIVATE, PRIVATE2].map((id) => withPointer(id, "private")),
+      [...both(U1, PRIVATE), ...both(U1, PRIVATE2)],
+    );
+    s.failPurges(true);
+    const result = await s.run({ batchSize: 1 });
+    expect(result).toMatchObject({ deleted: 4, purged: 0, purgeFailed: true });
+    expect(s.events.filter((e) => e.startsWith("purge"))).toEqual([`purge ${PRIVATE}`]);
+    expect(loadState(s.statePath).purgePending).toEqual([PRIVATE, PRIVATE2]);
+    expect(s.storage.store.size).toBe(0);
+  });
+
+  it("a card whose objects were already gone (nothing removed) is not purged", async () => {
+    const s = await setup([withPointer(PRIVATE, "private")], both(U1, PRIVATE));
+    s.storage.store.clear();
+    const result = await s.run();
+    expect(result).toMatchObject({ deleted: 0, purged: 0 });
+    expect(s.events.filter((e) => e.startsWith("purge"))).toEqual([]);
   });
 
   it("a card published between the pointer clear and the re-read keeps its render (the re-read decides)", async () => {
@@ -347,6 +411,11 @@ describe("applyPrivateRenders", () => {
 describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", () => {
   let tmp = "";
   let server: Server;
+  let supabaseHost = "";
+  let appHost = () => supabaseHost;
+  let purgeStatus = 200;
+  const app = fakeApp({ secret: "cron-test-secret", supabaseHost: () => appHost(), purgeStatus: () => purgeStatus });
+  let appUrl = "";
   const store = new Map<string, StoredObject>();
   const db = emptyDb();
   const rest: string[] = [];
@@ -381,7 +450,10 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     path.join(tmp, "state.json"),
     "--manifest",
     path.join(tmp, "manifest.jsonl"),
+    "--app-url",
+    appUrl,
   ];
+  const appOps = () => app.calls.map((c) => c.op);
 
   beforeAll(async () => {
     tmp = mkdtempSync(path.join(os.tmpdir(), "private-renders-cli-"));
@@ -415,13 +487,24 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
       },
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) => app.listen(0, "127.0.0.1", resolve));
     const { port } = server.address() as AddressInfo;
-    writeFileSync(path.join(tmp, "env"), `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:${port}\nSUPABASE_SECRET_KEY=sb_secret_fake\n`);
+    supabaseHost = `127.0.0.1:${port}`;
+    appUrl = `http://127.0.0.1:${(app.address() as AddressInfo).port}`;
+    writeFileSync(
+      path.join(tmp, "env"),
+      `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:${port}\nSUPABASE_SECRET_KEY=sb_secret_fake\nCRON_SECRET=cron-test-secret\n`,
+    );
+    writeFileSync(
+      path.join(tmp, "env-wrong-secret"),
+      `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:${port}\nSUPABASE_SECRET_KEY=sb_secret_fake\nCRON_SECRET=not-the-secret\n`,
+    );
     writeFileSync(path.join(tmp, "prod-env"), "NEXT_PUBLIC_SUPABASE_URL=https://zkwkisxoqdhdchqyjwdc.supabase.co\nSUPABASE_SECRET_KEY=x\n");
   });
 
   afterAll(async () => {
     await new Promise((resolve) => server?.close(resolve));
+    await new Promise((resolve) => app.close(resolve));
     if (tmp) rmSync(tmp, { recursive: true, force: true });
   });
 
@@ -437,12 +520,20 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
       [["--min-age-days", "30"], /--min-age-days doesn't apply to --private-renders/],
       [["--per-minute", "10"], /--per-minute doesn't apply to --private-renders/],
       [["--rescan-review"], /separate runs/],
+      [["--app-url", "http://app.example.test"], /--app-url: https only \(http is allowed for localhost\)/],
+      [["--app-url", "https://app.example.test/api"], /--app-url: the site's origin only/],
     ] as const) {
       const r = await run([...common(), ...flags]);
       expect(r.code, flags.join(" ")).toBe(1);
       expect(r.out).toMatch(message);
     }
+    // Production's app is fixed; the orphan sweep never acts through one.
+    const prodApp = await run(["--private-renders", "--target", "prod", "--app-url", appUrl]);
+    expect(prodApp.out).toMatch(/--app-url is for the dev target; production's app is https:\/\/www\.pipglyph\.com/);
+    const orphans = await run(["--env-file", path.join(tmp, "env"), "--app-url", appUrl]);
+    expect(orphans.out).toMatch(/--app-url doesn't apply: only --rescan-review and --private-renders act through the app/);
     expect(rest).toEqual([]);
+    expect(app.calls).toEqual([]);
   });
 
   it("dry run: card ids and counts only — no titles, no owners — and nothing changes", async () => {
@@ -461,9 +552,35 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     expect(out).not.toContain(SECRET_TITLE);
     expect(out).not.toContain(U1);
     expect(out).not.toContain(U2);
-    expect(out).toMatch(/Dry run: nothing deleted, no row changed/);
+    expect(out).toMatch(/Dry run: nothing deleted, no row changed, nothing purged/);
     expect([...store.keys()].sort()).toEqual(before);
     expect(rest.filter((r) => r.startsWith("PATCH"))).toEqual([]);
+    expect(app.calls).toEqual([]); // a dry run never needs the app
+  });
+
+  it("--apply asks the app which database it talks to BEFORE yes: another database, a refused secret or no --app-url stop the run", async () => {
+    const before = [...store.keys()].sort();
+    appHost = () => "znipzaxgpaiandwiqabn.supabase.co";
+    const other = await run([...common(), "--apply"], "yes\n");
+    appHost = () => supabaseHost;
+    expect(other.code).toBe(1);
+    expect(other.out).toMatch(/talks to database znipzaxgpaiandwiqabn\.supabase\.co, not 127\.0\.0\.1:\d+ — nothing is done through it/);
+    expect(other.out).toMatch(/nothing deleted, nothing purged/);
+    expect(other.out).not.toMatch(/Type "yes"/);
+
+    const refused = await run([...common().map((a) => (a.endsWith("/env") ? path.join(tmp, "env-wrong-secret") : a)), "--apply"], "yes\n");
+    expect(refused.code).toBe(1);
+    expect(refused.out).toMatch(/refused the CRON_SECRET \(HTTP 401\)/);
+    expect(refused.out).not.toContain("not-the-secret");
+
+    const noUrl = await run([...common().slice(0, -2), "--apply"], "yes\n");
+    expect(noUrl.code).toBe(1);
+    expect(noUrl.out).toMatch(/pass --app-url/);
+
+    expect([...store.keys()].sort()).toEqual(before);
+    expect(rest.filter((r) => r.startsWith("PATCH"))).toEqual([]);
+    expect(appOps()).toEqual(["whoami", "whoami"]);
+    app.calls.length = 0;
   });
 
   it("--apply without typing yes changes nothing", async () => {
@@ -471,8 +588,11 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     const { code, out } = await run([...common(), "--apply"], "no\n");
     expect(code).toBe(1);
     expect(out).toMatch(/Aborted — nothing deleted/);
+    expect(out).toMatch(/purge their CDN copies through http:\/\/127\.0\.0\.1:\d+\/api\/admin\/storage-sweep\?/);
     expect(store.size).toBe(before);
     expect(rest.filter((r) => r.startsWith("PATCH"))).toEqual([]);
+    expect(appOps()).toEqual(["whoami"]);
+    app.calls.length = 0;
   });
 
   it("a visibility answer cut short (server max-rows below the chunk) stops the run before anything is planned or deleted", async () => {
@@ -501,7 +621,7 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     const { code, out } = await run([...common(), "--apply"], "yes\n");
     onPatch = undefined;
     expect(code).toBe(0);
-    expect(out).toMatch(/Deleted 2 render object\(s\).*cleared 1 private card pointer\(s\); kept 2 on re-check/);
+    expect(out).toMatch(/Deleted 2 render object\(s\).*cleared 1 private card pointer\(s\); purged the CDN copies of 1 card\(s\); kept 2 on re-check/);
     expect(out).toMatch(new RegExp(`${FLIPS}\\.png: its card is public now — never touched — kept`));
     for (const gone of [`card-renders/${U1}/${PRIVATE}.png`, `card-renders/${U1}/${PRIVATE}.thumb.webp`]) {
       expect(store.has(gone), gone).toBe(false);
@@ -534,9 +654,47 @@ describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", 
     expect(manifest.filter((e: { path?: string }) => e.path).map((e: { path: string }) => e.path).sort()).toEqual(
       [`${U1}/${PRIVATE}.png`, `${U1}/${PRIVATE}.thumb.webp`].sort(),
     );
-    expect(loadState(path.join(tmp, "state.json"))).toMatchObject({ pending: null, deleted: 2 });
+    expect(loadState(path.join(tmp, "state.json"))).toMatchObject({ pending: null, deleted: 2, purgePending: [] });
+    // The CDN copies of the one card whose renders went, purged through the
+    // app with the env file's secret — never FLIPS, PUBLIC or DELETED.
+    expect(app.calls.map((c) => [c.op, c.body.cardIds ?? null])).toEqual([
+      ["whoami", null],
+      ["purge-cards", [PRIVATE]],
+    ]);
+    expect(app.calls.every((c) => c.auth === "Bearer cron-test-secret")).toBe(true);
+    expect(out).toMatch(/purged the caches of 1 card\(s\)/);
+    expect(out).not.toContain("cron-test-secret");
+    expect(manifest.filter((e: { purged?: string[] }) => e.purged)).toMatchObject([{ purged: [PRIVATE] }]);
+    app.calls.length = 0;
 
     const again = await run(common());
     expect(again.out).toMatch(/Renders to remove: 0 object\(s\)/);
+  });
+
+  it("a purge the app refuses: the renders still go, the run exits 1, and the next --apply purges them first", async () => {
+    db.cards.rows.push({ id: PRIVATE2, owner_id: U1, title: "Another Secret", visibility: "private", ...pointer(U1, PRIVATE2) });
+    put(`card-renders/${U1}/${PRIVATE2}.png`);
+    put(`card-renders/${U1}/${PRIVATE2}.thumb.webp`);
+    purgeStatus = 503;
+    const failed = await run([...common(), "--apply"], "yes\n");
+    purgeStatus = 200;
+    expect(failed.code).toBe(1);
+    expect(failed.out).toMatch(/CDN purge of 1 card\(s\) failed \(.*HTTP 503 — purge refused\)/);
+    expect(failed.out).toMatch(/1 card\(s\) still need their CDN copies purged/);
+    expect(store.has(`card-renders/${U1}/${PRIVATE2}.png`)).toBe(false);
+    expect(loadState(path.join(tmp, "state.json")).purgePending).toEqual([PRIVATE2]);
+
+    // A dry run says so and purges nothing…
+    app.calls.length = 0;
+    expect((await run(common())).out).toMatch(/1 card\(s\) from an earlier run still need their CDN copies purged/);
+    expect(app.calls).toEqual([]);
+    // …the next --apply purges them before anything else (nothing left to remove: no "yes" needed).
+    const retry = await run([...common(), "--apply"]);
+    expect(retry.code).toBe(0);
+    expect(app.calls.map((c) => [c.op, c.body.cardIds ?? null])).toEqual([
+      ["whoami", null],
+      ["purge-cards", [PRIVATE2]],
+    ]);
+    expect(loadState(path.join(tmp, "state.json")).purgePending).toEqual([]);
   });
 });

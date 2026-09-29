@@ -18,14 +18,29 @@
 //   * the URL carries `?v=<eTag>`, as the custom-pip scan's does, so a CDN
 //     copy of older bytes can't answer for the current ones.
 //
-// The SAME consequence: a flagged upload's object is removed from storage and
-// that is all (lib/cards/upload-art-server.ts, upload-watermark-server.ts,
-// lib/profile/upload-server.ts, lib/media/upload-cover-server.ts, the pip's
-// staged file in lib/pips/actions.ts) — no row is changed, nobody is
-// notified. So --apply removes each flagged object and nothing else. Unlike an
-// upload, an old file may be in use: the run lists every row that names a
-// flagged file (table, column, row id) so the owner can decide about those
-// rows — it does not change them.
+// The consequence (owner answer 2026-09-29): a flagged upload's object is
+// removed from storage, as the upload path does (lib/cards/upload-art-
+// server.ts, upload-watermark-server.ts, lib/profile/upload-server.ts,
+// lib/media/upload-cover-server.ts, the pip's staged file in
+// lib/pips/actions.ts). Unlike an upload, an old file may be IN USE, so
+// --apply first acts on every row the app draws it from — through the APP
+// (POST /api/admin/storage-sweep, scripts/lib/app-endpoint.mjs), with the
+// app's own code paths (lib/moderation/flagged-file.ts):
+//   * a card (art, second-face art, set icon, watermark icon, its bake) →
+//     hidden: the moderation hide (private, render removed, reports actioned,
+//     pages and CDN copies purged);
+//   * an avatar / banner → a built-in of that kind (the settings "Remove"
+//     pick);
+//   * a deck cover → cleared;
+//   * a custom pip → removed like the owner's "Remove" (row, object, re-bake
+//     of the cards that draw it);
+// and only when none of those failed is the file removed (a failure keeps
+// it: a re-run retries — the app re-checks each row, and a row that no
+// longer draws the file is skipped). A row that names the file anywhere else
+// (a message, a notification, a job payload, a challenge's hero image, a
+// deck entry) is listed, not changed. Every action and its result goes into
+// the manifest. Nobody is notified (the moderation hide doesn't notify
+// either).
 //
 // Nothing is copied to disk (the script refuses --backup-dir here): a flagged
 // file may be exactly what must not be kept. The report names a flagged file
@@ -34,6 +49,7 @@
 // it while the eTag is the same and scans again what errored or changed.
 // ---------------------------------------------------------------------------
 import { imageModerationRequest, scanVerdict } from "../../lib/moderation/image-scan-core.ts";
+import { AppEndpointError } from "./app-endpoint.mjs";
 import {
   KeyIndex,
   appendManifest,
@@ -67,6 +83,85 @@ const SETTLED = new Set(["clean", "flagged", "unscannable"]);
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const stateKey = (obj) => `${obj.bucket}/${obj.path}`;
+
+/**
+ * What --apply does, through the app, to a row that names a flagged file —
+ * by table and the columns the app draws a picture from (the columns match
+ * lib/moderation/flagged-file.ts CARD_PICTURE_COLUMNS and the action schema
+ * there; a unit test keeps them in step). Any other place is listed only.
+ */
+export const ROW_ACTIONS = {
+  cards: {
+    columns: ["art_url", "back_face", "set_icon_url", "watermark", "rendered_image_url", "rendered_thumb_url"],
+    does: "hide the card (the moderation hide)",
+    action: (row) => ({ kind: "hide-card", cardId: row.id }),
+  },
+  profiles: {
+    columns: ["avatar_url", "banner_url"],
+    does: "swap in a built-in image",
+    action: (row, column) => ({ kind: "profile-default", userId: row.id, column }),
+  },
+  decks: {
+    columns: ["cover_url"],
+    does: "clear the deck cover",
+    action: (row) => ({ kind: "clear-deck-cover", deckId: row.id }),
+  },
+  custom_pips: {
+    columns: ["image_url"],
+    does: "remove the custom pip",
+    action: (row) => ({ kind: "remove-custom-pip", pipId: row.id }),
+  },
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The row action for one place (`{ table, column, row }`), or null when the
+ *  app doesn't draw a picture from it (listed only). */
+export function rowActionFor(place) {
+  const rule = ROW_ACTIONS[place?.table];
+  if (!rule || !rule.columns.includes(place.column)) return null;
+  const id = place.row?.id;
+  if (typeof id !== "string" || !UUID.test(id)) return null;
+  return rule.action({ id: id.toLowerCase() }, place.column);
+}
+
+/** `{ actions, listed }` for the places that name one flagged file: one
+ *  action per row and column that draws it (a card named twice is hidden
+ *  once), the rest listed only. */
+export function planRowActions(places) {
+  const actions = [];
+  const seen = new Set();
+  const listed = [];
+  for (const place of places ?? []) {
+    const action = rowActionFor(place);
+    if (!action) {
+      listed.push(place);
+      continue;
+    }
+    const key = JSON.stringify(action);
+    if (!seen.has(key)) {
+      seen.add(key);
+      actions.push(action);
+    }
+  }
+  return { actions, listed };
+}
+
+/** "hide card <id>" — how an action reads in the output. */
+export function describeAction(action) {
+  switch (action?.kind) {
+    case "hide-card":
+      return `hide card ${action.cardId}`;
+    case "profile-default":
+      return `built-in ${action.column === "avatar_url" ? "avatar" : "banner"} for profile ${action.userId}`;
+    case "clear-deck-cover":
+      return `clear the cover of deck ${action.deckId}`;
+    case "remove-custom-pip":
+      return `remove custom pip ${action.pipId}`;
+    default:
+      return JSON.stringify(action);
+  }
+}
 
 /** The rescan's state: the sweep's (pending/deleted/bytes/runs) plus one
  *  verdict per object. */
@@ -256,15 +351,33 @@ const describePlace = (p) =>
     .join(", ")})`;
 
 /**
- * Remove each flagged object — the upload path's consequence, nothing more.
- * Per object: looked up again (gone → skipped; another eTag → skipped, the
- * next run scans the new bytes); `state.pending`, the remove, then storage's
- * own answer: gone → the manifest (with its categories and the rows that
- * named it); lookup failed → stays pending, the next run settles it.
+ * Per flagged file, in order:
+ *   1. looked up again: another eTag → skipped (the next run scans the new
+ *      bytes; no row is touched for bytes nobody judged); a failed lookup →
+ *      skipped;
+ *   2. the rows that draw it (planRowActions over `references`) acted on
+ *      through `app.flaggedFile` — every result appended to the manifest; a
+ *      FAILED action keeps the file (a re-run retries, the app re-checks each
+ *      row); the app not answering stops the run;
+ *   3. gone already → nothing to delete; else `state.pending`, the remove,
+ *      then storage's own answer: gone → the manifest (with its categories
+ *      and the rows that named it); lookup failed → stays pending, the next
+ *      run settles it.
  */
-export async function applyFlagged({ storage, flagged, references = new Map(), state, statePath, manifestPath, target, run, log = () => {} }) {
+export async function applyFlagged({
+  storage,
+  flagged,
+  references = new Map(),
+  app = null,
+  state,
+  statePath,
+  manifestPath,
+  target,
+  run,
+  log = () => {},
+}) {
   withVerdicts(state);
-  const result = { deleted: 0, bytes: 0, skipped: [], failed: [] };
+  const result = { deleted: 0, bytes: 0, skipped: [], failed: [], rows: { done: 0, skipped: 0, failed: 0 } };
   const skip = (f, why) => {
     result.skipped.push({ bucket: f.bucket, path: f.path, why });
     log(`  - ${f.bucket}/${f.path}: ${why} — kept`);
@@ -278,12 +391,52 @@ export async function applyFlagged({ storage, flagged, references = new Map(), s
       skip(f, `lookup failed (${err.message})`);
       continue;
     }
-    if (info.missing) {
-      skip(f, "already gone");
+    if (!info.missing && !sameEtag(info.etag, f.etag)) {
+      skip(f, "changed since it was scanned — the next run scans the new bytes");
       continue;
     }
-    if (!sameEtag(info.etag, f.etag)) {
-      skip(f, "changed since it was scanned — the next run scans the new bytes");
+
+    const usedBy = references.get(stateKey(f)) ?? [];
+    const { actions, listed } = planRowActions(usedBy);
+    if (actions.length) {
+      if (!app) throw new Error(`${stateKey(f)}: rows to act on, but no app to act through`);
+      log(`  ${stateKey(f)} — ${actions.length} row(s) through the app:`);
+      let outcomes;
+      try {
+        outcomes = await app.flaggedFile({ bucket: f.bucket, path: f.path }, actions);
+      } catch (err) {
+        if (!(err instanceof AppEndpointError)) throw err;
+        result.failed.push({ bucket: f.bucket, paths: [f.path], error: err.message });
+        log(`  ✗ ${stateKey(f)}: the app didn't act on its rows (${err.message}) — the file is kept; stopping`);
+        break;
+      }
+      appendManifest(manifestPath, [
+        {
+          at: new Date().toISOString(),
+          target,
+          run,
+          bucket: f.bucket,
+          path: f.path,
+          rowActions: outcomes.map((o) => ({ action: o?.action ?? null, status: o?.status ?? "failed", detail: o?.detail ?? null })),
+          listedOnly: listed,
+        },
+      ]);
+      let rowFailed = false;
+      for (const o of outcomes) {
+        const status = ["done", "skipped"].includes(o?.status) ? o.status : "failed";
+        result.rows[status] += 1;
+        if (status === "failed") rowFailed = true;
+        log(`    ${status === "done" ? "✓" : status === "skipped" ? "·" : "✗"} ${describeAction(o?.action)}: ${o?.detail ?? status}`);
+      }
+      if (rowFailed || outcomes.length !== actions.length) {
+        result.failed.push({ bucket: f.bucket, paths: [f.path], error: "a row action failed" });
+        skip(f, "a row action failed — the file stays so a re-run can retry");
+        continue;
+      }
+    }
+
+    if (info.missing) {
+      skip(f, "already gone");
       continue;
     }
     const categories = state.objects[stateKey(f)].categories ?? [];
@@ -316,7 +469,6 @@ export async function applyFlagged({ storage, flagged, references = new Map(), s
       skip(f, "storage did not remove it");
       continue;
     }
-    const usedBy = references.get(stateKey(f)) ?? [];
     appendManifest(manifestPath, [{ ...manifestEntry(target, f.bucket, item, run), categories, usedBy }]);
     state.objects[stateKey(f)] = { ...state.objects[stateKey(f)], verdict: "deleted", deletedAt: new Date().toISOString() };
     state.deleted = (state.deleted ?? 0) + 1;
@@ -332,8 +484,11 @@ export async function applyFlagged({ storage, flagged, references = new Map(), s
 /**
  * The whole mode: settle an interrupted delete, list the buckets, take the
  * review list, scan what has no verdict yet (`moderateFor()` is called only
- * then — it asks for the moderation key), report, and with `apply` (after
- * "yes") remove the flagged objects. Returns the exit code.
+ * then — it asks for the moderation key), report each flagged file with the
+ * rows that name it and what --apply does to each, and with `apply` — after
+ * `appFor()` (the app endpoint, asked for only when a row needs an action;
+ * it checks the app talks to this database) and "yes" — act on the rows and
+ * remove the flagged objects. Returns the exit code.
  */
 export async function runReviewRescan({
   storage,
@@ -342,6 +497,9 @@ export async function runReviewRescan({
   apply,
   confirm,
   moderateFor,
+  appFor = async () => {
+    throw new AppEndpointError("no app endpoint configured");
+  },
   publicUrl,
   perMinute = DEFAULT_PER_MINUTE,
   limit = Infinity,
@@ -410,6 +568,7 @@ export async function runReviewRescan({
   if (scan.stopped) log(`\nStopped: ${scan.stopped}.`);
 
   let references = new Map();
+  const plans = new Map();
   if (flagged.length) {
     references = await referencesOf(
       db,
@@ -419,17 +578,24 @@ export async function runReviewRescan({
     log(`\nFlagged (${flagged.length}) — by bucket/path and category only:`);
     for (const r of flagged) {
       const used = references.get(stateKey(r.obj)) ?? [];
+      const plan = planRowActions(used);
+      plans.set(stateKey(r.obj), plan);
+      log(`  ${stateKey(r.obj)}  ${formatBytes(Number(r.obj.size) || 0)}  ${r.categories.join(", ")}`);
+      if (!used.length) log("      named by no row");
+      for (const place of used) {
+        const action = rowActionFor(place);
+        log(`      named by ${describePlace(place)} → ${action ? ROW_ACTIONS[place.table].does : "listed only"}`);
+      }
+    }
+    const actionCount = [...plans.values()].reduce((n, p) => n + p.actions.length, 0);
+    if (actionCount) {
       log(
-        `  ${stateKey(r.obj)}  ${formatBytes(Number(r.obj.size) || 0)}  ${r.categories.join(", ")}` +
-          `${used.length ? `\n      named by ${used.map(describePlace).join("; ")}` : "\n      named by no row"}`,
+        `  --apply acts on ${actionCount} row(s) through the app first (the moderation hide for a card, a built-in image ` +
+          `for an avatar/banner, no cover for a deck, the pip removed), then removes each file whose rows all succeeded.`,
       );
     }
-    if (flagged.some((r) => (references.get(stateKey(r.obj)) ?? []).length)) {
-      log(
-        `  A row that names a flagged file keeps its value — the upload path never changes a row either — so it will ` +
-          `point at a missing picture, and a card's STORED render (card-renders) still shows the file until the card is ` +
-          `re-baked, hidden or deleted. Those rows are yours to decide about; this run changes none of them.`,
-      );
+    if ([...plans.values()].some((p) => p.listed.length)) {
+      log(`  A row listed only keeps its value (it names the file somewhere the app doesn't draw a picture from) — yours to decide about.`);
     }
   }
 
@@ -437,7 +603,7 @@ export async function runReviewRescan({
   if (!apply) {
     log(
       flagged.length
-        ? `\nDry run: nothing deleted. Re-run with --rescan-review --apply to remove the flagged file(s) — what the upload path does to a flagged upload.`
+        ? `\nDry run: nothing deleted, no row changed. Re-run with --rescan-review --apply to act on those rows and remove the flagged file(s).`
         : "\nNothing flagged.",
     );
     return exitCode;
@@ -446,18 +612,36 @@ export async function runReviewRescan({
     log("\nNothing flagged — nothing to delete.");
     return exitCode;
   }
+  const counts = { "hide-card": 0, "profile-default": 0, "clear-deck-cover": 0, "remove-custom-pip": 0 };
+  for (const plan of plans.values()) for (const a of plan.actions) counts[a.kind] += 1;
+  const rowCount = Object.values(counts).reduce((n, c) => n + c, 0);
+  let app = null;
+  if (rowCount) {
+    try {
+      app = await appFor();
+    } catch (err) {
+      if (!(err instanceof AppEndpointError)) throw err;
+      log(`\nThe app can't be reached (${err.message}) — nothing deleted, no row changed.`);
+      return 1;
+    }
+  }
+  const through = rowCount
+    ? ` First, through the app: hide ${counts["hide-card"]} card(s), swap ${counts["profile-default"]} avatar/banner(s) for a ` +
+      `built-in, clear ${counts["clear-deck-cover"]} deck cover(s), remove ${counts["remove-custom-pip"]} custom pip(s).`
+    : " No row draws them.";
   const answer = await confirm(
-    `\nDelete ${flagged.length} flagged object(s) from ${targetLabel}? The rows that name them are not changed. ` +
+    `\nDelete ${flagged.length} flagged object(s) from ${targetLabel}?${through} ` +
       `Storage has no undo and no copy is kept. Type "yes": `,
   );
   if (answer !== "yes") {
-    log("Aborted — nothing deleted.");
+    log("Aborted — nothing deleted, no row changed.");
     return 1;
   }
   const result = await applyFlagged({
     storage,
     flagged: flagged.map((r) => ({ ...r.obj, etag: r.etag ?? r.obj.etag })),
     references,
+    app,
     state,
     statePath,
     manifestPath,
@@ -466,8 +650,9 @@ export async function runReviewRescan({
     log,
   });
   log(
-    `\nDeleted ${result.deleted} flagged object(s), ${formatBytes(result.bytes)}; kept ${result.skipped.length}` +
-      `${result.failed.length ? `; stopped on a failed delete — re-run to settle it` : ""}. Manifest: ${manifestPath}`,
+    `\nRows: ${result.rows.done} done, ${result.rows.skipped} skipped (no longer draw the file), ${result.rows.failed} failed. ` +
+      `Deleted ${result.deleted} flagged object(s), ${formatBytes(result.bytes)}; kept ${result.skipped.length}` +
+      `${result.failed.length ? `; ${result.failed.length} failed — re-run to retry` : ""}. Manifest: ${manifestPath}`,
   );
   return result.failed.length ? 1 : exitCode;
 }

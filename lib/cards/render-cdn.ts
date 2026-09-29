@@ -57,6 +57,22 @@ export function isStoredRenderUrl(
   return object === `${base}.png` || object === `${base}.thumb.webp`;
 }
 
+const BAKE_OBJECT =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.(?:png|thumb\.webp)$/i;
+
+/**
+ * The card a card-renders object key belongs to — `{ownerId}/{cardId}.png`
+ * or `{ownerId}/{cardId}.thumb.webp`, the only two names a bake writes
+ * (lib/cards/bake-core.ts renderObjectNames) — lower-cased; null for any
+ * other key. The /render-cdn route serves only these, tagged
+ * `card-<cardId>` (lib/cards/cache-purge.ts), so every copy the CDN holds
+ * can be purged when its card leaves public view.
+ */
+export function bakeObjectCardId(objectKey: string): string | null {
+  const match = BAKE_OBJECT.exec(objectKey);
+  return match ? match[1].toLowerCase() : null;
+}
+
 export function toRenderCdnUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   const object = storedRenderObject(url);

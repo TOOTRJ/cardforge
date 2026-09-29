@@ -2,8 +2,6 @@
 
 import "server-only";
 
-import { after } from "next/server";
-import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -14,7 +12,7 @@ import {
   uploadRateLimitFailure,
   type UploadLimitFields,
 } from "@/lib/media/upload-rate-limit";
-import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
+import { deleteCustomPipRow, finishPipChange, removeCustomPipObject } from "@/lib/pips/remove-pip";
 import {
   isCustomPipSymbol,
   type CustomPipSymbol,
@@ -43,12 +41,6 @@ const ALLOWED_DECLARED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/webp",
 ]);
-
-// How many of the owner's affected baked thumbnails the post-response sweep
-// refreshes, newest first. Detail pages and exports always render live; a
-// long tail of very old gallery thumbnails catches up on next save or via
-// scripts/rebake-renders.mjs.
-const REBAKE_SWEEP_CAP = 40;
 
 export type CustomPipActionResult =
   | { ok: true; symbol: CustomPipSymbol; imageUrl: string | null }
@@ -188,84 +180,16 @@ export async function deleteCustomPipAction(
   }
   const symbol = symbolRaw;
 
+  // The shared remove (lib/pips/remove-pip.ts — the flagged-file rescan
+  // removes a pip the same way): the row, then the object, then the caches
+  // and the re-bake of the owner's cards that draw it.
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("custom_pips")
-    .delete()
-    .eq("owner_id", user.id)
-    .eq("symbol", symbol);
+  const { error } = await deleteCustomPipRow(supabase, user.id, symbol);
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error };
   }
-
-  // Best-effort object cleanup — the row is the source of truth, so a
-  // failed remove (or no service-role storage) only leaves an unreferenced
-  // file behind.
-  if (isUserStorageConfigured()) {
-    await userFolder("custom-pips", user.id)
-      .remove([`${symbol}.png`])
-      .catch(() => {});
-  }
+  await removeCustomPipObject(user.id, symbol);
 
   finishPipChange(user.id, symbol);
   return { ok: true, symbol, imageUrl: null };
-}
-
-// ---------------------------------------------------------------------------
-// Shared post-change plumbing: refresh the RSC caches that feed overrides to
-// the editor/preview, then sweep the owner's affected baked thumbnails AFTER
-// the response is sent (next/server `after`) so the upload click stays fast.
-// ---------------------------------------------------------------------------
-
-function finishPipChange(ownerId: string, symbol: CustomPipSymbol) {
-  revalidatePath("/create");
-  revalidatePath("/dashboard");
-  revalidatePath("/settings");
-
-  after(async () => {
-    try {
-      await rebakeCardsUsingSymbol(ownerId, symbol);
-    } catch (error) {
-      console.error("[custom-pips] rebake sweep failed", error);
-    }
-  });
-}
-
-/**
- * Re-bake the owner's most recently updated cards whose front or back cost
- * uses the changed symbol as a pure color pip. Capped + best-effort: a
- * failure on one card never blocks the rest (bakeAndPersistCardRender
- * already swallows per-card render errors).
- */
-async function rebakeCardsUsingSymbol(
-  ownerId: string,
-  symbol: CustomPipSymbol,
-): Promise<void> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("cards")
-    .select("id, cost, rules_text, back_face")
-    .eq("owner_id", ownerId)
-    .order("updated_at", { ascending: false })
-    .limit(400);
-  if (error || !data) return;
-
-  // The renderers draw custom pips in the cost AND inline in rules text
-  // ({T}: Add {R}), on both faces — a sweep that only looked at the cost
-  // left every rules-text pip on the old icon until the card was resaved.
-  const token = `{${symbol}}`;
-  const affected = data
-    .filter((row) => {
-      if (row.cost?.includes(token) || row.rules_text?.includes(token)) return true;
-      const back = row.back_face as { cost?: string; rules_text?: string } | null;
-      return (
-        (typeof back?.cost === "string" && back.cost.includes(token)) ||
-        (typeof back?.rules_text === "string" && back.rules_text.includes(token))
-      );
-    })
-    .slice(0, REBAKE_SWEEP_CAP);
-
-  for (const row of affected) {
-    await bakeAndPersistCardRender(row.id, ownerId);
-  }
 }

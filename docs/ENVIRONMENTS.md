@@ -250,22 +250,46 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
   --backup-dir ~/.pipglyph/sweep-backups/$(date +%F)
 ```
 
-**Owner steps on production, in this order, once #409 and #411 are live**
-(each step's dry run first; nothing is deleted without `--apply` + "yes"):
+**Owner steps on production, in this order, once #409, #411 and #412 are
+live** (each step's dry run first; nothing is deleted or changed without
+`--apply` + "yes"):
 
 1. `node scripts/sweep-storage-orphans.mjs --target prod` — the dry run:
    orphans, plus the two review lists below.
 2. `node scripts/sweep-storage-orphans.mjs --target prod --rescan-review` —
    moderation-scans the review list (asks for production's `OPENAI_API_KEY`
-   at a second hidden prompt) and lists flagged files. If any:
-   `… --rescan-review --apply` removes them (decide yourself about the rows
-   it lists as naming them — the run changes none).
+   at a second hidden prompt) and lists flagged files, each with the rows
+   that name it and what `--apply` will do to each. If any:
+   `… --rescan-review --apply` asks for production's `CRON_SECRET` (a third
+   hidden prompt; Vercel → Settings → Environment Variables), checks that
+   https://www.pipglyph.com talks to the production database, and — after
+   "yes" — through the app hides every card that draws a flagged file (the
+   moderation hide), gives every avatar/banner that is one a built-in image,
+   clears such deck covers and removes such custom pips, then removes the
+   file. Rows it lists as "listed only" (a message, a notification, a job
+   payload, a challenge image, a deck entry, card text) are yours to decide
+   about.
 3. `node scripts/sweep-storage-orphans.mjs --target prod --private-renders`,
-   then `… --private-renders --apply` — removes the renders of private
-   cards (a deleted card's render is an orphan: step 4 judges it).
+   then `… --private-renders --apply` (asks for the `CRON_SECRET` too) —
+   removes the renders of private cards and purges their `/render-cdn` CDN
+   copies through the app (a deleted card's render is an orphan: step 4
+   judges it).
 4. The orphan sweep's `--apply` (above). Last on purpose: its
    `--backup-dir` copies what it deletes to your disk, so flagged files and
    private cards' renders are removed first, without copies.
+
+**Acting through the app** (steps 2–3's `--apply`, owner answers
+2026-09-29): the script calls `POST /api/admin/storage-sweep`
+(`app/api/admin/storage-sweep/route.ts`) with `Authorization: Bearer
+<CRON_SECRET>` — the row actions have to be the app's own code paths, and
+only a function running on Vercel can purge its CDN. Production's app is
+fixed (https://www.pipglyph.com; `--app-url` is refused there) and its
+secret is read only at the hidden prompt. On the dev target pass
+`--app-url http://localhost:3000` (a local `npm run dev` on the dev
+database) with the same `CRON_SECRET` in `.env.local` for both the server
+and the script (off Vercel there is no CDN — the purge is a no-op and the
+run says so). The app is asked which database it talks to before "yes"; an
+app on another database than `--target` stops the run with nothing done.
 
 - **What counts as a reference:** the object's `{uuid}/{file}` key anywhere
   in any string of any row — the scan reads EVERY text/JSON column of EVERY
@@ -314,17 +338,29 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
     request, model and categories), paced (`--per-minute`, default 60),
     retrying 429/5xx; an error is "not scanned", never clean, and is tried
     again next run; verdicts are kept per object + eTag, so a re-run only
-    scans new or changed files. `--apply` does what the upload path does to
-    a flagged upload — removes the object and nothing else (no row changed,
-    nobody notified); the output and the manifest name every row that
-    points at a flagged file (a card that used it still shows it in its
-    stored render until re-baked or hidden). No copies, ever
-    (`--backup-dir` is refused). Production's `OPENAI_API_KEY` is read only
+    scans new or changed files. `--apply` removes the object as the upload
+    path does a flagged upload — but first acts, through the app
+    (`lib/moderation/flagged-file.ts`), on every row that DRAWS it: a card
+    (art, second-face art, set icon, watermark icon, its bake) → the
+    moderation hide (`lib/moderation/hide-card.ts`, the admin's "Hide":
+    private, render removed, reports actioned, pages + CDN purged); an
+    avatar/banner → a random built-in of that kind; a deck cover → cleared;
+    a custom pip → removed like the owner's "Remove" (and the owner's cards
+    that draw it re-baked). Each action re-reads its row and acts only
+    while it still draws that exact file (our host, its bucket, its key),
+    compare-and-set; then the file's URLs are purged from Vercel's Image
+    Optimization cache. A failed action keeps the file (a re-run retries);
+    a row naming the file anywhere else is listed only; nobody is notified.
+    The output and the manifest name every row and every action with its
+    result (`rowActions`, `listedOnly`). No copies, ever (`--backup-dir` is
+    refused). Production's `OPENAI_API_KEY` is read only
     at the hidden prompt and only sent to api.openai.com; the dev target
     reads it from the env file. Objects outside the `{uuid}/{file}` shape
     are not on the list (the dry run lists them separately).
   - **Renders of PRIVATE cards that are still stored** (publicly fetchable
-    at their URL — going private should have deleted them).
+    at their URL — going private should have deleted them; since #412
+    `/render-cdn` refuses them on a CDN miss, but the bucket's own public
+    URL still serves them).
     `--private-renders` removes the PNG + thumb of every card whose row
     says private — only on that positive evidence: a card with no row in
     the answer is never touched here (a deleted card's render is an orphan,
@@ -336,8 +372,15 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
     what going private writes), then every object is looked up (gone, or
     new bytes since the listing → kept), then the visibility is read AGAIN,
     then the remove: a card that is public, unlisted or without a row by
-    then is never touched. The dry run prints card ids and counts only — no
-    titles, no owners. No backups (a render is derived).
+    then is never touched. After each batch, the cards whose objects
+    storage confirmed gone have their CDN copies purged through the app
+    (`purge-cards` → `purgeHiddenCards`: `/render-cdn/<owner>/<card>.png`
+    is cached for a year, tagged `card-<id>`); each card is noted in the
+    state file (`purgePending`) before its remove and taken off once
+    purged, so a crash or a refused purge is retried first by the next
+    `--apply` (or purge the tags in the Vercel dashboard: CDN → Caches →
+    Purge cache → Cache Tag, Delete). The dry run prints card ids and
+    counts only — no titles, no owners. No backups (a render is derived).
 - **Decisions recorded 2026-09-29** (upload limit, #411): AI art stays
   EXEMPT from the upload limit (it is credit-metered and already behind
   `checkAiRateLimit`); the fail-closed refusal's wording "Uploads are paused

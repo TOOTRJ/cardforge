@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
-import { notifyIndexNow } from "@/lib/seo/indexnow";
+import { revalidateDeckPaths } from "@/lib/decks/revalidate";
 import { redirect } from "next/navigation";
 import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -75,25 +74,6 @@ function slugCandidate(desired: string, attempt: number): string {
   // Trim any hyphen the cut leaves at the end — "my-deck-" + "-2" would fail
   // the decks_slug_format CHECK with a raw Postgres error.
   return `${desired.slice(0, 80 - suffix.length).replace(/-+$/, "")}${suffix}`;
-}
-
-function revalidateDeckPaths(slug: string, ownerUsername?: string | null) {
-  revalidatePath("/dashboard/decks");
-  revalidatePath("/decks"); // public browse (live from PR 2 of the decks series)
-  revalidatePath("/dashboard");
-  revalidatePath(`/deck/${slug}`);
-  revalidatePath(`/deck/${slug}/edit`);
-  if (ownerUsername) {
-    revalidatePath(`/profile/${ownerUsername}`);
-  }
-  // Tell IndexNow engines the deck URL changed (or now 404s) — best-effort,
-  // off the request path. A private deck 404s for them, which is the point.
-  after(() =>
-    notifyIndexNow([
-      `/deck/${slug}`,
-      ...(ownerUsername ? [`/profile/${ownerUsername}`] : []),
-    ]),
-  );
 }
 
 // ---------------------------------------------------------------------------
