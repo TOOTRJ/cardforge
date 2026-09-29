@@ -1322,6 +1322,58 @@ describe("3b.15 the token type picker", () => {
     expect(preview().rarity).toBe("uncommon");
     expect(screen.getByTestId("locked-summary").textContent).toMatch(/Token Creature — Skeleton/);
   });
+
+  // Owner 2026-09-29: a remix saves a NEW card, so a token's remix is common
+  // like every new token (the creator's and the AI jobs' rule) — the token
+  // kind hides the rarity chips, so the parent's rare could never be set
+  // back on the remix. An edit keeps the stored rarity (above).
+  it.each([
+    ["an uncommon Creature token", { supertype: "Creature", power: "2", toughness: "2", rarity: "uncommon" }],
+    ["a mythic Treasure", { supertype: "Artifact", subtypes: ["Treasure"], rarity: "mythic", frame_style: { finish: "regular", template: "m15tokenartifact" } }],
+  ])("a remix of %s saves as common, and previews so", async (_label, over) => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "soldier-remix",
+    });
+    renderForm({
+      mode: "remix",
+      verifiedFrameKeys: WITH_ARTIFACT_TOKEN,
+      card: savedCard({
+        title: "Soldier",
+        card_type: "token",
+        subtypes: ["Soldier"],
+        power: null,
+        toughness: null,
+        cost: null,
+        visibility: "public",
+        frame_style: { finish: "regular", template: "m15token" },
+        ...over,
+      }),
+    });
+    expect(preview().rarity).toBe("common");
+    await typeTitle("Soldier of the Second Dawn");
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0];
+    expect(payload.parent_card_id).toBe(CARD_ID);
+    expect(payload.card_type).toBe("token");
+    expect(payload.rarity).toBe("common");
+  });
+
+  it("a remix of a non-token keeps its parent's rarity", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "wyrm-of-the-second-dawn",
+    });
+    renderForm({ mode: "remix", card: savedCard({ visibility: "public" }) });
+    expect(preview().rarity).toBe("rare");
+    await typeTitle("Wyrm of the Second Dawn");
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0][0].rarity).toBe("rare");
+  });
 });
 
 // ---------------------------------------------------------------------------
