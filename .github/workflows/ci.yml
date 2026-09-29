@@ -11,6 +11,16 @@
 #           inside the runner (never the dev branch, never production). This is
 #           the job that would have caught the 12 specs that drifted — and the
 #           two real bugs hiding behind them — in 2026-09.
+#   visual  the renderer's pixels (TODO 7.1): every case of
+#           tests/visual/matrix.ts (every frame template × colour × a few
+#           content shapes, finishes, HD, print corners) baked through the real
+#           Satori bake in three parallel jobs, then gated against the hashes in
+#           tests/visual/baseline.json. A changed hash fails unless the PR
+#           bumped CARD_LAYOUT_VERSION — and then until the regenerated
+#           baseline is committed (the summary lists the changed cases and the
+#           regenerate command; the `visual-baseline` artifact is this run's).
+#           Frames are fetched from the public bucket by manifest sha and
+#           cached by the manifest's hash — never committed.
 #
 # The repo is public, so Actions minutes are free. No secrets are needed: the
 # local stack's keys are generated per run and the e2e user is throwaway.
@@ -135,3 +145,81 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  visual-bake:
+    name: Visual regression (bake ${{ matrix.group }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [0, 1, 2]
+    steps:
+      # Depth 2 for --base HEAD^1: each case's scope is judged at the base
+      # branch's layout version (the gate job reads the same commit).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # The manifest's PNG objects (~140 MB), keyed by the manifest: storage
+      # is read only when it changes (an older cache seeds the new one, and
+      # the script drops objects the manifest no longer names).
+      - name: Restore the frame cache
+        uses: actions/cache@v4
+        with:
+          path: tmp/visual/frames
+          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          restore-keys: visual-frames-
+
+      - name: Bake (4 of 12 shards)
+        run: node scripts/visual-regression.mjs --shards 12 --group ${{ matrix.group }}/3 --no-gate --base HEAD^1
+
+      - name: Upload the hashes
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-results-${{ matrix.group }}
+          path: |
+            tmp/visual/results/
+            tmp/visual/logs/
+          retention-days: 7
+
+  visual:
+    name: Visual regression
+    needs: visual-bake
+    # Runs (and fails) when a bake job failed too, so the check is never
+    # "skipped" — a skipped required check would count as passing.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Depth 2: HEAD^1 is the base branch's tip for a PR's merge commit and
+      # the previous main for a push — "bumped" is judged against it.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: visual-results-*
+          merge-multiple: true
+          path: tmp/visual
+      - name: Gate
+        run: node scripts/visual-regression.mjs --gate-only --shards 12 --base HEAD^1
+      # What `npm run test:visual -- --update` would write, made on this
+      # runner: `gh run download <run> -n visual-baseline -D tests/visual`.
+      - name: Upload the regenerated baseline
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline
+          path: tmp/visual/next/baseline.json
+          if-no-files-found: ignore
+          retention-days: 14
