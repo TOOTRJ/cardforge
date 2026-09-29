@@ -43,6 +43,14 @@
 -- these rows as ticks from before 0115. `on conflict do nothing` never
 -- overrides a row that already exists on the dev branch or a local stack (a
 -- withdrawn tick, a pinned reference): re-seeding only adds missing combos.
+--
+-- A refresh does NOT reach the shared dev branch by itself. The Supabase CLI
+-- records every seed file it has run (supabase_migrations.seed_files) and
+-- never runs one again: for a CHANGED file, `db push --include-seed` (what
+-- `npm run db:seed:dev` runs) only records the new hash. After a refresh,
+-- run the frame_reviews block below on the dev branch by hand (its SQL
+-- editor); a combo production withdraws has to be unticked there by hand too.
+-- Fresh databases (a PR's preview branch, `db reset`, CI) run the whole file.
 
 -- frame_reviews:begin
 insert into public.frame_reviews (template, color_key, verified, verified_at)

@@ -72,8 +72,10 @@ Plus 22 cards (public / unlisted / private, remixes, a planeswalker, a saga,
 snow, devoid, a token), likes / comments / follows (the triggers turn those
 into 19 notifications), two decks, an active + closed + upcoming challenge, a
 published + a scheduled site update, and production's verified frame combos
-(`supabase/seed.sql`: 97 as of 2026-09-28; after the list is refreshed,
-`npm run db:seed:dev` adds the new combos to the shared dev database).
+(`supabase/seed.sql`: 97 as of 2026-09-28). A refresh of that list does not
+reach this database on its own: it has already run `seed.sql`, and the CLI
+never re-runs a seed file (see below). Run the file's frame_reviews block in
+the dev branch's SQL editor after each refresh.
 
 ### When to use the Docker stack instead
 
@@ -113,7 +115,10 @@ it names the dev ref and not production, then runs):
 
 ```bash
 npm run db:push:dev     # apply unapplied migrations to dev
-npm run db:seed:dev     # …and (re)apply the seed files — idempotent
+npm run db:seed:dev     # …and run the seed files dev hasn't run yet (the CLI
+                        # records each one in supabase_migrations.seed_files;
+                        # a file it already ran is never re-run, even when it
+                        # changed — it only records the new hash)
 npm run seed:dev        # passwords; add `-- --copy-cards-from <username>` to
                         # copy that user's PUBLIC prod cards into dev (read-only
                         # on prod, anonymous API; images re-hosted in dev storage)
