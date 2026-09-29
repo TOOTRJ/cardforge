@@ -418,6 +418,45 @@ describe("6.23 skeptic review: entering the emblem keeps nothing a token had", (
     expect((screen.getByPlaceholderText("Kaito") as HTMLInputElement).value).toBe("");
   });
 
+  // Owner evidence 2026-09-29: a Soldier token (named by its subtypes)
+  // turned emblem kept "Soldier" as the emblem's name.
+  it("a token named by its subtypes leaves that name behind: the emblem asks for the walker's", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_EMBLEM });
+    await pickKind(/^Token/);
+    await clickNext(); // Card → Identity
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), { target: { value: "Soldier" } });
+    });
+    // The token's name follows its subtypes.
+    expect(preview().title).toBe("Soldier");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await toggleEmblem();
+    expect(preview().title).toBe("");
+    await clickNext(); // Card → Identity
+    expect((screen.getByPlaceholderText("Kaito, Cunning Infiltrator") as HTMLInputElement).value).toBe("");
+  });
+
+  it("a token with its own name keeps it as the emblem's", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_EMBLEM });
+    await pickKind(/^Token/);
+    await clickNext(); // Card → Identity
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), { target: { value: "Wolf" } });
+    });
+    const name = document.querySelector<HTMLInputElement>("input[name='title']");
+    if (!name) throw new Error("no name input");
+    await act(async () => {
+      fireEvent.change(name, { target: { value: "Voja Fenstalker" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await toggleEmblem();
+    expect(preview().title).toBe("Voja Fenstalker");
+  });
+
   it("the AI fill offers an emblem no cost, colour, rarity or stats; a token keeps them", async () => {
     renderForm({ mode: "create", verifiedFrameKeys: WITH_EMBLEM });
     await pickKind(/^Token/);

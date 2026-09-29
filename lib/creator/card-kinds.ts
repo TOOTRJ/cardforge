@@ -381,6 +381,29 @@ export const EMBLEM_ENTRY_VALUES = {
   rarity: "common",
 } as const;
 
+/**
+ * The title a card keeps on entering the emblem kind (TODO 6.23): an emblem
+ * is named after its planeswalker, so a token's name that only restates its
+ * subtypes — the one the token's name-follow wrote (`lastAuto`), or any
+ * title equal to its subtypes' name ("Soldier", an import's, one typed to
+ * match), case and spacing aside — would stay behind as a stale "Soldier"
+ * over the emblem once its subtypes clear (owner evidence 2026-09-29). It
+ * goes (""), and the Identity step asks for the walker's name; any other
+ * name stays.
+ */
+export function titleEnteringEmblem(input: {
+  title: string;
+  subtypes: readonly string[];
+  lastAuto: string | null;
+}): string {
+  const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const title = norm(input.title);
+  if (!title) return input.title;
+  if (input.lastAuto !== null && input.title === input.lastAuto) return "";
+  const subtypeName = norm(tokenNameFromSubtypes(input.subtypes));
+  return subtypeName && title === subtypeName ? "" : input.title;
+}
+
 /** The colour key a kind's frame is resolved in (the creator's kind change):
  *  an emblem's frame is silver whatever the card's colour (CR 114), so the
  *  emblem kind resolves in `c` — entering it from a red token is no "isn't

@@ -191,7 +191,12 @@ import {
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
-import { EMBLEM_ENTRY_VALUES, frameColorKeyForKind, kindHidesRarity } from "@/lib/creator/card-kinds";
+import {
+  EMBLEM_ENTRY_VALUES,
+  frameColorKeyForKind,
+  kindHidesRarity,
+  titleEnteringEmblem,
+} from "@/lib/creator/card-kinds";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1291,8 +1296,20 @@ export function CardCreatorForm({
       setValue("rarity", "common", { shouldDirty: true });
     }
     // An emblem has no colour, cost, supertype, stats or rarity (TODO 6.23):
-    // they clear on the way in; the name, rules, art and subtypes stay.
+    // they clear on the way in, and so does its optional subtype (a token's
+    // "Soldier" would print "Emblem — Soldier"); the rules and art stay. So
+    // does the name — unless it only restated the token's subtypes (the
+    // name-follow's "Soldier"): an emblem is named after its walker, and a
+    // stale "Soldier" over the emblem went unnoticed (titleEnteringEmblem).
     if (nextKind === "emblem" && prevKind !== "emblem") {
+      const title = getValues("title") ?? "";
+      const kept = titleEnteringEmblem({
+        title,
+        subtypes: parseSubtypes(getValues("subtypes_text") ?? ""),
+        lastAuto: autoTokenTitleRef.current,
+      });
+      if (kept !== title) setValue("title", kept, { shouldDirty: true });
+      autoTokenTitleRef.current = null;
       for (const [field, value] of Object.entries(EMBLEM_ENTRY_VALUES)) {
         setValue(field as keyof FormValues, (Array.isArray(value) ? [...value] : value) as never, {
           shouldDirty: true,

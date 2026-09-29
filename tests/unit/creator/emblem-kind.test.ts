@@ -13,6 +13,7 @@ import {
   planKindChange,
   templateRefusesKind,
   templateSupportsKind,
+  titleEnteringEmblem,
 } from "@/lib/creator/card-kinds";
 import { frameKindGateError, frameKindUpdateGateError } from "@/lib/cards/frame-kind-gate";
 import { frameComboKey, sampleFramePreview } from "@/lib/cards/frame-reference-registry";
@@ -144,6 +145,26 @@ describe("the emblem kind", () => {
       defense: "",
       rarity: "common",
     });
+  });
+});
+
+describe("the name on entering the emblem (owner evidence 2026-09-29: a stale \"Soldier\")", () => {
+  it("drops a token name that only restates the token's subtypes — the walker's name is asked for", () => {
+    // The name-follow's own ("Soldier" from the Subtypes field).
+    expect(titleEnteringEmblem({ title: "Soldier", subtypes: ["Soldier"], lastAuto: "Soldier" })).toBe("");
+    expect(titleEnteringEmblem({ title: "Rabbit Knight", subtypes: [], lastAuto: "Rabbit Knight" })).toBe("");
+    // An import's or a typed one that equals the subtypes, case and spacing aside.
+    expect(titleEnteringEmblem({ title: "Soldier", subtypes: ["Soldier"], lastAuto: null })).toBe("");
+    expect(titleEnteringEmblem({ title: " rabbit  knight ", subtypes: ["Rabbit", "Knight"], lastAuto: null })).toBe("");
+  });
+
+  it("keeps any other name — a proper token name, a walker's, an empty one", () => {
+    expect(titleEnteringEmblem({ title: "Voja Fenstalker", subtypes: ["Wolf"], lastAuto: null })).toBe("Voja Fenstalker");
+    expect(titleEnteringEmblem({ title: "Kaito, Cunning Infiltrator", subtypes: ["Kaito"], lastAuto: "Kaito" })).toBe(
+      "Kaito, Cunning Infiltrator",
+    );
+    expect(titleEnteringEmblem({ title: "", subtypes: ["Soldier"], lastAuto: "Soldier" })).toBe("");
+    expect(titleEnteringEmblem({ title: "Soldier", subtypes: [], lastAuto: null })).toBe("Soldier");
   });
 });
 
