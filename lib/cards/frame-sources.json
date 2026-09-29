@@ -653,7 +653,7 @@
     "pack": "packTokenTextlessM15.js 'Textless (Bordered M15)'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1640–1856 (the window's straight sides through the type pill's shadow) moved down 8 px as one piece over the top 8 rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over 24 rows (premultiplied), a hard cut at the shadow's lower edge; corners rounded to the importer radius",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1640–1856 (the window's straight sides through the type pill's shadow) moved down 8 px as one piece over the top 8 rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over 24 rows, the shadow's last 2 rows faded into the texture (premultiplied); corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/token/m15/textless/w.png"
@@ -686,7 +686,7 @@
       "toY": 1857,
       "shift": 8,
       "blend": 24,
-      "blendBottom": 0
+      "blendBottom": 2
     },
     "sourceFiles": [
       "img/frames/m15/regular/m15MaskBorder.png",
@@ -715,7 +715,7 @@
     "pack": "packTokenTextlessM15.js 'Textless (Bordered M15)'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1640–1856 (the window's straight sides through the type pill's shadow) moved down 8 px as one piece over the top 8 rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over 24 rows (premultiplied), a hard cut at the shadow's lower edge; corners rounded to the importer radius",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1640–1856 (the window's straight sides through the type pill's shadow) moved down 8 px as one piece over the top 8 rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over 24 rows, the shadow's last 2 rows faded into the texture (premultiplied); corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/token/m15/textless/a.png through img/frames/m15/regular/m15MaskBorder.png",
@@ -768,7 +768,7 @@
       "toY": 1857,
       "shift": 8,
       "blend": 24,
-      "blendBottom": 0
+      "blendBottom": 2
     },
     "sourceFiles": [
       "img/frames/m15/regular/m15MaskBorder.png",

@@ -353,8 +353,8 @@ What a frame gives it:
   The importer moves rows 1640–1856 (the window's straight sides through the
   shadow) 8 px down as one piece over the top of the texture — the opened
   rows repeat the window's sides, cross-faded over 24 rows; the bottom seam
-  is a hard cut so the pill's lower edge stays sharp (`recutBand`,
-  `blendBottom: 0`). Edge by edge the pill is −0.9 … +1.6 px from the prints'
+  fades over the shadow's last 2 rows only (`recutBand`, `blendBottom: 2`),
+  so the pill keeps its edge and the texture's step matches CC's own. Edge by edge the pill is −0.9 … +1.6 px from the prints'
   means after the cut (−8.9 … −6.4 before) and the alignment score over the
   pins 94.47 → 94.99 % (a 6–10 px sweep peaks at 8 and 9). The profile rides
   the cut (`TOKEN_RECUT_PX`, a unit test holds it to the importer's shift):

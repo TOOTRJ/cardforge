@@ -108,8 +108,8 @@ describe("Card Conjurer recipe", () => {
     // the pill and the border where CC draws them. Rows 1640 (the window's
     // straight sides) to 1856 (the shadow's last row; the texture starts at
     // 1857) move 8 px, the top seam cross-faded over 24 rows, the bottom one
-    // a hard cut so the pill's lower edge stays sharp.
-    expect(TOKEN_TEXTLESS_RECUT).toEqual({ fromY: 1640, toY: 1857, shift: 8, blend: 24, blendBottom: 0 });
+    // over only the shadow's last 2 rows, so the pill keeps its lower edge.
+    expect(TOKEN_TEXTLESS_RECUT).toEqual({ fromY: 1640, toY: 1857, shift: 8, blend: 24, blendBottom: 2 });
     for (const template of ["m15token", "m15tokenartifact"]) {
       const def = templates[template];
       expect(def.recut, template).toBe(TOKEN_TEXTLESS_RECUT);

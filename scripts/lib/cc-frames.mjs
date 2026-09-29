@@ -102,11 +102,14 @@ const WUBRGM = ["w", "u", "b", "r", "g", "m"];
  * pill and its shadow cover the top 8 rows of the texture, and the texture,
  * the plate area, the border and the corners keep their place. The rows
  * opened at 1640 repeat the window's sides, cross-faded over `blend` rows;
- * the bottom seam is a hard cut (`blendBottom` 0) at the shadow's edge,
- * which keeps the pill's lower edge sharp. Native px of the pack
- * (1500 × 2100).
+ * the bottom seam fades over only `blendBottom` 2 rows, the shadow's own
+ * tail (1863–1864), so the pill and its shadow keep their edges: a hard cut
+ * there left the texture's jump at 1865 1.4–2.5× CC's own last shadow step
+ * on the marbled colours (b, r, g, u); the 2-row fade brings it to CC's
+ * (7.5 vs 7.8 on b, 14.7 vs 17.4 on r; the step before it is CC's too).
+ * Native px of the pack (1500 × 2100).
  */
-export const TOKEN_TEXTLESS_RECUT = { fromY: 1640, toY: 1857, shift: 8, blend: 24, blendBottom: 0 };
+export const TOKEN_TEXTLESS_RECUT = { fromY: 1640, toY: 1857, shift: 8, blend: 24, blendBottom: 2 };
 /** The textless token pack, as provenance names it. */
 const TOKEN_TEXTLESS_PACK = "packTokenTextlessM15.js 'Textless (Bordered M15)'";
 
@@ -303,7 +306,7 @@ export const CC_TEMPLATES = {
 
 /** How provenance describes the textless tokens' re-cut (TOKEN_TEXTLESS_RECUT). */
 function textlessRecutTransform(r) {
-  return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows (premultiplied), a hard cut at the shadow's lower edge; corners rounded to the importer radius`;
+  return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows, the shadow's last ${r.blendBottom} rows faded into the texture (premultiplied); corners rounded to the importer radius`;
 }
 
 /** Templates deliberately NOT imported yet, and why. */
