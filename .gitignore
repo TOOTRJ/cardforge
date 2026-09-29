@@ -59,3 +59,6 @@ supabase/.temp
 # Frame build output (Card Conjurer / MSE conversions) — published to the
 # frames bucket, never committed (frames plan 4.2, docs/FRAMES.md).
 /.frames-build/
+# Bucket frames fetched for the tests (scripts/frames-fetch.mjs; CI caches
+# them, TODO 7.6) — Card Conjurer-derived, never committed.
+/.frames-cache/
