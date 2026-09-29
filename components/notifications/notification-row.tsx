@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Bell,
+  CirclePause,
   Coins,
   Crown,
   Heart,
@@ -37,6 +38,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   comp_plan: Crown,
   card_limit: Layers,
   render_update: Sparkles,
+  render_sweep_paused: CirclePause,
 };
 
 export function NotificationRow({

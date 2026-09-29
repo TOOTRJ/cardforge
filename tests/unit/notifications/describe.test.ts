@@ -211,5 +211,22 @@ describe("describeNotification — deck generated", () => {
       href: "/dashboard/billing#plans",
     });
   });
+
+  it("render sweep paused: the breaker's reason, linking admins to the re-bake page", () => {
+    const base = { actor: null, card: null, threadId: null, type: "render_sweep_paused" };
+    expect(
+      describeNotification(
+        { ...base, payload: { reason: "A whole batch failed (8 cards): Row update failed: boom", failed: 8, rebaked: 0 } },
+        { isAdmin: true },
+      ),
+    ).toEqual({
+      subject: "Automatic re-bake",
+      body: "paused itself — A whole batch failed (8 cards): Row update failed: boom. Check the failures, then resume it.",
+      href: "/admin/renders",
+    });
+    expect(describeNotification({ ...base, payload: {} }, { isAdmin: true }).body).toBe(
+      "paused itself. Check the failures, then resume it.",
+    );
+  });
 });
 
