@@ -10,7 +10,7 @@ import { POISON_AFTER_STRIKES, type SweepStrike } from "@/lib/cards/auto-rebake-
 // The /admin/renders controls for the automatic re-bake. Each action checks
 // is_admin itself (the page's 404 is not a gate for a server action) and
 // writes render_sweep_state with the service-role client — the table is not
-// writable, or even readable, by API roles (migration 0121).
+// writable, or even readable, by API roles (migration 0123).
 //
 //   pause   the cron skips every invocation until resumed. Manual re-bakes
 //           (the script, the compare page) still run.

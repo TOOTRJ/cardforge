@@ -4,6 +4,7 @@ import {
   breakerAfterBatch,
   breakerForPoison,
   BREAKER_NEW_FAILURES,
+  diedHoldingLease,
   EMPTY_AUTO_REBAKE_STATE,
   formatRunLog,
   leaseIsLive,
@@ -11,6 +12,7 @@ import {
   POISON_AFTER_STRIKES,
   POISON_MAX,
   STRIKE_TTL_MS,
+  streakAfter,
   type AutoRebakeRunSummary,
   type PoisonEntry,
 } from "@/lib/cards/auto-rebake-state";
@@ -37,6 +39,7 @@ describe("parseSweepState", () => {
       paused_at: AT,
       strikes: { a: { n: 2, error: "art", at: AT } },
       poison: [{ id: "b", error: "art", failures: 3, at: AT }],
+      in_flight: ["c", "d"],
       last_run: { stop: "done", rebaked: 3 },
       idle: { layoutVersion: 32, candidates: 4, at: AT },
       last_checked_at: AT,
@@ -48,6 +51,7 @@ describe("parseSweepState", () => {
     expect(state.strikes).toEqual({ a: { n: 2, error: "art", at: AT } });
     expect(state.poison).toEqual([{ id: "b", error: "art", failures: 3, at: AT }]);
     expect(state.idle).toEqual({ layoutVersion: 32, candidates: 4, at: AT });
+    expect(state.inFlight).toEqual(["c", "d"]);
     expect(state.lastRun).toMatchObject({ stop: "done", rebaked: 3 });
     expect(state.revalidatePending).toBe(true);
   });
@@ -61,7 +65,9 @@ describe("parseSweepState", () => {
       idle: { layoutVersion: "32" },
       last_run: "garbage",
       paused: "yes",
+      in_flight: ["a", 3, null, "a", ""],
     });
+    expect(state.inFlight).toEqual(["a"]);
     expect(state.lease.holder).toBeNull();
     expect(state.lease.running).toBe(false);
     expect(state.strikes).toEqual({});
@@ -173,10 +179,13 @@ describe("the breaker", () => {
     ).toMatch(new RegExp(`${BREAKER_NEW_FAILURES} cards failed`));
   });
 
-  it("trips when the poison list outgrows its cap", () => {
+  it("trips when a run pushes the poison list past its cap — not on every run after", () => {
     const list = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `c${i}`, error: "e", failures: 3, at: AT }));
-    expect(breakerForPoison(list(POISON_MAX))).toBeNull();
-    expect(breakerForPoison(list(POISON_MAX + 1))).toMatch(/keep failing/);
+    expect(breakerForPoison(POISON_MAX - 1, list(POISON_MAX))).toBeNull();
+    expect(breakerForPoison(POISON_MAX, list(POISON_MAX + 1))).toMatch(/51 cards keep failing/);
+    expect(breakerForPoison(POISON_MAX - 3, list(POISON_MAX + 2))).toMatch(/keep failing/);
+    // Already over the cap before this run (an admin resumed): carry on.
+    expect(breakerForPoison(POISON_MAX + 1, list(POISON_MAX + 2))).toBeNull();
   });
 });
 
@@ -203,5 +212,44 @@ describe("formatRunLog", () => {
     );
     expect(line).not.toContain("\n");
     expect(line).not.toContain("11111111");
+  });
+});
+
+describe("diedHoldingLease — a cron run killed before its bookkeeping", () => {
+  const now = Date.parse(AT);
+  const row = (extra: Record<string, unknown> = {}) =>
+    parseSweepState({
+      lease_holder: "cron",
+      lease_token: "tok",
+      lease_acquired_at: "2026-09-28T11:50:00Z",
+      lease_expires_at: "2026-09-28T11:55:10Z",
+      last_run: { stop: "budget", finishedAt: "2026-09-28T11:45:00Z" },
+      ...extra,
+    });
+
+  it("is an expired cron lease with its token and no summary written after it was taken", () => {
+    expect(diedHoldingLease(row(), now)).toBe(true);
+    expect(diedHoldingLease(row({ last_run: null }), now)).toBe(true);
+  });
+
+  it("is not a live lease, a released one, a manual one, or a run that wrote its summary (hung)", () => {
+    expect(diedHoldingLease(row({ lease_expires_at: "2026-09-28T12:01:00Z" }), now)).toBe(false);
+    expect(diedHoldingLease(row({ lease_token: null }), now)).toBe(false);
+    expect(diedHoldingLease(row({ lease_holder: "manual" }), now)).toBe(false);
+    expect(diedHoldingLease(row({ last_run: { stop: "hung", finishedAt: "2026-09-28T11:54:40Z" } }), now)).toBe(false);
+    expect(diedHoldingLease(row({ lease_acquired_at: null }), now)).toBe(false);
+  });
+});
+
+describe("streakAfter", () => {
+  const run = (stop: AutoRebakeRunSummary["stop"], extra: Partial<AutoRebakeRunSummary> = {}) =>
+    ({ stop, ...extra }) as AutoRebakeRunSummary;
+  it("counts runs in a row that ended the same way", () => {
+    expect(streakAfter(null, "error", "errorStreak")).toBe(1);
+    expect(streakAfter(run("done"), "error", "errorStreak")).toBe(1);
+    expect(streakAfter(run("error"), "error", "errorStreak")).toBe(2); // an older summary without the field
+    expect(streakAfter(run("error", { errorStreak: 2 }), "error", "errorStreak")).toBe(3);
+    expect(streakAfter(run("crashed", { crashes: 1 }), "crashed", "crashes")).toBe(2);
+    expect(streakAfter(run("breaker", { errorStreak: 3 }), "error", "errorStreak")).toBe(1);
   });
 });

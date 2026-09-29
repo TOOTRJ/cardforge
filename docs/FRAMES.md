@@ -318,14 +318,15 @@ migration left on an older render.
   overlap guards still apply. Batches of 8 until a batch finds nothing, or
   until about 240 s have gone (`maxDuration` is 300 s). The next run carries
   on. A 700-card sweep takes roughly an hour.
-- **When idle** it costs a state read and one head count: published cards
-  that were never baked, have no stamp, or are stamped below the newest
-  sweep version (`latestSweepVersion()`). If only opt-in leftovers remain,
+- **When idle** it costs a state read, one head count and a timestamp
+  write. The count covers published cards that were never baked, have no
+  stamp, or are stamped below the newest sweep version
+  (`latestSweepVersion()`). If only opt-in leftovers remain,
   the count is remembered and the scan is skipped for up to 6 hours.
 - **Never clean.** It refuses (412, and records it) unless
   `NEXT_PUBLIC_BILLING_ENABLED` is `true`. `ALLOW_UNWATERMARKED_SWEEP` does
   not apply to it.
-- **One sweeper at a time.** One lease (`render_sweep_state`, migration 0121;
+- **One sweeper at a time.** One lease (`render_sweep_state`, migration 0123;
   `lib/cards/sweep-lease.ts`) is shared by the cron,
   `POST /api/admin/rebake` (the script) and `POST /api/admin/rebake-marked`
   (the compare page's "Re-bake now"). A manual call that finds the cron
@@ -333,20 +334,36 @@ migration left on an older render.
   manual calls the lease stays parked for the manual run, so the cron stays
   out until the run ends. If the lease is still busy after 2 minutes, the
   manual route answers `503` with `Retry-After: 60` and says why. The
-  script prints that and stops (with the retry helper from PR #394 it
-  backs off and retries). The compare page shows it next to "Try again".
-  Never `409`: the script treats that as fatal.
+  script's retry helper (`scripts/lib/rebake-request.mjs`) backs off and
+  retries a 503. The compare page shows it next to "Try again". Never
+  `409`: the script treats that as fatal.
 - **Failures.** A card that fails is skipped for the rest of that run. After
   it fails in 3 runs it goes on the **poison list**: every later run skips
   it and the pending count leaves it out. "Retry these cards" gives each
-  one more try.
+  one more try. An entry whose card no longer needs a re-bake (the owner
+  saved it again, unpublished or deleted it) leaves the list on the next
+  working run.
+- **A run that dies.** A run killed at the 300 s limit or out of memory
+  writes nothing. It records the batch it is baking first (`in_flight`), so
+  the next run gives each of those cards a strike: a card that kills the
+  renderer ends up on the poison list like one that fails.
+- **Time limit.** No batch starts if it would end past 240 s. A batch still
+  running at 280 s keeps the lease (it may still write) and ends the run.
+  If it had been running for 2 minutes or more, that is a **hung** batch
+  (breaker). A shorter one was just a slow last batch (an "overrun"): the
+  next run carries on.
 - **Breaker.** It pauses the automatic sweep and sends every admin a
   `render_sweep_paused` notification (a toast and a bell entry) when any of
   these happens:
   - a whole batch of first-time failures re-bakes nothing (≥ 3 cards);
   - 10 cards fail for the first time in one run;
-  - a batch is still running at 280 s;
-  - the poison list passes 50 cards.
+  - a batch hangs (see above);
+  - the batch query fails 3 runs in a row (a blip heals itself; code that
+    reads a column its migration hasn't added yet doesn't);
+  - 2 runs in a row die before finishing;
+  - one run pushes the poison list past 50 cards. It trips once, when the
+    list crosses 50, so Resume lets the sweep carry on past cards you
+    can't fix yet.
 
   A known-bad card that fails again doesn't count.
 - **Watching it.** `/admin/renders` (Admin → Re-bakes) shows the status, a

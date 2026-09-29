@@ -23,13 +23,21 @@ vi.mock("@/lib/cards/rebake-batch", () => ({ DEFAULT_BATCH: 8, runRebakeBatch: v
 
 import {
   AUTO_REBAKE_BUDGET_MS,
+  AUTO_REBAKE_HARD_STOP_MS,
+  AUTO_REBAKE_HUNG_BATCH_MS,
   IDLE_RECHECK_MS,
+  MAX_EXCLUDED_IDS,
   REFUSED_BILLING_ERROR,
   runAutoRebake,
   type AutoRebakeDeps,
 } from "@/lib/cards/auto-rebake";
 import { CARD_LAYOUT_VERSION, latestSweepVersion } from "@/lib/cards/layout-version";
-import { POISON_AFTER_STRIKES } from "@/lib/cards/auto-rebake-state";
+import {
+  BREAKER_ERROR_RUNS,
+  CRASHED_BATCH_ERROR,
+  POISON_AFTER_STRIKES,
+  POISON_MAX,
+} from "@/lib/cards/auto-rebake-state";
 
 const T0 = Date.parse("2026-09-28T12:00:00.000Z");
 const ISO0 = new Date(T0).toISOString();
@@ -128,6 +136,28 @@ describe("runAutoRebake — refusal and idle paths", () => {
     setup({ lease_holder: "manual", lease_token: "x", lease_expires_at: new Date(T0 - 1).toISOString() });
     script([{}]);
     expect((await runAutoRebake(db.client, { billingEnabled: true }, deps())).outcome).toBe("ran");
+  });
+
+  it("loses the acquire race to a manual call that took the lease after the state read: bakes nothing", async () => {
+    // The state read saw a free lease; the manual route takes it while the
+    // cron counts (the count is the last step before the acquire).
+    db = sweepDb({
+      now: () => t,
+      count: () => {
+        Object.assign(db.row, {
+          lease_holder: "manual",
+          lease_token: "manual-token",
+          lease_expires_at: new Date(T0 + 300_000).toISOString(),
+        });
+        return 5;
+      },
+    });
+    script([{ processed: rebaked(1) }]);
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(result).toEqual({ ok: true, outcome: "manual-run" });
+    expect(runBatch).not.toHaveBeenCalled();
+    expect(db.row).toMatchObject({ lease_holder: "manual", lease_token: "manual-token" });
+    expect(db.stateWrites()).toEqual([]);
   });
 
   it("idle: nothing pending costs a state read, one head count and a timestamp — no lease, no batch", async () => {
@@ -375,19 +405,59 @@ describe("runAutoRebake — the breaker", () => {
     expect(db.row.paused).toBe(true);
   });
 
+  /** A hard stop on fake time: fires on the next macrotask (after any batch
+   *  that resolves at once), moving the clock `ms` forward as it fires. */
+  const firesAfter = (ms: number) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const promise = new Promise<"timeout">((resolve) => {
+      timer = setTimeout(() => {
+        t += ms;
+        resolve("timeout");
+      }, 0);
+    });
+    return { promise, cancel: () => clearTimeout(timer) };
+  };
+
   it("a hung batch pauses the sweep and keeps the lease until it expires", async () => {
-    runBatch.mockImplementation(() => new Promise(() => {}));
+    runBatch.mockImplementation(async (_admin: unknown, o: { onPicked?: (ids: string[]) => Promise<void> }) => {
+      await o.onPicked?.([id(1), id(2)]);
+      return new Promise(() => {});
+    });
+    const timeouts: number[] = [];
     const result = await runAutoRebake(
       db.client,
       { billingEnabled: true },
-      deps({ timeout: () => ({ promise: Promise.resolve("timeout" as const), cancel: () => {} }) }),
+      deps({ timeout: (ms) => (timeouts.push(ms), firesAfter(ms)) }),
     );
     if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(timeouts).toEqual([AUTO_REBAKE_HARD_STOP_MS]); // the first batch gets the whole 280 s
     expect(result.summary.stop).toBe("hung");
+    expect(result.summary.suspects).toEqual([id(1), id(2)]);
     expect(db.row.paused).toBe(true);
-    expect(db.row.paused_reason).toMatch(/a render may hang/);
+    expect(db.row.paused_reason).toMatch(/still running after 280 s — a render may hang/);
     expect(db.row.lease_token).toBe("cron-token");
+    expect(db.row.in_flight).toEqual([]);
     expect(db.notifications).toHaveLength(2);
+  });
+
+  it("a slow LAST batch that runs into the hard stop is an overrun: lease kept, no pause, no alert", async () => {
+    let calls = 0;
+    runBatch.mockImplementation(async () => {
+      calls += 1;
+      if (calls <= 7) {
+        t += 30_000; // batches 1–7 take 30 s each (0 → 210 s)
+        return ok({ processed: rebaked(calls), remaining: 100 });
+      }
+      return new Promise(() => {}); // batch 8 starts at 210 s (210 + 30 ≤ 240) and never ends
+    });
+    // Batch 8's hard stop fires 70 s in — slow, not hung.
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps({ timeout: (ms) => firesAfter(ms) }));
+    if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(result.summary).toMatchObject({ stop: "overrun", batches: 7, rebaked: 7 });
+    expect(AUTO_REBAKE_HARD_STOP_MS - 210_000).toBeLessThan(AUTO_REBAKE_HUNG_BATCH_MS);
+    expect(db.row.paused).toBe(false);
+    expect(db.notifications).toEqual([]);
+    expect(db.row.lease_token).toBe("cron-token"); // it may still write
   });
 
   it("does not alert again when it was already paused by the time the run ended", async () => {
@@ -408,5 +478,239 @@ describe("runAutoRebake — the breaker", () => {
     const acquire = db.rpc.mock.calls.find(([fn]) => fn === "acquire_render_sweep_lease");
     expect(acquire?.[1]).toEqual({ p_holder: "cron", p_token: "cron-token", p_ttl_seconds: 310 });
     expect(called(countChains()[0], "or")).toBe(true);
+  });
+});
+
+describe("runAutoRebake — a run that died holding the lease", () => {
+  // The previous cron run took the lease at T0 - 700 s and was killed (the
+  // lease expired at T0 - 390 s): token still set, no summary after it, its
+  // batch still recorded as in flight.
+  const deadRun = (extra: Parameters<typeof sweepDb>[0]["row"] = {}) => ({
+    lease_holder: "cron" as const,
+    lease_token: "dead-token",
+    lease_acquired_at: new Date(T0 - 700_000).toISOString(),
+    lease_expires_at: new Date(T0 - 390_000).toISOString(),
+    in_flight: [id(1), id(2)],
+    last_run: { stop: "budget", finishedAt: new Date(T0 - 1_300_000).toISOString() },
+    ...extra,
+  });
+
+  it("strikes the batch it left in flight, records it, and carries on", async () => {
+    setup(deadRun());
+    script([{ processed: rebaked(3), remaining: 0 }, {}]);
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(result.summary.stop).toBe("done"); // this run finished normally
+    expect(db.row.strikes).toMatchObject({
+      [id(1)]: { n: 1, error: CRASHED_BATCH_ERROR },
+      [id(2)]: { n: 1, error: CRASHED_BATCH_ERROR },
+    });
+    expect(db.row.paused).toBe(false);
+    expect(db.notifications).toEqual([]);
+    // The crash was recorded before the run (then superseded by its summary).
+    const crash = db.stateWrites().find((w) => (w.last_run as { stop?: string } | undefined)?.stop === "crashed");
+    expect(crash?.last_run).toMatchObject({ stop: "crashed", crashes: 1, suspects: [id(1), id(2)] });
+    expect(crash?.in_flight).toEqual([]);
+    expect(logs.some((l) => l.includes("stop=crashed"))).toBe(true);
+    expect(logs.join("\n")).not.toContain(id(1)); // no card ids in the log
+  });
+
+  it("two dead runs in a row pause the sweep and alert the admins — without baking", async () => {
+    setup(
+      deadRun({
+        last_run: { stop: "crashed", crashes: 1, finishedAt: new Date(T0 - 1_300_000).toISOString() },
+        strikes: { [id(1)]: { n: 1, error: CRASHED_BATCH_ERROR, at: ISO0 } },
+      }),
+    );
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(result.summary).toMatchObject({ stop: "crashed", crashes: 2 });
+    expect(result.pausedReason).toMatch(/2 automatic runs in a row died before finishing/);
+    expect(runBatch).not.toHaveBeenCalled();
+    expect(db.rpc).not.toHaveBeenCalled(); // no lease taken
+    expect(db.row).toMatchObject({ paused: true });
+    expect(db.row.strikes).toMatchObject({ [id(1)]: { n: 2 }, [id(2)]: { n: 1 } });
+    expect(db.notifications).toHaveLength(2);
+  });
+
+  it("a card that kills the renderer three times is poisoned like one that fails", async () => {
+    setup(deadRun({ strikes: { [id(1)]: { n: POISON_AFTER_STRIKES - 1, error: CRASHED_BATCH_ERROR, at: ISO0 } } }));
+    script([{}]);
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(db.row.poison).toEqual([expect.objectContaining({ id: id(1), error: CRASHED_BATCH_ERROR })]);
+    expect(batchCalls()[0].skipIds).toEqual([id(1)]);
+  });
+
+  it("is not fooled by a hung run (summary written after the lease) or a released lease", async () => {
+    // Hung: the lease was kept on purpose, but the summary came after it.
+    setup(deadRun({ last_run: { stop: "hung", finishedAt: new Date(T0 - 420_000).toISOString() } }));
+    script([{}]);
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(db.row.strikes).toEqual({});
+    // Released: no token.
+    setup(deadRun({ lease_token: null, lease_holder: null }));
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(db.row.strikes).toEqual({});
+    // A manual run that died is the manual route's business, not a cron crash.
+    setup(deadRun({ lease_holder: "manual" }));
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(db.row.strikes).toEqual({});
+  });
+
+  it("clears a stale in-flight batch (a dead run a manual call took over) when it takes the lease", async () => {
+    setup({ in_flight: [id(40), id(41)] }); // no dead cron lease any more: nothing to blame
+    let seenAtFirstBatch: unknown = "unset";
+    runBatch.mockImplementation(async () => {
+      if (seenAtFirstBatch === "unset") seenAtFirstBatch = db.row.in_flight;
+      t += 5_000;
+      return ok({});
+    });
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(seenAtFirstBatch).toEqual([]);
+    expect(db.row.strikes).toEqual({});
+  });
+
+  it("records the batch it is baking before rendering, and clears it when the run ends", async () => {
+    const seen: unknown[] = [];
+    runBatch.mockImplementation(async (_admin: unknown, o: { onPicked?: (ids: string[]) => Promise<void> }) => {
+      t += 10_000;
+      if (seen.length === 0) {
+        await o.onPicked?.([id(7), id(8)]);
+        seen.push(db.row.in_flight);
+        return ok({ processed: rebaked(7, 8), remaining: 0 });
+      }
+      return ok({});
+    });
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(seen).toEqual([[id(7), id(8)]]);
+    expect(db.row.in_flight).toEqual([]);
+  });
+});
+
+describe("runAutoRebake — errors that repeat", () => {
+  it(`a batch query failing ${BREAKER_ERROR_RUNS} runs in a row trips the breaker; a blip doesn't`, async () => {
+    runBatch.mockResolvedValue({ ok: false, error: 'column cards.frame_preview does not exist' });
+    const results = [];
+    for (let run = 1; run <= BREAKER_ERROR_RUNS; run += 1) {
+      t = T0 + run * 600_000;
+      const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+      if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+      results.push(result.summary);
+    }
+    expect(results.map((s) => s.stop)).toEqual(["error", "error", "breaker"]);
+    expect(results.map((s) => s.errorStreak)).toEqual([1, 2, 3]);
+    expect(db.row.paused).toBe(true);
+    expect(db.row.paused_reason).toMatch(/failed 3 runs in a row: column cards\.frame_preview does not exist/);
+    expect(db.notifications).toHaveLength(2);
+
+    // After Resume the streak starts over.
+    db.row.paused = false;
+    t += 600_000;
+    const after = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!after.ok || after.outcome !== "ran") throw new Error("expected a run");
+    expect(after.summary).toMatchObject({ stop: "error", errorStreak: 1 });
+    expect(db.row.paused).toBe(false);
+  });
+
+  it("a successful run in between resets the streak", async () => {
+    setup({ last_run: { stop: "error", errorStreak: 2, finishedAt: new Date(T0 - 600_000).toISOString() } });
+    script([{}]);
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(result.summary.stop).toBe("done");
+    expect(result.summary.errorStreak).toBeUndefined();
+  });
+});
+
+describe("runAutoRebake — the poison list stays meaningful", () => {
+  const entry = (n: number) => ({ id: id(n), error: "Art unavailable", failures: 3, at: ISO0 });
+
+  it("drops entries whose card no longer owes a re-bake (fixed, unpublished, deleted)", async () => {
+    db = sweepDb({
+      now: () => t,
+      row: { poison: [entry(1), entry(2), entry(3)] },
+      count: () => pending,
+      owed: (card) => card === id(2),
+    });
+    script([{}]);
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect((db.row.poison as Array<{ id: string }>).map((p) => p.id)).toEqual([id(2)]);
+    // The lookup: those ids, published, still below the newest sweep version.
+    const lookup = db.forTable("cards").find((e) => e.calls.some((c) => c.method === "in" && c.args[0] === "id"));
+    expect(lookup?.calls.find((c) => c.method === "or")?.args[0]).toBe(
+      `rendered_image_url.is.null,layout_version.is.null,layout_version.lt.${latestSweepVersion()}`,
+    );
+    expect(lookup?.calls.find((c) => c.method === "in" && c.args[0] === "visibility")?.args[1]).toEqual(["public", "unlisted"]);
+  });
+
+  it("keeps the list as it is when the lookup fails", async () => {
+    setup({ poison: [entry(1)] });
+    const from = db.client as unknown as { from: (t: string) => unknown };
+    const original = from.from;
+    from.from = (table: string) => {
+      const builder = original(table) as Record<string, unknown>;
+      if (table !== "cards") return builder;
+      return new Proxy(builder, {
+        get(target, prop) {
+          if (prop === "select") {
+            return (...args: unknown[]) => {
+              if (args.length === 1) {
+                // the prune's plain select → an erroring builder
+                const failing: Record<string | symbol, unknown> = new Proxy(
+                  {},
+                  {
+                    get(_t, p) {
+                      if (p === "then") return (f: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { message: "boom" } }).then(f);
+                      return () => failing;
+                    },
+                  },
+                );
+                return failing;
+              }
+              return (target.select as (...a: unknown[]) => unknown)(...args);
+            };
+          }
+          return target[prop as string];
+        },
+      });
+    };
+    script([{}]);
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    expect(db.row.poison).toEqual([entry(1)]);
+  });
+
+  it("trips the breaker when a run pushes the list past the cap — once, not after every Resume", async () => {
+    const full = Array.from({ length: POISON_MAX }, (_, i) => entry(1000 + i));
+    setup({
+      poison: full,
+      strikes: { [id(1)]: { n: POISON_AFTER_STRIKES - 1, error: "art", at: ISO0 } },
+    });
+    script([{ processed: rebaked(5), failed: [{ id: id(1), error: "art" }], remaining: 3 }, {}]);
+    const first = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!first.ok || first.outcome !== "ran") throw new Error("expected a run");
+    expect(first.summary.stop).toBe("breaker");
+    expect(first.pausedReason).toMatch(/51 cards keep failing/);
+    expect(db.row.paused).toBe(true);
+
+    // Resume: the list is still over the cap, but this run didn't grow it
+    // past — the sweep carries on (poisoned cards skipped).
+    db.row.paused = false;
+    db.row.idle = null;
+    runBatch.mockReset();
+    script([{ processed: rebaked(6), remaining: 0 }, {}]);
+    t += 600_000;
+    pending = 7;
+    const second = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!second.ok || second.outcome !== "ran") throw new Error("expected a run");
+    expect(second.summary.stop).toBe("done");
+    expect(db.row.paused).toBe(false);
+  });
+
+  it(`leaves at most ${MAX_EXCLUDED_IDS} poisoned ids out of the count by name (the filter rides in the URL)`, async () => {
+    pending = 0;
+    setup({ poison: Array.from({ length: MAX_EXCLUDED_IDS + 40 }, (_, i) => entry(5000 + i)) });
+    await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    const not = countChains()[0].find((c) => c.method === "not");
+    expect((not?.args[2] as string).split(",")).toHaveLength(MAX_EXCLUDED_IDS);
   });
 });

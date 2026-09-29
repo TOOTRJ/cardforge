@@ -1,4 +1,4 @@
--- 0121 — automatic re-bake: one shared sweep lease, a circuit breaker, and
+-- 0123 — automatic re-bake: one shared sweep lease, a circuit breaker, and
 -- what the admin control shows.
 --
 -- A "sweep" layout bump (lib/cards/layout-version.ts VERSION_ROLLOUT) used to
@@ -26,8 +26,15 @@
 --   strikes   { "<card id>": { "n", "error", "at" } } — failed attempts, one
 --             per cron invocation; a card that is re-baked loses its entry.
 --   poison    [ { "id", "error", "failures", "at" } ] — cards that failed
---             3 invocations in a row. The cron skips them until an admin
---             retries them. Kept short (the breaker trips past 50).
+--             3 invocations. The cron skips them until an admin retries them;
+--             an entry whose card no longer owes a re-bake (fixed by a save,
+--             unpublished, deleted) is dropped by the next working run. The
+--             breaker trips when the list grows past 50 in one run.
+--   in_flight [ "<card id>" ] — the batch the cron is baking right now. A run
+--             that dies without its bookkeeping (killed at maxDuration, out of
+--             memory) leaves it behind: the next run gives those cards a
+--             strike, so a card that kills the renderer is poisoned like one
+--             that fails, and two dead runs in a row trip the breaker.
 --   last_run  the last cron invocation's summary (counts, stop reason).
 --   idle      { layoutVersion, candidates, at } — the "nothing to do" pre-check
 --             fingerprint (lib/cards/auto-rebake.ts explains).
@@ -60,6 +67,10 @@
 -- Grants: stated below (new projects don't auto-grant; prod's anon/
 -- authenticated grants are revoked explicitly).
 --
+-- Numbering: 0120 is reserved for Phase 1's frame_requests, 0121 is
+-- PR #395's frame_preview_cards and 0122 is PR #397's card_title_150 — two
+-- files with one version number would break the migration history on merge.
+--
 -- Ships through a PR; never applied ad-hoc.
 
 create table if not exists public.render_sweep_state (
@@ -74,6 +85,7 @@ create table if not exists public.render_sweep_state (
   paused_at timestamptz,
   strikes jsonb not null default '{}'::jsonb check (jsonb_typeof(strikes) = 'object'),
   poison jsonb not null default '[]'::jsonb check (jsonb_typeof(poison) = 'array'),
+  in_flight jsonb not null default '[]'::jsonb check (jsonb_typeof(in_flight) = 'array'),
   last_run jsonb,
   idle jsonb,
   last_checked_at timestamptz,

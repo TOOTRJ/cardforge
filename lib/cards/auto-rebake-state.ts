@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // The automatic re-bake's persisted state (public.render_sweep_state, migration
-// 0121) — types, the defensive row parser, and the pure bookkeeping the cron
+// 0123) — types, the defensive row parser, and the pure bookkeeping the cron
 // runs after an invocation: strikes → poison list, and the circuit breaker.
 // No imports and no server-only code: the admin panel renders these types.
 //
@@ -15,11 +15,15 @@
 //            look systemic (a renderer regression, storage down, a hung
 //            render) rather than one broken card. Only FIRST-time failures
 //            count: a known-bad card failing again is bookkeeping, not news.
+//   crashed  a cron invocation that died holding the lease (killed at
+//            maxDuration, out of memory) writes nothing; the next one sees
+//            the expired lease with no summary after it and strikes the batch
+//            it left in `in_flight`. Two dead runs in a row trip the breaker.
 // ---------------------------------------------------------------------------
 
 /** Invocations a card may fail before it goes on the poison list. */
 export const POISON_AFTER_STRIKES = 3;
-/** The breaker trips once the poison list grows past this. */
+/** The breaker trips when one run grows the poison list past this. */
 export const POISON_MAX = 50;
 /** A strike on a card nobody retried for this long is forgotten. */
 export const STRIKE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -28,6 +32,15 @@ export const STRIKE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const BREAKER_WHOLE_BATCH_MIN = 3;
 /** First-time failures in one invocation that trip the breaker. */
 export const BREAKER_NEW_FAILURES = 10;
+/** Invocations in a row whose batch query failed (stop "error") that trip
+ *  the breaker — a transient blip heals itself, a persistent one (code
+ *  selecting a column its migration hasn't added) must not stay silent. */
+export const BREAKER_ERROR_RUNS = 3;
+/** Invocations in a row that died holding the lease that trip the breaker. */
+export const BREAKER_CRASHED_RUNS = 2;
+/** The strike a dead run's in-flight batch gets. */
+export const CRASHED_BATCH_ERROR =
+  "The automatic run died while re-baking this card's batch (killed at the 300 s limit or out of memory).";
 /** Errors kept per summary (the Vercel log line and the admin panel). */
 const SUMMARY_ERRORS = 5;
 
@@ -44,7 +57,9 @@ export type AutoRebakeStop =
   | "paused" // an admin paused it mid-run
   | "lease-lost" // the lease was taken over (should not happen)
   | "breaker" // failures looked systemic — paused, admins alerted
-  | "hung" // a batch ran past the hard stop — paused, admins alerted
+  | "hung" // a batch ran past the hard stop for minutes — paused, admins alerted
+  | "overrun" // a slow last batch ran into the hard stop — the next run continues
+  | "crashed" // the previous run died holding the lease (recorded by the next one)
   | "error" // a batch query failed
   | "refused"; // NEXT_PUBLIC_BILLING_ENABLED is off: bakes would be clean
 
@@ -66,6 +81,14 @@ export type AutoRebakeRunSummary = {
   failures?: Array<{ id: string; error: string }>;
   /** Cards that went on the poison list in this run. */
   poisoned?: string[];
+  /** stop "crashed": dead runs in a row (the breaker trips at
+   *  BREAKER_CRASHED_RUNS). */
+  crashes?: number;
+  /** stop "error" (or the breaker it tripped): runs in a row whose batch
+   *  query failed. */
+  errorStreak?: number;
+  /** The cards of a batch that hung or whose run died — the suspects. */
+  suspects?: string[];
 };
 
 /** "Nothing actionable" fingerprint: the pending count a full scan found
@@ -88,6 +111,8 @@ export type AutoRebakeState = {
   pausedAt: string | null;
   strikes: Record<string, SweepStrike>;
   poison: PoisonEntry[];
+  /** The batch a cron run is baking now (left behind if it died). */
+  inFlight: string[];
   lastRun: AutoRebakeRunSummary | null;
   idle: IdleFingerprint | null;
   lastCheckedAt: string | null;
@@ -102,6 +127,7 @@ export const EMPTY_AUTO_REBAKE_STATE: AutoRebakeState = {
   pausedAt: null,
   strikes: {},
   poison: [],
+  inFlight: [],
   lastRun: null,
   idle: null,
   lastCheckedAt: null,
@@ -146,6 +172,10 @@ export function parseSweepState(row: Record<string, unknown> | null | undefined)
     }
   }
 
+  const inFlight = Array.isArray(row.in_flight)
+    ? [...new Set(row.in_flight.filter((v): v is string => typeof v === "string" && v.length > 0))]
+    : [];
+
   let idle: IdleFingerprint | null = null;
   if (isRecord(row.idle)) {
     const layoutVersion = num(row.idle.layoutVersion);
@@ -167,6 +197,7 @@ export function parseSweepState(row: Record<string, unknown> | null | undefined)
     pausedAt: str(row.paused_at),
     strikes,
     poison,
+    inFlight,
     lastRun: isRecord(row.last_run) ? (row.last_run as unknown as AutoRebakeRunSummary) : null,
     idle,
     lastCheckedAt: str(row.last_checked_at),
@@ -179,6 +210,33 @@ export function leaseIsLive(state: AutoRebakeState, nowMs: number): boolean {
   if (!state.lease.holder || !state.lease.expiresAt) return false;
   const expires = Date.parse(state.lease.expiresAt);
   return Number.isFinite(expires) && expires > nowMs;
+}
+
+/**
+ * The previous cron invocation died holding the lease: the lease is a cron's,
+ * still carries its token (never released), has expired, and no run summary
+ * was written after it was taken. A hung batch keeps its lease on purpose but
+ * writes its summary first, so it doesn't count.
+ */
+export function diedHoldingLease(state: AutoRebakeState, nowMs: number): boolean {
+  if (state.lease.holder !== "cron" || !state.lease.running) return false;
+  if (!state.lease.expiresAt || leaseIsLive(state, nowMs)) return false;
+  const acquired = state.lease.acquiredAt ? Date.parse(state.lease.acquiredAt) : NaN;
+  if (!Number.isFinite(acquired)) return false;
+  const finished = state.lastRun?.finishedAt ? Date.parse(state.lastRun.finishedAt) : NaN;
+  return !Number.isFinite(finished) || finished < acquired;
+}
+
+/** Runs in a row that ended the same way: the previous summary's streak
+ *  (at least 1 when it ended that way) plus this one. */
+export function streakAfter(
+  last: AutoRebakeRunSummary | null,
+  stop: AutoRebakeStop,
+  field: "crashes" | "errorStreak",
+): number {
+  if (!last || last.stop !== stop) return 1;
+  const previous = last[field];
+  return Math.max(1, typeof previous === "number" && Number.isFinite(previous) ? previous : 1) + 1;
 }
 
 /**
@@ -242,10 +300,13 @@ export function breakerAfterBatch(
   return null;
 }
 
-/** The breaker's poison-list check, after the run's outcome is folded in. */
-export function breakerForPoison(poison: readonly PoisonEntry[]): string | null {
-  return poison.length > POISON_MAX
-    ? `${poison.length} cards keep failing (the list holds ${POISON_MAX}) — something is wrong beyond single cards`
+/** The breaker's poison-list check, after the run's outcome is folded in:
+ *  trips when THIS run pushed the list past POISON_MAX — not on every later
+ *  run, so Resume lets the sweep carry on past cards an admin can't fix yet
+ *  (they stay listed, and skipped). */
+export function breakerForPoison(before: number, poison: readonly PoisonEntry[]): string | null {
+  return before <= POISON_MAX && poison.length > POISON_MAX
+    ? `${poison.length} cards keep failing (more than ${POISON_MAX}) — something is wrong beyond single cards`
     : null;
 }
 

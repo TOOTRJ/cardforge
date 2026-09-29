@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
 -- 20_auto_rebake.sql — synthetic state for the automatic re-bake's admin
--- page (/admin/renders, migration 0121) on non-production databases, so a
+-- page (/admin/renders, migration 0123) on non-production databases, so a
 -- preview shows every section: a last run, and one card on the "keeps
 -- failing" list (Gravebloom Shade, seeded in 10_dev_data.sql) to exercise
 -- "Retry this card". Vercel previews never run crons, so nothing overwrites

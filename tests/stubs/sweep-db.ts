@@ -2,12 +2,12 @@ import { vi } from "vitest";
 import { chainClient, called, payloadOf, type ChainCall } from "@/tests/stubs/supabase-chain";
 
 // ---------------------------------------------------------------------------
-// An in-memory stand-in for the automatic re-bake's tables (migration 0121):
+// An in-memory stand-in for the automatic re-bake's tables (migration 0123):
 // the single render_sweep_state row, the lease RPCs, the pending-card count,
-// the admin lookup and the notifications insert. Builds on chainClient, so
+// the poison prune's lookup, the admin lookup and the notifications insert. Builds on chainClient, so
 // every chain is recorded for assertions.
 //
-// The lease RPCs follow the SQL of supabase/migrations/0121_auto_rebake.sql
+// The lease RPCs follow the SQL of supabase/migrations/0123_auto_rebake.sql
 // branch for branch — the lease is free when it has no expiry, has expired,
 // is the caller's own token, or is PARKED (no token) for the same holder.
 // tests/unit/db/auto-rebake-migration.test.ts pins the SQL to those four
@@ -28,6 +28,7 @@ export type SweepRow = {
   paused_at: string | null;
   strikes: Record<string, unknown>;
   poison: unknown[];
+  in_flight: unknown[];
   last_run: Record<string, unknown> | null;
   idle: Record<string, unknown> | null;
   last_checked_at: string | null;
@@ -48,6 +49,7 @@ export function emptySweepRow(): SweepRow {
     paused_at: null,
     strikes: {},
     poison: [],
+    in_flight: [],
     last_run: null,
     idle: null,
     last_checked_at: null,
@@ -61,6 +63,9 @@ export function sweepDb(opts: {
   row?: Partial<SweepRow>;
   /** What the pending-card head count answers (sees the recorded chain). */
   count?: (calls: ChainCall[]) => number;
+  /** Which poisoned card ids still owe a re-bake (the poison prune's lookup).
+   *  Default: all of them. */
+  owed?: (id: string) => boolean;
   admins?: string[];
 }) {
   const row: SweepRow = { ...emptySweepRow(), ...opts.row };
@@ -77,6 +82,12 @@ export function sweepDb(opts: {
       return { data: { ...row } };
     }
     if (table === "cards") {
+      const idFilter = calls.find((c) => c.method === "in" && c.args[0] === "id");
+      if (idFilter) {
+        // The poison prune: which of these cards still owe a re-bake.
+        const ids = idFilter.args[1] as string[];
+        return { data: ids.filter((id) => (opts.owed ? opts.owed(id) : true)).map((id) => ({ id })) };
+      }
       countCalls += 1;
       return { count: opts.count ? opts.count(calls) : 0 };
     }

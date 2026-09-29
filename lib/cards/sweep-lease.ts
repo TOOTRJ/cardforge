@@ -4,7 +4,7 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import type { LeaseHolder } from "@/lib/cards/auto-rebake-state";
 
 // ---------------------------------------------------------------------------
-// The ONE sweep lease (public.render_sweep_state, migration 0121) that keeps
+// The ONE sweep lease (public.render_sweep_state, migration 0123) that keeps
 // the three re-bake drivers from running batches at the same time:
 //
 //   cron     /api/cron/auto-rebake — holds it for one invocation (≤ 300 s),
@@ -22,10 +22,10 @@ import type { LeaseHolder } from "@/lib/cards/auto-rebake-state";
 // minute). The manual drivers only see a slower answer, which both already
 // handle. If the lease is still busy after MANUAL_WAIT_MS (a hung batch,
 // another manual call mid-batch) the route answers 503 + Retry-After with a
-// plain message: scripts/rebake-renders.mjs prints it and stops (with the
-// PR #394 retry helper it backs off and retries a 503), the compare page
-// shows it with "Try again". Never 409 — the script treats that as fatal
-// with no retry.
+// plain message: scripts/rebake-renders.mjs's retry helper
+// (scripts/lib/rebake-request.mjs, PR #394) backs off and retries a 503,
+// the compare page shows it with "Try again". Never 409 — the script treats
+// any other 4xx as fatal with no retry.
 //
 // The SQL does the arbitration (one conditional UPDATE, row-locked); this
 // module only wraps it. Callers use the service-role client.

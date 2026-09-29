@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { MANUAL_PARK_SECONDS, SWEEP_LEASE_TTL_SECONDS } from "@/lib/cards/sweep-lease";
 
 // ---------------------------------------------------------------------------
-// Migration 0121 — the automatic re-bake's lease, breaker and admin view.
+// Migration 0123 — the automatic re-bake's lease, breaker and admin view.
 // There is no Postgres in unit tests, so this pins the SQL's shape:
 //   * the lease is taken by ONE conditional UPDATE whose WHERE has exactly
 //     the four branches tests/stubs/sweep-db.ts models (free / expired /
@@ -19,7 +19,7 @@ import { MANUAL_PARK_SECONDS, SWEEP_LEASE_TTL_SECONDS } from "@/lib/cards/sweep-
 // ---------------------------------------------------------------------------
 
 const dir = join(process.cwd(), "supabase/migrations");
-const SQL = readFileSync(join(dir, "0121_auto_rebake.sql"), "utf8");
+const SQL = readFileSync(join(dir, "0123_auto_rebake.sql"), "utf8");
 const body = SQL.split("\n")
   .filter((line) => !line.trim().startsWith("--"))
   .join("\n");
@@ -38,7 +38,7 @@ function typeCheckKinds(sql: string): string[] {
   return [...last[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 }
 
-describe("0121 — the sweep lease", () => {
+describe("0123 — the sweep lease", () => {
   it("takes the lease with one conditional UPDATE: free, expired, own token, or parked for the same holder", () => {
     const acquire = fn("acquire_render_sweep_lease");
     expect(acquire).toContain(
@@ -73,6 +73,16 @@ describe("0121 — the sweep lease", () => {
     expect(squash(body)).toContain("insert into public.render_sweep_state (id) values (1) on conflict (id) do nothing;");
   });
 
+  it("has every column the cron writes, with jsonb shapes the parser expects", () => {
+    const flat = squash(body);
+    expect(flat).toContain("strikes jsonb not null default '{}'::jsonb check (jsonb_typeof(strikes) = 'object')");
+    expect(flat).toContain("poison jsonb not null default '[]'::jsonb check (jsonb_typeof(poison) = 'array')");
+    expect(flat).toContain("in_flight jsonb not null default '[]'::jsonb check (jsonb_typeof(in_flight) = 'array')");
+    for (const column of ["last_run jsonb", "idle jsonb", "last_checked_at timestamptz", "revalidate_pending boolean"]) {
+      expect(flat).toContain(column);
+    }
+  });
+
   it("the app's TTLs fit the SQL bounds, and the lease outlives every route's maxDuration", () => {
     expect(body).toMatch(/p_ttl_seconds < 1 or p_ttl_seconds > 900/);
     expect(SWEEP_LEASE_TTL_SECONDS).toBeLessThanOrEqual(900);
@@ -90,7 +100,7 @@ describe("0121 — the sweep lease", () => {
   });
 });
 
-describe("0121 — grants and exposure", () => {
+describe("0123 — grants and exposure", () => {
   it("keeps the state table service-role only: RLS on, no policy, API roles revoked", () => {
     const flat = squash(body);
     expect(flat).toContain("alter table public.render_sweep_state enable row level security;");

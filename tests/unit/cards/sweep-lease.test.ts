@@ -12,7 +12,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // The ONE sweep lease shared by the automatic re-bake cron and the manual
-// drivers (lib/cards/sweep-lease.ts over migration 0121's RPCs): two
+// drivers (lib/cards/sweep-lease.ts over migration 0123's RPCs): two
 // concurrent holders → exactly one wins; the lease expires on its own just
 // after maxDuration; a manual run's PARKED lease keeps the cron out while the
 // next manual call takes it straight back; a manual call waits for the cron

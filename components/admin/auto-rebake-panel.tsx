@@ -23,6 +23,8 @@ const STOP_LABELS: Record<AutoRebakeStop, string> = {
   "lease-lost": "Lost the sweep lease mid-run",
   breaker: "Breaker tripped — paused",
   hung: "A batch hung — paused",
+  overrun: "A slow last batch ran into the time limit — the next run continues",
+  crashed: "The run before this one died without finishing (time limit or out of memory)",
   error: "Stopped on an error",
   refused: "Refused — the billing flag is off (bakes would be clean)",
 };
@@ -147,7 +149,7 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
           <Stat
             label="Last check"
             value={state.lastCheckedAt ? formatRelativeTime(state.lastCheckedAt, nowMs) : "never"}
-            hint="Idle checks cost two queries."
+            hint="An idle check costs a state read, one count and a timestamp."
           />
         </div>
 
@@ -173,6 +175,17 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
             </dl>
             <p className="text-sm text-muted">{STOP_LABELS[run.stop] ?? run.stop}.</p>
             {run.error ? <p className="break-words text-sm text-foreground">{run.error}</p> : null}
+            {run.suspects && run.suspects.length > 0 ? (
+              <p className="break-words text-xs leading-5 text-muted">
+                {`Cards in the batch that ${run.stop === "crashed" ? "died" : "was still running"}: `}
+                {run.suspects.map((id, i) => (
+                  <span key={id}>
+                    {i > 0 ? ", " : ""}
+                    <code className="text-foreground">{id}</code>
+                  </span>
+                ))}
+              </p>
+            ) : null}
             {run.failures && run.failures.length > 0 ? (
               <ul className="flex flex-col gap-1 text-xs leading-5 text-muted">
                 {run.failures.map((f) => (
@@ -193,16 +206,14 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="font-display text-xl font-semibold text-foreground">Cards that keep failing</h2>
             <p className="text-sm leading-6 text-muted">
-              A card that fails three runs in a row is skipped from then on — it keeps its old image
-              and downloads render it live. Fix the cause (usually art that can&apos;t be fetched),
-              then retry.
+              {`A card that fails in three runs is skipped from then on — it keeps its old image and downloads render it live. Fix the cause (usually art that can't be fetched), then retry. A card that no longer needs a re-bake (its owner saved it again, unpublished or deleted it) leaves the list on the next run.`}
             </p>
           </div>
           <RetryPoisonedButton count={poisonCards.length} />
         </div>
         {poisonCards.length === 0 ? (
           <p className="rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted">
-            None — no card has failed three runs in a row.
+            None — no card has failed in three runs.
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-border/50 rounded-md border border-border/60">
@@ -243,8 +254,7 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
           current batch and waits while a manual run is active.
         </p>
         <p>
-          The breaker pauses it and alerts every admin when a whole batch fails, ten cards fail for
-          the first time in one run, a batch hangs, or more than 50 cards keep failing.
+          {`The breaker pauses it and alerts every admin when a whole batch fails, ten cards fail for the first time in one run, a batch hangs, the batch query fails three runs in a row, two runs in a row die before finishing, or one run pushes the list of failing cards past 50.`}
         </p>
       </SurfaceCard>
     </div>

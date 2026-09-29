@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { buildCardPath } from "@/lib/cards/utils";
+import { isUuid } from "@/lib/ids";
 import { CARD_LAYOUT_VERSION, latestSweepVersion } from "@/lib/cards/layout-version";
 import { countSweepCandidates, readSweepState } from "@/lib/cards/auto-rebake";
 import {
@@ -72,20 +73,18 @@ async function describePoison(
   poison: readonly PoisonEntry[],
 ): Promise<PoisonCard[]> {
   if (poison.length === 0) return [];
-  const { data: cards } = await admin
-    .from("cards")
-    .select("id, title, slug, visibility, owner_id")
-    .in(
-      "id",
-      poison.map((p) => p.id),
-    );
-  const ownerIds = [...new Set((cards ?? []).map((c) => c.owner_id as string))];
-  const { data: owners } =
-    ownerIds.length > 0
-      ? await admin.from("profiles").select("id, username").in("id", ownerIds)
-      : { data: [] as Array<{ id: string; username: string | null }> };
-  const usernameById = new Map((owners ?? []).map((o) => [o.id as string, (o.username as string | null) ?? null]));
-  const cardById = new Map((cards ?? []).map((c) => [c.id as string, c]));
+  // `in (…)` lists travel in the URL: look them up 100 at a time.
+  const cards: Array<Record<string, unknown>> = [];
+  for (const part of chunk(poison.map((p) => p.id).filter(isUuid), 100)) {
+    const { data } = await admin.from("cards").select("id, title, slug, visibility, owner_id").in("id", part);
+    cards.push(...((data ?? []) as Array<Record<string, unknown>>));
+  }
+  const usernameById = new Map<string, string | null>();
+  for (const part of chunk([...new Set(cards.map((c) => c.owner_id as string))], 100)) {
+    const { data: owners } = await admin.from("profiles").select("id, username").in("id", part);
+    for (const o of owners ?? []) usernameById.set(o.id as string, (o.username as string | null) ?? null);
+  }
+  const cardById = new Map(cards.map((c) => [c.id as string, c]));
   return poison.map((entry) => {
     const card = cardById.get(entry.id);
     if (!card) return { ...entry, title: null, href: null, visibility: null };
@@ -104,4 +103,10 @@ async function describePoison(
             }),
     };
   });
+}
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }
