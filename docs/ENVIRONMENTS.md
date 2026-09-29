@@ -318,8 +318,10 @@ app on another database than `--target` stops the run with nothing done.
   at most `--storage-concurrency` in flight (default 4, max 8;
   `scripts/lib/storage-calls.mjs`) — and a call storage answers "busy"
   ("Too many connections", 429, 5xx, no answer) is retried with backoff
-  (4 tries, about 1 s / 2 s / 4 s apart) before it counts as failed.
-  Incident 2026-09-29: the first production run used `--batch-size 100`
+  (4 tries, about 1 s / 2 s / 4 s apart) before it counts as failed; a
+  busy REMOVE is sent again only for the objects a fresh lookup (and, for
+  `--private-renders`, a fresh visibility read) still clears, never on the
+  checks made before the wait. Incident 2026-09-29: the first production run used `--batch-size 100`
   (this runbook's advice then), fired each batch's 100 lookups at once and,
   after 193 deletes, ran storage out of database connections (7 deletes
   unconfirmed; nothing lost — the next run settles them). Per batch:
@@ -335,9 +337,10 @@ app on another database than `--target` stops the run with nothing done.
   `~/.pipglyph/sweep-storage-orphans.<project>.manifest.jsonl` (bucket, path,
   size, eTag, last change, reason, copy); an object it can't confirm stays in
   the state file with its copy and the next run settles it. `--limit n`
-  deletes at most n per run. Accepted race: a custom pip re-uploaded in the
-  milliseconds between that last lookup and the delete (its name is fixed,
-  `{uid}/{SYMBOL}.png`) is deleted — the user saves the pip again.
+  deletes at most n per run. Accepted race: a custom pip re-uploaded
+  between its last lookup and the delete (its name is fixed,
+  `{uid}/{SYMBOL}.png`) is deleted — under a second at the default batch
+  size, a few seconds if storage is busy; the user saves the pip again.
 - **Listed for review, never deleted by the orphan sweep** — each list has
   its own mode (owner decisions 2026-09-29; own state + manifest,
   `~/.pipglyph/sweep-storage-orphans.<project>.<mode>.json` /

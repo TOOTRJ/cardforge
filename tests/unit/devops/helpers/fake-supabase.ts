@@ -140,6 +140,12 @@ export type StorageOpts = {
   busyInfo?: Record<string, number>;
   /** The same, counted only once a remove has run (the confirm lookups). */
   busyInfoAfterRemove?: Record<string, number>;
+  /** The first this-many removes answer "Too many connections…" without
+   *  removing anything (the pool refused them). */
+  busyRemove?: number;
+  /** The first this-many removes DO remove, then answer "Too many
+   *  connections…" — an answer lost after the delete went through. */
+  busyRemoveAfterDelete?: number;
 };
 
 /** What Supabase Storage answered on 2026-09-29 when its database pool ran
@@ -154,6 +160,8 @@ export function fakeStorage(objects: Obj[], opts: StorageOpts = {}) {
   const stats = { inFlight: 0, peak: 0, refused: 0 };
   const busyLeft = new Map(Object.entries(opts.busyInfo ?? {}));
   const busyAfterRemoveLeft = new Map(Object.entries(opts.busyInfoAfterRemove ?? {}));
+  let busyRemoveLeft = opts.busyRemove ?? 0;
+  let busyRemoveAfterDeleteLeft = opts.busyRemoveAfterDelete ?? 0;
   const pool = async <T>(fn: () => T | Promise<T>): Promise<T> => {
     if (opts.maxConcurrent === undefined) return fn();
     if (stats.inFlight >= opts.maxConcurrent) {
@@ -193,8 +201,16 @@ export function fakeStorage(objects: Obj[], opts: StorageOpts = {}) {
       return pool(() => {
         this.removes.push(paths.map((p) => `${bucket}/${p}`));
         if (opts.removeFails) throw new Error("gateway timeout");
+        if (busyRemoveLeft > 0) {
+          busyRemoveLeft -= 1;
+          throw tooManyConnections();
+        }
         removed = true;
         const gone = paths.filter((p) => opts.sticky?.includes(p) || store.delete(`${bucket}/${p}`));
+        if (busyRemoveAfterDeleteLeft > 0) {
+          busyRemoveAfterDeleteLeft -= 1;
+          throw tooManyConnections();
+        }
         if (opts.echo === "none") return [];
         if (opts.echo === "renamed") return gone.map((p) => `${bucket}/${p}`);
         return gone;

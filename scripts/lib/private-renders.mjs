@@ -41,7 +41,10 @@
 // one database read plus the remove call. A card published inside it can't
 // lose a NEW render: the bake reads the card, renders (seconds) and only then
 // uploads; what the remove takes in that window is the old bake of a card
-// that was still private when read.
+// that was still private when read. A remove storage answers busy is never
+// simply sent again seconds later: the lookup and the visibility read are
+// repeated first (removeRechecked, scripts/lib/storage-calls.mjs), so the
+// window stays the same on every try.
 //
 // No backups (the script refuses --backup-dir here): a render is derived — a
 // card published again is baked again.
@@ -193,9 +196,11 @@ export async function purgeThroughApp({ app, ids, state, statePath, manifestPath
  *   3. `db.cardVisibility(ids)` — THE re-check, right before the remove:
  *      anything but a row that says private → kept, never touched;
  *   4. `state.pending` (and the batch's cards in `state.purgePending`), the
- *      remove, then storage's own answer for every object: gone → the
- *      manifest; still there → kept; lookup failed → stays pending for the
- *      next run (reconcilePending);
+ *      remove — one storage answers busy is sent again only for what 2 and
+ *      3, repeated after the backoff, still clear (`removeRechecked`) — then
+ *      storage's own answer for every object: gone → the manifest; still
+ *      there → kept; lookup failed → stays pending for the next run
+ *      (reconcilePending);
  *   5. the CDN purge, through `app`, of the cards whose objects are gone
  *      (see the header) — after one failure, no more tries this run.
  */
@@ -273,19 +278,20 @@ export async function applyPrivateRenders({
     // 3. The visibility, again, right before the delete: only a row that says
     //    private lets its card's renders go.
     const now = await db.cardVisibility(ids);
+    const notPrivate = (visibility) => {
+      const current = cardState(visibility);
+      if (current === "private") return null;
+      return current === "visible"
+        ? `its card is ${visibility} now — never touched`
+        : current === "deleted"
+          ? "its card has no row now — the orphan sweep's to judge"
+          : `its card's visibility is "${visibility}"`;
+    };
     const toRemove = [];
     for (const { obj, card, info } of present) {
-      const visibility = now.get(card.cardId);
-      const current = cardState(visibility);
-      if (current !== "private") {
-        skip(
-          obj,
-          current === "visible"
-            ? `its card is ${visibility} now — never touched`
-            : current === "deleted"
-              ? "its card has no row now — the orphan sweep's to judge"
-              : `its card's visibility is "${visibility}"`,
-        );
+      const why = notPrivate(now.get(card.cardId));
+      if (why) {
+        skip(obj, why);
         continue;
       }
       toRemove.push({
@@ -298,12 +304,44 @@ export async function applyPrivateRenders({
     }
     if (!toRemove.length) continue;
 
-    // 4. The delete, then storage's own answer.
+    // 4. The delete, then storage's own answer. A busy remove is sent again
+    //    only after steps 2 and 3 are repeated for what it still covers
+    //    (removeRechecked, scripts/lib/storage-calls.mjs) — so the window
+    //    stays one database read plus the remove call, whatever the retries.
     state.pending = { bucket: RENDER_BUCKET, run, at: new Date().toISOString(), items: toRemove };
     addPurgePending(state, toRemove.map((item) => item.card));
     saveState(statePath, state);
+    const byPath = new Map(toRemove.map((item) => [item.path, item]));
+    const notSentAgain = new Map();
+    const recheck = async (paths) => {
+      const again = await Promise.all(
+        paths.map(async (p) => {
+          try {
+            return { item: byPath.get(p), info: await storage.info(RENDER_BUCKET, p) };
+          } catch (err) {
+            return { item: byPath.get(p), error: err };
+          }
+        }),
+      );
+      const stillThere = [];
+      for (const { item, info, error } of again) {
+        if (error) notSentAgain.set(item.path, `lookup failed before the delete was sent again (${error.message})`);
+        else if (info.missing) continue; // the first try took it — the confirm below records it
+        else if (!sameEtag(info.etag, item.etag)) notSentAgain.set(item.path, "new bytes since the listing (a bake) — the next run judges it again");
+        else stillThere.push(item);
+      }
+      if (!stillThere.length) return [];
+      const visibilityNow = await db.cardVisibility([...new Set(stillThere.map((item) => item.card))]);
+      const send = [];
+      for (const item of stillThere) {
+        const why = notPrivate(visibilityNow.get(item.card));
+        if (why) notSentAgain.set(item.path, why);
+        else send.push(item.path);
+      }
+      return send;
+    };
     try {
-      await storage.remove(RENDER_BUCKET, toRemove.map((item) => item.path));
+      await storage.removeRechecked(RENDER_BUCKET, toRemove.map((item) => item.path), recheck);
     } catch (err) {
       result.failed.push({ bucket: RENDER_BUCKET, paths: toRemove.map((item) => item.path), error: err.message });
       log(`  ✗ ${RENDER_BUCKET}: delete of ${toRemove.length} object(s) failed (${err.message}) — re-run to settle it`);
@@ -327,7 +365,7 @@ export async function applyPrivateRenders({
       } else if (gone) {
         done.push(item);
       } else {
-        skip({ bucket: RENDER_BUCKET, path: item.path }, "storage did not remove it");
+        skip({ bucket: RENDER_BUCKET, path: item.path }, notSentAgain.get(item.path) ?? "storage did not remove it");
       }
     }
     appendManifest(

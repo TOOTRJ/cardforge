@@ -608,6 +608,75 @@ describe("applySweep", () => {
     expect(settled).toEqual({ gone: 2, present: 0 });
     expect(loadState(statePath)).toMatchObject({ pending: null, deleted: 2 });
   });
+
+  // Skeptic review of the fix: a remove re-sent after a backoff must not lean
+  // on the lookups made before it — storage has no conditional delete.
+  it("a busy remove is sent again only after step 3 is repeated: an object whose bytes changed during the wait is kept", async () => {
+    const objects = [real("card-art", `${U1}/a.jpg`), real("card-art", `${U1}/b.jpg`)];
+    const s = setup(objects, emptyDb(), {}, { busyRemove: 1 });
+    const backupDir = path.join(tmp, "backup-busy-remove");
+    const waits: number[] = [];
+    const lines: string[] = [];
+    const sleep = async (ms: number) => {
+      waits.push(ms);
+      // While we wait, b.jpg gets new bytes at the same name.
+      const b = s.storage.store.get(`card-art/${U1}/b.jpg`)!;
+      s.storage.store.set(`card-art/${U1}/b.jpg`, { ...b, etag: '"new-bytes"' });
+    };
+    const storage = limitStorage(s.storage, { sleep, log: (l: string) => lines.push(l) });
+    const result = await s.run({ storage, backupDir, log: (l: string) => lines.push(l) });
+    expect(waits).toHaveLength(1);
+    expect(s.storage.removes).toEqual([[`card-art/${U1}/a.jpg`, `card-art/${U1}/b.jpg`], [`card-art/${U1}/a.jpg`]]);
+    expect(result).toMatchObject({ deleted: 1, failed: [] });
+    expect(result.skipped).toEqual([{ bucket: "card-art", path: `${U1}/b.jpg`, why: "changed since it was listed" }]);
+    expect(s.storage.store.get(`card-art/${U1}/b.jpg`)?.etag).toBe('"new-bytes"');
+    expect(lines.some((l) => l.includes("storage busy on remove of 2 object(s) in card-art: Too many connections"))).toBe(true);
+    expect(readManifest(s.manifestPath).map((e: { path: string }) => e.path)).toEqual([`${U1}/a.jpg`]);
+    expect(existsSync(path.join(backupDir, "card-art", U1, "a.jpg"))).toBe(true);
+    expect(existsSync(path.join(backupDir, "card-art", U1, "b.jpg"))).toBe(false);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 1 });
+  });
+
+  it("a remove that went through but answered busy is never sent again: what landed at the name since is kept, the delete is recorded with its copy", async () => {
+    const objects = [real("custom-pips", `${U1}/W.png`), real("custom-pips", `${U1}/U.png`)];
+    const s = setup(objects, emptyDb(), {}, { busyRemoveAfterDelete: 1 });
+    const backupDir = path.join(tmp, "backup-lost-answer");
+    const reuploaded = { ...objects[0], etag: '"re-uploaded"', updatedAt: new Date().toISOString(), lastModified: new Date().toISOString() };
+    const sleep = async () => {
+      // The pip is saved again at its fixed name while we wait.
+      s.storage.store.set(`custom-pips/${U1}/W.png`, reuploaded);
+    };
+    const storage = limitStorage(s.storage, { sleep });
+    const result = await s.run({ storage, backupDir });
+    expect(s.storage.removes).toHaveLength(1); // one delete, never a second
+    expect(s.storage.store.get(`custom-pips/${U1}/W.png`)).toEqual(reuploaded);
+    expect(result).toMatchObject({ deleted: 1, failed: [] });
+    expect(result.skipped).toEqual([{ bucket: "custom-pips", path: `${U1}/W.png`, why: "changed since it was listed" }]);
+    // U.png: gone after the first try — recorded (not "already gone"), its copy kept.
+    expect(readManifest(s.manifestPath).map((e: { path: string; backup?: string }) => [e.path, e.backup])).toEqual([
+      [`${U1}/U.png`, path.join(backupDir, "custom-pips", U1, "U.png")],
+    ]);
+    expect(existsSync(path.join(backupDir, "custom-pips", U1, "U.png"))).toBe(true);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 1 });
+  });
+
+  it("a busy remove whose re-check finds nothing left to delete sends no second remove", async () => {
+    const s = setup([real("card-art", `${U1}/a.jpg`)], emptyDb(), {}, { busyRemoveAfterDelete: 1 });
+    const storage = limitStorage(s.storage, { sleep: async () => {} });
+    const result = await s.run({ storage });
+    expect(s.storage.removes).toHaveLength(1);
+    expect(result).toMatchObject({ deleted: 1, skipped: [], failed: [] });
+  });
+
+  it("a remove still busy after every try fails the batch and leaves it pending (the next run settles it)", async () => {
+    const s = setup([real("card-art", `${U1}/a.jpg`)], emptyDb(), {}, { busyRemove: 99 });
+    const storage = limitStorage(s.storage, { sleep: async () => {} });
+    const result = await s.run({ storage });
+    expect(s.storage.removes).toHaveLength(4);
+    expect(result.deleted).toBe(0);
+    expect(result.failed).toEqual([{ bucket: "card-art", paths: [`${U1}/a.jpg`], error: "Too many connections issued to the database" }]);
+    expect(loadState(s.statePath).pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/a.jpg`]);
+  });
 });
 
 // --- the run plan, backups, private renders -------------------------------------------------
@@ -930,5 +999,38 @@ describe("scripts/sweep-storage-orphans.mjs against a Storage whose database poo
     const manifest = readManifest(path.join(tmp, "manifest.jsonl"));
     expect(manifest.map((e: { bucket: string; path: string }) => `${e.bucket}/${e.path}`).sort()).toEqual([...orphanKeys].sort());
     expect(loadState(path.join(tmp, "state.json"))).toMatchObject({ pending: null, deleted: 40 });
+  });
+
+  it("a DELETE storage refuses as busy is sent again only after every object is looked up again", async () => {
+    const more = ["m-1", "m-2", "m-3"].map((n) => `card-art/${U1}/${n}.jpg`);
+    store.clear(); // on its own, whatever the tests above left
+    const t = new Date(Date.now() - 30 * DAY).toISOString();
+    for (const key of more) {
+      const bytes = Buffer.from(`bytes:${key}`);
+      store.set(key, { bytes, etag: `"${createHash("md5").update(bytes).digest("hex")}"`, created: t, updated: t });
+    }
+    const seen: string[] = [];
+    let deletes = 0;
+    pool.refused = 0;
+    pool.refuse = (method, p) => {
+      if (p.startsWith("/storage/v1/object/")) seen.push(`${method} ${p.replace(`/${U1}/`, "/")}`);
+      return method === "DELETE" && ++deletes === 1;
+    };
+    const { code, out } = await run([...common(), "--apply"], "yes\n");
+    pool.refuse = undefined;
+    expect(out).toMatch(/storage busy on remove of 3 object\(s\) in card-art: Too many connections issued to the database — each looked up again in \d\.\d s, then try 2 of 4/);
+    expect(out).toMatch(/Deleted 3 object\(s\)/);
+    expect(code).toBe(0);
+    expect(pool.refused).toBe(1);
+    expect(more.filter((k) => store.has(k))).toEqual([]);
+    // Refused DELETE → the three lookups again → the DELETE again → the confirms.
+    const afterRefusal = seen.slice(seen.indexOf("DELETE /storage/v1/object/card-art"));
+    expect(afterRefusal.slice(0, 5).map((e) => e.replace(/m-\d/, "m-N"))).toEqual([
+      "DELETE /storage/v1/object/card-art",
+      "GET /storage/v1/object/info/card-art/m-N.jpg",
+      "GET /storage/v1/object/info/card-art/m-N.jpg",
+      "GET /storage/v1/object/info/card-art/m-N.jpg",
+      "DELETE /storage/v1/object/card-art",
+    ]);
   });
 });

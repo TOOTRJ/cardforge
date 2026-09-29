@@ -685,7 +685,9 @@ export function sameEtag(a, b) {
  *      at once ran storage out of database connections on 2026-09-29): gone,
  *      another eTag (compared however each API quotes it, `sameEtag`) or
  *      size, or now younger than the floor → kept;
- *   4. the survivors go into `state.pending` and are removed; then EVERY one
+ *   4. the survivors go into `state.pending` and are removed — a remove
+ *      storage answers busy is sent again only for what step 3, repeated
+ *      after the backoff, still clears (`removeRechecked`); then EVERY one
  *      is looked up again — storage's own answer, not the names remove()
  *      echoes back (review 2026-09-29), decides: gone → the manifest (its
  *      copy kept); still there → kept (its copy dropped); lookup failed →
@@ -697,10 +699,12 @@ export function sameEtag(a, b) {
  *
  * Known, accepted race (review 2026-09-29): custom-pips names are
  * deterministic (`{uid}/{SYMBOL}.png`, overwritten in place), so a re-upload
- * landing in the milliseconds between step 3's lookup and the remove would
- * be deleted while its new custom_pips row points at it. A re-upload before
- * step 3 changes the eTag and the timestamp and is kept; the user fixes the
- * rare loser by saving the pip again.
+ * landing between step 3's lookup of that pip and the remove would be
+ * deleted while its new custom_pips row points at it. That stretch is a
+ * batch's worth of lookups, a few at a time — under a second at the default
+ * batch size, a few seconds when storage is busy and a lookup is retried. A
+ * re-upload before step 3 changes the eTag and the timestamp and is kept;
+ * the user fixes the rare loser by saving the pip again.
  *
  * `storage`: `info(bucket, path)` → `{ missing: true }` | `{ etag, size,
  * createdAt, lastModified }` (throws on any other error), `remove(bucket,
@@ -732,6 +736,17 @@ export async function applySweep({
   const skip = (bucket, obj, why) => {
     result.skipped.push({ bucket, path: obj.path, why });
     log(`  - ${bucket}/${obj.path}: ${why} — kept`);
+  };
+  /** Step 3's rule: why the listed `obj` must stay now that storage says
+   *  `info` (present) about it — null when it may go; `changed` = its last
+   *  change. The same rule decides a busy remove's re-send. */
+  const judgeAgain = (obj, info) => {
+    if (!sameEtag(info.etag, obj.etag) || (info.size != null && obj.size != null && Number(info.size) !== Number(obj.size))) {
+      return { why: "changed since it was listed" };
+    }
+    const changed = Math.max(objectTimestamp(info) ?? Infinity, objectTimestamp(obj) ?? Infinity);
+    if (!Number.isFinite(changed) || now() - changed < floor) return { why: `younger than ${minAgeDays} days now` };
+    return { why: null, changed };
   };
 
   const byBucket = new Map();
@@ -809,13 +824,9 @@ export async function applySweep({
           skip(bucket, obj, "already gone");
           continue;
         }
-        if (!sameEtag(info.etag, obj.etag) || (info.size != null && obj.size != null && Number(info.size) !== Number(obj.size))) {
-          skip(bucket, obj, "changed since it was listed");
-          continue;
-        }
-        const changed = Math.max(objectTimestamp(info) ?? Infinity, objectTimestamp(obj) ?? Infinity);
-        if (!Number.isFinite(changed) || now() - changed < floor) {
-          skip(bucket, obj, `younger than ${minAgeDays} days now`);
+        const { why, changed } = judgeAgain(obj, info);
+        if (why) {
+          skip(bucket, obj, why);
           continue;
         }
         toRemove.push({
@@ -835,13 +846,39 @@ export async function applySweep({
         continue;
       }
 
-      // 4. The delete, then storage's own answer for every object (limited
-      //    and retried like the lookups above).
+      // 4. The delete, then storage's own answer for every object. A busy
+      //    remove is sent again only after step 3 is repeated for what it
+      //    still covers (removeRechecked, scripts/lib/storage-calls.mjs):
+      //    gone → not sent (the first try took it; the confirm records it),
+      //    changed or unreadable → not sent (kept, with that reason).
       state.pending = { bucket, run, at: new Date().toISOString(), items: toRemove };
       saveState(statePath, state);
+      const listedAs = new Map(unreferenced.map((obj) => [obj.path, obj]));
+      const notSentAgain = new Map();
+      const recheck = async (paths) => {
+        const again = await Promise.all(
+          paths.map(async (p) => {
+            try {
+              return { p, info: await storage.info(bucket, p) };
+            } catch (err) {
+              return { p, error: err };
+            }
+          }),
+        );
+        const send = [];
+        for (const { p, info, error } of again) {
+          if (error) notSentAgain.set(p, `lookup failed before the delete was sent again (${error.message})`);
+          else if (!info.missing) {
+            const { why } = judgeAgain(listedAs.get(p), info);
+            if (why) notSentAgain.set(p, why);
+            else send.push(p);
+          }
+        }
+        return send;
+      };
       let echoed;
       try {
-        echoed = new Set(await storage.remove(bucket, toRemove.map((item) => item.path)));
+        echoed = new Set(await storage.removeRechecked(bucket, toRemove.map((item) => item.path), recheck));
       } catch (err) {
         // Unknown outcome: pending stays in the state, the next run settles
         // it (and the copies stay).
@@ -871,7 +908,7 @@ export async function applySweep({
           if (!echoed.has(item.path)) log(`  (${bucket}/${item.path}: gone, though remove() didn't name it)`);
         } else {
           stillThere.add(item.path);
-          skip(bucket, item, "storage did not remove it");
+          skip(bucket, item, notSentAgain.get(item.path) ?? "storage did not remove it");
         }
       }
       // Keep the copy of everything deleted or unconfirmed; drop the copies

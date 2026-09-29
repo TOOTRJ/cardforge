@@ -38,7 +38,8 @@
 //                         lookups, downloads, removes, in every mode (default
 //                         4, max 8). A call storage answers "busy" (Too many
 //                         connections, 429, 5xx, no answer) is retried with
-//                         backoff before it counts as failed. Incident
+//                         backoff before it counts as failed — a remove only
+//                         for what a fresh re-check still clears. Incident
 //                         2026-09-29: --batch-size 100 fired each batch's
 //                         100 lookups at once and ran storage out of database
 //                         connections after 193 deletes (nothing lost; the

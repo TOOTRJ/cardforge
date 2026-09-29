@@ -22,10 +22,20 @@
 // pool timeout, a rate limit, HTTP 408 / 429 / 5xx — or never answered (a
 // network error). Anything else (a 400, a 404, a refused key) fails at once.
 // A retry keeps its slot while it waits, so a busy storage gets fewer calls
-// from us, not the same number again. Retrying is safe for every call made
-// here: lookups, listings and downloads read, and a remove of an object that
-// is already gone is a no-op (what is gone is decided by the lookup after it
-// anyway).
+// from us, not the same number again. That is for the READS — listing
+// pages, lookups, downloads.
+//
+// A REMOVE is never simply sent again (skeptic review 2026-09-29). Storage
+// has no conditional delete, so every caller looks its objects up (and the
+// private-renders mode reads the visibility) right before the remove; a
+// remove re-sent seconds later would lean on that stale re-check — long
+// enough for a bake to write a NEW render of a card just made public, or
+// for a pip to be re-uploaded at its fixed name — and when the first try
+// did go through but its answer was lost ("no answer" is retryable), a
+// second one deletes whatever landed at that name since. So `remove` is one
+// try, and `removeRechecked` retries a busy remove only through the caller's
+// own `recheck`, run again after the backoff: only what it clears is sent
+// again; what it finds gone (the first try went through) or changed is not.
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_STORAGE_CONCURRENCY = 4;
@@ -147,12 +157,18 @@ export async function* listObjects(listPage, bucket, prefix = "") {
 }
 
 /**
- * `storage` with every call limited and retried (see the header):
- * `info(bucket, path)`, `remove(bucket, paths)`, `download(bucket, path)` and
- * the listing — built page by page from `storage.listPage` when it has one,
- * so every page is a limited call too; a `storage.list` given as a whole (an
- * in-memory test fake) is passed through. Each call looks its method up on
- * `storage` when it is made.
+ * `storage` with every call limited (see the header): `info(bucket, path)`,
+ * `download(bucket, path)` and the listing retried while storage is busy —
+ * the listing built page by page from `storage.listPage` when it has one, so
+ * every page is a limited call too; a `storage.list` given as a whole (an
+ * in-memory test fake) has each step through it limited. `remove(bucket,
+ * paths)` is limited, ONE try; `removeRechecked(bucket, paths, recheck)` is
+ * the remove the sweep uses: a busy one is sent again (limited, up to
+ * `attempts` tries in all) only for the paths `recheck(paths)` returns —
+ * called after each backoff, holding no slot (its own lookups go through the
+ * limiter), it looks them up again and keeps only what its caller would
+ * still delete (anything else it returns is ignored); nothing left → `[]`.
+ * Each call looks its method up on `storage` when it is made.
  *
  * Already limited → returned as it is, so the one limiter the script builds
  * is the one every helper uses; the helpers call this on whatever they are
@@ -203,7 +219,28 @@ export function limitStorage(
     limiter,
     concurrency,
     info: (bucket, objectPath) => call(`info ${bucket}/${objectPath}`, () => storage.info(bucket, objectPath)),
-    remove: (bucket, paths) => call(`remove of ${paths.length} object(s) in ${bucket}`, () => storage.remove(bucket, paths)),
+    /** One try, never re-sent on its own — see removeRechecked. */
+    remove: (bucket, paths) => limiter.run(() => storage.remove(bucket, paths)),
+    async removeRechecked(bucket, paths, recheck) {
+      if (typeof recheck !== "function") throw new Error("a remove is only sent again after a re-check");
+      let sending = [...paths];
+      for (let attempt = 1; ; attempt += 1) {
+        try {
+          return await limiter.run(() => storage.remove(bucket, sending));
+        } catch (err) {
+          if (attempt >= attempts || !isRetryableStorageError(err)) throw err;
+          const wait = backoffMs(attempt, random);
+          log(
+            `    (storage busy on remove of ${sending.length} object(s) in ${bucket}: ${err.message} — each looked up again in ` +
+              `${(wait / 1000).toFixed(1)} s, then try ${attempt + 1} of ${attempts} for what is still to go)`,
+          );
+          await sleep(wait);
+          const asked = new Set(sending);
+          sending = [...new Set(await recheck([...sending]))].filter((p) => asked.has(p));
+          if (!sending.length) return [];
+        }
+      }
+    },
     download: (bucket, objectPath) => call(`download ${bucket}/${objectPath}`, () => storage.download(bucket, objectPath)),
   };
   if (typeof storage.listPage === "function") {
@@ -211,7 +248,24 @@ export function limitStorage(
       call(`list ${bucket}/${prefix}${page?.offset ? ` (from ${page.offset})` : ""}`, () => storage.listPage(bucket, prefix, page));
     limited.list = (bucket, prefix = "") => listObjects(limited.listPage, bucket, prefix);
   } else if (typeof storage.list === "function") {
-    limited.list = (bucket, prefix) => storage.list(bucket, prefix);
+    // A listing given whole: each step through it is one limited call (not
+    // retried — a generator that threw is finished).
+    limited.list = async function* (bucket, prefix) {
+      const steps = storage.list(bucket, prefix)[Symbol.asyncIterator]();
+      let finished = false;
+      try {
+        for (;;) {
+          const step = await limiter.run(() => steps.next());
+          if (step.done) {
+            finished = true;
+            return;
+          }
+          yield step.value;
+        }
+      } finally {
+        if (!finished) await steps.return?.();
+      }
+    };
   }
   return limited;
 }
