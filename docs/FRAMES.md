@@ -345,16 +345,32 @@ What a frame gives it:
   `m15artifact/pt/{color}` on `m15tokenartifact` (CC's silver plate for
   `c`, the colour's own otherwise, as TC18 #7 prints). Both plates are in
   `PLATE_INK` already, so the rules layout keeps its lines off them;
+- the 14 masters are RE-CUT onto the prints (owner decision 2026-09-29;
+  `TOKEN_TEXTLESS_RECUT` in `scripts/lib/cc-frames.mjs`, recorded in
+  `frame-sources.json`): the 15 textless pins print CC's window edge, type
+  pill and the pill's shadow 8.2 px lower on average, while the title bar,
+  the frame texture under the pill and the border sit where CC draws them.
+  The importer moves rows 1640–1856 (the window's straight sides through the
+  shadow) 8 px down as one piece over the top of the texture — the opened
+  rows repeat the window's sides, cross-faded over 24 rows; the bottom seam
+  is a hard cut so the pill's lower edge stays sharp (`recutBand`,
+  `blendBottom: 0`). Edge by edge the pill is −0.9 … +1.6 px from the prints'
+  means after the cut (−8.9 … −6.4 before) and the alignment score over the
+  pins 94.47 → 94.99 % (a 6–10 px sweep peaks at 8 and 9). The profile rides
+  the cut (`TOKEN_RECUT_PX`, a unit test holds it to the importer's shift):
+  the art slot 8 px taller (69.38 %H), the type band on the moved pill;
 - the type line runs left-aligned from 8.54 %W to the set symbol, fitted
   (`fit: "measured"`), its baseline on the prints' 1800 HD px
-  (`TOKEN_TYPE_PRINT_DY`);
-- the set symbol has its own `symbolRect` (right edge 92.13 %W, centre
-  84.78 %H — the 15 prints' mean, not CC's 84.39, which sat 8 px above
-  them; `TOKEN_SYMBOL_CENTRE_PCT` — M15's 86 px box with the ink fit). Its
-  colour stays the card's rarity (new tokens save as common);
+  (`TOKEN_TYPE_PRINT_DY`: the band rule sets it 4 px lower in its pill than
+  the prints do);
+- the set symbol has its own `symbolRect`: CC's box (right edge 92.13 %W),
+  centred on the re-cut pill (84.77 %H = CC's 84.39 + 8 px; the prints
+  centre theirs on their pill the same way), M15's 86 px box with the ink
+  fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
+  stays the card's rarity (new tokens save as common);
 - still to come: the bordered text box `m15tokentext` / `m15tokenartifacttext`
-  (4.49 (b) — the rules scrim is today's), the gold small-caps name and the
-  art slot (4.53).
+  (4.49 (b) — the rules scrim is today's), the TALL text box (4.54), the gold
+  small-caps name and the art slot (4.53).
 
 A token's card types are WORDS in `supertype` (`card_type` stays `token`):
 "Creature", "Artifact", "Enchantment", plus "Legendary", toggled by the token

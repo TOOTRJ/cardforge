@@ -131,8 +131,10 @@ describe("baselines (TextSlot.dy)", () => {
   /** The prints' type baseline on Card Conjurer's M15 masters: 4.2 px up at HD. */
   const CC_TYPE_PRINT_DY = -0.0028;
   /** The 2014–19 token prints' type baseline (TODO 4.49 (d)): 4 px down at HD
-   *  (1796 → 1800; fifteen prints, mean 1800.4). */
-  const TOKEN_TYPE_PRINT_DY = 0.0027;
+   *  from the band rule on CC's pill (1796 → 1800; fifteen prints, mean
+   *  1800.4) — and, since the re-cut moved the pill and its band 8 px down,
+   *  those 8 px back up: the baseline stays at 1800. */
+  const TOKEN_TYPE_PRINT_DY = 0.0027 - 8 / 1500;
 
   // Every family front face: [template, title dy, type dy]. `undefined`: the
   // band is centred as before (no dy).
@@ -153,8 +155,8 @@ describe("baselines (TextSlot.dy)", () => {
     // the pips); its type line in M15's slot, on the prints' baseline.
     ["m15pw", undefined, cc],
     // The tokens: the name's baseline kept; the type line's kept through its
-    // band's move up onto CC's pill (82.6 → 82.14 %H), then 4 px down onto
-    // the prints' (TODO 4.49 (d)).
+    // band's move up onto CC's pill (82.6 → 82.14 %H), then onto the prints'
+    // (TODO 4.49 (d)) from the re-cut pill's band (82.52 %H).
     ["m15token", base.title, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
     ["m15tokenartifact", base.title, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
@@ -207,9 +209,10 @@ describe("baselines (TextSlot.dy)", () => {
     expect(at("saga")).toEqual([-5, -5, -3, -3]);
     expect(at("flip")).toEqual([-5, -5, -3, -3]);
     // The token's type text: −6 / −3 px for its size, +10 / +5 for its
-    // band's lift — where v31 drew it — and +4 / +2 onto the prints'
-    // baseline (TODO 4.49 (d)).
-    expect(at("m15token")).toEqual([-2, 8, -1, 4]);
+    // band's lift — where v31 drew it — +4 / +2 onto the prints' baseline
+    // (TODO 4.49 (d)) and −8 / −4 back up from the band, which rides the
+    // re-cut pill 8 / 4 px lower: the text stays where it was.
+    expect(at("m15token")).toEqual([-2, 0, -1, 0]);
     expect(at("fullart")).toEqual([-2, -5, -1, -3]);
     expect(at("aftermath")).toEqual([-2, -1, -1, 0]);
     expect(at("m15fullartland")).toEqual([0, 0, 0, 0]);

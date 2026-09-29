@@ -929,7 +929,7 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
     for (const t of V34_TOKEN_FRAME_TEMPLATES) {
       const profile = getFrameProfile(t);
       expect(profile.type.rect.leftPct, t).toBe(8.54);
-      expect(profile.symbolRect, t).toEqual({ topPct: 82.73, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
+      expect(profile.symbolRect, t).toEqual({ topPct: 82.34 + (8 / 2100) * 100, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
       expect(profile.pt?.plateAssetPathTemplate, t).toMatch(/^\/frames\/m15(artifact)?\/pt\/\{color\}\.png$/);
     }
     // alphatoken is not one of them: only its tokens' wording changes.
