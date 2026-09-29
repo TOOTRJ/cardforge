@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Frame } from "lucide-react";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FrameThumb } from "@/components/creator/frame-pickers";
@@ -51,6 +51,18 @@ export function ImportFrameChooser({
   // A pick among the other frames keeps them on show.
   const expanded =
     showAll || plan.moreOptions.some((option) => option.template === choiceKey(value));
+  // "Show all frames" goes away once pressed: hand keyboard focus to the
+  // first frame it revealed rather than dropping it on the page.
+  const sectionRef = useRef<HTMLElement>(null);
+  const focusRevealed = useRef(false);
+  const firstRevealed = plan.options.length;
+  useEffect(() => {
+    if (!showAll || !focusRevealed.current) return;
+    focusRevealed.current = false;
+    sectionRef.current
+      ?.querySelectorAll<HTMLElement>('[role="radio"]')
+      [firstRevealed]?.focus();
+  }, [showAll, firstRevealed]);
   const shown = expanded ? [...plan.options, ...plan.moreOptions] : plan.options;
   const options: ChipOption<string>[] = shown.map((option) => ({
     value: option.template,
@@ -89,6 +101,7 @@ export function ImportFrameChooser({
 
   return (
     <section
+      ref={sectionRef}
       aria-label="Pick a frame"
       data-testid="import-frame-chooser"
       className="flex flex-col gap-2 rounded-md border border-gold/40 bg-gold/5 p-3"
@@ -121,7 +134,10 @@ export function ImportFrameChooser({
       {!expanded && plan.moreOptions.length > 0 ? (
         <button
           type="button"
-          onClick={() => setShowAll(true)}
+          onClick={() => {
+            focusRevealed.current = true;
+            setShowAll(true);
+          }}
           disabled={disabled}
           data-testid="import-frame-show-all"
           className="self-start text-[11px] font-medium text-primary-bright underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
