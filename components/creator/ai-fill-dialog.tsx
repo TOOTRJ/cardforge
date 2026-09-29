@@ -168,8 +168,9 @@ function AiFillDialogBody({
     // Basic-only frames (the full-art basic land) are left out: the designer
     // rarely writes exactly one basic land, and the job would quietly swap
     // the request for a random frame (resolveGeneratedFrame, TODO 0.26). So
-    // is the artifact frame a creature borrows (TODO 1.7): the job honours
-    // it only for an Artifact Creature, which this dialog can't ask for.
+    // are the frames a creature borrows — the artifact frame (TODO 1.7) and
+    // the Nyx showcase (owner decision A3): the job honours them only for an
+    // Artifact / Enchantment Creature, which this dialog can't ask for.
     const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>

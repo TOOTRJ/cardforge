@@ -282,8 +282,17 @@ needs the combo verified in the card's colour (`withVerification`,
   key: old rows would stop grouping with new ones. Split a rule under a new
   key instead.
 - **A frame whose border isn't true yet** stays in
-  `BORDER_PENDING_TEMPLATES` (capped at `nearest`); take it out when 4.35
-  fixes it.
+  `BORDER_PENDING_TEMPLATES` (or, for single colour masters,
+  `BORDER_PENDING_COLOURS`), capped at `nearest`. The list is the edge
+  contract's known failures (`lib/frames/edge-contract.ts`, 7.7) except
+  alphaland's invisible corner specks, and a test holds them together:
+  once a master is fixed and struck from the known failures, take its cap
+  out too (4.35).
+- **A frame the registry names for later** (`onceVerified`): a rule may
+  name a verified frame now and another once that one is verified in the
+  card's colour — the 2003-frame textless promos name the 2003 frame until
+  `m15textless` is verified. `withVerification` makes the swap, so
+  verifying the combo is all it takes.
 - **Registry references** (`lib/cards/frame-references.json`) must resolve
   to their own template and pass the pin check;
   `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
