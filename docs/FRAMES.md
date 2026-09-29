@@ -752,6 +752,13 @@ Nothing here changes a stored bake or a renderer.
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged. After the deploy,
 the automatic re-bake sweeps the affected cards on its own (next section).
+CI's **Visual regression** check enforces it: a new frame object changes the
+matrix's hashes (`tests/visual/`, `tests/README.md`), so the PR fails until it
+bumps and commits the regenerated baseline (`npm run test:visual -- --update`).
+The job reads the frames from production's bucket, falling back to the dev
+bucket for objects not promoted yet (same bytes: the manifest's sha256 is
+checked). A NEW template joins the matrix by itself; its cases only need the
+regenerated baseline, not a bump.
 
 ### Additions vs corrections (owner rule, 2026-09-29)
 
