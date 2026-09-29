@@ -19,7 +19,7 @@ import {
 } from "@/lib/creator/card-kinds";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
-import { describeFrame } from "@/lib/creator/frame-resolve";
+import { describeFrame, withVerification } from "@/lib/creator/frame-resolve";
 import {
   FULL_ART_BASIC_2022_SETS,
   landFrameColorRule,
@@ -382,6 +382,18 @@ export function frameMatchFromScryfall(card: ScryfallCard): FrameMatch {
   return resolveFrameSignature(card, printingFacts(card));
 }
 
+/** THIS PRINTING's match as the user sees it: the registry's static match
+ *  finalized against the verified combos in the card's frame colour (an
+ *  unverified `exact` is only `nearest`). /api/scryfall/named puts it on the
+ *  patch; /api/scryfall/printings on every printing of the grid (TODO 1.5). */
+export function verifiedFrameMatchFromScryfall(
+  card: ScryfallCard,
+  verifiedKeys: ReadonlySet<string>,
+  match: FrameMatch = frameMatchFromScryfall(card),
+): FrameMatch {
+  return withVerification(match, pickFrameColorKey(frameColorsFromScryfall(card)), verifiedKeys);
+}
+
 /**
  * The frame an import of THIS PRINTING lands on — the signature registry's
  * `landOn ?? template` (a thin wrapper kept for older callers and tests).
@@ -475,7 +487,10 @@ const PRINTING_TREATMENT_PHRASES: Record<PrintingTreatment, string> = {
 };
 
 /**
- * The creator's toast once an import has landed: "This printing is
+ * The deck-remix pre-fill's toast for an older patch that carries no
+ * `frame_match` (the import dialog asks with its frame chooser instead, and
+ * a current patch is named by importSubstitutionMessage,
+ * lib/creator/import-frame-choice.ts): "This printing is
  * borderless — PipGlyph used the bordered M15 (2015) Standard frame."
  * `landed` is the template the card actually got (after the published-frame
  * resolution), so the copy never names a frame the card isn't on. "Bordered"
@@ -495,50 +510,6 @@ export function printingTreatmentNotice(
   return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — PipGlyph used the ${
     bordered ? `bordered ${frame}` : frame
   } frame.`;
-}
-
-/**
- * The import dialog's heads-up before the user commits, while they can
- * still pick another printing. `landing` is the treatment frame the import
- * itself lands on (printingTreatmentLanding — the signature registry picked
- * it and it is verified in this colour); `offer` is a verified PipGlyph
- * frame the creator's toast offers instead of the plain frame
- * (printingTreatmentOffer). With neither, the import uses the plain frame
- * and the copy says so.
- */
-export function printingTreatmentHint(
-  treatment: PrintingTreatment,
-  offer?: PrintingTreatmentOffer | null,
-  landing?: FrameTemplate | null,
-): string {
-  if (landing) {
-    return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — the import uses PipGlyph's ${describeFrame(landing)} frame.`;
-  }
-  const plain = treatment === "borderless" ? "a bordered" : "the regular";
-  if (offer) {
-    return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — the import uses ${plain} frame, then offers PipGlyph's ${offer.frameLabel} frame.`;
-  }
-  return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]}, which PipGlyph doesn't offer yet — the import uses ${plain} frame instead.`;
-}
-
-/**
- * The treatment frame an import of this printing LANDS on, for the dialog's
- * heads-up: the patch's frame (the signature registry's `landOn ??
- * template`, TODO 1.4) when it is a treatment frame — a showcase-era frame
- * or the borderless set — and it is verified in the card's colour, so the
- * creator's resolveImportFrame keeps it. Null when the import lands on a
- * plain frame.
- */
-export function printingTreatmentLanding(
-  patch: Pick<ScryfallImportPatch, "frame_template" | "color_identity">,
-  verifiedKeys: ReadonlySet<string>,
-): FrameTemplate | null {
-  const template = patch.frame_template;
-  if (!template) return null;
-  const set = FRAME_TEMPLATE_SET[template];
-  if (FRAME_SET_ERA[set] !== "showcase" && set !== "borderless") return null;
-  const colorKey = pickFrameColorKey(patch.color_identity ? [...patch.color_identity] : undefined);
-  return isFrameComboAvailable(template, colorKey, verifiedKeys) ? template : null;
 }
 
 /** A PipGlyph frame the creator can OFFER for an imported printing's

@@ -5,8 +5,6 @@ import {
   frameTemplateFromScryfall,
   mapScryfallToFormPatch,
   printingTreatmentFromScryfall,
-  printingTreatmentHint,
-  printingTreatmentLanding,
   printingTreatmentNotice,
   printingTreatmentOffer,
   FULL_ART_BASIC_2022_SETS,
@@ -190,17 +188,6 @@ describe("printingTreatmentNotice — the creator's toast after the frame lands"
   });
 });
 
-describe("printingTreatmentHint — the import dialog, before committing", () => {
-  it("says the treatment isn't drawn and which kind of frame the import uses", () => {
-    expect(printingTreatmentHint("borderless")).toBe(
-      "This printing is borderless, which PipGlyph doesn't offer yet — the import uses a bordered frame instead.",
-    );
-    expect(printingTreatmentHint("textless")).toBe(
-      "This printing is textless, which PipGlyph doesn't offer yet — the import uses the regular frame instead.",
-    );
-  });
-});
-
 // Frames plan 4.32 / 4.39: the borderless M15 frame and the full-art basic.
 // A borderless card still lands on the bordered frame (1.18) and the
 // creator OFFERS Borderless, once the owner has verified it in the card's
@@ -213,7 +200,6 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
   it("offers nothing while the frame is unverified (today)", () => {
     for (const key of Object.keys(printings) as PrintingKey[]) {
       expect(printingTreatmentOffer(patchOf(key), new Set()), key).toBeNull();
-      expect(printingTreatmentLanding(patchOf(key), new Set()), key).toBeNull();
     }
     expect(patchOf("dmu-435").frame_template).toBe("m15");
     expect(patchOf("one-262").frame_template).toBe("m15fullartland");
@@ -263,7 +249,7 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     for (const key of ["one-262", "fdn-282"] as const) {
       expect(patchOf(key).color_identity, key).toEqual(["white"]);
       expect(patchOf(key).printing_detail?.set, key).toBe(key.slice(0, 3));
-      expect(printingTreatmentLanding(patchOf(key), keys), key).toBe("m15fullartland");
+      expect(patchOf(key).frame_template, key).toBe("m15fullartland");
       expect(printingTreatmentOffer(patchOf(key), keys), key).toBeNull();
     }
     expect(patchOf("fdn-282").frame_match?.status).toBe("exact");
@@ -274,17 +260,14 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     for (const key of ["bfz-250", "znr-266", "spm-189"] as const) {
       expect(patchOf(key).printing_treatment, key).toBe("fullart");
       expect(patchOf(key).frame_match?.status, key).toBe("nearest");
-      expect(printingTreatmentLanding(patchOf(key), keys), key).toBe("m15fullartland");
+      expect(patchOf(key).frame_template, key).toBe("m15fullartland");
       expect(printingTreatmentOffer(patchOf(key), keys), key).toBeNull();
     }
     expect([...FULL_ART_BASIC_2022_SETS]).not.toContain("spm");
     expect([...FULL_ART_BASIC_2022_SETS]).not.toContain("sos");
     // FIN #309, the one printed left-disc Wastes: colourless, once c is verified.
     expect(patchOf("fin-309").color_identity).toEqual(["colorless"]);
-    expect(printingTreatmentLanding(patchOf("fin-309"), keys)).toBeNull();
-    expect(printingTreatmentLanding(patchOf("fin-309"), verified(["m15fullartland", "c"]))).toBe(
-      "m15fullartland",
-    );
+    expect(patchOf("fin-309").frame_template).toBe("m15fullartland");
     // A full-art creature: nothing.
     expect(printingTreatmentOffer(patchOf("sch-3"), verified(["m15fullartland", "b"]))).toBeNull();
   });
@@ -314,7 +297,6 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     expect(fra.printing_detail).toEqual({ set: "fra", fullArt: true, textless: false });
     expect(fra.frame_match).toMatchObject({ status: "nearest", template: "fullartland", landOn: "m15land" });
     expect(fra.frame_template).toBe("m15land");
-    expect(printingTreatmentLanding(fra, verified(["fullartland", "w"]))).toBeNull();
     expect(printingTreatmentOffer(fra, verified(["fullartland", "w"]))).toEqual({
       template: "fullartland",
       frameLabel: "Borderless Full-Art Basic",
@@ -327,18 +309,5 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     expect(unf.printing_detail?.textless).toBe(true);
     expect(unf.frame_template).toBe("m15textlessland");
     expect(printingTreatmentOffer(unf, verified(["fullartland", "w"], ["m15borderless", "w"]))).toBeNull();
-    // The dialog names the offer before the import.
-    expect(printingTreatmentHint("borderless", printingTreatmentOffer(fra, verified(["fullartland", "w"])))).toBe(
-      "This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless Full-Art Basic frame.",
-    );
-  });
-
-  it("the dialog's heads-up names the offered frame, or keeps today's copy", () => {
-    expect(
-      printingTreatmentHint("borderless", { template: "m15borderless", frameLabel: "Borderless", actionLabel: "Use Borderless" }),
-    ).toBe("This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless frame.");
-    expect(printingTreatmentHint("borderless", null)).toBe(
-      "This printing is borderless, which PipGlyph doesn't offer yet — the import uses a bordered frame instead.",
-    );
   });
 });

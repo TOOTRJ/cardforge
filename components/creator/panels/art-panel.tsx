@@ -3,8 +3,12 @@
 // Art panel — the uploader/positioner plus the artist-credit "more options"
 // collapsible. Moved unchanged from the old art step.
 
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { ArtUploader } from "@/components/creator/art-uploader";
+import {
+  ImportedArtNote,
+  type ImportedArtOrigin,
+} from "@/components/creator/import/imported-art-note";
 import {
   FieldGroup,
   MoreOptions,
@@ -24,6 +28,9 @@ type ArtPanelProps = {
    *  Save hint asks for it): "More options" opens so the field is visible
    *  (TODO 3b.5). */
   secondFaceNameMissing?: boolean;
+  /** Art a Scryfall import brought in (TODO 1.18): while it is still the
+   *  card's art, a note says Scryfall's crop stops at the printed frame. */
+  importedArtOrigin?: ImportedArtOrigin | null;
 };
 
 export function ArtPanel({
@@ -31,12 +38,17 @@ export function ArtPanel({
   backFaceSlot,
   aiSlot,
   secondFaceNameMissing = false,
+  importedArtOrigin = null,
 }: ArtPanelProps) {
   const {
     register,
     control,
     formState: { errors },
   } = useFormContext<FormValues>();
+  const [artUrl, template] = useWatch({
+    control,
+    name: ["art_url", "frame_style.template"],
+  });
 
   return (
     <>
@@ -70,6 +82,7 @@ export function ArtPanel({
           {errors.art_url.message}
         </p>
       ) : null}
+      <ImportedArtNote origin={importedArtOrigin} artUrl={artUrl} template={template} />
 
       <MoreOptions
         summary={
