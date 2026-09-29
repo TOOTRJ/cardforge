@@ -76,6 +76,14 @@ describe("fillPromptNote", () => {
     expect(note).not.toContain("artwork");
   });
 
+  it("pins a token's type line as it prints, so its type words survive (TODO 3b.15)", () => {
+    const note = fillPromptNote(
+      { title: "Treasure", card_type: "token", supertype: "Artifact", subtypes: ["Treasure"] },
+      ["rules_text"],
+    );
+    expect(note).toContain('type line "Token Artifact — Treasure"');
+  });
+
   it("asks only for an art prompt when just the art is wanted", () => {
     const note = fillPromptNote({ title: "Stone Stare" }, ["art"]);
     expect(note).toContain("Only the artwork is being generated");

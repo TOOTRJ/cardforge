@@ -650,8 +650,10 @@
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenTextlessM15.js 'Textless (Bordered M15)'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1640–1856 (the window's straight sides through the type pill's shadow) moved down 8 px as one piece over the top 8 rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over 24 rows, the shadow's last 2 rows faded into the texture (premultiplied); corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/token/m15/textless/w.png"
@@ -679,6 +681,13 @@
         "img/frames/token/m15/textless/m.png"
       ]
     },
+    "recut": {
+      "fromY": 1640,
+      "toY": 1857,
+      "shift": 8,
+      "blend": 24,
+      "blendBottom": 2
+    },
     "sourceFiles": [
       "img/frames/m15/regular/m15MaskBorder.png",
       "img/frames/m15/regular/m15MaskTitle.png",
@@ -695,15 +704,18 @@
     ],
     "notes": [
       "source: CC 'Textless (Bordered M15)' — its geometry matches the M15TOKEN profile (art 12.5–81.3 %, type bar ~82 %)",
-      "colourless creature token = PipGlyph composite: CC's silver token frame at 35 % (frame) / 80 % (type bar) opacity over the art, like printed BFZ/MH1/WAR colourless tokens (owner decision 2026-09-25)"
+      "colourless creature token = PipGlyph composite: CC's silver token frame at 35 % (frame) / 80 % (type bar) opacity over the art, like printed BFZ/MH1/WAR colourless tokens (owner decision 2026-09-25)",
+      "re-cut onto the prints (TODO 4.49, owner decision 2026-09-29): the window's bottom edge, the type pill and its shadow 8 px lower, as the fifteen 2014–19 textless pins print them; PipGlyph composite of CC pixels"
     ]
   },
   "m15tokenartifact": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
     "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenTextlessM15.js 'Textless (Bordered M15)'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1640–1856 (the window's straight sides through the type pill's shadow) moved down 8 px as one piece over the top 8 rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over 24 rows, the shadow's last 2 rows faded into the texture (premultiplied); corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/token/m15/textless/a.png through img/frames/m15/regular/m15MaskBorder.png",
@@ -751,6 +763,13 @@
         "img/frames/token/m15/textless/m.png through img/frames/token/m15/textless/pinline.svg"
       ]
     },
+    "recut": {
+      "fromY": 1640,
+      "toY": 1857,
+      "shift": 8,
+      "blend": 24,
+      "blendBottom": 2
+    },
     "sourceFiles": [
       "img/frames/m15/regular/m15MaskBorder.png",
       "img/frames/m15/regular/m15MaskTitle.png",
@@ -766,7 +785,8 @@
       "img/frames/token/tokenMaskTextlessType.png"
     ],
     "notes": [
-      "coloured artifact tokens = artifact token frame, colour pinline/title/type through CC's token masks"
+      "coloured artifact tokens = artifact token frame, colour pinline/title/type through CC's token masks",
+      "re-cut onto the prints like m15token (TODO 4.49, owner decision 2026-09-29)"
     ]
   }
 }

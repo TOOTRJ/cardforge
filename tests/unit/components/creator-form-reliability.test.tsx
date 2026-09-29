@@ -104,6 +104,9 @@ vi.mock("@/components/cards/card-preview", () => ({
   CardPreview: (props: {
     title?: string;
     cardType?: string | null;
+    supertype?: string | null;
+    power?: string | null;
+    rarity?: string | null;
     rulesText?: string;
     frameStyle?: { template?: string };
     faceContent?: unknown;
@@ -113,6 +116,9 @@ vi.mock("@/components/cards/card-preview", () => ({
       data-testid="card-preview"
       data-title={props.title ?? ""}
       data-card-type={props.cardType ?? ""}
+      data-supertype={props.supertype ?? ""}
+      data-power={props.power ?? ""}
+      data-rarity={props.rarity ?? ""}
       data-template={props.frameStyle?.template ?? ""}
       data-rules={props.rulesText ?? ""}
       data-face-content={JSON.stringify(props.faceContent ?? null)}
@@ -268,6 +274,9 @@ function preview() {
   return {
     title: el.dataset.title,
     cardType: el.dataset.cardType,
+    supertype: el.dataset.supertype,
+    power: el.dataset.power,
+    rarity: el.dataset.rarity,
     template: el.dataset.template,
     rules: el.dataset.rules,
     faceContent: JSON.parse(el.dataset.faceContent ?? "null"),
@@ -1014,6 +1023,356 @@ describe("3b.8 the second half is typed from the kind", () => {
     await clickSave();
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     expect(actions.createCardAction.mock.calls[0][0].back_face.card_type).toBe("instant");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b.15 — the token kind: its type picker writes the words, the frame and the
+// P/T follow them, the name follows the subtypes, and a new token is common.
+// ---------------------------------------------------------------------------
+
+describe("3b.15 the token type picker", () => {
+  const WITH_ARTIFACT_TOKEN = [...VERIFIED, ...EVERY_COLOUR.map((k) => frameComboKey("m15tokenartifact", k))];
+
+  function tokenChip(label: RegExp) {
+    const chip = Array.from(
+      document.querySelectorAll("[aria-label='Token types'] button, [aria-label='Token supertypes'] button"),
+    ).find((el) => label.test(el.textContent ?? "")) as HTMLButtonElement | undefined;
+    if (!chip) throw new Error(`no token chip ${label}`);
+    return chip;
+  }
+  async function toggle(label: RegExp) {
+    const chip = tokenChip(label);
+    await act(async () => {
+      fireEvent.click(chip);
+    });
+  }
+
+  it("a new token is a common Creature token with a P/T", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    expect(preview().cardType).toBe("token");
+    expect(preview().template).toBe("m15token");
+    expect(preview().supertype).toBe("Creature");
+    expect(preview().power).toBe("1");
+    expect(preview().rarity).toBe("common");
+    expect(tokenChip(/^Creature/).getAttribute("aria-pressed")).toBe("true");
+    expect(tokenChip(/^Artifact/).getAttribute("aria-pressed")).toBe("false");
+    // Back to a creature: the picker's word leaves with the kind.
+    await pickKind(/^Creature/);
+    expect(preview().supertype).toBe("");
+  });
+
+  it("Artifact picks the artifact token frame; the P/T goes with Creature; off again → the plain frame", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await toggle(/^Creature/);
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Artifact");
+    expect(preview().template).toBe("m15tokenartifact");
+    // The form still holds the new card's 1/1, but a Treasure prints none.
+    expect(preview().power).toBe("");
+    await toggle(/^Legendary/);
+    await toggle(/^Enchantment/);
+    expect(preview().supertype).toBe("Legendary Enchantment Artifact");
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Legendary Enchantment");
+    expect(preview().template).toBe("m15token");
+    // No toggle at all: a bare "Token", on the plain frame.
+    await toggle(/^Legendary/);
+    await toggle(/^Enchantment/);
+    expect(preview().supertype).toBe("");
+    expect(preview().template).toBe("m15token");
+  });
+
+  it("the \"Artifact Token\" frame is no chip of its own", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    const variations = screen.getByRole("radiogroup", { name: "Frame variations" });
+    const labels = Array.from(variations.querySelectorAll("[role='radio']")).map((el) => el.textContent ?? "");
+    expect(labels.some((text) => /^Standard/.test(text))).toBe(true);
+    expect(labels.some((text) => /Artifact Token/.test(text))).toBe(false);
+  });
+
+  it("an unverified artifact frame keeps the plain one and says so", async () => {
+    renderForm({ mode: "create" }); // m15tokenartifact isn't verified here
+    await pickKind(/^Token/);
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Artifact Creature");
+    expect(preview().template).toBe("m15token");
+    expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(/isn't verified in colorless yet/);
+  });
+
+  it("the name follows the subtypes until the user types one", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await clickNext(); // Card → Identity
+    const subtypes = screen.getByPlaceholderText("Dragon, Elder");
+    await act(async () => {
+      fireEvent.change(subtypes, { target: { value: "Rabbit, Knight" } });
+    });
+    expect(titleInput().value).toBe("Rabbit Knight");
+    await act(async () => {
+      fireEvent.change(subtypes, { target: { value: "Rabbit" } });
+    });
+    expect(titleInput().value).toBe("Rabbit");
+    await typeTitle("Warren Warleader");
+    await act(async () => {
+      fireEvent.change(subtypes, { target: { value: "Rabbit, Knight" } });
+    });
+    expect(titleInput().value).toBe("Warren Warleader");
+  });
+
+  it("a Treasure saves as \"Artifact\", common, with no P/T, on the artifact token frame", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "treasure",
+    });
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await toggle(/^Creature/);
+    await toggle(/^Artifact/);
+    await clickNext();
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), { target: { value: "Treasure" } });
+    });
+    // No rarity chips for a token.
+    await clickNext();
+    expect(screen.queryByRole("radiogroup", { name: "Rarity" })).toBeNull();
+    expect(screen.queryByPlaceholderText("4")).toBeNull();
+    await goToLastStep();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("save-as-draft"));
+    });
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0];
+    expect(payload).toMatchObject({
+      title: "Treasure",
+      card_type: "token",
+      supertype: "Artifact",
+      subtypes: ["Treasure"],
+      rarity: "common",
+      frame_style: { template: "m15tokenartifact" },
+    });
+    expect(payload.power).toBeUndefined();
+    expect(payload.toughness).toBeUndefined();
+  });
+
+  it("the Identity step's Supertype field shows and edits only the words the picker doesn't own", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Token/);
+    await toggle(/^Legendary/);
+    expect(preview().supertype).toBe("Legendary Creature");
+    await clickNext(); // Card → Identity
+    const field = () => screen.getByPlaceholderText("Snow") as HTMLInputElement;
+    // Not "Legendary Creature": those two are the picker's.
+    expect(field().value).toBe("");
+    expect(screen.queryByPlaceholderText("Legendary")).toBeNull();
+    await act(async () => {
+      fireEvent.change(field(), { target: { value: "Basic Snow " } });
+    });
+    // Merged in printed order with the picker's words; the text stays the
+    // user's (a trailing space and all) while they type.
+    expect(preview().supertype).toBe("Basic Legendary Snow Creature");
+    expect(field().value).toBe("Basic Snow ");
+    // A picker word typed here waits for the blur, then moves to its toggle.
+    await act(async () => {
+      fireEvent.change(field(), { target: { value: "Snow enchantment" } });
+    });
+    expect(preview().supertype).toBe("Legendary Snow Creature");
+    await act(async () => {
+      fireEvent.blur(field());
+    });
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Creature");
+    expect(field().value).toBe("Snow");
+    // The picker shows it; its toggles leave the field's words alone.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    expect(tokenChip(/^Enchantment/).getAttribute("aria-pressed")).toBe("true");
+    await toggle(/^Creature/);
+    await toggle(/^Artifact/);
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact");
+    expect(preview().template).toBe("m15tokenartifact");
+    await clickNext();
+    expect(field().value).toBe("Snow");
+    // Leaving and re-entering the field without typing writes nothing.
+    await act(async () => {
+      fireEvent.focus(field());
+      fireEvent.blur(field());
+    });
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact");
+  });
+
+  it("an imported \"Token Legendary Artifact Creature — Construct\" saves every word through the picker, the free field and Enter", async () => {
+    const card = scryfallCardSchema.parse({
+      ...importPrintings["tkld-7"],
+      name: "Construct",
+      type_line: "Token Legendary Artifact Creature — Construct",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).startsWith("/api/scryfall/named")
+          ? new Response(
+              JSON.stringify({
+                ok: true,
+                card: { name: card.name, scryfall_uri: null },
+                patch: JSON.parse(JSON.stringify(mapScryfallToFormPatch(card))),
+              }),
+              { status: 200 },
+            )
+          : new Response(JSON.stringify({ ok: false }), { status: 200 }),
+      ),
+    );
+    actions.createCardAction.mockResolvedValue({ ok: true, cardId: "44444444-4444-4444-8444-444444444444", slug: "construct" });
+    actions.linkDeckCardAction.mockResolvedValue({ ok: true });
+    renderForm({
+      mode: "create",
+      verifiedFrameKeys: WITH_ARTIFACT_TOKEN,
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: card.id,
+        deckSlug: "tester/deck",
+        deckTitle: "Deck",
+        entryName: card.name,
+      },
+    });
+    await waitFor(() => expect(preview().supertype).toBe("Legendary Artifact Creature"));
+    expect(preview().cardType).toBe("token");
+    expect(preview().template).toBe("m15tokenartifact");
+    // The import opens on the Identity step. Every word is the picker's: the
+    // free Supertype field starts empty.
+    const field = () => screen.getByPlaceholderText("Snow") as HTMLInputElement;
+    expect(field().value).toBe("");
+    const goTo = async (step: string) => {
+      await act(async () => {
+        fireEvent.click(screen.getAllByTitle(`Go to ${step}`)[0]);
+      });
+    };
+    // The picker (Card step): Enchantment on, Legendary off.
+    await goTo("Card");
+    await toggle(/^Enchantment/);
+    await toggle(/^Legendary/);
+    expect(preview().supertype).toBe("Enchantment Artifact Creature");
+    // A draft (the import brought no art), saved from the Identity step.
+    await goToLastStep();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("save-as-draft"));
+    });
+    await goTo("Identity");
+    await act(async () => {
+      fireEvent.change(field(), { target: { value: "Snow legendary" } });
+    });
+    expect(preview().supertype).toBe("Snow Enchantment Artifact Creature");
+    // Enter submits the form with the field still focused — no blur. The
+    // typed picker word goes to its toggle first, so the save keeps it.
+    await act(async () => {
+      fireEvent.keyDown(field(), { key: "Enter" });
+    });
+    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact Creature");
+    expect(field().value).toBe("Snow");
+    expect(saveButton().disabled).toBe(false);
+    await act(async () => {
+      fireEvent.submit(field().form!);
+    });
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0][0]).toMatchObject({
+      title: "Construct",
+      card_type: "token",
+      supertype: "Legendary Snow Enchantment Artifact Creature",
+      subtypes: ["Construct"],
+      frame_style: { template: "m15tokenartifact" },
+    });
+  });
+
+  it("every other kind keeps its plain Supertype field", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Creature/);
+    await clickNext();
+    expect(screen.queryByPlaceholderText("Snow")).toBeNull();
+    const field = screen.getByPlaceholderText("Legendary") as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(field, { target: { value: "Legendary Snow" } });
+    });
+    expect(preview().supertype).toBe("Legendary Snow");
+    expect(field.value).toBe("Legendary Snow");
+  });
+
+  it("a stored token from before the picker opens as a Creature token with its P/T", async () => {
+    renderForm({
+      mode: "edit",
+      card: savedCard({
+        title: "Stalzalfos",
+        card_type: "token",
+        supertype: null,
+        subtypes: ["Skeleton"],
+        power: "1",
+        toughness: "1",
+        cost: null,
+        rarity: "uncommon",
+        frame_style: { finish: "regular", template: "m15token" },
+      }),
+    });
+    expect(preview().supertype).toBe("Creature");
+    expect(preview().power).toBe("1");
+    // Its stored rarity stays.
+    expect(preview().rarity).toBe("uncommon");
+    expect(screen.getByTestId("locked-summary").textContent).toMatch(/Token Creature — Skeleton/);
+  });
+
+  // Owner 2026-09-29: a remix saves a NEW card, so a token's remix is common
+  // like every new token (the creator's and the AI jobs' rule) — the token
+  // kind hides the rarity chips, so the parent's rare could never be set
+  // back on the remix. An edit keeps the stored rarity (above).
+  it.each([
+    ["an uncommon Creature token", { supertype: "Creature", power: "2", toughness: "2", rarity: "uncommon" }],
+    ["a mythic Treasure", { supertype: "Artifact", subtypes: ["Treasure"], rarity: "mythic", frame_style: { finish: "regular", template: "m15tokenartifact" } }],
+  ])("a remix of %s saves as common, and previews so", async (_label, over) => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "soldier-remix",
+    });
+    renderForm({
+      mode: "remix",
+      verifiedFrameKeys: WITH_ARTIFACT_TOKEN,
+      card: savedCard({
+        title: "Soldier",
+        card_type: "token",
+        subtypes: ["Soldier"],
+        power: null,
+        toughness: null,
+        cost: null,
+        visibility: "public",
+        frame_style: { finish: "regular", template: "m15token" },
+        ...over,
+      }),
+    });
+    expect(preview().rarity).toBe("common");
+    await typeTitle("Soldier of the Second Dawn");
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0];
+    expect(payload.parent_card_id).toBe(CARD_ID);
+    expect(payload.card_type).toBe("token");
+    expect(payload.rarity).toBe("common");
+  });
+
+  it("a remix of a non-token keeps its parent's rarity", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: true,
+      cardId: "44444444-4444-4444-8444-444444444444",
+      slug: "wyrm-of-the-second-dawn",
+    });
+    renderForm({ mode: "remix", card: savedCard({ visibility: "public" }) });
+    expect(preview().rarity).toBe("rare");
+    await typeTitle("Wyrm of the Second Dawn");
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0][0].rarity).toBe("rare");
   });
 });
 

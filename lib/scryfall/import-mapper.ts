@@ -93,8 +93,11 @@ const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
 // The other words are NOT lost: they ride in `supertype`, in printed order,
 // so "Artifact Creature — Golem" keeps its "Artifact". (The renderers print
 // the supertype BEFORE the card type, so a line whose card type isn't its
-// last word — "Token Creature", "Land Creature", "Enchantment Land" under a
-// layout kind — reads the words in another order: a renderer item, TODO 1.3.)
+// last word — "Land Creature", "Enchantment Land" under a layout kind — reads
+// the words in another order: a renderer item, TODO 1.20. A token prints
+// "Token" first, then its words — "Token Artifact Creature — Thopter" — so
+// its line round-trips, and the token picker reads the same words: TODO
+// 3b.15.)
 const CARD_TYPE_PRECEDENCE: readonly CardType[] = [
   "token",
   "land",

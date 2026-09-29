@@ -483,6 +483,7 @@
     }
   },
   "m15token": {
+    "note": "The 2014–19 arch token (CC 'Textless (Bordered M15)'), textless prints only (TODO 4.49 re-pin, 2026-09-29). The text-box prints wait for m15tokentext (4.49 (b)); the M20+ full-art prints (TFDN, TBLB, TFRA, TFRC …) move to 4.48. m has no textless arch print (TC17 #9 and TWAR #16 have a text box): its own tick after a walk.",
     "colors": {
       "w": [
         {
@@ -492,50 +493,33 @@
           "curated": true
         },
         {
-          "name": "Warrior",
-          "set": "tfrc",
-          "scryfallId": "2dde64e7-dff3-4495-9649-d4b1e91f1cf3"
-        },
-        {
-          "name": "Warren Warleader",
-          "set": "tblb",
-          "scryfallId": "5cc9b628-0a3a-4d09-ae4a-57c7f6f9ac36"
+          "name": "Soldier",
+          "set": "tm19",
+          "scryfallId": "07929ced-5c81-4b05-82e1-522fec1cf5c0"
         }
       ],
       "u": [
         {
-          "name": "Drake",
-          "set": "tfdn",
-          "scryfallId": "f4a73034-e20f-4e7e-ac15-3460b1e9c69b",
-          "curated": true
+          "name": "Octopus",
+          "set": "tbfz",
+          "scryfallId": "19ac0a35-fae7-49f9-ae96-4406df992dc9"
         },
         {
-          "name": "Illusion",
-          "set": "tfra",
-          "scryfallId": "7bda0b63-fd0f-495d-9eb0-20057571c0ee"
-        },
-        {
-          "name": "Thundertrap Trainer",
-          "set": "tblb",
-          "scryfallId": "80bcbe35-7764-4c75-b954-cbba11372dec"
+          "name": "Wizard",
+          "set": "twar",
+          "scryfallId": "7b0b95ce-4821-4955-a27c-93471240f54b"
         }
       ],
       "b": [
         {
           "name": "Zombie",
-          "set": "tsoc",
-          "scryfallId": "b0d6fd21-48f0-4151-9671-762c25d95592",
-          "curated": true
+          "set": "tm19",
+          "scryfallId": "ed08aac1-9e82-4049-9926-618f15222024"
         },
         {
-          "name": "Zombie Army",
-          "set": "tfrc",
-          "scryfallId": "14474e29-27a4-475a-9d2c-eb1d6c146421"
-        },
-        {
-          "name": "Darkstar Augur",
-          "set": "tblb",
-          "scryfallId": "01b55966-0910-484d-9b2b-0a59233c44c4"
+          "name": "Cleric",
+          "set": "tdom",
+          "scryfallId": "74791ac4-7297-4731-aff8-20130da8b4b7"
         }
       ],
       "r": [
@@ -546,14 +530,9 @@
           "curated": true
         },
         {
-          "name": "Kobolds of Kher Keep",
-          "set": "tfrc",
-          "scryfallId": "d0d630b2-1e42-4cf7-bfa1-36d5c135877b"
-        },
-        {
           "name": "Elemental",
-          "set": "tncc",
-          "scryfallId": "512fedf8-f50d-4e81-9856-e051850dc05f"
+          "set": "tmh1",
+          "scryfallId": "e5b57672-c346-42f5-ac3e-82466a13b957"
         }
       ],
       "g": [
@@ -564,130 +543,53 @@
           "curated": true
         },
         {
-          "name": "Mowu",
-          "set": "tfra",
-          "scryfallId": "5868190d-18f6-43b6-af83-9e0ef585687d"
-        },
-        {
-          "name": "Pawpatch Recruit",
-          "set": "tblb",
-          "scryfallId": "7cdd8679-93a7-4e58-a6f3-b48897697e89"
+          "name": "Beast",
+          "set": "tm19",
+          "scryfallId": "832691a5-c638-481b-a413-3fdfc604a132"
         }
       ],
       "c": [
         {
-          "name": "Treasure",
-          "set": "txln",
-          "scryfallId": "720f3e68-84c0-462e-a0d1-90236ccc494a",
-          "curated": true
+          "name": "Eldrazi",
+          "set": "tbfz",
+          "scryfallId": "30ff04d5-ecaf-4be2-94f4-d5409f1c1e4e"
         },
         {
-          "name": "Cadet",
-          "set": "tfra",
-          "scryfallId": "8f4534d8-2783-484f-8ebf-a47b1cc4c6df"
-        },
-        {
-          "name": "Council of Reeds",
-          "set": "tmsc",
-          "scryfallId": "b1776802-c1d7-4d4d-926f-ab3748942b62"
+          "name": "Eldrazi Horror",
+          "set": "temn",
+          "scryfallId": "11d25bde-a303-4b06-a3e1-4ad642deae58"
         }
       ],
-      "m": [
-        {
-          "name": "Citizen",
-          "set": "tfrc",
-          "scryfallId": "b7171de9-476d-4bfa-8cc0-b4fbc168cf4d"
-        },
-        {
-          "name": "Human Soldier",
-          "set": "tvow",
-          "scryfallId": "5f3c4810-7359-42b7-905f-4845f6d1daf6"
-        }
-      ]
+      "m": null
     }
   },
   "m15tokenartifact": {
-    "note": "Printed artifact tokens are colourless (Treasure/Clue/Food…); coloured artifact tokens are rare finds from Universes Beyond token sets.",
+    "note": "The 2014–19 arch artifact token (CC's silver token frame), textless prints only (TODO 4.49 re-pin, 2026-09-29). The text-box prints (TXLN #7 Treasure, TSOI #11 Clue, TM19 #14, TC16 #9, TC18 #8) wait for m15tokenartifacttext (4.49 (b)); the M20+ prints move to 4.50. w/b/r/g/m have no printing: their own tick after a walk.",
     "colors": {
-      "w": [
-        {
-          "name": "Toy",
-          "set": "tdsk",
-          "scryfallId": "5e6d479d-c30d-4048-b250-5233358a174c"
-        },
-        {
-          "name": "Icingdeath, Frost Tongue",
-          "set": "tafr",
-          "scryfallId": "a9c981c9-3376-4f6e-b30d-859e5fc7347e"
-        }
-      ],
+      "w": null,
       "u": [
         {
-          "name": "Phyrexian Myr",
-          "set": "tsoc",
-          "scryfallId": "ca7e566f-5eb4-4f0f-bf87-5788c57ba1e4"
-        },
-        {
-          "name": "Sicarian Infiltrator",
-          "set": "t40k",
-          "scryfallId": "58784a4f-8190-4751-b42c-fff188ad3ce5"
+          "name": "Myr",
+          "set": "tc18",
+          "scryfallId": "656af066-f9b3-4c23-b6c4-3ff55776858f"
         }
       ],
-      "b": [
-        {
-          "name": "Necron Warrior",
-          "set": "t40k",
-          "scryfallId": "542b3490-1247-4f47-98b6-c67cabae53cb"
-        },
-        {
-          "name": "Alien Angel",
-          "set": "twho",
-          "scryfallId": "b65e872a-ba16-4df2-9214-60019fd6456a"
-        }
-      ],
-      "r": [
-        {
-          "name": "Gremlin",
-          "set": "tmoc",
-          "scryfallId": "23854999-2691-491c-aa7d-81f269e23b4e"
-        },
-        {
-          "name": "Feather",
-          "set": "tiko",
-          "scryfallId": "a9cc7c63-5d13-4fd6-af9d-4a26c2bab8e6"
-        }
-      ],
+      "b": null,
+      "r": null,
       "g": null,
       "c": [
         {
-          "name": "Treasure",
-          "set": "tmsh",
-          "scryfallId": "cec5cc8b-bc15-415a-bde6-6c783f8d0b0b",
-          "curated": true
+          "name": "Construct",
+          "set": "tkld",
+          "scryfallId": "623a08d1-f5ff-48b7-bdb6-54b8d7a4b931"
         },
-        {
-          "name": "Myr",
-          "set": "tfrc",
-          "scryfallId": "e41f83c6-c20f-455a-b630-5fad99fa54ad"
-        },
-        {
-          "name": "Map",
-          "set": "tlci",
-          "scryfallId": "64839118-09d2-4645-9d3c-f80755ac781f"
-        }
-      ],
-      "m": [
         {
           "name": "Golem",
-          "set": "tlci",
-          "scryfallId": "33a88096-dcfd-4acb-a092-b51507edd13e"
-        },
-        {
-          "name": "Mechtitan",
-          "set": "tneo",
-          "scryfallId": "0281825d-9d38-4b56-b522-a8d3cf8c77c9"
+          "set": "tmh1",
+          "scryfallId": "dc77b308-9d0c-492f-b3fe-e00d60470767"
         }
-      ]
+      ],
+      "m": null
     }
   },
   "m15snow": {

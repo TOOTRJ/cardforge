@@ -16,7 +16,7 @@ vi.mock("@/components/billing/credit-meter", () => ({ CreditMeter: () => null })
 import { AiFillDialog } from "@/components/creator/ai-fill-dialog";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 
-const VERIFIED = ["m15", "m15artifact", "m15snow"].flatMap((template) =>
+const VERIFIED = ["m15", "m15artifact", "m15snow", "m15token", "m15tokenartifact"].flatMap((template) =>
   ["w", "c"].map((colour) => frameComboKey(template, colour)),
 );
 
@@ -53,5 +53,11 @@ describe("AI fill dialog — frame options", () => {
 
   it("offers the Artifact type its own standard frame", () => {
     expect(frameOptionsFor("artifact")).toContain("m15artifact");
+  });
+
+  it("never offers a token the artifact token frame: its type words pick it (TODO 3b.15)", () => {
+    const options = frameOptionsFor("token");
+    expect(options).toContain("m15token");
+    expect(options).not.toContain("m15tokenartifact");
   });
 });

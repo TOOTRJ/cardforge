@@ -28,7 +28,15 @@ import {
   type FrameEra,
   type FrameTemplate,
 } from "@/types/card";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import {
+  TOKEN_TYPE_WORDS,
+  normalizeFrameTemplate,
+  supertypeHasWord,
+  supertypeWords,
+  withSupertypeWord,
+  withoutSupertypeWord,
+  type TokenTypeWord,
+} from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -525,6 +533,180 @@ export function withoutTypeWord(
     .split(/\s+/)
     .filter((part) => part && part.toLowerCase() !== word.toLowerCase())
     .join(" ");
+}
+
+// ---------------------------------------------------------------------------
+// The token kind's type picker (TODO 3b.15). A token's card types are words
+// in its supertype ("Token Artifact Creature — Thopter", the importer's 1.3
+// rule), and the picker toggles them: Creature · Artifact · Enchantment, plus
+// Legendary. Each toggle writes or removes only its own word, in printed
+// order (withSupertypeWord), and keeps every other word (Snow, Land, an
+// import's Basic). None on is allowed — the bare "Token" of a Copy (TFDN
+// #26, owner 2026-09-29). Creature is on for a new token.
+//
+// Seam for 6.23: an "Emblem" choice sits here too (owner 2026-09-29: inside
+// the Token kind, next to the types — not its own kind chip), switching the
+// card to the emblem kind, which stores its own card type. It is not built
+// until that kind exists: no dead button.
+// ---------------------------------------------------------------------------
+
+/** The picker's toggles, in display order (the type chips, then Legendary). */
+export const TOKEN_PICKER_WORDS = ["Creature", "Artifact", "Enchantment", "Legendary"] as const;
+export type TokenPickerWord = (typeof TOKEN_PICKER_WORDS)[number];
+
+/** Which picker toggles the supertype lights (an import lights its own). */
+export function tokenPickerWordsOf(
+  supertype: string | null | undefined,
+): TokenPickerWord[] {
+  return TOKEN_PICKER_WORDS.filter((word) => supertypeHasWord(supertype, word));
+}
+
+/** The supertype after a picker toggle: `word` added in printed order when
+ *  `on`, removed otherwise; nothing else moves. */
+export function toggleTokenWord(
+  supertype: string | null | undefined,
+  word: TokenPickerWord,
+  on: boolean,
+): string {
+  return on ? withSupertypeWord(supertype, word) : withoutSupertypeWord(supertype, word);
+}
+
+/** The picker word `word` spells (any case), or null for a word the picker
+ *  doesn't own. */
+function pickerWordOf(word: string): TokenPickerWord | null {
+  const lower = word.toLowerCase();
+  return TOKEN_PICKER_WORDS.find((w) => w.toLowerCase() === lower) ?? null;
+}
+
+/**
+ * The words of a token's supertype the picker does NOT own ("Basic", "Snow",
+ * an import's "Land"), in their order — what the Identity step's free
+ * Supertype field shows on the token kind, so the picker's words
+ * (Legendary, Enchantment, Artifact, Creature) have one control, not two.
+ */
+export function tokenOtherWordsOf(supertype: string | null | undefined): string {
+  return supertypeWords(supertype)
+    .filter((word) => pickerWordOf(word) === null)
+    .join(" ");
+}
+
+/**
+ * The supertype after the token's free Supertype field is edited to
+ * `typed`: `typed`'s words replace the supertype's other words, and the
+ * picker's words that are on stay on, merged back in printed order
+ * (withSupertypeWord) — "Snow" under Legendary + Creature → "Legendary Snow
+ * Creature". A picker word typed into the field is not written while the
+ * user types (the toggle is its one control); with `adoptPickerWords` (the
+ * field's blur) it turns its toggle on, spelled as the picker spells it.
+ */
+export function withTokenOtherWords(
+  supertype: string | null | undefined,
+  typed: string,
+  { adoptPickerWords = false }: { adoptPickerWords?: boolean } = {},
+): string {
+  const words = supertypeWords(typed);
+  const on = new Set<TokenPickerWord>(tokenPickerWordsOf(supertype));
+  if (adoptPickerWords) {
+    for (const word of words) {
+      const picked = pickerWordOf(word);
+      if (picked) on.add(picked);
+    }
+  }
+  const others = words.filter((word) => pickerWordOf(word) === null).join(" ");
+  return TOKEN_PICKER_WORDS.filter((word) => on.has(word)).reduce(
+    (acc, word) => withSupertypeWord(acc, word),
+    others,
+  );
+}
+
+/** The supertype a card carries INTO the token kind: "Creature" is on for a
+ *  new token (a creature turned token stays a creature). */
+export function supertypeEnteringToken(supertype: string | null | undefined): string {
+  return withSupertypeWord(supertype, "Creature");
+}
+
+/** The supertype a token carries OUT of the token kind: the picker's type
+ *  words are the token's own ("Creature" on a creature card would print
+ *  "Creature Creature"), so they go; Legendary and every other word stay. */
+export function supertypeLeavingToken(supertype: string | null | undefined): string {
+  return TOKEN_TYPE_WORDS.reduce<string>(
+    (acc, word) => withoutSupertypeWord(acc, word),
+    supertype ?? "",
+  );
+}
+
+/** A printed token's name follows its subtypes ("Soldier", "Rabbit
+ *  Knight") unless it has a proper name (TMKM #13 Voja Fenstalker). */
+export function tokenNameFromSubtypes(subtypes: readonly string[]): string {
+  return subtypes.map((s) => s.trim()).filter(Boolean).join(" ");
+}
+
+/**
+ * The title a token's name-follow writes (TODO 3b.15), or null to leave it:
+ * the name follows the subtypes while it is empty or still the last name it
+ * wrote (`lastAuto`); once the user types their own, it stops.
+ */
+export function followTokenName(input: {
+  title: string;
+  lastAuto: string | null;
+  subtypes: readonly string[];
+}): string | null {
+  const following = input.title.trim() === "" || input.title === input.lastAuto;
+  if (!following) return null;
+  const next = tokenNameFromSubtypes(input.subtypes);
+  return next === input.title ? null : next;
+}
+
+// Frames a kind wears BY TYPE WORD rather than as a pick (TODO 3b.15, 4.50):
+// the artifact token frame dresses an Artifact token — the picker's Artifact
+// toggle writes the word and the frame follows — so the "Artifact Token"
+// chip is no longer a choice of its own (stored cards keep their template).
+// Keyed by kind, then by the base frame the word re-dresses. Enchantment's
+// Nyx dress joins here with 4.51; the full-art family's artifact templates
+// with 4.48 / 4.50.
+const TYPE_WORD_DRESSES: Partial<
+  Record<CardKind, Partial<Record<FrameTemplate, { word: TokenTypeWord; template: FrameTemplate }>>>
+> = {
+  token: { m15token: { word: "Artifact", template: "m15tokenartifact" } },
+};
+
+/** True when the template is a frame this kind wears by type word (the
+ *  artifact token frame on a token): the frame pickers don't offer it. */
+export function isTypeWordDress(kind: CardKind, template: FrameTemplate): boolean {
+  return Object.values(TYPE_WORD_DRESSES[kind] ?? {}).some(
+    (dress) => dress?.template === template,
+  );
+}
+
+/**
+ * The frame the type words pick for a card on `template`: on a base with a
+ * type-word dress (m15token) or on the dress itself, the dress when the
+ * supertype says its word (an Artifact token → m15tokenartifact) and the
+ * base otherwise; any other template is returned as it is (a token on the
+ * Classic or a showcase frame keeps it).
+ */
+export function typeWordFrameFor(
+  kind: CardKind,
+  template: FrameTemplate,
+  supertype: string | null | undefined,
+): FrameTemplate {
+  const dresses = TYPE_WORD_DRESSES[kind] ?? {};
+  for (const [base, dress] of Object.entries(dresses) as [FrameTemplate, { word: TokenTypeWord; template: FrameTemplate }][]) {
+    if (template !== base && template !== dress.template) continue;
+    return supertypeHasWord(supertype, dress.word) ? dress.template : base;
+  }
+  return template;
+}
+
+/** True when the template is the one the type words pick (typeWordFrameFor)
+ *  — a random or requested frame never dresses a creature token as an
+ *  artifact, nor a Treasure on the plain token frame. */
+export function typeWordFrameFits(
+  kind: CardKind,
+  template: FrameTemplate,
+  supertype: string | null | undefined,
+): boolean {
+  return typeWordFrameFor(kind, template, supertype) === template;
 }
 
 /** withTypeWord for the artifact frame a creature borrows (TODO 1.7). */

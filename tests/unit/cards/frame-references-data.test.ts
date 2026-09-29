@@ -46,7 +46,11 @@ const templateSchema = z
 // Combos with no real printing — a null here is documented, anything else
 // null is a hole in the research.
 const DOCUMENTED_NULLS = new Set([
-  "m15tokenartifact/g",
+  // The 2014–19 arch tokens (TODO 4.49's re-pin): no textless three-colour
+  // arch token, and no white / black / red / green / gold arch artifact token
+  // (the M20+ full-art prints are 4.48 / 4.50's).
+  "m15token/m",
+  "m15tokenartifact/w", "m15tokenartifact/b", "m15tokenartifact/r", "m15tokenartifact/g", "m15tokenartifact/m",
   "adventure/c",
   "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
   "aftermath/c",
@@ -229,3 +233,43 @@ describe("4.32 / 4.39 references", () => {
     expect(frameReferenceNote("fullartland").note).toMatch(/nearest/);
   });
 })
+
+// TODO 4.49's re-pin (token research 2026-09-29): the 2014–19 arch token
+// frames are referenced to the arch prints only — 16 of m15token's 20 and
+// all 13 of m15tokenartifact's references were M20+ full-art prints, and
+// m15token/c was an ARTIFACT (TXLN #7 Treasure). The M20+ prints are 4.48 /
+// 4.50's; the text-box prints wait for 4.49 (b)'s m15tokentext /
+// m15tokenartifacttext.
+describe("4.49 token references", () => {
+  const ids = (template: string, key: string) =>
+    frameReferenceOptions(template, key).map((r) => `${r.set} ${r.name}`);
+
+  it("m15token: two textless 2014–19 arch prints per colour, none for m", () => {
+    expect(ids("m15token", "w")).toEqual(["tdom Soldier", "tm19 Soldier"]);
+    expect(ids("m15token", "u")).toEqual(["tbfz Octopus", "twar Wizard"]);
+    expect(ids("m15token", "b")).toEqual(["tm19 Zombie", "tdom Cleric"]);
+    expect(ids("m15token", "r")).toEqual(["tdom Goblin", "tmh1 Elemental"]);
+    expect(ids("m15token", "g")).toEqual(["tdom Saproling", "tm19 Beast"]);
+    // The see-through grey frame over the art that m15token/c draws.
+    expect(ids("m15token", "c")).toEqual(["tbfz Eldrazi", "temn Eldrazi Horror"]);
+    expect(FRAME_REFERENCES.m15token.c?.scryfallId).toBe("30ff04d5-ecaf-4be2-94f4-d5409f1c1e4e");
+    expect(FRAME_REFERENCES.m15token.m).toBeNull();
+  });
+
+  it("m15tokenartifact: c TKLD #2 · TMH1 #18, u TC18 #7, nothing else", () => {
+    expect(ids("m15tokenartifact", "c")).toEqual(["tkld Construct", "tmh1 Golem"]);
+    expect(ids("m15tokenartifact", "u")).toEqual(["tc18 Myr"]);
+    for (const key of ["w", "b", "r", "g", "m"] as const) expect(FRAME_REFERENCES.m15tokenartifact[key]).toBeNull();
+  });
+
+  it("lists no M20+ print on either arch frame (released before M20, 2019-07-12)", () => {
+    // Every arch token set: the 2014–19 token sets the pins come from.
+    const ARCH = new Set(["tdom", "tm19", "tbfz", "twar", "tmh1", "temn", "tkld", "tc18"]);
+    for (const template of ["m15token", "m15tokenartifact"]) {
+      for (const key of FRAME_COLOR_KEYS) {
+        for (const ref of frameReferenceOptions(template, key)) expect(ARCH.has(ref.set), `${template}/${key} ${ref.set}`).toBe(true);
+      }
+      expect(frameReferenceNote(template).note).toMatch(/2014–19 arch/);
+    }
+  });
+});

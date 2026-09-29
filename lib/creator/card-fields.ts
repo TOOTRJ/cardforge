@@ -5,8 +5,12 @@
 
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import {
+  hasTokenTypeWord,
   normalizeCardFinish,
   normalizeFrameTemplate,
+  showsPowerToughness,
+  supertypeHasWord,
+  withSupertypeWord,
 } from "@/lib/cards/card-display";
 import {
   DEFAULT_FRAME_TEMPLATE,
@@ -132,6 +136,26 @@ function backFaceFormValuesFrom(
   };
 }
 
+/**
+ * The supertype the form edits for a stored card. A token from before the
+ * type picker (TODO 3b.15) with a P/T and no type word was a creature — every
+ * token was — so it reads as "Creature", the word migration 0128 writes: its
+ * P/T inputs show, the picker's Creature toggle is on, and a remix saves the
+ * word. So does a stored token with a P/T that says Artifact or Enchantment
+ * but not Creature ("Artifact" → "Artifact Creature", owner 2026-09-29: it
+ * keeps its P/T — 0128 writes the same word), unless a Vehicle / Spacecraft
+ * subtype already prints its P/T. Every other card's supertype is as stored.
+ */
+export function formSupertypeOf(
+  card: Pick<Card, "card_type" | "supertype" | "power" | "toughness"> & Partial<Pick<Card, "subtypes">>,
+): string {
+  const supertype = card.supertype ?? "";
+  if (card.card_type !== "token" || !(card.power || card.toughness)) return supertype;
+  if (supertypeHasWord(supertype, "Creature")) return supertype;
+  if (hasTokenTypeWord(supertype) && showsPowerToughness("token", card.subtypes, supertype)) return supertype;
+  return withSupertypeWord(supertype, "Creature");
+}
+
 /** Viewer facts the defaults depend on (owner decision 2026-09-17): paid
  *  accounts start creatures/spells with no watermark (free: the PipGlyph
  *  Rose) and new cards prefill the account's footer mark. */
@@ -213,7 +237,7 @@ export function defaultValuesFor(
     game_system_id: card.game_system_id,
     cost: card.cost ?? "",
     color_identity: card.color_identity,
-    supertype: card.supertype ?? "",
+    supertype: formSupertypeOf(card),
     card_type: card.card_type ?? "",
     subtypes_text: card.subtypes.join(", "),
     tags_text: card.tags?.join(", ") ?? "",

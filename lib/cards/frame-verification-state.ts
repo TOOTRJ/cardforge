@@ -10,11 +10,19 @@ import {
 // override (migration 0115). The verification goes STALE when either moved
 // on: a renderer bump that touches the template, or an edited/reset
 // override. Rows ticked before 0115 carry no record — they are reported as
-// `legacy` (not stale) so the 71 existing verifications don't all demand a
-// re-tick at once; the next tick stamps them. A verification-neutral bump
+// `legacy` and judged as if ticked at LEGACY_TICK_LAYOUT_VERSION (v33), so
+// the 71 existing verifications didn't all demand a re-tick at once, while a
+// LATER bump that touches their template still stales them (TODO 4.49); the
+// next tick stamps them. A verification-neutral bump
 // (VERIFICATION_NEUTRAL_VERSIONS: v31's corner cut moves no slot; v32's M15
-// family sizes are signed off on the round-8 print comparison instead)
-// never stales a tick.
+// family sizes and v33's rules layout are signed off on the round-8 / 9 print
+// comparisons instead) never stales a tick. A bump whose slots move on fewer
+// templates than its bakes change on is judged by its slot templates
+// (layout-version.ts VERIFICATION_TEMPLATE_SCOPES): v34 stales the m15token /
+// m15tokenartifact ticks (4.49 moved their P/T, type line and symbol) and no
+// other — the token wording that reaches every template moves no slot. A
+// stale tick stays VERIFIED (the creator still offers the combo); the admin
+// pages show "needs re-verification" until it is ticked again.
 //
 // Pure: the page and the checklist derive their badges from it, tests pin
 // the rules.
@@ -52,6 +60,18 @@ export function overrideHash(override: unknown): string {
   return hash.toString(16).padStart(8, "0");
 }
 
+/**
+ * The layout a legacy tick (no verified_layout_version: ticked before
+ * migration 0115) is judged at. Every one predates layout v29, so the bumps
+ * up to this one are waived — the exemption legacy rows always had (v31–v33
+ * are verification-neutral anyway) — and any later bump that touches the
+ * template and isn't in VERIFICATION_NEUTRAL_VERSIONS stales it, as it
+ * stales a stamped tick. The first: TODO 4.49's token bump, which resets the
+ * 14 m15token / m15tokenartifact ticks (all legacy, 2026-07-08; owner
+ * decision 2026-09-29).
+ */
+export const LEGACY_TICK_LAYOUT_VERSION = 33;
+
 export type VerificationSnapshot = {
   verified: boolean;
   verifiedLayoutVersion: number | null;
@@ -79,18 +99,21 @@ export function verificationState(
   const reasons: string[] = [];
   const legacy =
     snapshot.verifiedLayoutVersion == null && snapshot.verifiedOverrideHash == null;
+  const since = snapshot.verifiedLayoutVersion ?? (legacy ? LEGACY_TICK_LAYOUT_VERSION : null);
   if (
-    snapshot.verifiedLayoutVersion != null &&
+    since != null &&
     // A tick verifies the REGULAR frame: a finish-scoped bump (v26 etched)
     // must not stale every combo. Rarity stays unknown → rarity-scoped
     // bumps (v23) remain conservative, as before. Verification-neutral
     // bumps (v31, v32, v33) are scoped to no template here.
-    isRenderStale(snapshot.verifiedLayoutVersion, template, VERIFICATION_SCOPED_VERSIONS, currentVersion, {
+    isRenderStale(since, template, VERIFICATION_SCOPED_VERSIONS, currentVersion, {
       frame_style: { template, finish: "regular" },
     })
   ) {
     reasons.push(
-      `the renderer changed since layout v${snapshot.verifiedLayoutVersion} (now v${currentVersion})`,
+      legacy
+        ? `the renderer changed since this tick (made before layout v${LEGACY_TICK_LAYOUT_VERSION}; now v${currentVersion})`
+        : `the renderer changed since layout v${since} (now v${currentVersion})`,
     );
   }
   if (

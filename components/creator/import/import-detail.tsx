@@ -23,6 +23,8 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
+import { buildTypeLine } from "@/lib/cards/card-display";
+import { parseSubtypes } from "@/lib/creator/card-fields";
 
 // ---------------------------------------------------------------------------
 // The import dialog's detail pane (TODO 1.5): the selected printing, what the
@@ -295,6 +297,24 @@ export function ImportDetail({
   );
 }
 
+/** The "Type" row of what an import will populate. A token reads as it will
+ *  print — "Token" first, then its words ("Token Artifact — Treasure",
+ *  TODO 3b.15) — not "Artifact token — Treasure". */
+export function importPatchTypeLine(
+  patch: Pick<ScryfallImportPatch, "supertype" | "card_type" | "subtypes_text">,
+): string {
+  if (patch.card_type === "token") {
+    return buildTypeLine({
+      supertype: patch.supertype,
+      cardType: "token",
+      subtypes: parseSubtypes(patch.subtypes_text ?? ""),
+    });
+  }
+  return [patch.supertype, patch.card_type, patch.subtypes_text ? `— ${patch.subtypes_text}` : null]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
   const rows: Array<{ label: string; value: React.ReactNode }> = [];
   if (patch.cost) {
@@ -307,11 +327,7 @@ function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
     rows.push({
       label: "Type",
       value: (
-        <span className="capitalize">
-          {[patch.supertype, patch.card_type, patch.subtypes_text ? `— ${patch.subtypes_text}` : null]
-            .filter(Boolean)
-            .join(" ")}
-        </span>
+        <span className="capitalize">{importPatchTypeLine(patch)}</span>
       ),
     });
   }

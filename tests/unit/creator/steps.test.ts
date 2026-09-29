@@ -109,13 +109,25 @@ describe("hidesCost", () => {
 });
 
 describe("statVisibility", () => {
-  it("creature/token → P/T only", () => {
+  it("creature / creature token → P/T only", () => {
     expect(statVisibility("creature")).toEqual({
       pt: true,
       loyalty: false,
       defense: false,
     });
-    expect(statVisibility("token").pt).toBe(true);
+    // A token's P/T follows its Creature word (TODO 3b.15).
+    expect(statVisibility("token", ["Soldier"], "Creature")).toEqual({
+      pt: true,
+      loyalty: false,
+      defense: false,
+    });
+  });
+
+  it("a Treasure, a Shard or a Copy token shows no P/T input (TODO 3b.15)", () => {
+    expect(statVisibility("token", ["Treasure"], "Artifact").pt).toBe(false);
+    expect(statVisibility("token", ["Shard"], "Enchantment").pt).toBe(false);
+    expect(statVisibility("token", [], "").pt).toBe(false);
+    expect(statVisibility("token").pt).toBe(false);
   });
 
   it("planeswalker → loyalty only", () => {

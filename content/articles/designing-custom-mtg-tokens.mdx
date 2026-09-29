@@ -10,8 +10,10 @@ faq:
     a: "It ceases to exist. The moment a token would move to any other zone — graveyard, hand, exile, library — it's removed as a state-based action and is gone. There's no graveyard value and nothing to bounce back, which is why generating tokens stays fair against board wipes and \"leaves the battlefield\" effects."
   - q: "How do I balance a card that makes tokens?"
     a: "Price the maker, not the token. Add up quantity, the size and abilities of each token, and whether the effect is one-shot or repeatable, then set the mana cost and rarity to match. Repeatable token engines are worth far more than their numbers suggest because they compound every turn; a one-shot swarm is a finisher; a single small token is a minor upside."
+  - q: "How is a token's type line written?"
+    a: "\"Token\" comes first, then the token's types, then a dash and its subtypes: \"Token Creature — Soldier\", \"Token Artifact — Treasure\", \"Token Enchantment Creature — Glimmer\", \"Token Legendary Creature — Wolf\". Only a creature token has power and toughness, so a Treasure has none. A copy token prints just \"Token\", and a token is named after its subtypes unless it has a proper name."
   - q: "Can I design custom token cards in PipGlyph?"
-    a: "Yes. PipGlyph's editor at /create supports token cards — set the name, color, power and toughness, type line, and any abilities, and the frame renders as you build. You can publish tokens to the gallery next to the spell or permanent that creates them so the pair shares context."
+    a: "Yes. Pick Token as the card type in the editor at /create, then turn on its types — Creature, Artifact, Enchantment, and Legendary for a named one. The type line prints \"Token\" first, an Artifact token wears the artifact token frame, power and toughness appear only for a creature token, and the name follows the subtypes until you type your own. You can publish tokens to the gallery next to the spell or permanent that creates them so the pair shares context."
 ---
 
 A token is a marker that represents a creature or other permanent on the battlefield, created by another card's ability rather than cast from your deck. Tokens have no mana cost, are never in your deck or hand, and cease to exist the moment they leave the battlefield. Designing one is really two jobs: building the token itself, and building the card or ability that makes it.
@@ -93,6 +95,10 @@ It ceases to exist. The moment a token would move to any other zone — graveyar
 
 Price the maker, not the token. Add up quantity, the size and abilities of each token, and whether the effect is one-shot or repeatable, then set the mana cost and rarity to match. Repeatable token engines are worth far more than their numbers suggest because they compound every turn; a one-shot swarm is a finisher; a single small token is a minor upside.
 
+### How is a token's type line written?
+
+"Token" comes first, then the token's types, then a dash and its subtypes: "Token Creature — Soldier", "Token Artifact — Treasure", "Token Enchantment Creature — Glimmer", "Token Legendary Creature — Wolf". Only a creature token has power and toughness, so a Treasure has none. A copy token prints just "Token", and a token is named after its subtypes unless it has a proper name.
+
 ### Can I design custom token cards in PipGlyph?
 
-Yes. PipGlyph's editor at [/create](/create) supports token cards — set the name, color, power and toughness, type line, and any abilities, and the frame renders as you build. You can publish tokens to the [gallery](/gallery) next to the spell or permanent that creates them so the pair shares context.
+Yes. Pick Token as the card type in the editor at [/create](/create), then turn on its types — Creature, Artifact, Enchantment, and Legendary for a named one. The type line prints "Token" first, an Artifact token wears the artifact token frame, power and toughness appear only for a creature token, and the name follows the subtypes until you type your own. You can publish tokens to the [gallery](/gallery) next to the spell or permanent that creates them so the pair shares context.

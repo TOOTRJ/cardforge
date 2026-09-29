@@ -47,12 +47,18 @@ import {
   framesForKind,
   isSingleBasicLand,
   kindHasAvailableFrame,
+  isTypeWordDress,
   skinVariantsFor,
   templateIsBasicOnly,
+  TOKEN_PICKER_WORDS,
+  toggleTokenWord,
+  tokenPickerWordsOf,
   typeLineHasWord,
+  typeWordFrameFor,
   withTypeWord,
   withoutTypeWord,
   type BorrowedTypeWord,
+  type TokenPickerWord,
   type CardKind,
   type FrameChoice,
   type FrameColorKey,
@@ -71,7 +77,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
@@ -106,10 +112,14 @@ function SetupSection({
   title,
   value,
   children,
+  autoClose = true,
 }: {
   title: string;
   value: string;
   children: React.ReactNode;
+  /** False for a section of toggles (the token's types): several picks in a
+   *  row, so it stays open until the user folds it. */
+  autoClose?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Auto-close on selection: the summary value changing while the section is
@@ -119,7 +129,7 @@ function SetupSection({
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
-    if (open) setOpen(false);
+    if (open && autoClose) setOpen(false);
   }
   return (
     <details
@@ -322,6 +332,20 @@ export function CardSetupPanel({
         />
       </SetupSection>
 
+      {/* 1b · The token's types (TODO 3b.15) — the words its type line
+          prints after "Token". The frame follows them (the orchestrator's
+          effect): Artifact → the artifact token frame. */}
+      {kind === "token" ? (
+        <TokenTypeSection
+          supertype={supertype ?? ""}
+          onToggle={(word, on) =>
+            setValue("supertype", toggleTokenWord(getValues("supertype"), word, on), {
+              shouldDirty: true,
+            })
+          }
+        />
+      ) : null}
+
       {/* 2 · Frame (border eras + layouts) and 3 · Variations (skins +
           showcase treatments of the chosen frame). One stored value —
           frame_style.template — drives both: the Frame section highlights
@@ -342,11 +366,17 @@ export function CardSetupPanel({
           const frameChoices = choices.filter(
             (c) => c.group === "standard" || c.group === "layout",
           );
+          // A frame the kind wears by type word (the artifact token frame)
+          // is no choice of its own: the Token type section's Artifact
+          // toggle picks it (TODO 3b.15), and the Standard chip stands for
+          // whichever of the two the type words pick.
           const skinChoices = choices.filter(
             (c) =>
               c.group === "skin" &&
-              skinVariantsFor(kind, base).includes(c.template),
+              skinVariantsFor(kind, base).includes(c.template) &&
+              !isTypeWordDress(kind, c.template),
           );
+          const wearsTypeWordDress = isTypeWordDress(kind, normalized);
           const showcaseChoices = choices.filter(
             (c) => c.group === "showcase",
           );
@@ -357,7 +387,7 @@ export function CardSetupPanel({
               ? FRAME_TEMPLATE_LABELS[base]
               : `${FRAME_ERA_LABELS[eraForTemplate(base)]} — ${FRAME_TEMPLATE_LABELS[base]}`;
           const frameVariationSummary =
-            normalized === base
+            normalized === base || wearsTypeWordDress
               ? "Standard"
               : eraForTemplate(normalized) === "showcase"
                 ? setQualifiedFrameLabel(normalized)
@@ -367,7 +397,7 @@ export function CardSetupPanel({
           const showLandMode =
             kind === "land" && landMode !== undefined && Boolean(onLandModeChange);
           const variationSummary = showLandMode
-            ? normalized === base
+            ? normalized === base || wearsTypeWordDress
               ? landModeLabel(landMode as LandMode)
               : `${landModeLabel(landMode as LandMode)} · ${frameVariationSummary}`
             : frameVariationSummary;
@@ -390,7 +420,11 @@ export function CardSetupPanel({
           // frame (to its first published colour) and a toast says so. The
           // form never holds an unpublished (frame, colour) pair — the
           // server refuses to save one.
-          const pickFrame = (next: FrameTemplate) => {
+          const pickFrame = (picked: FrameTemplate) => {
+            // On the token kind the type words pick between the plain and
+            // the artifact token frame (TODO 3b.15): "M15 Token" on an
+            // Artifact token is its artifact frame.
+            const next = typeWordFrameFor(kind, picked, getValues("supertype"));
             const resolution = resolvePublishedFrame({
               kind,
               candidates: [next],
@@ -479,14 +513,18 @@ export function CardSetupPanel({
             };
           };
 
-          // The Standard chip = the base frame itself.
+          // The Standard chip = the base frame itself — or, on a card that
+          // wears the base's type-word dress (an Artifact token), that dress.
+          const standardTemplate = wearsTypeWordDress ? normalized : base;
           const standardOption: ChipOption<FrameTemplate> = {
-            value: base,
+            value: standardTemplate,
             label: "Standard",
-            description: `The plain ${FRAME_TEMPLATE_LABELS[base]} frame`,
+            description: wearsTypeWordDress
+              ? `The ${FRAME_TEMPLATE_LABELS[standardTemplate]} frame — it follows the card's type`
+              : `The plain ${FRAME_TEMPLATE_LABELS[base]} frame`,
             leading: (
               <FrameThumb
-                template={base}
+                template={standardTemplate}
                 colorKey={colorKey}
                 colorIdentity={colorIdentity}
                 type={frameType}
@@ -616,6 +654,72 @@ export function CardSetupPanel({
         )}
       />
     </div>
+  );
+}
+
+const TOKEN_WORD_HINTS: Record<TokenPickerWord, string> = {
+  Creature: "Prints a power / toughness",
+  Artifact: "Treasure, Clue, Food — the artifact frame",
+  Enchantment: "A Shard, a Glimmer",
+  Legendary: "A named token",
+};
+
+/** The token kind's type picker (TODO 3b.15): Creature · Artifact ·
+ *  Enchantment, and Legendary. Each chip writes or removes only its own
+ *  word; none on prints a bare "Token" (a Copy). The Emblem choice joins
+ *  here with 6.23 (lib/creator/card-kinds.ts). */
+function TokenTypeSection({
+  supertype,
+  onToggle,
+}: {
+  supertype: string;
+  onToggle: (word: TokenPickerWord, on: boolean) => void;
+}) {
+  const active = tokenPickerWordsOf(supertype);
+  const toOption = (word: TokenPickerWord): ChipOption<TokenPickerWord> => ({
+    value: word,
+    label: word,
+    description: TOKEN_WORD_HINTS[word],
+  });
+  const onChange = (next: TokenPickerWord[]) => {
+    for (const word of TOKEN_PICKER_WORDS) {
+      const on = next.includes(word);
+      if (on !== active.includes(word)) onToggle(word, on);
+    }
+  };
+  return (
+    <SetupSection
+      title="Token type"
+      value={buildTypeLine({ supertype, cardType: "token" })}
+      autoClose={false}
+    >
+      <ChipGroup
+        multiSelect
+        ariaLabel="Token types"
+        layout="grid-3"
+        size="md"
+        value={active.filter((w) => w !== "Legendary")}
+        onChange={(next) =>
+          onChange([...next, ...active.filter((w) => w === "Legendary")])
+        }
+        options={(["Creature", "Artifact", "Enchantment"] as const).map(toOption)}
+      />
+      <ChipGroup
+        multiSelect
+        ariaLabel="Token supertypes"
+        layout="grid-3"
+        size="md"
+        value={active.filter((w) => w === "Legendary")}
+        onChange={(next) =>
+          onChange([...active.filter((w) => w !== "Legendary"), ...next])
+        }
+        options={[toOption("Legendary")]}
+      />
+      <p className="text-[11px] leading-4 text-subtle">
+        None on prints a bare &ldquo;Token&rdquo;, like a Copy token. The
+        power / toughness shows for a Creature token only.
+      </p>
+    </SetupSection>
   );
 }
 

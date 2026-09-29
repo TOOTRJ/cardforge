@@ -100,11 +100,11 @@ describe("layout v32 — the live family profiles with the measured fits and the
     }
   });
 
-  it("centres the token's set symbol on Card Conjurer's type pill (1716–1822 px at HD)", () => {
+  it("centres the token's type band on Card Conjurer's type pill, re-cut 8 px lower (1724–1830 px at HD; TODO 4.49)", () => {
     for (const t of ["m15token", "m15tokenartifact"] as const) {
       const { rect } = getFrameProfile(t).type;
       const centre = ((rect.topPct + rect.heightPct / 2) / 100) * 2100;
-      expect(Math.abs(centre - (1716 + 1822) / 2), t).toBeLessThan(1);
+      expect(Math.abs(centre - (1724 + 1830) / 2), t).toBeLessThan(1);
     }
   });
 

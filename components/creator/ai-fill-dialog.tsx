@@ -20,6 +20,7 @@ import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
 import {
   isBorrowedVariation,
+  isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
 } from "@/lib/creator/card-kinds";
@@ -171,12 +172,15 @@ function AiFillDialogBody({
     // are the frames a creature borrows — the artifact frame (TODO 1.7) and
     // the Nyx showcase (owner decision A3): the job honours them only for an
     // Artifact / Enchantment Creature, which this dialog can't ask for.
+    // The artifact token frame isn't a choice either: a token's type words
+    // pick it (TODO 3b.15) — "M15 Token" lands on it for an Artifact token.
     const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>
         choice.availableColorKeys.length > 0 &&
         !templateIsBasicOnly(choice.template) &&
-        !isBorrowedVariation(kind, choice.template),
+        !isBorrowedVariation(kind, choice.template) &&
+        !isTypeWordDress(kind, choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

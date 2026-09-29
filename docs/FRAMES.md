@@ -331,6 +331,72 @@ What a frame gives it:
   measured on. A value printed on the art (no plate) keeps its rect clear, a
   drawn badge (the battle's defense) its disc.
 
+## Tokens: the 2014–19 frame and the type words (TODO 4.49, 3b.15, layout v34)
+
+`m15token` / `m15tokenartifact` draw the 2014–19 arch token (M15 → MH1,
+2014-07-18 → 2019-05-30). Their references are those prints only
+(`frame-references.json`; `scripts/find-frame-references.mjs` stops at M20,
+`date<2019-07-12`); the M20+ full-art prints wait for 4.48 / 4.50. At v34
+(`M15TOKEN` in `lib/cards/template-layout.ts`):
+
+- the P/T is M15's slot — CC's plate box 0.13 %H lower (88.61 %H, where the
+  prints put the plate; `TOKEN_PLATE_PRINT_DY_PCT`), M15's value box
+  unmoved, 0.05 W dark ink — on M15's own plates: `m15/pt/{color}` on `m15token`,
+  `m15artifact/pt/{color}` on `m15tokenartifact` (CC's silver plate for
+  `c`, the colour's own otherwise, as TC18 #7 prints). Both plates are in
+  `PLATE_INK` already, so the rules layout keeps its lines off them;
+- the 14 masters are RE-CUT onto the prints (owner decision 2026-09-29;
+  `TOKEN_TEXTLESS_RECUT` in `scripts/lib/cc-frames.mjs`, recorded in
+  `frame-sources.json`): the 15 textless pins print CC's window edge, type
+  pill and the pill's shadow 8.2 px lower on average, while the title bar,
+  the frame texture under the pill and the border sit where CC draws them.
+  The importer moves rows 1640–1856 (the window's straight sides through the
+  shadow) 8 px down as one piece over the top of the texture — the opened
+  rows repeat the window's sides, cross-faded over 24 rows; the bottom seam
+  fades over the shadow's last 2 rows only (`recutBand`, `blendBottom: 2`),
+  so the pill keeps its edge and the texture's step matches CC's own. Edge
+  by edge the pill is −0.9 … +1.6 px from the prints' means after the cut
+  (−8.9 … −6.4 before) and the alignment score over the pins 94.47 → 94.99 %
+  (a 6–10 px sweep peaks at 8 and 9). The profile rides the cut
+  (`TOKEN_RECUT_PX`, a unit test holds it to the importer's shift): the art
+  slot 8 px taller (69.38 %H), the type band on the moved pill;
+- the type line runs left-aligned from 8.54 %W to the set symbol, fitted
+  (`fit: "measured"`), its baseline on the prints' 1800 HD px
+  (`TOKEN_TYPE_PRINT_DY`: the band rule sets it 4 px lower in its pill than
+  the prints do);
+- the set symbol has its own `symbolRect`: CC's box (right edge 92.13 %W),
+  centred on the re-cut pill (84.77 %H = CC's 84.39 + 8 px; the prints
+  centre theirs on their pill the same way), M15's 86 px box with the ink
+  fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
+  stays the card's rarity (a new token and a token's remix save as common);
+- still to come: the bordered text box `m15tokentext` / `m15tokenartifacttext`
+  (4.49 (b) — the rules scrim is today's), the TALL text box (4.55), the gold
+  small-caps name and the art slot (4.53).
+
+A token's card types are WORDS in `supertype` (`card_type` stays `token`):
+"Creature", "Artifact", "Enchantment", plus "Legendary", toggled by the token
+kind's picker in printed order (`withSupertypeWord` /
+`withoutSupertypeWord`); none on is a Copy's bare "Token". `buildTypeLine`
+prints "Token" first ("Token Artifact — Treasure", "Token Basic — Wastes") on
+every template. `showsPowerToughness(cardType, subtypes, supertype)` (the
+creator's inputs, the AI lint) is true for a token only with Creature or a
+Vehicle / Spacecraft subtype; the renderers gate on `printsPowerToughness`,
+which also keeps a stored word-less token's P/T (migration 0128 gave those
+rows "Creature" and a null render stamp, so the automatic re-bake redraws
+them with the word whichever of the migration and the deploy lands first). The frame follows the Artifact word
+(`typeWordFrameFor`): there is no separate "Artifact Token" chip, and stored
+cards keep their template.
+
+The bump is card-scoped (`VERSION_SCOPES[34]`): every card on the two token
+frames, plus a token whose printed line changes on any other template
+(`tokenTypeLineChanged` — alphatoken, the showcases, flip's Roles; a
+template list would AND those away). It is NOT verification-neutral: the
+m15token / m15tokenartifact ticks go stale (`VERIFICATION_TEMPLATE_SCOPES`;
+a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the
+14 legacy ones do too) and are re-verified against the new pins in the
+walk-through. A stale tick stays verified, so the creator keeps offering
+the frames; the wording alone stales no tick anywhere.
+
 ## Which printing is which frame (TODO 1.4)
 
 A Scryfall import knows which PipGlyph frame reproduces THIS printing from

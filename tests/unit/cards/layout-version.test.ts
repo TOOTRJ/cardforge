@@ -27,6 +27,9 @@ const AT_V31 = { current: 31 } as const;
 /** …and at v32, before v33 (the rules layout) made a v32 bake of any card
  *  that prints text stale again. */
 const AT_V32 = { current: 32 } as const;
+/** …and at v33, before v34 (the token release) made every bake on the token
+ *  frames stale again, text or no text. */
+const AT_V33 = { current: 33 } as const;
 
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
@@ -784,12 +787,15 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
   const scope = async () => (await import("@/lib/cards/layout-version")).VERSION_SCOPES[33];
 
   it("is an unscoped-by-template sweep narrowed by what the card prints — never a badge", async () => {
-    const { CARD_LAYOUT_VERSION, VERSION_SCOPES, classifyForSweep, hasNewerLook, hasPendingCorrection, latestOptInVersion, rolloutPolicy } =
+    const { CARD_LAYOUT_VERSION, VERSION_SCOPES, hasNewerLook, hasPendingCorrection, latestOptInVersion, rolloutPolicy } =
       await import("@/lib/cards/layout-version");
-    expect(CARD_LAYOUT_VERSION).toBe(33);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(33);
     expect(rolloutPolicy(33)).toBe("sweep");
     expect(latestOptInVersion()).toBe(22);
     expect(VERSION_SCOPES[33]).toBeTypeOf("function");
+    // Pinned at v33: v34 (the token release) re-bakes every card on the token
+    // frames again, text or no text.
+    const classifyForSweep = await sweepAt(33);
     for (const t of [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES]) {
       // No card to judge by → every template is touched (no template list).
       expect(isRenderStale(32, t), t).toBe(true);
@@ -798,11 +804,11 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
       expect(isRenderStale(32, t, undefined, 33, printed), t).toBe(true);
       expect(classifyForSweep(printed), t).toBe("rebake");
       expect(classifyForSweep(printed, 33), t).toBe("rebake");
-      expect(hasPendingCorrection(printed), t).toBe(true);
+      expect(hasPendingCorrection(printed, AT_V33), t).toBe(true);
       expect(hasNewerLook({ ...printed, visibility: "public" }), t).toBe(false);
       // A card that prints no text bakes as before: stamped, never re-rendered.
       expect(classifyForSweep(at(t)), t).toBe("stamp");
-      expect(hasPendingCorrection(at(t)), t).toBe(false);
+      expect(hasPendingCorrection(at(t), AT_V33), t).toBe(false);
     }
     // A v33 bake is current; the default frame a {} frame_style draws is m15.
     expect(classifyForSweep(at("m15", { layout_version: 33, rules_text: "Flying" }))).toBe("current");
@@ -889,6 +895,112 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
       expect(isRenderStale(32, t, VERIFICATION_SCOPED_VERSIONS, 33, regular), t).toBe(false);
       // …while a stored bake of a card that prints text still owes it.
       expect(isRenderStale(32, t, undefined, 33, { ...at(t), ...regular, rules_text: "Flying" }), t).toBe(true);
+    }
+  });
+});
+
+describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one bump)", () => {
+  const png = "https://x/y.png";
+  /** A v33 bake. Its columns default to UNTOUCHED_SINCE_V22 (a one-word
+   *  sorcery that prints no text) with the text it prints, so only v34 can be
+   *  pending on it. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 33,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    rules_text: "Flying",
+    ...over,
+  });
+  const token = (over: Record<string, unknown> = {}) => ({ card_type: "token", title: "Soldier", ...over });
+  const ALL = [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES];
+
+  it("is a sweep, never a badge, with the token frames frozen as a literal", async () => {
+    const { CARD_LAYOUT_VERSION, V34_TOKEN_FRAME_TEMPLATES, VERSION_SCOPES, latestOptInVersion, latestSweepVersion, rolloutPolicy } =
+      await import("@/lib/cards/layout-version");
+    expect(CARD_LAYOUT_VERSION).toBe(34);
+    expect(rolloutPolicy(34)).toBe("sweep");
+    expect(latestSweepVersion()).toBe(34);
+    expect(latestOptInVersion()).toBe(22);
+    expect(VERSION_SCOPES[34]).toBeTypeOf("function");
+    expect(V34_TOKEN_FRAME_TEMPLATES).toEqual(["m15token", "m15tokenartifact"]);
+    // The two frames 4.49 re-measured: the type band from 8.54 %W, the set
+    // symbol in its own box, the P/T on an M15 plate.
+    for (const t of V34_TOKEN_FRAME_TEMPLATES) {
+      const profile = getFrameProfile(t);
+      expect(profile.type.rect.leftPct, t).toBe(8.54);
+      expect(profile.symbolRect, t).toEqual({ topPct: 82.34 + (8 / 2100) * 100, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
+      expect(profile.pt?.plateAssetPathTemplate, t).toMatch(/^\/frames\/m15(artifact)?\/pt\/\{color\}\.png$/);
+    }
+    // alphatoken is not one of them: only its tokens' wording changes.
+    expect(getFrameProfile("alphatoken").symbolRect).toBeUndefined();
+  });
+
+  it("re-bakes EVERY card on the two token frames, and no non-token card on any other template", async () => {
+    const { V34_TOKEN_FRAME_TEMPLATES, classifyForSweep, hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    for (const t of ALL) {
+      const frame = V34_TOKEN_FRAME_TEMPLATES.includes(t);
+      // Whatever the card prints: text or none, a non-token or a bare token.
+      for (const row of [at(t), at(t, { rules_text: null }), at(t, token()), at(t, { ...token(), rules_text: null })]) {
+        const label = `${t} ${row.card_type} ${row.rules_text}`;
+        expect(isRenderStale(33, t, undefined, 34, row), label).toBe(frame);
+        expect(classifyForSweep(row), label).toBe(frame ? "rebake" : "stamp");
+        expect(classifyForSweep(row, 34), label).toBe(frame ? "rebake" : "stamp");
+        expect(hasPendingCorrection(row), label).toBe(frame);
+        expect(hasNewerLook({ ...row, visibility: "public" }), label).toBe(false);
+      }
+      // A creature with a P/T, a Vehicle, a legendary artifact: untouched off the token frames.
+      for (const over of [
+        { card_type: "creature", power: "2", toughness: "2" },
+        { card_type: "artifact", subtypes: ["Vehicle"], power: "3", toughness: "3" },
+        { card_type: "artifact", supertype: "Legendary" },
+      ]) {
+        expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe(frame ? "rebake" : "stamp");
+      }
+    }
+    // A {} frame_style draws m15: stamped.
+    expect(classifyForSweep(at("m15", { frame_style: {} }))).toBe("stamp");
+    // A v34 bake is current.
+    expect(classifyForSweep(at("m15token", { layout_version: 34 }))).toBe("current");
+  });
+
+  it("re-bakes a token whose printed line changes on ANY template (alphatoken, a showcase, flip's Roles)", async () => {
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    for (const t of ALL) {
+      // "Basic Token — Wastes" → "Token Basic — Wastes".
+      expect(classifyForSweep(at(t, token({ supertype: "Basic", subtypes: ["Wastes"] }))), t).toBe("rebake");
+      // "Token — Soldier" + 1/1 → "Token Creature — Soldier" (0128's word), before and after the migration.
+      expect(classifyForSweep(at(t, token({ subtypes: ["Soldier"], power: "1", toughness: "1" }))), t).toBe("rebake");
+      expect(classifyForSweep(at(t, token({ supertype: "Creature", subtypes: ["Soldier"], power: "1", toughness: "1" }))), t).toBe("rebake");
+      // A Treasure loses its stray P/T and prints "Token Artifact — Treasure".
+      expect(classifyForSweep(at(t, token({ supertype: "Artifact", subtypes: ["Treasure"], power: "1", toughness: "1" }))), t).toBe("rebake");
+      // A back face typed as a token with a word.
+      expect(classifyForSweep(at(t, { back_face: { card_type: "token", supertype: "Enchantment", subtypes: ["Aura", "Role"] } })), t).toBe(
+        "rebake",
+      );
+    }
+  });
+
+  it("answers conservatively (affected) for a row missing a column it reads", async () => {
+    const { VERSION_SCOPES } = await import("@/lib/cards/layout-version");
+    const v34 = VERSION_SCOPES[34];
+    expect(v34({ ...at("m15"), frame_style: undefined })).toBe(true);
+    for (const column of ["card_type", "supertype", "power", "toughness", "back_face"]) {
+      expect(v34({ ...at("m15"), [column]: undefined }), column).toBe(true);
+    }
+    // On the token frames it needs nothing but the template.
+    expect(v34({ frame_style: { template: "m15tokenartifact" } })).toBe(true);
+  });
+
+  it("is NOT verification-neutral: it stales the token frames' ticks and no other template's", async () => {
+    const { V34_TOKEN_FRAME_TEMPLATES, VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import(
+      "@/lib/cards/layout-version"
+    );
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(34);
+    expect(VERIFICATION_SCOPED_VERSIONS[34]).toEqual(V34_TOKEN_FRAME_TEMPLATES);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(33, t, VERIFICATION_SCOPED_VERSIONS, 34, regular), t).toBe(V34_TOKEN_FRAME_TEMPLATES.includes(t));
     }
   });
 });

@@ -255,6 +255,101 @@ describe("autofixCard", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tokens (TODO 3b.15): the P/T follows the Creature word, as the creator and
+// the renderers read it — the AI used to make every token a 2/2 creature.
+// ---------------------------------------------------------------------------
+
+function tokenCard(overrides: Partial<LintableCard> = {}): LintableCard {
+  return baseCard({
+    title: "Treasure",
+    cost: "—",
+    card_type: "token",
+    supertype: "Artifact",
+    subtypes: ["Treasure"],
+    color_identity: ["colorless"],
+    rules_text: "{T}, Sacrifice this token: Add one mana of any color.",
+    power: null,
+    toughness: null,
+    ...overrides,
+  });
+}
+
+describe("tokens: lint and autofix read the type words", () => {
+  it("a Treasure with no P/T lints clean, and autofix leaves it without one", () => {
+    const treasure = tokenCard();
+    expect(lintCardDesign(treasure).errors).toEqual([]);
+    const fixed = autofixCard(treasure);
+    expect(fixed.power).toBeNull();
+    expect(fixed.toughness).toBeNull();
+    expect(fixed.supertype).toBe("Artifact");
+  });
+
+  it("a Treasure given a P/T is an error, and autofix drops the stats", () => {
+    const result = lintCardDesign(tokenCard({ power: "2", toughness: "2" }));
+    expect(result.errors.map((issue) => issue.field)).toEqual(["power"]);
+    const fixed = autofixCard(tokenCard({ power: "2", toughness: "2" }));
+    expect(fixed.power).toBeNull();
+    expect(fixed.toughness).toBeNull();
+    expect(fixed.supertype).toBe("Artifact");
+  });
+
+  it("a creature token needs both stats; autofix fills them", () => {
+    const soldier = tokenCard({
+      title: "Soldier",
+      supertype: "Creature",
+      subtypes: ["Soldier"],
+      color_identity: ["white"],
+      rules_text: "",
+      power: null,
+      toughness: null,
+    });
+    expect(lintCardDesign(soldier).errors.map((issue) => issue.field)).toEqual(["power"]);
+    const fixed = autofixCard(soldier);
+    expect([fixed.power, fixed.toughness]).toEqual(["2", "2"]);
+    expect(lintCardDesign({ ...soldier, power: "1", toughness: "1" }).errors).toEqual([]);
+  });
+
+  it("an Enchantment Creature token is a creature token", () => {
+    const glimmer = tokenCard({
+      title: "Glimmer",
+      supertype: "Enchantment Creature",
+      subtypes: ["Glimmer"],
+      color_identity: ["white"],
+      rules_text: "Flying",
+      power: "1",
+      toughness: "1",
+    });
+    expect(lintCardDesign(glimmer).errors).toEqual([]);
+    expect(autofixCard(glimmer).power).toBe("1");
+  });
+
+  it("a token with a P/T and no type word was designed as a creature: autofix writes Creature", () => {
+    const legacy = tokenCard({ title: "Soldier", supertype: null, subtypes: ["Soldier"], power: "1", toughness: "1", rules_text: "" });
+    expect(lintCardDesign(legacy).errors.map((issue) => issue.field)).toEqual(["supertype"]);
+    const fixed = autofixCard(legacy);
+    expect(fixed.supertype).toBe("Creature");
+    expect([fixed.power, fixed.toughness]).toEqual(["1", "1"]);
+    expect(lintCardDesign(fixed).errors).toEqual([]);
+  });
+
+  it("a token with no type word and no P/T is only a warning (a Copy prints a bare \"Token\")", () => {
+    const copy = tokenCard({ title: "Copy", supertype: null, subtypes: [], rules_text: "" });
+    const result = lintCardDesign(copy);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.map((issue) => issue.field)).toContain("supertype");
+    const fixed = autofixCard(copy);
+    expect(fixed.power).toBeNull();
+    expect(fixed.supertype).toBeNull();
+  });
+
+  it("a Vehicle keeps its P/T (artifact or token)", () => {
+    const vehicle = baseCard({ card_type: "artifact", subtypes: ["Vehicle"], cost: "{2}", color_identity: ["colorless"], rules_text: "Crew 1" });
+    expect(lintCardDesign(vehicle).errors).toEqual([]);
+    expect(autofixCard(vehicle).power).toBe("2");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Set skeleton
 // ---------------------------------------------------------------------------
 

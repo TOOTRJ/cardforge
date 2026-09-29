@@ -443,14 +443,32 @@ describe("fitTypeLine (TODO 4.20, layout v32)", () => {
   });
 
   it("gives a centred line with no symbol its whole band, and a start-aligned one the band less the filler's gap", () => {
-    const token = measured(getFrameProfile("m15token"));
-    expect(token.type.align).toBe("center");
-    // The token's inline symbol and the gap beside it.
-    expect(typeLineRoomPct(token, 0.05)).toBeCloseTo(token.type.rect.widthPct / 100 - BAND_GAP_PCT - 0.05, 12);
+    // A centred measured band with the symbol inline (the tokens' through
+    // layout v33, before TODO 4.49 (d)): the symbol and the gap beside it.
+    const centred = { type: { ...M15.type, align: "center" as const, rect: { topPct: 82.14, leftPct: 11, widthPct: 78, heightPct: 4.2 } } };
+    expect(typeLineRoomPct(centred, 0.05)).toBeCloseTo(0.78 - BAND_GAP_PCT - 0.05, 12);
     // No symbol drawn (the adventure panel): the bake's filler takes a gap
     // on a start-aligned band, nothing on a centred one.
     expect(typeLineRoomPct({ type: M15.type }, null)).toBeCloseTo(M15.type.rect.widthPct / 100 - BAND_GAP_PCT, 12);
-    expect(typeLineRoomPct({ type: token.type }, null)).toBeCloseTo(token.type.rect.widthPct / 100, 12);
+    expect(typeLineRoomPct(centred, null)).toBeCloseTo(0.78, 12);
+  });
+
+  it("runs the 2014–19 token's left-aligned line up to its right-anchored symbol's ink (TODO 4.49 (d))", () => {
+    for (const template of ["m15token", "m15tokenartifact"] as const) {
+      const token = getFrameProfile(template);
+      expect(token.type.align, template).toBeUndefined();
+      expect(token.type.rect.leftPct).toBe(8.54);
+      const box = token.symbolRect!;
+      expect(box.leftPct + box.widthPct).toBeCloseTo(92.13, 9);
+      // Centred on the re-cut pill: CC's 84.39 %H + 8 px (TOKEN_RECUT_PX).
+      expect(box.topPct + box.heightPct / 2).toBeCloseTo(84.39 + (8 / 2100) * 100, 9);
+      // The band reaches the box's right edge; the line stops the print's
+      // gap before the symbol's drawn ink (an 86 px box's worth here).
+      expect(token.type.rect.leftPct + token.type.rect.widthPct).toBeCloseTo(92.13, 9);
+      const symbol = 0.0574;
+      expect(typeLineRoomPct(token, symbol)).toBeCloseTo(0.9213 - symbol - TYPE_SYMBOL_GAP_PCT - 0.0854, 12);
+      expect(inlineSymbolPullPct(token, { drawnWidthPct: symbol, inkLeftPct: 0 })).toBe(0);
+    }
   });
 
   it("floors at 5 pt of the card's orientation, and never grows a slot set below it", () => {

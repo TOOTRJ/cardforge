@@ -459,9 +459,71 @@ import type { CardType } from "@/types/card";
 //            vAlign), so the alignment scores stored with frame_reviews
 //            ticks would change on a re-score; the round-9
 //            print sign-off stands in for re-ticking.
+//   34     — the token release (owner decisions 2026-09-29), ONE bump for
+//            two tracks:
+//            * today's token frame against the 2014–19 arch prints (TODO 4.49
+//              (a) + (d); lib/cards/template-layout.ts M15TOKEN): the P/T on
+//              M15's plate — CC's plate box 75.73 / 88.48 / 18.8 × 7.33 moved
+//              0.13 %H down onto the prints (88.61; TOKEN_PLATE_PRINT_DY_PCT),
+//              the 4.18 value box, 0.05 W dark ink (was white ink on the
+//              frame's edge at 0.0427 W) — m15/pt/{color} on m15token,
+//              m15artifact/pt/{color} on m15tokenartifact (CC's silver plate
+//              for `c`, the colour's own otherwise, as TC18 #7 prints); the
+//              type line left-aligned from 8.54 %W to the symbol, its
+//              baseline 1796 → 1800 HD px (TOKEN_TYPE_PRINT_DY; 15 prints
+//              1797–1803, mean 1800.4); the set symbol in its own
+//              symbolRect, right edge 92.13 %W. The 14 masters RE-CUT
+//              (owner decision 2026-09-29, scripts/lib/cc-frames.mjs
+//              TOKEN_TEXTLESS_RECUT; TOKEN_RECUT_PX): CC's window edge, type
+//              pill and the pill's shadow 8 px lower, as the prints draw
+//              them (CC's sat 8.2 px above the 15 pins; −0.9 … +1.6 after,
+//              by edge), over the top of the texture below — the title bar,
+//              texture, border and corners unmoved; the art slot 8 px
+//              taller (69.0 → 69.38 %H, the art's cover fit +0.55 %), the
+//              type band on the moved pill (the baseline stays at 1800),
+//              the symbol box centred on the moved pill again, 84.77 %H
+//              (CC's 84.39 + 8 px; tall glyphs sat on CC's bottom bevel).
+//              Against the 15 textless pins (HD px, ours − print mean): P/T
+//              digits' centre +0.6 x / −1.3 y, plate +0.7 (median −0.5; was
+//              −2.7), symbol centre −0.1 (was −8.3), type baseline 1800 on
+//              all 15 (prints 1800.4), type line +4 px from the left, symbol
+//              right edge ±1 px (DOM, KLD); the symbol's ink 5–9 px clear of
+//              the pill's bottom bevel (it reached 1–3 px into it); the
+//              alignment score (lib/frames/align.ts) 94.47 → 94.99 %. Nothing above y 1640
+//              moves (the name, rules scrim — 4.49 (b) and 4.53 are open)
+//              but the art's scale. Every card on m15token /
+//              m15tokenartifact changes (every one has a type line and a
+//              symbol).
+//            * "Token" first on the type line (TODO 3b.15; buildTypeLine):
+//              "Basic Token — Wastes" → "Token Basic — Wastes", "Token —
+//              Soldier" → "Token Creature — Soldier" once migration 0128 gives
+//              a word-less P/T token its "Creature"; a token prints its P/T
+//              only with Creature or a Vehicle / Spacecraft subtype
+//              (printsPowerToughness — a stored word-less token keeps its
+//              P/T), so a Treasure's stray 1/1 goes. That is buildTypeLine on
+//              EVERY template a token can sit on (alphatoken, the showcases,
+//              flip's Roles), so it is judged by the card, not a template
+//              list (tokenTypeLineChanged).
+//            Card-scoped (VERSION_SCOPES[34] = v34Changed: every card on the
+//            two token frames, OR a token whose printed line changes on any
+//            other template; no TEMPLATE_SCOPED_VERSIONS row — a list there
+//            would AND away the tokens on alphatoken and the showcases).
+//            Public production (anonymous read, 2026-09-29): 32 cards on
+//            m15token, 0 on m15tokenartifact / alphatoken, 0 tokens on any
+//            other template — all 32 re-bake; real HD bakes of all 731
+//            cached public cards (v33 vs v34) change exactly those, and of a
+//            40-template matrix with token rows on every template 244 of
+//            1,080 change, exactly the 244 v34Changed selects. "sweep".
+//            NOT verification-neutral (owner decision 7, 2026-09-29): the
+//            frame's slots move, so a tick on m15token / m15tokenartifact
+//            goes stale — the 14 legacy ticks included
+//            (LEGACY_TICK_LAYOUT_VERSION) — and every other template's
+//            stays fresh (VERIFICATION_TEMPLATE_SCOPES[34]: the wording alone
+//            is verification-neutral). A stale tick is still verified: the
+//            creator keeps offering the frames.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 33;
+export const CARD_LAYOUT_VERSION = 34;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -519,6 +581,28 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   32: V32_M15_FAMILY_TEMPLATES,
   // (v33, the rules layout, reaches every template that prints text: no
   // template list — VERSION_SCOPES[33] narrows it by what the card prints.)
+  // (v34, the token release: no template list either — VERSION_SCOPES[34]
+  // holds the two token frames' every card AND a token's wording on any
+  // template; a list here would AND the second half away.)
+};
+
+// v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
+// type line and the set symbol move on all of them, the P/T plate appears
+// where there is a P/T). Frozen like the v29 / v32 / v33 lists: v34 is history
+// once it ships, and a token template added later (4.48's m20token…, 4.49's
+// m15tokentext) is new — no card was baked on it before v34.
+export const V34_TOKEN_FRAME_TEMPLATES: readonly string[] = ["m15token", "m15tokenartifact"];
+
+/**
+ * Bumps whose frame SLOTS move on fewer templates than their stored bakes
+ * change on: frame verification judges a tick by this list instead of the
+ * card scope. v34's wording (3b.15, a token's line on any template) moves no
+ * slot and alone would be verification-neutral; its frame half (4.49) moves
+ * the P/T, type line and symbol on the two token frames, so only their ticks
+ * go stale (owner decision 7, 2026-09-29).
+ */
+const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> = {
+  34: V34_TOKEN_FRAME_TEMPLATES,
 };
 
 /**
@@ -532,17 +616,20 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
  * v33 moves no slot either, only text inside the rules boxes (the rules
  * layout, TODO 3.29) — the alignment scores a tick stored would change on a
  * re-score — and the owner signs it off on the round-9 print comparison
- * (owner decision 2026-09-28).
+ * (owner decision 2026-09-28). v34 is NOT here: 4.49 moves the token frames'
+ * slots, so their ticks are re-verified (VERIFICATION_TEMPLATE_SCOPES).
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
 export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33];
 
-/** TEMPLATE_SCOPED_VERSIONS with every verification-neutral bump scoped to
- *  no template — the map lib/cards/frame-verification-state.ts judges a
- *  tick by. */
+/** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
+ *  (v34: only the token frames' ticks) and every verification-neutral bump
+ *  scoped to no template — the map lib/cards/frame-verification-state.ts
+ *  judges a tick by. */
 export const VERIFICATION_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   ...TEMPLATE_SCOPED_VERSIONS,
+  ...VERIFICATION_TEMPLATE_SCOPES,
   ...Object.fromEntries(VERIFICATION_NEUTRAL_VERSIONS.map((version) => [version, [] as readonly string[]])),
 };
 
@@ -711,6 +798,56 @@ function v33PrintsText(card: ScopeCard): boolean {
   );
 }
 
+/**
+ * TODO 3b.15's card scope — v34's wording half (v34Changed). Whether a
+ * card's bake changes with the token wording: a token whose supertype is not
+ * empty (a word: the line now prints "Token" first — "Basic Token — Wastes"
+ * → "Token Basic — Wastes"; a Treasure's stray P/T goes too; a blank one of
+ * spaces is trimmed away), and a token with a P/T
+ * and no word, which migration 0128 gives "Creature" ("Token — Soldier" → "Token
+ * Creature — Soldier") — counted whether the sweep reaches the row before or
+ * after the migration, so it is never stamped current on the old line. A
+ * back face typed token with a non-empty supertype is its own line too. Any token template
+ * (m15token, m15tokenartifact, alphatoken, a showcase, flip): no template
+ * list. A token with neither a word nor a P/T ("Token" / "Token — Boar")
+ * prints what it did. Any column it needs that the row doesn't carry →
+ * affected.
+ */
+export function tokenTypeLineChanged(card: ScopeCard): boolean {
+  if ([card.card_type, card.supertype, card.power, card.toughness, card.back_face].some((v) => v === undefined)) {
+    return true;
+  }
+  // Any non-empty supertype, spaces included: the old line kept a blank
+  // supertype's spaces before "Token" ("   Token — Boar"), the new one trims
+  // it, so a blank-but-not-empty supertype is a changed line too.
+  if (card.card_type === "token" && (Boolean(card.supertype) || Boolean(card.power || card.toughness))) {
+    return true;
+  }
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return (
+    back !== null &&
+    back.card_type === "token" &&
+    typeof back.supertype === "string" &&
+    back.supertype.length > 0
+  );
+}
+
+/**
+ * Whether layout v34 (the token release) changed a card's bake: EVERY card
+ * on the two token frames 4.49 re-measured (V34_TOKEN_FRAME_TEMPLATES — the
+ * P/T plate, the type line and the set symbol; drawn template, so a {}
+ * frame_style is m15 and not one of them), OR a token whose printed line
+ * changes with 3b.15's wording on any other template (tokenTypeLineChanged:
+ * alphatoken, a showcase, flip's Roles). A non-token card anywhere else is
+ * untouched. A row without frame_style → affected (conservative).
+ */
+function v34Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  if (V34_TOKEN_FRAME_TEMPLATES.includes(template)) return true;
+  return tokenTypeLineChanged(card);
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -742,6 +879,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   29: v29Changed,
   // v33 — the rules layout: every card that prints text (v33PrintsText).
   33: v33PrintsText,
+  // v34 — the token release: every card on the two token frames (4.49) and
+  // a token's changed wording on any template (3b.15) — v34Changed.
+  34: v34Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -854,6 +994,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   31: "sweep", // one corner radius (3.26): the bake's rounded corner, every card — a correction, never a badge
   32: "sweep", // one M15-era title / type size (4.20): the family's print sizes — a platform correction, never a badge
   33: "sweep", // rules text by its real lines at the prints' spacing (3.29) — a measurement correction, never a badge
+  34: "sweep", // token release: P/T plate, type line + symbol on the token frames (4.49), "Token" first (3b.15) — a platform correction
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

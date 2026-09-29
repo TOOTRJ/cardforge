@@ -156,7 +156,10 @@ from (values
      E'Defender\n{S}: Frostbound Sentinel gains reach until end of turn.', null, '1', '5', null, 13, 'm15snow', 'regular', 'public', null, array['snow'], null, 'normal', 8),
   ('c0000000-0000-4000-a000-000000000014'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Void Tithe', 'void-tithe', '{1}{B}', array['black'], null, 'instant', array[]::text[], 'uncommon',
      E'Devoid\nTarget player exiles a card from their hand.', null, null, null, null, 14, 'm15devoid', 'regular', 'unlisted', null, array['devoid'], null, 'normal', 6),
-  ('c0000000-0000-4000-a000-000000000015'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Beast', 'beast-token', null, array['green'], null, 'token', array['Beast'], 'common',
+  -- A token's card types ride in supertype (TODO 3b.15): "Token Creature —
+  -- Beast". Migration 0128 gives a stored P/T token the word; seeds run
+  -- after the migrations, so the row says it itself.
+  ('c0000000-0000-4000-a000-000000000015'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Beast', 'beast-token', null, array['green'], 'Creature', 'token', array['Beast'], 'common',
      null, null, '4', '4', null, 15, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 4),
   -- dev_pro — a few polished cards + a remix ---------------------------------
   ('c0000000-0000-4000-a000-000000000016'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Archivist of Lost Hours', 'archivist-of-lost-hours', '{2}{U}', array['blue'], null, 'creature', array['Human','Wizard'], 'rare',
@@ -165,6 +168,18 @@ from (values
      E'Flying\nCinderwing Broodling can''t block.', 'Dropped, and flying.', '2', '1', null, 17, 'm15', 'regular', 'public', 'c0000000-0000-4000-a000-000000000001'::uuid, array['dragons','remix'], null, 'normal', 9),
   ('c0000000-0000-4000-a000-000000000018'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Unfinished Masterwork', 'unfinished-masterwork', '{4}', array['colorless'], null, 'artifact', array[]::text[], 'rare',
      E'Unfinished Masterwork enters tapped.', null, null, null, null, 18, 'm15artifact', 'regular', 'private', null, array[]::text[], null, 'normal', 2),
+  -- …and one token of each other type the token picker makes (TODO 3b.15;
+  -- dev_artist's Beast is the creature): an artifact token on the artifact
+  -- token frame with no P/T ("Token Artifact — Treasure"), an enchantment
+  -- creature ("Token Enchantment Creature — Glimmer") and a Copy with no
+  -- type word at all (a bare "Token"). Public, so a preview shows the type
+  -- line on each card page's "Card details".
+  ('c0000000-0000-4000-a000-000000000023'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Treasure', 'treasure-token', null, array['colorless'], 'Artifact', 'token', array['Treasure'], 'common',
+     E'{T}, Sacrifice this token: Add one mana of any color.', null, null, null, null, 23, 'm15tokenartifact', 'regular', 'public', null, array['tokens'], null, 'token', 5),
+  ('c0000000-0000-4000-a000-000000000024'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Glimmer', 'glimmer-token', null, array['white'], 'Enchantment Creature', 'token', array['Glimmer'], 'common',
+     E'Flying', null, '1', '1', null, 24, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 5),
+  ('c0000000-0000-4000-a000-000000000025'::uuid, 'd0000000-0000-4000-a000-000000000002'::uuid, 'Copy', 'copy-token', null, array['colorless'], null, 'token', array[]::text[], 'common',
+     E'This token stands in for a copy of another permanent.', null, null, null, null, 25, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 5),
   -- dev_free — drafts, one public card, one remix draft ---------------------
   ('c0000000-0000-4000-a000-000000000019'::uuid, 'd0000000-0000-4000-a000-000000000003'::uuid, 'Hedge Witch''s Familiar', 'hedge-witchs-familiar', '{G}', array['green'], null, 'creature', array['Cat'], 'common',
      E'Deathtouch', 'It brings her things. She has stopped asking where from.', '1', '1', null, 19, 'm15', 'regular', 'public', null, array['cats'], null, 'normal', 14),

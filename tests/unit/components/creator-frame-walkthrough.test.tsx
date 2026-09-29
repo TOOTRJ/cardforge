@@ -78,6 +78,9 @@ vi.mock("@/components/cards/card-preview", () => ({
     frameStyle?: { template?: string };
     colorIdentity?: string[];
     backFace?: { title?: string } | null;
+    supertype?: string | null;
+    power?: string | null;
+    toughness?: string | null;
   }) => (
     <div
       data-testid="card-preview"
@@ -85,6 +88,8 @@ vi.mock("@/components/cards/card-preview", () => ({
       data-template={props.frameStyle?.template ?? ""}
       data-colors={(props.colorIdentity ?? []).join(",")}
       data-back-title={props.backFace?.title ?? ""}
+      data-supertype={props.supertype ?? ""}
+      data-pt={props.power || props.toughness ? `${props.power ?? ""}/${props.toughness ?? ""}` : ""}
     />
   ),
 }));
@@ -100,7 +105,7 @@ const PUBLISHED = ["m15", "m15land", "m15pw", "saga"].flatMap((t) =>
 );
 const ALL_KEYS = [
   ...PUBLISHED,
-  ...["adventure", "battle", "split", "flip", "aftermath", "m15artifact", "m15token"].flatMap((t) =>
+  ...["adventure", "battle", "split", "flip", "aftermath", "m15artifact", "m15token", "m15tokenartifact"].flatMap((t) =>
     EVERY_COLOUR.map((k) => frameComboKey(t, k)),
   ),
 ];
@@ -129,6 +134,8 @@ function preview() {
     template: el.dataset.template,
     colors: el.dataset.colors,
     backTitle: el.dataset.backTitle,
+    supertype: el.dataset.supertype,
+    pt: el.dataset.pt,
   };
 }
 
@@ -217,6 +224,41 @@ describe("walking the stepper (TODO 2.2)", () => {
     await waitFor(() => expect(preview().template).toBe("battle"));
     expect(preview().title).toBe("Sample Card");
     expect(preview().colors).toBe("red");
+  });
+
+  // TODO 4.49 resets the token ticks (owner decision 7): every colour is
+  // re-verified in this walk, most of them on sample content (m15token/m and
+  // m15tokenartifact w/b/r/g/m have no printing). The sample must be a
+  // creature token of the frame's own type words, or the walk shows no P/T
+  // plate (a word-less token has no P/T inputs) and the frame-follows-type
+  // rule (3b.15) swaps m15tokenartifact for m15token under the admin.
+  it.each([
+    ["m15tokenartifact", "w", "Artifact Creature"],
+    ["m15tokenartifact", "g", "Artifact Creature"],
+    ["m15token", "m", "Creature"],
+  ] as const)("a token sample walk stays on %s/%s and prints its P/T", async (template, colorKey, words) => {
+    renderForm({
+      param: "all",
+      publishedKeys: PUBLISHED,
+      walkthrough: {
+        template,
+        colorKey,
+        kind: "token",
+        note: "sample",
+        seed: {
+          patch: sampleWalkthroughPatch(template, colorKey, "token"),
+          source: { name: "Sample content (no real printing)", scryfallUri: null },
+          fromReference: false,
+        },
+      },
+    });
+    await waitFor(() => expect(preview().title).toBe("Sample Card"));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(preview().template).toBe(template);
+    expect(preview().supertype).toBe(words);
+    expect(preview().pt).toBe("3/3");
   });
 
   it("the walk's save is a frame preview: title-only, private, asks for the flag, keeps the mode", async () => {

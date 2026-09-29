@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import {
+  LEGACY_TICK_LAYOUT_VERSION,
   canonicalJson,
   overrideHash,
   verificationState,
@@ -55,6 +57,25 @@ describe("verificationState", () => {
       current,
     );
     expect(state).toEqual({ verified: true, stale: false, legacy: true, reasons: [] });
+  });
+
+  it("stales a legacy tick on a later bump that touches its template, and only then (TODO 4.49)", () => {
+    const legacyTick = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
+    // Every bump up to LEGACY_TICK_LAYOUT_VERSION is waived, as before…
+    expect(LEGACY_TICK_LAYOUT_VERSION).toBe(33);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(LEGACY_TICK_LAYOUT_VERSION);
+    for (const version of [23, 30, 33]) {
+      expect(verificationState(legacyTick, "m15token", "none", version).stale, `v${version}`).toBe(false);
+    }
+    // …and the next one (v34: no scope recorded here, so every template) stales it,
+    // still reported as legacy.
+    const state = verificationState(legacyTick, "m15token", "none", LEGACY_TICK_LAYOUT_VERSION + 1);
+    expect(state).toEqual({
+      verified: true,
+      stale: true,
+      legacy: true,
+      reasons: ["the renderer changed since this tick (made before layout v33; now v34)"],
+    });
   });
 
   it("is current when the version and the override hash both match", () => {
@@ -138,16 +159,48 @@ describe("verificationState", () => {
 
   it("v33 (the rules layout) is verification-neutral too: the round-9 sign-off stands in for re-ticks", () => {
     const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
-    expect(CARD_LAYOUT_VERSION).toBe(33);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(33);
     // A v32, v31 or v30 tick stays fresh on every template — v33 moves text
-    // inside every rules box, but no slot.
+    // inside every rules box, but no slot. (Pinned at v33: v34 stales the
+    // token frames' ticks, below.)
     for (const template of ["m15", "m15pw", "saga", "m15token", "fullartland", "modern", "split", "battle", "lotr", "flip"]) {
-      for (const v of [32, 31, 30]) expect(verificationState(tick(v), template, "h").stale, `${template}@${v}`).toBe(false);
+      for (const v of [32, 31, 30]) expect(verificationState(tick(v), template, "h", 33).stale, `${template}@${v}`).toBe(false);
     }
     // Older changes still stale a tick, now reported against v33.
-    expect(verificationState(tick(29), "fullartland", "h").stale).toBe(true);
-    const v28 = verificationState(tick(28), "m15", "h");
+    expect(verificationState(tick(29), "fullartland", "h", 33).stale).toBe(true);
+    const v28 = verificationState(tick(28), "m15", "h", 33);
     expect(v28.stale).toBe(true);
     expect(v28.reasons[0]).toMatch(/renderer changed since layout v28 \(now v33\)/);
+  });
+
+  it("v34 (the token release) stales the 14 token-frame ticks — still verified — and no other template's (owner decision 7)", () => {
+    expect(CARD_LAYOUT_VERSION).toBe(34);
+    // Production's 14 token ticks: every colour of both token frames, all
+    // legacy rows (no verified_layout_version, ticked 2026-07-08).
+    const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
+    const ticks = ["m15token", "m15tokenartifact"].flatMap((template) =>
+      ["w", "u", "b", "r", "g", "c", "m"].map((color) => ({ template, color })),
+    );
+    expect(ticks).toHaveLength(14);
+    for (const { template, color } of ticks) {
+      const state = verificationState(legacy, template, "none");
+      // Still verified: the creator keeps offering the frame…
+      expect(state.verified, `${template}/${color}`).toBe(true);
+      // …and the admin pages say "needs re-verification".
+      expect(state.stale, `${template}/${color}`).toBe(true);
+      expect(state.reasons).toEqual(["the renderer changed since this tick (made before layout v33; now v34)"]);
+    }
+    // A stamped tick from v33 / v32 / v30 on them goes stale too; a v34 re-tick is fresh.
+    const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
+    for (const template of ["m15token", "m15tokenartifact"]) {
+      for (const v of [33, 32, 30]) expect(verificationState(tick(v), template, "h").stale, `${template}@${v}`).toBe(true);
+      expect(verificationState(tick(34), template, "h").stale, template).toBe(false);
+    }
+    // Every other template's tick — a legacy one or a v33 one — stays fresh:
+    // the token wording (alphatoken, the showcases, flip's Roles) moves no slot.
+    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => t !== "m15token" && t !== "m15tokenartifact")) {
+      expect(verificationState(legacy, template, "none").stale, `${template} legacy`).toBe(false);
+      expect(verificationState(tick(33), template, "h").stale, `${template}@33`).toBe(false);
+    }
   });
 });
