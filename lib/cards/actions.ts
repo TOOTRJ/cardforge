@@ -44,7 +44,7 @@ import {
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
-import { withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
+import { cardPageName, withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -322,7 +322,9 @@ export async function createCardAction(
     }
   }
 
-  const desiredSlug = data.slug ? slugify(data.slug) : slugify(data.title);
+  // An emblem lives at its page name, "…-emblem" (cardPageName, owner
+  // decision 2026-09-29), like Scryfall's; every other card at its title.
+  const desiredSlug = data.slug ? slugify(data.slug) : slugify(cardPageName(data.title, data.card_type));
   const { slug } = await ensureUniqueSlugForUser(desiredSlug);
 
   // If the caller passed a parent_card_id, sanity-check it before insert so

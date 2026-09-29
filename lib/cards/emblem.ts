@@ -73,3 +73,20 @@ export function withEmblemUpdateShape<T extends EmblemShaped>(
 export function cardTypeHasRarity(cardType: string | null | undefined): boolean {
   return cardType !== "emblem";
 }
+
+/**
+ * The name a card goes by on its web page (owner decision 2026-09-29): an
+ * emblem is "<its planeswalker's name> Emblem", as Scryfall names it ("Kaito,
+ * Cunning Infiltrator Emblem") — its address (the slug a new one is given,
+ * …-emblem), its <title>, OG / Twitter title, JSON-LD name, breadcrumb and
+ * heading. The card itself prints the walker's name in the bar and "Emblem"
+ * on the type line: the render is unchanged. A title that already ends in
+ * "Emblem" isn't doubled; an empty one is "Emblem". Any other card type:
+ * the title as it is.
+ */
+export function cardPageName(title: string | null | undefined, cardType: string | null | undefined): string {
+  if (cardType !== "emblem") return title ?? "";
+  const name = (title ?? "").trim().replace(/\s+/g, " ");
+  if (!name) return "Emblem";
+  return /(^|\s)emblem$/i.test(name) ? name : `${name} Emblem`;
+}

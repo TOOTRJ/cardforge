@@ -67,7 +67,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
 import { buildTypeLine, describeManaCost, printsPowerToughness } from "@/lib/cards/card-display";
-import { cardTypeHasRarity } from "@/lib/cards/emblem";
+import { cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
 import { renderVersionOf } from "@/lib/cards/render-version";
 import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -216,6 +216,9 @@ export async function CardDetailContent({
   const siteBase = getSiteBaseUrl();
   const isShareable =
     card.visibility === "public" || card.visibility === "unlisted";
+  // The page's name for the card: an emblem is "<walker> Emblem", like
+  // Scryfall's (cardPageName; the card itself prints the walker's name).
+  const pageName = cardPageName(card.title, card.card_type);
   const jsonLd =
     variant === "page" && isShareable
       ? buildCardJsonLd({
@@ -249,7 +252,7 @@ export async function CardDetailContent({
           data={breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Gallery", path: "/gallery" },
-            { name: card.title, path: `/card/${username}/${card.slug}` },
+            { name: pageName, path: `/card/${username}/${card.slug}` },
           ])}
         />
       ) : null}
@@ -314,7 +317,7 @@ export async function CardDetailContent({
               <span className="text-xs text-subtle">· {createdAt}</span>
             </div>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              {card.title}
+              {pageName}
             </h1>
             {/* Chunk 13: "Also remixed by N others" chip. Only renders
                 when this card was imported from Scryfall AND at least
@@ -387,7 +390,7 @@ export async function CardDetailContent({
               downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
             />
             <ShareTargets
-              title={card.title}
+              title={pageName}
               url={`${siteBase}/card/${username}/${card.slug}`}
               entity="card"
               itemId={card.id}
@@ -903,6 +906,9 @@ export function buildCardJsonLd({
     description.length > 280 ? `${description.slice(0, 277)}…` : description;
 
   const canonical = `${siteBase}/card/${username}/${card.slug}`;
+  // An emblem's name is "<walker> Emblem" (cardPageName, owner decision
+  // 2026-09-29).
+  const name = cardPageName(card.title, card.card_type);
   const typeLine = buildTypeLine({
     supertype: card.supertype,
     cardType: card.card_type as CardType | null,
@@ -930,8 +936,8 @@ export function buildCardJsonLd({
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
-    name: card.title,
-    headline: card.title,
+    name,
+    headline: name,
     description: truncatedDescription,
     url: canonical,
     mainEntityOfPage: canonical,
@@ -943,6 +949,8 @@ export function buildCardJsonLd({
       url: `${siteBase}/api/cards/${card.id}/og${version ? `?v=${version}` : ""}`,
       width: imageSize.width,
       height: imageSize.height,
+      // The image's own words: the name it prints (the walker's, on an
+      // emblem) and its type line.
       caption: `${card.title} — custom MTG-style ${typeLine}${rarity ? `, ${rarity}` : ""}${
         card.cost ? `, mana cost ${describeManaCost(card.cost)}` : ""
       }`,
