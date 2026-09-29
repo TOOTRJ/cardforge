@@ -67,6 +67,7 @@ import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -1426,6 +1427,9 @@ async function executeDeckRemixStep(
   }
 
   // ---- New identity (mechanics untouched) ----
+  // A two-part layout card is renamed on BOTH halves in the same call
+  // (owner decision B3, 2026-09-29): the second half rides along only when
+  // the landed frame paints it (scryfallRemixMechanics).
   let identity;
   try {
     identity = await generateRemixIdentity({
@@ -1440,12 +1444,25 @@ async function executeDeckRemixStep(
         power: mechanics.power ?? null,
         toughness: mechanics.toughness ?? null,
       },
+      secondHalf: mechanics.back_face
+        ? {
+            layout: remixSecondHalfLayout(mechanics.frame_template),
+            face: mechanics.back_face,
+          }
+        : null,
       style: plan.style,
       theme: plan.theme ?? undefined,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Remix failed.";
     return { ...step, status: "failed", error: detail };
+  }
+  // The new names on the card: the rules text follows them (no source name
+  // left on a renamed card), and a second half without a new name fails
+  // here — before the art is paid for.
+  const named = applyRemixNames(mechanics, identity);
+  if (!named.ok) {
+    return { ...step, status: "failed", error: named.error };
   }
 
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
@@ -1514,7 +1531,7 @@ async function executeDeckRemixStep(
   }
   const result = await createCardAction(
     {
-      title: identity.title,
+      title: named.title,
       game_system_id: gameSystemId,
       cost: mechanics.cost,
       color_identity: (mechanics.color_identity ?? ["colorless"]) as never,
@@ -1522,7 +1539,7 @@ async function executeDeckRemixStep(
       card_type: mechanics.card_type as never,
       subtypes: mechanics.subtypes,
       rarity: mechanics.rarity as never,
-      rules_text: mechanics.rules_text,
+      rules_text: named.rules_text,
       flavor_text: identity.flavor_text ?? undefined,
       power: mechanics.power,
       toughness: mechanics.toughness,
@@ -1532,7 +1549,7 @@ async function executeDeckRemixStep(
       frame_style: mechanics.frame_template
         ? { template: mechanics.frame_template }
         : undefined,
-      back_face: mechanics.back_face,
+      back_face: named.back_face,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,
       // Art is guaranteed above; remixed cards ship public like the deck.
@@ -1559,7 +1576,9 @@ async function executeDeckRemixStep(
     ...step,
     status: "done",
     card_id: result.cardId,
-    label: identity.title,
+    label: named.back_face
+      ? `${named.title} // ${named.back_face.title}`
+      : named.title,
     error: undefined,
   };
 }

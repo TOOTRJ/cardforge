@@ -3,7 +3,8 @@
 // (tests/unit/ai/remix-mechanics.test.ts). executeDeckRemixStep
 // (lib/ai/generation-jobs.ts) maps the printing through the creator's import
 // mapper and hands the result to createCardAction with a new name, flavour
-// and art.
+// and art — on a two-part layout card, a new name for each half
+// (lib/ai/remix-names.ts, owner decision B3 2026-09-29).
 //
 // The frame is resolved like the creator import (remixFrameFor): the
 // printing's own frame when it is published in the card's colour, else its
@@ -78,8 +79,9 @@ export function scryfallRemixMechanics(
       defense: patch.defense,
       source_scryfall_id: patch.source_scryfall_id,
       frame_template: frame.template,
-      // The half keeps the printing's text, never its artist: the remix's
-      // art is new (the front's credit is the remixer's).
+      // The half keeps the printing's rules, never its artist: the remix's
+      // art is new (the front's credit is the remixer's). Its name and
+      // flavour are the AI identity's (applyRemixNames, B3).
       back_face: back ? { ...back, artist_credit: undefined, art_url: undefined } : undefined,
     },
   };

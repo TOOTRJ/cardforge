@@ -104,12 +104,17 @@ vi.mock("@/lib/cards/actions", () => ({
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { REMIX_FRAME_UNAVAILABLE } from "@/lib/creator/frame-resolve";
+import { REMIX_SECOND_NAME_MISSING } from "@/lib/ai/remix-names";
 
 const keys = (...combos: [string, string][]) =>
   combos.map(([template, colour]) => frameComboKey(template as FrameTemplate, colour));
 
-async function remix(key: PrintingKey) {
-  const printing = scryfallCardSchema.parse(printings[key]);
+async function remix(
+  key: PrintingKey,
+  override?: (raw: Record<string, unknown>) => Record<string, unknown>,
+) {
+  const raw = structuredClone(printings[key]) as Record<string, unknown>;
+  const printing = scryfallCardSchema.parse(override ? override(raw) : raw);
   s.printing = printing;
   s.job = {
     id: "job-1",
@@ -138,11 +143,13 @@ async function remix(key: PrintingKey) {
 beforeEach(() => {
   s.created = [];
   s.patched = [];
-  s.identity.mockReset().mockResolvedValue({
+  // Like the real call: a second name only when a second half is sent.
+  s.identity.mockReset().mockImplementation(async (input: { secondHalf?: unknown }) => ({
     title: "Remixed Name",
     flavor_text: "New flavour.",
     art_instruction: "A painted scene.",
-  });
+    ...(input.secondHalf ? { second_title: "Remixed Page", second_flavor_text: null } : {}),
+  }));
   s.image.mockReset().mockResolvedValue({
     ok: true,
     bytes: new Uint8Array([1, 2, 3]),
@@ -177,12 +184,51 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
     expect(card).toMatchObject({
       frame_style: { template: "adventure" },
       card_type: "enchantment",
-      back_face: { title: "Ardenvale Fealty", card_type: "instant" },
+      back_face: { card_type: "instant", subtypes: ["Adventure"] },
     });
-    // The AI names the front only; the half keeps its text, never the
-    // printing's artist.
+    // B3 (owner, 2026-09-29): the AI names BOTH halves in its one call; the
+    // half keeps its rules, never the printing's name or artist.
+    expect(s.identity).toHaveBeenCalledTimes(1);
+    expect(s.identity.mock.calls[0][0]).toMatchObject({
+      secondHalf: { layout: "adventure", face: { title: "Ardenvale Fealty", card_type: "instant" } },
+    });
     expect(card?.title).toBe("Remixed Name");
+    expect((card?.back_face as { title: string }).title).toBe("Remixed Page");
     expect((card?.back_face as { artist_credit?: string }).artist_credit).toBeUndefined();
+    expect(step.label).toBe("Remixed Name // Remixed Page");
+  });
+
+  it("the rules text follows both new names (no real card's name left on the remix)", async () => {
+    s.verified = keys(["adventure", "r"], ["m15", "r"]);
+    const { card } = await remix("eld-115", (raw) => {
+      const faces = raw.card_faces as Record<string, unknown>[];
+      faces[0].oracle_text =
+        "Whenever Bonecrusher Giant becomes the target of a spell, Bonecrusher Giant deals 2 damage to that spell's controller.";
+      faces[1].oracle_text = "Damage can't be prevented this turn. Stomp deals 2 damage to any target.";
+      return raw;
+    });
+    expect(card).toMatchObject({
+      title: "Remixed Name",
+      rules_text:
+        "Whenever Remixed Name becomes the target of a spell, Remixed Name deals 2 damage to that spell's controller.",
+      back_face: {
+        title: "Remixed Page",
+        rules_text: "Damage can't be prevented this turn. Remixed Page deals 2 damage to any target.",
+      },
+    });
+  });
+
+  it("a second half the AI didn't name fails the step before the art and the save", async () => {
+    s.verified = keys(["adventure", "w"], ["m15", "w"]);
+    s.identity.mockResolvedValueOnce({
+      title: "Remixed Name",
+      flavor_text: null,
+      art_instruction: "A painted scene.",
+    });
+    const { step, card } = await remix("woe-38");
+    expect(step).toMatchObject({ status: "failed", error: REMIX_SECOND_NAME_MISSING });
+    expect(card).toBeUndefined();
+    expect(s.image).not.toHaveBeenCalled();
   });
 
   it("the same printing on an unpublished layout frame saves as a one-faced card on its type's M15 frame", async () => {
@@ -190,6 +236,9 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
     const { card } = await remix("woe-38");
     expect(card).toMatchObject({ frame_style: { template: "m15" }, card_type: "enchantment" });
     expect(card?.back_face).toBeUndefined();
+    // One face, one name: the identity is asked for no second half.
+    expect(s.identity.mock.calls[0][0]).toMatchObject({ secondHalf: null });
+    expect(s.identity.mock.calls[0][0].secondHalf).toBeNull();
   });
 
   it("nothing published in the card's colour fails the step before the identity, the art or the save", async () => {
