@@ -372,7 +372,10 @@ Open decisions are marked **[decide]**; none blocks its phase.
         the full-art basics, the textless frames, an era's standard; a skin
         such as Snow or Devoid only when it IS the printing's frame) first,
         with "Show all frames (N more)" for the kind's other frames in
-        gallery order. With none of those published, everything shows.
+        gallery order (keyboard focus moves to the first frame it reveals;
+        each printing starts collapsed, and a pick among the other frames
+        keeps them on show). With none of those published, everything
+        shows.
       - **C3 — changed:** the `/create?deckCard=` pre-fill toasts only a real
         frame substitution: a crown / colour-indicator-only printing on its
         own frame gets just the chip (`importSubstitutionMessage` → null).
