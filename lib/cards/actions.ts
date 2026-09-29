@@ -59,6 +59,7 @@ import { isUuid } from "@/lib/ids";
 import { lookupUsername } from "@/lib/profile/username";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isCapacityViolation } from "@/lib/billing/capacity-copy";
+import { allFramePreviewsMessage } from "@/lib/cards/bulk-visibility-copy";
 import { CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
@@ -842,6 +843,10 @@ export async function deleteCardAction(
 //      a belt-and-braces guard alongside RLS.
 //   4. Revalidate the dashboard / gallery surfaces.
 //
+// A visibility change to public / unlisted SKIPS an admin's frame previews
+// (TODO 2.3 — migration 0121 keeps them private) and changes the rest; the
+// action finds them itself, never from the client (owner, 2026-09-28).
+//
 // We bound batches at 100 ids to keep request payloads reasonable + so the
 // pre-flight `IN (...)` query stays index-friendly.
 // ---------------------------------------------------------------------------
@@ -870,15 +875,30 @@ type BulkCardsFailure = {
 
 export type BulkCardsResult = BulkCardsSuccess | BulkCardsFailure;
 
+/** A bulk visibility change also says how many frame previews it skipped. */
+export type BulkVisibilityResult =
+  | (BulkCardsSuccess & { skippedPreviews: number })
+  | BulkCardsFailure;
+
 /** Wall-clock budget for the deferred bakes of one bulk publish — well inside
  *  the function's lifetime; whatever doesn't fit renders live until its next
  *  individual save. */
 const BULK_BAKE_BUDGET_MS = 200_000;
 
+type BulkPreflightRow = {
+  id: string;
+  owner_id: string;
+  title: string;
+  back_face: unknown;
+  rendered_image_url: string | null;
+  /** Absent until migration 0121 lands. */
+  frame_preview?: boolean;
+};
+
 export async function updateCardsVisibilityAction(
   cardIds: string[],
   visibility: Visibility,
-): Promise<BulkCardsResult> {
+): Promise<BulkVisibilityResult> {
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "Supabase is not configured." };
   }
@@ -899,10 +919,22 @@ export async function updateCardsVisibilityAction(
   const supabase = await createClient();
 
   // Pre-flight ownership: every id must exist AND be owned by the caller.
-  const { data: existing, error: existingError } = await supabase
+  // `frame_preview` rides along so a publish can skip an admin's previews.
+  // Between a deploy and migration 0121 landing the column doesn't exist
+  // yet (so no card can be a preview): read without it rather than break
+  // every user's bulk change in that window.
+  let existing: BulkPreflightRow[] | null;
+  let existingError: { message: string } | null;
+  ({ data: existing, error: existingError } = await supabase
     .from("cards")
-    .select("id, owner_id, title, back_face, rendered_image_url")
-    .in("id", ids);
+    .select("id, owner_id, title, back_face, rendered_image_url, frame_preview")
+    .in("id", ids));
+  if (existingError?.message.includes("frame_preview")) {
+    ({ data: existing, error: existingError } = await supabase
+      .from("cards")
+      .select("id, owner_id, title, back_face, rendered_image_url")
+      .in("id", ids));
+  }
   if (existingError) {
     return { ok: false, error: existingError.message };
   }
@@ -918,18 +950,31 @@ export async function updateCardsVisibilityAction(
       error: "Some cards aren't yours to edit.",
     };
   }
+  // An admin's frame preview (TODO 2.3) always stays private — 0121's CHECK
+  // refuses it anything else — so a publish / unlist skips the previews and
+  // changes the rest. Decided here from the rows, never from the client.
+  const goingPrivate = parsed.data.visibility === "private";
+  const previews = goingPrivate ? [] : existing.filter((c) => c.frame_preview === true);
+  const targets = goingPrivate ? existing : existing.filter((c) => c.frame_preview !== true);
+  if (targets.length === 0) {
+    return {
+      ok: false,
+      error: allFramePreviewsMessage(parsed.data.visibility, previews.length),
+    };
+  }
+  const targetIds = targets.map((c) => c.id);
+
   // Publishing needs every second face named (TODO 3b.5): a draft saved
   // with an unnamed Adventure / split half can't go out from here either.
   // Hiding a card never needs a name — whatever the draft policy says.
-  const unnamed =
-    parsed.data.visibility === "private"
-      ? []
-      : existing.filter((c) =>
-          missingSecondFaceName(
-            c.back_face as { title?: string | null } | null,
-            parsed.data.visibility,
-          ),
-        );
+  const unnamed = goingPrivate
+    ? []
+    : targets.filter((c) =>
+        missingSecondFaceName(
+          c.back_face as { title?: string | null } | null,
+          parsed.data.visibility,
+        ),
+      );
   if (unnamed.length > 0) {
     const names = unnamed
       .slice(0, 3)
@@ -944,7 +989,6 @@ export async function updateCardsVisibilityAction(
   // Going private must also drop the public render (the full card image) — both
   // the row's URL and the stored object — for the same reason the single-card
   // path does. Going public/unlisted bakes the missing renders below.
-  const goingPrivate = parsed.data.visibility === "private";
   const { error } = await supabase
     .from("cards")
     .update(
@@ -952,18 +996,18 @@ export async function updateCardsVisibilityAction(
         ? { visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null }
         : { visibility: parsed.data.visibility },
     )
-    .in("id", ids)
+    .in("id", targetIds)
     .eq("owner_id", user.id);
 
   if (error) {
-    // An admin's frame preview (TODO 2.3) is always private: migration 0121's
+    // A card flagged as a frame preview after the pre-flight read: 0121's
     // CHECK refuses the whole statement, so nothing changed — say why in
-    // words instead of Postgres's.
+    // words instead of Postgres's (a retry reads the flag and skips it).
     if (error.code === "23514" && error.message.includes("cards_frame_preview_private")) {
       return {
         ok: false,
         error:
-          "Frame previews stay private — deselect them (they're listed in Frame verification) and try again. Nothing was changed.",
+          "Frame previews stay private, and nothing was changed — try again and they'll be skipped.",
       };
     }
     return { ok: false, error: error.message };
@@ -975,7 +1019,7 @@ export async function updateCardsVisibilityAction(
     // path is deterministic and the bucket is public-read, so a leftover PNG
     // stays fetchable for a card the DB now reports as having no render.
     // (Mirrors removeRenderObject in lib/cards/bake-render.ts.)
-    const paths = ids.flatMap((id) => renderObjectPaths(user.id, id));
+    const paths = targetIds.flatMap((id) => renderObjectPaths(user.id, id));
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       const { error: removeErr } = await supabase.storage
         .from("card-renders")
@@ -993,7 +1037,7 @@ export async function updateCardsVisibilityAction(
   // skipped here — they'll refresh on next visit. Same posture as the
   // single-card updateCardAction. Cards going private also lose their CDN
   // share image right away.
-  if (goingPrivate) await purgeHiddenCards(ids);
+  if (goingPrivate) await purgeHiddenCards(targetIds);
   else revalidateCardListSurfaces();
 
   if (!goingPrivate) {
@@ -1002,7 +1046,7 @@ export async function updateCardsVisibilityAction(
     // the live preview forever and every uncached /og or /png hit re-ran
     // Satori. Bake the missing ones after the response, one at a time, inside
     // a time budget — the single-card save path does the same in after().
-    const toBake = existing
+    const toBake = targets
       .filter((c) => !c.rendered_image_url)
       .map((c) => c.id);
     if (toBake.length > 0) {
@@ -1028,7 +1072,7 @@ export async function updateCardsVisibilityAction(
     }
   }
 
-  return { ok: true, count: ids.length };
+  return { ok: true, count: targetIds.length, skippedPreviews: previews.length };
 }
 
 export async function deleteCardsAction(

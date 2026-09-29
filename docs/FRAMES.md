@@ -290,7 +290,13 @@ check an unverified frame the way a user would meet it, before publishing it:
   flag). It never joins a deck and never counts as product activity. The
   checklist lists previews under their template with **Re-verify** (the
   card reopened in preview mode on today's frame) and **Delete**
-  (`deleteFramePreviewCardAction`, flagged rows only).
+  (`deleteFramePreviewCardAction`, flagged rows only). In the admin's own
+  My Cards a preview carries a **Frame preview** badge in every view (grid,
+  compact, list) so it can be spotted and deleted there too. A bulk "make
+  public" or "make unlisted" skips the previews and changes the rest:
+  `updateCardsVisibilityAction` reads the flag itself, and the toast says
+  "Published 5 cards. Skipped 2 frame previews — they stay private." A batch
+  of only previews changes nothing and says why.
 - **Template sign-off (2.4).** `/admin/frame-compare?template=<t>` (no colour)
   shows every colour's reference, verification record (0.10), recorded
   auto-score (0.9) and walked previews. **Score** records a `score` event
@@ -303,7 +309,12 @@ check an unverified frame the way a user would meet it, before publishing it:
   each of those colours like a tick and logs
   `verify` events and one `signoff` event. Colours with no real printing
   stay on their own checkbox, which also still withdraws a single colour.
-  There is no score threshold: the number is information, the tick decides.
+  The recorded score is an edge difference (lower is better); the view also
+  shows it as a match, 100 − the difference. A colour whose match is below
+  `SIGN_OFF_LOW_MATCH_PCT` (90 %) is marked on its row, and Publish first
+  asks "N colours score below 90% — publish anyway?", naming them. It is a
+  warning, never a block. The `signoff` event records those colours as
+  `lowMatch`.
 
 Nothing here changes a stored bake or a renderer.
 

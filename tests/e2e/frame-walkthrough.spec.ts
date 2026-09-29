@@ -10,6 +10,8 @@ import { e2eCredentials, signIn } from "./helpers/sign-in";
 //     Scryfall call);
 //   * the save is a private frame preview and keeps preview mode on the
 //     edit page;
+//   * My Cards badges it "Frame preview", and a bulk "Make public" of only
+//     previews publishes nothing and says why;
 //   * the preview is listed under its template in the checklist and in the
 //     template's sign-off view, and deleting it there removes it;
 //   * a non-admin with the same URL gets the ordinary creator.
@@ -52,6 +54,19 @@ test.describe("admin frame walk-through", () => {
     await page.waitForURL(/\/card\/.+\/edit\?.*previewFrames=all/);
     await expect(page.getByTestId("frame-preview-banner")).toContainText(/frame preview/);
     await expect(page.getByText("Private", { exact: true }).first()).toBeVisible();
+
+    // My Cards badges it "Frame preview", and a bulk "Make public" of only
+    // previews publishes nothing and says why (owner, 2026-09-28).
+    await page.goto("/dashboard/cards");
+    await page.getByRole("searchbox", { name: /search your cards/i }).fill(title);
+    await expect(page.getByTestId("frame-preview-card-badge")).toHaveCount(1);
+    await expect(page.getByTestId("frame-preview-card-badge")).toHaveText("Frame preview");
+    await page.getByRole("button", { name: /^select$/i }).click();
+    await page.getByRole("button", { name: /^select all$/i }).click();
+    await page.getByRole("button", { name: /^make public$/i }).click();
+    await expect(
+      page.getByText(/Nothing was published: the selected card is a frame preview/),
+    ).toBeVisible();
 
     // The template's sign-off view lists it under its colour.
     await page.goto("/admin/frame-compare?template=battle");

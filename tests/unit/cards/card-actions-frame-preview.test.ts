@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  called,
   chainClient,
   payloadOf,
   type ChainAnswer,
@@ -13,7 +14,8 @@ import {
 // ignored — the gate refuses as usual. An ordinary save never names the
 // column (so it can't depend on migration 0121). A flagged card stays
 // private on every edit; an admin's edit that moves a card onto an
-// unverified frame makes it a preview.
+// unverified frame makes it a preview. A bulk publish / unlist in My Cards
+// skips the previews and changes the rest (owner, 2026-09-28).
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -76,6 +78,8 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
+import { after } from "next/server";
+import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import {
   createCardAction,
   updateCardAction,
@@ -230,34 +234,180 @@ describe("updateCardAction — frame previews", () => {
   });
 });
 
-describe("updateCardsVisibilityAction — a preview in the batch", () => {
-  const owned = [{ id: CARD, owner_id: USER, title: "Walked", back_face: null, rendered_image_url: null }];
 
-  it("names the reason when 0121's CHECK refuses the batch (nothing changed)", async () => {
-    state.client = chainClient((table, calls): ChainAnswer =>
-      calls.some((c) => c.method === "update")
-        ? {
-            error: {
-              code: "23514",
-              message: 'new row for relation "cards" violates check constraint "cards_frame_preview_private"',
-            },
-          }
-        : { data: owned, error: null },
-    ).client;
-    const result = await updateCardsVisibilityAction([CARD], "public");
+describe("updateCardsVisibilityAction — frame previews in the batch", () => {
+  // Owner, 2026-09-28: a publish / unlist SKIPS the previews (they stay
+  // private — 0121's CHECK keeps them so anyway) and changes the rest. The
+  // action reads the flag itself; the client only ever sends ids.
+  const PREVIEW = "55555555-5555-4555-8555-555555555555";
+  const PREVIEW_2 = "66666666-6666-4666-8666-666666666666";
+  const ORDINARY = "77777777-7777-4777-8777-777777777777";
+  const rowOf = (id: string, framePreview: boolean, owner = USER) => ({
+    id,
+    owner_id: owner,
+    title: `Card ${id.slice(0, 4)}`,
+    back_face: null,
+    rendered_image_url: null,
+    frame_preview: framePreview,
+  });
+
+  /** A chain client answering the pre-flight read with `rows` (optionally
+   *  failing the first read first) and the update with `updateError`. */
+  function bulkDb(
+    rows: unknown[],
+    opts: { updateError?: { code: string; message: string }; firstReadError?: string } = {},
+  ) {
+    let reads = 0;
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (called(calls, "update")) return { error: opts.updateError ?? null };
+      reads += 1;
+      if (reads === 1 && opts.firstReadError) {
+        return { error: { code: "42703", message: opts.firstReadError } };
+      }
+      return { data: rows, error: null };
+    });
+    const removed: string[][] = [];
+    state.client = {
+      ...stub.client,
+      storage: {
+        from: () => ({
+          remove: async (paths: string[]) => {
+            removed.push(paths);
+            return { error: null };
+          },
+        }),
+      },
+    };
+    return { stub, removed };
+  }
+
+  const updates = (stub: ReturnType<typeof chainClient>) =>
+    stub.forTable("cards").filter((entry) => called(entry.calls, "update"));
+  const updatedIds = (stub: ReturnType<typeof chainClient>) =>
+    updates(stub)[0].calls.find((c) => c.method === "in")!.args[1] as string[];
+
+  it("publishes the ordinary cards and skips the previews, saying how many", async () => {
+    const { stub } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true), rowOf(PREVIEW_2, true)]);
+    const result = await updateCardsVisibilityAction([ORDINARY, PREVIEW, PREVIEW_2], "public");
+    expect(result).toEqual({ ok: true, count: 1, skippedPreviews: 2 });
+    // The pre-flight read asked for the flag; the write names only the rest.
+    const read = stub.forTable("cards")[0].calls.find((c) => c.method === "select")!;
+    expect(read.args[0]).toMatch(/frame_preview/);
+    expect(updatedIds(stub)).toEqual([ORDINARY]);
+    expect(payloadOf(updates(stub)[0].calls, "update")).toEqual({ visibility: "public" });
+  });
+
+  it("an unlist skips the previews the same way", async () => {
+    const { stub } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true)]);
+    expect(await updateCardsVisibilityAction([ORDINARY, PREVIEW], "unlisted")).toEqual({
+      ok: true,
+      count: 1,
+      skippedPreviews: 1,
+    });
+    expect(updatedIds(stub)).toEqual([ORDINARY]);
+  });
+
+  it("only the published cards are baked — never a skipped preview", async () => {
+    vi.mocked(after).mockClear();
+    vi.mocked(bakeAndPersistCardRender).mockClear();
+    bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true)]);
+    await updateCardsVisibilityAction([ORDINARY, PREVIEW], "public");
+    const deferred = vi.mocked(after).mock.calls[0][0] as () => Promise<void>;
+    await deferred();
+    expect(vi.mocked(bakeAndPersistCardRender).mock.calls.map((c) => c[0])).toEqual([ORDINARY]);
+  });
+
+  it("all selected are previews → nothing is written, and the message says why", async () => {
+    const { stub } = bulkDb([rowOf(PREVIEW, true), rowOf(PREVIEW_2, true)]);
+    const result = await updateCardsVisibilityAction([PREVIEW, PREVIEW_2], "public");
     expect(result).toEqual({
       ok: false,
-      error: expect.stringMatching(/^Frame previews stay private .*Nothing was changed\.$/),
+      error: "Nothing was published: all 2 selected cards are frame previews, and frame previews stay private.",
+    });
+    expect(updates(stub)).toHaveLength(0);
+  });
+
+  it("a single preview says so in the singular", async () => {
+    bulkDb([rowOf(PREVIEW, true)]);
+    const result = await updateCardsVisibilityAction([PREVIEW], "unlisted");
+    expect(!result.ok && result.error).toBe(
+      "Nothing was made unlisted: the selected card is a frame preview, and frame previews stay private.",
+    );
+  });
+
+  it("making cards private includes the previews (nothing to skip)", async () => {
+    const { stub } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true)]);
+    expect(await updateCardsVisibilityAction([ORDINARY, PREVIEW], "private")).toEqual({
+      ok: true,
+      count: 2,
+      skippedPreviews: 0,
+    });
+    expect(updatedIds(stub)).toEqual([ORDINARY, PREVIEW]);
+  });
+
+  it("the ownership check still refuses the whole batch first", async () => {
+    const { stub } = bulkDb([rowOf(ORDINARY, false), rowOf(PREVIEW, true, "someone-else")]);
+    const result = await updateCardsVisibilityAction([ORDINARY, PREVIEW], "public");
+    expect(result).toEqual({ ok: false, error: "Some cards aren't yours to edit." });
+    expect(updates(stub)).toHaveLength(0);
+  });
+
+  it("a missing card still refuses the whole batch", async () => {
+    const { stub } = bulkDb([rowOf(ORDINARY, false)]);
+    const result = await updateCardsVisibilityAction([ORDINARY, PREVIEW], "public");
+    expect(result).toEqual({ ok: false, error: "Some cards weren't found." });
+    expect(updates(stub)).toHaveLength(0);
+  });
+
+  it("before migration 0121 lands (no column) it reads without the flag and carries on", async () => {
+    const ordinary = { ...rowOf(ORDINARY, false) } as Record<string, unknown>;
+    delete ordinary.frame_preview;
+    const { stub } = bulkDb([ordinary], {
+      firstReadError: "column cards.frame_preview does not exist",
+    });
+    expect(await updateCardsVisibilityAction([ORDINARY], "public")).toEqual({
+      ok: true,
+      count: 1,
+      skippedPreviews: 0,
+    });
+    const reads = stub
+      .forTable("cards")
+      .filter((entry) => called(entry.calls, "select"))
+      .map((entry) => entry.calls.find((c) => c.method === "select")!.args[0] as string);
+    expect(reads).toHaveLength(2);
+    expect(reads[1]).not.toMatch(/frame_preview/);
+    expect(updatedIds(stub)).toEqual([ORDINARY]);
+  });
+
+  it("any other read error is returned as itself", async () => {
+    state.client = chainClient((): ChainAnswer => ({
+      error: { code: "42501", message: "permission denied for table cards" },
+    })).client;
+    expect(await updateCardsVisibilityAction([ORDINARY], "public")).toEqual({
+      ok: false,
+      error: "permission denied for table cards",
     });
   });
 
-  it("any other database error still reads as itself", async () => {
-    state.client = chainClient((table, calls): ChainAnswer =>
-      calls.some((c) => c.method === "update")
-        ? { error: { code: "42501", message: "permission denied for table cards" } }
-        : { data: owned, error: null },
-    ).client;
-    expect(await updateCardsVisibilityAction([CARD], "public")).toEqual({
+  it("a card flagged after the read (the CHECK refuses the batch) reads in words", async () => {
+    bulkDb([rowOf(ORDINARY, false)], {
+      updateError: {
+        code: "23514",
+        message: 'new row for relation "cards" violates check constraint "cards_frame_preview_private"',
+      },
+    });
+    const result = await updateCardsVisibilityAction([ORDINARY], "public");
+    expect(result).toEqual({
+      ok: false,
+      error: "Frame previews stay private, and nothing was changed — try again and they'll be skipped.",
+    });
+  });
+
+  it("any other database error on the write still reads as itself", async () => {
+    bulkDb([rowOf(ORDINARY, false)], {
+      updateError: { code: "42501", message: "permission denied for table cards" },
+    });
+    expect(await updateCardsVisibilityAction([ORDINARY], "public")).toEqual({
       ok: false,
       error: "permission denied for table cards",
     });
