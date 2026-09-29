@@ -124,7 +124,7 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-type CaseResult = { hash: string | null; ms: number; stale?: boolean; warnings?: string[]; error?: string };
+type CaseResult = { hash: string | null; input: string; ms: number; stale?: boolean; printOnly?: true; warnings?: string[]; error?: string };
 
 it("bakes its shard of the visual-regression matrix", async () => {
   const { rowToPreviewData } = await import("@/lib/cards/bake-core");
@@ -152,7 +152,8 @@ it("bakes its shard of the visual-regression matrix", async () => {
     for (const c of cases) {
       current = [];
       const t0 = Date.now();
-      const result: CaseResult = { hash: null, ms: 0 };
+      const result: CaseResult = { hash: null, input: c.input, ms: 0 };
+      if (c.printOnly) result.printOnly = true;
       if (BASE_VERSION !== null) {
         result.stale = isRenderStale(BASE_VERSION, c.template, undefined, CARD_LAYOUT_VERSION, c.row);
       }

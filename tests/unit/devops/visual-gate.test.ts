@@ -7,6 +7,7 @@ import {
   formatReport,
   gateVerdict,
   mergeShardResults,
+  parseEntry,
   parseLayoutVersion,
   parseShard,
   regenerateCommands,
@@ -34,7 +35,7 @@ const ENV = {
   manifest: "5b3383c720b4a41e",
 };
 
-type Case = { hash: string | null; ms: number; stale?: boolean; error?: string };
+type Case = { hash: string | null; ms: number; stale?: boolean; error?: string; input?: string; printOnly?: boolean };
 
 function run(cases: Record<string, Case>, extra: Record<string, unknown> = {}) {
   return { layoutVersion: 34, baseVersion: 34, environment: ENV, seconds: 12, blocked: [] as string[], cases, ...extra };
@@ -235,6 +236,67 @@ describe("gateVerdict", () => {
     expect(codes(verdictFor({ cases: { a: { hash: H1, ms: 1 } }, base: null }))).toEqual(["no-baseline"]);
   });
 
+  it("asks for a regenerated baseline — never a bump — for a case the matrix redefined", () => {
+    // Same id, new input fingerprint (tests/visual/matrix.ts changed what it
+    // draws): not a renderer change.
+    const v = verdictFor({ cases: { a: { hash: H3, ms: 1, input: "bbbbbbbb", stale: false } }, base: { a: `${H1}:aaaaaaaa` } });
+    expect(codes(v)).toEqual(["cases-changed"]);
+    expect(v.problems[0].ids).toEqual(["~ a"]);
+    // The same input drawing different pixels IS a renderer change.
+    const same = verdictFor({ cases: { a: { hash: H3, ms: 1, input: "aaaaaaaa", stale: false } }, base: { a: `${H1}:aaaaaaaa` } });
+    expect(codes(same)).toEqual(["unbumped-change"]);
+  });
+
+  it("passes a regenerated baseline whose only moves are redefined cases, without a bump", () => {
+    const v = verdictFor({
+      cases: { a: { hash: H3, ms: 1, input: "bbbbbbbb" }, b: { hash: H2, ms: 1, input: "cccccccc" } },
+      base: { a: `${H3}:bbbbbbbb`, b: `${H2}:cccccccc` },
+      baseBaseline: { a: `${H1}:aaaaaaaa`, b: `${H2}:cccccccc` },
+    });
+    expect(v.ok).toBe(true);
+    // …while the same input with new pixels is drift.
+    const drift = verdictFor({
+      cases: { a: { hash: H3, ms: 1, input: "aaaaaaaa" } },
+      base: { a: `${H3}:aaaaaaaa` },
+      baseBaseline: { a: `${H1}:aaaaaaaa` },
+    });
+    expect(codes(drift)).toEqual(["unbumped-regeneration"]);
+  });
+
+  it("a print-only (square-corner) change needs the regenerated baseline, never a bump", () => {
+    // Square corners are the PDF / Square download — rendered live, never
+    // stored: bumping for them would sweep every card for nothing.
+    const v = verdictFor({ cases: { "m15/w/a@square": { hash: H3, ms: 1, printOnly: true, stale: false }, "m15/w/a": { hash: H1, ms: 1 } }, base: { "m15/w/a@square": H1, "m15/w/a": H1 } });
+    expect(codes(v)).toEqual(["print-changed"]);
+    expect(v.problems[0].ids).toEqual(["m15/w/a@square"]);
+    // Committed, it passes without a bump…
+    const after = verdictFor({
+      cases: { "m15/w/a@square": { hash: H3, ms: 1, printOnly: true }, "m15/w/a": { hash: H1, ms: 1 } },
+      base: { "m15/w/a@square": H3, "m15/w/a": H1 },
+      baseBaseline: { "m15/w/a@square": H1, "m15/w/a": H1 },
+    });
+    expect(after.ok).toBe(true);
+    // …and with a bump it is never "outside the bump's scope".
+    const bumped = verdictFor({
+      cases: { "m15/w/a@square": { hash: H3, ms: 1, printOnly: true, stale: false }, "m15/w/a": { hash: H3, ms: 1, stale: true } },
+      base: { "m15/w/a@square": H3, "m15/w/a": H3 },
+      baselineVersion: 35,
+      headVersion: 35,
+      baseVersion: 34,
+      baseBaseline: { "m15/w/a@square": H1, "m15/w/a": H1 },
+    });
+    expect(bumped.ok).toBe(true);
+  });
+
+  it("a stored case that changes next to a print-only one still needs the bump", () => {
+    const v = verdictFor({
+      cases: { "m15/w/a@square": { hash: H3, ms: 1, printOnly: true, stale: false }, "m15/w/a": { hash: H3, ms: 1, stale: false } },
+      base: { "m15/w/a@square": H1, "m15/w/a": H1 },
+    });
+    expect(codes(v)).toEqual(["unbumped-change", "print-changed"]);
+    expect(v.problems[0].ids).toEqual(["m15/w/a"]);
+  });
+
   it("a --only run compares just the cases it baked", () => {
     const r = run({ a: { hash: H1, ms: 1 } });
     const b = baseline({ a: H1, b: H2 });
@@ -256,6 +318,13 @@ describe("baseline file", () => {
     expect(text.endsWith("}\n")).toBe(true);
   });
 
+  it("records each case as <pixel hash>:<input fingerprint>", () => {
+    const parsed = JSON.parse(serializeBaseline(run({ a: { hash: H1, ms: 1, input: "0badcafe" } }), 34));
+    expect(parsed.cases.a).toBe(`${H1}:0badcafe`);
+    expect(parseEntry(parsed.cases.a)).toEqual({ pixel: H1, input: "0badcafe" });
+    expect(parseEntry(H1)).toEqual({ pixel: H1, input: null });
+  });
+
   it("refuses to record a case that failed to bake", () => {
     expect(() => serializeBaseline(run({ a: { hash: null, ms: 1, error: "boom" } }), 34)).toThrow(/failed to bake/);
   });
@@ -263,6 +332,8 @@ describe("baseline file", () => {
   it("names the drift between two baselines by id, ignoring new and removed cases", () => {
     expect(baselineDrift(baseline({ a: H1, b: H3, c: H1 }), baseline({ a: H1, b: H2, d: H2 }))).toEqual(["b"]);
     expect(baselineDrift(null, baseline({ a: H1 }))).toEqual([]);
+    // A redefined case (new input) is not drift; the same input with new pixels is.
+    expect(baselineDrift(baseline({ a: `${H3}:bbbbbbbb`, b: `${H3}:cccccccc` }), baseline({ a: `${H1}:aaaaaaaa`, b: `${H1}:cccccccc` }))).toEqual(["b"]);
   });
 
   it("names the tools or inputs that changed since the baseline", () => {
@@ -302,6 +373,16 @@ describe("report", () => {
     const text = formatReport({ verdict, comparison, run: r, headBaseline: b, headVersion: 34, env: {} });
     expect(text).toContain(`m15/r/a  ${H1} → ${H3}\n`);
     expect(text).not.toContain("scope)");
+  });
+
+  it("marks a print-only case as such, never with a scope", () => {
+    const r = run({ "m15/w/a@square": { hash: H3, ms: 1, stale: false, printOnly: true } });
+    const b = baseline({ "m15/w/a@square": H1 });
+    const comparison = compareToBaseline(r, b);
+    const verdict = gateVerdict({ comparison, run: r, headBaseline: b, headVersion: 34, baseVersion: 34 });
+    const text = formatReport({ verdict, comparison, run: r, headBaseline: b, headVersion: 34, env: {} });
+    expect(text).toContain(`m15/w/a@square  ${H1} → ${H3}  (print only — never stored)`);
+    expect(text).toContain("npm run test:visual -- --update");
   });
 
   it("counts ids by template, most first", () => {

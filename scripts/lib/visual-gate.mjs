@@ -20,8 +20,16 @@
 //     its stored image would stay old for good;
 //   * a baseline whose hashes changed against the base branch's without a
 //     bump fails too (regenerating is not a way around the bump);
-//   * new or removed cases need a regenerated baseline, never a bump;
+//   * new, removed or REDEFINED cases (the case's input fingerprint — its
+//     row, preset and corners — changed: a tests/visual/matrix.ts edit, not a
+//     renderer change) need a regenerated baseline, never a bump;
+//   * a PRINT-ONLY case (square corners: the PDF and the Square download,
+//     rendered live, never stored) that changes needs the regenerated
+//     baseline, never a bump, and is never "outside the bump's scope" —
+//     its round sibling in the matrix carries any stored-image change;
 //   * a render error, or a fetch the bake refused, always fails.
+//
+// A baseline entry is "<16-hex pixel hash>:<8-hex input fingerprint>".
 // ---------------------------------------------------------------------------
 
 export const BASELINE_PATH = "tests/visual/baseline.json";
@@ -77,14 +85,26 @@ export function mergeShardResults(shards) {
   };
 }
 
+/** "<pixel>:<input>" → { pixel, input } (input null when the entry has none). */
+export function parseEntry(entry) {
+  const [pixel, input] = String(entry ?? "").split(":");
+  return { pixel, input: input || null };
+}
+
+/** Two inputs differ only when both are known. */
+const redefinedInput = (a, b) => a != null && b != null && a !== b;
+
 /**
  * The run against a baseline. `partial` (a --only run): only the cases that
- * ran are compared — nothing counts as added or removed.
+ * ran are compared — nothing counts as added or removed. A case whose input
+ * fingerprint differs from the baseline's was REDEFINED (the matrix changed
+ * what it draws): like a new case, never a pixel change.
  */
 export function compareToBaseline(run, baseline, { partial = false } = {}) {
   const expected = baseline?.cases ?? {};
   const changed = [];
   const added = [];
+  const redefined = [];
   const errors = [];
   let unchanged = 0;
   for (const id of Object.keys(run.cases).sort()) {
@@ -97,26 +117,34 @@ export function compareToBaseline(run, baseline, { partial = false } = {}) {
       added.push(id);
       continue;
     }
-    if (expected[id] !== result.hash) changed.push({ id, from: expected[id], to: result.hash, stale: result.stale ?? null });
+    const was = parseEntry(expected[id]);
+    if (redefinedInput(was.input, result.input ?? null)) redefined.push(id);
+    else if (was.pixel !== result.hash) changed.push({ id, from: was.pixel, to: result.hash, stale: result.stale ?? null });
     else unchanged += 1;
   }
   const removed = partial ? [] : Object.keys(expected).filter((id) => !(id in run.cases)).sort();
-  return { changed, added, removed, errors, unchanged };
+  return { changed, added, removed, redefined, errors, unchanged };
 }
 
-/** Ids whose hash differs between two baselines (ids in only one are new or
- *  removed cases, never a change). */
+/** Ids whose pixel hash differs between two baselines for the SAME input
+ *  (ids in only one are new or removed cases, a changed input is a
+ *  redefined case — never a pixel change). */
 export function baselineDrift(head, base) {
   if (!head?.cases || !base?.cases) return [];
   return Object.keys(head.cases)
-    .filter((id) => id in base.cases && base.cases[id] !== head.cases[id])
+    .filter((id) => {
+      if (!(id in base.cases)) return false;
+      const now = parseEntry(head.cases[id]);
+      const was = parseEntry(base.cases[id]);
+      return !redefinedInput(now.input, was.input) && now.pixel !== was.pixel;
+    })
     .sort();
 }
 
 /**
  * @param {{
  *   comparison: ReturnType<typeof compareToBaseline>,
- *   run: { blocked?: string[], baseVersion?: number | null, cases: Record<string, { stale?: boolean }> },
+ *   run: { blocked?: string[], baseVersion?: number | null, cases: Record<string, { stale?: boolean, printOnly?: boolean }> },
  *   headBaseline: { layoutVersion: number, cases: Record<string, string> } | null,
  *   headVersion: number | null,
  *   baseVersion?: number | null,
@@ -132,7 +160,8 @@ export function baselineDrift(head, base) {
  *   baseVersion    — CARD_LAYOUT_VERSION on the base branch (null: unknown)
  *   baseBaseline   — the base branch's baseline (null: none / unknown)
  * Each case's `stale` (from the bake) is isRenderStale at the version the
- * bake was told is the base's (VISUAL_BASE_VERSION — the same --base).
+ * bake was told is the base's (VISUAL_BASE_VERSION — the same --base);
+ * `printOnly` marks a case no stored image is (square print corners).
  * Returns { ok, bumped, reference, widerScope, problems: [{ code, message, ids? }] }.
  */
 export function gateVerdict({ comparison, run, headBaseline, headVersion, baseVersion = null, baseBaseline = null, partial = false }) {
@@ -159,19 +188,24 @@ export function gateVerdict({ comparison, run, headBaseline, headVersion, baseVe
     problems.push({ code: "no-baseline", message: `There is no ${BASELINE_PATH} yet — generate it.` });
   }
 
+  // Square corners (print) are rendered live, never stored: a change there
+  // alone needs no bump — the case's round sibling carries any stored change.
+  const printOnly = (id) => run.cases[id]?.printOnly === true;
   const changed = comparison.changed;
-  if (headBaseline && changed.length && !bumped) {
+  const storedChanged = changed.filter((c) => !printOnly(c.id));
+  const printChanged = changed.filter((c) => printOnly(c.id));
+  if (headBaseline && storedChanged.length && !bumped) {
     problems.push({
       code: "unbumped-change",
-      message: `${changed.length} case(s) render differently and ${versionText} was not bumped. A change to stored-card pixels needs the bump + a VERSION_ROLLOUT policy (and a scope, if it touches only some cards) in ${LAYOUT_VERSION_PATH} — then regenerate the baseline.`,
-      ids: changed.map((c) => c.id),
+      message: `${storedChanged.length} case(s) render differently and ${versionText} was not bumped. A change to stored-card pixels needs the bump + a VERSION_ROLLOUT policy (and a scope, if it touches only some cards) in ${LAYOUT_VERSION_PATH} — then regenerate the baseline. (A change to the harness itself — tests/visual/bake.visual.ts's art or contract — raises VISUAL_HARNESS in tests/visual/matrix.ts instead.)`,
+      ids: storedChanged.map((c) => c.id),
     });
   }
-  const drift = baselineDrift(headBaseline, baseBaseline);
+  const drift = baselineDrift(headBaseline, baseBaseline).filter((id) => !printOnly(id));
   // What this PR moves: hashes against the committed baseline (before it is
   // regenerated) and the committed baseline against the base branch's
   // (after). With a bump, every one of them must be in the bump's scope.
-  const moved = new Set([...changed.map((c) => c.id), ...drift]);
+  const moved = new Set([...storedChanged.map((c) => c.id), ...drift]);
   const widerScope = [];
   if (bumped) {
     if (run.baseVersion != null && run.baseVersion !== reference) {
@@ -188,7 +222,7 @@ export function gateVerdict({ comparison, run, headBaseline, headVersion, baseVe
         ids: outside,
       });
     }
-    for (const [id, result] of Object.entries(run.cases)) if (result?.stale === true && !moved.has(id)) widerScope.push(id);
+    for (const [id, result] of Object.entries(run.cases)) if (result?.stale === true && !result.printOnly && !moved.has(id)) widerScope.push(id);
     widerScope.sort();
   }
   if (headBaseline && changed.length && bumped) {
@@ -198,11 +232,19 @@ export function gateVerdict({ comparison, run, headBaseline, headVersion, baseVe
       ids: changed.map((c) => c.id),
     });
   }
-  if (headBaseline && !partial && (comparison.added.length || comparison.removed.length)) {
+  if (headBaseline && printChanged.length && !bumped) {
+    problems.push({
+      code: "print-changed",
+      message: `${printChanged.length} print-only case(s) render differently — square corners (the PDF, the Square download) are rendered live, never stored, so no layout bump is needed: review them, then commit the regenerated baseline.`,
+      ids: printChanged.map((c) => c.id),
+    });
+  }
+  const redefined = comparison.redefined ?? [];
+  if (headBaseline && (redefined.length || (!partial && (comparison.added.length || comparison.removed.length)))) {
     problems.push({
       code: "cases-changed",
-      message: `The matrix gained ${comparison.added.length} and lost ${comparison.removed.length} case(s) — regenerate the baseline (new cases need no layout bump).`,
-      ids: [...comparison.added.map((id) => `+ ${id}`), ...comparison.removed.map((id) => `- ${id}`)],
+      message: `The matrix gained ${comparison.added.length}, lost ${comparison.removed.length} and redefined ${redefined.length} case(s) (a redefined case's row, preset or corners changed in tests/visual/matrix.ts) — regenerate the baseline; none of this needs a layout bump.`,
+      ids: [...comparison.added.map((id) => `+ ${id}`), ...comparison.removed.map((id) => `- ${id}`), ...redefined.map((id) => `~ ${id}`)],
     });
   }
   if (headBaseline && !changed.length && headVersion !== null && headBaseline.layoutVersion !== headVersion) {
@@ -225,14 +267,14 @@ export function gateVerdict({ comparison, run, headBaseline, headVersion, baseVe
 export function serializeBaseline(run, layoutVersion) {
   const cases = {};
   for (const id of Object.keys(run.cases).sort()) {
-    const { hash, error } = run.cases[id];
+    const { hash, input, error } = run.cases[id];
     if (error || !hash) throw new Error(`Refusing to write a baseline: ${id} failed to bake (${error ?? "no hash"}).`);
-    cases[id] = hash;
+    cases[id] = input ? `${hash}:${input}` : hash;
   }
   const { platform, node, satori, sharp, libvips, rsvg, cairo, pixman, fonts, manifest } = run.environment ?? {};
   const body = {
     about:
-      "Visual-regression baseline (TODO 7.1): the pixel hash of every case in tests/visual/matrix.ts. Generated — never edit by hand; `npm run test:visual -- --update` (or the CI job's visual-baseline artifact) rewrites it. Hashes only: no pixels, no frame art.",
+      "Visual-regression baseline (TODO 7.1): every case in tests/visual/matrix.ts as <pixel hash>:<input fingerprint> (the case's row, preset and corners). Generated — never edit by hand; `npm run test:visual -- --update` (or the CI job's visual-baseline artifact) rewrites it. Hashes only: no pixels, no frame art.",
     layoutVersion,
     generatedOn: { platform, node, satori, sharp, libvips, rsvg, cairo, pixman },
     inputs: { fonts, manifest },
@@ -287,7 +329,7 @@ export function countByTemplate(ids) {
  * @param {{
  *   verdict: ReturnType<typeof gateVerdict>,
  *   comparison: ReturnType<typeof compareToBaseline>,
- *   run: { cases: Record<string, { stale?: boolean }>, seconds: number, environment?: Record<string, any> },
+ *   run: { cases: Record<string, { stale?: boolean, printOnly?: boolean }>, seconds: number, environment?: Record<string, any> },
  *   headBaseline: { layoutVersion: number, generatedOn?: Record<string, any>, inputs?: Record<string, any> } | null,
  *   headVersion: number | null,
  *   env?: Record<string, string | undefined>,
@@ -302,7 +344,7 @@ export function formatReport({ verdict, comparison, run, headBaseline, headVersi
   out.push(
     `${total} case(s) baked in ${Math.round(run.seconds)} s on ${run.environment?.platform ?? "?"} · layout v${headVersion}` +
       (headBaseline ? ` · baseline v${headBaseline.layoutVersion} (${headBaseline.generatedOn?.platform ?? "?"})` : " · no baseline") +
-      ` · ${comparison.unchanged} unchanged, ${comparison.changed.length} changed, ${comparison.added.length} new, ${comparison.removed.length} removed, ${comparison.errors.length} failed`,
+      ` · ${comparison.unchanged} unchanged, ${comparison.changed.length} changed, ${comparison.added.length} new, ${comparison.removed.length} removed, ${comparison.redefined?.length ?? 0} redefined, ${comparison.errors.length} failed`,
   );
   const drift = environmentDrift(run, headBaseline);
   if (drift.length && comparison.changed.length) {
@@ -316,22 +358,29 @@ export function formatReport({ verdict, comparison, run, headBaseline, headVersi
     if (problem.ids?.length) {
       if (problem.ids.length > 20) {
         out.push("");
-        out.push(`By template: ${countByTemplate(problem.ids.map((i) => i.replace(/^[+-] /, ""))).map(([t, n]) => `${t} ${n}`).join(", ")}`);
+        out.push(`By template: ${countByTemplate(problem.ids.map((i) => i.replace(/^[+~-] /, ""))).map(([t, n]) => `${t} ${n}`).join(", ")}`);
       }
       out.push("");
       out.push("```");
       for (const id of problem.ids.slice(0, maxIds)) {
         const c = comparison.changed.find((x) => x.id === id);
-        // The scope mark means something only when this PR bumped.
+        // The scope mark means something only when this PR bumped, and never
+        // for a print-only case (no stored image to re-bake).
         const stale = run.cases[id]?.stale;
-        const scope = typeof stale !== "boolean" || !verdict.bumped ? "" : stale ? "  (in the bump's scope)" : "  (NOT in the bump's scope)";
+        const scope = run.cases[id]?.printOnly
+          ? "  (print only — never stored)"
+          : typeof stale !== "boolean" || !verdict.bumped
+            ? ""
+            : stale
+              ? "  (in the bump's scope)"
+              : "  (NOT in the bump's scope)";
         out.push(c ? `${id}  ${c.from} → ${c.to}${scope}` : `${id}${scope}`);
       }
       if (problem.ids.length > maxIds) out.push(`… and ${problem.ids.length - maxIds} more (tmp/visual/report.json)`);
       out.push("```");
     }
   }
-  if (verdict.problems.some((p) => ["regenerate", "cases-changed", "baseline-version", "no-baseline"].includes(p.code))) {
+  if (verdict.problems.some((p) => ["regenerate", "print-changed", "cases-changed", "baseline-version", "no-baseline"].includes(p.code))) {
     out.push("");
     out.push("Regenerate:");
     out.push("```");

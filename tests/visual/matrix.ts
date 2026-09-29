@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { CardRowForBake } from "@/lib/cards/bake-core";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -25,7 +26,11 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
 // NEW cases — only a changed hash needs one). Card ids are stable strings
-// ("m15/r/creature-short@hd"): renaming a case is a baseline change.
+// ("m15/r/creature-short@hd"): renaming a case is a baseline change. Each
+// case also carries an INPUT fingerprint (its row, preset and corners, plus
+// VISUAL_HARNESS): editing what a case draws redefines it — the baseline is
+// regenerated, no layout bump — while the same input drawing different
+// pixels is a renderer change.
 //
 // The content is synthetic and fixed here. Art is a generated gradient
 // (bake.visual.tsx), never a real picture, and nothing here names an
@@ -37,9 +42,23 @@ export type VisualColour = "w" | "u" | "b" | "r" | "g" | "c" | "wu" | "wub";
 export type VisualShape = "short" | "long" | "edge";
 export type VisualPreset = "default" | "hd";
 
+/**
+ * The harness's own version: raise it when tests/visual/bake.visual.ts draws
+ * differently for the same rows (its generated art, the render contract it
+ * passes) — every case is then REDEFINED (regenerate the baseline, no layout
+ * bump). Never raise it to get a renderer change past the gate.
+ */
+export const VISUAL_HARNESS = 1;
+
 export type VisualCase = {
   /** Stable id — the baseline key. */
   id: string;
+  /** 8-hex fingerprint of what the case draws (row, preset, corners,
+   *  VISUAL_HARNESS) — a matrix edit, not a pixel change, when it moves. */
+  input: string;
+  /** Square corners are print (the PDF, the Square download): rendered live,
+   *  never stored — a change there needs no layout bump (the gate). */
+  printOnly: boolean;
   template: FrameTemplate;
   kind: CardKind;
   colour: VisualColour;
@@ -336,6 +355,27 @@ function caseId(template: string, colour: string, kind: string, shape: string, s
   return `${template}/${colour}/${kind}-${shape}${suffix}`;
 }
 
+/** JSON with every object's keys sorted — a field's position in rowFor is
+ *  not an input. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical((value as Record<string, unknown>)[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+/** The input fingerprint of a case (VisualCase.input). */
+export function caseInput(c: Pick<VisualCase, "row" | "preset" | "corners">): string {
+  return createHash("sha256")
+    .update(canonical({ harness: VISUAL_HARNESS, row: c.row, preset: c.preset, corners: c.corners }))
+    .digest("hex")
+    .slice(0, 8);
+}
+
 /** The whole matrix, sorted by id. */
 export function visualCases(): VisualCase[] {
   const cases: VisualCase[] = [];
@@ -348,16 +388,21 @@ export function visualCases(): VisualCase[] {
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
+    const preset = extra.preset ?? "default";
+    const corners = extra.corners ?? "round";
+    const row = rowFor(template, kind, colour, shape, finish, id);
     cases.push({
       id,
+      input: caseInput({ row, preset, corners }),
+      printOnly: corners === "square",
       template,
       kind,
       colour,
       shape,
-      preset: extra.preset ?? "default",
-      corners: extra.corners ?? "round",
+      preset,
+      corners,
       finish,
-      row: rowFor(template, kind, colour, shape, finish, id),
+      row,
     });
   };
   const hosted = kindsByTemplate();

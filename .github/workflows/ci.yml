@@ -19,6 +19,8 @@
 #           bumped CARD_LAYOUT_VERSION — and then until the regenerated
 #           baseline is committed (the summary lists the changed cases and the
 #           regenerate command; the `visual-baseline` artifact is this run's).
+#           New, removed or redefined cases (a matrix edit) and print-only
+#           (square-corner) changes need only the regenerated baseline.
 #           Frames are fetched from the public bucket by manifest sha and
 #           cached by the manifest's hash — never committed.
 #
@@ -168,7 +170,9 @@ jobs:
 
       # The manifest's PNG objects (~140 MB), keyed by the manifest: storage
       # is read only when it changes (an older cache seeds the new one, and
-      # the script drops objects the manifest no longer names).
+      # the script drops objects the manifest no longer names). Every cached
+      # file is re-checked against the manifest's sha256 before use, so a
+      # cache written by another run can't feed the bake other bytes.
       - name: Restore the frame cache
         uses: actions/cache@v4
         with:
@@ -188,6 +192,8 @@ jobs:
             tmp/visual/results/
             tmp/visual/logs/
           retention-days: 7
+          # A re-run of this job replaces its attempt's hashes.
+          overwrite: true
 
   visual:
     name: Visual regression
@@ -223,3 +229,4 @@ jobs:
           path: tmp/visual/next/baseline.json
           if-no-files-found: ignore
           retention-days: 14
+          overwrite: true

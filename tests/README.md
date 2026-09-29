@@ -68,7 +68,9 @@ Satori bake and compares each card's pixel hash with the committed
   never enter git: the baseline holds 16-hex hashes of the decoded pixels,
   nothing else.
 - `scripts/visual-regression.mjs` + `scripts/lib/visual-gate.mjs` — fetch,
-  shard, gate, report.
+  shard, gate, report. The fetch (`scripts/lib/visual-frames.mjs`) takes a
+  quick pass and then retries, one at a time, whatever storage refused (a
+  429, a 5xx, a hang, a 400 for an object that is there).
 
 ```bash
 npm run test:visual                # bake + gate (dev bucket locally)
@@ -84,8 +86,15 @@ What CI does with a changed hash:
 | bumps, baseline not regenerated | ❌ `regenerate` — the diff list and the regenerate command; commit the new baseline |
 | bumps, a changed case outside the bump's scope (judged at the base branch's version, before and after regenerating) | ❌ `outside-bump-scope` — the sweep would stamp that card without re-baking it |
 | regenerates the baseline without a bump | ❌ `unbumped-regeneration` |
-| adds or removes matrix cases | ❌ `cases-changed` — regenerate; no bump needed |
+| adds, removes or redefines matrix cases (a case's row, preset or corners changed in `matrix.ts` — its input fingerprint moved) | ❌ `cases-changed` — regenerate; no bump needed |
+| changes only print-only cases (square corners: the PDF and the Square download are rendered live, never stored) | ❌ `print-changed` — regenerate; no bump needed, never "outside the scope" |
 | bumps with the regenerated baseline | ✅ |
+
+Each baseline entry is `<pixel hash>:<input fingerprint>`: the same input
+drawing different pixels is a renderer change; a new input is a matrix edit.
+A change to the harness itself (the generated art or the render contract in
+`bake.visual.ts`) raises `VISUAL_HARNESS` in `matrix.ts`, which redefines
+every case — never raise it to get a renderer change past the gate.
 
 "Bumped" is judged against the base branch (`--base HEAD^1` on CI's merge
 commit), never against the baseline file. The bake runs in three parallel

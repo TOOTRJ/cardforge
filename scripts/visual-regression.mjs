@@ -39,12 +39,12 @@
 // artifact), and the report appended to $GITHUB_STEP_SUMMARY in CI.
 // ---------------------------------------------------------------------------
 import { spawn, execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { frameObjectKey, mapLimit, parseFlags, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { parseFlags, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { syncFrameCache } from "./lib/visual-frames.mjs";
 import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
 import {
   BASELINE_PATH,
@@ -85,62 +85,21 @@ const GATE = !flags.has("--no-gate");
 const BAKE = !flags.has("--gate-only");
 if (GROUP.count > 1 && GATE) throw new Error("--group bakes part of the matrix: pass --no-gate (the gate job reads every group's results).");
 
-const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const readJson = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null);
 const git = (...args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
 
 // --- 1. frames --------------------------------------------------------------
-
-async function fetchObject(key, entry) {
-  const objectKey = frameObjectKey(key, entry.hash);
-  const file = path.join(FRAMES_DIR, objectKey);
-  if (fs.existsSync(file) && sha256(fs.readFileSync(file)) === entry.sha256) return { key, cached: true };
-  const tried = [];
-  for (const origin of ORIGINS) {
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        const res = await fetch(`${origin}/${objectKey}`, { signal: AbortSignal.timeout(60_000) });
-        if (res.status === 404 || res.status === 400) {
-          await res.body?.cancel().catch(() => {});
-          tried.push(`${origin}: ${res.status}`);
-          break; // not published there — next origin
-        }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const bytes = Buffer.from(await res.arrayBuffer());
-        if (sha256(bytes) !== entry.sha256) throw new Error("sha256 differs from the manifest");
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        const partial = `${file}.${process.pid}.part`;
-        fs.writeFileSync(partial, bytes);
-        fs.renameSync(partial, file);
-        return { key, cached: false, bytes: bytes.byteLength };
-      } catch (err) {
-        tried.push(`${origin}: ${err instanceof Error ? err.message : err}`);
-        await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
-      }
-    }
-  }
-  return { key, error: tried.join("; ") };
-}
 
 async function fetchFrames() {
   const manifest = readManifest(path.join(ROOT, "lib/frames/frame-manifest.json"));
   // The bake reads PNG masters only (the .webp siblings are the browser's).
   const entries = Object.entries(manifest.files).filter(([key]) => key.endsWith(".png"));
   const t0 = Date.now();
-  const results = await mapLimit(entries, 4, ([key, entry]) => fetchObject(key, entry));
-  // Drop cached objects the manifest no longer names (CI restores an older
-  // manifest's cache as a starting point; keep it from growing forever).
-  const wanted = new Set(entries.map(([key, entry]) => path.join(FRAMES_DIR, frameObjectKey(key, entry.hash))));
-  const walk = (dir) =>
-    fs.existsSync(dir)
-      ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(path.join(dir, d.name)) : [path.join(dir, d.name)]))
-      : [];
-  for (const file of walk(FRAMES_DIR)) if (!wanted.has(file)) fs.rmSync(file);
-  const failed = results.filter((r) => r.error);
-  const fetched = results.filter((r) => r.cached === false);
-  const mb = fetched.reduce((n, r) => n + r.bytes, 0) / 1e6;
+  // A quick pass, then a confirm pass over its failures (transient storage
+  // errors — scripts/lib/visual-frames.mjs).
+  const { cached, fetched, bytes, failed } = await syncFrameCache({ entries, origins: ORIGINS, dir: FRAMES_DIR });
   console.log(
-    `frames: ${entries.length} manifest PNGs — ${entries.length - fetched.length - failed.length} cached, ${fetched.length} fetched (${mb.toFixed(1)} MB) in ${Math.round((Date.now() - t0) / 1000)} s`,
+    `frames: ${entries.length} manifest PNGs — ${cached} cached, ${fetched} fetched (${(bytes / 1e6).toFixed(1)} MB) in ${Math.round((Date.now() - t0) / 1000)} s`,
   );
   if (failed.length) {
     for (const f of failed) console.error(`  ✗ ${f.key}: ${f.error}`);
@@ -264,11 +223,13 @@ if (UPDATE) {
   const comparison = compareToBaseline(run, headBaseline);
   fs.writeFileSync(path.join(ROOT, BASELINE_PATH), nextBaseline);
   console.log(
-    `Wrote ${BASELINE_PATH}: ${comparison.changed.length} changed, ${comparison.added.length} new, ${comparison.removed.length} removed, ${comparison.unchanged} unchanged (layout v${headVersion}, ${run.environment.platform}).`,
+    `Wrote ${BASELINE_PATH}: ${comparison.changed.length} changed, ${comparison.added.length} new, ${comparison.removed.length} removed, ${comparison.redefined.length} redefined, ${comparison.unchanged} unchanged (layout v${headVersion}, ${run.environment.platform}).`,
   );
-  if (comparison.changed.length && base?.version != null && !(headVersion > base.version)) {
+  // Print-only (square) cases never need the bump.
+  const stored = comparison.changed.filter((c) => !run.cases[c.id]?.printOnly);
+  if (stored.length && base?.version != null && !(headVersion > base.version)) {
     console.warn(
-      `⚠ ${comparison.changed.length} case(s) changed but CARD_LAYOUT_VERSION was not bumped against ${base.ref} (v${base.version}) — CI will refuse this baseline without the bump.`,
+      `⚠ ${stored.length} case(s) changed but CARD_LAYOUT_VERSION was not bumped against ${base.ref} (v${base.version}) — CI will refuse this baseline without the bump.`,
     );
   }
   process.exit(0);

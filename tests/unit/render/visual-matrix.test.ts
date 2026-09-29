@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
-import { VISUAL_COLOURS, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
+import { VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
 
 // ---------------------------------------------------------------------------
 // The visual-regression matrix (tests/visual/matrix.ts, TODO 7.1) and its
@@ -16,6 +16,8 @@ import { VISUAL_COLOURS, frameKeyOf, shardCases, visualCases } from "@/tests/vis
 // ---------------------------------------------------------------------------
 
 const cases = visualCases();
+/** A case's row without its id (siblings differ only by id). */
+const canonicalRow = (c: (typeof cases)[number]) => JSON.stringify({ ...c.row, id: null });
 const ids = cases.map((c) => c.id);
 const baseline = JSON.parse(readFileSync(join(process.cwd(), "tests/visual/baseline.json"), "utf8")) as {
   layoutVersion: number;
@@ -70,6 +72,23 @@ describe("visual-regression matrix", () => {
     }
   });
 
+  it("marks exactly the square-corner (print) cases print-only — each has a stored round sibling", () => {
+    for (const c of cases) expect(c.printOnly, c.id).toBe(c.corners === "square");
+    for (const c of cases.filter((x) => x.printOnly)) {
+      const sibling = cases.find((x) => !x.printOnly && x.preset === c.preset && x.finish === c.finish && canonicalRow(x) === canonicalRow(c));
+      expect(sibling, `${c.id}'s round sibling`).toBeDefined();
+    }
+  });
+
+  it("fingerprints what each case draws: the row, preset and corners — not the field order", () => {
+    const [c] = cases;
+    expect(caseInput(c)).toBe(c.input);
+    expect(caseInput({ ...c, row: Object.fromEntries(Object.entries(c.row).reverse()) as typeof c.row })).toBe(c.input);
+    expect(caseInput({ ...c, row: { ...c.row, rules_text: "Changed." } })).not.toBe(c.input);
+    expect(caseInput({ ...c, corners: c.corners === "round" ? "square" : "round" })).not.toBe(c.input);
+    expect(caseInput({ ...c, preset: c.preset === "hd" ? "default" : "hd" })).not.toBe(c.input);
+  });
+
   it("splits into shards that cover every case exactly once", () => {
     for (const count of [1, 4, 12]) {
       const all = Array.from({ length: count }, (_, i) => shardCases(cases, i, count).map((c) => c.id)).flat();
@@ -79,9 +98,12 @@ describe("visual-regression matrix", () => {
 });
 
 describe("tests/visual/baseline.json", () => {
-  it("records exactly the matrix's cases — regenerate it after changing the matrix", () => {
+  it("records exactly the matrix's cases, as they are drawn now — regenerate it after changing the matrix", () => {
     expect(Object.keys(baseline.cases).sort()).toEqual([...ids].sort());
-    for (const hash of Object.values(baseline.cases)) expect(hash).toMatch(/^[0-9a-f]{16}$/);
+    for (const entry of Object.values(baseline.cases)) expect(entry).toMatch(/^[0-9a-f]{16}:[0-9a-f]{8}$/);
+    // A case whose content, preset or corners changed since the baseline was
+    // made (`npm run test:visual -- --update` restamps it).
+    expect(cases.filter((c) => baseline.cases[c.id]?.split(":")[1] !== c.input).map((c) => c.id)).toEqual([]);
   });
 
   it("was made at the current CARD_LAYOUT_VERSION — a bump regenerates it in the same PR", () => {
