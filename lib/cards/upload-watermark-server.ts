@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
-import { normalizeUploadOrientation } from "@/lib/media/orientation";
+import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 
 // ---------------------------------------------------------------------------
 // Custom design-watermark upload — a near-copy of upload-art-server.ts with
@@ -73,10 +73,11 @@ export async function uploadWatermarkServerAction(
 
   // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts) —
   // Chrome obeys a PNG's tag and ignores a WebP's, the bake used to ignore
-  // both; with the tag gone every viewer and the bake agree (TODO 3.14).
+  // both; with the tag gone every viewer and the bake agree (TODO 3.14) —
+  // and no camera metadata (lib/media/upload-bytes.ts, TODO 3.14a).
   let stored: Buffer;
   try {
-    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+    stored = await prepareUploadBytes(buffer, metadata, { maxBytes: MAX_BYTES });
   } catch {
     return { ok: false, error: "That doesn't look like a valid image." };
   }

@@ -6,7 +6,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
-import { normalizeUploadOrientation } from "@/lib/media/orientation";
+import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -23,7 +23,9 @@ import { randomId } from "@/lib/ids";
 //      svg, avif, heif, tiff) is rejected.
 //   5. EXIF orientation normalized (lib/media/orientation.ts): a phone
 //      photo tagged "turn me" is stored as upright pixels with no tag, so
-//      the bake draws what the creator showed (TODO 3.14).
+//      the bake draws what the creator showed (TODO 3.14) — and camera
+//      metadata (EXIF incl. GPS, XMP, IPTC…) stripped without touching the
+//      pixels (lib/media/upload-bytes.ts, TODO 3.14a).
 //   6. Storage upload via the user's Supabase session — RLS still binds
 //      the destination to `card-art/{userId}/...`.
 //
@@ -127,11 +129,12 @@ export async function uploadCardArtServerAction(
     };
   }
 
-  // Store upright pixels: same format, the orientation tag applied and
-  // dropped (untouched bytes when there is nothing to turn).
+  // Store upright pixels with no camera metadata: same format, the
+  // orientation tag applied and dropped, EXIF/GPS/XMP removed losslessly
+  // (untouched bytes when there is nothing to turn or remove).
   let stored: Buffer;
   try {
-    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+    stored = await prepareUploadBytes(buffer, metadata, { maxBytes: MAX_BYTES });
   } catch {
     return { ok: false, error: "That doesn't look like a valid image." };
   }

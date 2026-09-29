@@ -4,6 +4,7 @@ import { isSafetyBlockError, shouldRewordAfter } from "@/lib/ai/art-prompt-safet
 import { experimental_generateImage as generateImage, generateText } from "ai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 import { autoOrientBytes } from "@/lib/media/orientation";
+import { imageWithoutMetadata } from "@/lib/media/upload-bytes";
 
 // ---------------------------------------------------------------------------
 // Image generation + image-to-image restyle. ALL image generation goes through
@@ -122,8 +123,11 @@ export async function restyleImage(input: {
   // The model gets the art as the owner sees it in the creator: a JPEG/PNG
   // stored before uploads were normalized may still carry an EXIF "turn me"
   // tag that the browser applies (TODO 3.14), and nothing promises the model
-  // reads it. Same rule as the bake (lib/media/orientation.ts).
-  const source = await autoOrientBytes(input.source, input.sourceContentType);
+  // reads it. Same rule as the bake (lib/media/orientation.ts). And it gets
+  // no camera metadata (TODO 3.14a): a file stored before uploads were
+  // stripped may still carry the owner's GPS, and this goes to a third party.
+  const upright = await autoOrientBytes(input.source, input.sourceContentType);
+  const source = await imageWithoutMetadata(upright.bytes, upright.contentType);
   return restyleViaGateway(
     source.bytes,
     source.contentType,
