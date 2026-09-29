@@ -439,6 +439,27 @@ Open decisions are marked **[decide]**; none blocks its phase.
 
       Optional follow-up: a server-side 'Paste an image URL', under the upload allowlist, size limit and moderation. Never a client CORS proxy, which is what CC uses. Depends on 3.14 for orientation.
       **Still open after 2026-09-28:** this paste-URL follow-up (not started — it needs its own server route: host allowlist, size limit, the omni-moderation scan, never a client proxy).
+      **Owner decisions 2026-09-29** (owner: "recommendations" on the
+      art PR's four questions, feat/import-art-from-card) — all four kept
+      as built:
+      - **E1 — kept:** the Art block's "Back face art" row stays for a card
+        with a back face but no second-face editor (an imported transform
+        / modal DFC such as Delver of Secrets). It's the only way to change
+        that back's art without importing again; 5.2's two-sided editor
+        takes it over.
+      - **E2 — kept:** a printing Scryfall credits no artist CLEARS
+        `artist_credit` (`realCardArtWrites`), rather than keep the old
+        artist's name beside art they didn't draw.
+      - **E3 — kept:** the interim `art-back` credit. Until 1.8's per-face
+        artist lands in `/api/scryfall/import-art` (feat/import-mapper-fixes,
+        `scryfallFaceArtist`), the back of a DFC whose faces have different
+        artists is credited to the card-level name; Delver (Nils Hamm on
+        both) is unaffected. The client credits whatever the route returns,
+        so it follows 1.8 with no change here.
+      - **E4 — kept:** the two additive route fields — `oracle_id` on each
+        `/api/scryfall/search` result, `back_thumb_url` / `back_artist` on
+        each `/api/scryfall/printings` item (null unless the back face has
+        its own image). No existing field changes.
 - [x] (done 2026-09-26 — feat/quick-wins: `printingTreatmentFromScryfall` names a borderless / showcase / extended-art / full-art / textless printing (full-art and textless 2015 tokens skipped), the import dialog says so before the import and the creator toasts the frame the card actually landed on, in front of the "Seeded form…" / "Pre-filled…" toast; the frame choice is unchanged. The "Use Borderless" / "Use Full-Art Basic" toast actions moved to 4.32 / 4.39's acceptance. Still silent, for later items: foil-etched frame printings (`frame_effects ∋ etched`, 4.28), white/silver/gold borders (4.30), `frame: future`, Expeditions) **1.16 [P0] Stopgap: say so when a borderless or showcase printing imports as the plain frame** (borderless research 2026-09-25; ships before 1.4) — The importer drops every treatment, so all 6,327 paper borderless printings land silently on the bordered standard:
       - `frameTemplateFromScryfall` (`lib/scryfall/import-mapper.ts`:239-259) maps only `frame`→era plus snow/devoid.
       - `border_color`, `full_art` and `promo_types` pass through untyped (`lib/scryfall/client.ts`:143-210, `.passthrough()`).
