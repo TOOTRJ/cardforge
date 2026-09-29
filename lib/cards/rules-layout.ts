@@ -410,6 +410,11 @@ export type RulesLayoutInput = {
   padPx?: RulesPadPx | ((sizePx: number) => RulesPadPx);
   /** Vertical alignment of the block in the box; default "start". */
   vAlign?: SlotAlign;
+  /** "center": a layout of ONE rules line in all (no flavor, no second
+   *  paragraph) sets it centred in the column — TextSlot.alignSingleLine
+   *  (TODO 4.49 (b)). Each target indents it by its own whole px
+   *  (singleLineIndentPx), and the keep-outs are judged where it lands. */
+  alignSingleLine?: "center";
   /** Whether a flavor block after rules text gets the 1 px bar (M15-era
    *  frames) or the no-bar gap. Default true. */
   divider?: boolean;
@@ -471,6 +476,9 @@ export type RulesLinePlacement = {
   /** Index into layout.blocks, and of the line within its block. */
   block: number;
   line: number;
+  /** How far the line starts right of the interior's left edge, whole
+   *  target px: 0, or a centred single line's indent (singleLineIndentPx). */
+  indent: number;
   /** The line box, card-absolute target px (top may be fractional: a
    *  centred block's offset is not rounded here; Yoga rounds each box). */
   top: number;
@@ -591,6 +599,22 @@ function blocksHeight(blocks: readonly RulesBlock[], m: RulesMetrics, divider: b
   return h;
 }
 
+/** Whether `blocks` are the ONE rules line a centring slot centres
+ *  (RulesLayoutInput.alignSingleLine): a single rules block of a single
+ *  line, nothing else — a flavor text, a blank line or a second paragraph
+ *  keeps every line at the left. */
+export function isSingleRulesLine(blocks: readonly RulesBlock[]): boolean {
+  return blocks.length === 1 && blocks[0].kind === "rules" && blocks[0].lines.length === 1;
+}
+
+/** A centred single line's indent at a target: half the room the line
+ *  leaves in the column, floored to the whole px (both renderers draw it as
+ *  a margin, so the preview's line starts where the bake's does). Never
+ *  negative (an overwide run starts at the left, as it always has). */
+export function singleLineIndentPx(interiorWidth: number, lineWidth: number): number {
+  return Math.max(0, Math.floor((interiorWidth - lineWidth) / 2));
+}
+
 function placeBlocks(
   blocks: readonly RulesBlock[],
   sizePx: number,
@@ -635,6 +659,7 @@ function placeBlocks(
   const blanks: RulesPlacement["blanks"] = [];
   let bar: RulesPlacement["bar"] = null;
   let y = top + insetTop;
+  const centred = input.alignSingleLine === "center" && isSingleRulesLine(blocks);
   blocks.forEach((b, bi) => {
     const gap = gapBefore(blocks, bi, m, divider);
     if (b.kind === "flavor" && bi > 0 && divider) {
@@ -649,17 +674,20 @@ function placeBlocks(
     b.lines.forEach((line, li) => {
       const ink = lineInk(line, m);
       const sideInk = lineSideInk(line, m);
+      const indent = centred ? singleLineIndentPx(interior.width, line.widthPx[target]) : 0;
+      const left = interior.left + indent;
       lines.push({
         block: bi,
         line: li,
+        indent,
         top: y,
-        left: interior.left,
+        left,
         width: line.widthPx[target],
         height: m.linePx,
         inkTop: y + ink.top,
         inkBottom: y + ink.bottom,
-        inkLeft: interior.left - sideInk.left,
-        inkRight: interior.left + line.widthPx[target] + sideInk.right,
+        inkLeft: left - sideInk.left,
+        inkRight: left + line.widthPx[target] + sideInk.right,
       });
       y += m.linePx;
     });

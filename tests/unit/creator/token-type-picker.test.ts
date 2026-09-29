@@ -141,6 +141,23 @@ describe("the frame follows the type", () => {
     expect(framesForKind("token", keys()).map((c) => c.template)).toContain("m15tokenartifact");
   });
 
+  it("the text-box token's artifact dress is worn by type word too (4.49 (b))", () => {
+    expect(isTypeWordDress("token", "m15tokenartifacttext")).toBe(true);
+    expect(isTypeWordDress("token", "m15tokentext")).toBe(false);
+    expect(typeWordFrameFor("token", "m15tokentext", "Artifact")).toBe("m15tokenartifacttext");
+    expect(typeWordFrameFor("token", "m15tokentext", "Artifact Creature")).toBe("m15tokenartifacttext");
+    expect(typeWordFrameFor("token", "m15tokenartifacttext", "Creature")).toBe("m15tokentext");
+    expect(typeWordFrameFor("token", "m15tokenartifacttext", "")).toBe("m15tokentext");
+    // The word keeps the text box: it never swaps a text-box token for the
+    // textless one, or the other way round.
+    expect(typeWordFrameFor("token", "m15token", "Artifact")).toBe("m15tokenartifact");
+    expect(typeWordFrameFits("token", "m15tokenartifacttext", "Artifact")).toBe(true);
+    expect(typeWordFrameFits("token", "m15tokentext", "Artifact")).toBe(false);
+    expect(framesForKind("token", keys()).map((c) => c.template)).toEqual(
+      expect.arrayContaining(["m15tokentext", "m15tokenartifacttext"]),
+    );
+  });
+
   it("Artifact → the artifact token frame; no Artifact → the plain one", () => {
     expect(typeWordFrameFor("token", "m15token", "Artifact")).toBe("m15tokenartifact");
     expect(typeWordFrameFor("token", "m15token", "Artifact Creature")).toBe("m15tokenartifact");

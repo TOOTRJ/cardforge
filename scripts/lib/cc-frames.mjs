@@ -41,6 +41,9 @@ const SNOW = "img/frames/m15/new/snow";
 const DEVOID = "img/frames/m15/devoid";
 const PW = "img/frames/planeswalker/regular";
 const TOKEN = "img/frames/token/m15/textless";
+/** CC 'Regular (Bordered M15)' — the 2014–19 arch token with a text box
+ *  (packTokenRegularM15.js; TODO 4.49 (b)). */
+const TOKEN_REG = "img/frames/token/m15/regular";
 
 /** A layer: a frame image, optionally shown only through a mask (its alpha),
  *  optionally at reduced opacity. */
@@ -81,6 +84,36 @@ const M15_INTERIOR_MASKS = [`${NEW}/rules.png`, `${NEW}/title.png`, `${NEW}/type
 /** CC's textless bordered token pack masks (packTokenTextlessM15.js). */
 const TOKEN_BASE_MASKS = [`${REG}/m15MaskBorder.png`, `${TOKEN}/frame.svg`];
 const TOKEN_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/tokenMaskTextlessType.png", `${TOKEN}/pinline.svg`];
+/** The same, from CC's regular (text-box) token pack (packTokenRegularM15.js:
+ *  Pinline, Frame, Title, Type, Rules, Border). A coloured artifact keeps the
+ *  silver box, as the text-box prints do (TC16 #9, TC18 #8 Thopter: a blue
+ *  pinline and pill on the silver frame and box): the box (Rules) is drawn
+ *  from the artifact frame with the border and frame, and the colour goes
+ *  through the textless recipe's Title + Type + Pinline. */
+const TOKEN_REG_RULES_MASK = "img/frames/token/tokenMaskRegularRules.png";
+const TOKEN_REG_BASE_MASKS = [`${REG}/m15MaskBorder.png`, `${TOKEN_REG}/frame.svg`, TOKEN_REG_RULES_MASK];
+const TOKEN_REG_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/tokenMaskRegularType.png", `${TOKEN_REG}/pinline.svg`];
+
+/**
+ * The re-cut of CC's text-box token masters (TODO 4.49 (b), "measure
+ * first"). CC's master draws the lower band ~3 %H above every print: the
+ * art window ends at 1340 px (63.9 %H) and the type pill's outline runs
+ * 1356–1477 (64.6–70.3 %H), where TDOM #2, TM19 #1, TC17 #9 and TWAR #16
+ * end the art at ~1404–1409 px and print the pill's outline at 1420–1540
+ * (Scryfall PNGs at 1500 × 2100; their title bars sit where CC's does,
+ * ±1 px). The band from the window's straight sides through the top of the
+ * text box moves down `shift` px as ONE piece — window edge, pill, box top,
+ * the frame beside them — and the rows it opens above are the window's
+ * straight sides again; the box keeps its bottom, so it is `shift` px
+ * shorter. Each seam is cross-faded over `blend` rows (premultiplied),
+ * inside the window's sides and inside the box, where the frame is a plain
+ * texture. 64 px (3.05 %H) puts the pill, the window edge and the box's top
+ * edge within 1 px of those prints; the alignment score (lib/frames/align.ts)
+ * over the 19 reference prints ties 62 and 64 px (94.5 %) and prefers 64 on
+ * the four ruler prints (95.1 %; CC as-is 93.1 %). Native px of the pack
+ * (1500 × 2100).
+ */
+export const TOKEN_REGULAR_RECUT = { fromY: 1240, toY: 1560, shift: 64, blend: 24 };
 
 const perColor = (fn, keys = COLORS) => Object.fromEntries(keys.map((k) => [k, fn(k)]));
 const WUBRGM = ["w", "u", "b", "r", "g", "m"];
@@ -114,13 +147,15 @@ const basics2022Frame = (k) => `${BASICS_2022}/${k === "c" ? "l" : k}.png`;
 const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${BASICS_2022}/s${k}.png`]));
 
 /**
- * template → { colors: colour → layers, plates?, symbols?, shield?,
+ * template → { colors: colour → layers, plates?, symbols?, shield?, recut?,
  * excluded?, pack?, transforms?, notes }.
  * `plates` are written at native size to <template>/pt/<colour>.png;
  * `symbols` (a basic land's mana-symbol disc, TODO 3.24) the same way to
  * <template>/symbol/<colour>.png, for the colours listed only.
  * `shield` cuts part of each built master out through a mask (its alpha)
  * into <template>/loyalty/<colour>.png, cropped to `box`.
+ * `recut` moves a band of each composite down before the downscale
+ * (recutBand; the text-box tokens, TOKEN_REGULAR_RECUT).
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
@@ -208,6 +243,48 @@ export const CC_TEMPLATES = {
     },
     notes: ["coloured artifact tokens = artifact token frame, colour pinline/title/type through CC's token masks"],
   },
+  // TODO 4.49 (b) — the 2014–19 arch token with a text box (CC 'Regular
+  // (Bordered M15)'), re-cut onto the prints (TOKEN_REGULAR_RECUT).
+  m15tokentext: {
+    colors: {
+      ...perColor((k) => [layer(`${TOKEN_REG}/${k}.png`)], WUBRGM),
+      // Built like m15token's `c`: printed colourless text-box tokens (BFZ /
+      // OGW Eldrazi Scion) are see-through over the art, the box too.
+      c: [
+        layer(`${TOKEN_REG}/a.png`, `${REG}/m15MaskBorder.png`),
+        layer(`${TOKEN_REG}/a.png`, `${TOKEN_REG}/frame.svg`, 0.35),
+        layer(`${TOKEN_REG}/a.png`, "img/frames/token/tokenMaskRegularType.png", 0.8),
+        layer(`${TOKEN_REG}/a.png`, TOKEN_REG_RULES_MASK, 0.8),
+        layer(`${TOKEN_REG}/a.png`, `${REG}/m15MaskTitle.png`),
+        layer(`${TOKEN_REG}/a.png`, `${TOKEN_REG}/pinline.svg`),
+      ],
+    },
+    recut: TOKEN_REGULAR_RECUT,
+    pack: "packTokenRegularM15.js 'Regular (Bordered M15)'",
+    transforms: recutTransform(TOKEN_REGULAR_RECUT),
+    notes: [
+      "source: CC 'Regular (Bordered M15)' — the arch token with a cream type pill and a text box, re-cut onto the prints (TODO 4.49 (b)): CC's lower band sits ~3 %H above TXLN #10, TDOM #2, TM19 #1 and TC17 #9",
+      "colourless = PipGlyph composite like m15token's: CC's silver token frame at 35 % (frame) / 80 % (type pill and text box) opacity over the art, as BFZ #2 / OGW #1 Eldrazi Scion print",
+    ],
+  },
+  // Its artifact dress (4.48's model, owner 2026-09-29: artifact tokens get
+  // their own templates), mirroring m15tokenartifact.
+  m15tokenartifacttext: {
+    colors: {
+      c: [layer(`${TOKEN_REG}/a.png`)],
+      ...perColor(
+        (k) => colouredArtifact(`${TOKEN_REG}/a.png`, `${TOKEN_REG}/${k}.png`, TOKEN_REG_BASE_MASKS, TOKEN_REG_INTERIOR_MASKS),
+        WUBRGM,
+      ),
+    },
+    recut: TOKEN_REGULAR_RECUT,
+    pack: "packTokenRegularM15.js 'Regular (Bordered M15)'",
+    transforms: recutTransform(TOKEN_REGULAR_RECUT),
+    notes: [
+      "source: CC 'Regular (Bordered M15)' Artifact Frame (a.png), re-cut onto the prints like m15tokentext (TODO 4.49 (b))",
+      "coloured artifact tokens = the silver token frame + border and box, the colour through CC's Title, Type and Pinline masks (TC16 #9, TC18 #8 Thopter print a blue pinline and pill on the silver frame and box)",
+    ],
+  },
   // 4.32 — the standard borderless frame (2019+): art to the card edge.
   m15borderless: {
     colors: perColor((k) => [layer(borderlessFrame(k))]),
@@ -264,6 +341,11 @@ export const CC_TEMPLATES = {
   },
 };
 
+/** How provenance describes a re-cut (TOKEN_REGULAR_RECUT). */
+function recutTransform(r) {
+  return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the top of the text box) moved down ${r.shift} px as one piece, the rows opened above them filled from the window's sides, each seam cross-faded over ${r.blend} rows (premultiplied); corners rounded to the importer radius`;
+}
+
 /** Templates deliberately NOT imported yet, and why. */
 export const CC_DEFERRED = {};
 
@@ -314,6 +396,45 @@ export function compositeLayers(images, width, height) {
     }
   }
   return acc;
+}
+
+/**
+ * Move a horizontal band of an 8-bit RGBA image down (TOKEN_REGULAR_RECUT):
+ * rows [fromY, toY) land `shift` px lower, the `shift` rows that opens at
+ * fromY repeat the rows just above it, and the rows below the moved band
+ * keep their place, so the band covers the top `shift` rows of what was
+ * below it. Each seam is cross-faded over `blend` rows in premultiplied
+ * space: at the top from the original rows into the repeated ones, at the
+ * bottom from the moved rows into the original ones. Returns a new buffer.
+ */
+export function recutBand(buf, width, height, { fromY, toY, shift, blend }) {
+  if (!(shift > 0) || !(fromY >= shift) || !(toY > fromY) || toY + shift > height || !(blend >= 0)) {
+    throw new Error(`recutBand: bad band ${JSON.stringify({ fromY, toY, shift, blend, height })}`);
+  }
+  const out = Buffer.from(buf);
+  const row = width * 4;
+  const mix = (y, a, b, t) => {
+    // premultiplied lerp of row a (weight 1 − t) and row b (weight t) into y
+    for (let x = 0; x < width; x += 1) {
+      const ia = a * row + x * 4;
+      const ib = b * row + x * 4;
+      const o = y * row + x * 4;
+      const aa = (buf[ia + 3] / 255) * (1 - t);
+      const ab = (buf[ib + 3] / 255) * t;
+      const alpha = aa + ab;
+      for (let c = 0; c < 3; c += 1) {
+        out[o + c] = alpha === 0 ? 0 : Math.round((buf[ia + c] * aa + buf[ib + c] * ab) / alpha);
+      }
+      out[o + 3] = Math.round(alpha * 255);
+    }
+  };
+  for (let y = fromY; y < toY + shift; y += 1) {
+    const src = y - shift;
+    if (y < fromY + blend) mix(y, y, src, (y - fromY + 1) / (blend + 1));
+    else if (y >= toY + shift - blend) mix(y, src, y, (y - (toY + shift - blend) + 1) / (blend + 1));
+    else buf.copy(out, y * row, src * row, (src + 1) * row);
+  }
+  return out;
 }
 
 /** Alpha out everything outside a rounded rectangle (1 px anti-aliased). */

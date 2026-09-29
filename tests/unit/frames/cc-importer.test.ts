@@ -8,10 +8,12 @@ import {
   COLORS,
   CORNER_RADIUS,
   SHIELD_BOX,
+  TOKEN_REGULAR_RECUT,
   builtColors,
   compositeLayers,
   cutThroughMask,
   describeLayer,
+  recutBand,
   roundCorners,
   roundCornersRgba8,
   sourceFilesFor,
@@ -38,6 +40,7 @@ type Def = {
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
+  recut?: typeof TOKEN_REGULAR_RECUT;
   excluded?: Record<string, string>;
   pack?: string;
   transforms?: string;
@@ -61,6 +64,8 @@ describe("Card Conjurer recipe", () => {
       "m15snowland",
       "m15token",
       "m15tokenartifact",
+      "m15tokenartifacttext",
+      "m15tokentext",
     ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -99,6 +104,46 @@ describe("Card Conjurer recipe", () => {
     for (const layer of templates.m15token.colors.w) expect(layer.src).toMatch(/^img\/frames\/token\/m15\/textless\//);
   });
 
+  it("sources the text-box tokens from CC's 'Regular (Bordered M15)' pack, re-cut onto the prints (TODO 4.49 (b))", () => {
+    for (const template of ["m15tokentext", "m15tokenartifacttext"]) {
+      const def = templates[template];
+      for (const k of COLORS) {
+        for (const l of def.colors[k]) expect(l.src, `${template}/${k}`).toMatch(/^img\/frames\/token\/m15\/regular\/[wubrgma]\.png$/);
+      }
+      // The lower band 64 px down (3.05 %H): the prints end the art ~64 px
+      // below CC's master and print the pill and box as much lower.
+      expect(def.recut, template).toEqual({ fromY: 1240, toY: 1560, shift: 64, blend: 24 });
+      expect(def.pack).toBe("packTokenRegularM15.js 'Regular (Bordered M15)'");
+      expect(def.transforms).toMatch(/re-cut: rows 1240–1559 .* moved down 64 px/);
+    }
+    // No other template is re-cut.
+    for (const [template, def] of Object.entries(templates)) {
+      if (!template.endsWith("text")) expect(def.recut, template).toBeUndefined();
+    }
+    // The colourless text-box token is see-through like m15token's, its box
+    // too (BFZ #2 / OGW #1 Eldrazi Scion); border, title and pinline opaque.
+    const c = templates.m15tokentext.colors.c;
+    expect(c.every((l) => l.src.endsWith("token/m15/regular/a.png"))).toBe(true);
+    expect(c.find((l) => l.mask?.endsWith("frame.svg"))?.opacity).toBe(0.35);
+    expect(c.find((l) => l.mask?.endsWith("tokenMaskRegularType.png"))?.opacity).toBe(0.8);
+    expect(c.find((l) => l.mask?.endsWith("tokenMaskRegularRules.png"))?.opacity).toBe(0.8);
+    for (const opaque of ["m15MaskBorder.png", "m15MaskTitle.png", "pinline.svg"]) {
+      expect(c.find((l) => l.mask?.endsWith(opaque))?.opacity, opaque).toBeUndefined();
+    }
+    // A coloured artifact keeps the SILVER box (TC16 #9, TC18 #8): the box
+    // is the artifact frame's, the colour through title, type and pinline.
+    const u = templates.m15tokenartifacttext.colors.u;
+    expect(u.map((l) => [l.src.split("/").pop(), l.mask?.split("/").pop()])).toEqual([
+      ["a.png", "m15MaskBorder.png"],
+      ["a.png", "frame.svg"],
+      ["a.png", "tokenMaskRegularRules.png"],
+      ["u.png", "m15MaskTitle.png"],
+      ["u.png", "tokenMaskRegularType.png"],
+      ["u.png", "pinline.svg"],
+    ]);
+    expect(templates.m15tokenartifacttext.colors.c).toEqual([{ src: "img/frames/token/m15/regular/a.png" }]);
+  });
+
   it("imports the see-through frames now that art runs under the frame (4.17, owner decision)", () => {
     expect(builtColors(templates.m15 as never)).toContain("c");
     expect(templates.m15.colors.c[0].src).toBe("img/frames/m15/new/c.png");
@@ -117,7 +162,7 @@ describe("Card Conjurer recipe", () => {
 
   it("writes down every colourless substitution", () => {
     for (const template of [
-      "m15land", "m15snow", "m15pw", "m15token", "m15devoid",
+      "m15land", "m15snow", "m15pw", "m15token", "m15tokentext", "m15devoid",
       "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland",
     ]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
@@ -204,6 +249,71 @@ describe("Card Conjurer recipe", () => {
 
 describe("pixel operations", () => {
   const px = (r: number, g: number, b: number, a: number) => [r, g, b, a];
+
+  describe("recutBand (TODO 4.49 (b)'s re-cut)", () => {
+    /** A 1-px-wide column of rows, each row's red = its index, alpha 255
+     *  (rows ≥ 200 would overflow: callers keep H ≤ 200). */
+    const column = (h: number, alphaAt?: (y: number) => number) => {
+      const buf = Buffer.alloc(h * 4);
+      for (let y = 0; y < h; y += 1) buf.set([y, 0, 0, alphaAt ? alphaAt(y) : 255], y * 4);
+      return buf;
+    };
+    const red = (buf: Buffer, y: number) => buf[y * 4];
+
+    it("moves the band down, repeats the rows above it into the gap and keeps everything below", () => {
+      const out = recutBand(column(40), 1, 40, { fromY: 10, toY: 20, shift: 5, blend: 0 });
+      // Above the band: untouched.
+      for (let y = 0; y < 10; y += 1) expect(red(out, y), `row ${y}`).toBe(y);
+      // The opened rows repeat the 5 rows above the band; the band (rows
+      // 10–19) follows, 5 rows lower.
+      expect(Array.from({ length: 15 }, (_, i) => red(out, 10 + i))).toEqual([
+        5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+      ]);
+      // Below the moved band: untouched — the rows it now covers (20–24)
+      // are gone.
+      for (let y = 25; y < 40; y += 1) expect(red(out, y), `row ${y}`).toBe(y);
+    });
+
+    it("cross-fades each seam over `blend` rows, premultiplied", () => {
+      const out = recutBand(column(60), 1, 60, { fromY: 20, toY: 30, shift: 10, blend: 3 });
+      // Top seam: row 20 + i mixes the original row (weight 1 − t) and the
+      // repeated one (row 10 + i, weight t), t = (i + 1) / 4.
+      expect([20, 21, 22].map((y) => red(out, y))).toEqual([
+        Math.round(20 * 0.75 + 10 * 0.25),
+        Math.round(21 * 0.5 + 11 * 0.5),
+        Math.round(22 * 0.25 + 12 * 0.75),
+      ]);
+      expect(red(out, 23)).toBe(13);
+      // Bottom seam (rows 37–39): the moved row into the original one.
+      expect([37, 38, 39].map((y) => red(out, y))).toEqual([
+        Math.round(27 * 0.75 + 37 * 0.25),
+        Math.round(28 * 0.5 + 38 * 0.5),
+        Math.round(29 * 0.25 + 39 * 0.75),
+      ]);
+      expect(red(out, 40)).toBe(40);
+    });
+
+    it("blends colour by alpha, so a transparent row adds no colour", () => {
+      // Rows 0–9 transparent black, rows ≥ 10 opaque: the top seam at 10
+      // mixes opaque row 10 with transparent row 5 → its own red, half alpha.
+      const src = column(40, (y) => (y < 10 ? 0 : 255));
+      for (let y = 0; y < 10; y += 1) src[y * 4] = 0;
+      const out = recutBand(src, 1, 40, { fromY: 10, toY: 20, shift: 5, blend: 1 });
+      expect([out[40], out[43]]).toEqual([10, 128]);
+    });
+
+    it("refuses a band that doesn't fit", () => {
+      expect(() => recutBand(column(40), 1, 40, { fromY: 10, toY: 38, shift: 5, blend: 0 })).toThrow(/bad band/);
+      expect(() => recutBand(column(40), 1, 40, { fromY: 2, toY: 20, shift: 5, blend: 0 })).toThrow(/bad band/);
+    });
+
+    it("never touches the source buffer", () => {
+      const src = column(40);
+      const copy = Buffer.from(src);
+      recutBand(src, 1, 40, { fromY: 10, toY: 20, shift: 5, blend: 2 });
+      expect(src.equals(copy)).toBe(true);
+    });
+  });
 
   it("shows an upper layer only through its mask's ALPHA — mask colour is irrelevant (CC's source-in)", () => {
     // 2×1: red base; blue overlay through a mask that is opaque RED at x=0
@@ -378,7 +488,7 @@ describe("provenance and hygiene", () => {
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");
     // The later runs name their pack and what was done to its pixels.
-    for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"]) {
+    for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland", "m15tokentext", "m15tokenartifacttext"]) {
       expect(provenance[template].pack, template).toBe(templates[template].pack);
       expect(provenance[template].transforms, template).toMatch(/no resample/);
       expect(provenance[template].sourceFiles, template).toEqual(sourceFilesFor(templates[template] as never));
@@ -387,6 +497,11 @@ describe("provenance and hygiene", () => {
     expect(provenance.fullartland.colors.w).toEqual([
       "img/frames/textless/2022/w.png outside img/frames/textless/2022/maskBorder.png",
     ]);
+    // The text-box tokens record their re-cut (TODO 4.49 (b)).
+    for (const template of ["m15tokentext", "m15tokenartifacttext"]) {
+      expect(provenance[template].recut, template).toEqual(TOKEN_REGULAR_RECUT);
+    }
+    expect(provenance.m15token.recut).toBeUndefined();
   });
 
   it("never commits the build folder", () => {

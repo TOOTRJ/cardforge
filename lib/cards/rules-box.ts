@@ -102,6 +102,7 @@ function fitSlot(
       lineHeight: slot.lineHeight,
       padPx: slot.padPx ?? defaults.pad,
       vAlign: slot.vAlign ?? "start",
+      ...(slot.alignSingleLine ? { alignSingleLine: slot.alignSingleLine } : {}),
       divider: layout.flavorDivider !== false,
       keepOuts: rulesKeepOuts(drawnStatInk(layout, show, aspect), slot.rect, defaults.rotation, aspect),
     }),
@@ -177,6 +178,11 @@ export type RulesDrawBlock =
       bar: { above: number; below: number; thickness: number } | null;
       /** Each line's runs. */
       lines: RulesItem[][][];
+      /** Each line's indent from the column's left edge (px at the
+       *  target): 0, or a centred single line's (TextSlot.alignSingleLine,
+       *  TODO 4.49 (b)). Both renderers draw a non-zero one as the line's
+       *  left margin. */
+      indents: number[];
     }
   | { kind: "blank"; marginTop: number; height: number };
 
@@ -223,7 +229,7 @@ export function rulesDraw(layout: RulesLayout, target: RulesTarget): RulesDraw {
         : null;
     const marginTop = bar ? 0 : gap(top, bottom);
     bottom = lines[lines.length - 1].top + m.linePx;
-    return { kind: b.kind, marginTop, bar, lines: b.lines.map((l) => l.runs) };
+    return { kind: b.kind, marginTop, bar, lines: b.lines.map((l) => l.runs), indents: lines.map((l) => l.indent) };
   });
   return {
     target,

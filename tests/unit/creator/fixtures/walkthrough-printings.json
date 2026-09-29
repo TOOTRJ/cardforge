@@ -408,5 +408,72 @@
       "nonfoil"
     ],
     "scryfall_uri": "https://scryfall.com/card/tkld/2/construct"
+  },
+  "tdom-2": {
+    "id": "cc7d137c-f6c0-44e5-af9f-a8bbd52d3b2a",
+    "oracle_id": "340aaeb6-cd18-4908-9729-8c53ab02c6f8",
+    "name": "Knight",
+    "released_at": "2018-04-27",
+    "layout": "token",
+    "set": "tdom",
+    "set_name": "Dominaria Tokens",
+    "set_type": "token",
+    "collector_number": "2",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Vigilance"
+    ],
+    "type_line": "Token Creature — Knight",
+    "mana_cost": "",
+    "oracle_text": "Vigilance",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Tyler Walpole",
+    "finishes": [
+      "nonfoil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tdom/2/knight?utm_source=api"
+  },
+  "txln-7": {
+    "id": "720f3e68-84c0-462e-a0d1-90236ccc494a",
+    "oracle_id": "3c549374-6c37-42e0-8d88-a8555d46732d",
+    "name": "Treasure",
+    "released_at": "2017-09-29",
+    "layout": "token",
+    "set": "txln",
+    "set_name": "Ixalan Tokens",
+    "set_type": "token",
+    "collector_number": "7",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "setpromo"
+    ],
+    "keywords": [],
+    "type_line": "Token Artifact — Treasure",
+    "mana_cost": "",
+    "oracle_text": "{T}, Sacrifice this token: Add one mana of any color.",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Florian de Gesincourt",
+    "finishes": [
+      "nonfoil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/txln/7/treasure?utm_source=api"
   }
 }

@@ -155,6 +155,11 @@ describe("full-art and textless families (TODO 1.19)", () => {
     ["trk-392", "unsupported", "m15land", undefined],
     // Tokens: the 2015 full-art token IS m15token; older ones are 4.43's.
     ["t2xm-4", "exact", "m15token", undefined],
+    // A 2014–19 token that prints text wears the text-box arch (TODO 4.49
+    // (b)): TDOM #2 Knight "Vigilance"; TXLN #7 Treasure its artifact dress.
+    // Exact here; withVerification makes it nearest until it is verified.
+    ["tdom-2", "exact", "m15tokentext", undefined],
+    ["txln-7", "exact", "m15tokenartifacttext", undefined],
     ["tlrw-3", "nearest", "m15token", undefined],
     ["tzen-3", "nearest", "m15token", undefined],
     // Japan showcase (black and white border).

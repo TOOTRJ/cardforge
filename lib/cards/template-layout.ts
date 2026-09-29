@@ -145,6 +145,15 @@ export type TextSlot = {
    *  hold the textbox border, SPLIT_RULES_PAD_PX). Code-owned: not part of
    *  the override schema. */
   padPx?: { x: number; y: number } | { left: number; right: number; top: number; bottom: number };
+  /** RULES boxes only (TODO 4.49 (b)): "center" sets the text centred on
+   *  its line when the shared wrap (lib/cards/rules-layout.ts) gives ONE
+   *  line in all — rules text only, no flavor — as the token prints do
+   *  ("Vigilance", TDOM #2; "Flying, vigilance", TM19 #1); two or more
+   *  lines start at the box's left, as ever. The layout places the line
+   *  (its whole-px indent at each target), so both renderers draw it where
+   *  the fit checked it. Unset: every line starts at the left (every
+   *  profile before 4.49 (b)). Code-owned: not part of the override schema. */
+  alignSingleLine?: "center";
 };
 
 /** TextSlot.fit's policies. */
@@ -1304,6 +1313,62 @@ const M15TOKEN: FrameProfile = {
   // value box (4.18), its ink span, size and dark ink; the plate masters are
   // M15's own (m15/pt, and m15artifact/pt on the artifact token below).
   pt: { ...M15.pt! },
+};
+
+// M15 Token with a text box — TODO 4.49 (b): Card Conjurer 'Regular
+// (Bordered M15)' (packTokenRegularM15.js), re-cut onto the prints by the
+// importer (scripts/lib/cc-frames.mjs TOKEN_REGULAR_RECUT: the lower band
+// 64 px down). The same arch, title bar, P/T plate and footer as M15TOKEN;
+// the window ends at 1404 px (66.9 %H) and the type pill sits 292 px above
+// the textless one, over a cream text box (74.2–92.7 %H) that replaces the
+// scrim over the art — the prints: TDOM #2 Knight, TM19 #1 Angel, TC17 #9
+// Cat Dragon, TXLN #7 / #10 Treasure, TC16 #9 Thopter.
+/** How far the text-box token's pill sits above the textless one's: 292 px
+ *  at HD (1712 → 1420 px, the pill's top outline; the prints' 1420–1422),
+ *  in %H. */
+const TOKEN_TEXT_PILL_UP_PCT = (292 / 2100) * 100;
+/** Twelve 2014–19 text-box prints set the type line's baseline at 1500 px
+ *  (the "Token" ink ends 1498–1505, mean 1501.6, Scryfall PNGs at 1500 ×
+ *  2100): 8 px higher against the pill than the textless prints' 1800, so
+ *  the text rises 8 px at HD after the band moves up with the pill (a
+ *  fraction of card WIDTH, dy's unit). */
+const TOKEN_TEXT_TYPE_PRINT_DY = -8 / 1500;
+const M15TOKENTEXT: FrameProfile = {
+  ...M15TOKEN,
+  label: "M15 Token, text box",
+  // The re-cut window runs 111–1389 px across and ends at 1408 px (the `c`
+  // composite; 1404 on the opaque masters): M15TOKEN's slot, ending 3 px
+  // below it (7.6's overscan).
+  artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 55.2 },
+  // CC's setSymbolBounds (y 0.6743, centre) moved down with the band:
+  // centred 70.48 %H on the pill, right edge 92.13 %W as on M15TOKEN.
+  symbolRect: { ...M15TOKEN.symbolRect!, topPct: M15TOKEN.symbolRect!.topPct - TOKEN_TEXT_PILL_UP_PCT },
+  // M15TOKEN's band on the pill, 292 px up (the pill's interior 1424–1530
+  // px), left-aligned from 8.54 %W; the text 8 px higher to the prints'
+  // baseline.
+  type: {
+    ...M15TOKEN.type,
+    rect: { ...M15TOKEN.type.rect, topPct: M15TOKEN.type.rect.topPct - TOKEN_TEXT_PILL_UP_PCT },
+    dy: M15TOKEN.type.dy! + TOKEN_TEXT_TYPE_PRINT_DY,
+  },
+  // CC's rules box (8.6 / 71.43 / 82.8 × 20.48) with its top moved down
+  // with the band (1564 px), 5 px inside the drawn box (1559–1947 px) at
+  // both ends — CC's ended at 1930, so a centred line sat 5 px above the
+  // prints' (their single lines centre on 1751–1753, the drawn box's
+  // centre). Dark ink on the cream box, no scrim, the text centred in the
+  // box and ONE line centred on it (the prints: "Vigilance" TDOM #2,
+  // "Flying" TC17 #9, "This creature is all colors." TWAR #16); two or more
+  // lines start at the left (TWAR #6, TM19 #9, TXLN #7). The prints' ink
+  // runs x 130–1372: 2 px of padding either side.
+  rules: {
+    rect: { topPct: 74.48, leftPct: 8.6, widthPct: 82.8, heightPct: 18 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    alignSingleLine: "center",
+    font: "body",
+    padPx: { x: 2, y: 0 },
+  },
 };
 
 // M15 Snow (Kaldheim/Coldsnap frosty frame) and M15 Devoid (Eldrazi washed-out
@@ -2698,6 +2763,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15TOKEN,
     label: "M15 Artifact Token",
     pt: { ...M15TOKEN.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+  },
+  // TODO 4.49 (b): the text-box token; its colourless master is see-through
+  // like m15token's (BFZ #2 / OGW #1 Eldrazi Scion), the artifact dress's
+  // silver (TXLN #7 Treasure) and its plates M15's artifact set.
+  m15tokentext: { ...M15TOKENTEXT, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  m15tokenartifacttext: {
+    ...M15TOKENTEXT,
+    label: "M15 Artifact Token, text box",
+    pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,

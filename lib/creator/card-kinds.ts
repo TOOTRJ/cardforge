@@ -611,11 +611,15 @@ export function followTokenName(input: {
 // chip is no longer a choice of its own (stored cards keep their template).
 // Keyed by kind, then by the base frame the word re-dresses. Enchantment's
 // Nyx dress joins here with 4.51; the full-art family's artifact templates
-// with 4.48 / 4.50.
+// with 4.48 / 4.50. The text-box token (4.49 (b)) has its own artifact
+// dress, as the textless one does.
 const TYPE_WORD_DRESSES: Partial<
   Record<CardKind, Partial<Record<FrameTemplate, { word: TokenTypeWord; template: FrameTemplate }>>>
 > = {
-  token: { m15token: { word: "Artifact", template: "m15tokenartifact" } },
+  token: {
+    m15token: { word: "Artifact", template: "m15tokenartifact" },
+    m15tokentext: { word: "Artifact", template: "m15tokenartifacttext" },
+  },
 };
 
 /** True when the template is a frame this kind wears by type word (the
@@ -628,10 +632,10 @@ export function isTypeWordDress(kind: CardKind, template: FrameTemplate): boolea
 
 /**
  * The frame the type words pick for a card on `template`: on a base with a
- * type-word dress (m15token) or on the dress itself, the dress when the
- * supertype says its word (an Artifact token → m15tokenartifact) and the
- * base otherwise; any other template is returned as it is (a token on the
- * Classic or a showcase frame keeps it).
+ * type-word dress (m15token, m15tokentext) or on the dress itself, the dress
+ * when the supertype says its word (an Artifact token → m15tokenartifact,
+ * m15tokenartifacttext) and the base otherwise; any other template is
+ * returned as it is (a token on the Classic or a showcase frame keeps it).
  */
 export function typeWordFrameFor(
   kind: CardKind,

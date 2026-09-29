@@ -160,10 +160,20 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
   return { status: "unavailable" };
 }
 
+/** The textless token frame a text-box token frame falls back to while it
+ *  isn't published in the card's colour (TODO 4.49 (b)): the same arch and
+ *  artifact dress, the text on the scrim as before — never the plain token
+ *  frame for a Treasure. */
+const TEXT_BOX_TOKEN_FALLBACK: Partial<Record<FrameTemplate, FrameTemplate>> = {
+  m15tokentext: "m15token",
+  m15tokenartifacttext: "m15tokenartifact",
+};
+
 /** The frames a Scryfall import asks resolvePublishedFrame for, most wanted
- *  first: the printing's own frame, its era's standard for the card type,
- *  then the M15 standard. An Artifact Creature asks for M15's artifact frame
- *  before the plain one (TODO 1.7), so a Juggernaut whose Alpha frame isn't
+ *  first: the printing's own frame (a text-box token's textless dress next,
+ *  TEXT_BOX_TOKEN_FALLBACK), its era's standard for the card type, then the
+ *  M15 standard. An Artifact Creature asks for M15's artifact frame before
+ *  the plain one (TODO 1.7), so a Juggernaut whose Alpha frame isn't
  *  published falls forward to the artifact card it is, not a grey spell. */
 export function importFrameCandidates(input: {
   wanted: FrameTemplate;
@@ -177,6 +187,7 @@ export function importFrameCandidates(input: {
     new Set(
       [
         wanted,
+        TEXT_BOX_TOKEN_FALLBACK[wanted] ?? null,
         standardFrameFor(eraForTemplate(wanted), cardType),
         artifactCreature ? ("m15artifact" as const) : null,
         standardFrameFor("m15", cardType),

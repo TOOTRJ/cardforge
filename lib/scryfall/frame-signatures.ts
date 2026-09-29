@@ -369,6 +369,26 @@ const layoutTemplateOf = (kind: CardKind | undefined): FrameTemplate | null =>
 const isArtifactCreature = (facts: PrintingFacts) =>
   facts.kind === "creature" && facts.cardTypes.has("artifact");
 
+/** True when the printing's front face prints rules or flavour text — a
+ *  2014–19 token with a text box (TODO 4.49 (b): TDOM #2 "Vigilance", TXLN
+ *  #7 Treasure), where a vanilla one prints none (TDOM #3 Soldier). */
+export function printsTokenTextBox(card: Pick<ScryfallCard, "oracle_text" | "flavor_text" | "card_faces">): boolean {
+  const face = card.card_faces?.[0];
+  const text = (face ? face.oracle_text : card.oracle_text) ?? "";
+  const flavor = (face ? face.flavor_text : card.flavor_text) ?? "";
+  return text.trim() !== "" || flavor.trim() !== "";
+}
+
+/** The 2014–19 arch token a token printing wears: its artifact dress for an
+ *  Artifact (1.3), and the text-box variation when it prints text (4.49
+ *  (b)). */
+function archTokenFrame(ctx: Ctx): FrameTemplate {
+  const artifact = ctx.facts.cardTypes.has("artifact");
+  const text = printsTokenTextBox(ctx.card);
+  if (artifact) return text ? "m15tokenartifacttext" : "m15tokenartifact";
+  return text ? "m15tokentext" : "m15token";
+}
+
 const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
@@ -378,19 +398,22 @@ const FAMILIES: Record<
   // land is the snow land frame, a snow spell or snow ARTIFACT the snow frame
   // (Replicating Ring KHM #244 prints it; the Artifact kind can't take it
   // yet, so the kind check lands it on m15artifact), an Artifact Creature
-  // the artifact frame, an artifact token the artifact token frame.
+  // the artifact frame, an artifact token the artifact token frame — and a
+  // token that prints text the text-box token frame (4.49 (b)).
   m15: {
     produces: [
       "saga", "adventure", "split", "aftermath", "flip", "m15token",
-      "m15tokenartifact", "m15land", "m15snowland", "m15pw", "battle",
-      "m15snow", "m15devoid", "m15artifact", "m15",
+      "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "m15land",
+      "m15snowland", "m15pw", "battle", "m15snow", "m15devoid", "m15artifact",
+      "m15",
     ],
-    pick: ({ facts, effects }) => {
+    pick: (ctx) => {
+      const { facts, effects } = ctx;
       const layout = layoutTemplateOf(facts.kind);
       if (layout) return layout;
       switch (facts.kind) {
         case "token":
-          return facts.cardTypes.has("artifact") ? "m15tokenartifact" : "m15token";
+          return archTokenFrame(ctx);
         case "land":
           return effects.has("snow") ? "m15snowland" : "m15land";
         case "planeswalker":

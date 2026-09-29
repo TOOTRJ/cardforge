@@ -2393,7 +2393,7 @@ function RulesBox({
               }}
             >
               {b.lines.map((runs, li) => (
-                <RulesBoxLine key={li} runs={runs} d={d} hd={hd} overrides={overrides} />
+                <RulesBoxLine key={li} runs={runs} indent={b.indents[li]} d={d} hd={hd} overrides={overrides} />
               ))}
             </div>
           ),
@@ -2403,14 +2403,18 @@ function RulesBox({
   );
 }
 
-// One drawn line: a nowrap row of runs, the line box tall, runs centred on it.
+// One drawn line: a nowrap row of runs, the line box tall, runs centred on it
+// — indented from the column's left by the layout's whole px when it is a
+// centred single line (TextSlot.alignSingleLine), as the bake draws it.
 function RulesBoxLine({
   runs,
+  indent,
   d,
   hd,
   overrides,
 }: {
   runs: RulesItem[][];
+  indent: number;
   d: RulesDraw;
   hd: (px: number) => string;
   overrides: PipOverrides | null;
@@ -2426,6 +2430,7 @@ function RulesBoxLine({
         alignItems: "center",
         height: hd(d.linePx),
         flexShrink: 0,
+        ...(indent > 0 ? { marginLeft: hd(indent) } : {}),
       }}
     >
       {runs.map((run, ri) => (
