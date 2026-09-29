@@ -141,9 +141,10 @@ export type TextSlot = {
    *  default (lib/cards/rules-box.ts): RULES_BOX_PAD_PX (9 / 18, the old
    *  0.6 % / 1.2 %) on a main box, the adventure page's and a second face's
    *  own. M15 sets the prints' margins, 4 / 0: its printed text runs to
-   *  within a few px of the box. Code-owned: not part of the override
-   *  schema. */
-  padPx?: { x: number; y: number };
+   *  within a few px of the box; split gives each side its own (its boxes
+   *  hold the textbox border, SPLIT_RULES_PAD_PX). Code-owned: not part of
+   *  the override schema. */
+  padPx?: { x: number; y: number } | { left: number; right: number; top: number; bottom: number };
 };
 
 /** TextSlot.fit's policies. */
@@ -1896,6 +1897,25 @@ const FLIP: FrameProfile = {
 // color (the app has one color identity, so a two-color split renders multicolor
 // on both halves). Frame composited from two MSE half-frames by
 // scripts/build-split-frame.mjs. Geometry is the MSE 523×375 spec in percent.
+//
+// The rules rects span each half's art-window width, so the frame's textbox
+// border lies INSIDE them: at its widest the cream starts 33 HD px inside a
+// rect's left edge and ends 38 px inside its right, on both halves of every
+// colour master (tests/unit/cards/rules-box.test.ts measures them). The text
+// keeps the padding of the MSE split style the frame comes from (6 / 4 of
+// its 523 px card: 24 / 16 HD px) inside that border — the first v33 cut
+// set it on the gold (an italic "f" crossed into the black frame). Both halves
+// keep the front box's 18 px above and below (the right half had a second
+// face's 12), so their first lines sit level. The boxes themselves (the
+// clip, the watermark centred in them) stay where they were.
+export const SPLIT_TEXTBOX_BORDER_PX = { left: 33, right: 38 } as const;
+const SPLIT_RULES_PAD_PX = {
+  left: SPLIT_TEXTBOX_BORDER_PX.left + 24,
+  right: SPLIT_TEXTBOX_BORDER_PX.right + 16,
+  top: 18,
+  bottom: 18,
+} as const;
+
 const SPLIT: FrameProfile = {
   label: "Split",
   orientation: "landscape",
@@ -1924,6 +1944,7 @@ const SPLIT: FrameProfile = {
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
+    padPx: SPLIT_RULES_PAD_PX,
   },
   secondFace: {
     rotation: 0,
@@ -1949,6 +1970,7 @@ const SPLIT: FrameProfile = {
       colorHex: INK_DARK,
       vAlign: "start",
       font: "body",
+      padPx: SPLIT_RULES_PAD_PX,
     },
   },
 };

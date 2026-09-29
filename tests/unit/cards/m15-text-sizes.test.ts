@@ -318,7 +318,15 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     const size = (slot: TextSlot): TextSlot => {
       const v31 = V31_RULES_SIZE.get(slot.sizePct);
       expect(v31, `rules size ${slot.sizePct}`).toBeDefined();
-      return { ...slot, sizePct: v31! };
+      // v33 also pads split's two rules boxes past the textbox border they
+      // hold (the text moves, no slot does); no other frame outside the
+      // family carries a rules padding.
+      const { padPx, ...rest } = slot;
+      if (padPx) {
+        expect(p.label).toBe("Split");
+        expect(padPx).toEqual({ left: 57, right: 54, top: 18, bottom: 18 });
+      }
+      return { ...rest, sizePct: v31! };
     };
     return {
       ...p,
@@ -328,7 +336,7 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     };
   };
 
-  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling", () => {
+  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling (and split's rules padding)", () => {
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {

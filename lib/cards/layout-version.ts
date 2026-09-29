@@ -407,7 +407,10 @@ import type { CardType } from "@/types/card";
 //            * M15 and its skins print to the prints' margins (4 / 0 HD px,
 //              was 9 / 18); every other box keeps 9 / 18 HD px on both
 //              orientations (a landscape box's was 40 % more), the adventure
-//              page 9 / 15, a second face 18 / 12;
+//              page 9 / 15, a second face 18 / 12; split's halves, whose
+//              boxes hold the frame's textbox border, 24 / 16 HD px inside
+//              that border (the MSE split style's margins — the first cut
+//              set an italic "f" on the gold);
 //            * the bake's flavor hairline is a 1 px box, not a border: Satori
 //              clips a border with a clip path of its own, so on text
 //              clipped at the floor the bar escaped the box and drew a line
@@ -415,7 +418,10 @@ import type { CardType } from "@/types/card";
 //            * the tokenizer glues only what touches: "{B} equal" and
 //              "(remix) deals" were drawn "ⓑequal", "(remix)deals" (54 of the
 //              731 public cards measured), and "{T}:" inside a reminder now
-//              stays whole (16 more);
+//              stays whole (16 more); a lone em dash after a word ("choose
+//              one —", "Landfall —") never starts a line — it breaks with
+//              its word, as the vow-63 print sets "choose up to" / "one —"
+//              (no current card had one);
 //            * ability words refreshed from Scryfall's catalog (TODO 1.13,
 //              the committed fixture of 2026-09-28: 48 → 69 words — Eerie,
 //              Void, Survival… — "Descend 4" and a curly apostrophe read);
@@ -448,9 +454,10 @@ import type { CardType } from "@/types/card";
 //            land's (it prints none). "sweep" (owner decision
 //            2026-09-28). VERIFICATION-NEUTRAL (owner decision 2026-09-28): no
 //            slot, bar or rect moves, but text inside the rules boxes does
-//            (M15's box padding, walker row edges and badges, split's right
-//            half honouring vAlign), so the alignment scores stored with
-//            frame_reviews ticks would change on a re-score; the round-9
+//            (M15's box padding, walker row edges and badges, split's
+//            halves padded past their border and the right one honouring
+//            vAlign), so the alignment scores stored with frame_reviews
+//            ticks would change on a re-score; the round-9
 //            print sign-off stands in for re-ticking.
 // ---------------------------------------------------------------------------
 

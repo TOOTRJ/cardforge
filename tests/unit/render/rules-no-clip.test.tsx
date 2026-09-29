@@ -283,8 +283,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   ],
   // The shorter boxes: level-up's seven paragraphs too.
   [["avatar/main", "battle/main", "bloomburrow/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
-  [["split/main"], ["1200 chars", "EOE #30", "TLA #112", "level up"]],
-  [["split/second face"], ["1200 chars", "EOE #30", "level up"]],
+  // Split's halves set their text inside the textbox border their boxes
+  // hold (SPLIT_TEXTBOX_BORDER_PX): 400 characters no longer fit either.
+  [["split/main", "split/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   [["aftermath/second face"], ["1200 chars", "EOE #30"]],
   [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112"]],
   [["adventure/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],

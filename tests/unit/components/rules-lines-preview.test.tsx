@@ -5,10 +5,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { mainRulesLayout, rulesDraw, secondFaceRulesLayout, type DrawnStats } from "@/lib/cards/rules-box";
 import { wordWidthPx, type RulesLayout } from "@/lib/cards/rules-layout";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile } from "@/lib/cards/template-layout";
 import { PLACEHOLDER_FLAVOR_TEXT, PLACEHOLDER_RULES_TEXT, RULES_HD_WIDTH } from "@/lib/cards/typography";
 import type { FrameTemplate } from "@/types/card";
-import { EOE_30, RULES_MATRIX, TLA_112 } from "@/tests/unit/cards/fixtures/rules-texts";
+import { EOE_30, RULES_MATRIX, TLA_112, VOW_63 } from "@/tests/unit/cards/fixtures/rules-texts";
 
 // ---------------------------------------------------------------------------
 // The preview half of the v33 rules drawing (TODO 3.29): CardPreview draws
@@ -202,6 +202,39 @@ describe("CardPreview — rules lines", () => {
       expectDrawn(box, layout, template);
       unmount();
     }
+  });
+
+  it("pads both split halves past the frame's textbox border, as the bake does", () => {
+    const back = { title: "Ribbons", cost: "{X}{B}{B}", card_type: "sorcery" as const, rules_text: "Aftermath (Cast this spell only from your graveyard. Then exile it.)" };
+    const front = "(from your graveyard) Cut deals 4 damage to target creature.";
+    const { container } = render(<CardPreview {...creature("split", front)} cardType="sorcery" backFace={back} />);
+    const p = getFrameProfile("split");
+    const halves = [
+      [mainRulesLayout({ layout: p, rulesText: front, aspect: 5 / 7, show: {} }), "(from"],
+      [secondFaceRulesLayout({ layout: p, rulesText: back.rules_text, aspect: 5 / 7, show: {} })!, "Aftermath"],
+    ] as const;
+    for (const [layout, first] of halves) {
+      const box = boxes(container).find((b) => b.textContent?.startsWith(first))!;
+      const d = rulesDraw(layout, "hd");
+      // The first v33 cut padded 9 / 18 px from a box that holds the border.
+      expect(d.pad.left, first).toBeGreaterThanOrEqual(SPLIT_TEXTBOX_BORDER_PX.left + 24);
+      expect(d.pad.right, first).toBeGreaterThanOrEqual(SPLIT_TEXTBOX_BORDER_PX.right + 16);
+      expect(css(box, "padding"), first).toBe(
+        [d.pad.top, d.pad.right, d.pad.bottom, d.pad.left].map((px) => cqwOf(px, "split")).join(" "),
+      );
+      expectDrawn(box, layout, "split");
+    }
+  });
+
+  it("keeps the vow-63 modal dash on its word, the bake's lines", () => {
+    const { container } = render(<CardPreview {...creature("m15", VOW_63)} />);
+    const layout = mainRulesLayout({ layout: getFrameProfile("m15"), rulesText: VOW_63, aspect: 7 / 5, show: { pt: true } });
+    const [box] = boxes(container);
+    expectDrawn(box, layout, "m15");
+    const texts = linesOf(box).map((l) => l.textContent);
+    // Word gaps are margins: "one —" reads "one—" in the DOM.
+    expect(texts).toContain("one—");
+    expect(texts).not.toContain("—");
   });
 
   it("mutes the editor's hint on an empty adventure page", () => {

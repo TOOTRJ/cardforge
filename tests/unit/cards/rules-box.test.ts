@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
   ADVENTURE_PAGE_PAD_PX,
@@ -26,7 +28,7 @@ import {
   type RulesPlacement,
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
-import { getFrameProfile, type FrameProfile, type Rect } from "@/lib/cards/template-layout";
+import { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile, type FrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { RULES_BOX_PAD_PX, RULES_SIZE_PX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { EOE_30, TLA_112, plainText } from "@/tests/unit/cards/fixtures/rules-texts";
@@ -59,8 +61,9 @@ function textReaching(input: (text: string) => RulesLayoutInput, keepOut: Rect):
 }
 
 describe("the main box on every template", () => {
-  it("gives M15 and its skins the prints' margins (4 / 0 HD px), every other box its default", () => {
-    const withPrintMargins = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.padPx);
+  it("gives M15 and its skins the prints' margins (4 / 0 HD px), split its border's, every other box its default", () => {
+    const withPrintMargins = FRAME_TEMPLATE_VALUES.filter((t) => t !== "split" && getFrameProfile(t).rules.padPx);
+    expect(getFrameProfile("split").rules.padPx).toEqual({ left: 57, right: 54, top: 18, bottom: 18 });
     expect([...withPrintMargins].sort()).toEqual(
       ["m15", "m15artifact", "m15devoid", "m15land", "m15snow", "m15snowland", "nyx"].sort(),
     );
@@ -246,7 +249,9 @@ describe("the adventure page and the second faces", () => {
       const p = getFrameProfile(t);
       const layout = secondFaceRulesLayout({ layout: p, rulesText: "Draw a card.", aspect: aspectOf(p), show: {} })!;
       expect(layout.input.rect, t).toBe(p.secondFace!.rules.rect);
-      expect(layout.input.padPx, t).toEqual(SECOND_FACE_PAD_PX);
+      // Split's halves pad past the textbox border inside their boxes (the
+      // next test); flip and aftermath take a second face's default.
+      expect(layout.input.padPx, t).toEqual(t === "split" ? p.rules.padPx : SECOND_FACE_PAD_PX);
       expect(layout.input.vAlign, t).toBe(p.secondFace!.rules.vAlign ?? "start");
     }
     // Split's right half honours its "start" (it was always centred).
@@ -255,6 +260,80 @@ describe("the adventure page and the second faces", () => {
     const right = secondFaceRulesLayout({ layout: split, rulesText: "Draw a card.", aspect: 5 / 7, show: {} })!;
     const placed = linePositions(right, "hd");
     expect(placed.top).toBe(placed.interior.top);
+  });
+
+  it("keeps both split halves' text inside the frame's textbox border, at the MSE style's margins", async () => {
+    // The border measured on the masters (every colour but white, whose
+    // border is the cream's colour; the same MSE half in every colour): the
+    // cream — within 28 of the box's own colour on every channel, three px in
+    // a row — starts at most 33 HD px inside each half's rect and ends at
+    // most 38 px inside its right edge, on every row of the box.
+    const split = getFrameProfile("split");
+    const halves = [
+      { name: "left", rect: split.rules.rect },
+      { name: "right", rect: split.secondFace!.rules.rect },
+    ];
+    const widest = { left: 0, right: 0 };
+    for (const color of ["w", "u", "b", "r", "g", "c", "m"].filter((c) => c !== "w")) {
+      const { data, info } = await sharp(join(process.cwd(), "public/frames/split", `${color}.png`))
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      expect([info.width, info.height], color).toEqual([2100, 1500]);
+      const px = (x: number, y: number) => [0, 1, 2].map((c) => data[(y * info.width + x) * 3 + c]);
+      for (const { rect } of halves) {
+        const box = rectPx(rect, "landscape", 5 / 7, "hd");
+        const mid = Math.round(box.left + box.width / 2);
+        for (let y = box.top; y < box.bottom; y += 4) {
+          const ref = Array.from({ length: 100 }, (_, i) => px(mid - 200 + 4 * i, y)).sort(
+            (a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]),
+          )[50];
+          const cream = (x: number) => [x, x + 1, x + 2].every((xx) => px(xx, y).every((v, c) => Math.abs(v - ref[c]) <= 28));
+          const creamR = (x: number) => [x, x - 1, x - 2].every((xx) => px(xx, y).every((v, c) => Math.abs(v - ref[c]) <= 28));
+          let l = box.left;
+          while (!cream(l)) l += 1;
+          let r = box.right - 1;
+          while (!creamR(r)) r -= 1;
+          widest.left = Math.max(widest.left, l - box.left);
+          widest.right = Math.max(widest.right, box.right - (r + 1));
+        }
+      }
+    }
+    expect(widest).toEqual(SPLIT_TEXTBOX_BORDER_PX);
+
+    // Every line's ink — an italic "f" leading a reminder, an overhanging
+    // last glyph — lands inside the cream on both halves, at both targets,
+    // at every size the ladder reaches; the column starts the MSE style's
+    // 24 px (right: 16) inside the border.
+    const texts = [
+      "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nEach opponent loses X life. You gain life equal to the life lost this way.",
+      "(from your graveyard) (fff jjj of) " + plainText(60),
+      plainText(900),
+    ];
+    const layouts = [
+      ...texts.map((t) => mainRulesLayout({ layout: split, rulesText: t, aspect: 5 / 7, show: {} })),
+      ...texts.map((t) => secondFaceRulesLayout({ layout: split, rulesText: t, aspect: 5 / 7, show: {} })!),
+      ...[64, 52, 42].flatMap((s) => [
+        layoutRulesAt(mainRulesLayout({ layout: split, rulesText: texts[1], aspect: 5 / 7, show: {} }).input, s),
+        layoutRulesAt(secondFaceRulesLayout({ layout: split, rulesText: texts[1], aspect: 5 / 7, show: {} })!.input, s),
+      ]),
+    ];
+    for (const layout of layouts) {
+      for (const target of RULES_TARGETS) {
+        const placed = linePositions(layout, target);
+        const scale = target === "hd" ? 1 : 0.5;
+        const cream = {
+          left: placed.box.left + SPLIT_TEXTBOX_BORDER_PX.left * scale,
+          right: placed.box.left + placed.box.width - SPLIT_TEXTBOX_BORDER_PX.right * scale,
+        };
+        expect(placed.interior.left - cream.left, target).toBeGreaterThanOrEqual(24 * scale);
+        expect(cream.right - (placed.interior.left + placed.interior.width), target).toBeGreaterThanOrEqual(16 * scale - 0.5);
+        for (const line of placed.lines) {
+          expect(line.inkLeft, `${layout.sizePx} ${target} line ${line.block}.${line.line}`).toBeGreaterThanOrEqual(cream.left);
+          expect(line.inkRight, `${layout.sizePx} ${target} line ${line.block}.${line.line}`).toBeLessThanOrEqual(cream.right);
+        }
+      }
+    }
   });
 
   it("turns the flip face's P/T into its own frame", () => {

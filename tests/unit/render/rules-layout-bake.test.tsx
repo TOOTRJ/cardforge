@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { mainRulesLayout } from "@/lib/cards/rules-box";
-import { linePositions, type RulesTarget } from "@/lib/cards/rules-layout";
+import { linePositions, rectPx, type RulesTarget } from "@/lib/cards/rules-layout";
 import { EOE_30 } from "@/tests/unit/cards/fixtures/rules-texts";
 
 // ---------------------------------------------------------------------------
@@ -21,7 +21,11 @@ vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
     ...real,
     getFrameProfile: (template?: string) => {
       const p = real.getFrameProfile(template);
-      return { ...p, rules: { ...p.rules, colorHex: "#ff00ff" } };
+      return {
+        ...p,
+        rules: { ...p.rules, colorHex: "#ff00ff" },
+        ...(p.secondFace ? { secondFace: { ...p.secondFace, rules: { ...p.secondFace.rules, colorHex: "#ff00ff" } } } : {}),
+      };
     },
   };
 });
@@ -107,5 +111,63 @@ describe("rules lines on real bakes", () => {
         expect(Math.abs(inkRows[inkRows.length - 1] - (last.inkBottom - 1))).toBeLessThanOrEqual(2);
       }, 60_000);
     }
+  }
+});
+
+describe("split: both halves' text inside the textbox border on real bakes", () => {
+  // The split masters are in git, so the frame draws here: every magenta
+  // pixel of either half must land on the cream, SPLIT_TEXTBOX_BORDER_PX in
+  // from each rect's sides (the first v33 cut set an italic "f" on the gold
+  // and into the black frame).
+  for (const preset of ["default", "hd"] as const) {
+    it(`draws no rules ink on the border — ${preset}`, async () => {
+      const { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile } = await import("@/lib/cards/template-layout");
+      const { renderCardImage } = await import("@/lib/render/card-image");
+      const card = {
+        title: "Cut",
+        cost: "{1}{R}",
+        cardType: "sorcery",
+        supertype: null,
+        subtypes: [],
+        rarity: "common",
+        colorIdentity: ["white"],
+        artistCredit: "Probe",
+        artUrl: null,
+        artPosition: {},
+        rulesText: "(from your graveyard) Cut deals 4 damage to target creature. fff jjj of",
+        backFace: {
+          title: "Ribbons",
+          cost: "{X}{B}{B}",
+          card_type: "sorcery",
+          rules_text: "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nEach opponent loses X life. You gain life equal to the life lost this way.",
+        },
+        frameStyle: { template: "split", finish: "regular" },
+      } as unknown as CardPreviewData;
+      const split = getFrameProfile("split");
+      const png = Buffer.from(
+        await (await renderCardImage(card, preset, { brandMark: false, watermarkText: null, corners: "square" })).arrayBuffer(),
+      );
+      const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      const scale = preset === "hd" ? 1 : 0.5;
+      for (const rect of [split.rules.rect, split.secondFace!.rules.rect]) {
+        const box = rectPx(rect, "landscape", 5 / 7, preset);
+        const cream = { left: box.left + SPLIT_TEXTBOX_BORDER_PX.left * scale, right: box.right - SPLIT_TEXTBOX_BORDER_PX.right * scale };
+        let inked = 0;
+        let minX = Infinity;
+        let maxX = -Infinity;
+        for (let y = box.top; y < box.bottom; y += 1) {
+          for (let x = box.left; x < box.right; x += 1) {
+            const i = (y * info.width + x) * 3;
+            if (!magenta(data[i], data[i + 1], data[i + 2])) continue;
+            inked += 1;
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+          }
+        }
+        expect(inked, `${rect.leftPct}`).toBeGreaterThan(0);
+        expect(minX, `${rect.leftPct} left`).toBeGreaterThanOrEqual(cream.left);
+        expect(maxX, `${rect.leftPct} right`).toBeLessThan(cream.right);
+      }
+    }, 60_000);
   }
 });

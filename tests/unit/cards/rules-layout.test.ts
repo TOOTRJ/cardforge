@@ -24,6 +24,7 @@ import type { RulesItem } from "@/lib/cards/rules-text";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { RULES_BOX_PAD_PX, RULES_SIZE_PX, RULES_TEXT, ptToPct, rulesPxToPct } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { VOW_63 } from "@/tests/unit/cards/fixtures/rules-texts";
 
 // ---------------------------------------------------------------------------
 // lib/cards/rules-layout.ts — the ONE rules layout of layout v33 (TODO 3.29):
@@ -272,6 +273,48 @@ describe("breakRulesText — explicit lines at MPlantin's advances", () => {
     expect(items.every((it) => it.t === "w" && it.em === "flavor")).toBe(true);
     expect(items.map((it) => it.v)).toContain("well-known"); // no break at a hyphen
     expect(breakRulesText(" \n ", "  ", 76, { hd: 1237, default: 618 })).toEqual([]);
+  });
+
+  it("never starts a line with the em dash after a word: the vow-63 print's 'choose up to' / 'one —'", () => {
+    const text = (runs: readonly RulesItem[][]) =>
+      runs.map((r) => r.map((it) => (it.t === "m" ? `{${it.suffix}}` : it.v)).join("")).join(" ");
+    const fit = fitRulesLayout(m15(VOW_63, { padPx: PRINT_PAD, keepOuts: [PLATE_INK] }));
+    expect(fit.clipped).toBe(false);
+    // Before: "Whenever you cast a spell, choose up to one" / "—".
+    expect(fit.blocks[2].lines.map((l) => text(l.runs))).toEqual(["Whenever you cast a spell, choose up to", "one —"]);
+    // At every step of the ladder and a spread of columns: the dash is never
+    // a line's first run after the paragraph's first line, and the word
+    // before it keeps its word gap (a run of its own).
+    for (const s of EVEN_LADDER) {
+      for (const hd of [700, 900, 1100, 1237]) {
+        const columns = { hd, default: Math.floor(hd / 2) };
+        for (const block of breakRulesText(`${VOW_63}\nLandfall — Scry 1.\nChoose one —`, null, s, columns)) {
+          block.lines.forEach((line, i) => {
+            if (i > 0) expect(text(line.runs).startsWith("—"), `${s} @ ${hd}: ${text(line.runs)}`).toBe(false);
+            for (const t of RULES_TARGETS) expect(line.widthPx[t], `${s} @ ${hd} ${t}`).toBeLessThanOrEqual(columns[t]);
+          });
+        }
+      }
+    }
+    // A column "choose up to one" fills exactly at each target: "one" is
+    // carried down with its dash, a word gap between them.
+    const exact = (t: RulesTarget) => {
+      const m = metricsFor(76, 0.98, t);
+      return ["choose", "up", "to", "one"].reduce((w, word, i) => w + (i > 0 ? m.wordGapPx : 0) + wordPx(word, m.fontPx), 0);
+    };
+    const [glued] = breakRulesText("choose up to one —", null, 76, { hd: exact("hd"), default: exact("default") });
+    expect(glued.lines.map((l) => text(l.runs))).toEqual(["choose up to", "one —"]);
+    for (const t of RULES_TARGETS) {
+      const m = metricsFor(76, 0.98, t);
+      expect(glued.lines[1].widthPx[t], t).toBe(wordPx("one", m.fontPx) + m.wordGapPx + wordPx("—", m.fontPx));
+      expect(glued.lines[0].widthPx[t], t).toBe(exact(t) - m.wordGapPx - wordPx("one", m.fontPx));
+    }
+    // A pair wider than the column breaks as before (915 + 20 + 76 > 1000);
+    // a dash after a pip is not glued.
+    const [narrow] = breakRulesText("a Pneumonoultramicroscopic —", null, 76, { hd: 1000, default: 500 });
+    expect(narrow.lines.map((l) => text(l.runs))).toEqual(["a Pneumonoultramicroscopic", "—"]);
+    const [pip] = breakRulesText("Pay {G} —", null, 76, { hd: 240, default: 120 });
+    expect(pip.lines.map((l) => text(l.runs))).toEqual(["Pay {g}", "—"]);
   });
 
   it("gives a run wider than the column a line of its own", () => {

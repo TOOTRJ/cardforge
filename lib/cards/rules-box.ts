@@ -40,8 +40,9 @@ import { RULES_BOX_PAD_PX } from "@/lib/cards/typography";
 /** The adventure page's padding, HD px: the old 0.6 % / 1.0 % of the card. */
 export const ADVENTURE_PAGE_PAD_PX = { x: 9, y: 15 } as const;
 
-/** A second face's padding (flip, split, aftermath), HD px: the old 1.2 % /
- *  0.8 % of a portrait card. */
+/** A second face's padding (flip, aftermath), HD px: the old 1.2 % / 0.8 %
+ *  of a portrait card. Split's halves set their own (template-layout.ts
+ *  SPLIT_RULES_PAD_PX: their boxes hold the textbox border). */
 export const SECOND_FACE_PAD_PX = { x: 18, y: 12 } as const;
 
 /** Which stat badges the card DRAWS — the renderers' gates (showPT /

@@ -9,6 +9,11 @@ export const EOE_30 =
 export const TLA_112 =
   "When this enchantment enters and at the beginning of your upkeep, you lose 1 life and create a Clue token. (It’s an artifact with “{2}, Sacrifice this token: Draw a card.”)\nWhenever you attack, put X +1/+1 counters on target attacking creature, where X is the number of permanents you’ve sacrificed this turn. If X is three or greater, that creature gains lifelink until end of turn.";
 
+/** VOW #63 (Hullbreaker Horror, a 7/8) — its modal dash: the print sets
+ *  "choose up to" / "one —", never the dash alone on a line. */
+export const VOW_63 =
+  "Flash\nThis spell can’t be countered.\nWhenever you cast a spell, choose up to one —\n• Return target spell you don’t control to its owner’s hand.\n• Return target nonland permanent to its owner’s hand.";
+
 const SENTENCE = "Whenever this creature attacks, draw a card and gain 1 life. ";
 
 /** A text of about `chars` characters of plain rules sentences. */

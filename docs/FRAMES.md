@@ -282,7 +282,9 @@ How rules text is sized and set:
   top so the clip takes the tail, never the first line.
 - **Spacing**: 0.98 em line pitch (rules, flavor and attribution alike), a
   fixed 24 HD px between abilities, 30 px either side of the 1 px flavor bar
-  (42 px on a frame without one).
+  (42 px on a frame without one). A lone em dash after a word ("choose one
+  —", "Landfall —") never starts a line: it breaks with its word, as the
+  prints set it.
 - **Positions per bake**: the lines are the same at 750 and HD, but each
   rounds its own px, so the 750 bake's pitch is 0.962–0.974 em (1.0 em from
   42 to 50 px) against HD's 0.974–0.986, and its line tops drift up to 6 HD
@@ -297,7 +299,10 @@ What a frame gives it:
   a point literal), `vAlign`, `flavorDivider`, and its padding in HD px
   (`TextSlot.padPx`; default 9 / 18, M15 and its skins the prints' 4 / 0 —
   a 0.98 em line box already holds the air above the ascenders, and an
-  accented first capital gets its own headroom);
+  accented first capital gets its own headroom). A rect that holds part of
+  the frame's own textbox border pads past it, per side: split's halves
+  (`SPLIT_TEXTBOX_BORDER_PX`, 33 / 38 px measured on the masters by
+  `tests/unit/cards/rules-box.test.ts`, then the MSE split style's 24 / 16);
 - a planeswalker frame's `loyaltyRows.maxSizePct`: the walker ceiling (64 px
   on m15pw) for the ability rows and a walker drawn in the plain box; any
   other card on the frame keeps the rules slot's own size (68 px). The row

@@ -224,6 +224,20 @@ export function runWidthPx(run: readonly RulesItem[], m: RulesMetrics): number {
   return w;
 }
 
+/** A line's width at `m`'s target: its runs `wordGapPx` apart. */
+function lineWidthPx(runs: readonly RulesItem[][], m: RulesMetrics): number {
+  return runs.reduce((w, run, i) => w + (i > 0 ? m.wordGapPx : 0) + runWidthPx(run, m), 0);
+}
+
+/** A lone em dash after a word — "choose one —", "Landfall —": printed cards
+ *  never start a line with it (the vow-63 print sets "choose up to" / "one
+ *  —"), so it breaks with the word before it. It stays its own run, a word
+ *  gap after that word, as both renderers draw it. */
+function gluesToWord(run: readonly RulesItem[], before: readonly RulesItem[] | undefined): boolean {
+  const only = run.length === 1 ? run[0] : null;
+  return only?.t === "w" && only.v === "—" && before?.[before.length - 1]?.t === "w";
+}
+
 /** The runs a flavor source line breaks into: its words, italic. */
 function flavorRuns(line: string): RulesItem[][] {
   return line
@@ -236,7 +250,9 @@ function flavorRuns(line: string): RulesItem[][] {
  *  a new line when the line it would join is wider than its column at ANY
  *  target (each with its own whole-px gaps and pips — at s = 50, 58, 66 and
  *  74 the 750 bake's word gap, doubled, is a px wider than the HD one). A run
- *  wider than the column gets a line of its own. */
+ *  wider than the column gets a line of its own. A lone em dash that would
+ *  start a line takes the word before it along (gluesToWord) — the same
+ *  break at both targets, unless the pair is wider than a column itself. */
 function breakRuns(
   runs: readonly RulesItem[][],
   metrics: Readonly<Record<RulesTarget, RulesMetrics>>,
@@ -245,6 +261,10 @@ function breakRuns(
   const lines: RulesLine[] = [];
   let current: RulesItem[][] = [];
   let width: Record<RulesTarget, number> = { hd: 0, default: 0 };
+  const widthOf = (line: readonly RulesItem[][]) => ({
+    hd: lineWidthPx(line, metrics.hd),
+    default: lineWidthPx(line, metrics.default),
+  });
   for (const run of runs) {
     const next = { hd: 0, default: 0 };
     let overflows = false;
@@ -252,6 +272,17 @@ function breakRuns(
       const m = metrics[t];
       next[t] = width[t] + (current.length > 0 ? m.wordGapPx : 0) + runWidthPx(run, m);
       if (next[t] > columns[t]) overflows = true;
+    }
+    if (current.length > 1 && overflows && gluesToWord(run, current[current.length - 1])) {
+      const pair = [current[current.length - 1], run];
+      const pairWidth = widthOf(pair);
+      if (RULES_TARGETS.every((t) => pairWidth[t] <= columns[t])) {
+        const kept = current.slice(0, -1);
+        lines.push({ runs: kept, widthPx: widthOf(kept) });
+        current = pair;
+        width = pairWidth;
+        continue;
+      }
     }
     if (current.length > 0 && overflows) {
       lines.push({ runs: current, widthPx: width });
