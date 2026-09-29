@@ -247,8 +247,9 @@ Rules and gotchas:
   onto the prints, `TOKEN_REGULAR_RECUT`); `rules.alignSingleLine: "center"`
   centres ONE rules line (the layout places it, both renderers draw its
   indent). New and unverified: the registry resolves a 2015-frame token that
-  prints text to them, and the import lands on the textless dress until they
-  are verified (`TEXT_BOX_TOKEN_FALLBACK`). A later bump whose slots move
+  prints text to them (the arch's tall box = pinned `TALL_BOX_TOKEN_PINS`,
+  nearest), and the import lands on the textless dress until they are
+  verified (`TEXT_BOX_TOKEN_FALLBACK`). A later bump whose slots move
   on fewer templates than its bakes change on lists them in
   `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`

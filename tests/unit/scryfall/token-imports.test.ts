@@ -12,6 +12,7 @@ import {
 import {
   M20_TOKEN_DESIGN_FROM,
   PLST_PRE_M20_PREFIX_SETS,
+  TALL_BOX_TOKEN_PINS,
   isM20DesignPrinting,
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
@@ -44,6 +45,10 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tdom-2", "exact", "m15tokentext", "era/2015", undefined],
     ["tdom-11", "exact", "m15token", "era/2015", undefined],
     ["txln-7", "exact", "m15tokenartifacttext", "era/2015", undefined],
+    // …except the arch's TALL text box (4.49 (b)'s P3, no CC source):
+    // pinned (TALL_BOX_TOKEN_PINS), nearest the regular box and logged.
+    ["takh-1", "nearest", "m15tokentext", "era/2015+tall-box", "4.49"],
+    ["tsoi-11", "nearest", "m15tokenartifacttext", "era/2015+tall-box", "4.49"],
     // From M20 (2019-07-12) on: the full-art design PipGlyph doesn't draw
     // yet (4.48) — nearest the arch, the artifact arch for an Artifact, and
     // its text-box variant when the printing has text (4.49 (b): a box, not
@@ -139,6 +144,46 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
       setCode: "twoe",
       collectorNumber: "15",
     });
+  });
+});
+
+describe("the 2014–19 arch's tall text box (TODO 4.49 (b), P3)", () => {
+  it("pins the 21 tall-box printings — never a regular-box one, never an M20 print", () => {
+    const pins = Object.entries(TALL_BOX_TOKEN_PINS).flatMap(([set, numbers]) => numbers.map((n) => `${set} #${n}`));
+    expect(pins).toHaveLength(21);
+    expect(new Set(pins).size).toBe(21);
+    // Amonkhet / Hour of Devastation's embalmed and eternalized cards, the
+    // SOI Clues (39 characters, yet tall), Dominaria's Demon, C18's Dragon
+    // Egg, Mask and Clue, Rivals' Elemental, Unstable's Clue.
+    expect(TALL_BOX_TOKEN_PINS.tsoi).toEqual(["11", "12", "13", "14", "15", "16"]);
+    // The regular-box references and ruler prints are not pinned.
+    for (const key of ["tdom-2", "txln-7", "tdom-3"] as const) {
+      const card = printing(key);
+      expect(TALL_BOX_TOKEN_PINS[card.set!]?.includes(card.collector_number!) ?? false, key).toBe(false);
+    }
+    // Every pinned set is a pre-M20 token set.
+    for (const set of Object.keys(TALL_BOX_TOKEN_PINS)) expect(set, set).toMatch(/^t[a-z0-9]+$/);
+  });
+
+  it("says why, lists the gap, and logs the demand as a missing frame (1.6)", () => {
+    expect(match("tsoi-11")).toMatchObject({
+      status: "nearest",
+      template: "m15tokenartifacttext",
+      reason: "PipGlyph doesn't have the tall text box of this token frame yet",
+      gaps: ["tall-box"],
+    });
+    // Nearest whatever is verified: never an exact match on the regular box.
+    expect(match("takh-1").status).toBe("nearest");
+    const patch = mapScryfallToFormPatch(printing("tsoi-11"));
+    expect(frameRequestFromImport(patch, { artImported: false, source: "import" })).toMatchObject({
+      signature: "era/2015+tall-box",
+      status: "nearest",
+      cause: "missing",
+      setCode: "tsoi",
+      collectorNumber: "11",
+    });
+    // A tall box is no detail the chooser may skip (C1).
+    expect(onlyUndrawnDetailsMissing(match("takh-1"), "w")).toBe(false);
   });
 });
 

@@ -110,7 +110,7 @@ const TOKEN_REG_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/t
  * texture. 64 px (3.05 %H) puts the pill, the window edge and the box's top
  * edge within 1 px of those prints; the alignment score (lib/frames/align.ts)
  * over the 19 reference prints ties 62 and 64 px (94.5 %) and prefers 64 on
- * the four ruler prints (95.1 %; CC as-is 93.1 %). Native px of the pack
+ * the four ruler prints (95.0 %; CC as-is 93.1 %). Native px of the pack
  * (1500 × 2100).
  */
 export const TOKEN_REGULAR_RECUT = { fromY: 1240, toY: 1560, shift: 64, blend: 24 };

@@ -91,8 +91,10 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   prints 62 and 64 px tie at 94.5 % (56 px 93.9, 59 px 94.3, 65 px 94.4,
   CC's master as-is 92.8 %, today's m15token over the same prints 93.9 %),
   and on the four ruler prints (TXLN #10, TDOM #2, TM19 #1, TC17 #9) 64 px
-  scores best, 95.1 % (62 px 94.9, CC as-is 93.1). Provenance records the
-  re-cut (`recut`, `transforms`).
+  scores best: the published masters 95.0 % (62 px 94.9, CC as-is 93.1;
+  re-scored independently in the skeptic pass, which also measured CC's
+  band 60–65 px above the prints and the re-cut within ±2 px). Provenance
+  records the re-cut (`recut`, `transforms`).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame and
   the colourless creature token are see-through, like the printed cards. The
   profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);
@@ -415,7 +417,14 @@ textless dress it landed on before (`TEXT_BOX_TOKEN_FALLBACK` in
 No stored card moves (a later migration, once verified: 4.49 (b)'s "Stored
 cards"), no layout bump (new templates), and the scrim on m15token stays.
 TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: 4.49's
-P3) and is not a reference.
+P3) and is not a reference. The registry pins the 21 arch printings with
+the tall box (`TALL_BOX_TOKEN_PINS`: every black-bordered pre-M20 arch token
+with rules text measured against this master — Amonkhet / Hour of
+Devastation's embalmed and eternalized cards, the SOI Clues, TDOM #7, TC18
+#4 / #10 / #19, TRIX #1, TUST #18): the `tall-box` gap answers `nearest` the
+regular box with `blockedBy` 4.49, so the import lands there (the text
+shrinks to fit) and the 1.6 log counts the demand, instead of calling the
+regular box exact.
 
 A token's card types are WORDS in `supertype` (`card_type` stays `token`):
 "Creature", "Artifact", "Enchantment", plus "Legendary", toggled by the token
@@ -479,7 +488,11 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   held to Scryfall by `tests/unit/scryfall/fixtures/plst-token-prefixes.json`).
   Those print the full-art design (4.48), so `token/m20` answers `nearest`
   the 2014–19 arch until 4.48's templates exist (then `onceVerified`); the
-  earlier 2015-frame tokens ARE the arch (`era/2015`, exact). A token's Nyx
+  earlier 2015-frame tokens ARE the arch (`era/2015`, exact). Either way the
+  family pick is the text-box arch (`m15tokentext` / `m15tokenartifacttext`,
+  4.49 (b)) for a printing with rules or flavour text — a box, not the
+  scrim — and the textless one otherwise; the arch's tall box is the
+  `tall-box` gap (pinned, `TALL_BOX_TOKEN_PINS`). A token's Nyx
   is the `nyx-dress` gap (4.51), not `nyx` (4.7). Role cards (`token/role`,
   unsupported) and double-faced tokens import their front face only.
   Tokens and emblems are only found through the import dialog's "Tokens &
