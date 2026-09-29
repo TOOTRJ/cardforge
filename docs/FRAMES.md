@@ -354,11 +354,12 @@ What a frame gives it:
   shadow) 8 px down as one piece over the top of the texture — the opened
   rows repeat the window's sides, cross-faded over 24 rows; the bottom seam
   fades over the shadow's last 2 rows only (`recutBand`, `blendBottom: 2`),
-  so the pill keeps its edge and the texture's step matches CC's own. Edge by edge the pill is −0.9 … +1.6 px from the prints'
-  means after the cut (−8.9 … −6.4 before) and the alignment score over the
-  pins 94.47 → 94.99 % (a 6–10 px sweep peaks at 8 and 9). The profile rides
-  the cut (`TOKEN_RECUT_PX`, a unit test holds it to the importer's shift):
-  the art slot 8 px taller (69.38 %H), the type band on the moved pill;
+  so the pill keeps its edge and the texture's step matches CC's own. Edge
+  by edge the pill is −0.9 … +1.6 px from the prints' means after the cut
+  (−8.9 … −6.4 before) and the alignment score over the pins 94.47 → 94.99 %
+  (a 6–10 px sweep peaks at 8 and 9). The profile rides the cut
+  (`TOKEN_RECUT_PX`, a unit test holds it to the importer's shift): the art
+  slot 8 px taller (69.38 %H), the type band on the moved pill;
 - the type line runs left-aligned from 8.54 %W to the set symbol, fitted
   (`fit: "measured"`), its baseline on the prints' 1800 HD px
   (`TOKEN_TYPE_PRINT_DY`: the band rule sets it 4 px lower in its pill than
@@ -367,9 +368,9 @@ What a frame gives it:
   centred on the re-cut pill (84.77 %H = CC's 84.39 + 8 px; the prints
   centre theirs on their pill the same way), M15's 86 px box with the ink
   fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
-  stays the card's rarity (new tokens save as common);
+  stays the card's rarity (a new token and a token's remix save as common);
 - still to come: the bordered text box `m15tokentext` / `m15tokenartifacttext`
-  (4.49 (b) — the rules scrim is today's), the TALL text box (4.54), the gold
+  (4.49 (b) — the rules scrim is today's), the TALL text box (4.55), the gold
   small-caps name and the art slot (4.53).
 
 A token's card types are WORDS in `supertype` (`card_type` stays `token`):
