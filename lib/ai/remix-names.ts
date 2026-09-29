@@ -40,18 +40,48 @@ export const REMIX_SECOND_NAME_MISSING =
   "The AI didn't name the card's second half — retry this card.";
 export const REMIX_SECOND_NAME_REUSED =
   "The AI kept the second half's original name — retry this card.";
+export const REMIX_NAME_REUSED =
+  "The AI kept one of the card's original names — retry this card.";
+
+/**
+ * The short name rules text calls a card by, or null: the part before the
+ * comma ("Dokai, Weaver of Life" → "Dokai"), or — for a LEGENDARY face
+ * without one — the ONE word before " the " ("Goka the Unjust" → "Goka":
+ * Scryfall's oracle for the CHK flip reads "Goka deals 4 damage"). Never
+ * shorter than 3 characters. A non-legendary "Curse of the Fire Penguin"
+ * has no short name, nor does the legendary "Kodama of the North Tree"
+ * (its rules text uses the full name).
+ */
+export function shortNameOf(
+  name: string,
+  supertype?: string | null,
+): string | null {
+  const title = name.trim();
+  const comma = title.indexOf(",");
+  let short = comma > 0 ? title.slice(0, comma).trim() : "";
+  if (!short && /\blegendary\b/i.test(supertype ?? "")) {
+    const the = title.indexOf(" the ");
+    const head = the > 0 ? title.slice(0, the).trim() : "";
+    if (head && !/\s/.test(head)) short = head;
+  }
+  return short.length >= 3 ? short : null;
+}
 
 /** True when a new name is the old one again, or keeps a legendary's own
  *  name ("Dokai, Weaver of Life" → "Dokai, Lifebringer", seen in a live
- *  run 2026-09-28): the half wasn't renamed. */
-export function reusesSourceName(newName: string, oldName: string): boolean {
+ *  run 2026-09-28; "Goka the Unjust" → "Goka the Merciful"): the half
+ *  wasn't renamed. */
+export function reusesSourceName(
+  newName: string,
+  oldName: string,
+  oldSupertype?: string | null,
+): boolean {
   const next = newName.trim().toLowerCase();
   const old = oldName.trim().toLowerCase();
   if (!old) return false;
   if (next === old) return true;
-  const comma = old.indexOf(",");
-  const short = comma > 0 ? old.slice(0, comma).trim() : "";
-  if (short.length < 3) return false;
+  const short = shortNameOf(oldName, oldSupertype)?.toLowerCase();
+  if (!short) return false;
   return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(short)}(?![\\p{L}\\p{N}])`, "u").test(next);
 }
 
@@ -75,19 +105,19 @@ function escapeRegExp(text: string): string {
 }
 
 /** old → new name pairs for one face, plus a legendary's short name
- *  ("Dokai, Weaver of Life" is "Dokai" in modern rules text). */
-function renamePairs(oldName: string, newName: string): [string, string][] {
+ *  ("Dokai, Weaver of Life" is "Dokai" and "Goka the Unjust" is "Goka" in
+ *  modern rules text; shortNameOf). */
+function renamePairs(
+  oldName: string,
+  newName: string,
+  supertype?: string | null,
+): [string, string][] {
   const from = oldName.trim();
   const to = newName.trim();
   if (!from || !to || from === to) return [];
   const pairs: [string, string][] = [[from, to]];
-  const comma = from.indexOf(",");
-  if (comma > 0) {
-    const short = from.slice(0, comma).trim();
-    const newComma = to.indexOf(",");
-    const shortTo = newComma > 0 ? to.slice(0, newComma).trim() : to;
-    if (short.length >= 3) pairs.push([short, shortTo]);
-  }
+  const short = shortNameOf(from, supertype);
+  if (short) pairs.push([short, shortNameOf(to, supertype) ?? to]);
   return pairs.filter(
     ([name]) => /\s/.test(name) || !RULES_WORDS.has(name.toLowerCase()),
   );
@@ -128,13 +158,21 @@ export type RemixNamedFaces =
  * the remix carries a second half — its second_title on that half, with
  * both halves' rules text following both renames. The second half's
  * flavour is the identity's, and only where the source half had flavour
- * (a half's text box is small). No second name, or the source's name kept
- * (reusesSourceName) → the step fails, before the art is paid for, and
- * the credit wrapper refunds it; it never ships the source's name on a
- * renamed card.
+ * (a half's text box is small). No second name, or either new name keeping
+ * EITHER original name or a legendary's own name (reusesSourceName — the
+ * names the prompt reserves: "Erayo's Echo" after "Erayo, Soratami
+ * Ascendant // Erayo's Essence", or a swapped "Ice // Fire") → the step
+ * fails, before the art is paid for, and the credit wrapper refunds it; it
+ * never ships the source's name on a renamed card. A one-faced card is not
+ * guarded (its naming is what it was before B3).
  */
 export function applyRemixNames(
-  source: { title: string; rules_text?: string; back_face?: CardBackFace },
+  source: {
+    title: string;
+    supertype?: string | null;
+    rules_text?: string;
+    back_face?: CardBackFace;
+  },
   names: RemixNames,
 ): RemixNamedFaces {
   const back = source.back_face;
@@ -142,12 +180,23 @@ export function applyRemixNames(
   if (back && !secondTitle) {
     return { ok: false, error: REMIX_SECOND_NAME_MISSING };
   }
-  if (back && secondTitle && reusesSourceName(secondTitle, back.title)) {
-    return { ok: false, error: REMIX_SECOND_NAME_REUSED };
+  if (back && secondTitle) {
+    const originals: [string, string | null | undefined][] = [
+      [back.title, back.supertype],
+      [source.title, source.supertype],
+    ];
+    if (originals.some(([name, supertype]) => reusesSourceName(secondTitle, name, supertype))) {
+      return { ok: false, error: REMIX_SECOND_NAME_REUSED };
+    }
+    if (originals.some(([name, supertype]) => reusesSourceName(names.title, name, supertype))) {
+      return { ok: false, error: REMIX_NAME_REUSED };
+    }
   }
   const pairs = [
-    ...renamePairs(source.title, names.title),
-    ...(back && secondTitle ? renamePairs(back.title, secondTitle) : []),
+    ...renamePairs(source.title, names.title, source.supertype),
+    ...(back && secondTitle
+      ? renamePairs(back.title, secondTitle, back.supertype)
+      : []),
   ];
   return {
     ok: true,

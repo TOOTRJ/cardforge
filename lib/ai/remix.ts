@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Card, CardBackFace } from "@/types/card";
 import { designModel } from "@/lib/ai/provider";
 import { clampedText } from "@/lib/ai/card-design";
-import type { RemixSecondHalfLayout } from "@/lib/ai/remix-names";
+import { shortNameOf, type RemixSecondHalfLayout } from "@/lib/ai/remix-names";
 
 // ---------------------------------------------------------------------------
 // AI remix — a re-SKIN, never a redesign. The remix keeps the parent card's
@@ -91,16 +91,19 @@ TWO-PART CARD: this card prints a second half ("second_half") on the same frame.
 }
 
 /** The original names — and a legendary's own name ("Dokai" of "Dokai,
- *  Weaver of Life") — the new ones must not reuse. Spelled out because a
- *  live run (2026-09-28) kept "Dokai" under the general rule. */
-function reservedNamesLine(...titles: string[]): string {
+ *  Weaver of Life", "Goka" of "Goka the Unjust"; shortNameOf) — the new
+ *  ones must not reuse. Spelled out because a live run (2026-09-28) kept
+ *  "Dokai" under the general rule; applyRemixNames enforces the same list. */
+function reservedNamesLine(
+  ...faces: { title: string; supertype?: string | null }[]
+): string {
   const names = new Set<string>();
-  for (const title of titles) {
-    const name = title.trim();
+  for (const face of faces) {
+    const name = face.title.trim();
     if (!name) continue;
     names.add(name);
-    const comma = name.indexOf(",");
-    if (comma > 0) names.add(name.slice(0, comma).trim());
+    const short = shortNameOf(name, face.supertype);
+    if (short) names.add(short);
   }
   return `Names the new ones must not reuse: ${[...names]
     .map((name) => JSON.stringify(name))
@@ -172,7 +175,7 @@ export function buildRemixIdentityRequest(input: RemixIdentityInput) {
     system: second ? SYSTEM_PROMPT + twoPartRules(second.layout) : SYSTEM_PROMPT,
     prompt: [
       `Original card:\n${JSON.stringify(summary, null, 2)}`,
-      second ? reservedNamesLine(input.card.title, second.face.title) : null,
+      second ? reservedNamesLine(input.card, second.face) : null,
       `Target style: ${input.style.trim().slice(0, 200)}`,
       input.theme?.trim()
         ? `Extra theme direction: ${input.theme.trim().slice(0, 300)}`

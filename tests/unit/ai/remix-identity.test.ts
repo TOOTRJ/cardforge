@@ -149,6 +149,20 @@ describe("buildRemixIdentityRequest — a two-part card names both halves", () =
     );
   });
 
+  it("reserves a legendary 'X the Y' half's own name too (Goka the Unjust → \"Goka\")", () => {
+    const request = buildRemixIdentityRequest({
+      card: { ...giant, title: "Initiate of Blood" },
+      secondHalf: {
+        layout: "flip",
+        face: { title: "Goka the Unjust", supertype: "Legendary", card_type: "creature" },
+      },
+      style: "ink",
+    });
+    expect(request.prompt).toContain(
+      'Names the new ones must not reuse: "Initiate of Blood", "Goka the Unjust", "Goka".',
+    );
+  });
+
   it("tells the model how each layout's halves relate", () => {
     for (const layout of ["adventure", "split", "aftermath", "flip"] as const) {
       const request = buildRemixIdentityRequest({

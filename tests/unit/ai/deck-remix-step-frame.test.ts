@@ -104,7 +104,7 @@ vi.mock("@/lib/cards/actions", () => ({
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { REMIX_FRAME_UNAVAILABLE } from "@/lib/creator/frame-resolve";
-import { REMIX_SECOND_NAME_MISSING } from "@/lib/ai/remix-names";
+import { REMIX_NAME_REUSED, REMIX_SECOND_NAME_MISSING } from "@/lib/ai/remix-names";
 
 const keys = (...combos: [string, string][]) =>
   combos.map(([template, colour]) => frameComboKey(template as FrameTemplate, colour));
@@ -200,22 +200,59 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
 
   it("the rules text follows both new names (no real card's name left on the remix)", async () => {
     s.verified = keys(["adventure", "r"], ["m15", "r"]);
+    // Scryfall's CURRENT oracle (captured 2026-09-28): a permanent says
+    // "this creature" since the 2024 templating update, a spell still says
+    // its own name — so the front reads as it did and Stomp's line follows.
     const { card } = await remix("eld-115", (raw) => {
       const faces = raw.card_faces as Record<string, unknown>[];
       faces[0].oracle_text =
-        "Whenever Bonecrusher Giant becomes the target of a spell, Bonecrusher Giant deals 2 damage to that spell's controller.";
+        "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller.";
       faces[1].oracle_text = "Damage can't be prevented this turn. Stomp deals 2 damage to any target.";
       return raw;
     });
     expect(card).toMatchObject({
       title: "Remixed Name",
       rules_text:
-        "Whenever Remixed Name becomes the target of a spell, Remixed Name deals 2 damage to that spell's controller.",
+        "Whenever this creature becomes the target of a spell, this creature deals 2 damage to that spell's controller.",
       back_face: {
         title: "Remixed Page",
         rules_text: "Damage can't be prevented this turn. Remixed Page deals 2 damage to any target.",
       },
     });
+  });
+
+  it("a one-faced landing renames the card's own mention too (Fire // Ice on M15, current oracle)", async () => {
+    // Split is unverified here, so Fire // Ice lands one-faced on M15 with
+    // Fire's text — which names Fire (a spell still names itself).
+    s.verified = keys(["m15", "m"]);
+    const { step, card } = await remix("dmr-215", (raw) => {
+      const faces = raw.card_faces as Record<string, unknown>[];
+      faces[0].oracle_text = "Fire deals 2 damage divided as you choose among one or two targets.";
+      faces[1].oracle_text = "Tap target permanent.\nDraw a card.";
+      return raw;
+    });
+    expect(step).toMatchObject({ status: "done", label: "Remixed Name" });
+    expect(card).toMatchObject({
+      frame_style: { template: "m15" },
+      title: "Remixed Name",
+      rules_text: "Remixed Name deals 2 damage divided as you choose among one or two targets.",
+    });
+    expect(card?.back_face).toBeUndefined();
+  });
+
+  it("a front that keeps an original name fails the step before the art and the save", async () => {
+    s.verified = keys(["adventure", "r"], ["m15", "r"]);
+    s.identity.mockResolvedValueOnce({
+      title: "Bonecrusher Giant",
+      flavor_text: null,
+      art_instruction: "A painted scene.",
+      second_title: "Remixed Page",
+      second_flavor_text: null,
+    });
+    const { step, card } = await remix("eld-115");
+    expect(step).toMatchObject({ status: "failed", error: REMIX_NAME_REUSED });
+    expect(card).toBeUndefined();
+    expect(s.image).not.toHaveBeenCalled();
   });
 
   it("a second half the AI didn't name fails the step before the art and the save", async () => {
