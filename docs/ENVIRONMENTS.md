@@ -71,7 +71,9 @@ All five share `DEV_SEED_PASSWORD` once `npm run seed:dev` has run.
 Plus 22 cards (public / unlisted / private, remixes, a planeswalker, a saga,
 snow, devoid, a token), likes / comments / follows (the triggers turn those
 into 19 notifications), two decks, an active + closed + upcoming challenge, a
-published + a scheduled site update, and production's 71 verified frame combos.
+published + a scheduled site update, and production's verified frame combos
+(`supabase/seed.sql`: 97 as of 2026-09-28; after the list is refreshed,
+`npm run db:seed:dev` adds the new combos to the shared dev database).
 
 ### When to use the Docker stack instead
 
