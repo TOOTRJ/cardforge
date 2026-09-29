@@ -24,6 +24,7 @@ import {
   framesForKind,
   importedCardTypeForKind,
   isBorrowedVariation,
+  isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
   type CardKind,
@@ -109,11 +110,14 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     // explicit candidate (TODO 0.26). Nor is a frame the kind borrows from
     // another type (the artifact frame on a creature, TODO 1.7; the Nyx
     // showcase, owner decision A3): it would dress a plain creature as an
-    // artifact or an enchantment.
+    // artifact or an enchantment. Nor is a frame the kind wears by type word
+    // (the artifact token frame, TODO 3b.15): the words pick it, never a
+    // fallback.
     const any = gallery.find(
       (choice) =>
         !templateIsBasicOnly(choice.template) &&
         !isBorrowedVariation(kind, choice.template) &&
+        !isTypeWordDress(kind, choice.template) &&
         choice.availableColorKeys.includes(colorKey),
     );
     return any

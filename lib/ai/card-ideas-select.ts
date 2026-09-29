@@ -1,3 +1,5 @@
+import { buildTypeLine } from "@/lib/cards/card-display";
+
 /** A partial set of creator form values an AI flow writes into the open
  *  form (only present keys are applied). Shared by the ideas dialog and the
  *  per-field fill flow. */
@@ -78,6 +80,10 @@ export function ideaFieldSummary(idea: CardIdea, group: IdeaFieldGroup): string 
     case "title":
       return idea.title;
     case "typeLine":
+      // A token reads as it prints: "Token Artifact — Treasure" (TODO 3b.15).
+      if (idea.card_type === "token") {
+        return buildTypeLine({ supertype: idea.supertype, cardType: "token", subtypes: idea.subtypes });
+      }
       return [idea.supertype, idea.card_type, idea.subtypes.length ? `— ${idea.subtypes.join(" ")}` : null]
         .filter(Boolean)
         .join(" ");

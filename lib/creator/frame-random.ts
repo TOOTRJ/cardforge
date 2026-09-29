@@ -15,6 +15,8 @@ import {
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
+  typeWordFrameFits,
+  typeWordFrameFor,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
@@ -67,17 +69,23 @@ export function resolveGeneratedFrame(input: {
   // creature borrows (TODO 1.7) is for an Artifact Creature only, the Nyx
   // showcase (owner decision A3) for an Enchantment Creature — asked for by
   // name or picked at random.
+  // …and a token's type words pick between the plain and the artifact
+  // token frame (TODO 3b.15): a Treasure never lands on the plain one, a
+  // Soldier never on the artifact one; a request for either means the one
+  // the words pick.
   const kind = kindFromCard(cardType, undefined);
   const type = { cardType, supertype: face?.supertype };
   const pool = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
       (basicLand || !templateIsBasicOnly(choice.template)) &&
-      borrowedFrameFits(kind, choice.template, type),
+      borrowedFrameFits(kind, choice.template, type) &&
+      typeWordFrameFits(kind, choice.template, face?.supertype),
   );
 
   if (requested !== "random") {
-    const match = pool.find((choice) => choice.template === requested);
+    const wanted = typeWordFrameFor(kind, requested, face?.supertype);
+    const match = pool.find((choice) => choice.template === wanted);
     if (match) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
     // that color isn't published) — degrade to a random valid one.

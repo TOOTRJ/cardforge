@@ -6,6 +6,7 @@
 // the unit tests.
 
 import type { CardType, ColorIdentity, Rarity } from "@/types/card";
+import { buildTypeLine } from "@/lib/cards/card-display";
 
 export const CARD_FILL_FIELDS = [
   "title",
@@ -159,13 +160,18 @@ export function fillPromptNote(
   const pinned: string[] = [];
   if (!has("title") && locked.title) pinned.push(`title "${locked.title}"`);
   if (!has("card_type")) {
-    const typeLine = [
-      locked.supertype,
-      locked.card_type,
-      locked.subtypes?.length ? `— ${locked.subtypes.join(" ")}` : null,
-    ]
-      .filter(Boolean)
-      .join(" ");
+    // A token's line as it prints — "Token Artifact — Treasure" (TODO
+    // 3b.15) — so the designer keeps its type words.
+    const typeLine =
+      locked.card_type === "token"
+        ? buildTypeLine({ supertype: locked.supertype, cardType: "token", subtypes: locked.subtypes })
+        : [
+            locked.supertype,
+            locked.card_type,
+            locked.subtypes?.length ? `— ${locked.subtypes.join(" ")}` : null,
+          ]
+            .filter(Boolean)
+            .join(" ");
     if (typeLine) pinned.push(`type line "${typeLine}"`);
   }
   if (!has("color_identity") && locked.color_identity?.length) {

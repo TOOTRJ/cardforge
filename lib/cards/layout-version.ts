@@ -711,6 +711,38 @@ function v33PrintsText(card: ScopeCard): boolean {
   );
 }
 
+/**
+ * TODO 3b.15's card scope, for the release's layout bump to wire into
+ * VERSION_SCOPES (not wired here — one bump ships 3b.15 with the other token
+ * work, so the integrator gives it its version). Whether a card's bake
+ * changes with the token wording: a token whose supertype has a word (the
+ * line now prints "Token" first — "Basic Token — Wastes" → "Token Basic —
+ * Wastes"; a Treasure's stray P/T goes too), and a token with a P/T and no
+ * word, which migration 0124 gives "Creature" ("Token — Soldier" → "Token
+ * Creature — Soldier") — counted whether the sweep reaches the row before or
+ * after the migration, so it is never stamped current on the old line. A
+ * back face typed token with a word is its own line too. Any token template
+ * (m15token, m15tokenartifact, alphatoken, a showcase, flip): no template
+ * list. A token with neither a word nor a P/T ("Token" / "Token — Boar")
+ * prints what it did. Any column it needs that the row doesn't carry →
+ * affected.
+ */
+export function tokenTypeLineChanged(card: ScopeCard): boolean {
+  if ([card.card_type, card.supertype, card.power, card.toughness, card.back_face].some((v) => v === undefined)) {
+    return true;
+  }
+  if (card.card_type === "token" && (Boolean(card.supertype?.trim()) || Boolean(card.power || card.toughness))) {
+    return true;
+  }
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return (
+    back !== null &&
+    back.card_type === "token" &&
+    typeof back.supertype === "string" &&
+    back.supertype.trim().length > 0
+  );
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {

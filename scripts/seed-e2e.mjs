@@ -140,7 +140,8 @@ if (wipeError) {
 // the "switch to M15" planeswalker offer. So verify exactly the combos the
 // specs click through — all seven color keys, so a spec that changes the
 // card's color first still finds them. (Local-only by the URL guard above.)
-const E2E_VERIFIED_TEMPLATES = ["m15", "m15pw", "agclassic"];
+// The token picker spec (token-types.spec.ts) builds on both token frames.
+const E2E_VERIFIED_TEMPLATES = ["m15", "m15pw", "agclassic", "m15token", "m15tokenartifact"];
 const E2E_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"];
 const verifiedAt = new Date().toISOString();
 const { error: framesError } = await admin.from("frame_reviews").upsert(

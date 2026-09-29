@@ -80,7 +80,7 @@ import {
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
-  showsPowerToughness,
+  printsPowerToughness,
   slotLine,
   splitTypeLine,
   type LoyaltyAbility,
@@ -662,10 +662,7 @@ function CardFace({
   const showCost =
     !layout.hideCost && face.cardType !== "land" && Boolean(face.cost?.trim());
 
-  const showPT =
-    Boolean(layout.pt) &&
-    showsPowerToughness(face.cardType, face.subtypes) &&
-    Boolean(face.power || face.toughness);
+  const showPT = Boolean(layout.pt) && printsPowerToughness(face);
   // In the editor the starting-loyalty shield shows even before a value is
   // typed (empty plate > invisible element); the gallery/bake require one.
   const showLoyalty =
@@ -1109,6 +1106,7 @@ function CardFace({
       ) : (
       <BandSlot slot={{ ...layout.type, sizePct: typeSizePct }}>
         <span
+          data-testid="type-line"
           style={{
             ...ELLIPSIS,
             ...typeInk,

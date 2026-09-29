@@ -64,7 +64,7 @@ import {
 import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
-import { buildTypeLine, describeManaCost } from "@/lib/cards/card-display";
+import { buildTypeLine, describeManaCost, printsPowerToughness } from "@/lib/cards/card-display";
 import { renderVersionOf } from "@/lib/cards/render-version";
 import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -1010,9 +1010,16 @@ function CardDetails({
   const colors = (card.color_identity ?? [])
     .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
     .join(", ");
-  const stats =
-    card.power != null || card.toughness != null
-      ? `${card.power ?? "?"}/${card.toughness ?? "?"}`
+  // The stats the render prints (printsPowerToughness): a Treasure token
+  // carrying a stray P/T prints none, so its details list none (TODO 3b.15).
+  const stats = printsPowerToughness({
+    cardType: card.card_type as CardType | null,
+    supertype: card.supertype,
+    subtypes: card.subtypes ?? [],
+    power: card.power,
+    toughness: card.toughness,
+  })
+    ? `${card.power ?? "?"}/${card.toughness ?? "?"}`
       : card.loyalty != null
         ? `Loyalty ${card.loyalty}`
         : card.defense != null

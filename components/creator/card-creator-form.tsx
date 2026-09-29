@@ -175,6 +175,10 @@ import {
   toBasicLandIdentity,
   toNonbasicLandIdentity,
   planKindChange,
+  followTokenName,
+  supertypeEnteringToken,
+  supertypeLeavingToken,
+  typeWordFrameFor,
   KIND_DEFS,
   type CardKind,
   type FrameColorKey,
@@ -786,6 +790,7 @@ export function CardCreatorForm({
   const statVis = statVisibility(
     watched.card_type,
     parseSubtypes(watched.subtypes_text),
+    watched.supertype,
   );
   // Basic-land rule (lib/cards/watermark.ts): a BASIC land prints the big
   // symbol and no text; the Text step becomes the icon step. Computed once
@@ -855,6 +860,60 @@ export function CardCreatorForm({
     clearErrors,
     verifiedFrameKeys,
   ]);
+
+  // The token kind (TODO 3b.15). Both follow real edits only (isDirty, a
+  // change this session) — a loaded card keeps its stored frame and name —
+  // and never while revising (the type line is locked).
+  //
+  // Frame follows the type: the Artifact word picks the artifact token frame
+  // and its absence the plain one, whoever wrote the word (the picker, the
+  // Supertype field, an AI fill or idea, a kind change). A frame the colour
+  // isn't verified in is never written; the card keeps its frame and says so.
+  const lastTokenTypeRef = useRef(`${kind}|${watched.supertype}`);
+  useEffect(() => {
+    const key = `${kind}|${watched.supertype}`;
+    if (lastTokenTypeRef.current === key) return;
+    lastTokenTypeRef.current = key;
+    if (isRevise || !isDirty || kind !== "token") return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const next = typeWordFrameFor(kind, current, getValues("supertype"));
+    if (next === current) return;
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) {
+      toast.info(
+        `${describeFrame(next)} isn't verified in ${colorWord(colorKey)} yet — keeping ${describeFrame(current)}.`,
+      );
+      return;
+    }
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [
+    kind,
+    watched.supertype,
+    isRevise,
+    isDirty,
+    getValues,
+    setValue,
+    verifiedFrameKeys,
+  ]);
+  // Name follows the subtypes: a printed token is named after them
+  // ("Soldier") unless it has a proper name, so an empty title — or the one
+  // this wrote last — follows the Subtypes field until the user types one.
+  const autoTokenTitleRef = useRef<string | null>(null);
+  const lastTokenSubtypesRef = useRef(`${kind}|${watched.subtypes_text}`);
+  useEffect(() => {
+    const key = `${kind}|${watched.subtypes_text}`;
+    if (lastTokenSubtypesRef.current === key) return;
+    lastTokenSubtypesRef.current = key;
+    if (isRevise || !isDirty || kind !== "token") return;
+    const next = followTokenName({
+      title: getValues("title") ?? "",
+      lastAuto: autoTokenTitleRef.current,
+      subtypes: parseSubtypes(watched.subtypes_text),
+    });
+    if (next === null) return;
+    autoTokenTitleRef.current = next;
+    setValue("title", next, { shouldDirty: true });
+  }, [kind, watched.subtypes_text, isRevise, isDirty, getValues, setValue]);
 
   // A frame switch the user makes keeps the art's framing (the visible
   // centre carries to the new art window) and drops Etched on an
@@ -1066,6 +1125,14 @@ export function CardCreatorForm({
       );
     }
     const nextKind = kindFromCard(patch.card_type, template);
+    // The token picker's type words are the token kind's own (TODO 3b.15):
+    // they leave with it, before the land auto-identity judges the
+    // supertype below ("Creature" would read as a typed one).
+    if (prevKind === "token" && nextKind !== "token") {
+      setValue("supertype", supertypeLeavingToken(getValues("supertype")), {
+        shouldDirty: true,
+      });
+    }
     const identitySnapshot = {
       title: getValues("title") ?? "",
       supertype: getValues("supertype") ?? "",
@@ -1132,6 +1199,14 @@ export function CardCreatorForm({
         setValue("supertype", "", { shouldDirty: true });
         setValue("subtypes_text", "", { shouldDirty: true });
       }
+    }
+    // A new token is a Creature token (the picker's default, TODO 3b.15) and
+    // common: the token kind hides the rarity chips (owner 2026-09-29).
+    if (nextKind === "token" && prevKind !== "token") {
+      setValue("supertype", supertypeEnteringToken(getValues("supertype")), {
+        shouldDirty: true,
+      });
+      setValue("rarity", "common", { shouldDirty: true });
     }
   };
   const handleKindSelect = (next: CardKind) => {
@@ -2140,7 +2215,15 @@ export function CardCreatorForm({
     // defense). P/T already had this rule; loyalty/defense now match it.
     const submitSubtypes = parseSubtypes(values.subtypes_text);
     const submitCardType = (values.card_type || null) as CardType | null;
-    const printsPT = showsPowerToughness(submitCardType, submitSubtypes);
+    const printsPT = showsPowerToughness(
+      submitCardType,
+      submitSubtypes,
+      values.supertype,
+    );
+    // A NEW token is common whatever an import or the AI said: the token
+    // kind hides the rarity chips (TODO 3b.15, owner 2026-09-29). A stored
+    // token keeps its rarity (edits never send a hidden change).
+    const tokenRarity = submitKind === "token" && !isRevise;
 
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
@@ -2154,7 +2237,7 @@ export function CardCreatorForm({
       card_type: values.card_type || undefined,
       subtypes: submitSubtypes,
       tags: parseTags(values.tags_text),
-      rarity: values.rarity || undefined,
+      rarity: tokenRarity ? "common" : values.rarity || undefined,
       rules_text: rulesTextOut || undefined,
       face_content: faceContentPayload,
       watermark: watermarkPayload,
@@ -2470,7 +2553,13 @@ export function CardCreatorForm({
 
   const cardTypeForPreview =
     watched.card_type === "" ? null : (watched.card_type as CardType);
-  const rarityForPreview = watched.rarity === "" ? null : (watched.rarity as Rarity);
+  // A new token previews as it saves: common (TODO 3b.15; see onSubmit).
+  const rarityForPreview =
+    kind === "token" && !isRevise
+      ? "common"
+      : watched.rarity === ""
+        ? null
+        : (watched.rarity as Rarity);
 
   // v2 back face: the referenced card (from myCards) rendered on the flip with
   // its OWN frame/colour/rarity/art. null when none is linked.
@@ -2537,8 +2626,12 @@ export function CardCreatorForm({
     colorIdentity: watched.color_identity,
     rulesText: watched.rules_text,
     flavorText: watched.flavor_text,
-    power: watched.power,
-    toughness: watched.toughness,
+    // The P/T the card will SAVE with: only while its inputs show (a token
+    // with the Creature toggle off keeps the new card's 1/1 in the form, and
+    // the renderers print any P/T on a token with no type word — the stored
+    // tokens from before TODO 3b.15).
+    power: statVis.pt ? watched.power : "",
+    toughness: statVis.pt ? watched.toughness : "",
     loyalty: watched.loyalty,
     defense: watched.defense,
     artistCredit: watched.artist_credit,
@@ -2761,7 +2854,10 @@ export function CardCreatorForm({
                     frameLocked={isRevise}
                   />
                 ) : null}
-                <RarityPanel />
+                {/* Tokens print a black set symbol, never a rarity (4.9):
+                    the token kind hides the chips (owner 2026-09-29) — a
+                    new token is common, a stored one keeps its rarity. */}
+                {kind !== "token" ? <RarityPanel /> : null}
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land

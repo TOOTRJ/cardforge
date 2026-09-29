@@ -10,7 +10,7 @@ import { Lock } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { KIND_DEFS, kindFromCard } from "@/lib/creator/card-kinds";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
@@ -32,13 +32,17 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   const template = normalizeFrameTemplate(frameStyle?.template) as FrameTemplate;
   const kind = kindFromCard(cardType, template);
   const subtypes = parseSubtypes(subtypesText);
-  const typeLine = [
-    supertype.trim(),
-    KIND_DEFS[kind].label,
-    subtypes.length > 0 ? `— ${subtypes.join(" ")}` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  // A token reads as it prints: "Token" first (TODO 3b.15).
+  const typeLine =
+    kind === "token"
+      ? buildTypeLine({ supertype, cardType: "token", subtypes })
+      : [
+          supertype.trim(),
+          KIND_DEFS[kind].label,
+          subtypes.length > 0 ? `— ${subtypes.join(" ")}` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
   const frameLabel = FRAME_TEMPLATE_LABELS[template] ?? template;
   const eraLabel = FRAME_ERA_LABELS[eraForTemplate(template)];
   const colorLabel =
