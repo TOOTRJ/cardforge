@@ -276,10 +276,15 @@ Rules and gotchas:
   `TOKEN_REGULAR_RECUT` — its own band, symbol and type band from CC's
   (`TOKEN_CC_*`), never M15TOKEN's re-cut ones); `rules.alignSingleLine:
   "center"` centres ONE rules line (the layout places it, both renderers
-  draw its indent). New and unverified: the registry resolves a 2015-frame
-  token that prints text to them (the arch's tall box = pinned
-  `TALL_BOX_TOKEN_PINS`, nearest, 4.55), and the import lands on the
-  textless dress until they are verified (`TEXT_BOX_TOKEN_FALLBACK`). A
+  draw its indent). The text box FOLLOWS THE TEXT (owner decision 5):
+  `textBoxFrameFor` / `tokenFrameFor` on `hasRulesBoxText` (the renderers'
+  test) — the creator (`followTokenTextBox`: automatic until a Variations
+  pick, which sticks, as does a stored frame that disagrees with its text),
+  the registry (tall box = pinned `TALL_BOX_TOKEN_PINS`, nearest, 4.55;
+  unverified → `TEXT_BOX_TOKEN_FALLBACK`), `resolveGeneratedFrame` and the
+  remix (`autoTokenTextBoxFrame`); 0129 moved stored non-land, non-preview
+  cards with text off the textless pair (null stamp, no bump). The textless pair's
+  scrim is ONLY the fallback for text left on them. A
   later bump whose slots move on fewer templates than its bakes change on
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`

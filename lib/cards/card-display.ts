@@ -174,6 +174,18 @@ export function printsPowerToughness(face: PowerToughnessFace): boolean {
   return face.cardType === "token" && !hasTokenTypeWord(face.supertype);
 }
 
+/**
+ * Whether a face has text for its rules box: rules or flavour text that isn't
+ * blank (String.prototype.trim — its whitespace, no other character). Both
+ * renderers draw the box's text (and a translucent box's backdrop) only then,
+ * and the token frame's text box follows it (TODO 4.49 (b): the creator, the
+ * AI jobs and migration 0129, whose SQL mirrors this trim). The frame still
+ * decides whether it prints it: a basic land's, and a textless frame's, never.
+ */
+export function hasRulesBoxText(face: { rulesText?: string | null; flavorText?: string | null }): boolean {
+  return Boolean(face.rulesText?.trim() || face.flavorText?.trim());
+}
+
 export function showsLoyalty(cardType: CardType | null | undefined): boolean {
   return cardType === "planeswalker";
 }

@@ -1350,6 +1350,14 @@ const M15TOKEN: FrameProfile = {
     weight: 600,
     font: "display",
   },
+  // A textless token prints no text (TDOM #3, TM19 #6): its text goes to the
+  // text-box arch (M15TOKENTEXT) — automatically in the creator, the import
+  // and the AI jobs, and migration 0129 moved the stored cards with text
+  // there (TODO 4.49 (b), owner decision 5). This box and its scrim are the
+  // FALLBACK for a card that carries text on this frame anyway — a variation
+  // the user picked by hand (it sticks), an older client's save — so the
+  // text is never lost nor set straight on the art. Both renderers draw them
+  // only when there is text (hasRulesBoxText).
   rules: {
     rect: { topPct: 60.5, leftPct: 12, widthPct: 76, heightPct: 12 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.standard),

@@ -56,6 +56,7 @@ import {
   colorHintsForFrame,
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
+import { autoTokenTextBoxFrame } from "@/lib/creator/frame-resolve";
 import type {
   CardBackFace,
   CardType,
@@ -679,6 +680,7 @@ export async function createCardGenerationJob(
       subtypes: card.subtypes,
       title: card.title,
       rulesText: card.rules_text,
+      flavorText: card.flavor_text,
     },
   });
 
@@ -809,6 +811,7 @@ export async function createCardFillJob(
             subtypes: designed.fields.subtypes ?? input.locked.subtypes,
             title: designed.fields.title ?? input.locked.title,
             rulesText: designed.fields.rules_text ?? input.locked.rules_text,
+            flavorText: designed.fields.flavor_text ?? input.locked.flavor_text,
           },
         })
       : null;
@@ -1530,6 +1533,20 @@ async function executeDeckRemixStep(
   }
 
   // ---- Create the remixed custom card, linked into the new deck ----
+  // The printing's frame followed its PRINTED text; the remix saves the AI's
+  // flavour, so a token's text box follows the text it saves with (TODO 4.49
+  // (b), owner decision 5) — the creator's and the other AI jobs' rule.
+  const frameTemplate = mechanics.frame_template
+    ? autoTokenTextBoxFrame({
+        template: mechanics.frame_template as FrameTemplate,
+        cardType: mechanics.card_type as CardType | undefined,
+        supertype: mechanics.supertype,
+        rulesText: named.rules_text,
+        flavorText: identity.flavor_text,
+        colorIdentity: (mechanics.color_identity ?? ["colorless"]) as ColorIdentity[],
+        verifiedKeys: new Set(await getVerifiedFrameKeys()),
+      })
+    : undefined;
   const gameSystemId = await activeGameSystemId();
   if (!gameSystemId) {
     return { ...step, status: "failed", error: "No game system configured." };
@@ -1551,9 +1568,7 @@ async function executeDeckRemixStep(
       loyalty: mechanics.loyalty,
       defense: mechanics.defense,
       art_url: artUrl,
-      frame_style: mechanics.frame_template
-        ? { template: mechanics.frame_template }
-        : undefined,
+      frame_style: frameTemplate ? { template: frameTemplate } : undefined,
       back_face: named.back_face,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,
