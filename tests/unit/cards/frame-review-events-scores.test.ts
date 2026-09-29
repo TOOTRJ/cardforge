@@ -14,7 +14,7 @@ const state = vi.hoisted(() => ({ client: null as unknown }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => state.client }));
 
-import { latestScoreEvents } from "@/lib/cards/frame-review-events";
+import { latestScoreEvents, latestScoreEventsForTemplates } from "@/lib/cards/frame-review-events";
 
 const row = (colorKey: string, action: string, createdAt: string, scoreJson: unknown) => ({
   id: `${colorKey}-${action}-${createdAt}`,
@@ -71,5 +71,45 @@ describe("latestScoreEvents", () => {
   it("an error reads as no scores", async () => {
     state.client = chainClient(() => ({ data: null, error: { message: "boom" } })).client;
     expect((await latestScoreEvents("saga")).size).toBe(0);
+  });
+});
+
+describe("latestScoreEventsForTemplates (TODO 4.12's treatment panel)", () => {
+  it("picks the newest scored event per template and colour from a light read, then loads only those rows", async () => {
+    const candidates = [
+      { id: "a1", template: "m15borderless", color_key: "w", created_at: "2026-09-29T12:00:00Z", overall: null }, // failed tick
+      { id: "a2", template: "m15borderless", color_key: "w", created_at: "2026-09-29T11:00:00Z", overall: 7 },
+      { id: "a3", template: "m15borderless", color_key: "w", created_at: "2026-09-29T10:00:00Z", overall: 9 },
+      { id: "b1", template: "m15borderlessartifact", color_key: "w", created_at: "2026-09-29T09:00:00Z", overall: 4 },
+    ];
+    const full = [
+      { ...row("w", "score", "2026-09-29T11:00:00Z", { overall: 7, slots: {} }), id: "a2", template: "m15borderless" },
+      { ...row("w", "verify", "2026-09-29T09:00:00Z", { overall: 4 }), id: "b1", template: "m15borderlessartifact" },
+    ];
+    const stub = chainClient((_table, calls): ChainAnswer => {
+      const byId = calls.find((c) => c.method === "in" && c.args[0] === "id");
+      return { data: byId ? full : candidates, error: null };
+    });
+    state.client = stub.client;
+
+    const latest = await latestScoreEventsForTemplates(["m15borderless", "m15borderlessartifact"]);
+    const [light, heavy] = stub.forTable("frame_review_events");
+    // The candidate read leaves the score body out.
+    expect(light.calls.find((c) => c.method === "select")?.args[0]).not.toMatch(/score_json,|score_json$/);
+    expect(light.calls.find((c) => c.method === "in" && c.args[0] === "template")?.args[1]).toEqual([
+      "m15borderless",
+      "m15borderlessartifact",
+    ]);
+    expect(heavy.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["a2", "b1"]);
+    expect(latest.get("m15borderless")?.get("w")).toMatchObject({ id: "a2", scoreJson: { overall: 7, slots: {} } });
+    expect(latest.get("m15borderlessartifact")?.get("w")).toMatchObject({ id: "b1", action: "verify" });
+  });
+
+  it("no templates, no read; an error reads as no scores", async () => {
+    const stub = db();
+    expect((await latestScoreEventsForTemplates([])).size).toBe(0);
+    expect(stub.log).toHaveLength(0);
+    state.client = chainClient(() => ({ data: null, error: { message: "boom" } })).client;
+    expect((await latestScoreEventsForTemplates(["saga"])).size).toBe(0);
   });
 });

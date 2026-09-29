@@ -619,6 +619,23 @@ check an unverified frame the way a user would meet it, before publishing it:
   asks "N colours score below 90% — publish anyway?", naming them. It is a
   warning, never a block. The `signoff` event records those colours as
   `lowMatch`.
+- **Scoring in one job (4.12).** "Score all N colours" (and "Score N
+  colours", the unscored / stale ones) is ONE request to
+  `POST /api/admin/frame-score-batch`: the server plans each colour's
+  reference from one review read, scores two at a time with one override
+  map, records every score as a `score` event (the same path as the
+  per-colour Score, `lib/frames/score-record.ts`) and streams NDJSON
+  progress (`lib/frames/score-batch.ts`). A run stops starting combos after
+  200 s and the tab's store (`components/admin/score-batch-store.ts`) sends
+  the rest in a follow-up; Cancel stops it and keeps what was scored. The
+  view shows a progress panel, a per-slot × colour table of scores and
+  nudges with a **Template nudge** column (the move most colours agree on —
+  one layout override moves every colour; apply it in Compare → Edit
+  layout), and every colour **side by side** (our live render next to its
+  printing). When the template's frame set has other frames, the
+  **Treatment** panel scores all of them in one job and pools the slots they
+  draw on the same rect into one nudge. The job never ticks: publishing is
+  still the checkbox or Publish.
 
 Nothing here changes a stored bake or a renderer.
 
