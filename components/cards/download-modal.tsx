@@ -92,7 +92,7 @@ type DownloadModalProps = {
    *  "Download" button styled as an outline button. */
   trigger?: ReactNode;
   /** Tab to open first. Defaults to "single" since one card on one page
-   *  is the most common pick (free users always start on PNG). */
+   *  is the most common pick (free users always start on Image). */
   defaultTab?: DownloadTab;
   /** Viewer entitlement. PDF needs a paid plan; sheets need Pro. Defaults to
    *  the free experience. */

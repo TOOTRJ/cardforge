@@ -49,6 +49,14 @@ describe("clientNetworkOf — what one caller is counted as", () => {
     expect(clientNetworkOf(" 203.0.113.7 ")).toBe("203.0.113.7");
   });
 
+  it("an IPv4-mapped address in hex is still that IPv4 address — never the one /64 every IPv4 client would share", () => {
+    expect(clientNetworkOf("::ffff:cb00:7107")).toBe("203.0.113.7");
+    expect(clientNetworkOf("::FFFF:CB00:7107")).toBe("203.0.113.7");
+    expect(clientNetworkOf("0:0:0:0:0:ffff:cb00:7107")).toBe("203.0.113.7");
+    expect(clientNetworkOf("::ffff:c633:6401")).toBe("198.51.100.1");
+    expect(clientNetworkOf("::ffff:cb00:7107")).not.toBe(clientNetworkOf("::ffff:c633:6401"));
+  });
+
   it("an IPv6 address as its /64, however it is written", () => {
     expect(clientNetworkOf("2001:db8:1:2:aaaa:bbbb:cccc:dddd")).toBe("2001:db8:1:2::/64");
     expect(clientNetworkOf("2001:0db8:0001:0002:0000:0000:0000:0001")).toBe("2001:db8:1:2::/64");
@@ -59,11 +67,12 @@ describe("clientNetworkOf — what one caller is counted as", () => {
     expect(clientNetworkOf("::1")).toBe("0:0:0:0::/64");
   });
 
-  it("anything unreadable is one shared bucket", () => {
-    expect(clientNetworkOf(undefined)).toBe("unknown");
-    expect(clientNetworkOf("")).toBe("unknown");
-    expect(clientNetworkOf("not-an-ip")).toBe("unknown");
-    expect(clientNetworkOf("203.0.113.7, 10.0.0.1")).toBe("unknown");
+  it("anything unreadable is no network at all (not one shared bucket)", () => {
+    expect(clientNetworkOf(undefined)).toBeNull();
+    expect(clientNetworkOf("")).toBeNull();
+    expect(clientNetworkOf("not-an-ip")).toBeNull();
+    expect(clientNetworkOf("203.0.113.7, 10.0.0.1")).toBeNull();
+    expect(clientNetworkOf("unknown")).toBeNull();
   });
 });
 
@@ -140,6 +149,18 @@ describe("checkAnonLiveRenderLimit", () => {
       },
     ]);
     expect(JSON.stringify(db.calls)).not.toContain("203.0.113.7");
+  });
+
+  it("a caller with no readable address (only possible off Vercel) is never counted, never pooled", async () => {
+    expect(anonRenderKey(request(), "s")).toBeNull();
+    expect(anonRenderKey(request("garbage"), "s")).toBeNull();
+    for (let i = 0; i < ANON_LIVE_RENDER_LIMITS.perMinute * 2; i += 1) {
+      expect(await checkAnonLiveRenderLimit(request(i % 2 ? "garbage" : undefined))).toEqual({ ok: true });
+    }
+    expect(db.calls).toHaveLength(0);
+    // …while a readable neighbour is still counted.
+    expect(await checkAnonLiveRenderLimit(request("203.0.113.7"))).toEqual({ ok: true });
+    expect(db.calls).toHaveLength(1);
   });
 
   it("fails open: an RPC error, a thrown client, no admin client or no secret all let the render through", async () => {

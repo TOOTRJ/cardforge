@@ -79,6 +79,8 @@ import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 import { anonRenderDb } from "@/tests/stubs/anon-render-db";
 import { ANON_LIVE_RENDER_LIMITS } from "@/lib/cards/anon-render-limit";
 import { CARD_JPEG_QUALITY } from "@/lib/render/card-jpeg";
+import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { createHash } from "node:crypto";
 
 let storedPng: Buffer;
 let livePng: Buffer;
@@ -448,6 +450,34 @@ describe("JPEG download (TODO 6.18)", () => {
       expect(res.headers.get("content-disposition")).toBe('attachment; filename="c.png"');
       expect(res.headers.get("etag")).toBe(plain.headers.get("etag"));
       expect(Buffer.from(await res.arrayBuffer()).equals(plainBytes)).toBe(true);
+    }
+  });
+
+  it("a PNG's ETag is still main's formula — `format` never enters it — so every browser-cached PNG keeps answering 304", async () => {
+    // origin/main's ETag inputs before 6.18, verbatim (no pip or frame
+    // overrides, no footer text in these fixtures).
+    type EtagCard = { id: string; updated_at: string; rendered_at: string | null; layout_version: number | null };
+    const mainEtag = (c: EtagCard, preset: string, corners: string, wm: boolean) =>
+      `W/"${createHash("sha1")
+        .update(
+          [c.id, c.updated_at, c.rendered_at ?? "", c.layout_version ?? "", preset, corners, wm ? "wm" : "clean", "", CARD_LAYOUT_VERSION, "null", "null"].join("|"),
+        )
+        .digest("hex")
+        .slice(0, 27)}"`;
+    for (const template of ["m15", "fullartland"]) {
+      const c = { ...card({ frame_style: { template } }), layout_version: 30 };
+      state.card = c;
+      for (const format of [undefined, "png", "gif"]) {
+        state.paid = false;
+        for (const corners of ["round", "square", undefined] as const) {
+          const tag = mainEtag(c, "default", corners ?? "square", true);
+          const res = await download("default", {}, corners, format);
+          expect(res.headers.get("etag"), `${template} ${format} ${corners}`).toBe(tag);
+          expect((await download("default", { "if-none-match": tag }, corners, format)).status).toBe(304);
+        }
+        state.paid = true;
+        expect((await download("hd", {}, "round", format)).headers.get("etag")).toBe(mainEtag(c, "hd", "round", false));
+      }
     }
   });
 
