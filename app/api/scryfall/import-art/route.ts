@@ -51,7 +51,9 @@ const bodySchema = z.object({
    *   - "art-back"  : art_crop of the back face (DFC only)
    *  Both "*-back" modes return 404 when the card has no second face, or
    *  when that face has no image of its own (a split / adventure / flip
-   *  card — the dialog asks only when /named says `has_back_image`). */
+   *  card — the import dialog asks only when /named says `has_back_image`,
+   *  "Use art from a real card" only when /printings does; both flags are
+   *  hasBackFaceImage). */
   mode: z
     .enum(["print", "art", "print-back", "art-back"])
     .optional()

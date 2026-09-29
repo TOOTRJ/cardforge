@@ -40,6 +40,10 @@ export const maxDuration = 15;
 type TrimmedScryfallCard = {
   id: string;
   name: string;
+  /** The printings grid of "Use art from a real card" (TODO 1.15) pages
+   *  /api/scryfall/printings by it. Null on Scryfall's reversible cards,
+   *  whose oracle id sits on the faces. */
+  oracle_id: string | null;
   set: string | null;
   set_name: string | null;
   type_line: string | null;
@@ -56,6 +60,7 @@ function trim(card: ScryfallCard): TrimmedScryfallCard {
   return {
     id: card.id,
     name: card.name,
+    oracle_id: card.oracle_id ?? null,
     set: card.set ?? null,
     set_name: card.set_name ?? null,
     type_line: card.type_line ?? null,

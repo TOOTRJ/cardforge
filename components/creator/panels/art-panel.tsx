@@ -1,10 +1,13 @@
 "use client";
 
 // Art panel — the uploader/positioner plus the artist-credit "more options"
-// collapsible. Moved unchanged from the old art step.
+// collapsible. Moved unchanged from the old art step. "Use art from a real
+// card" (TODO 1.15) sits beside Choose file: a real printing's art without
+// the full import.
 
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { ArtUploader } from "@/components/creator/art-uploader";
+import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import {
   ImportedArtNote,
   type ImportedArtOrigin,
@@ -15,6 +18,7 @@ import {
   inputClass,
 } from "@/components/creator/field-group";
 import type { FormValues } from "@/lib/creator/form-types";
+import { realCardArtOrigin } from "@/lib/creator/real-card-art";
 
 type ArtPanelProps = {
   userId: string | null;
@@ -31,6 +35,12 @@ type ArtPanelProps = {
   /** Art a Scryfall import brought in (TODO 1.18): while it is still the
    *  card's art, a note says Scryfall's crop stops at the printed frame. */
   importedArtOrigin?: ImportedArtOrigin | null;
+  /** Front art taken from a real card (TODO 1.15): the creator remembers
+   *  its origin so the note above reads the same as after a full import. */
+  onImportedArtOrigin?: (origin: ImportedArtOrigin) => void;
+  /** Real-card art landed on the back face of a two-faced card (an
+   *  imported transform / modal DFC): the preview turns to that face. */
+  onBackFaceArt?: () => void;
 };
 
 export function ArtPanel({
@@ -39,16 +49,24 @@ export function ArtPanel({
   aiSlot,
   secondFaceNameMissing = false,
   importedArtOrigin = null,
+  onImportedArtOrigin,
+  onBackFaceArt,
 }: ArtPanelProps) {
   const {
     register,
     control,
     formState: { errors },
   } = useFormContext<FormValues>();
-  const [artUrl, template] = useWatch({
+  const [artUrl, template, hasBackFace, backFace] = useWatch({
     control,
-    name: ["art_url", "frame_style.template"],
+    name: ["art_url", "frame_style.template", "has_back_face", "back_face"],
   });
+  // A second face with its own art but no editor: an imported transform /
+  // modal DFC (Delver of Secrets) keeps its back in `back_face`, and the
+  // two-sided editor is Phase 5 (TODO 5.2). Its art can still come from a
+  // real card (TODO 1.15). The inline second faces (adventure, split,
+  // aftermath, flip) edit theirs in backFaceSlot instead.
+  const showBackFaceArt = Boolean(hasBackFace) && !backFaceSlot;
 
   return (
     <>
@@ -71,7 +89,18 @@ export function ArtPanel({
                   artUrlField.onChange(artUrl ?? "");
                   artPosField.onChange(artPosition);
                 }}
-                actionSlot={aiSlot}
+                actionSlot={
+                  <>
+                    {aiSlot}
+                    <RealCardArtButton
+                      target="front"
+                      signedIn={Boolean(userId)}
+                      onApplied={({ art, printing }) =>
+                        onImportedArtOrigin?.(realCardArtOrigin(printing, art.publicUrl))
+                      }
+                    />
+                  </>
+                }
               />
             )}
           />
@@ -83,6 +112,39 @@ export function ArtPanel({
         </p>
       ) : null}
       <ImportedArtNote origin={importedArtOrigin} artUrl={artUrl} template={template} />
+
+      {showBackFaceArt ? (
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-elevated/30 p-3"
+          data-testid="back-face-art"
+        >
+          {backFace?.art_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={backFace.art_url}
+              alt="Back face artwork"
+              className="h-12 w-16 shrink-0 rounded-sm border border-border/50 object-cover"
+            />
+          ) : (
+            <span className="h-12 w-16 shrink-0 rounded-sm bg-elevated" aria-hidden />
+          )}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+              Back face art
+            </span>
+            <span className="truncate text-[11px] text-muted">
+              {[backFace?.title || "The card's second face", backFace?.artist_credit]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </span>
+          <RealCardArtButton
+            target="back"
+            signedIn={Boolean(userId)}
+            onApplied={() => onBackFaceArt?.()}
+          />
+        </div>
+      ) : null}
 
       <MoreOptions
         summary={

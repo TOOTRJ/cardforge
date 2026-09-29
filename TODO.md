@@ -464,7 +464,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       **Needs Lane A (2026-09-28, Phase 1 lane split):** `ABILITY_WORDS` italicises rules text in both renderers, so a new word changes existing bakes. Pair it with Lane A's rules-text round (3.29) and a captured `catalog/ability-words` fixture (tests never call Scryfall live).
 - [x] (done 2026-09-26 — shipped in feat/import-correctness: the mapping is gone; Bitterblossom, Crib Swap and Kindred Discovery pin it, and no fixture imports the legacy "spell") **1.14 [P2] Kindred stays a supertype word; delete the dead
       `tribal → "spell"` mapping** (`import-mapper.ts`).
-- [ ] **1.15 [P2] 'Use art from a real card' in the Art panel** (Card Conjurer audit 2026-09-25) — Today real-card art only arrives with a full Scryfall import that overwrites text, frame and colour (`components/creator/scryfall-import-dialog.tsx`:364-399,841). CC has a separate art-by-name lookup (`creator-23.js`:4138-4185).
+- [x] (done 2026-09-28 — shipped in feat/import-art-from-card: "Use art from a real card" beside Choose file in the Identity step's art block (`components/creator/real-card-art-dialog.tsx`, `RealCardArtButton` + `RealCardArtDialog`). A name typeahead on `/api/scryfall/search` (debounced, aborted, the 1.9 stale-search guard; the trimmed result now carries `oracle_id`), the chosen card's printings through 1.5's `PrintingsGrid` + `usePrintings` with the filter chips and no frame-status badges, the chosen printing's crop, set, number and artist, and "Use this art" → POST `/api/scryfall/import-art` {scryfallId, mode} (route unchanged; same `search` + `import_art` quotas). "Front art" / "Back art" (`art-back`) is offered only when the printing `has_back_image` (1.8's `hasBackFaceImage`, the same test as `/named`'s flag); the back art is preselected when the art is for the card's back face, and the chosen-printing panel then shows the back face's own crop and artist (each printing carries `back_thumb_url` / `back_artist`, `lib/scryfall/printing-summary.ts`), and the front art's own credit as `front_artist` — both by 1.8's `scryfallFaceArtist`, the credit import-art writes, so Fire // Ice's front art shows David Martin, not the card-level "David Martin & Franz Vohwinkel". The one write path is `realCardArtWrites` / `applyRealCardArt` (`lib/creator/real-card-art.ts`): the target face's `art_url`, a re-centred `art_position` and its `artist_credit` (the route's `artist`: the requested face's own since 1.8; cleared when Scryfall credits no one, held to 120 chars) — never the title, text, type, frame, colour, `source_scryfall_id` or tags; tests compare the whole form before/after. Targets: the front art block; the second face's art block of a split / aftermath / flip half (`LayoutPanel`); and, for a card with a back face but no second-face editor (an imported transform / modal DFC such as Delver of Secrets, until 5.2), a "Back face art" row in the Art block — the preview turns to the back when its art lands. An import error toasts the route's message and writes nothing; the dialog can't close mid-download; a placeholder scan can't be used. Front art from a printing sets the creator's session-only `importedArtOrigin`, so 1.18's `ImportedArtNote` reads the same as after a full import (the dialog shows it for the chosen printing first). Guests: disabled with "Sign in to use art from real cards." No renderer change. Still open: the optional server-side "Paste an image URL" below, and re-framing a window crop against a full-bleed slot (3b.13)) **1.15 [P2] 'Use art from a real card' in the Art panel** (Card Conjurer audit 2026-09-25) — Today real-card art only arrives with a full Scryfall import that overwrites text, frame and colour (`components/creator/scryfall-import-dialog.tsx`:364-399,841). CC has a separate art-by-name lookup (`creator-23.js`:4138-4185).
 
       Add a dialog in the Art panel:
       1. Name typeahead.
@@ -474,6 +474,35 @@ Open decisions are marked **[decide]**; none blocks its phase.
       It sets only `art_url`, a reset `art_position` and `artist_credit`, never text, frame or colour, and counts against the same Scryfall quota.
 
       Optional follow-up: a server-side 'Paste an image URL', under the upload allowlist, size limit and moderation. Never a client CORS proxy, which is what CC uses. Depends on 3.14 for orientation.
+      **Still open after 2026-09-28:** this paste-URL follow-up (not started — it needs its own server route: host allowlist, size limit, the omni-moderation scan, never a client proxy).
+      **Owner decisions 2026-09-29** (owner: "recommendations" on the
+      art PR's four questions, feat/import-art-from-card) — all four kept
+      as built:
+      - **E1 — kept:** the Art block's "Back face art" row stays for a card
+        with a back face but no second-face editor (an imported transform
+        / modal DFC such as Delver of Secrets). It's the only way to change
+        that back's art without importing again; 5.2's two-sided editor
+        takes it over.
+      - **E2 — kept:** a printing Scryfall credits no artist CLEARS
+        `artist_credit` (`realCardArtWrites`), rather than keep the old
+        artist's name beside art they didn't draw.
+      - **E3 — kept:** the interim `art-back` credit. Until 1.8's per-face
+        artist lands in `/api/scryfall/import-art` (feat/import-mapper-fixes,
+        `scryfallFaceArtist`), the back of a DFC whose faces have different
+        artists is credited to the card-level name; Delver (Nils Hamm on
+        both) is unaffected. The client credits whatever the route returns,
+        so it follows 1.8 with no change here.
+      - **E4 — kept:** the two additive route fields — `oracle_id` on each
+        `/api/scryfall/search` result, `back_thumb_url` / `back_artist` on
+        each `/api/scryfall/printings` item (null unless the back face has
+        its own image). No existing field changes.
+      - **After 1.8 landed (restacked onto #399 + main):** the route credits
+        the requested face, as E3 expected. The chosen-printing panel now
+        previews that same credit for the front art through a third
+        additive field, `front_artist` (`scryfallFaceArtist(card, 0)`), so
+        a split card such as Fire // Ice shows David Martin, the name the
+        import writes. `has_back_image` / the back art use 1.8's
+        `hasBackFaceImage`, the same test `/named` uses.
 - [x] (done 2026-09-26 — feat/quick-wins: `printingTreatmentFromScryfall` names a borderless / showcase / extended-art / full-art / textless printing (full-art and textless 2015 tokens skipped), the import dialog says so before the import and the creator toasts the frame the card actually landed on, in front of the "Seeded form…" / "Pre-filled…" toast; the frame choice is unchanged. The "Use Borderless" / "Use Full-Art Basic" toast actions moved to 4.32 / 4.39's acceptance. Still silent, for later items: foil-etched frame printings (`frame_effects ∋ etched`, 4.28), white/silver/gold borders (4.30), `frame: future`, Expeditions) **1.16 [P0] Stopgap: say so when a borderless or showcase printing imports as the plain frame** (borderless research 2026-09-25; ships before 1.4) — The importer drops every treatment, so all 6,327 paper borderless printings land silently on the bordered standard:
       - `frameTemplateFromScryfall` (`lib/scryfall/import-mapper.ts`:239-259) maps only `frame`→era plus snow/devoid.
       - `border_color`, `full_art` and `promo_types` pass through untyped (`lib/scryfall/client.ts`:143-210, `.passthrough()`).

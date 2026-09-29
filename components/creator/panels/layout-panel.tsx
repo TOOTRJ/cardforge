@@ -18,6 +18,7 @@ import {
   type PipTextEditorHandle,
 } from "@/components/creator/pip-text-editor";
 import { ArtUploader } from "@/components/creator/art-uploader";
+import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import {
   CARD_TYPE_OPTIONS,
   FieldGroup,
@@ -271,6 +272,11 @@ export function LayoutPanel({
                         artUrl={artUrlField.value}
                         artPosition={artPosField.value}
                         primaryPasteTarget={false}
+                        actionSlot={
+                          // TODO 1.15: a real printing's art on this face
+                          // only (its art, position and artist credit).
+                          <RealCardArtButton target="back" signedIn={Boolean(userId)} />
+                        }
                         onArtChange={({ artUrl, artPosition }) => {
                           // Controller onChange is the single write path —
                           // it updates the value AND dirties the field.

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import importPrintings from "../scryfall/fixtures/import-printings.json";
 
 // ---------------------------------------------------------------------------
 // GET /api/scryfall/search — the per-user quota (TODO 0.17). A normal
@@ -126,5 +127,31 @@ describe("GET /api/scryfall/search — per-user quota", () => {
     expect(await res.json()).toEqual({ ok: true, results: [] });
     expect(state.check).not.toHaveBeenCalled();
     expect(state.search).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/scryfall/search — the trimmed result", () => {
+  it("carries the oracle id the art picker's printings grid needs (TODO 1.15); null when Scryfall has none", async () => {
+    state.search.mockResolvedValue([
+      { id: "c1", name: "Llanowar Elves", oracle_id: "68954295-54e3-4303-a6bc-fc4547a4e3a3" },
+      { id: "c2", name: "Reversible card" },
+    ]);
+    const body = await (await get("q=llanowar")).json();
+    expect(body.results.map((c: { oracle_id: string | null }) => c.oracle_id)).toEqual([
+      "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      null,
+    ]);
+  });
+
+  it("real printings: a transform DFC keeps its card-level oracle id; a reversible card has none (its faces carry it)", async () => {
+    const delver = importPrintings["isd-51"];
+    const commandTower = importPrintings["sld-2794"];
+    state.search.mockResolvedValue([delver, commandTower]);
+    const body = await (await get("q=delver")).json();
+    expect(body.results).toMatchObject([
+      { id: delver.id, name: "Delver of Secrets // Insectile Aberration", oracle_id: delver.oracle_id },
+      { id: commandTower.id, oracle_id: null },
+    ]);
+    expect(delver.oracle_id).toBe("edd531b9-f615-4399-8c8c-1c5e18c4acbf");
   });
 });
