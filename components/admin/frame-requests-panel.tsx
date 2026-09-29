@@ -17,7 +17,7 @@ import type { FrameRequestArtFlag } from "@/lib/frames/frame-requests";
 // /admin/frame-requests (TODO 1.6): every import PipGlyph couldn't reproduce
 // exactly, per frame signature + set, most requested first — the order the
 // missing frames get built in (frames plan 4.7 / 4.11). Families PipGlyph
-// will never build (posters, The Zeta Set, substitute cards) sit collapsed
+// will never build (posters, The Zeta Set, substitute and art cards) sit collapsed
 // at the bottom: no count changes their answer. Server component.
 // ---------------------------------------------------------------------------
 
@@ -99,7 +99,8 @@ export function FrameRequestsPanel({
         <details className="group rounded-lg border border-border/60 bg-background/40">
           <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-muted hover:text-foreground">
             Unsupported for good ({forGood.reduce((sum, row) => sum + row.count, 0)} requests,{" "}
-            {forGood.length} row{forGood.length === 1 ? "" : "s"}) — posters, The Zeta Set, substitute cards
+            {forGood.length} row{forGood.length === 1 ? "" : "s"}) — posters, The Zeta Set, substitute
+            and art cards
           </summary>
           <RequestTable rows={forGood} now={now} caption="Families PipGlyph won't build" />
         </details>

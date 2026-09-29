@@ -1148,15 +1148,33 @@ describe("frame request log", () => {
     });
   });
 
-  it("a log call that fails (offline) never blocks the import", async () => {
+  it("a log call that fails (offline) never blocks the import, and its rejection is handled", async () => {
     const oko = (signaturePrintings as unknown as Record<string, ScryfallCard>)["eld-271"];
-    actions.recordFrameRequestAction.mockRejectedValue(new TypeError("Failed to fetch"));
-    prefill(oko);
-    await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Pre-filled from Oko")),
-    );
-    expect(actions.recordFrameRequestAction).toHaveBeenCalledTimes(1);
-    expect(toast.error).not.toHaveBeenCalled();
+    // The call is fire-and-forget: without its own .catch a rejected server
+    // action (offline, a stale deployment) is an unhandled rejection in the
+    // browser. Watch for one while the import runs.
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    try {
+      actions.recordFrameRequestAction.mockImplementation(() => {
+        // A thenable, not a Promise: vitest's spy attaches its own handlers
+        // to a returned Promise (to record its settled result), which would
+        // hide a missing .catch. This rejection is the form's alone to handle.
+        const rejected = Promise.reject(new TypeError("Failed to fetch"));
+        return { then: rejected.then.bind(rejected), catch: rejected.catch.bind(rejected) };
+      });
+      prefill(oko);
+      await waitFor(() =>
+        expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Pre-filled from Oko")),
+      );
+      expect(actions.recordFrameRequestAction).toHaveBeenCalledTimes(1);
+      expect(toast.error).not.toHaveBeenCalled();
+      // Node reports an unhandled rejection after the microtask queue drains.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off("unhandledRejection", unhandled);
+    }
   });
 
   it("logs nothing for an exact printing (Llanowar Elves DOM #168 on the verified M15 frame)", async () => {
