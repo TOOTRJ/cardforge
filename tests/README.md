@@ -102,10 +102,9 @@ jobs of four shards each; the gate job merges their hashes and uploads the
 baseline it would write as the `visual-baseline` artifact —
 `gh run download <run> -n visual-baseline -D tests/visual` takes it when
 regenerating locally isn't convenient. The pipeline is deterministic across
-platforms for the pinned sharp/libvips (2026-09-29: the baseline was made on
-darwin-arm64 / Node 25; 284 cases re-baked end to end on linux-arm64 /
-Node 24 after a fresh `npm ci` matched it, and 90 sampled SVGs rasterised
-bit-identically on linux-x64 under emulation); if every case
+platforms for the pinned sharp/libvips (2026-09-29: the baseline made on
+darwin-arm64 / Node 25 matched all 849 cases on CI's linux-x64 / Node 24
+runner, and a 3-shard local run matched the 4-shard baseline); if every case
 changes at once with no code change, the report names the tool or input
 that moved. `tests/unit/render/visual-matrix.test.ts` also fails the fast
 unit run when the baseline no longer matches the matrix or the layout
