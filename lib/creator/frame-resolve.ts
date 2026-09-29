@@ -262,7 +262,9 @@ export function resolveImportFrame(input: {
  *     A9) takes that frame when it is — and, when the registry says what
  *     the match is then (`onceVerifiedMatch`: an M20+ token is exact on its
  *     full-art template, TODO 4.48, or nearest for a gap it doesn't draw),
- *     that status, reason, item and gaps;
+ *     that status, reason, item and gaps — and while it isn't verified, a
+ *     match that would then be exact says "not yet verified" and is marked
+ *     `unverified`, the stand-in still its landing;
  *   • `exact` only when PipGlyph's frame is verified in the card's colour —
  *     an unverified frame is never an exact match to a user, so it becomes
  *     `nearest`, "not yet verified in <colour>", marked `unverified` (the
@@ -294,6 +296,19 @@ export function withVerification<
     } else {
       finalized = { ...rest, template: onceVerified } as unknown as T;
     }
+  } else if (match.onceVerified && match.onceVerifiedMatch?.status === "exact" && match.status !== "exact") {
+    // The frame the printing wears exists and would be exact, but isn't
+    // verified in the card's colour yet (the M20 token design before its
+    // tick): the stand-in keeps the landing, and the answer says what's
+    // left — "not yet verified", filed under the request log's "Not yet
+    // verified" (TODO 1.6, D1) like any unverified exact frame.
+    const base: Partial<FrameMatch> = { ...match };
+    delete base.blockedBy;
+    return {
+      ...base,
+      reason: `not yet verified in ${colorWord(colorKey)}`,
+      unverified: true,
+    } as unknown as T;
   }
   if (finalized.status !== "exact") return finalized;
   if (verifiedKeys.has(frameComboKey(finalized.template, colorKey))) return finalized;

@@ -1216,7 +1216,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
         template: { family: "m15" },
         onceVerified: { family: "m20" },
         exactOnceVerified: true,
-        reason: "PipGlyph doesn't have the current full-art token frame yet",
+        reason: "PipGlyph's full-art token frame isn't verified yet",
         blockedBy: "4.48",
       },
     },

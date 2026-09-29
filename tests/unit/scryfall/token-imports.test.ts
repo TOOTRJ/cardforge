@@ -110,13 +110,13 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
   it("says why an M20 token isn't exact, and keeps saying it beside a gap", () => {
     expect(match("t2xm-4")).toMatchObject({
       exactLabel: "M20 full-art token frame",
-      reason: "PipGlyph doesn't have the current full-art token frame yet",
+      reason: "PipGlyph's full-art token frame isn't verified yet",
     });
     expect(match("tmkm-13").reason).toBe(
-      "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the legendary crown yet",
+      "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the legendary crown yet",
     );
     expect(match("tdsk-4").reason).toBe(
-      "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the Nyx dress on its token frames yet",
+      "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the Nyx dress on its token frames yet",
     );
     expect(match("tfra-5")).toMatchObject({
       exactLabel: "Planeswalker token",
@@ -183,10 +183,14 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
     const m = match(key);
     expect(m.onceVerified).toBe(template);
     expect(m.onceVerifiedMatch).toEqual({ status: "exact", reason: null });
-    // Unverified: the arch stands in, as before.
+    // Unverified: the arch stands in, as before, and the answer says what's
+    // left — "not yet verified", the request log's "Not yet verified" (D1).
     const colour = pickColour(key);
-    expect(withVerification(m, colour, new Set())).toMatchObject({ status: "nearest", blockedBy: "4.48" });
-    expect(withVerification(m, colour, new Set()).template).toMatch(/^m15token/);
+    const waiting = withVerification(m, colour, new Set());
+    expect(waiting).toMatchObject({ status: "nearest", unverified: true, reason: expect.stringMatching(/^not yet verified in /) });
+    expect(waiting.template).toBe(m.template);
+    expect(waiting.template).toMatch(/^m15token/);
+    expect(waiting.blockedBy).toBeUndefined();
     // Verified: exact on the full-art template, no reason, no item.
     const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));
     expect(done).toMatchObject({ status: "exact", template, reason: null });
@@ -205,6 +209,9 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
     for (const [key, template, reason, blockedBy, gaps] of cases) {
       const m = match(key);
       expect(m.onceVerified, key).toBe(template);
+      // Before its tick: still the registry's own nearest (a gap is missing
+      // whatever is verified), never "not yet verified".
+      expect(withVerification(m, pickColour(key), new Set()).unverified, key).toBeUndefined();
       // Two colours land on gold ("m") until 4.6's gradient.
       const colour = pickColour(key);
       const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));

@@ -541,10 +541,13 @@ frames bucket — never git:
   sets those below 9 pt).
 - **Import** (TODO 1.23). `token/m20` names the height's template through
   `onceVerified` (family `m20`) and is `exactOnceVerified`: until the
-  template is verified in the card's colour the 2014–19 arch stands in
-  (`nearest`, 4.48); once it is, `withVerification` makes the match `exact`
-  on it (`FrameMatch.onceVerifiedMatch`) — or `nearest` with the gap's own
-  reason for a crown, two colours or the Nyx dress.
+  template is verified in the card's colour the 2014–19 arch stands in —
+  `nearest`, "not yet verified in <colour>", marked `unverified` (the
+  request log's "Not yet verified") when the full-art template would be
+  exact; once it is, `withVerification` makes the match `exact` on it
+  (`FrameMatch.onceVerifiedMatch`) — or `nearest` with the gap's own
+  reason for a crown, two colours or the Nyx dress (logged "missing"
+  either way).
 - **Creator.** The six are variations of the token kind
   (`TEMPLATE_SKIN_VARIANTS.m15token`), each height's artifact template its
   Artifact-word dress (`TYPE_WORD_DRESSES`), and unverified: the walk-through
