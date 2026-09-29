@@ -1248,6 +1248,32 @@ const TOKEN_PILL_LIFT_PCT = (0.46 / 100) * (7 / 5);
  *  2014–19 token prints (TDOM #2–#11, TM19, TBFZ, TWAR, TMH1, TKLD, TC18,
  *  TEMN; Scryfall PNGs at 1500 × 2100) print it at 1797–1803, mean 1800.4. */
 const TOKEN_TYPE_PRINT_DY = 0.0027;
+/** TODO 4.49 (d), print pass: the set symbol's centre (card %H). CC's
+ *  setSymbolBounds centre it on 84.39 %H, its own pill's centre, but CC's
+ *  pill sits ~8 px above the printed one: fifteen 2014–19 textless prints
+ *  (the 4.49 pins, Scryfall PNGs at 1500 × 2100) centre the symbol's ink at
+ *  1775.5–1784.5 px, mean 1781.0 (84.81 %H), and the same glyphs baked in
+ *  CC's box centred 8.1 px higher. 84.78 puts the box's centre (an uploaded
+ *  icon's) at 1780.4 px, the Keyrune glyphs' ink within ±2 px of the mean.
+ *  The right edge stays on 92.13 %W. On CC's pill (interior 1716–1822 px)
+ *  the 86 px box now reaches 1823 px, as the prints' reaches their pill's
+ *  bottom (DOM's ink 1741–1828 on a ~1726–1828 interior). */
+const TOKEN_SYMBOL_CENTRE_PCT = 84.78;
+/** CC's setSymbolBounds on its textless token (packTokenTextlessM15.js):
+ *  right edge 92.13 %W, centred on 84.39 %H — its own pill's centre. A
+ *  frame that moves CC's pill with the symbol (a re-cut master: 4.49 (b)'s
+ *  text-box token) derives its box from this one, not from M15TOKEN's
+ *  print-moved symbolRect. */
+const TOKEN_CC_SYMBOL_RECT: Rect = { topPct: 82.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 };
+/** TODO 4.49 (a), print pass: M15's plate box (CC's 88.48 %H top) 0.13 %H
+ *  (2.7 px at HD) lower on the token frames — where the prints put the
+ *  plate. Each of the fifteen prints' plate profile (rim, inner line and
+ *  bottom bevel over the plate's flat middle, x 1255–1335 px) aligned to
+ *  ours by correlation: CC's plate sits 2.7 px above them on average
+ *  (median 3.75; −5.5 to +3.5 print to print, as the prints are cut). The
+ *  value box stays M15's (4.18) — the digits were already on the prints
+ *  (1291 × 1929.8 px, 15 prints; ours 1291.5 × 1928.5). */
+const TOKEN_PLATE_PRINT_DY_PCT = 0.13;
 const M15TOKEN: FrameProfile = {
   label: "M15 Token",
   hideCost: true,
@@ -1255,10 +1281,14 @@ const M15TOKEN: FrameProfile = {
   // CC's token symbol box, M15's (0.041 H = 86 px; layout v32).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
-  // CC's setSymbolBounds on its textless token (packTokenTextlessM15.js):
-  // right edge 92.13 %W, centred on 84.39 %H — the pill's centre (TODO 4.49
-  // (d); it rode the end of a centred type line before).
-  symbolRect: { topPct: 82.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  // CC's setSymbolBounds (TOKEN_CC_SYMBOL_RECT), right edge 92.13 %W (TODO
+  // 4.49 (d); it rode the end of a centred type line before), moved down
+  // onto the prints: centred on 84.78 %H, not CC's 84.39
+  // (TOKEN_SYMBOL_CENTRE_PCT).
+  symbolRect: {
+    ...TOKEN_CC_SYMBOL_RECT,
+    topPct: TOKEN_SYMBOL_CENTRE_PCT - TOKEN_CC_SYMBOL_RECT.heightPct / 2,
+  },
   title: {
     rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
     sizePct: TITLE_SIZE_PCT,
@@ -1312,7 +1342,12 @@ const M15TOKEN: FrameProfile = {
   // black border at ~1948 px). M15's slot as a whole: CC's plate box, the
   // value box (4.18), its ink span, size and dark ink; the plate masters are
   // M15's own (m15/pt, and m15artifact/pt on the artifact token below).
-  pt: { ...M15.pt! },
+  // The plate box alone moves down onto the prints (TOKEN_PLATE_PRINT_DY_PCT):
+  // the digits centre in the value box, not the plate's.
+  pt: {
+    ...M15.pt!,
+    plateRect: { ...M15.pt!.plateRect!, topPct: M15.pt!.plateRect!.topPct + TOKEN_PLATE_PRINT_DY_PCT },
+  },
 };
 
 // M15 Token with a text box — TODO 4.49 (b): Card Conjurer 'Regular
@@ -1341,8 +1376,11 @@ const M15TOKENTEXT: FrameProfile = {
   // below it (7.6's overscan).
   artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 55.2 },
   // CC's setSymbolBounds (y 0.6743, centre) moved down with the band:
-  // centred 70.48 %H on the pill, right edge 92.13 %W as on M15TOKEN.
-  symbolRect: { ...M15TOKEN.symbolRect!, topPct: M15TOKEN.symbolRect!.topPct - TOKEN_TEXT_PILL_UP_PCT },
+  // centred 70.48 %H on the pill, right edge 92.13 %W as on M15TOKEN. From
+  // CC's own box (TOKEN_CC_SYMBOL_RECT), not M15TOKEN's: the re-cut moved
+  // CC's pill onto the prints with the symbol, so M15TOKEN's print pass
+  // (its symbol 8 px lower on CC's un-moved pill) does not apply here.
+  symbolRect: { ...TOKEN_CC_SYMBOL_RECT, topPct: TOKEN_CC_SYMBOL_RECT.topPct - TOKEN_TEXT_PILL_UP_PCT },
   // M15TOKEN's band on the pill, 292 px up (the pill's interior 1424–1530
   // px), left-aligned from 8.54 %W; the text 8 px higher to the prints'
   // baseline.

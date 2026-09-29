@@ -460,7 +460,7 @@ describe("fitTypeLine (TODO 4.20, layout v32)", () => {
       expect(token.type.rect.leftPct).toBe(8.54);
       const box = token.symbolRect!;
       expect(box.leftPct + box.widthPct).toBeCloseTo(92.13, 9);
-      expect(box.topPct + box.heightPct / 2).toBeCloseTo(84.39, 9);
+      expect(box.topPct + box.heightPct / 2).toBeCloseTo(84.78, 9);
       // The band reaches the box's right edge; the line stops the print's
       // gap before the symbol's drawn ink (an 86 px box's worth here).
       expect(token.type.rect.leftPct + token.type.rect.widthPct).toBeCloseTo(92.13, 9);

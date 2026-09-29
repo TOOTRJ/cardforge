@@ -157,7 +157,7 @@ from (values
   ('c0000000-0000-4000-a000-000000000014'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Void Tithe', 'void-tithe', '{1}{B}', array['black'], null, 'instant', array[]::text[], 'uncommon',
      E'Devoid\nTarget player exiles a card from their hand.', null, null, null, null, 14, 'm15devoid', 'regular', 'unlisted', null, array['devoid'], null, 'normal', 6),
   -- A token's card types ride in supertype (TODO 3b.15): "Token Creature —
-  -- Beast". Migration 0124 gives a stored P/T token the word; seeds run
+  -- Beast". Migration 0128 gives a stored P/T token the word; seeds run
   -- after the migrations, so the row says it itself.
   ('c0000000-0000-4000-a000-000000000015'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid, 'Beast', 'beast-token', null, array['green'], 'Creature', 'token', array['Beast'], 'common',
      null, null, '4', '4', null, 15, 'm15token', 'regular', 'public', null, array['tokens'], null, 'token', 4),

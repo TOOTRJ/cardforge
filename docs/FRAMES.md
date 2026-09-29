@@ -362,8 +362,9 @@ What a frame gives it:
 `date<2019-07-12`); the M20+ full-art prints wait for 4.48 / 4.50. At v34
 (`M15TOKEN` in `lib/cards/template-layout.ts`):
 
-- the P/T is M15's slot as a whole — CC's plate box, the value box, 0.05 W
-  dark ink — on M15's own plates: `m15/pt/{color}` on `m15token`,
+- the P/T is M15's slot — CC's plate box 0.13 %H lower (88.61 %H, where the
+  prints put the plate; `TOKEN_PLATE_PRINT_DY_PCT`), M15's value box
+  unmoved, 0.05 W dark ink — on M15's own plates: `m15/pt/{color}` on `m15token`,
   `m15artifact/pt/{color}` on `m15tokenartifact` (CC's silver plate for
   `c`, the colour's own otherwise, as TC18 #7 prints). Both plates are in
   `PLATE_INK` already, so the rules layout keeps its lines off them;
@@ -371,8 +372,9 @@ What a frame gives it:
   (`fit: "measured"`), its baseline on the prints' 1800 HD px
   (`TOKEN_TYPE_PRINT_DY`);
 - the set symbol has its own `symbolRect` (right edge 92.13 %W, centre
-  84.39 %H, M15's 86 px box with the ink fit). Its colour stays the card's
-  rarity (new tokens save as common);
+  84.78 %H — the 15 prints' mean, not CC's 84.39, which sat 8 px above
+  them; `TOKEN_SYMBOL_CENTRE_PCT` — M15's 86 px box with the ink fit). Its
+  colour stays the card's rarity (new tokens save as common);
 - still to come: the gold small-caps name and the art slot (4.53).
 
 **The text-box token (4.49 (b)): `m15tokentext` / `m15tokenartifacttext`.**
@@ -386,7 +388,9 @@ profile (`M15TOKENTEXT`) is M15TOKEN's with:
   one's;
 - the type line on the pill, left from 8.54 %W, its baseline on the prints'
   1500 px (twelve prints 1498–1505), the set symbol right-anchored at
-  92.13 %W and centred on 70.48 %H (CC's 67.43 moved down with the band);
+  92.13 %W and centred on 70.48 %H (CC's 67.43 moved down with the band) —
+  CC's own box (`TOKEN_CC_SYMBOL_RECT`), not M15TOKEN's print-moved one:
+  the re-cut already put CC's pill, and the symbol with it, on the prints;
 - the rules in dark ink in CC's box moved down with the band and ending 5 px
   inside the drawn box as it starts (8.6 / 74.48 / 82.8 × 18 %: 1564–1942 px
   in the drawn box's 1559–1947; CC's ended at 1930, and a centred line sat
@@ -398,8 +402,7 @@ profile (`M15TOKENTEXT`) is M15TOKEN's with:
   places the line (a whole-px indent per target, `singleLineIndentPx`) and
   both renderers draw that indent as the line's margin, so the keep-outs
   are judged where it lands. No scrim;
-- the P/T on M15's plate, as on M15TOKEN (`m15artifact/pt` on the artifact
-  dress);
+- the P/T as on M15TOKEN (`m15artifact/pt` on the artifact dress);
 - `c` see-through like m15token's: CC's silver frame at 35 %, the pill and
   the box at 80 % over the art (BFZ #2 / OGW #1 Eldrazi Scion). A coloured
   artifact keeps the silver box and takes the colour through the title,
@@ -434,7 +437,7 @@ prints "Token" first ("Token Artifact — Treasure", "Token Basic — Wastes") o
 every template. `showsPowerToughness(cardType, subtypes, supertype)` (the
 creator's inputs, the AI lint) is true for a token only with Creature or a
 Vehicle / Spacecraft subtype; the renderers gate on `printsPowerToughness`,
-which also keeps a stored word-less token's P/T (migration 0124 gave those
+which also keeps a stored word-less token's P/T (migration 0128 gave those
 rows "Creature" and a null render stamp, so the automatic re-bake redraws
 them with the word whichever of the migration and the deploy lands first). The frame follows the Artifact word
 (`typeWordFrameFor`): there is no separate "Artifact Token" chip, and stored

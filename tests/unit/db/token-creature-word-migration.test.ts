@@ -63,9 +63,9 @@ const ROWS: Row[] = [
   { card_type: "token", supertype: "Creatures", power: "1", toughness: "1", after: "Creatures Creature" },
 ];
 
-describe("0124 — stored creature tokens gain \"Creature\"", () => {
-  it("has its migration, numbered 0124", () => {
-    expect(file).toBe("0124_token_creature_word.sql");
+describe("0128 — stored creature tokens gain \"Creature\"", () => {
+  it("has its migration, numbered 0128", () => {
+    expect(file).toBe("0128_token_creature_word.sql");
   });
 
   it("is one UPDATE of public.cards — no DDL, no grants; it nulls the changed rows' render stamp", () => {

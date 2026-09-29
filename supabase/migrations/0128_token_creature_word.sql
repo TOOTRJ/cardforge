@@ -1,4 +1,8 @@
--- 0124 — stored creature tokens gain "Creature" in their supertype (TODO 3b.15).
+-- 0128 — stored creature tokens gain "Creature" in their supertype (TODO 3b.15).
+--
+-- Numbered 0128, not the 0124 it was written as: main took 0125 (#406) and
+-- 0126 / 0127 are queued ahead of the token release, and Supabase never
+-- applies a version below one production already has.
 --
 -- A token's card types ride in `supertype` ("Token Artifact Creature —
 -- Thopter" is card_type 'token' with "Artifact Creature" in supertype — the

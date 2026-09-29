@@ -2815,7 +2815,7 @@ export function CardCreatorForm({
             {stepKey === "identity" ? (
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
-                <IdentityPanel revise={isRevise} />
+                <IdentityPanel revise={isRevise} token={kind === "token"} />
                 <ArtPanel
                   userId={userId}
                   importedArtOrigin={importedArtOrigin}

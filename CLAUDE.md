@@ -237,7 +237,7 @@ Rules and gotchas:
   "Token" first on every template. P/T: `showsPowerToughness(type, subtypes,
   supertype)` for inputs and the AI (a token needs Creature or a Vehicle /
   Spacecraft subtype), `printsPowerToughness` in both renderers (keeps a
-  stored word-less token's P/T; 0124 gave them "Creature" + a null stamp).
+  stored word-less token's P/T; 0128 gave them "Creature" + a null stamp).
   The Artifact word picks `m15tokenartifact` (`typeWordFrameFor`; no
   "Artifact Token" chip); new tokens save as common (creator AND AI jobs),
   chips hidden. `m15token` / `m15tokenartifact` = the 2014–19 arch prints

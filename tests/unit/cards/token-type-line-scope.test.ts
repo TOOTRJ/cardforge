@@ -10,7 +10,7 @@ import type { CardType } from "@/types/card";
 //
 // Checked against real bakes on 2026-09-29: the 32 public production tokens
 // (anonymous REST; their r5-cached rows identical in supertype, subtypes,
-// P/T and template) baked by main (02fe649) and by this branch with 0124's
+// P/T and template) baked by main (02fe649) and by this branch with 0128's
 // word applied — 30 PNGs differ (22 "Basic" tokens: "Basic Token — Wastes"
 // → "Token Basic — Wastes"; 8 P/T tokens with no word: "Token — X" → "Token
 // Creature — X"), 2 are byte-identical (no word, no P/T: "Token"). PUBLIC
@@ -67,7 +67,7 @@ describe("tokenTypeLineChanged — 3b.15's card scope", () => {
     }
   });
 
-  it("covers a P/T token before AND after 0124 writes its word", () => {
+  it("covers a P/T token before AND after 0128 writes its word", () => {
     expect(tokenTypeLineChanged(row([null, ["Soldier"], "1", "1"]))).toBe(true);
     expect(tokenTypeLineChanged(row(["Creature", ["Soldier"], "1", "1"]))).toBe(true);
   });

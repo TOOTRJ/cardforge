@@ -463,24 +463,28 @@ import type { CardType } from "@/types/card";
 //            two tracks:
 //            * today's token frame against the 2014–19 arch prints (TODO 4.49
 //              (a) + (d); lib/cards/template-layout.ts M15TOKEN): the P/T on
-//              M15's plate — CC's plate box 75.73 / 88.48 / 18.8 × 7.33, the
-//              4.18 value box, 0.05 W dark ink (was white ink on the frame's
-//              edge at 0.0427 W) — m15/pt/{color} on m15token, m15artifact/
-//              pt/{color} on m15tokenartifact (CC's silver plate for `c`, the
-//              colour's own otherwise, as TC18 #7 prints); the type line
-//              left-aligned from 8.54 %W to the symbol, its baseline 1796 →
-//              1800 HD px (TOKEN_TYPE_PRINT_DY; 15 prints 1797–1803, mean
-//              1800.4); the set symbol in its own symbolRect, right edge
-//              92.13 %W, centre 84.39 %H. Against 15 prints (HD px, ours −
-//              print): P/T digits' centre ±2 x / −1.4 y, plate 8–9 px high,
-//              type line +4 px from the left, symbol right edge ±1 px (DOM,
-//              KLD). Nothing above y 1725 moves (art, name, rules scrim —
+//              M15's plate — CC's plate box 75.73 / 88.48 / 18.8 × 7.33 moved
+//              0.13 %H down onto the prints (88.61; TOKEN_PLATE_PRINT_DY_PCT),
+//              the 4.18 value box, 0.05 W dark ink (was white ink on the
+//              frame's edge at 0.0427 W) — m15/pt/{color} on m15token,
+//              m15artifact/pt/{color} on m15tokenartifact (CC's silver plate
+//              for `c`, the colour's own otherwise, as TC18 #7 prints); the
+//              type line left-aligned from 8.54 %W to the symbol, its
+//              baseline 1796 → 1800 HD px (TOKEN_TYPE_PRINT_DY; 15 prints
+//              1797–1803, mean 1800.4); the set symbol in its own
+//              symbolRect, right edge 92.13 %W, centre 84.78 %H (CC's
+//              84.39 sat 8.3 px above the prints; TOKEN_SYMBOL_CENTRE_PCT).
+//              Against the 15 textless pins (HD px, ours − print mean): P/T
+//              digits' centre +0.6 x / −1.3 y, plate +0.3 (was −2.7),
+//              symbol centre −0.3 (was −8.3), type line +4 px from the left,
+//              symbol right edge ±1 px (DOM, KLD). Nothing above y 1725
+//              moves (art, name, rules scrim —
 //              4.49 (b) and 4.53 are open). Every card on m15token /
 //              m15tokenartifact changes (every one has a type line and a
 //              symbol).
 //            * "Token" first on the type line (TODO 3b.15; buildTypeLine):
 //              "Basic Token — Wastes" → "Token Basic — Wastes", "Token —
-//              Soldier" → "Token Creature — Soldier" once migration 0124 gives
+//              Soldier" → "Token Creature — Soldier" once migration 0128 gives
 //              a word-less P/T token its "Creature"; a token prints its P/T
 //              only with Creature or a Vehicle / Spacecraft subtype
 //              (printsPowerToughness — a stored word-less token keeps its
@@ -788,7 +792,7 @@ function v33PrintsText(card: ScopeCard): boolean {
  * empty (a word: the line now prints "Token" first — "Basic Token — Wastes"
  * → "Token Basic — Wastes"; a Treasure's stray P/T goes too; a blank one of
  * spaces is trimmed away), and a token with a P/T
- * and no word, which migration 0124 gives "Creature" ("Token — Soldier" → "Token
+ * and no word, which migration 0128 gives "Creature" ("Token — Soldier" → "Token
  * Creature — Soldier") — counted whether the sweep reaches the row before or
  * after the migration, so it is never stamped current on the old line. A
  * back face typed token with a non-empty supertype is its own line too. Any token template
