@@ -60,6 +60,7 @@
 // (the renders still go) and exits 1.
 // ---------------------------------------------------------------------------
 import { AppEndpointError } from "./app-endpoint.mjs";
+import { limitStorage } from "./storage-calls.mjs";
 import {
   DEFAULT_BATCH_SIZE,
   MAX_BATCH_SIZE,
@@ -186,7 +187,8 @@ export async function purgeThroughApp({ app, ids, state, statePath, manifestPath
  * batch:
  *   1. `db.clearRenderPointers(ids)` — the pointers of those that are private
  *      right now (conditional UPDATE, see the header); returns the ids;
- *   2. every object looked up at once: gone → skipped; another eTag than the
+ *   2. every object looked up (at most `--storage-concurrency` at a time,
+ *      scripts/lib/storage-calls.mjs): gone → skipped; another eTag than the
  *      listing's (new bytes — a bake) → kept, the next run judges it again;
  *   3. `db.cardVisibility(ids)` — THE re-check, right before the remove:
  *      anything but a row that says private → kept, never touched;
@@ -212,6 +214,7 @@ export async function applyPrivateRenders({
   log = () => {},
 }) {
   if (!(batchSize >= 1 && batchSize <= MAX_BATCH_SIZE)) throw new Error(`batch size must be 1–${MAX_BATCH_SIZE}`);
+  storage = limitStorage(storage, { log });
   for (const card of cards) {
     if (card.state !== "private") throw new Error(`card ${card.cardId} is ${card.state} — only a private card's renders are removed here`);
     for (const obj of card.objects) {
@@ -245,7 +248,8 @@ export async function applyPrivateRenders({
       log(`  cleared the render pointer of ${cleared.length} private card(s)`);
     }
 
-    // 2. The objects, all at once (the slow part, so it comes before the re-check).
+    // 2. The objects (the slow part, so it comes before the re-check; a few
+    //    at a time, busy storage retried — scripts/lib/storage-calls.mjs).
     const looked = await Promise.all(
       batch.flatMap((card) =>
         card.objects.map(async (obj) => {
@@ -375,6 +379,7 @@ export async function runPrivateRenders({
   run,
   log = () => {},
 }) {
+  storage = limitStorage(storage, { log });
   await reconcilePending({ storage, state, statePath, manifestPath, target, log });
 
   const objects = [];

@@ -404,6 +404,27 @@ describe("applyPrivateRenders", () => {
     expect(result.failed).toEqual([{ bucket: "card-renders", paths: [`${U1}/${PRIVATE}.thumb.webp`], error: "delete not confirmed" }]);
     expect(loadState(s.statePath).pending.items.map((i: { path: string }) => i.path)).toEqual([`${U1}/${PRIVATE}.thumb.webp`]);
   });
+
+  // Incident 2026-09-29 (the orphan sweep's `--batch-size 100`): every lookup
+  // of a batch went out at once and storage ran out of database connections.
+  // A batch of 100 private cards is 200 lookups before the remove and 200
+  // after it.
+  it("a batch of 100 cards against a storage that refuses a 5th call at once: every render removed and confirmed, never more than 4 in flight", async () => {
+    const ids = Array.from({ length: 100 }, (_, i) => `eeeeeeee-eeee-4eee-8eee-${String(i).padStart(12, "0")}`);
+    const s = await setup(
+      ids.map((id) => withPointer(id, "private")),
+      ids.flatMap((id) => both(U1, id)),
+      {},
+      { maxConcurrent: 4 },
+    );
+    const result = await s.run({ batchSize: 100 });
+    expect(result.skipped).toEqual([]);
+    expect(result.failed).toEqual([]);
+    expect(result).toMatchObject({ deleted: 200, purged: 100 });
+    expect(s.storage.store.size).toBe(0);
+    expect(s.storage.stats).toMatchObject({ peak: 4, refused: 0 });
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, purgePending: [] });
+  });
 });
 
 // --- the CLI against a fake Supabase ------------------------------------------------------

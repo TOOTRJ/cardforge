@@ -34,7 +34,8 @@ import {
   textColumns,
   userFolderKey,
 } from "@/scripts/lib/storage-orphans.mjs";
-import { emptyDb, fakeDb, fakeStorage, fakeSupabase, openApiOf, type Db, type Obj, type StoredObject } from "./helpers/fake-supabase";
+import { limitStorage } from "@/scripts/lib/storage-calls.mjs";
+import { emptyDb, fakeDb, fakeStorage, fakeSupabase, openApiOf, storagePool, type Db, type Obj, type StoredObject } from "./helpers/fake-supabase";
 
 vi.mock("@/lib/supabase/admin", () => ({ isAdminConfigured: () => false, createAdminClient: () => ({}) }));
 
@@ -561,6 +562,52 @@ describe("applySweep", () => {
     saveState(file, { ...loadState(file), target: "x", deleted: 3 });
     expect(loadState(file)).toMatchObject({ version: 1, target: "x", deleted: 3, pending: null });
   });
+
+  // Incident 2026-09-29: `--apply --batch-size 100` on production deleted 193
+  // objects, then a batch failed — "couldn't confirm the delete (Too many
+  // connections issued to the database)": every lookup of a batch went out at
+  // once and Supabase Storage ran out of database connections.
+  it("a batch of 100 against a storage that refuses a 5th call at once: every object deleted and confirmed, never more than 4 in flight", async () => {
+    const md5 = (text: string) => `"${createHash("md5").update(text).digest("hex")}"`;
+    const objects = Array.from({ length: 100 }, (_, i) =>
+      real("card-art", `${U1}/${String(i).padStart(3, "0")}.jpg`, 30, { etag: md5(`bytes of card-art/${U1}/${String(i).padStart(3, "0")}.jpg`) }),
+    );
+    const s = setup(objects, emptyDb(), {}, { maxConcurrent: 4 });
+    const result = await s.run({ batchSize: 100, backupDir: path.join(tmp, "backup-100") });
+    expect(result.skipped).toEqual([]);
+    expect(result.failed).toEqual([]);
+    expect(result.deleted).toBe(100);
+    expect(s.storage.store.size).toBe(0);
+    expect(s.storage.stats).toMatchObject({ peak: 4, refused: 0 });
+    expect(s.database.selects.filter((t) => t === "cards")).toHaveLength(1); // still ONE full scan for the batch
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 100 });
+  });
+
+  it("a busy storage is retried: a lookup or a confirm that answers \"Too many connections\" first still decides", async () => {
+    const objects = [real("card-art", `${U1}/a.jpg`), real("card-art", `${U1}/b.jpg`)];
+    // a.jpg: busy once on its lookup before the delete; b.jpg: busy twice on
+    // the confirm after it (what failed on 2026-09-29).
+    const s = setup(objects, emptyDb(), {}, { busyInfo: { [`${U1}/a.jpg`]: 1 }, busyInfoAfterRemove: { [`${U1}/b.jpg`]: 2 } });
+    const waits: number[] = [];
+    const lines: string[] = [];
+    const storage = limitStorage(s.storage, { sleep: async (ms: number) => void waits.push(ms), log: (l: string) => lines.push(l) });
+    const result = await s.run({ storage, log: (l: string) => lines.push(l) });
+    expect(result).toMatchObject({ deleted: 2, skipped: [], failed: [] });
+    expect(waits).toHaveLength(3);
+    expect(lines.filter((l) => l.includes("storage busy on info"))).toHaveLength(3);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 2 });
+  });
+
+  it("reconcilePending retries a busy storage too (a raw storage gets the default limiter)", async () => {
+    const items = [`${U1}/a.jpg`, `${U1}/b.jpg`].map((p) => ({ path: p, size: 1, etag: '"e"', reason: "no row references it" }));
+    const statePath = path.join(tmp, "state.json");
+    const state = { ...loadState(statePath), pending: { bucket: "card-art", run: "r0", at: "x", items } };
+    // The settle that follows the incident's failed batch: storage still busy once.
+    const storage = fakeStorage([], { busyInfo: { [`${U1}/b.jpg`]: 1 } });
+    const settled = await reconcilePending({ storage, state, statePath, manifestPath: path.join(tmp, "m.jsonl"), target: "dev.example" });
+    expect(settled).toEqual({ gone: 2, present: 0 });
+    expect(loadState(statePath)).toMatchObject({ pending: null, deleted: 2 });
+  });
 });
 
 // --- the run plan, backups, private renders -------------------------------------------------
@@ -794,5 +841,94 @@ describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
 
     const again = await run(common());
     expect(again.out).toMatch(/Total: 0 orphan\(s\)/);
+  });
+});
+
+// --- incident 2026-09-29: storage ran out of database connections --------------------------
+
+describe("scripts/sweep-storage-orphans.mjs against a Storage whose database pool takes 4 calls at once", () => {
+  // Production, 2026-09-29: `--apply --batch-size 100` fired each batch's
+  // lookups all at once; after 193 deletes storage answered "Too many
+  // connections issued to the database" and the batch's confirms failed.
+  // This fake refuses a storage request that arrives while 4 are in flight.
+  let tmp = "";
+  let server: Server;
+  const store = new Map<string, StoredObject>();
+  const pool = storagePool({ max: 4, delayMs: 15 });
+  const orphanKeys = Array.from({ length: 40 }, (_, i) => `card-art/${U1}/o-${String(i).padStart(2, "0")}.jpg`);
+
+  function run(args: string[], input = ""): Promise<{ code: number | null; out: string }> {
+    return new Promise((resolve) => {
+      const child = spawn(process.execPath, ["--no-warnings", SCRIPT, ...args], { cwd: ROOT, env: { ...process.env, HOME: tmp } });
+      let out = "";
+      child.stdout.on("data", (d) => (out += d));
+      child.stderr.on("data", (d) => (out += d));
+      child.on("close", (code) => resolve({ code, out }));
+      child.stdin.end(input);
+    });
+  }
+  const common = () => ["--env-file", path.join(tmp, "env"), "--state", path.join(tmp, "state.json"), "--manifest", path.join(tmp, "manifest.jsonl")];
+
+  beforeAll(async () => {
+    tmp = mkdtempSync(path.join(os.tmpdir(), "sweep-pool-"));
+    const t = new Date(Date.now() - 30 * DAY).toISOString();
+    for (const key of orphanKeys) {
+      const bytes = Buffer.from(`bytes:${key}`);
+      store.set(key, { bytes, etag: `"${createHash("md5").update(bytes).digest("hex")}"`, created: t, updated: t });
+    }
+    server = fakeSupabase(store, emptyDb(), { storagePool: pool });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    writeFileSync(path.join(tmp, "env"), `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:${port}\nSUPABASE_SECRET_KEY=sb_secret_fake\n`);
+  });
+
+  afterAll(async () => {
+    await new Promise((resolve) => server?.close(resolve));
+    if (tmp) rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it("--storage-concurrency is 1 to 8", async () => {
+    for (const bad of ["0", "9", "x"]) {
+      const { code, out } = await run([...common(), "--storage-concurrency", bad]);
+      expect(code).toBe(1);
+      expect(out).toMatch(/--storage-concurrency must be a whole number from 1 to 8/);
+    }
+  });
+
+  it("--storage-concurrency 2: never more than 2 storage calls in flight", async () => {
+    pool.peak = 0;
+    pool.refused = 0;
+    const { code, out } = await run([...common(), "--apply", "--batch-size", "100", "--storage-concurrency", "2", "--limit", "10"], "yes\n");
+    expect(code).toBe(0);
+    expect(out).toMatch(/Storage calls: at most 2 at a time/);
+    expect(out).toMatch(/Deleted 10 object\(s\)/);
+    expect(pool.refused).toBe(0);
+    expect(pool.peak).toBeLessThanOrEqual(2);
+  });
+
+  it("--apply --batch-size 100 (the incident's run): every orphan deleted and confirmed, at most 4 calls in flight; a busy confirm is retried", async () => {
+    pool.peak = 0;
+    pool.refused = 0;
+    // One confirm lookup (the object's second info request) is refused once,
+    // whatever the load — what failed on 2026-09-29.
+    const busyKey = `/storage/v1/object/info/${orphanKeys[25]}`;
+    let seen = 0;
+    pool.refuse = (method, p) => method === "GET" && p === busyKey && ++seen === 2;
+    const backupDir = path.join(tmp, "backup");
+    const { code, out } = await run([...common(), "--apply", "--batch-size", "100", "--backup-dir", backupDir], "yes\n");
+    pool.refuse = undefined;
+    expect(out).not.toMatch(/couldn't confirm|lookup failed|backup failed/);
+    expect(out).toMatch(/--apply re-reads the whole database once per batch: 1 batch\(es\) of up to 100 → 1 full read\(s\) of every table\. Storage calls: at most 4 at a time/);
+    expect(out).not.toMatch(/use --batch-size 100/);
+    expect(out).toMatch(new RegExp(`storage busy on info ${orphanKeys[25]}: Too many connections issued to the database — try 2 of 4`));
+    expect(out).toMatch(/Deleted 30 object\(s\)/);
+    expect(code).toBe(0);
+    expect(pool.refused).toBe(1); // the one refusal picked above, nothing else
+    expect(pool.peak).toBeLessThanOrEqual(4);
+    expect(pool.peak).toBeGreaterThan(1); // still in parallel, just capped
+    expect(orphanKeys.filter((k) => store.has(k))).toEqual([]);
+    const manifest = readManifest(path.join(tmp, "manifest.jsonl"));
+    expect(manifest.map((e: { bucket: string; path: string }) => `${e.bucket}/${e.path}`).sort()).toEqual([...orphanKeys].sort());
+    expect(loadState(path.join(tmp, "state.json"))).toMatchObject({ pending: null, deleted: 40 });
   });
 });

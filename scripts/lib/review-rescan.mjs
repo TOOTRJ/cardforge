@@ -50,6 +50,7 @@
 // ---------------------------------------------------------------------------
 import { imageModerationRequest, scanVerdict } from "../../lib/moderation/image-scan-core.ts";
 import { AppEndpointError } from "./app-endpoint.mjs";
+import { limitStorage } from "./storage-calls.mjs";
 import {
   KeyIndex,
   appendManifest,
@@ -377,6 +378,7 @@ export async function applyFlagged({
   log = () => {},
 }) {
   withVerdicts(state);
+  storage = limitStorage(storage, { log });
   const result = { deleted: 0, bytes: 0, skipped: [], failed: [], rows: { done: 0, skipped: 0, failed: 0 } };
   const skip = (f, why) => {
     result.skipped.push({ bucket: f.bucket, path: f.path, why });
@@ -513,6 +515,7 @@ export async function runReviewRescan({
   log = () => {},
 }) {
   withVerdicts(state);
+  storage = limitStorage(storage, { log });
   await reconcilePending({ storage, state, statePath, manifestPath, target, log });
 
   const listed = [];

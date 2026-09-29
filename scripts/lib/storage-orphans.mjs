@@ -24,6 +24,7 @@ import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { isUuid } from "../../lib/ids.ts";
+import { limitStorage } from "./storage-calls.mjs";
 
 /** Buckets the sweep may delete from. */
 export const SWEEP_BUCKETS = ["card-art", "profile-media", "set-covers", "custom-pips", "card-renders"];
@@ -41,6 +42,11 @@ export const NOT_SWEPT = {
  *  any bucket. Remixes share `art_url`, AI job steps and the creator's
  *  unsaved drafts point at fresh uploads before any card row does. */
 export const MIN_AGE_DAYS = 7;
+/** Objects per delete batch. Each batch re-reads the whole database (about
+ *  2 s on production, 2026-09-29: 36 tables, 6.6k rows), so the default is
+ *  fine there too. The batch size never decides how many storage calls run
+ *  at once — that is `--storage-concurrency` (scripts/lib/storage-calls.mjs;
+ *  incident 2026-09-29). */
 export const DEFAULT_BATCH_SIZE = 25;
 export const MAX_BATCH_SIZE = 100;
 /** PostgREST page size. The scan pages until an EMPTY page, so a lower
@@ -602,6 +608,7 @@ export function readManifest(file) {
 export async function reconcilePending({ storage, state, statePath, manifestPath, target, log = () => {} }) {
   const pending = state.pending;
   if (!pending?.items?.length) return { gone: 0, present: 0 };
+  storage = limitStorage(storage, { log });
   let gone = 0;
   let present = 0;
   const entries = [];
@@ -673,9 +680,11 @@ export function sameEtag(a, b) {
  *   2. the whole database is scanned AGAIN for the batch's keys (a row may
  *      have started pointing at one since the listing) and, for renders, the
  *      card ids (a card may exist again);
- *   3. every object is looked up again, all at once: gone, another eTag
- *      (compared however each API quotes it, `sameEtag`) or size, or now
- *      younger than the floor → kept;
+ *   3. every object is looked up again (at most `--storage-concurrency` at a
+ *      time — scripts/lib/storage-calls.mjs; firing all of a batch's lookups
+ *      at once ran storage out of database connections on 2026-09-29): gone,
+ *      another eTag (compared however each API quotes it, `sameEtag`) or
+ *      size, or now younger than the floor → kept;
  *   4. the survivors go into `state.pending` and are removed; then EVERY one
  *      is looked up again — storage's own answer, not the names remove()
  *      echoes back (review 2026-09-29), decides: gone → the manifest (its
@@ -696,7 +705,8 @@ export function sameEtag(a, b) {
  * `storage`: `info(bucket, path)` → `{ missing: true }` | `{ etag, size,
  * createdAt, lastModified }` (throws on any other error), `remove(bucket,
  * paths)` → what it says it removed (logged only), `download(bucket, path)`
- * → Buffer.
+ * → Buffer. Every call goes through `limitStorage` (the script's own
+ * limiter, or a default one of 4 for a storage given raw).
  */
 export async function applySweep({
   db,
@@ -716,6 +726,7 @@ export async function applySweep({
 }) {
   if (!(batchSize >= 1 && batchSize <= MAX_BATCH_SIZE)) throw new Error(`batch size must be 1–${MAX_BATCH_SIZE}`);
   if (!(minAgeDays >= MIN_AGE_DAYS)) throw new Error(`the age floor is ${MIN_AGE_DAYS} days`);
+  storage = limitStorage(storage, { log });
   const floor = minAgeMs(minAgeDays);
   const result = { deleted: 0, bytes: 0, skipped: [], failed: [] };
   const skip = (bucket, obj, why) => {
@@ -776,7 +787,9 @@ export async function applySweep({
         return true;
       });
 
-      // 3. The objects themselves, all at once, right before the delete.
+      // 3. The objects themselves, right before the delete (the limiter lets
+      //    a few run at a time; a busy storage is retried before a lookup
+      //    counts as failed).
       const looked = await Promise.all(
         unreferenced.map(async (obj) => {
           try {
@@ -822,7 +835,8 @@ export async function applySweep({
         continue;
       }
 
-      // 4. The delete, then storage's own answer for every object.
+      // 4. The delete, then storage's own answer for every object (limited
+      //    and retried like the lookups above).
       state.pending = { bucket, run, at: new Date().toISOString(), items: toRemove };
       saveState(statePath, state);
       let echoed;

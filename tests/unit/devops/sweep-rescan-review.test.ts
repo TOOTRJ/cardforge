@@ -24,6 +24,7 @@ import {
   runReviewRescan,
 } from "@/scripts/lib/review-rescan.mjs";
 import { loadState, readManifest, reconcilePending, reviewList } from "@/scripts/lib/storage-orphans.mjs";
+import { limitStorage } from "@/scripts/lib/storage-calls.mjs";
 import { emptyDb, fakeDb, fakeStorage, fakeSupabase, type Obj, type StoredObject } from "./helpers/fake-supabase";
 import { fakeApp, type RowAction } from "./helpers/fake-app";
 
@@ -294,6 +295,27 @@ describe("applyFlagged — the upload path's consequence, nothing more", () => {
       setAppDown: (v: boolean) => (appDown = v),
     };
   }
+
+  it("a busy storage is retried (incident 2026-09-29): a lookup and a confirm that answer \"Too many connections\" first still decide", async () => {
+    const flagged = listed("card-art", `${U1}/nsfw.jpg`);
+    const s = setup([flagged], { busyInfo: { [`${U1}/nsfw.jpg`]: 1 }, busyInfoAfterRemove: { [`${U1}/nsfw.jpg`]: 1 } });
+    const waits: number[] = [];
+    const storage = limitStorage(s.storage, { sleep: async (ms: number) => void waits.push(ms) });
+    const result = await applyFlagged({
+      storage,
+      flagged: [flagged],
+      references: new Map(),
+      state: s.state,
+      statePath: s.statePath,
+      manifestPath: s.manifestPath,
+      target: "dev.example",
+      run: "r1",
+    });
+    expect(result).toMatchObject({ deleted: 1, skipped: [], failed: [] });
+    expect(waits).toHaveLength(2);
+    expect(s.storage.store.size).toBe(0);
+    expect(loadState(s.statePath)).toMatchObject({ pending: null, deleted: 1 });
+  });
 
   it("acts on the rows that draw the file through the app FIRST, then removes exactly the flagged object — every action in the manifest", async () => {
     const flagged = listed("card-art", `${U1}/nsfw.jpg`);
