@@ -74,10 +74,19 @@ import type { CardFieldPatch } from "@/lib/ai/card-ideas-select";
 import { CardIdeasDialog } from "@/components/creator/card-ideas-dialog";
 import {
   ScryfallImportDialog,
-  toastImportNotice,
-  type ImportNotice,
   type ScryfallImportPayload,
 } from "@/components/creator/scryfall-import-dialog";
+import {
+  toastImportNotice,
+  type ImportNotice,
+} from "@/components/creator/import/import-notice";
+import type { ImportedArtOrigin } from "@/components/creator/import/imported-art-note";
+import {
+  appliedImportFrameChoice,
+  frameSubstitutionFor,
+  importSubstitutionMessage,
+  type FrameSubstitution,
+} from "@/lib/creator/import-frame-choice";
 import {
   CARDFORGE_EVENTS,
   FORM_SCROLL_TARGET_ID,
@@ -110,10 +119,7 @@ import {
 } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
-import {
-  frameRequestFromImport,
-  type FrameRequestSource,
-} from "@/lib/frames/frame-requests";
+import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
 import {
   printingTreatmentNotice,
@@ -138,6 +144,7 @@ import {
   showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { cardCornersClass, isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   colorIdentityForKey,
   colorWord,
@@ -534,6 +541,15 @@ export function CardCreatorForm({
     name: string;
     scryfallUri: string | null;
   } | null>(null);
+  // Session-only import facts (never saved): the Card step's "Frame
+  // substituted (imported …)" chip while the card sits on a frame that
+  // isn't the printing's own (TODO 1.5), and the Art step's note on
+  // Scryfall's cropped art while the imported art is still in place
+  // (TODO 1.18). Any user frame or kind change clears the chip.
+  const [frameSubstitution, setFrameSubstitution] =
+    useState<FrameSubstitution | null>(null);
+  const [importedArtOrigin, setImportedArtOrigin] =
+    useState<ImportedArtOrigin | null>(null);
   // True while the deck-remix deep link is fetching + applying the original
   // card (data + artwork) — drives the preview spinner overlay.
   const [deckRemixImporting, setDeckRemixImporting] = useState(false);
@@ -1125,6 +1141,7 @@ export function CardCreatorForm({
       template: watched.frame_style?.template,
     });
     if (plan.action === "apply") {
+      setFrameSubstitution(null);
       applyKindPatch(plan.patch);
     } else {
       setPendingKindPlan(plan);
@@ -1269,18 +1286,29 @@ export function CardCreatorForm({
   // The `importedArtUrl` (set when the user opted to also import artwork)
   // is written to art_url and resets the focal point so the new image
   // shows centered.
-  /** Applies the import and returns the printing-treatment notice (or null)
-   *  for the CALLER to toast after its own success toast, so the notice
-   *  stacks on top of it (Sonner shows the newest in front). */
+  /** Applies the import. `via` says who asked:
+   *  • "dialog" — the import dialog, whose frame chooser already asked about
+   *    a printing whose frame PipGlyph doesn't have (TODO 1.5): the user's
+   *    pick (`frameChoice`) lands, re-checked. Without one (an exact
+   *    printing), or when it went stale, the usual resolution runs and any
+   *    substitution toasts right away. Returns null.
+   *  • "deck-remix" — /create?deckCard= has no dialog: the usual resolution,
+   *    and ONE notice naming the substitution, RETURNED for the caller to
+   *    toast after its own "Pre-filled …" toast (Sonner shows the newest in
+   *    front).
+   *  The frame request log (TODO 1.6) files a "dialog" import as `import`
+   *  and a "deck-remix" one as `deck_prefill`. */
   const handleScryfallImport = (
-    { patch, importedArtUrl, source }: ScryfallImportPayload,
-    /** Which flow imported — the frame request log's `source` (TODO 1.6). */
-    requestSource: FrameRequestSource = "import",
+    { patch, importedArtUrl, frameChoice, source }: ScryfallImportPayload,
+    via: "dialog" | "deck-remix" = "dialog",
   ): ImportNotice | null => {
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
     };
+    const verifiedKeys = new Set(verifiedFrameKeys);
+    // "Keep my current frame" means the frame BEFORE the import's kind change.
+    const templateBefore = getValues("frame_style.template") ?? null;
 
     // Kind first, synchronously: card_type + frame land in one handler pass
     // (via planKindChange), so there's no effect left to race the rest of the
@@ -1302,14 +1330,27 @@ export function CardCreatorForm({
       );
     }
 
-    // Adopt THIS PRINTING's frame (the mapper's era/skin template; layout
-    // kinds already landed on their template above) — resolved against the
+    // The frame. The dialog's chooser pick lands when it still fits the
+    // imported kind and colour (appliedImportFrameChoice). Otherwise adopt
+    // THIS PRINTING's frame (the signature registry's match; layout kinds
+    // already landed on their template above) — resolved against the
     // IMPORTED colour, which is a fact about the card and never changes:
     // the printing's frame, else its era's standard, else the M15 standard,
     // else any published frame of the kind in that colour. A substitution is
-    // announced, never silent. (Phase 1 replaces the toast with the
-    // exact/nearest chooser.)
-    {
+    // announced, never silent.
+    const chosenTemplate = appliedImportFrameChoice({
+      choice: frameChoice,
+      patch,
+      kind: importedKind,
+      templateBefore,
+      verifiedKeys,
+    });
+    let resolutionMessage: string | null = null;
+    if (chosenTemplate) {
+      if (getValues("frame_style.template") !== chosenTemplate) {
+        setValue("frame_style.template", chosenTemplate, { shouldDirty: true });
+      }
+    } else {
       const { wanted, colorKey, resolution } = resolveImportFrame({
         patch,
         kind: importedKind,
@@ -1320,7 +1361,7 @@ export function CardCreatorForm({
           cardType: getValues("card_type") || null,
           colors: getValues("color_identity"),
         },
-        verifiedKeys: new Set(verifiedFrameKeys),
+        verifiedKeys,
       });
       if (
         resolution.status === "exact" ||
@@ -1332,16 +1373,12 @@ export function CardCreatorForm({
           });
         }
         if (resolution.status === "frame-switched") {
-          toast.info(
-            `This printing's ${describeFrame(resolution.fromTemplate)} frame isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`,
-          );
+          resolutionMessage = `This printing's ${describeFrame(resolution.fromTemplate)} frame isn't available in ${colorWord(colorKey)} yet — using ${describeFrame(resolution.template)}.`;
         }
       } else {
         // Never recolour an imported card; keep whatever frame the kind
         // change landed on and say why.
-        toast.info(
-          `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`,
-        );
+        resolutionMessage = `${describeFrame(wanted)} isn't available in ${colorWord(colorKey)} yet — kept the current frame.`;
       }
     }
     // A printing PipGlyph can't reproduce exactly (nearest / unsupported, or
@@ -1357,42 +1394,62 @@ export function CardCreatorForm({
       ? null
       : frameRequestFromImport(patch, {
           artImported: Boolean(importedArtUrl),
-          source: requestSource,
+          source: via === "deck-remix" ? "deck_prefill" : "import",
           landedTemplate: getValues("frame_style.template") as FrameTemplate | undefined,
-          verifiedKeys: new Set(verifiedFrameKeys),
+          verifiedKeys,
         });
     if (frameRequest) void recordFrameRequestAction(frameRequest).catch(() => {});
-    // A borderless / showcase / extended-art / full-art / textless printing
-    // lands on the plain frame above, which "exact" alone would pass off as
-    // a match — name the treatment and the frame it actually got (TODO 1.16
-    // stopgap until the 1.4 resolver). Returned, not toasted: both callers
-    // toast their own "Imported …" / "Pre-filled …" first and this notice
-    // right after it, so it sits in front.
     const landedTemplate =
       (getValues("frame_style.template") as FrameTemplate | undefined) ??
       DEFAULT_FRAME_TEMPLATE;
-    const treatmentMessage = patch.printing_treatment
-      ? printingTreatmentNotice(patch.printing_treatment, landedTemplate)
-      : null;
-    // PipGlyph's own frame for the treatment (the borderless M15 frame, the
-    // full-art basic — frames plan 4.32 / 4.39) is OFFERED once it is
-    // verified in this colour, never picked for the user (1.16).
-    const treatmentOffer = treatmentMessage
-      ? printingTreatmentOffer(patch, new Set(verifiedFrameKeys))
-      : null;
-    const treatmentNotice: ImportNotice | null =
-      treatmentMessage && treatmentOffer && treatmentOffer.template !== landedTemplate
-        ? {
-            message: treatmentMessage,
-            action: {
-              label: treatmentOffer.actionLabel,
-              onClick: () =>
-                setValue("frame_style.template", treatmentOffer.template, {
-                  shouldDirty: true,
-                }),
-            },
-          }
-        : treatmentMessage;
+    // The Card step's chip while the card sits on a frame that isn't the
+    // printing's own (session-only; never saved).
+    setFrameSubstitution(frameSubstitutionFor(patch.frame_match, landedTemplate));
+
+    let notice: ImportNotice | null = null;
+    if (via === "dialog") {
+      // The chooser asked before commit; only a fallback it couldn't foresee
+      // (a stale pick, a patch with no match) still says what happened.
+      if (resolutionMessage) toast.info(resolutionMessage);
+    } else {
+      // ONE toast naming the substitution: what the printing is and the
+      // frame the card got; an older patch with no match names its
+      // treatment instead (TODO 1.16's copy). PipGlyph's own frame for the
+      // treatment (the borderless M15 frame, the full-art basic — frames plan
+      // 4.32 / 4.39) is OFFERED once it is verified in this colour, never
+      // picked for the user.
+      const importedColorKey = pickFrameColorKey(patch.color_identity);
+      // Only a real substitution toasts: a card on the printing's own frame
+      // short of only the crown or a colour indicator gets just the Card
+      // step's "Nearest frame" chip (owner decision C3).
+      const message =
+        importSubstitutionMessage(
+          patch.frame_match,
+          landedTemplate,
+          (template) => isFrameComboAvailable(template, importedColorKey, verifiedKeys),
+          importedColorKey,
+        ) ??
+        resolutionMessage ??
+        (patch.printing_treatment && !patch.frame_match
+          ? printingTreatmentNotice(patch.printing_treatment, landedTemplate)
+          : null);
+      const offer = message ? printingTreatmentOffer(patch, verifiedKeys) : null;
+      notice =
+        message && offer && offer.template !== landedTemplate
+          ? {
+              message,
+              action: {
+                label: offer.actionLabel,
+                onClick: () => {
+                  setValue("frame_style.template", offer.template, {
+                    shouldDirty: true,
+                  });
+                  setFrameSubstitution(null);
+                },
+              },
+            }
+          : message;
+    }
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
@@ -1435,6 +1492,18 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
     }
+    // What the Art step's note reads while this art stays (TODO 1.18):
+    // Scryfall's art_crop stops at the printed frame.
+    setImportedArtOrigin(
+      importedArtUrl
+        ? {
+            artUrl: importedArtUrl,
+            borderless: patch.printing_treatment === "borderless",
+            fullArt: patch.printing_detail?.fullArt ?? false,
+            textless: patch.printing_detail?.textless ?? false,
+          }
+        : null,
+    );
 
     // DFC handling: if the Scryfall card had a back face, the mapper
     // returns `patch.back_face`. Enable has_back_face and populate the
@@ -1488,7 +1557,7 @@ export function CardCreatorForm({
     setRemixSource({ name: source.name, scryfallUri: source.scryfallUri });
     // Pop the user back to Identity so they can see the seeded fields.
     goToStepKey("identity");
-    return treatmentNotice;
+    return notice;
   };
 
   // Deck remix deep-link (/create?deckCard=…): pre-fill the form from the
@@ -1555,7 +1624,7 @@ export function CardCreatorForm({
           // soft-fail — the user can import art from the dialog later
         }
 
-        const treatmentNotice = handleScryfallImport(
+        const substitutionNotice = handleScryfallImport(
           {
             patch: body.patch,
             importedArtUrl,
@@ -1564,7 +1633,7 @@ export function CardCreatorForm({
               scryfallUri: body.card.scryfall_uri,
             },
           },
-          "deck_prefill",
+          "deck-remix",
         );
         // Re-baseline: the imported card is the starting point, not user
         // work. Save stays disabled until they actually alter something —
@@ -1573,7 +1642,7 @@ export function CardCreatorForm({
         toast.success(
           `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
         );
-        toastImportNotice(treatmentNotice);
+        toastImportNotice(substitutionNotice);
       } catch {
         toast.error(
           `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
@@ -1911,6 +1980,8 @@ export function CardCreatorForm({
   const handleStartOver = () => {
     reset(defaults);
     setRemixSource(null);
+    setFrameSubstitution(null);
+    setImportedArtOrigin(null);
     setPreviewFace("front");
     setServerError(null);
     goToIndex(0);
@@ -2619,6 +2690,8 @@ export function CardCreatorForm({
                 kind={kind}
                 colorIdentity={watched.color_identity}
                 verifiedFrameKeys={verifiedFrameKeys}
+                frameSubstitution={frameSubstitution}
+                onFramePick={() => setFrameSubstitution(null)}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
                 landMode={
@@ -2646,6 +2719,7 @@ export function CardCreatorForm({
                 <IdentityPanel revise={isRevise} />
                 <ArtPanel
                   userId={userId}
+                  importedArtOrigin={importedArtOrigin}
                   secondFaceNameMissing={secondFaceNameMissing}
                   aiSlot={
                     <AiFillButton
@@ -2789,8 +2863,9 @@ export function CardCreatorForm({
               Both paths just flip `scryfallOpen` via state or events. */}
           <ScryfallImportDialog
             signedIn={Boolean(userId)}
-            onImport={handleScryfallImport}
+            onImport={(payload) => handleScryfallImport(payload, "dialog")}
             verifiedFrameKeys={verifiedFrameKeys}
+            currentFrameTemplate={watched.frame_style?.template ?? null}
             open={scryfallOpen}
             onOpenChange={setScryfallOpen}
           />
@@ -2826,7 +2901,10 @@ export function CardCreatorForm({
           <KindChangeDialog
             message={pendingKindPlan?.message ?? null}
             onConfirm={() => {
-              if (pendingKindPlan) applyKindPatch(pendingKindPlan.patch);
+              if (pendingKindPlan) {
+                setFrameSubstitution(null);
+                applyKindPatch(pendingKindPlan.patch);
+              }
               setPendingKindPlan(null);
             }}
             onCancel={() => setPendingKindPlan(null)}

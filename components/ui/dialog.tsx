@@ -49,6 +49,9 @@ type DialogContentProps = ComponentPropsWithoutRef<typeof DialogPrimitive.Conten
   /** When true, the close X button in the corner is hidden — use this when
    *  the dialog supplies its own close affordance (e.g. a header). */
   hideCloseButton?: boolean;
+  /** Disable the corner X while the dialog must not close (a commit in
+   *  flight). Pair it with an onOpenChange that ignores closes. */
+  closeDisabled?: boolean;
   /** Sizes: default is comfortable for a small confirm; "lg" is for the
    *  Scryfall import; "xl" for future content-heavy modals. */
   size?: "sm" | "md" | "lg" | "xl";
@@ -64,7 +67,7 @@ const SIZE_CLASS: Record<NonNullable<DialogContentProps["size"]>, string> = {
 export const DialogContent = forwardRef<
   ComponentRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton, size = "md", ...props }, ref) => (
+>(({ className, children, hideCloseButton, closeDisabled, size = "md", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -94,9 +97,11 @@ export const DialogContent = forwardRef<
       {hideCloseButton ? null : (
         <DialogPrimitive.Close
           aria-label="Close"
+          disabled={closeDisabled}
           className={cn(
             "absolute right-3 top-3 rounded-md p-1 text-muted transition-colors",
             "hover:bg-elevated hover:text-foreground",
+            "disabled:pointer-events-none disabled:opacity-40",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
           )}
         >

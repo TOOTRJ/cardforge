@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   getCardPrintings,
-  pickArtCropUrl,
+  searchPrintingsPage,
   type ScryfallCard,
 } from "@/lib/scryfall/client";
 import {
@@ -11,71 +11,66 @@ import {
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import {
+  DEFAULT_PRINTING_VIEW,
+  isPrintingView,
+  printingsQuery,
+  type PrintingsResponse,
+} from "@/lib/scryfall/printing-views";
+import {
+  selectRepresentatives,
+  trimPrinting,
+} from "@/lib/scryfall/printing-summary";
 
 // ---------------------------------------------------------------------------
-// GET /api/scryfall/printings?oracle_id=<uuid>
+// GET /api/scryfall/printings?oracle_id=<uuid>&view=<view>&page=<n>
 //
-// Every printing of an oracle card (newest first, capped), trimmed for the
-// import dialog's printing picker. Each printing carries its own border
-// generation + frame effects, so picking one decides which of our frame
-// eras the import adopts. Counted against the "search" budget — it IS a
-// Scryfall search under the hood.
+// The printings of an oracle card, trimmed for the import dialog's grid
+// (TODO 1.5), each with its frame match — Exact / Nearest / Not available —
+// finalized against the verified combos (ONE frame_reviews read per
+// request).
+//
+//   • view=representative (the default): the capped strip the dialog opens
+//     with — the newest and oldest printing of every distinct look, then
+//     the newest to fill (selectRepresentatives). Up to two Scryfall
+//     searches (newest page + oldest page), never paged.
+//   • every other view (all | regular | borderless | showcase | extendedart
+//     | fullart | textless | oldborder): the FULL list narrowed by a Scryfall
+//     qualifier (PRINTING_VIEW_QUALIFIERS), newest first, one Scryfall page
+//     (175) per request — ONE search per "Load more".
+//
+// Counted against the "search" budget — it IS a Scryfall search.
 // ---------------------------------------------------------------------------
 
-const MAX_PRINTINGS = 30;
-
-type PrintingSummary = {
-  id: string;
-  set: string | null;
-  set_name: string | null;
-  released_at: string | null;
-  /** Scryfall border generation: "1993" | "1997" | "2003" | "2015" | "future". */
-  frame: string | null;
-  snow: boolean;
-  devoid: boolean;
-  thumb_url: string | null;
-  image_status: string | null;
-};
-
-function trimPrinting(card: ScryfallCard): PrintingSummary {
-  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
-  return {
-    id: card.id,
-    set: card.set ?? null,
-    set_name: card.set_name ?? null,
-    released_at: card.released_at ?? null,
-    frame: card.frame ?? null,
-    snow: effects.includes("snow"),
-    devoid: effects.includes("devoid"),
-    thumb_url: pickArtCropUrl(card),
-    image_status: card.image_status ?? null,
-  };
-}
+/** Scryfall pages hold 175; the most-printed card (Plains) is ~6 pages. */
+const MAX_PAGE = 50;
 
 export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { ok: false, error: "Supabase is not configured." },
-      { status: 503 },
-    );
+    return json({ ok: false, error: "Supabase is not configured." }, 503);
   }
 
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json(
-      { ok: false, error: "Sign in to look up cards." },
-      { status: 401 },
-    );
+    return json({ ok: false, error: "Sign in to look up cards." }, 401);
   }
 
-  const oracleId = request.nextUrl.searchParams.get("oracle_id")?.trim();
+  const params = request.nextUrl.searchParams;
+  const oracleId = params.get("oracle_id")?.trim();
   // Scryfall oracle ids are UUID-shaped; reject anything else before it
   // reaches the upstream query string.
   if (!oracleId || !/^[0-9a-f-]{36}$/i.test(oracleId)) {
-    return NextResponse.json(
-      { ok: false, error: "Provide a valid oracle_id." },
-      { status: 400 },
-    );
+    return json({ ok: false, error: "Provide a valid oracle_id." }, 400);
+  }
+  const view = params.get("view")?.trim() || DEFAULT_PRINTING_VIEW;
+  if (!isPrintingView(view)) {
+    return json({ ok: false, error: "Unknown printings view." }, 400);
+  }
+  const pageParam = params.get("page")?.trim() || "1";
+  const page = /^\d{1,3}$/.test(pageParam) ? Number(pageParam) : NaN;
+  if (!Number.isInteger(page) || page < 1 || page > MAX_PAGE) {
+    return json({ ok: false, error: "Provide a valid page." }, 400);
   }
 
   const limit = await checkScryfallRateLimit(user.id, "search");
@@ -83,45 +78,43 @@ export async function GET(request: NextRequest) {
     return rateLimitedResponse(limit);
   }
 
-  const all = await getCardPrintings(oracleId);
-  if (all.length === 0) {
-    return NextResponse.json({ ok: true, printings: [] });
+  let cards: ScryfallCard[];
+  let hasMore = false;
+  let totalCards: number;
+  if (view === "representative") {
+    const all = await getCardPrintings(oracleId);
+    cards = selectRepresentatives(all.cards);
+    totalCards = all.totalCards;
+  } else {
+    const result = await searchPrintingsPage(printingsQuery(oracleId, view), page);
+    if (!result) {
+      return json(
+        { ok: false, error: "Scryfall didn't answer — try again in a moment." },
+        502,
+      );
+    }
+    cards = result.cards;
+    hasMore = result.hasMore;
+    totalCards = result.totalCards;
+  }
+
+  if (cards.length === 0) {
+    // Don't spend the user's budget on a lookup that found nothing (the
+    // posture /named keeps).
+    return json({ ok: true, printings: [], has_more: false, total_cards: 0 });
   }
 
   await logScryfallCall(user.id, "search");
 
-  return NextResponse.json({
+  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  return json({
     ok: true,
-    printings: selectRepresentatives(all).map(trimPrinting),
+    printings: cards.map((card) => trimPrinting(card, verifiedKeys)),
+    has_more: hasMore,
+    total_cards: totalCards,
   });
 }
 
-/** The strip caps at MAX_PRINTINGS, but a naive newest-first cut would drop
- *  exactly the printings the picker exists for — the old borders. Guarantee
- *  the NEWEST and the OLDEST printing of every distinct frame treatment
- *  (border generation + snow/devoid), then fill the remaining slots newest
- *  first. Result stays sorted newest → oldest. */
-function selectRepresentatives(cards: ScryfallCard[]): ScryfallCard[] {
-  const sorted = [...cards].sort((a, b) =>
-    (b.released_at ?? "").localeCompare(a.released_at ?? ""),
-  );
-  const labelOf = (c: ScryfallCard) => {
-    const effects = (c.frame_effects ?? []).map((e) => e.toLowerCase());
-    return `${c.frame ?? "?"}|${effects.includes("snow") ? "s" : ""}${effects.includes("devoid") ? "d" : ""}`;
-  };
-  const keep = new Set<string>();
-  const newestByLabel = new Map<string, string>();
-  const oldestByLabel = new Map<string, string>();
-  for (const c of sorted) {
-    const label = labelOf(c);
-    if (!newestByLabel.has(label)) newestByLabel.set(label, c.id);
-    oldestByLabel.set(label, c.id); // last one seen per label = oldest
-  }
-  for (const id of newestByLabel.values()) keep.add(id);
-  for (const id of oldestByLabel.values()) keep.add(id);
-  for (const c of sorted) {
-    if (keep.size >= MAX_PRINTINGS) break;
-    keep.add(c.id);
-  }
-  return sorted.filter((c) => keep.has(c.id)).slice(0, MAX_PRINTINGS);
+function json(body: PrintingsResponse, status = 200) {
+  return NextResponse.json(body, { status });
 }
