@@ -182,7 +182,10 @@ Rules and gotchas:
   render objects and THEN purges tag `card-<id>` (`purgeHiddenCard(s)` /
   `purgeCardCdnCache`: delete, never invalidate): the tag is on the share
   image AND the one-year immutable `/render-cdn` bake, which serves only a
-  bake's two names. Owner-run scripts reach the app for such work through
+  bake's two names, and on a CDN miss only while the card is public or
+  unlisted under that owner (one read before storage: Supabase's CDN keeps
+  a removed object up to 60 s, which could refill ours after the purge).
+  Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
   deploy"): `/api/cron/auto-rebake` (`vercel.json`, every 5 min, production

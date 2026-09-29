@@ -33,9 +33,9 @@ import { deleteCustomPipRow, finishPipChange, removeCustomPipObject } from "@/li
 //     that draw it).
 //
 // Every action re-reads its row first and acts only while that row STILL
-// draws this exact file — our storage host, the file's bucket, its key (the
-// script's search is bucket-agnostic and substring-based, which is right for
-// listing and wrong for acting). Each write is a compare-and-set on the value
+// draws this exact file — our storage host, the file's bucket, its exact
+// (case-sensitive) key (the script's search is bucket-agnostic, case-blind
+// and substring-based, which is right for listing and wrong for acting). Each write is a compare-and-set on the value
 // it read. A row that no longer names the file is "skipped" (a re-run after a
 // partial run skips what is done). Finally every stored URL that named the
 // file, and its bare public URL, is purged from Vercel's Image Optimization
@@ -98,14 +98,26 @@ function* stringsIn(value: unknown): Generator<string> {
   }
 }
 
+/** The key as storage reads it (it decodes the URL path); the raw key when
+ *  it isn't valid percent-encoding. */
+function decodedKey(key: string): string {
+  try {
+    return decodeURIComponent(key);
+  } catch {
+    return key;
+  }
+}
+
 /** The strings in `value` that are a public URL of `file` on one of OUR
- *  storage hosts, in its bucket (any query string). Keys compare
- *  case-insensitively, like the script's search. */
+ *  storage hosts, in its bucket (any query string), with EXACTLY its key.
+ *  Storage keys are case-sensitive: `photo.JPG` next to `Photo.jpg` is
+ *  another object, and a row that draws it is not acted on (the script's
+ *  search is case-insensitive — right for listing, wrong for acting). */
 export function urlsNamingFile(value: unknown, file: FlaggedFile): string[] {
   const out: string[] = [];
   for (const s of stringsIn(value)) {
     const object = ownStorageObject(s.trim());
-    if (object && object.bucket === file.bucket && object.key.toLowerCase() === file.path.toLowerCase()) out.push(s);
+    if (object && object.bucket === file.bucket && decodedKey(object.key) === file.path) out.push(s);
   }
   return out;
 }

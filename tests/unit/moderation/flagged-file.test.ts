@@ -80,11 +80,19 @@ beforeEach(() => {
 const act = (stub: ReturnType<typeof admin>, ...actions: FlaggedFileAction[]) => actOnFlaggedFile(stub.client as never, FILE, actions);
 
 describe("urlsNamingFile — does this value DRAW the file?", () => {
-  it("a public URL of the file on our storage host (either), in its bucket, any query, any case — at any JSON depth", () => {
+  it("a public URL of the file on our storage host (either), in its bucket, any query — at any JSON depth", () => {
     expect(urlsNamingFile(FLAGGED_URL, FILE)).toEqual([FLAGGED_URL]);
-    const legacy = `https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/${U1}/my-photo.JPG`;
+    const legacy = `https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/card-art/${U1}/My-Photo.jpg?t=1`;
     expect(urlsNamingFile(legacy, FILE)).toEqual([legacy]);
+    const encoded = URL_OF("card-art", `${U1}/My%2DPhoto.jpg`);
+    expect(urlsNamingFile(encoded, FILE)).toEqual([encoded]);
     expect(urlsNamingFile({ art_url: FLAGGED_URL, faces: [{ url: FLAGGED_URL }] }, FILE)).toEqual([FLAGGED_URL, FLAGGED_URL]);
+  });
+
+  it("never the same name in another case — storage keys are case-sensitive, so that row draws ANOTHER object", () => {
+    for (const key of [`${U1}/my-photo.jpg`, `${U1}/My-Photo.JPG`, `${U1}/MY-PHOTO.JPG`]) {
+      expect(urlsNamingFile(URL_OF("card-art", key), FILE), key).toEqual([]);
+    }
   });
 
   it("never another bucket, an outside host, a longer name, a bare key or a URL inside text", () => {
@@ -207,7 +215,7 @@ describe("a custom pip → removed like the owner's Remove", () => {
 describe("the run", () => {
   it("acts in order, one failure doesn't stop the rest, then purges every URL that named the file + its bare URL", async () => {
     s.rows.cards = { id: CARD, visibility: "unlisted", art_url: FLAGGED_URL };
-    s.rows.decks = { id: DECK, slug: "d", owner_id: U1, cover_url: URL_OF("card-art", `${U1}/my-photo.jpg`) };
+    s.rows.decks = { id: DECK, slug: "d", owner_id: U1, cover_url: URL_OF("card-art", `${U1}/My-Photo.jpg`, "?t=2") };
     s.hide.mockRejectedValueOnce(new Error("network"));
     const results = await act(admin(), { kind: "hide-card", cardId: CARD }, { kind: "clear-deck-cover", deckId: DECK });
     expect(results.map((r) => [r.action.kind, r.status, r.detail])).toEqual([
@@ -217,7 +225,7 @@ describe("the run", () => {
     expect(s.purgeSources).toHaveBeenCalledTimes(1);
     expect(s.purgeSources.mock.calls[0][0]).toEqual([
       FLAGGED_URL,
-      URL_OF("card-art", `${U1}/my-photo.jpg`),
+      URL_OF("card-art", `${U1}/My-Photo.jpg`, "?t=2"),
       URL_OF("card-art", `${U1}/My-Photo.jpg`),
     ]);
   });

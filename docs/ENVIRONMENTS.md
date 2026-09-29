@@ -358,7 +358,9 @@ app on another database than `--target` stops the run with nothing done.
     reads it from the env file. Objects outside the `{uuid}/{file}` shape
     are not on the list (the dry run lists them separately).
   - **Renders of PRIVATE cards that are still stored** (publicly fetchable
-    at their URL — going private should have deleted them).
+    at their URL — going private should have deleted them; since #412
+    `/render-cdn` refuses them on a CDN miss, but the bucket's own public
+    URL still serves them).
     `--private-renders` removes the PNG + thumb of every card whose row
     says private — only on that positive evidence: a card with no row in
     the answer is never touched here (a deleted card's render is an orphan,

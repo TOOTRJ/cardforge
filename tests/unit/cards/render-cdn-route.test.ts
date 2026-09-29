@@ -1,5 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { chainClient, type ChainAnswer, type ChainCall } from "@/tests/stubs/supabase-chain";
+
+const db = vi.hoisted(() => ({
+  answer: null as null | ((calls: unknown[]) => { data?: unknown; error?: { message: string } | null }),
+  calls: [] as unknown[][],
+}));
+vi.mock("@/lib/supabase/public", () => ({
+  createPublicClient: () =>
+    chainClient((_table: string, calls: ChainCall[]): ChainAnswer => {
+      db.calls.push(calls);
+      return db.answer ? db.answer(calls) : {};
+    }).client,
+}));
+
 import { GET } from "@/app/render-cdn/[...path]/route";
 import { bakeObjectCardId } from "@/lib/cards/render-cdn";
 
@@ -30,6 +44,9 @@ beforeEach(() => {
       }),
   );
   vi.stubGlobal("fetch", fetchMock);
+  // The card is shown (public or unlisted) unless a test says otherwise.
+  db.calls = [];
+  db.answer = () => ({ data: { id: CARD } });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -94,6 +111,42 @@ describe("GET /render-cdn", () => {
     for (const segments of [[OWNER, ".."], ["..", `${CARD}.png`], [OWNER, "%2e%2e"]]) {
       expect((await get(segments)).status).toBe(404);
     }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /render-cdn — a card that isn't shown any more", () => {
+  // The purge (lib/cards/cache-purge.ts) runs right after the objects are
+  // removed, but Supabase's CDN can answer a removed object for up to 60 s:
+  // a request in that window refilled Vercel's CDN with the private image,
+  // for a year. So every miss asks the database too.
+  it("asks for THAT card, by THAT owner, public or unlisted — the anonymous read", async () => {
+    await get([OWNER.toUpperCase(), `${CARD.toUpperCase()}.png`]);
+    const calls = db.calls[0] as { method: string; args: unknown[] }[];
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        { method: "eq", args: ["id", CARD] },
+        { method: "eq", args: ["owner_id", OWNER] },
+        { method: "in", args: ["visibility", ["public", "unlisted"]] },
+      ]),
+    );
+  });
+
+  it("private, hidden, deleted or another owner's → a short-cached 404 with no tag, even while storage still serves the bytes", async () => {
+    db.answer = () => ({ data: null });
+    const res = await get([OWNER, `${CARD}.png`]);
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Vercel-Cache-Tag")).toBeNull();
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(fetchMock).not.toHaveBeenCalled(); // storage would still have answered 200
+  });
+
+  it("a database that can't answer → 503, never cached, never the image", async () => {
+    db.answer = () => ({ data: null, error: { message: "timeout" } });
+    const res = await get([OWNER, `${CARD}.thumb.webp`]);
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Vercel-Cache-Tag")).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
