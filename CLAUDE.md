@@ -132,8 +132,10 @@ Rules and gotchas:
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
-  credit grants/refunds, protected billing columns, and is_admin-gated
-  tooling only; every non-cron caller checks auth itself.
+  credit grants/refunds, protected billing columns, is_admin-gated tooling,
+  and storage writes into the caller's own folder via
+  `lib/media/user-storage.ts` (users have no storage write policy since
+  0126) only; every non-cron caller checks auth itself.
 - Watermark policy (layout v20): every DISPLAY surface — stored bake,
   gallery tile, OG image, live preview — carries the pipglyph.com mark and
   no custom footer text, whatever the owner's plan. Only a paid VIEWER's

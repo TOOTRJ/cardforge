@@ -33,6 +33,18 @@ blanket `grant all on all tables in schema public` — that silently undoes the
 deliberate lockdowns (0073 job RPCs, 0074 profile billing columns, 0088
 notifications, 0095 email tables).
 
+## Storage: users have no write policy
+
+Since `0126` no API role holds an insert, update or delete policy on
+`storage.objects` for any bucket. Buckets stay public-read by URL; every
+write is server code on the service role — a user's folder only through
+`lib/media/user-storage.ts` (the action checks auth, the key is forced to
+`{userId}/{server-made name}`), bakes through `lib/cards/bake-core.ts`.
+Direct client writes skipped the byte sniff, the metadata strip and the
+moderation scan (and could replace a card's watermarked bake). Never add an
+owner-folder write policy back; `tests/unit/db/storage-server-writes-migration.test.ts`
+replays every storage policy and fails if one appears.
+
 ## Errata — corrections to merged migration headers
 
 A migration file is never edited after it merges (the integration tracks it
@@ -101,3 +113,9 @@ instead. Each bullet: what the header says, and what is true now.
   `borderless` as `regular`. The finishes are `regular`, `foil`, `etched` and
   `showcase`. Borderless is a frame treatment (its own templates), never a
   finish.
+- **0004 / 0007 / 0010 / 0021 / 0039 ("writes are restricted to" / "scoped
+  to the owner's first-folder", "owner-scoped writes", "owner-folder
+  writes"), 0022's profile-media write policies** and **0038 / 0039 (the owner SELECT policy exists "so their
+  own upserts can resolve")** — since 0126 users hold no write policy on
+  `storage.objects` at all (see "Storage" above). The two owner SELECT
+  policies were kept (reads unchanged) but back no write any more.
