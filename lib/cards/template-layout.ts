@@ -1250,6 +1250,12 @@ const TOKEN_TYPE_PRINT_DY = 0.0027;
  *  the 86 px box now reaches 1823 px, as the prints' reaches their pill's
  *  bottom (DOM's ink 1741–1828 on a ~1726–1828 interior). */
 const TOKEN_SYMBOL_CENTRE_PCT = 84.78;
+/** CC's setSymbolBounds on its textless token (packTokenTextlessM15.js):
+ *  right edge 92.13 %W, centred on 84.39 %H — its own pill's centre. A
+ *  frame that moves CC's pill with the symbol (a re-cut master: 4.49 (b)'s
+ *  text-box token) derives its box from this one, not from M15TOKEN's
+ *  print-moved symbolRect. */
+const TOKEN_CC_SYMBOL_RECT: Rect = { topPct: 82.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 };
 /** TODO 4.49 (a), print pass: M15's plate box (CC's 88.48 %H top) 0.13 %H
  *  (2.7 px at HD) lower on the token frames — where the prints put the
  *  plate. Each of the fifteen prints' plate profile (rim, inner line and
@@ -1266,11 +1272,14 @@ const M15TOKEN: FrameProfile = {
   // CC's token symbol box, M15's (0.041 H = 86 px; layout v32).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
-  // CC's setSymbolBounds on its textless token (packTokenTextlessM15.js),
-  // right edge 92.13 %W (TODO 4.49 (d); it rode the end of a centred type
-  // line before), moved down onto the prints: centred on 84.78 %H, not CC's
-  // 84.39 (TOKEN_SYMBOL_CENTRE_PCT).
-  symbolRect: { topPct: TOKEN_SYMBOL_CENTRE_PCT - 4.1 / 2, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  // CC's setSymbolBounds (TOKEN_CC_SYMBOL_RECT), right edge 92.13 %W (TODO
+  // 4.49 (d); it rode the end of a centred type line before), moved down
+  // onto the prints: centred on 84.78 %H, not CC's 84.39
+  // (TOKEN_SYMBOL_CENTRE_PCT).
+  symbolRect: {
+    ...TOKEN_CC_SYMBOL_RECT,
+    topPct: TOKEN_SYMBOL_CENTRE_PCT - TOKEN_CC_SYMBOL_RECT.heightPct / 2,
+  },
   title: {
     rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
     sizePct: TITLE_SIZE_PCT,
