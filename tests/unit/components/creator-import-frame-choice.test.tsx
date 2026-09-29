@@ -247,6 +247,16 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
     await toCardStep();
     expect(chip()).toBeNull();
   });
+
+  it("C1: a crown-only printing the dialog didn't ask about (DMU #107) lands on its own frame with just the Nearest frame chip", async () => {
+    renderForm();
+    await importPayload(payload("dmu-107"));
+    expect(template()).toBe("m15");
+    expect(toast.info).not.toHaveBeenCalled();
+    await toCardStep();
+    expect(chip()?.textContent).toBe("Nearest frame (imported M15 (2015) frame)");
+    expect(chip()?.getAttribute("title")).toBe("PipGlyph doesn't draw the legendary crown yet");
+  });
 });
 
 describe("the Art step's note on Scryfall's art (TODO 1.18, UI half)", () => {
@@ -349,5 +359,30 @@ describe("the deck-remix pre-fill (/create?deckCard=): no dialog, ONE toast", ()
       "Scryfall's art for this printing is cropped to the bordered window — using M15 (2015) Standard instead of the Borderless frame.",
     );
     expect(options.action?.label).toMatch(/Borderless/);
+  });
+
+  it("C3: stays quiet for a crown-only printing on its own frame (DMU #107): no substitution happened", async () => {
+    const sheoldred = card("dmu-107");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith("/api/scryfall/named")) return json(namedBody("dmu-107", new Set(STANDARD)));
+        return json({ ok: false, error: "no art" });
+      }),
+    );
+    renderForm({
+      verifiedFrameKeys: STANDARD,
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: sheoldred.id,
+        deckSlug: "tester/grixis",
+        deckTitle: "Grixis",
+        entryName: sheoldred.name,
+      },
+    });
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    expect(template()).toBe("m15");
+    expect(toast.info).not.toHaveBeenCalled();
   });
 });

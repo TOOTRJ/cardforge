@@ -180,3 +180,56 @@ describe("the other outcomes", () => {
     expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
   });
 });
+
+describe("owner decisions 2026-09-29 (C1, C2)", () => {
+  it("C1: Sheoldred DMU #107, short of only the crown, imports on its own M15 frame without asking", async () => {
+    const onImport = await pickPrinting("dmu-107", { verified: verifiedIn("m15") });
+    expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
+    // The detail still says what the printing is and why it isn't exact.
+    expect(screen.getByText("M15 (2015) frame")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /the frame \(M15 \(2015\) Standard — PipGlyph doesn't draw the legendary crown yet\) are all replaced/,
+      ),
+    ).toBeTruthy();
+    const payload = await commit(onImport);
+    expect(payload.frameChoice).toBeUndefined();
+    expect(payload.patch.frame_match).toMatchObject({ status: "nearest", template: "m15", gaps: ["crown"] });
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
+  it("C1: …but asks while M15 isn't published in black (a real substitution)", async () => {
+    await pickPrinting("dmu-107", { verified: [...verifiedIn("m15snow"), "m15/w"] });
+    expect(screen.getByTestId("import-frame-chooser")).toBeTruthy();
+  });
+
+  it("C2: the standard frame and the printing's family first; Show all frames reveals the rest, and a pick among them is sent", async () => {
+    const onImport = await pickPrinting("dmu-435", {
+      verified: [...verifiedIn("m15", "m15snow", "m15devoid"), "m15borderless/b"],
+    });
+    const group = screen.getByRole("radiogroup", { name: "Frame for the import" });
+    const labels = () => within(group).getAllByRole("radio").map((el) => el.textContent ?? "");
+    expect(labels()).toHaveLength(3);
+    expect(labels()[0]).toMatch(/^M15 \(2015\) Standard/);
+    expect(labels()[1]).toMatch(/^M15 \(2015\) Borderless/);
+    expect(labels()[2]).toMatch(/^Keep my current frame/);
+    const showAll = screen.getByTestId("import-frame-show-all");
+    expect(showAll.textContent).toBe("Show all frames (2 more)");
+
+    fireEvent.click(showAll);
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+    expect(labels()).toHaveLength(5);
+    expect(labels().some((label) => /^M15 \(2015\) Snow/.test(label))).toBe(true);
+    expect(labels().some((label) => /^M15 \(2015\) Devoid/.test(label))).toBe(true);
+    // The preselection didn't move.
+    expect(frameRadio(/^M15 \(2015\) Standard/).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(frameRadio(/^M15 \(2015\) Snow/));
+    expect((await commit(onImport)).frameChoice).toEqual({ template: "m15snow" });
+  });
+
+  it("C2: no link when the standard frame and the family are all there is", async () => {
+    await pickPrinting("dmu-435", { verified: [...verifiedIn("m15"), "m15borderless/b"] });
+    expect(screen.getByTestId("import-frame-chooser")).toBeTruthy();
+    expect(screen.queryByTestId("import-frame-show-all")).toBeNull();
+  });
+});

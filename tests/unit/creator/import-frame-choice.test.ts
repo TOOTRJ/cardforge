@@ -2,11 +2,8 @@ import { describe, expect, it } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import treatmentPrintings from "../scryfall/fixtures/treatment-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import {
-  mapScryfallToFormPatch,
-  verifiedFrameMatchFromScryfall,
-  type ScryfallImportPatch,
-} from "@/lib/scryfall/import-mapper";
+import { mapScryfallToFormPatch, type ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   appliedImportFrameChoice,
@@ -14,6 +11,7 @@ import {
   frameSubstitutionLabel,
   importFramePlan,
   importSubstitutionMessage,
+  onlyUndrawnDetailsMissing,
   theFrame,
   WINDOW_CROPPED_NOTE,
 } from "@/lib/creator/import-frame-choice";
@@ -24,7 +22,10 @@ import {
 // when it shows, what it offers in the imported colour, what it preselects
 // (resolveImportFrame's landing — 1.18's bordered M15 for a borderless
 // printing), "keep my current frame", a substitute card's refusal, and the
-// creator's re-check when it applies the pick.
+// creator's re-check when it applies the pick. Owner decisions 2026-09-29:
+// no chooser (and no deck pre-fill toast) for a printing short of only the
+// crown or a colour indicator on its own frame (C1 / C3); the standard frame
+// and the printing's family first, the rest behind "Show all frames" (C2).
 // ---------------------------------------------------------------------------
 
 const fixtures = { ...signaturePrintings, ...treatmentPrintings } as Record<string, unknown>;
@@ -32,16 +33,53 @@ const EVERY_COLOUR = ["w", "u", "b", "r", "g", "c", "m"];
 const verified = (...templates: string[]) =>
   new Set(templates.flatMap((t) => EVERY_COLOUR.map((k) => frameComboKey(t, k))));
 
-/** The /api/scryfall/named patch: the mapper's, with the match finalized. */
+/** The /api/scryfall/named patch: the mapper's, with the match finalized
+ *  (the route's finalizeImportMatch). */
 function namedPatch(key: string, keys: ReadonlySet<string>): ScryfallImportPatch {
-  const card = scryfallCardSchema.parse(fixtures[key]);
-  const patch = mapScryfallToFormPatch(card);
-  patch.frame_match = verifiedFrameMatchFromScryfall(card, keys, patch.frame_match);
-  return patch;
+  return finalizeImportMatch(mapScryfallToFormPatch(scryfallCardSchema.parse(fixtures[key])), keys);
 }
+
+/** A fixture printing with some fields changed — a synthetic variant for a
+ *  gap combination no fixture has, run through the same mapper. */
+function variantPatch(
+  key: string,
+  changes: Record<string, unknown>,
+  keys: ReadonlySet<string>,
+): ScryfallImportPatch {
+  const raw = { ...(fixtures[key] as Record<string, unknown>), ...changes };
+  return finalizeImportMatch(mapScryfallToFormPatch(scryfallCardSchema.parse(raw)), keys);
+}
+
+/** Sheoldred DMU #107 (legendary: the crown) as a black-red card: the crown
+ *  AND the two-colour split frame PipGlyph paints gold. */
+const twoColourLegend = (keys: ReadonlySet<string>) =>
+  variantPatch(
+    "dmu-107",
+    { colors: ["B", "R"], color_identity: ["B", "R"], mana_cost: "{2}{B}{R}" },
+    keys,
+  );
+/** …as a non-legendary card with a colour-indicator dot only. */
+const indicatorOnly = (keys: ReadonlySet<string>) =>
+  variantPatch(
+    "dmu-107",
+    { type_line: "Creature — Phyrexian Praetor", frame_effects: [], color_indicator: ["B"] },
+    keys,
+  );
+/** …legendary with a colour-indicator dot: two details, both undrawn. */
+const legendWithIndicator = (keys: ReadonlySet<string>) =>
+  variantPatch("dmu-107", { color_indicator: ["B"] }, keys);
 
 const STANDARD = verified("m15", "m15artifact", "m15land", "m15pw", "m15token", "saga");
 const WITH_BORDERLESS = new Set([...STANDARD, ...verified("m15borderless", "m15fullartland")]);
+/** Every frame a creature can wear, for "Show all frames". */
+const EVERYTHING = new Set([
+  ...WITH_BORDERLESS,
+  ...verified(
+    "m15snow", "m15devoid", "agclassic", "retro", "modern", "m15borderlessartifact",
+    "bloomburrow", "bloomanime", "tarkirdraconic", "tarkirghostfire", "lotr", "lotrscroll",
+    "fullartland", "m15textless", "m15textlessland", "nyx",
+  ),
+]);
 
 describe("importFramePlan — when the chooser shows", () => {
   it("an exact printing imports without asking (Evolving Wilds MSC #240, a Cat token)", () => {
@@ -240,18 +278,38 @@ describe("the substitution chip and the deck-remix toast", () => {
     expect(importSubstitutionMessage(match, "m15borderless")).toBeNull();
   });
 
-  it("a nearest match on its own frame is 'Nearest frame', and the toast gives the reason (Sheoldred DMU #107)", () => {
+  it("a crown-only match on its own frame is 'Nearest frame' with no toast (Sheoldred DMU #107, C3)", () => {
     const match = namedPatch("dmu-107", STANDARD).frame_match;
-    expect(match).toMatchObject({ status: "nearest", template: "m15" });
+    expect(match).toMatchObject({ status: "nearest", template: "m15", gaps: ["crown"] });
     const substitution = frameSubstitutionFor(match, "m15");
-    expect(substitution).toMatchObject({ nearestOnOwnFrame: true });
+    expect(substitution).toMatchObject({
+      nearestOnOwnFrame: true,
+      reason: "PipGlyph doesn't draw the legendary crown yet",
+    });
     expect(frameSubstitutionLabel(substitution!)).toBe("Nearest frame (imported M15 (2015) frame)");
-    expect(importSubstitutionMessage(match, "m15")).toBe(
-      "PipGlyph doesn't draw the legendary crown yet — using M15 (2015) Standard.",
-    );
-    // Another frame picked instead: that IS a substitution.
+    // No substitution happened: the deck pre-fill stays quiet (C3).
+    expect(importSubstitutionMessage(match, "m15", undefined, "b")).toBeNull();
+    // Another frame picked instead: that IS a substitution, and it says so.
     const swapped = frameSubstitutionFor(match, "m15snow");
     expect(frameSubstitutionLabel(swapped!)).toBe("Frame substituted (imported M15 (2015) frame)");
+    expect(importSubstitutionMessage(match, "m15snow", undefined, "b")).toBe(
+      "PipGlyph doesn't have the M15 (2015) frame yet — using M15 (2015) Snow.",
+    );
+  });
+
+  it("a colour indicator alone, or with the crown, is quiet too; a second gap PipGlyph paints differently still toasts (C3)", () => {
+    const indicator = indicatorOnly(STANDARD).frame_match;
+    expect(indicator).toMatchObject({ status: "nearest", template: "m15", gaps: ["colour-indicator"] });
+    expect(importSubstitutionMessage(indicator, "m15", undefined, "b")).toBeNull();
+    const both = legendWithIndicator(STANDARD).frame_match;
+    expect(both?.gaps).toEqual(["crown", "colour-indicator"]);
+    expect(importSubstitutionMessage(both, "m15", undefined, "b")).toBeNull();
+    // The crown and the gold frame for a black-red split: a real difference.
+    const twoColour = twoColourLegend(STANDARD).frame_match;
+    expect(twoColour?.gaps).toEqual(["crown", "two-colour"]);
+    expect(importSubstitutionMessage(twoColour, "m15", undefined, "m")).toBe(
+      "PipGlyph doesn't draw the legendary crown yet — using M15 (2015) Standard.",
+    );
   });
 
   it("names the cropped art, not a missing frame, when a nearest edge-to-edge frame is published (DMU #435)", () => {
@@ -281,5 +339,157 @@ describe("the substitution chip and the deck-remix toast", () => {
     expect(theFrame("Nyx frame (2003)")).toBe("the Nyx frame (2003)");
     expect(theFrame("Bloomburrow woodland showcase")).toBe("the Bloomburrow woodland showcase frame");
     expect(theFrame("The Lord of the Rings ring showcase")).toBe("The Lord of the Rings ring showcase frame");
+  });
+});
+
+describe("C1 — no chooser when the only gap is a detail no frame draws (owner decision 2026-09-29)", () => {
+  it("Sheoldred DMU #107 (the crown) lands on its own M15 frame without asking", () => {
+    expect(importFramePlan(namedPatch("dmu-107", STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
+  });
+
+  it("…from any current frame, and for a colour indicator, alone or with the crown", () => {
+    expect(importFramePlan(namedPatch("dmu-107", STANDARD), STANDARD, "m15land")).toEqual({
+      mode: "none",
+    });
+    expect(importFramePlan(indicatorOnly(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
+    expect(importFramePlan(legendWithIndicator(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
+  });
+
+  it("asks when a second gap holds (the crown and the two-colour split frame)", () => {
+    const plan = importFramePlan(twoColourLegend(STANDARD), STANDARD, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.heading).toBe(
+      "PipGlyph can't match this printing's M15 (2015) frame exactly yet — pick one of these",
+    );
+    expect(plan.preselected).toEqual({ template: "m15" });
+  });
+
+  it("asks when the printing's own frame isn't published in its colour (a real substitution)", () => {
+    const noBlack = new Set([...STANDARD].filter((key) => key !== frameComboKey("m15", "b")));
+    const plan = importFramePlan(namedPatch("dmu-107", noBlack), noBlack, "m15");
+    expect(plan.mode).toBe("choose");
+  });
+
+  it("asks when the crown sits on a frame the import can't land on (Borderless → bordered M15, DMU #435)", () => {
+    expect(importFramePlan(namedPatch("dmu-435", WITH_BORDERLESS), WITH_BORDERLESS, "m15").mode).toBe(
+      "choose",
+    );
+  });
+
+  it("onlyUndrawnDetailsMissing: only nearest, on its own frame, only crown / colour-indicator, a true border", () => {
+    const base = { status: "nearest" as const, template: "m15" as const, gaps: ["crown" as const] };
+    expect(onlyUndrawnDetailsMissing(base, "b")).toBe(true);
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["colour-indicator"] }, "b")).toBe(true);
+    expect(onlyUndrawnDetailsMissing({ ...base, status: "exact" }, "b")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, landOn: "m15artifact" }, "b")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: [] }, "b")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: undefined }, "b")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown", "vehicle"] }, "b")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["nyx", "crown"] }, "b")).toBe(false);
+    // A frame whose border isn't true yet is a second gap (4.35 / A8).
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "battle" }, "w")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "expeditionland" }, "g")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "expeditionland" }, "r")).toBe(true);
+    expect(onlyUndrawnDetailsMissing(undefined, "b")).toBe(false);
+  });
+});
+
+describe("C2 — the standard frame and the printing's family first, the rest behind Show all frames", () => {
+  const templates = (options: readonly { template: string }[]) => options.map((o) => o.template);
+
+  it("Sheoldred DMU #435: M15 and Borderless first; Snow, Devoid, the older eras and the showcases behind the link", () => {
+    const plan = importFramePlan(namedPatch("dmu-435", EVERYTHING), EVERYTHING, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(templates(plan.options)).toEqual(["m15", "m15borderless"]);
+    const more = templates(plan.moreOptions);
+    expect(more).toEqual(expect.arrayContaining(["m15snow", "m15devoid", "agclassic", "retro", "modern", "bloomburrow"]));
+    // Gallery order: the border eras oldest first, then the showcases.
+    expect(more.indexOf("agclassic")).toBeLessThan(more.indexOf("modern"));
+    expect(more.indexOf("m15devoid")).toBeLessThan(more.indexOf("bloomburrow"));
+    // Never a frame the card can't wear: the artifact dress, Nyx, a basic-only frame.
+    expect(more).not.toContain("m15artifact");
+    expect(more).not.toContain("m15borderlessartifact");
+    expect(more).not.toContain("nyx");
+    expect(more).not.toContain("fullartland");
+    // Nothing twice.
+    expect(new Set([...templates(plan.options), ...more]).size).toBe(plan.options.length + more.length);
+  });
+
+  it("a showcase printing lists its own set's frames (Bloomburrow anime BLB #343: woodland beside it)", () => {
+    const plan = importFramePlan(namedPatch("blb-343", EVERYTHING), EVERYTHING, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(templates(plan.options)).toEqual(["bloomanime", "m15", "bloomburrow"]);
+    expect(templates(plan.moreOptions)).not.toContain("bloomanime");
+  });
+
+  it("a full-art basic lists the full-art basics, not the textless frames (ONE #262)", () => {
+    const plan = importFramePlan(namedPatch("one-262", EVERYTHING), EVERYTHING, "m15land");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(templates(plan.options)).toEqual(["m15fullartland", "m15land", "fullartland"]);
+    expect(templates(plan.moreOptions)).toEqual(expect.arrayContaining(["m15textlessland"]));
+  });
+
+  it("a snow printing's family is its own Snow skin beside the standard; a plain one's isn't", () => {
+    const khm = importFramePlan(namedPatch("khm-244", EVERYTHING), EVERYTHING, "m15");
+    if (khm.mode !== "choose") throw new Error(khm.mode);
+    // KHM #244 is an ARTIFACT: the snow frame can't dress the kind, so only
+    // the artifact standard is first.
+    expect(templates(khm.options)).toEqual(["m15artifact"]);
+    const thb = importFramePlan(namedPatch("thb-18", EVERYTHING), EVERYTHING, "m15");
+    if (thb.mode !== "choose") throw new Error(thb.mode);
+    expect(templates(thb.options)).toEqual(["m15"]);
+    // An Enchantment Creature may wear Nyx (A3) — among the other frames.
+    expect(templates(thb.moreOptions)).toContain("nyx");
+  });
+
+  it("with nothing of the family or the standard published, every published frame is shown", () => {
+    const keys = verified("retro");
+    const plan = importFramePlan(namedPatch("dmu-435", keys), keys, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(templates(plan.options)).toEqual(["retro"]);
+    expect(plan.moreOptions).toEqual([]);
+  });
+
+  it("the nearest stays preselected and first", () => {
+    const plan = importFramePlan(namedPatch("fra-382", EVERYTHING), EVERYTHING, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.preselected).toEqual({ template: "m15land" });
+    expect(plan.options[0]).toMatchObject({ template: "m15land", nearest: true });
+    expect(templates(plan.options)).toEqual(["m15land", "fullartland", "m15fullartland"]);
+  });
+});
+
+describe("A3 — the chooser dresses an Enchantment Creature in Nyx, never a plain creature", () => {
+  it("offers Nyx to a THB god and applies it", () => {
+    const keys = new Set([...STANDARD, frameComboKey("nyx", "w")]);
+    const patch = namedPatch("thb-18", keys);
+    const plan = importFramePlan(patch, keys, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect([...plan.options, ...plan.moreOptions].map((o) => o.template)).toContain("nyx");
+    expect(
+      appliedImportFrameChoice({
+        choice: { template: "nyx" },
+        patch,
+        kind: "creature",
+        templateBefore: "m15",
+        verifiedKeys: keys,
+      }),
+    ).toBe("nyx");
+  });
+
+  it("refuses Nyx for a creature that isn't an enchantment", () => {
+    const keys = new Set([...STANDARD, frameComboKey("nyx", "b")]);
+    const plan = importFramePlan(twoColourLegend(keys), keys, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect([...plan.options, ...plan.moreOptions].map((o) => o.template)).not.toContain("nyx");
+    expect(
+      appliedImportFrameChoice({
+        choice: { template: "nyx" },
+        patch: namedPatch("dmu-107", keys),
+        kind: "creature",
+        templateBefore: "m15",
+        verifiedKeys: keys,
+      }),
+    ).toBeNull();
   });
 });
