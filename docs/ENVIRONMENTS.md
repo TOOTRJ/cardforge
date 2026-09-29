@@ -250,10 +250,9 @@ node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
   --backup-dir ~/.pipglyph/sweep-backups/$(date +%F)
 ```
 
-**Owner steps on production, in this order, once #409, #411 and the
-moderation/CDN follow-up (fix/moderation-cdn-followup) are live** (each
-step's dry run first; nothing is deleted or changed without `--apply` +
-"yes"):
+**Owner steps on production, in this order, once #409, #411 and #412 are
+live** (each step's dry run first; nothing is deleted or changed without
+`--apply` + "yes"):
 
 1. `node scripts/sweep-storage-orphans.mjs --target prod` — the dry run:
    orphans, plus the two review lists below.
