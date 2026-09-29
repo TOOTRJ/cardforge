@@ -10,8 +10,12 @@ import type { ScryfallCard } from "@/lib/scryfall/client";
 // and "Angel". So /api/scryfall/search sends it only
 //   • from the dialog's "Tokens & emblems" scope, restricted to tokens and
 //     emblems (tokensScopeQuery), or
-//   • as a second request when a plain query finds nothing at all (Scryfall's
-//     404) — the same tokens-and-emblems query;
+//   • as a second request when a plain query from the dialog's Cards scope
+//     finds nothing at all (Scryfall's 404) — the same tokens-and-emblems
+//     query. The dialog asks for it (`fallback=tokens`, SEARCH_FALLBACK);
+//     the route's other callers (the "Use art from a real card" dialog, the
+//     admin frame-reference picker) don't, so a typo there is still ONE
+//     counted search and never lists tokens;
 // and drops what PipGlyph can't import from those results
 // (keepExtrasResult). The printings list (TODO 1.5) then picks the printing:
 // its `oracleid:` search returns tokens and emblems without the flag.
@@ -35,6 +39,11 @@ export const SEARCH_SCOPE_LABELS: Record<SearchScope, string> = {
 export function isSearchScope(value: unknown): value is SearchScope {
   return (SEARCH_SCOPE_VALUES as readonly unknown[]).includes(value);
 }
+
+/** The `fallback` value the import dialog's Cards scope sends: when the plain
+ *  query finds nothing, the route asks once more in the tokens scope. The
+ *  only value the route accepts; without it a Cards search is one request. */
+export const SEARCH_FALLBACK = "tokens" as const;
 
 /** The Scryfall query for the "Tokens & emblems" scope: the user's query,
  *  grouped, restricted to token and emblem type lines. */

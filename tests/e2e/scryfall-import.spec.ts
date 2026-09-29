@@ -441,16 +441,16 @@ test.describe("Scryfall search → import", () => {
 
   // TODO 1.23: Scryfall leaves tokens and emblems out of a plain search. The
   // dialog's "Tokens & emblems" scope asks the search route for scope=tokens
-  // (the only place Scryfall's include_extras is sent), and a Cards search
-  // that the server answered from tokens and emblems (its no-match fallback)
-  // says so. The routes are mocked, so the run stays offline; the token is
+  // (Scryfall's include_extras), the Cards scope asks for the no-match
+  // fallback (fallback=tokens — the only other place it is sent), and a
+  // Cards search that the server answered from tokens and emblems says so. The routes are mocked, so the run stays offline; the token is
   // the 2014–19 Treasure TXLN #7, an exact match, so no chooser.
   test("the Tokens & emblems scope finds a Treasure token and imports it", async ({ page }) => {
     const id = "720f3e68-84c0-462e-a0d1-90236ccc494a"; // TXLN #7
-    const searched: Array<{ q: string | null; scope: string | null }> = [];
+    const searched: Array<{ q: string | null; scope: string | null; fallback: string | null }> = [];
     await page.route("**/api/scryfall/search**", async (route) => {
       const params = new URL(route.request().url()).searchParams;
-      searched.push({ q: params.get("q"), scope: params.get("scope") });
+      searched.push({ q: params.get("q"), scope: params.get("scope"), fallback: params.get("fallback") });
       const token = params.get("scope") === "tokens";
       await route.fulfill({
         json: {
@@ -544,7 +544,9 @@ test.describe("Scryfall search → import", () => {
     await expect(page.getByTestId("search-fallback-note")).toHaveText(
       "No cards matched — these are tokens and emblems.",
     );
-    await expect.poll(() => searched.at(-1)).toEqual({ q: "Kaito Cunning Infiltrator Emblem", scope: null });
+    await expect
+      .poll(() => searched.at(-1))
+      .toEqual({ q: "Kaito Cunning Infiltrator Emblem", scope: null, fallback: "tokens" });
 
     // The Tokens & emblems scope sends scope=tokens and lists the type line.
     await page
@@ -553,7 +555,7 @@ test.describe("Scryfall search → import", () => {
       .click();
     await search.fill("Treasure");
     // Switching the scope re-ran the Kaito query first; wait for Treasure's.
-    await expect.poll(() => searched.at(-1)).toEqual({ q: "Treasure", scope: "tokens" });
+    await expect.poll(() => searched.at(-1)).toEqual({ q: "Treasure", scope: "tokens", fallback: null });
     const option = page.getByRole("option", { name: /Treasure/ });
     await expect(option).toContainText("Token Artifact — Treasure");
     await expect(page.getByTestId("search-fallback-note")).toHaveCount(0);

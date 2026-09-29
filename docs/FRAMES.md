@@ -373,8 +373,9 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   is the `nyx-dress` gap (4.51), not `nyx` (4.7). Role cards (`token/role`,
   unsupported) and double-faced tokens import their front face only.
   Tokens and emblems are only found through the import dialog's "Tokens &
-  emblems" scope or the no-match fallback (`lib/scryfall/search-scope.ts`,
-  Scryfall's `include_extras`).
+  emblems" scope or the no-match fallback its Cards scope asks for
+  (`fallback=tokens`; `lib/scryfall/search-scope.ts`, Scryfall's
+  `include_extras`).
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or

@@ -92,7 +92,7 @@ describe("the Tokens & emblems scope (TODO 1.23)", () => {
     expect(screen.queryByTestId("search-fallback-note")).toBeNull();
   });
 
-  it("the Cards scope sends no scope, and says so when the server fell back to tokens and emblems", async () => {
+  it("the Cards scope sends no scope but asks for the fallback, and says so when the server fell back", async () => {
     const mock = stubScryfallRoutes({
       search: [],
       printings: {},
@@ -108,6 +108,54 @@ describe("the Tokens & emblems scope (TODO 1.23)", () => {
       "No cards matched — these are tokens and emblems.",
     );
     expect(searchCalls(mock).at(-1)!.has("scope")).toBe(false);
+    // Only this dialog asks for it: the route's other callers search once.
+    expect(searchCalls(mock).at(-1)!.get("fallback")).toBe("tokens");
+  });
+
+  it("the Tokens & emblems scope asks for no fallback (it is that search)", async () => {
+    const mock = stubScryfallRoutes({
+      search: [],
+      printings: {},
+      serverVerified: SERVER_VERIFIED,
+      override: searchAnswer(["tdom-3"], "tokens"),
+    });
+    renderDialog();
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: "Search scope" })).getByRole("radio", {
+        name: "Tokens & emblems",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Search Scryfall"), { target: { value: "Soldier" } });
+    await screen.findByRole("option", { name: /Soldier/ });
+    expect(searchCalls(mock).at(-1)!.has("fallback")).toBe(false);
+  });
+
+  it("switching back to Cards never labels the Tokens results a fallback while the Cards answer loads", async () => {
+    // The Tokens search answers at once; the Cards search after the switch
+    // is still in flight when the list is checked.
+    stubScryfallRoutes({
+      search: [],
+      printings: {},
+      serverVerified: SERVER_VERIFIED,
+      override: (url) => {
+        if (!url.startsWith("/api/scryfall/search")) return undefined;
+        const params = new URL(url, "http://x").searchParams;
+        if (params.get("scope") === "tokens") return searchAnswer(["tdom-3"], "tokens")(url);
+        return new Promise<Response>(() => {});
+      },
+    });
+    renderDialog();
+    const scopes = screen.getByRole("radiogroup", { name: "Search scope" });
+    fireEvent.click(within(scopes).getByRole("radio", { name: "Tokens & emblems" }));
+    fireEvent.change(screen.getByLabelText("Search Scryfall"), { target: { value: "Soldier" } });
+    await screen.findByRole("option", { name: /Soldier/ });
+
+    fireEvent.click(within(scopes).getByRole("radio", { name: "Cards" }));
+    // The Tokens results are still listed (the Cards answer hasn't landed)…
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(screen.getByRole("option", { name: /Soldier/ })).toBeTruthy();
+    // …and they are not a Cards search the server answered from tokens.
+    expect(screen.queryByTestId("search-fallback-note")).toBeNull();
   });
 
   it("switching the scope re-runs the same query", async () => {

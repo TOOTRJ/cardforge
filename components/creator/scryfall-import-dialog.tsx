@@ -42,6 +42,7 @@ import {
 } from "@/lib/scryfall/printing-views";
 import {
   DEFAULT_SEARCH_SCOPE,
+  SEARCH_FALLBACK,
   SEARCH_SCOPE_LABELS,
   SEARCH_SCOPE_VALUES,
   type SearchScope,
@@ -65,8 +66,9 @@ import { cn } from "@/lib/utils";
 // search never reports "Search failed", a printing click keeps the result
 // list's selection, and the dialog can't close mid-commit. TODO 1.23: a
 // "Tokens & emblems" scope finds what a plain Scryfall search leaves out
-// (lib/scryfall/search-scope.ts), and a plain search that finds nothing
-// falls back to it on the server — the list then says so.
+// (lib/scryfall/search-scope.ts), and a Cards search that finds nothing
+// falls back to it on the server (the Cards scope asks: `fallback=tokens`)
+// — the list then says so.
 // ---------------------------------------------------------------------------
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -243,6 +245,11 @@ function ScryfallImportContent({
   // The scope the shown results come from: "tokens" under the Cards scope
   // when the server fell back to tokens and emblems (TODO 1.23).
   const [resultScope, setResultScope] = useState<SearchScope>(DEFAULT_SEARCH_SCOPE);
+  // The shown results are a Cards search the server answered from tokens
+  // and emblems. Kept per response, not derived from the chips: after a
+  // switch back to Cards the Tokens results stay listed until the Cards
+  // answer lands, and they are no fallback.
+  const [fellBack, setFellBack] = useState(false);
   const [results, setResults] = useState<TrimmedCard[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -321,7 +328,9 @@ function ScryfallImportContent({
           `/api/scryfall/search?${new URLSearchParams({
             q,
             limit: "12",
-            ...(scope === "tokens" ? { scope } : {}),
+            // The Cards scope asks for the tokens fallback; the Tokens &
+            // emblems scope IS that search.
+            ...(scope === "tokens" ? { scope } : { fallback: SEARCH_FALLBACK }),
           })}`,
           { signal: controller.signal },
         );
@@ -336,6 +345,7 @@ function ScryfallImportContent({
         }
         setResults(Array.isArray(body.results) ? body.results : []);
         setResultScope(body.scope === "tokens" ? "tokens" : scope);
+        setFellBack(scope === "cards" && body.scope === "tokens");
       } catch {
         if (stale()) return;
         setSearchError("Search failed.");
@@ -596,7 +606,7 @@ function ScryfallImportContent({
               </p>
             ) : (
               <>
-                {scope === "cards" && resultScope === "tokens" ? (
+                {fellBack && scope === "cards" ? (
                   <p
                     className="border-b border-border/40 px-4 py-2 text-[11px] leading-4 text-subtle"
                     data-testid="search-fallback-note"

@@ -9,12 +9,14 @@ import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 // (the frame-compare reference picker) is never refused and never logged, so a
 // verification session never spends the admin's "search" bucket, which the
 // printings strip shares. is_admin comes from the session's profile only.
-// The upstream call still goes through searchCards, whose module-level
-// throttle (lib/scryfall/client.ts) spaces every request, admin or not.
+// The upstream call still goes through the Scryfall client
+// (searchCardsWithOutcome), whose module-level throttle
+// (lib/scryfall/client.ts) spaces every request, admin or not.
 //
 // TODO 1.23: tokens and emblems — the "Tokens & emblems" scope (Scryfall's
 // include_extras, restricted to tokens and emblems) and the fallback to it
-// when a plain query finds nothing.
+// when a plain query finds nothing, which only the import dialog's Cards
+// scope asks for (`fallback=tokens`).
 // ---------------------------------------------------------------------------
 
 type Profile = { id: string; is_admin: boolean } | null;
@@ -196,7 +198,9 @@ describe("GET /api/scryfall/search — tokens and emblems (TODO 1.23)", () => {
 
   it("falls back to tokens and emblems when the plain query finds nothing — two calls, each counted", async () => {
     state.search.mockResolvedValueOnce([]).mockResolvedValueOnce([KAITO]);
-    const body = await (await get(`q=${encodeURIComponent("Kaito Cunning Infiltrator Emblem")}`)).json();
+    const body = await (
+      await get(`q=${encodeURIComponent("Kaito Cunning Infiltrator Emblem")}&fallback=tokens`)
+    ).json();
     expect(state.search.mock.calls).toEqual([
       [{ query: "Kaito Cunning Infiltrator Emblem", limit: 12 }],
       [{ query: "(Kaito Cunning Infiltrator Emblem) (t:token OR t:emblem)", limit: 12, includeExtras: true }],
@@ -208,21 +212,42 @@ describe("GET /api/scryfall/search — tokens and emblems (TODO 1.23)", () => {
 
   it("keeps the Cards scope when the fallback finds nothing either", async () => {
     state.search.mockResolvedValue([]);
-    const body = await (await get("q=zzzz")).json();
+    const body = await (await get("q=zzzz&fallback=tokens")).json();
     expect(state.search).toHaveBeenCalledTimes(2);
     expect(body).toEqual({ ok: true, results: [], scope: "cards" });
   });
 
   it("never falls back on an upstream failure (not Scryfall's 'no matches')", async () => {
     state.search.mockResolvedValue({ cards: [], noMatches: false });
-    await get("q=treasure");
+    await get("q=treasure&fallback=tokens");
     expect(state.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("never falls back unless the caller asks: the real-card art dialog and the admin reference picker search once", async () => {
+    // Their no-match stays ONE counted search and lists no tokens.
+    state.search.mockResolvedValueOnce([]).mockResolvedValueOnce([KAITO]);
+    const body = await (await get(`q=${encodeURIComponent("Kaito Cunning Infiltrator Emblem")}&limit=12`)).json();
+    expect(state.search.mock.calls).toEqual([[{ query: "Kaito Cunning Infiltrator Emblem", limit: 12 }]]);
+    expect(state.log).toHaveBeenCalledTimes(1);
+    expect(body).toEqual({ ok: true, results: [], scope: "cards" });
+  });
+
+  it("the Tokens & emblems scope is already that search: a fallback there adds no request", async () => {
+    state.search.mockResolvedValue([]);
+    await get("q=zzzz&scope=tokens&fallback=tokens");
+    expect(state.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses an unknown fallback before calling Scryfall", async () => {
+    const res = await get("q=treasure&fallback=planes");
+    expect(res.status).toBe(400);
+    expect(state.search).not.toHaveBeenCalled();
   });
 
   it("an admin's fallback isn't counted either", async () => {
     signIn({ id: "admin-1", is_admin: true });
     state.search.mockResolvedValueOnce([]).mockResolvedValueOnce([KAITO]);
-    await get("q=kaito%20emblem");
+    await get("q=kaito%20emblem&fallback=tokens");
     expect(state.search).toHaveBeenCalledTimes(2);
     expect(state.log).not.toHaveBeenCalled();
   });

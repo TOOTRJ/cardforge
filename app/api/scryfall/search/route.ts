@@ -9,6 +9,7 @@ import {
 } from "@/lib/scryfall/client";
 import {
   DEFAULT_SEARCH_SCOPE,
+  SEARCH_FALLBACK,
   isSearchScope,
   tokensScopeQuery,
   type SearchScope,
@@ -20,7 +21,7 @@ import {
 import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
-// GET /api/scryfall/search?q=<query>&limit=<n>&scope=<cards|tokens>
+// GET /api/scryfall/search?q=<query>&limit=<n>&scope=<cards|tokens>&fallback=tokens
 //
 // Server-side proxy in front of Scryfall's /cards/search. Auth-gated and
 // per-user rate-limited so a single malicious account can't hammer the
@@ -41,10 +42,13 @@ import { rateLimitedResponse } from "@/lib/api/responses";
 // Tokens and emblems (TODO 1.23, lib/scryfall/search-scope.ts): Scryfall
 // leaves them out unless the request sends `include_extras`. `scope=tokens`
 // (the dialog's "Tokens & emblems" scope) searches only tokens and emblems,
-// with the flag. The default scope (`cards`) sends a plain query and, when
-// Scryfall finds NOTHING (its 404 — never on an upstream failure), asks once
-// more in the tokens scope; the answer's `scope` says which one the results
-// come from. Each upstream search is one call against the quota.
+// with the flag. The default scope (`cards`) sends a plain query; only when
+// the caller asks (`fallback=tokens` — the import dialog's Cards scope) and
+// Scryfall finds NOTHING (its 404 — never on an upstream failure) does it ask
+// once more in the tokens scope. The answer's `scope` says which one the
+// results come from. Each upstream search is one call against the quota. The
+// route's other callers (the real-card art dialog, the admin reference
+// picker) send no `fallback`: one request, as before 1.23.
 // ---------------------------------------------------------------------------
 
 export const maxDuration = 15;
@@ -128,6 +132,13 @@ export async function GET(request: NextRequest) {
       { status: 400 },
     );
   }
+  const fallbackParam = request.nextUrl.searchParams.get("fallback")?.trim() || null;
+  if (fallbackParam !== null && fallbackParam !== SEARCH_FALLBACK) {
+    return NextResponse.json(
+      { ok: false, error: "Unknown search fallback." },
+      { status: 400 },
+    );
+  }
 
   const limitRaw = Number(request.nextUrl.searchParams.get("limit") ?? "12");
   const limit = Number.isFinite(limitRaw)
@@ -164,7 +175,7 @@ export async function GET(request: NextRequest) {
 
   let scope: SearchScope = scopeParam;
   let outcome = await search(scope);
-  if (scope === "cards" && outcome.noMatches) {
+  if (scope === "cards" && fallbackParam === SEARCH_FALLBACK && outcome.noMatches) {
     // Nothing is called that: perhaps a token or an emblem (TODO 1.23).
     const extras = await search("tokens");
     if (extras.cards.length > 0) {
