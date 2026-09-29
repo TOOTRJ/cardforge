@@ -19,7 +19,7 @@
       "public/fonts/Beleren-Bold.ttf": "00d9238fe4816e91",
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5"
     },
-    "manifest": "5b3383c720b4a41e"
+    "manifest": "97e79632ace43241"
   },
   "cases": {
     "adventure/b/adventure-long": "6c96b140017aa2cd:42614af9",
@@ -207,6 +207,23 @@
     "bloomburrow/wu/creature-short": "99d9b95e633bbf22:b90e919e",
     "bloomburrow/wub/creature-long": "944fe3b34a0792ac:522e98fb",
     "bloomburrow/wub/creature-short": "ce9db355686f46a0:6d5e2b90",
+    "emblem/b/emblem-long": "1be3d309c544966c:662e9350",
+    "emblem/b/emblem-short": "5f186d4ddc8a2ca2:7a105451",
+    "emblem/c/emblem-long": "445ee37ae64dd239:e26035cf",
+    "emblem/c/emblem-short": "5f186d4ddc8a2ca2:1975caa3",
+    "emblem/g/emblem-long": "86a921a68d5f470f:dbf14284",
+    "emblem/g/emblem-long@hd": "ae56bfe60f17d3d4:c9c24776",
+    "emblem/g/emblem-short": "5f186d4ddc8a2ca2:7f3cb933",
+    "emblem/r/emblem-long": "38bfbe3939619460:f44eff4e",
+    "emblem/r/emblem-short": "5f186d4ddc8a2ca2:f52a9a89",
+    "emblem/u/emblem-long": "f2a5298b0f6a362c:aafec3d2",
+    "emblem/u/emblem-short": "5f186d4ddc8a2ca2:66ac5184",
+    "emblem/w/emblem-long": "1559c0a7442a5ccd:5884114d",
+    "emblem/w/emblem-short": "5f186d4ddc8a2ca2:4b0a8fa2",
+    "emblem/wu/emblem-long": "2b09950921772731:3b65b522",
+    "emblem/wu/emblem-short": "5f186d4ddc8a2ca2:a0581abd",
+    "emblem/wub/emblem-long": "2b09950921772731:5c9f5632",
+    "emblem/wub/emblem-short": "5f186d4ddc8a2ca2:c0239277",
     "expeditionland/b/land-long": "e12d05a9cb7b7e86:3fcf6327",
     "expeditionland/b/land-short": "a296fd5ed9c5e199:3418e758",
     "expeditionland/c/land-long": "5f249cdabf301769:d900c993",
