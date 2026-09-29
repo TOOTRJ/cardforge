@@ -136,6 +136,26 @@ export type Database = {
         };
         Relationships: [];
       };
+      // migration 0125 — the anonymous live-render limiter's minute windows
+      // (service-role only; lib/cards/anon-render-limit.ts).
+      anon_render_hits: {
+        Row: {
+          key_hash: string;
+          window_start: string;
+          hits: number;
+        };
+        Insert: {
+          key_hash: string;
+          window_start: string;
+          hits?: number;
+        };
+        Update: {
+          key_hash?: string;
+          window_start?: string;
+          hits?: number;
+        };
+        Relationships: [];
+      };
       credit_ledger: {
         Row: {
           balance_after: number;
@@ -1743,6 +1763,12 @@ export type Database = {
           ok: boolean;
           balance: number;
         }[];
+      };
+      // migration 0125 — count one anonymous live render or refuse it
+      // (service-role only; lib/cards/anon-render-limit.ts).
+      hit_anon_render_limit: {
+        Args: { p_key_hash: string; p_per_minute: number; p_per_hour: number };
+        Returns: { allowed: boolean; retry_after_seconds: number }[];
       };
       grant_credits: {
         Args: {
