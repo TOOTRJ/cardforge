@@ -299,6 +299,22 @@ Rules and gotchas:
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
   "Tokens").
+- Printed pieces a card SWITCHES ON (TODO 4.6.0; owner rule 2026-09-29,
+  #418: additions are opt-in per card): `frame_style.crown` /
+  `frame_style.twoColor`, drawn only when `=== true` (`lib/cards/anatomy.ts`)
+  — absent = the card's old look, so declaring a piece changes no stored
+  card and needs no bump or sweep. New cards start on (`NEW_CARD_ANATOMY`;
+  `createCardAction` stamps `newCardFrameStyle`), every save drops a switch
+  its template can't draw (`normalizeAnatomy`), imports follow the printing
+  (`printed_crown` — off on a showcase — `printed_two_color`, `color_pair`),
+  and an edit sends only `frame_anatomy`, never frame_style. The colour PAIR
+  is card data (two WUBRG words; the multicolor token ignored; the "Two
+  colours" row, pre-filled from the cost — never derived at render); the
+  DRESS is `twoColorDressOf(cost)`. A template draws a piece only via its
+  PROFILES entry (`overlays`, `twoColorMasters` — never a spread base);
+  overlays draw right after the frame and in both finish masks, preloaded by
+  `frameAssetPathsFor`; the bake's master / plate / overlay keys match the
+  preview's (`anatomy-key-parity.test.ts`). `docs/FRAMES.md` "Printed pieces".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

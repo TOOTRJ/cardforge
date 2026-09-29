@@ -743,6 +743,69 @@ that uses it. `lib/cards/layout-version.ts` explains both policies and
 `TEMPLATE_SCOPED_VERSIONS` / `VERSION_SCOPES`, which limit a bump to the
 cards it changes.
 
+### Printed pieces a card switches on
+
+TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
+additions (above): opt-in per card, never a sweep, never a badge. The
+plumbing is `lib/cards/anatomy.ts`; 4.6.0 ships it with no template drawing
+anything, so it changes no card.
+
+- **The switches are card data:** `frame_style.crown` and
+  `frame_style.twoColor` (booleans, `frameStyleBaseSchema`). Both renderers
+  draw a piece only when its switch is exactly `true`; absent and `false` are
+  the look the card always had. So declaring a piece on a template changes
+  no stored card, and needs no `CARD_LAYOUT_VERSION` bump.
+- **Who sets them:** a new card starts with every switch on
+  (`NEW_CARD_ANATOMY` in the creator; `createCardAction` stamps
+  `newCardFrameStyle` for a payload that names none — the AI jobs). An import
+  follows the printing (`printed_crown`: Scryfall's `legendary` frame effect,
+  off on a showcase printing; `printed_two_color`: a 2015-frame printing of
+  exactly two colours). A stored card shows each switch OFF with a one-line
+  hint in the editor (`AnatomyPanel`) until its owner turns it on; an edit
+  sends only `frame_anatomy`, merged over the stored `frame_style`
+  (`applyFrameAnatomyPatch`).
+- **Every save** drops a switch its template can't draw (`normalizeAnatomy`),
+  so a template that gains a piece later (4.6f) never changes a card stored
+  on it before.
+- **The colour pair** is `color_identity` with exactly two WUBRG words (the
+  AI's `multicolor` token is ignored), picked in the Colour step's "Two
+  colours" row and pre-filled from the cost (`twoColorFromCost`,
+  `useTwoColorPairFollow`) — never derived at render. A stored
+  `["multicolor"]` card gets it only when its owner switches the two-colour
+  frame on (a refinement; a stored mono or three-colour card is never
+  re-coloured). The **dress** is print's for the cost (`twoColorDressOf`):
+  hybrid when every coloured pip is a two-colour hybrid (or a nonland has
+  none), gold-split otherwise — a mixed cost too.
+- **A template draws a piece** only through its `PROFILES` entry:
+  `overlays` (the crown band: `FrameOverlaySlot` — rect, `{key}` image,
+  published `keys`, `keyMap`) and `twoColorMasters` (`<template>/<pair>.png`
+  split, `<pair>-h.png` hybrid). Never on a base another profile spreads
+  (`M15` is spread by 11 profiles, `M15LAND` by m15snowland). Both are
+  code-owned (the override schema refuses them).
+- **Renderers:** the overlays draw right after the frame master
+  (`FrameOverlayLayer` / the bake's `<img>`s, never a Fragment) and inside
+  both finish masks; `frameAssetPathsFor` preloads them;
+  `frameMasterKey(..., frameStyle)` paints the pair master; `plateKeyFor`
+  gives a hybrid its grey plate. The bake keeps one key list per asset
+  family (`FRAME_MASTER_KEYS` with the pair masters, `FRAME_PLATE_KEYS`) and
+  loads an overlay with no fallback key (`getFrameOverlayDataUrl`), so it
+  reads the file the preview shows (`tests/unit/render/anatomy-key-parity.test.ts`).
+- **Registry:** the `crown`, `two-colour` and `two-colour-hybrid` gaps
+  (`hybridCost`) drop where the frame the import lands on draws the piece
+  (`gapDrawnBy`) — nothing to keep in step by hand.
+- **Importer** (`scripts/lib/cc-frames.mjs`): a layer through a list of masks,
+  the untilted `rampMask` (`TWO_COLOR_RAMPS`: pinline 40→60, text box
+  46→58, crown 43→55 %W), the premultiplied `lerpLayers`, `twoColorRecipe`
+  (CC's cardFrameProperties, corrected) and `CROWN_BAND`.
+
+Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
+into `.frames-build`, publish to the dev bucket, declare it on the
+`PROFILES` entry, update the pinned sets in `tests/unit/cards/anatomy.test.ts`,
+sign it off on a print sheet in the PR, promote, merge, and post the site
+update ([Announcing a change](#announcing-a-change)). No bump, no sweep: a
+card gets the look when its owner switches it on, and new cards get it by
+default.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
