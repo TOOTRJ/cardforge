@@ -58,12 +58,89 @@ real session.
 as the card's picture) joins that trigger, and any surface that draws one
 checks it with `isStoredRenderUrl()` (`lib/cards/render-cdn.ts`) first.
 
-**Not covered yet (TODO 3.14b):** the other user-media URL columns —
-`cards.art_url` (and the second face's art in `back_face`), `set_icon_url`,
-`watermark`'s icon, `profiles.avatar_url` / `banner_url`, `decks.cover_url`,
-`custom_pips.image_url`, `deck_cards.image_url` — are still any https URL
-their owner writes through PostgREST (length CHECKs only), so an outside
-picture can skip the strip and the scan there.
+**Every picture URL column is tied to our storage (0127, TODO 3.14b).** One
+guard trigger per table (`cards_guard_media_columns`,
+`profiles_guard_media_columns`, `decks_guard_media_columns`,
+`custom_pips_guard_media_columns`, `deck_cards_guard_media_columns`) lets
+`anon` / `authenticated` only keep a column's value, clear it, or set what
+`public.media_url_allowed(kind, url, auth.uid())` accepts: a public object on
+one of `public.storage_origins`, in the kind's bucket, directly in the
+caller's own folder — `cards.art_url` and the second face's art (card-art,
+or a built-in image: the seed cards), the custom watermark's `url`
+(card-art), `set_icon_url` (set-covers or card-art), `avatar_url` /
+`banner_url` (profile-media or a built-in `/defaults/…` image of that kind),
+`decks.cover_url` (set-covers, or card-art for an AI cover),
+`custom_pips.image_url` (custom-pips, `?v=` allowed); `deck_cards.image_url`
+takes a Scryfall printing image (`https://cards.scryfall.io/…`) only. Refused
+= `insufficient_privilege` with `media_url_not_allowed: <table>.<column>`
+(the save actions turn it into a field error, `lib/media/media-url-errors.ts`).
+The service role and `postgres` are not checked; existing rows are
+grandfathered (only changes are checked). A remix of someone else's card
+copies the parent's pictures into the remixer's folder before it saves
+(`lib/cards/remix-media.ts`). `handle_new_user` keeps a signup's metadata
+avatar only when it is a Google profile picture. Any surface that DRAWS one of
+these columns checks it with `isAllowedMediaUrl()` / `profileMediaSrc()`
+(`lib/media/media-urls.ts`) first — the database can't pin the deployment's
+host, the app can.
+
+- **A new picture column** joins a guard trigger and a `media_url_allowed`
+  kind (and `MEDIA_KIND_BUCKETS` in `lib/media/media-urls.ts` — a unit test
+  keeps the two tables equal).
+- **`public.storage_origins`** lists production's origins (the custom domain
+  and the project host) and the persistent dev branch's; `supabase/seed.sql`
+  adds `https://*.supabase.co` (each preview branch has its own host) and the
+  local stack — seeds never run on production. **If the storage domain ever
+  moves**, a migration adds the new origin BEFORE `NEXT_PUBLIC_SUPABASE_URL`
+  changes, or every new upload fails to save.
+- **Uploads are rate-limited per user** (30 a minute, 300 a rolling day;
+  admins exempt): `public.upload_hits` + `hit_upload_limit()`, service role
+  only, called by every upload action before it touches the bytes
+  (`lib/media/upload-rate-limit.ts`; AI art and our own bakes aren't counted).
+
+Classification of every row (counts only — production's private rows are the
+owner's to read):
+
+```sql
+-- Read-only. Every user-media URL column, classified the way 0127 sees it —
+-- counts only (no ids, no URLs). Runs before or after 0127 (SQL editor,
+-- production).
+with v (tbl, col, vis, owner, url, buckets) as (
+  select 'cards', 'art_url', c.visibility, c.owner_id, c.art_url, array['card-art'] from public.cards c
+  union all select 'cards', 'back_face.art_url', c.visibility, c.owner_id, c.back_face ->> 'art_url', array['card-art'] from public.cards c
+  union all select 'cards', 'watermark.url', c.visibility, c.owner_id, c.watermark ->> 'url', array['card-art'] from public.cards c
+  union all select 'cards', 'set_icon_url', c.visibility, c.owner_id, c.set_icon_url, array['set-covers', 'card-art'] from public.cards c
+  union all select 'profiles', 'avatar_url', 'all', p.id, p.avatar_url, array['profile-media'] from public.profiles p
+  union all select 'profiles', 'banner_url', 'all', p.id, p.banner_url, array['profile-media'] from public.profiles p
+  union all select 'decks', 'cover_url', d.visibility, d.owner_id, d.cover_url, array['set-covers', 'card-art'] from public.decks d
+  union all select 'custom_pips', 'image_url', 'all', cp.owner_id, cp.image_url, array['custom-pips'] from public.custom_pips cp
+  union all select 'deck_cards', 'image_url', d.visibility, d.owner_id, dc.image_url, array[]::text[]
+    from public.deck_cards dc join public.decks d on d.id = dc.deck_id
+),
+m as (
+  select *, regexp_match(url, '^(https?://[^/]+)/storage/v1/object/public/([^/]+)/([^/]+)/(.+)$') as p from v
+)
+select tbl, col,
+       case when vis in ('public', 'unlisted') then 'public+unlisted' else vis end as rows_of,
+       case
+         when url is null or url = '' then 'empty'
+         when url ~ '^/defaults/' then 'built-in (site-relative)'
+         when url ~ '^https://(www\.)?pipglyph\.com/defaults/' then 'built-in (pipglyph.com)'
+         when p is not null and p[1] in ('https://auth.pipglyph.com', 'https://zkwkisxoqdhdchqyjwdc.supabase.co') then
+           case
+             when not (p[2] = any (buckets)) then 'our storage, another bucket'
+             when p[3] = owner::text then 'our storage, own folder'
+             else 'our storage, ANOTHER user''s folder'
+           end
+         when url ~ '^https://lh[0-9]+\.googleusercontent\.com/' then 'Google avatar'
+         when url ~ '^https://cards\.scryfall\.io/' then 'Scryfall CDN'
+         when url ~ '^https://([a-z0-9-]+\.)*scryfall\.(io|com)/' then 'Scryfall, other host'
+         else 'OTHER HOST'
+       end as class,
+       count(*) as n
+from m
+group by 1, 2, 3, 4
+order by 1, 2, 3, 4;
+```
 
 ## Errata — corrections to merged migration headers
 
