@@ -180,7 +180,7 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
    DB), or sign up fresh (email confirmation is off on branches).
 4. Merge. Everything after that is automatic.
 
-### Writing migrations — two rules learned the hard way
+### Writing migrations — rules learned the hard way
 
 - **State your grants.** Production is an *old* Supabase project that
   auto-grants new `public` objects to `anon` / `authenticated` /
@@ -196,6 +196,15 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
 - **Admin checks in policies use `public.viewer_is_admin()`**, never a subquery
   on `profiles.is_admin` (unreadable to `authenticated` since 0074 — this broke
   challenge authoring in production until 0096).
+- **No storage write policies.** Since 0126 users can't insert, update or
+  delete `storage.objects` with their own JWT; uploads and removals are server
+  actions on the service role (`lib/media/user-storage.ts` forces the
+  `{userId}/` folder). A new bucket or upload path follows that — never an
+  owner-folder policy (`supabase/migrations/README.md`, "Storage"). The same
+  goes for a card's render columns (`cards_guard_render_columns`: an API
+  role may only clear them). Uploads therefore need `SUPABASE_SECRET_KEY` in
+  every environment — a local checkout or a preview without it can't upload,
+  bake or delete a render (the app logs that loudly).
 
 ### When the Supabase check misbehaves
 
