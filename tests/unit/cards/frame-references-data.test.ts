@@ -51,6 +51,10 @@ const DOCUMENTED_NULLS = new Set([
   // (the M20+ full-art prints are 4.48 / 4.50's).
   "m15token/m",
   "m15tokenartifact/w", "m15tokenartifact/b", "m15tokenartifact/r", "m15tokenartifact/g", "m15tokenartifact/m",
+  // …and no white / black / red / green / gold text-box arch artifact token
+  // either (4.49 (b)).
+  "m15tokenartifacttext/w", "m15tokenartifacttext/b", "m15tokenartifacttext/r", "m15tokenartifacttext/g",
+  "m15tokenartifacttext/m",
   "adventure/c",
   "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
   "aftermath/c",
@@ -266,6 +270,48 @@ describe("4.49 token references", () => {
     // Every arch token set: the 2014–19 token sets the pins come from.
     const ARCH = new Set(["tdom", "tm19", "tbfz", "twar", "tmh1", "temn", "tkld", "tc18"]);
     for (const template of ["m15token", "m15tokenartifact"]) {
+      for (const key of FRAME_COLOR_KEYS) {
+        for (const ref of frameReferenceOptions(template, key)) expect(ARCH.has(ref.set), `${template}/${key} ${ref.set}`).toBe(true);
+      }
+      expect(frameReferenceNote(template).note).toMatch(/2014–19 arch/);
+    }
+  });
+});
+
+// TODO 4.49 (b): the text-box arch tokens are referenced to the 2014–19
+// text-box prints, two per colour (4.49's list); m15tokenartifacttext has
+// c and u only. TSOI #11 Clue, on 4.49's list, prints the TALL box (type bar
+// at ~56 %H, no CC source: 4.49's P3), so TXLN #10 Treasure — the re-cut's
+// ruler print — stands in for it.
+describe("4.49 (b) text-box token references", () => {
+  const ids = (template: string, key: string) =>
+    frameReferenceOptions(template, key).map((r) => `${r.set} ${r.name}`);
+
+  it("m15tokentext: two text-box arch prints per colour", () => {
+    expect(ids("m15tokentext", "w")).toEqual(["tdom Knight", "tm19 Angel"]);
+    expect(ids("m15tokentext", "u")).toEqual(["tm15 Squid", "tc16 Bird"]);
+    expect(ids("m15tokentext", "b")).toEqual(["tm19 Bat", "twar Assassin"]);
+    expect(ids("m15tokentext", "r")).toEqual(["tm19 Dragon", "tsoi Devil"]);
+    expect(ids("m15tokentext", "g")).toEqual(["tm15 Insect", "txln Dinosaur"]);
+    expect(ids("m15tokentext", "m")).toEqual(["tc17 Cat Dragon", "twar Citizen"]);
+    // The see-through grey frame and box over the art that m15tokentext/c draws.
+    expect(ids("m15tokentext", "c")).toEqual(["tbfz Eldrazi Scion", "togw Eldrazi Scion"]);
+    expect(FRAME_REFERENCES.m15tokentext.w?.scryfallId).toBe("cc7d137c-f6c0-44e5-af9f-a8bbd52d3b2a");
+  });
+
+  it("m15tokenartifacttext: c TXLN #7 · TM19 #14 · TXLN #10, u TC16 #9 · TC18 #8, nothing else", () => {
+    expect(ids("m15tokenartifacttext", "c")).toEqual(["txln Treasure", "tm19 Thopter", "txln Treasure"]);
+    expect(ids("m15tokenartifacttext", "u")).toEqual(["tc16 Thopter", "tc18 Thopter"]);
+    for (const key of ["w", "b", "r", "g", "m"] as const) expect(FRAME_REFERENCES.m15tokenartifacttext[key]).toBeNull();
+    // Not the tall-box Clue.
+    expect(frameReferenceOptions("m15tokenartifacttext", "c").map((r) => r.scryfallId)).not.toContain(
+      "f2c859e1-181e-44d1-afbd-bbd6e52cf42a",
+    );
+  });
+
+  it("lists only 2014–19 arch prints (released before M20, 2019-07-12)", () => {
+    const ARCH = new Set(["tdom", "tm19", "tm15", "tc16", "twar", "tsoi", "txln", "tc17", "tbfz", "togw", "tc18"]);
+    for (const template of ["m15tokentext", "m15tokenartifacttext"]) {
       for (const key of FRAME_COLOR_KEYS) {
         for (const ref of frameReferenceOptions(template, key)) expect(ARCH.has(ref.set), `${template}/${key} ${ref.set}`).toBe(true);
       }

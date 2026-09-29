@@ -287,6 +287,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // hold (SPLIT_TEXTBOX_BORDER_PX): 400 characters no longer fit either.
   [["split/main", "split/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   [["aftermath/second face"], ["1200 chars", "EOE #30"]],
+  // The text-box tokens' box (TODO 4.49 (b): 74.5–92.5 %H, the P/T plate in
+  // its corner) holds 400 characters but not a planeswalker's worth.
+  [["m15tokentext/main", "m15tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
   [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112"]],
   [["adventure/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR

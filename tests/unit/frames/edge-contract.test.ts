@@ -377,3 +377,71 @@ describe("fullartland keeps nothing of the erased Border ring", () => {
     });
   }
 });
+
+// TODO 4.49 (b): the text-box tokens are Card Conjurer's 'Regular (Bordered
+// M15)' masters with the lower band re-cut 64 px down onto the prints (CC's
+// window ended at 1340 px, the prints' at ~1404–1409): the window now ends at
+// 1404 px (1408 on the see-through `c`), the pill's top outline sits at 1420
+// and the box starts at 1559. And 7.6's art-window coverage: the transparent
+// window flood-filled (α < 16) from the profile's artSlot centre lies inside
+// the artSlot with ≥ 0.05 % overscan on every side. Run where the masters
+// are available (the importer builds them; CI has no bucket frames).
+describe("the text-box tokens' re-cut window and 7.6's art-window coverage", () => {
+  /** The α < 16 region 4-connected to (cx, cy): its bounding box. */
+  function windowBox(data: Buffer, width: number, height: number, cx: number, cy: number) {
+    const seen = new Uint8Array(width * height);
+    const stack = [cy * width + cx];
+    let x0 = cx;
+    let x1 = cx;
+    let y0 = cy;
+    let y1 = cy;
+    while (stack.length) {
+      const i = stack.pop()!;
+      if (seen[i] || data[i * 4 + 3] >= 16) continue;
+      seen[i] = 1;
+      const x = i % width;
+      const y = (i - x) / width;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+      if (x > 0) stack.push(i - 1);
+      if (x < width - 1) stack.push(i + 1);
+      if (y > 0) stack.push(i - width);
+      if (y < height - 1) stack.push(i + width);
+    }
+    return { x0, x1: x1 + 1, y0, y1: y1 + 1 };
+  }
+
+  for (const template of ["m15tokentext", "m15tokenartifacttext"]) {
+    const masters = mastersOf(template);
+    if (masters.length === 0) {
+      it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
+      continue;
+    }
+    it(`${template}: every colour's window ends ~1404 px, the pill and box below it, inside the art slot`, async () => {
+      expect(masters).toHaveLength(7);
+      const slot = getFrameProfile(template).artSlot;
+      for (const m of masters) {
+        const { data, width, height } = await rgbaOf(m.file);
+        const cx = Math.round(((slot.leftPct + slot.widthPct / 2) / 100) * width);
+        const cy = Math.round(((slot.topPct + slot.heightPct / 2) / 100) * height);
+        const win = windowBox(data, width, height, cx, cy);
+        // The re-cut: the window ends 64 px lower than CC's 1341.
+        expect(win.y1, `${m.key} window bottom`).toBeGreaterThanOrEqual(1405);
+        expect(win.y1, `${m.key} window bottom`).toBeLessThanOrEqual(1409);
+        // …then opaque from the pill's top outline (1420) through the box
+        // (1559–1947) on the centre column.
+        for (const y of [1422, 1480, 1540, 1600, 1760, 1940]) {
+          expect(data[(y * width + 750) * 4 + 3], `${m.key} α at 750, ${y}`).toBeGreaterThan(m.key === "c" && template === "m15tokentext" ? 150 : 250);
+        }
+        // 7.6: the art slot covers the window with ≥ 0.05 % overscan.
+        const over = { x: 0.0005 * width, y: 0.0005 * height };
+        expect((slot.leftPct / 100) * width, `${m.key} left`).toBeLessThanOrEqual(win.x0 - over.x);
+        expect(((slot.leftPct + slot.widthPct) / 100) * width, `${m.key} right`).toBeGreaterThanOrEqual(win.x1 + over.x);
+        expect((slot.topPct / 100) * height, `${m.key} top`).toBeLessThanOrEqual(win.y0 - over.y);
+        expect(((slot.topPct + slot.heightPct) / 100) * height, `${m.key} bottom`).toBeGreaterThanOrEqual(win.y1 + over.y);
+      }
+    });
+  }
+});

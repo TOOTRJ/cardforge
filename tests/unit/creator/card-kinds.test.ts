@@ -133,7 +133,9 @@ describe("framesForKind", () => {
     }
     expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
     expect(skinsFor("land")).toEqual(["m15snowland"]);
-    expect(skinsFor("token")).toEqual(["m15tokenartifact"]);
+    // The artifact dress and 4.49 (b)'s text-box variations (the artifact
+    // ones are type-word dresses: the pickers hide them, isTypeWordDress).
+    expect(skinsFor("token")).toEqual(["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"]);
     // Standards with their own geometry and no skin set stay bare.
     for (const kind of ["planeswalker", "battle"] as CardKind[]) {
       expect(skinsFor(kind)).toEqual([]);

@@ -101,9 +101,12 @@ describe("importFramePlan — when the chooser shows", () => {
     });
     // A legendary M20 token is short of more than the crown: the frame
     // itself is a stand-in, so C1 never skips the chooser.
+    // Its rules text asks for the text-box arch (4.49 (b)); unverified, the
+    // textless arch it lands on is preselected (TEXT_BOX_TOKEN_FALLBACK).
     expect(importFramePlan(namedPatch("tmkm-13", STANDARD), STANDARD, "m15")).toMatchObject({
       mode: "choose",
-      match: { status: "nearest", template: "m15token" },
+      match: { status: "nearest", template: "m15tokentext" },
+      preselected: { template: "m15token" },
     });
   });
 

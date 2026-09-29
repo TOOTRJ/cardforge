@@ -84,6 +84,18 @@ const TEMPLATES = {
   m15tokenartifact: {
     q: (k) => `t:token t:artifact frame:2015 date<2019-07-12 -is:fullart -is:showcase ${spellColor(k)}`,
   },
+  // 4.49 (b): the same arch with a text box — the prints with rules or
+  // flavour text. Keep the REGULAR box by eye (type bar at ~67 %H): the tall
+  // box (type bar at ~56 %H: TSOI #11 Clue, TAKH #1, TDOM #7) has no Card
+  // Conjurer source (4.49's P3).
+  m15tokentext: {
+    note: "Text-box arch prints only (released before M20); drop the tall box (type bar ~56 %H) by eye.",
+    q: (k) => `t:token -t:artifact -t:emblem frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase -set:tunf -set:tund ${spellColor(k)}`,
+  },
+  m15tokenartifacttext: {
+    note: "Text-box arch artifact prints only (released before M20); drop the tall box by eye.",
+    q: (k) => `t:token t:artifact frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase ${spellColor(k)}`,
+  },
   m15snow: {
     q: (k) => `frame:2015 frame:snow -t:land -t:token ${STANDARD_EXCLUSIONS} ${spellColor(k)}`,
   },

@@ -391,7 +391,11 @@ describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
 
 /** Templates added after v29 (frames plan 4.32 / 4.39): no card was ever
  *  baked on them before v30, so v29's frozen lists never name them. */
-const POST_V29_TEMPLATES: readonly string[] = ["m15borderless", "m15borderlessartifact", "m15fullartland"];
+const POST_V29_TEMPLATES: readonly string[] = [
+  "m15borderless", "m15borderlessartifact", "m15fullartland",
+  // TODO 4.49 (b)'s text-box tokens.
+  "m15tokentext", "m15tokenartifacttext",
+];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   const png = "https://x/y.png";
@@ -700,7 +704,11 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     const { M15_FAMILY_TEMPLATES } = await import("@/lib/cards/m15-family");
     // The family changed? Don't edit the frozen v32 list: ship the change in
     // its own bump, and record it here (the family = v32's list ± it).
-    expect([...V32_M15_FAMILY_TEMPLATES].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
+    // + 4.49 (b)'s text-box tokens: NEW templates, no card ever baked on
+    // them before, so they joined without a bump.
+    const joinedLater = ["m15tokentext", "m15tokenartifacttext"];
+    expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
+    for (const t of joinedLater) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
     expect(new Set(V32_M15_FAMILY_TEMPLATES).size).toBe(V32_M15_FAMILY_TEMPLATES.length);
     expect(V32_M15_FAMILY_TEMPLATES).toHaveLength(23);
     for (const t of V32_M15_FAMILY_TEMPLATES) expect(FRAME_TEMPLATE_VALUES, t).toContain(t);

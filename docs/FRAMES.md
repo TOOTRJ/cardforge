@@ -53,7 +53,10 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
   black-bordered m15fullartland and the borderless fullartland (the same
   frame with its Border mask erased), each with CC's mana symbols at
-  `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot.
+  `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot;
+- the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
+  m15tokentext and its artifact dress m15tokenartifacttext, re-cut onto the
+  prints (below).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -72,6 +75,26 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   Border mask) by subtracting the mask's coverage (alpha − mask alpha), so
   the ring's anti-aliased inner edge leaves nothing behind; multiplying by
   (1 − mask alpha) left a faint 1 px rounded rectangle over the art.
+- **Re-cut (the text-box tokens, 4.49 (b)).** CC's 'Regular (Bordered
+  M15)' master draws its lower band ~3 %H above every print: the window ends
+  at 1340 px and the pill's outline runs 1356–1477, where TDOM #2, TM19 #1,
+  TC17 #9 and TWAR #16 end the art at ~1404–1409 and print the pill's
+  outline at 1420–1540. The importer composites the pack as CC draws it,
+  then moves rows 1240–1559 (the window's straight sides through the top of
+  the text box) 64 px down
+  as one piece (`TOKEN_REGULAR_RECUT`, `recutBand` in
+  `scripts/lib/cc-frames.mjs`): the rows it opens repeat the window's sides,
+  the box keeps its bottom, and each seam is cross-faded over 24 rows. The
+  shift puts the pill, the window edge and the box's top edge within 1 px
+  of those prints (their title bars sit where CC's does, ±1 px), and the
+  alignment score (`lib/frames/align.ts`) agrees: over the 19 reference
+  prints 62 and 64 px tie at 94.5 % (56 px 93.9, 59 px 94.3, 65 px 94.4,
+  CC's master as-is 92.8 %, today's m15token over the same prints 93.9 %),
+  and on the four ruler prints (TXLN #10, TDOM #2, TM19 #1, TC17 #9) 64 px
+  scores best: the published masters 95.0 % (62 px 94.9, CC as-is 93.1;
+  re-scored independently in the skeptic pass, which also measured CC's
+  band 60–65 px above the prints and the re-cut within ±2 px). Provenance
+  records the re-cut (`recut`, `transforms`).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame and
   the colourless creature token are see-through, like the printed cards. The
   profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);
@@ -369,9 +392,71 @@ What a frame gives it:
   centre theirs on their pill the same way), M15's 86 px box with the ink
   fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
   stays the card's rarity (a new token and a token's remix save as common);
-- still to come: the bordered text box `m15tokentext` / `m15tokenartifacttext`
-  (4.49 (b) — the rules scrim is today's), the TALL text box (4.55), the gold
-  small-caps name and the art slot (4.53).
+- still to come: the TALL text box (4.55), the gold small-caps name and
+  the art slot (4.53).
+
+**The text-box token (4.49 (b)): `m15tokentext` / `m15tokenartifacttext`.**
+The same arch with a cream type pill and a text box, from CC 'Regular
+(Bordered M15)' re-cut onto the prints by its OWN band
+(`TOKEN_REGULAR_RECUT`: rows 1240–1559 64 px down, both seams cross-faded
+over 24 rows — not the textless masters' 8 px band above), for tokens that
+print rules or flavour text (TDOM #2 Knight, TM19 #1 Angel, TXLN #7
+Treasure). The profile (`M15TOKENTEXT`) is M15TOKEN's with:
+
+- the window ending at 1404 px (66.9 %H; 1408 on the see-through `c`; the
+  art slot to 67.2 %H, 7.6's overscan), the pill 292 px above CC's textless
+  one's (M15TOKEN's re-cut pill sits 8 px lower still);
+- the type line on the pill, left from 8.54 %W, its baseline on the prints'
+  1500 px (twelve prints 1498–1505) — CC's band moved up with the pill
+  (`TOKEN_CC_TYPE_TOP_PCT`, `TOKEN_CC_TYPE_PRINT_DY`), not M15TOKEN's, which
+  rides the textless re-cut 8 px lower (spread as is, the band sat 8 px low
+  in the pill and its text 8 px higher to make up for it); the set symbol
+  right-anchored at 92.13 %W and centred on 70.48 %H (CC's 67.43 moved down
+  with the band) — CC's own box (`TOKEN_CC_SYMBOL_RECT`), not M15TOKEN's
+  (moved 8 px down with the textless re-cut): this master's own re-cut
+  already put CC's pill, and the symbol with it, on the prints (TDOM #2 /
+  TM19 #1 / TXLN #10 / TC16 #9 centre their symbols 0.5 px below ours on
+  average; M15TOKEN's box would sit 8 px low);
+- the rules in dark ink in CC's box moved down with the band and ending 5 px
+  inside the drawn box as it starts (8.6 / 74.48 / 82.8 × 18 %: 1564–1942 px
+  in the drawn box's 1559–1947; CC's ended at 1930, and a centred line sat
+  5 px above the prints' 1751–1753), 2 px of
+  padding each side (the prints' ink runs x 130–1372), centred vertically,
+  and `rules.alignSingleLine: "center"`: ONE rules line is centred on the box
+  ("Vigilance", "Flying", "This creature is all colors."); two or more lines,
+  or a line with flavour, start at the left. `lib/cards/rules-layout.ts`
+  places the line (a whole-px indent per target, `singleLineIndentPx`) and
+  both renderers draw that indent as the line's margin, so the keep-outs
+  are judged where it lands. No scrim;
+- the P/T exactly as on M15TOKEN — M15's value box, the plate box 0.13 %H
+  lower (88.61 %H): the text-box prints put their plate where the textless
+  ones do (TDOM #2 / TM19 #1 / TC16 #9: 4.1 px below CC's 88.48 box, 1.4
+  after the move) — `m15artifact/pt` on the artifact dress;
+- `c` see-through like m15token's: CC's silver frame at 35 %, the pill and
+  the box at 80 % over the art (BFZ #2 / OGW #1 Eldrazi Scion). A coloured
+  artifact keeps the silver box and takes the colour through the title,
+  type and pinline masks (TC16 #9, TC18 #8 Thopter).
+
+The Artifact word dresses it as on the textless pair (`TYPE_WORD_DRESSES`:
+m15tokentext ↔ m15tokenartifacttext). Both templates are NEW and start
+UNVERIFIED: no user can pick them until the owner verifies a colour, and the
+walk-through (`/create?previewFrames=m15tokentext`, `…=m15tokenartifacttext`)
+reaches them. The registry resolves a 2015-frame token that prints text to
+them (`printsTokenTextBox`); until they are verified in the card's colour
+that is a `nearest` "not yet verified" answer, and the import lands on the
+textless dress it landed on before (`TEXT_BOX_TOKEN_FALLBACK` in
+`lib/creator/frame-resolve.ts`: m15token, m15tokenartifact for a Treasure).
+No stored card moves (a later migration, once verified: 4.49 (b)'s "Stored
+cards"), no layout bump (new templates), and the scrim on m15token stays.
+TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: its own
+item, 4.55, P3) and is not a reference. The registry pins the 21 arch printings with
+the tall box (`TALL_BOX_TOKEN_PINS`: every black-bordered pre-M20 arch token
+with rules text measured against this master — Amonkhet / Hour of
+Devastation's embalmed and eternalized cards, the SOI Clues, TDOM #7, TC18
+#4 / #10 / #19, TRIX #1, TUST #18): the `tall-box` gap answers `nearest` the
+regular box with `blockedBy` 4.55, so the import lands there (the text
+shrinks to fit) and the 1.6 log counts the demand, instead of calling the
+regular box exact.
 
 A token's card types are WORDS in `supertype` (`card_type` stays `token`):
 "Creature", "Artifact", "Enchantment", plus "Legendary", toggled by the token
@@ -435,7 +520,11 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   held to Scryfall by `tests/unit/scryfall/fixtures/plst-token-prefixes.json`).
   Those print the full-art design (4.48), so `token/m20` answers `nearest`
   the 2014–19 arch until 4.48's templates exist (then `onceVerified`); the
-  earlier 2015-frame tokens ARE the arch (`era/2015`, exact). A token's Nyx
+  earlier 2015-frame tokens ARE the arch (`era/2015`, exact). Either way the
+  family pick is the text-box arch (`m15tokentext` / `m15tokenartifacttext`,
+  4.49 (b)) for a printing with rules or flavour text — a box, not the
+  scrim — and the textless one otherwise; the arch's tall box is the
+  `tall-box` gap (pinned, `TALL_BOX_TOKEN_PINS`). A token's Nyx
   is the `nyx-dress` gap (4.51), not `nyx` (4.7). Role cards (`token/role`,
   unsupported) and double-faced tokens import their front face only.
   Tokens and emblems are only found through the import dialog's "Tokens &

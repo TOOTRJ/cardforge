@@ -270,8 +270,18 @@ Rules and gotchas:
   2014–19 arch prints only (M20+ = 4.48): masters RE-CUT 8 px onto the prints
   (`TOKEN_TEXTLESS_RECUT` in the CC importer; the profile rides it through
   `TOKEN_RECUT_PX`), P/T on M15's plates, type line left from 8.54 %W, own
-  `symbolRect` centred on the moved pill. A later bump whose slots move on fewer templates than its
-  bakes change on lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
+  `symbolRect` centred on the moved pill. `m15tokentext` /
+  `m15tokenartifacttext` (4.49 (b)) = the same arch with a text box (CC
+  'Regular (Bordered M15)' re-cut 64 px down onto the prints,
+  `TOKEN_REGULAR_RECUT` — its own band, symbol and type band from CC's
+  (`TOKEN_CC_*`), never M15TOKEN's re-cut ones); `rules.alignSingleLine:
+  "center"` centres ONE rules line (the layout places it, both renderers
+  draw its indent). New and unverified: the registry resolves a 2015-frame
+  token that prints text to them (the arch's tall box = pinned
+  `TALL_BOX_TOKEN_PINS`, nearest, 4.55), and the import lands on the
+  textless dress until they are verified (`TEXT_BOX_TOKEN_FALLBACK`). A
+  later bump whose slots move on fewer templates than its bakes change on
+  lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
   "Tokens").
 - Notifications are push, not pull: `notifications` is on the

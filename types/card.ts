@@ -323,6 +323,12 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15devoid",
   "m15pw",
   "m15tokenartifact",
+  // The 2014–19 arch token with a text box (TODO 4.49 (b), Card Conjurer
+  // 'Regular (Bordered M15)', re-cut onto the prints), and its artifact
+  // dress: the token kind's text-box variations of m15token /
+  // m15tokenartifact.
+  "m15tokentext",
+  "m15tokenartifacttext",
   // The 2019+ borderless frame (frames plan 4.32, Card Conjurer 'Borderless
   // (Alt)'): art to the card edge, dark translucent bars and box, white ink.
   // Skins of the M15 standard and the M15 artifact frame, in the Borderless
@@ -393,6 +399,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
   m15tokenartifact: "Artifact Token",
+  m15tokentext: "Token (2014–2019), text box",
+  m15tokenartifacttext: "Artifact Token (2014–2019), text box",
   m15borderless: "Borderless",
   m15borderlessartifact: "Borderless Artifact",
   m15pw: "Planeswalker",
@@ -487,6 +495,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15devoid: "m15",
   m15pw: "m15",
   m15tokenartifact: "m15",
+  m15tokentext: "m15",
+  m15tokenartifacttext: "m15",
   m15borderless: "borderless",
   m15borderlessartifact: "borderless",
   battle: "m15",
@@ -642,7 +652,9 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   // The artifact kind's own borderless dress (frames plan 4.32).
   m15artifact: ["m15borderlessartifact"],
   m15land: ["m15snowland"],
-  m15token: ["m15tokenartifact"],
+  // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
+  // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
+  m15token: ["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"],
 };
 
 

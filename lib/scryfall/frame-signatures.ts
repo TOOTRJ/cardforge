@@ -186,6 +186,25 @@ const NYX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = {
   sld: ["1835"],
 };
 
+/** The 2014–19 arch tokens that print the TALL text box — the type pill at
+ *  ~56–62 %H over a box twice the regular one's, not m15tokentext's pill at
+ *  67–73.5 %H (TODO 4.55: no Card Conjurer source, P3 by the 1.6 log).
+ *  Scryfall has no field for the box height and text length doesn't tell
+ *  (the SOI Clue's 39 characters print tall), so they are pinned: every
+ *  black-bordered pre-M20 arch token with rules text (316 printings, the
+ *  List's pre-M20 prefixes included; Scryfall 2026-09-29) measured against
+ *  m15tokentext's master — the regular box within 12 px, these 21 about
+ *  238 px higher — and checked by eye. */
+export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = {
+  takh: ["1", "5", "6", "12", "15"],
+  thou: ["2", "3", "4", "6"],
+  tc18: ["4", "10", "19"],
+  tsoi: ["11", "12", "13", "14", "15", "16"],
+  tdom: ["7"],
+  trix: ["1"],
+  tust: ["18"],
+};
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -418,6 +437,26 @@ const layoutTemplateOf = (kind: CardKind | undefined): FrameTemplate | null =>
 const isArtifactCreature = (facts: PrintingFacts) =>
   facts.kind === "creature" && facts.cardTypes.has("artifact");
 
+/** True when the printing's front face prints rules or flavour text — a
+ *  2014–19 token with a text box (TODO 4.49 (b): TDOM #2 "Vigilance", TXLN
+ *  #7 Treasure), where a vanilla one prints none (TDOM #3 Soldier). */
+export function printsTokenTextBox(card: Pick<ScryfallCard, "oracle_text" | "flavor_text" | "card_faces">): boolean {
+  const face = card.card_faces?.[0];
+  const text = (face ? face.oracle_text : card.oracle_text) ?? "";
+  const flavor = (face ? face.flavor_text : card.flavor_text) ?? "";
+  return text.trim() !== "" || flavor.trim() !== "";
+}
+
+/** The 2014–19 arch token a token printing wears: its artifact dress for an
+ *  Artifact (1.3), and the text-box variation when it prints text (4.49
+ *  (b)). */
+function archTokenFrame(ctx: Ctx): FrameTemplate {
+  const artifact = ctx.facts.cardTypes.has("artifact");
+  const text = printsTokenTextBox(ctx.card);
+  if (artifact) return text ? "m15tokenartifacttext" : "m15tokenartifact";
+  return text ? "m15tokentext" : "m15token";
+}
+
 const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
@@ -427,19 +466,22 @@ const FAMILIES: Record<
   // land is the snow land frame, a snow spell or snow ARTIFACT the snow frame
   // (Replicating Ring KHM #244 prints it; the Artifact kind can't take it
   // yet, so the kind check lands it on m15artifact), an Artifact Creature
-  // the artifact frame, an artifact token the artifact token frame.
+  // the artifact frame, an artifact token the artifact token frame — and a
+  // token that prints text the text-box token frame (4.49 (b)).
   m15: {
     produces: [
       "saga", "adventure", "split", "aftermath", "flip", "m15token",
-      "m15tokenartifact", "m15land", "m15snowland", "m15pw", "battle",
-      "m15snow", "m15devoid", "m15artifact", "m15",
+      "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "m15land",
+      "m15snowland", "m15pw", "battle", "m15snow", "m15devoid", "m15artifact",
+      "m15",
     ],
-    pick: ({ facts, effects }) => {
+    pick: (ctx) => {
+      const { facts, effects } = ctx;
       const layout = layoutTemplateOf(facts.kind);
       if (layout) return layout;
       switch (facts.kind) {
         case "token":
-          return facts.cardTypes.has("artifact") ? "m15tokenartifact" : "m15token";
+          return archTokenFrame(ctx);
         case "land":
           return effects.has("snow") ? "m15snowland" : "m15land";
         case "planeswalker":
@@ -578,7 +620,8 @@ type GapKey =
   | "nickname"
   | "nyx-dress"
   | "nyx"
-  | "light-box";
+  | "light-box"
+  | "tall-box";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -666,6 +709,14 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't draw the Nyx dress on its token frames yet",
     blockedBy: "4.51",
   },
+  // The arch token's tall text box (TODO 4.55, P3 — split out of 4.49 (b),
+  // owner 2026-09-29): the import lands on the regular box, the text
+  // shrinking to fit (3.29), and the 1.6 log counts the demand.
+  "tall-box": {
+    match: { kinds: ["token"], collectorIds: TALL_BOX_TOKEN_PINS },
+    reason: "PipGlyph doesn't have the tall text box of this token frame yet",
+    blockedBy: "4.55",
+  },
   nyx: {
     match: { effectsAny: ["enchantment"], notKinds: ["token"] },
     reason: "PipGlyph doesn't draw the Nyx starfield on this frame yet",
@@ -716,6 +767,7 @@ function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
 const M15_ERA_GAPS: readonly GapKey[] = [
   "layout",
   "dfc",
+  "tall-box",
   "nyx-dress",
   "nyx",
   "etched",

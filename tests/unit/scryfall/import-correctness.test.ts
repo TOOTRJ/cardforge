@@ -684,6 +684,31 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(landing(bolt, withTextless)).toEqual({ template: "m15", colorKey: "r", status: "frame-switched" });
   });
 
+  it("a 2014–19 token with text asks for the text-box token frame; unverified, it lands on its textless dress (4.49 (b))", () => {
+    // Knight TDOM #2 "Vigilance": m15tokentext, exact in the registry — a
+    // nearest "not yet verified" answer until the owner verifies it, and the
+    // import lands on the arch token it landed on before.
+    const knight = finalizeImportMatch(signature("tdom-2"), PROD_VERIFIED);
+    expect(knight.frame_match).toMatchObject({ status: "nearest", template: "m15tokentext", unverified: true });
+    expect(landing(knight)).toEqual({ template: "m15token", colorKey: "w", status: "frame-switched" });
+    // Treasure TXLN #7: the ARTIFACT token frame while it waits — never the
+    // plain token frame (TEXT_BOX_TOKEN_FALLBACK).
+    const treasure = finalizeImportMatch(signature("txln-7"), PROD_VERIFIED);
+    expect(treasure.frame_match).toMatchObject({ status: "nearest", template: "m15tokenartifacttext", unverified: true });
+    expect(landing(treasure)).toEqual({ template: "m15tokenartifact", colorKey: "c", status: "frame-switched" });
+    // Once verified in the card's colour: exact, and the import lands on it.
+    const verified = new Set([
+      ...PROD_VERIFIED,
+      frameComboKey("m15tokentext", "w"),
+      frameComboKey("m15tokenartifacttext", "c"),
+    ]);
+    expect(finalizeImportMatch(signature("tdom-2"), verified).frame_match?.status).toBe("exact");
+    expect(landing(signature("tdom-2"), verified)).toEqual({ template: "m15tokentext", colorKey: "w", status: "exact" });
+    expect(landing(signature("txln-7"), verified)).toEqual({ template: "m15tokenartifacttext", colorKey: "c", status: "exact" });
+    // A vanilla token keeps the textless frame (the 2015 full-art Cat T2XM #4).
+    expect(signature("t2xm-4").frame_match?.template).toBe("m15token");
+  });
+
   it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
     // Built explicitly both ways, so the test holds whether or not seed.sql
     // (which mirrors production) lists the full-art basics as verified yet.

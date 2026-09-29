@@ -61,9 +61,15 @@ function textReaching(input: (text: string) => RulesLayoutInput, keepOut: Rect):
 }
 
 describe("the main box on every template", () => {
-  it("gives M15 and its skins the prints' margins (4 / 0 HD px), split its border's, every other box its default", () => {
-    const withPrintMargins = FRAME_TEMPLATE_VALUES.filter((t) => t !== "split" && getFrameProfile(t).rules.padPx);
+  it("gives M15 and its skins the prints' margins (4 / 0 HD px), split its border's, the text-box tokens theirs, every other box its default", () => {
+    const TOKEN_TEXT = ["m15tokentext", "m15tokenartifacttext"];
+    const withPrintMargins = FRAME_TEMPLATE_VALUES.filter(
+      (t) => t !== "split" && !TOKEN_TEXT.includes(t) && getFrameProfile(t).rules.padPx,
+    );
     expect(getFrameProfile("split").rules.padPx).toEqual({ left: 57, right: 54, top: 18, bottom: 18 });
+    // TODO 4.49 (b): the 2014–19 text-box token prints set their rules from
+    // x 130 to 1372 in CC's 129–1371 px box: 2 px either side, none above.
+    for (const t of TOKEN_TEXT) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 2, y: 0 });
     expect([...withPrintMargins].sort()).toEqual(
       ["m15", "m15artifact", "m15devoid", "m15land", "m15snow", "m15snowland", "nyx"].sort(),
     );

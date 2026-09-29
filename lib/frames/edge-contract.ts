@@ -105,6 +105,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15snowland: ALL_BORDER,
   m15token: ALL_BORDER,
   m15tokenartifact: ALL_BORDER,
+  // The text-box tokens (TODO 4.49 (b), CC 'Regular (Bordered M15)', re-cut).
+  m15tokentext: ALL_BORDER,
+  m15tokenartifacttext: ALL_BORDER,
   m15artifact: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,

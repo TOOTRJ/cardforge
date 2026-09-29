@@ -12,6 +12,7 @@ import {
 import {
   M20_TOKEN_DESIGN_FROM,
   PLST_PRE_M20_PREFIX_SETS,
+  TALL_BOX_TOKEN_PINS,
   isM20DesignPrinting,
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
@@ -37,50 +38,57 @@ type Row = [Key, FrameMatchStatus, FrameTemplate, string, string | undefined];
 
 describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
   const rows: Row[] = [
-    // The 2014–19 arch (M15 → MH1) IS m15token / m15tokenartifact: exact,
-    // text box or not (4.49 adds the text-box variant).
+    // The 2014–19 arch (M15 → MH1) IS m15token / m15tokenartifact: exact —
+    // and m15tokentext / m15tokenartifacttext when the printing has rules or
+    // flavour text (4.49 (b): TDOM #2, TXLN #7).
     ["tdom-3", "exact", "m15token", "era/2015", undefined],
-    ["tdom-2", "exact", "m15token", "era/2015", undefined],
+    ["tdom-2", "exact", "m15tokentext", "era/2015", undefined],
     ["tdom-11", "exact", "m15token", "era/2015", undefined],
-    ["txln-7", "exact", "m15tokenartifact", "era/2015", undefined],
+    ["txln-7", "exact", "m15tokenartifacttext", "era/2015", undefined],
+    // …except the arch's TALL text box (4.55, P3 — split out of 4.49 (b),
+    // owner 2026-09-29; no CC source): pinned (TALL_BOX_TOKEN_PINS),
+    // nearest the regular box and logged, blocked by its own item.
+    ["takh-1", "nearest", "m15tokentext", "era/2015+tall-box", "4.55"],
+    ["tsoi-11", "nearest", "m15tokenartifacttext", "era/2015+tall-box", "4.55"],
     // From M20 (2019-07-12) on: the full-art design PipGlyph doesn't draw
-    // yet (4.48) — nearest the arch, the artifact arch for an Artifact.
-    // TM20 #2 and T2XM #4 were `exact` on m15token before.
+    // yet (4.48) — nearest the arch, the artifact arch for an Artifact, and
+    // its text-box variant when the printing has text (4.49 (b): a box, not
+    // the scrim). TM20 #2 and T2XM #4 were `exact` on m15token before.
     ["tm20-2", "nearest", "m15token", "token/m20", "4.48"],
     ["t2xm-4", "nearest", "m15token", "token/m20", "4.48"],
     ["tfdn-6", "nearest", "m15token", "token/m20", "4.48"],
-    ["tfdn-27", "nearest", "m15token", "token/m20", "4.48"],
-    ["tblb-5", "nearest", "m15token", "token/m20", "4.48"],
-    ["tlci-17", "nearest", "m15tokenartifact", "token/m20", "4.48"],
-    ["tfdn-23", "nearest", "m15tokenartifact", "token/m20", "4.48"],
+    ["tfdn-27", "nearest", "m15tokentext", "token/m20", "4.48"],
+    ["tblb-5", "nearest", "m15tokentext", "token/m20", "4.48"],
+    ["tlci-17", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
+    ["tfdn-23", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
     ["tdsk-7", "nearest", "m15tokenartifact", "token/m20", "4.48"],
     // A plain enchantment token (no Nyx) and a Copy.
-    ["tkhm-1", "nearest", "m15token", "token/m20", "4.48"],
-    ["tfdn-26", "nearest", "m15token", "token/m20", "4.48"],
-    ["t2xm-31", "nearest", "m15token", "token/m20", "4.48"],
+    ["tkhm-1", "nearest", "m15tokentext", "token/m20", "4.48"],
+    ["tfdn-26", "nearest", "m15tokentext", "token/m20", "4.48"],
+    ["t2xm-31", "nearest", "m15tokentext", "token/m20", "4.48"],
     // Nyx on the token kind names 4.51 (not 4.7's non-token m15nyx):
     // flagged by Scryfall (TEOC #13) or pinned (TDSK #4, TDSK #10).
     ["teoc-13", "nearest", "m15tokenartifact", "token/m20+nyx-dress", "4.51"],
     ["tdsk-4", "nearest", "m15token", "token/m20+nyx-dress", "4.51"],
     ["tdsk-10", "nearest", "m15token", "token/m20+nyx-dress", "4.51"],
     // …and on the 2014–19 arch (TC15 #23, a W/B Nyx-textured Spirit).
-    ["tc15-23", "nearest", "m15token", "era/2015+nyx-dress", "4.51"],
+    ["tc15-23", "nearest", "m15tokentext", "era/2015+nyx-dress", "4.51"],
     // The crown and the two-colour blend: 4.6.
-    ["tmkm-13", "nearest", "m15token", "token/m20+crown", "4.6"],
+    ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.6"],
     ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.6"],
     // Double-faced token: its front face's frame.
-    ["tmom-16", "nearest", "m15tokenartifact", "token/m20", "4.48"],
+    ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
     // The List follows its collector prefix: TXLN is pre-M20, TKHM isn't.
-    ["plst-txln-10", "exact", "m15tokenartifact", "era/2015", undefined],
-    ["plst-tkhm-19", "nearest", "m15tokenartifact", "token/m20", "4.48"],
+    ["plst-txln-10", "exact", "m15tokenartifacttext", "era/2015", undefined],
+    ["plst-tkhm-19", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
     // Other token types: nearest on the token kind, logged (1.6).
-    ["tfra-5", "nearest", "m15token", "token/other-type", undefined],
-    ["tdsk-16", "nearest", "m15token", "token/other-type", undefined],
-    ["tbro-3", "nearest", "m15token", "token/other-type", undefined],
+    ["tfra-5", "nearest", "m15tokentext", "token/other-type", undefined],
+    ["tdsk-16", "nearest", "m15tokentext", "token/other-type", undefined],
+    ["tbro-3", "nearest", "m15tokentext", "token/other-type", undefined],
     // Roles: the front Role, logged unsupported.
-    ["twoe-15", "unsupported", "m15token", "token/role", undefined],
-    ["twoc-1", "unsupported", "m15token", "token/role", undefined],
-    ["plst-twoe-17", "unsupported", "m15token", "token/role", undefined],
+    ["twoe-15", "unsupported", "m15tokentext", "token/role", undefined],
+    ["twoc-1", "unsupported", "m15tokentext", "token/role", undefined],
+    ["plst-twoe-17", "unsupported", "m15tokentext", "token/role", undefined],
     // A 2003-frame token: 1.4's token/old-frame, unchanged.
     ["tlrw-3", "nearest", "m15token", "token/old-frame", "4.43"],
   ];
@@ -137,6 +145,46 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
       setCode: "twoe",
       collectorNumber: "15",
     });
+  });
+});
+
+describe("the 2014–19 arch's tall text box (TODO 4.49 (b), P3)", () => {
+  it("pins the 21 tall-box printings — never a regular-box one, never an M20 print", () => {
+    const pins = Object.entries(TALL_BOX_TOKEN_PINS).flatMap(([set, numbers]) => numbers.map((n) => `${set} #${n}`));
+    expect(pins).toHaveLength(21);
+    expect(new Set(pins).size).toBe(21);
+    // Amonkhet / Hour of Devastation's embalmed and eternalized cards, the
+    // SOI Clues (39 characters, yet tall), Dominaria's Demon, C18's Dragon
+    // Egg, Mask and Clue, Rivals' Elemental, Unstable's Clue.
+    expect(TALL_BOX_TOKEN_PINS.tsoi).toEqual(["11", "12", "13", "14", "15", "16"]);
+    // The regular-box references and ruler prints are not pinned.
+    for (const key of ["tdom-2", "txln-7", "tdom-3"] as const) {
+      const card = printing(key);
+      expect(TALL_BOX_TOKEN_PINS[card.set!]?.includes(card.collector_number!) ?? false, key).toBe(false);
+    }
+    // Every pinned set is a pre-M20 token set.
+    for (const set of Object.keys(TALL_BOX_TOKEN_PINS)) expect(set, set).toMatch(/^t[a-z0-9]+$/);
+  });
+
+  it("says why, lists the gap, and logs the demand as a missing frame (1.6)", () => {
+    expect(match("tsoi-11")).toMatchObject({
+      status: "nearest",
+      template: "m15tokenartifacttext",
+      reason: "PipGlyph doesn't have the tall text box of this token frame yet",
+      gaps: ["tall-box"],
+    });
+    // Nearest whatever is verified: never an exact match on the regular box.
+    expect(match("takh-1").status).toBe("nearest");
+    const patch = mapScryfallToFormPatch(printing("tsoi-11"));
+    expect(frameRequestFromImport(patch, { artImported: false, source: "import" })).toMatchObject({
+      signature: "era/2015+tall-box",
+      status: "nearest",
+      cause: "missing",
+      setCode: "tsoi",
+      collectorNumber: "11",
+    });
+    // A tall box is no detail the chooser may skip (C1).
+    expect(onlyUndrawnDetailsMissing(match("takh-1"), "w")).toBe(false);
   });
 });
 
@@ -206,8 +254,9 @@ describe("token import words and faces (TODO 1.23)", () => {
     expect(patch).toMatchObject({ title: "Copy", kind: "token", card_type: "token", color_identity: ["colorless"] });
     expect(patch.supertype).toBeUndefined();
     expect(patch.subtypes_text).toBeUndefined();
-    // …on 4.48's colourless design, which PipGlyph doesn't draw yet.
-    expect(patch.frame_template).toBe("m15token");
+    // …on 4.48's colourless design, which PipGlyph doesn't draw yet: its
+    // italic line asks for the text-box arch (4.49 (b)).
+    expect(patch.frame_template).toBe("m15tokentext");
     expect(patch.frame_match).toMatchObject({ status: "nearest", signature: "token/m20" });
   });
 

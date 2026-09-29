@@ -110,11 +110,13 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
 
   it("warns when the printing's signature resolves to another template", () => {
     // The Treasure token XLN #7 — m15token/c's default until TODO 4.49's
-    // re-pin (TBFZ #1 Eldrazi) — prints the ARTIFACT token frame.
+    // re-pin (TBFZ #1 Eldrazi) — prints the ARTIFACT token frame with a text
+    // box (m15tokenartifacttext's default since 4.49 (b)).
     const treasure = card("720f3e68-84c0-462e-a0d1-90236ccc494a");
     expect(treasure.name).toBe("Treasure");
     expect(validateReferenceForCombo(treasure, "m15token", "c").warnings.join(" ")).toMatch(
-      /frame signature registry resolves it to the Artifact Token frame/,
+      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token\./,
     );
+    expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });
 });

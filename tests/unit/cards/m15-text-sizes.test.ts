@@ -52,7 +52,8 @@ const font: { ascender: number; descender: number; unitsPerEm: number } = openty
 
 describe("one M15-era display size (layout v32)", () => {
   it("prints every family frame's name and type line at TITLE_SIZE_PCT / TYPE_SIZE_PCT — both halves of a flip or aftermath", () => {
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(23);
+    // v32's 23, plus 4.49 (b)'s two text-box tokens.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(25);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -132,9 +133,14 @@ describe("baselines (TextSlot.dy)", () => {
   const CC_TYPE_PRINT_DY = -0.0028;
   /** The 2014–19 token prints' type baseline (TODO 4.49 (d)): 4 px down at HD
    *  from the band rule on CC's pill (1796 → 1800; fifteen prints, mean
-   *  1800.4) — and, since the re-cut moved the pill and its band 8 px down,
-   *  those 8 px back up: the baseline stays at 1800. */
-  const TOKEN_TYPE_PRINT_DY = 0.0027 - 8 / 1500;
+   *  1800.4) — on CC's own, un-moved pill. */
+  const TOKEN_CC_TYPE_PRINT_DY = 0.0027;
+  /** The same on the textless masters since the re-cut moved the pill and
+   *  its band 8 px down: those 8 px back up, the baseline stays at 1800. */
+  const TOKEN_TYPE_PRINT_DY = TOKEN_CC_TYPE_PRINT_DY - 8 / 1500;
+  /** The 2014–19 text-box token prints' type baseline (TODO 4.49 (b)): 1500
+   *  px at HD, 8 px higher against the pill than the textless prints'. */
+  const TOKEN_TEXT_TYPE_PRINT_DY = -8 / 1500;
 
   // Every family front face: [template, title dy, type dy]. `undefined`: the
   // band is centred as before (no dy).
@@ -159,6 +165,19 @@ describe("baselines (TextSlot.dy)", () => {
     // (TODO 4.49 (d)) from the re-cut pill's band (82.52 %H).
     ["m15token", base.title, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
     ["m15tokenartifact", base.title, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
+    // The text-box tokens (TODO 4.49 (b)): CC's token band (on CC's own
+    // pill, not the textless re-cut's) on its re-cut pill, 292 px up, and the
+    // text 8 px higher to the prints' 1500.
+    [
+      "m15tokentext",
+      base.title,
+      kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
+    ],
+    [
+      "m15tokenartifacttext",
+      base.title,
+      kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
+    ],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
     ["adventure", base.title, base.type],
     ["extendedart", base.title, base.type],
@@ -213,6 +232,11 @@ describe("baselines (TextSlot.dy)", () => {
     // (TODO 4.49 (d)) and −8 / −4 back up from the band, which rides the
     // re-cut pill 8 / 4 px lower: the text stays where it was.
     expect(at("m15token")).toEqual([-2, 0, -1, 0]);
+    // The text-box token's: CC's band moved with its pill, +4 / +2 onto the
+    // prints' baseline, then 8 / 4 px higher (TODO 4.49 (b)) — no pull-back:
+    // its band does not ride the textless re-cut (its master has its own,
+    // TOKEN_REGULAR_RECUT).
+    expect(at("m15tokentext")).toEqual([-2, 0, -1, 0]);
     expect(at("fullart")).toEqual([-2, -5, -1, -3]);
     expect(at("aftermath")).toEqual([-2, -1, -1, 0]);
     expect(at("m15fullartland")).toEqual([0, 0, 0, 0]);

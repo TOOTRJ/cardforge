@@ -592,6 +592,134 @@
       "m": null
     }
   },
+  "m15tokentext": {
+    "note": "The 2014–19 arch token with a text box (CC 'Regular (Bordered M15)', re-cut onto the prints; TODO 4.49 (b)), text-box arch prints only (released before M20, 2019-07-12). The textless arch prints are m15token's; the M20+ full-art prints wait for 4.48.",
+    "colors": {
+      "w": [
+        {
+          "name": "Knight",
+          "set": "tdom",
+          "scryfallId": "cc7d137c-f6c0-44e5-af9f-a8bbd52d3b2a"
+        },
+        {
+          "name": "Angel",
+          "set": "tm19",
+          "scryfallId": "dc31e017-81e6-43bf-bf8e-ea0faca5d9b7"
+        }
+      ],
+      "u": [
+        {
+          "name": "Squid",
+          "set": "tm15",
+          "scryfallId": "8c366546-6da9-4daa-b0c3-1401ace5568c"
+        },
+        {
+          "name": "Bird",
+          "set": "tc16",
+          "scryfallId": "09ae926d-80be-42c5-8c36-658cd38d2597"
+        }
+      ],
+      "b": [
+        {
+          "name": "Bat",
+          "set": "tm19",
+          "scryfallId": "f1349fcb-db31-4b1d-8063-e5c28b4472cc"
+        },
+        {
+          "name": "Assassin",
+          "set": "twar",
+          "scryfallId": "b7e997ac-5a4a-4555-9b37-06c25a5db356"
+        }
+      ],
+      "r": [
+        {
+          "name": "Dragon",
+          "set": "tm19",
+          "scryfallId": "f43a5ec2-8898-4645-84d7-b7218682be9b"
+        },
+        {
+          "name": "Devil",
+          "set": "tsoi",
+          "scryfallId": "3e78c4b8-371b-43d7-a315-fb299704aa60"
+        }
+      ],
+      "g": [
+        {
+          "name": "Insect",
+          "set": "tm15",
+          "scryfallId": "e101a5b1-614e-43a0-9e7e-de5a248e2e43"
+        },
+        {
+          "name": "Dinosaur",
+          "set": "txln",
+          "scryfallId": "1ccee594-e1e6-4a82-bc17-93bcdeb36198"
+        }
+      ],
+      "c": [
+        {
+          "name": "Eldrazi Scion",
+          "set": "tbfz",
+          "scryfallId": "b999a0fe-d2d0-4367-9abb-6ce5f3764f19"
+        },
+        {
+          "name": "Eldrazi Scion",
+          "set": "togw",
+          "scryfallId": "a03edf14-3495-4f61-ad73-f16e9456472c"
+        }
+      ],
+      "m": [
+        {
+          "name": "Cat Dragon",
+          "set": "tc17",
+          "scryfallId": "748d267d-9c81-4dc0-92b7-eafb7691c6cc"
+        },
+        {
+          "name": "Citizen",
+          "set": "twar",
+          "scryfallId": "de7ba875-f77b-404f-8b75-4ba6f81da410"
+        }
+      ]
+    }
+  },
+  "m15tokenartifacttext": {
+    "note": "The 2014–19 arch artifact token with a text box (CC's silver 'Regular (Bordered M15)' frame, re-cut onto the prints; TODO 4.49 (b)), text-box arch prints only. TSOI #11 Clue prints the TALL box (type bar at ~56 %H, 4.49's P3) and is not a reference; TXLN #10 Treasure (the re-cut's ruler print) takes its place. w/b/r/g/m have no printing: their own tick after a walk.",
+    "colors": {
+      "w": null,
+      "u": [
+        {
+          "name": "Thopter",
+          "set": "tc16",
+          "scryfallId": "6c9a9020-2bf0-4bdd-94a2-545304226a53"
+        },
+        {
+          "name": "Thopter",
+          "set": "tc18",
+          "scryfallId": "a3506ee6-a168-49a4-9814-2858194be60e"
+        }
+      ],
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Treasure",
+          "set": "txln",
+          "scryfallId": "720f3e68-84c0-462e-a0d1-90236ccc494a"
+        },
+        {
+          "name": "Thopter",
+          "set": "tm19",
+          "scryfallId": "d0044cd9-2136-423e-aa2a-829e8f007535"
+        },
+        {
+          "name": "Treasure",
+          "set": "txln",
+          "scryfallId": "bbe8bced-9524-47f6-a600-bf4ddc072698"
+        }
+      ],
+      "m": null
+    }
+  },
   "m15snow": {
     "note": "Gold snow spells only exist as legendaries (crown) — the m reference is accepted with that caveat.",
     "colors": {

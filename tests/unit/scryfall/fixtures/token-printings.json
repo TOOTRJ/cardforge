@@ -1295,5 +1295,67 @@
     "rarity": "common",
     "artist": "David Palumbo",
     "image_status": "highres_scan"
+  },
+  "takh-1": {
+    "id": "a1786cb3-6f38-4f10-b5f1-8feb20e3baaf",
+    "oracle_id": "19b90e71-c37a-4b61-bb46-9a4a19b6ea8d",
+    "name": "Angel of Sanctions",
+    "layout": "token",
+    "set": "takh",
+    "set_name": "Amonkhet Tokens",
+    "set_type": "token",
+    "collector_number": "1",
+    "released_at": "2017-04-28",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Token Creature — Zombie Angel",
+    "mana_cost": "",
+    "oracle_text": "Flying\nWhen Angel of Sanctions enters the battlefield, you may exile target nonland permanent an opponent controls until Angel of Sanctions leaves the battlefield.",
+    "power": "3",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Min Yum",
+    "image_status": "highres_scan",
+    "promo_types": [
+      "setpromo"
+    ]
+  },
+  "tsoi-11": {
+    "id": "f2c859e1-181e-44d1-afbd-bbd6e52cf42a",
+    "oracle_id": "496e1083-c792-40a4-adf4-fec1d559cd5e",
+    "name": "Clue",
+    "layout": "token",
+    "set": "tsoi",
+    "set_name": "Shadows over Innistrad Tokens",
+    "set_type": "token",
+    "collector_number": "11",
+    "released_at": "2016-04-08",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Token Artifact — Clue",
+    "mana_cost": "",
+    "oracle_text": "{2}, Sacrifice this token: Draw a card.",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "John Avon",
+    "image_status": "highres_scan",
+    "promo_types": [
+      "setpromo"
+    ]
   }
 }

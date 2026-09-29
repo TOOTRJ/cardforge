@@ -788,5 +788,154 @@
       "coloured artifact tokens = artifact token frame, colour pinline/title/type through CC's token masks",
       "re-cut onto the prints like m15token (TODO 4.49, owner decision 2026-09-29)"
     ]
+  },
+  "m15tokenartifacttext": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenRegularM15.js 'Regular (Bordered M15)'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1240–1559 (the window's straight sides through the top of the text box) moved down 64 px as one piece, the rows opened above them filled from the window's sides, each seam cross-faded over 24 rows (premultiplied); corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png",
+        "img/frames/token/m15/regular/w.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/w.png through img/frames/token/tokenMaskRegularType.png",
+        "img/frames/token/m15/regular/w.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "u": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png",
+        "img/frames/token/m15/regular/u.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/u.png through img/frames/token/tokenMaskRegularType.png",
+        "img/frames/token/m15/regular/u.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "b": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png",
+        "img/frames/token/m15/regular/b.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/b.png through img/frames/token/tokenMaskRegularType.png",
+        "img/frames/token/m15/regular/b.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "r": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png",
+        "img/frames/token/m15/regular/r.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/r.png through img/frames/token/tokenMaskRegularType.png",
+        "img/frames/token/m15/regular/r.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "g": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png",
+        "img/frames/token/m15/regular/g.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/g.png through img/frames/token/tokenMaskRegularType.png",
+        "img/frames/token/m15/regular/g.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "c": [
+        "img/frames/token/m15/regular/a.png"
+      ],
+      "m": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png",
+        "img/frames/token/m15/regular/m.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/m.png through img/frames/token/tokenMaskRegularType.png",
+        "img/frames/token/m15/regular/m.png through img/frames/token/m15/regular/pinline.svg"
+      ]
+    },
+    "recut": {
+      "fromY": 1240,
+      "toY": 1560,
+      "shift": 64,
+      "blend": 24
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskBorder.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/token/m15/regular/a.png",
+      "img/frames/token/m15/regular/b.png",
+      "img/frames/token/m15/regular/frame.svg",
+      "img/frames/token/m15/regular/g.png",
+      "img/frames/token/m15/regular/m.png",
+      "img/frames/token/m15/regular/pinline.svg",
+      "img/frames/token/m15/regular/r.png",
+      "img/frames/token/m15/regular/u.png",
+      "img/frames/token/m15/regular/w.png",
+      "img/frames/token/tokenMaskRegularRules.png",
+      "img/frames/token/tokenMaskRegularType.png"
+    ],
+    "notes": [
+      "source: CC 'Regular (Bordered M15)' Artifact Frame (a.png), re-cut onto the prints like m15tokentext (TODO 4.49 (b))",
+      "coloured artifact tokens = the silver token frame + border and box, the colour through CC's Title, Type and Pinline masks (TC16 #9, TC18 #8 Thopter print a blue pinline and pill on the silver frame and box)"
+    ]
+  },
+  "m15tokentext": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenRegularM15.js 'Regular (Bordered M15)'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1240–1559 (the window's straight sides through the top of the text box) moved down 64 px as one piece, the rows opened above them filled from the window's sides, each seam cross-faded over 24 rows (premultiplied); corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/token/m15/regular/w.png"
+      ],
+      "u": [
+        "img/frames/token/m15/regular/u.png"
+      ],
+      "b": [
+        "img/frames/token/m15/regular/b.png"
+      ],
+      "r": [
+        "img/frames/token/m15/regular/r.png"
+      ],
+      "g": [
+        "img/frames/token/m15/regular/g.png"
+      ],
+      "c": [
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskBorder.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/frame.svg at 35%",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularType.png at 80%",
+        "img/frames/token/m15/regular/a.png through img/frames/token/tokenMaskRegularRules.png at 80%",
+        "img/frames/token/m15/regular/a.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/token/m15/regular/a.png through img/frames/token/m15/regular/pinline.svg"
+      ],
+      "m": [
+        "img/frames/token/m15/regular/m.png"
+      ]
+    },
+    "recut": {
+      "fromY": 1240,
+      "toY": 1560,
+      "shift": 64,
+      "blend": 24
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskBorder.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/token/m15/regular/a.png",
+      "img/frames/token/m15/regular/b.png",
+      "img/frames/token/m15/regular/frame.svg",
+      "img/frames/token/m15/regular/g.png",
+      "img/frames/token/m15/regular/m.png",
+      "img/frames/token/m15/regular/pinline.svg",
+      "img/frames/token/m15/regular/r.png",
+      "img/frames/token/m15/regular/u.png",
+      "img/frames/token/m15/regular/w.png",
+      "img/frames/token/tokenMaskRegularRules.png",
+      "img/frames/token/tokenMaskRegularType.png"
+    ],
+    "notes": [
+      "source: CC 'Regular (Bordered M15)' — the arch token with a cream type pill and a text box, re-cut onto the prints (TODO 4.49 (b)): CC's lower band sits ~3 %H above TXLN #10, TDOM #2, TM19 #1 and TC17 #9",
+      "colourless = PipGlyph composite like m15token's: CC's silver token frame at 35 % (frame) / 80 % (type pill and text box) opacity over the art, as BFZ #2 / OGW #1 Eldrazi Scion print"
+    ]
   }
 }

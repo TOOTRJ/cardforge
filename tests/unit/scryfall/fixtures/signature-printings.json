@@ -2842,5 +2842,57 @@
     "color_identity": [
       "G"
     ]
+  },
+  "tdom-2": {
+    "id": "cc7d137c-f6c0-44e5-af9f-a8bbd52d3b2a",
+    "name": "Knight",
+    "layout": "token",
+    "set": "tdom",
+    "set_name": "Dominaria Tokens",
+    "set_type": "token",
+    "collector_number": "2",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Vigilance"
+    ],
+    "type_line": "Token Creature — Knight",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Vigilance"
+  },
+  "txln-7": {
+    "id": "720f3e68-84c0-462e-a0d1-90236ccc494a",
+    "name": "Treasure",
+    "layout": "token",
+    "set": "txln",
+    "set_name": "Ixalan Tokens",
+    "set_type": "token",
+    "collector_number": "7",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "setpromo"
+    ],
+    "keywords": [],
+    "type_line": "Token Artifact — Treasure",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}, Sacrifice this token: Add one mana of any color."
   }
 }
