@@ -14,6 +14,11 @@ import {
   userFolder,
 } from "@/lib/media/user-storage";
 import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
+import {
   isDefaultProfileMedia,
   type ProfileMediaKind,
 } from "@/lib/profile/default-media";
@@ -80,7 +85,7 @@ function extractBucketPath(url: string, bucket: string): string | null {
 
 export type UploadProfileMediaResult =
   | { ok: true; publicUrl: string }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function uploadProfileMediaServerAction(
   kind: ProfileMediaKind,
@@ -102,6 +107,9 @@ export async function uploadProfileMediaServerAction(
   if (kind !== "avatar" && kind !== "banner") {
     return { ok: false, error: "Unknown image kind." };
   }
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts).
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const file = formData.get("file");
   if (!(file instanceof File)) {

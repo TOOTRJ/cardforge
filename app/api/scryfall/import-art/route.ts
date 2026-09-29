@@ -15,6 +15,7 @@ import {
 } from "@/lib/scryfall/rate-limit";
 import { scryfallFaceArtist } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { checkUploadRateLimit } from "@/lib/media/upload-rate-limit";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -109,6 +110,12 @@ export async function POST(request: Request) {
   const limit = await checkScryfallRateLimit(user.id, "import_art");
   if (!limit.ok) {
     return rateLimitedResponse(limit);
+  }
+  // The upload limit too (30 a minute / 300 a day per user,
+  // lib/media/upload-rate-limit.ts): this stores a file in the user's folder.
+  const uploadLimit = await checkUploadRateLimit(user.id);
+  if (!uploadLimit.ok) {
+    return rateLimitedResponse(uploadLimit);
   }
   // 1) Re-fetch the card from Scryfall to recover a trusted image URL. We
   // deliberately don't accept a URL from the client.

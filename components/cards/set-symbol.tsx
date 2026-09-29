@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 import type { Rarity } from "@/types/card";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
 import {
@@ -136,12 +137,16 @@ export function SetSymbol({
 }: SetSymbolProps) {
   const color = setSymbolColor(rarity);
 
-  // 1. Uploaded image — drawn as-is (the owner's design carries its own color).
-  if (iconUrl) {
+  // 1. Uploaded image — drawn as-is (the owner's design carries its own
+  //    color), and only when it is one of our stored icons (migration 0127,
+  //    lib/media/media-urls.ts): an older row could name any host. Anything
+  //    else falls through to the preset / the default mark.
+  const drawableIcon = drawableMediaUrl("set-icon", iconUrl);
+  if (drawableIcon) {
     return (
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
-        src={iconUrl}
+        src={drawableIcon}
         alt="Set icon"
         className={className}
         style={{ width: size, height: size, objectFit: "contain", ...style }}

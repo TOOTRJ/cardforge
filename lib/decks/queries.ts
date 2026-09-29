@@ -21,6 +21,7 @@ import type {
   Profile,
 } from "@/types/supabase";
 import { narrowCard } from "@/lib/cards/narrow";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // Narrowers — keep enum-typed text columns honest (types/deck.ts convention).
@@ -222,7 +223,8 @@ export async function listPublicDecks(
           byId.set(row.id, {
             username: row.username,
             display_name: row.display_name,
-            avatar_url: row.avatar_url,
+            // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+            avatar_url: profileMediaSrc("avatar", row.avatar_url, row.id),
           });
         }
         return byId;
@@ -360,7 +362,7 @@ export const getDeckBySlugWithOwner = cache(async (
         ? {
             username: ownerRow.username,
             display_name: ownerRow.display_name,
-            avatar_url: ownerRow.avatar_url,
+            avatar_url: profileMediaSrc("avatar", ownerRow.avatar_url, deck.owner_id),
           }
         : null,
     };

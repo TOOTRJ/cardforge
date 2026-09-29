@@ -40,6 +40,7 @@ import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isFollowing } from "@/lib/follows/queries";
 import { SocialIcon } from "@/components/profile/social-icon";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -728,6 +729,8 @@ function CreatorFeature({
     profile.display_name?.trim() || profile.username || "Forgemaster";
   const initial = displayName.charAt(0).toUpperCase();
   const profileHref = profile.username ? `/profile/${profile.username}` : null;
+  // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+  const avatarSrc = profileMediaSrc("avatar", profile.avatar_url, profile.id);
   const cardsCount = profile.public_cards_count;
 
   const socialEntries = SOCIAL_PLATFORMS.flatMap((p) => {
@@ -749,9 +752,9 @@ function CreatorFeature({
       </span>
 
       <div className="flex items-start gap-4">
-        {profile.avatar_url ? (
+        {avatarSrc ? (
           <Image
-            src={profile.avatar_url}
+            src={avatarSrc}
             alt={`${displayName} avatar`}
             width={56}
             height={56}

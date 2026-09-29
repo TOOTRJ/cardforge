@@ -108,6 +108,24 @@ export function userFolder(bucket: UserStorageBucket, userId: string) {
       return { error: error ? { message: error.message } : null };
     },
 
+    /**
+     * Copy an existing object of the same bucket — `sourceKey` is
+     * `{anyUser}/{name}`, as read back from stored data — INTO this user's
+     * folder as `name`. Only a remix save uses it, to give the remixer their
+     * own copy of the parent card's pictures (lib/cards/remix-media.ts,
+     * migration 0127): the source is only read (every bucket is public-read
+     * anyway), and the write lands in `{userId}/` like any other.
+     */
+    async copyIn(sourceKey: string, name: string): Promise<UserStorageResult> {
+      const key = keyOf(name);
+      const [folder, sourceName, ...rest] = sourceKey.split("/");
+      if (!key || rest.length > 0 || !isUuid(folder ?? "") || !isValidFileName(sourceName ?? "")) {
+        return refused("Invalid storage path.");
+      }
+      const { error } = await objects().copy(sourceKey, key);
+      return { error: error ? { message: error.message } : null };
+    },
+
     async remove(names: string[]): Promise<UserStorageResult> {
       const keys = names.map(keyOf);
       if (keys.some((key) => key === null)) return refused("Invalid storage path.");

@@ -13,6 +13,7 @@ import type { DeckBoard } from "@/types/deck";
 import { DECK_BOARD_LABELS } from "@/types/deck";
 import { cn } from "@/lib/utils";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // DeckCardList — the deck's card list grouped by board, then by type bucket.
@@ -251,10 +252,13 @@ function EntryRow({
   // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
   // written before migration 0126 could point the card anywhere.
   const proxyImage = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
+  // …and a printing image only from Scryfall (migration 0127,
+  // lib/media/media-urls.ts), the one outside host a deck entry stores.
+  const printImage = drawableMediaUrl("deck-card-image", entry.image_url);
   const thumb =
-    (showProxies ? proxyImage : entry.image_url) ??
+    (showProxies ? proxyImage : printImage) ??
     proxyImage ??
-    entry.image_url;
+    printImage;
 
   return (
     <li>

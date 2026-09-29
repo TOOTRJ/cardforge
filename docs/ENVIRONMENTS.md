@@ -205,6 +205,16 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
   role may only clear them). Uploads therefore need `SUPABASE_SECRET_KEY` in
   every environment — a local checkout or a preview without it can't upload,
   bake or delete a render (the app logs that loudly).
+- **Picture URL columns hold our storage only** (0127): a user can store
+  only an object in their own folder of the right bucket (or a built-in
+  image / a Scryfall deck image) — see "Storage" in
+  `supabase/migrations/README.md`. The origins it accepts are
+  `public.storage_origins`: production + the dev branch in the migration,
+  `https://*.supabase.co` + the local stack in `supabase/seed.sql`. A preview
+  branch whose seed didn't run (§4), or a local stack migrated without a
+  reset, refuses every new upload on save — re-run the seed (`npm run
+  db:reset` locally). A storage domain change needs a migration adding the
+  new origin first.
 
 ### When the Supabase check misbehaves
 

@@ -30,6 +30,10 @@ vi.mock("@/lib/supabase/admin", () => ({
               state.calls.push({ op: "remove", args });
               return { data: [], error: null };
             },
+            copy: async (...args: unknown[]) => {
+              state.calls.push({ op: "copy", args });
+              return { data: { path: args[1] }, error: null };
+            },
             getPublicUrl: (key: string) => ({ data: { publicUrl: `https://storage.test/${bucket}/${key}` } }),
           };
         },
@@ -141,5 +145,40 @@ describe("userFolder", () => {
   it("an empty remove makes no request", async () => {
     expect(await userFolder("custom-pips", ME).remove([])).toEqual({ error: null });
     expect(state.calls).toEqual([]);
+  });
+});
+
+// A remix save gives the remixer their own copy of the parent's pictures
+// (lib/cards/remix-media.ts, migration 0127): the SOURCE may be any user's
+// object (read from stored data), the copy always lands in `{userId}/`.
+describe("userFolder.copyIn", () => {
+  it("copies another user's object into the caller's own folder", async () => {
+    expect(await userFolder("card-art", ME).copyIn(`${OTHER}/front.jpg`, "remix-1.jpg")).toEqual({ error: null });
+    expect(state.buckets).toEqual(["card-art"]);
+    expect(state.calls).toEqual([{ op: "copy", args: [`${OTHER}/front.jpg`, `${ME}/remix-1.jpg`] }]);
+  });
+
+  it("refuses a bad destination name, a nested or traversing source, and a non-uuid source folder", async () => {
+    const folder = userFolder("card-art", ME);
+    for (const name of BAD_NAMES) {
+      expect(await folder.copyIn(`${OTHER}/front.jpg`, name), JSON.stringify(name)).toEqual({
+        error: { message: "Invalid storage path." },
+      });
+    }
+    for (const source of [
+      `${OTHER}/nested/front.jpg`,
+      `${OTHER}/../${ME}/x.jpg`,
+      "front.jpg",
+      "not-a-uuid/front.jpg",
+      `${OTHER}/`,
+      `${OTHER}/..`,
+    ]) {
+      expect(await folder.copyIn(source, "remix-1.jpg"), source).toEqual({ error: { message: "Invalid storage path." } });
+    }
+    expect(await userFolder("card-art", "user-1").copyIn(`${OTHER}/front.jpg`, "a.jpg")).toEqual({
+      error: { message: "Invalid storage path." },
+    });
+    expect(state.calls).toEqual([]);
+    expect(state.clients).toBe(0);
   });
 });

@@ -8,6 +8,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import {
+  checkUploadRateLimit,
+  uploadRateLimitFailure,
+  type UploadLimitFields,
+} from "@/lib/media/upload-rate-limit";
 
 // ---------------------------------------------------------------------------
 // Moderated upload for the `set-covers` bucket — deck covers and custom card
@@ -37,7 +42,7 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
 
 export type UploadCoverServerResult =
   | { ok: true; publicUrl: string; path: string }
-  | { ok: false; error: string };
+  | ({ ok: false; error: string } & UploadLimitFields);
 
 export async function uploadCoverServerAction(
   formData: FormData,
@@ -47,6 +52,9 @@ export async function uploadCoverServerAction(
   }
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Sign in to upload an image." };
+  // 30 a minute / 300 a day per user (lib/media/upload-rate-limit.ts).
+  const limit = await checkUploadRateLimit(user.id);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
 
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "No file received." };

@@ -392,7 +392,7 @@ describe("CardPreview — the borderless M15 frame (4.32)", () => {
       expect(decl(glyph, "text-shadow"), template).toBeNull();
       expect(decl(glyph, "color"), template).toBe(RARITY_INK.common);
     }
-    const icon = markup(growthUi("m15borderless", { setIconCode: null, setIconUrl: "https://example.test/icon.png" }));
+    const icon = markup(growthUi("m15borderless", { setIconCode: null, setIconUrl: "https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/set-covers/11111111-1111-4111-8111-111111111111/icon.png" }));
     expect(icon.querySelector('img[alt="Set icon"]')!.getAttribute("style")).not.toMatch(/text-shadow/);
     const mark = markup(growthUi("m15borderless", { setIconCode: null }));
     expect(mark.querySelector('svg[aria-label="PipGlyph set"]')).toBeTruthy();

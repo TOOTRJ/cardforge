@@ -128,7 +128,11 @@ Rules and gotchas:
   (`lib/media/orientation.ts`, TODO 3.14) and with no camera metadata
   (`lib/media/strip-metadata.ts`, TODO 3.14a: EXIF/GPS, XMP, IPTC, text
   chunks… dropped at the container level, pixels + ICC kept byte-exact). A
-  new upload path does the same; a client-side strip never counts.
+  new upload path does the same; a client-side strip never counts. It also
+  calls `checkUploadRateLimit()` first (30/min, 300/day, admins exempt), and
+  a picture URL column only takes the caller's own storage objects (0127
+  `media_url_allowed`; a remix copies its parent's) — draw one only through
+  `isAllowedMediaUrl()` / `profileMediaSrc()` (`lib/media/media-urls.ts`).
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,

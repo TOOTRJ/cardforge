@@ -36,6 +36,7 @@ import {
 import { buildCardPath } from "@/lib/cards/utils";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 import {
   DECK_BOARD_LABELS,
   DECK_BOARD_VALUES,
@@ -79,7 +80,8 @@ export function DeckCardModal({
   // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
   // written before migration 0126 could point the card anywhere.
   const proxyImage = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
-  const originalImage = entry.image_url;
+  // A printing image only from Scryfall (migration 0127, lib/media/media-urls.ts).
+  const originalImage = drawableMediaUrl("deck-card-image", entry.image_url);
   const hasBoth = Boolean(proxyImage && originalImage);
   // Adjust-during-render (not an effect): re-sync the flip state when the
   // list's toggle changes between opens.

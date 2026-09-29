@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import {
   isCustomPipSymbol,
   type PipOverrides,
@@ -35,9 +36,12 @@ export const getPipOverrides = cache(
 
     if (error || !data) return {};
 
+    // Only the owner's own stored pips (migration 0127,
+    // lib/media/media-urls.ts): a row written before it could name any host.
+    // Every renderer — preview and bake — reads its overrides from here.
     const overrides: PipOverrides = {};
     for (const row of data) {
-      if (isCustomPipSymbol(row.symbol) && row.image_url) {
+      if (isCustomPipSymbol(row.symbol) && isAllowedMediaUrl("pip", row.image_url, ownerId)) {
         overrides[row.symbol] = row.image_url;
       }
     }
