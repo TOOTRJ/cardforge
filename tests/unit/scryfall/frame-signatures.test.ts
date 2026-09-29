@@ -105,7 +105,7 @@ describe("borderless families (TODO 1.17)", () => {
   it("names why a borderless printing isn't exact", () => {
     expect(frameMatchFromScryfall(printing("dmu-435"))).toMatchObject({
       signature: "borderless/standard+crown",
-      blockedBy: "4.6",
+      blockedBy: "4.6a",
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
     expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
@@ -294,7 +294,7 @@ describe("the general signatures (TODO 1.4)", () => {
   it("names the anatomy gap and the blocking item", () => {
     expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({
       signature: "era/2015+crown",
-      blockedBy: "4.6",
+      blockedBy: "4.6a",
       reason: "PipGlyph doesn't draw the legendary crown yet",
     });
     expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");

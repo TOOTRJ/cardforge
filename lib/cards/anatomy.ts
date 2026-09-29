@@ -234,13 +234,16 @@ export function twoColorFromCost(cost: string | null | undefined): TwoColorPair 
  *     colour-indicator cards, MH2 #186);
  *   • "split" — anything else: a two-colour cost (FDN #122), a mixed cost of
  *     hybrid and mono pips (STX #175, MKM #238), twobrid / mono-Phyrexian
- *     pips (mono pips), and every land (the land frame's own split, MKM).
+ *     pips (mono pips), every land (the land frame's own split, MKM) and
+ *     every token (no cost; the token design's own split, 4.48).
  */
 export function twoColorDressOf(
   cost: string | null | undefined,
   cardType: string | null | undefined,
 ): TwoColorDress {
-  if (cardType === "land") return "split";
+  // A land prints its land frame's split; a token has no cost at all and
+  // prints the token design's own split (4.48), never the hybrid dress.
+  if (cardType === "land" || cardType === "token") return "split";
   const pips = colouredPips(cost);
   if (pips.length === 0) return "hybrid";
   return pips.every((letters) => letters.length === 2) ? "hybrid" : "split";

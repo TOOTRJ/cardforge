@@ -498,5 +498,121 @@
     "colors": [],
     "color_identity": [],
     "rarity": "mythic"
+  },
+  "woe-220": {
+    "id": "3f5acc0d-33a6-476f-95ca-a1ad788334dd",
+    "oracle_id": "06374e6d-62fa-4833-81cd-b4d0a35e7365",
+    "name": "Beluna Grandsquall // Seek Thrills",
+    "released_at": "2023-09-08",
+    "layout": "adventure",
+    "set": "woe",
+    "set_name": "Wilds of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "220",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Trample",
+      "Mill"
+    ],
+    "type_line": "Legendary Creature — Giant Noble // Instant — Adventure",
+    "mana_cost": "{G}{U}{R} // {2}{G}{U}{R}",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "G",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "R",
+      "U"
+    ],
+    "rarity": "mythic",
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Beluna Grandsquall",
+        "mana_cost": "{G}{U}{R}",
+        "type_line": "Legendary Creature — Giant Noble",
+        "power": "4",
+        "toughness": "4"
+      },
+      {
+        "object": "card_face",
+        "name": "Seek Thrills",
+        "mana_cost": "{2}{G}{U}{R}",
+        "type_line": "Instant — Adventure"
+      }
+    ]
+  },
+  "khm-201": {
+    "id": "d18396f9-ae20-4471-84ab-a2148319bc39",
+    "oracle_id": "7cb47a7e-fe60-45a2-9c07-bd5c6ddca82d",
+    "name": "Arni Slays the Troll",
+    "released_at": "2021-02-05",
+    "layout": "saga",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "201",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Fight"
+    ],
+    "type_line": "Enchantment — Saga",
+    "mana_cost": "{R}{G}",
+    "colors": [
+      "G",
+      "R"
+    ],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "rarity": "uncommon"
+  },
+  "eld-206": {
+    "id": "b42e1359-c79d-4848-a0f1-3f274e0bf0d9",
+    "oracle_id": "4bd38337-fb79-4809-848a-308c682825d1",
+    "name": "Arcanist's Owl",
+    "released_at": "2019-10-04",
+    "layout": "normal",
+    "set": "eld",
+    "set_name": "Throne of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "206",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Artifact Creature — Bird",
+    "mana_cost": "{W/U}{W/U}{W/U}{W/U}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon"
   }
 }

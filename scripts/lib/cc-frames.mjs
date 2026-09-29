@@ -395,7 +395,8 @@ export const CC_DEFERRED = {};
 
 /**
  * Composite RGBA layers (each `{ data, mask?, invert?, opacity? }`, raw 8-bit
- * RGBA of the same size) in order: a layer's alpha is multiplied by its
+ * RGBA of the same size; `mask` may be a LIST, whose alphas multiply — CC's
+ * intersection) in order: a layer's alpha is multiplied by its
  * mask's ALPHA, then drawn source-over onto the accumulator — exactly CC's
  * drawFrames (a black canvas, the masks drawn 'source-in', the image drawn
  * 'source-in', the result 'source-over'). CC's masks are solid colours
@@ -419,7 +420,11 @@ export function compositeLayers(images, width, height) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
       if (img.mask) {
-        const m = img.mask[o + 3] / 255;
+        // A list of masks is CC's intersection (each drawn 'source-in'):
+        // their alphas multiply (TODO 4.6.0 — a region through a ramp).
+        const m = Array.isArray(img.mask)
+          ? img.mask.reduce((k, mask) => k * (mask[o + 3] / 255), 1)
+          : img.mask[o + 3] / 255;
         a = img.invert ? Math.max(0, a - m) : a * m;
       }
       if (img.opacity !== undefined) a *= img.opacity;
@@ -543,9 +548,10 @@ export function toRgba8(acc) {
 }
 
 /** One layer as provenance prints it: "src", "src through mask",
- *  "src outside mask", "… at 35%". */
+ *  "src through maskA ∩ maskB", "src outside mask", "… at 35%". */
 export function describeLayer(l) {
-  const mask = l.mask ? ` ${l.invert ? "outside" : "through"} ${l.mask}` : "";
+  const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
+  const mask = masks ? ` ${l.invert ? "outside" : "through"} ${masks}` : "";
   return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
 }
 
@@ -561,11 +567,150 @@ export function sourceFilesFor(def) {
   for (const layers of Object.values(def.colors)) {
     for (const l of layers) {
       files.add(l.src);
-      if (l.mask) files.add(l.mask);
+      // A procedural mask (a ramp) is no Card Conjurer file.
+      for (const mask of Array.isArray(l.mask) ? l.mask : l.mask ? [l.mask] : []) {
+        if (!mask.startsWith("procedural:")) files.add(mask);
+      }
     }
   }
   for (const plate of Object.values(def.plates ?? {})) files.add(plate);
   for (const symbol of Object.values(def.symbols ?? {})) files.add(symbol);
   if (def.shield) files.add(def.shield.mask);
   return [...files].sort();
+}
+
+// ---------------------------------------------------------------------------
+// Two-colour frames and the crown band (TODO 4.6.0 — the importer half of
+// the plumbing, additive: nothing above builds with it yet; 4.6a / 4.6b
+// build the crown bands and pair masters with it). Design 2026-09-29 §1.1 /
+// §1.2, measured on the prints:
+//   • every split ramp is UNTILTED — the prints measure 0.00 ± 0.36 %W from
+//     10.8 to 55.9 %H, where CC's maskRightHalf.png tilts +1.35 %W;
+//   • a mixed cost (hybrid and mono pips) prints GOLD-SPLIT, not hybrid;
+//   • a pair is a premultiplied LERP of the two colours' layers, never CC's
+//     stacking: opaque pixels come out the same, but stacking doubles a
+//     translucent edge (the crown's shadow over the art, α 160 against 99).
+// ---------------------------------------------------------------------------
+
+/** The split ramps, in % of the card's width: the second colour's share goes
+ *  0 → 1 from `from` to `to`, the same on every row. `frame` is the hybrid
+ *  dress's outer frame band. 10/50/90 on the prints: pinline 42.2 / 50.3 /
+ *  58.8, text box 47.2 / 51.3 / 56.8, crown 42.7 / 48.5 / 53.0 (gold) and
+ *  43.8 / 50.1 / 54.3 (hybrid). */
+export const TWO_COLOR_RAMPS = {
+  pinline: [40, 60],
+  frame: [40, 60],
+  rules: [46, 58],
+  crown: [43, 55],
+};
+
+/** How provenance names a ramp mask (never a Card Conjurer file). */
+export function rampName([from, to]) {
+  return `procedural:ramp(${from}→${to} %W)`;
+}
+
+/**
+ * An untilted horizontal ramp as an 8-bit RGBA mask of `width` × `height`
+ * (black, alpha only): 0 left of `from` %W, 255 right of `to` %W, linear
+ * between, measured at pixel centres; every row the same.
+ */
+export function rampMask(width, height, [from, to]) {
+  if (!(to > from)) throw new Error(`rampMask: bad ramp ${from}→${to}`);
+  const row = Buffer.alloc(width * 4);
+  for (let x = 0; x < width; x += 1) {
+    const pct = ((x + 0.5) / width) * 100;
+    const t = Math.min(1, Math.max(0, (pct - from) / (to - from)));
+    row[x * 4 + 3] = Math.round(t * 255);
+  }
+  const out = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) row.copy(out, y * width * 4);
+  return out;
+}
+
+/**
+ * The premultiplied lerp of two 8-bit RGBA layers by a ramp mask's alpha t:
+ * left · (1 − t) + right · t, in premultiplied space. Where both are opaque
+ * it equals drawing `right` through the ramp over `left` (CC's stacking);
+ * where both are translucent to the same alpha it keeps that alpha, which
+ * stacking would raise. Returns 8-bit RGBA.
+ */
+export function lerpLayers(left, right, ramp) {
+  const out = Buffer.alloc(left.length);
+  for (let o = 0; o < left.length; o += 4) {
+    const t = ramp[o + 3] / 255;
+    const al = (left[o + 3] / 255) * (1 - t);
+    const ar = (right[o + 3] / 255) * t;
+    const alpha = al + ar;
+    for (let c = 0; c < 3; c += 1) {
+      out[o + c] = alpha === 0 ? 0 : Math.round((left[o + c] * al + right[o + c] * ar) / alpha);
+    }
+    out[o + 3] = Math.round(alpha * 255);
+  }
+  return out;
+}
+
+/** The ten pairs in printed order (lib/cards/frame-reference-registry.ts
+ *  TWO_COLOR_PAIRS): the first colour on the left. */
+export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+
+/**
+ * What each region of a two-colour master is made of — a pure port of Card
+ * Conjurer's cardFrameProperties (creator-23.js:577–755, its default M15
+ * style) with the corrections above. `kind`: "m15" (a nonland card),
+ * "artifact" (the m15artifact frame) or "land" (m15land); `dress`: "split"
+ * (the gold card) or "hybrid". Keys are CC's frame letters, lower-cased:
+ * a colour (w u b r g), "m" gold, "a" artifact, "l" the land / grey bars;
+ * a land's colour regions are its land tints ("wl"). `right` is the
+ * second colour through the region's ramp (TWO_COLOR_RAMPS), null for a
+ * region drawn whole. `pt` is the plate (none on a land). A hybrid ARTIFACT
+ * is the gold-split recipe: m15artifact has no hybrid plate yet (`pt/h`).
+ */
+export function twoColorRecipe(pair, dress, kind) {
+  if (!TWO_COLOR_PAIRS.includes(pair)) throw new Error(`twoColorRecipe: not a pair in printed order: ${pair}`);
+  const [a, b] = pair.split("");
+  if (kind === "land") {
+    return {
+      frame: { left: "l", right: null },
+      pinline: { left: `${a}l`, right: `${b}l`, ramp: TWO_COLOR_RAMPS.pinline },
+      rules: { left: `${a}l`, right: `${b}l`, ramp: TWO_COLOR_RAMPS.rules },
+      typeTitle: "l",
+      pt: null,
+      crown: { left: a, right: b, ramp: TWO_COLOR_RAMPS.crown },
+    };
+  }
+  const hybrid = dress === "hybrid" && kind !== "artifact";
+  return {
+    frame: kind === "artifact"
+      ? { left: "a", right: null }
+      : hybrid
+        ? { left: a, right: b, ramp: TWO_COLOR_RAMPS.frame }
+        : { left: "m", right: null },
+    pinline: { left: a, right: b, ramp: TWO_COLOR_RAMPS.pinline },
+    rules: { left: a, right: b, ramp: TWO_COLOR_RAMPS.rules },
+    typeTitle: hybrid ? "l" : "m",
+    pt: hybrid ? "c" : "m",
+    crown: { left: a, right: b, ramp: TWO_COLOR_RAMPS.crown },
+  };
+}
+
+/**
+ * The standard legendary crown band (TODO 4.6a; design §1.1): CC's
+ * `img/frames/m15/crowns/new/<key>.png` (1922 × 493, native 2010 × 2814)
+ * over CC's black "Legend Crown Border Cover", composited at 2010 × 2814,
+ * downscaled once to 1500 × 2100, corner cut, and cropped to the rows the
+ * band covers — the overlay FrameProfile.overlays stretches over
+ * 0 / 0 / 100 × 19.52 %. Rects in card %.
+ */
+export const CROWN_BAND = {
+  source: "img/frames/m15/crowns/new",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+  crown: { leftPct: 2.19, topPct: 1.88, widthPct: 95.62, heightPct: 17.52 },
+  cover: { leftPct: 0, topPct: 0, widthPct: 100, heightPct: 4.87 },
+  compositeSize: { width: 2010, height: 2814 },
+  rows: 410,
+};
+
+/** The top `rows` rows of an 8-bit RGBA image (the crown band's crop). */
+export function cropRows(buf, width, rows) {
+  return Buffer.from(buf.subarray(0, width * rows * 4));
 }

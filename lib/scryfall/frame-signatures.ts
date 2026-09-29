@@ -15,6 +15,7 @@ import {
 import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
+import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, with 1.17's borderless families and
@@ -308,6 +309,10 @@ type Match = {
   colorIndicator?: true;
   omen?: true;
   colorCount?: { min?: number; max?: number };
+  /** The front face's cost is print's HYBRID dress (twoColorDressOf, TODO
+   *  4.6.0): every coloured pip a two-colour hybrid, or a nonland with no
+   *  coloured pip — `false` for any other (the gold-split dress). */
+  hybridCost?: boolean;
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
 };
@@ -383,6 +388,14 @@ function contextOf(card: ScryfallCard, facts: PrintingFacts): Ctx {
 const hasAny = (set: ReadonlySet<string>, list: readonly string[]) =>
   list.some((value) => set.has(value));
 
+/** True when the front face's cost prints the hybrid two-colour dress
+ *  (lib/cards/anatomy.ts twoColorDressOf — the renderers' rule). */
+function isHybridCost({ card, facts }: Ctx): boolean {
+  const cost = card.card_faces?.[0]?.mana_cost ?? card.mana_cost ?? null;
+  const cardType = facts.kind === "land" || facts.kind === "token" ? facts.kind : "nonland";
+  return twoColorDressOf(cost, cardType) === "hybrid";
+}
+
 function matches(match: Match, ctx: Ctx): boolean {
   const { card, facts } = ctx;
   if (match.frames && !match.frames.includes(ctx.frame)) return false;
@@ -417,6 +430,7 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.flavorName && !card.flavor_name) return false;
   if (match.colorIndicator && !facts.colorIndicator) return false;
   if (match.omen && !facts.omen) return false;
+  if (match.hybridCost !== undefined && isHybridCost(ctx) !== match.hybridCost) return false;
   if (match.colorCount) {
     const n = facts.colors.length;
     if (match.colorCount.min !== undefined && n < match.colorCount.min) return false;
@@ -608,6 +622,7 @@ export type FrameGap = GapKey;
 type GapKey =
   | "crown"
   | "two-colour"
+  | "two-colour-hybrid"
   | "colour-indicator"
   | "vehicle"
   | "dfc"
@@ -631,15 +646,23 @@ const BORDER_WORD: Record<string, string> = {
 };
 
 const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = {
+  // The legendary crown and the two-colour dresses (TODO 4.6a / 4.6b): a gap
+  // only where the frame the card lands on doesn't draw it — derived from the
+  // profile (gapDrawnBy), never a second hand-kept list.
   crown: {
     match: { effectsAny: ["legendary"] },
     reason: "PipGlyph doesn't draw the legendary crown yet",
-    blockedBy: "4.6",
+    blockedBy: "4.6a",
   },
   "two-colour": {
-    match: { colorCount: { min: 2, max: 2 } },
+    match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
-    blockedBy: "4.6",
+    blockedBy: "4.6b",
+  },
+  "two-colour-hybrid": {
+    match: { colorCount: { min: 2, max: 2 }, hybridCost: true },
+    reason: "two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one",
+    blockedBy: "4.6b",
   },
   "colour-indicator": {
     match: { colorIndicator: true },
@@ -777,6 +800,7 @@ const M15_ERA_GAPS: readonly GapKey[] = [
   "vehicle",
   "colour-indicator",
   "two-colour",
+  "two-colour-hybrid",
   "marks",
 ];
 
@@ -788,6 +812,7 @@ const OLD_ERA_GAPS: readonly GapKey[] = [
   "colourshifted",
   "marks",
   "two-colour",
+  "two-colour-hybrid",
 ];
 
 const showcaseLabel = ({ card, set }: Ctx) =>
@@ -1087,7 +1112,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"] },
       outcome: { status: "exact", template: { family: "borderless" } },
     },
-    ["etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "light-box"],
+    ["etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
   ),
 
   // --- 1.19 steps 3–7: the other full-art and textless printings ----------
@@ -1166,7 +1191,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
         blockedBy: "4.48",
       },
     },
-    ["nyx-dress", "border", "crown", "two-colour"],
+    ["nyx-dress", "border", "crown", "two-colour", "two-colour-hybrid"],
   ),
   {
     key: "fullart/basic/coloured-border",
@@ -1432,7 +1457,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { effectsAny: ["extendedart"] },
       outcome: { status: "exact", template: "extendedart" },
     },
-    ["layout", "dfc", "etched", "border", "crown", "vehicle", "two-colour"],
+    ["layout", "dfc", "etched", "border", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
   ),
   {
     key: "nyx/2003",
@@ -1486,7 +1511,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { frames: ["2015"], kinds: LAYOUT_KINDS },
       outcome: { status: "exact", template: { family: "m15" } },
     },
-    ["omen", "dfc", "etched", "border"],
+    // A crowned adventure (WOE #220 Beluna, 56 printings) and a two-colour
+    // saga (KHM #201, 84) print pieces the layout frames don't draw yet
+    // (TODO 4.6.0; 4.6f adds them).
+    ["omen", "dfc", "etched", "border", "crown", "two-colour", "two-colour-hybrid"],
   ),
   {
     key: "layout/older",
@@ -1620,11 +1648,19 @@ const kindWord = (kind: CardKind) => {
  */
 export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts): FrameMatch {
   const ctx = contextOf(card, facts);
+  const templateOf = (candidate: Rule): FrameTemplate => {
+    const spec = candidate.outcome.template;
+    return typeof spec === "string" ? spec : FAMILIES[spec.family].pick(ctx);
+  };
+  // A gap rule is no gap where the frame it lands on draws that piece (the
+  // crown, a two-colour dress — gapDrawnBy): the next rule decides.
   const rule =
-    FRAME_SIGNATURE_RULES.find((candidate) => matches(candidate.match, ctx)) ??
-    FRAME_SIGNATURE_RULES[FRAME_SIGNATURE_RULES.length - 1];
-  const spec = rule.outcome.template;
-  const template = typeof spec === "string" ? spec : FAMILIES[spec.family].pick(ctx);
+    FRAME_SIGNATURE_RULES.find(
+      (candidate) =>
+        matches(candidate.match, ctx) &&
+        !(candidate.gaps && gapDrawnBy(candidate.gaps[0], templateOf(candidate))),
+    ) ?? FRAME_SIGNATURE_RULES[FRAME_SIGNATURE_RULES.length - 1];
+  const template = templateOf(rule);
 
   let status = rule.outcome.status;
   let reason = status === "exact" ? null : textOf(rule.outcome.reason, ctx);
@@ -1669,7 +1705,9 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   // Every anatomy gap that holds: the matched gap rule's own, then the
   // base's later ones (FrameMatch.gaps).
   const gaps = rule.gaps
-    ? rule.gaps.filter((gap, index) => index === 0 || matches(GAPS[gap].match, ctx))
+    ? rule.gaps.filter(
+        (gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, template),
+      )
     : [];
 
   return {
@@ -1685,6 +1723,24 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(onceVerified ? { onceVerified } : {}),
     ...(gaps.length > 0 ? { gaps } : {}),
   };
+}
+
+/** True when `template` draws the anatomy a gap names — its PROFILES entry
+ *  declares the crown overlay or the two-colour dress (lib/cards/anatomy.ts,
+ *  TODO 4.6.0). No template does yet; 4.6a / 4.6b declare them, and each gap
+ *  then drops where the landing frame draws it, with nothing to keep in
+ *  step here. */
+function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
+  switch (gap) {
+    case "crown":
+      return frameAnatomyOf(template).crown;
+    case "two-colour":
+      return frameAnatomyOf(template).twoColor.includes("split");
+    case "two-colour-hybrid":
+      return frameAnatomyOf(template).twoColor.includes("hybrid");
+    default:
+      return false;
+  }
 }
 
 /** Why `template` can't dress this printing's kind, or null when it can: a
