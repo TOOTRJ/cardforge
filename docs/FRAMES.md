@@ -121,6 +121,29 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   when a local build is present (`FRAMES_BUILD_DIR`, else `.frames-build`,
   checked against the manifest's sha256). A new template declares its edges
   there first; today's known failures are listed as expected failures.
+- **Art-window coverage (TODO 7.6).** Right after the edge contract, the
+  importer flood-fills each master's see-through window (α < 16) from the
+  centre of every art slot its profile paints (`artSlot`, and a second
+  face's `secondFace.artSlot` turned by its `rotation`) and asks the slot to
+  cover it with ≥ 0.05 % of the card to spare, and every translucent frame
+  part (α < 250 — a text box or type bar the art shows through) with a
+  pixel under the slot to stay inside it, give or take a 0.2 % anti-aliased
+  rim; on a see-through master (`underFrameArt`, 4.17) the under-frame rect
+  must cover the window and every pixel the frame lets ≥ 2 % through. A
+  see-through pixel no art covers shows the bake's #101015 (a seam where a
+  translucent box runs past the art). `lib/frames/art-window.ts` holds the
+  check and its known failures, each with the TODO item that fixes it and a
+  `maxMissPx` bound it may not get worse than; the
+  importer reads the profiles through `scripts/lib/ts-alias-hooks.mjs`, and
+  a violation makes it exit non-zero. CI runs it on every master
+  (`tests/unit/render/art-window-coverage.test.ts`): the checks job fetches
+  the manifest's PNGs from production's PUBLIC bucket first
+  (`node scripts/frames-fetch.mjs`, sha256-checked, cached by the
+  manifest's hash, the dev bucket only for a PR's frames not promoted yet)
+  and sets `FRAMES_BUILD_DIR`, so the bucket halves of the edge contract,
+  the square corners and the plate ink run there too. Locally:
+  `node scripts/frames-fetch.mjs` (into the gitignored `.frames-cache`),
+  then `FRAMES_BUILD_DIR=.frames-cache npm run test:unit`.
 - **Never committed.** Card Conjurer's site was shut down after a Wizards of
   the Coast cease-and-desist, and the fork has no licence file. The converted
   frames only ever go to the bucket.
@@ -442,16 +465,59 @@ Treasure). The profile (`M15TOKENTEXT`) is M15TOKEN's with:
   type and pinline masks (TC16 #9, TC18 #8 Thopter).
 
 The Artifact word dresses it as on the textless pair (`TYPE_WORD_DRESSES`:
-m15tokentext ↔ m15tokenartifacttext). Both templates are NEW and start
-UNVERIFIED: no user can pick them until the owner verifies a colour, and the
-walk-through (`/create?previewFrames=m15tokentext`, `…=m15tokenartifacttext`)
-reaches them. The registry resolves a 2015-frame token that prints text to
-them (`printsTokenTextBox`); until they are verified in the card's colour
-that is a `nearest` "not yet verified" answer, and the import lands on the
-textless dress it landed on before (`TEXT_BOX_TOKEN_FALLBACK` in
-`lib/creator/frame-resolve.ts`: m15token, m15tokenartifact for a Treasure).
-No stored card moves (a later migration, once verified: 4.49 (b)'s "Stored
-cards"), no layout bump (new templates), and the scrim on m15token stays.
+m15tokentext ↔ m15tokenartifacttext). Both templates shipped UNVERIFIED
+(#414) and were verified on production in every colour on 2026-09-29. The
+registry resolves a 2015-frame token that prints text to them
+(`printsTokenTextBox`); where one isn't verified in the card's colour that is
+a `nearest` "not yet verified" answer, and the import lands on the textless
+dress (`TEXT_BOX_TOKEN_FALLBACK` in `lib/creator/frame-resolve.ts`:
+m15token, m15tokenartifact for a Treasure).
+
+**The text box follows the text (owner decision 5, 2026-09-29).** On the
+token kind the arch wears its text-box variation while the card has rules or
+flavour text and the textless one while it has none — the renderers' own
+test, `hasRulesBoxText` (`lib/cards/card-display.ts`: either column, blank =
+nothing but what `String.prototype.trim` removes). `TEXT_BOX_DRESSES` in
+`lib/creator/card-kinds.ts` holds the pairs (`textBoxFrameFor`; with the
+Artifact word, `tokenFrameFor`), and every writer follows it:
+
+- the creator (`card-creator-form.tsx`): entering the token kind picks the
+  variation the text wants; after that the frame follows the text coming or
+  going (`followTokenTextBox`) only while it is the one the text picked — a
+  variation picked by hand in the setup panel's Variations sticks for the
+  session, and a stored card whose frame disagrees with its text (the
+  textless arch over text, an empty box) keeps it. A Frame-section pick of
+  the arch is automatic again. It runs while revising a saved card too (the
+  text isn't locked there); an import or an AI fill that wrote the frame, and
+  the admin walk-through's combo under test, settle it
+  (`settleTokenTextFollow`), and an admin's saved frame preview never
+  follows (it previews its combo). An unverified variation is never
+  written: the card keeps its frame and a toast says so. The AI fill dialog
+  no longer offers the text box (the text it writes picks it);
+- the import: the registry's `archTokenFrame` picks by the printing's text
+  (the 2015 arch, the 1997 / 2003 tokens, and a borderless token's
+  `nearest` — `borderless/token` is the m15 family's pick), and a token
+  whose own frame isn't published (an Alpha token) falls back to the arch
+  its text and type words pick (`importFrameCandidates`: `tokenFrameFor`,
+  then its textless dress);
+- the AI jobs: `resolveGeneratedFrame` prefers the variation the generated
+  text picks (a request for either one means that one; while it isn't
+  published, the textless arch asked for), and the deck remix saves the one
+  its FINAL text picks (`autoTokenTextBoxFrame` — the AI's flavour replaces
+  the printing's);
+- stored cards: migration 0129 moved every non-land card with text from
+  m15token / m15tokenartifact to its text-box variation — never an admin's
+  frame preview (0121), which stays on the combo it previews (only the
+  `template` key; a null stamp, so the automatic re-bake draws the box — 33
+  public cards on 2026-09-29, all on m15token). No layout bump: the
+  renderers didn't change, and the templates were live before the move.
+
+The textless frames keep their scrim (`rules.backdropHex`) as a FALLBACK: it
+draws only when there is text (as it always did), which after 0129 is only a
+card whose owner picked the textless variation by hand over text, a frame
+preview, a land, or one an older client saved — its text stays readable
+instead of being lost or set straight on the art.
+
 TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: its own
 item, 4.55, P3) and is not a reference. The registry pins the 21 arch printings with
 the tall box (`TALL_BOX_TOKEN_PINS`: every black-bordered pre-M20 arch token
@@ -705,6 +771,24 @@ check an unverified frame the way a user would meet it, before publishing it:
   asks "N colours score below 90% — publish anyway?", naming them. It is a
   warning, never a block. The `signoff` event records those colours as
   `lowMatch`.
+- **Scoring in one job (4.12).** "Score all N colours" (and "Score N
+  colours", the unscored / stale ones) is ONE request to
+  `POST /api/admin/frame-score-batch`: the server plans each colour's
+  reference from one review read, scores two at a time with one override
+  map, records every score as a `score` event (the same path as the
+  per-colour Score, `lib/frames/score-record.ts`) and streams NDJSON
+  progress (`lib/frames/score-batch.ts`). A run stops starting combos after
+  200 s and the tab's store (`components/admin/score-batch-store.ts`) sends
+  the rest in a follow-up; Cancel stops it and keeps what was scored. The
+  view shows a progress panel, a per-slot × colour table of scores and
+  nudges with a **Template nudge** column (the move most colours agree on —
+  one layout override moves every colour; apply it in Compare → Edit
+  layout), and every colour **side by side** (our live render next to its
+  printing; each printing is looked up once per server instance and reused
+  for 30 min, and a lookup unanswered after 8 s shows the sample). When the
+  template's frame set has other frames, the **Treatment** panel scores all
+  of them in one job and pools the slots they draw on the same rect into one
+  nudge. The job never ticks: publishing is still the checkbox or Publish.
 
 Nothing here changes a stored bake or a renderer.
 
@@ -754,6 +838,46 @@ Nothing here changes a stored bake or a renderer.
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged. After the deploy,
 the automatic re-bake sweeps the affected cards on its own (next section).
+CI's **Visual regression** check enforces it: a new frame object changes the
+matrix's hashes (`tests/visual/`, `tests/README.md`), so the PR fails until it
+bumps and commits the regenerated baseline (`npm run test:visual -- --update`).
+The job reads the frames from production's bucket, falling back to the dev
+bucket for objects not promoted yet (same bytes: the manifest's sha256 is
+checked). A NEW template joins the matrix by itself; its cases only need the
+regenerated baseline, not a bump.
+
+### Additions vs corrections (owner rule, 2026-09-29)
+
+Every change to how cards look is one of two kinds, and the kind decides the
+rollout:
+
+- **Addition or new look — opt-in per card.** A new anatomy element or a
+  different style a card owner might reasonably not want: legendary crowns,
+  two-colour frames, the full-art token design, the Nyx starfield, the
+  collector line and holofoil stamp, the vehicle P/T plate, colour
+  indicators, coloured-artifact blends, new frames and treatments.
+  - NEW cards get it by default, with a switch to turn it off.
+  - EXISTING cards keep their look; the owner can open the card and switch
+    it on (the editor may hint at it).
+  - Scryfall imports follow the printing (a crown only on printings from
+    Dominaria, 2018-04, on; a two-colour frame only where the printing has
+    one).
+  - It is stored as card data (`frame_style`), so the preview and the bake
+    read the same switch; stored cards are NOT swept and owners are NOT
+    badged. Announce it with a site update.
+- **Correction — sweep.** Fixing a look that is wrong against its own print
+  (P/T on the border, clipped text, a misplaced pill or symbol, wrong sizes,
+  a mis-sourced frame): a `CARD_LAYOUT_VERSION` bump with a `"sweep"`
+  rollout for every affected card, after the owner signs off the
+  before/after sheet. No badge.
+- **Borderline** (e.g. era fonts on the old frames, 4.8): ask the owner.
+
+Why: a design choice belongs to the card's owner (789 legendary cards were
+printed without a crown between M15 and Rivals, so a crownless legendary is
+an authentic look), but a broken look must not stay broken; and every
+per-card switch is a permanent second render path — both renderers, the
+verification ticks and the tests — so switches are reserved for real design
+choices.
 
 ## Re-bakes after a deploy (automatic)
 

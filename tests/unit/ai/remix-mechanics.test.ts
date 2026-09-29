@@ -51,6 +51,8 @@ function productionVerifiedKeys(): Set<string> {
 const PROD = productionVerifiedKeys();
 const plus = (...combos: [string, string][]) =>
   new Set([...PROD, ...combos.map(([t, k]) => frameComboKey(t as FrameTemplate, k))]);
+const without = (...templates: string[]) =>
+  new Set([...PROD].filter((key) => !templates.some((t) => key.startsWith(`${t}/`))));
 
 /** The remix's landing + a check that the save's two gates let it through. */
 function remixOf(key: PrintingKey, verified: ReadonlySet<string> = PROD) {
@@ -81,11 +83,18 @@ function remixOf(key: PrintingKey, verified: ReadonlySet<string> = PROD) {
 }
 
 describe("remixFrameFor — the old-border printings that failed the step", () => {
-  it("falls forward to M15 where production hasn't verified the printing's frame", () => {
-    // agclassic and modernland (in blue / gold) are unverified on production.
+  it("falls forward to M15 where the printing's frame isn't verified", () => {
+    // Built explicitly: production verified modernland in every colour on
+    // 2026-09-29 (supabase/seed.sql mirrors it); agclassic still isn't.
+    const unverified = without("agclassic", "modernland");
+    expect(remixOf("lea-255", unverified)).toMatchObject({ template: "m15artifact", colorKey: "c", cardType: "creature" });
+    expect(remixOf("mrd-283", unverified)).toMatchObject({ template: "m15land", colorKey: "u", cardType: "land" });
+    expect(remixOf("c13-281", unverified)).toMatchObject({ template: "m15land", colorKey: "m", cardType: "land" });
+    // What production does today: Juggernaut still falls forward; the
+    // Mirrodin / C13 lands keep their own frame.
     expect(remixOf("lea-255")).toMatchObject({ template: "m15artifact", colorKey: "c", cardType: "creature" });
-    expect(remixOf("mrd-283")).toMatchObject({ template: "m15land", colorKey: "u", cardType: "land" });
-    expect(remixOf("c13-281")).toMatchObject({ template: "m15land", colorKey: "m", cardType: "land" });
+    expect(remixOf("mrd-283")).toMatchObject({ template: "modernland", colorKey: "u", cardType: "land" });
+    expect(remixOf("c13-281")).toMatchObject({ template: "modernland", colorKey: "m", cardType: "land" });
   });
 
   it("keeps the printing's own frame once it is verified in the card's colour", () => {

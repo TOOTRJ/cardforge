@@ -287,3 +287,49 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
     expect(s.image).not.toHaveBeenCalled();
   });
 });
+
+// TODO 4.49 (b), owner decision 5: the token text box follows the text the
+// remix SAVES — the printing's rules and the AI's flavour — not the text the
+// printing's frame was picked for. Treasure TMSH #27 (colourless, printed
+// with no text in this trimmed fixture).
+describe("executeDeckRemixStep — a token's text box follows the saved text", () => {
+  const BOTH = keys(["m15tokenartifact", "c"], ["m15tokenartifacttext", "c"]);
+
+  it("a textless printing given the AI's flavour line saves on the text box", async () => {
+    s.verified = BOTH;
+    const { step, card } = await remix("tmsh-27");
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({
+      frame_style: { template: "m15tokenartifacttext" },
+      card_type: "token",
+      flavor_text: "New flavour.",
+    });
+  });
+
+  it("…and on the textless arch while the box isn't published in its colour (never an unpublished pair)", async () => {
+    s.verified = keys(["m15tokenartifact", "c"]);
+    const { card } = await remix("tmsh-27");
+    expect(card).toMatchObject({ frame_style: { template: "m15tokenartifact" }, flavor_text: "New flavour." });
+  });
+
+  it("a flavour-only printing whose remix keeps no text saves without the box", async () => {
+    s.verified = BOTH;
+    s.identity.mockResolvedValueOnce({ title: "Remixed Name", flavor_text: null, art_instruction: "A painted scene." });
+    const { card } = await remix("tmsh-27", (raw) => ({ ...raw, flavor_text: "Glittering." }));
+    expect(card).toMatchObject({ frame_style: { template: "m15tokenartifact" } });
+    expect(card?.flavor_text).toBeUndefined();
+  });
+
+  it("a printing with rules text keeps the box whatever the flavour", async () => {
+    s.verified = BOTH;
+    s.identity.mockResolvedValueOnce({ title: "Remixed Name", flavor_text: null, art_instruction: "A painted scene." });
+    const { card } = await remix("tmsh-27", (raw) => ({
+      ...raw,
+      oracle_text: "{T}, Sacrifice this artifact: Add one mana of any color.",
+    }));
+    expect(card).toMatchObject({
+      frame_style: { template: "m15tokenartifacttext" },
+      rules_text: "{T}, Sacrifice this artifact: Add one mana of any color.",
+    });
+  });
+});

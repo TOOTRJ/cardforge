@@ -62,6 +62,7 @@ import {
 import {
   buildTypeLine,
   displayLine,
+  hasRulesBoxText,
   normalizeFrameTemplate,
   showsDefense,
   showsLoyalty,
@@ -564,7 +565,7 @@ function CardImage({
   const hasRulesContent =
     !isBasicLand &&
     !textless &&
-    Boolean(card.rulesText?.trim() || card.flavorText?.trim());
+    hasRulesBoxText(card);
   // The plain rules box's ONE layout (layout v33, lib/cards/rules-box.ts):
   // its size, every line (rules and flavor) and every position, fitted at
   // both bake targets, clear of the drawn stat badges — a walker drawn here

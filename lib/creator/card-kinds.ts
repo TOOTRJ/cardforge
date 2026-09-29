@@ -30,6 +30,7 @@ import {
 } from "@/types/card";
 import {
   TOKEN_TYPE_WORDS,
+  hasRulesBoxText,
   normalizeFrameTemplate,
   supertypeHasWord,
   supertypeWords,
@@ -715,6 +716,99 @@ export function typeWordFrameFits(
   supertype: string | null | undefined,
 ): boolean {
   return typeWordFrameFor(kind, template, supertype) === template;
+}
+
+/** The base a type-word dress re-dresses (m15tokenartifact → m15token,
+ *  m15tokenartifacttext → m15tokentext); any other template as it is — what
+ *  the setup panel's Variations compare against, so the Artifact word never
+ *  hides which variation the card wears. */
+export function typeWordBaseFor(kind: CardKind, template: FrameTemplate): FrameTemplate {
+  for (const [base, dress] of Object.entries(TYPE_WORD_DRESSES[kind] ?? {}) as [FrameTemplate, { template: FrameTemplate }][]) {
+    if (template === dress.template) return base;
+  }
+  return template;
+}
+
+// The token text box follows the text (TODO 4.49 (b), owner decision 5,
+// 2026-09-29): on the token kind the 2014–19 arch wears its text-box
+// variation when the card has rules or flavour text (hasRulesBoxText — the
+// renderers' test) and the textless one when it has none, as the prints do.
+// Keyed by kind, then textless frame → its text-box variation; the Artifact
+// type word dresses both (TYPE_WORD_DRESSES), so the two rules compose.
+//
+// Automatic until the user picks a variation by hand: the creator's follow
+// (followTokenTextBox) switches the frame only while it is the one the text
+// picked, the import and the AI jobs land on the one the text picks
+// (lib/scryfall/frame-signatures.ts archTokenFrame, resolveGeneratedFrame,
+// autoTokenTextBoxFrame), and migration 0129 moved the stored cards with text
+// off the textless frames. The textless frame keeps its scrim for a card
+// that carries text anyway (a manual pick, an older client's save): the
+// text never lands straight on the art, nor disappears.
+const TEXT_BOX_DRESSES: Partial<Record<CardKind, Partial<Record<FrameTemplate, FrameTemplate>>>> = {
+  token: {
+    m15token: "m15tokentext",
+    m15tokenartifact: "m15tokenartifacttext",
+  },
+};
+
+/** True when the template is a text-box variation the kind's text picks
+ *  (m15tokentext, m15tokenartifacttext on a token). */
+export function isTextBoxDress(kind: CardKind, template: FrameTemplate): boolean {
+  return Object.values(TEXT_BOX_DRESSES[kind] ?? {}).includes(template);
+}
+
+/**
+ * The frame the text picks for a card on `template`: on a textless frame
+ * with a text-box variation, or on that variation, the variation when the
+ * card has text and the textless frame otherwise; any other template (a
+ * token on Alpha's frame or a showcase, every other kind) as it is. It never
+ * changes the Artifact dress.
+ */
+export function textBoxFrameFor(kind: CardKind, template: FrameTemplate, hasText: boolean): FrameTemplate {
+  for (const [textless, boxed] of Object.entries(TEXT_BOX_DRESSES[kind] ?? {}) as [FrameTemplate, FrameTemplate][]) {
+    if (template !== textless && template !== boxed) continue;
+    return hasText ? boxed : textless;
+  }
+  return template;
+}
+
+/** True when the template is the one the text picks (textBoxFrameFor) — a
+ *  random or requested frame never puts a token's text on the textless arch,
+ *  nor an empty text box under a vanilla token. */
+export function textBoxFrameFits(kind: CardKind, template: FrameTemplate, hasText: boolean): boolean {
+  return textBoxFrameFor(kind, template, hasText) === template;
+}
+
+/** Both of the token's automatic frame rules at once: the type words'
+ *  dress (typeWordFrameFor) and the text's box (textBoxFrameFor). */
+export function tokenFrameFor(
+  kind: CardKind,
+  template: FrameTemplate,
+  face: { supertype?: string | null; rulesText?: string | null; flavorText?: string | null },
+): FrameTemplate {
+  return textBoxFrameFor(kind, typeWordFrameFor(kind, template, face.supertype), hasRulesBoxText(face));
+}
+
+/**
+ * The creator's text-box follow (owner decision 5): when the card's text
+ * comes or goes (`hasText` is the new state), the frame the text now picks,
+ * or null to leave the frame alone. It follows only while the frame is the
+ * one the text picked before the edit: a frame that disagreed with the text
+ * (the textless arch over text, an empty text box) is a choice the user
+ * made, and it sticks — so does one made by hand this session (`manual`),
+ * which the caller remembers.
+ */
+export function followTokenTextBox(input: {
+  kind: CardKind;
+  template: FrameTemplate;
+  hasText: boolean;
+  manual: boolean;
+}): FrameTemplate | null {
+  const { kind, template, hasText, manual } = input;
+  if (manual) return null;
+  if (textBoxFrameFor(kind, template, !hasText) !== template) return null;
+  const next = textBoxFrameFor(kind, template, hasText);
+  return next === template ? null : next;
 }
 
 /** withTypeWord for the artifact frame a creature borrows (TODO 1.7). */

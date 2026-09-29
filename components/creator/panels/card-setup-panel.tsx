@@ -47,13 +47,16 @@ import {
   framesForKind,
   isSingleBasicLand,
   kindHasAvailableFrame,
+  isTextBoxDress,
   isTypeWordDress,
   skinVariantsFor,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
+  tokenFrameFor,
   tokenPickerWordsOf,
   typeLineHasWord,
+  typeWordBaseFor,
   typeWordFrameFor,
   withTypeWord,
   withoutTypeWord,
@@ -172,8 +175,10 @@ type CardSetupPanelProps = {
    *  1.5): the "Frame substituted (imported …)" chip shows while the card
    *  still sits on that frame. Session-only, never saved. */
   frameSubstitution?: FrameSubstitution | null;
-  /** The user picked a frame tile (the orchestrator clears the chip). */
-  onFramePick?: () => void;
+  /** The user picked a frame tile (the orchestrator clears the chip) —
+   *  `variation` when it was a chip of the Variations section, a choice
+   *  that sticks (the token's text box, TODO 4.49 (b)). */
+  onFramePick?: (pick: { variation: boolean }) => void;
   /** Kind selection routes through the orchestrator's planKindChange so a
    *  change can remap the frame in-era or ask — never silently. */
   onKindSelect: (next: CardKind) => void;
@@ -376,28 +381,36 @@ export function CardSetupPanel({
               skinVariantsFor(kind, base).includes(c.template) &&
               !isTypeWordDress(kind, c.template),
           );
-          const wearsTypeWordDress = isTypeWordDress(kind, normalized);
+          // The variation the card wears with its type-word dress taken
+          // off (an Artifact token's text-box frame is the text-box
+          // variation): what the Variations chips compare against, so the
+          // Artifact word never hides the text box.
+          const undressed = typeWordBaseFor(kind, normalized);
+          const wearsTypeWordDress = undressed !== normalized;
           const showcaseChoices = choices.filter(
             (c) => c.group === "showcase",
           );
           const variationChoices = [...skinChoices, ...showcaseChoices];
+          // The token's text box follows the text (owner decision 5): say
+          // so beside the chips, and that picking one keeps it.
+          const textBoxFollows = variationChoices.some((c) => isTextBoxDress(kind, c.template));
 
           const frameSummary =
             eraForTemplate(base) === "showcase"
               ? FRAME_TEMPLATE_LABELS[base]
               : `${FRAME_ERA_LABELS[eraForTemplate(base)]} — ${FRAME_TEMPLATE_LABELS[base]}`;
           const frameVariationSummary =
-            normalized === base || wearsTypeWordDress
+            undressed === base
               ? "Standard"
-              : eraForTemplate(normalized) === "showcase"
-                ? setQualifiedFrameLabel(normalized)
-                : FRAME_TEMPLATE_LABELS[normalized];
+              : eraForTemplate(undressed) === "showcase"
+                ? setQualifiedFrameLabel(undressed)
+                : FRAME_TEMPLATE_LABELS[undressed];
           // Lands lead their Variations with Basic vs Nonbasic — the choice
           // that decides whether the card prints a big symbol or rules text.
           const showLandMode =
             kind === "land" && landMode !== undefined && Boolean(onLandModeChange);
           const variationSummary = showLandMode
-            ? normalized === base || wearsTypeWordDress
+            ? undressed === base
               ? landModeLabel(landMode as LandMode)
               : `${landModeLabel(landMode as LandMode)} · ${frameVariationSummary}`
             : frameVariationSummary;
@@ -420,11 +433,20 @@ export function CardSetupPanel({
           // frame (to its first published colour) and a toast says so. The
           // form never holds an unpublished (frame, colour) pair — the
           // server refuses to save one.
-          const pickFrame = (picked: FrameTemplate) => {
+          const pickFrame = (picked: FrameTemplate, variation: boolean) => {
             // On the token kind the type words pick between the plain and
             // the artifact token frame (TODO 3b.15): "M15 Token" on an
-            // Artifact token is its artifact frame.
-            const next = typeWordFrameFor(kind, picked, getValues("supertype"));
+            // Artifact token is its artifact frame. A Frame-section pick of
+            // the arch lets the text pick its text box too (TODO 4.49 (b),
+            // owner decision 5); a Variations chip is the box the user
+            // chose, and it sticks.
+            const next = variation
+              ? typeWordFrameFor(kind, picked, getValues("supertype"))
+              : tokenFrameFor(kind, picked, {
+                  supertype: getValues("supertype"),
+                  rulesText: getValues("rules_text"),
+                  flavorText: getValues("flavor_text"),
+                });
             const resolution = resolvePublishedFrame({
               kind,
               candidates: [next],
@@ -435,7 +457,7 @@ export function CardSetupPanel({
             if (resolution.status === "unavailable") return;
             field.onChange(resolution.template);
             clearErrors("frame_style");
-            onFramePick?.();
+            onFramePick?.({ variation });
             const word = borrowedTypeWord(kind, resolution.template);
             if (
               word &&
@@ -493,12 +515,18 @@ export function CardSetupPanel({
                     ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
                     : borrowedWord
                       ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
-                      : choice.group === "skin"
-                        ? "Same layout, different dress"
-                        : undefined,
+                      : isTextBoxDress(kind, choice.template)
+                        ? "A text box for rules and flavour text"
+                        : choice.group === "skin"
+                          ? "Same layout, different dress"
+                          : undefined,
               leading: (
                 <FrameThumb
-                  template={choice.template}
+                  template={
+                    choice.group === "skin"
+                      ? typeWordFrameFor(kind, choice.template, supertype)
+                      : choice.template
+                  }
                   colorKey={
                     colorAvailable
                       ? colorKey
@@ -513,15 +541,17 @@ export function CardSetupPanel({
             };
           };
 
-          // The Standard chip = the base frame itself — or, on a card that
-          // wears the base's type-word dress (an Artifact token), that dress.
-          const standardTemplate = wearsTypeWordDress ? normalized : base;
+          // The Standard chip = the base frame itself, drawn — and named —
+          // in the type-word dress the card wears (an Artifact token's).
+          const standardTemplate = typeWordFrameFor(kind, base, supertype);
           const standardOption: ChipOption<FrameTemplate> = {
-            value: standardTemplate,
+            value: base,
             label: "Standard",
             description: wearsTypeWordDress
               ? `The ${FRAME_TEMPLATE_LABELS[standardTemplate]} frame — it follows the card's type`
-              : `The plain ${FRAME_TEMPLATE_LABELS[base]} frame`,
+              : textBoxFollows
+                ? `The ${FRAME_TEMPLATE_LABELS[base]} frame, no text box`
+                : `The plain ${FRAME_TEMPLATE_LABELS[base]} frame`,
             leading: (
               <FrameThumb
                 template={standardTemplate}
@@ -571,7 +601,7 @@ export function CardSetupPanel({
                         layout="grid-2"
                         size="md"
                         value={base}
-                        onChange={pickFrame}
+                        onChange={(picked) => pickFrame(picked, false)}
                         options={byEra.get(era)!.map(toOption)}
                       />
                     </div>
@@ -618,13 +648,19 @@ export function CardSetupPanel({
                           ariaLabel="Frame variations"
                           layout="grid-2"
                           size="md"
-                          value={normalized}
-                          onChange={pickFrame}
+                          value={undressed}
+                          onChange={(picked) => pickFrame(picked, true)}
                           options={[
                             standardOption,
                             ...variationChoices.map(toOption),
                           ]}
                         />
+                        {textBoxFollows ? (
+                          <p className="text-[11px] leading-4 text-subtle">
+                            The text box comes and goes with the card&apos;s rules and flavour
+                            text. Pick one here to keep it.
+                          </p>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>

@@ -21,7 +21,8 @@
 // commit (cached outside the repo), composites the layers through their
 // masks at the pack's NATIVE size in CC's draw order (2010×2814 for the
 // accurate M15 pack), downscales once with Lanczos to 1500×2100, cuts the
-// one card corner (lib/cards/card-corner.ts, 64.5 px), and writes
+// one card corner (lib/cards/card-corner.ts, 64.5 px), checks the edge
+// contract (7.7), the corner (3.26) and the art window (7.6), and writes
 // <out>/<template>/<colour>.png + .webp, plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
 // (re-cut templates) a band moved down before the downscale (recut),
@@ -65,6 +66,15 @@ import {
   edgeContractViolations,
   isKnownEdgeFailure,
 } from "../lib/frames/edge-contract.ts";
+// The art-window coverage (TODO 7.6) — the check CI runs on every master
+// (tests/unit/render/art-window-coverage.test.ts), here on the flattened
+// master after the downscale has anti-aliased the window edge. The art
+// slots are the frame profiles' own (lib/cards/template-layout.ts), read
+// through the "@/" alias hook — a dynamic import, so the hook is in place.
+import { artWindowFindings, artWindowSlotsOf, artWindowVerdict } from "../lib/frames/art-window.ts";
+import "./lib/ts-alias-hooks.mjs";
+
+const { getFrameProfile, underFrameArtRect } = await import("../lib/cards/template-layout.ts");
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -129,6 +139,7 @@ async function writePlate(src, pngFile) {
 
 const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
 const edgeFailures = [];
+const artWindowFailures = [];
 // Drop templates the recipe no longer builds (e.g. deferred ones).
 for (const template of Object.keys(provenance)) if (!CC_TEMPLATES[template]) delete provenance[template];
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
@@ -171,6 +182,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       ]) {
         edgeFailures.push(`${template}/${key} ${v}`);
       }
+    }
+    {
+      // A known failure fails only when it got worse than its entry's bound.
+      const profile = getFrameProfile(template);
+      const findings = artWindowFindings(master, OUT_W, OUT_H, artWindowSlotsOf(profile, underFrameArtRect(profile, key)));
+      const verdict = artWindowVerdict(template, key, findings);
+      for (const v of verdict.fails) artWindowFailures.push(`${template}/${key} ${v}`);
+      if (verdict.fixed) console.log(`${template}/${key}: its art window passes now — strike it from ART_WINDOW_KNOWN_FAILURES (lib/frames/art-window.ts)`);
     }
     await writeMaster(master, out);
     console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
@@ -226,4 +245,11 @@ if (edgeFailures.length) {
   process.exitCode = 1;
 } else if (!dryRun) {
   console.log("edge contracts + corner check: every master honours its template's (TODO 7.7 / 3.26)");
+}
+if (artWindowFailures.length) {
+  console.error(`✗ ${artWindowFailures.length} art window(s) escape their art slot (TODO 7.6) — fix the master or the slot before publishing:`);
+  for (const f of artWindowFailures) console.error(`  ${f}`);
+  process.exitCode = 1;
+} else if (!dryRun) {
+  console.log("art windows: every slot covers its master's window, 0.05 % to spare (TODO 7.6; known failures within their bounds)");
 }

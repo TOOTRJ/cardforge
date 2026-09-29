@@ -561,7 +561,9 @@ describe("colour from the front face (TODO 1.2)", () => {
     expect(lands("soi-281")).toEqual({ template: "m15land", colorKey: "c" });
     expect(lands("msc-233")).toEqual({ template: "m15land", colorKey: "m" });
     expect(lands("ogw-13")).toEqual({ template: "m15devoid", colorKey: "w" });
-    expect(lands("isd-243")).toEqual({ template: "m15land", colorKey: "c" });
+    // Innistrad's 2003-frame land: modernland/c is verified on production
+    // (2026-09-29).
+    expect(lands("isd-243")).toEqual({ template: "modernland", colorKey: "c" });
     expect(lands("c17-289")).toEqual({ template: "m15land", colorKey: "r" });
     expect(lands("jmp-33")).toEqual({ template: "m15land", colorKey: "m" });
     expect(lands("ogw-170")).toEqual({ template: "m15land", colorKey: "c" });
@@ -677,36 +679,76 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(later.frame_match?.onceVerified).toBeUndefined();
     expect(later.frame_template).toBe("m15textless");
     expect(landing(later, withTextless)).toEqual({ template: "m15textless", colorKey: "w", status: "exact" });
-    // Lightning Bolt P10 #1 is red: modern/r isn't verified, so it falls
-    // forward to M15 while it waits, and the swap is per colour.
+    // Lightning Bolt P10 #1 is red: m15textless/r isn't verified, so it
+    // keeps the 2003 frame (modern/r, verified on production 2026-09-29) —
+    // the swap is per colour — and falls forward to M15 where modern/r isn't
+    // verified either.
     const bolt = finalizeImportMatch(signature("p10-1"), withTextless);
     expect(bolt.frame_match?.template).toBe("modern");
-    expect(landing(bolt, withTextless)).toEqual({ template: "m15", colorKey: "r", status: "frame-switched" });
+    expect(landing(bolt, withTextless)).toEqual({ template: "modern", colorKey: "r", status: "exact" });
+    const noModernRed = new Set([...withTextless].filter((key) => key !== frameComboKey("modern", "r")));
+    expect(landing(bolt, noModernRed)).toEqual({ template: "m15", colorKey: "r", status: "frame-switched" });
   });
 
   it("a 2014–19 token with text asks for the text-box token frame; unverified, it lands on its textless dress (4.49 (b))", () => {
+    // Built explicitly: production verified the text-box token frames in
+    // every colour on 2026-09-29 (supabase/seed.sql mirrors it).
+    const unverified = new Set(
+      [...PROD_VERIFIED].filter((key) => !/^m15token(artifact)?text\//.test(key)),
+    );
     // Knight TDOM #2 "Vigilance": m15tokentext, exact in the registry — a
     // nearest "not yet verified" answer until the owner verifies it, and the
     // import lands on the arch token it landed on before.
-    const knight = finalizeImportMatch(signature("tdom-2"), PROD_VERIFIED);
+    const knight = finalizeImportMatch(signature("tdom-2"), unverified);
     expect(knight.frame_match).toMatchObject({ status: "nearest", template: "m15tokentext", unverified: true });
-    expect(landing(knight)).toEqual({ template: "m15token", colorKey: "w", status: "frame-switched" });
+    expect(landing(knight, unverified)).toEqual({ template: "m15token", colorKey: "w", status: "frame-switched" });
     // Treasure TXLN #7: the ARTIFACT token frame while it waits — never the
     // plain token frame (TEXT_BOX_TOKEN_FALLBACK).
-    const treasure = finalizeImportMatch(signature("txln-7"), PROD_VERIFIED);
+    const treasure = finalizeImportMatch(signature("txln-7"), unverified);
     expect(treasure.frame_match).toMatchObject({ status: "nearest", template: "m15tokenartifacttext", unverified: true });
-    expect(landing(treasure)).toEqual({ template: "m15tokenartifact", colorKey: "c", status: "frame-switched" });
-    // Once verified in the card's colour: exact, and the import lands on it.
-    const verified = new Set([
-      ...PROD_VERIFIED,
-      frameComboKey("m15tokentext", "w"),
-      frameComboKey("m15tokenartifacttext", "c"),
-    ]);
-    expect(finalizeImportMatch(signature("tdom-2"), verified).frame_match?.status).toBe("exact");
-    expect(landing(signature("tdom-2"), verified)).toEqual({ template: "m15tokentext", colorKey: "w", status: "exact" });
-    expect(landing(signature("txln-7"), verified)).toEqual({ template: "m15tokenartifacttext", colorKey: "c", status: "exact" });
+    expect(landing(treasure, unverified)).toEqual({ template: "m15tokenartifact", colorKey: "c", status: "frame-switched" });
+    // Verified in the card's colour (production today): exact, and the
+    // import lands on it.
+    expect(finalizeImportMatch(signature("tdom-2"), PROD_VERIFIED).frame_match?.status).toBe("exact");
+    expect(landing(signature("tdom-2"))).toEqual({ template: "m15tokentext", colorKey: "w", status: "exact" });
+    expect(landing(signature("txln-7"))).toEqual({ template: "m15tokenartifacttext", colorKey: "c", status: "exact" });
     // A vanilla token keeps the textless frame (the 2015 full-art Cat T2XM #4).
     expect(signature("t2xm-4").frame_match?.template).toBe("m15token");
+  });
+
+  it("a token with text that PipGlyph has no frame of its own for lands on the text box too, never its text on the scrim (4.49 (b))", () => {
+    // The printings as they are, with text on them (a borderless ONE
+    // Jumpstart token, a Zendikar token re-dated to the 1993 border): the
+    // box follows the text on every token route, not only the 2014–19 arch.
+    const withText = (key: keyof typeof signaturePrintings, extra: Record<string, unknown>) =>
+      mapScryfallToFormPatch(scryfallCardSchema.parse({ ...signaturePrintings[key], ...extra }));
+    // Borderless (4.37): the nearest is the bordered arch its text and type
+    // words pick — the box, and for a Treasure the artifact box.
+    const borderless = withText("wone-1", { oracle_text: "Vigilance" });
+    expect(borderless.frame_match).toMatchObject({ status: "nearest", template: "m15tokentext" });
+    expect(landing(borderless)).toEqual({ template: "m15tokentext", colorKey: "w", status: "exact" });
+    const borderlessTreasure = withText("wone-1", {
+      type_line: "Token Artifact — Treasure",
+      oracle_text: "{T}, Sacrifice this artifact: Add one mana of any color.",
+      power: undefined,
+      toughness: undefined,
+    });
+    expect(borderlessTreasure.frame_match?.template).toBe("m15tokenartifacttext");
+    // …a borderless vanilla token keeps the textless arch.
+    expect(withText("wone-1", {}).frame_match?.template).toBe("m15token");
+    // An Alpha token (its own frame, unverified on production): the M15
+    // fallback follows the text — the box, then its textless dress while the
+    // box isn't verified in the colour.
+    const alpha = withText("tzen-3", { frame: "1993", oracle_text: "Flying" });
+    expect(alpha.frame_template).toBe("alphatoken");
+    expect(landing(alpha)).toEqual({ template: "m15tokentext", colorKey: "w", status: "frame-switched" });
+    const noBox = new Set([...PROD_VERIFIED].filter((key) => !/^m15token(artifact)?text\//.test(key)));
+    expect(landing(alpha, noBox)).toEqual({ template: "m15token", colorKey: "w", status: "frame-switched" });
+    expect(landing(withText("tzen-3", { frame: "1993" }))).toEqual({
+      template: "m15token",
+      colorKey: "w",
+      status: "frame-switched",
+    });
   });
 
   it("a verified full-art basic lands on it; an unverified one falls back to the land frame", () => {
