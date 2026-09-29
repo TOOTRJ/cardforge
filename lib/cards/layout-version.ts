@@ -472,14 +472,26 @@ import type { CardType } from "@/types/card";
 //              type line left-aligned from 8.54 %W to the symbol, its
 //              baseline 1796 → 1800 HD px (TOKEN_TYPE_PRINT_DY; 15 prints
 //              1797–1803, mean 1800.4); the set symbol in its own
-//              symbolRect, right edge 92.13 %W, centre 84.78 %H (CC's
-//              84.39 sat 8.3 px above the prints; TOKEN_SYMBOL_CENTRE_PCT).
+//              symbolRect, right edge 92.13 %W. The 14 masters RE-CUT
+//              (owner decision 2026-09-29, scripts/lib/cc-frames.mjs
+//              TOKEN_TEXTLESS_RECUT; TOKEN_RECUT_PX): CC's window edge, type
+//              pill and the pill's shadow 8 px lower, as the prints draw
+//              them (CC's sat 8.2 px above the 15 pins; −0.9 … +1.6 after,
+//              by edge), over the top of the texture below — the title bar,
+//              texture, border and corners unmoved; the art slot 8 px
+//              taller (69.0 → 69.38 %H, the art's cover fit +0.55 %), the
+//              type band on the moved pill (the baseline stays at 1800),
+//              the symbol box centred on the moved pill again, 84.77 %H
+//              (CC's 84.39 + 8 px; tall glyphs sat on CC's bottom bevel).
 //              Against the 15 textless pins (HD px, ours − print mean): P/T
-//              digits' centre +0.6 x / −1.3 y, plate +0.3 (was −2.7),
-//              symbol centre −0.3 (was −8.3), type line +4 px from the left,
-//              symbol right edge ±1 px (DOM, KLD). Nothing above y 1725
-//              moves (art, name, rules scrim —
-//              4.49 (b) and 4.53 are open). Every card on m15token /
+//              digits' centre +0.6 x / −1.3 y, plate +0.7 (median −0.5; was
+//              −2.7), symbol centre −0.1 (was −8.3), type baseline 1800 on
+//              all 15 (prints 1800.4), type line +4 px from the left, symbol
+//              right edge ±1 px (DOM, KLD); the symbol's ink 5–9 px clear of
+//              the pill's bottom bevel (it reached 1–3 px into it); the
+//              alignment score (lib/frames/align.ts) 94.47 → 94.99 %. Nothing above y 1640
+//              moves (the name, rules scrim — 4.49 (b) and 4.53 are open)
+//              but the art's scale. Every card on m15token /
 //              m15tokenartifact changes (every one has a type line and a
 //              symbol).
 //            * "Token" first on the type line (TODO 3b.15; buildTypeLine):

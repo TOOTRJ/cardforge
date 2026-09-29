@@ -2227,9 +2227,11 @@ export function CardCreatorForm({
       values.supertype,
     );
     // A NEW token is common whatever an import or the AI said: the token
-    // kind hides the rarity chips (TODO 3b.15, owner 2026-09-29). A stored
-    // token keeps its rarity (edits never send a hidden change).
-    const tokenRarity = submitKind === "token" && !isRevise;
+    // kind hides the rarity chips (TODO 3b.15, owner 2026-09-29). So is a
+    // REMIX of a token (owner 2026-09-29): it saves a new card, and its
+    // parent's rarity can't be seen or changed there. A stored token keeps
+    // its rarity (edits never send a hidden change).
+    const tokenRarity = submitKind === "token" && !isEdit;
 
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
@@ -2559,9 +2561,10 @@ export function CardCreatorForm({
 
   const cardTypeForPreview =
     watched.card_type === "" ? null : (watched.card_type as CardType);
-  // A new token previews as it saves: common (TODO 3b.15; see onSubmit).
+  // A new token (or a token's remix) previews as it saves: common (TODO
+  // 3b.15; see onSubmit).
   const rarityForPreview =
-    kind === "token" && !isRevise
+    kind === "token" && !isEdit
       ? "common"
       : watched.rarity === ""
         ? null
@@ -2862,7 +2865,8 @@ export function CardCreatorForm({
                 ) : null}
                 {/* Tokens print a black set symbol, never a rarity (4.9):
                     the token kind hides the chips (owner 2026-09-29) — a
-                    new token is common, a stored one keeps its rarity. */}
+                    new token (and a token's remix) is common, a stored one
+                    keeps its rarity. */}
                 {kind !== "token" ? <RarityPanel /> : null}
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules

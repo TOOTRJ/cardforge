@@ -106,10 +106,10 @@ describe("CardPreview — 2014–19 token frame (TODO 4.49 (a) + (d))", () => {
       expect(p.type.rect.leftPct).toBe(8.54);
       expect(band[0]).toContain("justify-content:space-between");
       expect(band[0]).not.toContain("justify-content:center");
-      // The symbol: CC's box, on the prints (right edge 92.13 %W, centre
-      // 84.78 %H), right-aligned and centred in it, holding the icon, and
-      // none inline in the band.
-      expect(p.symbolRect).toEqual({ topPct: 82.73, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
+      // The symbol: CC's box, moved down with the re-cut pill (right edge
+      // 92.13 %W, centre 84.77 %H), right-aligned and centred in it, holding
+      // the icon, and none inline in the band.
+      expect(p.symbolRect).toEqual({ topPct: 82.34 + (8 / 2100) * 100, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
       const symbolBox = tagsAt(html, p.symbolRect!);
       expect(symbolBox).toHaveLength(1);
       expect(symbolBox[0]).toContain("align-items:center;justify-content:flex-end");

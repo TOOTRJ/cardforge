@@ -16,24 +16,42 @@
 -- then prints "Token Creature — Soldier" with its P/T, and the picker shows
 -- the Creature toggle on.
 --
+-- So does a stored token with a P/T that says Artifact or Enchantment but
+-- not Creature (owner decision 2026-09-29, round 10: "so they keep their
+-- P/T") — a hand-typed "Artifact" on a 1/1 Thopter, or an AI token the old
+-- autofix gave a 2/2. Under this release's rule (a token prints a P/T only
+-- with Creature or a Vehicle / Spacecraft subtype) its P/T would stop
+-- printing; with "Creature" added — last, its printed place: "Artifact" →
+-- "Artifact Creature", "Enchantment Artifact" → "Enchantment Artifact
+-- Creature", "Legendary Artifact" → "Legendary Artifact Creature" — it
+-- prints "Token Artifact Creature — Thopter" with the P/T it printed before.
+-- A Vehicle or Spacecraft keeps its P/T without the word (showsPowerToughness)
+-- and is left alone.
+--
 -- Scope, as the app reads it (lib/cards/card-display.ts):
 --   * card_type = 'token';
 --   * a power or a toughness (a non-empty string, the renderers' test);
---   * no Creature, Artifact or Enchantment word in supertype (whole words,
---     any case — hasTokenTypeWord). A token that names another type (a
---     Treasure's "Artifact") is left alone;
+--   * no Creature word in supertype (whole words, any case —
+--     supertypeHasWord);
+--   * AND either no Artifact or Enchantment word either (the pre-picker
+--     token: hasTokenTypeWord is false) or no Vehicle / Spacecraft subtype
+--     (any case, trimmed — PT_SUBTYPES). A word-less token keeps the first
+--     scope exactly, whatever its subtypes;
 --   * the result fits cards_supertype_length (64, migration 0003). A longer
---     one is skipped rather than failing the migration; the renderers still
---     print its P/T (printsPowerToughness's stored-token rule).
+--     one is skipped rather than failing the migration; a word-less one
+--     still prints its P/T (printsPowerToughness's stored-token rule), an
+--     Artifact / Enchantment one does not.
 -- Back faces (the back_face jsonb) are not touched: the renderers' same rule
 -- keeps a token back face's P/T, and production has no public card with a
 -- token back face (checked 2026-09-29).
 --
 -- Production, 2026-09-29 (anonymous REST, public rows only — RLS hides
--- private ones, so their count is unknown): 32 public tokens; 8 have a P/T
--- and no type word (all 8 with an empty supertype) and change here. The other
--- 24 have no P/T (22 of them typed "Basic", one account's lands on the token
--- frame) and are untouched.
+-- private ones, so their count is unknown; re-read 17:30 UTC): 33 public
+-- tokens; 9 have a P/T and no type word (all 9 with an empty supertype) and
+-- change here, 0 have a P/T with Artifact or Enchantment. The other 24 have
+-- no P/T (22 of them typed "Basic", one account's lands on the token frame)
+-- and are untouched. The owner counts the private rows of both kinds before
+-- the merge (TODO 4.49).
 --
 -- The same statement sets layout_version = NULL on exactly these rows (the
 -- 0117 / 0118 pattern). A null stamp owes a platform re-bake that the
@@ -63,6 +81,9 @@
 -- Idempotent: an updated row has "Creature", so a second run matches nothing
 -- (and nulls no stamp).
 --
+-- The creator reads the same word onto such a stored row before it runs
+-- (formSupertypeOf), and the renderers print it the same way after it.
+--
 -- Grants: none. This migration only updates rows of public.cards. It creates
 -- no table or function and changes no grant, so the API roles keep exactly
 -- the privileges they have on public.cards (0097).
@@ -75,5 +96,13 @@ set
   layout_version = null
 where card_type = 'token'
   and (coalesce(power, '') <> '' or coalesce(toughness, '') <> '')
-  and coalesce(supertype, '') !~* '(^|\s)(creature|artifact|enchantment)(\s|$)'
+  and coalesce(supertype, '') !~* '(^|\s)creature(\s|$)'
+  and (
+    coalesce(supertype, '') !~* '(^|\s)(artifact|enchantment)(\s|$)'
+    or not exists (
+      select 1
+      from unnest(subtypes) as t(subtype)
+      where lower(btrim(t.subtype, E' \t\n\r')) in ('vehicle', 'spacecraft')
+    )
+  )
   and char_length(btrim(regexp_replace(coalesce(supertype, '') || ' Creature', '\s+', ' ', 'g'))) <= 64;

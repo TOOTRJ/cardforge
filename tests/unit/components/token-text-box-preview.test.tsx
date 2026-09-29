@@ -81,6 +81,31 @@ describe("CardPreview — the text-box token's rules (TODO 4.49 (b))", () => {
     },
   );
 
+  it.each(["m15tokentext", "m15tokenartifacttext"])(
+    "%s: the type band on its own re-cut pill — CC's band 292 px up, not the textless re-cut's",
+    (template) => {
+      const p = getFrameProfile(template);
+      // CC's token band (82.14 %H, centred on CC's textless pill) moved 292
+      // px up with this master's own re-cut (TOKEN_REGULAR_RECUT): centred on
+      // the pill's interior, 1424–1530 px at HD. The textless masters' re-cut
+      // (TOKEN_RECUT_PX: M15TOKEN's band 8 px lower, its dy 8 px higher) is
+      // not this master's — spread from M15TOKEN, the band would sit 8 px
+      // low in the pill.
+      expect(p.type.rect).toEqual({ topPct: 82.14 - (292 / 2100) * 100, leftPct: 8.54, widthPct: 83.59, heightPct: 4.2 });
+      const centre = ((p.type.rect.topPct + p.type.rect.heightPct / 2) / 100) * 2100;
+      expect(Math.abs(centre - (1424 + 1530 + 1) / 2)).toBeLessThanOrEqual(0.5);
+      expect(p.type.rect.topPct).toBeCloseTo(getFrameProfile("m15token").type.rect.topPct - ((292 + 8) / 2100) * 100, 9);
+      // The text: the print pass's offset on CC's pill (+4 px at HD) and 8 px
+      // higher to the prints' 1500 — which comes to M15TOKEN's dy (+4 px,
+      // then its re-cut's 8 px pull-back). Spread from M15TOKEN it would be
+      // 8 px higher still, on a band 8 px lower.
+      expect(p.type.dy).toBeCloseTo(getFrameProfile("m15token").type.dy!, 12);
+      // The art slot is its own (the window ends at 1408 px), not the
+      // textless re-cut's taller one.
+      expect(p.artSlot).toEqual({ topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 55.2 });
+    },
+  );
+
   it("draws no scrim behind the text-box token's rules (the textless token keeps its own)", () => {
     expect(getFrameProfile("m15tokentext").rules.backdropHex).toBeUndefined();
     expect(lines("m15tokentext", "Vigilance").html).not.toContain("rgba(10,8,6,0.5)");

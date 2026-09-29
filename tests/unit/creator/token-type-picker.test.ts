@@ -310,12 +310,28 @@ describe("stored tokens from before the picker", () => {
     expect(tokenPickerWordsOf(values.supertype)).toEqual(["Creature"]);
   });
 
+  it("a token with a P/T that says Artifact or Enchantment but not Creature reads as a creature too (the word 0128 writes)", () => {
+    // Owner 2026-09-29: they keep their P/T — "Creature" added in printed order.
+    expect(formSupertypeOf(card({ supertype: "Artifact", subtypes: ["Thopter"] }))).toBe("Artifact Creature");
+    expect(formSupertypeOf(card({ supertype: "Enchantment" }))).toBe("Enchantment Creature");
+    expect(formSupertypeOf(card({ supertype: "Legendary Artifact" }))).toBe("Legendary Artifact Creature");
+    expect(formSupertypeOf(card({ supertype: "Enchantment Artifact" }))).toBe("Enchantment Artifact Creature");
+    const values = defaultValuesFor(card({ supertype: "Artifact", subtypes: ["Thopter"] }), []);
+    expect(values.supertype).toBe("Artifact Creature");
+    expect(statVisibility(values.card_type, ["Thopter"], values.supertype).pt).toBe(true);
+    expect(tokenPickerWordsOf(values.supertype)).toEqual(["Creature", "Artifact"]);
+    // A Vehicle / Spacecraft prints its P/T without the word: left as stored.
+    expect(formSupertypeOf(card({ supertype: "Artifact", subtypes: ["Vehicle"] }))).toBe("Artifact");
+    expect(formSupertypeOf(card({ supertype: "Artifact", subtypes: [" spacecraft "] }))).toBe("Artifact");
+  });
+
   it("leaves every other stored card's supertype as stored", () => {
-    // No P/T (the "Basic" lands on the token frame, a Copy).
+    // No P/T (the "Basic" lands on the token frame, a Copy, a Treasure).
     expect(formSupertypeOf(card({ supertype: "Basic", power: null, toughness: null }))).toBe("Basic");
     expect(formSupertypeOf(card({ power: null, toughness: null }))).toBe("");
-    // A token that names its type.
-    expect(formSupertypeOf(card({ supertype: "Artifact" }))).toBe("Artifact");
+    expect(formSupertypeOf(card({ supertype: "Artifact", subtypes: ["Treasure"], power: null, toughness: null }))).toBe("Artifact");
+    // A creature token already says so.
+    expect(formSupertypeOf(card({ supertype: "Artifact Creature" }))).toBe("Artifact Creature");
     // Not a token.
     expect(formSupertypeOf(card({ card_type: "creature" }))).toBe("");
   });

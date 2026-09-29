@@ -3,14 +3,14 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { plateInkRect } from "@/lib/cards/plate-ink";
 import { SET_SYMBOL_BOX_PCT } from "@/lib/cards/typography";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { TOKEN_PILL_INTERIOR_PX, getFrameProfile } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
 // TODO 4.49 (a) + (d) on REAL bakes, at HD and at the 750 px default: the
 // 2014–19 token frames (m15token / m15tokenartifact) print the P/T on M15's
-// plate, the type line left-aligned from 8.54 %W, and the set symbol
-// right-anchored at 92.13 %W, centred on 84.78 %H — where the prints put
-// them. Until layout v33 the value sat on the band's edge with no plate
+// plate, the type line left-aligned from 8.54 %W on the prints' baseline,
+// and the set symbol right-anchored at 92.13 %W, centred on the re-cut pill
+// (84.77 %H) — where the prints put them. Until layout v33 the value sat on the band's edge with no plate
 // (MSE's 88.6–94.8 %H rect: the digits ran into the black border) and the
 // type line and symbol were centred together.
 //
@@ -18,8 +18,9 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 // TM19 #6/#8/#12, TBFZ #1/#7, TWAR #5, TMH1 #8/#18, TEMN #1, TKLD #2,
 // TC18 #7; Scryfall PNGs at 1500 × 2100), the mean over the fifteen, in HD
 // px. Our positions must land within ±2 px of it (±1.5 px at 750). CC's own
-// symbol box (84.39 %H) centred 8.3 px above the prints and its plate box
-// (88.48 %H) 2.7 px above them.
+// symbol box (84.39 %H) centred 8.3 px above the prints — its pill sat 8 px
+// above theirs, until the re-cut (TODO 4.49, TOKEN_RECUT_PX) moved both —
+// and its plate box (88.48 %H) 2.7 px above them.
 //
 // The masters live in the frames bucket (never in git): the bake is served a
 // flat mid-grey card and a WHITE plate, so the plate, the dark digits, the
@@ -134,6 +135,8 @@ const PRINT = {
   /** The set symbol's ink centre, y (1775.5–1784.5; DOM, M19, BFZ, WAR,
    *  MH1, EMN, KLD and C18 glyphs). */
   symbolY: 1781.0,
+  /** The type line's baseline (1797–1803). */
+  baseline: 1800.4,
   /** The plate's box top: each print's plate profile (rim, inner line,
    *  bottom bevel over x 1255–1335) aligned to CC's plate master by
    *  correlation — 2.7 px below CC's 1858.1 on average (−3.5 to +5.5 print
@@ -197,7 +200,7 @@ describe("2014–19 token frame on real bakes (TODO 4.49 (a) + (d))", () => {
   }, 60_000);
 
   it.each(TEMPLATES.flatMap((t) => PRESETS.map(([p, s]) => [t, p, s] as const)))(
-    "%s @%s: the type line starts at x 8.54 and the symbol is right-anchored at x 92.13, centred on y 84.78 (card percent)",
+    "%s @%s: the type line starts at x 8.54 on the prints' baseline, and the symbol is right-anchored at x 92.13, centred on the re-cut pill (y 84.77, card percent)",
     async (template, preset, s) => {
       const b = await bake(token(template, { supertype: "Token Creature", cardType: null }), preset);
       const p = getFrameProfile(template);
@@ -211,15 +214,24 @@ describe("2014–19 token frame on real bakes (TODO 4.49 (a) + (d))", () => {
       const left = (band.leftPct / 100) * b.w;
       expect(line.x0).toBeGreaterThanOrEqual(left - 1);
       expect(line.x0).toBeLessThanOrEqual(left + 4 * s);
+      // "Token Creature — Soldier" has no descenders: its ink ends on the
+      // baseline (round letters overshoot it by ≤ 1 px) — where the prints
+      // set theirs, whatever the re-cut did to the band.
+      expect(Math.abs(line.y1 - PRINT.baseline * s), "type baseline vs the prints").toBeLessThanOrEqual(near(s));
       // The symbol: an uploaded icon fills M15's 86 px box, its right edge on
       // 92.13 %W (the DOM prints' ink ends at 1379–1382 px) and its centre on
-      // 84.78 %H — where the prints centre their symbols.
+      // the re-cut pill's (84.77 %H) — where the prints centre their symbols.
       const icon = inkBox(b, { x0: 1150 * s, y0, x1: b.w, y1: y1 + 20 * s }, black)!;
       expect(icon, "symbol drawn").not.toBeNull();
       const side = SET_SYMBOL_BOX_PCT * b.w;
       expect(Math.abs(icon.x1 - 0.9213 * b.w)).toBeLessThanOrEqual(1);
       expect(Math.abs(icon.x1 - icon.x0 - side)).toBeLessThanOrEqual(1);
-      expect(Math.abs((icon.y0 + icon.y1) / 2 - 0.8478 * b.h)).toBeLessThanOrEqual(1);
+      const box = p.symbolRect!;
+      expect(Math.abs((icon.y0 + icon.y1) / 2 - ((box.topPct + box.heightPct / 2) / 100) * b.h)).toBeLessThanOrEqual(1);
+      // …inside the re-cut pill, clear of both bevels (the box reached CC's
+      // bottom bevel before the re-cut).
+      expect(icon.y0 - TOKEN_PILL_INTERIOR_PX.top * s, "clear of the top outline").toBeGreaterThanOrEqual(12 * s);
+      expect((TOKEN_PILL_INTERIOR_PX.bottom + 1) * s - icon.y1, "clear of the bottom bevel").toBeGreaterThanOrEqual(6 * s);
       expect(Math.abs((icon.y0 + icon.y1) / 2 - PRINT.symbolY * s), "symbol centre vs the prints").toBeLessThanOrEqual(near(s));
       expect(Math.abs(icon.y1 - icon.y0 - side)).toBeLessThanOrEqual(1);
       // …and the line stays clear of it.

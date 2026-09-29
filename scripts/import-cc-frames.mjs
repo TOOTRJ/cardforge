@@ -5,8 +5,9 @@
 // 2026-09-25: Card Conjurer art for the M15 era, MSE for showcase families
 // and the old borders). Later runs of the same importer: 4.32's borderless
 // frame (m15borderless, m15borderlessartifact) and 4.39's full-art basics
-// (m15fullartland, fullartland), and 4.49 (b)'s text-box tokens
-// (m15tokentext, m15tokenartifacttext), re-cut onto the prints.
+// (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
+// (m15tokentext, m15tokenartifacttext), re-cut onto the prints, and 4.49's
+// textless-token re-cut (m15token, m15tokenartifact moved onto the prints).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
@@ -21,7 +22,7 @@
 // one card corner (lib/cards/card-corner.ts, 64.5 px), and writes
 // <out>/<template>/<colour>.png + .webp, plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
-// (text-box tokens) the lower band moved down before the downscale (recut),
+// (re-cut templates) a band moved down before the downscale (recut),
 // and a planeswalker's loyalty shield cut out of each master under loyalty/. Provenance (which source files made which
 // frame, and every substitution) goes to lib/cards/frame-sources.json.
 //
@@ -151,7 +152,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       });
     }
     const composite = toRgba8(compositeLayers(images, W, H));
-    // The text-box tokens' lower band, moved onto the prints (TODO 4.49 (b)).
+    // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b)).
     const native = def.recut ? recutBand(composite, W, H, def.recut) : composite;
     const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
       .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })

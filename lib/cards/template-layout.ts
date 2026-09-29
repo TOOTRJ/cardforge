@@ -1243,27 +1243,50 @@ const M15PW: FrameProfile = {
  *  82.14 %H, layout v32), as a fraction of card WIDTH (dy's unit): 0.46 %H ×
  *  7/5. The type text's dy moves it back down by exactly this. */
 const TOKEN_PILL_LIFT_PCT = (0.46 / 100) * (7 / 5);
-/** TODO 4.49 (d): down onto the prints' type-line baseline, as a fraction of
- *  card WIDTH (dy's unit): 1796 → 1800 px at HD (2 px at 750). Fifteen
- *  2014–19 token prints (TDOM #2–#11, TM19, TBFZ, TWAR, TMH1, TKLD, TC18,
- *  TEMN; Scryfall PNGs at 1500 × 2100) print it at 1797–1803, mean 1800.4. */
-const TOKEN_TYPE_PRINT_DY = 0.0027;
-/** TODO 4.49 (d), print pass: the set symbol's centre (card %H). CC's
- *  setSymbolBounds centre it on 84.39 %H, its own pill's centre, but CC's
- *  pill sits ~8 px above the printed one: fifteen 2014–19 textless prints
- *  (the 4.49 pins, Scryfall PNGs at 1500 × 2100) centre the symbol's ink at
- *  1775.5–1784.5 px, mean 1781.0 (84.81 %H), and the same glyphs baked in
- *  CC's box centred 8.1 px higher. 84.78 puts the box's centre (an uploaded
- *  icon's) at 1780.4 px, the Keyrune glyphs' ink within ±2 px of the mean.
- *  The right edge stays on 92.13 %W. On CC's pill (interior 1716–1822 px)
- *  the 86 px box now reaches 1823 px, as the prints' reaches their pill's
- *  bottom (DOM's ink 1741–1828 on a ~1726–1828 interior). */
-const TOKEN_SYMBOL_CENTRE_PCT = 84.78;
+/** TODO 4.49, owner decision 2026-09-29: the textless token masters are
+ *  RE-CUT (scripts/lib/cc-frames.mjs TOKEN_TEXTLESS_RECUT, whose `shift` a
+ *  unit test holds to this): CC's window edge, type pill and the pill's
+ *  shadow move down as one piece onto the fifteen 2014–19 textless pins,
+ *  which print them 8.2 px below CC's on average (the title bar, the
+ *  texture under the pill and the border stay). HD px; the art slot's
+ *  bottom, the type band and the set symbol's box move with it. */
+export const TOKEN_RECUT_PX = 8;
+/** TOKEN_RECUT_PX in card %H. */
+const TOKEN_RECUT_PCT = (TOKEN_RECUT_PX / 2100) * 100;
+/** CC's textless token pill after the re-cut (card px at HD, interior rows,
+ *  inclusive): CC's interior 1716–1822 (between the dark outline's rising
+ *  edge at 1715.5 and the bottom bevel's first shaded row, 1823) moved down
+ *  TOKEN_RECUT_PX. The prints' interiors run ~1724–1828 (mean of the fifteen
+ *  pins; their bottom bevel prints a little higher than CC's). The set
+ *  symbol keeps clear of both ends (a unit test holds it). */
+export const TOKEN_PILL_INTERIOR_PX = { top: 1716 + TOKEN_RECUT_PX, bottom: 1822 + TOKEN_RECUT_PX };
+/** CC's type band on its own (un-moved) pill: layout v32 centred the band
+ *  on CC's pill (82.6 → 82.14 %H, TOKEN_PILL_LIFT_PCT). A frame that draws
+ *  CC's pill somewhere else (4.49 (b)'s text-box token) derives its band
+ *  from this one. */
+const TOKEN_CC_TYPE_TOP_PCT = 82.14;
+/** TODO 4.49 (d) on CC's own (un-moved) pill: the band rule drew the type
+ *  line's baseline at 1796 px, and 4.49 (d) moved it down to the prints'
+ *  1800 (+0.0027, a fraction of card WIDTH, dy's unit). A frame that draws
+ *  CC's pill somewhere else (4.49 (b)'s text-box token) derives its dy from
+ *  this one, with TOKEN_CC_TYPE_TOP_PCT. */
+const TOKEN_CC_TYPE_PRINT_DY = 0.0027;
+/** TODO 4.49 (d), re-derived for the re-cut: the band rides the moved pill
+ *  (TOKEN_RECUT_PX lower), and the text comes back UP onto the prints'
+ *  type-line baseline, as a fraction of card WIDTH (dy's unit). The band
+ *  rule sets the baseline 4 px lower in its pill than the prints do: on
+ *  CC's un-moved pill it drew 1796 px and 4.49 (d) moved it down to 1800
+ *  (TOKEN_CC_TYPE_PRINT_DY, +0.0027); the pill moved 8 px, the baseline
+ *  does not — 0.0027 − 8/1500. Fifteen 2014–19 token prints (TDOM #2–#11,
+ *  TM19, TBFZ, TWAR, TMH1, TKLD, TC18, TEMN; Scryfall PNGs at 1500 × 2100)
+ *  print it at 1797–1803, mean 1800.4; the type line's pixels are the same
+ *  as before the re-cut. */
+const TOKEN_TYPE_PRINT_DY = TOKEN_CC_TYPE_PRINT_DY - TOKEN_RECUT_PX / 1500;
 /** CC's setSymbolBounds on its textless token (packTokenTextlessM15.js):
  *  right edge 92.13 %W, centred on 84.39 %H — its own pill's centre. A
  *  frame that moves CC's pill with the symbol (a re-cut master: 4.49 (b)'s
- *  text-box token) derives its box from this one, not from M15TOKEN's
- *  print-moved symbolRect. */
+ *  text-box token, and M15TOKEN's own re-cut) derives its box from this
+ *  one. */
 const TOKEN_CC_SYMBOL_RECT: Rect = { topPct: 82.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 };
 /** TODO 4.49 (a), print pass: M15's plate box (CC's 88.48 %H top) 0.13 %H
  *  (2.7 px at HD) lower on the token frames — where the prints put the
@@ -1277,18 +1300,23 @@ const TOKEN_PLATE_PRINT_DY_PCT = 0.13;
 const M15TOKEN: FrameProfile = {
   label: "M15 Token",
   hideCost: true,
-  artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 69.0 },
+  // The window's bottom edge moved down with the re-cut (TOKEN_RECUT_PX), and
+  // the slot's bottom with it (1701 → 1709 px): the window's last clear row
+  // is 1708 on the see-through and coloured-artifact masters (1704 on the
+  // opaque ones), as 1700 / 1696 were on CC's. The art's cover fit follows
+  // the taller slot (+0.55 %).
+  artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 69.0 + TOKEN_RECUT_PCT },
   // CC's token symbol box, M15's (0.041 H = 86 px; layout v32).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
   // CC's setSymbolBounds (TOKEN_CC_SYMBOL_RECT), right edge 92.13 %W (TODO
   // 4.49 (d); it rode the end of a centred type line before), moved down
-  // onto the prints: centred on 84.78 %H, not CC's 84.39
-  // (TOKEN_SYMBOL_CENTRE_PCT).
-  symbolRect: {
-    ...TOKEN_CC_SYMBOL_RECT,
-    topPct: TOKEN_SYMBOL_CENTRE_PCT - TOKEN_CC_SYMBOL_RECT.heightPct / 2,
-  },
+  // with the re-cut pill: centred on the pill again, 84.77 %H (1780.2 px).
+  // The prints centre their symbols on their pill the same way (ink centre
+  // 1781.0 px, mean of the fifteen pins; their pill's outline centres on
+  // 1780.7); the print pass's 84.78 %H on CC's un-moved pill put tall glyphs
+  // on its bottom bevel, 8 px above the prints'.
+  symbolRect: { ...TOKEN_CC_SYMBOL_RECT, topPct: TOKEN_CC_SYMBOL_RECT.topPct + TOKEN_RECUT_PCT },
   title: {
     rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
     sizePct: TITLE_SIZE_PCT,
@@ -1310,9 +1338,11 @@ const M15TOKEN: FrameProfile = {
   // change.
   // TODO 4.49 (d): left-aligned from CC's 8.54 %W to the set symbol's box
   // (symbolRect, 92.13 %W; the measured fit keeps TYPE_SYMBOL_GAP_PCT before
-  // its ink), and down TOKEN_TYPE_PRINT_DY onto the prints' baseline.
+  // its ink). The band rides the re-cut pill (TOKEN_RECUT_PX lower) and the
+  // text sits TOKEN_TYPE_PRINT_DY from the band rule, on the prints'
+  // baseline.
   type: {
-    rect: { topPct: 82.14, leftPct: 8.54, widthPct: 83.59, heightPct: 4.2 },
+    rect: { topPct: TOKEN_CC_TYPE_TOP_PCT + TOKEN_RECUT_PCT, leftPct: 8.54, widthPct: 83.59, heightPct: 4.2 },
     sizePct: TYPE_SIZE_PCT,
     dy: keepBaseline(0.034, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT_PCT + TOKEN_TYPE_PRINT_DY,
     fit: "measured",
@@ -1358,9 +1388,10 @@ const M15TOKEN: FrameProfile = {
 // the textless one, over a cream text box (74.2–92.7 %H) that replaces the
 // scrim over the art — the prints: TDOM #2 Knight, TM19 #1 Angel, TC17 #9
 // Cat Dragon, TXLN #7 / #10 Treasure, TC16 #9 Thopter.
-/** How far the text-box token's pill sits above the textless one's: 292 px
+/** How far the text-box token's pill sits above CC's textless one's: 292 px
  *  at HD (1712 → 1420 px, the pill's top outline; the prints' 1420–1422),
- *  in %H. */
+ *  in %H. CC's un-moved textless pill: the textless masters' own re-cut
+ *  (TOKEN_RECUT_PX) puts M15TOKEN's 8 px lower, which this one ignores. */
 const TOKEN_TEXT_PILL_UP_PCT = (292 / 2100) * 100;
 /** Twelve 2014–19 text-box prints set the type line's baseline at 1500 px
  *  (the "Token" ink ends 1498–1505, mean 1501.6, Scryfall PNGs at 1500 ×
@@ -1381,13 +1412,18 @@ const M15TOKENTEXT: FrameProfile = {
   // CC's pill onto the prints with the symbol, so M15TOKEN's print pass
   // (its symbol 8 px lower on CC's un-moved pill) does not apply here.
   symbolRect: { ...TOKEN_CC_SYMBOL_RECT, topPct: TOKEN_CC_SYMBOL_RECT.topPct - TOKEN_TEXT_PILL_UP_PCT },
-  // M15TOKEN's band on the pill, 292 px up (the pill's interior 1424–1530
-  // px), left-aligned from 8.54 %W; the text 8 px higher to the prints'
-  // baseline.
+  // CC's token band (TOKEN_CC_TYPE_TOP_PCT, centred on CC's textless pill)
+  // on this pill, 292 px up (the pill's interior 1424–1530 px), left-aligned
+  // from 8.54 %W as on M15TOKEN; the text on CC's pill's print offset
+  // (TOKEN_CC_TYPE_PRINT_DY) and 8 px higher to the prints' baseline. From
+  // CC's band, not M15TOKEN's: that one rides the textless master's own
+  // re-cut (TOKEN_RECUT_PX lower, its dy as much higher), which this master
+  // does not have — its own re-cut (TOKEN_REGULAR_RECUT) already put CC's
+  // pill on the prints.
   type: {
     ...M15TOKEN.type,
-    rect: { ...M15TOKEN.type.rect, topPct: M15TOKEN.type.rect.topPct - TOKEN_TEXT_PILL_UP_PCT },
-    dy: M15TOKEN.type.dy! + TOKEN_TEXT_TYPE_PRINT_DY,
+    rect: { ...M15TOKEN.type.rect, topPct: TOKEN_CC_TYPE_TOP_PCT - TOKEN_TEXT_PILL_UP_PCT },
+    dy: keepBaseline(0.034, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT_PCT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
   },
   // CC's rules box (8.6 / 71.43 / 82.8 × 20.48) with its top moved down
   // with the band (1564 px), 5 px inside the drawn box (1559–1947 px) at

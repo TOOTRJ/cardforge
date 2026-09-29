@@ -368,31 +368,55 @@ What a frame gives it:
   `m15artifact/pt/{color}` on `m15tokenartifact` (CC's silver plate for
   `c`, the colour's own otherwise, as TC18 #7 prints). Both plates are in
   `PLATE_INK` already, so the rules layout keeps its lines off them;
+- the 14 masters are RE-CUT onto the prints (owner decision 2026-09-29;
+  `TOKEN_TEXTLESS_RECUT` in `scripts/lib/cc-frames.mjs`, recorded in
+  `frame-sources.json`): the 15 textless pins print CC's window edge, type
+  pill and the pill's shadow 8.2 px lower on average, while the title bar,
+  the frame texture under the pill and the border sit where CC draws them.
+  The importer moves rows 1640–1856 (the window's straight sides through the
+  shadow) 8 px down as one piece over the top of the texture — the opened
+  rows repeat the window's sides, cross-faded over 24 rows; the bottom seam
+  fades over the shadow's last 2 rows only (`recutBand`, `blendBottom: 2`),
+  so the pill keeps its edge and the texture's step matches CC's own. Edge
+  by edge the pill is −0.9 … +1.6 px from the prints' means after the cut
+  (−8.9 … −6.4 before) and the alignment score over the pins 94.47 → 94.99 %
+  (a 6–10 px sweep peaks at 8 and 9). The profile rides the cut
+  (`TOKEN_RECUT_PX`, a unit test holds it to the importer's shift): the art
+  slot 8 px taller (69.38 %H), the type band on the moved pill;
 - the type line runs left-aligned from 8.54 %W to the set symbol, fitted
   (`fit: "measured"`), its baseline on the prints' 1800 HD px
-  (`TOKEN_TYPE_PRINT_DY`);
-- the set symbol has its own `symbolRect` (right edge 92.13 %W, centre
-  84.78 %H — the 15 prints' mean, not CC's 84.39, which sat 8 px above
-  them; `TOKEN_SYMBOL_CENTRE_PCT` — M15's 86 px box with the ink fit). Its
-  colour stays the card's rarity (new tokens save as common);
-- still to come: the gold small-caps name and the art slot (4.53).
+  (`TOKEN_TYPE_PRINT_DY`: the band rule sets it 4 px lower in its pill than
+  the prints do);
+- the set symbol has its own `symbolRect`: CC's box (right edge 92.13 %W),
+  centred on the re-cut pill (84.77 %H = CC's 84.39 + 8 px; the prints
+  centre theirs on their pill the same way), M15's 86 px box with the ink
+  fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
+  stays the card's rarity (a new token and a token's remix save as common);
+- still to come: the TALL text box (4.55), the gold small-caps name and
+  the art slot (4.53).
 
 **The text-box token (4.49 (b)): `m15tokentext` / `m15tokenartifacttext`.**
 The same arch with a cream type pill and a text box, from CC 'Regular
-(Bordered M15)' re-cut onto the prints (above), for tokens that print rules
-or flavour text (TDOM #2 Knight, TM19 #1 Angel, TXLN #7 Treasure). The
-profile (`M15TOKENTEXT`) is M15TOKEN's with:
+(Bordered M15)' re-cut onto the prints by its OWN band
+(`TOKEN_REGULAR_RECUT`: rows 1240–1559 64 px down, both seams cross-faded
+over 24 rows — not the textless masters' 8 px band above), for tokens that
+print rules or flavour text (TDOM #2 Knight, TM19 #1 Angel, TXLN #7
+Treasure). The profile (`M15TOKENTEXT`) is M15TOKEN's with:
 
 - the window ending at 1404 px (66.9 %H; 1408 on the see-through `c`; the
-  art slot to 67.2 %H, 7.6's overscan), the pill 292 px above the textless
-  one's;
+  art slot to 67.2 %H, 7.6's overscan), the pill 292 px above CC's textless
+  one's (M15TOKEN's re-cut pill sits 8 px lower still);
 - the type line on the pill, left from 8.54 %W, its baseline on the prints'
-  1500 px (twelve prints 1498–1505), the set symbol right-anchored at
-  92.13 %W and centred on 70.48 %H (CC's 67.43 moved down with the band) —
-  CC's own box (`TOKEN_CC_SYMBOL_RECT`), not M15TOKEN's print-moved one:
-  the re-cut already put CC's pill, and the symbol with it, on the prints
-  (TDOM #2 / TM19 #1 / TXLN #10 / TC16 #9 centre their symbols 0.5 px
-  below ours on average; M15TOKEN's box would sit 8 px low);
+  1500 px (twelve prints 1498–1505) — CC's band moved up with the pill
+  (`TOKEN_CC_TYPE_TOP_PCT`, `TOKEN_CC_TYPE_PRINT_DY`), not M15TOKEN's, which
+  rides the textless re-cut 8 px lower (spread as is, the band sat 8 px low
+  in the pill and its text 8 px higher to make up for it); the set symbol
+  right-anchored at 92.13 %W and centred on 70.48 %H (CC's 67.43 moved down
+  with the band) — CC's own box (`TOKEN_CC_SYMBOL_RECT`), not M15TOKEN's
+  (moved 8 px down with the textless re-cut): this master's own re-cut
+  already put CC's pill, and the symbol with it, on the prints (TDOM #2 /
+  TM19 #1 / TXLN #10 / TC16 #9 centre their symbols 0.5 px below ours on
+  average; M15TOKEN's box would sit 8 px low);
 - the rules in dark ink in CC's box moved down with the band and ending 5 px
   inside the drawn box as it starts (8.6 / 74.48 / 82.8 × 18 %: 1564–1942 px
   in the drawn box's 1559–1947; CC's ended at 1930, and a centred line sat
