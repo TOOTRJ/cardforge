@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { keepExtrasResult } from "@/lib/scryfall/search-scope";
 
 // ---------------------------------------------------------------------------
 // Scryfall server-side client.
@@ -275,25 +276,39 @@ export type ScryfallSearchOptions = {
   query: string;
   /** How many cards to return. Scryfall pages in chunks of 175; we trim. */
   limit?: number;
+  /** Send Scryfall's `include_extras` (tokens, emblems, art cards …) and
+   *  drop what PipGlyph can't import from the answer (keepExtrasResult)
+   *  before the limit. TODO 1.23: only the import dialog's "Tokens &
+   *  emblems" scope and the no-match fallback send it. */
+  includeExtras?: boolean;
+};
+
+export type ScryfallSearchOutcome = {
+  cards: ScryfallCard[];
+  /** Scryfall answered "no matches" (its 404). The only answer the search
+   *  route's extras fallback retries: an upstream failure (429, 5xx, a bad
+   *  body) never spends a second request. */
+  noMatches: boolean;
 };
 
 /**
- * Search Scryfall by free-form query. Returns trimmed card objects suitable
- * for typeahead. Errors (network, parse, 404 no-results) resolve to an
- * empty list rather than throwing — the caller decides whether to surface
- * "no matches" or a generic error.
+ * Search Scryfall by free-form query, saying whether Scryfall found nothing
+ * (TODO 1.23's fallback reads it). Errors (network aside, parse, 4xx/5xx)
+ * resolve to an empty list rather than throwing.
  */
-export async function searchCards({
+export async function searchCardsWithOutcome({
   query,
   limit = 12,
-}: ScryfallSearchOptions): Promise<ScryfallCard[]> {
+  includeExtras = false,
+}: ScryfallSearchOptions): Promise<ScryfallSearchOutcome> {
   const q = query.trim();
-  if (!q) return [];
+  if (!q) return { cards: [], noMatches: false };
 
   const url = `/cards/search?${new URLSearchParams({
     q,
     unique: "cards",
     order: "name",
+    ...(includeExtras ? { include_extras: "true" } : {}),
   })}`;
 
   const response = await scryfallFetch(url);
@@ -301,7 +316,7 @@ export async function searchCards({
     // 404 = no matches. Anything else (429/500/etc.) we treat as a soft
     // empty so the UI stays calm; the route handler still surfaces the
     // status code in its own response.
-    return [];
+    return { cards: [], noMatches: response.status === 404 };
   }
 
   let parsed: ScryfallSearchResponse;
@@ -309,10 +324,21 @@ export async function searchCards({
     const body: unknown = await response.json();
     parsed = scryfallSearchResponseSchema.parse(body);
   } catch {
-    return [];
+    return { cards: [], noMatches: false };
   }
 
-  return parsed.data.slice(0, Math.max(1, Math.min(limit, 50)));
+  const cards = includeExtras ? parsed.data.filter(keepExtrasResult) : parsed.data;
+  return { cards: cards.slice(0, Math.max(1, Math.min(limit, 50))), noMatches: false };
+}
+
+/**
+ * Search Scryfall by free-form query. Returns trimmed card objects suitable
+ * for typeahead. Errors (network, parse, 404 no-results) resolve to an
+ * empty list rather than throwing — the caller decides whether to surface
+ * "no matches" or a generic error.
+ */
+export async function searchCards(options: ScryfallSearchOptions): Promise<ScryfallCard[]> {
+  return (await searchCardsWithOutcome(options)).cards;
 }
 
 /**

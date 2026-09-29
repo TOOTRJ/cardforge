@@ -26,8 +26,10 @@ import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout
 //
 // One ORDERED rule table; the first rule whose match holds wins. The order
 // is the TODO's: 1.19's substitutes and for-good refusals, 1.17's borderless
-// families, the rest of 1.19 (Japan showcase, old tokens, full-art basics,
-// textless), the look-alikes (ZNR showcase, Expeditions), then 1.4's general
+// families, the rest of 1.19 (Japan showcase, old tokens), 1.23's 2015-frame
+// tokens (Roles, other token types, the M20 design), the rest of 1.19
+// (full-art basics, textless), the look-alikes (ZNR showcase, Expeditions),
+// then 1.4's general
 // signatures (pinned showcase runs, Future Sight, extended art, Nyx, coloured
 // artifacts on the old frames, layout kinds, and each border era with its
 // anatomy gaps).
@@ -142,6 +144,48 @@ const PLAIN_BAR_BASIC_SETS = ["thb", "2xm", "dmu", "spm", "sos", "plg25"] as con
 /** Per-set full-art basic designs (4.11). */
 const PER_SET_BASIC_SETS = ["ugl", "unh", "und", "neo", "lci"] as const;
 
+/** The day Core Set 2020 was released. Tokens printed from then on wear the
+ *  full-art token design (frames plan 4.48); the `frame: 2015` tokens before
+ *  it (M15 2014-07-18 → MH1 2019-05-30) wear the 2014–19 arch that
+ *  `m15token` draws (TODO 1.23). Scryfall has no field for the design:
+ *  `full_art` is set on 57 of the 58 vanilla tokens of M20's first year but
+ *  on only 4 token printings in all of 2024, so the date decides. */
+export const M20_TOKEN_DESIGN_FROM = "2019-07-12";
+
+/** The List (`plst`) reprints tokens and emblems under their original set's
+ *  collector prefix ("TXLN-10") in that set's design, while its
+ *  `released_at` is The List's own. These are the prefix sets released
+ *  before M20: 11 sets, 22 of The List's 71 token and emblem printings
+ *  (Scryfall 2026-09-28). tests/unit/scryfall/fixtures/
+ *  plst-token-prefixes.json holds the list to Scryfall's release dates. */
+export const PLST_PRE_M20_PREFIX_SETS: ReadonlySet<string> = new Set([
+  "takh", "tbng", "tc17", "tgrn", "tisd", "tnph", "tori", "tshm", "tsoi", "tuma", "txln",
+]);
+
+/** True when a printing wears the design M20 introduced (TODO 1.23): released
+ *  on or after 2019-07-12, or a `plst` reprint whose collector prefix names a
+ *  set that isn't one of PLST_PRE_M20_PREFIX_SETS (plst TKHM-19 yes, plst
+ *  TXLN-10 no). A printing with no release date (an older cached payload)
+ *  isn't: it keeps the answer it had. Emblems follow the same rule (4.52). */
+export function isM20DesignPrinting(
+  card: Pick<ScryfallCard, "set" | "collector_number" | "released_at">,
+): boolean {
+  if ((card.set ?? "").trim().toLowerCase() === "plst") {
+    const prefix = /^([a-z0-9]+)-/i.exec((card.collector_number ?? "").trim())?.[1];
+    if (prefix) return !PLST_PRE_M20_PREFIX_SETS.has(prefix.toLowerCase());
+  }
+  const released = (card.released_at ?? "").trim();
+  return released !== "" && released >= M20_TOKEN_DESIGN_FROM;
+}
+
+/** Nyx tokens Scryfall doesn't flag with the `enchantment` frame effect
+ *  (frames plan 4.51, checked by eye 2026-09-29): Glimmer TDSK #4, Horror
+ *  TDSK #10 and Shrine SLD #1835 print the starfield in their name pill. */
+const NYX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = {
+  tdsk: ["4", "10"],
+  sld: ["1835"],
+};
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -236,6 +280,8 @@ type Match = {
   /** `full_art`, or the `fullart` frame effect. */
   fullArt?: boolean;
   textless?: boolean;
+  /** The printing wears the design M20 introduced (isM20DesignPrinting). */
+  m20Design?: boolean;
   /** `type_line` is exactly "Card" (a double-faced substitute). */
   typeLineCard?: true;
   singleBasic?: boolean;
@@ -289,6 +335,7 @@ type Ctx = {
   collector: string;
   collectorNumber: number | null;
   fullArt: boolean;
+  m20Design: boolean;
 };
 
 const lower = (list: readonly string[] | null | undefined) =>
@@ -310,6 +357,7 @@ function contextOf(card: ScryfallCard, facts: PrintingFacts): Ctx {
     collector,
     collectorNumber: leading ? Number(leading[1]) : null,
     fullArt: card.full_art === true || effects.has("fullart"),
+    m20Design: isM20DesignPrinting(card),
   };
 }
 
@@ -344,6 +392,7 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.layouts && !match.layouts.includes((card.layout ?? "").toLowerCase())) return false;
   if (match.fullArt !== undefined && ctx.fullArt !== match.fullArt) return false;
   if (match.textless !== undefined && (card.textless === true) !== match.textless) return false;
+  if (match.m20Design !== undefined && ctx.m20Design !== match.m20Design) return false;
   if (match.typeLineCard && (card.type_line ?? "").trim() !== "Card") return false;
   if (match.singleBasic !== undefined && facts.singleBasic !== match.singleBasic) return false;
   if (match.flavorName && !card.flavor_name) return false;
@@ -550,6 +599,7 @@ type GapKey =
   | "marks"
   | "colourshifted"
   | "nickname"
+  | "nyx-dress"
   | "nyx"
   | "light-box";
 
@@ -628,8 +678,19 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't print the nickname line yet",
     blockedBy: "6.3",
   },
+  // A token's Nyx is a dress of the token frames (4.51: the starfield in the
+  // name pill on the M20 design, a textured frame on the 2014–19 one), not
+  // the non-token m15nyx frame 4.7 builds — so the token kind names 4.51.
+  "nyx-dress": {
+    match: {
+      kinds: ["token"],
+      anyOf: [{ effectsAny: ["enchantment"] }, { collectorIds: NYX_TOKEN_PINS }],
+    },
+    reason: "PipGlyph doesn't draw the Nyx dress on its token frames yet",
+    blockedBy: "4.51",
+  },
   nyx: {
-    match: { effectsAny: ["enchantment"] },
+    match: { effectsAny: ["enchantment"], notKinds: ["token"] },
     reason: "PipGlyph doesn't draw the Nyx starfield on this frame yet",
     blockedBy: "4.7",
   },
@@ -640,23 +701,36 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   },
 };
 
-/** The base rule, preceded by one `nearest` rule per gap ('era/2015+crown'). */
+/** The base rule, preceded by one `nearest` rule per gap ('era/2015+crown').
+ *  A gap rule names the item that finishes the match (its `blockedBy`).
+ *  When the base is itself only `nearest` (the M20 token design on the arch
+ *  frame, TODO 1.23), the gap rule keeps the base's reason before its own,
+ *  and records no FrameMatch.gaps: the frame is a stand-in whatever the
+ *  gaps, so the import dialog must still ask (C1 reads the gaps). */
 function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
+  const exactBase = base.outcome.status === "exact";
+  const baseReason = base.outcome.reason;
   return [
-    ...gaps.map((gap, index): Rule => ({
-      key: `${base.key}+${gap}`,
-      exactLabel: base.exactLabel,
-      match: { allOf: [base.match, GAPS[gap].match] },
-      outcome: {
-        ...base.outcome,
-        status: base.outcome.status === "exact" ? "nearest" : base.outcome.status,
-        reason: GAPS[gap].reason,
-        blockedBy: GAPS[gap].blockedBy,
-      },
-      // The earlier gaps didn't hold (first match wins); the later ones are
-      // checked at resolve time (FrameMatch.gaps).
-      gaps: gaps.slice(index),
-    })),
+    ...gaps.map((gap, index): Rule => {
+      const gapReason = GAPS[gap].reason;
+      return {
+        key: `${base.key}+${gap}`,
+        exactLabel: base.exactLabel,
+        match: { allOf: [base.match, GAPS[gap].match] },
+        outcome: {
+          ...base.outcome,
+          status: exactBase ? "nearest" : base.outcome.status,
+          reason:
+            exactBase || baseReason === undefined
+              ? gapReason
+              : (ctx: Ctx) => `${textOf(baseReason, ctx)}; ${textOf(gapReason, ctx)}`,
+          blockedBy: GAPS[gap].blockedBy,
+        },
+        // The earlier gaps didn't hold (first match wins); the later ones are
+        // checked at resolve time (FrameMatch.gaps).
+        ...(exactBase ? { gaps: gaps.slice(index) } : {}),
+      };
+    }),
     base,
   ];
 }
@@ -665,6 +739,7 @@ function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
 const M15_ERA_GAPS: readonly GapKey[] = [
   "layout",
   "dfc",
+  "nyx-dress",
   "nyx",
   "etched",
   "border",
@@ -1008,6 +1083,58 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.43",
     },
   },
+  // --- 1.23: the 2015-frame tokens ------------------------------------------
+  // WOE's Role cards (TWOE #15–17, TWOC #1–2, plst TWOE-17) are Scryfall's
+  // `flip` layout: two Roles, one upside down. The import takes the front
+  // Role on the token kind (the owner's override of 1.21's B2, for Roles
+  // only) and logs the printing; no two-Role layout is planned (4.51).
+  {
+    key: "token/role",
+    exactLabel: "Role token card (two Roles, one upside down)",
+    match: { kinds: ["token"], layouts: ["flip"] },
+    outcome: {
+      status: "unsupported",
+      template: { family: "m15" },
+      reason: "PipGlyph doesn't make a card with two Roles; the import takes the front Role",
+    },
+  },
+  // Token types the token frames don't print (logged for 1.6): "Token
+  // Planeswalker — Jace" (TFRA #5, loyalty abilities), "Token Land" (TDSK
+  // #16, TECL #11) and "Token Land Creature" (TBRO #3, TM3C #19, TFRA #9).
+  {
+    key: "token/other-type",
+    exactLabel: ({ facts }) =>
+      facts.cardTypes.has("planeswalker") ? "Planeswalker token" : "Land token",
+    match: { kinds: ["token"], typeWordsAny: ["planeswalker", "land"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: ({ facts }) =>
+        facts.cardTypes.has("planeswalker")
+          ? "PipGlyph's token frames don't print a planeswalker token's loyalty yet"
+          : "PipGlyph's token frames don't print a land token yet",
+    },
+  },
+  // Every token from Core Set 2020 on wears the full-art token design, which
+  // PipGlyph doesn't draw yet (4.48): the 2014–19 arch (m15token, or the
+  // artifact arch for an Artifact) is the nearest. Once 4.48's templates are
+  // verified this rule names them instead (`onceVerified`) and becomes exact
+  // with these gaps; until then a gap only names the item that finishes the
+  // match. The earlier 2015-frame tokens ARE the arch: era/2015, exact.
+  ...withGaps(
+    {
+      key: "token/m20",
+      exactLabel: "M20 full-art token frame",
+      match: { frames: ["2015"], kinds: ["token"], m20Design: true },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        reason: "PipGlyph doesn't have the current full-art token frame yet",
+        blockedBy: "4.48",
+      },
+    },
+    ["nyx-dress", "border", "crown", "two-colour"],
+  ),
   {
     key: "fullart/basic/coloured-border",
     exactLabel: "Full-art basic land with a coloured border",

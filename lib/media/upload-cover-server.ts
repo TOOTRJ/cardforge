@@ -6,7 +6,7 @@ import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
-import { normalizeUploadOrientation } from "@/lib/media/orientation";
+import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 
 // ---------------------------------------------------------------------------
 // Moderated upload for the `set-covers` bucket — deck covers and custom card
@@ -66,10 +66,11 @@ export async function uploadCoverServerAction(
 
   // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts): the
   // deck page shows a phone-photo cover upright, and so must its OG image
-  // and a set icon's bake (TODO 3.14).
+  // and a set icon's bake (TODO 3.14). No camera metadata either — a public
+  // deck's cover is public (lib/media/upload-bytes.ts, TODO 3.14a).
   let stored: Buffer;
   try {
-    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+    stored = await prepareUploadBytes(buffer, metadata, { maxBytes: MAX_BYTES });
   } catch {
     return { ok: false, error: "That doesn't look like an image." };
   }

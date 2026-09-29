@@ -224,8 +224,11 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
 //     enchantments (the WOE Virtues), 8 artifacts (Equipment, a Book), 5 FIN
 //     Town lands and 1 sorcery (Twice Upon a Time).
 //   • flip — the P/T is ink on the cream band, drawn only for a P/T type; the
-//     master paints no box. Kamigawa's flips are creatures; WOE's Role tokens
-//     ("Token Enchantment — Aura Role") are tokens.
+//     master paints no box. Kamigawa's flips are creatures. WOE's Role tokens
+//     ("Token Enchantment — Aura Role") are Scryfall flip cards too, but
+//     since TODO 1.23 they import on the TOKEN kind, front Role only (the
+//     owner's override of B2 for Roles); a token typed on the flip frame by
+//     hand stays drawable.
 //   • saga — Saga is an enchantment subtype; the chapter rail replaces the
 //     rules box and the profile has no P/T slot (a FIN Summon, "Enchantment
 //     Creature — Saga Dragon", stays the enchantment with "Creature" in

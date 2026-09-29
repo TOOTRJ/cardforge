@@ -1,0 +1,475 @@
+{
+  "_note": "The List (plst) token and emblem printings: Scryfall /cards/search q=\"(t:token game:paper) OR t:emblem\" restricted to set plst, unique=prints, include_extras=true (captured 2026-09-28), and the release date of each collector prefix's set from Scryfall /sets (captured 2026-09-29). TODO 1.23 pins the prefixes whose set was released before M20 (2019-07-12).",
+  "printings": [
+    {
+      "collector_number": "LCI-1",
+      "name": "Copy",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "T2XM-2",
+      "name": "Shapeshifter",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TAFR-1",
+      "name": "Angel",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TAKH-16",
+      "name": "Cat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TAKH-17",
+      "name": "Warrior",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TBLB-7",
+      "name": "Fish",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TBNG-2",
+      "name": "Cat Soldier",
+      "layout": "token",
+      "frame": "2003"
+    },
+    {
+      "collector_number": "TC17-1",
+      "name": "Cat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TC17-3",
+      "name": "Rat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TC21-25",
+      "name": "Golem",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TC21-26",
+      "name": "Golem",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TC21-27",
+      "name": "Golem",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TCMM-40",
+      "name": "Clue",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TCMR-2",
+      "name": "Soldier",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TDMC-8",
+      "name": "Egg",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TELD-7",
+      "name": "Dwarf",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TGRN-1",
+      "name": "Angel",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TGRN-2",
+      "name": "Soldier",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TIKO-10",
+      "name": "Beast",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TISD-5",
+      "name": "Vampire",
+      "layout": "token",
+      "frame": "2003"
+    },
+    {
+      "collector_number": "TISD-6",
+      "name": "Wolf",
+      "layout": "token",
+      "frame": "2003"
+    },
+    {
+      "collector_number": "TKHM-19",
+      "name": "Treasure",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TKHM-21",
+      "name": "Tibalt, Cosmic Impostor Emblem",
+      "layout": "emblem",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TKHM-8",
+      "name": "Shapeshifter",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TLCC-1",
+      "name": "Shapeshifter",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TM20-1",
+      "name": "Ajani's Pridemate",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TM21-11",
+      "name": "Cat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TM21-20",
+      "name": "Cat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TM21-3",
+      "name": "Griffin",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TM3C-1",
+      "name": "Eldrazi",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMH2-17",
+      "name": "Food",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMH3-2",
+      "name": "Eldrazi Spawn",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMH3-34",
+      "name": "Treasure",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMID-13",
+      "name": "Wolf",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMID-16",
+      "name": "Clue",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMKC-12",
+      "name": "Kobolds of Kher Keep",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMKC-21",
+      "name": "Tiny",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMKM-1",
+      "name": "Dog",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMKM-15",
+      "name": "Clue",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TMOC-2",
+      "name": "Sliver",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TNEC-12",
+      "name": "Thopter",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TNEO-17",
+      "name": "Treasure",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TNPH-1",
+      "name": "Beast",
+      "layout": "token",
+      "frame": "2003"
+    },
+    {
+      "collector_number": "TONE-2",
+      "name": "Samurai",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TORI-12",
+      "name": "Jace, Telepath Unbound Emblem",
+      "layout": "emblem",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TORI-13",
+      "name": "Liliana, Defiant Necromancer Emblem",
+      "layout": "emblem",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TORI-14",
+      "name": "Chandra, Roaring Flame Emblem",
+      "layout": "emblem",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TORI-5",
+      "name": "Zombie",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TORI-7",
+      "name": "Ashaya, the Awoken World",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TOTJ-1",
+      "name": "Copy",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TOTJ-3",
+      "name": "Ox",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSHM-12",
+      "name": "Elf Warrior",
+      "layout": "token",
+      "frame": "2003"
+    },
+    {
+      "collector_number": "TSNC-10",
+      "name": "Dog",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSNC-12",
+      "name": "Citizen",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSNC-9",
+      "name": "Cat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSOI-10",
+      "name": "Human Cleric",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSOI-18",
+      "name": "Arlinn, Embraced by the Moon Emblem",
+      "layout": "emblem",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSTX-5",
+      "name": "Pest",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TSTX-8",
+      "name": "Lukka, Wayward Bonder Emblem",
+      "layout": "emblem",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TTSR-10",
+      "name": "Ape",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TUMA-11",
+      "name": "Soldier",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TWOC-11",
+      "name": "Faerie Rogue",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TWOC-15",
+      "name": "Saproling",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TWOE-11",
+      "name": "Food",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TWOE-17",
+      "name": "Wicked // Cursed",
+      "layout": "flip",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TWOE-7",
+      "name": "Rat",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TXLN-1",
+      "name": "Vampire",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TXLN-10",
+      "name": "Treasure",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TXLN-6",
+      "name": "Plant",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TZNR-3",
+      "name": "Cat Beast",
+      "layout": "token",
+      "frame": "2015"
+    },
+    {
+      "collector_number": "TZNR-8",
+      "name": "Plant",
+      "layout": "token",
+      "frame": "2015"
+    }
+  ],
+  "prefix_set_released_at": {
+    "lci": "2023-11-17",
+    "t2xm": "2020-08-07",
+    "tafr": "2021-07-23",
+    "takh": "2017-04-28",
+    "tblb": "2024-08-02",
+    "tbng": "2014-02-07",
+    "tc17": "2017-08-25",
+    "tc21": "2021-04-23",
+    "tcmm": "2023-08-04",
+    "tcmr": "2020-11-20",
+    "tdmc": "2022-09-09",
+    "teld": "2019-10-04",
+    "tgrn": "2018-10-05",
+    "tiko": "2020-04-24",
+    "tisd": "2011-09-30",
+    "tkhm": "2021-02-05",
+    "tlcc": "2023-11-17",
+    "tm20": "2019-07-12",
+    "tm21": "2020-07-03",
+    "tm3c": "2024-06-14",
+    "tmh2": "2021-06-18",
+    "tmh3": "2024-06-14",
+    "tmid": "2021-09-24",
+    "tmkc": "2024-02-09",
+    "tmkm": "2024-02-09",
+    "tmoc": "2023-04-21",
+    "tnec": "2022-02-18",
+    "tneo": "2022-02-18",
+    "tnph": "2011-05-13",
+    "tone": "2023-02-03",
+    "tori": "2015-07-17",
+    "totj": "2024-04-19",
+    "tshm": "2008-05-02",
+    "tsnc": "2022-04-29",
+    "tsoi": "2016-04-08",
+    "tstx": "2021-04-23",
+    "ttsr": "2021-03-19",
+    "tuma": "2018-12-07",
+    "twoc": "2023-09-08",
+    "twoe": "2023-09-08",
+    "txln": "2017-09-29",
+    "tznr": "2020-09-25"
+  }
+}

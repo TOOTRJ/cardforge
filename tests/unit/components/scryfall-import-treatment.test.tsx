@@ -151,8 +151,8 @@ describe("borderless Sheoldred (DMU #435) — 1.18: the bordered frame, Borderle
 });
 
 describe("the other outcomes", () => {
-  it("an exact printing (a 2015 full-art Cat token) imports without asking", async () => {
-    const onImport = await pickPrinting("t2xm-4");
+  it("an exact printing (a 2014–19 Soldier token) imports without asking", async () => {
+    const onImport = await pickPrinting("tdom-3");
     expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
     expect(screen.getByText(/the frame \(an exact match: .*\) are all replaced/)).toBeTruthy();
     const payload = await commit(onImport);

@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
-import { normalizeUploadOrientation } from "@/lib/media/orientation";
+import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import {
   isDefaultProfileMedia,
   type ProfileMediaKind,
@@ -125,10 +125,11 @@ export async function uploadProfileMediaServerAction(
 
   // Upright pixels, no EXIF orientation tag (lib/media/orientation.ts): the
   // settings page shows a phone-photo avatar upright, and so must the
-  // profile OG image, which is drawn by Satori (TODO 3.14).
+  // profile OG image, which is drawn by Satori (TODO 3.14). No camera
+  // metadata — a selfie's GPS is where someone lives (TODO 3.14a).
   let stored: Buffer;
   try {
-    stored = (await normalizeUploadOrientation(buffer, metadata, { maxBytes: MAX_BYTES })).buffer;
+    stored = await prepareUploadBytes(buffer, metadata, { maxBytes: MAX_BYTES });
   } catch {
     return { ok: false, error: "That doesn't look like a valid image." };
   }

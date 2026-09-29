@@ -20,6 +20,8 @@ Custom MTG-style card creator. Next.js 16 App Router + Supabase + Tailwind v4
   `scripts/lib/prod-guard.mjs`). `npm run dev:prod` is the deliberate, loud
   exception (reads `.env.prod-peek`). Never weaken these guards, never put
   production keys back in `.env.local`, never use `--with-data` branching.
+  An owner-run script reads production's key ONLY through `promptHidden()`
+  (`scripts/lib/hidden-prompt.mjs`) — a `_writeToOutput` filter echoed it.
 - The repo is **public**: no credentials in seeds, fixtures or docs — not even
   test passwords.
 
@@ -121,6 +123,12 @@ Rules and gotchas:
   for OG/JSON-LD/email), "Remove" swaps in another built-in, and
   `chooseDefaultProfileMediaAction` only accepts paths `isDefaultProfileMedia`
   recognises. The seeded e2e user is pre-onboarded (`scripts/seed-e2e.mjs`).
+- Uploads: every server action that stores a user's file passes it through
+  `prepareUploadBytes()` (`lib/media/upload-bytes.ts`) — upright
+  (`lib/media/orientation.ts`, TODO 3.14) and with no camera metadata
+  (`lib/media/strip-metadata.ts`, TODO 3.14a: EXIF/GPS, XMP, IPTC, text
+  chunks… dropped at the container level, pixels + ICC kept byte-exact). A
+  new upload path does the same; a client-side strip never counts.
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
