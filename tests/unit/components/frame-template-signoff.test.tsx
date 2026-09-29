@@ -170,6 +170,126 @@ describe("FrameTemplateSignOff", () => {
     expect(row.querySelectorAll("button")).toHaveLength(0);
   });
 
+  describe("a colour below the 90 % warning line (owner, 2026-09-28)", () => {
+    const lowView = (colorKey: string, overall: number) => {
+      const base = view(colorKey, "scored");
+      return { ...base, score: { ...base.score, overall, low: true } };
+    };
+    const renderLow = () =>
+      render(
+        <FrameTemplateSignOff
+          template="saga"
+          currentVersion={32}
+          currentHash="none"
+          colours={[view("w", "scored"), lowView("u", 12.4), lowView("b", 20)]}
+          ready
+          publishableCount={3}
+        />,
+      );
+    const tickAndPublish = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("signoff-confirm"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("signoff-publish"));
+      });
+    };
+
+    it("marks each low row with its match, and only those", () => {
+      renderLow();
+      expect(screen.getByTestId("signoff-colour-w").textContent).toMatch(/frame 5\.5% · 94\.5% match/);
+      expect(screen.queryByTestId("signoff-low-w")).toBeNull();
+      expect(screen.getByTestId("signoff-colour-u").textContent).toMatch(/87\.6% match/);
+      expect(screen.getByTestId("signoff-low-u").textContent).toMatch(/Below 90% match/);
+      expect(screen.getByTestId("signoff-low-b")).toBeTruthy();
+    });
+
+    it("Publish asks first, naming the low colours; Go back publishes nothing", async () => {
+      renderLow();
+      await tickAndPublish();
+      const confirm = await screen.findByTestId("signoff-low-confirm");
+      expect(confirm.textContent).toMatch(/2 colours score below 90% — publish anyway\?/);
+      expect(confirm.textContent).toMatch(/U 87\.6%, B 80%/);
+      expect(actions.signOffFrameTemplateAction).not.toHaveBeenCalled();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+      });
+      await waitFor(() => expect(screen.queryByTestId("signoff-low-confirm")).toBeNull());
+      expect(actions.signOffFrameTemplateAction).not.toHaveBeenCalled();
+    });
+
+    it("Publish anyway still publishes (a warning, never a block)", async () => {
+      actions.signOffFrameTemplateAction.mockResolvedValue({ ok: true, published: ["w", "u", "b"], sampleOnly: [] });
+      renderLow();
+      await tickAndPublish();
+      await act(async () => {
+        fireEvent.click(await screen.findByTestId("signoff-publish-anyway"));
+      });
+      await waitFor(() =>
+        expect(actions.signOffFrameTemplateAction).toHaveBeenCalledWith({ template: "saga", confirmed: true }),
+      );
+      expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/W, U, B published/));
+    });
+
+    it("one low colour reads in the singular", async () => {
+      render(
+        <FrameTemplateSignOff
+          template="saga"
+          currentVersion={32}
+          currentHash="none"
+          colours={[view("w", "scored"), lowView("u", 12.4)]}
+          ready
+          publishableCount={2}
+        />,
+      );
+      await tickAndPublish();
+      expect((await screen.findByTestId("signoff-low-confirm")).textContent).toMatch(
+        /1 colour scores below 90% — publish anyway\?/,
+      );
+    });
+
+    it("a stale low score is marked but doesn't ask at Publish (it isn't published)", async () => {
+      actions.signOffFrameTemplateAction.mockResolvedValue({ ok: true, published: ["w"], sampleOnly: [] });
+      const stale = view("u", "stale");
+      render(
+        <FrameTemplateSignOff
+          template="saga"
+          currentVersion={32}
+          currentHash="none"
+          colours={[view("w", "scored"), { ...stale, score: { ...stale.score, overall: 30, low: true } }]}
+          ready
+          publishableCount={1}
+        />,
+      );
+      expect(screen.getByTestId("signoff-low-u")).toBeTruthy();
+      await tickAndPublish();
+      await waitFor(() => expect(actions.signOffFrameTemplateAction).toHaveBeenCalled());
+      expect(screen.queryByTestId("signoff-low-confirm")).toBeNull();
+    });
+
+    it("a Score below the line says so in its toast", async () => {
+      actions.scoreFrameColorAction.mockResolvedValue({ ok: true, overall: 14, referenceId: "r" });
+      render(
+        <FrameTemplateSignOff
+          template="saga"
+          currentVersion={32}
+          currentHash="none"
+          colours={[view("u", "unscored")]}
+          ready={false}
+          publishableCount={0}
+        />,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Score$/ }));
+      });
+      await waitFor(() =>
+        expect(toast.success).toHaveBeenCalledWith(
+          "saga/u scored: frame 14% · 86% match. Below 90% — check it in Compare.",
+        ),
+      );
+    });
+  });
+
   it("a score recorded by the colour's own tick says so", () => {
     const ticked = view("w", "scored");
     render(

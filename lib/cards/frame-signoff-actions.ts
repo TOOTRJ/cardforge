@@ -13,7 +13,7 @@ import {
   latestScoreEvents,
   recordFrameReviewEvent,
 } from "@/lib/cards/frame-review-events";
-import { signOffStatus } from "@/lib/cards/frame-signoff";
+import { SIGN_OFF_LOW_MATCH_PCT, signOffStatus } from "@/lib/cards/frame-signoff";
 import { revalidateFramePickers } from "@/lib/cards/frame-picker-revalidate";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { scoreFrameCombo } from "@/lib/frames/score-combo";
@@ -188,6 +188,10 @@ export async function signOffFrameTemplateAction(
         status.colours.map((c) => [c.colorKey, c.overall]),
       ),
       sampleOnly: status.sampleOnly,
+      // Published anyway below the warning line (the view's confirm step
+      // named them) — kept for the history, never a block.
+      lowMatch: status.lowPublishable,
+      lowMatchBelowPct: SIGN_OFF_LOW_MATCH_PCT,
     },
   });
 

@@ -197,6 +197,18 @@ describe("signOffFrameTemplateAction", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("a colour below the 90 % warning line is published anyway and named in the signoff event", async () => {
+    // Owner, 2026-09-28: a warning (the view's confirm step), never a block.
+    const scores = sagaScores();
+    scores.set("u", { ...scores.get("u")!, scoreJson: { overall: 12.5 } }); // 87.5 % match
+    state.scores = scores;
+    const stub = db();
+    const result = await signOffFrameTemplateAction({ template: "saga", confirmed: true });
+    expect(result.ok && result.published).toContain("u");
+    const signoff = events(stub).find((e) => e.action === "signoff")!;
+    expect(signoff.score_json).toMatchObject({ lowMatch: ["u"], lowMatchBelowPct: 90 });
+  });
+
   it("refuses a stale score (the override changed since)", async () => {
     state.scores = sagaScores();
     state.overrides = { saga: { type: { rect: { topPct: 85 } } } };

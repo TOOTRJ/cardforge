@@ -3,10 +3,18 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Footprints, Gauge, Loader2 } from "lucide-react";
+import { ArrowRight, Footprints, Gauge, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
 import {
@@ -17,6 +25,11 @@ import {
   scoreFrameColorAction,
   signOffFrameTemplateAction,
 } from "@/lib/cards/frame-signoff-actions";
+import {
+  SIGN_OFF_LOW_MATCH_PCT,
+  frameMatchPct,
+  isLowFrameScore,
+} from "@/lib/cards/frame-signoff";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -27,7 +40,9 @@ import { cn } from "@/lib/utils";
 // scored on today's renderer + the owner's tick. The server re-derives the
 // same rule (signOffFrameTemplateAction); this view only shows it. Colours
 // with no real printing stay on their own checkbox, which also withdraws a
-// single colour.
+// single colour. A colour whose match is below SIGN_OFF_LOW_MATCH_PCT is
+// marked on its row and named in a confirm step before Publish — a warning,
+// never a block (owner, 2026-09-28).
 // ---------------------------------------------------------------------------
 
 export type SignOffColourView = {
@@ -43,7 +58,10 @@ export type SignOffColourView = {
   /** The recorded auto-score and whether it counts today. */
   score: {
     state: "scored" | "stale" | "unscored" | "no-reference";
+    /** Edge difference, 0–100, lower is better (lib/frames/align.ts). */
     overall: number | null;
+    /** Its match (100 − overall) is below SIGN_OFF_LOW_MATCH_PCT. */
+    low?: boolean;
     reasons: string[];
     createdAt: string | null;
     /** Recorded by a per-colour tick (its "verify" event), not by Score. */
@@ -85,7 +103,21 @@ function ScoreCell({ view }: { view: SignOffColourView }) {
       )}
       title={score.reasons.join(" ")}
     >
-      <span className="font-semibold tabular-nums">frame {score.overall}%</span>
+      <span className="font-semibold tabular-nums">
+        frame {score.overall}%
+        {score.overall !== null ? (
+          <span className="font-normal text-muted"> · {frameMatchPct(score.overall)}% match</span>
+        ) : null}
+      </span>
+      {score.low ? (
+        <span
+          className="flex items-center gap-1 text-[10px] font-semibold text-gold-strong"
+          data-testid={`signoff-low-${view.colorKey}`}
+        >
+          <TriangleAlert className="h-3 w-3 shrink-0" aria-hidden />
+          Below {SIGN_OFF_LOW_MATCH_PCT}% match — check it in Compare
+        </span>
+      ) : null}
       <span className="text-[10px] text-subtle">
         {score.state === "stale" ? "stale — score again" : "current"}
         {score.fromTick ? " · from the tick" : ""}
@@ -114,7 +146,11 @@ export function FrameTemplateSignOff({
   const [scoring, setScoring] = useState<string | null>(null);
   const [scoringAll, setScoringAll] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [lowConfirmOpen, setLowConfirmOpen] = useState(false);
   const [publishing, startPublish] = useTransition();
+
+  // Colours Publish would stamp whose match is below the warning line.
+  const lowColours = colours.filter((c) => c.score.state === "scored" && c.score.low);
 
   const scoreOne = async (colorKey: string): Promise<boolean> => {
     setScoring(colorKey);
@@ -124,7 +160,14 @@ export function FrameTemplateSignOff({
         toast.error(`${template}/${colorKey}: ${result.error}`);
         return false;
       }
-      toast.success(`${template}/${colorKey} scored: frame ${result.overall}%.`);
+      const match = frameMatchPct(result.overall);
+      toast.success(
+        `${template}/${colorKey} scored: frame ${result.overall}% · ${match}% match.${
+          isLowFrameScore(result.overall)
+            ? ` Below ${SIGN_OFF_LOW_MATCH_PCT}% — check it in Compare.`
+            : ""
+        }`,
+      );
       return true;
     } catch {
       toast.error(`${template}/${colorKey}: the score request failed — try again.`);
@@ -152,6 +195,7 @@ export function FrameTemplateSignOff({
   const publish = () =>
     startPublish(async () => {
       const result = await signOffFrameTemplateAction({ template, confirmed: true });
+      setLowConfirmOpen(false);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -178,7 +222,10 @@ export function FrameTemplateSignOff({
         {colours.map((view) => (
           <li key={view.colorKey}>
             <SurfaceCard
-              className="flex flex-col gap-3 p-4"
+              className={cn(
+                "flex flex-col gap-3 p-4",
+                view.score.low && "border-gold/50",
+              )}
               data-testid={`signoff-colour-${view.colorKey}`}
             >
               <div className="flex flex-wrap items-center gap-3">
@@ -329,7 +376,7 @@ export function FrameTemplateSignOff({
           <Button
             type="button"
             disabled={!ready || !confirmed || publishing}
-            onClick={publish}
+            onClick={() => (lowColours.length > 0 ? setLowConfirmOpen(true) : publish())}
             data-testid="signoff-publish"
           >
             {publishing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
@@ -337,6 +384,50 @@ export function FrameTemplateSignOff({
           </Button>
         </div>
       </SurfaceCard>
+
+      {/* Low scores warn, never block: one more click names them. */}
+      <Dialog open={lowConfirmOpen} onOpenChange={setLowConfirmOpen}>
+        <DialogContent size="sm" data-testid="signoff-low-confirm">
+          <DialogHeader>
+            <DialogTitle>
+              {lowColours.length} colour{lowColours.length === 1 ? " scores" : "s score"} below{" "}
+              {SIGN_OFF_LOW_MATCH_PCT}% — publish anyway?
+            </DialogTitle>
+            <DialogDescription>
+              Below {SIGN_OFF_LOW_MATCH_PCT}% match with the reference:{" "}
+              {lowColours
+                .map(
+                  (c) =>
+                    `${c.colorKey.toUpperCase()} ${
+                      c.score.overall === null ? "?" : frameMatchPct(c.score.overall)
+                    }%`,
+                )
+                .join(", ")}
+              . Publishing is still allowed — open Compare first if you&apos;re not
+              sure the frame is right.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="px-5 pb-5 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setLowConfirmOpen(false)}
+              disabled={publishing}
+            >
+              Go back
+            </Button>
+            <Button
+              type="button"
+              onClick={publish}
+              disabled={publishing}
+              data-testid="signoff-publish-anyway"
+            >
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+              Publish anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

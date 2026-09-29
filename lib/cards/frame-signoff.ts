@@ -18,10 +18,30 @@ import type { FrameColorKey } from "@/lib/cards/frame-reference-registry";
 // about another card). A colour with no real
 // printing can't be scored — it stays out of the template sign-off and is
 // published by its own checkbox after the owner has walked its sample
-// content. No score threshold: the number is information, the tick is the
-// decision (an owner question in the PR). Colours stay individually
-// withdrawable (the per-colour checkbox). Pure.
+// content. Colours stay individually withdrawable (the per-colour checkbox).
+//
+// Low scores WARN, never block (owner, 2026-09-28): a colour whose match is
+// below SIGN_OFF_LOW_MATCH_PCT is marked on its row and named in a confirm
+// step before Publish; publishing stays allowed. The recorded number is an
+// edge DIFFERENCE (0–100, lower is better — lib/frames/align.ts), so the
+// match is 100 − it: "below 90 %" = a difference above 10. Pure.
 // ---------------------------------------------------------------------------
+
+/** The sign-off warns (never blocks) when a colour's frame match — 100 −
+ *  the recorded edge difference — is below this, in percent (owner,
+ *  2026-09-28). */
+export const SIGN_OFF_LOW_MATCH_PCT = 90;
+
+/** A recorded frame score (edge difference, 0–100, lower is better) as a
+ *  match percentage, one decimal: 4.9 → 95.1. */
+export function frameMatchPct(overall: number): number {
+  return Math.round((100 - overall) * 10) / 10;
+}
+
+/** A recorded frame score whose match is below the warning line. */
+export function isLowFrameScore(overall: number | null): boolean {
+  return overall !== null && 100 - overall < SIGN_OFF_LOW_MATCH_PCT;
+}
 
 /** The part of a "score" (or scored "verify") event the rule reads. */
 export type RecordedScore = {
@@ -44,8 +64,12 @@ export type SignOffColourInput = {
 export type SignOffColourStatus = {
   colorKey: FrameColorKey;
   state: "scored" | "stale" | "unscored" | "no-reference";
-  /** The recorded frame score (0–100), when there is one. */
+  /** The recorded frame score (edge difference, 0–100, lower is better),
+   *  when there is one. */
   overall: number | null;
+  /** The recorded score's match is below SIGN_OFF_LOW_MATCH_PCT — a warning,
+   *  never a block. */
+  low: boolean;
   /** Why a recorded score no longer counts. */
   reasons: string[];
 };
@@ -58,6 +82,9 @@ export type SignOffStatus = {
   blocking: FrameColorKey[];
   /** Colours with no real printing — published individually. */
   sampleOnly: FrameColorKey[];
+  /** Publishable colours whose match is below the warning line: the view
+   *  names them in a confirm step before Publish (never a block). */
+  lowPublishable: FrameColorKey[];
   /** Nothing blocks and there is something to publish. */
   ready: boolean;
 };
@@ -77,17 +104,25 @@ export function signOffStatus(input: {
   const currentVersion = input.currentVersion ?? CARD_LAYOUT_VERSION;
   const colours = input.colours.map((colour): SignOffColourStatus => {
     if (colour.referenceId === null) {
-      return { colorKey: colour.colorKey, state: "no-reference", overall: null, reasons: [] };
+      return {
+        colorKey: colour.colorKey,
+        state: "no-reference",
+        overall: null,
+        low: false,
+        reasons: [],
+      };
     }
     const overall = colour.score ? recordedOverall(colour.score.scoreJson) : null;
     if (!colour.score || overall === null) {
-      return { colorKey: colour.colorKey, state: "unscored", overall: null, reasons: [] };
+      return { colorKey: colour.colorKey, state: "unscored", overall: null, low: false, reasons: [] };
     }
+    const low = isLowFrameScore(overall);
     if (colour.score.layoutVersion == null || colour.score.overrideHash == null) {
       return {
         colorKey: colour.colorKey,
         state: "stale",
         overall,
+        low,
         reasons: ["the score recorded no layout version or override"],
       };
     }
@@ -98,6 +133,7 @@ export function signOffStatus(input: {
         colorKey: colour.colorKey,
         state: "stale",
         overall,
+        low,
         reasons: [
           colour.score.referenceScryfallId
             ? "the score was taken against another reference printing than today's"
@@ -119,6 +155,7 @@ export function signOffStatus(input: {
       colorKey: colour.colorKey,
       state: state.stale ? "stale" : "scored",
       overall,
+      low,
       reasons: state.reasons,
     };
   });
@@ -127,11 +164,15 @@ export function signOffStatus(input: {
     .filter((c) => c.state === "unscored" || c.state === "stale")
     .map((c) => c.colorKey);
   const sampleOnly = colours.filter((c) => c.state === "no-reference").map((c) => c.colorKey);
+  const lowPublishable = colours
+    .filter((c) => c.state === "scored" && c.low)
+    .map((c) => c.colorKey);
   return {
     colours,
     publishable,
     blocking,
     sampleOnly,
+    lowPublishable,
     ready: blocking.length === 0 && publishable.length > 0,
   };
 }

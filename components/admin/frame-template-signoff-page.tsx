@@ -98,6 +98,7 @@ export async function FrameTemplateSignOffPage({
       score: {
         state: colourStatus.state,
         overall: colourStatus.overall,
+        low: colourStatus.low,
         reasons: colourStatus.reasons,
         createdAt: scores.get(colorKey)?.createdAt ?? null,
         fromTick: scores.get(colorKey)?.action === "verify",
