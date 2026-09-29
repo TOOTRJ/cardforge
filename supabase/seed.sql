@@ -91,16 +91,3 @@ values
   ('modern', 'w', true, now())
 on conflict (template, color_key) do nothing;
 -- frame_reviews:end
-
--- Baseline rows: storage_origins (migration 0127). The media URL guards
--- accept a picture only when it is a storage URL on one of these origins.
--- The migration lists production's and the persistent dev branch's; every
--- per-PR preview branch has its own `<ref>.supabase.co`, and the local stack
--- (and CI's) is plain http on port 54321 — neither is known to a migration,
--- and neither may exist on production, so they live here (seeds never run
--- there).
-insert into public.storage_origins (origin, note) values
-  ('https://*.supabase.co', 'preview branches (seed.sql only — never production)'),
-  ('http://127.0.0.1:54321', 'the local Docker stack / CI (seed.sql only)'),
-  ('http://localhost:54321', 'the local Docker stack (seed.sql only)')
-on conflict (origin) do nothing;

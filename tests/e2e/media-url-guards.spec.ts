@@ -13,10 +13,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // PostgREST, per column: their own folder passes, another user's folder and
 // an outside host are refused (42501, `media_url_not_allowed`), keeping the
 // current value or clearing it passes, and the service role is unrestricted.
-// It also checks the signup-metadata avatar and the upload rate limit
-// (hit_upload_limit). Needs the local stack (tests/README.md); CI boots one
-// with every migration and supabase/seed.sql (which lists the local origin
-// in public.storage_origins) applied.
+// It also checks the signup-metadata avatar, a card's back face
+// (cards_guard_back_card) and the upload rate limit (hit_upload_limit:
+// sliding windows, the bounded prune). Needs the local stack
+// (tests/README.md); CI boots one with every migration applied. The local
+// origin is registered in public.storage_origins the way the app does it
+// before its first upload (lib/media/storage-origin.ts) — no seed lists one.
 // ---------------------------------------------------------------------------
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -53,6 +55,11 @@ test.describe("media URL columns (migration 0127)", () => {
     userId = data.user.id;
     const { data: system } = await admin.from("game_systems").select("id").limit(1).single();
     gameSystemId = system!.id;
+    // What the app does before its first user-folder write.
+    const registered = await admin
+      .from("storage_origins")
+      .upsert({ origin: new URL(url).origin, note: "e2e (as lib/media/storage-origin.ts)" }, { onConflict: "origin", ignoreDuplicates: true });
+    expect(registered.error).toBeNull();
   });
 
   test.afterAll(async () => {
@@ -201,21 +208,69 @@ test.describe("media URL columns (migration 0127)", () => {
     expectRefused((await pip(object("custom-pips", OTHER, "C.png"))).error, "another user's pip");
   });
 
-  test("signup metadata: only a Google profile picture survives into the profile", async () => {
-    const forged = await admin.auth.admin.createUser({
-      email: `${run}@example.test`,
-      password: `${run}-Pw!9`,
-      email_confirm: true,
-      user_metadata: { avatar_url: OUTSIDE },
-    });
-    expect(forged.error).toBeNull();
-    const id = forged.data.user!.id;
-    cleanup.push(() => admin.auth.admin.deleteUser(id));
-    const { data: profile } = await admin.from("profiles").select("avatar_url").eq("id", id).single();
-    expect(profile!.avatar_url).toMatch(/^\/defaults\/avatars\/avatar-\d{2}\.webp$/);
+  test("signup metadata: an email signup never brings its own avatar — not even a Google-hosted one", async () => {
+    // Any email signup can send user metadata. A Google-hosted URL (the host
+    // also serves any Google Photos image) was kept before the provider
+    // check (review 2026-09-29); only a Google SIGN-IN keeps its picture.
+    for (const [i, avatar] of [OUTSIDE, "https://lh3.googleusercontent.com/a/forged-account-shape=s96-c"].entries()) {
+      const forged = await admin.auth.admin.createUser({
+        email: `${run}-${i}@example.test`,
+        password: `${run}-Pw!9`,
+        email_confirm: true,
+        user_metadata: { avatar_url: avatar },
+      });
+      expect(forged.error).toBeNull();
+      const id = forged.data.user!.id;
+      cleanup.push(() => admin.auth.admin.deleteUser(id));
+      const { data: profile } = await admin.from("profiles").select("avatar_url").eq("id", id).single();
+      expect(profile!.avatar_url, avatar).toMatch(/^\/defaults\/avatars\/avatar-\d{2}\.webp$/);
+    }
   });
 
-  test("the upload rate limit: counted per user, refused past the limit, admins exempt", async () => {
+  test("a card's back face: only another of the owner's own cards", async () => {
+    const mk = async (owner: string, title: string) => {
+      const { data, error } = await admin
+        .from("cards")
+        .insert({ owner_id: owner, title, slug: `${run}-${title.toLowerCase().replaceAll(" ", "-")}`, game_system_id: gameSystemId })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      cleanup.push(() => admin.from("cards").delete().eq("id", data!.id));
+      return data!.id as string;
+    };
+    const created = await admin.auth.admin.createUser({ email: `${run}-other@example.test`, password: `${run}-Pw!9`, email_confirm: true });
+    expect(created.error).toBeNull();
+    const other = created.data.user!.id;
+    cleanup.push(() => admin.auth.admin.deleteUser(other));
+
+    const front = await mk(userId, "Front face");
+    const ownBack = await mk(userId, "Own back");
+    const theirs = await mk(other, "Their card");
+
+    const refused = await patch("cards", { back_card_id: theirs }, { id: front });
+    expectRefusedBack(refused, "another user's card");
+    expect(refused!.message).toMatch(/back_card_not_allowed/);
+    expectRefusedBack(await patch("cards", { back_card_id: front }, { id: front }), "itself");
+    expect(await patch("cards", { back_card_id: ownBack }, { id: front })).toBeNull();
+    expect(await patch("cards", { title: "Front face, renamed" }, { id: front })).toBeNull(); // kept
+    expect(await patch("cards", { back_card_id: null }, { id: front })).toBeNull(); // cleared
+    // A new card can't be born pointing at someone else's either.
+    const born = await user
+      .from("cards")
+      .insert({ owner_id: userId, title: "Born flipped", slug: `${run}-born-flipped`, game_system_id: gameSystemId, back_card_id: theirs })
+      .select("id");
+    for (const row of born.data ?? []) await admin.from("cards").delete().eq("id", row.id);
+    expect(born.error?.code).toBe("42501");
+    // The service role is unrestricted.
+    expect((await admin.from("cards").update({ back_card_id: theirs }).eq("id", front)).error).toBeNull();
+
+    function expectRefusedBack(error: { code?: string; message: string } | null, what: string) {
+      expect(error, what).not.toBeNull();
+      expect(error!.code).toBe("42501");
+    }
+  });
+
+  test("the upload rate limit: sliding windows per user, refusals uncounted, admins exempt, a bounded prune", async () => {
     const created = await admin.auth.admin.createUser({
       email: `${run}-limit@example.test`,
       password: `${run}-Pw!9`,
@@ -225,27 +280,55 @@ test.describe("media URL columns (migration 0127)", () => {
     const id = created.data.user!.id;
     cleanup.push(() => admin.auth.admin.deleteUser(id));
 
-    const hit = async (who: string, perMinute: number) => {
-      const { data, error } = await admin.rpc("hit_upload_limit", { p_user_id: who, p_per_minute: perMinute, p_per_day: 300 });
+    type Hit = { allowed: boolean; retry_after_seconds: number; limited_by: string | null };
+    const hit = async (who: string, perMinute: number, perDay = 300): Promise<Hit> => {
+      const { data, error } = await admin.rpc("hit_upload_limit", { p_user_id: who, p_per_minute: perMinute, p_per_day: perDay });
       expect(error).toBeNull();
-      return (data as { allowed: boolean; retry_after_seconds: number; limited_by: string | null }[])[0];
+      return (data as Hit[])[0];
     };
-    // 3 a minute: the 4th is refused — unless the minute rolled over
-    // between the calls, in which case the next minute's 4th is.
-    let fourth: Awaited<ReturnType<typeof hit>> | null = null;
-    for (let attempt = 0; attempt < 2 && !(fourth && !fourth.allowed); attempt += 1) {
-      await admin.from("upload_hits").delete().eq("user_id", id);
-      for (let i = 0; i < 3; i += 1) expect((await hit(id, 3)).allowed).toBe(true);
-      fourth = await hit(id, 3);
-    }
+    const count = async (who: string) =>
+      (await admin.from("upload_hits").select("*", { count: "exact", head: true }).eq("user_id", who)).count;
+    const ago = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString();
+
+    // 3 a minute: the 4th is refused, and not counted.
+    for (let i = 0; i < 3; i += 1) expect((await hit(id, 3)).allowed).toBe(true);
+    const fourth = await hit(id, 3);
     expect(fourth).toMatchObject({ allowed: false, limited_by: "minute" });
-    expect(fourth!.retry_after_seconds).toBeGreaterThanOrEqual(1);
-    expect(fourth!.retry_after_seconds).toBeLessThanOrEqual(60);
+    expect(fourth.retry_after_seconds).toBeGreaterThanOrEqual(1);
+    expect(fourth.retry_after_seconds).toBeLessThanOrEqual(60);
+    expect(await count(id)).toBe(3);
+
+    // SLIDING: three hits 50 s ago still fill the last 60 seconds — a
+    // calendar minute would have let a new burst through at the boundary —
+    // and the wait is until the oldest of them is 60 s old.
+    await admin.from("upload_hits").delete().eq("user_id", id);
+    await admin.from("upload_hits").insert([ago(50), ago(49), ago(48)].map((t) => ({ user_id: id, hit_at: t })));
+    const slid = await hit(id, 3);
+    expect(slid).toMatchObject({ allowed: false, limited_by: "minute" });
+    // ~10 s (the runner's clock and the database's share a host; a margin
+    // for the round trips).
+    expect(slid.retry_after_seconds).toBeGreaterThanOrEqual(5);
+    expect(slid.retry_after_seconds).toBeLessThanOrEqual(15);
+    // …and 61 s ago is outside the minute, inside the day.
+    await admin.from("upload_hits").delete().eq("user_id", id);
+    await admin.from("upload_hits").insert([ago(61), ago(62), ago(63)].map((t) => ({ user_id: id, hit_at: t })));
+    expect((await hit(id, 3)).allowed).toBe(true);
+    const daily = await hit(id, 3, 4);
+    expect(daily).toMatchObject({ allowed: false, limited_by: "day" });
+    expect(daily.retry_after_seconds).toBeGreaterThan(23 * 3600);
+
+    // The prune: rows the day no longer reads go — anyone's, a bounded batch.
+    await admin.from("upload_hits").insert({ user_id: id, hit_at: ago(25 * 3600) });
+    const other = await admin.auth.admin.createUser({ email: `${run}-limit2@example.test`, password: `${run}-Pw!9`, email_confirm: true });
+    expect(other.error).toBeNull();
+    cleanup.push(() => admin.auth.admin.deleteUser(other.data.user!.id));
+    expect((await hit(other.data.user!.id, 30)).allowed).toBe(true);
+    const { data: stale } = await admin.from("upload_hits").select("hit_at").eq("user_id", id).lt("hit_at", ago(24 * 3600));
+    expect(stale).toEqual([]);
 
     // The seeded e2e user is an admin: never refused, never counted.
     for (let i = 0; i < 3; i += 1) expect((await hit(userId, 1)).allowed).toBe(true);
-    const { count } = await admin.from("upload_hits").select("*", { count: "exact", head: true }).eq("user_id", userId);
-    expect(count).toBe(0);
+    expect(await count(userId)).toBe(0);
 
     // The API roles can't call it or read the counters.
     const { error: direct } = await user.rpc("hit_upload_limit", { p_user_id: userId, p_per_minute: 30, p_per_day: 300 });

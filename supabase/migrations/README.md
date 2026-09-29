@@ -77,25 +77,33 @@ takes a Scryfall printing image (`https://cards.scryfall.io/…`) only. Refused
 The service role and `postgres` are not checked; existing rows are
 grandfathered (only changes are checked). A remix of someone else's card
 copies the parent's pictures into the remixer's folder before it saves
-(`lib/cards/remix-media.ts`). `handle_new_user` keeps a signup's metadata
-avatar only when it is a Google profile picture. Any surface that DRAWS one of
-these columns checks it with `isAllowedMediaUrl()` / `profileMediaSrc()`
-(`lib/media/media-urls.ts`) first — the database can't pin the deployment's
-host, the app can.
+(`lib/cards/remix-media.ts`) — also when the parent is your own card whose
+art still sits in its original owner's folder (a pre-0127 remix).
+`handle_new_user` keeps a signup's metadata avatar only for a Google sign-in
+(`raw_app_meta_data.provider = 'google'`, GoTrue's, never the user's) and
+only a Google ACCOUNT picture (`https://lhN.googleusercontent.com/a/…` or
+`/a-/…`). A card's `back_card_id` must name another of its owner's cards
+(`cards_guard_back_card`). Any surface that DRAWS one of these columns checks
+it with `isAllowedMediaUrl()` / `profileMediaSrc()` (`lib/media/media-urls.ts`)
+first — the database can't pin the deployment's host, the app can.
 
 - **A new picture column** joins a guard trigger and a `media_url_allowed`
   kind (and `MEDIA_KIND_BUCKETS` in `lib/media/media-urls.ts` — a unit test
   keeps the two tables equal).
-- **`public.storage_origins`** lists production's origins (the custom domain
-  and the project host) and the persistent dev branch's; `supabase/seed.sql`
-  adds `https://*.supabase.co` (each preview branch has its own host) and the
-  local stack — seeds never run on production. **If the storage domain ever
-  moves**, a migration adds the new origin BEFORE `NEXT_PUBLIC_SUPABASE_URL`
-  changes, or every new upload fails to save.
-- **Uploads are rate-limited per user** (30 a minute, 300 a rolling day;
-  admins exempt): `public.upload_hits` + `hit_upload_limit()`, service role
-  only, called by every upload action before it touches the bytes
-  (`lib/media/upload-rate-limit.ts`; AI art and our own bakes aren't counted).
+- **`public.storage_origins`** lists production's two origins (the custom
+  domain and the project host) — from the migration, which runs everywhere,
+  so nothing else goes there (no dev host, no wildcard: production would
+  trust it too). Every other database gets its OWN origin from the app,
+  which upserts the origin of `NEXT_PUBLIC_SUPABASE_URL` with the service
+  role before its first write into a user folder (`lib/media/storage-origin.ts`);
+  a storage domain move registers itself the same way. The e2e spec
+  registers the local stack's origin in its setup, like the app would.
+- **Uploads are rate-limited per user** (30 in any 60 seconds, 300 in any
+  24 hours — sliding windows over one row per counted upload; admins
+  exempt): `public.upload_hits` + `hit_upload_limit()`, service role only,
+  called by every upload action before it touches the bytes
+  (`lib/media/upload-rate-limit.ts`, fail-CLOSED except while the function
+  isn't deployed yet; AI art and our own bakes aren't counted).
 
 Classification of every row (counts only — production's private rows are the
 owner's to read):
@@ -128,11 +136,18 @@ select tbl, col,
          when p is not null and p[1] in ('https://auth.pipglyph.com', 'https://zkwkisxoqdhdchqyjwdc.supabase.co') then
            case
              when not (p[2] = any (buckets)) then 'our storage, another bucket'
+             -- A nested path, an odd file name or a query other than
+             -- ?v=<digits>: kept while unchanged, but the guard refuses it as
+             -- a new value and the display drops a nested path / odd name.
+             when p[4] !~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,199}(\?v=[0-9]{1,20})?$'
+                  or position('..' in p[4]) > 0 then 'our storage, odd path/name/query'
              when p[3] = owner::text then 'our storage, own folder'
              else 'our storage, ANOTHER user''s folder'
            end
-         when url ~ '^https://lh[0-9]+\.googleusercontent\.com/' then 'Google avatar'
-         when url ~ '^https://cards\.scryfall\.io/' then 'Scryfall CDN'
+         when url ~ '^https://lh[0-9]{1,2}\.googleusercontent\.com/a-?/' then 'Google account avatar'
+         when url ~ '^https://lh[0-9]+\.googleusercontent\.com/' then 'Google host, NOT an account avatar'
+         when url ~ '^https://cards\.scryfall\.io/[A-Za-z0-9_./-]+(\?[0-9]{1,20})?$' then 'Scryfall CDN'
+         when url ~ '^https://cards\.scryfall\.io/' then 'Scryfall CDN, odd path/query'
          when url ~ '^https://([a-z0-9-]+\.)*scryfall\.(io|com)/' then 'Scryfall, other host'
          else 'OTHER HOST'
        end as class,
@@ -140,6 +155,21 @@ select tbl, col,
 from m
 group by 1, 2, 3, 4
 order by 1, 2, 3, 4;
+```
+
+And the back faces (counts only; production's public + unlisted cards have
+no `back_card_id` at all, 2026-09-29):
+
+```sql
+-- Read-only. Cards whose v2 back face is ANOTHER owner's card — refused as
+-- a new value since 0127 (cards_guard_back_card); the card page skips them.
+select case when c.visibility in ('public', 'unlisted') then 'public+unlisted' else c.visibility end as rows_of,
+       count(*) as n
+from public.cards c
+join public.cards b on b.id = c.back_card_id
+where b.owner_id <> c.owner_id
+group by 1
+order by 1;
 ```
 
 ## Errata — corrections to merged migration headers

@@ -159,17 +159,17 @@ export type Database = {
       upload_hits: {
         Row: {
           user_id: string;
-          window_start: string;
+          hit_at: string;
           hits: number;
         };
         Insert: {
           user_id: string;
-          window_start: string;
+          hit_at: string;
           hits?: number;
         };
         Update: {
           user_id?: string;
-          window_start?: string;
+          hit_at?: string;
           hits?: number;
         };
         Relationships: [];
