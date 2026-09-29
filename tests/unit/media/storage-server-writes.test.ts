@@ -109,7 +109,7 @@ vi.mock("@/lib/media/upload-bytes", async (importOriginal) => {
 });
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
-vi.mock("@/lib/profile/username", () => ({ revalidateProfilePage: vi.fn() }));
+vi.mock("@/lib/profile/username", () => ({ revalidateProfilePage: vi.fn(), revalidateProfileMedia: vi.fn() }));
 vi.mock("@/lib/cards/bake-render", () => ({ bakeAndPersistCardRender: vi.fn() }));
 
 import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";

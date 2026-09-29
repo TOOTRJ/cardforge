@@ -45,7 +45,21 @@
 //
 // No backups (the script refuses --backup-dir here): a render is derived — a
 // card published again is baked again.
+//
+// The CDN (owner answer 2026-09-29): /render-cdn/<owner>/<card>.png is cached
+// by Vercel for a year, tagged card-<id> (app/render-cdn/[...path]/route.ts),
+// so removing the object is not enough — the CDN copy has to be purged, and
+// only a function running on Vercel can. --apply therefore needs the app
+// (POST /api/admin/storage-sweep, scripts/lib/app-endpoint.mjs, checked to
+// talk to this database before "yes"): after each batch, the cards whose
+// renders storage confirmed gone are purged through it (purgeHiddenCards —
+// the same purge as going private in the app). Every card of a batch is
+// noted in the state file (`purgePending`) BEFORE its remove and taken off
+// only once the purge succeeded, so a crash or a failed purge is retried at
+// the start of the next --apply; after one failed purge the run stops asking
+// (the renders still go) and exits 1.
 // ---------------------------------------------------------------------------
+import { AppEndpointError } from "./app-endpoint.mjs";
 import {
   DEFAULT_BATCH_SIZE,
   MAX_BATCH_SIZE,
@@ -131,6 +145,41 @@ function nextBatch(cards, start, batchSize, left) {
   return batch;
 }
 
+/** Note card ids whose CDN copies must be purged (kept across runs). */
+export function addPurgePending(state, ids) {
+  state.purgePending = [...new Set([...(state.purgePending ?? []), ...ids])].sort();
+}
+
+/**
+ * Purge these cards' caches through the app and take them off
+ * `state.purgePending`. → true on success; false (logged, still pending)
+ * when there is no app or it failed. Anything but the app's own failure
+ * throws.
+ */
+export async function purgeThroughApp({ app, ids, state, statePath, manifestPath, target, run, log = () => {} }) {
+  const unique = [...new Set(ids)].sort();
+  if (!unique.length) return true;
+  if (!app) {
+    log(`  ! ${unique.length} card(s) need their CDN copies purged and there is no app to do it — kept for the next --apply`);
+    return false;
+  }
+  let answer;
+  try {
+    answer = await app.purgeCards(unique);
+  } catch (err) {
+    if (!(err instanceof AppEndpointError)) throw err;
+    log(`  ✗ CDN purge of ${unique.length} card(s) failed (${err.message}) — kept in the state file; the next --apply retries`);
+    return false;
+  }
+  state.purgePending = (state.purgePending ?? []).filter((id) => !unique.includes(id));
+  saveState(statePath, state);
+  appendManifest(manifestPath, [
+    { at: new Date().toISOString(), target, run, purged: unique, cdn: answer.vercel ? "purged (tag card-<id>)" : "the app is not on Vercel — no CDN to purge" },
+  ]);
+  log(`  purged the caches of ${unique.length} card(s)${answer.vercel ? "" : " (the app is not on Vercel: no CDN copies)"}`);
+  return true;
+}
+
 /**
  * Remove the renders of `cards` (entries of planPrivateRenders whose state is
  * "private"), `batchSize` cards at a time, at most `limit` objects. Per
@@ -141,9 +190,12 @@ function nextBatch(cards, start, batchSize, left) {
  *      listing's (new bytes — a bake) → kept, the next run judges it again;
  *   3. `db.cardVisibility(ids)` — THE re-check, right before the remove:
  *      anything but a row that says private → kept, never touched;
- *   4. `state.pending`, the remove, then storage's own answer for every
- *      object: gone → the manifest; still there → kept; lookup failed →
- *      stays pending for the next run (reconcilePending).
+ *   4. `state.pending` (and the batch's cards in `state.purgePending`), the
+ *      remove, then storage's own answer for every object: gone → the
+ *      manifest; still there → kept; lookup failed → stays pending for the
+ *      next run (reconcilePending);
+ *   5. the CDN purge, through `app`, of the cards whose objects are gone
+ *      (see the header) — after one failure, no more tries this run.
  */
 export async function applyPrivateRenders({
   db,
@@ -151,6 +203,7 @@ export async function applyPrivateRenders({
   cards,
   batchSize = DEFAULT_BATCH_SIZE,
   limit = Infinity,
+  app = null,
   state,
   statePath,
   manifestPath,
@@ -167,7 +220,7 @@ export async function applyPrivateRenders({
       }
     }
   }
-  const result = { deleted: 0, bytes: 0, pointersCleared: 0, skipped: [], failed: [], limitReached: false };
+  const result = { deleted: 0, bytes: 0, pointersCleared: 0, purged: 0, purgeFailed: false, skipped: [], failed: [], limitReached: false };
   const skip = (obj, why) => {
     result.skipped.push({ bucket: obj.bucket, path: obj.path, why });
     log(`  - ${obj.bucket}/${obj.path}: ${why} — kept`);
@@ -243,6 +296,7 @@ export async function applyPrivateRenders({
 
     // 4. The delete, then storage's own answer.
     state.pending = { bucket: RENDER_BUCKET, run, at: new Date().toISOString(), items: toRemove };
+    addPurgePending(state, toRemove.map((item) => item.card));
     saveState(statePath, state);
     try {
       await storage.remove(RENDER_BUCKET, toRemove.map((item) => item.path));
@@ -284,6 +338,11 @@ export async function applyPrivateRenders({
     state.pending = unsettled.length ? { ...state.pending, items: unsettled } : null;
     saveState(statePath, state);
     for (const item of done) log(`  ✓ ${RENDER_BUCKET}/${item.path}  ${formatBytes(Number(item.size) || 0)}`);
+    const gone = [...new Set(done.map((item) => item.card))];
+    if (gone.length && !result.purgeFailed) {
+      if (await purgeThroughApp({ app, ids: gone, state, statePath, manifestPath, target, run, log })) result.purged += gone.length;
+      else result.purgeFailed = true;
+    }
     if (unsettled.length) {
       result.failed.push({ bucket: RENDER_BUCKET, paths: unsettled.map((item) => item.path), error: "delete not confirmed" });
       break;
@@ -303,6 +362,9 @@ export async function runPrivateRenders({
   db,
   apply,
   confirm,
+  appFor = async () => {
+    throw new AppEndpointError("no app endpoint configured");
+  },
   batchSize = DEFAULT_BATCH_SIZE,
   limit = Infinity,
   state,
@@ -343,33 +405,63 @@ export async function runPrivateRenders({
   }
   if (doomed.length > LIST_CAP) log(`  … and ${doomed.length - LIST_CAP} more card(s)`);
 
+  const pendingPurge = state.purgePending ?? [];
+  if (pendingPurge.length) {
+    log(`\n${pendingPurge.length} card(s) from an earlier run still need their CDN copies purged — --apply retries that first.`);
+  }
   if (!apply) {
     log(
       doomed.length
-        ? `\nDry run: nothing deleted, no row changed. Re-run with --private-renders --apply to remove them (the visibility is read again right before each delete).`
+        ? `\nDry run: nothing deleted, no row changed, nothing purged. Re-run with --private-renders --apply to remove them (the visibility is read again right before each delete) and purge their CDN copies through the app.`
         : "\nNothing to remove.",
     );
     return 0;
   }
-  if (!doomed.length) {
+  if (!doomed.length && !pendingPurge.length) {
     log("\nNothing to remove.");
+    return 0;
+  }
+  // The app first — before "yes" — so a run never removes renders it can't
+  // purge the CDN copies of.
+  let app;
+  try {
+    app = await appFor();
+  } catch (err) {
+    if (!(err instanceof AppEndpointError)) throw err;
+    log(`\nThe app can't be reached (${err.message}) — nothing deleted, nothing purged.`);
+    return 1;
+  }
+  if (pendingPurge.length) {
+    log(`\nPurging the CDN copies of ${pendingPurge.length} card(s) left from an earlier run:`);
+    const ok = await purgeThroughApp({ app, ids: pendingPurge, state, statePath, manifestPath, target, run, log });
+    if (!ok) return 1;
+  }
+  if (!doomed.length) {
+    log("\nNothing (more) to remove.");
     return 0;
   }
   const take = Math.min(doomedObjects, limit);
   const answer = await confirm(
     `\nRemove ${take === doomedObjects ? "" : `up to ${take} of `}${doomedObjects} render object(s) (${formatBytes(doomedBytes)}) from ${targetLabel}, ` +
-      `and clear the render pointer of those private cards (what going private does)? Storage has no undo — ` +
-      `a card published again is baked again. Type "yes": `,
+      `clear the render pointer of those private cards (what going private does), and purge their CDN copies through ` +
+      `${app.url}? Storage has no undo — a card published again is baked again. Type "yes": `,
   );
   if (answer !== "yes") {
     log("Aborted — nothing deleted.");
     return 1;
   }
-  const result = await applyPrivateRenders({ db, storage, cards: doomed, batchSize, limit, state, statePath, manifestPath, target, run, log });
+  const result = await applyPrivateRenders({ db, storage, cards: doomed, batchSize, limit, app, state, statePath, manifestPath, target, run, log });
   log(
     `\nDeleted ${result.deleted} render object(s), ${formatBytes(result.bytes)}; cleared ${result.pointersCleared} private card pointer(s); ` +
-      `kept ${result.skipped.length} on re-check${result.failed.length ? `; ${result.failed.length} batch(es) failed — re-run to settle` : ""}. Manifest: ${manifestPath}`,
+      `purged the CDN copies of ${result.purged} card(s); kept ${result.skipped.length} on re-check` +
+      `${result.failed.length ? `; ${result.failed.length} batch(es) failed — re-run to settle` : ""}. Manifest: ${manifestPath}`,
   );
+  if (result.purgeFailed || (state.purgePending ?? []).length) {
+    log(
+      `${(state.purgePending ?? []).length} card(s) still need their CDN copies purged (state file: purgePending) — re-run --private-renders --apply, ` +
+        `or purge their tags card-<id> in the Vercel dashboard (CDN → Caches → Purge cache → Cache Tag, Delete).`,
+    );
+  }
   if (result.limitReached) log(`--limit ${limit} reached: re-run to continue.`);
-  return result.failed.length ? 1 : 0;
+  return result.failed.length || result.purgeFailed || (state.purgePending ?? []).length ? 1 : 0;
 }

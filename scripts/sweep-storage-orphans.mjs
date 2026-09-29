@@ -42,6 +42,10 @@
 //   --manifest <file>     delete log, JSON lines (default ~/.pipglyph/sweep-
 //                         storage-orphans.<project>[.<mode>].manifest.jsonl)
 //   --env-file <path>     dev target's env file (default .env.local)
+//   --app-url <origin>    dev target only: the app --apply acts through
+//                         (below) — a local `npm run dev` on the dev
+//                         database, e.g. http://localhost:3000. Production's
+//                         is fixed: https://www.pipglyph.com
 //   --private-renders     the private-render clean-up (below)
 //   --rescan-review       the review list's moderation rescan (below)
 //   --per-minute <n>      --rescan-review only: moderation calls a minute
@@ -87,23 +91,35 @@
 //                       whose row says PRIVATE — never a public or unlisted
 //                       card's, and never on a missing row (a deleted card's
 //                       render is an orphan: the sweep above judges it) —
-//                       and clear those cards' render pointer, as going
-//                       private does. Each object is looked up, then the
+//                       clear those cards' render pointer, as going private
+//                       does, and purge the CDN copies of their /render-cdn
+//                       URLs through the app (tag card-<id>; only the app on
+//                       Vercel can). Each object is looked up, then the
 //                       visibility read again, right before the delete.
 //                       Takes --batch-size (cards) and --limit (objects);
 //                       refuses --bucket, --min-age-days and --backup-dir.
 //                       scripts/lib/private-renders.mjs.
 //   --rescan-review     run the upload path's moderation scan (lib/moderation/
 //                       image-scan-core.ts) on the review list above and, with
-//                       --apply, remove each flagged file — the upload path's
-//                       consequence, nothing more: rows that name one are
-//                       listed, not changed. Paced (--per-minute, default 60),
-//                       resumable (a verdict is kept per object and eTag).
-//                       OPENAI_API_KEY: production's at a hidden prompt, the
-//                       dev target's from the env file. Takes --bucket and
-//                       --limit (scans); refuses --min-age-days, --batch-size
-//                       and --backup-dir (a flagged file is never copied).
+//                       --apply, act on every row that DRAWS a flagged file,
+//                       through the app (a card → the moderation hide; an
+//                       avatar/banner → a built-in image; a deck cover →
+//                       cleared; a custom pip → removed), then remove the
+//                       file. Rows that name it anywhere else are listed.
+//                       Paced (--per-minute, default 60), resumable (a
+//                       verdict is kept per object and eTag). OPENAI_API_KEY:
+//                       production's at a hidden prompt, the dev target's
+//                       from the env file. Takes --bucket and --limit
+//                       (scans); refuses --min-age-days, --batch-size and
+//                       --backup-dir (a flagged file is never copied).
 //                       scripts/lib/review-rescan.mjs.
+//
+// Both modes' --apply act through the APP: POST /api/admin/storage-sweep
+// with `Authorization: Bearer <CRON_SECRET>` (scripts/lib/app-endpoint.mjs).
+// Production: https://www.pipglyph.com, its CRON_SECRET at a hidden prompt.
+// Dev: --app-url and CRON_SECRET from the env file (the app needs the same
+// secret). Before "yes", the app is asked which database it talks to — it
+// must be this --target's, or nothing happens.
 //
 // The owner's order (docs/ENVIRONMENTS.md §4): dry run → --rescan-review
 // (dry run, then --apply) → --private-renders (dry run, then --apply) → the
@@ -120,6 +136,7 @@ import OpenAI from "openai";
 import { IMAGE_MODERATION_TIMEOUT_MS } from "../lib/moderation/image-scan-core.ts";
 import { promptHidden } from "./lib/hidden-prompt.mjs";
 import { CARD_READ_CHUNK, RENDER_POINTER_COLUMNS, runPrivateRenders } from "./lib/private-renders.mjs";
+import { AppEndpointError, PRODUCTION_APP_URL, appUrlProblem, createAppEndpoint } from "./lib/app-endpoint.mjs";
 import { PRODUCTION_SUPABASE_REF, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
 import { DEFAULT_PER_MINUTE, MAX_PER_MINUTE, runReviewRescan } from "./lib/review-rescan.mjs";
 import {
@@ -160,6 +177,7 @@ const VALUE_FLAGS = new Set([
   "--manifest",
   "--env-file",
   "--per-minute",
+  "--app-url",
 ]);
 const BARE_FLAGS = new Set(["--apply", "--private-renders", "--rescan-review"]);
 const values = new Map();
@@ -198,7 +216,10 @@ if (bare.has("--private-renders") && bare.has("--rescan-review")) fail("--privat
 const mode = bare.has("--private-renders") ? "private-renders" : bare.has("--rescan-review") ? "rescan-review" : "orphans";
 /** Flags a mode refuses, and why. */
 const REFUSED = {
-  orphans: { "--per-minute": "only --rescan-review calls the moderation API" },
+  orphans: {
+    "--per-minute": "only --rescan-review calls the moderation API",
+    "--app-url": "only --rescan-review and --private-renders act through the app",
+  },
   "private-renders": {
     "--bucket": "it only reads card-renders",
     "--min-age-days": "a private card's render goes whatever its age",
@@ -261,6 +282,7 @@ let envFile = null;
 let devEnv = {};
 if (target === "prod") {
   if (values.has("--env-file")) fail("--env-file is for the dev target; production's key is only read at the prompt.");
+  if (values.has("--app-url")) fail(`--app-url is for the dev target; production's app is ${PRODUCTION_APP_URL}.`);
   url = `https://${PRODUCTION_SUPABASE_REF}.supabase.co`;
   if (!isProductionSupabaseUrl(url)) fail("Production URL check failed.");
   if (!process.stdin.isTTY) fail("Run this in a terminal: production's secret key is read at a hidden prompt.");
@@ -273,6 +295,10 @@ if (target === "prod") {
   key = devEnv.SUPABASE_SECRET_KEY ?? "";
   if (!url || !key) fail(`${envFile} needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY.`);
   if (isProductionSupabaseUrl(url)) fail(`${envFile} points at PRODUCTION — use --target prod (hidden-prompt key) for that.`);
+}
+if (values.has("--app-url")) {
+  const problem = appUrlProblem(values.get("--app-url"));
+  if (problem) fail(`--app-url: ${problem}.`);
 }
 const host = new URL(url).host;
 const project = host.split(".")[0];
@@ -418,6 +444,37 @@ async function moderateFor() {
   return (request) => client.moderations.create(request);
 }
 
+/** The app endpoint both modes' --apply act through (made once, on first
+ *  need): production's is fixed and its CRON_SECRET read at the hidden
+ *  prompt (never from a file or the environment); the dev target's comes
+ *  from --app-url and the env file's CRON_SECRET (or the prompt). It is
+ *  asked which database it talks to before anything is done through it. */
+let appEndpoint = null;
+async function appFor() {
+  if (appEndpoint) return appEndpoint;
+  let baseUrl;
+  let secret = "";
+  if (target === "prod") {
+    baseUrl = PRODUCTION_APP_URL;
+    secret = await promptHidden(`Production CRON_SECRET for ${PRODUCTION_APP_URL} (Vercel → Settings → Environment Variables; not echoed): `);
+  } else {
+    baseUrl = values.get("--app-url");
+    if (!baseUrl) {
+      throw new AppEndpointError(
+        "--apply acts through the app: pass --app-url (a local `npm run dev` on the dev database, e.g. http://localhost:3000, with CRON_SECRET set)",
+      );
+    }
+    secret = devEnv.CRON_SECRET ?? "";
+    if (!secret && process.stdin.isTTY) secret = await promptHidden(`CRON_SECRET of ${baseUrl} (not echoed): `);
+    if (!secret) throw new AppEndpointError(`${envFile} has no CRON_SECRET and there is no terminal to ask for one`);
+  }
+  const endpoint = createAppEndpoint({ baseUrl, secret, targetHost: host });
+  const who = await endpoint.whoami();
+  console.log(`App: ${endpoint.url} — database ${who.supabaseHost}${who.vercel ? "" : " (not on Vercel: no CDN to purge)"}`);
+  appEndpoint = endpoint;
+  return endpoint;
+}
+
 // --- run -------------------------------------------------------------------------
 const log = (line) => console.log(line);
 const state = loadState(statePath);
@@ -440,6 +497,7 @@ if (mode !== "orphans") {
             db,
             apply,
             confirm: promptLine,
+            appFor,
             batchSize,
             limit,
             state,
@@ -457,6 +515,7 @@ if (mode !== "orphans") {
             apply,
             confirm: promptLine,
             moderateFor,
+            appFor,
             publicUrl: (bucket, objectPath) => bucketApi(bucket).getPublicUrl(objectPath).data.publicUrl,
             perMinute,
             limit,

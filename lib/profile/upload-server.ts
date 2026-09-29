@@ -22,7 +22,7 @@ import {
   isDefaultProfileMedia,
   type ProfileMediaKind,
 } from "@/lib/profile/default-media";
-import { revalidateProfilePage } from "@/lib/profile/username";
+import { revalidateProfileMedia, revalidateProfilePage } from "@/lib/profile/username";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -262,15 +262,6 @@ async function storedMediaName(
   return ownMediaName(userId, currentUrl);
 }
 
-async function revalidateProfile(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-) {
-  revalidatePath("/settings");
-  revalidatePath("/onboarding");
-  await revalidateProfilePage(supabase, userId);
-}
-
 /** Use one of the built-in images (public/defaults). `path` must be a value
  *  from lib/profile/default-media — anything else is refused, so this can
  *  never be used to point a profile at an arbitrary URL. */
@@ -302,6 +293,6 @@ export async function chooseDefaultProfileMediaAction(
     await userFolder("profile-media", user.id).remove([previousName]);
   }
 
-  await revalidateProfile(supabase, user.id);
+  await revalidateProfileMedia(supabase, user.id);
   return { ok: true, publicUrl: path };
 }

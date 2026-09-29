@@ -43,3 +43,16 @@ export async function revalidateProfilePage(
   const username = await lookupUsername(supabase, userId);
   if (username) revalidatePath(`/profile/${username}`);
 }
+
+/** Everything that shows a user's avatar or banner: their settings and
+ *  onboarding pages and their public profile. After "use a built-in image"
+ *  (lib/profile/upload-server.ts) and the flagged-file rescan swapping a
+ *  flagged avatar/banner for a built-in (lib/moderation/flagged-file.ts). */
+export async function revalidateProfileMedia(
+  supabase: ProfileClient,
+  userId: string,
+): Promise<void> {
+  revalidatePath("/settings");
+  revalidatePath("/onboarding");
+  await revalidateProfilePage(supabase, userId);
+}
