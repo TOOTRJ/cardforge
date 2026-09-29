@@ -1839,12 +1839,6 @@
     "colors": {
       "w": [
         {
-          "name": "Serra Angel",
-          "set": "dmr",
-          "scryfallId": "e430b8c9-9439-4256-9066-e9b57f257fe7",
-          "curated": true
-        },
-        {
           "name": "Plains",
           "set": "itp",
           "scryfallId": "9919afe3-b65e-4ec6-8a4f-9adbe5682ac7"
@@ -2032,12 +2026,6 @@
   "retroland": {
     "colors": {
       "w": [
-        {
-          "name": "Serra Angel",
-          "set": "m12",
-          "scryfallId": "3c31fb9d-ec0d-4555-814d-62642d52c710",
-          "curated": true
-        },
         {
           "name": "Plains",
           "set": "inr",
@@ -2626,12 +2614,6 @@
           "set": "fra",
           "scryfallId": "9a5db4d2-035f-4f48-8752-75487267c222",
           "tier": 2
-        },
-        {
-          "name": "Sothera, the Supervoid",
-          "set": "eoe",
-          "scryfallId": "07b10f1b-b03b-4f19-bc7e-69d5eaa5ff07",
-          "tier": 2
         }
       ],
       "r": [
@@ -2648,14 +2630,7 @@
           "scryfallId": "e40fe4b6-81c0-4822-9668-2dac7820dcb9"
         }
       ],
-      "c": [
-        {
-          "name": "Aang, Swift Savior // Aang and La, Ocean's Fury",
-          "set": "tla",
-          "scryfallId": "372afa84-9ca9-46e6-8643-e16249505c59",
-          "tier": 2
-        }
-      ],
+      "c": null,
       "m": [
         {
           "name": "Katara, the Fearless",
@@ -2956,9 +2931,9 @@
           "tier": 1
         },
         {
-          "name": "There and Back Again",
+          "name": "Rush the Room",
           "set": "ltr",
-          "scryfallId": "f7596fb2-2f2b-4fde-8b8b-e041e16de4e9",
+          "scryfallId": "02e9fa6c-f331-4817-9919-d154b1a96c7b",
           "tier": 1
         }
       ],
@@ -3058,14 +3033,14 @@
       ],
       "c": [
         {
-          "name": "Aang, Swift Savior // Aang and La, Ocean's Fury",
-          "set": "tla",
-          "scryfallId": "077a1ad2-6317-4271-b86c-cc999776251d"
+          "name": "Arcane Signet",
+          "set": "tle",
+          "scryfallId": "89ac0b50-8c64-46b0-b670-cd2321153502"
         },
         {
-          "name": "Aang, at the Crossroads // Aang, Destined Savior",
-          "set": "tla",
-          "scryfallId": "d7f35cd9-71ac-4191-8604-1a653b56c42d"
+          "name": "Sol Ring",
+          "set": "tle",
+          "scryfallId": "c1f93f78-645b-4f21-a80b-5542f3328111"
         }
       ],
       "m": [
@@ -3083,7 +3058,7 @@
     }
   },
   "bloomburrow": {
-    "note": "BLB woodland and anime showcase cards share every Scryfall flag (#295–336); the picks below are from that run — CONFIRM the thumbnail shows the woodland frame, and pin another printing if not.",
+    "note": "Woodland = the BLB borderless showcase run #295–336 in WUBRG + gold order (one frame: #315 and #316 checked by eye 2026-09-28). The raised-foil anime legends #343–355 are bloomanime.",
     "confirm": true,
     "colors": {
       "w": [
@@ -3157,104 +3132,33 @@
     }
   },
   "bloomanime": {
-    "note": "Anime frame: the raised-foil anime run (#343–355) is unambiguous but foil-only; confirm the thumbnail.",
+    "note": "Anime frame = the raised-foil anime legends BLB #343–355 (black bars with vine flourishes; checked by eye 2026-09-28). The run is one mono-green card (Lumra) and multicolour legends, so w/u/b/r/c have no printing. m: Baylen is three-colour (the uniform gold), Alania two-colour (split pinline, 4.6). Foil-only prints.",
     "confirm": true,
     "colors": {
-      "w": [
-        {
-          "name": "Hop to It",
-          "set": "blb",
-          "scryfallId": "684614e3-5454-4e68-87da-a2027b6af6d7",
-          "tier": 2
-        },
-        {
-          "name": "Whiskervale Forerunner",
-          "set": "blb",
-          "scryfallId": "7ea69966-8961-4447-bd39-70d3d8d48ede",
-          "tier": 2
-        }
-      ],
-      "u": [
-        {
-          "name": "Mind Spring",
-          "set": "blb",
-          "scryfallId": "e7e7d174-eb7c-41ad-a241-cfbfdc71e3a7",
-          "tier": 2
-        },
-        {
-          "name": "Eluge, the Shoreless Sea",
-          "set": "blb",
-          "scryfallId": "df9da428-3af7-4027-b3f0-9138d953c37b",
-          "tier": 2
-        }
-      ],
-      "b": [
-        {
-          "name": "Fell",
-          "set": "blb",
-          "scryfallId": "7a4bb137-2639-4158-a24b-93c8e4f4cc21",
-          "tier": 2
-        },
-        {
-          "name": "Rottenmouth Viper",
-          "set": "blb",
-          "scryfallId": "7bad7555-3e5d-4096-a671-184630d38113",
-          "tier": 2
-        }
-      ],
-      "r": [
-        {
-          "name": "Flame Lash",
-          "set": "blb",
-          "scryfallId": "c6440439-7178-4a97-9e18-7fdef4b02678",
-          "tier": 2
-        },
-        {
-          "name": "Season of the Bold",
-          "set": "blb",
-          "scryfallId": "e9d88763-35bd-472a-810e-02c795d0c873",
-          "tier": 2
-        }
-      ],
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
       "g": [
         {
-          "name": "Giant Growth",
+          "name": "Lumra, Bellow of the Woods",
           "set": "blb",
-          "scryfallId": "e70722d6-b4d5-45c2-9488-9a5eb0bdb9bd",
-          "tier": 2
-        },
-        {
-          "name": "Season of Gathering",
-          "set": "blb",
-          "scryfallId": "6e99fa55-2594-434b-9396-95b8f661bd0d",
+          "scryfallId": "8487cfce-2b73-4082-a1f2-dea263811516",
           "tier": 2
         }
       ],
-      "c": [
-        {
-          "name": "Forest",
-          "set": "blb",
-          "scryfallId": "bddc66f7-4e94-4857-ba7d-6b0083d0bfa0",
-          "tier": 2
-        },
-        {
-          "name": "Starforged Sword",
-          "set": "blb",
-          "scryfallId": "c23d8e96-b972-4c6c-b0c4-b6627621f048",
-          "tier": 2
-        }
-      ],
+      "c": null,
       "m": [
         {
-          "name": "Pond Prophet",
+          "name": "Baylen, the Haymaker",
           "set": "blb",
-          "scryfallId": "fb959e74-61ea-453d-bb9f-ad0183c0e1b1",
+          "scryfallId": "0b511524-e628-41d4-b0dc-d98961d4e9e1",
           "tier": 2
         },
         {
-          "name": "Ral, Crackling Wit",
+          "name": "Alania, Divergent Storm",
           "set": "blb",
-          "scryfallId": "acfde780-899a-4c5b-a39b-f4a3ff129103",
+          "scryfallId": "34ace81d-823f-43d1-902e-345418cd8fd2",
           "tier": 2
         }
       ]
@@ -3290,12 +3194,6 @@
     "colors": {
       "w": [
         {
-          "name": "Twinmaw Stormbrood // Charring Bite",
-          "set": "tdm",
-          "scryfallId": "ef466256-7d9c-46d0-a860-a0db6930db61",
-          "tier": 1
-        },
-        {
           "name": "Teeming Dragonstorm",
           "set": "tdm",
           "scryfallId": "f717301c-1ae8-44b4-b6e5-d3bdf052f5da",
@@ -3304,25 +3202,19 @@
       ],
       "u": [
         {
-          "name": "Whirlwing Stormbrood // Dynamic Soar",
-          "set": "tdm",
-          "scryfallId": "a621ea7f-f6d5-4663-897a-bbdc2556d665",
-          "tier": 1
-        },
-        {
           "name": "Dragonologist",
           "set": "tdm",
           "scryfallId": "97e8d7d3-7e80-4742-9951-eb6679a0aa66",
           "tier": 1
+        },
+        {
+          "name": "Roiling Dragonstorm",
+          "set": "tdm",
+          "scryfallId": "3c725add-1cca-4003-8f37-c68f8f8fcc33",
+          "tier": 1
         }
       ],
       "b": [
-        {
-          "name": "Feral Deathgorger // Dusk Sight",
-          "set": "tdm",
-          "scryfallId": "58c446e6-8ffb-45ed-aca2-95161ac88d5c",
-          "tier": 1
-        },
         {
           "name": "Corroding Dragonstorm",
           "set": "tdm",
@@ -3343,12 +3235,6 @@
         }
       ],
       "g": [
-        {
-          "name": "Sagu Wildling // Roost Seek",
-          "set": "tdm",
-          "scryfallId": "b72ee8f9-5e79-4f77-ae7e-e4c274f78187",
-          "tier": 1
-        },
         {
           "name": "Encroaching Dragonstorm",
           "set": "tdm",

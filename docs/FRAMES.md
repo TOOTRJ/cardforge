@@ -258,6 +258,44 @@ fit (the symbol drawn at `type.sizePct × 1.1`, or at an override's
 family is a layout bump of its own. Rules text is not part of this standard: it keeps the
 9 pt ceiling and its fit (the recalibration is TODO 3.29).
 
+## Which printing is which frame (TODO 1.4)
+
+A Scryfall import knows which PipGlyph frame reproduces THIS printing from
+the frame signature registry, `lib/scryfall/frame-signatures.ts`: an
+ordered rule table (first match wins) over the printing's frame year,
+border colour, frame effects, promo types, set, set type and collector
+number. Each rule has a stable signature id and resolves to `exact`,
+`nearest` (with a reason and the TODO item that would make it exact) or
+`unsupported`. The import patch carries it as `frame_match`; `exact` also
+needs the combo verified in the card's colour (`withVerification`,
+`lib/creator/frame-resolve.ts`).
+
+- **A new frame** gets a rule for the printings it reproduces (a set +
+  collector range for a showcase run; never `full_art` alone), a fixture
+  printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
+  a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
+  test fails until some rule can reach it.
+- **A frame whose border isn't true yet** stays in
+  `BORDER_PENDING_TEMPLATES` (or, for single colour masters,
+  `BORDER_PENDING_COLOURS`), capped at `nearest`. The list is the edge
+  contract's known failures (`lib/frames/edge-contract.ts`, 7.7) except
+  alphaland's invisible corner specks, and a test holds them together:
+  once a master is fixed and struck from the known failures, take its cap
+  out too (4.35).
+- **A frame the registry names for later** (`onceVerified`): a rule may
+  name a verified frame now and another once that one is verified in the
+  card's colour — the 2003-frame textless promos name the 2003 frame until
+  `m15textless` is verified. `withVerification` makes the swap, so
+  verifying the combo is all it takes.
+- **Registry references** (`lib/cards/frame-references.json`) must resolve
+  to their own template and pass the pin check;
+  `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
+  trimmed capture of every reference printing
+  (`tests/unit/cards/fixtures/reference-printings.json` — re-capture it
+  when you add a reference). Never replace the DEFAULT reference of a combo
+  production has verified; add an alternate and ask the owner to
+  re-verify.
+
 ## Walking the stepper and signing off a template (TODO Phase 2)
 
 Verification is still the only gate (`frame_reviews`), but an admin can now

@@ -7,6 +7,7 @@ import {
 import {
   CARD_KIND_VALUES,
   KIND_DEFS,
+  isBorrowedVariation,
   templateSupportsKind,
   type CardKind,
 } from "@/lib/creator/card-kinds";
@@ -167,7 +168,16 @@ export function walkthroughKindFor(template: FrameTemplate): CardKind {
       return kind;
     }
   }
-  return CARD_KIND_VALUES.find((kind) => templateSupportsKind(template, kind)) ?? "creature";
+  // A frame's own kind before a kind that only borrows it (a creature may
+  // wear Nyx as an Enchantment Creature, TODO 1.7 / A3 — Nyx still walks as
+  // an enchantment).
+  return (
+    CARD_KIND_VALUES.find(
+      (kind) => templateSupportsKind(template, kind) && !isBorrowedVariation(kind, template),
+    ) ??
+    CARD_KIND_VALUES.find((kind) => templateSupportsKind(template, kind)) ??
+    "creature"
+  );
 }
 
 /** The `kind` a walk-through URL carries, validated: a real kind the

@@ -391,4 +391,47 @@ test.describe("Scryfall search → import", () => {
       .filter({ visible: true });
     await expect(typeLines.first()).toHaveText("Instant");
   });
+
+  // TODO 1.4: the frame signature registry. Bident of Thassa THS #42 prints
+  // Theros's 2003 Nyx frame, whose nearest PipGlyph frame is Nyx
+  // (frame_match); Nyx isn't verified in blue (supabase/seed.sql), so the
+  // import falls forward to M15 and the creator says which frame it wanted.
+  test("an import asks for its signature's frame and names the fallback", async ({ page }) => {
+    const id = "85e45d14-a501-40b9-af0a-720ecd20dad7"; // THS #42
+    await mockPrinting(page, {
+      id,
+      name: "Bident of Thassa",
+      set: "ths",
+      set_name: "Theros",
+      type_line: "Legendary Enchantment Artifact",
+      has_back_image: false,
+      // What lib/scryfall/import-mapper.ts emits for THS #42.
+      patch: {
+        title: "Bident of Thassa",
+        cost: "{2}{U}{U}",
+        kind: "enchantment",
+        frame_template: "nyx",
+        frame_match: {
+          status: "nearest",
+          template: "nyx",
+          exactLabel: "Nyx frame (2003)",
+          reason: "PipGlyph's Nyx frame is the 2015 constellation showcase",
+          signature: "nyx/2003",
+          blockedBy: "4.7",
+        },
+        card_type: "enchantment",
+        supertype: "Legendary Artifact",
+        rarity: "rare",
+        color_identity: ["blue"],
+        source_scryfall_id: id,
+      },
+    });
+
+    await pickAndImport(page, "Bident", false);
+    await expect(
+      page.getByText(
+        "This printing's Nyx Constellation frame isn't available in blue yet — using M15 (2015) Standard.",
+      ),
+    ).toBeVisible();
+  });
 });

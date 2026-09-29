@@ -246,7 +246,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       Token+Artifact ⇒ `m15tokenartifact`, Artifact Land stays a land);
       Saga/Room/Class/Case/Omen from the front-face subtype (transforming
       Sagas, Rooms no longer Split) — `import-mapper.ts`:172-210.
-- [ ] **1.4 [P0] Frame signature registry + resolver** in the mapper — every
+- [x] (done 2026-09-28 — shipped in feat/import-frame-signatures: `lib/scryfall/frame-signatures.ts`, an ordered rule table (first match wins) with stable signature ids (`FRAME_SIGNATURE_KEYS` / `isKnownFrameSignature`, for 1.6) and a declarative match over frame, border, frame effects, promo types, set / set_type, per-set collector ranges, kind and type words. The patch carries `frame_match` {status, template, exactLabel, reason, signature, landOn?, reject?, forGood?, blockedBy?}; `frame_template` stays `landOn ?? template` (layout kinds: undefined) and `frameTemplateFromScryfall` is a thin wrapper. **Exact:** the border eras (the 1993/1997/2003 standards, the M15 standard and its snow/devoid/artifact dresses), layout kinds on the 2015 frame, extended art, and the pinned showcase runs whose border is true (ZNR hedron, the Expeditions but for the black and green masters, the THB constellation run #258–268 → nyx, which an Enchantment Creature borrows since A3). LTR ring, TDM draconic, BLB woodland and TLA/TLE elemental resolve to their frames but are capped at `nearest` until their edge defects are fixed (A8). **Nearest, with a reason and `blockedBy`:** anatomy gaps (owner question 1's default: legendary crown and two-colour frames 4.6, colour indicator, vehicle, double-faced marks Phase 5, unmodelled layouts 4.27, etched 4.28, white/silver/gold border 4.30, frame marks 4.7, and the Nyx starfield every modern enchantment prints — 4.7's `m15nyx`, since `nyx` is the dark THB showcase: FDN #27 → nearest m15); the templates whose border isn't true (capped: 4.35's bloomanime, tarkirghostfire, tarkirdragon, lotrscroll, battle, and 7.7's avatar, bloomburrow, lotr, tarkirdraconic and expeditionland b/g — A8); a coloured artifact on 1997/2003 → m15artifact (Porcelain Legionnaire NPH #19); THS's 2003 Nyx → nyx (Bident of Thassa THS #42); a frame that can't dress the card's kind lands on the kind's standard (`landOn`: a KHM snow artifact → m15artifact, a TDM omen → adventure; a creature on Nyx that isn't an Enchantment Creature → M15). A 2003-frame textless promo names the 2003 frame until m15textless is verified in its colour (`onceVerified`, A9). `frame: future` → unsupported, nearest M15 (1.10). `withVerification` (`lib/creator/frame-resolve.ts`) makes exact need the verified combo, `/api/scryfall/named` finalizes it, `resolveImportFrame` reads `frame_match`. `LAND_FRAME_OVERRIDES` moved into the registry (`landFrameColorRule`): a fetch land for two basic land types prints both colours (Flooded Strand KTK #233 → m15land/m, Arid Mesa ZEN #211 R/W); on their scans Fabled Passage ELD #244 and Prismatic Vista MH1 #244 print the GOLD land frame (added as "gold"), Evolving Wilds MSC #240 grey. The pin check accepts a standard kind the frame can't dress yet when the printing's signature IS that frame, and warns when it resolves elsewhere. Registry: all 498 references resolve to their own template and pass the pin check (`tests/unit/cards/frame-reference-signatures.test.ts`, fixture `tests/unit/cards/fixtures/reference-printings.json`) except five production-verified DEFAULTS, allowlisted for owner re-verification against their alternates: m15snow w/b/g (KHM #1, #83, #192 print the plain M15 frame, not snow), m15devoid/c (no colourless devoid printing exists), m15token/c (the Treasure token prints the artifact token frame). Re-pinned: Serra Angel off alphaland/w and retroland/w; Sothera EOE #382 (a poster) off m15textless/b; m15textless/c → null (no colourless borderless textless printing); There and Back Again (a saga) → Rush the Room LTR #598 on lotrscroll/r; the Aang cards (multicolour) → Arcane Signet TLE #315 · Sol Ring TLE #316 on avatar/c; the Stormbrood omens off tarkirdraconic (+ Roiling Dragonstorm TDM #296 on u); bloomanime → Lumra BLB #343 (g), Baylen #345 · Alania #344 (m), w/u/b/r/c null (the anime run has no such printing). Fixtures: 96 printings in `tests/unit/scryfall/fixtures/signature-printings.json`. Left for later: 1.5's chooser, 1.6's request log; `seed.sql` listed only the pre-4.32 verified combos — A7's separate supabase PR mirrors production's) **1.4 [P0] Frame signature registry + resolver** in the mapper — every
       template declares the Scryfall signature it reproduces;
       `frame_match: { status: exact | nearest | unsupported, template,
       exactLabel, reason }` on the patch; `exact` requires the combo to be
@@ -283,6 +283,61 @@ Open decisions are marked **[decide]**; none blocks its phase.
         on tarkirdraconic, Aang on avatar/c, a BLB Forest on bloomanime/c,
         There and Back Again on lotrscroll, …): re-pin or fix them with their
         signatures.
+      **Owner decisions 2026-09-29** (owner: "recommendations" on the
+      signature registry's nine questions, feat/import-frame-signatures):
+      - **A1 anatomy gaps — kept:** the legendary crown, two-colour frames,
+        the DFC marks, etched and white/silver/gold borders stay `nearest`
+        (with `blockedBy` 4.6 / Phase 5 / 4.28 / 4.30).
+      - **A2 full-art basics — kept:** a bordered full-art basic (split bar,
+        plain bar, per-set, SLD, ONE/MOM, coloured borders) lands on
+        m15fullartland once verified in its colour; a borderless basic lands
+        on m15land with 'Use Borderless Full-Art Basic' offered.
+      - **A3 Nyx for Enchantment Creatures — changed:** a creature borrows
+        the Nyx showcase the way it borrows m15artifact (1.7): the creator
+        offers it in a creature's Variations ("For Enchantment Creatures"),
+        picking it writes "Enchantment" into the supertype and leaving it
+        takes the word out, AI frames and the any-frame fallback skip it
+        unless the card says Enchantment, the server gate accepts a creature
+        on it, and the pin check accepts only an Enchantment Creature. The THB
+        constellation gods (#258–268) resolve `exact` nyx, so they land on it
+        once nyx is verified in their colour (M15 until then). Every
+        Theros-block Enchantment Creature on the 2003 frame (THS / BNG / JOU
+        gods, bestow creatures, Nyxborn, Eidolons; 117 printings with
+        their promos and reprints) keeps
+        `nearest` nyx without the kind landing, so while nyx is unverified a
+        white one lands on M15, not modern/w (the only verified 2003
+        standard) — **owner 2026-09-29: keep as built** (they land on M15
+        until nyx is verified; no `onceVerified` on `nyx/2003`, Bident
+        unchanged).
+        Their `frame_template` is now `nyx`, so the AI deck remix needs
+        #397's `remixFrameFor` (which resolves the remix frame against the
+        verified combos) before a remix of one saves.
+      - **A4 regular Nyx — kept:** the 2015 starfield enchantments are
+        `nearest` M15 (`blockedBy` 4.7's `m15nyx`); THS's 2003 Nyx is
+        `nearest` nyx.
+      - **A5 — kept:** Fabled Passage and Prismatic Vista print the gold land
+        frame.
+      - **A6 — owner step:** re-verify m15snow w/b/g and m15token/c in the
+        walk-through against the printings that ARE those frames — Search for
+        Glory KHM #27 (w), Priest of the Haunted Edge KHM #104 (b), Sculptor
+        of Winter KHM #193 (g), Cadet TFRA #1 (c) — then retire their
+        allowlist rows (`tests/unit/cards/frame-reference-signatures.test.ts`).
+        m15devoid/c stays verified against Kozilek's Channeler BFZ #10.
+      - **A7 — a new small supabase PR** (branch
+        `chore/seed-verified-frames`, its TODO 7.9) mirrors production's
+        verified `frame_reviews` in `supabase/seed.sql` (never ahead of
+        production), so previews and the dev DB show the full-art landings
+        and the Borderless offers.
+      - **A8 — changed:** avatar, bloomburrow, lotr and tarkirdraconic join
+        `BORDER_PENDING_TEMPLATES`, and expeditionland is capped in black and
+        green only (`BORDER_PENDING_COLOURS`; no printed Expedition is either),
+        until their edge defects are fixed (7.7's known failures; a test
+        holds the two lists together).
+      - **A9 — changed:** the 2003-frame textless promos (Player Rewards
+        P05–P11, Wrath of God P07 #1) name the 2003 frame (modern) as their
+        nearest until m15textless is verified in their colour, then
+        m15textless (`onceVerified`, swapped in by `withVerification`). Future
+        Sight textless printings keep m15textless (`textless/future`).
 - [ ] **1.5 [P0] Import dialog UX** — per-printing status (✓ Exact · ≈ Nearest
       · ✕ Not available); full printings list with a treatment filter instead
       of newest/oldest 30 (`app/api/scryfall/printings/route.ts`:108,
@@ -311,6 +366,11 @@ Open decisions are marked **[decide]**; none blocks its phase.
       card for "Artifact" in the supertype (4.31, `isArtifactFrameType`), and
       today an imported Juggernaut — or the frame-compare view of Battering
       Ram — gets the grey colourless card.
+      **Owner decision A3 (2026-09-29):** the same borrow for the Nyx
+      showcase — a creature may wear Nyx as an Enchantment Creature (the THB
+      constellation gods). `BORROWED_SHOWCASES` / `borrowedTypeWord` in
+      `lib/creator/card-kinds.ts` carry the word each borrowed frame writes
+      ("Artifact", "Enchantment"); every 1.7 rule above reads it.
 - [x] (done 2026-09-28 — feat/import-mapper-fixes: `/api/scryfall/named`'s card payload carries `has_back_image` (`hasBackFaceImage`, `lib/scryfall/client.ts`: `card_faces[1].image_uris` holds a URL), and the import dialog asks `/import-art` for `art-back` only then — a split, adventure, flip, aftermath or Room card is one image, so it no longer spends a lookup on a 404 and toasts "The back-face art couldn't be fetched" (Bonecrusher Giant ELD #115); a DFC still gets both faces (Delver ISD #51). `/import-art` charges `import_art` only after the face AND its image URL resolve ("no back face" / "no image" cost nothing; the placeholder gate still refuses first) and returns the requested face's artist. Per-face artist (`scryfallFaceArtist`, `lib/scryfall/import-mapper.ts`): a multi-face card's front is `card_faces[0].artist ?? card.artist`, its back `card_faces[1].artist ?? card.artist` — Fire // Ice DMR #215 imports David Martin / Franz Vohwinkel, not "David Martin & Franz Vohwinkel" twice; the admin frame-compare render (`buildFrameComparePayload`) picks it up. Fixtures: image_uris captured 2026-09-28 on isd-51, eld-115, dmr-215; tests `tests/unit/scryfall/face-art.test.ts`, `tests/unit/api/scryfall-import-art-route.test.ts`, `tests/unit/components/scryfall-import-back-art.test.tsx`) **1.8 [P1] Back-face art only when the face has `image_uris`** (expose
       `has_back_image` on `/named`), log the quota after URL resolution,
       import the per-face artist — `app/api/scryfall/import-art/route.ts`:134,
@@ -321,6 +381,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
 - [ ] **1.10 [P2] Flavour `*…*` markers → italic toggles; rarity `special`/
       `bonus` → the purple special symbol; `frame: "future"` labelled and
       reported as unsupported** (`import-mapper.ts`:80,226,339).
+      **Signature registry 2026-09-28:** the `frame: "future"` part is done in 1.4 (signature `future`: `unsupported`, exactLabel "Future Sight frame", nearest M15, `blockedBy` 4.15; FUT / MB2 textless printings resolve through 1.19's textless rule first). The flavour `*…*` italic toggles and the `special`/`bonus` purple rarity need Lane A: a renderer change plus the rarity CHECK constraint.
 - [ ] **1.11 [P2] Mana-symbol vocabulary** — `{G/U/P}`-style Phyrexian
       hybrids, `{C/W}`, `{HW}`, `{½}`, `{∞}`, `{CHAOS}`, `{TK}`, `{A}`, `{PW}`,
       `{P}`, `{L}`, `{D}` in the tokenizer and both renderers
@@ -360,7 +421,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - This closes 1,131 more silent "exact"s (survey `stopgap.txt`).
       - Fixtures: BFZ #250 (→ m15land, toast), ONE #262 (toast), SCH #3 (textless → m15, toast), T2XM #4 (no toast).
       - Once 4.39 is verified for that colour, add a "Use Full-Art Basic" action.
-- [ ] **1.17 [P0] Borderless families in the signature registry (feeds 1.4)** (borderless research 2026-09-25) — 1.1 parses the fields; this item is the borderless half of 1.4's resolver. Every borderless printing is `frame: 2015` (`-frame:2015` returns 0). None is a battle, and none carries `extendedart` (0 each).
+- [x] (done 2026-09-28 — shipped in feat/import-frame-signatures, in the order below with the full-art amendment. Exact: the dark-box standard → m15borderless / m15borderlessartifact (the import still lands on the bordered frame, 1.18's decision, via `landOn`), BLB woodland, LTR ring, TLA/TLE elemental. An edge-to-edge match (m15borderless, m15borderlessartifact, fullartland) ALWAYS lands on its bordered frame, `full_art` or not: measured 2026-09-28, the `art_crop` of full-art borderless printings is the window too (FRA #382, CMM #702, SPG #119, TLE #1 626×457; MH3 #326 571×460). Nearest: the crown, the nickname line, the Nyx starfield, a vehicle, a colour indicator, a two-colour pinline and the light box (4.37) on the standard family; planeswalkers → m15pw (4.33); nonbasic lands → m15land (4.34); basics → fullartland (FRA #382–396's dark bars; other borderless basics — landing on m15land with 'Use Borderless Full-Art Basic' offered once verified, as 4.39 has it) or m15textlessland (textless); double-faced cards (5.7, checked before the kind so ZNR #284 names it); layout cards (4.38); tokens (4.37); textless non-basics → m15textless (4.35); text on the art (source material, TDM clan, 4.36); the other showcases and set frames (4.11). Posters are unsupported for good; MP2 / UST / BOT unsupported (UST's five textless basics go to the basic rule). **Correction, checked by eye on the scans:** BLB #295–336 is ONE woodland run in WUBRG + gold order (#315 and #316 print the same vine frame; so do #326 and #331), and the anime frame is only the raised-foil legends #343–355 — BLB #316 resolves `exact` bloomburrow, not anime. WOT #64 is the standard frame (confirmed). TLE #305–317 print the TLA elemental frame.) **1.17 [P0] Borderless families in the signature registry (feeds 1.4)** (borderless research 2026-09-25) — 1.1 parses the fields; this item is the borderless half of 1.4's resolver. Every borderless printing is `frame: 2015` (`-frame:2015` returns 0). None is a battle, and none carries `extendedart` (0 each).
 
       Resolve in this order:
       1. `promo_types ∋ poster` (369; artist-lettered, e.g. SPG #119, LTR #731) → `unsupported` for good. Offer Borderless (4.32) as the nearest.
@@ -425,7 +486,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
       - **Window-shaped crops.** Other full-art printings still get the 626×457 window (SCH #3, MID #268, DSK #389, SLZ #46). Covering a 1500×2100 slot scales the tall crops about 2.6–3.2× and the window crops about 4.6×.
       - **What to do.** Show the Art-step note with "…and includes parts of the printed frame", and log `art: frame-in-crop` on the 1.6 row.
       - **Decided 2026-09-26 (owner approved the full-art recommendations)**: warn only (the alternative was auto-trimming by a per-family inset table, which is heuristic and wrong on one-offs).
-- [ ] **1.19 [P0] Full-art and textless families in the signature registry (feeds 1.4; runs after 1.17)** (full-art research 2026-09-26) — 1.17 resolves `border_color: borderless`. This item is the same resolver for every other printing Scryfall flags `full_art` or `textless`.
+- [x] (done 2026-09-28 — shipped in feat/import-frame-signatures, in the order below: substitute cards rejected (`reject`); SLZ and black posters unsupported for good, nearest M15; the Japan showcase nearest M15 (white run: 4.30 too); 1997/2003 tokens nearest m15token, 2015 full-art tokens exact; full-art basics by border, set list and design, never by `full_art` alone — FDN #282 / HOB #194 exact m15fullartland, ONE / MOM nearest (the 4.39 amendment), split bar (4.40, incl. ZEN / J14 on the 2003 frame), plain bar (4.41), coloured borders (4.30), per-set designs (4.11) and SLD black basics nearest m15fullartland; textless non-basics nearest m15textless / m15textlessland (4.42, 4.43), the TRK LCARS lands unsupported; any other bordered full-art printing nearest M15, "full-art one-off"; the look-alikes by set + range: ZNR #290–313 → fullart, ZNE / EXP → expeditionland (never by set_type alone: MUL, STA, EOS, WOT and SPG are `masterpiece` too). **Landing change:** a black-bordered (or yellow/white-bordered) full-art basic now lands on m15fullartland once that combo is verified (it landed on m15land, with a "Use Full-Art Basic" offer for the 2022 design only; their `art_crop` is the taller full-art crop) — kept by the owner 2026-09-29 (A2). A 2003-frame textless promo (P07 #1) names the 2003 frame (modern) as its nearest until m15textless is verified in its colour, then m15textless (owner decision A9 2026-09-29, `onceVerified`: it lands on modern/w as before the registry); Future Sight textless printings keep m15textless (`textless/future`)) **1.19 [P0] Full-art and textless families in the signature registry (feeds 1.4; runs after 1.17)** (full-art research 2026-09-26) — 1.17 resolves `border_color: borderless`. This item is the same resolver for every other printing Scryfall flags `full_art` or `textless`.
 
       **Scale.** 1,449 paper full-art printings are not borderless. 1,302 of them would still import as the bordered standard with a false "exact" after 1.16 as written (survey `stopgap.txt`; the 1.16 amendment above closes this). Run through the real mapper (`lib/scryfall/import-mapper.ts`:237-259; `today/resolve-results.txt`, `survey/mapper/mapper-results.txt`), today:
       - BFZ #250, ZNR #266, NEO #293 and ONE #262 → `m15land`; (2026-09-26: ONE / MOM print an older bar geometry than `m15fullartland`'s master — `nearest`; FDN #282 is the `exact` fixture, see 4.39)
@@ -896,7 +957,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       4-ability + compleated planeswalkers. Each ships through 0.9 → 2.2 → 2.4.
       **Card Conjurer audit 2026-09-25:** - **Borderless:** → 4.32–4.38, 5.7 (borderless research 2026-09-25: CC FullArtNew, `m15/new/fullart` 2010×2814, has an opaque black ring, so it is a black-bordered full-art frame, not borderless; every CC borderless pack is 1500×2100).
       - **Extended art:** from CC `m15/new/extended` (2010 px, includes c and v; art 0/8.39/100×54.37).
-      - **Nyx (fix):** a new `m15nyx` skin of m15 from CC `m15/new/nyx` (normal cream text box, dark ink; c → a.png). Auto for Enchantment Creature/Artifact and for `frame_effects: enchantment` on non-showcase printings. Add a saga Nyx and a Nyx inner crown. KEEP the `nyx` template as the THB 'Constellation' showcase, which matches its references.
+      - **Nyx (fix):** (owner decision A4 2026-09-29: until it ships, the signature registry keeps the 2015 starfield printings `nearest` M15 with `blockedBy` 4.7, and THS's 2003 Nyx `nearest` nyx; since A3 a creature borrows `nyx` for an Enchantment Creature, so `m15nyx` should be borrowed the same way) a new `m15nyx` skin of m15 from CC `m15/new/nyx` (normal cream text box, dark ink; c → a.png). Auto for Enchantment Creature/Artifact and for `frame_effects: enchantment` on non-showcase printings. Add a saga Nyx and a Nyx inner crown. KEEP the `nyx` template as the THB 'Constellation' showcase, which matches its references.
       - **Tall walker:** `m15pwtall` from CC PlaneswalkerTall (type y 49.67, rows from 55.81 at 8.96 %, symbol y 52.34), auto at ≥4 loyalty rows; Compleated as a skin on it.
       - **Case and Fuse (new):** Case (MKM) as the class column with `face_content.case = {text, toSolve, solved}`; Fuse (DGM) as a split skin with a full-width fuse bar. Class stores `face_content.class.levels`.
       - **Leveler:** via a `tiers` capability (shared with Station, 4.27).
@@ -1382,12 +1443,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       References: Spirebluff Canal OTJ #304 · Deserted Beach MID #281; long text: Avengers Tower MSH #334.
 - [ ] **4.35 [P1] Make "borderless" true in the existing templates (the border half of 4.11's re-measure, pulled forward)** (borderless research 2026-09-25) — Measured on the local masters (side band at 20–80 % H), five templates have a transparent outer ring plus an inset art slot: bloomanime, tarkirghostfire, tarkirdragon, lotrscroll and battle. They bake a flat #101015 "border" that is in neither the art nor the print. Two registries point at the wrong printings. None of these combos is verified (production `frame_reviews`: 71 combos, all m15 family + saga + modern/w), so fixing them is cheap now and must happen before 1.17 calls any of them `exact`.
-      - **bloomanime.** `borderlessShowcase()` insets the art 2.5/3.5/93×92 (`lib/cards/template-layout.ts`:1571-1616). MSE's source runs the image 0/0/100×91.6, or 94.8 with a P/T (`magic-m15-showcase-bloomburrow-borderless-anime.mse-style/style`:401-407). Match MSE. The registry references Hop to It BLB #381 and Fell BLB #383, which are black-border promo-pack printings, not the anime run. Replace them with BLB #316–336 and #343–355. 0 production cards.
+      - **bloomanime.** `borderlessShowcase()` insets the art 2.5/3.5/93×92 (`lib/cards/template-layout.ts`:1571-1616). MSE's source runs the image 0/0/100×91.6, or 94.8 with a P/T (`magic-m15-showcase-bloomburrow-borderless-anime.mse-style/style`:401-407). Match MSE. The registry references Hop to It BLB #381 and Fell BLB #383, which are black-border promo-pack printings, not the anime run. Replace them with BLB #316–336 and #343–355. 0 production cards. **Signature registry 2026-09-28:** replaced, but by #343–355 only: #316–336 print the woodland frame (checked by eye), so bloomanime has references for g (Lumra #343) and m (Baylen #345, Alania #344) and no printing in w/u/b/r/c. The registry caps bloomanime, tarkirghostfire, tarkirdragon, lotrscroll and battle at `nearest` (`BORDER_PENDING_TEMPLATES` in `lib/scryfall/frame-signatures.ts`) — take a template out of that set when its border is true.
       - **tarkirghostfire.** The comment calls it "borderless" (`template-layout.ts`:1618). Scryfall: #399–408 are black-bordered, #409–418 white. The registry references #410, which is white. Paint a real black ring for the black run, register #399–408 references (e.g. Clarion Conqueror TDM #400), and leave the white run to 4.30. 1 production card, so ship it as a 0.20 platform correction.
       - **tarkirdragon.** The ring bakes #101015 (16,16,21), but the MUL references are black-bordered. Make it opaque black. 4 production cards; 0.20 sweep.
       - **fullartland.** The only true edge-to-edge master, but its references are HOB/BFZ black-bordered full-art basics. **Decided 2026-09-26 (owner: "go with your recommendation")**: keep it borderless (the alternative was adding a black border to match the current references). References revised the same day after the full-art research: FRA #382–396, not UNF #235 / EOE #262 (see the end of this item). 0 production cards.
       - **m15textless / m15textlessland.** Black-ring masters, but their references are borderless (MSH/TRK/TLA/FRA; EOE basics). **Decided 2026-09-26 (owner: "go with your recommendation")**: re-source them borderless from CC `TextlessGenericShowcase` (4.37), matching their references (the alternative was re-referencing them to black-bordered textless printings).
       - **lotrscroll and battle** are the same ring problem, already in 7.6/4.21. Cross-reference; don't duplicate.
+      - **Owner decision A8 (2026-09-29):** the signature registry also caps the four templates 7.7's edge contract found (avatar, bloomburrow, lotr, tarkirdraconic: a transparent outer band at the bottom and lower sides) and expeditionland in black and green (3) — `BORDER_PENDING_TEMPLATES` / `BORDER_PENDING_COLOURS` in `lib/scryfall/frame-signatures.ts`. A test holds that list to `EDGE_CONTRACT_KNOWN_FAILURES` (but alphaland's invisible corner specks), so fixing a master here — which strikes it from the known failures — asks for its cap to go too.
 
       Acceptance: 7.7 passes for every template listed here.
       **Full-art research 2026-09-26:**
@@ -1514,6 +1576,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       Acceptance: 7.7 passes (border on all four edges). SCH #3 resolves `exact`. A parity case where rules text is present but hidden.
 - [ ] **4.43 [P3] Old-frame full art: 2003 textless promos, 2003-era full-art tokens and basics, Future Sight textless** (full-art research 2026-09-26) — None of these has an M15-era CC source. Build them only after 4.10 (1997/2003 borders from CC Seventh/8th) and 4.23 (era text treatment), in 1.6-log order, and log each as `nearest` until then.
+      - **Owner decision A9 (2026-09-29):** until this ships, the signature registry names the 2003 frame (modern) as these promos' nearest, and m15textless once it is verified in the card's colour (`onceVerified` on the `textless/old-frame` rule, swapped in by `withVerification`) — verifying m15textless is all it takes; point the rule at this item's frame when it exists.
       - **Player Rewards textless:** P05–P11 (48) plus PLST reprints (9) and 1 more. 2003 frame, textured colour ring, arched art to the bottom, no type line. Derive from CC 8th (4.10's 1500 px source) through its type/rules masks, using MSE `magic-new-textless` (375 px) for geometry, plus 3.24's `textless` flag.
       - **2003-era full-art tokens:** 74, plus 6 silver-bordered UGL tokens, 1998–2014. Name plaque, arched art over the text area, type bar and P/T. MSE (375 px) only.
       - **ZEN (20) and J14 (5) full-art basics:** 4.40's medallion bar on 4.10's 2003 border.
@@ -1764,7 +1827,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
       Fix those with 4.21 and the M15-family `artSlot` = CC artBounds (4.4). Translucent frames (4.17) are asserted differently.
       **Full-art research 2026-09-26:** check every colour of every master. The `expeditionland` b/g defect slipped through because the earlier checks sampled one colour.
-- [x] (done 2026-09-26 — wf/nf-renderer + feat/new-frames: `lib/frames/edge-contract.ts` holds the table and the checker — the table sits there rather than in the test so `scripts/import-cc-frames.mjs` runs the same check after its downscale and exits non-zero on a violation or an undeclared template; `tests/unit/frames/edge-contract.test.ts` checks every git master, and every bucket master when a local build matches the manifest's sha256 (`FRAMES_BUILD_DIR`, else `.frames-build`), with today's failures as `it.fails`. The check found four more ring templates the side-band survey missed — avatar, bloomburrow, lotr and tarkirdraconic (transparent bottom band and lower sides) — listed as known failures beside 7.7's list, for 4.35 / 4.11. It passes on all 14 borderless masters (`m15borderless`: bar 7.76 % H, fins up the sides from 78.67 % H, measured on all nine CC masters), on `m15fullartland` (border; CC `textless/2022` rings are α 1.00) and on the re-sourced `fullartland` (art on every edge, plus its two bars)) **7.7 [P1] Edge-contract test (borderless-safe 7.6)** (borderless research 2026-09-25) — 7.6 asserts the frame is opaque outside the art window; an edge-to-edge treatment needs the opposite check. The manifest (4.1; a table in the test until then) declares each edge as `border`, `art` or `bar`, the same vocabulary as 6.1a's bleed recipe. For every template × colour master:
+- [x] (done 2026-09-26 — wf/nf-renderer + feat/new-frames: `lib/frames/edge-contract.ts` holds the table and the checker — the table sits there rather than in the test so `scripts/import-cc-frames.mjs` runs the same check after its downscale and exits non-zero on a violation or an undeclared template; `tests/unit/frames/edge-contract.test.ts` checks every git master, and every bucket master when a local build matches the manifest's sha256 (`FRAMES_BUILD_DIR`, else `.frames-build`), with today's failures as `it.fails`. The check found four more ring templates the side-band survey missed — avatar, bloomburrow, lotr and tarkirdraconic (transparent bottom band and lower sides) — listed as known failures beside 7.7's list, for 4.35 / 4.11 (owner decision A8 2026-09-29: the signature registry caps every known failure but alphaland's corner specks at `nearest` until it is fixed — see 4.35). It passes on all 14 borderless masters (`m15borderless`: bar 7.76 % H, fins up the sides from 78.67 % H, measured on all nine CC masters), on `m15fullartland` (border; CC `textless/2022` rings are α 1.00) and on the re-sourced `fullartland` (art on every edge, plus its two bars)) **7.7 [P1] Edge-contract test (borderless-safe 7.6)** (borderless research 2026-09-25) — 7.6 asserts the frame is opaque outside the art window; an edge-to-edge treatment needs the opposite check. The manifest (4.1; a table in the test until then) declares each edge as `border`, `art` or `bar`, the same vocabulary as 6.1a's bleed recipe. For every template × colour master:
       - `border` → frame α ≥ 0.99 in the outer 2 % band;
       - `art` → the artSlot touches that edge (0 or 100 %) and the frame is α ≤ 0.05 there outside declared bars;
       - `bar` → an opaque band at least the declared height.

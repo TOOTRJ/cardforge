@@ -10,10 +10,13 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
+  colorWord,
   isArtifactFrameType,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
+import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   KIND_DEFS,
@@ -104,8 +107,9 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     // A basic-only frame (the full-art basic land) is never a stand-in: it
     // can't draw most cards of its kind, so it is reachable only as an
     // explicit candidate (TODO 0.26). Nor is a frame the kind borrows from
-    // another type (the artifact frame on a creature, TODO 1.7): it would
-    // dress a plain creature as an artifact.
+    // another type (the artifact frame on a creature, TODO 1.7; the Nyx
+    // showcase, owner decision A3): it would dress a plain creature as an
+    // artifact or an enchantment.
     const any = gallery.find(
       (choice) =>
         !templateIsBasicOnly(choice.template) &&
@@ -190,6 +194,12 @@ export function importFrameCandidates(input: {
 export function resolveImportFrame(input: {
   patch: {
     frame_template?: FrameTemplate;
+    /** The signature registry's match (TODO 1.4). When present, the import
+     *  wants `landOn ?? template` — the same frame `frame_template` names
+     *  on a fresh patch; an older cached patch without it keeps
+     *  `frame_template`. A rejected printing (a substitute card) wants
+     *  nothing of its own. */
+    frame_match?: Pick<FrameMatch, "template" | "landOn" | "reject">;
     card_type?: CardType;
     supertype?: string;
     color_identity?: readonly ColorIdentity[];
@@ -208,7 +218,12 @@ export function resolveImportFrame(input: {
     patch.color_identity ?? current.colors,
   ) as FrameColorKey;
   const cardType = patch.card_type || current.cardType || "creature";
-  const wanted = patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
+  const matched =
+    patch.frame_match && !patch.frame_match.reject
+      ? (patch.frame_match.landOn ?? patch.frame_match.template)
+      : undefined;
+  const wanted =
+    matched ?? patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
   const resolution = resolvePublishedFrame({
     kind: input.kind ?? kindFromCard(cardType, undefined),
     candidates: importFrameCandidates({
@@ -221,6 +236,66 @@ export function resolveImportFrame(input: {
     prefer: "frame",
   });
   return { wanted, colorKey, resolution };
+}
+
+/**
+ * Finalize a static frame match (the signature registry, TODO 1.4) against
+ * the verified combos:
+ *   • a match that names another frame once it is verified
+ *     (`onceVerified`: a 2003-frame textless promo names the 2003 frame
+ *     until the textless frame is verified in its colour, owner decision
+ *     A9) takes that frame when it is;
+ *   • `exact` only when PipGlyph's frame is verified in the card's colour —
+ *     an unverified frame is never an exact match to a user, so it becomes
+ *     `nearest`, "not yet verified in <colour>".
+ * Nearest and unsupported matches otherwise pass through unchanged. Pure.
+ */
+export function withVerification<
+  T extends Pick<FrameMatch, "status" | "template" | "reason"> &
+    Partial<Pick<FrameMatch, "onceVerified">>,
+>(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
+  let finalized = match;
+  if (match.onceVerified && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey))) {
+    const { onceVerified, ...rest } = match;
+    finalized = { ...rest, template: onceVerified } as unknown as T;
+  }
+  if (finalized.status !== "exact") return finalized;
+  if (verifiedKeys.has(frameComboKey(finalized.template, colorKey))) return finalized;
+  return {
+    ...finalized,
+    status: "nearest",
+    reason: `not yet verified in ${colorWord(colorKey)}`,
+  };
+}
+
+/**
+ * An import patch with its frame match finalized (withVerification, in the
+ * patch's own colour) — what /api/scryfall/named returns. `frame_template`
+ * follows the finalized match (`landOn ?? template`) when the match took
+ * another frame, as the mapper wrote it from the static one; a patch
+ * without a match, or a layout kind's (no frame_template), keeps its own.
+ * Pure: returns a new patch.
+ */
+export function finalizeImportMatch<
+  P extends {
+    frame_match?: FrameMatch;
+    frame_template?: FrameTemplate;
+    color_identity?: readonly ColorIdentity[];
+  },
+>(patch: P, verifiedKeys: ReadonlySet<string>): P {
+  if (!patch.frame_match) return patch;
+  const match = withVerification(
+    patch.frame_match,
+    pickFrameColorKey(patch.color_identity),
+    verifiedKeys,
+  );
+  const moved =
+    patch.frame_template !== undefined && match.template !== patch.frame_match.template;
+  return {
+    ...patch,
+    frame_match: match,
+    ...(moved ? { frame_template: match.landOn ?? match.template } : {}),
+  };
 }
 
 /** The AI deck remix's step error when no frame is published in the card's
