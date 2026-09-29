@@ -22,13 +22,17 @@
 //     they sit in and are centred on the x-height, with a hairline between
 //     adjacent symbols ("{G}{G}") and none between a symbol and its
 //     punctuation ("{T}:").
-//   • Leading is tight (≈1.15 × size); abilities are separated by roughly
-//     half a line; M15-family frames draw a hairline before flavor text,
-//     pre-M15 frames leave a gap only.
+//   • Leading is solid: 0.98 × size, rules and flavor alike (the prints'
+//     line pitch, 74–75 HD px at 9 pt, measured three ways — layout v33,
+//     TODO 3.29). Abilities are separated by a FIXED gap (≈1 mm, 24 HD px
+//     whatever the size) and the flavor by 30 px either side of the
+//     M15-family hairline (42 px on frames with no hairline).
 //
 // A physical card is 2.5 in wide (portrait) — 3.5 in when a landscape frame
 // (Battle) is the reference box — so 9 pt = 9/72 in = 5 % of a portrait
-// card's width.
+// card's width. The RULES text alone is sized on an even HD-px grid
+// (RULES_SIZE_PX below, layout v33): the prints' 9 pt at 63 mm is 76 px of a
+// 1500 px card, and an even size is a whole px at the 750 px bake too.
 // ---------------------------------------------------------------------------
 
 /** Physical card width in inches for the two frame orientations. */
@@ -110,25 +114,35 @@ export function displayPct(pct: number, orientation: CardOrientation = "portrait
   return (pct * CARD_WIDTH_IN.portrait) / CARD_WIDTH_IN[orientation];
 }
 
+/**
+ * The rules-text typography standard (layout v33, TODO 3.29) — the numbers
+ * lib/cards/rules-layout.ts lays every rules and flavor line out with, and
+ * both renderers draw. Em values scale with the text size; `…Px` values are
+ * FIXED HD px (the 1500 px portrait / 2100 px landscape card — one physical
+ * scale), whatever the size, the way the prints set them.
+ */
 export const RULES_TEXT = {
-  /** Default rules-text size on a full text box (creature, instant, …). */
+  /** The printed standard, in points (a full text box). The profiles' own
+   *  ceilings are RULES_SIZE_PX, this at 63 mm rounded up to an even px. */
   standardPt: 9,
-  /** Half-box frames — split / flip / adventure halves, saga chapters,
-   *  tokens, planeswalker ability rows print smaller from the start. */
-  compactPt: 7.5,
-  /** The editing floor real cards shrink to before the box is redesigned. */
-  floorPt: 7.5,
-  /** Last-resort floor so pathological text still fits instead of clipping. */
+  /** Last-resort floor, in points, of the fits that still speak in points
+   *  (stat values, the display lines). The rules ladder's floor is
+   *  RULES_SIZE_PX.floor — the same 5 pt at the bake's whole px. */
   hardFloorPt: 5,
-  /** Shrink in half-point steps, like an editor would. */
-  stepPt: 0.5,
-  /** Line box height, as a multiple of the font size. */
-  lineHeight: 1.06,
-  /** Extra space between WRAPPED lines of one paragraph (em). Together with
-   *  lineHeight this is the printed ≈1.15 em leading. */
-  wrapGapEm: 0.09,
-  /** Space between abilities / paragraphs (em) — about half a line. */
-  paragraphGapEm: 0.45,
+  /** Line box height — the line PITCH — as a multiple of the size, for rules
+   *  lines, flavor lines and the attribution line alike. Measured on the
+   *  prints: 0.97–0.99 em by word width, autocorrelation and baselines. */
+  lineHeight: 0.98,
+  /** Between two abilities (paragraphs): line box to line box, HD px. The
+   *  prints add a constant ≈24 px (22.9–25.2, n = 26) from 6.6 to 9 pt. */
+  paragraphGapPx: 24,
+  /** Rules → flavor on a frame that draws the hairline: this much above the
+   *  1 px bar and again below it (pitch + 61 baseline to baseline, the
+   *  prints' pitch + 60–65), HD px. */
+  flavorGapPx: 30,
+  /** Rules → flavor with no hairline (pre-M15 frames, flavorDivider false):
+   *  line box to line box, HD px (the pre-bar M15-era prints' pitch + 41). */
+  flavorGapNoBarPx: 42,
   /** Height a blank source line contributes (em). */
   blankLineEm: 0.6,
   /** Word gap (em) — MPlantin's space width. */
@@ -137,12 +151,57 @@ export const RULES_TEXT = {
   pipDiscEm: 0.86,
   /** Gap between two adjacent pips (em). */
   pipGapEm: 0.1,
-  /** Flavor block: space above the hairline / gap, and below it (em). */
-  flavorGapEm: 0.55,
 } as const;
 
-/** Effective leading (line pitch) of wrapped rules text, in em. */
-export const RULES_LINE_PITCH_EM = RULES_TEXT.lineHeight + RULES_TEXT.wrapGapEm;
+/**
+ * The rules text's size ladder, in HD px (layout v33): a profile's ceiling is
+ * one of the three named sizes (rulesPxToPct), and the fit steps down in
+ * `stepPx` to `floor`. Even HD px, so the 750 px bake draws exactly half and
+ * the preview draws the HD bake's px (÷ RULES_HD_WIDTH, in cqw). The ceilings
+ * are the prints' sizes at 63 mm rounded UP to an even px — 9 pt → 76,
+ * 8 pt → 68, 7.5 pt → 64 — so none is below the v32 size it replaces.
+ */
+export const RULES_SIZE_PX = {
+  /** A full text box (M15 and every frame that prints 9 pt; tokens, whose
+   *  prints set 9 pt too). */
+  standard: 76,
+  /** Half-width and showcase boxes that print 8 pt (split, battle, the
+   *  adventure creature page, the art-forward showcases, LOTR, full-art). */
+  reduced: 68,
+  /** The 7.5 pt boxes (flip, the adventure page, Alpha tokens, the saga) and
+   *  planeswalker text, which prints at most this (the walker prints'
+   *  letters are ≤ 56.5 px, condensed). */
+  compact: 64,
+  /** The fit's last step: 5 pt (41.7 px) at the bake's whole px. Text that
+   *  doesn't fit here clips (the box keeps `overflow: hidden`). */
+  floor: 42,
+  /** The fit's step, 0.24 pt — finer than a half point, like the prints'
+   *  off-half-point sizes (7.33, 7.86, 8.38 pt). */
+  stepPx: 2,
+} as const;
+
+/** The card width HD px are measured against: the stored HD bake's
+ *  (RENDER_PRESETS.hd), 2100 on a landscape card — the same physical scale. */
+export const RULES_HD_WIDTH: Readonly<Record<CardOrientation, number>> = { portrait: 1500, landscape: 2100 };
+
+/** A rules size in HD px as the profile unit, a fraction of card width. */
+export function rulesPxToPct(px: number, orientation: CardOrientation = "portrait"): number {
+  return px / RULES_HD_WIDTH[orientation];
+}
+
+/** A profile's rules size (fraction of card width) on the even HD-px grid:
+ *  its HD px rounded DOWN to an even px (a hair of float error forgiven), so
+ *  an overridden size never grows past what its owner set. */
+export function rulesPctToPx(pct: number, orientation: CardOrientation = "portrait"): number {
+  const px = pct * RULES_HD_WIDTH[orientation];
+  const step = RULES_SIZE_PX.stepPx;
+  return Math.floor(px / step + 1e-6) * step;
+}
+
+/** The rules box's padding, HD px: `x` either side, `y` above and below —
+ *  today's 0.6 % / 1.2 % of the card width. A slot may give its own
+ *  (the M15 prints' ink runs to within a few px of the box). */
+export const RULES_BOX_PAD_PX = { x: 9, y: 18 } as const;
 
 /** Editor-only sample shown in the live preview of a card with no rules text
  *  yet — real pips, a keyword line and a flavor line, so a fresh card reads

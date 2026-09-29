@@ -84,7 +84,7 @@ export function verificationState(
     // A tick verifies the REGULAR frame: a finish-scoped bump (v26 etched)
     // must not stale every combo. Rarity stays unknown → rarity-scoped
     // bumps (v23) remain conservative, as before. Verification-neutral
-    // bumps (v31, v32) are scoped to no template here.
+    // bumps (v31, v32, v33) are scoped to no template here.
     isRenderStale(snapshot.verifiedLayoutVersion, template, VERIFICATION_SCOPED_VERSIONS, currentVersion, {
       frame_style: { template, finish: "regular" },
     })

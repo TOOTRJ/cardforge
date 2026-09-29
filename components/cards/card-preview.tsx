@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { RotateCw } from "lucide-react";
 import { cn, clamp } from "@/lib/utils";
@@ -33,13 +33,20 @@ import {
   type FoilArtSource,
 } from "@/lib/cards/foil-finish";
 import {
-  LOYALTY_ROW,
   layoutProfileLoyaltyRows,
+  loyaltyRowsDrawing,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
+import { wordWidthPx, type RulesBlock, type RulesLayout, type RulesMetrics } from "@/lib/cards/rules-layout";
+import {
+  layoutSagaRail,
+  sagaBadgeWidthPx,
+  sagaRailMetrics,
+  sagaRailPx,
+  type SagaRailLayout,
+} from "@/lib/cards/saga-rail";
 import {
   NAME_COST_GAP_PCT,
-  fitRulesSizePct,
   fitSplitTypeSizePct,
   fitTypeLineBand,
   inlineSymbolPullPct,
@@ -52,15 +59,21 @@ import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
-  RULES_TEXT,
+  RULES_HD_WIDTH,
   orientationFromAspect,
   type CardOrientation,
 } from "@/lib/cards/typography";
 import {
-  tokenizeRulesText,
-  groupTightRuns,
-  type RulesItem,
-} from "@/lib/cards/rules-text";
+  adventureRulesLayout,
+  hasRulesLines,
+  mainRulesLayout,
+  rulesDraw,
+  rulesWordText,
+  secondFaceRulesLayout,
+  type DrawnStats,
+  type RulesDraw,
+} from "@/lib/cards/rules-box";
+import type { RulesItem } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
   displayLine,
@@ -71,7 +84,6 @@ import {
   slotLine,
   splitTypeLine,
   type LoyaltyAbility,
-  type SagaChapter,
 } from "@/lib/cards/card-display";
 import {
   resolveLoyaltyRows,
@@ -686,47 +698,51 @@ function CardFace({
   const scale = clamp(face.artPosition?.scale ?? 1, 0.5, 4);
 
   const aspect = layout.orientation === "landscape" ? 5 / 7 : 7 / 5;
-  // Planeswalker ability rows spend ~20% of the box on the badge rail plus
-  // per-row padding; narrow the rect handed to the fit estimate accordingly
-  // (the same correction in both renderers keeps preview == bake). The rows
-  // themselves are fitted by layoutLoyaltyRows below; this size is left for
-  // a walker with no abilities (the plain box).
+  // The stat badges this face draws — the rules boxes keep their lines out
+  // of them (lib/cards/rules-box.ts), the bake's twin.
+  const secondFacePtShown = Boolean(secondFace?.power || secondFace?.toughness);
+  const drawnStats: DrawnStats = useMemo(
+    () => ({
+      pt: showPT,
+      loyalty: showLoyalty,
+      defense: showDefense,
+      secondFacePt: Boolean(layout.secondFace?.pt && secondFacePtShown),
+    }),
+    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown],
+  );
+  // Planeswalker ability rows when the frame defines them and the card is a
+  // planeswalker; a walker with no abilities draws the plain box (below).
   const usesLoyaltyRows =
     Boolean(layout.loyaltyRows) && showsLoyalty(face.cardType) && !textless;
-  const fitRect = usesLoyaltyRows
-    ? {
-        ...layout.rules.rect,
-        widthPct: layout.rules.rect.widthPct * 0.78,
-        heightPct: layout.rules.rect.heightPct * 0.88,
-      }
-    : layout.rules.rect;
-  // A textless frame prints no rules: the fit estimate is skipped.
-  const rulesSizePct = textless
-    ? layout.rules.sizePct
-    : fitRulesSizePct({
-        rulesText: face.rulesText,
-        flavorText: face.flavorText,
-        rect: fitRect,
-        baseSizePct: layout.rules.sizePct,
-        lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
-        aspect,
-      });
   // Planeswalker ability rows (badged loyalty costs, striped rows) when the
   // frame defines them and the card actually is a planeswalker. Structured
   // rows first, rules_text parsing as the legacy fallback.
-  const loyaltyAbilities = usesLoyaltyRows
-    ? resolveLoyaltyRows(face.faceContent, face.rulesText)
-    : [];
+  const loyaltyAbilities = useMemo(
+    () => (usesLoyaltyRows ? resolveLoyaltyRows(face.faceContent, face.rulesText) : []),
+    [usesLoyaltyRows, face.faceContent, face.rulesText],
+  );
   // Their text size and content-sized row heights, the last row's text short
   // of the loyalty shield when it would reach it — the bake's twin
   // (lib/cards/loyalty-rows.ts). The editor-only empty walker lays out its
-  // hint rows the same way.
-  const loyaltyRowsFor = (abilities: LoyaltyAbility[]) =>
-    layoutProfileLoyaltyRows(layout, abilities, aspect);
-  // Saga chapter rail content — same structured-first resolution.
-  const sagaContent = layout.chapters
-    ? resolveSagaChapters(face.faceContent, face.rulesText)
-    : null;
+  // hint rows the same way. (Memoised like the rules layouts below: a long
+  // walker's rows take a few ms to fit.)
+  const loyaltyRowsLayout = useMemo(
+    () => (loyaltyAbilities.length > 0 ? layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect) : null),
+    [layout, loyaltyAbilities, aspect],
+  );
+  const showsHintRows = usesLoyaltyRows && staticInEditor && loyaltyAbilities.length === 0;
+  const hintRowsLayout = useMemo(
+    () => (showsHintRows ? layoutProfileLoyaltyRows(layout, EDITOR_LOYALTY_HINT, aspect) : null),
+    [showsHintRows, layout, aspect],
+  );
+  // Saga chapter rail content — same structured-first resolution — and its
+  // text laid out in lines at today's size (lib/cards/saga-rail.ts, the
+  // bake's twin).
+  const sagaRail = useMemo(() => {
+    if (!layout.chapters) return null;
+    const sagaContent = resolveSagaChapters(face.faceContent, face.rulesText);
+    return sagaContent ? layoutSagaRail(layout.chapters, sagaContent.intro, sagaContent.chapters) : null;
+  }, [layout.chapters, face.faceContent, face.rulesText]);
   // The name's fit (the bake's twin, lib/cards/title-band.ts): before a
   // detached cost box (costRect) it stops before the pips, shrinking to fit
   // there when it is long; on a measured slot (the M15-era family, layout
@@ -762,6 +778,60 @@ function CardFace({
     !isBasicLand &&
     !textless &&
     Boolean(face.rulesText?.trim() || face.flavorText?.trim());
+  // The plain rules box's ONE layout (layout v33, lib/cards/rules-box.ts) —
+  // the bake's twin: its size, every line and every position, clear of the
+  // drawn stat badges. The editor shows a sample (real type, size and pips)
+  // in a card with no text yet; never the gallery or the bake. Not on a
+  // textless frame, a basic land, the saga rail or ability rows (an empty
+  // walker in the editor shows hint rows instead).
+  const rulesPlaceholder = staticInEditor && !face.rulesText?.trim() && !face.flavorText?.trim();
+  const drawsRulesBox =
+    !textless &&
+    !isBasicLand &&
+    !layout.chapters &&
+    !(layout.loyaltyRows && (loyaltyAbilities.length > 0 || (usesLoyaltyRows && staticInEditor)));
+  // (Memoised: a long text's fit takes a millisecond or two, and a face
+  // re-renders on every flip and hover.)
+  const rulesLayout = useMemo(
+    () =>
+      drawsRulesBox
+        ? mainRulesLayout({
+            layout,
+            rulesText: rulesPlaceholder ? PLACEHOLDER_RULES_TEXT : face.rulesText,
+            flavorText: rulesPlaceholder ? PLACEHOLDER_FLAVOR_TEXT : face.flavorText,
+            aspect,
+            show: drawnStats,
+          })
+        : null,
+    [drawsRulesBox, layout, rulesPlaceholder, face.rulesText, face.flavorText, aspect, drawnStats],
+  );
+  // The adventure page's and a second face's rules — the same layout. The
+  // editor's empty adventure page shows a hint, laid out like flavor text.
+  const adventurePlaceholder = staticInEditor && !adventure?.rulesText?.trim();
+  const hasAdventure = Boolean(adventure);
+  const adventureText = adventure?.rulesText;
+  const adventureRules = useMemo(
+    () =>
+      layout.adventure && hasAdventure
+        ? adventureRulesLayout({
+            layout,
+            rulesText: adventurePlaceholder ? null : adventureText,
+            flavorText: adventurePlaceholder ? ADVENTURE_RULES_HINT : null,
+            aspect,
+            show: drawnStats,
+          })
+        : null,
+    [layout, hasAdventure, adventurePlaceholder, adventureText, aspect, drawnStats],
+  );
+  const hasSecondFace = Boolean(secondFace);
+  const secondFaceText = secondFace?.rulesText;
+  const secondFaceRules = useMemo(
+    () =>
+      layout.secondFace && hasSecondFace
+        ? secondFaceRulesLayout({ layout, rulesText: secondFaceText, aspect, show: drawnStats })
+        : null,
+    [layout, hasSecondFace, secondFaceText, aspect, drawnStats],
+  );
   // The type line, and its two halves on a split type line (TextSlot.split,
   // TODO 3.24) — one size for both, the bake's twin.
   const typeLine = buildTypeLine({
@@ -1191,22 +1261,18 @@ function CardFace({
 
       {/* A textless frame (TODO 3.24) prints no rules, flavour, rows or
           rail — nor the editor's sample text. */}
-      {textless ? null : layout.chapters ? (
-        <ChapterRail
-          slot={layout.chapters}
-          intro={sagaContent?.intro ?? null}
-          chapters={sagaContent?.chapters ?? []}
-        />
-      ) : layout.loyaltyRows && loyaltyAbilities.length > 0 ? (
+      {textless ? null : layout.chapters && sagaRail ? (
+        <ChapterRail slot={layout.chapters} rail={sagaRail} pipOverrides={pipOverrides} />
+      ) : layout.loyaltyRows && loyaltyRowsLayout ? (
         <LoyaltyRows
           pipOverrides={pipOverrides}
           slot={layout.rules}
           rows={layout.loyaltyRows}
           abilities={loyaltyAbilities}
-          rowsLayout={loyaltyRowsFor(loyaltyAbilities)}
+          rowsLayout={loyaltyRowsLayout}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
-      ) : layout.loyaltyRows && usesLoyaltyRows && staticInEditor ? (
+      ) : layout.loyaltyRows && hintRowsLayout ? (
         // Editor-only: an empty planeswalker still shows the striped ability
         // rows (with a hint) instead of the bare art cut-out reading as a
         // black box. Never rendered in the gallery or the bake.
@@ -1215,62 +1281,26 @@ function CardFace({
           slot={layout.rules}
           rows={layout.loyaltyRows}
           abilities={EDITOR_LOYALTY_HINT}
-          rowsLayout={loyaltyRowsFor(EDITOR_LOYALTY_HINT)}
+          rowsLayout={hintRowsLayout}
           placeholder
           foil={plateFoil && { ...plateFoil, id: `${foilId}-rows` }}
         />
-      ) : isBasicLand ? null : (
-      <div
-        style={{
-          ...rectStyle(layout.rules.rect),
-          zIndex: 20,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "stretch",
-          justifyContent: vJustify(layout.rules.vAlign ?? "start"),
-          overflow: "hidden",
-          padding: "1.2cqw 0.6cqw",
-          fontFamily: CARD_FONT,
-          fontSize: cqw(rulesSizePct),
-          lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
-          color: layout.rules.colorHex,
-          textAlign: "left",
-        }}
-      >
-        {face.rulesText?.trim() ? (
-          <RulesBody text={face.rulesText} overrides={pipOverrides} />
-        ) : staticInEditor && !face.flavorText?.trim() ? (
-          // Editor-only sample in the real type, size and pips; never shown
-          // in the gallery preview or the bake.
-          <div style={{ display: "contents", opacity: 0.5 }}>
-            <RulesBody text={PLACEHOLDER_RULES_TEXT} overrides={pipOverrides} />
-          </div>
-        ) : null}
-        {face.flavorText?.trim() ? (
-          <FlavorBlock
-            text={face.flavorText}
-            afterRules={Boolean(face.rulesText?.trim())}
-            divider={layout.flavorDivider !== false}
-            colorHex={layout.rules.colorHex}
-          />
-        ) : staticInEditor && !face.rulesText?.trim() ? (
-          <FlavorBlock
-            text={PLACEHOLDER_FLAVOR_TEXT}
-            afterRules
-            divider={layout.flavorDivider !== false}
-            colorHex={layout.rules.colorHex}
-            placeholder
-          />
-        ) : null}
-      </div>
-      )}
+      ) : hasRulesLines(rulesLayout) ? (
+        <RulesBox
+          layout={rulesLayout}
+          colorHex={layout.rules.colorHex}
+          overrides={pipOverrides}
+          opacity={rulesPlaceholder ? 0.5 : undefined}
+        />
+      ) : null}
 
       {/* Adventure spell — the left storybook page (Adventure frames). */}
       {layout.adventure && adventure ? (
         <AdventurePanel
           slot={layout.adventure}
           data={adventure}
-          staticInEditor={staticInEditor}
+          rules={adventureRules}
+          rulesPlaceholder={adventurePlaceholder}
           pipOverrides={pipOverrides}
         />
       ) : null}
@@ -1281,6 +1311,7 @@ function CardFace({
           slot={layout.secondFace}
           data={secondFace}
           aspect={aspect}
+          rules={secondFaceRules}
           pipOverrides={pipOverrides}
         />
       ) : null}
@@ -1685,13 +1716,23 @@ function StatOverlay({
 
 function ChapterRail({
   slot,
-  intro,
-  chapters,
+  rail,
+  pipOverrides = null,
 }: {
   slot: NonNullable<FrameProfile["chapters"]>;
-  intro: string | null;
-  chapters: SagaChapter[];
+  /** The rail's text in lines (lib/cards/saga-rail.ts layoutSagaRail). */
+  rail: SagaRailLayout;
+  pipOverrides?: PipOverrides | null;
 }) {
+  // The HD bake's anatomy and text metrics (layout v33, the bake's
+  // ChapterBake twin): the intro's and the chapters' lines drawn by
+  // RulesLines — real pips, reminder italics, U+2212 as a hyphen — at v32's
+  // sizes (owner decision 2026-09-28: correctness only; TODO 4.21).
+  const px = sagaRailPx(slot, "hd");
+  const metrics = sagaRailMetrics(rail, "hd");
+  const { chapters } = rail;
+  // Nothing leaves the rail (the bake's twin): an intro too tall for it
+  // gives way and is clipped at the rail's foot.
   return (
     <div
       style={{
@@ -1699,22 +1740,23 @@ function ChapterRail({
         zIndex: 20,
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {intro ? (
+      {rail.intro ? (
         <div
           style={{
-            flexShrink: 0,
-            padding: `${cqw(slot.sizePct * 0.4)} ${cqw(slot.sizePct * 0.3)}`,
+            flexShrink: 1,
+            minHeight: 0,
+            overflow: "hidden",
+            display: "flex",
+            padding: `${hdCqw(px.introPadY)} ${hdCqw(px.introPadX)}`,
             borderBottom: `1px solid ${slot.dividerHex}`,
             fontFamily: CARD_FONT,
-            fontStyle: "italic",
-            fontSize: cqw(slot.sizePct * 0.9),
-            lineHeight: 1.2,
             color: slot.textColorHex,
           }}
         >
-          {intro}
+          <RulesLines blocks={rail.intro} metrics={metrics.intro} overrides={pipOverrides} />
         </div>
       ) : null}
       {chapters.length > 0 ? (
@@ -1726,9 +1768,7 @@ function ChapterRail({
               minHeight: 0,
               display: "flex",
               alignItems: "center",
-              // Size-relative so spacing matches the bake's ChapterBake exactly.
-              gap: cqw(slot.sizePct * 0.6),
-              padding: `${cqw(slot.sizePct * 0.3)} ${cqw(slot.sizePct * 0.2)}`,
+              padding: `${hdCqw(px.rowPadY)} ${hdCqw(px.rowPadX)}`,
               overflow: "hidden",
               borderBottom:
                 i < chapters.length - 1
@@ -1743,9 +1783,11 @@ function ChapterRail({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                minWidth: cqw(slot.sizePct * 1.7),
-                height: cqw(slot.sizePct * 1.9),
-                padding: `0 ${cqw(slot.sizePct * 0.32)}`,
+                // The width the chapter's lines were broken beside (its
+                // numeral + padding, or the minimum), as the bake draws it.
+                width: hdCqw(sagaBadgeWidthPx(ch.marker, px)),
+                height: hdCqw(px.badgeHeight),
+                marginRight: hdCqw(px.badgeGap),
               }}
             >
               {/* The printed saga milestone crest: flat top, pointed bottom. */}
@@ -1765,10 +1807,10 @@ function ChapterRail({
               <span
                 style={{
                   position: "relative",
-                  paddingBottom: cqw(slot.sizePct * 0.3),
+                  paddingBottom: hdCqw(px.markerLift),
                   color: slot.markerTextHex,
                   fontFamily: DISPLAY_FONT,
-                  fontSize: cqw(slot.sizePct * 0.82),
+                  fontSize: hdCqw(px.markerText),
                   fontWeight: 700,
                 }}
               >
@@ -1779,14 +1821,13 @@ function ChapterRail({
               style={{
                 flex: 1,
                 minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
                 fontFamily: CARD_FONT,
-                fontSize: cqw(slot.sizePct),
-                lineHeight: 1.22,
                 color: slot.textColorHex,
-                overflow: "hidden",
               }}
             >
-              {ch.text}
+              <RulesLines blocks={ch.blocks} metrics={metrics.chapter} overrides={pipOverrides} />
             </div>
           </div>
         ))
@@ -1821,12 +1862,16 @@ function ChapterRail({
 function AdventurePanel({
   slot,
   data,
-  staticInEditor,
+  rules,
+  rulesPlaceholder,
   pipOverrides = null,
 }: {
   slot: NonNullable<FrameProfile["adventure"]>;
   data: AdventureData;
-  staticInEditor: boolean;
+  /** The page's rules layout (lib/cards/rules-box.ts adventureRulesLayout) —
+   *  the editor's hint when `rulesPlaceholder`. */
+  rules: RulesLayout | null;
+  rulesPlaceholder: boolean;
   pipOverrides?: PipOverrides | null;
 }) {
   const name = data.title?.trim() || "Adventure";
@@ -1879,42 +1924,22 @@ function AdventurePanel({
           {displayLine(typeFit ? typeFit.text : typeLine)}
         </span>
       </BandSlot>
-      <div
-        style={{
-          ...rectStyle(slot.rules.rect),
-          zIndex: 20,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: vJustify(slot.rules.vAlign ?? "start"),
-          overflow: "hidden",
-          padding: "1cqw 0.6cqw",
-          fontFamily: CARD_FONT,
-          fontSize: cqw(
-            fitRulesSizePct({
-              rulesText: data.rulesText,
-              flavorText: null,
-              rect: slot.rules.rect,
-              baseSizePct: slot.rules.sizePct,
-              lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
-              aspect: 7 / 5,
-            }),
-          ),
-          lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
-          color: slot.rules.colorHex,
-          textAlign: "center",
-        }}
-      >
-        {data.rulesText?.trim() ? (
-          <RulesBody text={data.rulesText} overrides={pipOverrides} />
-        ) : staticInEditor ? (
-          <span style={{ fontStyle: "italic", opacity: 0.55 }}>
-            Adventure rules (the back face).
-          </span>
-        ) : null}
-      </div>
+      {/* The page's rules, line by line (layout v33); the editor's hint on
+          an empty page. */}
+      {hasRulesLines(rules) ? (
+        <RulesBox
+          layout={rules}
+          colorHex={slot.rules.colorHex}
+          overrides={pipOverrides}
+          opacity={rulesPlaceholder ? 0.55 : undefined}
+        />
+      ) : null}
     </>
   );
 }
+
+/** The editor's hint on an empty adventure page (never baked). */
+const ADVENTURE_RULES_HINT = "Adventure rules (the back face).";
 
 // ---------------------------------------------------------------------------
 // SecondFacePanel — the back-face content of a multi-panel frame, drawn inline
@@ -1927,11 +1952,15 @@ function SecondFacePanel({
   slot,
   data,
   aspect,
+  rules,
   pipOverrides = null,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
   data: FaceData;
   aspect: number;
+  /** The face's rules layout, in its own unturned frame
+   *  (lib/cards/rules-box.ts secondFaceRulesLayout). */
+  rules: RulesLayout | null;
   pipOverrides?: PipOverrides | null;
 }) {
   const rot = `rotate(${slot.rotation}deg)`;
@@ -1957,14 +1986,6 @@ function SecondFacePanel({
   // bake sets them (measuredLinePx); a face without it as before.
   const linePct = (fitted: number, base: number) =>
     slot.fitLines ? measuredLinePreviewPct(fitted, base, orientationFromAspect(aspect)) : fitted;
-  const rulesSizePct = fitRulesSizePct({
-    rulesText: data.rulesText,
-    flavorText: null,
-    rect: slot.rules.rect,
-    baseSizePct: slot.rules.sizePct,
-    lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
-    aspect,
-  });
   return (
     <>
       <div
@@ -2010,28 +2031,17 @@ function SecondFacePanel({
       >
         <span style={ELLIPSIS}>{displayLine(lineSizes.typeText)}</span>
       </div>
-      <div
-        style={{
-          ...rectStyle(slot.rules.rect),
-          zIndex: 21,
-          transform: rot,
-          transformOrigin: "center",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          overflow: "hidden",
-          padding: "0.8cqw 1.2cqw",
-          fontFamily: CARD_FONT,
-          fontSize: cqw(rulesSizePct),
-          lineHeight: slot.rules.lineHeight ?? RULES_TEXT.lineHeight,
-          color: slot.rules.colorHex,
-          textAlign: "center",
-        }}
-      >
-        {data.rulesText?.trim() ? (
-          <RulesBody text={data.rulesText} overrides={pipOverrides} />
-        ) : null}
-      </div>
+      {/* The face's rules, line by line in its own frame, turned in place
+          with it (layout v33) — at the slot's own alignment. */}
+      {hasRulesLines(rules) ? (
+        <RulesBox
+          layout={rules}
+          colorHex={slot.rules.colorHex}
+          overrides={pipOverrides}
+          zIndex={21}
+          rotation={slot.rotation}
+        />
+      ) : null}
       {showPT && slot.pt ? (
         <div
           style={{
@@ -2144,141 +2154,325 @@ function ArtImage({
   );
 }
 
-// RulesBody — the shared rules-text renderer. Lays each paragraph out as a
-// flex-wrap row of word + inline-mana items (lib/cards/rules-text.ts), so inline
-// {T}/{G} render as real pips and reminder text / ability words are italicized.
-// The Satori bake (RulesBodyBake) consumes the SAME item stream, so the editor
-// preview and the exported PNG match.
-function RulesBody({
-  text,
+/** An HD px length (lib/cards/rules-layout.ts) as the preview draws it: the
+ *  same fraction of the card's width as on the stored HD bake, in cqw. */
+function hdCqw(px: number, orientation: CardOrientation = "portrait"): string {
+  return `${((px * 100) / RULES_HD_WIDTH[orientation]).toFixed(4)}cqw`;
+}
+
+// RulesLines — the lines lib/cards/rules-layout.ts broke a text into (layout
+// v33), drawn at the HD bake's px (metricsFor "hd", in cqw) so the preview's
+// geometry is the stored bake's: the walker rows' abilities and the saga
+// rail's text. The browser never wraps them: each line is a `nowrap` flex
+// row one line box tall, its runs `flexShrink: 0`, a word gap as the
+// marginLeft of every run after the first, every word its ceiled box
+// (wordWidthPx — the width Satori gives it), pips centred. U+2212 draws as
+// the hyphen MPlantin has (the bake's bakeText) — the advance the layout
+// measured. Mirrors RulesLinesBake.
+function RulesLines({
+  blocks,
+  metrics: m,
+  orientation = "portrait",
   overrides = null,
 }: {
-  text: string;
+  blocks: readonly RulesBlock[];
+  metrics: RulesMetrics;
+  orientation?: CardOrientation;
   overrides?: PipOverrides | null;
 }) {
-  const paragraphs = tokenizeRulesText(text);
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        rowGap: `${RULES_TEXT.paragraphGapEm}em`,
-        width: "100%",
-      }}
-    >
-      {paragraphs.map((items, pi) => (
+  const px = (v: number) => hdCqw(v, orientation);
+  const lineHeight = m.linePx / m.fontPx;
+  const rows: ReactNode[] = [];
+  blocks.forEach((block, bi) => {
+    const gap = bi === 0 ? 0 : block.kind === "flavor" ? m.flavorGapNoBarPx : m.paragraphGapPx;
+    if (block.kind === "blank") {
+      rows.push(<div key={`blank-${bi}`} style={{ flexShrink: 0, height: px(m.blankLinePx), marginTop: gap ? px(gap) : undefined }} />);
+      return;
+    }
+    block.lines.forEach((line, li) => {
+      rows.push(
         <div
-          key={pi}
+          key={`${bi}-${li}`}
+          data-rules-line=""
           style={{
             display: "flex",
-            flexWrap: "wrap",
+            flexWrap: "nowrap",
             alignItems: "center",
-            justifyContent: "flex-start",
-            columnGap: `${RULES_TEXT.wordGapEm}em`,
-            rowGap: `${RULES_TEXT.wrapGapEm}em`,
-            minHeight: items.length === 0 ? `${RULES_TEXT.blankLineEm}em` : undefined,
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+            height: px(m.linePx),
+            ...(li === 0 && gap ? { marginTop: px(gap) } : {}),
           }}
         >
-          {groupTightRuns(items).map((run, ri) => (
+          {line.runs.map((run, ri) => (
             <span
               key={ri}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                whiteSpace: "nowrap",
+                flexShrink: 0,
+                ...(ri > 0 ? { marginLeft: px(m.wordGapPx) } : {}),
               }}
             >
               {run.map((it, i) => (
-                <RulesRunItem
+                <RulesLineItem
                   key={i}
                   item={it}
-                  overrides={overrides}
+                  metrics={m}
+                  orientation={orientation}
+                  lineHeight={lineHeight}
                   pipGapBefore={i > 0 && it.t === "m" && run[i - 1].t === "m"}
+                  overrides={overrides}
                 />
               ))}
             </span>
           ))}
-        </div>
-      ))}
+        </div>,
+      );
+    });
+  });
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flexShrink: 0, fontSize: px(m.fontPx) }}>{rows}</div>
+  );
+}
+
+// One item of a RulesLines run: a word at the line box's height (italic for
+// any emphasis) in its ceiled box, or an inline pip whose disc is
+// metrics.pipPx (mana-font draws its disc at 1.3 em of the font size, hence
+// the division).
+function RulesLineItem({
+  item,
+  metrics: m,
+  orientation,
+  lineHeight,
+  pipGapBefore,
+  overrides,
+}: {
+  item: RulesItem;
+  metrics: RulesMetrics;
+  orientation: CardOrientation;
+  lineHeight: number;
+  pipGapBefore: boolean;
+  overrides: PipOverrides | null;
+}) {
+  if (item.t === "m") {
+    return (
+      <RulesPip
+        suffix={item.suffix}
+        fontSize={hdCqw(m.pipPx / MS_COST_DISC_EM, orientation)}
+        gapBefore={pipGapBefore ? hdCqw(m.pipGapPx, orientation) : null}
+        overrides={overrides}
+      />
+    );
+  }
+  // The word's ceiled box (the bake's width for it), so every run after it
+  // starts where the bake starts it.
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        flexShrink: 0,
+        width: hdCqw(wordWidthPx(item, m), orientation),
+        lineHeight,
+        ...(item.em ? { fontStyle: "italic" } : {}),
+      }}
+    >
+      {rulesWordText(item.v)}
+    </span>
+  );
+}
+
+// One inline pip of a rules line: the layout's disc (mana-font draws it at
+// 1.3 em of the pip's font size), a hairline after an adjacent pip. The pip
+// sits in a wrapper that carries that gap as PADDING and has no margin of its
+// own: mana-font styles `.ms-2 { margin-left: inherit !important }`, so a
+// {2} disc whose parent was a run with a word gap took that gap again and
+// pushed the rest of its line a word gap right of the bake (layout v33
+// review: "equip cost {2} destroy" drew 11 HD px apart). The bake has no
+// such rule.
+function RulesPip({
+  suffix,
+  fontSize,
+  gapBefore,
+  overrides,
+}: {
+  suffix: string;
+  fontSize: string;
+  gapBefore: string | null;
+  overrides: PipOverrides | null;
+}) {
+  const overrideSrc = pipOverrideForSuffix(suffix, overrides);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, ...(gapBefore ? { paddingLeft: gapBefore } : {}) }}>
+      {overrideSrc ? (
+        <PipOverrideImg src={overrideSrc} style={{ fontSize, flexShrink: 0 }} />
+      ) : (
+        <i aria-hidden className={cn("ms ms-cost ms-shadow", `ms-${suffix}`)} style={{ fontSize, flexShrink: 0 }} />
+      )}
+    </span>
+  );
+}
+
+// RulesBox — the preview's rules box (layout v33, TODO 3.29): a fitted
+// lib/cards/rules-layout.ts layout drawn line by line — the bake's
+// RulesBoxBake twin, at the HD bake's px in cqw (px × 100 ÷ the HD card
+// width), so its geometry is the stored PNG's. The browser never wraps: each
+// line is a nowrap flex row exactly its line box tall, its runs never
+// shrink, each word is its own box with the line box as its line height,
+// word gaps are margins, pips are the layout's discs. Rules paragraphs,
+// blank lines, and the flavor with its 1 px bar where the frame prints one,
+// all at the layout's fixed gaps. The main box on every template, the
+// adventure page and the second faces (turned in place by `rotation`).
+function RulesBox({
+  layout,
+  colorHex,
+  overrides = null,
+  zIndex = 20,
+  rotation = 0,
+  opacity,
+}: {
+  layout: RulesLayout;
+  colorHex: string;
+  overrides?: PipOverrides | null;
+  zIndex?: number;
+  rotation?: number;
+  /** An editor placeholder's muted ink. */
+  opacity?: number;
+}) {
+  const d = rulesDraw(layout, "hd");
+  const hd = (px: number) => cqw(px / RULES_HD_WIDTH[layout.orientation]);
+  return (
+    <div
+      data-testid="rules-box"
+      data-rules-size={layout.sizePx}
+      style={{
+        ...rectStyle(layout.input.rect),
+        zIndex,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: vJustify(d.vAlign),
+        overflow: "hidden",
+        padding: `${hd(d.pad.top)} ${hd(d.pad.right)} ${hd(d.pad.bottom)} ${hd(d.pad.left)}`,
+        fontFamily: CARD_FONT,
+        fontSize: hd(d.fontPx),
+        color: colorHex,
+        ...(rotation ? { transform: `rotate(${rotation}deg)`, transformOrigin: "center" } : {}),
+        ...(opacity !== undefined ? { opacity } : {}),
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          paddingTop: hd(d.insetTop),
+          paddingBottom: hd(d.insetBottom),
+        }}
+      >
+        {d.blocks.map((b, bi) =>
+          b.kind === "blank" ? (
+            <div key={bi} style={{ flexShrink: 0, height: hd(b.height), marginTop: hd(b.marginTop) }} />
+          ) : (
+            <div
+              key={bi}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flexShrink: 0,
+                ...(b.bar
+                  ? {
+                      marginTop: hd(b.bar.above),
+                      // The bar stays a 1 CSS px line, but the layout
+                      // reserved one HD px for it: the padding makes up the
+                      // difference, so the flavor lands where the bake puts
+                      // it at every editor width (a 1 px border alone set it
+                      // up to 3 HD px low at 330 px).
+                      paddingTop: `calc(${hd(b.bar.below + b.bar.thickness)} - ${b.bar.thickness}px)`,
+                      borderTop: `${b.bar.thickness}px solid ${colorHex}44`,
+                    }
+                  : { marginTop: hd(b.marginTop) }),
+              }}
+            >
+              {b.lines.map((runs, li) => (
+                <RulesBoxLine key={li} runs={runs} d={d} hd={hd} overrides={overrides} />
+              ))}
+            </div>
+          ),
+        )}
+      </div>
     </div>
   );
 }
 
-// One item inside an unbreakable run. Inline pips size so the visible disc is
-// RULES_TEXT.pipDiscEm of the text size (mana-font draws its disc at 1.3em of
-// the font size, hence the division), matching the bake's ManaGem; reminder /
-// ability emphasis is italic at full ink, like print.
-function RulesRunItem({
-  item,
-  pipGapBefore,
-  overrides = null,
+// One drawn line: a nowrap row of runs, the line box tall, runs centred on it.
+function RulesBoxLine({
+  runs,
+  d,
+  hd,
+  overrides,
 }: {
-  item: RulesItem;
-  pipGapBefore: boolean;
-  overrides?: PipOverrides | null;
+  runs: RulesItem[][];
+  d: RulesDraw;
+  hd: (px: number) => string;
+  overrides: PipOverrides | null;
 }) {
-  if (item.t === "m") {
-    const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
-    if (overrideSrc) {
-      return (
-        <PipOverrideImg
-          src={overrideSrc}
-          fontSizeEm={RULES_TEXT.pipDiscEm / MS_COST_DISC_EM}
-          style={pipGapBefore ? { marginLeft: `${RULES_TEXT.pipGapEm}em` } : undefined}
-        />
-      );
-    }
-    return (
-      <i
-        aria-hidden
-        className={cn("ms ms-cost ms-shadow", `ms-${item.suffix}`)}
-        style={{
-          fontSize: `${(RULES_TEXT.pipDiscEm / MS_COST_DISC_EM).toFixed(4)}em`,
-          ...(pipGapBefore ? { marginLeft: `${RULES_TEXT.pipGapEm}em` } : {}),
-        }}
-      />
-    );
-  }
-  return (
-    <span style={item.em ? { fontStyle: "italic" } : undefined}>{item.v}</span>
-  );
-}
-
-// FlavorBlock — italic flavor text under the rules. M15-family frames print a
-// hairline between the two; pre-M15 frames leave a gap only. Spacing is in em
-// of the rules size so it shrinks with the text, like print. Mirrors FlavorBake.
-function FlavorBlock({
-  text,
-  afterRules,
-  divider,
-  colorHex,
-  placeholder = false,
-}: {
-  text: string;
-  afterRules: boolean;
-  divider: boolean;
-  colorHex: string;
-  placeholder?: boolean;
-}) {
-  const gap = `${RULES_TEXT.flavorGapEm}em`;
+  // mana-font draws its disc at 1.3 em of the pip's font size.
+  const pipFontSize = hd(d.pipPx / MS_COST_DISC_EM);
   return (
     <div
+      data-testid="rules-line"
       style={{
         display: "flex",
-        flexDirection: "column",
-        rowGap: `${RULES_TEXT.wrapGapEm}em`,
-        fontStyle: "italic",
-        lineHeight: RULES_TEXT.lineHeight,
-        ...(afterRules
-          ? divider
-            ? { marginTop: gap, paddingTop: gap, borderTop: `1px solid ${colorHex}44` }
-            : { marginTop: `calc(${gap} * 2)` }
-          : {}),
-        ...(placeholder ? { opacity: 0.5 } : {}),
+        flexWrap: "nowrap",
+        alignItems: "center",
+        height: hd(d.linePx),
+        flexShrink: 0,
       }}
     >
-      {text.split(/\n/).filter((l) => l.trim()).map((line, i) => (
-        <span key={i}>{line}</span>
+      {runs.map((run, ri) => (
+        <span
+          key={ri}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+            ...(ri > 0 ? { marginLeft: hd(d.wordGapPx) } : {}),
+          }}
+        >
+          {run.map((item, i) => {
+            if (item.t === "m") {
+              return (
+                <RulesPip
+                  key={i}
+                  suffix={item.suffix}
+                  fontSize={pipFontSize}
+                  gapBefore={i > 0 && run[i - 1].t === "m" ? hd(d.pipGapPx) : null}
+                  overrides={overrides}
+                />
+              );
+            }
+            // Each word in its ceiled box — the width Satori gives it
+            // (wordWidthPx) — so every run after it starts where the bake
+            // starts it; the browser would lay the word out at its exact
+            // advances and drift up to 9 HD px left along a line.
+            return (
+              <span
+                key={i}
+                style={{
+                  display: "inline-block",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  width: hd(wordWidthPx(item, d)),
+                  lineHeight: hd(d.linePx),
+                  ...(item.em ? { fontStyle: "italic" } : {}),
+                }}
+              >
+                {rulesWordText(item.v)}
+              </span>
+            );
+          })}
+        </span>
       ))}
     </div>
   );
@@ -2316,8 +2510,11 @@ function LoyaltyRows({
    *  LoyaltyRowsBake twin. */
   foil?: { id: string; landscape: boolean } | null;
 }) {
-  const { sizePct, rowFractions, lastRowInsetPct } = rowsLayout;
-  const last = abilities.length - 1;
+  const { rowFractions } = rowsLayout;
+  // The HD bake's px (loyaltyRowsDrawing "hd"), drawn in cqw: the rows'
+  // anatomy and each ability's column, lines and ink headroom.
+  const draw = loyaltyRowsDrawing(rowsLayout, "hd");
+  const a = draw.row;
   const stripe = (i: number) => (i % 2 === 0 ? rows.stripeAHex : rows.stripeBHex);
   const stripeRects = foil ? loyaltyStripeRects(slot.rect, rowsLayout.rowFractions) : null;
   // Foil: rows contain their sheen, and the badge + text after it are
@@ -2332,8 +2529,6 @@ function LoyaltyRows({
         flexDirection: "column",
         overflow: "hidden",
         fontFamily: CARD_FONT,
-        fontSize: cqw(sizePct),
-        lineHeight: slot.lineHeight ?? RULES_TEXT.lineHeight,
         color: slot.colorHex,
         borderRadius: "1.2cqw",
       }}
@@ -2350,7 +2545,9 @@ function LoyaltyRows({
             minHeight: 0,
             alignItems: "center",
             background: stripe(i),
-            padding: `${cqw(sizePct * LOYALTY_ROW.padYEm)} ${cqw(sizePct * LOYALTY_ROW.padXEm)}`,
+            paddingTop: hdCqw(a.padY),
+            paddingBottom: hdCqw(a.padY),
+            paddingLeft: hdCqw(a.padX),
             ...onTop,
           }}
         >
@@ -2373,9 +2570,11 @@ function LoyaltyRows({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: cqw(sizePct * LOYALTY_ROW.badgeWidthEm),
-              height: cqw(sizePct * LOYALTY_ROW.badgeHeightEm),
-              marginRight: cqw(sizePct * LOYALTY_ROW.badgeGapEm),
+              width: hdCqw(a.badgeWidth),
+              height: hdCqw(a.badgeHeight),
+              // The text column starts where the rail ends: the column the
+              // ability's lines were broken for.
+              marginRight: hdCqw(a.rail - a.padX - a.badgeWidth),
             }}
           >
             {ab.cost ? (
@@ -2406,14 +2605,14 @@ function LoyaltyRows({
                 position: "relative",
                 color: rows.badgeTextHex,
                 fontFamily: DISPLAY_FONT,
-                fontSize: cqw(sizePct * LOYALTY_ROW.badgeTextEm),
+                fontSize: hdCqw(a.badgeText),
                 fontWeight: 700,
                 // Optically center inside the shield's flat region.
                 ...(ab.cost
                   ? loyaltyBadgeShapeFor(ab.cost) === "up"
-                    ? { paddingTop: cqw(sizePct * LOYALTY_ROW.badgeNudgeEm) }
+                    ? { paddingTop: hdCqw(a.badgeNudge) }
                     : loyaltyBadgeShapeFor(ab.cost) === "down"
-                      ? { paddingBottom: cqw(sizePct * LOYALTY_ROW.badgeNudgeEm) }
+                      ? { paddingBottom: hdCqw(a.badgeNudge) }
                       : {}
                   : {}),
               }}
@@ -2421,18 +2620,23 @@ function LoyaltyRows({
               {ab.cost ?? ""}
             </span>
           </div>
+          {/* The ability's lines, in the column they were broken for — the
+              last one short of the loyalty shield when its text would reach
+              it (lastRowInsetPct) — centred in the row, with the ink
+              headroom an accented first capital needs. */}
           <div
             style={{
-              flex: 1,
-              minWidth: 0,
-              // The last ability wraps before the loyalty shield (when its
-              // text would reach it; lastRowInsetPct is 0 otherwise).
-              ...(i === last && lastRowInsetPct > 0 ? { marginRight: cqw(lastRowInsetPct) } : {}),
+              display: "flex",
+              flexDirection: "column",
+              flexShrink: 0,
+              width: hdCqw(draw.text[i].column),
+              paddingTop: hdCqw(draw.text[i].insetTop),
+              paddingBottom: hdCqw(draw.text[i].insetBottom),
               ...onTop,
-              ...(placeholder ? { fontStyle: "italic", opacity: 0.55 } : {}),
+              ...(placeholder ? { opacity: 0.55 } : {}),
             }}
           >
-            <RulesBody text={ab.text} overrides={pipOverrides} />
+            <RulesLines blocks={rowsLayout.text[i].blocks} metrics={draw.text[i].metrics} overrides={pipOverrides} />
           </div>
         </div>
       ))}

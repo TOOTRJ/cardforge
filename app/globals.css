@@ -33,6 +33,12 @@
    compress -o public/fonts/mplantin.woff2 public/fonts/mplantin.woff`), never
    the .ttf: the .ttf's cmap says language 1, which Chromium's font sanitiser
    rejects (TODO 3.27; tests/unit/content/mplantin-web-font.test.ts). */
+/* The metric overrides are the face's own hhea (774 / 225 / 150 units per
+   1000): the line box the rules layout models (lib/cards/rules-metrics.ts
+   MPLANTIN_LINE_METRICS) and Satori sets. macOS already uses hhea; Windows
+   Chromium and Firefox would size the content area from the font's win
+   metrics (904 / 263 — it doesn't set USE_TYPO_METRICS) and set every rules
+   line 0.046 em low (layout v33 review). */
 @font-face {
   font-family: "MPlantin";
   src:
@@ -42,6 +48,9 @@
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
+  ascent-override: 77.4%;
+  descent-override: 22.5%;
+  line-gap-override: 15%;
 }
 
 /* MPlantin Italic — the real italic master (flavor text, reminder text). The
@@ -57,6 +66,10 @@
   font-weight: 400 700;
   font-style: italic;
   font-display: swap;
+  /* The italic's hhea (772 / 227 / 150), as above. */
+  ascent-override: 77.2%;
+  descent-override: 22.7%;
+  line-gap-override: 15%;
 }
 
 /* CardDisplay — title/type/footer/stat face: Beleren Bold, the face real cards
