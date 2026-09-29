@@ -10,10 +10,12 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 // dark ink in the box below the pill — ONE line centred (TDOM #2 "Vigilance",
 // TM19 #1), two or more from the box's left (TWAR #6, TXLN #7) — with no
 // scrim, the type line on the prints' 1500 px baseline and the set symbol
-// centred on the re-cut pill (70.48 %H). The masters live in the frames
-// bucket (never in git): the bake is served a flat mid-grey card and a white
-// plate, so the dark text is the only mark in the box. The preview half is
-// pinned in tests/unit/components/token-text-box-preview.test.tsx.
+// centred on the re-cut pill (70.48 %H), and the P/T plate where the
+// text-box prints put it (M15TOKEN's print-moved plate, 88.61 %H). The
+// masters live in the frames bucket (never in git): the bake is served a
+// flat mid-grey card and a white plate, so the dark text is the only mark in
+// the box. The preview half is pinned in
+// tests/unit/components/token-text-box-preview.test.tsx.
 // ---------------------------------------------------------------------------
 
 const stand = vi.hoisted(() => ({ grey: "", white: "", black: "" }));
@@ -126,6 +128,15 @@ function inkBands(b: Baked, area: Box, hit: (l: number) => boolean): { y0: numbe
 
 const dark = (l: number) => l < 60;
 const black = (l: number) => l < 8;
+const white = (l: number) => l > 200;
+
+/** The P/T plate's box top on the three text-box pins that print one
+ *  (TDOM #2, TM19 #1, TC16 #9; Scryfall PNGs at 1500 × 2100), HD px: each
+ *  print's plate aligned to a real bake of its row by 2-D correlation of
+ *  edge maps over the plate, digits masked — 1861.8 / 1862.7 / 1862.0. CC's
+ *  88.48 %H box (1858.1 px, the textless token's before its print pass) sat
+ *  4.1 px above them; the print-moved 88.61 %H box (1860.8) sits 1.4 above. */
+const PRINT_PLATE_TOP = 1862.2;
 const PRESETS = [
   ["hd", 1],
   ["default", 0.5],
@@ -194,5 +205,18 @@ describe("the 2014–19 text-box token on real bakes (TODO 4.49 (b))", () => {
     expect(Math.abs(icon.x1 - 0.9213 * b.w)).toBeLessThanOrEqual(1);
     expect(Math.abs(icon.x1 - icon.x0 - side)).toBeLessThanOrEqual(1);
     expect(Math.abs((icon.y0 + icon.y1) / 2 - 0.7048 * b.h)).toBeLessThanOrEqual(1);
+  }, 60_000);
+
+  it.each(CASES)("%s @%s: the P/T plate where the text-box prints put it", async (template, preset, s) => {
+    const b = await bake(token(template), preset);
+    const plate = getFrameProfile(template).pt!.plateRect!;
+    // The (white stand-in) plate drawn over exactly its box…
+    const box = inkBox(b, { x0: 1000 * s, y0: 1780 * s, x1: 1500 * s, y1: 2100 * s }, white)!;
+    expect(box, "plate drawn").not.toBeNull();
+    expect(Math.abs(box.x0 - (plate.leftPct / 100) * b.w)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y0 - (plate.topPct / 100) * b.h)).toBeLessThanOrEqual(1);
+    // …whose top is where the pins' plate is: ±2 px at HD, ±1.5 of its own
+    // px at 750 (CC's un-moved box misses by 4.1 / 2.1).
+    expect(Math.abs(box.y0 - PRINT_PLATE_TOP * s), "plate top vs the text-box prints").toBeLessThanOrEqual(s === 1 ? 2 : 1.5);
   }, 60_000);
 });

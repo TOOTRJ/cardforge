@@ -63,6 +63,24 @@ describe("CardPreview — the text-box token's rules (TODO 4.49 (b))", () => {
     expect(marginLeft(drawn[0])).toBe("");
   });
 
+  it.each(["m15tokentext", "m15tokenartifacttext"])(
+    "%s: CC's symbol box moved up with the re-cut pill, and the textless token's print-moved P/T plate",
+    (template) => {
+      const p = getFrameProfile(template);
+      // CC's setSymbolBounds (80.13 / 82.34 / 12 × 4.1: right edge 92.13 %W)
+      // 292 px up with the band — centred on 70.48 %H, on the pill the
+      // re-cut put onto the prints. NOT the textless token's print pass
+      // (82.73 top): that moved the symbol down on CC's un-moved pill.
+      expect(p.symbolRect).toEqual({ topPct: 82.34 - (292 / 2100) * 100, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
+      expect(p.symbolRect!.topPct + p.symbolRect!.heightPct / 2).toBeCloseTo(70.485, 3);
+      // The P/T: the textless token's slot as is — M15's value box, CC's
+      // plate box 0.13 %H lower, where the text-box prints put it too.
+      expect(p.pt!.plateRect).toEqual({ topPct: 88.61, leftPct: 75.73, widthPct: 18.8, heightPct: 7.33 });
+      expect(p.pt!.plateRect).toEqual(getFrameProfile("m15token").pt!.plateRect);
+      expect(p.pt!.rect).toEqual(getFrameProfile("m15").pt!.rect);
+    },
+  );
+
   it("draws no scrim behind the text-box token's rules (the textless token keeps its own)", () => {
     expect(getFrameProfile("m15tokentext").rules.backdropHex).toBeUndefined();
     expect(lines("m15tokentext", "Vigilance").html).not.toContain("rgba(10,8,6,0.5)");

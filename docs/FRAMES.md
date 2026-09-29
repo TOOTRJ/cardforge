@@ -390,7 +390,9 @@ profile (`M15TOKENTEXT`) is M15TOKEN's with:
   1500 px (twelve prints 1498–1505), the set symbol right-anchored at
   92.13 %W and centred on 70.48 %H (CC's 67.43 moved down with the band) —
   CC's own box (`TOKEN_CC_SYMBOL_RECT`), not M15TOKEN's print-moved one:
-  the re-cut already put CC's pill, and the symbol with it, on the prints;
+  the re-cut already put CC's pill, and the symbol with it, on the prints
+  (TDOM #2 / TM19 #1 / TXLN #10 / TC16 #9 centre their symbols 0.5 px
+  below ours on average; M15TOKEN's box would sit 8 px low);
 - the rules in dark ink in CC's box moved down with the band and ending 5 px
   inside the drawn box as it starts (8.6 / 74.48 / 82.8 × 18 %: 1564–1942 px
   in the drawn box's 1559–1947; CC's ended at 1930, and a centred line sat
@@ -402,7 +404,10 @@ profile (`M15TOKENTEXT`) is M15TOKEN's with:
   places the line (a whole-px indent per target, `singleLineIndentPx`) and
   both renderers draw that indent as the line's margin, so the keep-outs
   are judged where it lands. No scrim;
-- the P/T as on M15TOKEN (`m15artifact/pt` on the artifact dress);
+- the P/T exactly as on M15TOKEN — M15's value box, the plate box 0.13 %H
+  lower (88.61 %H): the text-box prints put their plate where the textless
+  ones do (TDOM #2 / TM19 #1 / TC16 #9: 4.1 px below CC's 88.48 box, 1.4
+  after the move) — `m15artifact/pt` on the artifact dress;
 - `c` see-through like m15token's: CC's silver frame at 35 %, the pill and
   the box at 80 % over the art (BFZ #2 / OGW #1 Eldrazi Scion). A coloured
   artifact keeps the silver box and takes the colour through the title,

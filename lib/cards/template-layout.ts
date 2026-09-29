@@ -1407,6 +1407,11 @@ const M15TOKENTEXT: FrameProfile = {
     font: "body",
     padPx: { x: 2, y: 0 },
   },
+  // The P/T: M15TOKEN's slot as is (by the spread) — M15's value box, and
+  // CC's plate box 0.13 %H lower (TOKEN_PLATE_PRINT_DY_PCT). The text-box
+  // prints put their plate where the textless ones do: on CC's 88.48 %H
+  // box the plate sat 4.1 px above TDOM #2 / TM19 #1 / TC16 #9 (2.5 on
+  // average over nine text-box prints), 1.4 px after the move.
 };
 
 // M15 Snow (Kaldheim/Coldsnap frosty frame) and M15 Devoid (Eldrazi washed-out
