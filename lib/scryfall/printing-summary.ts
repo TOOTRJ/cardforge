@@ -24,6 +24,9 @@ export function trimPrinting(
 ): PrintingSummary {
   const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
   const front = card.card_faces?.[0];
+  // A back face with its own image (a transform / modal DFC); a split,
+  // adventure or flip card's second face shares the one image.
+  const back = card.card_faces?.[1]?.image_uris ? card.card_faces[1] : null;
   // Every printing has a match: a card PipGlyph can't make (an Emblem, a
   // Plane) is the registry's `unsupported` "no-card-type".
   const match = verifiedFrameMatchFromScryfall(card, verifiedKeys);
@@ -41,8 +44,10 @@ export function trimPrinting(
     devoid: effects.includes("devoid"),
     treatment: printingTreatmentFromScryfall(card) ?? null,
     artist: card.artist ?? front?.artist ?? null,
-    has_back_image: Boolean(card.card_faces?.[1]?.image_uris),
+    has_back_image: Boolean(back),
     thumb_url: pickArtCropUrl(card),
+    back_thumb_url: back?.image_uris?.art_crop ?? back?.image_uris?.normal ?? null,
+    back_artist: back ? (back.artist ?? card.artist ?? null) : null,
     image_status: card.image_status ?? null,
     match: {
       status: match.status,

@@ -146,6 +146,9 @@ const DELVER_ISD = printing({
   frame: "2003",
   artist: "Delver Artist",
   has_back_image: true,
+  thumb_url: "https://cards.scryfall.io/art_crop/front/1/1/delver-isd.jpg",
+  back_thumb_url: "https://cards.scryfall.io/art_crop/back/1/1/delver-isd.jpg",
+  back_artist: "Aberration Artist",
 });
 const PLACEHOLDER = printing({
   id: "a1b2c3d4-0000-4000-8000-000000000001",
@@ -231,7 +234,11 @@ function Harness({
 function renderButton(target: "front" | "back", props: { signedIn?: boolean; onApplied?: Parameters<typeof RealCardArtButton>[0]["onApplied"] } = {}) {
   const holder: { form: Form | null } = { form: null };
   render(<Harness target={target} onForm={(form) => (holder.form = form)} {...props} />);
-  return { values: () => holder.form!.getValues() };
+  // A deep copy: getValues() is a SHALLOW copy of the live form, so a
+  // nested object (back_face, frame_style) captured "before" would be the
+  // very object setValue mutates, and a stray nested write would compare
+  // equal to itself.
+  return { values: () => structuredClone(holder.form!.getValues()) };
 }
 
 async function pickCard(query: string, option: RegExp, face: "front" | "back" = "front") {
@@ -345,6 +352,26 @@ describe("the back art is offered only when the printing has a back image", () =
     expect(values().back_face.art_url).toBe(cardInProgress().back_face.art_url);
   });
 
+  it("the chosen panel shows the image and artist 'Use this art' will import", async () => {
+    stubRoutes();
+    renderButton("front");
+    await pickCard("Delver", /Delver of Secrets/);
+    const chosen = () => screen.getByTestId("real-art-chosen");
+    const crop = () => within(chosen()).getByRole("img");
+    expect(crop().getAttribute("src")).toBe(DELVER_ISD.thumb_url);
+    expect(crop().getAttribute("alt")).toContain("Delver of Secrets");
+    expect(chosen().textContent).toContain("Artist: Delver Artist");
+
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name: "Which art" })).getByRole("radio", {
+        name: /Back art/,
+      }),
+    );
+    expect(crop().getAttribute("src")).toBe(DELVER_ISD.back_thumb_url);
+    expect(crop().getAttribute("alt")).toContain("Insectile Aberration");
+    expect(chosen().textContent).toContain("Artist: Aberration Artist");
+  });
+
   it("a placeholder scan can't be used", async () => {
     stubRoutes({ printings: { [LLANOWAR.oracleId]: [PLACEHOLDER] } });
     renderButton("front");
@@ -454,6 +481,56 @@ describe("failures leave the form alone", () => {
   });
 });
 
+describe("an aborted search stays quiet when fetch itself rejects", () => {
+  it("the common abort (before the response): no 'Search failed', the newer search keeps its spinner", async () => {
+    let releaseSecond: (() => void) | null = null;
+    stubRoutes({
+      search: (url, init) => {
+        const q = new URL(url, "http://x").searchParams.get("q");
+        if (q === "Llan") {
+          // No response yet when the next keystroke aborts: fetch rejects.
+          const signal = init?.signal as AbortSignal;
+          return new Promise<Response>((_, reject) =>
+            signal.addEventListener("abort", () =>
+              reject(new DOMException("The operation was aborted.", "AbortError")),
+            ),
+          );
+        }
+        return new Promise<Response>((resolve) => {
+          releaseSecond = () =>
+            resolve(
+              json({
+                ok: true,
+                results: [{ id: LLANOWAR.id, name: "Llanowar Elves", oracle_id: LLANOWAR.oracleId, set: "dom", set_name: "Dominaria", thumb_url: null }],
+              }),
+            );
+        });
+      },
+    });
+    renderButton("front");
+    fireEvent.click(screen.getByRole("button", { name: /use art from a real card/i }));
+    const input = await screen.findByLabelText("Search a card by name");
+    fireEvent.change(input, { target: { value: "Llan" } });
+    await waitFor(() => expect(screen.queryByTestId("real-art-search-spinner")).toBeTruthy());
+    fireEvent.change(input, { target: { value: "Llanowar" } });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+    });
+    expect(screen.queryByText("Search failed.")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await waitFor(() => expect(releaseSecond).not.toBeNull());
+    // The newer search is in flight: its spinner is still up.
+    expect(screen.queryByTestId("real-art-search-spinner")).toBeTruthy();
+    await act(async () => {
+      releaseSecond!();
+    });
+    await screen.findByRole("option", { name: /Llanowar Elves/ });
+    expect(screen.queryByText("Search failed.")).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId("real-art-search-spinner")).toBeNull());
+  });
+});
+
 describe("guests", () => {
   it("the button is disabled with the sign-in hint and opens nothing", () => {
     const mock = stubRoutes();
@@ -523,7 +600,7 @@ describe("in the Art panel", () => {
     );
     const row = screen.getByTestId("back-face-art");
     expect(row.textContent).toContain("Ashen Hatchling · Back Artist");
-    const before = holder.form!.getValues();
+    const before = structuredClone(holder.form!.getValues());
 
     await pickCard("Delver", /Delver of Secrets/, "back");
     await useThisArt();

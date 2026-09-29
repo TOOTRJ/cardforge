@@ -568,17 +568,25 @@ function ChosenPrinting({
   // The Art step's note (TODO 1.18) for this printing, before the import:
   // the same text the Art block shows once the art is in place.
   const previewOrigin: ImportedArtOrigin = realCardArtOrigin(printing, "chosen-printing");
+  // Show the image "Use this art" will import: the back face's own crop
+  // (and its artist) once "Back art" is picked.
+  const showBack = mode === "art-back";
+  const thumb = showBack ? printing.back_thumb_url ?? null : printing.thumb_url;
+  const faceName = showBack ? faceNames.back ?? faceNames.front : faceNames.front;
+  const artist = showBack
+    ? printing.back_artist ?? printing.artist
+    : printing.artist;
   return (
     <div
       className="flex flex-col gap-3 rounded-md border border-border/60 bg-elevated/30 p-3"
       data-testid="real-art-chosen"
     >
       <div className="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)]">
-        {printing.thumb_url ? (
+        {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={printing.thumb_url}
-            alt={`Art of ${faceNames.front}, ${where}`}
+            src={thumb}
+            alt={`Art of ${faceName}, ${where}`}
             className="aspect-[4/3] w-full rounded-sm border border-border/50 object-cover"
           />
         ) : (
@@ -588,7 +596,7 @@ function ChosenPrinting({
           <span className="font-semibold uppercase tracking-wide text-foreground">{where}</span>
           <span className="text-muted">{printing.set_name ?? "Unknown set"}</span>
           <span className="text-muted">
-            Artist: <span className="text-foreground">{printing.artist ?? "not credited"}</span>
+            Artist: <span className="text-foreground">{artist ?? "not credited"}</span>
           </span>
           {treatment ? (
             <span className="self-start rounded-full border border-border/70 px-1.5 text-[10px] leading-4 text-muted">

@@ -72,6 +72,16 @@ describe("realCardArtWrites", () => {
 });
 
 describe("applyRealCardArt", () => {
+  it("front: exactly the three front art writes, each dirty", () => {
+    const setValue = vi.fn();
+    applyRealCardArt(setValue, "front", { publicUrl: URL, artist: "Rebecca Guay" });
+    expect(setValue.mock.calls).toEqual([
+      ["art_url", URL, { shouldDirty: true }],
+      ["art_position", { focalX: 0.5, focalY: 0.5, scale: 1 }, { shouldDirty: true }],
+      ["artist_credit", "Rebecca Guay", { shouldDirty: true }],
+    ]);
+  });
+
   it("writes each field dirty, like a user edit", () => {
     const setValue = vi.fn();
     applyRealCardArt(setValue, "back", { publicUrl: URL, artist: "Nils Hamm" });

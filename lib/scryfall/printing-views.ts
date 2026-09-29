@@ -107,6 +107,11 @@ export type PrintingSummary = {
   /** The second face carries its own art (a transform / modal DFC). */
   has_back_image: boolean;
   thumb_url: string | null;
+  /** The second face's own art crop and artist, when it has an image — what
+   *  "Use art from a real card" (TODO 1.15) shows once "Back art" is picked.
+   *  Absent on an older payload; null on a one-image printing. */
+  back_thumb_url?: string | null;
+  back_artist?: string | null;
   image_status: string | null;
   /** Null for a card PipGlyph can't make (an Emblem, a Plane). */
   match: PrintingMatch | null;

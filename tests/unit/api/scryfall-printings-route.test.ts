@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import treatmentPrintings from "../scryfall/fixtures/treatment-printings.json";
+import importPrintings from "../scryfall/fixtures/import-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
@@ -236,5 +237,54 @@ describe("selectRepresentatives — every look keeps a representative (1.5's int
     // Still newest first.
     const dates = picked.map((c) => c.released_at ?? "");
     expect([...dates].sort().reverse()).toEqual(dates);
+  });
+});
+
+describe("GET /api/scryfall/printings — a back face's own art (TODO 1.15)", () => {
+  // Real printings (tests/unit/scryfall/fixtures/import-printings.json) with
+  // the image_uris Scryfall serves for them: a transform DFC carries one per
+  // face, a split card one at the top level for both halves.
+  const art = (face: "front" | "back", id: string) =>
+    `https://cards.scryfall.io/art_crop/${face}/${id[0]}/${id[1]}/${id}.jpg`;
+  const delverIsd = () => {
+    const raw = importPrintings["isd-51"];
+    return scryfallCardSchema.parse({
+      ...raw,
+      card_faces: raw.card_faces.map((face, i) => ({
+        ...face,
+        image_uris: { art_crop: art(i === 0 ? "front" : "back", raw.id) },
+      })),
+    });
+  };
+  const fireIce = () => {
+    const raw = importPrintings["dmr-215"];
+    return scryfallCardSchema.parse({ ...raw, image_uris: { art_crop: art("front", raw.id) } });
+  };
+
+  it("Delver of Secrets ISD #51: the back crop and the back face's artist ride with the printing", async () => {
+    state.searchPrintingsPage.mockResolvedValue({ cards: [delverIsd()], hasMore: false, totalCards: 1 });
+    const body = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()) as {
+      printings: PrintingSummary[];
+    };
+    const id = importPrintings["isd-51"].id;
+    expect(body.printings[0]).toMatchObject({
+      has_back_image: true,
+      thumb_url: art("front", id),
+      back_thumb_url: art("back", id),
+      back_artist: "Nils Hamm",
+    });
+  });
+
+  it("Fire // Ice DMR #215: one image for both halves, so no back crop and no back artist", async () => {
+    state.searchPrintingsPage.mockResolvedValue({ cards: [fireIce()], hasMore: false, totalCards: 1 });
+    const body = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()) as {
+      printings: PrintingSummary[];
+    };
+    expect(body.printings[0]).toMatchObject({
+      has_back_image: false,
+      thumb_url: art("front", importPrintings["dmr-215"].id),
+      back_thumb_url: null,
+      back_artist: null,
+    });
   });
 });
