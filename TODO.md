@@ -367,7 +367,14 @@ Open decisions are marked **[decide]**; none blocks its phase.
         match it downgrades (`FrameMatch.unverified`), so the cause survives
         the named route's finalization; `frameRequestCause()` reads it. The
         page splits into "Missing frames" (build) and "Not yet verified"
-        (verify in Frame compare).
+        (verify in Frame compare). The seeded "Not yet verified" rows are
+        frames production hasn't verified (Heliod THB #259 on Nyx, WOE #328
+        on the extended-art frame) — never the FDN #282 Plains, which is
+        exact on production's verified m15fullartland; a test re-derives
+        every seeded row against `supabase/seed.sql` (A7 keeps it equal to
+        production). Follow-up: a row doesn't store which frame + colour
+        waits for verification (the page shows the label and where the card
+        landed).
       - **D2 retention — kept:** no prune job; the log is small and kept for
         good (funnel_events prunes at 180 days; this doesn't).
       - **D3 per-user cap — kept:** 30 rows an hour per user, then silently

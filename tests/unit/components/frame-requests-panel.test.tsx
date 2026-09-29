@@ -166,6 +166,18 @@ describe("FrameRequestsPanel", () => {
     expect(labels).toEqual(["japan-showcase", "borderless/standard+crown"]);
   });
 
+  it("counts a group's frames by signature, not by set rows", () => {
+    // The same missing frame asked for from two sets is one frame to build.
+    const rows = [
+      row({ count: 3 }),
+      row({ setCode: "mom", sampleCollector: "311", sampleUrl: "https://scryfall.com/card/mom/311", count: 2 }),
+    ];
+    render(<FrameRequestsPanel summary={summary({ rows })} now={NOW} />);
+    const missing = screen.getByRole("region", { name: "Missing frames" });
+    expect(within(missing).getByText("5 requests for 1 missing frame")).toBeTruthy();
+    expect(within(missing).getAllByRole("row")).toHaveLength(3);
+  });
+
   it("says when a group is empty in this window", () => {
     render(<FrameRequestsPanel summary={summary({ rows: [row({})] })} now={NOW} />);
     const unverified = screen.getByRole("region", { name: "Not yet verified" });

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
 import type { ScryfallCard } from "@/lib/scryfall/client";
+import type { FrameTemplate } from "@/types/card";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { FRAME_SIGNATURE_KEYS, type FrameMatch } from "@/lib/scryfall/frame-signatures";
@@ -366,6 +367,45 @@ describe("supabase/seeds/21_frame_requests.sql", () => {
       } else {
         expect(match.status, row.id).toBe(row.status);
       }
+    }
+  });
+
+  it("gives every row the status and cause a real import would log against production's verified frames", () => {
+    // supabase/seed.sql mirrors production's verified combos (owner decision
+    // A7); production also verified both full-art basics in w/u/b/r/g/c,
+    // which that refresh brings in (as in import-correctness.test.ts). A row
+    // filed 'unverified' whose frame production already verified — the FDN
+    // #282 Plains on m15fullartland — would be a request no import can make.
+    const sql = readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8");
+    const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/
+      .exec(sql)?.[1]
+      .replace(/--.*$/gm, "");
+    expect(block, "seed.sql's frame_reviews block").toBeTruthy();
+    const verified = new Set<string>();
+    const everyColour = /unnest\(array\[([^\]]*)\]\)\s+as t/.exec(block!)?.[1] ?? "";
+    for (const [, template] of everyColour.matchAll(/'([^']+)'/g)) {
+      for (const colour of ["w", "u", "b", "r", "g", "c", "m"]) {
+        verified.add(frameComboKey(template as FrameTemplate, colour));
+      }
+    }
+    for (const [, template, colour] of block!.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)) {
+      verified.add(frameComboKey(template as FrameTemplate, colour));
+    }
+    expect(verified.has(frameComboKey("m15", "w"))).toBe(true);
+    for (const template of ["m15fullartland", "fullartland"] as const) {
+      for (const colour of ["w", "u", "b", "r", "g", "c"]) verified.add(frameComboKey(template, colour));
+    }
+
+    const byId = new Map(
+      [...Object.values(SIGNATURE), ...Object.values(IMPORTS)].map((card) => [card.id, card]),
+    );
+    for (const row of rows.filter((r) => r.signature !== RETIRED)) {
+      // What /api/scryfall/named sends, then what the form logs.
+      const patch = finalizeImportMatch(mapScryfallToFormPatch(byId.get(row.scryfallId!)!), verified);
+      expect(
+        frameRequestFromImport(patch, { artImported: false, source: "import", verifiedKeys: verified }),
+        row.id,
+      ).toMatchObject({ signature: row.signature, status: row.status, cause: row.cause });
     }
   });
 

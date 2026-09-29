@@ -41,7 +41,7 @@ test.describe("admin frame requests", () => {
     // Exact frames waiting for verification sit in their own group (D1).
     const unverified = page.getByRole("table", { name: "Not yet verified" });
     await expect(unverified.locator('tr[data-signature="showcase/thb/constellation"]')).toBeVisible();
-    await expect(unverified.locator('tr[data-signature="fullart/basic/2022"]')).toBeVisible();
+    await expect(unverified.locator('tr[data-signature="extendedart"]')).toBeVisible();
     await expect(missing.locator('tr[data-signature="showcase/thb/constellation"]')).toHaveCount(0);
 
     // The poster family sits in the collapsed "Unsupported for good" group.

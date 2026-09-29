@@ -13,8 +13,10 @@
 --
 -- Both groups (D1): cause 'missing' (the registry has no exact frame) and
 -- 'unverified' (its exact frame isn't verified in the card's colour: Heliod
--- on Nyx, the FDN full-art Plains on the Full-Art Basic — neither is in
--- supabase/seed.sql's verified list).
+-- on Nyx, A Tale for the Ages on the extended-art frame — neither is
+-- verified in production, so neither is in supabase/seed.sql, which mirrors
+-- it; the test re-derives every row against seed.sql's list. Never the FDN
+-- full-art Plains: production verified m15fullartland, so it imports exact).
 --
 -- Every signature is a real registry key (FRAME_SIGNATURE_KEYS in
 -- lib/scryfall/frame-signatures.ts) with the registry's label, and every
@@ -66,9 +68,9 @@ from (values
   -- Not yet verified ----------------------------------------------------------
   -- Heliod, Sun-Crowned THB #259: constellation showcase, exact on Nyx (A3) — Nyx isn't verified in white
   ('fa000000-0000-4000-a000-000000000006', 'd0000000-0000-4000-a000-000000000002', 'showcase/thb/constellation', 'Theros Beyond Death constellation showcase', 'thb', '259', 'e11cf760-da35-41f2-8cf5-a5141103eeb3', 'nearest', 'unverified', 'm15', null, 'import', now() - interval '12 days'),
-  -- Plains FDN #282: the 2022 full-art basic, exact on m15fullartland — not verified in white
-  ('fa000000-0000-4000-a000-00000000000d', 'd0000000-0000-4000-a000-000000000004', 'fullart/basic/2022', 'Full-art basic land', 'fdn', '282', '6e6f19b3-4c76-4078-8ed2-b2832a33d066', 'nearest', 'unverified', 'm15land', 'frame-in-crop', 'import', now() - interval '5 days'),
-  ('fa000000-0000-4000-a000-00000000000e', 'd0000000-0000-4000-a000-000000000003', 'fullart/basic/2022', 'Full-art basic land', 'fdn', '282', '6e6f19b3-4c76-4078-8ed2-b2832a33d066', 'nearest', 'unverified', 'm15land', null, 'deck_prefill', now() - interval '7 days'),
+  -- A Tale for the Ages WOE #328: extended art, exact on the extended-art frame — not verified in white
+  ('fa000000-0000-4000-a000-00000000000d', 'd0000000-0000-4000-a000-000000000004', 'extendedart', 'Extended-art frame', 'woe', '328', '4fc7d7d8-0965-4097-98ee-e89cfa05fd05', 'nearest', 'unverified', 'm15', null, 'import', now() - interval '5 days'),
+  ('fa000000-0000-4000-a000-00000000000e', 'd0000000-0000-4000-a000-000000000003', 'extendedart', 'Extended-art frame', 'woe', '328', '4fc7d7d8-0965-4097-98ee-e89cfa05fd05', 'nearest', 'unverified', 'm15', null, 'deck_prefill', now() - interval '7 days'),
   -- Unsupported for good (collapsed on the admin page): a poster, The Zeta Set
   ('fa000000-0000-4000-a000-00000000000a', null, 'borderless/poster', 'Artist-lettered borderless poster', 'spg', '119', 'f461d613-518f-41cf-b08f-0778d40d3cf7', 'unsupported', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '4 days'),
   ('fa000000-0000-4000-a000-00000000000b', null, 'frameless/slz', 'The Zeta Set frameless typeset card', 'slz', '46', '5165917b-4d9c-4dc4-917b-a3a17d5869f7', 'unsupported', 'missing', 'm15', 'frame-in-crop', 'import', now() - interval '8 days')
