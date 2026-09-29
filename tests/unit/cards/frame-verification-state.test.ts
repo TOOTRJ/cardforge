@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import {
+  LEGACY_TICK_LAYOUT_VERSION,
   canonicalJson,
   overrideHash,
   verificationState,
@@ -55,6 +56,25 @@ describe("verificationState", () => {
       current,
     );
     expect(state).toEqual({ verified: true, stale: false, legacy: true, reasons: [] });
+  });
+
+  it("stales a legacy tick on a later bump that touches its template, and only then (TODO 4.49)", () => {
+    const legacyTick = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
+    // Every bump up to LEGACY_TICK_LAYOUT_VERSION is waived, as before…
+    expect(LEGACY_TICK_LAYOUT_VERSION).toBe(33);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(LEGACY_TICK_LAYOUT_VERSION);
+    for (const version of [23, 30, 33]) {
+      expect(verificationState(legacyTick, "m15token", "none", version).stale, `v${version}`).toBe(false);
+    }
+    // …and the next one (v34: no scope recorded here, so every template) stales it,
+    // still reported as legacy.
+    const state = verificationState(legacyTick, "m15token", "none", LEGACY_TICK_LAYOUT_VERSION + 1);
+    expect(state).toEqual({
+      verified: true,
+      stale: true,
+      legacy: true,
+      reasons: ["the renderer changed since this tick (made before layout v33; now v34)"],
+    });
   });
 
   it("is current when the version and the override hash both match", () => {
