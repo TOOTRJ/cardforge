@@ -122,6 +122,10 @@ test.describe("Scryfall search → import", () => {
   // the dialog says so before the import and the creator toasts the frame
   // the card actually got, instead of a silent "exact". The notice is the
   // FRONT toast (it follows the dialog's own "Seeded form with …").
+  // Borderless is verified in every colour on production (supabase/seed.sql
+  // mirrors it), so both also OFFER it (printingTreatmentOffer): the dialog
+  // names it and the toast carries a "Use Borderless" action. The import
+  // itself still lands on the bordered frame.
   async function importBorderlessSheoldred(
     page: Page,
     frameTemplate: string,
@@ -190,7 +194,9 @@ test.describe("Scryfall search → import", () => {
     await page.getByRole("option", { name: /sheoldred/i }).click();
 
     await expect(
-      page.getByText(/This printing is borderless, which PipGlyph doesn't offer yet/),
+      page.getByText(
+        /This printing is borderless — the import uses a bordered frame, then offers PipGlyph's Borderless frame\./,
+      ),
     ).toBeVisible();
     // Keep the run offline: no art import.
     await page.getByRole("checkbox", { name: /also import artwork/i }).uncheck();
@@ -202,9 +208,13 @@ test.describe("Scryfall search → import", () => {
 
   test("names a borderless printing's substituted frame", async ({ page }) => {
     await importBorderlessSheoldred(page, "m15");
-    await expect(frontToast(page)).toHaveText(
+    // The toast's text includes its action button's label, hence contain.
+    await expect(frontToast(page)).toContainText(
       "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.",
     );
+    await expect(
+      frontToast(page).getByRole("button", { name: "Use Borderless" }),
+    ).toBeVisible();
   });
 
   test("names the frame the card landed on, not the one the printing wanted", async ({
@@ -213,7 +223,7 @@ test.describe("Scryfall search → import", () => {
     // modern is verified in white only (supabase/seed.sql), so a black card
     // asking for it lands on M15 Standard; the notice names M15.
     await importBorderlessSheoldred(page, "modern");
-    await expect(frontToast(page)).toHaveText(
+    await expect(frontToast(page)).toContainText(
       "This printing is borderless — PipGlyph used the bordered M15 (2015) Standard frame.",
     );
   });
