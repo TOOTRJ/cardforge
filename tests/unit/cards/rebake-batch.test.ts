@@ -14,7 +14,7 @@ import { chainClient, called, payloadOf, type ChainAnswer, type ChainCall } from
 const mocks = vi.hoisted(() => ({
   render: vi.fn(async () => new Response(new Uint8Array([137, 80, 78, 71]))),
   upload: vi.fn(async () => ({ ok: true as const, renderedImageUrl: "https://cdn/r.png?v=2", renderedThumbUrl: "https://cdn/r.webp?v=2" })),
-  remove: vi.fn(async () => {}),
+  remove: vi.fn(async () => ({ error: null as string | null })),
   art: vi.fn(async () => ({ ok: true as const, artUrl: null as string | null })),
   purge: vi.fn(async (ids: readonly string[]) => void ids),
 }));
@@ -25,7 +25,7 @@ vi.mock("@/lib/cards/bake-core", () => ({
   BAKE_SELECT_COLUMNS: "id, owner_id, visibility, updated_at, art_url, frame_style",
   rowToPreviewData: () => ({ title: "x" }),
   uploadRenderObjects: mocks.upload,
-  removeRenderObject: mocks.remove,
+  removeRenderObjects: mocks.remove,
 }));
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
@@ -202,6 +202,12 @@ describe("runRebakeBatch", () => {
     });
     // The share images' CDN copies go with the old bake (3.26 review).
     expect(mocks.purge).toHaveBeenCalledWith(["c1", "c2"]);
+    // Each bake lands in ITS ROW's owner folder — bake-core takes the owner
+    // and the card, never a storage path or a client (migration 0126).
+    expect(mocks.upload.mock.calls.map((call) => (call as unknown[]).slice(0, 2))).toEqual([
+      ["owner-1", "c1"],
+      ["owner-1", "c2"],
+    ]);
   });
 
   it("never picks a skipped id, sizes the page to limit + skips, counts remaining exactly", async () => {
@@ -310,7 +316,13 @@ describe("runRebakeBatch", () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.superseded).toEqual(["c1"]);
     expect(result.processed).toEqual([]);
-    expect(mocks.remove).toHaveBeenCalledWith(expect.anything(), "owner-1/c1.png");
+    // Both objects (PNG + thumb) in the row owner's folder — bake-core only
+    // ever opens `{owner_id}/` (the thumb used to be left behind here).
+    expect(mocks.remove).toHaveBeenCalledWith("owner-1", ["c1"]);
+    // …and the CDN copies (/render-cdn could have been filled from the new
+    // bytes after the unpublish purged it) — after the remove.
+    expect(mocks.purge).toHaveBeenCalledWith(["c1"]);
+    expect(mocks.purge.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.remove.mock.invocationCallOrder[0]);
   });
 
   it("a lost compare-and-set on a still-public card keeps the objects (the newer bake owns them)", async () => {
@@ -319,6 +331,7 @@ describe("runRebakeBatch", () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.superseded).toEqual(["c1"]);
     expect(mocks.remove).not.toHaveBeenCalled();
+    expect(mocks.purge.mock.calls.flat(2)).not.toContain("c1");
   });
 
   it("a dry run plans without rendering or writing", async () => {

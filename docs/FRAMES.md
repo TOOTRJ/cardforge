@@ -429,6 +429,19 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   printing in `tests/unit/scryfall/fixtures/signature-printings.json`, and
   a row in `tests/unit/scryfall/frame-signatures.test.ts`. The completeness
   test fails until some rule can reach it.
+- **Tokens (TODO 1.23).** Scryfall has no field for a token's design, so
+  the date decides: `isM20DesignPrinting` (released on or after 2019-07-12,
+  a `plst` reprint by its collector prefix — `PLST_PRE_M20_PREFIX_SETS`,
+  held to Scryfall by `tests/unit/scryfall/fixtures/plst-token-prefixes.json`).
+  Those print the full-art design (4.48), so `token/m20` answers `nearest`
+  the 2014–19 arch until 4.48's templates exist (then `onceVerified`); the
+  earlier 2015-frame tokens ARE the arch (`era/2015`, exact). A token's Nyx
+  is the `nyx-dress` gap (4.51), not `nyx` (4.7). Role cards (`token/role`,
+  unsupported) and double-faced tokens import their front face only.
+  Tokens and emblems are only found through the import dialog's "Tokens &
+  emblems" scope or the no-match fallback its Cards scope asks for
+  (`fallback=tokens`; `lib/scryfall/search-scope.ts`, Scryfall's
+  `include_extras`).
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or

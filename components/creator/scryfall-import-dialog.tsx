@@ -13,6 +13,7 @@ import { Loader2, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ChipGroup } from "@/components/ui/chip-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -39,6 +40,13 @@ import {
   type PrintingSummary,
   type PrintingView,
 } from "@/lib/scryfall/printing-views";
+import {
+  DEFAULT_SEARCH_SCOPE,
+  SEARCH_FALLBACK,
+  SEARCH_SCOPE_LABELS,
+  SEARCH_SCOPE_VALUES,
+  type SearchScope,
+} from "@/lib/scryfall/search-scope";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -56,7 +64,11 @@ import { cn } from "@/lib/utils";
 // whether PipGlyph has its exact frame, and asks for a frame before commit
 // when it doesn't (lib/creator/import-frame-choice.ts). TODO 1.9: a stale
 // search never reports "Search failed", a printing click keeps the result
-// list's selection, and the dialog can't close mid-commit.
+// list's selection, and the dialog can't close mid-commit. TODO 1.23: a
+// "Tokens & emblems" scope finds what a plain Scryfall search leaves out
+// (lib/scryfall/search-scope.ts), and a Cards search that finds nothing
+// falls back to it on the server (the Cards scope asks: `fallback=tokens`)
+// — the list then says so.
 // ---------------------------------------------------------------------------
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -70,6 +82,9 @@ type TrimmedCard = {
   mana_cost: string | null;
   rarity: string | null;
   artist: string | null;
+  /** Absent on an older response. */
+  power?: string | null;
+  toughness?: string | null;
   thumb_url: string | null;
   print_url: string | null;
   oracle_text: string | null;
@@ -226,6 +241,15 @@ function ScryfallImportContent({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<SearchScope>(DEFAULT_SEARCH_SCOPE);
+  // The scope the shown results come from: "tokens" under the Cards scope
+  // when the server fell back to tokens and emblems (TODO 1.23).
+  const [resultScope, setResultScope] = useState<SearchScope>(DEFAULT_SEARCH_SCOPE);
+  // The shown results are a Cards search the server answered from tokens
+  // and emblems. Kept per response, not derived from the chips: after a
+  // switch back to Cards the Tokens results stay listed until the Cards
+  // answer lands, and they are no fallback.
+  const [fellBack, setFellBack] = useState(false);
   const [results, setResults] = useState<TrimmedCard[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -301,7 +325,13 @@ function ScryfallImportContent({
       setSearchError(null);
       try {
         const response = await fetch(
-          `/api/scryfall/search?${new URLSearchParams({ q, limit: "12" })}`,
+          `/api/scryfall/search?${new URLSearchParams({
+            q,
+            limit: "12",
+            // The Cards scope asks for the tokens fallback; the Tokens &
+            // emblems scope IS that search.
+            ...(scope === "tokens" ? { scope } : { fallback: SEARCH_FALLBACK }),
+          })}`,
           { signal: controller.signal },
         );
         const body = await response.json().catch(() => ({}));
@@ -314,6 +344,8 @@ function ScryfallImportContent({
           return;
         }
         setResults(Array.isArray(body.results) ? body.results : []);
+        setResultScope(body.scope === "tokens" ? "tokens" : scope);
+        setFellBack(scope === "cards" && body.scope === "tokens");
       } catch {
         if (stale()) return;
         setSearchError("Search failed.");
@@ -326,7 +358,7 @@ function ScryfallImportContent({
       controller.abort();
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, scope]);
 
   // Tracks the most recently requested card id so a slower earlier fetch can't
   // land after a faster later one and show a detail that doesn't match the
@@ -523,7 +555,11 @@ function ScryfallImportContent({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="e.g. Lightning Bolt, t:dragon r:rare"
+              placeholder={
+                scope === "tokens"
+                  ? "e.g. Treasure, Soldier, Kaito emblem"
+                  : "e.g. Lightning Bolt, t:dragon r:rare"
+              }
               className="h-8 flex-1 bg-transparent text-sm text-foreground placeholder:text-subtle focus:outline-none"
               aria-label="Search Scryfall"
               disabled={committing}
@@ -537,12 +573,27 @@ function ScryfallImportContent({
             ) : null}
           </div>
 
+          <div className="border-b border-border/60 px-4 py-2">
+            <ChipGroup
+              ariaLabel="Search scope"
+              layout="wrap"
+              size="sm"
+              value={scope}
+              onChange={setScope}
+              options={SEARCH_SCOPE_VALUES.map((value) => ({
+                value,
+                label: SEARCH_SCOPE_LABELS[value],
+                disabled: committing,
+              }))}
+            />
+          </div>
+
           <div className="min-h-0 flex-1 overflow-y-auto">
             {searchError ? (
               <p className="px-4 py-3 text-xs text-danger">{searchError}</p>
             ) : null}
             {!query.trim() ? (
-              <SearchTips />
+              <SearchTips scope={scope} />
             ) : searching && results.length === 0 ? (
               // First-paint while waiting on the initial Scryfall response
               // for a new query. Once results land we render them
@@ -554,57 +605,77 @@ function ScryfallImportContent({
                 No matches.
               </p>
             ) : (
-              <ul role="listbox" aria-label="Search results">
-                {results.map((card) => (
-                  <li key={card.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selectedResultId === card.id}
-                      onClick={() => handleSelectResult(card.id)}
-                      disabled={committing}
-                      className={cn(
-                        "flex w-full items-start gap-3 border-b border-border/40 px-3 py-2 text-left transition-colors hover:bg-elevated/60",
-                        selectedResultId === card.id ? "bg-elevated/80" : "",
-                      )}
-                    >
-                      {card.thumb_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={card.thumb_url}
-                          alt=""
-                          className="h-12 w-16 shrink-0 rounded-sm object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-12 w-16 shrink-0 rounded-sm bg-elevated" />
-                      )}
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {card.name}
-                        </span>
-                        <span className="truncate text-[11px] uppercase tracking-wider text-subtle">
-                          {card.set ? card.set.toUpperCase() : "—"}
-                          {card.rarity ? ` · ${card.rarity}` : ""}
-                        </span>
-                        {card.image_status === "lowres" ? (
-                          <Badge variant="outline" className="self-start text-[10px]">
-                            Low-res scan
-                          </Badge>
-                        ) : card.image_status === "placeholder" ||
-                          card.image_status === "missing" ? (
-                          <Badge variant="outline" className="self-start text-[10px]">
-                            No real image yet
-                          </Badge>
-                        ) : null}
-                        {card.mana_cost ? (
-                          <ManaCostGlyphs cost={card.mana_cost} size="sm" />
-                        ) : null}
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <>
+                {fellBack && scope === "cards" ? (
+                  <p
+                    className="border-b border-border/40 px-4 py-2 text-[11px] leading-4 text-subtle"
+                    data-testid="search-fallback-note"
+                  >
+                    No cards matched — these are tokens and emblems.
+                  </p>
+                ) : null}
+                <ul role="listbox" aria-label="Search results">
+                  {results.map((card) => (
+                    <li key={card.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={selectedResultId === card.id}
+                        onClick={() => handleSelectResult(card.id)}
+                        disabled={committing}
+                        className={cn(
+                          "flex w-full items-start gap-3 border-b border-border/40 px-3 py-2 text-left transition-colors hover:bg-elevated/60",
+                          selectedResultId === card.id ? "bg-elevated/80" : "",
+                        )}
+                      >
+                        {card.thumb_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={card.thumb_url}
+                            alt=""
+                            className="h-12 w-16 shrink-0 rounded-sm object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="h-12 w-16 shrink-0 rounded-sm bg-elevated" />
+                        )}
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {card.name}
+                          </span>
+                          {resultScope === "tokens" ? (
+                            // A token's name is shared by many cards
+                            // (Soldier): the type line and P/T tell them apart.
+                            <span className="truncate text-[11px] text-muted">
+                              {card.type_line ?? "—"}
+                              {card.power || card.toughness
+                                ? ` · ${card.power ?? "—"}/${card.toughness ?? "—"}`
+                                : ""}
+                            </span>
+                          ) : null}
+                          <span className="truncate text-[11px] uppercase tracking-wider text-subtle">
+                            {card.set ? card.set.toUpperCase() : "—"}
+                            {card.rarity && resultScope !== "tokens" ? ` · ${card.rarity}` : ""}
+                          </span>
+                          {card.image_status === "lowres" ? (
+                            <Badge variant="outline" className="self-start text-[10px]">
+                              Low-res scan
+                            </Badge>
+                          ) : card.image_status === "placeholder" ||
+                            card.image_status === "missing" ? (
+                            <Badge variant="outline" className="self-start text-[10px]">
+                              No real image yet
+                            </Badge>
+                          ) : null}
+                          {card.mana_cost ? (
+                            <ManaCostGlyphs cost={card.mana_cost} size="sm" />
+                          ) : null}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         </div>
@@ -687,7 +758,18 @@ function ScryfallImportContent({
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function SearchTips() {
+function SearchTips({ scope }: { scope: SearchScope }) {
+  if (scope === "tokens") {
+    return (
+      <div className="flex flex-col gap-3 px-4 py-5 text-xs leading-5 text-subtle">
+        <p>
+          Search Scryfall&apos;s tokens and emblems by name — a Treasure, a
+          Soldier, or an emblem by its planeswalker (&ldquo;Kaito
+          emblem&rdquo;). Pick one, then its printing.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3 px-4 py-5 text-xs leading-5 text-subtle">
       <p>

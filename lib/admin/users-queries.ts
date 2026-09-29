@@ -6,6 +6,7 @@ import {
   USER_LIST_PAGE_SIZE,
   type UserListParams,
 } from "@/lib/admin/users-params";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // /admin/users reads — the directory page and the per-user detail. Both
@@ -71,7 +72,9 @@ export async function listAdminUsers(params: UserListParams): Promise<AdminUserP
     id: row.id,
     username: row.username,
     displayName: row.display_name,
-    avatarUrl: row.avatar_url,
+    // Only a drawable avatar (migration 0127) — an admin viewing a
+    // tracking pixel would hand its host the admin's IP.
+    avatarUrl: profileMediaSrc("avatar", row.avatar_url, row.id),
     email: row.email,
     subscriptionTier: row.subscription_tier,
     subscriptionStatus: row.subscription_status,

@@ -24,8 +24,8 @@
 // CI's "Frames published" check stays red until you do.
 // ---------------------------------------------------------------------------
 import path from "node:path";
-import readline from "node:readline";
 import { createClient } from "@supabase/supabase-js";
+import { promptHidden } from "./lib/hidden-prompt.mjs";
 import { PRODUCTION_SUPABASE_REF, isProductionSupabaseUrl } from "./lib/prod-guard.mjs";
 import {
   BUCKET,
@@ -40,20 +40,6 @@ import {
   sha256,
 } from "./lib/frame-objects.mjs";
 
-/** Read a secret from the TTY without echoing it. */
-function promptHidden(question) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => {
-      if (s.includes(question)) process.stdout.write(s);
-    };
-    rl.question(question, (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve(answer.trim());
-    });
-  });
-}
 
 const prodUrl = process.env.FRAMES_PROD_URL ?? `https://${PRODUCTION_SUPABASE_REF}.supabase.co`;
 let prodKey = process.env.FRAMES_PROD_SECRET_KEY ?? "";

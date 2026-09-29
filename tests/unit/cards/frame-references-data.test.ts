@@ -110,6 +110,30 @@ describe("frame-references.json", () => {
     expect(FRAME_REFERENCES.battle.w?.name).toMatch(/^Invasion of Gobakhan/);
   });
 
+  it("defaults m15snow w/b/g to the snow printings production verified them against (1.4 A6)", () => {
+    // frame_reviews.verified_reference_id on production, 2026-09-29.
+    expect(FRAME_REFERENCES.m15snow.w).toMatchObject({
+      name: "Search for Glory",
+      scryfallId: "b65c215d-562d-4c7c-bc9f-b1d741050158",
+      curated: true,
+    });
+    expect(FRAME_REFERENCES.m15snow.b).toMatchObject({
+      name: "Priest of the Haunted Edge",
+      scryfallId: "0cde0f4d-5acc-4a25-a3d6-c6b9b734360c",
+      curated: true,
+    });
+    expect(FRAME_REFERENCES.m15snow.g).toMatchObject({
+      name: "Sculptor of Winter",
+      scryfallId: "9dab2ca2-0039-4eac-a7dc-68756362737d",
+      curated: true,
+    });
+    // The plain-frame printings that stood in for them are gone.
+    const names = ["w", "b", "g"].flatMap((key) => frameReferenceOptions("m15snow", key).map((r) => r.name));
+    for (const name of ["Axgard Braggart", "Deathknell Berserker", "Sarulf's Packmate"]) {
+      expect(names).not.toContain(name);
+    }
+  });
+
   it("gives most combos an alternate printing", () => {
     let withAlternates = 0;
     let total = 0;

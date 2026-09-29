@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import {
   assessPrintImageQuality,
   fetchScryfallImage,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/scryfall/rate-limit";
 import { scryfallFaceArtist } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
+import { checkUploadRateLimit } from "@/lib/media/upload-rate-limit";
 import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
@@ -22,9 +24,9 @@ import { randomId } from "@/lib/ids";
 //
 // Server fetches the Scryfall image (via the trusted client helper that
 // host-locks to cards.scryfall.io / api.scryfall.com), validates the
-// content type, and uploads the bytes to the user's `card-art` bucket. The
-// upload uses the user's session so RLS still binds the destination path
-// to auth.uid().
+// content type, and uploads the bytes to the user's `card-art` folder — with
+// the service role, the folder forced from the session's user id
+// (lib/media/user-storage.ts; users hold no storage write policy since 0126).
 //
 // We never accept an arbitrary `imageUrl` from the client. The client only
 // names a Scryfall card id; the server re-derives the URL from a fresh
@@ -69,7 +71,7 @@ function extensionFromContentType(contentType: string): string {
 }
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !isUserStorageConfigured()) {
     return NextResponse.json(
       { ok: false, error: "Supabase is not configured." },
       { status: 503 },
@@ -108,6 +110,12 @@ export async function POST(request: Request) {
   const limit = await checkScryfallRateLimit(user.id, "import_art");
   if (!limit.ok) {
     return rateLimitedResponse(limit);
+  }
+  // The upload limit too (30 a minute / 300 a day per user,
+  // lib/media/upload-rate-limit.ts): this stores a file in the user's folder.
+  const uploadLimit = await checkUploadRateLimit(user.id);
+  if (!uploadLimit.ok) {
+    return rateLimitedResponse(uploadLimit);
   }
   // 1) Re-fetch the card from Scryfall to recover a trusted image URL. We
   // deliberately don't accept a URL from the client.
@@ -196,20 +204,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // 3) Upload via the user's session — RLS binds the destination prefix.
+  // 3) Upload into the caller's own card-art folder (service role; the
+  // folder comes from the session, the name is ours).
   const ext = extensionFromContentType(fetched.contentType);
-  const id = randomId();
-  const path = `${user.id}/${id}.${ext}`;
-
-  const supabase = await createClient();
+  const name = `${randomId()}.${ext}`;
+  const art = userFolder("card-art", user.id);
   const arrayBuffer = await fetched.blob.arrayBuffer();
-  const { error: uploadError } = await supabase.storage
-    .from("card-art")
-    .upload(path, arrayBuffer, {
-      cacheControl: "3600",
-      contentType: fetched.contentType,
-      upsert: false,
-    });
+  const { error: uploadError } = await art.upload(name, arrayBuffer, {
+    cacheControl: "3600",
+    contentType: fetched.contentType,
+    upsert: false,
+  });
 
   if (uploadError) {
     return NextResponse.json(
@@ -218,13 +223,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: publicData } = supabase.storage
-    .from("card-art")
-    .getPublicUrl(path);
-
   return NextResponse.json({
     ok: true,
-    publicUrl: publicData.publicUrl,
+    publicUrl: art.publicUrl(name),
     // The requested face's artist (TODO 1.8): Ice's, not "David Martin &
     // Franz Vohwinkel".
     artist: scryfallFaceArtist(card, isBack ? 1 : 0) ?? null,

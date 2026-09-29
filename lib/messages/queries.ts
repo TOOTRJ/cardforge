@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import type { MessageSenderRole, ThreadStatus } from "@/lib/messages/schemas";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // Reads for admin ↔ user messaging.
@@ -254,7 +255,13 @@ async function profilesById(
     .from("profiles")
     .select("id, username, display_name, avatar_url")
     .in("id", unique);
-  return new Map(((data ?? []) as ProfileLite[]).map((p) => [p.id, p]));
+  // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+  return new Map(
+    ((data ?? []) as ProfileLite[]).map((p) => [
+      p.id,
+      { ...p, avatar_url: profileMediaSrc("avatar", p.avatar_url, p.id) },
+    ]),
+  );
 }
 
 export type AdminThreadFilter = "all" | "unread" | "open" | "closed";

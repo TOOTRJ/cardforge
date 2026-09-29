@@ -3,6 +3,8 @@ import "server-only";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 type ModerationReport = {
   id: string;
@@ -77,8 +79,10 @@ export async function getModerationQueue(): Promise<ModerationCard[] | null> {
         title: card.title,
         slug: card.slug,
         ownerId: card.owner_id,
-        artUrl: card.art_url,
-        renderedImageUrl: card.rendered_image_url,
+        // Only pictures we store (migrations 0126 / 0127): an admin viewing an
+        // outside URL would hand its host the admin's IP.
+        artUrl: drawableMediaUrl("card-art", card.art_url),
+        renderedImageUrl: isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null,
         landscape: isLandscapeFrame(card.frame_style),
         reports: [],
       };

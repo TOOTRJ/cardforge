@@ -22,6 +22,7 @@ import {
   type DeckFormat,
 } from "@/types/deck";
 import { firstString } from "@/lib/routing/search-params";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
 // The community decks browse is two routes with one result grid:
@@ -307,6 +308,8 @@ export function PublicDeckTile({
 
   // Avoid nesting <a> inside <a> (invalid HTML): the cover + title/description
   // are wrapped in one Link, then the owner chip is a sibling Link below.
+  // Only a cover we store (migration 0127, lib/media/media-urls.ts).
+  const coverUrl = drawableMediaUrl("deck-cover", deck.cover_url, deck.owner_id);
   return (
     <SurfaceCard className="flex h-full flex-col gap-0 overflow-hidden p-0 transition-colors hover:border-border-strong">
       <Link
@@ -315,9 +318,9 @@ export function PublicDeckTile({
         aria-label={`Open ${deck.title}`}
       >
         <div className="relative aspect-video w-full overflow-hidden bg-elevated">
-          {deck.cover_url ? (
+          {coverUrl ? (
             <Image
-              src={deck.cover_url}
+              src={coverUrl}
               alt={`${deck.title} — custom card deck cover`}
               fill
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"

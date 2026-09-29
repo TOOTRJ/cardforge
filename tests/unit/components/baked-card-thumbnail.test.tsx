@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
 import type { CardPreviewData } from "@/components/cards/card-preview";
@@ -13,7 +13,18 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 // empty 5:7 letterbox (so pre-v31 square battle bakes round too).
 // ---------------------------------------------------------------------------
 
-afterEach(cleanup);
+// A real bake URL: our storage host, the card-renders bucket. Anything else
+// is not drawn (see "only our own bakes" below).
+const HOST = "https://auth.pipglyph.com";
+const RENDERS = `${HOST}/storage/v1/object/public/card-renders/owner-1`;
+
+beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", HOST);
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
 
 const classes = (el: Element | null) => new Set((el?.getAttribute("class") ?? "").split(/\s+/));
 
@@ -21,15 +32,15 @@ function tile(template: string, urls: { thumb?: string | null; png?: string } = 
   const previewData = { title: "Probe", frameStyle: { template } } as CardPreviewData;
   const { container } = render(
     <BakedCardThumbnail
-      renderedImageUrl={urls.png ?? "/renders/probe.png"}
-      renderedThumbUrl={urls.thumb === undefined ? "/renders/probe.thumb.webp" : urls.thumb}
+      renderedImageUrl={urls.png ?? `${RENDERS}/probe.png?v=1`}
+      renderedThumbUrl={urls.thumb === undefined ? `${RENDERS}/probe.thumb.webp?v=1` : urls.thumb}
       title="Probe"
       previewData={previewData}
     />,
   );
   const outer = container.firstElementChild as HTMLElement;
   const img = container.querySelector("img") as HTMLImageElement;
-  return { outer, img };
+  return { outer, img, container };
 }
 
 describe("BakedCardThumbnail corners", () => {
@@ -83,5 +94,38 @@ describe("BakedCardThumbnail corners", () => {
     expect(box.parentElement).toBe(outer);
     expect(classes(box).has("card-corners-landscape")).toBe(true);
     expect(classes(img).has("bg-[#101015]")).toBe(true);
+  });
+});
+
+// Migration 0126 lets only the service role point a card at a render, but a
+// row written before it (when an owner could PATCH rendered_image_url /
+// rendered_thumb_url through PostgREST) could hold any picture — a raw <img>
+// of an outside host is a viewer-IP tracking pixel and an unmoderated,
+// unwatermarked image in every public listing.
+describe("BakedCardThumbnail draws only our own bakes", () => {
+  const imgSrcs = (container: HTMLElement) =>
+    [...container.querySelectorAll("img")].map((el) => el.getAttribute("src") ?? "");
+
+  it("the thumb goes through the /render-cdn proxy", () => {
+    const { img } = tile("m15");
+    expect(img.getAttribute("src")).toBe("/render-cdn/owner-1/probe.thumb.webp?v=1");
+  });
+
+  it.each([
+    ["an outside host", "https://tracker.example/pixel.png"],
+    ["another storage project", "https://evil.supabase.co/storage/v1/object/public/card-renders/owner-1/probe.png"],
+    ["a raw card-art upload", `${HOST}/storage/v1/object/public/card-art/owner-1/upload.png`],
+    ["a relative path", "/renders/probe.png"],
+  ])("a PNG URL on %s is no render: the live preview, nothing fetched from it", (_label, png) => {
+    const { container } = tile("m15", { png, thumb: png });
+    expect(imgSrcs(container).some((src) => src.includes(new URL(png, "https://x.test").pathname))).toBe(false);
+    expect(container.querySelector(".card-corners.border")).toBeNull();
+  });
+
+  it("a thumb that isn't ours is skipped for the (ours) PNG through next/image", () => {
+    const { container } = tile("m15", { thumb: "https://tracker.example/pixel.webp" });
+    const srcs = imgSrcs(container);
+    expect(srcs.some((src) => src.includes("tracker.example"))).toBe(false);
+    expect(srcs.some((src) => decodeURIComponent(src).includes("card-renders/owner-1/probe.png"))).toBe(true);
   });
 });

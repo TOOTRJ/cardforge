@@ -180,7 +180,7 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
    DB), or sign up fresh (email confirmation is off on branches).
 4. Merge. Everything after that is automatic.
 
-### Writing migrations — two rules learned the hard way
+### Writing migrations — rules learned the hard way
 
 - **State your grants.** Production is an *old* Supabase project that
   auto-grants new `public` objects to `anon` / `authenticated` /
@@ -196,6 +196,29 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
 - **Admin checks in policies use `public.viewer_is_admin()`**, never a subquery
   on `profiles.is_admin` (unreadable to `authenticated` since 0074 — this broke
   challenge authoring in production until 0096).
+- **No storage write policies.** Since 0126 users can't insert, update or
+  delete `storage.objects` with their own JWT; uploads and removals are server
+  actions on the service role (`lib/media/user-storage.ts` forces the
+  `{userId}/` folder). A new bucket or upload path follows that — never an
+  owner-folder policy (`supabase/migrations/README.md`, "Storage"). The same
+  goes for a card's render columns (`cards_guard_render_columns`: an API
+  role may only clear them). Uploads therefore need `SUPABASE_SECRET_KEY` in
+  every environment — a local checkout or a preview without it can't upload,
+  bake or delete a render (the app logs that loudly).
+- **Picture URL columns hold our storage only** (0127): a user can store
+  only an object in their own folder of the right bucket (or a built-in
+  image / a Scryfall deck image) — see "Storage" in
+  `supabase/migrations/README.md`. The origins it accepts are
+  `public.storage_origins`: production's two in the migration, and every
+  other database's OWN origin, which the app registers itself before its
+  first upload (`lib/media/storage-origin.ts`: the origin of
+  `NEXT_PUBLIC_SUPABASE_URL`, service role, once per process) — so the dev
+  branch, each preview branch and the local stack accept exactly their own
+  storage, never another project's, and nothing in `supabase/seed.sql` is
+  needed. `npm run seed:dev -- --copy-cards-from` registers the dev origin
+  too. A storage domain change registers itself the same way (the old host
+  still goes into `LEGACY_SUPABASE_HOSTS`, `lib/media/storage-hosts.ts`, for
+  the display side).
 
 ### When the Supabase check misbehaves
 
@@ -211,6 +234,169 @@ feature branch ──PR──▶ CI: typecheck · lint · unit · e2e (local Sup
 
 `npm run db:push:prod` still exists (reads `SUPABASE_PROD_REF`, requires typing
 `production`). For genuine emergencies only.
+
+### Storage orphan sweep (owner-run, TODO 3.14b)
+
+`scripts/sweep-storage-orphans.mjs` lists, and with `--apply` deletes, the
+storage objects no database row references: flagged uploads and replaced
+avatars/banners that the pre-0126 user-session removes never deleted, art
+uploaded for a card that was never saved, renders of deleted cards, leftovers
+of deleted accounts. Run it from an up-to-date `main` checkout:
+
+```bash
+node scripts/sweep-storage-orphans.mjs                  # dev (.env.local), dry run
+node scripts/sweep-storage-orphans.mjs --target prod    # prod, dry run (hidden-prompt key)
+node scripts/sweep-storage-orphans.mjs --target prod --apply --batch-size 100 \
+  --backup-dir ~/.pipglyph/sweep-backups/$(date +%F)
+```
+
+**Owner steps on production, in this order, once #409, #411 and #412 are
+live** (each step's dry run first; nothing is deleted or changed without
+`--apply` + "yes"):
+
+1. `node scripts/sweep-storage-orphans.mjs --target prod` — the dry run:
+   orphans, plus the two review lists below.
+2. `node scripts/sweep-storage-orphans.mjs --target prod --rescan-review` —
+   moderation-scans the review list (asks for production's `OPENAI_API_KEY`
+   at a second hidden prompt) and lists flagged files, each with the rows
+   that name it and what `--apply` will do to each. If any:
+   `… --rescan-review --apply` asks for production's `CRON_SECRET` (a third
+   hidden prompt; Vercel → Settings → Environment Variables), checks that
+   https://www.pipglyph.com talks to the production database, and — after
+   "yes" — through the app hides every card that draws a flagged file (the
+   moderation hide), gives every avatar/banner that is one a built-in image,
+   clears such deck covers and removes such custom pips, then removes the
+   file. Rows it lists as "listed only" (a message, a notification, a job
+   payload, a challenge image, a deck entry, card text) are yours to decide
+   about.
+3. `node scripts/sweep-storage-orphans.mjs --target prod --private-renders`,
+   then `… --private-renders --apply` (asks for the `CRON_SECRET` too) —
+   removes the renders of private cards and purges their `/render-cdn` CDN
+   copies through the app (a deleted card's render is an orphan: step 4
+   judges it).
+4. The orphan sweep's `--apply` (above). Last on purpose: its
+   `--backup-dir` copies what it deletes to your disk, so flagged files and
+   private cards' renders are removed first, without copies.
+
+**Acting through the app** (steps 2–3's `--apply`, owner answers
+2026-09-29): the script calls `POST /api/admin/storage-sweep`
+(`app/api/admin/storage-sweep/route.ts`) with `Authorization: Bearer
+<CRON_SECRET>` — the row actions have to be the app's own code paths, and
+only a function running on Vercel can purge its CDN. Production's app is
+fixed (https://www.pipglyph.com; `--app-url` is refused there) and its
+secret is read only at the hidden prompt. On the dev target pass
+`--app-url http://localhost:3000` (a local `npm run dev` on the dev
+database) with the same `CRON_SECRET` in `.env.local` for both the server
+and the script (off Vercel there is no CDN — the purge is a no-op and the
+run says so). The app is asked which database it talks to before "yes"; an
+app on another database than `--target` stops the run with nothing done.
+
+- **What counts as a reference:** the object's `{uuid}/{file}` key anywhere
+  in any string of any row — the scan reads EVERY text/JSON column of EVERY
+  table the API exposes (PostgREST's OpenAPI document), not a column list,
+  and finds keys inside public URLs (either host), `/render-cdn/` paths,
+  percent-encoded next/image URLs, Markdown, JSON at any depth and bare
+  storage paths. A new column that stores a storage URL is covered without a
+  code change; a new way of naming an object that doesn't contain its
+  `{uuid}/{file}` key is not — keep keys in the stored value.
+- **What is never deleted:** anything younger than 7 days (`--min-age-days`,
+  floor 7, every bucket — AI job steps and the creator's unsaved drafts point
+  at fresh uploads); a card-renders bake or thumb whose card still exists; an
+  object outside the `{uuid}/{file}` user-folder shape (listed for you to
+  judge); the `frames` bucket (never listed) and `card-exports` (legacy
+  download history, still named by `card_exports` rows and possibly shared
+  as links — listed, never deleted).
+- **`--apply`** (type "yes"): batches of 25 (`--batch-size`, max 100).
+  **Every batch re-reads the whole database** (every text/JSON column of
+  every table, `notifications`, `funnel_events` and `ai_generation_jobs`
+  included), so N orphans cost N / batch-size full reads — on production
+  pass `--batch-size 100` (the prompt prints the number of full reads before
+  you type "yes"). Per batch: `--backup-dir` copies each object
+  (recommended for the first production run — storage has no undo; a copy
+  that doesn't match the listed MD5 eTag keeps the object; the directory is
+  refused inside any git working tree, since this repo is public and the
+  copies are users' images — keep them under `~/.pipglyph/`), then a fresh
+  full database scan for the batch's keys and card ids, then a lookup of
+  every object at once right before the delete (gone, another eTag/size, or
+  recently changed → kept). After the delete every object is looked up again
+  and only what storage reports gone is appended to
+  `~/.pipglyph/sweep-storage-orphans.<project>.manifest.jsonl` (bucket, path,
+  size, eTag, last change, reason, copy); an object it can't confirm stays in
+  the state file with its copy and the next run settles it. `--limit n`
+  deletes at most n per run. Accepted race: a custom pip re-uploaded in the
+  milliseconds between that last lookup and the delete (its name is fixed,
+  `{uid}/{SYMBOL}.png`) is deleted — the user saves the pip again.
+- **Listed for review, never deleted by the orphan sweep** — each list has
+  its own mode (owner decisions 2026-09-29; own state + manifest,
+  `~/.pipglyph/sweep-storage-orphans.<project>.<mode>.json` /
+  `.manifest.jsonl`):
+  - **User-folder objects whose names the server doesn't make today** (an
+    older upload path, or a file written straight to storage with the
+    user's own session before 0126 — it skipped the byte sniff, the strip
+    and the moderation scan). `--rescan-review` runs the upload path's own
+    scan on exactly this list (`lib/moderation/image-scan-core.ts`: same
+    request, model and categories), paced (`--per-minute`, default 60),
+    retrying 429/5xx; an error is "not scanned", never clean, and is tried
+    again next run; verdicts are kept per object + eTag, so a re-run only
+    scans new or changed files. `--apply` removes the object as the upload
+    path does a flagged upload — but first acts, through the app
+    (`lib/moderation/flagged-file.ts`), on every row that DRAWS it: a card
+    (art, second-face art, set icon, watermark icon, its bake) → the
+    moderation hide (`lib/moderation/hide-card.ts`, the admin's "Hide":
+    private, render removed, reports actioned, pages + CDN purged); an
+    avatar/banner → a random built-in of that kind; a deck cover → cleared;
+    a custom pip → removed like the owner's "Remove" (and the owner's cards
+    that draw it re-baked). Each action re-reads its row and acts only
+    while it still draws that exact file (our host, its bucket, its key),
+    compare-and-set; then the file's URLs are purged from Vercel's Image
+    Optimization cache. A failed action keeps the file (a re-run retries);
+    a row naming the file anywhere else is listed only; nobody is notified.
+    The output and the manifest name every row and every action with its
+    result (`rowActions`, `listedOnly`). No copies, ever (`--backup-dir` is
+    refused). Production's `OPENAI_API_KEY` is read only
+    at the hidden prompt and only sent to api.openai.com; the dev target
+    reads it from the env file. Objects outside the `{uuid}/{file}` shape
+    are not on the list (the dry run lists them separately).
+  - **Renders of PRIVATE cards that are still stored** (publicly fetchable
+    at their URL — going private should have deleted them; since #412
+    `/render-cdn` refuses them on a CDN miss, but the bucket's own public
+    URL still serves them).
+    `--private-renders` removes the PNG + thumb of every card whose row
+    says private — only on that positive evidence: a card with no row in
+    the answer is never touched here (a deleted card's render is an orphan,
+    judged by the orphan sweep with its reference check, age floor and
+    backup), and a visibility answer whose exact count doesn't match the
+    rows returned stops the run. Per batch of cards: first the render
+    pointer of those that are private at that moment (one conditional
+    UPDATE of `rendered_image_url`, `rendered_thumb_url`, `rendered_at` —
+    what going private writes), then every object is looked up (gone, or
+    new bytes since the listing → kept), then the visibility is read AGAIN,
+    then the remove: a card that is public, unlisted or without a row by
+    then is never touched. After each batch, the cards whose objects
+    storage confirmed gone have their CDN copies purged through the app
+    (`purge-cards` → `purgeHiddenCards`: `/render-cdn/<owner>/<card>.png`
+    is cached for a year, tagged `card-<id>`); each card is noted in the
+    state file (`purgePending`) before its remove and taken off once
+    purged, so a crash or a refused purge is retried first by the next
+    `--apply` (or purge the tags in the Vercel dashboard: CDN → Caches →
+    Purge cache → Cache Tag, Delete). The dry run prints card ids and
+    counts only — no titles, no owners. No backups (a render is derived).
+- **Decisions recorded 2026-09-29** (upload limit, #411): AI art stays
+  EXEMPT from the upload limit (it is credit-metered and already behind
+  `checkAiRateLimit`); the fail-closed refusal's wording "Uploads are paused
+  for a moment — try again in a minute." is approved.
+- Checked on dev 2026-09-29 (a throwaway object in a fake folder, uploaded,
+  removed, gone): the listing's `metadata.eTag` and `info()`'s `etag` are the
+  same quoted MD5, `remove()` echoes the full paths, and `info()` of a gone
+  object is a 400 with `statusCode: "404"` — the sweep compares eTags
+  however they are quoted and trusts only the lookup anyway.
+- Dev dry run 2026-09-29: 218 card-art objects (193 referenced, 24
+  unreferenced but under 7 days, 1 test file outside a user folder), 380
+  card-renders (all referenced), the other buckets empty — 0 orphans; the
+  reference scan read 35 tables (768 rows) in about 2 s. The same day:
+  `--private-renders` found 380 renders of 190 cards, all public/unlisted
+  (nothing to remove); `--rescan-review` listed 598 objects, review list
+  empty (nothing to scan).
 
 ### Branch protection on `main` (ruleset "main", created 2026-09-21)
 

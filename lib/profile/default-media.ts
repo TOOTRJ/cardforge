@@ -44,6 +44,14 @@ export function randomDefaultMedia(kind: ProfileMediaKind, exclude?: string | nu
   return all[Math.floor(Math.random() * all.length)];
 }
 
+/** A built-in image picked from `seed` (a profile id) — the same one every
+ *  time, so a fallback doesn't reshuffle between renders. */
+export function defaultMediaFor(kind: ProfileMediaKind, seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return defaultMediaPath(kind, (hash % DEFAULT_MEDIA_COUNT[kind]) + 1);
+}
+
 /** True for a path this module minted AND that exists (index in range). */
 export function isDefaultProfileMedia(
   url: string | null | undefined,

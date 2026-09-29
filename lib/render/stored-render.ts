@@ -3,6 +3,7 @@ import "server-only";
 import sharp from "sharp";
 import { hasPendingCorrection, type ScopeCard } from "@/lib/cards/layout-version";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
+import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 import { squareCardCorners, type CardCornerFills } from "@/lib/cards/card-corner";
 import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
@@ -47,6 +48,9 @@ const MAX_RENDER_BYTES = 25 * 1024 * 1024;
 export type StoredRenderRow = ScopeCard & {
   rendered_image_url: string | null;
   layout_version: number | null;
+  /** With both, the URL must be THIS card's own bake (see fetchStoredRender). */
+  id?: string;
+  owner_id?: string;
 };
 
 /** True when the row's baked PNG may stand in for a live render: a URL
@@ -84,8 +88,16 @@ export async function fetchStoredRender(
   if (!usable) return null;
   const url = row.rendered_image_url as string;
   // rendered_image_url is written by the bake, but it is still a row column —
-  // the same SSRF gate the art fetch uses keeps this to our storage host.
+  // the same SSRF gate the art fetch uses keeps this to our storage host, and
+  // it must be a bake in card-renders — this card's own when the row carries
+  // its ids (lib/cards/render-cdn.ts). Since migration 0126 only the service
+  // role can set the column, but a row written before it (when an owner could
+  // PATCH their card) might name anything the SSRF gate lets through: a raw
+  // card-art upload (no watermark, served as the "watermarked" download and
+  // the share image), another card's bake, a Scryfall image.
   if (!isAllowedServerImageFetchUrl(url)) return null;
+  const card = row.id && row.owner_id ? { ownerId: row.owner_id, cardId: row.id } : undefined;
+  if (!isStoredRenderUrl(url, card)) return null;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);

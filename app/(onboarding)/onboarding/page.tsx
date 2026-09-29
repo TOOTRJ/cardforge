@@ -6,6 +6,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getMyEmailPreferences } from "@/lib/email/preferences";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 export const metadata: Metadata = {
   title: "Set up your profile",
@@ -51,8 +52,9 @@ export default async function OnboardingPage({
           username: profile.username,
           displayName: profile.display_name ?? "",
           bio: profile.bio ?? "",
-          avatarUrl: profile.avatar_url,
-          bannerUrl: profile.banner_url,
+          // Only drawable pictures (migration 0127, lib/media/media-urls.ts).
+          avatarUrl: drawableMediaUrl("avatar", profile.avatar_url, profile.id),
+          bannerUrl: drawableMediaUrl("banner", profile.banner_url, profile.id),
           email: {
             account: email.account,
             activity: email.activity,

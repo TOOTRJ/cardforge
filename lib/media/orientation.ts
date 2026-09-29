@@ -36,7 +36,9 @@ import sharp from "sharp";
 //     bake drew WebP that way before 3.14 too).
 //
 // Orientation 1 (or no tag) is the common case and costs nothing: the bytes
-// are returned untouched, never re-encoded.
+// are returned untouched, never re-encoded. Upload actions do not call
+// normalizeUploadOrientation() directly: lib/media/upload-bytes.ts
+// prepareUploadBytes() runs it and then strips camera metadata (TODO 3.14a).
 // ---------------------------------------------------------------------------
 
 /** True for the EXIF Orientation values that ask for a turn or a mirror

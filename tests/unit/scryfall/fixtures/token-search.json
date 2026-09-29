@@ -1,0 +1,583 @@
+{
+  "_note": "Scryfall /cards/search, unique=cards, order=name, include_extras=true, captured 2026-09-29 (User-Agent pipglyph-dev-audit). `treasure-extras`: q=!\"Treasure\" (the TODO 1.23 measurement: F17 #11 first, FJ22 #36 front_card, TFRA #15 the only single-faced Treasure). `treasure-scope` / `kaito-scope`: the import dialog's Tokens & emblems query. A plain !\"Treasure\" and a plain \"Kaito Cunning Infiltrator Emblem\" answer 404 (no matches) without include_extras.",
+  "treasure-extras": [
+    {
+      "id": "21f5880d-6272-4ba8-bdf8-f9a7e54a3336",
+      "oracle_id": "fd2617fe-1bf3-40c3-9da5-841e63f4d62d",
+      "name": "Dinosaur // Treasure",
+      "layout": "double_faced_token",
+      "set": "f17",
+      "set_name": "Friday Night Magic 2017",
+      "set_type": "promo",
+      "collector_number": "11",
+      "released_at": "2017-01-01",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Trample"
+      ],
+      "type_line": "Token Creature — Dinosaur // Token Artifact — Treasure",
+      "color_identity": [
+        "G"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Filip Burburan & Florian de Gesincourt",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Dinosaur",
+          "type_line": "Token Creature — Dinosaur",
+          "mana_cost": "",
+          "oracle_text": "Trample",
+          "power": "3",
+          "toughness": "3",
+          "colors": [
+            "G"
+          ],
+          "artist": "Filip Burburan"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Florian de Gesincourt"
+        }
+      ]
+    },
+    {
+      "id": "2e20d047-0d43-4709-919c-0b0f714e9903",
+      "oracle_id": "967e5a03-e4b5-4334-82b6-6e43485271a0",
+      "name": "Merfolk // Treasure",
+      "layout": "double_faced_token",
+      "set": "f18",
+      "set_name": "Friday Night Magic 2018",
+      "set_type": "promo",
+      "collector_number": "1",
+      "released_at": "2017-12-27",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Hexproof"
+      ],
+      "type_line": "Token Creature — Merfolk // Token Artifact — Treasure",
+      "color_identity": [
+        "U"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Randy Gallegos & Jason Felix",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Merfolk",
+          "type_line": "Token Creature — Merfolk",
+          "mana_cost": "",
+          "oracle_text": "Hexproof (This creature can't be the target of spells or abilities your opponents control.)",
+          "power": "1",
+          "toughness": "1",
+          "colors": [
+            "U"
+          ],
+          "artist": "Randy Gallegos"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Jason Felix"
+        }
+      ]
+    },
+    {
+      "id": "46bf5e2b-869f-480e-ac37-1bdb40a92f8c",
+      "oracle_id": "f0859071-53bc-4bb1-985c-64976dd5cb04",
+      "name": "Pirate // Treasure",
+      "layout": "double_faced_token",
+      "set": "f17",
+      "set_name": "Friday Night Magic 2017",
+      "set_type": "promo",
+      "collector_number": "12",
+      "released_at": "2017-01-01",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Menace"
+      ],
+      "type_line": "Token Creature — Pirate // Token Artifact — Treasure",
+      "color_identity": [
+        "B"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Matt Stewart & Milivoj Ćeran",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Pirate",
+          "type_line": "Token Creature — Pirate",
+          "mana_cost": "",
+          "oracle_text": "Menace",
+          "power": "2",
+          "toughness": "2",
+          "colors": [
+            "B"
+          ],
+          "artist": "Matt Stewart"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Milivoj Ćeran"
+        }
+      ]
+    },
+    {
+      "id": "03992f88-7a15-4234-9bed-b7617d7ff09c",
+      "oracle_id": "3c549374-6c37-42e0-8d88-a8555d46732d",
+      "name": "Treasure",
+      "layout": "token",
+      "set": "tfra",
+      "set_name": "Reality Fracture Tokens",
+      "set_type": "token",
+      "collector_number": "15",
+      "released_at": "2026-10-02",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "keywords": [],
+      "type_line": "Token Artifact — Treasure",
+      "mana_cost": "",
+      "oracle_text": "{T}, Sacrifice this token: Add one mana of any color.",
+      "colors": [],
+      "color_identity": [],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Alayna Danner",
+      "image_status": "highres_scan"
+    },
+    {
+      "id": "5e138adb-32ba-4b63-8964-5447bc353161",
+      "oracle_id": "3365a79e-3e2d-4f4b-861c-a970ae23345b",
+      "name": "Treasure",
+      "layout": "front_card",
+      "set": "fj22",
+      "set_name": "Jumpstart 2022 Front Cards",
+      "set_type": "memorabilia",
+      "collector_number": "36",
+      "released_at": "2022-12-02",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "keywords": [],
+      "type_line": "Card",
+      "mana_cost": "",
+      "oracle_text": "(Theme color: {R})",
+      "colors": [],
+      "color_identity": [],
+      "rarity": "common",
+      "artist": "Jason Felix",
+      "image_status": "highres_scan"
+    },
+    {
+      "id": "05934d59-7e98-4fff-8ccb-70cd1a61c6fd",
+      "oracle_id": "226d997d-5363-40ea-83e1-90a3a180d4cb",
+      "name": "Vampire // Treasure",
+      "layout": "double_faced_token",
+      "set": "f17",
+      "set_name": "Friday Night Magic 2017",
+      "set_type": "promo",
+      "collector_number": "10",
+      "released_at": "2017-01-01",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Lifelink"
+      ],
+      "type_line": "Token Creature — Vampire // Token Artifact — Treasure",
+      "color_identity": [
+        "W"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "John Severin Brassell & Zoltan Boros",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Vampire",
+          "type_line": "Token Creature — Vampire",
+          "mana_cost": "",
+          "oracle_text": "Lifelink",
+          "power": "1",
+          "toughness": "1",
+          "colors": [
+            "W"
+          ],
+          "artist": "John Severin Brassell"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Zoltan Boros"
+        }
+      ]
+    }
+  ],
+  "treasure-scope": [
+    {
+      "id": "21f5880d-6272-4ba8-bdf8-f9a7e54a3336",
+      "oracle_id": "fd2617fe-1bf3-40c3-9da5-841e63f4d62d",
+      "name": "Dinosaur // Treasure",
+      "layout": "double_faced_token",
+      "set": "f17",
+      "set_name": "Friday Night Magic 2017",
+      "set_type": "promo",
+      "collector_number": "11",
+      "released_at": "2017-01-01",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Trample"
+      ],
+      "type_line": "Token Creature — Dinosaur // Token Artifact — Treasure",
+      "color_identity": [
+        "G"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Filip Burburan & Florian de Gesincourt",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Dinosaur",
+          "type_line": "Token Creature — Dinosaur",
+          "mana_cost": "",
+          "oracle_text": "Trample",
+          "power": "3",
+          "toughness": "3",
+          "colors": [
+            "G"
+          ],
+          "artist": "Filip Burburan"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Florian de Gesincourt"
+        }
+      ]
+    },
+    {
+      "id": "2e20d047-0d43-4709-919c-0b0f714e9903",
+      "oracle_id": "967e5a03-e4b5-4334-82b6-6e43485271a0",
+      "name": "Merfolk // Treasure",
+      "layout": "double_faced_token",
+      "set": "f18",
+      "set_name": "Friday Night Magic 2018",
+      "set_type": "promo",
+      "collector_number": "1",
+      "released_at": "2017-12-27",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Hexproof"
+      ],
+      "type_line": "Token Creature — Merfolk // Token Artifact — Treasure",
+      "color_identity": [
+        "U"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Randy Gallegos & Jason Felix",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Merfolk",
+          "type_line": "Token Creature — Merfolk",
+          "mana_cost": "",
+          "oracle_text": "Hexproof (This creature can't be the target of spells or abilities your opponents control.)",
+          "power": "1",
+          "toughness": "1",
+          "colors": [
+            "U"
+          ],
+          "artist": "Randy Gallegos"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Jason Felix"
+        }
+      ]
+    },
+    {
+      "id": "46bf5e2b-869f-480e-ac37-1bdb40a92f8c",
+      "oracle_id": "f0859071-53bc-4bb1-985c-64976dd5cb04",
+      "name": "Pirate // Treasure",
+      "layout": "double_faced_token",
+      "set": "f17",
+      "set_name": "Friday Night Magic 2017",
+      "set_type": "promo",
+      "collector_number": "12",
+      "released_at": "2017-01-01",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Menace"
+      ],
+      "type_line": "Token Creature — Pirate // Token Artifact — Treasure",
+      "color_identity": [
+        "B"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Matt Stewart & Milivoj Ćeran",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Pirate",
+          "type_line": "Token Creature — Pirate",
+          "mana_cost": "",
+          "oracle_text": "Menace",
+          "power": "2",
+          "toughness": "2",
+          "colors": [
+            "B"
+          ],
+          "artist": "Matt Stewart"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Milivoj Ćeran"
+        }
+      ]
+    },
+    {
+      "id": "03992f88-7a15-4234-9bed-b7617d7ff09c",
+      "oracle_id": "3c549374-6c37-42e0-8d88-a8555d46732d",
+      "name": "Treasure",
+      "layout": "token",
+      "set": "tfra",
+      "set_name": "Reality Fracture Tokens",
+      "set_type": "token",
+      "collector_number": "15",
+      "released_at": "2026-10-02",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "keywords": [],
+      "type_line": "Token Artifact — Treasure",
+      "mana_cost": "",
+      "oracle_text": "{T}, Sacrifice this token: Add one mana of any color.",
+      "colors": [],
+      "color_identity": [],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "Alayna Danner",
+      "image_status": "highres_scan"
+    },
+    {
+      "id": "05934d59-7e98-4fff-8ccb-70cd1a61c6fd",
+      "oracle_id": "226d997d-5363-40ea-83e1-90a3a180d4cb",
+      "name": "Vampire // Treasure",
+      "layout": "double_faced_token",
+      "set": "f17",
+      "set_name": "Friday Night Magic 2017",
+      "set_type": "promo",
+      "collector_number": "10",
+      "released_at": "2017-01-01",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "promo_types": [
+        "tourney",
+        "fnm"
+      ],
+      "keywords": [
+        "Lifelink"
+      ],
+      "type_line": "Token Creature — Vampire // Token Artifact — Treasure",
+      "color_identity": [
+        "W"
+      ],
+      "produced_mana": [
+        "B",
+        "G",
+        "R",
+        "U",
+        "W"
+      ],
+      "rarity": "common",
+      "artist": "John Severin Brassell & Zoltan Boros",
+      "image_status": "highres_scan",
+      "card_faces": [
+        {
+          "name": "Vampire",
+          "type_line": "Token Creature — Vampire",
+          "mana_cost": "",
+          "oracle_text": "Lifelink",
+          "power": "1",
+          "toughness": "1",
+          "colors": [
+            "W"
+          ],
+          "artist": "John Severin Brassell"
+        },
+        {
+          "name": "Treasure",
+          "type_line": "Token Artifact — Treasure",
+          "mana_cost": "",
+          "oracle_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+          "colors": [],
+          "artist": "Zoltan Boros"
+        }
+      ]
+    }
+  ],
+  "kaito-scope": [
+    {
+      "id": "bfe4b1d5-f252-48fe-b4a1-7fbbc2523cf1",
+      "oracle_id": "49d4e201-8ef2-4fde-b478-ea5c46521535",
+      "name": "Kaito, Cunning Infiltrator Emblem",
+      "layout": "emblem",
+      "set": "tfdn",
+      "set_name": "Foundations Tokens",
+      "set_type": "token",
+      "collector_number": "24",
+      "released_at": "2024-11-15",
+      "frame": "2015",
+      "border_color": "black",
+      "full_art": false,
+      "textless": false,
+      "keywords": [],
+      "type_line": "Emblem",
+      "mana_cost": "",
+      "oracle_text": "Whenever a player casts a spell, you create a 2/1 blue Ninja creature token.",
+      "colors": [],
+      "color_identity": [],
+      "rarity": "common",
+      "artist": "Evyn Fong",
+      "image_status": "highres_scan"
+    }
+  ]
+}

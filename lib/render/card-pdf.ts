@@ -26,10 +26,17 @@
 //
 // The old `PdfLayout` of "card" | "sheet" is preserved for backward
 // compatibility — passing "sheet" still produces the Letter sheet.
+//
+// Every slot is PORTRAIT, whatever the render (TODO 6.22). A landscape render
+// (Battle, Split — 2100 × 1500 at HD) is turned 90° anticlockwise into it,
+// the way the printed card carries it: a Battle or Split is a portrait card
+// with its design printed sideways, read by turning the card clockwise. The
+// card stays 2.5" × 3.5", the 3×3 sheet and its crop marks stay as they are,
+// and the PNG itself (stored bake, download) stays landscape.
 // ---------------------------------------------------------------------------
 
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, PDFFont, PDFImage, rgb, StandardFonts } from "pdf-lib";
+import { degrees, PDFDocument, PDFFont, PDFImage, PDFPage, rgb, StandardFonts } from "pdf-lib";
 
 // PDF point dimensions for a standard MTG card (72pt = 1 inch).
 const CARD_W_PT = 180; // 2.5"
@@ -87,6 +94,35 @@ function drawCropMark(
   });
 }
 
+/** How a render fills the portrait card slot whose lower-left corner is
+ *  (x, y) — pdf-lib `drawImage` options (points, y up; `rotate` is
+ *  anticlockwise about the image's own lower-left corner).
+ *
+ *  A portrait render fills the slot as is. A landscape render (wider than
+ *  tall) is turned 90° anticlockwise: drawn 252 × 180 from the slot's
+ *  lower-RIGHT corner, so its top edge runs up the slot's left side and its
+ *  left edge along the bottom. That is how Wizards prints them — Scryfall's
+ *  scans of Invasion of Zendikar (MOM) and Fire // Ice (MH2) are portrait,
+ *  the title reading bottom-to-top up the left edge, Fire in the bottom
+ *  half — so the printed proxy reads when turned clockwise, like the real
+ *  card (the same quarter turn scripts/visual-audit.mjs undoes on a scan). */
+function cardSlotPlacement(
+  image: { width: number; height: number },
+  x: number,
+  y: number,
+): { x: number; y: number; width: number; height: number; rotateDeg: 0 | 90 } {
+  if (image.width > image.height) {
+    return { x: x + CARD_W_PT, y, width: CARD_H_PT, height: CARD_W_PT, rotateDeg: 90 };
+  }
+  return { x, y, width: CARD_W_PT, height: CARD_H_PT, rotateDeg: 0 };
+}
+
+/** Draw a render into the portrait card slot at (x, y) — see cardSlotPlacement. */
+function drawCardInSlot(page: PDFPage, img: PDFImage, x: number, y: number): void {
+  const { rotateDeg, ...box } = cardSlotPlacement(img, x, y);
+  page.drawImage(img, { ...box, rotate: degrees(rotateDeg) });
+}
+
 /** A new document carrying PipGlyph's metadata block. */
 async function newDocument(title: string, subject: string): Promise<PDFDocument> {
   const doc = await PDFDocument.create();
@@ -98,10 +134,11 @@ async function newDocument(title: string, subject: string): Promise<PDFDocument>
   return doc;
 }
 
-/** One card on a page exactly 2.5" × 3.5". */
+/** One card on a page exactly 2.5" × 3.5" (portrait — a landscape render is
+ *  turned into it, never given a landscape page). */
 function addCardPage(doc: PDFDocument, img: PDFImage): void {
   const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
-  page.drawImage(img, { x: 0, y: 0, width: CARD_W_PT, height: CARD_H_PT });
+  drawCardInSlot(page, img, 0, 0);
 }
 
 /** Paper for a sheet layout — A4 when asked for, US Letter otherwise
@@ -128,8 +165,9 @@ function drawSheetPage(
     const x = marginX + col * CARD_W_PT;
     const y = pageHeight - marginY - (row + 1) * CARD_H_PT;
 
-    page.drawImage(img, { x, y, width: CARD_W_PT, height: CARD_H_PT });
+    drawCardInSlot(page, img, x, y);
 
+    // The marks bracket the slot, which a turned landscape card fills exactly.
     const corners = [
       { cx: x, cy: y, hDir: -1, vDir: -1 },
       { cx: x + CARD_W_PT, cy: y, hDir: 1, vDir: -1 },

@@ -242,7 +242,7 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
 
   it("an exact import (no choice) lands with no chip", async () => {
     renderForm();
-    await importPayload(payload("t2xm-4"));
+    await importPayload(payload("tdom-3"));
     expect(template()).toBe("m15token");
     await toCardStep();
     expect(chip()).toBeNull();
@@ -384,5 +384,31 @@ describe("the deck-remix pre-fill (/create?deckCard=): no dialog, ONE toast", ()
     await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
     expect(template()).toBe("m15");
     expect(toast.info).not.toHaveBeenCalled();
+  });
+});
+
+describe("a double-faced token or a Role card (TODO 1.23)", () => {
+  it("a double-faced token imports its front face and the creator says so", async () => {
+    renderForm();
+    // A single-faced token says nothing about faces…
+    await importPayload(payload("tdom-3"));
+    expect(toast.info).not.toHaveBeenCalled();
+    // …a double-faced one names the face that came in.
+    await importPayload(payload("tmom-16"));
+    expect(toast.info).toHaveBeenCalledWith(
+      "Incubator // Phyrexian is a double-faced token — PipGlyph imported its front face, Incubator. Two-sided tokens aren't supported yet.",
+      { duration: 8000 },
+    );
+    expect((screen.getByPlaceholderText("Emberbound Wyrm") as HTMLInputElement).value).toBe("Incubator");
+  });
+
+  it("a Role card imports the front Role on the token kind and says so", async () => {
+    renderForm();
+    await importPayload(payload("twoe-15"));
+    expect(toast.info).toHaveBeenCalledWith(
+      "Monster // Sorcerer holds two Roles — PipGlyph imported the front one, Monster.",
+      { duration: 8000 },
+    );
+    expect(template()).toBe("m15token");
   });
 });

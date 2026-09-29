@@ -136,9 +136,9 @@ export type PrintingsResponse =
   | { ok: false; error: string };
 
 /** The treatment badge on a printing tile ("Borderless", "Full art", …). A
- *  borderless full-art printing says both; a full-art token (whose frame
- *  PipGlyph has, so it carries no treatment) still says "Full art". Null for
- *  a plain printing. */
+ *  borderless full-art printing says both; a full-art 2014–19 token (whose
+ *  frame PipGlyph has, so it carries no treatment — an M20-design one does,
+ *  TODO 1.23) still says "Full art". Null for a plain printing. */
 export function printingTreatmentBadge(
   p: Pick<PrintingSummary, "treatment" | "full_art">,
 ): string | null {

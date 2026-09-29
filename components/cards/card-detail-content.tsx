@@ -40,6 +40,7 @@ import { GalleryCardTile } from "@/components/cards/gallery-card-tile";
 import { FollowButton } from "@/components/follows/follow-button";
 import { isFollowing } from "@/lib/follows/queries";
 import { SocialIcon } from "@/components/profile/social-icon";
+import { profileMediaSrc } from "@/lib/media/media-urls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -63,6 +64,7 @@ import {
 } from "@/lib/cards/queries";
 import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
 import { buildTypeLine, describeManaCost, printsPowerToughness } from "@/lib/cards/card-display";
 import { renderVersionOf } from "@/lib/cards/render-version";
@@ -152,9 +154,11 @@ export async function CardDetailContent({
     inDecks,
   ] = await Promise.all([
     // v2 back face: the referenced card, if any and if it's readable (RLS
-    // scopes the anon client to shareable cards). Rendered on the flip.
+    // scopes the anon client to shareable cards) — and only the owner's own
+    // (sameOwnerBackCard: a pre-0127 row could name someone else's card).
+    // Rendered on the flip.
     card.back_card_id
-      ? getCardById(card.back_card_id)
+      ? getCardById(card.back_card_id).then((back) => sameOwnerBackCard(card, back))
       : Promise.resolve(null),
     getFrameProfileOverrides(),
     countCardLikes(card.id),
@@ -728,6 +732,8 @@ function CreatorFeature({
     profile.display_name?.trim() || profile.username || "Forgemaster";
   const initial = displayName.charAt(0).toUpperCase();
   const profileHref = profile.username ? `/profile/${profile.username}` : null;
+  // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
+  const avatarSrc = profileMediaSrc("avatar", profile.avatar_url, profile.id);
   const cardsCount = profile.public_cards_count;
 
   const socialEntries = SOCIAL_PLATFORMS.flatMap((p) => {
@@ -749,9 +755,9 @@ function CreatorFeature({
       </span>
 
       <div className="flex items-start gap-4">
-        {profile.avatar_url ? (
+        {avatarSrc ? (
           <Image
-            src={profile.avatar_url}
+            src={avatarSrc}
             alt={`${displayName} avatar`}
             width={56}
             height={56}

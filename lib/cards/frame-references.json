@@ -597,15 +597,10 @@
     "colors": {
       "w": [
         {
-          "name": "Axgard Braggart",
-          "set": "khm",
-          "scryfallId": "4de5ff64-6fe7-4fc5-be27-cdbaa14545ab",
-          "curated": true
-        },
-        {
           "name": "Search for Glory",
           "set": "khm",
-          "scryfallId": "b65c215d-562d-4c7c-bc9f-b1d741050158"
+          "scryfallId": "b65c215d-562d-4c7c-bc9f-b1d741050158",
+          "curated": true
         }
       ],
       "u": [
@@ -628,15 +623,10 @@
       ],
       "b": [
         {
-          "name": "Deathknell Berserker",
-          "set": "khm",
-          "scryfallId": "f9f2029f-ffda-4374-9a78-79866ac23fca",
-          "curated": true
-        },
-        {
           "name": "Priest of the Haunted Edge",
           "set": "khm",
-          "scryfallId": "0cde0f4d-5acc-4a25-a3d6-c6b9b734360c"
+          "scryfallId": "0cde0f4d-5acc-4a25-a3d6-c6b9b734360c",
+          "curated": true
         },
         {
           "name": "Draugr Necromancer",
@@ -659,15 +649,10 @@
       ],
       "g": [
         {
-          "name": "Sarulf's Packmate",
-          "set": "khm",
-          "scryfallId": "6061113e-7dd8-4739-b4dd-55bb7f9e39a2",
-          "curated": true
-        },
-        {
           "name": "Sculptor of Winter",
           "set": "khm",
-          "scryfallId": "9dab2ca2-0039-4eac-a7dc-68756362737d"
+          "scryfallId": "9dab2ca2-0039-4eac-a7dc-68756362737d",
+          "curated": true
         },
         {
           "name": "Blizzard Brawl",

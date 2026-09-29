@@ -1,5 +1,6 @@
 import { MAX_ENTRY_QUANTITY } from "@/lib/decks/parse-decklist";
 import { clampManaValue } from "@/lib/decks/import-resolution";
+import { isScryfallPrintingImage } from "@/lib/media/media-urls";
 import type { DeckCardInsert } from "@/types/supabase";
 
 // ---------------------------------------------------------------------------
@@ -57,10 +58,14 @@ export function importMergeKey(row: {
   return `${row.board}|${row.scryfall_id ?? `name:${row.name.trim().toLowerCase()}`}`;
 }
 
-/** Only image URLs from Scryfall's CDN survive — belt-and-braces against a
- *  tampered client posting arbitrary hotlinks into public deck pages. */
+/** Only Scryfall printing images survive — belt-and-braces against a
+ *  tampered client posting arbitrary hotlinks into public deck pages. The
+ *  SAME rule migration 0127 enforces on `deck_cards.image_url`
+ *  (isScryfallPrintingImage): a URL the database would refuse becomes null
+ *  here, so one odd image drops that picture instead of failing the whole
+ *  import (every entry goes in with one insert). */
 export function scryfallImageOnly(url: string | null): string | null {
-  return url && url.startsWith("https://cards.scryfall.io/") ? url : null;
+  return isScryfallPrintingImage(url) ? url : null;
 }
 
 export function planImportWrites(

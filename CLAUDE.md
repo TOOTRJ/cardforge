@@ -20,6 +20,8 @@ Custom MTG-style card creator. Next.js 16 App Router + Supabase + Tailwind v4
   `scripts/lib/prod-guard.mjs`). `npm run dev:prod` is the deliberate, loud
   exception (reads `.env.prod-peek`). Never weaken these guards, never put
   production keys back in `.env.local`, never use `--with-data` branching.
+  An owner-run script reads production's key ONLY through `promptHidden()`
+  (`scripts/lib/hidden-prompt.mjs`) — a `_writeToOutput` filter echoed it.
 - The repo is **public**: no credentials in seeds, fixtures or docs — not even
   test passwords.
 
@@ -121,11 +123,31 @@ Rules and gotchas:
   for OG/JSON-LD/email), "Remove" swaps in another built-in, and
   `chooseDefaultProfileMediaAction` only accepts paths `isDefaultProfileMedia`
   recognises. The seeded e2e user is pre-onboarded (`scripts/seed-e2e.mjs`).
+- Uploads: every server action that stores a user's file passes it through
+  `prepareUploadBytes()` (`lib/media/upload-bytes.ts`) — upright
+  (`lib/media/orientation.ts`, TODO 3.14) and with no camera metadata
+  (`lib/media/strip-metadata.ts`, TODO 3.14a: EXIF/GPS, XMP, IPTC, text
+  chunks… dropped at the container level, pixels + ICC kept byte-exact). A
+  new upload path does the same; a client-side strip never counts. It also
+  calls `checkUploadRateLimit()` first (30 per 60 s, 300 per 24 h, sliding;
+  admins exempt; fail-closed), and a picture URL column only takes the
+  caller's own storage objects (0127 `media_url_allowed`; a remix copies its
+  parent's) on an origin in `storage_origins` — production's in the
+  migration, every other database's own registered by the app
+  (`lib/media/storage-origin.ts`; never list another host or a wildcard) —
+  draw one only through `isAllowedMediaUrl()` / `profileMediaSrc()`
+  (`lib/media/media-urls.ts`).
 - Viewer-independent server reads use `createPublicClient()` (cookie-free,
   keeps routes ISR-eligible); cookie-bound reads via `createClient()` make
   a route dynamic. `lib/supabase/admin.ts` bypasses RLS — webhook/cron,
-  credit grants/refunds, protected billing columns, and is_admin-gated
-  tooling only; every non-cron caller checks auth itself.
+  credit grants/refunds, protected billing columns, is_admin-gated tooling,
+  storage writes into the caller's own folder via
+  `lib/media/user-storage.ts` (users have no storage write policy since
+  0126; card renders through `lib/cards/bake-core.ts`, which takes an
+  owner + card ids, never a path), and a card's render pointer
+  (`cards_guard_render_columns`, 0126: an API role may only CLEAR
+  `rendered_*` / `layout_version`; draw one only if `isStoredRenderUrl()`)
+  only; every non-cron caller checks auth itself.
 - Watermark policy (layout v20): every DISPLAY surface — stored bake,
   gallery tile, OG image, live preview — carries the pipglyph.com mark and
   no custom footer text, whatever the owner's plan. Only a paid VIEWER's
@@ -155,6 +177,16 @@ Rules and gotchas:
   `lib/cards/render-thumb.ts`) — gallery-style tiles MUST use
   `BakedCardThumbnail` with `renderedThumbUrl`, never the 3 MB PNG;
   `scripts/backfill-render-thumbs.mjs` fills thumbs for older bakes.
+  Taking a card out of public view (private, moderation hide — ONE function,
+  `lib/moderation/hide-card.ts` — delete, account deletion) removes its
+  render objects and THEN purges tag `card-<id>` (`purgeHiddenCard(s)` /
+  `purgeCardCdnCache`: delete, never invalidate): the tag is on the share
+  image AND the one-year immutable `/render-cdn` bake, which serves only a
+  bake's two names, and on a CDN miss only while the card is public or
+  unlisted under that owner (one read before storage: Supabase's CDN keeps
+  a removed object up to 60 s, which could refill ours after the purge).
+  Owner-run scripts reach the app for such work through
+  `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
   deploy"): `/api/cron/auto-rebake` (`vercel.json`, every 5 min, production
   only; `lib/cards/auto-rebake.ts`) re-bakes what a "sweep" bump or a null

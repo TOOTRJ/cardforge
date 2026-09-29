@@ -17,9 +17,8 @@ import { SIGN_OFF_LOW_MATCH_PCT, signOffStatus } from "@/lib/cards/frame-signoff
 import { revalidateFramePickers } from "@/lib/cards/frame-picker-revalidate";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { scoreFrameCombo } from "@/lib/frames/score-combo";
-import { removeRenderObject } from "@/lib/cards/bake-core";
-import { cardRenderPath } from "@/lib/cards/storage-paths";
-import { renderThumbPath } from "@/lib/cards/render-thumb";
+import { removeRenderObjects } from "@/lib/cards/bake-core";
+import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -232,10 +231,10 @@ export async function deleteFramePreviewCardAction(
   if (error) return { ok: false, error: error.message };
 
   // A preview is private, so it has no public render — but a card flagged
-  // after it was baked could; drop both objects (a missing one is a no-op).
-  const png = cardRenderPath(card.owner_id, card.id);
-  await removeRenderObject(client, png);
-  await removeRenderObject(client, renderThumbPath(png));
+  // after it was baked could; drop both objects (a missing one is a no-op)
+  // and any CDN copy of them (share image, /render-cdn bake).
+  await removeRenderObjects(card.owner_id, [card.id]);
+  await purgeCardCdnCache([card.id]);
 
   revalidatePath("/admin/frame-compare");
   return { ok: true };

@@ -29,13 +29,14 @@ const printings = printingsData as Record<string, unknown>;
 // resolves to another template. Each is the DEFAULT reference of a combo
 // production has verified, which this registry never replaces: the owner
 // re-verifies it against an alternate that resolves to the row's template.
+//
+// The m15snow w/b/g rows are gone (TODO 1.4 owner step A6, done on
+// production 2026-09-29): the owner re-verified those combos against Search
+// for Glory KHM #27, Priest of the Haunted Edge KHM #104 and Sculptor of
+// Winter KHM #193, which are now their defaults; the non-snow printings
+// (Axgard Braggart, Deathknell Berserker, Sarulf's Packmate) left the
+// registry.
 const ALLOWLIST: Record<string, string> = {
-  "m15snow/w#0":
-    "verified default; Axgard Braggart KHM #1 prints the plain M15 frame (not snow) — re-verify against Search for Glory KHM #27",
-  "m15snow/b#0":
-    "verified default; Deathknell Berserker KHM #83 isn't a snow printing — re-verify against Priest of the Haunted Edge KHM #104",
-  "m15snow/g#0":
-    "verified default; Sarulf's Packmate KHM #192 isn't a snow printing — re-verify against Sculptor of Winter KHM #193",
   "m15devoid/c#0":
     "verified default; no colourless devoid printing exists, so the row is referenced to BFZ's colourless Eldrazi frame (Kozilek's Channeler BFZ #10)",
 };
