@@ -105,8 +105,9 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     // A basic-only frame (the full-art basic land) is never a stand-in: it
     // can't draw most cards of its kind, so it is reachable only as an
     // explicit candidate (TODO 0.26). Nor is a frame the kind borrows from
-    // another type (the artifact frame on a creature, TODO 1.7): it would
-    // dress a plain creature as an artifact.
+    // another type (the artifact frame on a creature, TODO 1.7; the Nyx
+    // showcase, owner decision A3): it would dress a plain creature as an
+    // artifact or an enchantment.
     const any = gallery.find(
       (choice) =>
         !templateIsBasicOnly(choice.template) &&

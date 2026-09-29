@@ -319,6 +319,30 @@ describe("basic-only frames", () => {
     ).toEqual({ status: "exact", template: "m15artifact", colorKey: "u" });
   });
 
+  it("nor is the Nyx showcase a creature borrows (A3)", () => {
+    // Only nyx is published in blue: a plain creature is never dressed as
+    // an Enchantment Creature behind the user's back…
+    expect(
+      resolvePublishedFrame({
+        kind: "creature",
+        candidates: ["m15snow", "m15"],
+        colorKey: "u",
+        verifiedKeys: verified(k("nyx", "u")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "unavailable" });
+    // …while a Theros god's import asks for it by name and gets it.
+    expect(
+      resolvePublishedFrame({
+        kind: "creature",
+        candidates: ["nyx", "m15"],
+        colorKey: "u",
+        verifiedKeys: verified(k("nyx", "u")),
+        prefer: "frame",
+      }),
+    ).toEqual({ status: "exact", template: "nyx", colorKey: "u" });
+  });
+
   it("basicOnlyFrameFallback: never recolours, and ignores frames that aren't basic-only", () => {
     expect(
       basicOnlyFrameFallback("fullartland", "w", verified(k("fullartland", "w"), k("m15land", "u"))),

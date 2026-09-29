@@ -300,8 +300,17 @@ Open decisions are marked **[decide]**; none blocks its phase.
         unless the card says Enchantment, the server gate accepts a creature
         on it, and the pin check accepts only an Enchantment Creature. The THB
         constellation gods (#258–268) resolve `exact` nyx, so they land on it
-        once nyx is verified in their colour (M15 until then); a THS god
-        (2003 frame) keeps `nearest` nyx without the kind landing.
+        once nyx is verified in their colour (M15 until then). Every
+        Theros-block Enchantment Creature on the 2003 frame (THS / BNG / JOU
+        gods, bestow creatures, Nyxborn, Eidolons; 117 printings with
+        their promos and reprints) keeps
+        `nearest` nyx without the kind landing, so while nyx is unverified a
+        white one lands on M15, not modern/w (the only verified 2003
+        standard) — **[decide]** whether they keep the 2003 frame until nyx
+        is verified (`onceVerified` on `nyx/2003`, which moves Bident too).
+        Their `frame_template` is now `nyx`, so the AI deck remix needs
+        #397's `remixFrameFor` (which resolves the remix frame against the
+        verified combos) before a remix of one saves.
       - **A4 regular Nyx — kept:** the 2015 starfield enchantments are
         `nearest` M15 (`blockedBy` 4.7's `m15nyx`); THS's 2003 Nyx is
         `nearest` nyx.
@@ -313,10 +322,11 @@ Open decisions are marked **[decide]**; none blocks its phase.
         of Winter KHM #193 (g), Cadet TFRA #1 (c) — then retire their
         allowlist rows (`tests/unit/cards/frame-reference-signatures.test.ts`).
         m15devoid/c stays verified against Kozilek's Channeler BFZ #10.
-      - **A7 — a new small supabase PR** mirrors production's verified
-        `frame_reviews` in `supabase/seed.sql` (never ahead of production),
-        so previews and the dev DB show the full-art landings and the
-        Borderless offers.
+      - **A7 — a new small supabase PR** (branch
+        `chore/seed-verified-frames`, its TODO 7.9) mirrors production's
+        verified `frame_reviews` in `supabase/seed.sql` (never ahead of
+        production), so previews and the dev DB show the full-art landings
+        and the Borderless offers.
       - **A8 — changed:** avatar, bloomburrow, lotr and tarkirdraconic join
         `BORDER_PENDING_TEMPLATES`, and expeditionland is capped in black and
         green only (`BORDER_PENDING_COLOURS`; no printed Expedition is either),

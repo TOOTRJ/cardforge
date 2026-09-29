@@ -35,8 +35,9 @@ export function frameChoicesForType(
  *
  *   - specific template → kept when it dresses the type AND its color for
  *     this card is published (and, for a basic-only frame, the card is one
- *     basic land; for the artifact frame a creature borrows, the card is an
- *     Artifact Creature); otherwise falls back like "random".
+ *     basic land; for a frame a creature borrows, the card says its word —
+ *     an Artifact Creature on the artifact frame, an Enchantment Creature on
+ *     Nyx); otherwise falls back like "random".
  *   - "random" → a uniformly random published frame whose available colors
  *     include the generated card's color key.
  *   - undefined → null (caller keeps the creator's era default).

@@ -201,6 +201,19 @@ describe("full-art and textless families (TODO 1.19)", () => {
     const future = frameMatchFromScryfall(printing("fut-19"));
     expect(future).toMatchObject({ signature: "textless/future", template: "m15textless" });
     expect(future.onceVerified).toBeUndefined();
+    // A later frame that can't dress the kind is never named: the textless
+    // frame has no loyalty slot, so a (synthetic) 2003-frame textless
+    // planeswalker keeps its walker frame and nothing to swap.
+    const walker = frameMatchFromScryfall(
+      scryfallCardSchema.parse({
+        ...printingsData["p07-1"],
+        name: "A Walker",
+        type_line: "Legendary Planeswalker — Ajani",
+        loyalty: "4",
+      }),
+    );
+    expect(walker).toMatchObject({ signature: "textless/old-frame", template: "m15pw" });
+    expect(walker.onceVerified).toBeUndefined();
     // No other fixture names a frame for later.
     for (const key of Object.keys(printingsData) as PrintingKey[]) {
       const match = frameMatchFromScryfall(printing(key));

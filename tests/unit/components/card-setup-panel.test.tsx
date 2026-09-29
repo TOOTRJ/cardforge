@@ -60,6 +60,12 @@ function Harness({
       <output data-testid="template">{template}</output>
       <output data-testid="color">{color.join(",")}</output>
       <output data-testid="supertype">{supertypeNow}</output>
+      {/* The Identity step's supertype field, as the user types in it. */}
+      <input
+        aria-label="Supertype (typed)"
+        value={supertypeNow}
+        onChange={(event) => methods.setValue("supertype", event.target.value)}
+      />
     </FormProvider>
   );
 }
@@ -452,6 +458,22 @@ describe("CardSetupPanel — Nyx is a creature variation for Enchantment Creatur
     expect(screen.getByTestId("supertype").textContent).toBe("Legendary Artifact");
     fireEvent.click(nyxChip());
     expect(screen.getByTestId("template").textContent).toBe("nyx");
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Enchantment");
+  });
+
+  it("forgets a word once it took it out, so a word the user types later stays", () => {
+    render(<Harness verified={verified} onColor={vi.fn()} initialColor="white" supertype="Legendary" />);
+    fireEvent.click(nyxChip());
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary");
+    // The user types the word themselves, then tries the artifact frame:
+    // only the word that frame wrote comes and goes, never theirs.
+    fireEvent.change(screen.getByRole("textbox", { name: "Supertype (typed)" }), {
+      target: { value: "Legendary Enchantment" },
+    });
+    fireEvent.click(within(variations()).getByRole("radio", { name: /^Artifact/ }));
+    expect(screen.getByTestId("supertype").textContent).toBe("Legendary Enchantment Artifact");
+    fireEvent.click(within(variations()).getByRole("radio", { name: /Standard/ }));
     expect(screen.getByTestId("supertype").textContent).toBe("Legendary Enchantment");
   });
 
