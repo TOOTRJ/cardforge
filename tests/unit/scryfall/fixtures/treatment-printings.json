@@ -523,5 +523,74 @@
     "promo_types": [
       "universesbeyond"
     ]
+  },
+  "mh3-351": {
+    "id": "3d7d07bb-b875-4a6d-8b87-4187e823af75",
+    "oracle_id": "63dfe794-5f56-41ec-9883-5523b41cc3e0",
+    "name": "Arena of Glory",
+    "released_at": "2024-06-14",
+    "layout": "normal",
+    "set": "mh3",
+    "set_name": "Modern Horizons 3",
+    "collector_number": "351",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Mountain.\n{T}: Add {R}.\n{R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste until end of turn. (An exerted permanent won't untap during your next untap step.)",
+    "rarity": "rare",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "mid-281": {
+    "id": "c092d9c5-538f-4667-9070-bdce7f8b522a",
+    "oracle_id": "f0ec8681-da50-466b-8cdd-1dc710deccd9",
+    "name": "Deserted Beach",
+    "released_at": "2021-09-24",
+    "layout": "normal",
+    "set": "mid",
+    "set_name": "Innistrad: Midnight Hunt",
+    "collector_number": "281",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {W} or {U}.",
+    "rarity": "rare",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
   }
 }

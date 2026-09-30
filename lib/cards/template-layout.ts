@@ -1553,6 +1553,21 @@ const M15BORDERLESSARTIFACT: FrameProfile = {
   label: "M15 Borderless Artifact",
   pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
 };
+// …and its nonbasic land (frames plan 4.34): the same pack and geometry —
+// the land prints' title bar, type bar and text box sit where the spells'
+// do (outline rows 88–89 / 222, 1167 / 1300 and 1950 px at HD on 14
+// borderless land prints and 5 spells, 2026-09-29) — with the land's
+// tinted type bar and box in the master (scripts/lib/cc-frames.mjs
+// borderlessLandLayers) and M15 Land's anatomy: no cost, and the rules
+// centred in the box (M15's vAlign, kept). The name keeps the borderless
+// band (8.5–92.2 %W): with no pips the prints set a long name across it
+// (Meduseld, Golden Hall of Edoras LTC #361). A land creature prints on
+// the borderless plates (m15borderless's, in the land's colour key).
+const M15BORDERLESSLAND: FrameProfile = {
+  ...M15BORDERLESS,
+  label: "M15 Borderless Land",
+  hideCost: true,
+};
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
 // magic-agclassic.mse-style, re-cut by the same build-alpha-frames.mjs):
@@ -2863,6 +2878,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
+  m15borderlessland: M15BORDERLESSLAND,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
   m15pw: M15PW,

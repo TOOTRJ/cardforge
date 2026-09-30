@@ -5,6 +5,7 @@ import {
   BRAND_MARK_PLACEMENT,
   ON_ART_OUTLINE,
   SET_SYMBOL_KEYLINE,
+  artReachesCardEdge,
   brandMarkLayout,
   footerInk,
   textShadowCopies,
@@ -133,6 +134,32 @@ describe("opt-in profile fields", () => {
   });
 });
 
+describe("the borderless land (TODO 4.34)", () => {
+  it("is the borderless M15 frame with M15 Land's anatomy: no cost, the rules centred, the borderless plates", () => {
+    const land = getFrameProfile("m15borderlessland");
+    const borderless = getFrameProfile("m15borderless");
+    // The same pack and geometry: art to the edges over the bottom bar, the
+    // measured M15 slots in white.
+    expect(land.artSlot).toEqual({ topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 });
+    expect(artReachesCardEdge(land)).toBe(true);
+    for (const slot of ["title", "type", "rules", "footer"] as const) {
+      expect(land[slot], slot).toEqual(borderless[slot]);
+    }
+    expect(land.rules.colorHex).toBe("#ffffff");
+    expect(land.rules.vAlign).toBe("center");
+    // A land prints no cost (M15 Land's rule), whatever the card says.
+    expect(land.hideCost).toBe(true);
+    expect(borderless.hideCost).toBeUndefined();
+    expect(getFrameProfile("m15land").hideCost).toBe(true);
+    // A land creature prints on the borderless plates, white digits.
+    expect(land.pt).toEqual(borderless.pt);
+    expect(land.pt!.plateAssetPathTemplate).toBe("/frames/m15borderless/pt/{color}.png");
+    expect(land.underFrameArt).toBeUndefined();
+    expect(land.label).toBe("M15 Borderless Land");
+    expect(brandMarkLayout(land)).toEqual({ ...BRAND_MARK_PLACEMENT, scale: 1 });
+  });
+});
+
 describe("footerInk on the art (TODO 3.8 / 3.23)", () => {
   const footer: TextSlot = {
     rect: { topPct: 93, leftPct: 6.5, widthPct: 87, heightPct: 3 },
@@ -163,9 +190,11 @@ describe("footerInk on the art (TODO 3.8 / 3.23)", () => {
 });
 
 describe("the set symbol's keyline on a dark type bar (4.32, owner evidence 2026-09-26)", () => {
-  const BORDERLESS = ["m15borderless", "m15borderlessartifact"];
+  // …and on the borderless land's tinted one (4.34), whose black and gold
+  // bars hide a common's #0f0f12 glyph the same way.
+  const BORDERLESS = ["m15borderless", "m15borderlessartifact", "m15borderlessland"];
 
-  it("is set by the borderless M15 pair only — every other profile draws the glyph as before", () => {
+  it("is set by the borderless M15 frames only — every other profile draws the glyph as before", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       if (BORDERLESS.includes(template)) expect(p.setSymbolKeyline, template).toBe(SET_SYMBOL_KEYLINE);

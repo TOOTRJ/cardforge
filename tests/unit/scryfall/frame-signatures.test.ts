@@ -20,6 +20,8 @@ import {
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
 import { EDGE_CONTRACT_KNOWN_FAILURES } from "@/lib/frames/edge-contract";
+import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -53,11 +55,22 @@ describe("borderless families (TODO 1.17)", () => {
     // Planeswalkers (4.33), light (ELD #271) and dark (WOE #297).
     ["eld-271", "nearest", "m15pw", undefined],
     ["woe-297", "nearest", "m15pw", undefined],
-    // Nonbasic lands (4.34).
-    ["mid-281", "nearest", "m15land", undefined],
-    ["otj-304", "nearest", "m15land", undefined],
+    // Nonbasic lands (4.34): the borderless land frame, exact — and, its art
+    // reaching the card edge, the import lands on the bordered land frame
+    // (1.18). A mono-colour (MH3 #351, FRA #381), a colourless (CMM #663)
+    // and a five-colour land (CMM #659, the gold master) are exact; the
+    // two-colour lands print a split pinline and box (4.6), a crowned one
+    // the floating crown (4.6), a nicknamed one its nickname line (6.3).
+    ["mh3-351", "exact", "m15borderlessland", "m15land"],
+    ["fra-381", "exact", "m15borderlessland", "m15land"],
+    ["cmm-663", "exact", "m15borderlessland", "m15land"],
+    ["cmm-659", "exact", "m15borderlessland", "m15land"],
+    ["mid-281", "nearest", "m15borderlessland", "m15land"],
+    ["otj-304", "nearest", "m15borderlessland", "m15land"],
+    ["neo-413", "nearest", "m15borderlessland", "m15land"],
+    ["ltc-361", "nearest", "m15borderlessland", "m15land"],
     // MDFC (5.7), saga / adventure / room (4.38).
-    ["znr-284", "nearest", "m15land", undefined],
+    ["znr-284", "nearest", "m15borderlessland", "m15land"],
     ["tdm-383", "nearest", "saga", undefined],
     ["woe-298", "nearest", "adventure", undefined],
     ["dsk-334", "nearest", "m15borderless", "m15"],
@@ -82,7 +95,7 @@ describe("borderless families (TODO 1.17)", () => {
     // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
     // Invocations unsupported.
     ["sta-1", "nearest", "m15borderless", "m15"],
-    ["eos-1", "nearest", "m15land", undefined],
+    ["eos-1", "nearest", "m15borderlessland", "m15land"],
     ["mp2-1", "unsupported", "m15borderless", "m15"],
     // Tokens (4.37).
     ["wone-1", "nearest", "m15token", undefined],
@@ -109,11 +122,68 @@ describe("borderless families (TODO 1.17)", () => {
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
     expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
+    // Nonbasic lands (4.34): the land's own gaps, never "no borderless land
+    // frame" any more.
+    expect(frameMatchFromScryfall(printing("mh3-351"))).toMatchObject({
+      signature: "borderless/land",
+      exactLabel: "Borderless land",
+      reason: null,
+    });
+    expect(frameMatchFromScryfall(printing("mid-281"))).toMatchObject({
+      signature: "borderless/land+two-colour",
+      blockedBy: "4.6",
+      gaps: ["two-colour"],
+    });
+    expect(frameMatchFromScryfall(printing("neo-413"))).toMatchObject({
+      signature: "borderless/land+crown",
+      blockedBy: "4.6",
+    });
+    expect(frameMatchFromScryfall(printing("ltc-361"))).toMatchObject({
+      signature: "borderless/land+nickname",
+      blockedBy: "6.3",
+    });
+    for (const key of ["mh3-351", "mid-281", "znr-284", "eos-1"] as const) {
+      expect(frameMatchFromScryfall(printing(key)).blockedBy, key).not.toBe("4.34");
+    }
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",
       exactLabel: "Bloomburrow anime showcase",
     });
+  });
+});
+
+describe("the borderless land frame, verified or not (TODO 4.34)", () => {
+  const imported = (key: PrintingKey, verified: readonly string[]) =>
+    finalizeImportMatch(mapScryfallToFormPatch(printing(key), { artPreviewUrl: null }), new Set(verified));
+
+  it("is exact once verified in the card's colour, nearest ('not yet verified') until then — the import lands on the bordered land frame either way", () => {
+    const before = imported("mh3-351", []);
+    expect(before.frame_match).toMatchObject({
+      status: "nearest",
+      template: "m15borderlessland",
+      landOn: "m15land",
+      reason: "not yet verified in red",
+      unverified: true,
+    });
+    expect(before.frame_template).toBe("m15land");
+    const after = imported("mh3-351", [frameComboKey("m15borderlessland", "r")]);
+    expect(after.frame_match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land", reason: null });
+    expect("unverified" in (after.frame_match ?? {})).toBe(false);
+    expect(after.frame_template).toBe("m15land");
+    // Verified in another colour only: still nearest for a colourless land.
+    expect(imported("cmm-663", [frameComboKey("m15borderlessland", "r")]).frame_match).toMatchObject({
+      status: "nearest",
+      reason: "not yet verified in colorless",
+    });
+    expect(imported("cmm-663", [frameComboKey("m15borderlessland", "c")]).frame_match?.status).toBe("exact");
+  });
+
+  it("keeps a two-colour land nearest even when the gold master is verified: its split pinline is 4.6's", () => {
+    const out = imported("mid-281", [frameComboKey("m15borderlessland", "m")]);
+    expect(out.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6" });
+    expect(colorKeyOf("mid-281")).toBe("m");
+    expect(out.frame_template).toBe("m15land");
   });
 });
 

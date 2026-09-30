@@ -176,7 +176,7 @@ describe("registry helpers", () => {
 
 // Frames plan 4.32 / 4.39: the references the items list, two per colour
 // (short text first), looked up on Scryfall by set + collector number.
-describe("4.32 / 4.39 references", () => {
+describe("4.32 / 4.34 / 4.39 references", () => {
   const ids = (template: string, key: string) =>
     frameReferenceOptions(template, key).map((r) => `${r.set} ${r.name}`);
 
@@ -213,6 +213,26 @@ describe("4.32 / 4.39 references", () => {
     expect(frameReferenceNote("m15borderlessartifact").confirm).toBe(true);
     // Its m references print a two-colour pinline: m waits for 4.6.
     expect(frameReferenceNote("m15borderlessartifact").note).toMatch(/leave m unverified/);
+  });
+
+  it("m15borderlessland: non-legendary prints whose type bar wears the title's tint, the best-registered first (TODO 4.34)", () => {
+    expect(ids("m15borderlessland", "w")).toEqual(["mh3 Monumental Henge", "sld Ancient Den"]);
+    expect(ids("m15borderlessland", "u")).toEqual(["fra Theorist's Sanctum", "mh3 Archway of Innovation"]);
+    expect(ids("m15borderlessland", "b")).toEqual(["mh3 Spymaster's Vault", "mh2 Cabal Coffers"]);
+    expect(ids("m15borderlessland", "r")).toEqual(["slp Valakut, the Molten Pinnacle", "mh3 Arena of Glory"]);
+    expect(ids("m15borderlessland", "g")).toEqual(["fra Roiling Canopy", "mh3 Shifting Woodland"]);
+    // c = colourless lands; m = three and more colours (gold bars and box).
+    expect(ids("m15borderlessland", "c")).toEqual(["cmm Reliquary Tower", "cmm Myriad Landscape"]);
+    expect(ids("m15borderlessland", "m")).toEqual(["cmm Command Tower", "msh Avengers Tower"]);
+    for (const key of FRAME_COLOR_KEYS) {
+      for (const ref of frameReferenceOptions("m15borderlessland", key)) {
+        // Never a set that prints the DARK type bar, never a two-colour print.
+        expect(["woe", "acr", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
+        expect(["Deserted Beach", "Spirebluff Canal"], ref.name).not.toContain(ref.name);
+      }
+    }
+    expect(frameReferenceNote("m15borderlessland").confirm).toBe(true);
+    expect(frameReferenceNote("m15borderlessland").note).toMatch(/SPLIT pinline/);
   });
 
   it("m15fullartland: the 2024–25 printings (ONE / MOM are an older bar geometry); fullartland: FRA #382–396 only", () => {

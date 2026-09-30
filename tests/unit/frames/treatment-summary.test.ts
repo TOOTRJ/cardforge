@@ -57,19 +57,21 @@ describe("buildTreatmentView", () => {
     expect(view).not.toBeNull();
     expect(view!.key).toBe("borderless");
     expect(view!.label).toBe("Borderless");
-    expect(view!.templates.map((t) => t.template)).toEqual(["m15borderless", "m15borderlessartifact"]);
+    // 4.34's land is the third frame of the Borderless set.
+    expect(view!.templates.map((t) => t.template)).toEqual(["m15borderless", "m15borderlessartifact", "m15borderlessland"]);
     expect(view!.templates[0].label).toBe("label:m15borderless");
     const states = Object.fromEntries(view!.templates[0].colours.map((c) => [c.colorKey, c.state]));
     expect(states).toMatchObject({ w: "scored", u: "scored", b: "stale", r: "unscored" });
 
-    // Every colour both frames have a printing for (all seven, per the registry).
-    expect(view!.combos).toHaveLength(14);
+    // Every colour the three frames have a printing for (all seven, per the
+    // registry).
+    expect(view!.combos).toHaveLength(21);
 
-    // The artifact kind spreads the borderless profile: title is ONE slot,
-    // voted on by the three current colours of both frames.
+    // The artifact kind and the land spread the borderless profile: title is
+    // ONE slot, voted on by the three current colours of the scored frames.
     const title = view!.shared.find((row) => row.path === "title");
     expect(title).toMatchObject({
-      templates: ["m15borderless", "m15borderlessartifact"],
+      templates: ["m15borderless", "m15borderlessartifact", "m15borderlessland"],
       samples: 3,
       nudge: expect.objectContaining({ dyPct: 0.3, agree: 3, of: 3 }),
     });
@@ -87,8 +89,15 @@ describe("buildTreatmentView", () => {
       scores: new Map(),
       labelFor: (t) => t,
     });
-    expect(view!.shared.some((row) => row.path === "title")).toBe(false);
-    expect(view!.shared.some((row) => row.path === "type")).toBe(true);
+    // The artifact frame's title leaves the pool; the land's still shares
+    // the standard's (4.34).
+    const title = view!.shared.filter((row) => row.path === "title");
+    expect(title.map((row) => row.templates)).toEqual([["m15borderless", "m15borderlessland"]]);
+    expect(view!.shared.find((row) => row.path === "type")?.templates).toEqual([
+      "m15borderless",
+      "m15borderlessartifact",
+      "m15borderlessland",
+    ]);
   });
 
   it("the combos leave out the colours no printing covers", () => {

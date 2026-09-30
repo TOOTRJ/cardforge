@@ -339,8 +339,9 @@ const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
 // M15 artifact frame, so the gallery only offers it where those are — but
 // it is new (no legacy card sits on it), so it carries a restriction too and
 // the server refuses it on any other kind: CC's pack has no planeswalker,
-// land, token or battle frame (those are 4.33 / 4.34 / 4.37). The artifact
-// dress also serves an Artifact Creature, borrowed like m15artifact (1.7).
+// token or battle frame (those are 4.33 / 4.37). The artifact dress also
+// serves an Artifact Creature, borrowed like m15artifact (1.7). Its land
+// (4.34) is a skin of the M15 land frame and dresses the Land kind only.
 const SHOWCASE_KIND_RESTRICTION: Partial<
   Record<FrameTemplate, readonly CardKind[]>
 > = {
@@ -350,6 +351,7 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
   m15textlessland: ["land"],
   m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
+  m15borderlessland: ["land"],
   nyx: ["enchantment", "creature"],
   fullart: KINDS_WITHOUT_STAT_OVERLAY,
   m15textless: KINDS_WITHOUT_STAT_OVERLAY,

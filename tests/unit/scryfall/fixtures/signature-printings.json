@@ -2894,5 +2894,188 @@
       "W"
     ],
     "oracle_text": "{T}, Sacrifice this token: Add one mana of any color."
+  },
+  "mh3-351": {
+    "id": "3d7d07bb-b875-4a6d-8b87-4187e823af75",
+    "name": "Arena of Glory",
+    "layout": "normal",
+    "set": "mh3",
+    "set_name": "Modern Horizons 3",
+    "set_type": "draft_innovation",
+    "collector_number": "351",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Exert"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Mountain.\n{T}: Add {R}.\n{R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste until end of turn. (An exerted permanent won't untap during your next untap step.)"
+  },
+  "fra-381": {
+    "id": "e8f607b3-f37c-49e7-8eb8-a14b2153f30e",
+    "name": "Theorist's Sanctum",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "381",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Behold"
+    ],
+    "type_line": "Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "oracle_text": "({T}: Add {U}.)\nAs this land enters, you may behold a Jace. If you don't, this land enters tapped. (To behold a Jace, choose a Jace you control or reveal a Jace card from your hand.)\n{2}{U}, {T}: Empower Jace 2."
+  },
+  "cmm-663": {
+    "id": "df2370ea-9bb8-496f-aaf5-f0bb3bb55f9b",
+    "name": "Reliquary Tower",
+    "layout": "normal",
+    "set": "cmm",
+    "set_name": "Commander Masters",
+    "set_type": "masters",
+    "collector_number": "663",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "You have no maximum hand size.\n{T}: Add {C}."
+  },
+  "cmm-659": {
+    "id": "24179418-d92c-43eb-a8f6-b8ea83f8c80f",
+    "name": "Command Tower",
+    "layout": "normal",
+    "set": "cmm",
+    "set_name": "Commander Masters",
+    "set_type": "masters",
+    "collector_number": "659",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}: Add one mana of any color in your commander's color identity."
+  },
+  "neo-413": {
+    "id": "7c31c48f-6275-4430-8dc9-05d70c332b7a",
+    "name": "Eiganjo, Seat of the Empire",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "413",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Channel"
+    ],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "{T}: Add {W}.\nChannel — {2}{W}, Discard this card: It deals 4 damage to target attacking or blocking creature. This ability costs {1} less to activate for each legendary creature you control."
+  },
+  "ltc-361": {
+    "id": "b65d2bc3-7f36-4c81-95da-a22c3a47b2e4",
+    "name": "Castle Ardenvale",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "361",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "flavor_name": "Meduseld, Golden Hall of Edoras",
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains.\n{T}: Add {W}.\n{2}{W}{W}, {T}: Create a 1/1 white Human creature token."
   }
 }

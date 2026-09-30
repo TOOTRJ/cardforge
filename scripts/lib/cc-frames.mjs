@@ -53,6 +53,11 @@ const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opa
  *  itself paints (its black ring), so the mask's COVERAGE is subtracted
  *  (alpha − mask alpha), not multiplied out: see compositeLayers. */
 const outside = (src, mask) => ({ src, mask, invert: true });
+/** A layer that REPLACES what is under it through a mask (4.34): where the
+ *  mask covers, the layer's pixels stand instead of the ones below, not on
+ *  top of them — a tinted box over a dark one would otherwise read darker
+ *  than either. See compositeLayers. */
+const replacing = (src, mask, extra = {}) => ({ src, mask, replace: true, ...extra });
 
 /** The planeswalker loyalty shield's box on the 1500×2100 master: CC's
  *  maskLoyalty.png covers x 1197–1430, y 1844–1991 after the Lanczos
@@ -158,6 +163,81 @@ const borderlessFrame = (k) => `${BORDERLESS}/m15GenericShowcaseFrame${k.toUpper
 /** The pack's P/T plates: one per colour, "Artifact" (a) and "Colorless" (l).
  *  (pt/c.png sits in the folder too, but the pack never lists it.) */
 const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM), c: `${BORDERLESS}/pt/l.png` };
+
+// --- 4.34 the borderless nonbasic land, from the same pack. Measured on the
+// prints (2026-09-29, 50+ borderless land printings): a borderless land
+// wears its colour on ALL THREE of its translucent parts — the title bar,
+// the type bar and the text box — where a borderless spell tints only the
+// title bar (its type bar and box are the dark α128 of the masters above).
+// CC's pack draws the land look from no single file: its 'Land Frame' (L)
+// is the spell look in grey, and CC's autoframe (creator-23.js
+// autoBorderlessFrame) keeps the dark type bar and box too. So the land
+// master is a PipGlyph composite of the pack's pixels, in four layers:
+//   1. the colour's frame, whole (its title bar, pinline, bottom bar and
+//      fins — the m15borderless master of that colour; L for colourless);
+//   2. the TYPE BAR = the same frame's title bar, moved down onto it
+//      (BORDERLESS_TITLE_TO_TYPE_DY): the print's type bar is its title bar
+//      (same tint, bevels and caps), and CC's Title and Type masks match at
+//      that shift (mean |Δα| 1.7 levels over the bar);
+//   3. the TEXT BOX = the tinted box of CC's genericShowcase pack (its
+//      neutral 'Land Frame', flat #9a9a9a α191 with its bevels and the
+//      shadow under the type bar), re-tinted to the colour's title-bar tint
+//      (retintStructure: every genericShowcase colour's box is that one
+//      structure lerped from its tint to white or black, ≤ 0.06 levels
+//      mean error) — the print's box tint is the title's (best fit over 52
+//      box edges: the title colour, rms 22.8, against genericShowcase's own
+//      tints 28.4 and the dark α128 box 68.6), at genericShowcase's α191;
+//   4. the pinline, through the pack's Pinline mask, on top (it repairs the
+//      pixels layers 2 and 3 replaced along its anti-aliased edge).
+// Two-colour lands (the most printed kind: MID #281, OTJ #304, the RVR
+// shocks, the MKM surveil lands) print the grey L bars with a SPLIT pinline
+// and a split box; their pair masters are 4.6's (borderlessLandLayers takes
+// the letters, so a pair adds the right-hand pinline and box through 4.6's
+// procedural ramp). Until then `m` is the three-and-more-colour land
+// (Command Tower CMM #659, SNC #291–295): gold bars, box and pinline.
+const GENERIC_SHOWCASE = "img/frames/m15/genericShowcase";
+/** The pack's own Pinline mask (packBorderless.js lists it first). */
+const BORDERLESS_PINLINE_MASK = `${GENERIC_SHOWCASE}/m15GenericShowcaseMaskPinline.png`;
+/** The regular M15 masks the pack lists for its Type and Rules layers. */
+const REG_TYPE_MASK = `${REG}/m15MaskType.png`;
+const REG_RULES_MASK = `${REG}/m15MaskRules.png`;
+/** From the title bar to the type bar on the pack's 1500×2100 frames, in
+ *  native px: CC's Title mask spans rows 100–221 and its Type mask
+ *  1181–1302 (both 122 rows; the row ends agree within 1 px at every row). */
+export const BORDERLESS_TITLE_TO_TYPE_DY = 1081;
+/** Where a colour's title-bar tint is read, in native px: the middle of the
+ *  bar's flat interior (96–97.6 % of its pixels are that one RGBA). */
+export const BORDERLESS_TINT_POINT = { x: 750, y: 160 };
+/** The tinted box's structure: genericShowcase's neutral 'Land Frame', whose
+ *  flat box is #9a9a9a — `from` is asserted against it when imported. */
+export const TINTED_BOX_STRUCTURE = {
+  src: `${GENERIC_SHOWCASE}/m15GenericShowcaseFrameL.png`,
+  from: [154, 154, 154],
+  /** A flat pixel of the box, where `from` is checked. */
+  flatAt: { x: 750, y: 1600 },
+};
+/** The pack letter of a colour key's land dress: colourless is CC's 'Land
+ *  Frame' (grey bars, the land's brown-grey pinline), never the see-through
+ *  'Colorless Frame' of the spells. */
+const borderlessLandLetter = (k) => (k === "c" ? "l" : k);
+
+/**
+ * The borderless land master's layers, bottom → top (see above): `frame`
+ * dresses the title bar, the type bar and the bottom bar, `box` tints the
+ * text box, `pinline` colours the pinline — each a pack letter (w u b r g m
+ * l). A mono-colour land passes one letter three times; 4.6's pair masters
+ * pass the grey `l` bars and a letter pair for the box and pinline.
+ */
+export function borderlessLandLayers({ frame, box, pinline }) {
+  return [
+    layer(borderlessFrame(frame)),
+    replacing(borderlessFrame(frame), REG_TYPE_MASK, { dy: BORDERLESS_TITLE_TO_TYPE_DY }),
+    replacing(TINTED_BOX_STRUCTURE.src, REG_RULES_MASK, {
+      retint: { from: TINTED_BOX_STRUCTURE.from, tintOf: { src: borderlessFrame(box), ...BORDERLESS_TINT_POINT } },
+    }),
+    layer(borderlessFrame(pinline), BORDERLESS_PINLINE_MASK),
+  ];
+}
 
 // --- 4.39 'Fullart Basics (2022)' — CC packTextlessBasics2022.js
 // (groupTextless-4.js:5). 1500×2100 native, opaque black ring; a title bar
@@ -351,6 +431,22 @@ export const CC_TEMPLATES = {
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
     ],
   },
+  // 4.34 — the borderless nonbasic land: the colour on the title bar, the
+  // type bar AND the text box (borderlessLandLayers).
+  m15borderlessland: {
+    colors: perColor((k) => {
+      const letter = borderlessLandLetter(k);
+      return borderlessLandLayers({ frame: letter, box: letter, pinline: letter });
+    }),
+    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the text-box structure of packGenericShowcase.js 'Borderless' (groupShowcase-5.js:48)",
+    transforms: `native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down ${BORDERLESS_TITLE_TO_TYPE_DY} px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (${BORDERLESS_TINT_POINT.x}, ${BORDERLESS_TINT_POINT.y})) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; corners rounded to the importer radius`,
+    notes: [
+      "the print's land look (2026-09-29, 50+ borderless land printings): title bar, type bar and text box all wear the colour's title-bar tint; a borderless spell tints only its title bar (m15borderless)",
+      "colourless = CC's 'Land Frame' (m15GenericShowcaseFrameL.png): grey bars and box, the land's brown-grey pinline (the prints' #a5988a on CMM #663 / FRA #379), never the see-through 'Colorless Frame'",
+      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — 4.6's pair masters (borderlessLandLayers with a letter pair)",
+      "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)",
+    ],
+  },
   // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
   m15fullartland: {
     colors: perColor((k) => [layer(basics2022Frame(k))]),
@@ -409,7 +505,11 @@ export const CC_DEFERRED = {};
  * straight inner edges, up to 64 at its rounded corners — a faint rounded
  * rectangle over the art (owner evidence 2026-09-26). The two agree wherever
  * the mask is 0 or 255 or the frame is opaque (the bars that reach into the
- * ring). Returns a Float32Array RGBA with alpha in 0..1.
+ * ring). `replace` (4.34) puts the layer IN PLACE of what is under it where
+ * the mask covers: a premultiplied lerp from the accumulator to the layer by
+ * the mask's alpha (the layer's own alpha kept), so a tinted box stands
+ * instead of the dark one below, and the mask's anti-aliased edge blends the
+ * two. Returns a Float32Array RGBA with alpha in 0..1.
  */
 export function compositeLayers(images, width, height) {
   const n = width * height;
@@ -418,6 +518,18 @@ export function compositeLayers(images, width, height) {
     for (let p = 0; p < n; p += 1) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
+      if (img.replace && i > 0) {
+        const m = img.mask ? img.mask[o + 3] / 255 : 1;
+        if (m === 0) continue;
+        if (img.opacity !== undefined) a *= img.opacity;
+        const ab = acc[o + 3];
+        const outA = ab * (1 - m) + a * m;
+        for (let c = 0; c < 3; c += 1) {
+          acc[o + c] = outA === 0 ? 0 : (acc[o + c] * ab * (1 - m) + img.data[o + c] * a * m) / outA;
+        }
+        acc[o + 3] = outA;
+        continue;
+      }
       if (img.mask) {
         const m = img.mask[o + 3] / 255;
         a = img.invert ? Math.max(0, a - m) : a * m;
@@ -490,6 +602,68 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
   return out;
 }
 
+/**
+ * Move every row of an 8-bit RGBA image down `dy` px (4.34: the borderless
+ * land's title bar onto its type bar). The rows it opens at the top are
+ * transparent; rows pushed past the bottom are dropped. Returns a new
+ * buffer.
+ */
+export function shiftRows(buf, width, height, dy) {
+  if (!Number.isInteger(dy) || dy < 0 || dy >= height) {
+    throw new Error(`shiftRows: bad shift ${dy} for ${height} rows`);
+  }
+  const out = Buffer.alloc(buf.length);
+  const row = width * 4;
+  buf.copy(out, dy * row, 0, (height - dy) * row);
+  return out;
+}
+
+/**
+ * The RGBA at (x, y) of an 8-bit RGBA image, asserted FLAT: its 5×5
+ * neighbourhood is that one value (4.34: a title bar's tint is read from
+ * the middle of its flat interior, so a source that moved fails the import
+ * instead of tinting a box with a bevel's colour).
+ */
+export function flatPixelAt(buf, width, height, { x, y }) {
+  const at = (px, py) => {
+    const o = (py * width + px) * 4;
+    return [buf[o], buf[o + 1], buf[o + 2], buf[o + 3]];
+  };
+  const value = at(x, y);
+  for (let py = y - 2; py <= y + 2; py += 1) {
+    for (let px = x - 2; px <= x + 2; px += 1) {
+      if (px < 0 || py < 0 || px >= width || py >= height || at(px, py).some((v, c) => v !== value[c])) {
+        throw new Error(`flatPixelAt: (${x}, ${y}) is not in a flat region (${at(px, py)} at (${px}, ${py}) vs ${value})`);
+      }
+    }
+  }
+  return value;
+}
+
+/**
+ * Re-tint a NEUTRAL structure (4.34: genericShowcase's grey 'Land Frame'
+ * text box, flat `from`, its bevels lighter and its shadow darker) to the
+ * colour `to`: each pixel is `from` lerped toward white or black by some t,
+ * and becomes `to` lerped the same way by the same t — the relation every
+ * genericShowcase colour frame's box has to its own tint. t is read from
+ * the pixel's channel mean (a neutral structure's channels agree); alpha is
+ * kept. Returns a new buffer.
+ */
+export function retintStructure(buf, from, to) {
+  const out = Buffer.from(buf);
+  const f = (from[0] + from[1] + from[2]) / 3;
+  if (!(f > 0 && f < 255)) throw new Error(`retintStructure: \`from\` must be a mid tone, got ${from}`);
+  for (let o = 0; o < buf.length; o += 4) {
+    const v = (buf[o] + buf[o + 1] + buf[o + 2]) / 3;
+    const lighter = v >= f;
+    const t = lighter ? (v - f) / (255 - f) : 1 - v / f;
+    for (let c = 0; c < 3; c += 1) {
+      out[o + c] = Math.round(lighter ? to[c] + t * (255 - to[c]) : to[c] * (1 - t));
+    }
+  }
+  return out;
+}
+
 /** Alpha out everything outside a rounded rectangle (1 px anti-aliased). */
 export function roundCorners(acc, width, height, radius) {
   const r = radius;
@@ -543,10 +717,16 @@ export function toRgba8(acc) {
 }
 
 /** One layer as provenance prints it: "src", "src through mask",
- *  "src outside mask", "… at 35%". */
+ *  "src outside mask", "… at 35%", and 4.34's "src moved down N px
+ *  replacing through mask", "src re-tinted from r,g,b to the tint of other
+ *  at (x, y) replacing through mask". */
 export function describeLayer(l) {
-  const mask = l.mask ? ` ${l.invert ? "outside" : "through"} ${l.mask}` : "";
-  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
+  const moved = l.dy ? ` moved down ${l.dy} px` : "";
+  const tint = l.retint
+    ? ` re-tinted from ${l.retint.from.join(",")} to the tint of ${l.retint.tintOf.src} at (${l.retint.tintOf.x}, ${l.retint.tintOf.y})`
+    : "";
+  const mask = l.mask ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${l.mask}` : "";
+  return `${l.src}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
 }
 
 /** The colours a template builds (all seven minus `excluded`). */
@@ -562,6 +742,7 @@ export function sourceFilesFor(def) {
     for (const l of layers) {
       files.add(l.src);
       if (l.mask) files.add(l.mask);
+      if (l.retint) files.add(l.retint.tintOf.src);
     }
   }
   for (const plate of Object.values(def.plates ?? {})) files.add(plate);

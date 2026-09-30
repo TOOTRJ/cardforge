@@ -337,6 +337,10 @@ export const FRAME_TEMPLATE_VALUES = [
   // has no body for 4.16's artifact interior).
   "m15borderless",
   "m15borderlessartifact",
+  // …and its nonbasic land (frames plan 4.34): a skin of the M15 land frame
+  // whose title bar, type bar AND text box wear the colour's tint, as the
+  // borderless land prints do (MID #281, OTJ #304, CMM #659).
+  "m15borderlessland",
   "agclassic",
   "alphaland",
   "alphatoken",
@@ -403,6 +407,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15tokenartifacttext: "Artifact Token (2014–2019), text box",
   m15borderless: "Borderless",
   m15borderlessartifact: "Borderless Artifact",
+  m15borderlessland: "Borderless Land",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -499,6 +504,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15tokenartifacttext: "m15",
   m15borderless: "borderless",
   m15borderlessartifact: "borderless",
+  m15borderlessland: "borderless",
   battle: "m15",
   saga: "m15",
   adventure: "m15",
@@ -651,7 +657,8 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   m15: ["m15snow", "m15devoid", "m15borderless"],
   // The artifact kind's own borderless dress (frames plan 4.32).
   m15artifact: ["m15borderlessartifact"],
-  m15land: ["m15snowland"],
+  // The land kind's own borderless dress (frames plan 4.34).
+  m15land: ["m15snowland", "m15borderlessland"],
   // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
   m15token: ["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"],

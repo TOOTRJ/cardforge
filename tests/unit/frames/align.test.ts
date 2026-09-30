@@ -221,7 +221,9 @@ describe("alignAndScore", () => {
   it("excludes the arch only for the borderless M15 frames", () => {
     expect(scoreExclusionsFor("m15borderless")).toEqual([HOLO_STAMP_ARCH]);
     expect(scoreExclusionsFor("m15borderlessartifact")).toEqual([HOLO_STAMP_ARCH]);
-    for (const template of ["m15", "m15fullartland", "fullartland"]) {
+    // 4.34's land: nearly every borderless nonbasic land is rare.
+    expect(scoreExclusionsFor("m15borderlessland")).toEqual([HOLO_STAMP_ARCH]);
+    for (const template of ["m15", "m15land", "m15fullartland", "fullartland"]) {
       expect(scoreExclusionsFor(template), template).toEqual([]);
     }
     // x 640–860, y 1890–2000 on 1500 × 2100: the arch (656–850, from 1905)

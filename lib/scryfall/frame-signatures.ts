@@ -498,12 +498,13 @@ const FAMILIES: Record<
       return "m15";
     },
   },
-  // The 2019+ borderless dress (4.32) where it exists; the bordered M15
-  // standard for the kinds it can't dress yet (4.33–4.38).
+  // The 2019+ borderless dress (4.32, and 4.34's land) where it exists; the
+  // bordered M15 standard for the kinds it can't dress yet (4.33, 4.35–4.38).
   borderless: {
     produces: [
-      "saga", "adventure", "split", "aftermath", "flip", "m15token", "m15land",
-      "m15pw", "battle", "m15borderlessartifact", "m15borderless",
+      "saga", "adventure", "split", "aftermath", "flip", "m15token",
+      "m15borderlessland", "m15pw", "battle", "m15borderlessartifact",
+      "m15borderless",
     ],
     pick: ({ facts }) => {
       const layout = layoutTemplateOf(facts.kind);
@@ -512,7 +513,7 @@ const FAMILIES: Record<
         case "token":
           return "m15token";
         case "land":
-          return "m15land";
+          return "m15borderlessland";
         case "planeswalker":
           return "m15pw";
         case "battle":
@@ -595,6 +596,7 @@ function kindFallback(ctx: Ctx): FrameTemplate {
 const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15borderless: "m15",
   m15borderlessartifact: "m15artifact",
+  m15borderlessland: "m15land",
 };
 
 // ---------------------------------------------------------------------------
@@ -1036,17 +1038,23 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.33",
     },
   },
-  {
-    key: "borderless/land",
-    exactLabel: "Borderless land",
-    match: { borders: ["borderless"], kinds: ["land"] },
-    outcome: {
-      status: "nearest",
-      template: "m15land",
-      reason: "PipGlyph doesn't have the borderless land frame yet",
-      blockedBy: "4.34",
+  // A nonbasic land (4.34): the borderless land frame — exact once it is
+  // verified in the card's colour (withVerification: `nearest`, "not yet
+  // verified", until then), and like the spells' frame its art reaches the
+  // card edge, so the import lands on the bordered land frame (1.18) with
+  // Borderless Land offered once verified. The two-colour lands — most of
+  // them: MID #281, OTJ #304, the RVR shocks, the MKM surveil lands — print
+  // a split pinline and box on grey bars, 4.6's pair masters: nearest on
+  // the gold `m` until then, like the two-colour spells.
+  ...withGaps(
+    {
+      key: "borderless/land",
+      exactLabel: "Borderless land",
+      match: { borders: ["borderless"], kinds: ["land"] },
+      outcome: { status: "exact", template: { family: "borderless" } },
     },
-  },
+    ["etched", "nickname", "crown", "nyx", "two-colour", "light-box"],
+  ),
   {
     key: "borderless/layout",
     exactLabel: "Borderless layout card",

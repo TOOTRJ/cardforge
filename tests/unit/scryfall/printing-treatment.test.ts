@@ -251,6 +251,34 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     }
   });
 
+  it("offers Borderless Land for a borderless nonbasic land once verified in its colour (4.34)", () => {
+    // Arena of Glory MH3 #351: the registry's exact borderless land, landing
+    // on the bordered land frame (1.18) — the creator offers the rest.
+    const mh3 = patchOf("mh3-351");
+    expect(mh3.printing_treatment).toBe("borderless");
+    expect(mh3.color_identity).toEqual(["red"]);
+    expect(mh3.frame_match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land" });
+    expect(mh3.frame_template).toBe("m15land");
+    expect(printingTreatmentOffer(mh3, verified(["m15borderlessland", "r"]))).toEqual({
+      template: "m15borderlessland",
+      frameLabel: "Borderless Land",
+      actionLabel: "Use Borderless Land",
+    });
+    // Unverified, verified in another colour, or only the spells' frame: nothing.
+    expect(printingTreatmentOffer(mh3, new Set())).toBeNull();
+    expect(printingTreatmentOffer(mh3, verified(["m15borderlessland", "u"]))).toBeNull();
+    expect(printingTreatmentOffer(mh3, verified(["m15borderless", "r"], ["fullartland", "r"]))).toBeNull();
+    // Deserted Beach MID #281, two colours: the gold land, nearest until
+    // 4.6's split pinline — offered like a two-colour spell's gold frame.
+    const mid = patchOf("mid-281");
+    expect(mid.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6" });
+    expect(printingTreatmentOffer(mid, verified(["m15borderlessland", "m"]))?.template).toBe("m15borderlessland");
+    // A basic keeps its full-art offers, never the nonbasic land's.
+    const keys = verified(["m15borderlessland", "w"], ["fullartland", "w"]);
+    expect(printingTreatmentOffer(patchOf("fra-382"), keys)?.template).toBe("fullartland");
+    expect(printingTreatmentOffer(patchOf("unf-235"), keys)).toBeNull();
+  });
+
   it("lands a full-art basic on the black-bordered full-art basic itself, once verified (no offer)", () => {
     // ONE #262 and FDN #282 print the 2022 design (title bar + left disc):
     // FDN exact, ONE nearest (its 2023 bars). The mapper colours a Plains

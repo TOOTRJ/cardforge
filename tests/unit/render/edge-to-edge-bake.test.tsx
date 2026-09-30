@@ -80,6 +80,8 @@ beforeAll(async () => {
     "m15fullartland/symbol/w.png": await solid(168, 168, SYMBOL_RGB),
     "m15borderless/g.png": clear,
     "m15borderless/pt/g.png": await solid(274, 140, PLATE_RGB),
+    // 4.34's land: its own masters, m15borderless's plates.
+    "m15borderlessland/g.png": clear,
   };
   const manifest = {
     version: 1 as const,
@@ -647,6 +649,64 @@ describe("the profiles that ship the pieces (4.39 full-art basics, 4.32 borderle
       expect(isArt(square.px(x, y))).toBe(true);
       expect(square.a(x, y)).toBe(255);
     }
+  });
+});
+
+// 4.34's borderless land, baked as it ships (on a see-through stand-in
+// master): M15 Land's anatomy on the borderless frame — no cost, the rules
+// centred in the box, white ink, m15borderless's plate for a land creature.
+describe("the borderless land (4.34) — real bakes", () => {
+  const canopy = {
+    title: "Roiling Canopy",
+    // A land prints no cost, whatever the card says (hideCost).
+    cost: "{1}{G}",
+    cardType: "land",
+    colorIdentity: ["green"],
+    rulesText: "This land enters tapped.",
+  };
+  const land = getFrameProfile("m15borderlessland");
+  const costArea: Rect = { topPct: 4.8, leftPct: 78, widthPct: 14.2, heightPct: 6 };
+
+  it("draws no cost where the borderless spell frame draws one, in the same white ink", async () => {
+    const b = await bake({ ...canopy, frameStyle: { template: "m15borderlessland" } });
+    expect(count(b, costArea, (p) => !isArt(p))).toBe(0);
+    // hideCost is the frame's, whatever the card: a costed card on the land
+    // frame prints no pips where the spell frame prints them.
+    const costed = { ...canopy, cardType: "creature", power: "1", toughness: "1" };
+    const onLand = await bake({ ...costed, frameStyle: { template: "m15borderlessland" } });
+    const onSpell = await bake({ ...costed, frameStyle: { template: "m15borderless" } });
+    expect(count(onLand, costArea, (p) => !isArt(p))).toBe(0);
+    expect(count(onSpell, costArea, (p) => !isArt(p))).toBeGreaterThan(100);
+    const white = (px: [number, number, number]) => lum(px) > 235;
+    expect(count(b, land.title.rect, white)).toBeGreaterThan(300);
+    expect(count(b, land.type.rect, white)).toBeGreaterThan(100);
+    // One short line, centred in the box (M15 Land's vAlign), ±1 line.
+    const ink = inkBox(b, land.rules.rect, white);
+    const mid = ((land.rules.rect.topPct + land.rules.rect.heightPct / 2) / 100) * H;
+    expect(ink.n).toBeGreaterThan(100);
+    expect(Math.abs((ink.minY + ink.maxY) / 2 - mid)).toBeLessThan(0.02 * H);
+    // Art to the top corners, like every borderless frame.
+    expect(isArt(b.px(3, 3))).toBe(true);
+    expect(isArt(b.px(W - 4, 3))).toBe(true);
+  });
+
+  it("prints a P/T on m15borderless's plate, in the borderless plate box, white", async () => {
+    const gray = ([r, g, bl]: [number, number, number]) =>
+      Math.abs(r - 128) <= 3 && Math.abs(g - 128) <= 3 && Math.abs(bl - 128) <= 3;
+    // The frame's P/T slot (a land creature's), forced on with a creature.
+    const b = await bake({
+      title: "Dryad Arbor",
+      cardType: "creature",
+      subtypes: ["Dryad"],
+      colorIdentity: ["green"],
+      power: "1",
+      toughness: "1",
+      frameStyle: { template: "m15borderlessland" },
+    });
+    const plate = land.pt!.plateRect!;
+    expect(plate).toEqual(getFrameProfile("m15borderless").pt!.plateRect);
+    expect(count(b, plate, gray)).toBeGreaterThan(0.6 * ((plate.widthPct / 100) * W) * ((plate.heightPct / 100) * H));
+    expect(count(b, land.pt!.rect, (px) => lum(px) > 235)).toBeGreaterThan(50);
   });
 });
 

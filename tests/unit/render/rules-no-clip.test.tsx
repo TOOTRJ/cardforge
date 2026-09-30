@@ -275,7 +275,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [
     [
       "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "lotr/main", "m15/main",
-      "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15devoid/main", "m15land/main",
+      "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15borderlessland/main", "m15devoid/main", "m15land/main",
       "m15pw/main", "m15pw/walker", "m15snow/main", "m15snowland/main", "modern/main", "modernland/main",
       "nyx/main", "retro/main", "retroland/main", "tarkirdraconic/main", "tarkirdragon/main", "tarkirghostfire/main",
     ],

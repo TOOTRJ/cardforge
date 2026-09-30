@@ -329,6 +329,39 @@ describe("CardPreview — the full-art basics of 4.39 (their own profiles)", () 
   });
 });
 
+describe("CardPreview — the borderless land (4.34)", () => {
+  it("paints its own master, no cost, white ink, and m15borderless's plate for a P/T — as the bake does", () => {
+    const land = getFrameProfile("m15borderlessland");
+    const ui = (template: FrameTemplate, cardType = "land") => (
+      <CardPreview
+        title="Roiling Canopy"
+        cost="{1}{G}"
+        cardType={cardType as CardPreviewData["cardType"]}
+        colorIdentity={["green"]}
+        rulesText="This land enters tapped."
+        power={cardType === "land" ? undefined : "1"}
+        toughness={cardType === "land" ? undefined : "1"}
+        frameStyle={{ template }}
+      />
+    );
+    const html = renderToStaticMarkup(ui("m15borderlessland"));
+    expect(html).toContain(frameUrl("/frames/m15borderlessland/g.webp"));
+    // hideCost: no pip on the land frame, even for a costed card; the
+    // borderless spell frame prints the same card's two.
+    const costed = markup(ui("m15borderlessland", "creature"));
+    expect(costed.querySelectorAll("i.ms")).toHaveLength(0);
+    expect(markup(ui("m15borderless", "creature")).querySelectorAll("i.ms").length).toBeGreaterThan(0);
+    expect(land.title.colorHex).toBe("#ffffff");
+    // The plate is m15borderless's, at the borderless plate box.
+    const { container } = render(ui("m15borderlessland", "creature"));
+    const plate = Array.from(container.querySelectorAll("img")).find(
+      (i) => i.getAttribute("src") === frameUrl("/frames/m15borderless/pt/g.png"),
+    ) as HTMLImageElement;
+    expect(plate).toBeTruthy();
+    expectRect(plate, land.pt!.plateRect!);
+  });
+});
+
 describe("CardPreview — the borderless M15 frame (4.32)", () => {
   it("prints white ink and draws the pack's P/T plate in its own box", () => {
     const { container } = render(

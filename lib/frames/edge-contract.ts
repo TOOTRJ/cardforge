@@ -160,6 +160,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The artifact dress: CC's A frame (c) and the colour frames — the same
   // pack, the same edges.
   m15borderlessartifact: BORDERLESS_M15,
+  // The nonbasic land (4.34): the same pack's frames, re-tinted inside —
+  // the same edges.
+  m15borderlessland: BORDERLESS_M15,
   // CC `textless/2022` composites keep their black ring (α 1.00 on all
   // seven masters); the re-sourced `fullartland` drops it (ALL_ART above;
   // its two bars float inside the card, clear of every edge band).

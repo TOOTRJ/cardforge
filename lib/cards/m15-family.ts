@@ -18,7 +18,8 @@ import type { FrameTemplate } from "@/types/card";
 // The profile tests read this list. Layout v32's template scope is a FROZEN
 // copy in lib/cards/layout-version.ts (a test keeps the two equal at v32):
 // a template that joins the family later brings its own bump — or, a NEW
-// template no card was ever baked on (4.49 (b)'s text-box tokens), none.
+// template no card was ever baked on (4.49 (b)'s text-box tokens, 4.34's
+// borderless land), none.
 // ---------------------------------------------------------------------------
 
 export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
@@ -38,6 +39,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // so they joined without a bump.
   "m15tokentext",
   "m15tokenartifacttext",
+  // The borderless land (TODO 4.34): a new template, no stored card — it
+  // joined without a bump too.
+  "m15borderlessland",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

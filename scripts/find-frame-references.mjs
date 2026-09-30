@@ -120,6 +120,16 @@ const TEMPLATES = {
     q: (k) =>
       `border:borderless frame:2015 -is:showcase -frame:legendary -is:dfc -is:textless t:artifact -t:land -t:token -t:vehicle ${spellColor(k)}`,
   },
+  // The borderless nonbasic land (4.34). A land's frame colour follows the
+  // mana it makes: c = colourless lands, m = three and more colours (two
+  // split the pinline and box, 4.6). No crown or nickname line until 4.6 /
+  // 6.3. Curate by eye: drop the sets that print a DARK type bar (WOE, ACR,
+  // TDM, EOE, FIC) — the master tints it like the title bar.
+  m15borderlessland: {
+    confirm: "Keep prints whose type bar wears the title bar's tint (most sets); WOE, ACR, TDM, EOE and FIC print it dark.",
+    q: (k) =>
+      `border:borderless frame:2015 t:land -t:basic -is:showcase -frame:legendary -is:dfc -is:textless -is:flavorname -t:creature ${k === "m" ? "produces>=3 -produces:c" : `produces=${k}`}`,
+  },
   battle: {
     note: "Every printed battle is a transform DFC; the front face is the landscape siege.",
     q: (k) => `t:battle ${spellColor(k)}`,

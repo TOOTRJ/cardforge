@@ -50,6 +50,8 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates;
+- the borderless nonbasic land (4.34): m15borderlessland, a composite of
+  the same pack's pixels (below), on m15borderless's plates;
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
   black-bordered m15fullartland and the borderless fullartland (the same
   frame with its Border mask erased), each with CC's mana symbols at
@@ -95,6 +97,25 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   re-scored independently in the skeptic pass, which also measured CC's
   band 60–65 px above the prints and the re-cut within ±2 px). Provenance
   records the re-cut (`recut`, `transforms`).
+- **The borderless land (4.34).** A borderless land prints its colour on
+  the title bar, the type bar AND the text box, where a borderless spell
+  tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
+  file draws that — its 'Land Frame' is the spell look in grey — so
+  `borderlessLandLayers` (`scripts/lib/cc-frames.mjs`) builds it in four
+  layers: the colour's 'Borderless (Alt)' frame whole (its title bar,
+  pinline, bottom bar and fins; the grey Land Frame for colourless); the
+  same frame's title bar moved 1081 px down onto the type bar, replacing
+  it through CC's Type mask (`replace`: the layer stands instead of what is
+  under it, a premultiplied lerp by the mask); genericShowcase's neutral
+  text box (#9a9a9a α191 with its bevels and the shadow under the type bar)
+  re-tinted to the colour's title-bar tint (`retintStructure`, read at a
+  flat pixel the importer asserts), replacing the dark box through CC's
+  Rules mask; and the pinline through the pack's Pinline mask on top. `m`
+  is the three-and-more-colour land (gold bars, box and pinline); a
+  two-colour land prints grey bars with a split pinline and box, which are
+  4.6's pair masters (the same function with a letter pair). Some sets
+  (WOE, ACR, TDM, EOE, FIC) print a dark type bar over the tinted box: not
+  drawn, and no reference comes from them.
 - **See-through frames.** CC's colourless M15 frame, every devoid frame and
   the colourless creature token are see-through, like the printed cards. The
   profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);
@@ -147,7 +168,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
 Shipping them is 4.4: publish, delete the git copies, fix the profiles, bump
 the layout version once and sweep. 4.32 / 4.39 followed the same path: the
 new templates need no sweep (no card sits on them), and fullartland's
-re-source is its own template-scoped v30 sweep. A new template stays out of
+re-source is its own template-scoped v30 sweep. 4.34's borderless land is
+new too: no bump, no sweep, only its visual-regression cases added to the
+baseline. A new template stays out of
 the picker until the owner verifies each colour in `/admin/frame-compare`;
 an import never lands on one (the creator only offers it, once verified).
 The compare page's alignment score leaves out printed details a master
