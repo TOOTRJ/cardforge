@@ -10,7 +10,7 @@ import {
 import { leaseIsLive, type LeaseHolder } from "@/lib/cards/auto-rebake-state";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { describeFrame, eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
-import { frameMatchPct, isLowFrameScore } from "@/lib/cards/frame-signoff";
+import { frameMatchPct, isLowFrameScore, recordedOverall } from "@/lib/cards/frame-signoff";
 import {
   FRAME_ERA_VALUES,
   FRAME_TEMPLATE_VALUES,
@@ -87,12 +87,6 @@ export type FrameVerificationSummary = {
   templates: TemplateVerificationRow[];
 };
 
-function recordedScore(scoreJson: unknown): number | null {
-  if (!scoreJson || typeof scoreJson !== "object") return null;
-  const overall = (scoreJson as { overall?: unknown }).overall;
-  return typeof overall === "number" && Number.isFinite(overall) ? overall : null;
-}
-
 /**
  * Per-template verification counts, from the frame_reviews rows (keyed
  * "template/color", as getFrameReviews() returns them) and the saved layout
@@ -132,7 +126,7 @@ export function summariseFrameVerification(
         if (!state.verified) continue;
         verified += 1;
         if (state.stale) stale += 1;
-        const difference = recordedScore(review?.scoreJson);
+        const difference = recordedOverall(review?.scoreJson);
         if (difference == null) continue;
         worstDifference = worstDifference == null ? difference : Math.max(worstDifference, difference);
         if (isLowFrameScore(difference)) lowMatch += 1;
@@ -249,8 +243,11 @@ export type FrameDemandSummary = {
   window: FrameRequestWindow;
   /** Every logged request in the window (the admin page's badge). */
   requests: number;
-  /** Open signatures (families PipGlyph will never build left out), by
-   *  cause: frames to build and exact frames to verify. */
+  /** Distinct open frame SIGNATURES (families PipGlyph will never build
+   *  left out), by cause: frames to build and exact frames to verify. The
+   *  page's group headings count the same way ("N requests for M missing
+   *  frames") — a signature logged under two set codes is two rows but one
+   *  frame. */
   missing: number;
   unverified: number;
   /** The most-wanted open rows, in the page's order (users, requests, latest). */
@@ -265,11 +262,13 @@ export function summariseFrameDemand(
   limit: number = FRAME_DEMAND_TOP,
 ): FrameDemandSummary {
   const open = summary.rows.filter((row) => !row.forGood);
+  const frames = (cause: FrameRequestCause) =>
+    new Set(open.filter((row) => row.cause === cause).map((row) => row.signature)).size;
   return {
     window: summary.window,
     requests: summary.totalRequests,
-    missing: open.filter((row) => row.cause === "missing").length,
-    unverified: open.filter((row) => row.cause === "unverified").length,
+    missing: frames("missing"),
+    unverified: frames("unverified"),
     top: open.slice(0, Math.max(0, limit)).map((row) => ({
       signature: row.signature,
       label: row.label,

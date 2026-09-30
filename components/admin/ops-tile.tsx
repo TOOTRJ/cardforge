@@ -27,10 +27,10 @@ import { FRAME_ERA_LABELS, FRAME_ERA_VALUES } from "@/types/card";
 // ---------------------------------------------------------------------------
 // The admin dashboard tile (TODO 7.4) on /dashboard: frame verification, the
 // automatic re-bake and frame-request demand at a glance, each linking to its
-// admin page. Server component, no client JS: it prints counts only — no card
-// id, title or other row of render_sweep_state reaches the page. The data is
-// lib/admin/ops-summary-queries.ts (admin-gated); the numbers are the admin
-// pages' own (lib/admin/ops-summary.ts).
+// admin page. Server component, no client JS: it prints counts only — no
+// card id, title or poison error from render_sweep_state reaches the page.
+// The data is lib/admin/ops-summary-queries.ts (admin-gated); the numbers are
+// the admin pages' own (lib/admin/ops-summary.ts).
 // ---------------------------------------------------------------------------
 
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -148,7 +148,7 @@ function FramesSection({ frames }: { frames: FrameVerificationSummary }) {
               key={row.template}
               href={`/admin/frame-compare?template=${row.template}`}
               className="rounded-md border border-gold/40 bg-gold/5 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:border-gold"
-              title={`${row.stale} of ${row.combos} colours need re-verification`}
+              title={`${row.stale} of ${row.combos} colours ${row.stale === 1 ? "needs" : "need"} re-verification`}
             >
               {row.fullLabel} · {row.stale}
             </Link>

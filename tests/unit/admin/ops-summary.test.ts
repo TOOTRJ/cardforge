@@ -260,6 +260,27 @@ describe("summariseFrameDemand", () => {
     expect(s.top[1]).toEqual({ signature: "b", label: "Borderless B", setCode: "abc", cause: "unverified", users: 3, count: 3 });
   });
 
+  it("counts FRAMES the way the page's group headings do: one signature under two set codes is one frame", () => {
+    // The RPC groups by signature + set + cause, so a family printed in two
+    // sets comes back as two rows; /admin/frame-requests says "3 requests
+    // for 1 missing frame" (distinct signatures), and so must the tile.
+    const s = summariseFrameDemand(
+      summary([
+        row({ signature: "borderless/standard", label: "Borderless", setCode: "dmu", users: 2, count: 2 }),
+        row({ signature: "borderless/standard", label: "Borderless", setCode: "bro", users: 1, count: 1 }),
+        row({ signature: "extendedart", label: "Extended art", setCode: "woe", cause: "unverified", users: 1, count: 1 }),
+        row({ signature: "extendedart", label: "Extended art", setCode: "lci", cause: "unverified", users: 1, count: 1 }),
+      ]),
+    );
+    expect(s).toMatchObject({ requests: 5, missing: 1, unverified: 1 });
+    // The top list stays per row, as the page's table is.
+    expect(s.top.map((r) => `${r.signature}/${r.setCode}`)).toEqual([
+      "borderless/standard/dmu",
+      "borderless/standard/bro",
+      "extendedart/woe",
+    ]);
+  });
+
   it("is empty but honest about a read error", () => {
     expect(summariseFrameDemand(summary([], { error: "Couldn't read the request log." }))).toEqual({
       window: "30",
