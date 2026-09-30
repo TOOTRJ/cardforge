@@ -97,6 +97,30 @@ describe("frameKindGateError", () => {
     expect(frameKindGateError("m15fullartland", creature)).toMatch(/doesn't dress Creature cards/);
   });
 
+  it("refuses a planeswalker or battle on the IP showcases that print P/T only (TODO 4.5a)", () => {
+    expect(frameKindGateError("tarkirghostfire", walker)).toBe(
+      "The Tarkir: Dragonstorm Ghostfire frame doesn't dress Planeswalker cards — pick another frame.",
+    );
+    expect(frameKindGateError("bloomanime", walker)).toBe(
+      "The Bloomburrow Anime frame doesn't dress Planeswalker cards — pick another frame.",
+    );
+    for (const template of [
+      "lotr",
+      "lotrscroll",
+      "avatar",
+      "bloomburrow",
+      "bloomanime",
+      "tarkirdraconic",
+      "tarkirghostfire",
+      "tarkirdragon",
+    ]) {
+      expect(frameKindGateError(template, walker), template).toMatch(/doesn't dress Planeswalker cards/);
+      expect(frameKindGateError(template, battle), template).toMatch(/doesn't dress Battle cards/);
+      expect(frameKindGateError(template, creature), template).toBeNull();
+      expect(frameKindGateError(template, hallowedFountain), template).toBeNull();
+    }
+  });
+
   it("never refuses a border-era frame an off-kind legacy card sits on", () => {
     expect(frameKindGateError("m15", cardFieldsFace({ card_type: "artifact" }))).toBeNull();
     expect(frameKindGateError("m15", cardFieldsFace({ card_type: "token" }))).toBeNull();
@@ -148,6 +172,36 @@ describe("frameKindUpdateGateError", () => {
         next: walker,
       }),
     ).toBeNull();
+  });
+
+  it("keeps a walker saved on a showcase before TODO 4.5a editable, and refuses turning a showcase creature into one", () => {
+    // The legacy pin: the frame stays, the card stays savable.
+    expect(
+      frameKindUpdateGateError({
+        existingTemplate: "tarkirghostfire",
+        nextTemplate: undefined,
+        existing: walker,
+        next: { ...walker, title: "Nissa, renamed" },
+      }),
+    ).toBeNull();
+    // A creature on the Ring frame retyped as a planeswalker is refused.
+    expect(
+      frameKindUpdateGateError({
+        existingTemplate: "lotr",
+        nextTemplate: undefined,
+        existing: creature,
+        next: walker,
+      }),
+    ).toMatch(/Planeswalker cards/);
+    // Moving a walker onto one is refused.
+    expect(
+      frameKindUpdateGateError({
+        existingTemplate: "m15pw",
+        nextTemplate: "bloomanime",
+        existing: walker,
+        next: walker,
+      }),
+    ).toMatch(/Planeswalker cards/);
   });
 
   it("still refuses a move from one wrong frame to another", () => {

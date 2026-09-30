@@ -392,7 +392,11 @@ frame change](#shipping-a-frame-change)).
    `FRAME_TEMPLATE_LABELS` and `FRAME_TEMPLATE_SET` (exhaustive: the
    compiler names what is missing), and where the picker offers it:
    `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, a showcase set, or a kind's
-   `layoutTemplates` and restrictions in `lib/creator/card-kinds.ts`.
+   `layoutTemplates` and restrictions in `lib/creator/card-kinds.ts`. A
+   showcase whose profile has no `loyalty` + `loyaltyRows` or no `defense`
+   refuses planeswalkers or battles in `SHOWCASE_KIND_RESTRICTION` (a unit
+   test derives it from the profiles; TODO 4.5a). A walker body for a
+   treatment is a new template, never anatomy added to one that exists.
 4. **Write the profile**: one entry in `PROFILES`
    (`lib/cards/template-layout.ts`). Spread the closest verified profile,
    measure the bands on the master (a column scan: the transparent run is

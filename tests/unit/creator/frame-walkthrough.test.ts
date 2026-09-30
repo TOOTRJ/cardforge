@@ -161,6 +161,27 @@ describe("buildFrameWalkthrough", () => {
     expect(walk?.note).toMatch(/lookup of .* failed/);
   });
 
+  it("a reference whose kind the frame can't dress walks the frame's own kind with sample content (TODO 4.5a)", async () => {
+    // tarkirghostfire/c's only reference is Ugin #409, a planeswalker.
+    const reference = FRAME_REFERENCES.tarkirghostfire.c!;
+    expect(reference.name).toMatch(/^Ugin/);
+    state.payload = {
+      cardName: reference.name,
+      scryfallUri: "https://scryfall.com/card/x",
+      patch: { title: reference.name, kind: "planeswalker", frame_template: "m15pw", card_type: "planeswalker" },
+    };
+    const walk = await buildFrameWalkthrough({
+      template: "tarkirghostfire",
+      color: "c",
+      kind: "planeswalker",
+      seed: "reference",
+    });
+    expect(walk?.kind).toBe("creature");
+    expect(walk?.seed?.fromReference).toBe(false);
+    expect(walk?.seed?.patch).toMatchObject({ kind: "creature", frame_template: "tarkirghostfire" });
+    expect(walk?.note).toMatch(/Ugin, Eye of the Storms is a planeswalker, which this frame doesn't dress/);
+  });
+
   it("seed=sample never looks anything up", async () => {
     const walk = await buildFrameWalkthrough({ template: "saga", color: "w", seed: "sample" });
     expect(state.lookups).toHaveLength(0);

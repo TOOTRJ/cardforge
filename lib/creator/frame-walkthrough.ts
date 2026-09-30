@@ -11,6 +11,7 @@ import {
   parseWalkthroughSeed,
   walkthroughKind,
 } from "@/lib/creator/frame-preview";
+import { KIND_DEFS, templateSupportsKind } from "@/lib/creator/card-kinds";
 import {
   SAMPLE_SEED_NAME,
   sampleWalkthroughPatch,
@@ -95,6 +96,16 @@ export async function buildFrameWalkthrough(
   const payload = await buildFrameComparePayload(reference.scryfallId, template);
   if (!payload) {
     return sample(`the lookup of ${reference.name} failed (reload to retry)`);
+  }
+  // A reference the frame prints but can't dress in the creator (the
+  // Ghostfire frame's Ugin #409, its only colourless printing: a walker, and
+  // the showcases draw no loyalty since TODO 4.5a) would walk a card the
+  // save refuses — walk the frame's own kind with sample content instead.
+  const referenceKind = payload.patch.kind;
+  if (referenceKind && !templateSupportsKind(template, referenceKind)) {
+    return sample(
+      `${payload.cardName} is a ${KIND_DEFS[referenceKind].label.toLowerCase()}, which this frame doesn't dress`,
+    );
   }
   const seed: WalkthroughSeed = {
     // Pinned to the frame under test: the import handler then lands on it
