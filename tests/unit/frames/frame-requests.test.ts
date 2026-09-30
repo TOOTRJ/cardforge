@@ -162,7 +162,10 @@ describe("frameRequestFromImport", () => {
         verifiedKeys: new Set(),
       });
       expect(row, key).not.toBeNull();
-      expect(row!.cause, key).toBe(patch.frame_match.status === "exact" ? "unverified" : "missing");
+      // Exact once its frame is verified: the exact ones, and an M20+ token
+      // whose full-art template would be exact (TODO 4.48, onceVerifiedMatch).
+      const wouldBeExact = patch.frame_match.status === "exact" || patch.frame_match.onceVerifiedMatch?.status === "exact";
+      expect(row!.cause, key).toBe(wouldBeExact ? "unverified" : "missing");
       if (row!.cause === "unverified") unverified += 1;
       expect(frameRequestSchema.safeParse(row).success, key).toBe(true);
     }

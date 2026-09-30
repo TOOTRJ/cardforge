@@ -26,8 +26,13 @@ import {
   type SelectionImageSize,
   type SelectionPdfLayout,
 } from "@/lib/cards/print-selection";
-import { planSheet, type SheetCardSize, type SheetGap, type SheetMarks } from "@/lib/render/sheet-layout";
-import { cn } from "@/lib/utils";
+import { planSheet } from "@/lib/render/sheet-layout";
+import {
+  perSheetLabel,
+  PrintBleedCheckbox,
+  PrintField as Field,
+  SheetOptionsFields,
+} from "@/components/cards/print-sheet-options";
 
 // ---------------------------------------------------------------------------
 // PrintSelectionDialog — "Print / download selected" (TODO 6.15): the cards
@@ -41,7 +46,9 @@ import { cn } from "@/lib/utils";
 //               (TODO 6.1a — each card becomes its print render with the
 //               bleed, and the grid makes room for it).
 //   ZIP       — one clean image per card (HD or standard; HD may carry the
-//               bleed), square like every print file.
+//               bleed), square like every print file — or MakePlayingCards'
+//               poker-size file (TODO 6.1: MPC's own bleed, 1644 × 2244,
+//               a Battle or Split turned portrait; never the 1/8″ on top).
 //
 // Pro, like the deck export (the caller opens the upgrade modal instead of
 // this dialog for anyone else; POST /api/cards/export checks it again). The
@@ -71,24 +78,10 @@ const LAYOUT_OPTIONS: ChipOption<SelectionPdfLayout>[] = [
   { value: "pages", label: "One per page" },
 ];
 
-const GAP_OPTIONS: ChipOption<SheetGap>[] = [
-  { value: "none", label: "No gap" },
-  { value: "sixteenth", label: "1/16″ gap" },
-];
-
-const MARK_OPTIONS: ChipOption<SheetMarks>[] = [
-  { value: "corners", label: "Corner marks" },
-  { value: "lines", label: "Full-length lines" },
-];
-
-const SIZE_OPTIONS: ChipOption<SheetCardSize>[] = [
-  { value: "in", label: "2.5 × 3.5 in" },
-  { value: "mm", label: "63 × 88 mm" },
-];
-
 const QUALITY_OPTIONS: ChipOption<SelectionImageSize>[] = [
   { value: "hd", label: "HD · 1500 × 2100" },
   { value: "default", label: "Standard · 750 × 1050" },
+  { value: "mpc", label: "MakePlayingCards · 1644 × 2244" },
 ];
 
 export function PrintSelectionDialog({ open, onOpenChange, cards, onStarted }: PrintSelectionDialogProps) {
@@ -126,8 +119,10 @@ function PrintSelectionBody({
   const included = useMemo(() => cards.slice(0, MAX_SELECTION_CARDS), [cards]);
   const isPdf = settings.kind === "pdf";
   const isSheets = isPdf && settings.layout !== "pages";
-  // A bleed ZIP is the 600 ppi print render — HD only.
+  // A bleed ZIP is the 600 ppi print render — HD only (an MPC image carries
+  // MPC's own bleed).
   const bleed = settings.bleed && (isPdf || settings.quality === "hd");
+  const mpc = !isPdf && settings.quality === "mpc";
 
   // What the export will actually ask for — the server budgets the same way.
   const budgeted = useMemo(
@@ -204,29 +199,7 @@ function PrintSelectionBody({
                 onChange={(layout) => patch({ layout })}
               />
             </Field>
-            {isSheets ? (
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Spacing">
-                  <ChipGroup ariaLabel="Spacing" options={GAP_OPTIONS} value={settings.gap} onChange={(gap) => patch({ gap })} />
-                </Field>
-                <Field label="Cut guides">
-                  <ChipGroup
-                    ariaLabel="Cut guides"
-                    options={MARK_OPTIONS}
-                    value={settings.marks}
-                    onChange={(marks) => patch({ marks })}
-                  />
-                </Field>
-                <Field label="Card size">
-                  <ChipGroup
-                    ariaLabel="Card size"
-                    options={SIZE_OPTIONS}
-                    value={settings.cardSize}
-                    onChange={(cardSize) => patch({ cardSize })}
-                  />
-                </Field>
-              </div>
-            ) : null}
+            {isSheets ? <SheetOptionsFields value={settings} onChange={patch} /> : null}
           </>
         ) : (
           <Field label="Image size">
@@ -236,36 +209,32 @@ function PrintSelectionBody({
               value={settings.quality}
               onChange={(quality) => patch({ quality })}
             />
+            {mpc ? (
+              <p className="text-xs leading-5 text-subtle" data-testid="print-selection-mpc">
+                MakePlayingCards&apos; poker-size upload: 822 × 1122 at 300 dpi, here at 600 — the card plus
+                MPC&apos;s bleed, square corners. A Battle or Split is turned onto MPC&apos;s portrait card, its title up the left edge.
+              </p>
+            ) : null}
           </Field>
         )}
 
-        <label
-          className={cn(
-            "flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5",
-            !isPdf && settings.quality !== "hd" && "cursor-not-allowed opacity-60",
-          )}
-        >
-          <input
-            type="checkbox"
-            checked={bleed}
-            disabled={!isPdf && settings.quality !== "hd"}
-            onChange={(event) => patch({ bleed: event.target.checked })}
-            className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
-            data-testid="print-selection-bleed"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="font-medium">Add a 1/8″ bleed</span>
-            <span className="text-xs leading-5 text-muted">
-              {!isPdf
-                ? settings.quality === "hd"
-                  ? "1650 × 2250 print files: the card runs 1/8″ past its trim on every side."
+        <PrintBleedCheckbox
+          checked={bleed}
+          disabled={!isPdf && settings.quality !== "hd"}
+          onChange={(next) => patch({ bleed: next })}
+          testId="print-selection-bleed"
+          hint={
+            !isPdf
+              ? settings.quality === "hd"
+                ? "1650 × 2250 print files: the card runs 1/8″ past its trim on every side."
+                : mpc
+                  ? "MakePlayingCards files carry MPC's own bleed."
                   : "The bleed comes with the HD images only."
-                : isSheets
-                  ? "Each card runs 1/8″ past its trim; the guides mark the trim. Fewer cards fit on a sheet."
-                  : "Each page is the card with its bleed, crop marks on the trim."}
-            </span>
-          </span>
-        </label>
+              : isSheets
+                ? "Each card runs 1/8″ past its trim; the guides mark the trim. Fewer cards fit on a sheet."
+                : "Each page is the card with its bleed, crop marks on the trim."
+          }
+        />
 
         {isSheets ? (
           <Field label="Copies">
@@ -291,7 +260,7 @@ function PrintSelectionBody({
 
         <p className="text-xs leading-5 text-muted" data-testid="print-selection-summary">
           {plan
-            ? `${plan.perPage} per sheet${plan.orientation === "landscape" ? " (landscape page)" : ""} · ${physical} card${physical === 1 ? "" : "s"} on ${sheets} sheet${sheets === 1 ? "" : "s"}. Guides print in the margins and gaps, never on a card.`
+            ? `${perSheetLabel(plan)} · ${physical} card${physical === 1 ? "" : "s"} on ${sheets} sheet${sheets === 1 ? "" : "s"}. Guides print in the margins and gaps, never on a card.`
             : isPdf
               ? `${included.length} page${included.length === 1 ? "" : "s"}, one card each${bleed ? " with its bleed" : ""}.`
               : `${included.length} image${included.length === 1 ? "" : "s"} · ≈ ${zipEstimate}.`}
@@ -308,15 +277,6 @@ function PrintSelectionBody({
         </Button>
       </DialogFooter>
     </>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">{label}</span>
-      {children}
-    </div>
   );
 }
 

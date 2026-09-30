@@ -80,6 +80,14 @@ describe("the remembered settings", () => {
     });
   });
 
+  it("keeps MakePlayingCards as a ZIP image size (TODO 6.1)", () => {
+    expect(parsePrintSelectionSettings({ kind: "zip", quality: "mpc" })).toEqual({
+      ...DEFAULT_PRINT_SELECTION_SETTINGS,
+      kind: "zip",
+      quality: "mpc",
+    });
+  });
+
   it("round-trips through localStorage", () => {
     const store = new Map<string, string>();
     vi.stubGlobal("localStorage", {
@@ -118,6 +126,10 @@ describe("selectionExportFilename", () => {
     [twelve, { kind: "pdf", layout: "pages", bleed: false }, "pipglyph-12-cards.pdf"],
     [twelve, { kind: "zip", layout: "sheet-letter", bleed: true }, "pipglyph-12-cards-bleed.zip"],
     [one, { kind: "zip", layout: "pages", bleed: false }, "stone-matriarch.zip"],
+    [twelve, { kind: "zip", layout: "pages", bleed: false, quality: "mpc" }, "pipglyph-12-cards-mpc.zip"],
+    [one, { kind: "zip", layout: "pages", bleed: false, quality: "mpc" }, "stone-matriarch-mpc.zip"],
+    // A PDF is never MPC's (MPC takes images).
+    [one, { kind: "pdf", layout: "pages", bleed: false, quality: "mpc" }, "stone-matriarch.pdf"],
   ] as const)("%j %j → %s", (cards, opts, name) => {
     expect(selectionExportFilename(cards, opts)).toBe(name);
   });

@@ -25,18 +25,41 @@ import {
 } from "@/components/ui/dialog";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useDeckExport } from "@/components/decks/deck-export-provider";
+import {
+  perSheetLabel,
+  PrintBleedCheckbox,
+  SheetOptionsFields,
+} from "@/components/cards/print-sheet-options";
 import { APPROX_BYTES_PER_CARD, formatBytes, type DeckExportQuality } from "@/lib/decks/export-client";
+import {
+  DEFAULT_PRINT_SELECTION_SETTINGS,
+  loadPrintSelectionSettings,
+  savePrintSelectionSettings,
+  type PrintSelectionSettings,
+} from "@/lib/cards/print-selection";
 import type { DeckPdfLayout } from "@/lib/render/card-pdf";
+import { planSheet } from "@/lib/render/sheet-layout";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // DeckExportMenu — the deck owner's export hub (Pro). Two builds, both run
 // in the background by DeckExportProvider with a progress card:
-//   Deck ZIP   — clean card images (HD or standard), cover, deck.pdf report
-//                (stats, decklist, AI guide + combos), decklist.txt
-//   Print PDF  — one card per page, or 3×3 proxy sheets (Letter / A4) with
-//                crop marks; real cards land on a checklist page
-// plus the free copy-as-text buttons. A free/Plus owner never sees this
+//   Deck ZIP   — clean card images (HD, standard, or MakePlayingCards' poker-
+//                size files — TODO 6.1, MPC's bleed, always portrait), cover,
+//                deck.pdf report (stats, decklist, AI guide + combos),
+//                decklist.txt
+//   Print PDF  — one card per page, or proxy sheets (Letter / A4) with the
+//                print options of My Cards' selection export (TODO 6.15,
+//                components/cards/print-sheet-options.tsx): spacing, cut
+//                guides, card size, and the 1/8″ bleed (pages or sheets —
+//                a bleed sheet makes room: Letter prints landscape); real
+//                cards land on a checklist page
+// Every PDF card and HD image is the card's 600 ppi print render, the art
+// at full resolution (lib/decks/export-client.ts exportCardHref). The
+// options start from the ones this browser used last — shared with the
+// selection export and the download modal (lib/cards/print-selection.ts) —
+// and are saved when a build starts.
+// Plus the free copy-as-text buttons. A free/Plus owner never sees this
 // dialog: the Export button opens the upgrade modal straight away (owner
 // decision 2026-09-15).
 // ---------------------------------------------------------------------------
@@ -56,16 +79,36 @@ type DeckExportMenuProps = {
   hasCover: boolean;
 };
 
-const QUALITY_OPTIONS: Array<{ value: DeckExportQuality; label: string; detail: string }> = [
+const QUALITY_OPTIONS: Array<{ value: DeckExportQuality; label: string; detail: string; wide?: boolean }> = [
   { value: "hd", label: "HD", detail: "1500 × 2100 · print quality" },
   { value: "default", label: "Standard", detail: "750 × 1050 · sharing & screens" },
+  {
+    value: "mpc",
+    label: "MakePlayingCards",
+    detail: "1644 × 2244 · MPC's poker-size upload, bleed included",
+    wide: true,
+  },
 ];
 
-const LAYOUT_OPTIONS: Array<{ value: DeckPdfLayout; label: string; detail: string }> = [
-  { value: "pages", label: "One per page", detail: "2.5 × 3.5 in, one card each" },
-  { value: "sheet-letter", label: "3×3 sheets · Letter", detail: "9 up with crop marks" },
-  { value: "sheet-a4", label: "3×3 sheets · A4", detail: "9 up with crop marks" },
+const LAYOUT_OPTIONS: Array<{ value: DeckPdfLayout; label: string }> = [
+  { value: "pages", label: "One per page" },
+  { value: "sheet-letter", label: "Sheets · Letter" },
+  { value: "sheet-a4", label: "Sheets · A4" },
 ];
+
+/** A layout tile's second line, for the options as set: "2.5 × 3.5 in, one
+ *  card each", "9 per sheet with corner marks", "6 per sheet (landscape
+ *  page) with full-length lines". */
+function layoutDetail(layout: DeckPdfLayout, settings: PrintSelectionSettings): string {
+  if (layout === "pages") return settings.bleed ? "One card each, with its bleed" : "2.5 × 3.5 in, one card each";
+  const plan = planSheet(layout === "sheet-a4" ? "a4" : "letter", {
+    gap: settings.gap,
+    marks: settings.marks,
+    cardSize: settings.cardSize,
+    bleed: settings.bleed,
+  });
+  return `${perSheetLabel(plan)} with ${settings.marks === "lines" ? "full-length lines" : "corner marks"}`;
+}
 
 export function DeckExportMenu({
   deckId,
@@ -78,10 +121,16 @@ export function DeckExportMenu({
   hasCover,
 }: DeckExportMenuProps) {
   const [open, setOpen] = useState(false);
-  const [quality, setQuality] = useState<DeckExportQuality>("hd");
-  const [layout, setLayout] = useState<DeckPdfLayout>("pages");
+  // The print options this browser used last (loaded as the dialog opens).
+  const [settings, setSettings] = useState<PrintSelectionSettings>(DEFAULT_PRINT_SELECTION_SETTINGS);
+  const patch = (next: Partial<PrintSelectionSettings>) => setSettings((prev) => ({ ...prev, ...next }));
+  const { quality, layout } = settings;
   const upgrade = useUpgradeModal();
   const exporter = useDeckExport();
+  const onOpenChange = (next: boolean) => {
+    if (next) setSettings(loadPrintSelectionSettings());
+    setOpen(next);
+  };
 
   const copyText = async (label: string, text: string) => {
     try {
@@ -102,7 +151,16 @@ export function DeckExportMenu({
   }
 
   const startExport = (kind: "zip" | "pdf") => {
-    exporter.start({ deckId, kind, quality, layout });
+    savePrintSelectionSettings({ ...settings, kind });
+    exporter.start({
+      deckId,
+      kind,
+      quality,
+      layout,
+      sheet: { gap: settings.gap, marks: settings.marks, cardSize: settings.cardSize },
+      // The bleed is a PDF option; the ZIP's images are the plain print files.
+      bleed: kind === "pdf" && settings.bleed,
+    });
     setOpen(false);
   };
 
@@ -111,7 +169,7 @@ export function DeckExportMenu({
   const busy = exporter.busy;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
@@ -167,9 +225,10 @@ export function DeckExportMenu({
                     key={option.value}
                     name="export-quality"
                     checked={quality === option.value}
-                    onChange={() => setQuality(option.value)}
+                    onChange={() => patch({ quality: option.value })}
                     label={option.label}
                     detail={option.detail}
+                    className={option.wide ? "col-span-2" : undefined}
                   />
                 ))}
               </div>
@@ -192,7 +251,7 @@ export function DeckExportMenu({
               <div className="flex flex-col gap-0.5">
                 <h3 className="text-base font-semibold text-foreground">Print proxies · PDF</h3>
                 <p className="text-xs leading-5 text-muted">
-                  Your custom cards at true 2.5 × 3.5 in. Sheets repeat each card by its deck quantity.
+                  Your custom cards at true card size. Sheets repeat each card by its deck quantity.
                 </p>
               </div>
             </header>
@@ -204,13 +263,26 @@ export function DeckExportMenu({
                     key={option.value}
                     name="export-layout"
                     checked={layout === option.value}
-                    onChange={() => setLayout(option.value)}
+                    onChange={() => patch({ layout: option.value })}
                     label={option.label}
-                    detail={option.detail}
+                    detail={layoutDetail(option.value, settings)}
                   />
                 ))}
               </div>
             </fieldset>
+            {layout !== "pages" ? (
+              <SheetOptionsFields value={settings} onChange={patch} className="gap-3 sm:grid-cols-1" />
+            ) : null}
+            <PrintBleedCheckbox
+              checked={settings.bleed}
+              onChange={(next) => patch({ bleed: next })}
+              testId="deck-export-bleed"
+              hint={
+                layout === "pages"
+                  ? "Each page is the card with its bleed, crop marks on the trim."
+                  : "Each card runs 1/8″ past its trim; the guides mark the trim. Fewer cards fit on a sheet."
+              }
+            />
             {realCardCount > 0 ? (
               <p className="text-xs leading-5 text-subtle">
                 {realCardCount} real card{realCardCount === 1 ? "" : "s"} without a custom proxy go on a checklist page instead of printing.
@@ -259,12 +331,14 @@ function ChoiceTile({
   onChange,
   label,
   detail,
+  className,
 }: {
   name: string;
   checked: boolean;
   onChange: () => void;
   label: string;
   detail: string;
+  className?: string;
 }) {
   return (
     <label
@@ -273,6 +347,7 @@ function ChoiceTile({
         checked
           ? "border-primary-bright/60 bg-primary/10"
           : "border-border/60 bg-surface/40 hover:border-border hover:bg-elevated/60",
+        className,
       )}
     >
       <input type="radio" name={name} className="sr-only" checked={checked} onChange={onChange} />

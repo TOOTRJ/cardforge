@@ -71,7 +71,9 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
       );
       return;
     }
-    expect(match.template, `${row.combo} ${match.signature} ${match.reason ?? ""}`).toBe(row.template);
+    // A full-art token (TODO 4.48) resolves to its own template through
+    // `onceVerified`: the 2014–19 arch stands in until it is verified.
+    expect(match.onceVerified ?? match.template, `${row.combo} ${match.signature} ${match.reason ?? ""}`).toBe(row.template);
     expect(match.status).not.toBe("unsupported");
   });
 
@@ -147,7 +149,7 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     const treasure = card("720f3e68-84c0-462e-a0d1-90236ccc494a");
     expect(treasure.name).toBe("Treasure");
     expect(validateReferenceForCombo(treasure, "m15token", "c").warnings.join(" ")).toMatch(
-      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token\./,
+      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token \(2014–2019\)\./,
     );
     expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });

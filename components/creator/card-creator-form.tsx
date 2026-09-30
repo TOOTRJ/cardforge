@@ -190,6 +190,15 @@ import {
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
 import {
+  defaultTokenFrameIn,
+  followTokenHeight,
+  isArchTokenFrame,
+  newTokenFrame,
+  sameTokenFrameText,
+  tokenFrameText,
+} from "@/lib/creator/token-frame-auto";
+import { isM20ArtifactTokenTemplate, m20TokenHeightOf, m20TokenTemplate } from "@/lib/cards/token-height";
+import {
   blankSecondFaceFor,
   defaultValuesFor,
   isBlankBackFace,
@@ -899,50 +908,108 @@ export function CardCreatorForm({
     setValue,
     verifiedFrameKeys,
   ]);
-  // The text box follows the text (TODO 4.49 (b), owner decision 5): on the
-  // token kind the 2014–19 arch wears its text-box variation while the card
-  // has rules or flavour text and the textless one while it has none. Real
-  // edits only (isDirty) — and while revising too: the text is not locked
-  // there, and a saved token given its first flavour line belongs in the box
-  // as much as a new one. Entering the token kind (never while revising: the
-  // type is locked) picks the one the text wants; after that the frame
-  // follows only while it is the one the text picked (followTokenTextBox): a
-  // variation picked by hand in the setup panel's Variations — or a stored
-  // card whose frame disagrees with its text — sticks. A Frame-section pick
-  // of the arch goes back to automatic. An import or an AI fill that names
-  // its frame decides it itself (settleTokenTextFollow). Never an unverified
-  // combo: the card keeps its frame and says so. Nor an admin's saved frame
-  // preview (TODO 2.3): it previews its frame, so an edit of its text never
-  // moves it to another combo — the walk-through's rule, and migration
-  // 0129's (it leaves frame previews where they are).
-  const tokenTextPresent = hasRulesBoxText({
-    rulesText: watched.rules_text,
-    flavorText: watched.flavor_text,
-  });
+  // The token's frame follows its text (TODO 4.49 (b) and 4.48, owner
+  // decisions 2026-09-29). On the 2014–19 arch the text box comes and goes
+  // with the rules or flavour text; on the full-art design the height (no
+  // box, the regular box, the tall box) follows the text as it grows or
+  // shrinks (lib/creator/token-frame-auto.ts followTokenHeight). Real edits
+  // only (isDirty) — and while revising too: the text is not locked there,
+  // and a saved token given its first flavour line belongs in the box as
+  // much as a new one. Entering the token kind (never while revising: the
+  // type is locked) is where a NEW token starts: on the M15 era's standard,
+  // the full-art template its text asks for once that template is verified
+  // in the card's colour (the default switch, newTokenFrame), else the arch
+  // round 11 picks; on any other era's token frame, the text box it wants.
+  // After that the frame follows only while it is the one the text picked
+  // before the edit (followTokenTextBox / followTokenHeight): a variation
+  // picked by hand in the setup panel's Variations — or a stored card whose
+  // frame disagrees with its text — sticks. A Frame-section pick goes back
+  // to automatic. The Artifact word's dress is the type-word effect's
+  // (above); this one moves only the box and the height. An import or an AI
+  // fill that names its frame decides it itself (settleTokenTextFollow).
+  // Never an unverified combo: the card keeps its frame and says so. Nor an
+  // admin's saved frame preview (TODO 2.3): it previews its frame, so an
+  // edit of its text never moves it to another combo — the walk-through's
+  // rule, and migration 0129's (it leaves frame previews where they are).
+  const tokenText = useMemo(
+    () =>
+      tokenFrameText({
+        cardType: watched.card_type || null,
+        supertype: watched.supertype,
+        subtypes: parseSubtypes(watched.subtypes_text),
+        rulesText: watched.rules_text,
+        flavorText: watched.flavor_text,
+        power: watched.power,
+        toughness: watched.toughness,
+      }),
+    [
+      watched.card_type,
+      watched.supertype,
+      watched.subtypes_text,
+      watched.rules_text,
+      watched.flavor_text,
+      watched.power,
+      watched.toughness,
+    ],
+  );
   const tokenFramePinned = isEdit && card?.frame_preview === true;
-  const lastTokenTextRef = useRef({ kind, text: tokenTextPresent });
+  const lastTokenTextRef = useRef({ kind, text: tokenText });
   const manualTokenFrameRef = useRef(false);
+  // The default switch's pick (owner decision 1, 2026-09-29): a NEW token
+  // entered on the arch wears newTokenFrame's frame — and keeps wearing the
+  // switch's pick in whatever colour is chosen next, since the Card step
+  // asks the colour last and a new card starts colourless:
+  // handleColorIdentityChange moves it (defaultTokenFrameIn) and the colour
+  // tiles offer every colour that pick is verified in. A frame the user, an
+  // import or an AI fill picks ends it, as does leaving the token kind. The
+  // ref serves the handlers (a frame pick that switches the colour runs
+  // both in one event), the state the tiles.
+  const tokenDefaultFrameRef = useRef(false);
+  const [tokenDefaultFrame, setTokenDefaultFrameState] = useState(false);
+  const setTokenDefaultFrame = (on: boolean) => {
+    tokenDefaultFrameRef.current = on;
+    setTokenDefaultFrameState(on);
+  };
+  const verifiedFrameSet = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   useEffect(() => {
     const prev = lastTokenTextRef.current;
-    if (prev.kind === kind && prev.text === tokenTextPresent) return;
-    lastTokenTextRef.current = { kind, text: tokenTextPresent };
+    if (prev.kind === kind && sameTokenFrameText(prev.text, tokenText)) return;
+    lastTokenTextRef.current = { kind, text: tokenText };
     if (!isDirty || kind !== "token" || tokenFramePinned) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    const verified = new Set(verifiedFrameKeys);
+    const hasText = hasRulesBoxText(tokenText);
     let next: FrameTemplate | null;
     if (prev.kind !== "token") {
       manualTokenFrameRef.current = false;
-      next = textBoxFrameFor(kind, current, tokenTextPresent);
-    } else {
+      next = isArchTokenFrame(current)
+        ? newTokenFrame(tokenText, colorKey, verified)
+        : textBoxFrameFor(kind, current, hasText);
+    } else if (m20TokenHeightOf(current)) {
+      const target = followTokenHeight({
+        ...tokenText,
+        template: current,
+        previous: prev.text,
+        heightPinned: manualTokenFrameRef.current,
+      });
+      // Only the height moves here, in the dress the card wears: the
+      // Artifact word's dress is the type-word effect's (it has already
+      // run, and says so when it can't).
+      const height = m20TokenHeightOf(target);
+      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current)) : null;
+    } else if (hasRulesBoxText(prev.text) !== hasText) {
       next = followTokenTextBox({
         kind,
         template: current,
-        hasText: tokenTextPresent,
+        hasText,
         manual: manualTokenFrameRef.current,
       });
+    } else {
+      next = null;
     }
     if (!next || next === current) return;
-    const colorKey = pickFrameColorKey(getValues("color_identity"));
-    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) {
+    if (!isFrameComboAvailable(next, colorKey, verified)) {
       toast.info(
         `${describeFrame(next)} isn't verified in ${colorWord(colorKey)} yet — keeping ${describeFrame(current)}.`,
       );
@@ -951,7 +1018,7 @@ export function CardCreatorForm({
     setValue("frame_style.template", next, { shouldDirty: true });
   }, [
     kind,
-    tokenTextPresent,
+    tokenText,
     isDirty,
     tokenFramePinned,
     getValues,
@@ -964,12 +1031,18 @@ export function CardCreatorForm({
   const settleTokenTextFollow = ({ manual = false }: { manual?: boolean } = {}) => {
     lastTokenTextRef.current = {
       kind: kindFromCard(getValues("card_type"), getValues("frame_style.template")),
-      text: hasRulesBoxText({
+      text: tokenFrameText({
+        cardType: getValues("card_type") || null,
+        supertype: getValues("supertype"),
+        subtypes: parseSubtypes(getValues("subtypes_text")),
         rulesText: getValues("rules_text"),
         flavorText: getValues("flavor_text"),
+        power: getValues("power"),
+        toughness: getValues("toughness"),
       }),
     };
     manualTokenFrameRef.current = manual;
+    setTokenDefaultFrame(false);
   };
 
   // Name follows the subtypes: a printed token is named after them
@@ -1285,6 +1358,11 @@ export function CardCreatorForm({
       });
       setValue("rarity", "common", { shouldDirty: true });
     }
+    // A NEW token entered on the arch is the default switch's (the text
+    // follow's effect puts it on newTokenFrame's pick); leaving the token
+    // kind ends it.
+    if (nextKind !== "token") setTokenDefaultFrame(false);
+    else if (prevKind !== "token") setTokenDefaultFrame(!isRevise && isArchTokenFrame(template));
   };
   const handleKindSelect = (next: CardKind) => {
     if (next === kind) return;
@@ -1304,6 +1382,22 @@ export function CardCreatorForm({
    *  basic, so the seed clears for the user to name their dual). Inert the
    *  moment the user renames the card. */
   const handleColorIdentityChange = (next: ColorIdentity[]) => {
+    // A new token still on the default switch's pick follows the colour
+    // (owner decision 1): onto the full-art design where it is verified in
+    // that colour, back to the arch where it isn't.
+    if (tokenDefaultFrameRef.current && kind === "token") {
+      const colorKey = pickFrameColorKey(next);
+      const current = normalizeFrameTemplate(getValues("frame_style.template"));
+      const target = defaultTokenFrameIn(tokenText, current, colorKey, verifiedFrameSet);
+      if (target && target !== current) {
+        setValue("frame_style.template", target, { shouldDirty: true });
+        if (m20TokenHeightOf(current) && !m20TokenHeightOf(target)) {
+          toast.info(
+            `${describeFrame(current)} isn't verified in ${colorWord(colorKey)} yet — using ${describeFrame(target)}.`,
+          );
+        }
+      }
+    }
     if (watched.card_type !== "land") return;
     const identity = {
       title: getValues("title") ?? "",
@@ -2886,9 +2980,18 @@ export function CardCreatorForm({
                   // A variation picked by hand sticks (owner decision 5); a
                   // frame picked in the Frame section follows the text again.
                   manualTokenFrameRef.current = variation;
+                  // Either is the user's frame, no longer the default
+                  // switch's: a colour picked after it never moves it.
+                  setTokenDefaultFrame(false);
                 }}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
+                colorFrameFor={
+                  tokenDefaultFrame && kind === "token"
+                    ? (colorKey) =>
+                        defaultTokenFrameIn(tokenText, normalizeFrameTemplate(currentTemplate), colorKey, verifiedFrameSet)
+                    : undefined
+                }
                 landMode={
                   watched.card_type === "land"
                     ? landBasicKey

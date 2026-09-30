@@ -29,10 +29,20 @@ import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 describe("opt-in profile fields", () => {
   const FULL_ART_BASICS = ["m15fullartland", "fullartland"];
 
-  it("are set only by the full-art basics", () => {
+  // 3.24's `textless` has one user: the full-art token's textless height
+  // (TODO 4.48), which keeps its type line (`textlessTypeLine`).
+  const TEXTLESS_TOKENS = ["m20token", "m20tokenartifact"];
+
+  it("are set only by the full-art basics (and `textless` by the full-art token's textless height)", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
-      expect(p.textless, template).toBeUndefined();
+      if (TEXTLESS_TOKENS.includes(template)) {
+        expect(p.textless, template).toBe(true);
+        expect(p.textlessTypeLine, template).toBe(true);
+      } else {
+        expect(p.textless, template).toBeUndefined();
+        expect(p.textlessTypeLine, template).toBeUndefined();
+      }
       expect(p.type.split, template).toBeUndefined();
       if (FULL_ART_BASICS.includes(template)) continue;
       expect(p.basicSymbol, template).toBeUndefined();

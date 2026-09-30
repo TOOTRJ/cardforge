@@ -61,13 +61,33 @@ describe("frame reference registry", () => {
       "m15tokenartifacttext/r",
       "m15tokenartifacttext/g",
       "m15tokenartifacttext/m",
+      // 4.48 / 4.50's full-art tokens (Scryfall 2026-09-29, heights measured
+      // on the prints): no red, colourless or three-colour tall token
+      // outside a legend; no black (bar T40K's own layout), green or gold
+      // textless artifact token; no green or gold text-box one; only
+      // colourless tall artifact tokens (Map, MKM's Clues).
+      "m20tokentall/r",
+      "m20tokentall/c",
+      "m20tokentall/m",
+      "m20tokenartifact/b",
+      "m20tokenartifact/g",
+      "m20tokenartifact/m",
+      "m20tokenartifacttext/g",
+      "m20tokenartifacttext/m",
+      "m20tokenartifacttall/w",
+      "m20tokenartifacttall/u",
+      "m20tokenartifacttall/b",
+      "m20tokenartifacttall/r",
+      "m20tokenartifacttall/g",
+      "m20tokenartifacttall/m",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
     );
     // + the borderless skins of 4.32 (their set, Borderless, is M15-era)
-    // + 4.49 (b)'s two text-box tokens + 4.34's borderless land.
-    expect(m15Templates.length).toBe(20);
+    // + 4.49 (b)'s two text-box tokens + 4.34's borderless land + 4.48 /
+    // 4.50's six full-art tokens.
+    expect(m15Templates.length).toBe(26);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

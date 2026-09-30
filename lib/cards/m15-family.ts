@@ -19,7 +19,7 @@ import type { FrameTemplate } from "@/types/card";
 // copy in lib/cards/layout-version.ts (a test keeps the two equal at v32):
 // a template that joins the family later brings its own bump — or, a NEW
 // template no card was ever baked on (4.49 (b)'s text-box tokens, 4.34's
-// borderless land), none.
+// borderless land, 4.48's full-art tokens), none.
 // ---------------------------------------------------------------------------
 
 export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
@@ -42,6 +42,16 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The borderless land (TODO 4.34): a new template, no stored card — it
   // joined without a bump too.
   "m15borderlessland",
+  // The full-art tokens (TODO 4.48 / 4.50): new templates with no stored
+  // card — CC's name and type sizes are the family's (0.0381 H =
+  // TITLE_SIZE_PCT, 0.0324 H = TYPE_SIZE_PCT) — so they joined without a
+  // bump too.
+  "m20token",
+  "m20tokentext",
+  "m20tokentall",
+  "m20tokenartifact",
+  "m20tokenartifacttext",
+  "m20tokenartifacttall",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

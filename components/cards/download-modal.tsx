@@ -14,18 +14,29 @@
 //                  the border's colour, for printing. Both ask the png route
 //                  by name (corners=…). A JPEG has no transparency, so it is
 //                  always Square (format=jpeg; the switch shows it).
-//                  PAID viewers also pick the print options (TODO 6.1a/6.1b,
-//                  lib/cards/print-export.ts): Resolution 600 ppi (1500 ×
-//                  2100) or 800 ppi (2000 × 2800), and a 1/8″ bleed
-//                  checkbox. Either one is a PRINT render: square, PNG only
-//                  (the JPEG chip and Rounded are disabled while one is on,
-//                  and the print options while JPEG is), ?ppi=…&bleed=1.
+//                  PAID viewers also pick the print options (TODO 6.1a/6.1b/
+//                  6.1, lib/cards/print-export.ts): Resolution 600 ppi (1500
+//                  × 2100) or 800 ppi (2000 × 2800), and the Bleed — None,
+//                  1/8″ (2.75″ × 3.75″), or MakePlayingCards (MPC's poker-
+//                  size upload: its own bleed, 1644 × 2244 at 600 ppi, a
+//                  Battle or Split turned portrait). Any of them is a PRINT
+//                  render: square, PNG only (the JPEG chip and Rounded are
+//                  disabled while one is on, and the print options while
+//                  JPEG is), ?ppi=…&bleed=1|mpc.
 //                  800 ppi says when the frame is upscaled
 //                  (printFrameUpscaledAt800 — every template, today).
-//   Single PDF   — 2.5"×3.5" page sized exactly to the card; sleeve-ready,
-//                  optionally with the 1/8″ bleed and trim crop marks. (Plus+)
-//   3×3 Letter   — 9 copies on US Letter with corner crop marks. (Pro)
-//   3×3 A4       — 9 copies on A4 with corner crop marks. (Pro)
+//   PDF          — Layout: One card — a 2.5"×3.5" page sized exactly to the
+//                  card; sleeve-ready (Plus+) — or Sheet — a page of copies
+//                  on US Letter or A4 (Pro). Sheets take the print options
+//                  of My Cards' selection export and the deck export (TODO
+//                  6.15, components/cards/print-sheet-options.tsx): spacing,
+//                  cut guides (corner marks / full-length lines), card size
+//                  (2.5 × 3.5 in / 63 × 88 mm); both layouts the 1/8″ bleed
+//                  (a bleed sheet makes room — Letter prints landscape).
+//                  The options and the bleed start from the ones this
+//                  browser used last (lib/cards/print-selection.ts — shared
+//                  with those exports) and are saved on download; the layout
+//                  always opens on One card. Links: lib/cards/card-pdf-link.ts.
 //
 // A free viewer gets exactly ONE live option — the low-resolution
 // watermarked image (PNG or JPEG) — and sees the other formats greyed out
@@ -41,7 +52,6 @@ import {
   Download,
   FileImage,
   FileText,
-  Grid3X3,
   Sparkles,
 } from "lucide-react";
 import {
@@ -77,8 +87,18 @@ import {
   printFrameUpscaledAt800,
   printPixelSize,
   PRINT_800_PPI_PAID_ONLY,
+  type PrintBleed,
   type PrintPpi,
 } from "@/lib/cards/print-export";
+import { cardPdfFilename, cardPdfHref, type CardPdfLayout } from "@/lib/cards/card-pdf-link";
+import {
+  DEFAULT_PRINT_SELECTION_SETTINGS,
+  loadPrintSelectionSettings,
+  savePrintSelectionSettings,
+  type PrintSelectionSettings,
+} from "@/lib/cards/print-selection";
+import { planSheet } from "@/lib/render/sheet-layout";
+import { PrintBleedCheckbox, SheetOptionsFields } from "@/components/cards/print-sheet-options";
 import { cn } from "@/lib/utils";
 
 const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
@@ -129,7 +149,22 @@ type DownloadModalProps = {
   frameTemplate?: string;
 };
 
-type DownloadTab = "png" | "single" | "letter" | "a4";
+type DownloadTab = "png" | "single";
+
+/** The PDF tab's layout: one card on its own page, or a sheet of copies. */
+type PdfLayoutChoice = "card" | "sheet";
+
+type SheetPaperLayout = Exclude<CardPdfLayout, "card">;
+
+const PAPER_OPTIONS: ChipOption<SheetPaperLayout>[] = [
+  { value: "sheet-letter", label: "US Letter" },
+  { value: "sheet-a4", label: "A4" },
+];
+
+/** The paper a remembered layout names (one per page → Letter). */
+function sheetPaperOf(settings: PrintSelectionSettings): SheetPaperLayout {
+  return settings.layout === "sheet-a4" ? "sheet-a4" : "sheet-letter";
+}
 
 export function DownloadModal({
   cardId,
@@ -146,18 +181,43 @@ export function DownloadModal({
   // JPEG is always square — the PNG's choice is kept for switching back.
   const [format, setFormat] = useState<CardImageFormat>("png");
   const [pngCorners, setPngCorners] = useState<CardCorners>("round");
-  // Print options (paid; TODO 6.1a/6.1b): a print render is square + PNG.
+  // Print options (paid; TODO 6.1a/6.1b/6.1): a print render is square + PNG.
   const [ppi, setPpi] = useState<PrintPpi>(DEFAULT_PRINT_PPI);
-  const [bleed, setBleed] = useState(false);
-  const [pdfBleed, setPdfBleed] = useState(false);
+  const [bleed, setBleed] = useState<PrintBleed>(false);
+  // The PDF tab (TODO 6.15): the layout opens on One card; the sheet's
+  // paper and options and the bleed start from the settings this browser
+  // printed with last (loaded as the dialog opens — never during SSR).
+  const [open, setOpen] = useState(false);
+  const [pdfLayout, setPdfLayout] = useState<PdfLayoutChoice>("card");
+  const [pdfSettings, setPdfSettings] = useState<PrintSelectionSettings>(DEFAULT_PRINT_SELECTION_SETTINGS);
+  const patchPdf = (next: Partial<PrintSelectionSettings>) => setPdfSettings((prev) => ({ ...prev, ...next }));
+  const onOpenChange = (next: boolean) => {
+    if (next) {
+      setPdfSettings(loadPrintSelectionSettings());
+      setPdfLayout("card");
+    }
+    setOpen(next);
+  };
+  const sheetLayout = sheetPaperOf(pdfSettings);
+  // Sheets are Pro: a Plus viewer always gets the one-card page.
+  const pdfChoice: PdfLayoutChoice = canBatch ? pdfLayout : "card";
+  const pdfBleed = isPaid && pdfSettings.bleed;
+  const sheetOptions = { gap: pdfSettings.gap, marks: pdfSettings.marks, cardSize: pdfSettings.cardSize };
+  const sheetPlan = planSheet(sheetLayout === "sheet-a4" ? "a4" : "letter", { ...sheetOptions, bleed: pdfBleed });
+  const pdfLink = {
+    layout: pdfChoice === "sheet" ? sheetLayout : ("card" as CardPdfLayout),
+    bleed: pdfBleed,
+  };
+  // Remember what this PDF was printed with (the paper only for a sheet).
+  const rememberPdf = () =>
+    savePrintSelectionSettings(pdfChoice === "sheet" ? { ...pdfSettings, layout: sheetLayout } : pdfSettings);
   // 800 ppi follows PRINT_800_PPI_PAID_ONLY (the open 6.1b [decide]); the
   // bleed is always a clean-download feature.
   const can800 = isPaid || !PRINT_800_PPI_PAID_ONLY;
-  const printOptions = { ppi: can800 ? ppi : DEFAULT_PRINT_PPI, bleed: isPaid && bleed };
+  const printOptions = { ppi: can800 ? ppi : DEFAULT_PRINT_PPI, bleed: isPaid ? bleed : false };
   const print = format === "png" && isPrintRequest(printOptions);
   const corners = print ? "square" : effectiveCorners(format, pngCorners);
   const preset = isPaid ? "hd" : "default";
-  const base = `/api/cards/${cardId}`;
   // Free users start on the Image tab — the one format they can actually use.
   const initialTab: DownloadTab = isPaid ? defaultTab : "png";
   const links: Record<DownloadTab, { href: string; filename: string }> = {
@@ -173,21 +233,14 @@ export function DownloadModal({
               : cardPngHref(cardId, { preset, corners }),
           filename: cardImageFilename(cardSlug, { format, corners }),
         },
-    single: pdfBleed
-      ? { href: `${base}/pdf?layout=card&bleed=1`, filename: `${cardSlug}-bleed.pdf` }
-      : { href: `${base}/pdf?layout=card`, filename: `${cardSlug}.pdf` },
-    letter: {
-      href: `${base}/pdf?layout=sheet&paper=letter`,
-      filename: `${cardSlug}-sheet.pdf`,
-    },
-    a4: {
-      href: `${base}/pdf?layout=sheet&paper=a4`,
-      filename: `${cardSlug}-sheet-a4.pdf`,
+    single: {
+      href: cardPdfHref(cardId, { ...pdfLink, sheet: sheetOptions }),
+      filename: cardPdfFilename(cardSlug, pdfLink),
     },
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button variant="outline">
@@ -199,8 +252,8 @@ export function DownloadModal({
         <DialogHeader>
           <DialogTitle>Download this card</DialogTitle>
           <DialogDescription>
-            Pick a format. Sheets include corner crop marks; cut along them
-            for sleeve-ready cards.
+            Pick a format. Sheets carry cut guides; cut along them for
+            sleeve-ready cards.
           </DialogDescription>
         </DialogHeader>
         <div className="px-5 py-5">
@@ -218,22 +271,6 @@ export function DownloadModal({
                 <FileText className="h-3.5 w-3.5" aria-hidden />
                 PDF
               </TabsTrigger>
-              <TabsTrigger
-                value="letter"
-                disabled={!canBatch}
-                title={canBatch ? undefined : "Sheet layouts are a Pro feature"}
-              >
-                <Grid3X3 className="h-3.5 w-3.5" aria-hidden />
-                3×3 Letter
-              </TabsTrigger>
-              <TabsTrigger
-                value="a4"
-                disabled={!canBatch}
-                title={canBatch ? undefined : "Sheet layouts are a Pro feature"}
-              >
-                <Grid3X3 className="h-3.5 w-3.5" aria-hidden />
-                3×3 A4
-              </TabsTrigger>
             </TabsList>
             {downloadDiffersFromGallery ? (
               <p
@@ -246,11 +283,7 @@ export function DownloadModal({
             ) : null}
             {!isPaid ? (
               <p className="mt-2 text-[11px] leading-4 text-subtle">
-                PDF is a Plus feature; 3×3 sheets are Pro.
-              </p>
-            ) : !canBatch ? (
-              <p className="mt-2 text-[11px] leading-4 text-subtle">
-                3×3 sheets are a Pro feature.
+                PDF is a Plus feature; print sheets are Pro.
               </p>
             ) : null}
 
@@ -300,7 +333,7 @@ export function DownloadModal({
                         ? // Only when PRINT_800_PPI_PAID_ONLY is off: a free
                           // viewer's 800 ppi file keeps the mark (the bleed
                           // stays paid, so this is never a bleed file).
-                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed.`
+                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed or MakePlayingCards' size.`
                         : "750 × 1050 with the PipGlyph mark — fine for sharing and playtesting. Plus and Pro download a clean, print-ready 1500 × 2100 image."}
                     </p>
                   </div>
@@ -325,43 +358,80 @@ export function DownloadModal({
 
             <TabsContent value="single" className="mt-5">
               {isPaid ? (
-                <BleedCheckbox
-                  checked={pdfBleed}
-                  onChange={setPdfBleed}
-                  testId="download-pdf-bleed"
-                  hint="The page grows to 2.75″ × 3.75″ plus a margin, with crop marks on the trim line."
-                />
+                <div className="mb-4 flex flex-col gap-4" data-testid="download-pdf-options">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium text-foreground">Layout</span>
+                    <ChipGroup
+                      ariaLabel="PDF layout"
+                      options={[
+                        { value: "card", label: "One card" },
+                        { value: "sheet", label: "Sheet of copies", disabled: !canBatch },
+                      ]}
+                      value={pdfChoice}
+                      onChange={setPdfLayout}
+                    />
+                    {!canBatch ? (
+                      <p className="flex flex-wrap items-center gap-x-2 text-[11px] leading-4 text-subtle">
+                        Print sheets are a Pro feature.
+                        <button
+                          type="button"
+                          className="font-medium text-primary-bright underline-offset-2 hover:underline"
+                          onClick={() => upgrade.open("batch_export")}
+                        >
+                          See Pro
+                        </button>
+                      </p>
+                    ) : null}
+                  </div>
+                  {pdfChoice === "sheet" ? (
+                    <>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-xs font-medium text-foreground">Paper</span>
+                        <ChipGroup
+                          ariaLabel="Paper"
+                          options={PAPER_OPTIONS}
+                          value={sheetLayout}
+                          onChange={(layout) => patchPdf({ layout })}
+                        />
+                      </div>
+                      <SheetOptionsFields
+                        value={sheetOptions}
+                        onChange={patchPdf}
+                        className="gap-3 sm:grid-cols-1"
+                      />
+                    </>
+                  ) : null}
+                  <PrintBleedCheckbox
+                    checked={pdfBleed}
+                    onChange={(next) => patchPdf({ bleed: next })}
+                    testId="download-pdf-bleed"
+                    hint={
+                      pdfChoice === "sheet"
+                        ? "Each card runs 1/8″ past its trim; the guides mark the trim. Fewer cards fit on a sheet."
+                        : "The page grows to 2.75″ × 3.75″ plus a margin, with crop marks on the trim line."
+                    }
+                  />
+                </div>
               ) : null}
-              <DownloadPanel
-                title="Single card PDF"
-                description="One page sized exactly to a standard MTG card (2.5″ × 3.5″ / 63.5 × 88.9 mm). Drop it into a 9-pocket page or print onto card stock and cut."
-                href={links.single.href}
-                filename={links.single.filename}
-                locked={!isPaid}
-                onUpgrade={() => upgrade.open("pdf_export")}
-              />
-            </TabsContent>
-
-            <TabsContent value="letter" className="mt-5">
-              <DownloadPanel
-                title="3 × 3 sheet — US Letter"
-                description="Nine copies tiled on a US Letter (8.5″ × 11″) page with corner crop marks. Recommended paper: 110 lb. card stock."
-                href={links.letter.href}
-                filename={links.letter.filename}
-                locked={!canBatch}
-                onUpgrade={() => upgrade.open("batch_export")}
-              />
-            </TabsContent>
-
-            <TabsContent value="a4" className="mt-5">
-              <DownloadPanel
-                title="3 × 3 sheet — A4"
-                description="Nine copies tiled on an A4 (210 × 297 mm) page with corner crop marks. Recommended paper: 250 g/m² card stock."
-                href={links.a4.href}
-                filename={links.a4.filename}
-                locked={!canBatch}
-                onUpgrade={() => upgrade.open("batch_export")}
-              />
+              {pdfChoice === "sheet" ? (
+                <DownloadPanel
+                  title={`Print sheet — ${sheetLayout === "sheet-a4" ? "A4" : "US Letter"}`}
+                  description={sheetDescription(sheetLayout, sheetPlan, pdfSettings.marks, pdfBleed)}
+                  href={links.single.href}
+                  filename={links.single.filename}
+                  onDownload={rememberPdf}
+                />
+              ) : (
+                <DownloadPanel
+                  title="Single card PDF"
+                  description="One page sized exactly to a standard MTG card (2.5″ × 3.5″ / 63.5 × 88.9 mm). Drop it into a 9-pocket page or print onto card stock and cut."
+                  href={links.single.href}
+                  filename={links.single.filename}
+                  locked={!isPaid}
+                  onUpgrade={() => upgrade.open("pdf_export")}
+                  onDownload={rememberPdf}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -401,9 +471,23 @@ const PPI_OPTIONS: ChipOption<"600" | "800">[] = [
   { value: "800", label: "800 ppi · 2000 × 2800" },
 ];
 
-/** "800 ppi PNG with bleed", "PNG with bleed", "800 ppi PNG". */
-function printTitle(opts: { ppi: PrintPpi; bleed: boolean }): string {
+/** The Bleed choice's chip values. */
+type BleedChoice = "none" | "eighth" | "mpc";
+
+const BLEED_OPTIONS: ChipOption<BleedChoice>[] = [
+  { value: "none", label: "None" },
+  { value: "eighth", label: "1/8″" },
+  { value: "mpc", label: "MakePlayingCards" },
+];
+
+const bleedChoiceOf = (bleed: PrintBleed): BleedChoice => (bleed === "mpc" ? "mpc" : bleed ? "eighth" : "none");
+const bleedOfChoice = (choice: BleedChoice): PrintBleed => (choice === "mpc" ? "mpc" : choice === "eighth");
+
+/** "800 ppi PNG with bleed", "PNG with bleed", "800 ppi PNG", "PNG for
+ *  MakePlayingCards". */
+function printTitle(opts: { ppi: PrintPpi; bleed: PrintBleed }): string {
   const res = opts.ppi === DEFAULT_PRINT_PPI ? "" : `${opts.ppi} ppi `;
+  if (opts.bleed === "mpc") return `${res}PNG for MakePlayingCards`;
   return `${res}PNG${opts.bleed ? " with 1/8″ bleed" : ""} for print`;
 }
 
@@ -413,14 +497,18 @@ function freePrintSize(ppi: PrintPpi): string {
   return `${width} × ${height} (${ppi} ppi)`;
 }
 
-function printDescription(opts: { ppi: PrintPpi; bleed: boolean }, frameUpscaled: boolean): string {
-  const trim = opts.ppi === 800 ? "2000 × 2800" : "1500 × 2100";
-  const size = opts.bleed ? (opts.ppi === 800 ? "2200 × 3000" : "1650 × 2250") : trim;
+function printDescription(opts: { ppi: PrintPpi; bleed: PrintBleed }, frameUpscaled: boolean): string {
+  const trimSize = printPixelSize(opts.ppi, { bleed: false });
+  const trim = `${trimSize.width} × ${trimSize.height}`;
+  const out = printPixelSize(opts.ppi, { bleed: opts.bleed });
+  const size = `${out.width} × ${out.height}`;
   const parts = [
     `Clean ${size} render with square corners, the art at full resolution.`,
-    opts.bleed
-      ? `The card (${trim} at the trim) runs 1/8″ past the trim line on every side (2.75″ × 3.75″) — cut along the card's edge.`
-      : null,
+    opts.bleed === "mpc"
+      ? `MakePlayingCards' poker-size upload (822 × 1122 at 300 dpi, here at ${opts.ppi}): the card (${trim} at the trim) plus MPC's bleed, ${out.bleedX} px on every side. A Battle or Split is turned onto MPC's portrait card, its title up the left edge.`
+      : opts.bleed
+        ? `The card (${trim} at the trim) runs 1/8″ past the trim line on every side (2.75″ × 3.75″) — cut along the card's edge.`
+        : null,
     opts.ppi === 800
       ? frameUpscaled
         ? "Text and symbols are drawn at 800 ppi; this frame is upscaled from its 600 ppi master."
@@ -430,7 +518,7 @@ function printDescription(opts: { ppi: PrintPpi; bleed: boolean }, frameUpscaled
   return parts.filter(Boolean).join(" ");
 }
 
-/** Resolution + bleed (paid; TODO 6.1a/6.1b) — PNG only. */
+/** Resolution + bleed (paid; TODO 6.1a/6.1b/6.1) — PNG only. */
 function PrintOptions({
   ppi,
   onPpiChange,
@@ -441,12 +529,13 @@ function PrintOptions({
 }: {
   ppi: PrintPpi;
   onPpiChange: (next: PrintPpi) => void;
-  bleed: boolean;
+  bleed: PrintBleed;
   /** Null: no bleed for this viewer (it follows the clean download). */
-  onBleedChange: ((next: boolean) => void) | null;
+  onBleedChange: ((next: PrintBleed) => void) | null;
   disabled: boolean;
   frameUpscaled: boolean;
 }) {
+  const choice = disabled ? "none" : bleedChoiceOf(bleed);
   return (
     <div className="mb-4 flex flex-col gap-3" data-testid="download-print">
       <div className="flex flex-col gap-1.5">
@@ -466,52 +555,37 @@ function PrintOptions({
         </p>
       </div>
       {onBleedChange ? (
-        <BleedCheckbox
-          checked={bleed && !disabled}
-          onChange={onBleedChange}
-          disabled={disabled}
-          testId="download-bleed"
-          hint="Extends the card 1/8″ past the trim on every side (2.75″ × 3.75″) for print shops."
-        />
+        <div className="flex flex-col gap-1.5" data-testid="download-bleed">
+          <span className="text-xs font-medium text-foreground">Bleed</span>
+          <ChipGroup
+            ariaLabel="Bleed"
+            options={BLEED_OPTIONS.map((option) => ({ ...option, disabled }))}
+            value={choice}
+            onChange={(next) => onBleedChange(bleedOfChoice(next))}
+          />
+          <p className="text-[11px] leading-4 text-subtle">
+            {choice === "mpc"
+              ? "Sized for MakePlayingCards' poker-size cards: MPC's own bleed, always portrait."
+              : "1/8″ extends the card past the trim on every side (2.75″ × 3.75″) for print shops."}
+          </p>
+        </div>
       ) : null}
     </div>
   );
 }
 
-function BleedCheckbox({
-  checked,
-  onChange,
-  disabled = false,
-  testId,
-  hint,
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  disabled?: boolean;
-  testId: string;
-  hint: string;
-}) {
-  return (
-    <label
-      className={cn(
-        "mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5",
-        disabled && "cursor-not-allowed opacity-60",
-      )}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
-        data-testid={testId}
-      />
-      <span className="flex flex-col gap-0.5">
-        <span className="font-medium">Add a 1/8″ bleed</span>
-        <span className="text-xs leading-5 text-muted">{hint}</span>
-      </span>
-    </label>
-  );
+/** What a single-card sheet holds: "6 copies per sheet (landscape page) on
+ *  US Letter, full-length cut lines…". */
+function sheetDescription(
+  layout: SheetPaperLayout,
+  plan: ReturnType<typeof planSheet>,
+  marks: PrintSelectionSettings["marks"],
+  bleed: boolean,
+): string {
+  const paper = layout === "sheet-a4" ? "an A4 (210 × 297 mm)" : "a US Letter (8.5″ × 11″)";
+  const guides = marks === "lines" ? "full-length cut lines" : "corner crop marks";
+  const stock = layout === "sheet-a4" ? "250 g/m² card stock" : "110 lb. card stock";
+  return `${plan.perPage} copies of this card on ${paper} page${plan.orientation === "landscape" ? ", printed landscape" : ""}, with ${guides}${bleed ? " on the trim lines" : ""}. Recommended paper: ${stock}.`;
 }
 
 /** The image's Rounded / Square switch — every viewer, free included. A
@@ -550,6 +624,7 @@ function DownloadPanel({
   filename,
   locked = false,
   onUpgrade,
+  onDownload,
 }: {
   title: string;
   description: string;
@@ -557,6 +632,8 @@ function DownloadPanel({
   filename: string;
   locked?: boolean;
   onUpgrade?: () => void;
+  /** Runs as the download starts (the PDF remembers its options). */
+  onDownload?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -577,7 +654,7 @@ function DownloadPanel({
         </Button>
       ) : (
         <Button asChild className={cn("self-start")}>
-          <a href={href} download={filename}>
+          <a href={href} download={filename} onClick={onDownload}>
             <Download className="h-4 w-4" aria-hidden /> Download
           </a>
         </Button>
