@@ -3,11 +3,12 @@ import {
   decodePDFRawStream,
   PDFArray,
   PDFDocument,
+  PDFImage,
   PDFPage,
   PDFRawStream,
   PDFRef,
 } from "pdf-lib";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildCardPdf, buildDeckPdf } from "@/lib/render/card-pdf";
 import { DEFAULT_SHEET_OPTIONS, planSheet, type SheetOptions } from "@/lib/render/sheet-layout";
 
@@ -218,5 +219,31 @@ describe("buildDeckPdf — a selection with sheet options (TODO 6.15)", () => {
   it("without a bleed, one per page is the plain 2.5 × 3.5 in page, as before", async () => {
     const doc = await PDFDocument.load(await buildDeckPdf([{ png: CARD, copies: 2 }], { layout: "pages" }));
     expect(doc.getPages().map((p) => p.getSize())).toEqual([{ width: 180, height: 252 }]);
+  });
+});
+
+describe("buildDeckPdf — memory on a big selection", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // pdf-lib decodes a PNG to raw pixels on embedPng and keeps them until the
+  // image is written into the document — at save() unless asked sooner. A
+  // 150-card export then held every card decoded at once (≈ 11 MB per
+  // 1650 × 2250 bleed render, ≈ 1.6 GB in the browser tab). Each image must
+  // be written as it is embedded, so its pixels go before the next decodes.
+  it.each(["sheet-letter", "pages"] as const)("%s: every card is written into the PDF before save()", async (layout) => {
+    const embed = vi.spyOn(PDFImage.prototype, "embed");
+    const save = vi.spyOn(PDFDocument.prototype, "save");
+    const entries = [
+      { png: BLEED_CARD, copies: 2 },
+      { png: BLEED_LANDSCAPE, copies: 1 },
+      { png: await png(66, 90), copies: 3 },
+    ];
+    const pages = await inspect(await buildDeckPdf(entries, { layout, bleed: true }));
+    expect(pages.flatMap(images)).toHaveLength(layout === "pages" ? 3 : 6);
+    const saved = save.mock.invocationCallOrder[0];
+    const writtenBeforeSave = embed.mock.invocationCallOrder.filter((order) => order < saved);
+    expect(writtenBeforeSave).toHaveLength(entries.length);
   });
 });

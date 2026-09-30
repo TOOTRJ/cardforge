@@ -8,10 +8,12 @@
 // A sheet is a grid of CELLS. A cell is the card's bleed box — the trim box
 // (the card itself) plus the bleed on each side when the renders carry one
 // (TODO 6.1a) — and the grid is as many cells as fit inside the paper less a
-// 1/8 in margin, `gap` apart, centred. The page turns landscape only when
-// that fits MORE cards (A4 with a bleed: 4 × 2 = 8 instead of 2 × 3 = 6);
-// on a tie it stays portrait. Cards themselves are always portrait (a
-// landscape render is turned into the cell, card-pdf.ts).
+// 1/8 in margin, `gap` apart, centred. The page turns landscape when that
+// fits MORE cards (A4 with a bleed: 4 × 2 = 8 instead of 2 × 3 = 6), or as
+// many with roomier margins — the cut marks live there (Letter with a bleed:
+// 3 × 2 either way, but portrait would leave 1/8 in at the sides); otherwise
+// it stays portrait. Cards themselves are always portrait (a landscape
+// render is turned into the cell, card-pdf.ts).
 //
 // The default options are the sheet PipGlyph always printed — 3 × 3 butted
 // 2.5 × 3.5 in cards, centred (36 / 18 pt margins on Letter, 27.64 / 42.95
@@ -130,14 +132,26 @@ export function planSheet(paper: SheetPaper, options: SheetOptions = DEFAULT_SHE
   ).map(([orientation, pageWidth, pageHeight]) => {
     const cols = fit(pageWidth - 2 * SHEET_MIN_MARGIN_PT, cellW, gap);
     const rows = fit(pageHeight - 2 * SHEET_MIN_MARGIN_PT, cellH, gap);
-    return { orientation, pageWidth, pageHeight, cols, rows };
+    // The narrower of the two margins the centred grid leaves.
+    const margin = Math.min(
+      pageWidth - (cols * cellW + (cols - 1) * gap),
+      pageHeight - (rows * cellH + (rows - 1) * gap),
+    ) / 2;
+    return { orientation, pageWidth, pageHeight, cols, rows, margin };
   });
-  // Landscape only when it holds more cards; a tie stays portrait.
+  // More cards wins. On a tie the ROOMIER page wins — its narrowest margin
+  // wider — because the marks that locate every cut sit in the margins:
+  // Letter with a bleed holds 3 × 2 either way, but portrait leaves 1/8 in
+  // at the sides (the horizontal marks would land in most printers'
+  // unprintable edge) where landscape leaves 1/2 in. Portrait otherwise.
+  const [portrait, landscape] = candidates;
+  const count = (c: (typeof candidates)[number]) => c.cols * c.rows;
   const best =
-    candidates[1].cols * candidates[1].rows > candidates[0].cols * candidates[0].rows
-      ? candidates[1]
-      : candidates[0];
-  if (best.cols * best.rows === 0) throw new Error("No card fits on this paper.");
+    count(landscape) > count(portrait) ||
+    (count(landscape) === count(portrait) && landscape.margin > portrait.margin + 0.01)
+      ? landscape
+      : portrait;
+  if (count(best) === 0) throw new Error("No card fits on this paper.");
 
   const { pageWidth, pageHeight, cols, rows } = best;
   const marginX = (pageWidth - (cols * cellW + (cols - 1) * gap)) / 2;

@@ -99,7 +99,9 @@ describe("planSheet — the options (TODO 6.15)", () => {
 
   it("the bleed grows each cell by 1/8 in a side around the SAME trim — six to a Letter sheet (3 × 3 would need 11.25 in)", () => {
     const plan = planSheet("letter", { ...DEFAULT_SHEET_OPTIONS, bleed: true });
-    expect([plan.orientation, plan.cols, plan.rows]).toEqual(["portrait", 3, 2]);
+    // 3 × 2 fits either way; the landscape page leaves 99 / 36 pt round the
+    // grid where portrait would leave 9 pt at the sides (see the tie test).
+    expect([plan.orientation, plan.cols, plan.rows]).toEqual(["landscape", 3, 2]);
     const [cell] = plan.cells;
     expect([cell.width, cell.height]).toEqual([198, 270]);
     expect([cell.trim.x - cell.x, cell.trim.y - cell.y, cell.trim.width, cell.trim.height]).toEqual([
@@ -114,6 +116,20 @@ describe("planSheet — the options (TODO 6.15)", () => {
     const plan = planSheet("a4", { ...DEFAULT_SHEET_OPTIONS, bleed: true });
     expect([plan.orientation, plan.cols, plan.rows, plan.perPage]).toEqual(["landscape", 4, 2, 8]);
     expect([plan.pageWidth, plan.pageHeight]).toEqual([PAPER_PT.a4.height, PAPER_PT.a4.width]);
+  });
+
+  it("a tie goes to the roomier page: Letter + bleed is 3 × 2 both ways, landscape leaves 99 / 36 pt, portrait 9 / 126", () => {
+    for (const cardSize of SHEET_CARD_SIZES) {
+      const plan = planSheet("letter", { ...DEFAULT_SHEET_OPTIONS, cardSize, bleed: true });
+      const [first] = plan.cells;
+      const last = plan.cells[plan.cells.length - 1];
+      expect([plan.orientation, plan.perPage]).toEqual(["landscape", 6]);
+      expect([plan.pageWidth, plan.pageHeight]).toEqual([792, 612]);
+      // Both margins wide enough for a printer to reach the marks in them.
+      expect(Math.min(first.x, last.y)).toBeGreaterThan(30);
+    }
+    // No tie, no turn: the default Letter sheet holds 9 portrait, 8 landscape.
+    expect(planSheet("letter").orientation).toBe("portrait");
   });
 
   it("Letter with a bleed AND a gap: landscape 3 × 2 = 6 beats portrait 2 × 2", () => {
@@ -178,6 +194,53 @@ describe("sheetGuides — never on a card", () => {
         for (let t = 0; t <= 1; t += 0.01) {
           expect(onACard(plan, s.x1 + (s.x2 - s.x1) * t, s.y1 + (s.y2 - s.y1) * t)).toBe(false);
         }
+      }
+    },
+  );
+
+  /** The outer strip of the paper most printers can't print: a laser's
+   *  usual 4.2 mm (1/6 in); an inkjet's is less. */
+  const UNPRINTABLE_EDGE_PT = 12;
+
+  it.each(PAPERS.flatMap((paper) => ALL_OPTIONS.map((o) => [paper, o] as const)))(
+    "%s %o: every cut is marked somewhere a printer reaches and no card covers",
+    (paper, options) => {
+      const plan = planSheet(paper, options);
+      const guides = sheetGuides(plan, options.marks);
+      // The cards (bleed included) are drawn OVER the guides; a 0.25 pt line
+      // on a cell's edge is covered too.
+      const covered = (x: number, y: number) =>
+        plan.cells.some(
+          (c) => x >= c.x - 0.13 && x <= c.x + c.width + 0.13 && y >= c.y - 0.13 && y <= c.y + c.height + 0.13,
+        );
+      const printable = (x: number, y: number) =>
+        x >= UNPRINTABLE_EDGE_PT &&
+        x <= plan.pageWidth - UNPRINTABLE_EDGE_PT &&
+        y >= UNPRINTABLE_EDGE_PT &&
+        y <= plan.pageHeight - UNPRINTABLE_EDGE_PT;
+      const shows = (s: { x1: number; y1: number; x2: number; y2: number }) => {
+        // Every 1/4 pt along it (a page-long line has ~3,400 samples).
+        const steps = Math.ceil(Math.hypot(s.x2 - s.x1, s.y2 - s.y1) * 4);
+        for (let i = 0; i <= steps; i += 1) {
+          const x = s.x1 + ((s.x2 - s.x1) * i) / steps;
+          const y = s.y1 + ((s.y2 - s.y1) * i) / steps;
+          if (printable(x, y) && !covered(x, y)) return true;
+        }
+        return false;
+      };
+      const trimXs = new Set(plan.cells.flatMap((c) => [c.trim.x, c.trim.x + c.trim.width]).map(r2));
+      const trimYs = new Set(plan.cells.flatMap((c) => [c.trim.y, c.trim.y + c.trim.height]).map(r2));
+      for (const x of trimXs) {
+        expect(
+          guides.some((s) => s.x1 === s.x2 && r2(s.x1) === x && shows(s)),
+          `the cut at x = ${x} shows on the printed page`,
+        ).toBe(true);
+      }
+      for (const y of trimYs) {
+        expect(
+          guides.some((s) => s.y1 === s.y2 && r2(s.y1) === y && shows(s)),
+          `the cut at y = ${y} shows on the printed page`,
+        ).toBe(true);
       }
     },
   );

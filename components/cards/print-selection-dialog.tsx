@@ -330,6 +330,11 @@ function CopiesStepper({
   onChange: (next: number) => void;
 }) {
   const set = (next: number) => onChange(Math.min(MAX_COPIES_PER_CARD, Math.max(1, Math.round(next) || 1)));
+  // What is being typed. A controlled number field snapped straight back to
+  // 1 when cleared, so "1" → backspace → "5" read as 15; the field keeps the
+  // draft (empty included), the count follows every valid number, and
+  // leaving the field shows the count again.
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <span className="flex shrink-0 items-center gap-1">
       <Button
@@ -348,8 +353,13 @@ function CopiesStepper({
         inputMode="numeric"
         min={1}
         max={MAX_COPIES_PER_CARD}
-        value={value}
-        onChange={(event) => set(Number(event.target.value))}
+        value={draft ?? value}
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft(raw);
+          if (raw.trim() !== "" && Number.isFinite(Number(raw))) set(Number(raw));
+        }}
+        onBlur={() => setDraft(null)}
         aria-label={`Copies of ${title}`}
         className="h-7 w-12 rounded-md border border-border bg-background/60 text-center text-sm tabular-nums text-foreground"
       />

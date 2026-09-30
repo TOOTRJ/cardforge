@@ -238,6 +238,32 @@ describe("PrintSelectionDialog", () => {
     expect(screen.getByTestId("print-selection-summary").textContent).toContain("2 pages, one card each");
   });
 
+  it("the copies field can be cleared and retyped (it used to snap back to 1, so 1 → ⌫ → 5 read 15)", async () => {
+    dialog();
+    const field = screen.getByRole("spinbutton", { name: "Copies of Mine 1" }) as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(field, { target: { value: "" } });
+    });
+    expect(field.value).toBe("");
+    await act(async () => {
+      fireEvent.change(field, { target: { value: "5" } });
+    });
+    expect(field.value).toBe("5");
+    await act(async () => {
+      fireEvent.blur(field);
+    });
+    expect(field.value).toBe("5");
+    await click(screen.getByRole("button", { name: /build pdf/i }));
+    expect(exporter.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cards: [
+          { id: id(1), copies: 5 },
+          { id: id(2), copies: 1 },
+        ],
+      }),
+    );
+  });
+
   it("a running export blocks a second one", () => {
     exporter.busy = true;
     dialog();

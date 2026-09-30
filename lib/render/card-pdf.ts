@@ -87,6 +87,19 @@ async function embedImage(doc: PDFDocument, pngBytes: Uint8Array): Promise<PDFIm
   }
 }
 
+/** embedImage, then write the image into the document NOW. pdf-lib decodes
+ *  a PNG to raw pixels on embedPng and keeps them until the image is
+ *  written — by default at save(), so a many-card PDF held every card
+ *  decoded at once (≈ 9.5 MB per HD render, 11 MB per 1650 × 2250 bleed
+ *  render: 1.4–1.7 GB for a 150-card export, in the browser tab). Writing
+ *  each as it comes frees its pixels before the next is decoded; the saved
+ *  file is the same pages. */
+async function embedImageNow(doc: PDFDocument, pngBytes: Uint8Array): Promise<PDFImage> {
+  const img = await embedImage(doc, pngBytes);
+  await img.embed();
+  return img;
+}
+
 /** How a render fills the portrait card slot whose lower-left corner is
  *  (x, y) — pdf-lib `drawImage` options (points, y up; `rotate` is
  *  anticlockwise about the image's own lower-left corner).
@@ -433,7 +446,7 @@ export async function buildDeckPdf(
 
   if (layout === "pages") {
     for (const entry of entries) {
-      const img = await embedImage(doc, entry.png);
+      const img = await embedImageNow(doc, entry.png);
       if (bleed) addBleedCardPage(doc, img);
       else addCardPage(doc, img);
     }
@@ -441,7 +454,7 @@ export async function buildDeckPdf(
     // Embed each unique PNG once; the slot list repeats the PDFImage.
     const slots: PDFImage[] = [];
     for (const entry of entries) {
-      const img = await embedImage(doc, entry.png);
+      const img = await embedImageNow(doc, entry.png);
       for (let copy = 0; copy < Math.max(1, entry.copies); copy += 1) {
         slots.push(img);
       }

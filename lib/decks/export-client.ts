@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { buildDeckPdf, type DeckPdfLayout, type DeckPdfSheetOptions } from "@/lib/render/card-pdf";
 import { cardPngHref } from "@/lib/cards/output-corners";
-import { cardPrintPngHref } from "@/lib/cards/print-export";
+import { BLEED_IN, CARD_TRIM_IN, cardPrintPngHref } from "@/lib/cards/print-export";
 import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/print-selection";
 
 // ---------------------------------------------------------------------------
@@ -154,14 +154,40 @@ async function fetchDeckExportManifest(
   return (await response.json()) as DeckExportManifest;
 }
 
+/** A PNG's pixel size, from its IHDR chunk; null when the bytes aren't one. */
+export function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (bytes.byteLength < 24 || signature.some((b, i) => bytes[i] !== b)) return null;
+  if (String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]) !== "IHDR") return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+/** The shape of a render WITH the 1/8 in bleed: 2.75 × 3.75 in (1650 × 2250
+ *  at 600 ppi), short side over long (a landscape card is turned). */
+const BLEED_ASPECT = (CARD_TRIM_IN.width + 2 * BLEED_IN) / (CARD_TRIM_IN.height + 2 * BLEED_IN);
+
+/** True when `bytes` is a PNG shaped like a bleed render — not the 5:7 card
+ *  without one (2.6 % apart). A bleed sheet puts each image's bleed box in
+ *  its cell, so a card WITHOUT the bleed would be stretched into it and its
+ *  trim would miss the cut marks by ~1/8 in: such a card counts as failed. */
+export function carriesPrintBleed(bytes: Uint8Array): boolean {
+  const size = pngSize(bytes);
+  if (!size || size.width === 0 || size.height === 0) return false;
+  const shortOverLong = Math.min(size.width, size.height) / Math.max(size.width, size.height);
+  return Math.abs(shortOverLong / BLEED_ASPECT - 1) < 0.01;
+}
+
 /** Fetch every card's PNG with a small worker pool, reporting each finish.
- *  `hrefOf` names the render (HD square, or the print render with bleed). */
+ *  `hrefOf` names the render (HD square, or the print render with bleed);
+ *  a response `accept` turns down counts as a failure. */
 async function fetchCardPngs(
   cards: ReadonlyArray<{ id: string; title: string }>,
   hrefOf: (card: { id: string }) => string,
   fetchImpl: FetchLike,
   signal: AbortSignal | undefined,
   onOne: (title: string, ok: boolean) => void,
+  accept?: (bytes: Uint8Array) => boolean,
 ): Promise<Map<string, Uint8Array>> {
   const out = new Map<string, Uint8Array>();
   let cursor = 0;
@@ -175,7 +201,12 @@ async function fetchCardPngs(
           onOne(card.title, false);
           continue;
         }
-        out.set(card.id, new Uint8Array(await response.arrayBuffer()));
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (accept && !accept(bytes)) {
+          onOne(card.title, false);
+          continue;
+        }
+        out.set(card.id, bytes);
         onOne(card.title, true);
       } catch (error) {
         if (signal?.aborted) return;
@@ -377,11 +408,19 @@ export async function runCardsExport(
     bleed
       ? cardPrintPngHref(card.id, { ppi: 600, bleed: true })
       : cardPngHref(card.id, { preset: quality, corners: "square" });
-  const pngs = await fetchCardPngs(manifest.cards, hrefOf, fetchImpl, signal, (cardTitle, ok) => {
-    progress.done += 1;
-    if (!ok) progress.failed.push(cardTitle);
-    emit();
-  });
+  const pngs = await fetchCardPngs(
+    manifest.cards,
+    hrefOf,
+    fetchImpl,
+    signal,
+    (cardTitle, ok) => {
+      progress.done += 1;
+      if (!ok) progress.failed.push(cardTitle);
+      emit();
+    },
+    // A bleed export takes only renders that carry the bleed.
+    bleed ? carriesPrintBleed : undefined,
+  );
 
   progress.phase = "packaging";
   emit();

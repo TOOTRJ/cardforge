@@ -13,7 +13,8 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 
 const state = vi.hoisted(() => ({
   user: null as { id: string } | null,
-  tierOk: true,
+  /** The viewer's effective plan; requireTier(min) passes at min or above. */
+  tier: "pro" as "free" | "plus" | "pro",
   rows: [] as Array<Record<string, unknown>>,
   askedIds: [] as string[],
 }));
@@ -36,8 +37,9 @@ vi.mock("@/lib/billing/entitlements", () => {
   class UpgradeRequiredError extends Error {}
   return {
     UpgradeRequiredError,
-    requireTier: async () => {
-      if (!state.tierOk) throw new UpgradeRequiredError("UPGRADE_REQUIRED");
+    requireTier: async (min: "free" | "plus" | "pro") => {
+      const rank = { free: 0, plus: 1, pro: 2 } as const;
+      if (rank[state.tier] < rank[min]) throw new UpgradeRequiredError("UPGRADE_REQUIRED");
       return {};
     },
   };
@@ -66,7 +68,7 @@ const row = (n: number, extra: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   state.user = { id: ME };
-  state.tierOk = true;
+  state.tier = "pro";
   state.rows = [row(1), row(2, { visibility: "private", owner_id: ME }), row(3, { visibility: "private" }), row(4, { visibility: "unlisted" })];
   state.askedIds = [];
 });
@@ -77,11 +79,13 @@ describe("POST /api/cards/export", () => {
     expect((await post({ cards: [{ id: id(1), copies: 1 }] })).status).toBe(401);
   });
 
-  it("403 UPGRADE_REQUIRED below Pro — the deck export's gate", async () => {
-    state.tierOk = false;
+  it.each(["free", "plus"] as const)("403 UPGRADE_REQUIRED for a %s viewer — Pro, the deck export's gate (Plus has clean downloads, not batch)", async (tier) => {
+    state.tier = tier;
     const res = await post({ cards: [{ id: id(1), copies: 1 }] });
     expect(res.status).toBe(403);
     expect(await res.json()).toMatchObject({ code: "UPGRADE_REQUIRED" });
+    // Refused before a single card is read.
+    expect(state.askedIds).toEqual([]);
   });
 
   it("400 on a bad body", async () => {

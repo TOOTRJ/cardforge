@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
-import { DeckExportError, runCardsExport, type CardsExportManifest } from "@/lib/decks/export-client";
+import {
+  carriesPrintBleed,
+  DeckExportError,
+  pngSize,
+  runCardsExport,
+  type CardsExportManifest,
+} from "@/lib/decks/export-client";
 
 // ---------------------------------------------------------------------------
 // TODO 6.15 — runCardsExport: the deck export's browser pipeline for any
@@ -104,6 +110,40 @@ describe("runCardsExport", () => {
     const doc = await PDFDocument.load(new Uint8Array(await result.blob.arrayBuffer()));
     // 7 copies, 6 to a Letter bleed sheet.
     expect(doc.getPageCount()).toBe(2);
+  });
+
+  it("with the bleed, a render WITHOUT one is left out as failed — never stretched into a bleed cell", async () => {
+    const calls: Call[] = [];
+    const plain = await pngOf(50, 70);
+    const base = await fakeFetch(calls);
+    const result = await runCardsExport(
+      { ...request, kind: "pdf", quality: "hd", layout: "sheet-letter", bleed: true },
+      {
+        // Stone Matriarch comes back as the 5:7 card, without its bleed.
+        fetchImpl: async (url, init) =>
+          url.includes("/api/cards/c1/png")
+            ? new Response(plain as BodyInit, { headers: { "content-type": "image/png" } })
+            : base(url, init),
+        onProgress: () => {},
+      },
+    );
+    // The skipped id first, then the renders in the order they finished.
+    expect(result.failed[0]).toBe("Old Draft");
+    expect([...result.failed].sort()).toEqual(["Broken One", "Old Draft", "Stone Matriarch"]);
+    expect(result.cardsIncluded).toBe(1);
+    const doc = await PDFDocument.load(new Uint8Array(await result.blob.arrayBuffer()));
+    // Petrifying Glance's 5 copies only: one Letter bleed sheet of 6.
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("carriesPrintBleed: 1650 × 2250 and its landscape turn, not the 5:7 card or a non-PNG", async () => {
+    expect(pngSize(await pngOf(1650, 2250))).toEqual({ width: 1650, height: 2250 });
+    expect(carriesPrintBleed(await pngOf(1650, 2250))).toBe(true);
+    expect(carriesPrintBleed(await pngOf(2250, 1650))).toBe(true);
+    expect(carriesPrintBleed(await pngOf(2200, 3000))).toBe(true); // 800 ppi + bleed
+    expect(carriesPrintBleed(await pngOf(1500, 2100))).toBe(false);
+    expect(carriesPrintBleed(await pngOf(2100, 1500))).toBe(false);
+    expect(carriesPrintBleed(new TextEncoder().encode("<html>not a png</html>"))).toBe(false);
   });
 
   it("ZIP: one square image per card at the size asked, a MISSING note for what was left out", async () => {
