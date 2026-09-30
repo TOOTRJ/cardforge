@@ -55,6 +55,59 @@ describe("CardPreview — the borderless planeswalkers (4.33)", () => {
     });
   }
 
+  // Owner round 15 (2026-09-29): a walker with NO ability text shows the
+  // light first stripe in its window, never the bare art — the bake's twin
+  // (borderless-walker-bake.test.tsx). The editor keeps its hint rows there.
+  const STRIPE_A = "rgba(255,255,255,0.608)";
+  const backdropsOf = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>("div")).filter(
+      (el) => el.style.background.replace(/,\s*/g, ",") === STRIPE_A && el.style.zIndex === "9",
+    );
+  const emptyWalker = (template: string, staticInEditor = false) => (
+    <CardPreview
+      title="Teferi, Master of Time"
+      cost="{2}{U}{U}"
+      cardType="planeswalker"
+      supertype="Legendary"
+      subtypes={["Teferi"]}
+      colorIdentity={["blue"]}
+      loyalty="3"
+      rulesText=""
+      staticInEditor={staticInEditor}
+      frameStyle={{ template: template as never }}
+    />
+  );
+  for (const template of ["m15borderlesspw", "m15borderlesspwtall"] as const) {
+    it(`${template}: a walker with no ability text fills its window with the light first stripe`, () => {
+      const { container } = render(emptyWalker(template));
+      const fills = backdropsOf(container);
+      expect(fills).toHaveLength(1);
+      expectRect(fills[0], getFrameProfile(template).rules.rect);
+    });
+
+    it(`${template}: the editor shows its hint rows there instead, with no fill under them`, () => {
+      const { container } = render(emptyWalker(template, true));
+      expect(backdropsOf(container)).toHaveLength(0);
+      // The hint rows' stripes (both of them) are there.
+      const html = container.innerHTML.replace(/,\s*/g, ",");
+      expect(html).toContain(STRIPE_A);
+      expect(html).toContain("rgba(164,164,164,0.706)");
+    });
+
+    it(`${template}: a walker WITH abilities draws its rows and no fill under them`, () => {
+      const { container } = render(walker(template));
+      expect(backdropsOf(container)).toHaveLength(0);
+    });
+  }
+
+  it("leaves the bordered m15pw as it was: no fill in an empty window (the rule is the borderless walkers')", () => {
+    const { container } = render(emptyWalker("m15pw"));
+    const cream = Array.from(container.querySelectorAll<HTMLElement>("div")).filter(
+      (el) => el.style.zIndex === "9" && el.style.background.startsWith("rgba"),
+    );
+    expect(cream).toHaveLength(0);
+  });
+
   it("draws the tall one's type slot, set symbol and rows 138 HD px higher, the title where it was", () => {
     const regular = getFrameProfile("m15borderlesspw");
     const tall = getFrameProfile("m15borderlesspwtall");

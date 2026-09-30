@@ -40,6 +40,7 @@ import {
   secondFaceRulesLayout,
   type RulesDraw,
 } from "@/lib/cards/rules-box";
+import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
@@ -831,11 +832,15 @@ function CardImage({
           type bands (see the preview's twin comment: z9 under their z20).
           Satori paints in document order, so it comes BEFORE the bands:
           where a rules box overlaps the type bar (Expedition, 60.5 %H) the
-          backdrop used to dim the bake's type line and set symbol only. */}
+          backdrop used to dim the bake's type line and set symbol only.
+          WHEN it is drawn is the preview's rule too (drawsRulesBackdrop). */}
       {layout.rules.backdropHex &&
-      hasRulesContent &&
-      !layout.chapters &&
-      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+      drawsRulesBackdrop(layout.rules, {
+        hasRulesContent,
+        textless,
+        chapters: Boolean(layout.chapters),
+        rowsDrawn: Boolean(layout.loyaltyRows) && loyaltyAbilities.length > 0,
+      }) ? (
         <div
           style={{
             ...slotBox(layout.rules.rect),

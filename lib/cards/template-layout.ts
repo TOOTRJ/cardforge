@@ -98,6 +98,14 @@ export type TextSlot = {
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
    *  words stay legible regardless of the artwork underneath. */
   backdropHex?: string;
+  /** Draw `backdropHex` even when the box has no text (TODO 4.33, owner
+   *  round 15, 2026-09-29): a borderless walker's ability window is a
+   *  see-through cut-out, so a walker with no ability text shows the first
+   *  stripe's light ground instead of the bare art — in both renderers,
+   *  which ask drawsRulesBackdrop (lib/cards/rules-backdrop.ts). Never under
+   *  ability rows, the editor's hint rows or a saga rail, never on a
+   *  textless frame. Code-owned: not part of the override schema. */
+  backdropWhenEmpty?: boolean;
   /** TYPE LINE ONLY — print it in two boxes split at the em dash (TODO
    *  3.24): "Basic Land" in `leftRect`, "Forest" in `rightRect`, the way
    *  Zendikar-style basics print either side of their medallion. Both parts
@@ -1637,9 +1645,12 @@ const M15BORDERLESSPW: FrameProfile = {
   ...M15PW,
   label: "M15 Borderless Planeswalker",
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 91.53 },
-  // A walker with no ability text, or another card forced onto the frame,
-  // gets the plain box on the first stripe's light ground.
-  rules: { ...M15PW.rules, backdropHex: BORDERLESS_PW_STRIPE_A },
+  // A walker whose text isn't ability rows, or another card forced onto the
+  // frame, gets the plain box on the first stripe's light ground — and so
+  // does a walker with NO ability text (owner round 15, 2026-09-29): the
+  // window is a see-through cut-out, never left showing the bare art. The
+  // editor still shows its hint rows there (as on m15pw).
+  rules: { ...M15PW.rules, backdropHex: BORDERLESS_PW_STRIPE_A, backdropWhenEmpty: true },
   loyaltyRows: {
     ...M15PW.loyaltyRows!,
     stripeAHex: BORDERLESS_PW_STRIPE_A,

@@ -156,6 +156,41 @@ describe("the borderless planeswalkers on real bakes (TODO 4.33)", () => {
     expect(seen.some((p) => near(p, cream, 2))).toBe(false);
   });
 
+  // Owner round 15 (2026-09-29): a walker with NO ability text shows the
+  // light first stripe in its window — the see-through cut-out never shows
+  // the bare art. The preview's twin: borderless-walker-preview.test.tsx.
+  for (const template of ["m15borderlesspw", "m15borderlesspwtall"] as const) {
+    it(`${template}: a walker with no ability text fills its window with the light first stripe`, async () => {
+      const b = await bake(template, { rulesText: "", faceContent: null } as Partial<CardPreviewData>);
+      const rules = getFrameProfile(template).rules.rect;
+      const stripeA = over([255, 255, 255], 0.608);
+      const left = (rules.leftPct / 100) * W;
+      const right = ((rules.leftPct + rules.widthPct) / 100) * W;
+      const top = (rules.topPct / 100) * H;
+      const bottom = ((rules.topPct + rules.heightPct) / 100) * H;
+      // The window's middle and its four sides, clear of the rounded corners
+      // and of the loyalty shield (bottom right).
+      const inside: [number, number][] = [
+        [(left + right) / 2, (top + bottom) / 2],
+        [left + 6, (top + bottom) / 2],
+        [right - 6, top + 30],
+        [(left + right) / 2, top + 6],
+        [left + 40, bottom - 6],
+      ];
+      for (const [x, y] of inside) expect(near(b.px(x, y), stripeA), `${template} ${x},${y}`).toBe(true);
+    });
+  }
+
+  it("draws no backdrop under real ability rows: the first row is stripe A over the art, once", async () => {
+    // With abilities the rows paint both stripes and nothing sits under them
+    // (a backdrop there would lay stripe A over stripe A).
+    const b = await bake("m15borderlesspw");
+    const rules = getFrameProfile("m15borderlesspw").rules.rect;
+    const x = ((rules.leftPct + rules.widthPct) / 100) * W - 4;
+    const y = (rules.topPct / 100) * H + 4;
+    expect(near(b.px(x, y), over([255, 255, 255], 0.608))).toBe(true);
+  });
+
   it("puts the starting loyalty on the master's own shield, cut out to its loyalty/ plate", async () => {
     const b = await bake("m15borderlesspw");
     const box = getFrameProfile("m15borderlesspw").loyalty!.plateRect!;

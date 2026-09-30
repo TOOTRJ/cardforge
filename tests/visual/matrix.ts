@@ -361,6 +361,12 @@ const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["nyx", "w"],
   ["fullart", "g"],
 ];
+/** No ability text on a borderless walker (TODO 4.33, owner round 15): its
+ *  see-through window shows the light first stripe, never the bare art. */
+const NO_TEXT_CASES: readonly [FrameTemplate, VisualColour][] = [
+  ["m15borderlesspw", "w"],
+  ["m15borderlesspwtall", "wub"],
+];
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15", "w"],
   ["tarkirdragon", "u"],
@@ -402,13 +408,24 @@ export function visualCases(): VisualCase[] {
     kind: CardKind,
     colour: VisualColour,
     shape: VisualShape,
-    extra: { preset?: VisualPreset; corners?: "round" | "square"; finish?: VisualCase["finish"]; suffix?: string; noArt?: boolean } = {},
+    extra: {
+      preset?: VisualPreset;
+      corners?: "round" | "square";
+      finish?: VisualCase["finish"];
+      suffix?: string;
+      noArt?: boolean;
+      noText?: boolean;
+    } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = { ...rowFor(template, kind, colour, shape, finish, id), ...(extra.noArt ? { art_url: null } : {}) };
+    const row = {
+      ...rowFor(template, kind, colour, shape, finish, id),
+      ...(extra.noArt ? { art_url: null } : {}),
+      ...(extra.noText ? { rules_text: null, flavor_text: null, face_content: null } : {}),
+    };
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -444,6 +461,10 @@ export function visualCases(): VisualCase[] {
   for (const [template, colour] of NO_ART_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { suffix: "@noart", noArt: true });
+  }
+  for (const [template, colour] of NO_TEXT_CASES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, colour, "short", { suffix: "@notext", noText: true });
   }
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
