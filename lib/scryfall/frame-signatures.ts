@@ -215,11 +215,16 @@ export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = 
  *  #282; checked by eye on the Scryfall scans 2026-09-29), and no Scryfall
  *  field tells them apart (`inverted` doesn't: FDN #359 and M21 #282 carry
  *  none), so the light ones are pinned and every other mono-black walker is
- *  the `dark-bars` gap. */
+ *  the `dark-bars` gap. Every mono-black borderless walker's title ink was
+ *  checked on the scans (2026-09-29): these six print dark ink on light
+ *  bars. BLC #78 is NOT one — its dark bars print white ink over pale art,
+ *  so they only look light. SLD #1593 is the nickname gap's either way. */
 export const LIGHT_BLACK_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
   afr: ["284"],
   stx: ["276"],
-  blc: ["78"],
+  cmr: ["512"],
+  med: ["RA3", "GR2"],
+  sld: ["1593"],
 };
 
 /** The double-faced frame marks (Phase 5). */
@@ -776,9 +781,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // non-showcase printings) stays the light frame's nearest, as the owner
   // decided on 2026-09-26 — although the scans checked (WOE #297, ECL
   // #284, FRA #291 / #300 / #303, SOS #282, 2X2 #333, MKM #335, DSK #328,
-  // TDM #398, EOE #287) print the same light rows as the rest. And a
-  // mono-black walker off the pinned light ones prints dark name and type
-  // bars with white ink (LIGHT_BLACK_WALKER_PINS).
+  // TDM #398, EOE #287) print the same light rows as the rest; BLC's
+  // raised-foil inverted walkers (#93 blue, #94 black, #96 green) print dark
+  // name and type bars with white ink in any colour. And a mono-black
+  // walker off the pinned light ones prints dark name and type bars with
+  // white ink (LIGHT_BLACK_WALKER_PINS).
   inverted: {
     match: { effectsAny: ["inverted"] },
     reason: "Scryfall marks this printing's frame inverted, which PipGlyph's borderless planeswalker doesn't claim to match yet",

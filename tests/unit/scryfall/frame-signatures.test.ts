@@ -55,15 +55,19 @@ describe("borderless families (TODO 1.17)", () => {
     // crop is the window, 1.18). A run of statics shares a printed row: NEO
     // #303 (Flash + a static + three abilities) is tall, ZNR #281 (two
     // statics + two abilities) regular. An `inverted` printing (WOE #297),
-    // a black walker with dark bars (FDN #359; AFR #284 is a pinned light
-    // one) and a two-colour split frame (ELD #271 GU, DMU #375 GW) are
-    // nearest.
+    // a black walker with dark bars (FDN #359, and BLC #78, whose dark bars
+    // only look light over its pale art; AFR #284, CMR #512 and MED #GR2
+    // are pinned light ones) and a two-colour split frame (ELD #271 GU,
+    // DMU #375 GW) are nearest.
     ["m21-280", "exact", "m15borderlesspw", "m15pw"],
     ["m21-279", "exact", "m15borderlesspw", "m15pw"],
     ["znr-281", "exact", "m15borderlesspw", "m15pw"],
     ["m21-281", "exact", "m15borderlesspwtall", "m15pw"],
     ["neo-303", "exact", "m15borderlesspwtall", "m15pw"],
     ["afr-284", "exact", "m15borderlesspwtall", "m15pw"],
+    ["cmr-512", "exact", "m15borderlesspwtall", "m15pw"],
+    ["med-GR2", "exact", "m15borderlesspw", "m15pw"],
+    ["blc-78", "nearest", "m15borderlesspw", "m15pw"],
     ["eld-271", "nearest", "m15borderlesspw", "m15pw"],
     ["woe-297", "nearest", "m15borderlesspwtall", "m15pw"],
     ["fdn-359", "nearest", "m15borderlesspwtall", "m15pw"],
@@ -142,6 +146,10 @@ describe("borderless families (TODO 1.17)", () => {
     });
     expect(frameMatchFromScryfall(printing("m21-280")).signature).toBe("borderless/planeswalker");
     expect(frameMatchFromScryfall(printing("afr-284")).signature).toBe("borderless/planeswalker");
+    expect(frameMatchFromScryfall(printing("med-GR2")).signature).toBe("borderless/planeswalker");
+    // BLC #78's bars look light over its pale art, but its ink is white:
+    // the dark dress, never the pinned light one.
+    expect(frameMatchFromScryfall(printing("blc-78")).signature).toBe("borderless/planeswalker+dark-bars");
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",

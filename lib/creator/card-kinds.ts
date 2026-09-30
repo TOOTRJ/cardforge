@@ -841,8 +841,11 @@ export function followTokenTextBox(input: {
 // Wandering Emperor NEO #303 (Flash + a static + three abilities) prints
 // four rows on the tall frame, Jace, Mirror Mage ZNR #281 and Vivien,
 // Monsters' Advocate IKO #277 (two statics + two abilities) three on the
-// regular one (checked on 16 prints, 2026-09-29). Keyed by kind, then the
-// regular frame → its tall dress.
+// regular one (checked on the scans of all 209 printings the registry's
+// borderless/planeswalker rule matches, 2026-09-29: 206 print the box this
+// count picks; Gideon Blackblade MED #WS2 sets its two statics in two rows
+// and Comet UNF #275 / #526 its die-roll table on the tall box). Keyed by
+// kind, then the regular frame → its tall dress.
 //
 // Always automatic, in every path: the tall frame is no choice of its own
 // (the picker's one Borderless Planeswalker chip stands for both, like the

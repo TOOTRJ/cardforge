@@ -128,12 +128,12 @@ const TEMPLATES = {
   // light-barred prints (LIGHT_BLACK_WALKER_PINS; most black walkers print
   // dark bars). m = three colours (two-colour walkers split the frame, 4.6).
   m15borderlesspw: {
-    confirm: "Keep printings with three printed rows; b only the light-barred ones (AFR #284, STX #276, BLC #78).",
+    confirm: "Keep printings with three printed rows; b only the light-barred ones (dark ink: MED #GR2, MED #RA3 — not BLC #78, whose ink is white).",
     q: (k) =>
       `t:planeswalker border:borderless frame:2015 -is:showcase -is:dfc -frame:inverted -is:textless ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
   },
   m15borderlesspwtall: {
-    confirm: "Keep printings with four printed rows; b only the light-barred ones (AFR #284, STX #276, BLC #78).",
+    confirm: "Keep printings with four printed rows; b only the light-barred ones (dark ink: AFR #284, STX #276, CMR #512).",
     q: (k) =>
       `t:planeswalker border:borderless frame:2015 -is:showcase -is:dfc -frame:inverted -is:textless ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
   },

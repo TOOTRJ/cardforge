@@ -1228,7 +1228,7 @@
     }
   },
   "m15borderlesspw": {
-    "note": "The light borderless planeswalker (TODO 4.33): mono-colour printings with three printed ability rows (a run of statics shares a row) and NO inverted flag, checked by eye on the Scryfall scans 2026-09-29. Two-colour walkers (Oko ELD #271, Saheeli BRO #294) print a split frame (4.6) and the dark inverted ones (Ashiok WOE #297, Ajani ECL #284) have no frame yet: neither is a reference. m = three colours (Narset IKO #278), the gold frame our master draws. c = Card Conjurer's 'Artifact Frame' with its rim made opaque (see frame-sources.json); Ugin M21 #279 and Karn DMU #372 print the see-through grey bars. b: most mono-black borderless walkers print dark name and type bars with white ink (M21 #282, DMU #373, VOW #278, INR #322 — the registry's dark-bars gap); Card Conjurer's b master is the light dress that BLC #78 prints (LIGHT_BLACK_WALKER_PINS). Rares and mythics print the holo stamp in the bottom bar.",
+    "note": "The light borderless planeswalker (TODO 4.33): mono-colour printings with three printed ability rows (a run of statics shares a row) and NO inverted flag, checked by eye on the Scryfall scans 2026-09-29. Two-colour walkers (Oko ELD #271, Saheeli BRO #294) print a split frame (4.6) and the dark inverted ones (Ashiok WOE #297, Ajani ECL #284) have no frame yet: neither is a reference. m = three colours (Narset IKO #278), the gold frame our master draws. c = Card Conjurer's 'Artifact Frame' with its rim made opaque (see frame-sources.json); Ugin M21 #279 and Karn DMU #372 print the see-through grey bars. b: most mono-black borderless walkers print dark name and type bars with white ink (M21 #282, DMU #373, VOW #278, INR #322 — the registry's dark-bars gap); Card Conjurer's b master is the light dress (dark ink on light grey bars) that only a few print (LIGHT_BLACK_WALKER_PINS); the three-row ones are Mythic Edition's Liliana, the Last Hope MED #GR2 and Sorin Markov MED #RA3. BLC #78 looks light but is the dark dress: white ink on dark see-through bars over pale art. Rares and mythics print the holo stamp in the bottom bar.",
     "colors": {
       "w": [
         {
@@ -1261,9 +1261,14 @@
       ],
       "b": [
         {
-          "name": "Liliana of the Dark Realms",
-          "set": "blc",
-          "scryfallId": "00e73c6f-bdbb-474b-9b24-44cb3fd5f751"
+          "name": "Liliana, the Last Hope",
+          "set": "med",
+          "scryfallId": "7ffc77bf-21e7-4e1e-a635-d6b61213b3e1"
+        },
+        {
+          "name": "Sorin Markov",
+          "set": "med",
+          "scryfallId": "ab6ccbe1-937e-405b-afd5-333abfd5c6a5"
         }
       ],
       "r": [
