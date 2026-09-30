@@ -220,6 +220,7 @@ import {
   FRAME_ANATOMY_KEYS,
   frameAnatomyOf,
   importedAnatomy,
+  importedFormAnatomy,
 } from "@/lib/cards/anatomy";
 import {
   AnatomyPanel,
@@ -1750,8 +1751,12 @@ export function CardCreatorForm({
 
     // The printing's colour — its PAIR where the landed frame draws the
     // two-colour frame — and, for a new card, its own crown and two-colour
-    // switches (importedAnatomy; "imports follow the printing"). The save
-    // keeps only the switches the frame draws.
+    // switches (importedAnatomy; "imports follow the printing"). A switch
+    // the printing says nothing about (a nonlegendary or one-colour
+    // printing — owner round 17: printing-only) takes the NEW-card default,
+    // whatever an earlier import or toggle left, as the AI deck remix's
+    // save does (newCardFrameStyle). The save keeps only the switches the
+    // frame draws.
     const imported = importedAnatomy(patch, landedTemplate);
     const importedColors = isRevise ? patch.color_identity : imported.colorIdentity;
     if (importedColors) {
@@ -1762,10 +1767,10 @@ export function CardCreatorForm({
       );
     }
     if (!isRevise) {
+      const switches = importedFormAnatomy(imported.style);
       for (const key of FRAME_ANATOMY_KEYS) {
-        const value = imported.style[key];
-        if (value !== undefined) {
-          setValue(`frame_style.${key}`, value, { shouldDirty: true });
+        if (getValues(`frame_style.${key}`) !== switches[key]) {
+          setValue(`frame_style.${key}`, switches[key], { shouldDirty: true });
         }
       }
       // The import's colour is the printing's: the cost no longer re-fills it.

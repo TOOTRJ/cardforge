@@ -829,19 +829,31 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   `newCardFrameStyle` for a payload that names none — the AI jobs; a remix,
   the creator's or the AI deck remix of an own card, keeps its parent's
   explicit ones, `storedAnatomyOf`). An import
-  follows the printing (`printed_crown`: Scryfall's `legendary` frame effect,
-  off on a showcase printing; `printed_two_color`: a 2015-frame printing of
-  exactly two colours). A stored card shows each switch OFF with a one-line
+  follows the printing and names only what the printing says (owner round
+  17, 2026-09-30: printing-only; `importedAnatomy`): `printed_crown` is
+  `true` for Scryfall's `legendary` frame effect, `false` for a Legendary
+  card printed without it (M15–RIX, List reprints) and for any showcase,
+  and absent for a nonlegendary printing; `printed_two_color` is `true` (with
+  its pair) for a 2015-frame printing of exactly two colours, else absent —
+  never `false`. A switch the printing doesn't name takes the new-card
+  default (the save's stamp; the creator's form, `importedFormAnatomy`), so a
+  card made Legendary or given a pair later starts on, like any new card.
+  A stored card shows each switch OFF with a one-line
   hint in the editor (`AnatomyPanel`) until its owner turns it on; an edit
   sends only `frame_anatomy`, merged over the stored `frame_style`
   (`applyFrameAnatomyPatch`). A switch (and its hint) shows only where it
   can draw: the crown on a Legendary non-planeswalker; the two-colour frame
   on a pair, or a plain `["multicolor"]` card whose cost spans two colours
   or has no coloured pip (`offersTwoColor` — never three colour words, never
-  a Multicolor card whose cost spans one or three-plus).
-- **Every save** drops a switch its template can't draw (`normalizeAnatomy`),
-  so a template that gains a piece later (4.6f) never changes a card stored
-  on it before.
+  a Multicolor card whose cost spans one or three-plus), and for a LAND only
+  on a land frame (`twoColorFits`: m15land, `twoColorForLands`). A two-colour
+  land stored with no template draws on m15, whose gold-split isn't a
+  land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
+  the save drops it and the renderers don't draw it (owner round 17).
+- **Every save** drops a switch its template can't draw for the card
+  (`normalizeAnatomy`, with the card's type), so a template that gains a
+  piece later (4.6f) never changes a card stored on it before, and a crafted
+  payload can't give a land on m15 or m15artifact the two-colour frame.
 - **The colour pair** is `color_identity` with exactly two WUBRG words (the
   AI's `multicolor` token is ignored), picked in the Colour step's "Two
   colours" row and pre-filled from the cost (`twoColorFromCost`,
@@ -856,10 +868,11 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   none), gold-split otherwise — a mixed cost too.
 - **A template draws a piece** only through its `PROFILES` entry:
   `overlays` (the crown band: `FrameOverlaySlot` — rect, `{key}` image,
-  published `keys`, `keyMap`) and `twoColorMasters` (`<template>/<pair>.png`
-  split, `<pair>-h.png` hybrid). Never on a base another profile spreads
-  (`M15` is spread by 11 profiles, `M15LAND` by m15snowland). Both are
-  code-owned (the override schema refuses them).
+  published `keys`, `keyMap`), `twoColorMasters` (`<template>/<pair>.png`
+  split, `<pair>-h.png` hybrid) and `twoColorForLands` (its pairs are a land
+  frame's: only there does a land card wear them). Never on a base another
+  profile spreads (`M15` is spread by 11 profiles, `M15LAND` by
+  m15snowland). All three are code-owned (the override schema refuses them).
 - **Renderers:** the overlays draw right after the frame master
   (`FrameOverlayLayer` / the bake's `<img>`s, never a Fragment) and inside
   both finish masks; `frameAssetPathsFor` preloads them;
@@ -906,11 +919,14 @@ crowned prints the band is judged against (FDN #2 / #45 / #72 / #91 / #106 /
 #243, UMA #6 / #241, FDN #677, NEO #74 / #266–278, M20 #131): the
 /admin/frame-compare "Legendary" toggle renders the sample crowned beside
 them (a tick still records the combo's own reference). An import's switch is
-`printed_crown` — off for a printing without the `legendary` effect (M15–RIX,
-List and playtest reprints) and for any showcase, by Scryfall's `showcase`
-effect or the registry's showcase signature (MUL's etched run carries only
-`legendary` + `etched`). No tick changes: the owner signs the crown off once
-on a print sheet in the PR.
+`printed_crown` (`crownSwitchFromPrinting`) — on for the `legendary` effect;
+off for a Legendary card printed without it (M15–RIX, List and playtest
+reprints) and for any showcase, by Scryfall's `showcase` effect or the
+registry's showcase signature (MUL's etched run carries only `legendary` +
+`etched`); not named for a nonlegendary printing, which gets the new-card
+default (owner round 17: printing-only). The standard crowns are Card
+Conjurer's as they are — u / r / g too, untinted (owner round 17). No tick
+changes: the owner signs the crown off once on a print sheet in the PR.
 
 #### The two-colour frames (4.6b)
 
@@ -974,7 +990,10 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   template's `m` tick — a deterministic recipe over the verified masters,
   like `a` riding `c` — and the owner signs off a pair sheet in the PR
   (10 pairs × dress × template beside the FDN / TLA / DFT / MKM prints, and
-  the ramp table). No migration, no tick goes stale.
+  the ramp table). No migration, no tick goes stale. Signed off in round 17
+  (2026-09-30), with FDN's UNCROWNED gold prints as the references for the
+  W|B, B|G and R|G split crowns (FDN #120 / #125 / #117: FDN printed no
+  crowned card in those pairs).
 
 ## Text sizes on the M15-era family
 

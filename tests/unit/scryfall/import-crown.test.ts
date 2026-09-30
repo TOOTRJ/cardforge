@@ -12,8 +12,10 @@ import printings from "./fixtures/anatomy-printings.json";
 // frames that draw the crown and the pairs (m15, m15artifact, m15land): the
 // registry lands it exact,
 // the card stores the printing's own crown switch (a crownless M15–RIX
-// legendary stores `false`, so the new-card default never crowns it), and
-// the renderers' rule draws the crown in the pinline of the master drawn.
+// legendary stores `false`, so the new-card default never crowns it), a
+// switch the printing says nothing about takes the new-card default (owner
+// round 17, 2026-09-30: printing-only), and the renderers' rule draws the
+// crown in the pinline of the master drawn.
 // Fixtures: real Scryfall printings, trimmed (anatomy-printings.json).
 // ---------------------------------------------------------------------------
 
@@ -26,7 +28,7 @@ function imported(key: string) {
   const patch = mapScryfallToFormPatch(P[key]);
   const template = patch.frame_match?.template as FrameTemplate;
   const anatomy = importedAnatomy(patch, template);
-  const frameStyle = newCardFrameStyle({ template, ...anatomy.style });
+  const frameStyle = newCardFrameStyle({ template, ...anatomy.style }, patch.card_type);
   const crown = crownKeyFor(
     {
       colorIdentity: anatomy.colorIdentity ?? patch.color_identity,
@@ -55,9 +57,11 @@ describe("a crowned printing imports exact, crowned in its frame's pinline", () 
     // Every one is exact: m15 draws the pair too since 4.6b.
     expect(got.match).toMatchObject({ status: "exact" });
     expect(got.match?.gaps).toBeUndefined();
-    // Both switches follow the printing: the crown, and the two-colour frame
-    // only where the printing's own frame is split (Kykar).
-    expect(got.frameStyle).toMatchObject({ template, crown: true, twoColor: key === "fdn-122" });
+    // The crown follows the printing; the two-colour switch is the printing's
+    // for Kykar (its own frame is split) and the new-card default for the
+    // rest (printing-only, round 17) — on, but drawn only with a stored pair,
+    // so a mono or three-colour card stays in its colour's frame.
+    expect(got.frameStyle).toMatchObject({ template, crown: true, twoColor: true });
     expect(got.crown).toBe(crown);
   });
 });
@@ -66,20 +70,20 @@ describe("a crownless printing imports without the crown", () => {
   it("an M15–RIX legendary (M15 #3 Avacyn) stores the switch off: no crown", () => {
     const got = imported("m15-3");
     expect(got.match).toMatchObject({ status: "exact", template: "m15" });
-    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: false });
+    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: true });
     expect(got.crown).toBeNull();
   });
 
   it("a showcase printing (LTR #302 ring) stores the switch off where it lands on a crowned frame", () => {
     const patch = mapScryfallToFormPatch(P["ltr-302"]);
     expect(patch.printed_crown).toBe(false);
-    expect(newCardFrameStyle({ template: "m15", ...importedAnatomy(patch, "m15").style })).toMatchObject({ crown: false });
+    expect(newCardFrameStyle({ template: "m15", ...importedAnatomy(patch, "m15").style }, "creature")).toMatchObject({ crown: false });
   });
 
   it("a Multiverse Legends etched printing (MUL #66) lands on m15 without the crown its frame never printed", () => {
     const got = imported("mul-66");
     expect(got.match).toMatchObject({ status: "nearest", template: "m15", signature: "showcase/mul" });
-    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: false });
+    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: true });
     expect(got.crown).toBeNull();
   });
 });

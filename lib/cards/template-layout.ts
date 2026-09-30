@@ -387,6 +387,15 @@ export type FrameProfile = {
    *  `twoColorSplit` (Dragon Wing's older two-halves rule, which reads the
    *  pair with no switch). Code-owned; set only on PROFILES entries. */
   twoColorMasters?: readonly TwoColorDress[];
+  /** The pair masters are a LAND frame's split (m15land: the land frame and
+   *  bars in the two land tints, MKM #259–271). A land card draws the
+   *  two-colour frame only on a profile that says so: on m15 or m15artifact
+   *  it would wear a nonland frame's gold-split (Shadowwood Hollow and
+   *  Sunfade Citadel, lands stored with no template and drawn on m15), so
+   *  the creator hides its switch there, the save drops it and the renderers
+   *  don't draw it (owner round 17, 2026-09-30; lib/cards/anatomy.ts
+   *  twoColorFits). Code-owned; set only on PROFILES entries. */
+  twoColorForLands?: boolean;
   /** Two-colour cards draw the frame SPLIT down a hard vertical seam — the
    *  first colour's PNG left of `atPct`, the second's right of it, in printed
    *  pair order (twoColorFrameKeys: WU WB UB UR BR BG RG RW GW GU) — instead
@@ -3270,6 +3279,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15LAND,
     overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }],
     twoColorMasters: ["split"],
+    // Its pairs are a land's (the only frame a two-colour LAND draws them
+    // on — owner round 17, 2026-09-30).
+    twoColorForLands: true,
   },
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).

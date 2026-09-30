@@ -11,10 +11,16 @@
 //   • a NEW card starts with every switch on (NEW_CARD_ANATOMY in the
 //     creator; createCardAction stamps a payload that names none — the AI
 //     jobs), with an off switch;
-//   • an import follows the printing (lib/scryfall/import-mapper.ts);
-//   • every save drops a switch the saved template can't draw
+//   • an import follows the printing, and names only what the printing
+//     says (owner round 17, 2026-09-30; importedAnatomy): the crown for a
+//     Legendary printing (on with the `legendary` frame effect, off without
+//     it and on any showcase), the two-colour frame and its pair only for a
+//     two-colour printing — any other switch is left to the new-card
+//     default, so a card made Legendary or given a pair later starts on;
+//   • every save drops a switch the saved template can't draw for the card
 //     (normalizeAnatomy), so a template that gains a piece later (4.6f
-//     wave 2) never changes a card stored on it before.
+//     wave 2) never changes a card stored on it before — and a LAND keeps
+//     the two-colour switch only on a land frame (twoColorFits).
 //
 // A template draws a piece when its PROFILES entry declares it
 // (FrameProfile.overlays for the crown, FrameProfile.twoColorMasters for the
@@ -57,7 +63,7 @@ export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
  *  pair masters for. */
 export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[] };
 
-type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters">;
+type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
 
 /** The switches a NEW card starts with (the creator's create and remix
  *  forms): every piece on. The renderers draw only what the template can,
@@ -87,6 +93,31 @@ export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boole
   return key === "crown" ? anatomy.crown : anatomy.twoColor.length > 0;
 }
 
+/**
+ * True when a card of `cardType` can wear the two-colour frame on `profile`:
+ * the profile has pair masters, and a LAND only where they are a land
+ * frame's (FrameProfile.twoColorForLands: m15land). On m15 or m15artifact a
+ * two-colour land would wear a nonland frame's gold-split (Shadowwood Hollow
+ * and Sunfade Citadel, lands stored with no template and drawn on m15) —
+ * owner round 17, 2026-09-30: the switch is hidden there, never offered. The
+ * ONE rule the renderers (resolveTwoColor), the save (normalizeAnatomy), an
+ * edit's flip (applyFrameAnatomyPatch) and the creator's switch
+ * (offersTwoColor) share, so the preview never draws what the save drops.
+ */
+export function twoColorFits(profile: AnatomyProfile, cardType: string | null | undefined): boolean {
+  if ((profile.twoColorMasters ?? []).length === 0) return false;
+  return cardType !== "land" || profile.twoColorForLands === true;
+}
+
+/** twoColorFits for a stored template (its CODE profile, like
+ *  frameAnatomyOf). */
+export function twoColorFitsTemplate(
+  template: FrameTemplate | string | null | undefined,
+  cardType: string | null | undefined,
+): boolean {
+  return twoColorFits(getFrameProfile(template ?? undefined), cardType);
+}
+
 /** The ONE render rule for a switch: on only when it is exactly `true`. */
 export function anatomyOn(
   style: FrameAnatomyStyle | null | undefined,
@@ -114,18 +145,24 @@ export function anatomyDefaults(
  * the template can't draw is dropped — a `true`, so a template that gains
  * that piece later never changes the card, and a `false` too, since absent
  * already means off (a stored frame_style names only the switches its
- * template draws). A switch the template draws is kept either way — `false`
- * is its owner's explicit "off". Everything else is kept as it is. Returns
- * the input itself when nothing is dropped.
+ * template draws). So is the two-colour switch of a LAND on a template
+ * whose pairs aren't a land frame's (twoColorFits: m15, m15artifact — owner
+ * round 17, 2026-09-30), whatever the payload says. A switch the template
+ * draws is kept either way — `false` is its owner's explicit "off".
+ * Everything else is kept as it is. Returns the input itself when nothing is
+ * dropped.
  */
 export function normalizeAnatomy<T extends FrameAnatomyStyle>(
   frameStyle: T,
   template: FrameTemplate | string | null | undefined,
+  cardType: string | null | undefined,
 ): T {
-  const anatomy = frameAnatomyOf(template);
+  const profile = getFrameProfile(template ?? undefined);
+  const anatomy = frameAnatomyOfProfile(profile);
   let out = frameStyle;
   for (const key of FRAME_ANATOMY_KEYS) {
-    if (key in frameStyle && !anatomyDrawn(anatomy, key)) {
+    const drawn = key === "twoColor" ? twoColorFits(profile, cardType) : anatomyDrawn(anatomy, key);
+    if (key in frameStyle && !drawn) {
       if (out === frameStyle) out = { ...frameStyle };
       delete out[key];
     }
@@ -136,12 +173,13 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
 /**
  * A NEW card's stored frame style (createCardAction — the one insert behind
  * the creator, the AI jobs and remixes): every switch the payload doesn't
- * name defaults to its template's (anatomyDefaults), then the save rule
- * applies (normalizeAnatomy). An explicit `false` (an import of a crownless
- * printing, the creator's off switch) stays. The input itself when nothing
- * changes.
+ * name defaults to its template's (anatomyDefaults) — an import names only
+ * what its printing says (importedAnatomy), so the rest get this default
+ * too — then the save rule applies (normalizeAnatomy, with the card's type).
+ * An explicit `false` (a crownless Legendary printing, a showcase, the
+ * creator's off switch) stays. The input itself when nothing changes.
  */
-export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T): T {
+export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType: string | null | undefined): T {
   const defaults = anatomyDefaults(frameStyle.template);
   let stamped = frameStyle;
   for (const key of FRAME_ANATOMY_KEYS) {
@@ -150,7 +188,7 @@ export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T): T {
       stamped[key] = defaults[key];
     }
   }
-  return normalizeAnatomy(stamped, frameStyle.template);
+  return normalizeAnatomy(stamped, frameStyle.template, cardType);
 }
 
 /** The anatomy switches a stored frame_style names (booleans only) — what a
@@ -244,7 +282,10 @@ export function twoColorFromCost(cost: string | null | undefined): TwoColorPair 
 /**
  * Whether the two-colour frame is FOR this card — the creator shows its
  * switch (and a stored card's hint) only then (4.6 review 2026-09-29):
- *   • the identity holds a pair (twoColorPairOf; the "multicolor" token
+ *   • the card can wear it on its frame at all (twoColorFits: the template
+ *     has pair masters, and a LAND only on a land frame — owner round 17,
+ *     2026-09-30: never offered for a two-colour land drawn on m15);
+ *   • and the identity holds a pair (twoColorPairOf; the "multicolor" token
  *     ignored);
  *   • or it is plain "multicolor" (no colour word) and the cost spans exactly
  *     two colours — the pair switching it on pre-fills;
@@ -258,7 +299,9 @@ export function twoColorFromCost(cost: string | null | undefined): TwoColorPair 
 export function offersTwoColor(
   colors: readonly ColorIdentity[] | null | undefined,
   cost: string | null | undefined,
+  frame: { template: FrameTemplate | string | null | undefined; cardType: string | null | undefined },
 ): boolean {
+  if (!twoColorFitsTemplate(frame.template, frame.cardType)) return false;
   if (twoColorPairOf(colors) !== null) return true;
   const identity = colors ?? [];
   if (!identity.includes("multicolor") || identity.some((color) => WORD_LETTER[color] !== undefined)) return false;
@@ -306,7 +349,8 @@ export type TwoColorLook = {
 /**
  * The two-colour look a card draws, or null for the gold frame (today's
  * look): the switch is on (FrameStyle.twoColor === true), the identity is a
- * stored pair, and the profile has pair masters. The dress is print's for the
+ * stored pair, and the card can wear the profile's pair masters
+ * (twoColorFits — a LAND only a land frame's). The dress is print's for the
  * cost (twoColorDressOf); a dress the template has no masters for falls back
  * to its gold-split masters (a hybrid artifact on m15artifact, which has no
  * hybrid plate yet), else to gold.
@@ -317,7 +361,7 @@ export function resolveTwoColor(
   facts: AnatomyFacts,
 ): TwoColorLook | null {
   const dresses = profile.twoColorMasters;
-  if (!dresses || dresses.length === 0 || !anatomyOn(style, "twoColor")) return null;
+  if (!dresses || !twoColorFits(profile, facts.cardType) || !anatomyOn(style, "twoColor")) return null;
   const pair = twoColorPairOf(facts.colors);
   if (!pair) return null;
   const wanted = twoColorDressOf(facts.cost, facts.cardType);
@@ -421,10 +465,18 @@ export type AppliedFrameAnatomyPatch =
  * stored card" (owner decision 2026-09-29): ["multicolor"] becomes
  * ["white", "blue"]; a card that already has a pair keeps it; a mono,
  * colourless or three-colour card is refused. A pair on a card whose frame
- * can't draw the two-colour look (the switch normalised away) is ignored.
+ * can't draw the two-colour look for it (the switch normalised away: a
+ * frame with no pair masters, or a LAND on a nonland frame — a crafted
+ * payload for Shadowwood Hollow on m15) is ignored.
  */
 export function applyFrameAnatomyPatch(
-  stored: { frameStyle: Record<string, unknown>; colorIdentity: readonly ColorIdentity[] },
+  stored: {
+    frameStyle: Record<string, unknown>;
+    colorIdentity: readonly ColorIdentity[];
+    /** The card's type as it will be saved (a land keeps the two-colour
+     *  switch only on a land frame — twoColorFits). */
+    cardType: string | null | undefined;
+  },
   patch: FrameAnatomyPatch,
 ): AppliedFrameAnatomyPatch {
   const template = typeof stored.frameStyle.template === "string" ? stored.frameStyle.template : undefined;
@@ -432,7 +484,10 @@ export function applyFrameAnatomyPatch(
   for (const key of FRAME_ANATOMY_KEYS) {
     if (patch[key] !== undefined) merged[key] = patch[key];
   }
-  const frameStyle = normalizeAnatomy(merged as FrameAnatomyStyle, template) as Record<string, unknown>;
+  const frameStyle = normalizeAnatomy(merged as FrameAnatomyStyle, template, stored.cardType) as Record<
+    string,
+    unknown
+  >;
   if (!patch.pair || frameStyle.twoColor !== true) return { ok: true, frameStyle, colorIdentity: null };
 
   const pair = twoColorPairOf(patch.pair);
@@ -454,22 +509,37 @@ export function applyFrameAnatomyPatch(
 // Imports (lib/scryfall/import-mapper.ts → the creator, the AI deck remix)
 // ---------------------------------------------------------------------------
 
-/** The printing facts an import patch carries for the anatomy. */
+/** The printing facts an import patch carries for the anatomy
+ *  (ScryfallImportPatch). */
 export type ImportedAnatomyFacts = {
   color_identity?: readonly ColorIdentity[];
   color_pair?: TwoColorPair;
+  /** `true` — the printing prints the standard crown; `false` — a
+   *  Legendary card printed without it (M15–RIX, List reprints) or any
+   *  showcase; absent — nothing to follow (a nonlegendary printing). */
   printed_crown?: boolean;
-  printed_two_color?: boolean;
+  /** `true` for a two-colour printing, else absent — never `false`. */
+  printed_two_color?: true;
 };
 
 /**
  * An imported card's anatomy on the frame it landed on (`landedTemplate`) —
- * "imports follow the printing" (owner rule 2026-09-29): the crown and
- * two-colour switches take the printing's own values (a crownless M15–RIX
- * legendary or a showcase printing says `false`, so the new-card default
- * never crowns it), and the colour is the printing's PAIR where the landed
- * frame draws the two-colour frame, else the patch's own identity
- * ("multicolor"). The save drops a switch the frame can't draw.
+ * "imports follow the printing" (owner rule 2026-09-29), PRINTING-ONLY
+ * (owner round 17, 2026-09-30): a switch is named only where the printing
+ * says something about it.
+ *   • The crown: the printing's own value for a Legendary card — on with
+ *     the `legendary` frame effect, `false` for an M15–RIX legendary or a
+ *     List reprint (owner 2026-09-29: "OFF for M15–RIX legendaries") and
+ *     for any showcase (Q6 → b, "match scan"); a nonlegendary printing
+ *     names none.
+ *   • The two-colour frame: `true` for a two-colour printing, with its PAIR
+ *     as the colour where the landed frame draws pairs; any other printing
+ *     names none and keeps its own identity ("multicolor" for a two-colour
+ *     card on a frame that prints gold, RTR #145).
+ * A switch named nowhere gets the new-card default at the save
+ * (newCardFrameStyle; the creator's form holds NEW_CARD_ANATOMY), so a card
+ * later made Legendary, or given a pair, starts with the piece on like any
+ * new card. The save drops a switch the frame can't draw.
  */
 export function importedAnatomy(
   patch: ImportedAnatomyFacts,
@@ -477,13 +547,29 @@ export function importedAnatomy(
 ): { style: FrameAnatomyStyle; colorIdentity: ColorIdentity[] | undefined } {
   const style: FrameAnatomyStyle = {};
   if (patch.printed_crown !== undefined) style.crown = patch.printed_crown;
-  if (patch.printed_two_color !== undefined) style.twoColor = patch.printed_two_color;
+  const twoColourPrinting = patch.printed_two_color === true;
+  if (twoColourPrinting) style.twoColor = true;
   const drawsPairs = frameAnatomyOf(landedTemplate).twoColor.length > 0;
   const colorIdentity =
-    drawsPairs && patch.color_pair
+    drawsPairs && twoColourPrinting && patch.color_pair
       ? pairColorIdentity(patch.color_pair)
       : patch.color_identity
         ? [...patch.color_identity]
         : undefined;
   return { style, colorIdentity };
+}
+
+/**
+ * The switches a NEW card's creator form holds after an import: the
+ * printing's (importedAnatomy's `style`), and NEW_CARD_ANATOMY for a switch
+ * the printing names none for — whatever an earlier import or toggle left
+ * there. Saved (newCardFrameStyle) it is exactly what the AI deck remix of
+ * the same printing stores, which sends the printing's switches alone and
+ * gets the default stamped (tests/unit/cards/anatomy-import-default.test.ts).
+ */
+export function importedFormAnatomy(style: FrameAnatomyStyle): Required<FrameAnatomyStyle> {
+  return {
+    crown: style.crown ?? NEW_CARD_ANATOMY.crown,
+    twoColor: style.twoColor ?? NEW_CARD_ANATOMY.twoColor,
+  };
 }

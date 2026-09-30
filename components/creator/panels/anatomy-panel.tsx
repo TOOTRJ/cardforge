@@ -8,7 +8,8 @@
 // A switch shows only where it can draw something: the template draws the
 // piece (its PROFILES entry declares it) and the card qualifies (Legendary
 // for the crown; for the two-colour frame a pair, or a plain "multicolor"
-// card whose cost spans two colours or names none — offersTwoColor). Both draw on
+// card whose cost spans two colours or names none, and never a LAND on a
+// nonland frame — owner round 17, 2026-09-30 — offersTwoColor). Both draw on
 // the m15 / m15artifact / m15land PROFILES entries: the crown (4.6a) and the
 // two-colour pair masters (4.6b).
 //
@@ -276,9 +277,10 @@ export function AnatomyPanel({
   // Only a card the two-colour frame is for (offersTwoColor): never a
   // three-colour identity, nor a "multicolor" card whose cost spans one or
   // three-plus colours — there the switch would do nothing, or offer a pair
-  // the cost contradicts.
-  const showTwoColor =
-    which.includes("twoColor") && anatomy.twoColor.length > 0 && offersTwoColor(colors, cost);
+  // the cost contradicts — and never a LAND on a nonland frame (a two-colour
+  // land stored with no template draws on m15, whose gold-split isn't a
+  // land's; owner round 17: hidden, with its hint).
+  const showTwoColor = which.includes("twoColor") && offersTwoColor(colors, cost, { template, cardType });
   if (!showCrown && !showTwoColor) return null;
 
   const editing = stored !== null;

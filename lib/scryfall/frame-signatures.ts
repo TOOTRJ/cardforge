@@ -708,7 +708,7 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // profile (gapDrawnBy), never a second hand-kept list.
   // The STANDARD crown: a showcase printing (LTR ring, TDM draconic, BLB
   // woodland …) carries Scryfall's `legendary` effect but prints no standard
-  // crown, and imports with the crown off (printsStandardCrown) — no gap.
+  // crown, and imports with the crown off (crownSwitchFromPrinting) — no gap.
   // m15, m15artifact and m15land draw it (TODO 4.6a); every other frame's
   // crown — snow, devoid, borderless, extended art, adventure, saga — is 4.6f.
   crown: {

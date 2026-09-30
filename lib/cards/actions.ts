@@ -403,9 +403,11 @@ export async function createCardAction(
     art_position: data.art_position ?? {},
     // The anatomy switches (TODO 4.6.0, owner rule 2026-09-29): a new card
     // gets every piece its template draws unless the payload says otherwise
-    // (the AI jobs name none; an import of a crownless printing says false),
-    // and never a switch its template can't draw (lib/cards/anatomy.ts).
-    frame_style: newCardFrameStyle(data.frame_style ?? {}),
+    // (the AI jobs name none; an import names only what its printing says —
+    // false for a crownless Legendary or a showcase printing), and never a
+    // switch its template can't draw for the card — a land's two-colour
+    // frame only on a land frame (lib/cards/anatomy.ts).
+    frame_style: newCardFrameStyle(data.frame_style ?? {}, data.card_type),
     // No art or a frame preview → private (storedVisibility, above).
     visibility: storedVisibility,
     // Only a preview names the column, so an ordinary save never depends on
@@ -670,23 +672,30 @@ export async function updateCardAction(
   if (data.artist_credit !== undefined) update.artist_credit = data.artist_credit ?? null;
   if (data.art_url !== undefined) update.art_url = data.art_url ?? null;
   if (data.art_position !== undefined) update.art_position = data.art_position;
+  // The card's type as it will be saved: a land keeps the two-colour switch
+  // only on a land frame (lib/cards/anatomy.ts twoColorFits).
+  const savedCardType = data.card_type !== undefined ? data.card_type : existing.card_type;
   if (data.frame_style !== undefined) {
-    // Never a switch the saved template can't draw (lib/cards/anatomy.ts):
-    // a template that gains the piece later must not change this card.
+    // Never a switch the saved template can't draw for the card
+    // (lib/cards/anatomy.ts): a template that gains the piece later must not
+    // change this card.
     update.frame_style = normalizeAnatomy(
       data.frame_style,
       data.frame_style.template ??
         (existing.frame_style as { template?: string } | null)?.template,
+      savedCardType,
     );
   }
   // An edit's switch flip (frame_anatomy — edits never send frame_style):
   // merged over the stored frame_style, which otherwise stays exactly as
-  // stored, and a confirmed colour pair for a multicolour card.
+  // stored, and a confirmed colour pair for a multicolour card. A crafted
+  // two-colour flip for a land on a nonland frame is dropped.
   if (data.frame_anatomy !== undefined) {
     const applied = applyFrameAnatomyPatch(
       {
         frameStyle: (update.frame_style ?? existing.frame_style ?? {}) as Record<string, unknown>,
         colorIdentity: data.color_identity ?? existing.color_identity ?? [],
+        cardType: savedCardType,
       },
       data.frame_anatomy,
     );

@@ -717,7 +717,8 @@ export type FrameStyle = {
    *  the gold frame, or the hybrid frame when every coloured pip is hybrid.
    *  Opt-in per card like `crown`; drawn only for a stored colour PAIR
    *  (exactly two WUBRG words in color_identity) on a template with pair
-   *  masters. Absent = off = the gold frame, as before. */
+   *  masters — for a land, only a land frame's (twoColorFits; the save drops
+   *  it elsewhere). Absent = off = the gold frame, as before. */
   twoColor?: boolean;
 };
 

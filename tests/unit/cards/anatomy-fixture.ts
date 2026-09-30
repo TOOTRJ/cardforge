@@ -17,12 +17,12 @@ export const TEST_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS],
 };
 
-type Declared = Pick<FrameProfile, "overlays" | "twoColorMasters">;
+type Declared = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
 
 export const DECLARED: Record<string, Declared> = {
   m15: { overlays: [TEST_CROWN], twoColorMasters: ["split", "hybrid"] },
   m15artifact: { overlays: [{ ...TEST_CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split"] },
-  m15land: { overlays: [{ ...TEST_CROWN, keyMap: { c: "l" } }], twoColorMasters: ["split"] },
+  m15land: { overlays: [{ ...TEST_CROWN, keyMap: { c: "l" } }], twoColorMasters: ["split"], twoColorForLands: true },
 };
 
 /** getFrameProfile with DECLARED merged in (an unknown template reads as

@@ -39,7 +39,7 @@ export type CrownCard = {
   frameStyle?: FrameAnatomyStyle | null;
 };
 
-type CrownProfile = Pick<FrameProfile, "overlays" | "twoColorMasters">;
+type CrownProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
 
 function factsOf(card: CrownCard): AnatomyFacts & { colorKey: string } {
   return {

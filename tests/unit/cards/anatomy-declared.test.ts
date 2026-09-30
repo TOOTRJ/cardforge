@@ -43,14 +43,14 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
     expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true });
     expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true });
     expect(anatomyDefaults("m15pw")).toEqual({});
-    expect(newCardFrameStyle({ template: "m15" })).toEqual({ template: "m15", crown: true, twoColor: true });
+    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true });
     // The AI jobs send no frame_style at all: the default template's pieces.
-    expect(newCardFrameStyle({})).toEqual({ crown: true, twoColor: true });
+    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true });
   });
 
   it("keeps an explicit off (an import of a crownless printing, the creator's switch)", () => {
-    expect(newCardFrameStyle({ template: "m15", crown: false })).toEqual({ template: "m15", crown: false, twoColor: true });
-    expect(newCardFrameStyle({ template: "m15", crown: false, twoColor: false })).toEqual({
+    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true });
+    expect(newCardFrameStyle({ template: "m15", crown: false, twoColor: false }, "creature")).toEqual({
       template: "m15",
       crown: false,
       twoColor: false,
@@ -58,11 +58,11 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
   });
 
   it("the creator's all-on switches store only what the template draws", () => {
-    expect(newCardFrameStyle({ template: "m15snow", finish: "regular", ...NEW_CARD_ANATOMY })).toEqual({
+    expect(newCardFrameStyle({ template: "m15snow", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15snow",
       finish: "regular",
     });
-    expect(newCardFrameStyle({ template: "m15artifact", ...NEW_CARD_ANATOMY })).toEqual({
+    expect(newCardFrameStyle({ template: "m15artifact", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15artifact",
       crown: true,
       twoColor: true,
@@ -72,13 +72,13 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
 
 describe("every save (normalizeAnatomy)", () => {
   it("drops a switch the template can't draw, so a template that gains the piece later never changes the card", () => {
-    expect(normalizeAnatomy({ template: "m15snow", crown: true, twoColor: false }, "m15snow")).toEqual({ template: "m15snow" });
-    expect(normalizeAnatomy({ template: "m15", crown: true, twoColor: false }, "m15")).toEqual({
+    expect(normalizeAnatomy({ template: "m15snow", crown: true, twoColor: false }, "m15snow", "creature")).toEqual({ template: "m15snow" });
+    expect(normalizeAnatomy({ template: "m15", crown: true, twoColor: false }, "m15", "creature")).toEqual({
       template: "m15",
       crown: true,
       twoColor: false,
     });
-    expect(normalizeAnatomy({ template: "m15pw", crown: true }, "m15pw")).toEqual({ template: "m15pw" });
+    expect(normalizeAnatomy({ template: "m15pw", crown: true }, "m15pw", "creature")).toEqual({ template: "m15pw" });
   });
 });
 
@@ -111,10 +111,10 @@ describe("the two-colour master (frameMasterKey — both renderers)", () => {
 describe("an edit's switch flip (applyFrameAnatomyPatch)", () => {
   it("merges the switch over the stored frame_style and keeps every other key exactly as stored", () => {
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15", finish: "foil" }, colorIdentity: ["red"] }, { crown: true }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15", finish: "foil" }, colorIdentity: ["red"], cardType: "creature" }, { crown: true }),
     ).toEqual({ ok: true, frameStyle: { template: "m15", finish: "foil", crown: true }, colorIdentity: null });
     // A legacy template is never rewritten (it reads as m15).
-    expect(applyFrameAnatomyPatch({ frameStyle: { template: "regular" }, colorIdentity: ["red"] }, { crown: false })).toEqual({
+    expect(applyFrameAnatomyPatch({ frameStyle: { template: "regular" }, colorIdentity: ["red"], cardType: "creature" }, { crown: false })).toEqual({
       ok: true,
       frameStyle: { template: "regular", crown: false },
       colorIdentity: null,
@@ -124,14 +124,14 @@ describe("an edit's switch flip (applyFrameAnatomyPatch)", () => {
   it("gives a stored multicolour card the pair its owner confirmed", () => {
     expect(
       applyFrameAnatomyPatch(
-        { frameStyle: { template: "m15" }, colorIdentity: ["multicolor"] },
+        { frameStyle: { template: "m15" }, colorIdentity: ["multicolor"], cardType: "creature" },
         { twoColor: true, pair: ["blue", "white"] },
       ),
     ).toEqual({ ok: true, frameStyle: { template: "m15", twoColor: true }, colorIdentity: ["white", "blue"] });
     // An AI identity that already names the pair: nothing to re-colour.
     expect(
       applyFrameAnatomyPatch(
-        { frameStyle: { template: "m15" }, colorIdentity: ["blue", "white", "multicolor"] },
+        { frameStyle: { template: "m15" }, colorIdentity: ["blue", "white", "multicolor"], cardType: "creature" },
         { twoColor: true, pair: ["white", "blue"] },
       ),
     ).toEqual({ ok: true, frameStyle: { template: "m15", twoColor: true }, colorIdentity: null });
@@ -140,7 +140,7 @@ describe("an edit's switch flip (applyFrameAnatomyPatch)", () => {
   it("never re-colours a stored card: a mono, three-colour or other-pair card is refused", () => {
     for (const colorIdentity of [["black"], ["white", "blue", "black"], ["white", "black"], ["colorless"]] as const) {
       const applied = applyFrameAnatomyPatch(
-        { frameStyle: { template: "m15" }, colorIdentity: [...colorIdentity] },
+        { frameStyle: { template: "m15" }, colorIdentity: [...colorIdentity], cardType: "creature" },
         { twoColor: true, pair: ["white", "blue"] },
       );
       expect(applied.ok, colorIdentity.join()).toBe(false);
@@ -150,7 +150,7 @@ describe("an edit's switch flip (applyFrameAnatomyPatch)", () => {
   it("ignores a pair on a frame that can't draw the two-colour frame", () => {
     expect(
       applyFrameAnatomyPatch(
-        { frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"] },
+        { frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"], cardType: "creature" },
         { twoColor: true, pair: ["white", "blue"] },
       ),
     ).toEqual({ ok: true, frameStyle: { template: "m15snow" }, colorIdentity: null });
@@ -162,7 +162,7 @@ describe("an import (importedAnatomy)", () => {
     color_identity: ["multicolor"] as const,
     color_pair: "wu" as const,
     printed_crown: true,
-    printed_two_color: true,
+    printed_two_color: true as const,
   };
 
   it("stores the printing's pair where the landed frame draws the two-colour frame, else its multicolor", () => {
@@ -176,7 +176,7 @@ describe("an import (importedAnatomy)", () => {
 
   it("a crownless printing imports with the crown off, so the new-card default never crowns it", () => {
     const crownless = importedAnatomy({ ...facts, printed_crown: false }, "m15");
-    expect(newCardFrameStyle({ template: "m15", ...crownless.style })).toEqual({
+    expect(newCardFrameStyle({ template: "m15", ...crownless.style }, "creature")).toEqual({
       template: "m15",
       crown: false,
       twoColor: true,

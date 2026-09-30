@@ -17,7 +17,10 @@ import {
   twoColorFromCost,
   twoColorPairOf,
   offersTwoColor,
+  importedFormAnatomy,
+  twoColorFits,
 } from "@/lib/cards/anatomy";
+import { templateSupportsKind } from "@/lib/creator/card-kinds";
 import { getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
@@ -94,26 +97,45 @@ describe("the colour pair — card data, never the cost", () => {
 });
 
 describe("the cards the two-colour frame is for (the creator's switch; 4.6 review 2026-09-29)", () => {
+  /** A nonland card on m15, the frame with both dresses. */
+  const ON_M15 = { template: "m15", cardType: "creature" } as const;
+
   it("a pair, or plain multicolor whose cost spans exactly two colours or none", () => {
-    expect(offersTwoColor(["white", "blue"], null)).toBe(true);
-    expect(offersTwoColor(["blue", "white", "multicolor"], "{W}{U}")).toBe(true);
-    expect(offersTwoColor(["multicolor"], "{2}{B}{G}")).toBe(true);
-    expect(offersTwoColor(["multicolor"], "{G/W}{G/W}")).toBe(true);
-    expect(offersTwoColor(["multicolor"], null)).toBe(true);
-    expect(offersTwoColor(["multicolor"], "—")).toBe(true);
-    expect(offersTwoColor(["multicolor"], "{3}")).toBe(true);
+    expect(offersTwoColor(["white", "blue"], null, ON_M15)).toBe(true);
+    expect(offersTwoColor(["blue", "white", "multicolor"], "{W}{U}", ON_M15)).toBe(true);
+    expect(offersTwoColor(["multicolor"], "{2}{B}{G}", ON_M15)).toBe(true);
+    expect(offersTwoColor(["multicolor"], "{G/W}{G/W}", ON_M15)).toBe(true);
+    expect(offersTwoColor(["multicolor"], null, ON_M15)).toBe(true);
+    expect(offersTwoColor(["multicolor"], "—", ON_M15)).toBe(true);
+    expect(offersTwoColor(["multicolor"], "{3}", ON_M15)).toBe(true);
   });
 
   it("never an identity with one or three-plus colour words, a multicolor card whose cost spans one or 3+ colours, or no multicolour at all", () => {
-    expect(offersTwoColor(["white", "blue", "black"], "{W}{U}{B}")).toBe(false);
-    expect(offersTwoColor(["white", "blue", "black"], "{W}{U}")).toBe(false);
-    expect(offersTwoColor(["black"], "{3}{U}{B}")).toBe(false);
-    expect(offersTwoColor(["red", "multicolor"], "{1}{R}{G}")).toBe(false);
-    expect(offersTwoColor(["multicolor"], "{1}{W}{U}{B}")).toBe(false);
-    expect(offersTwoColor(["multicolor"], "{G}{G}")).toBe(false);
-    expect(offersTwoColor(["colorless"], null)).toBe(false);
-    expect(offersTwoColor([], "{W}{U}")).toBe(false);
-    expect(offersTwoColor(null, "{W}{U}")).toBe(false);
+    expect(offersTwoColor(["white", "blue", "black"], "{W}{U}{B}", ON_M15)).toBe(false);
+    expect(offersTwoColor(["white", "blue", "black"], "{W}{U}", ON_M15)).toBe(false);
+    expect(offersTwoColor(["black"], "{3}{U}{B}", ON_M15)).toBe(false);
+    expect(offersTwoColor(["red", "multicolor"], "{1}{R}{G}", ON_M15)).toBe(false);
+    expect(offersTwoColor(["multicolor"], "{1}{W}{U}{B}", ON_M15)).toBe(false);
+    expect(offersTwoColor(["multicolor"], "{G}{G}", ON_M15)).toBe(false);
+    expect(offersTwoColor(["colorless"], null, ON_M15)).toBe(false);
+    expect(offersTwoColor([], "{W}{U}", ON_M15)).toBe(false);
+    expect(offersTwoColor(null, "{W}{U}", ON_M15)).toBe(false);
+  });
+
+  it("never a LAND on a nonland frame — only on the land frame (owner round 17, 2026-09-30)", () => {
+    // Shadowwood Hollow / Sunfade Citadel: two-colour lands stored with no
+    // template, drawn on m15 — m15's gold-split isn't a land's.
+    for (const template of [undefined, null, "m15", "regular", "m15artifact"]) {
+      expect(offersTwoColor(["black", "green"], null, { template, cardType: "land" }), String(template)).toBe(false);
+      expect(offersTwoColor(["multicolor"], null, { template, cardType: "land" }), String(template)).toBe(false);
+    }
+    expect(offersTwoColor(["black", "green"], null, { template: "m15land", cardType: "land" })).toBe(true);
+    expect(offersTwoColor(["multicolor"], null, { template: "m15land", cardType: "land" })).toBe(true);
+    // The same pair on a nonland card keeps the switch on m15 and m15artifact.
+    expect(offersTwoColor(["black", "green"], "{B}{G}", { template: undefined, cardType: "creature" })).toBe(true);
+    expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15artifact", cardType: "artifact" })).toBe(true);
+    // A frame with no pair masters offers it to nobody.
+    expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15snow", cardType: "creature" })).toBe(false);
   });
 });
 
@@ -269,21 +291,21 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters)", ()
     for (const template of FRAME_TEMPLATE_VALUES) {
       const draws = DRAWN.includes(template);
       expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true, twoColor: true } : {});
-      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template), template).toEqual(
+      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template, "creature"), template).toEqual(
         draws ? { template, finish: "foil", crown: true, twoColor: false } : { template, finish: "foil" },
       );
-      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY }), template).toEqual(
+      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY }, "creature"), template).toEqual(
         draws ? { template, finish: "regular", crown: true, twoColor: true } : { template, finish: "regular" },
       );
     }
     // The AI jobs send no frame_style: the default template (m15) draws both.
-    expect(newCardFrameStyle({})).toEqual({ crown: true, twoColor: true });
+    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true });
     // A stored card names no switch: nothing to drop, the same object back.
     const untouched: FrameStyle = { template: "m15", finish: "regular" };
-    expect(normalizeAnatomy(untouched, "m15")).toBe(untouched);
-    expect(normalizeAnatomy(untouched, "m15snow")).toBe(untouched);
+    expect(normalizeAnatomy(untouched, "m15", "creature")).toBe(untouched);
+    expect(normalizeAnatomy(untouched, "m15snow", "creature")).toBe(untouched);
     const off: FrameStyle = { template: "m15", finish: "regular", crown: false };
-    expect(normalizeAnatomy(off, "m15")).toBe(off);
+    expect(normalizeAnatomy(off, "m15", "creature")).toBe(off);
   });
 
   it("the real m15 profile draws print's dress; m15artifact's hybrid falls back to its gold-split", () => {
@@ -312,35 +334,35 @@ describe("an edit's switch flip (frame_anatomy)", () => {
     // A legacy template draws the m15 frame: both switches are kept, the
     // template is never rewritten.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "regular", finish: "foil" }, colorIdentity: ["red"] }, { crown: true, twoColor: true }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "regular", finish: "foil" }, colorIdentity: ["red"], cardType: "creature" }, { crown: true, twoColor: true }),
     ).toEqual({ ok: true, frameStyle: { template: "regular", finish: "foil", crown: true, twoColor: true }, colorIdentity: null });
     // A frame that draws neither drops both switches.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: ["red"] }, { crown: true, twoColor: true }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: ["red"], cardType: "creature" }, { crown: true, twoColor: true }),
     ).toEqual({ ok: true, frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: null });
   });
 
   it("stores a pair only as a refinement of a multicolour card; refuses one that would re-colour it", () => {
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["multicolor"] }, { twoColor: true, pair: ["white", "blue"] }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["multicolor"], cardType: "creature" }, { twoColor: true, pair: ["white", "blue"] }),
     ).toEqual({ ok: true, frameStyle: { template: "m15", twoColor: true }, colorIdentity: ["white", "blue"] });
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["black"] }, { twoColor: true, pair: ["blue", "black"] }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["black"], cardType: "creature" }, { twoColor: true, pair: ["blue", "black"] }),
     ).toMatchObject({ ok: false });
     expect(
       applyFrameAnatomyPatch(
-        { frameStyle: { template: "m15" }, colorIdentity: ["white", "blue", "black"] },
+        { frameStyle: { template: "m15" }, colorIdentity: ["white", "blue", "black"], cardType: "creature" },
         { twoColor: true, pair: ["white", "blue"] },
       ),
     ).toMatchObject({ ok: false });
     // On a frame without pair masters the switch and the pair are ignored.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"] }, { twoColor: true, pair: ["white", "blue"] }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"], cardType: "creature" }, { twoColor: true, pair: ["white", "blue"] }),
     ).toEqual({ ok: true, frameStyle: { template: "m15snow" }, colorIdentity: null });
   });
 });
 
-describe("imports follow the printing", () => {
+describe("imports follow the printing — printing-only (owner round 17, 2026-09-30)", () => {
   it("the switches take the printing's own values; the colour is the printing's pair where the frame draws pairs", () => {
     expect(
       importedAnatomy(
@@ -352,10 +374,101 @@ describe("imports follow the printing", () => {
     expect(
       importedAnatomy({ color_identity: ["multicolor"], color_pair: "wu", printed_two_color: true }, "m15snow"),
     ).toEqual({ style: { twoColor: true }, colorIdentity: ["multicolor"] });
-    expect(importedAnatomy({ color_identity: ["black"], printed_crown: false, printed_two_color: false }, "m15")).toEqual({
-      style: { crown: false, twoColor: false },
+    // A crownless Legendary printing (or a showcase) says false.
+    expect(importedAnatomy({ color_identity: ["black"], printed_crown: false }, "m15")).toEqual({
+      style: { crown: false },
       colorIdentity: ["black"],
     });
     expect(importedAnatomy({}, "m15")).toEqual({ style: {}, colorIdentity: undefined });
+  });
+
+  it("names no two-colour switch, and stores no pair, for a printing that isn't two-coloured", () => {
+    // Azorius Charm RTR #145: two colours on the 2003 frame (gold) — the
+    // pair is a fact of the card, but the printing isn't two-coloured.
+    expect(importedAnatomy({ color_identity: ["multicolor"], color_pair: "wu" }, "m15")).toEqual({
+      style: {},
+      colorIdentity: ["multicolor"],
+    });
+    expect(importedAnatomy({ color_identity: ["black"] }, "m15")).toEqual({ style: {}, colorIdentity: ["black"] });
+  });
+
+  it("a switch the printing names none for takes the new-card default at the save", () => {
+    const style = importedAnatomy({ color_identity: ["black"] }, "m15").style;
+    expect(newCardFrameStyle({ template: "m15", ...style }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true });
+    // The creator's form holds the same: the printing's switch, else on.
+    expect(importedFormAnatomy(style)).toEqual(NEW_CARD_ANATOMY);
+    expect(importedFormAnatomy({ crown: false })).toEqual({ crown: false, twoColor: true });
+    expect(importedFormAnatomy({ crown: true, twoColor: true })).toEqual({ crown: true, twoColor: true });
+  });
+});
+
+describe("a LAND wears the two-colour frame only on a land frame (owner round 17, 2026-09-30)", () => {
+  const landPair = { colors: ["black", "green"] as ColorIdentity[], cost: null, cardType: "land" };
+
+  it("the renderers draw no pair master for a land on m15 or m15artifact — the land frame's only", () => {
+    const on = { twoColor: true };
+    expect(resolveTwoColor(getFrameProfile("m15"), on, landPair)).toBeNull();
+    expect(resolveTwoColor(getFrameProfile("m15artifact"), on, landPair)).toBeNull();
+    expect(resolveTwoColor(getFrameProfile("m15land"), on, landPair)?.masterKey).toBe("bg");
+    // A crowned land on m15 then wears the gold crown, as its gold frame.
+    expect(
+      resolveFrameOverlays(getFrameProfile("m15"), { crown: true, twoColor: true }, { ...landPair, supertype: "Legendary", colorKey: "m" }).map(
+        (o) => o.key,
+      ),
+    ).toEqual(["m"]);
+  });
+
+  it("the save drops the switch — true or false — for a land on a nonland frame, whatever the payload says", () => {
+    // "regular" is a legacy template the renderers draw as m15.
+    for (const template of ["m15", "m15artifact", undefined, "regular"] as (FrameStyle["template"] | undefined)[]) {
+      expect(normalizeAnatomy({ template, crown: true, twoColor: true }, template, "land"), String(template)).toEqual({
+        template,
+        crown: true,
+      });
+      expect(normalizeAnatomy({ template, twoColor: false }, template, "land"), String(template)).toEqual({ template });
+      expect(newCardFrameStyle({ template, ...NEW_CARD_ANATOMY }, "land"), String(template)).toEqual({ template, crown: true });
+    }
+    expect(normalizeAnatomy({ template: "m15land", twoColor: true }, "m15land", "land")).toEqual({
+      template: "m15land",
+      twoColor: true,
+    });
+    // A nonland card keeps it on m15.
+    expect(normalizeAnatomy({ template: "m15", twoColor: true }, "m15", "creature")).toEqual({ template: "m15", twoColor: true });
+  });
+
+  it("an edit's crafted flip for a land on m15 is dropped, and its pair ignored (Shadowwood Hollow)", () => {
+    expect(
+      applyFrameAnatomyPatch(
+        { frameStyle: { finish: "regular" }, colorIdentity: ["black", "green"], cardType: "land" },
+        { twoColor: true },
+      ),
+    ).toEqual({ ok: true, frameStyle: { finish: "regular" }, colorIdentity: null });
+    expect(
+      applyFrameAnatomyPatch(
+        { frameStyle: { template: "m15" }, colorIdentity: ["multicolor"], cardType: "land" },
+        { twoColor: true, pair: ["black", "green"] },
+      ),
+    ).toEqual({ ok: true, frameStyle: { template: "m15" }, colorIdentity: null });
+    // On the land frame the flip is kept.
+    expect(
+      applyFrameAnatomyPatch(
+        { frameStyle: { template: "m15land" }, colorIdentity: ["black", "green"], cardType: "land" },
+        { twoColor: true },
+      ),
+    ).toEqual({ ok: true, frameStyle: { template: "m15land", twoColor: true }, colorIdentity: null });
+  });
+
+  it("the land frames are exactly the pair templates a land can wear (twoColorForLands ⇔ the land kind's gallery)", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      const profile = getFrameProfile(template);
+      if ((profile.twoColorMasters ?? []).length === 0) {
+        expect(profile.twoColorForLands, template).toBeUndefined();
+        continue;
+      }
+      expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
+      expect(twoColorFits(profile, "creature"), template).toBe(true);
+    }
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land"]);
+    expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

@@ -235,6 +235,44 @@ describe("the two-colour switch on a stored card", () => {
     }
   });
 
+  it("never offered (switch or hint) for a LAND on a nonland frame — Shadowwood Hollow on m15 (owner round 17, 2026-09-30)", () => {
+    // Shadowwood Hollow / Sunfade Citadel: two-colour lands stored with no
+    // template (drawn on m15). The crown switch still shows for a Legendary one.
+    for (const frameStyle of [{}, { template: "m15" }, { template: "m15artifact" }] as FrameStyle[]) {
+      render(
+        <Harness
+          seed={{ colors: ["black", "green"], cardType: "land", supertype: "Legendary", frameStyle }}
+          stored={{ frameStyle, colorIdentity: ["black", "green"] }}
+        />,
+      );
+      const label = JSON.stringify(frameStyle);
+      expect(twoColorSwitch(), label).toBeNull();
+      expect(screen.queryByTestId("anatomy-hint-twoColor"), label).toBeNull();
+      expect(crownSwitch(), label).not.toBeNull();
+      cleanup();
+    }
+    // A plain Multicolor land on m15 neither.
+    render(
+      <Harness
+        seed={{ colors: ["multicolor"], cardType: "land", frameStyle: { template: "m15" } }}
+        stored={{ frameStyle: { template: "m15" }, colorIdentity: ["multicolor"] }}
+        which={["twoColor"]}
+      />,
+    );
+    expect(twoColorSwitch()).toBeNull();
+    cleanup();
+    // On the land frame it is offered, with its hint.
+    render(
+      <Harness
+        seed={{ colors: ["black", "green"], cardType: "land", frameStyle: { template: "m15land" } }}
+        stored={{ frameStyle: { template: "m15land" }, colorIdentity: ["black", "green"] }}
+        which={["twoColor"]}
+      />,
+    );
+    expect(twoColorSwitch()).not.toBeNull();
+    expect(screen.queryByTestId("anatomy-hint-twoColor")).not.toBeNull();
+  });
+
   it("never offered on a mono card, whatever its cost (an explicit black {3}{U}{B} stays black)", () => {
     render(
       <Harness

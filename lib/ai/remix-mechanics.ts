@@ -40,8 +40,10 @@ export type ScryfallRemixMechanics = {
   frame_template: FrameTemplate;
   /** The printing's own anatomy switches (the crown, the two-colour frame —
    *  lib/cards/anatomy.ts importedAnatomy), saved with the frame: the remix
-   *  follows its printing, and createCardAction keeps only what the frame
-   *  draws. */
+   *  follows its printing, and only where the printing says something (owner
+   *  round 17: printing-only) — createCardAction stamps the new-card default
+   *  for the rest, as the creator's form holds it (importedFormAnatomy), and
+   *  keeps only what the frame draws. */
   anatomy: FrameAnatomyStyle;
   /** The second half a layout frame paints (the adventure's storybook
    *  page, the split / aftermath / flip half) — set only when the landed

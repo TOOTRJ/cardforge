@@ -144,10 +144,12 @@ export function isArtifactFrameType(type: FrameTypeInfo | null | undefined): boo
 }
 
 /** A profile's type-dressed masters (FrameProfile.artifactMasterKeys) and
- *  its two-colour pair masters (FrameProfile.twoColorMasters). */
+ *  its two-colour pair masters (FrameProfile.twoColorMasters; a land wears
+ *  them only where they are a land frame's, twoColorForLands). */
 type MasterDress = {
   artifactMasterKeys?: Partial<Record<string, FrameMasterKey>>;
   twoColorMasters?: readonly TwoColorDress[];
+  twoColorForLands?: boolean;
 };
 
 /** The frame master (public/frames/{template}/{key}.png) a card of frame

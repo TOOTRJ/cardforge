@@ -486,7 +486,9 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(patch.color_identity).toEqual(["multicolor"]);
     // m15land draws the pair: the land imports W|U with the switch on.
     expect(patch).toMatchObject({ color_pair: "wu", printed_two_color: true });
-    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { crown: false, twoColor: true }, colorIdentity: ["white", "blue"] });
+    // Not Legendary: the import names no crown switch (printing-only, owner
+    // round 17), so the new-card default applies.
+    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { twoColor: true }, colorIdentity: ["white", "blue"] });
   });
 
   it("Bident of Thassa THS #42 → nyx, nearest", () => {
