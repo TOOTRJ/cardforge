@@ -14,7 +14,16 @@
 //                  the border's colour, for printing. Both ask the png route
 //                  by name (corners=…). A JPEG has no transparency, so it is
 //                  always Square (format=jpeg; the switch shows it).
-//   Single PDF   — 2.5"×3.5" page sized exactly to the card; sleeve-ready. (Plus+)
+//                  PAID viewers also pick the print options (TODO 6.1a/6.1b,
+//                  lib/cards/print-export.ts): Resolution 600 ppi (1500 ×
+//                  2100) or 800 ppi (2000 × 2800), and a 1/8″ bleed
+//                  checkbox. Either one is a PRINT render: square, PNG only
+//                  (the JPEG chip and Rounded are disabled while one is on,
+//                  and the print options while JPEG is), ?ppi=…&bleed=1.
+//                  800 ppi says when the frame is upscaled
+//                  (printFrameUpscaledAt800 — every template, today).
+//   Single PDF   — 2.5"×3.5" page sized exactly to the card; sleeve-ready,
+//                  optionally with the 1/8″ bleed and trim crop marks. (Plus+)
 //   3×3 Letter   — 9 copies on US Letter with corner crop marks. (Pro)
 //   3×3 A4       — 9 copies on A4 with corner crop marks. (Pro)
 //
@@ -60,6 +69,16 @@ import {
   effectiveCorners,
   type CardImageFormat,
 } from "@/lib/cards/output-format";
+import {
+  cardPrintFilename,
+  cardPrintPngHref,
+  DEFAULT_PRINT_PPI,
+  isPrintRequest,
+  printFrameUpscaledAt800,
+  printPixelSize,
+  PRINT_800_PPI_PAID_ONLY,
+  type PrintPpi,
+} from "@/lib/cards/print-export";
 import { cn } from "@/lib/utils";
 
 const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
@@ -69,16 +88,18 @@ const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
 
 const FORMAT_LABEL: Record<CardImageFormat, string> = { png: "PNG", jpeg: "JPEG" };
 
-/** A JPEG can't be rounded: Rounded is shown but not selectable. */
-function cornerOptions(format: CardImageFormat): ChipOption<CardCorners>[] {
+/** A JPEG — or a print render (800 ppi, bleed) — can't be rounded: Rounded
+ *  is shown but not selectable. */
+function cornerOptions(format: CardImageFormat, print: boolean): ChipOption<CardCorners>[] {
   return [
-    { value: "round", label: "Rounded", disabled: format === "jpeg" },
+    { value: "round", label: "Rounded", disabled: format === "jpeg" || print },
     { value: "square", label: "Square" },
   ];
 }
 
 /** One line under the switch — tier-aware: only a paid viewer has the PDF. */
-function cornersHint(isPaid: boolean, format: CardImageFormat): string {
+function cornersHint(isPaid: boolean, format: CardImageFormat, print: boolean): string {
+  if (print) return "Print files are always Square — they're cut along the rectangle.";
   if (format === "jpeg") return "JPEG has no transparency, so it's always Square — a smaller file.";
   return isPaid
     ? "Rounded for sharing; choose Square (or the PDF) to print."
@@ -103,6 +124,9 @@ type DownloadModalProps = {
    *  a card still owed a platform correction (both render live). Computed
    *  on the server with downloadDiffersFromGallery (lib/cards/layout-version.ts). */
   downloadDiffersFromGallery?: boolean;
+  /** The card's frame template — the 800 ppi option says when its frame is
+   *  upscaled (lib/cards/print-export.ts printFrameUpscaledAt800). */
+  frameTemplate?: string;
 };
 
 type DownloadTab = "png" | "single" | "letter" | "a4";
@@ -115,13 +139,23 @@ export function DownloadModal({
   isPaid = false,
   canBatch = false,
   downloadDiffersFromGallery = false,
+  frameTemplate,
 }: DownloadModalProps) {
   const upgrade = useUpgradeModal();
   // PNG first; its corner Rounded first, like the card in the gallery. A
   // JPEG is always square — the PNG's choice is kept for switching back.
   const [format, setFormat] = useState<CardImageFormat>("png");
   const [pngCorners, setPngCorners] = useState<CardCorners>("round");
-  const corners = effectiveCorners(format, pngCorners);
+  // Print options (paid; TODO 6.1a/6.1b): a print render is square + PNG.
+  const [ppi, setPpi] = useState<PrintPpi>(DEFAULT_PRINT_PPI);
+  const [bleed, setBleed] = useState(false);
+  const [pdfBleed, setPdfBleed] = useState(false);
+  // 800 ppi follows PRINT_800_PPI_PAID_ONLY (the open 6.1b [decide]); the
+  // bleed is always a clean-download feature.
+  const can800 = isPaid || !PRINT_800_PPI_PAID_ONLY;
+  const printOptions = { ppi: can800 ? ppi : DEFAULT_PRINT_PPI, bleed: isPaid && bleed };
+  const print = format === "png" && isPrintRequest(printOptions);
+  const corners = print ? "square" : effectiveCorners(format, pngCorners);
   const preset = isPaid ? "hd" : "default";
   const base = `/api/cards/${cardId}`;
   // Free users start on the Image tab — the one format they can actually use.
@@ -130,14 +164,18 @@ export function DownloadModal({
     // The server clamps a free viewer to 750 px anyway; asking for it
     // outright keeps the URL honest about what they get. A PNG always names
     // its corner: the route's default is square (older callers).
-    png: {
-      href:
-        format === "jpeg"
-          ? cardJpegHref(cardId, { preset })
-          : cardPngHref(cardId, { preset, corners }),
-      filename: cardImageFilename(cardSlug, { format, corners }),
-    },
-    single: { href: `${base}/pdf?layout=card`, filename: `${cardSlug}.pdf` },
+    png: print
+      ? { href: cardPrintPngHref(cardId, printOptions), filename: cardPrintFilename(cardSlug, printOptions) }
+      : {
+          href:
+            format === "jpeg"
+              ? cardJpegHref(cardId, { preset })
+              : cardPngHref(cardId, { preset, corners }),
+          filename: cardImageFilename(cardSlug, { format, corners }),
+        },
+    single: pdfBleed
+      ? { href: `${base}/pdf?layout=card&bleed=1`, filename: `${cardSlug}-bleed.pdf` }
+      : { href: `${base}/pdf?layout=card`, filename: `${cardSlug}.pdf` },
     letter: {
       href: `${base}/pdf?layout=sheet&paper=letter`,
       filename: `${cardSlug}-sheet.pdf`,
@@ -217,20 +255,33 @@ export function DownloadModal({
             ) : null}
 
             <TabsContent value="png" className="mt-5">
-              <FormatSwitch value={format} onChange={setFormat} />
+              <FormatSwitch value={format} onChange={setFormat} jpegDisabled={print} />
               <CornersSwitch
                 value={corners}
                 onChange={setPngCorners}
                 isPaid={isPaid}
                 format={format}
+                print={print}
               />
+              {can800 ? (
+                <PrintOptions
+                  ppi={ppi}
+                  onPpiChange={setPpi}
+                  bleed={bleed}
+                  onBleedChange={isPaid ? setBleed : null}
+                  disabled={format === "jpeg"}
+                  frameUpscaled={printFrameUpscaledAt800(frameTemplate)}
+                />
+              ) : null}
               {isPaid ? (
                 <DownloadPanel
-                  title={`High-resolution ${FORMAT_LABEL[format]}`}
+                  title={print ? printTitle(printOptions) : `High-resolution ${FORMAT_LABEL[format]}`}
                   description={
-                    format === "jpeg"
-                      ? "Clean, full-resolution (1500 × 2100) render with square corners, in a smaller file than the PNG."
-                      : "Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
+                    print
+                      ? printDescription(printOptions, printFrameUpscaledAt800(frameTemplate))
+                      : format === "jpeg"
+                        ? "Clean, full-resolution (1500 × 2100) render with square corners, in a smaller file than the PNG."
+                        : "Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
                   }
                   href={links.png.href}
                   filename={links.png.filename}
@@ -242,12 +293,15 @@ export function DownloadModal({
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="font-display text-sm font-semibold text-foreground">
-                      Low-resolution {FORMAT_LABEL[format]}
+                      {print ? printTitle(printOptions) : `Low-resolution ${FORMAT_LABEL[format]}`}
                     </h3>
                     <p className="text-xs leading-5 text-muted">
-                      750 × 1050 with the PipGlyph mark — fine for sharing and
-                      playtesting. Plus and Pro download a clean, print-ready
-                      1500 × 2100 image.
+                      {print
+                        ? // Only when PRINT_800_PPI_PAID_ONLY is off: a free
+                          // viewer's 800 ppi file keeps the mark (the bleed
+                          // stays paid, so this is never a bleed file).
+                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed.`
+                        : "750 × 1050 with the PipGlyph mark — fine for sharing and playtesting. Plus and Pro download a clean, print-ready 1500 × 2100 image."}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -270,6 +324,14 @@ export function DownloadModal({
             </TabsContent>
 
             <TabsContent value="single" className="mt-5">
+              {isPaid ? (
+                <BleedCheckbox
+                  checked={pdfBleed}
+                  onChange={setPdfBleed}
+                  testId="download-pdf-bleed"
+                  hint="The page grows to 2.75″ × 3.75″ plus a margin, with crop marks on the trim line."
+                />
+              ) : null}
               <DownloadPanel
                 title="Single card PDF"
                 description="One page sized exactly to a standard MTG card (2.5″ × 3.5″ / 63.5 × 88.9 mm). Drop it into a 9-pocket page or print onto card stock and cut."
@@ -308,24 +370,147 @@ export function DownloadModal({
   );
 }
 
-/** PNG or JPEG (TODO 6.18) — every viewer, free included. */
+/** PNG or JPEG (TODO 6.18) — every viewer, free included. A print render
+ *  (800 ppi, bleed) is PNG only: JPEG is shown but not selectable then. */
 function FormatSwitch({
   value,
   onChange,
+  jpegDisabled = false,
 }: {
   value: CardImageFormat;
   onChange: (next: CardImageFormat) => void;
+  jpegDisabled?: boolean;
 }) {
   return (
     <div className="mb-4 flex flex-col gap-1.5" data-testid="download-format">
       <span className="text-xs font-medium text-foreground">File type</span>
       <ChipGroup
         ariaLabel="File type"
-        options={FORMAT_OPTIONS}
+        options={FORMAT_OPTIONS.map((option) =>
+          option.value === "jpeg" && jpegDisabled ? { ...option, disabled: true } : option,
+        )}
         value={value}
         onChange={onChange}
       />
     </div>
+  );
+}
+
+const PPI_OPTIONS: ChipOption<"600" | "800">[] = [
+  { value: "600", label: "600 ppi · 1500 × 2100" },
+  { value: "800", label: "800 ppi · 2000 × 2800" },
+];
+
+/** "800 ppi PNG with bleed", "PNG with bleed", "800 ppi PNG". */
+function printTitle(opts: { ppi: PrintPpi; bleed: boolean }): string {
+  const res = opts.ppi === DEFAULT_PRINT_PPI ? "" : `${opts.ppi} ppi `;
+  return `${res}PNG${opts.bleed ? " with 1/8″ bleed" : ""} for print`;
+}
+
+/** "2000 × 2800 (800 ppi)" — a free viewer's print file (no bleed). */
+function freePrintSize(ppi: PrintPpi): string {
+  const { width, height } = printPixelSize(ppi, { bleed: false });
+  return `${width} × ${height} (${ppi} ppi)`;
+}
+
+function printDescription(opts: { ppi: PrintPpi; bleed: boolean }, frameUpscaled: boolean): string {
+  const trim = opts.ppi === 800 ? "2000 × 2800" : "1500 × 2100";
+  const size = opts.bleed ? (opts.ppi === 800 ? "2200 × 3000" : "1650 × 2250") : trim;
+  const parts = [
+    `Clean ${size} render with square corners, the art at full resolution.`,
+    opts.bleed
+      ? `The card (${trim} at the trim) runs 1/8″ past the trim line on every side (2.75″ × 3.75″) — cut along the card's edge.`
+      : null,
+    opts.ppi === 800
+      ? frameUpscaled
+        ? "Text and symbols are drawn at 800 ppi; this frame is upscaled from its 600 ppi master."
+        : "Text, symbols and the frame are drawn at 800 ppi."
+      : null,
+  ];
+  return parts.filter(Boolean).join(" ");
+}
+
+/** Resolution + bleed (paid; TODO 6.1a/6.1b) — PNG only. */
+function PrintOptions({
+  ppi,
+  onPpiChange,
+  bleed,
+  onBleedChange,
+  disabled,
+  frameUpscaled,
+}: {
+  ppi: PrintPpi;
+  onPpiChange: (next: PrintPpi) => void;
+  bleed: boolean;
+  /** Null: no bleed for this viewer (it follows the clean download). */
+  onBleedChange: ((next: boolean) => void) | null;
+  disabled: boolean;
+  frameUpscaled: boolean;
+}) {
+  return (
+    <div className="mb-4 flex flex-col gap-3" data-testid="download-print">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-foreground">Resolution</span>
+        <ChipGroup
+          ariaLabel="Resolution"
+          options={PPI_OPTIONS.map((option) => ({ ...option, disabled }))}
+          value={disabled ? "600" : String(ppi) as "600" | "800"}
+          onChange={(next) => onPpiChange(Number(next) as PrintPpi)}
+        />
+        <p className="text-[11px] leading-4 text-subtle">
+          {disabled
+            ? "800 ppi and bleed are PNG only."
+            : frameUpscaled
+              ? "800 ppi draws the text and art sharper; the frame itself is upscaled."
+              : "800 ppi for print shops that ask for it."}
+        </p>
+      </div>
+      {onBleedChange ? (
+        <BleedCheckbox
+          checked={bleed && !disabled}
+          onChange={onBleedChange}
+          disabled={disabled}
+          testId="download-bleed"
+          hint="Extends the card 1/8″ past the trim on every side (2.75″ × 3.75″) for print shops."
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function BleedCheckbox({
+  checked,
+  onChange,
+  disabled = false,
+  testId,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  testId: string;
+  hint: string;
+}) {
+  return (
+    <label
+      className={cn(
+        "mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5",
+        disabled && "cursor-not-allowed opacity-60",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+        data-testid={testId}
+      />
+      <span className="flex flex-col gap-0.5">
+        <span className="font-medium">Add a 1/8″ bleed</span>
+        <span className="text-xs leading-5 text-muted">{hint}</span>
+      </span>
+    </label>
   );
 }
 
@@ -336,22 +521,24 @@ function CornersSwitch({
   onChange,
   isPaid,
   format,
+  print = false,
 }: {
   value: CardCorners;
   onChange: (next: CardCorners) => void;
   isPaid: boolean;
   format: CardImageFormat;
+  print?: boolean;
 }) {
   return (
     <div className="mb-4 flex flex-col gap-1.5" data-testid="download-corners">
       <span className="text-xs font-medium text-foreground">Corners</span>
       <ChipGroup
         ariaLabel="Corners"
-        options={cornerOptions(format)}
+        options={cornerOptions(format, print)}
         value={value}
         onChange={onChange}
       />
-      <p className="text-[11px] leading-4 text-subtle">{cornersHint(isPaid, format)}</p>
+      <p className="text-[11px] leading-4 text-subtle">{cornersHint(isPaid, format, print)}</p>
     </div>
   );
 }

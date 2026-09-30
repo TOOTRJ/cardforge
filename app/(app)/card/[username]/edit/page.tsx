@@ -6,6 +6,7 @@ import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
+import { frameTemplateOf } from "@/lib/cards/print-export";
 import { RenderUpdateNotice } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { downloadDiffersFromGallery, hasNewerLook } from "@/lib/cards/layout-version";
@@ -147,6 +148,7 @@ export default async function EditCardPage({
               isPaid={entitlements.isPaid}
               canBatch={entitlements.allowBatchExport}
               downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
+              frameTemplate={frameTemplateOf(card.frame_style)}
             />
             <Button asChild variant="ghost">
               <Link href={publicPath}>

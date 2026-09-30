@@ -27,6 +27,8 @@ import {
   type DashboardCard,
 } from "@/components/creator/dashboard-card-tile";
 import { DashboardBulkBar } from "@/components/creator/dashboard-bulk-bar";
+import { PrintSelectionDialog } from "@/components/cards/print-selection-dialog";
+import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { LikedCardTile } from "@/components/creator/liked-card-tile";
 import {
   LikedCardListRow,
@@ -71,6 +73,10 @@ import { cn } from "@/lib/utils";
 //   - Shift-click range-selects in DISPLAY order from the last-clicked card,
 //     extending (not replacing) the selection — the macOS Finder pattern
 //   - "Select" flips plain clicks from navigate to toggle
+//
+// Bulk actions: "Print / download" (TODO 6.15 — PrintSelectionDialog; Pro
+// like the deck export, the upgrade modal otherwise) on every tab, the
+// Liked tab included; visibility and delete on your own cards only.
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE: Record<MyCardsView, number> = {
@@ -114,6 +120,9 @@ type MyCardsBrowserProps = {
   initialView: MyCardsView;
   initialFilter: MyCardsFilter;
   initialSort: MyCardsSort;
+  /** The viewer's plan includes the deck export (Pro) — and so printing a
+   *  selection (TODO 6.15). Otherwise the action opens the upgrade modal. */
+  canPrint?: boolean;
 };
 
 export function MyCardsBrowser({
@@ -124,7 +133,10 @@ export function MyCardsBrowser({
   initialView,
   initialFilter,
   initialSort,
+  canPrint = false,
 }: MyCardsBrowserProps) {
+  const upgrade = useUpgradeModal();
+  const [printOpen, setPrintOpen] = useState(false);
   const [view, setView] = useState(initialView);
   const [filter, setFilter] = useState(initialFilter);
   const [sort, setSort] = useState(initialSort);
@@ -224,8 +236,8 @@ export function MyCardsBrowser({
   const visibleOwned = ownedResults.slice(0, shown);
   const visibleLiked = likedResults.slice(0, shown);
   const visibleIds = useMemo(
-    () => ownedResults.slice(0, shown).map((c) => c.id),
-    [ownedResults, shown],
+    () => (isLiked ? likedResults : ownedResults).slice(0, shown).map((c) => c.id),
+    [isLiked, likedResults, ownedResults, shown],
   );
 
   const toggleOne = useCallback((cardId: string) => {
@@ -306,6 +318,15 @@ export function MyCardsBrowser({
   };
 
   const selectedIds = Array.from(selection);
+  // The selection in DISPLAY order, for the print dialog (its copies list
+  // and the sheets follow what the user sees).
+  const printCards = useMemo(
+    () =>
+      (isLiked ? likedResults : ownedResults)
+        .filter((card) => selection.has(card.id))
+        .map(({ id, slug, title }) => ({ id, slug, title })),
+    [isLiked, likedResults, ownedResults, selection],
+  );
 
   return (
     <div className="mt-8 flex flex-col gap-4">
@@ -375,7 +396,7 @@ export function MyCardsBrowser({
             ))}
           </div>
 
-          {isLiked || ownedResults.length === 0 ? null : selectMode ? (
+          {total === 0 ? null : selectMode ? (
             <>
               <span className="text-sm text-muted">
                 <span className="font-semibold text-foreground">
@@ -425,6 +446,7 @@ export function MyCardsBrowser({
                   key={card.id}
                   card={card}
                   profileOverrides={profileOverrides}
+                  selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
                 />
               ))
             : visibleOwned.map((card) => (
@@ -447,6 +469,7 @@ export function MyCardsBrowser({
                   key={card.id}
                   card={card}
                   profileOverrides={profileOverrides}
+                  selection={{ isSelected: selection.has(card.id), selectMode, onToggle: handleToggle }}
                 />
               ))
             : visibleOwned.map((card) => (
@@ -486,8 +509,18 @@ export function MyCardsBrowser({
           selectedIds={selectedIds}
           onClear={clearSelection}
           onSuccess={exitSelectMode}
+          ownedActions={!isLiked}
+          onPrint={() => (canPrint ? setPrintOpen(true) : upgrade.open("batch_export"))}
+          printLocked={!canPrint}
         />
       ) : null}
+
+      <PrintSelectionDialog
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+        cards={printCards}
+        onStarted={exitSelectMode}
+      />
     </div>
   );
 }

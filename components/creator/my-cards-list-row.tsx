@@ -9,6 +9,7 @@ import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type DashboardCard } from "@/components/creator/dashboard-card-tile";
+import type { LikedCardSelection } from "@/components/creator/liked-card-tile";
 import {
   FramePreviewCardBadge,
   isFramePreviewCard,
@@ -24,7 +25,9 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // List-view rows for My Cards. Same data + actions as the grid tiles
 // (DashboardCardTile / LikedCardTile), laid out as one scannable line:
-// thumbnail · title + type line · status · last edited · actions.
+// thumbnail · title + type line · status · last edited · actions. A liked
+// row takes part in selection when given `selection` (its one bulk action
+// is "Print / download", TODO 6.15).
 // ---------------------------------------------------------------------------
 
 const ROW_CLASS =
@@ -197,13 +200,54 @@ export function MyCardListRow({
 export function LikedCardListRow({
   card,
   profileOverrides = null,
+  selection,
 }: {
   card: CardWithStats;
   profileOverrides?: FrameProfileOverridesMap | null;
+  selection?: LikedCardSelection;
 }) {
   const path = buildCardPath(card);
+  const selected = selection?.isSelected ?? false;
+  const toggle = (event: MouseEvent) =>
+    selection?.onToggle(card.id, {
+      meta: event.metaKey || event.ctrlKey,
+      shift: event.shiftKey,
+    });
   return (
-    <li className={cn(ROW_CLASS, "border-border/70 hover:border-border-strong")}>
+    <li
+      // Select mode: every click in the row is a toggle, like MyCardListRow.
+      onClickCapture={
+        selection?.selectMode
+          ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggle(event);
+            }
+          : undefined
+      }
+      className={cn(
+        ROW_CLASS,
+        selection?.selectMode && "cursor-pointer",
+        selected ? "border-primary-bright bg-primary/10" : "border-border/70 hover:border-border-strong",
+      )}
+    >
+      {selection ? (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-pressed={selected}
+          aria-label={selected ? `Deselect ${card.title}` : `Select ${card.title}`}
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border/80 bg-background/80 text-transparent hover:border-border-strong hover:text-foreground",
+          )}
+        >
+          <Check className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      ) : null}
       <Link href={path} tabIndex={-1} aria-hidden className="block w-12 shrink-0">
         <RowThumb card={card} profileOverrides={profileOverrides} />
       </Link>
