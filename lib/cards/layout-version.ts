@@ -570,11 +570,13 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            moves too), and on m15token / m15tokentext / m15pw only a
 //            colourless card with art (V35_SEE_THROUGH_C_TEMPLATES: the
 //            under-frame layer is drawn only under art). Public production
-//            (anonymous read, 2026-09-29): 738 of 824 public / unlisted cards
-//            — m15 610, m15land 49, m15artifact 37, m15devoid 19, m15snow 13,
+//            (anonymous read, 2026-09-29): 740 of 827 public / unlisted cards
+//            — m15 611, m15land 49, m15artifact 37, m15devoid 20, m15snow 13,
 //            m15tokentext 9 of 33, m15pw 1 of 7, none on m15snowland,
-//            m15token, nyx, fullart. The visual matrix (tests/visual), 857
-//            cases against v34: 162 stored cases change + 1 print-only one
+//            m15token, nyx, fullart; re-baked, all 740 change, only inside
+//            their art rects, and none outside the scope. The visual matrix
+//            (tests/visual), 841 cases (after #429's 16 removals) against
+//            v34: 162 stored cases change + 1 print-only one
 //            (m15/w/creature-short@square, which the gate exempts), every
 //            one inside the scope, and the scope selects no unchanged case;
 //            8 no-art cases are new (the empty-art box on v35's slots, and

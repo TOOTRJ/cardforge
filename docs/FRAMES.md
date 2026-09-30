@@ -1149,11 +1149,12 @@ empty box stays in M15PW's slot). Production, anonymous read 2026-09-29: 740
 of 827 public / unlisted cards (m15 611, m15land 49, m15artifact 37,
 m15devoid 20, m15snow 13, m15tokentext 9 of 33, m15pw 1 of 7; none on
 m15snowland, m15token, nyx, fullart); re-baked on v35, every one of the 740
-changes, only inside its art rects, and no card outside the scope does. The visual matrix (857
-cases) against v34: 162 stored cases change + 1 print-only one
-(`m15/w/creature-short@square`, which the gate exempts), all inside the scope,
-and the scope holds no unchanged case; 8 no-art cases are new (the empty-art
-box on v35's slots, and no under-frame change without art).
+changes, only inside its art rects, and no card outside the scope does. The
+visual matrix (841 cases) against v34: 162 stored cases change + 1
+print-only one (`m15/w/creature-short@square`, which the gate exempts), all
+inside the scope, and the scope holds no unchanged case; 8 no-art cases are
+new (the empty-art box on v35's slots, and no under-frame change without
+art).
 
 Previews: Vercel previews on the dev DB are never swept (the auto-rebake
 cron runs in production only), so a preview's stored bakes — gallery tiles,
