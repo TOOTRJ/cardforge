@@ -11,6 +11,7 @@ import {
   upright,
   type FixtureFormat,
 } from "@/tests/stubs/exif-fixtures";
+import { claimRpc, forgetStaged, resetStaging, stagingBucketApi, uploadCardArtViaStaging } from "@/tests/stubs/card-art-staging";
 
 // ---------------------------------------------------------------------------
 // TODO 3.14 — EXIF orientation at UPLOAD. Every human upload path stores
@@ -39,18 +40,26 @@ function dbClient() {
 
 function storageClient() {
   return {
-    // The upload limit (0127, fail-closed) answers "allowed"; the storage
-    // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
-    rpc: async () => ({ data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null }),
+    // The upload limit (0127, fail-closed) answers "allowed", the card-art
+    // finish's claim (0132) wins once per name; the storage origin
+    // registration (lib/media/storage-origin.ts) is a no-op upsert.
+    rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) =>
+      fn === "claim_card_art_upload"
+        ? claimRpc(args)
+        : { data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null },
     from: () => ({ upsert: async () => ({ error: null }) }),
     storage: {
       from: (bucket: string) => ({
+        ...stagingBucketApi(bucket),
         upload: async (path: string, body: unknown, opts: { contentType?: string }) => {
           state.uploads.push({ bucket, path, body, contentType: opts?.contentType });
           return { error: null };
         },
         getPublicUrl: (path: string) => ({ data: { publicUrl: `https://storage.test/${bucket}/${path}` } }),
-        remove: async () => ({ error: null }),
+        remove: async (keys: string[]) => {
+          forgetStaged(bucket, keys);
+          return { error: null };
+        },
       }),
     },
   };
@@ -89,7 +98,6 @@ import {
   orientedSize,
   swapsAxes,
 } from "@/lib/media/orientation";
-import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
 import { uploadCoverServerAction } from "@/lib/media/upload-cover-server";
 import { uploadProfileMediaServerAction } from "@/lib/profile/upload-server";
@@ -121,7 +129,11 @@ async function expectUprightUntagged(body: Buffer, format: string) {
 beforeEach(() => {
   state.uploads.length = 0;
   state.generateTextCalls.length = 0;
+  resetStaging();
 });
+
+/** A card-art upload the way the browser runs it: start → PUT → finish. */
+const uploadCardArt = (bytes: Buffer, format: FixtureFormat) => uploadCardArtViaStaging(bytes, MIME[format]);
 
 describe("orientation helpers", () => {
   it("only 2–8 need turning; only 5–8 swap the axes", () => {
@@ -198,7 +210,7 @@ describe("normalizeUploadOrientation", () => {
 
 describe("every upload path stores upright pixels", () => {
   it("card art: an orientation-6 phone JPEG is stored upright, untagged, as image/jpeg", async () => {
-    const result = await uploadCardArtServerAction(form(await storedAs(6, "jpeg"), "jpeg"));
+    const result = await uploadCardArt(await storedAs(6, "jpeg"), "jpeg");
     expect(result.ok).toBe(true);
     const up = lastUpload("card-art");
     expect(up.path).toMatch(/\.jpg$/);
@@ -208,7 +220,7 @@ describe("every upload path stores upright pixels", () => {
 
   it("card art: an untagged upload is stored byte-for-byte", async () => {
     const bytes = await upright("jpeg");
-    expect((await uploadCardArtServerAction(form(bytes, "jpeg"))).ok).toBe(true);
+    expect((await uploadCardArt(bytes, "jpeg")).ok).toBe(true);
     expect(lastUpload("card-art").body.equals(bytes)).toBe(true);
   });
 

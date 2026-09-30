@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   clients: 0,
   buckets: [] as string[],
   calls: [] as { op: string; args: unknown[] }[],
+  listing: [] as { name: string; created_at: string | null }[],
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -35,6 +36,18 @@ vi.mock("@/lib/supabase/admin", () => ({
               return { data: { path: args[1] }, error: null };
             },
             getPublicUrl: (key: string) => ({ data: { publicUrl: `https://storage.test/${bucket}/${key}` } }),
+            createSignedUploadUrl: async (...args: unknown[]) => {
+              state.calls.push({ op: "sign", args });
+              return { data: { signedUrl: "https://storage.test/sign", path: args[0], token: "tok" }, error: null };
+            },
+            download: async (...args: unknown[]) => {
+              state.calls.push({ op: "download", args });
+              return { data: new Blob([new Uint8Array([7, 8])]), error: null };
+            },
+            list: async (...args: unknown[]) => {
+              state.calls.push({ op: "list", args });
+              return { data: state.listing, error: null };
+            },
           };
         },
       },
@@ -54,6 +67,8 @@ import {
   fileNameInFolder,
   userFolder,
   userObjectPath,
+  STAGED_TOMBSTONE,
+  userUploadStaging,
 } from "@/lib/media/user-storage";
 
 const ME = "11111111-1111-4111-8111-111111111111";
@@ -79,6 +94,7 @@ beforeEach(() => {
   state.clients = 0;
   state.buckets.length = 0;
   state.calls.length = 0;
+  state.listing = [];
 });
 
 describe("userObjectPath", () => {
@@ -194,5 +210,66 @@ describe("userFolder.copyIn", () => {
     });
     expect(state.calls).toEqual([]);
     expect(state.clients).toBe(0);
+  });
+});
+
+// Card art is uploaded by the browser into a PRIVATE staging bucket through a
+// signed URL (TODO 6.10, migration 0131) — the door mints that URL, reads the
+// staged bytes back and removes them, all inside `{userId}/`.
+describe("userUploadStaging", () => {
+  it("signs, reads and removes inside `{userId}/` of card-art-incoming, with the service role", async () => {
+    const staging = userUploadStaging(ME);
+    expect(await staging.createUploadUrl("u.upload")).toEqual({ data: { path: `${ME}/u.upload`, token: "tok" }, error: null });
+    const read = await staging.download("u.upload");
+    expect(read.bytes && [...read.bytes]).toEqual([7, 8]);
+    expect(await staging.remove(["u.upload"])).toEqual({ error: null });
+    expect(state.buckets).toEqual(["card-art-incoming"]);
+    expect(state.calls).toEqual([
+      { op: "sign", args: [`${ME}/u.upload`] },
+      { op: "download", args: [`${ME}/u.upload`] },
+      { op: "remove", args: [[`${ME}/u.upload`]] },
+    ]);
+  });
+
+  it("markConsumed overwrites the staged object with the 8-byte non-image tombstone (the signed URL can't put it again)", async () => {
+    expect(await userUploadStaging(ME).markConsumed("u.upload")).toEqual({ error: null });
+    expect(state.calls).toEqual([
+      { op: "upload", args: [`${ME}/u.upload`, STAGED_TOMBSTONE, { upsert: true, contentType: "image/png", cacheControl: "0" }] },
+    ]);
+    expect(new TextDecoder().decode(STAGED_TOMBSTONE)).toBe("consumed");
+    expect((await userUploadStaging(ME).markConsumed("../x.upload")).error).not.toBeNull();
+    expect(state.calls).toHaveLength(1);
+  });
+
+  it("never registers a storage origin (nothing here becomes a stored URL)", async () => {
+    await userUploadStaging(ME).createUploadUrl("u.upload");
+    expect(state.calls.map((c) => c.op)).toEqual(["sign"]);
+  });
+
+  it("answers an invalid name or a non-uuid owner with an error and never reaches storage", async () => {
+    for (const name of BAD_NAMES) {
+      expect((await userUploadStaging(ME).createUploadUrl(name)).error, JSON.stringify(name)).not.toBeNull();
+      expect((await userUploadStaging(ME).download(name)).error, JSON.stringify(name)).not.toBeNull();
+      expect((await userUploadStaging(ME).remove([name])).error, JSON.stringify(name)).not.toBeNull();
+    }
+    expect((await userUploadStaging("user-1").createUploadUrl("u.upload")).error).not.toBeNull();
+    expect(await userUploadStaging("user-1").removeOlderThan(0)).toBe(0);
+    expect(state.calls).toEqual([]);
+    expect(state.clients).toBe(0);
+  });
+
+  it("removeOlderThan drops only the caller's staged objects past the age, by valid name", async () => {
+    const now = Date.parse("2026-09-29T12:00:00Z");
+    state.listing = [
+      { name: "old.upload", created_at: "2026-09-29T08:00:00Z" },
+      { name: "fresh.upload", created_at: "2026-09-29T11:30:00Z" },
+      { name: "no-date.upload", created_at: null },
+      { name: "..", created_at: "2026-09-28T00:00:00Z" },
+    ];
+    expect(await userUploadStaging(ME).removeOlderThan(3 * 60 * 60 * 1000, now)).toBe(1);
+    expect(state.calls).toEqual([
+      { op: "list", args: [ME, { limit: 100 }] },
+      { op: "remove", args: [[`${ME}/old.upload`]] },
+    ]);
   });
 });

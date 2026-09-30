@@ -18,6 +18,7 @@ import { purgeHiddenCards } from "@/lib/cards/revalidate";
 
 const ACCOUNT_BUCKETS = [
   "card-art",
+  "card-art-incoming", // private staging: uploads whose finish never came (0131)
   "card-renders",
   "card-exports",
   "set-covers", // deck covers + card set icons (historical bucket name)

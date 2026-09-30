@@ -1,3 +1,5 @@
+import sharp from "sharp";
+import { noisePng } from "@/tests/stubs/noise-png";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -110,5 +112,34 @@ describe("the image moderation scan", () => {
       sleep: async () => {},
     });
     expect(failed).toEqual({ verdict: "error", error: "HTTP 400" });
+  });
+
+  // TODO 6.10: card art may be 20 MiB. OpenAI takes image files up to 20 MB
+  // and a refusal FAILS OPEN here — so a big upload scanned by URL could go
+  // unscanned. Given the bytes, a file over 8 MiB goes as a downscaled copy.
+  describe("a card-art upload scanned with its bytes", () => {
+    type Req = { input: { image_url: { url: string } }[] };
+    const sentUrl = () => (openai.requests[0] as Req).input[0].image_url.url;
+
+    it("up to 8 MiB it is still scanned by URL (nothing that uploaded before changes)", async () => {
+      const small = await sharp({ create: { width: 64, height: 90, channels: 3, background: "#468" } }).png().toBuffer();
+      await scanImageUrl(URL_, { bytes: small });
+      expect(sentUrl()).toBe(URL_);
+    });
+
+    it("over 8 MiB the model gets a JPEG copy fit inside 2048 px, as a data: URL — the same verdict rules", async () => {
+      // A 2000×2800 noise PNG (~16 MiB): print-size art at its most incompressible.
+      const big = await noisePng(2000, 2800);
+      expect(big.byteLength).toBeGreaterThan(8 * 1024 * 1024);
+
+      openai.answer = { results: [{ flagged: true, categories: { sexual: true } }] };
+      expect(await scanImageUrl(URL_, { bytes: big })).toEqual({ flagged: true, categories: ["sexual"] });
+      const url = sentUrl();
+      expect(url.startsWith("data:image/jpeg;base64,")).toBe(true);
+      const copy = Buffer.from(url.slice("data:image/jpeg;base64,".length), "base64");
+      const meta = await sharp(copy).metadata();
+      expect([meta.format, meta.width, meta.height]).toEqual(["jpeg", 1463, 2048]);
+      expect(url.length).toBeLessThan(20 * 1000 * 1000);
+    }, 30_000); // encodes + decodes a 16 MiB PNG: seconds on a loaded runner
   });
 });
