@@ -331,6 +331,17 @@ export const FRAME_TEMPLATE_VALUES = [
   // m15tokenartifact.
   "m15tokentext",
   "m15tokenartifacttext",
+  // The full-art token design, M20 (2019) → today (TODO 4.48 / 4.50, Card
+  // Conjurer's 'Textless', 'Short' and 'Tall' token packs): the art to the
+  // black ring, a name pill, a type pill and a translucent box. Three
+  // printed heights — no box, the regular box, the tall box — and an
+  // artifact template for each (owner 2026-09-29), the token kind's only.
+  "m20token",
+  "m20tokentext",
+  "m20tokentall",
+  "m20tokenartifact",
+  "m20tokenartifacttext",
+  "m20tokenartifacttall",
   // The 2019+ borderless frame (frames plan 4.32, Card Conjurer 'Borderless
   // (Alt)'): art to the card edge, dark translucent bars and box, white ink.
   // Skins of the M15 standard and the M15 artifact frame, in the Borderless
@@ -403,14 +414,22 @@ export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
 export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15: "Standard",
   m15land: "Land",
-  m15token: "Token",
+  // The 2014–19 arch, named for its years (owner decision 2026-09-29) now
+  // that new tokens default to the full-art design once it is verified.
+  m15token: "Token (2014–2019)",
   m15artifact: "Artifact",
   m15snow: "Snow",
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
-  m15tokenartifact: "Artifact Token",
+  m15tokenartifact: "Artifact Token (2014–2019)",
   m15tokentext: "Token (2014–2019), text box",
   m15tokenartifacttext: "Artifact Token (2014–2019), text box",
+  m20token: "Full-art Token",
+  m20tokentext: "Full-art Token, text box",
+  m20tokentall: "Full-art Token, tall text box",
+  m20tokenartifact: "Full-art Artifact Token",
+  m20tokenartifacttext: "Full-art Artifact Token, text box",
+  m20tokenartifacttall: "Full-art Artifact Token, tall text box",
   m15borderless: "Borderless",
   m15borderlessartifact: "Borderless Artifact",
   m15borderlesspw: "Borderless Planeswalker",
@@ -509,6 +528,12 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15tokenartifact: "m15",
   m15tokentext: "m15",
   m15tokenartifacttext: "m15",
+  m20token: "m15",
+  m20tokentext: "m15",
+  m20tokentall: "m15",
+  m20tokenartifact: "m15",
+  m20tokenartifacttext: "m15",
+  m20tokenartifacttall: "m15",
   m15borderless: "borderless",
   m15borderlessartifact: "borderless",
   m15borderlesspw: "borderless",
@@ -671,7 +696,21 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   m15land: ["m15snowland"],
   // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
-  m15token: ["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"],
+  // The full-art token design (TODO 4.48) and its heights, variations of the
+  // token kind — a NEW token starts on them where they are verified in its
+  // colour (lib/creator/token-frame-auto.ts newTokenFrame); the artifact
+  // templates are dressed by the Artifact word (4.50).
+  m15token: [
+    "m15tokenartifact",
+    "m15tokentext",
+    "m15tokenartifacttext",
+    "m20token",
+    "m20tokentext",
+    "m20tokentall",
+    "m20tokenartifact",
+    "m20tokenartifacttext",
+    "m20tokenartifacttall",
+  ],
 };
 
 

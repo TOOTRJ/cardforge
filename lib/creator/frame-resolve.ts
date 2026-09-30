@@ -11,6 +11,8 @@ import {
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
   colorWord,
   isArtifactFrameType,
@@ -215,28 +217,53 @@ export function importFrameCandidates(input: {
 
 /**
  * The frame a token saved away from the creator lands on once its final text
- * is known (TODO 4.49 (b), owner decision 5): the one its type words and text
- * pick (tokenFrameFor — rules or flavour text → the text-box arch, none → the
- * textless one) when that is published in the card's colour, else the frame
- * it had, never an unpublished pair. Any other kind's frame, and a token on
- * any other frame, is returned as it is. The AI deck remix saves through it:
- * the printing's frame follows the PRINTED text (the signature registry), but
- * the remix saves the AI's flavour.
+ * is known (TODO 4.49 (b), 4.48, owner decision 5): the one its type words
+ * and text pick (tokenFrameFor — on the 2014–19 arch, rules or flavour text →
+ * the text-box arch, none → the textless one; on the full-art design, the
+ * height the text asks for) when that is published in the card's colour,
+ * else the frame it had, never an unpublished pair. Any other kind's frame,
+ * and a token on any other frame, is returned as it is. The AI deck remix
+ * saves through it: the printing's frame follows the PRINTED text (the
+ * signature registry), but the remix saves the AI's flavour.
  */
 export function autoTokenTextBoxFrame(input: {
   template: FrameTemplate;
   cardType: CardType | null | undefined;
   supertype?: string | null;
+  subtypes?: readonly string[] | null;
   rulesText?: string | null;
   flavorText?: string | null;
+  /** The saved P/T: a printed one keeps the full-art rules clear of the
+   *  plate (printsPowerToughness). */
+  power?: string | null;
+  toughness?: string | null;
   colorIdentity: readonly ColorIdentity[];
   verifiedKeys: ReadonlySet<string>;
 }): FrameTemplate {
   const kind = kindFromCard(input.cardType, input.template);
-  const wanted = tokenFrameFor(kind, input.template, input);
+  const face = {
+    ...input,
+    printsPowerToughness: printsPowerToughness({
+      cardType: input.cardType,
+      supertype: input.supertype,
+      subtypes: input.subtypes,
+      power: input.power,
+      toughness: input.toughness,
+    }),
+  };
+  const wanted = tokenFrameFor(kind, input.template, face);
   if (wanted === input.template) return wanted;
   const colorKey = pickFrameColorKey([...input.colorIdentity]);
-  return isFrameComboAvailable(wanted, colorKey, input.verifiedKeys) ? wanted : input.template;
+  if (isFrameComboAvailable(wanted, colorKey, input.verifiedKeys)) return wanted;
+  // The full-art design's textless height would hide the saved text (3.24's
+  // `textless`): while the height the text asks for isn't published, the
+  // arch's text box stands in when it is — the arch's textless frame keeps
+  // its text on the scrim, so it stays as it is.
+  if (kind === "token" && getFrameProfile(input.template).textless && hasRulesBoxText(face)) {
+    const arch = tokenFrameFor(kind, "m15token", face);
+    if (isFrameComboAvailable(arch, colorKey, input.verifiedKeys)) return arch;
+  }
+  return input.template;
 }
 
 /**
@@ -307,7 +334,12 @@ export function resolveImportFrame(input: {
  *   • a match that names another frame once it is verified
  *     (`onceVerified`: a 2003-frame textless promo names the 2003 frame
  *     until the textless frame is verified in its colour, owner decision
- *     A9) takes that frame when it is;
+ *     A9) takes that frame when it is — and, when the registry says what
+ *     the match is then (`onceVerifiedMatch`: an M20+ token is exact on its
+ *     full-art template, TODO 4.48, or nearest for a gap it doesn't draw),
+ *     that status, reason, item and gaps — and while it isn't verified, a
+ *     match that would then be exact says "not yet verified" and is marked
+ *     `unverified`, the stand-in still its landing;
  *   • `exact` only when PipGlyph's frame is verified in the card's colour —
  *     an unverified frame is never an exact match to a user, so it becomes
  *     `nearest`, "not yet verified in <colour>", marked `unverified` (the
@@ -316,12 +348,42 @@ export function resolveImportFrame(input: {
  */
 export function withVerification<
   T extends Pick<FrameMatch, "status" | "template" | "reason"> &
-    Partial<Pick<FrameMatch, "onceVerified" | "unverified">>,
+    Partial<Pick<FrameMatch, "onceVerified" | "onceVerifiedMatch" | "unverified" | "blockedBy" | "gaps">>,
 >(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
   let finalized = match;
   if (match.onceVerified && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey))) {
-    const { onceVerified, ...rest } = match;
-    finalized = { ...rest, template: onceVerified } as unknown as T;
+    const { onceVerified, onceVerifiedMatch, ...rest } = match;
+    if (onceVerifiedMatch) {
+      // The M20 token design (TODO 4.48): exact on its own verified frame,
+      // or nearest for a gap it doesn't draw either — with that gap's
+      // reason, item and gaps, never the stand-in's.
+      const base: Partial<FrameMatch> = { ...rest };
+      delete base.blockedBy;
+      delete base.gaps;
+      finalized = {
+        ...base,
+        template: onceVerified,
+        status: onceVerifiedMatch.status,
+        reason: onceVerifiedMatch.reason,
+        ...(onceVerifiedMatch.blockedBy ? { blockedBy: onceVerifiedMatch.blockedBy } : {}),
+        ...(onceVerifiedMatch.gaps ? { gaps: onceVerifiedMatch.gaps } : {}),
+      } as unknown as T;
+    } else {
+      finalized = { ...rest, template: onceVerified } as unknown as T;
+    }
+  } else if (match.onceVerified && match.onceVerifiedMatch?.status === "exact" && match.status !== "exact") {
+    // The frame the printing wears exists and would be exact, but isn't
+    // verified in the card's colour yet (the M20 token design before its
+    // tick): the stand-in keeps the landing, and the answer says what's
+    // left — "not yet verified", filed under the request log's "Not yet
+    // verified" (TODO 1.6, D1) like any unverified exact frame.
+    const base: Partial<FrameMatch> = { ...match };
+    delete base.blockedBy;
+    return {
+      ...base,
+      reason: `not yet verified in ${colorWord(colorKey)}`,
+      unverified: true,
+    } as unknown as T;
   }
   if (finalized.status !== "exact") return finalized;
   if (verifiedKeys.has(frameComboKey(finalized.template, colorKey))) return finalized;

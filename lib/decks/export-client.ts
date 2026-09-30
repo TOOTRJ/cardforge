@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { buildDeckPdf, type DeckPdfLayout, type DeckPdfSheetOptions } from "@/lib/render/card-pdf";
 import { cardPngHref } from "@/lib/cards/output-corners";
-import { BLEED_IN, CARD_TRIM_IN, cardPrintPngHref } from "@/lib/cards/print-export";
+import { BLEED_IN, CARD_TRIM_IN, cardPrintPngHref, printPixelSize } from "@/lib/cards/print-export";
 import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/print-selection";
 
 // ---------------------------------------------------------------------------
@@ -10,22 +10,35 @@ import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/pr
 // with live progress while they keep using the site:
 //
 //   1. manifest   GET /api/decks/[id]/download?part=manifest
-//   2. cards      GET /api/cards/[id]/png?preset=…&corners=square  (clean for
-//                 a paid viewer; a few in flight at once, each ~1–3 s of live
-//                 rendering). SQUARE (TODO 3.26): the same bytes feed the
-//                 deck PDF's pages and 3×3 sheets AND the ZIP, and both are
-//                 print input — cut along the rectangle, corners in the
-//                 border's colour, never transparent.
+//   2. cards      GET /api/cards/[id]/png — a few in flight at once, each
+//                 ~1–3 s of live rendering, clean for a paid viewer. Every
+//                 PDF card and every HD ZIP image is the 600 ppi PRINT
+//                 render (?ppi=600&corners=square&print=1 — TODO 6.10/6.15:
+//                 1500 × 2100 with the art composited at full resolution,
+//                 not the bake's 1600 px inlined copy; + &bleed=1 with the
+//                 1/8 in bleed, TODO 6.1a); a standard-size ZIP image is the
+//                 750 px square render (?preset=default&corners=square),
+//                 and an MPC ZIP image MakePlayingCards' file (&bleed=mpc,
+//                 TODO 6.1: 1644 × 2244, always portrait).
+//                 SQUARE (TODO 3.26) either way: both are print input — cut
+//                 along the rectangle, corners in the border's colour.
 //   3. package    ZIP → cover + deck.pdf report + decklist.txt + PNGs
-//                 PDF → pdf-lib pages / 3×3 sheets + checklist page
+//                 PDF → pdf-lib pages / sheets + checklist page; the sheets
+//                 take the print options (gap, cut guides, card size — lib/
+//                 render/sheet-layout.ts — and the bleed)
+//
+// Why here and not one server route (TODO 6.15): each card is its own
+// function invocation (one render's memory, ~3 in flight), so no function
+// holds more than one render or sits on its time limit, even for 150 cards.
+// The BROWSER is not bounded: it keeps every card's PNG until the PDF is
+// saved, plus the PDF itself. buildDeckPdf's embedImageNow only stops
+// pdf-lib from also keeping each card DECODED. A 1500 × 2100 print render
+// is ~3–7 MB (RGB, ~10 % smaller than the RGBA HD render this export used
+// before); 150 busy cards measured 728 MB of PNGs and a 722 MB PDF.
 //
 // runCardsExport (TODO 6.15) is the same pipeline for ANY selection of cards
 // (My Cards' "Print / download" bulk action): the manifest comes from
-// POST /api/cards/export, the sheets take the selection's options (gap, cut
-// guides, card size — lib/render/sheet-layout.ts) and, with a bleed, every
-// card is fetched as its 600 ppi print render with the 1/8 in bleed
-// (/api/cards/[id]/png?ppi=600&corners=square&bleed=1, TODO 6.1a) instead of
-// the HD square render.
+// POST /api/cards/export, with per-card copies.
 //
 /** The card body face, shipped as a static asset. Null on any failure. */
 async function fetchChecklistFont(
@@ -63,23 +76,30 @@ export type CardsExportManifest = {
 };
 
 export type DeckExportKind = "zip" | "pdf";
-export type DeckExportQuality = "hd" | "default";
+/** A ZIP's image size: HD (the 600 ppi print render), standard (750 px), or
+ *  MakePlayingCards' poker-size file (TODO 6.1). A PDF is always HD. */
+export type DeckExportQuality = "hd" | "default" | "mpc";
 
 export type DeckExportRequest = {
   deckId: string;
   kind: DeckExportKind;
-  /** ZIP: image size. PDF: always HD (print). */
+  /** ZIP: image size (HD, standard or MPC). PDF: always HD (print). */
   quality: DeckExportQuality;
   /** PDF only. */
   layout: DeckPdfLayout;
+  /** PDF sheets only: gap, cut guides, card size (default: the 3×3). */
+  sheet?: DeckPdfSheetOptions;
+  /** PDF only: every card with a 1/8 in bleed (the print render). */
+  bleed?: boolean;
 };
 
 /** Print / download a selection of cards (TODO 6.15). */
 export type CardsExportRequest = {
   cards: Array<{ id: string; copies: number }>;
   kind: DeckExportKind;
-  /** ZIP: image size (a bleed ZIP is always the 600 ppi print render). PDF:
-   *  always HD (print). */
+  /** ZIP: image size (a bleed ZIP is always the 600 ppi print render; an
+   *  MPC one carries MPC's own bleed, never the 1/8 in). PDF: always HD
+   *  (print). */
   quality: DeckExportQuality;
   /** PDF only. */
   layout: SelectionPdfLayout;
@@ -125,6 +145,8 @@ export class DeckExportError extends Error {
 export const APPROX_BYTES_PER_CARD: Record<DeckExportQuality, number> = {
   hd: 3.2 * 1024 * 1024,
   default: 0.9 * 1024 * 1024,
+  // 1644 × 2244: the HD card's area plus MPC's bleed, ~17 % more.
+  mpc: 3.75 * 1024 * 1024,
 };
 
 export function formatBytes(bytes: number): string {
@@ -178,8 +200,43 @@ export function carriesPrintBleed(bytes: Uint8Array): boolean {
   return Math.abs(shortOverLong / BLEED_ASPECT - 1) < 0.01;
 }
 
+/** MakePlayingCards' file at 600 ppi (TODO 6.1): 1644 × 2244, portrait. */
+const MPC_EXPORT_SIZE = printPixelSize(600, { bleed: "mpc" });
+
+/** True when `bytes` is a PNG of MPC's exact size at 600 ppi — what an MPC
+ *  ZIP takes (the 1/8 in bleed's 1650 × 2250 is 0.1 % from its shape, so
+ *  only the size tells them apart; a render without MPC's bleed, or turned
+ *  landscape, would be the wrong file to upload). */
+export function isMpcExportRender(bytes: Uint8Array): boolean {
+  const size = pngSize(bytes);
+  return size?.width === MPC_EXPORT_SIZE.width && size.height === MPC_EXPORT_SIZE.height;
+}
+
+/** True when a request's ZIP images are MakePlayingCards' files. */
+function mpcZip(request: { kind: DeckExportKind; quality: DeckExportQuality }): boolean {
+  return request.kind === "zip" && request.quality === "mpc";
+}
+
+/**
+ * Which render an export fetches for a card: the 600 ppi PRINT render (full-
+ * resolution art; with the bleed when asked) for a PDF and for HD images,
+ * MakePlayingCards' file for an MPC ZIP (TODO 6.1), the 750 px square render
+ * for a standard-size ZIP.
+ */
+export function exportCardHref(
+  cardId: string,
+  opts: { kind: DeckExportKind; quality: DeckExportQuality; bleed: boolean },
+): string {
+  if (mpcZip(opts)) return cardPrintPngHref(cardId, { ppi: 600, bleed: "mpc" });
+  if (opts.bleed || opts.kind === "pdf" || opts.quality === "hd") {
+    return cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed });
+  }
+  return cardPngHref(cardId, { preset: "default", corners: "square" });
+}
+
 /** Fetch every card's PNG with a small worker pool, reporting each finish.
- *  `hrefOf` names the render (HD square, or the print render with bleed);
+ *  `hrefOf` names the render (exportCardHref: the print render, or the
+ *  750 px square one);
  *  a response `accept` turns down counts as a failure. */
 async function fetchCardPngs(
   cards: ReadonlyArray<{ id: string; title: string }>,
@@ -247,13 +304,26 @@ export async function runDeckExport(
   progress.phase = "rendering";
   emit();
 
-  const quality: DeckExportQuality = request.kind === "pdf" ? "hd" : request.quality;
-  const hrefOf = (card: { id: string }) => cardPngHref(card.id, { preset: quality, corners: "square" });
-  const pngs = await fetchCardPngs(manifest.cards, hrefOf, fetchImpl, signal, (title, ok) => {
-    progress.done += 1;
-    if (!ok) progress.failed.push(title);
-    emit();
-  });
+  // The bleed is a PDF option (the ZIP's images are the plain print files,
+  // or MPC's, which carry MPC's own bleed).
+  const bleed = request.kind === "pdf" && request.bleed === true;
+  const mpc = mpcZip(request);
+  const hrefOf = (card: { id: string }) =>
+    exportCardHref(card.id, { kind: request.kind, quality: request.quality, bleed });
+  const pngs = await fetchCardPngs(
+    manifest.cards,
+    hrefOf,
+    fetchImpl,
+    signal,
+    (title, ok) => {
+      progress.done += 1;
+      if (!ok) progress.failed.push(title);
+      emit();
+    },
+    // A bleed PDF takes only renders that carry the bleed; an MPC ZIP only
+    // MPC's files.
+    mpc ? isMpcExportRender : bleed ? carriesPrintBleed : undefined,
+  );
 
   progress.phase = "packaging";
   emit();
@@ -279,11 +349,13 @@ export async function runDeckExport(
       // Helvetica + "?" substitution if this fails, so it is best-effort).
       checklistFont:
         manifest.checklist.length > 0 ? await fetchChecklistFont(fetchImpl, signal) : null,
+      sheet: request.sheet,
+      bleed,
     });
     const suffix = request.layout === "pages" ? "" : request.layout === "sheet-a4" ? "-sheets-a4" : "-sheets";
     return {
       blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
-      filename: `${manifest.deck.slug}${suffix}.pdf`,
+      filename: `${manifest.deck.slug}${suffix}${bleed ? "-bleed" : ""}.pdf`,
       cardsIncluded: entries.length,
       failed: progress.failed,
       deck: manifest.deck,
@@ -314,7 +386,7 @@ export async function runDeckExport(
     const png = pngs.get(card.id);
     if (!png) continue;
     added += 1;
-    zip.file(`cards/${String(added).padStart(2, "0")}-${card.slug}.png`, png);
+    zip.file(`cards/${String(added).padStart(2, "0")}-${card.slug}${mpc ? "-mpc" : ""}.png`, png);
   }
   const notes: string[] = [];
   if (manifest.cards.length === 0) {
@@ -332,7 +404,7 @@ export async function runDeckExport(
   const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
   return {
     blob,
-    filename: `${manifest.deck.slug}-deck.zip`,
+    filename: `${manifest.deck.slug}-deck${mpc ? "-mpc" : ""}.zip`,
     cardsIncluded: added,
     failed: progress.failed,
     deck: manifest.deck,
@@ -399,15 +471,15 @@ export async function runCardsExport(
   progress.phase = "rendering";
   emit();
 
-  // With a bleed every card is its 600 ppi PRINT render (1650 × 2250, the
-  // art at full resolution, always square); without one, the HD square
-  // render the deck export uses (the ZIP may ask for the standard size).
-  const bleed = request.bleed === true;
-  const quality: DeckExportQuality = request.kind === "pdf" ? "hd" : request.quality;
+  // Every PDF card and HD image is its 600 ppi PRINT render (1500 × 2100,
+  // or 1650 × 2250 with the bleed; the art at full resolution, always
+  // square); a standard-size ZIP image the 750 px square render; an MPC ZIP
+  // image MakePlayingCards' file (1644 × 2244, MPC's own bleed — never the
+  // 1/8 in on top).
+  const mpc = mpcZip(request);
+  const bleed = request.bleed === true && !mpc;
   const hrefOf = (card: { id: string }) =>
-    bleed
-      ? cardPrintPngHref(card.id, { ppi: 600, bleed: true })
-      : cardPngHref(card.id, { preset: quality, corners: "square" });
+    exportCardHref(card.id, { kind: request.kind, quality: request.quality, bleed });
   const pngs = await fetchCardPngs(
     manifest.cards,
     hrefOf,
@@ -418,14 +490,20 @@ export async function runCardsExport(
       if (!ok) progress.failed.push(cardTitle);
       emit();
     },
-    // A bleed export takes only renders that carry the bleed.
-    bleed ? carriesPrintBleed : undefined,
+    // A bleed export takes only renders that carry the bleed; an MPC ZIP
+    // only MPC's files.
+    mpc ? isMpcExportRender : bleed ? carriesPrintBleed : undefined,
   );
 
   progress.phase = "packaging";
   emit();
 
-  const filename = selectionExportFilename(manifest.cards, { kind: request.kind, layout: request.layout, bleed });
+  const filename = selectionExportFilename(manifest.cards, {
+    kind: request.kind,
+    layout: request.layout,
+    bleed,
+    quality: request.quality,
+  });
   const rendered = manifest.cards.filter((card) => pngs.has(card.id));
   if (rendered.length === 0) {
     throw new DeckExportError("None of the cards could be rendered — try again in a moment.");
@@ -454,7 +532,7 @@ export async function runCardsExport(
   const zip = new JSZip();
   rendered.forEach((card, index) => {
     zip.file(
-      `cards/${String(index + 1).padStart(2, "0")}-${card.slug}${bleed ? "-bleed" : ""}.png`,
+      `cards/${String(index + 1).padStart(2, "0")}-${card.slug}${mpc ? "-mpc" : bleed ? "-bleed" : ""}.png`,
       pngs.get(card.id) as Uint8Array,
     );
   });

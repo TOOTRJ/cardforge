@@ -185,7 +185,7 @@ describe("printingTreatmentNotice — the creator's toast after the frame lands"
       "This printing is full art — PipGlyph used the M15 (2015) Land frame.",
     );
     expect(printingTreatmentNotice("fullart", "m15token")).toBe(
-      "This printing is full art — PipGlyph used the M15 (2015) Token frame.",
+      "This printing is full art — PipGlyph used the M15 (2015) Token (2014–2019) frame.",
     );
     expect(printingTreatmentNotice("textless", "m15")).toBe(
       "This printing is textless — PipGlyph used the M15 (2015) Standard frame.",

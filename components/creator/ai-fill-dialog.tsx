@@ -22,6 +22,7 @@ import {
   isBorrowedVariation,
   isRowDress,
   isTextBoxDress,
+  isTokenHeightDress,
   isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
@@ -177,8 +178,10 @@ function AiFillDialogBody({
     // The artifact token frame isn't a choice either: a token's type words
     // pick it (TODO 3b.15) — "M15 Token" lands on it for an Artifact token.
     // Nor is the token's text box: the text the AI writes picks it (TODO
-    // 4.49 (b)) — "M15 Token" lands on it for a token with text. Nor the
-    // borderless planeswalker's tall box: its rows pick it (4.33).
+    // 4.49 (b)) — "M15 Token" lands on it for a token with text — nor the
+    // full-art token's height (4.48): "Token" lands on the regular or the
+    // tall box as the text asks. Nor the borderless planeswalker's tall box:
+    // its rows pick it (4.33).
     const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>
@@ -187,6 +190,7 @@ function AiFillDialogBody({
         !isBorrowedVariation(kind, choice.template) &&
         !isTypeWordDress(kind, choice.template) &&
         !isTextBoxDress(kind, choice.template) &&
+        !isTokenHeightDress(kind, choice.template) &&
         !isRowDress(kind, choice.template),
     );
   }, [cardType, verifiedFrameKeys]);

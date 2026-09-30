@@ -133,9 +133,13 @@ describe("framesForKind", () => {
     }
     expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
     expect(skinsFor("land")).toEqual(["m15snowland"]);
-    // The artifact dress and 4.49 (b)'s text-box variations (the artifact
-    // ones are type-word dresses: the pickers hide them, isTypeWordDress).
-    expect(skinsFor("token")).toEqual(["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"]);
+    // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's
+    // full-art heights (the artifact ones are type-word dresses: the pickers
+    // hide them, isTypeWordDress).
+    expect(skinsFor("token")).toEqual([
+      "m15tokenartifact", "m15tokentext", "m15tokenartifacttext",
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+    ]);
     // 4.33's borderless planeswalkers; the tall one is a row dress (the
     // pickers hide it, isRowDress).
     expect(skinsFor("planeswalker")).toEqual(["m15borderlesspw", "m15borderlesspwtall"]);

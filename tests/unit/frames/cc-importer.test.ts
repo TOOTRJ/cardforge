@@ -10,12 +10,21 @@ import {
   PW_COLOURLESS_RIM_GAIN,
   PW_GOLD_FACE,
   SHIELD_BOX,
+  M20_ARTIFACT_NAME_SLATE,
+  M20_ARTIFACT_SOLID_NAME_PILL,
+  M20_ARTIFACT_TYPE_TINT,
+  M20_COLOURLESS_TYPE_TINT,
+  M20_TOKEN_SOLID_TYPE_PILL,
+  M20_TOKEN_TEXTLESS_RECUT,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
   builtColors,
+  compositeFinish,
   compositeLayers,
   cutThroughMask,
+  describeFinish,
   describeLayer,
+  finishFor,
   recutBand,
   roundCorners,
   roundCornersRgba8,
@@ -23,6 +32,7 @@ import {
   toRgba8,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
 import { applyCardCornerMask, cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
@@ -46,8 +56,12 @@ type Layer = {
   recolour?: boolean;
   lumaRamp?: readonly number[];
 };
+type Finish =
+  | { op: "opaque"; mask: string; colors?: string[] }
+  | { op: "tint"; mask: string; rgb: [number, number, number]; opacity: number; alphaFull: number; alphaNone: number; colors?: string[] };
 type Def = {
   colors: Record<string, Layer[]>;
+  finish?: Finish[];
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
@@ -61,6 +75,18 @@ const templates = CC_TEMPLATES as Record<string, Def>;
 /** The re-cut templates (TODO 4.49): each pair has its own band. */
 const TEXTLESS_TOKENS = ["m15token", "m15tokenartifact"];
 const TEXT_BOX_TOKENS = ["m15tokentext", "m15tokenartifacttext"];
+/** The full-art tokens' textless height (TODO 4.48): its own band. */
+const M20_TEXTLESS_TOKENS = ["m20token", "m20tokenartifact"];
+const M20_TOKENS = ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"];
+/** The recut each template has, if any. */
+const recutOf = (template: string) =>
+  TEXTLESS_TOKENS.includes(template)
+    ? TOKEN_TEXTLESS_RECUT
+    : TEXT_BOX_TOKENS.includes(template)
+      ? TOKEN_REGULAR_RECUT
+      : M20_TEXTLESS_TOKENS.includes(template)
+        ? M20_TOKEN_TEXTLESS_RECUT
+        : undefined;
 
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
@@ -82,6 +108,12 @@ describe("Card Conjurer recipe", () => {
       "m15tokenartifact",
       "m15tokenartifacttext",
       "m15tokentext",
+      "m20token",
+      "m20tokenartifact",
+      "m20tokenartifacttall",
+      "m20tokenartifacttext",
+      "m20tokentall",
+      "m20tokentext",
     ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -136,13 +168,10 @@ describe("Card Conjurer recipe", () => {
       // (blendBottom) is theirs alone.
       expect(def.transforms).toMatch(/each seam cross-faded over 24 rows/);
     }
-    // No other template is re-cut by this band: the textless tokens have
-    // their own (TOKEN_TEXTLESS_RECUT, the next test), the rest none.
-    for (const [template, def] of Object.entries(templates)) {
-      if (TEXT_BOX_TOKENS.includes(template)) continue;
-      if (TEXTLESS_TOKENS.includes(template)) expect(def.recut, template).toBe(TOKEN_TEXTLESS_RECUT);
-      else expect(def.recut, template).toBeUndefined();
-    }
+    // No other template is re-cut by this band: the textless tokens and the
+    // full-art textless tokens have their own (the tests below), the rest
+    // none.
+    for (const [template, def] of Object.entries(templates)) expect(def.recut, template).toBe(recutOf(template));
     // The colourless text-box token is see-through like m15token's, its box
     // too (BFZ #2 / OGW #1 Eldrazi Scion); border, title and pinline opaque.
     const c = templates.m15tokentext.colors.c;
@@ -186,12 +215,133 @@ describe("Card Conjurer recipe", () => {
     }
     // No other template is re-cut by this band: the text-box tokens keep
     // their own (TOKEN_REGULAR_RECUT, the test above: no blendBottom, the
-    // bottom seam over `blend` rows), the rest none.
-    for (const [template, def] of Object.entries(templates)) {
-      if (TEXTLESS_TOKENS.includes(template)) continue;
-      if (TEXT_BOX_TOKENS.includes(template)) expect(def.recut, template).toBe(TOKEN_REGULAR_RECUT);
-      else expect(def.recut, template).toBeUndefined();
+    // bottom seam over `blend` rows), the full-art textless tokens theirs,
+    // the rest none.
+    for (const [template, def] of Object.entries(templates)) expect(def.recut, template).toBe(recutOf(template));
+  });
+
+  it("builds the full-art tokens from CC's 'Textless' / 'Short' / 'Tall' token packs, the artifact ones their own templates (TODO 4.48 / 4.50)", () => {
+    const H = { m20token: "textless", m20tokentext: "short", m20tokentall: "tall" } as const;
+    for (const [template, dir] of Object.entries(H)) {
+      const Hn = { textless: "Textless", short: "Short", tall: "Tall" }[dir];
+      const def = templates[template];
+      // One layer per colour: the pack's own master; `c` its frameC.
+      for (const k of ["w", "u", "b", "r", "g", "m"]) {
+        expect(def.colors[k], `${template}/${k}`).toEqual([{ src: `img/frames/token/${dir}/tokenFrame${k.toUpperCase()}${Hn}.png` }]);
+      }
+      expect(def.colors.c).toEqual([{ src: `img/frames/token/${dir}/frameC.png` }]);
+      // The artifact template: the silver master whole, the colour through
+      // the pack's Pinline mask only (the pills stay silver: not 4.16's
+      // m15artifact recipe, whose colour takes the title, type and box).
+      const art = templates[`${template.replace("m20token", "m20tokenartifact")}`];
+      expect(art.colors.c).toEqual([{ src: `img/frames/token/${dir}/tokenFrameA${Hn}.png` }]);
+      const pinline = {
+        textless: "img/frames/token/tokenMaskTextlessPinline.png",
+        short: "img/frames/token/short/m15MaskPinlineSuperShort.png",
+        tall: "img/frames/m15/regular/m15MaskPinline.png",
+      }[dir];
+      for (const k of ["w", "u", "b", "r", "g", "m"]) {
+        expect(art.colors[k], `${template} artifact/${k}`).toEqual([
+          { src: `img/frames/token/${dir}/tokenFrameA${Hn}.png` },
+          { src: `img/frames/token/${dir}/tokenFrame${k.toUpperCase()}${Hn}.png`, mask: pinline },
+        ]);
+      }
+      for (const t of [template, `${template.replace("m20token", "m20tokenartifact")}`]) {
+        expect(templates[t].pack, t).toMatch(new RegExp(`packToken${Hn}-1\\.js`));
+        // No plates of their own: M15's (m15/pt) and M15 artifact's.
+        expect(templates[t].plates, t).toBeUndefined();
+      }
     }
+    // CC's 'Regular' pack (type pill at 64 %H) matches no print: never used.
+    for (const t of M20_TOKENS) {
+      for (const f of sourceFilesFor(templates[t] as never)) expect(f, t).not.toMatch(/token\/regular\//);
+    }
+  });
+
+  it("re-cuts only the full-art textless masters' type pill 5 px down onto the prints (TODO 4.48, measure first)", () => {
+    // Held to the profile's own constant (the art slot and the bands ride it).
+    expect(M20_TOKEN_TEXTLESS_RECUT.shift).toBe(M20_TOKEN_TEXTLESS_RECUT_PX);
+    expect(M20_TOKEN_TEXTLESS_RECUT).toEqual({ fromY: 1687, toY: 1845, shift: 5, blend: 0, blendBottom: 0 });
+    for (const template of M20_TEXTLESS_TOKENS) {
+      const def = templates[template];
+      expect(def.recut, template).toBe(M20_TOKEN_TEXTLESS_RECUT);
+      expect(def.transforms).toMatch(/rows 1687–1844 \(the type pill with its glow and bottom rim\) moved down 5 px/);
+      expect(def.notes.join(" ")).toMatch(/re-cut onto the prints \(TODO 4\.48/);
+    }
+    // The regular and tall packs sit on the prints as drawn (±1 px).
+    for (const template of ["m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall"]) {
+      expect(templates[template].recut, template).toBeUndefined();
+    }
+    // The band moves as one piece; the rows it opens repeat the rows above
+    // it (the clear window and the black ring), and nothing below 1850 moves.
+    const W = 4;
+    const H = 2100;
+    const buf = Buffer.alloc(W * H * 4);
+    for (let y = 0; y < H; y += 1) for (let x = 0; x < W; x += 1) buf[(y * W + x) * 4 + 3] = y % 251;
+    const out = recutBand(buf, W, H, M20_TOKEN_TEXTLESS_RECUT);
+    const a = (b: Buffer, y: number) => b[y * W * 4 + 3];
+    for (let y = 0; y < 1687; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y));
+    for (let y = 1687; y < 1692; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y - 5));
+    for (let y = 1692; y < 1850; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y - 5));
+    for (let y = 1850; y < H; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y));
+  });
+
+  it("darkens the colourless and artifact type pills to the prints and makes every full-art token's type pill solid; the artifact name pill slate, then solid (owner decisions 2026-09-29, round 14)", () => {
+    const TYPE = {
+      m20token: "img/frames/token/tokenMaskTextlessType.png",
+      m20tokentext: "img/frames/token/short/m15MaskTypeShort.png",
+      m20tokentall: "img/frames/m15/regular/m15MaskType.png",
+    } as const;
+    const TITLE = "img/frames/m15/regular/m15MaskTitle.png";
+    for (const [plain, typeMask] of Object.entries(TYPE)) {
+      const artifact = plain.replace("m20token", "m20tokenartifact");
+      // The plain template: the colourless (`c`) pill darkened (that colour
+      // only), then the pill solid through the pack's own Type mask. The
+      // tint goes FIRST: it weighs CC's alpha, which "opaque" sets to 255.
+      expect(templates[plain].finish, plain).toEqual([
+        { ...M20_COLOURLESS_TYPE_TINT, mask: typeMask },
+        { op: "opaque", mask: typeMask },
+      ]);
+      expect(finishFor(templates[plain] as never, "c"), plain).toEqual(templates[plain].finish);
+      // The five coloured pills (and the gold one) keep CC's colour: solid only.
+      for (const k of ["w", "u", "b", "r", "g", "m"]) {
+        expect(finishFor(templates[plain] as never, k), `${plain} ${k}`).toEqual([{ op: "opaque", mask: typeMask }]);
+      }
+      // The artifact template: its silver type pill darkened in EVERY colour
+      // (a coloured artifact token keeps the silver pill), then solid; the
+      // slate through M15's Title mask (the three packs' name pill), then
+      // that pill solid too.
+      expect(templates[artifact].finish, artifact).toEqual([
+        { ...M20_ARTIFACT_TYPE_TINT, mask: typeMask },
+        { op: "opaque", mask: typeMask },
+        { ...M20_ARTIFACT_NAME_SLATE, mask: TITLE },
+        { op: "opaque", mask: TITLE },
+      ]);
+      for (const k of COLORS) expect(finishFor(templates[artifact] as never, k), `${artifact} ${k}`).toEqual(templates[artifact].finish);
+      for (const t of [plain, artifact]) {
+        // The masks are source files (provenance lists them), and the
+        // transforms and notes say what was composited, before the re-cut.
+        for (const f of templates[t].finish!) expect(sourceFilesFor(templates[t] as never), t).toContain(f.mask);
+        expect(templates[t].transforms, t).toContain(`PipGlyph composites over the flattened pixels: ${templates[t].finish!.map(describeFinish).join("; ")}`);
+        expect(templates[t].notes.join(" "), t).toMatch(/the type pill SOLID/);
+        expect(templates[t].notes.join(" "), t).toMatch(/type pill darkened to the prints \(owner decision round 14/);
+      }
+      expect(templates[artifact].notes.join(" ")).toMatch(/name pill darkened to the prints' slate/);
+      expect(templates[artifact].notes.join(" ")).toMatch(/the name pill SOLID \(owner decision round 14/);
+      expect(templates[plain].notes.join(" ")).not.toMatch(/slate/);
+    }
+    expect(M20_TOKEN_SOLID_TYPE_PILL).toEqual({ op: "opaque" });
+    expect(M20_ARTIFACT_SOLID_NAME_PILL).toEqual({ op: "opaque" });
+    expect(M20_ARTIFACT_NAME_SLATE).toEqual({ op: "tint", rgb: [30, 40, 48], opacity: 0.65, alphaFull: 230, alphaNone: 244 });
+    // Round 14's print fits (the prints' median behind the type line).
+    expect(M20_COLOURLESS_TYPE_TINT).toEqual({ op: "tint", rgb: [164, 149, 143], opacity: 0.65, alphaFull: 168, alphaNone: 186, colors: ["c"] });
+    expect(M20_ARTIFACT_TYPE_TINT).toEqual({ op: "tint", rgb: [151, 170, 181], opacity: 0.65, alphaFull: 205, alphaNone: 216 });
+    // Provenance says which colour a composite is limited to.
+    expect(describeFinish({ ...M20_COLOURLESS_TYPE_TINT, mask: "m" } as never)).toMatch(/\(colour c only\)$/);
+    expect(describeFinish({ ...M20_ARTIFACT_TYPE_TINT, mask: "m" } as never)).not.toMatch(/only/);
+    // No other template composites anything of its own.
+    for (const [t, def] of Object.entries(templates)) if (!M20_TOKENS.includes(t)) expect(def.finish, t).toBeUndefined();
+    for (const [t, def] of Object.entries(templates)) if (!M20_TOKENS.includes(t)) expect(finishFor(def as never, "c"), t).toEqual([]);
   });
 
   it("imports the see-through frames now that art runs under the frame (4.17, owner decision)", () => {
@@ -357,6 +507,137 @@ describe("Card Conjurer recipe", () => {
 
 describe("pixel operations", () => {
   const px = (r: number, g: number, b: number, a: number) => [r, g, b, a];
+
+  describe("compositeFinish (the full-art tokens' composites, owner decisions 2026-09-29)", () => {
+    /** One row of pixels and a mask over it. */
+    const row = (pixels: number[][]) => Buffer.from(pixels.flat());
+    const maskOf = (alphas: number[]) => Buffer.from(alphas.flatMap((a) => [255, 0, 0, a]));
+
+    it("'opaque': a pixel the mask covers keeps its colour and becomes opaque; a partial mask adds its share", () => {
+      // CC's interior (α 204), the colourless one (166), the outline (255),
+      // a pixel outside the mask, one on the mask's anti-aliased edge.
+      const buf = row([px(243, 241, 232, 204), px(209, 209, 209, 166), px(0, 0, 0, 255), px(10, 20, 30, 0), px(243, 241, 232, 204)]);
+      const out = compositeFinish(buf, 5, 1, [{ op: "opaque", mask: "type" }], { type: maskOf([255, 255, 255, 0, 128]) });
+      expect([...out]).toEqual([
+        ...px(243, 241, 232, 255),
+        ...px(209, 209, 209, 255),
+        ...px(0, 0, 0, 255),
+        ...px(10, 20, 30, 0),
+        ...px(243, 241, 232, Math.round(204 + 51 * (128 / 255))),
+      ]);
+      // Pure: the input is untouched.
+      expect(buf[3]).toBe(204);
+    });
+
+    it("'tint': the slate goes source-over CC's translucent silver only — its interior fully, the rims not at all", () => {
+      const slate = { ...M20_ARTIFACT_NAME_SLATE, mask: "title" } as const;
+      // CC's pill: its middle (77), its end (246), both α 230; a rim pixel
+      // (α 246) and one half-way (α 237); one outside the mask.
+      const buf = row([px(77, 77, 77, 230), px(246, 246, 246, 230), px(246, 246, 246, 246), px(240, 240, 240, 237), px(77, 77, 77, 230)]);
+      const out = compositeFinish(buf, 5, 1, [slate], { title: maskOf([255, 255, 255, 255, 0]) });
+      const over = (c: number, s: number, a: number, t: number) => {
+        const outA = t + (a / 255) * (1 - t);
+        return Math.round((s * t + c * (a / 255) * (1 - t)) / outA);
+      };
+      const at = (i: number) => [...out.subarray(i * 4, i * 4 + 4)];
+      expect(at(0)).toEqual([over(77, 30, 230, 0.65), over(77, 40, 230, 0.65), over(77, 48, 230, 0.65), Math.round((0.65 + (230 / 255) * 0.35) * 255)]);
+      expect(at(1)[0]).toBe(over(246, 30, 230, 0.65));
+      // The rim keeps CC's pixel; the half-way pixel takes half the weight.
+      expect(at(2)).toEqual(px(246, 246, 246, 246));
+      expect(at(3)[0]).toBe(over(240, 30, 237, 0.65 * 0.5));
+      expect(at(4)).toEqual(px(77, 77, 77, 230));
+    });
+
+    it("the slate puts the prints' luminance behind the name on CC's silver, lighter towards the caps", () => {
+      // CC's tokenFrameA pill (α 230): ~77 at its middle, a median of ~110
+      // behind the name (x 420–1080 × y 135–190 px), 246 at the caps. On
+      // mid-grey art.
+      const lum = (p: number[]) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+      const linear = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const whiteContrast = (p: number[]) => 1.05 / (0.2126 * linear(p[0]) + 0.7152 * linear(p[1]) + 0.0722 * linear(p[2]) + 0.05);
+      const onArt = (p: number[]) => [0, 1, 2].map((c) => p[c] * (p[3] / 255) + 118 * (1 - p[3] / 255));
+      const slate = { ...M20_ARTIFACT_NAME_SLATE, mask: "title" } as const;
+      const tint = (v: number) =>
+        onArt([...compositeFinish(row([px(v, v, v, 230)]), 1, 1, [slate], { title: maskOf([255]) })]);
+      // Behind the name, the prints' slate: luminance 54–71 and white ink
+      // 9–11 : 1 (16 M20+ artifact prints; CC's silver pill there was
+      // 102–137, 3.5–5.7 : 1).
+      const behind = tint(110);
+      expect(lum(behind)).toBeGreaterThanOrEqual(54);
+      expect(lum(behind)).toBeLessThanOrEqual(71);
+      expect(whiteContrast(behind)).toBeGreaterThanOrEqual(9);
+      expect(whiteContrast(behind)).toBeLessThanOrEqual(11.5);
+      // Blue-grey, as printed (the prints' 59 / 64 / 67).
+      expect(behind[2]).toBeGreaterThan(behind[0]);
+      // Darker still at the pill's middle; the caps stay lighter, as printed
+      // (the prints' ~130–150; CC's 246).
+      expect(lum(tint(77))).toBeLessThan(lum(behind));
+      expect(lum(tint(246))).toBeGreaterThan(95);
+      expect(lum(tint(246))).toBeLessThan(150);
+    });
+
+    it("round 14: the type tints put CC's flat pill interiors on the prints' median; the bevel, outline and rim keep CC's pixels", () => {
+      const lum = (p: number[]) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+      /** One pixel through the pill's own finish (tint, then opaque). */
+      const pill = (tint: typeof M20_COLOURLESS_TYPE_TINT | typeof M20_ARTIFACT_TYPE_TINT, p: number[]) => [
+        ...compositeFinish(row([p]), 1, 1, [{ ...tint, mask: "type" }, { op: "opaque", mask: "type" }], { type: maskOf([255]) }),
+      ];
+      // Colourless: frameC's interior (a flat 209 at α 166) → the median of
+      // 4 M20+ colourless prints (TEOE #1, TCMM #1, TMH3 #38, TFDN #26:
+      // rgb 176/165/160, luminance 167; 157–180). CC's was 209.
+      const c = pill(M20_COLOURLESS_TYPE_TINT, px(209, 209, 209, 166));
+      expect(c).toEqual(px(176, 165, 160, 255));
+      expect(lum(c)).toBeGreaterThanOrEqual(157);
+      expect(lum(c)).toBeLessThanOrEqual(180);
+      // Artifact: tokenFrameA's interior (rgb 181/197/203 at α 204) → the
+      // median of 16 M20+ artifact prints (rgb 160/178/188, luminance 174;
+      // 160–190). CC's was 193.
+      const a = pill(M20_ARTIFACT_TYPE_TINT, px(181, 197, 203, 204));
+      expect(a).toEqual(px(160, 178, 188, 255));
+      expect(lum(a)).toBeGreaterThanOrEqual(160);
+      expect(lum(a)).toBeLessThanOrEqual(190);
+      // Steel, as printed: blue above red.
+      expect(a[2]).toBeGreaterThan(a[0]);
+      // CC's bevel (its light top rows, its dark left / bottom rows), the
+      // black outline: only made solid, never tinted — as the prints keep a
+      // lighter top bevel and a darker bottom one around the flat interior.
+      for (const [tint, bevel] of [
+        [M20_COLOURLESS_TYPE_TINT, [px(214, 214, 214, 190), px(110, 110, 110, 211), px(189, 189, 189, 241), px(0, 0, 0, 255)]],
+        [M20_ARTIFACT_TYPE_TINT, [px(191, 199, 202, 247), px(103, 111, 115, 231), px(109, 117, 120, 242), px(145, 158, 163, 216), px(0, 0, 0, 255)]],
+      ] as const) {
+        for (const p of bevel) expect(pill(tint, [...p]), `${tint.rgb} ${p}`).toEqual([p[0], p[1], p[2], 255]);
+      }
+    });
+
+    it("round 14: the artifact name pill is solid — the slate's α ≈ 246 made 255, its tone kept inside the prints' range", () => {
+      const lum = (p: number[]) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+      const linear = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const whiteContrast = (p: number[]) => 1.05 / (0.2126 * linear(p[0]) + 0.7152 * linear(p[1]) + 0.0722 * linear(p[2]) + 0.05);
+      const name = (finish: object[], v: number) =>
+        [...compositeFinish(row([px(v, v, v, 230)]), 1, 1, finish as never, { title: maskOf([255]) })];
+      const slate = { ...M20_ARTIFACT_NAME_SLATE, mask: "title" };
+      const solid = { ...M20_ARTIFACT_SOLID_NAME_PILL, mask: "title" };
+      // Before round 14 the slate left CC's silver at α ≈ 246 (the art
+      // showed through); now every covered pixel is opaque…
+      expect(name([slate], 110)[3]).toBe(Math.round((0.65 + (230 / 255) * 0.35) * 255));
+      const behind = name([slate, solid], 110);
+      expect(behind[3]).toBe(255);
+      // …in the same colour: behind the name still the prints' slate
+      // (luminance 54–71, white ink 9–11.5 : 1; 16 M20+ artifact prints).
+      expect(behind.slice(0, 3)).toEqual(name([slate], 110).slice(0, 3));
+      expect(lum(behind)).toBeGreaterThanOrEqual(54);
+      expect(lum(behind)).toBeLessThanOrEqual(71);
+      expect(whiteContrast(behind)).toBeGreaterThanOrEqual(9);
+      expect(whiteContrast(behind)).toBeLessThanOrEqual(11.5);
+    });
+
+    it("refuses an unknown op or a missing mask", () => {
+      const buf = row([px(1, 2, 3, 4)]);
+      expect(() => compositeFinish(buf, 1, 1, [{ op: "opaque", mask: "x" }], {})).toThrow(/no 1x1 mask for x/);
+      expect(() => compositeFinish(buf, 1, 1, [{ op: "blur", mask: "x" } as never], { x: maskOf([255]) })).toThrow(/unknown op/);
+      expect(() => describeFinish({ op: "blur" } as never)).toThrow(/unknown op/);
+    });
+  });
 
   describe("recutBand (TODO 4.49's re-cuts: the textless and the text-box tokens)", () => {
     /** A 1-px-wide column of rows, each row's red = its index, alpha 255
@@ -676,6 +957,8 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].pack, template).toBe(templates[template].pack);
       expect(provenance[template].transforms, template).toMatch(/no resample/);
       expect(provenance[template].sourceFiles, template).toEqual(sourceFilesFor(templates[template] as never));
+      // Every PipGlyph composite is on the record (the full-art tokens').
+      expect(provenance[template].finish, template).toEqual(templates[template].finish?.map(describeFinish));
     }
     expect(Object.keys(provenance.fullartland.symbols).sort()).toEqual(["b", "c", "g", "output", "r", "u", "w"]);
     expect(provenance.fullartland.colors.w).toEqual([

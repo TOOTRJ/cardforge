@@ -7,8 +7,10 @@
 //
 //   "card"            — Single card on a page exactly 2.5" × 3.5" (63.5 × 88.9 mm).
 //                       Good for inserting into a sleeve or sharing digitally.
-//   "sheet-letter"    — Nine copies tiled 3×3 on US Letter (8.5" × 11") with crop marks.
-//   "sheet-a4"        — Nine copies tiled 3×3 on A4 (210 × 297 mm) with crop marks.
+//   "sheet-letter"    — A sheet of copies on US Letter (8.5" × 11") with cut
+//                       guides: 3×3 with corner marks by default, or the
+//                       sheet options' grid (TODO 6.15, below).
+//   "sheet-a4"        — The same on A4 (210 × 297 mm).
 //
 // Standard MTG card dimensions:
 //   2.5"  × 3.5"  (imperial)
@@ -34,7 +36,7 @@
 // card stays 2.5" × 3.5", the 3×3 sheet and its crop marks stay as they are,
 // and the PNG itself (stored bake, download) stays landscape.
 //
-// BLEED (TODO 6.1a, the single-card page only): the render carries 1/8 in
+// BLEED (TODO 6.1a, the single-card page): the render carries 1/8 in
 // (9 pt) of bleed on every side (lib/render/card-print.ts), so it is drawn
 // 198 × 270 pt — the trim 180 × 252 plus the bleed — centred on a page with
 // a 1/4 in slug all round (234 × 306 pt). Crop marks sit in the slug on the
@@ -262,23 +264,26 @@ export type PdfLayout = "card" | "sheet" | "sheet-letter" | "sheet-a4";
  *
  * @param pngBytes   Raw PNG bytes from `renderCardImage`.
  * @param layout     "card" → single 2.5"×3.5" page;
- *                   "sheet" or "sheet-letter" → 9-up Letter sheet;
- *                   "sheet-a4" → 9-up A4 sheet.
+ *                   "sheet" or "sheet-letter" → one Letter sheet of copies;
+ *                   "sheet-a4" → one A4 sheet of copies.
  * @param cardTitle  Used in the PDF metadata `title` field.
  * @param options    `bleed`: the PNG carries a 1/8 in bleed (TODO 6.1a) —
- *                   "card" only: a bleed page with trim-line crop marks
- *                   (addBleedCardPage). Sheets have no bleed layout (6.15).
+ *                   "card": a bleed page with trim-line crop marks
+ *                   (addBleedCardPage); a sheet: every cell is the card's
+ *                   bleed box (the grid makes room — Letter prints
+ *                   landscape, 3 × 2; A4 4 × 2).
+ *                   `sheet`: a sheet's gap, cut guides and card size (TODO
+ *                   6.15, lib/render/sheet-layout.ts; default the 3 × 3).
+ *                   A sheet is ONE page, every cell the same card.
  * @returns          A Uint8Array of PDF bytes ready to stream to the client.
  */
 export async function buildCardPdf(
   pngBytes: Uint8Array,
   layout: PdfLayout = "card",
   cardTitle = "PipGlyph Card",
-  options: { bleed?: boolean } = {},
+  options: { bleed?: boolean; sheet?: DeckPdfSheetOptions } = {},
 ): Promise<Uint8Array> {
-  if (options.bleed && layout !== "card") {
-    throw new Error("A bleed PDF is a single-card page.");
-  }
+  const bleed = options.bleed === true;
   const doc = await newDocument(
     cardTitle,
     "Custom MTG card — fan-made, not affiliated with Wizards of the Coast.",
@@ -286,13 +291,14 @@ export async function buildCardPdf(
   const img = await embedImage(doc, pngBytes);
 
   if (layout === "card") {
-    if (options.bleed) addBleedCardPage(doc, img);
+    if (bleed) addBleedCardPage(doc, img);
     else addCardPage(doc, img);
   } else {
     // "sheet" (legacy) and "sheet-letter" both produce the US Letter sheet:
-    // one page of the default grid (3 × 3), every cell the same card.
-    const plan = planSheet(sheetPaper(layout), DEFAULT_SHEET_OPTIONS);
-    drawSheetPage(doc, Array.from({ length: plan.perPage }, () => img), plan, DEFAULT_SHEET_OPTIONS.marks);
+    // one page of the grid, every cell the same card.
+    const sheet: SheetOptions = { ...DEFAULT_SHEET_OPTIONS, ...definedOnly(options.sheet), bleed };
+    const plan = planSheet(sheetPaper(layout), sheet);
+    drawSheetPage(doc, Array.from({ length: plan.perPage }, () => img), plan, sheet.marks);
   }
 
   return doc.save();

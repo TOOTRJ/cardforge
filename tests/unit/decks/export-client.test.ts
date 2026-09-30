@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
+import { PDFDocument } from "pdf-lib";
+import sharp from "sharp";
 import {
   APPROX_BYTES_PER_CARD,
   DeckExportError,
@@ -65,7 +67,7 @@ describe("runDeckExport", () => {
     expect(seen.at(-1)).toBe("packaging:3/3");
   });
 
-  it("builds a print PDF and always renders HD", async () => {
+  it("builds a print PDF from every card's 600 ppi PRINT render (full-resolution art)", async () => {
     const urls: string[] = [];
     const inner = fakeFetch();
     const result = await runDeckExport(
@@ -80,10 +82,12 @@ describe("runDeckExport", () => {
     );
     expect(result.filename).toBe("gorgon-gaze-sheets-a4.pdf");
     expect(result.blob.type).toBe("application/pdf");
-    // HD and SQUARE: the sheets are cut along the rectangle (TODO 3.26).
+    // The 600 ppi print render (TODO 6.10/6.15: the art composited at full
+    // resolution, not the HD render's 1600 px inlined copy), SQUARE: the
+    // sheets are cut along the rectangle (TODO 3.26).
     const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
     expect(cardUrls.length).toBeGreaterThan(0);
-    expect(cardUrls.every((u) => u.endsWith("/png?preset=hd&corners=square"))).toBe(true);
+    expect(cardUrls.every((u) => u.endsWith("/png?ppi=600&corners=square&print=1"))).toBe(true);
     expect(urls.some((u) => u.includes("part=report"))).toBe(false);
     const head = new Uint8Array(await result.blob.slice(0, 5).arrayBuffer());
     expect(String.fromCharCode(...head)).toBe("%PDF-");
@@ -108,6 +112,103 @@ describe("runDeckExport", () => {
     expect(cardUrls).toHaveLength(3);
     expect(cardUrls.every((u) => new URL(u, "http://x").searchParams.get("corners") === "square")).toBe(true);
     expect(cardUrls.every((u) => new URL(u, "http://x").searchParams.get("preset") === "default")).toBe(true);
+  });
+
+  it("the HD ZIP's images are the 600 ppi print renders too; the standard ZIP keeps the 750 px render", async () => {
+    for (const [quality, expected] of [
+      ["hd", "/png?ppi=600&corners=square&print=1"],
+      ["default", "/png?preset=default&corners=square"],
+    ] as const) {
+      const urls: string[] = [];
+      const inner = fakeFetch();
+      await runDeckExport(
+        // A bleed asked for a ZIP is ignored: the bleed is a PDF option here.
+        { deckId: "d1", kind: "zip", quality, layout: "pages", bleed: true },
+        {
+          fetchImpl: (input, init) => {
+            urls.push(input);
+            return inner(input, init);
+          },
+          onProgress: () => {},
+        },
+      );
+      const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+      expect(cardUrls).toHaveLength(3);
+      expect(cardUrls.every((u) => u.endsWith(expected))).toBe(true);
+    }
+  });
+
+  it("an MPC ZIP (TODO 6.1): MakePlayingCards' files, named -mpc, in a -mpc ZIP", async () => {
+    const mpcPng = new Uint8Array(
+      await sharp({ create: { width: 1644, height: 2244, channels: 3, background: { r: 0, g: 0, b: 0 } } }).png().toBuffer(),
+    );
+    const urls: string[] = [];
+    const inner = fakeFetch();
+    const result = await runDeckExport(
+      { deckId: "d1", kind: "zip", quality: "mpc", layout: "pages", bleed: true },
+      {
+        fetchImpl: async (input, init) => {
+          urls.push(input);
+          if (input.includes("/api/cards/c1/png") || input.includes("/api/cards/c2/png")) {
+            return new Response(mpcPng as BodyInit, { headers: { "content-type": "image/png" } });
+          }
+          // c3 answers the 1 px render (not MPC's file): left out as failed.
+          return inner(input, init);
+        },
+        onProgress: () => {},
+      },
+    );
+    const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+    expect(cardUrls).toHaveLength(3);
+    expect(cardUrls.every((u) => u.endsWith("/png?ppi=600&corners=square&bleed=mpc"))).toBe(true);
+    expect(result.filename).toBe("gorgon-gaze-deck-mpc.zip");
+    expect(result.failed).toEqual(["Broken One"]);
+    const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+    expect(Object.keys(zip.files).filter((name) => name.startsWith("cards/")).sort()).toEqual([
+      "cards/",
+      "cards/01-stone-matriarch-mpc.png",
+      "cards/02-petrifying-glance-mpc.png",
+    ]);
+    expect(APPROX_BYTES_PER_CARD.mpc).toBeGreaterThan(APPROX_BYTES_PER_CARD.hd);
+  });
+
+  it("takes the print options: sheet gap / guides / size and the bleed (TODO 6.15)", async () => {
+    const bleedPng = new Uint8Array(
+      await sharp({ create: { width: 66, height: 90, channels: 3, background: "#000000" } }).png().toBuffer(),
+    );
+    const urls: string[] = [];
+    const result = await runDeckExport(
+      {
+        deckId: "d1",
+        kind: "pdf",
+        quality: "hd",
+        layout: "sheet-letter",
+        sheet: { gap: "sixteenth", marks: "lines", cardSize: "mm" },
+        bleed: true,
+      },
+      {
+        fetchImpl: async (input) => {
+          urls.push(input);
+          if (input.includes("part=manifest")) return Response.json(manifest);
+          // Stone Matriarch comes back WITHOUT its bleed: left out, never
+          // stretched into a bleed cell.
+          if (input.includes("/api/cards/c1/png")) return new Response(PNG_1PX, { headers: { "content-type": "image/png" } });
+          if (input.includes("/api/cards/c3/png")) return Response.json({ error: "Render failed" }, { status: 500 });
+          if (input.includes("/api/cards/")) return new Response(bleedPng, { headers: { "content-type": "image/png" } });
+          return new Response(null, { status: 404 });
+        },
+        onProgress: () => {},
+      },
+    );
+    const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+    expect(cardUrls.every((u) => u.endsWith("/png?ppi=600&corners=square&bleed=1"))).toBe(true);
+    expect(result.filename).toBe("gorgon-gaze-sheets-bleed.pdf");
+    expect(result.failed.sort()).toEqual(["Broken One", "Stone Matriarch"]);
+    const doc = await PDFDocument.load(new Uint8Array(await result.blob.arrayBuffer()));
+    // Petrifying Glance × 4 on a Letter bleed sheet — landscape — then the
+    // checklist page (on Letter).
+    expect(doc.getPage(0).getSize()).toEqual({ width: 792, height: 612 });
+    expect(doc.getPageCount()).toBe(2);
   });
 
   it("surfaces the upgrade code from the manifest request", async () => {

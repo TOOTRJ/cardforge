@@ -207,8 +207,13 @@ describe("every caller names its corner", () => {
     // every render it makes — as do the 800 ppi / bleed PNGs.
     expect(read("app/api/cards/[id]/pdf/route.ts")).toMatch(/renderCardPrint\(previewData, \{/);
     expect(read("lib/render/card-print.ts")).toMatch(/squareCardCorners\(trim, trimW, trimH, cornerFills, radius\)/);
-    // The deck export (PDF sheets AND the ZIP): square, named explicitly.
-    expect(read("lib/decks/export-client.ts")).toContain('cardPngHref(card.id, { preset: quality, corners: "square" })');
+    // The deck and selection exports (PDF sheets AND the ZIP): every PDF card
+    // and HD image is the print render (square — its link names
+    // corners=square), a standard image the 750 px render, square by name.
+    const exportClient = read("lib/decks/export-client.ts");
+    expect(exportClient).toContain("cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed })");
+    expect(exportClient).toContain('cardPngHref(cardId, { preset: "default", corners: "square" })');
+    expect(read("lib/cards/print-export.ts")).toMatch(/\/png\?ppi=\$\{opts\.ppi\}&corners=square/);
   });
 });
 
