@@ -16,6 +16,7 @@ import {
   twoColorDressOf,
   twoColorFromCost,
   twoColorPairOf,
+  offersTwoColor,
 } from "@/lib/cards/anatomy";
 import { getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
@@ -89,6 +90,30 @@ describe("the colour pair — card data, never the cost", () => {
     expect(twoColorFromCost("{C}{S}{X}")).toBeNull();
     expect(twoColorFromCost("")).toBeNull();
     expect(twoColorFromCost(null)).toBeNull();
+  });
+});
+
+describe("the cards the two-colour frame is for (the creator's switch; 4.6 review 2026-09-29)", () => {
+  it("a pair, or plain multicolor whose cost spans exactly two colours or none", () => {
+    expect(offersTwoColor(["white", "blue"], null)).toBe(true);
+    expect(offersTwoColor(["blue", "white", "multicolor"], "{W}{U}")).toBe(true);
+    expect(offersTwoColor(["multicolor"], "{2}{B}{G}")).toBe(true);
+    expect(offersTwoColor(["multicolor"], "{G/W}{G/W}")).toBe(true);
+    expect(offersTwoColor(["multicolor"], null)).toBe(true);
+    expect(offersTwoColor(["multicolor"], "—")).toBe(true);
+    expect(offersTwoColor(["multicolor"], "{3}")).toBe(true);
+  });
+
+  it("never an identity with one or three-plus colour words, a multicolor card whose cost spans one or 3+ colours, or no multicolour at all", () => {
+    expect(offersTwoColor(["white", "blue", "black"], "{W}{U}{B}")).toBe(false);
+    expect(offersTwoColor(["white", "blue", "black"], "{W}{U}")).toBe(false);
+    expect(offersTwoColor(["black"], "{3}{U}{B}")).toBe(false);
+    expect(offersTwoColor(["red", "multicolor"], "{1}{R}{G}")).toBe(false);
+    expect(offersTwoColor(["multicolor"], "{1}{W}{U}{B}")).toBe(false);
+    expect(offersTwoColor(["multicolor"], "{G}{G}")).toBe(false);
+    expect(offersTwoColor(["colorless"], null)).toBe(false);
+    expect(offersTwoColor([], "{W}{U}")).toBe(false);
+    expect(offersTwoColor(null, "{W}{U}")).toBe(false);
   });
 });
 

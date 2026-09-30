@@ -7,7 +7,8 @@
 // owner has never set it — and nothing changes until the owner turns it on.
 // A switch shows only where it can draw something: the template draws the
 // piece (its PROFILES entry declares it) and the card qualifies (Legendary
-// for the crown; a multicolour card for the two-colour frame). Both draw on
+// for the crown; for the two-colour frame a pair, or a plain "multicolor"
+// card whose cost spans two colours or names none — offersTwoColor). Both draw on
 // the m15 / m15artifact / m15land PROFILES entries: the crown (4.6a) and the
 // two-colour pair masters (4.6b).
 //
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 import {
   frameAnatomyOf,
   pairColorIdentity,
+  offersTwoColor,
   qualifiesForCrown,
   twoColorDressOf,
   twoColorFromCost,
@@ -63,18 +65,13 @@ export const HYBRID_FALLBACK_NOTE =
 const PAIR_COLORS = ["white", "blue", "black", "red", "green"] as const;
 type PairColor = (typeof PAIR_COLORS)[number];
 
-/** True for a multicolour identity that names no colour or exactly the pair
- *  it holds — the cards the two-colour frame is for. */
-export function isMulticolourIdentity(colors: readonly ColorIdentity[]): boolean {
-  return colors.length > 1 || colors[0] === "multicolor";
-}
-
 /**
  * A NEW card's pair follows its cost (create and remix; owner decision
  * 2026-09-29: "pre-filled from the cost's pips"): while the card is plain
  * "multicolor" — or holds the pair this hook filled in — on a template that
  * draws the two-colour frame, a cost spanning exactly two colours fills the
- * pair, and a cost that stops spanning them takes it out again. A pick in the
+ * pair, and a cost that stops spanning them takes it out again; so does a
+ * move to a template that doesn't draw it. A pick in the
  * "Two colours" row (the returned `markTouched`) or any other colour ends
  * it. The fill is not an edit of the user's (no dirty flag). Called by the
  * form itself (it takes the form's methods: it runs above the provider),
@@ -95,9 +92,20 @@ export function useTwoColorPairFollow(
   const filled = useRef<TwoColorPair | null>(null);
   useEffect(() => {
     if (!enabled || touched.current) return;
-    if (frameAnatomyOf(template).twoColor.length === 0) return;
     const identity = (colorIdentity ?? []) as ColorIdentity[];
     const current = twoColorPairOf(identity);
+    if (frameAnatomyOf(template).twoColor.length === 0) {
+      // The frame stopped drawing the two-colour frame (a Variations or
+      // Frame pick): the pair this hook filled goes back to plain
+      // "multicolor" — the row that shows it hides here, and a split frame
+      // (Dragon Wing) would draw it with nothing on screen saying why (4.6
+      // review). A pair picked by hand or imported stays (touched).
+      if (filled.current !== null && current === filled.current) {
+        filled.current = null;
+        setValue("color_identity", ["multicolor"]);
+      }
+      return;
+    }
     const plain = identity.length === 1 && identity[0] === "multicolor";
     if (!plain && !(current !== null && current === filled.current)) return;
     const fromCost = twoColorFromCost(cost);
@@ -265,8 +273,12 @@ export function AnatomyPanel({
   const colors = (colorIdentity ?? []) as ColorIdentity[];
   const pair = twoColorPairOf(colors);
   const showCrown = which.includes("crown") && anatomy.crown && qualifiesForCrown({ cardType, supertype });
+  // Only a card the two-colour frame is for (offersTwoColor): never a
+  // three-colour identity, nor a "multicolor" card whose cost spans one or
+  // three-plus colours — there the switch would do nothing, or offer a pair
+  // the cost contradicts.
   const showTwoColor =
-    which.includes("twoColor") && anatomy.twoColor.length > 0 && isMulticolourIdentity(colors);
+    which.includes("twoColor") && anatomy.twoColor.length > 0 && offersTwoColor(colors, cost);
   if (!showCrown && !showTwoColor) return null;
 
   const editing = stored !== null;

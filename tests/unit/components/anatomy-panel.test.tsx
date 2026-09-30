@@ -87,6 +87,11 @@ function Harness({
       <output data-testid="style">{JSON.stringify(frameStyle)}</output>
       <output data-testid="type">{cardType}</output>
       <input aria-label="cost" value={useWatch({ control: methods.control, name: "cost" })} onChange={(e) => methods.setValue("cost", e.target.value)} />
+      <input
+        aria-label="template"
+        value={frameStyle?.template ?? ""}
+        onChange={(e) => methods.setValue("frame_style.template", e.target.value as FrameStyle["template"])}
+      />
     </FormProvider>
   );
 }
@@ -200,6 +205,36 @@ describe("the two-colour switch on a stored card", () => {
     expect(colors()).toBe("white,black");
   });
 
+  it("offered (switch + hint) only where it can apply: a pair, or plain Multicolor with a two-colour cost or none (4.6 review)", () => {
+    const cases: [ColorIdentity[], string, boolean][] = [
+      [["white", "blue"], "{1}{W}{U}", true],
+      [["blue", "white", "multicolor"], "{1}{W}{U}", true], // the AI's letters: the pair
+      [["multicolor"], "{2}{B}{G}", true], // the pair switching it on pre-fills
+      [["multicolor"], "", true], // no cost: only the row can name the pair
+      [["multicolor"], "{3}", true], // no coloured pip either
+      // Where it could never apply:
+      [["white", "blue", "black"], "{W}{U}{B}", false], // three colour words
+      [["white", "blue", "black", "red", "green"], "{W}{U}{B}{R}{G}", false],
+      [["multicolor"], "{1}{W}{U}{B}", false], // a three-colour cost: switching on would offer a pair it contradicts
+      [["multicolor"], "{W}{U}{B}{R}{G}", false],
+      [["multicolor"], "{2}{G}{G}", false], // a one-colour cost
+      [["red", "multicolor"], "{1}{R}{G}", false], // an explicit colour word is never overridden
+    ];
+    for (const [identity, cost, offered] of cases) {
+      render(
+        <Harness
+          seed={{ colors: identity, cost, frameStyle: { template: "m15" } }}
+          stored={{ frameStyle: { template: "m15" }, colorIdentity: identity }}
+          which={["twoColor"]}
+        />,
+      );
+      const label = `${identity.join(",")} ${cost}`;
+      expect(twoColorSwitch() !== null, label).toBe(offered);
+      expect(screen.queryByTestId("anatomy-hint-twoColor") !== null, label).toBe(offered);
+      cleanup();
+    }
+  });
+
   it("never offered on a mono card, whatever its cost (an explicit black {3}{U}{B} stays black)", () => {
     render(
       <Harness
@@ -235,6 +270,32 @@ describe("a new card's Two colours row (Card step)", () => {
       fireEvent.change(screen.getByLabelText("cost"), { target: { value: "{1}{W}{U}" } });
     });
     expect(colors()).toBe("multicolor");
+  });
+
+  it("a pair the cost filled goes back to plain multicolor when the frame stops drawing pairs (Dragon Wing); a hand-picked pair stays", async () => {
+    render(<Harness seed={{ colors: ["multicolor"], cost: "{1}{W}{U}", frameStyle: { template: "m15", ...NEW_CARD_ANATOMY } }} follow which={["twoColor"]} />);
+    expect(colors()).toBe("white,blue");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("template"), { target: { value: "tarkirdragon" } });
+    });
+    expect(colors()).toBe("multicolor");
+    // Back on a frame that draws pairs: filled from the cost again.
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("template"), { target: { value: "m15" } });
+    });
+    expect(colors()).toBe("white,blue");
+    cleanup();
+
+    // Picked by hand in the row: the owner's choice, kept on any frame.
+    render(<Harness seed={{ colors: ["multicolor"], cost: "", frameStyle: { template: "m15", ...NEW_CARD_ANATOMY } }} follow which={["twoColor"]} />);
+    const row = screen.getByTestId("two-colour-row");
+    fireEvent.click(within(row).getByRole("button", { name: /^white$/i }));
+    fireEvent.click(within(row).getByRole("button", { name: /^black$/i }));
+    expect(colors()).toBe("white,black");
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText("template"), { target: { value: "tarkirdragon" } });
+    });
+    expect(colors()).toBe("white,black");
   });
 
   it("a mono card's cost never re-colours it", async () => {

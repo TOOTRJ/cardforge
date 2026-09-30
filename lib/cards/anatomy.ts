@@ -153,6 +153,20 @@ export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T): T {
   return normalizeAnatomy(stamped, frameStyle.template);
 }
 
+/** The anatomy switches a stored frame_style names (booleans only) — what a
+ *  remix keeps of its parent's (the creator's remixValuesFrom, and the AI
+ *  deck remix of an own card): an explicit off stays off, and a switch the
+ *  parent never set gets the new-card default. */
+export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
+  const stored = (frameStyle ?? {}) as Record<string, unknown>;
+  const out: FrameAnatomyStyle = {};
+  for (const key of FRAME_ANATOMY_KEYS) {
+    const value = stored[key];
+    if (typeof value === "boolean") out[key] = value;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Colour pairs
 // ---------------------------------------------------------------------------
@@ -225,6 +239,30 @@ function colouredPips(cost: string | null | undefined): string[][] {
  *  render input. */
 export function twoColorFromCost(cost: string | null | undefined): TwoColorPair | null {
   return pairOfLetters(colouredPips(cost).flat());
+}
+
+/**
+ * Whether the two-colour frame is FOR this card — the creator shows its
+ * switch (and a stored card's hint) only then (4.6 review 2026-09-29):
+ *   • the identity holds a pair (twoColorPairOf; the "multicolor" token
+ *     ignored);
+ *   • or it is plain "multicolor" (no colour word) and the cost spans exactly
+ *     two colours — the pair switching it on pre-fills;
+ *   • or it is plain "multicolor" with no coloured pip (a land, a
+ *     colour-indicator card): only the "Two colours" row can name its pair.
+ * Never for an identity with one or three-plus colour words (an explicit
+ * identity is never overridden by the cost), and never for a plain
+ * "multicolor" card whose cost spans one or three-plus colours (turning it
+ * on would offer a pair its cost contradicts).
+ */
+export function offersTwoColor(
+  colors: readonly ColorIdentity[] | null | undefined,
+  cost: string | null | undefined,
+): boolean {
+  if (twoColorPairOf(colors) !== null) return true;
+  const identity = colors ?? [];
+  if (!identity.includes("multicolor") || identity.some((color) => WORD_LETTER[color] !== undefined)) return false;
+  return twoColorFromCost(cost) !== null || colouredPips(cost).length === 0;
 }
 
 /**

@@ -17,7 +17,7 @@ import {
   normalizeColorSelection,
 } from "@/lib/creator/card-fields";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import { frameAnatomyOf } from "@/lib/cards/anatomy";
+import { frameAnatomyOf, twoColorPairOf } from "@/lib/cards/anatomy";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { PipOverrides } from "@/lib/pips/override";
 
@@ -50,14 +50,20 @@ export function PipsPanel({
   // the multicolor frame), so "mismatch" means the cost's FRAME differs from
   // the current one — a WU cost on the multicolor frame already matches (a
   // pair and "multicolor" are the same "m" frame key). On a frame that draws
-  // the two-colour frame (TODO 4.6b) "Switch" picks the cost's pair.
+  // the two-colour frame (TODO 4.6b) "Switch" picks the cost's pair — and
+  // there a card that HOLDS a pair draws it (split halves), so a cost that
+  // names another pair, or three colours, no longer matches it (4.6 review:
+  // "Switch" to W|U, then {W}{B}, kept the W|U split with no prompt). A
+  // plain "multicolor" card is never prompted for its pair: the follow
+  // (useTwoColorPairFollow) fills it, or its owner chose the gold frame.
   const derived = deriveColorIdentity(cost);
-  const target = normalizeColorSelection(derived, {
-    keepPair: frameAnatomyOf(frameTemplate).twoColor.length > 0,
-  });
+  const drawsPairs = frameAnatomyOf(frameTemplate).twoColor.length > 0;
+  const target = normalizeColorSelection(derived, { keepPair: drawsPairs });
+  const heldPair = drawsPairs ? twoColorPairOf(colorIdentity) : null;
   const framesDiffer =
     derived.length > 0 &&
-    pickFrameColorKey(target) !== pickFrameColorKey(colorIdentity);
+    (pickFrameColorKey(target) !== pickFrameColorKey(colorIdentity) ||
+      (heldPair !== null && twoColorPairOf(target) !== heldPair));
   const notWearing = derived.filter((c) => !colorIdentity.includes(c));
   // Name the colors the frame is missing; when the frames differ but every
   // cost color is technically in a (legacy multi-value) identity, name the
