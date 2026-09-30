@@ -165,7 +165,9 @@ describe("saving a finish (free account, verified frame)", () => {
     const stub = db();
     const result = await createCardAction(payload(finish));
     expect(result).toEqual({ ok: true, cardId: CARD_ID, slug: "sunforged-paladin" });
-    expect(insertOf(stub)?.frame_style).toEqual({ finish, template: "m15" });
+    // A new card on m15 also starts with the two-colour frame on (TODO 4.6b:
+    // the template draws pairs; createCardAction's newCardFrameStyle).
+    expect(insertOf(stub)?.frame_style).toEqual({ finish, template: "m15", twoColor: true });
   });
 
   it("gates on the frame, not the finish: an unverified colour is refused in foil exactly as in regular", async () => {
@@ -201,9 +203,9 @@ describe("a saved foil card round-trips", () => {
     const row = storedRow(insertOf(stub)?.frame_style);
 
     const edit = defaultValuesFor(row, []);
-    expect(edit.frame_style).toEqual({ finish: "foil", template: "m15" });
+    expect(edit.frame_style).toEqual({ finish: "foil", template: "m15", twoColor: true });
     expect(remixValuesFrom(row, []).frame_style.finish).toBe("foil");
-    expect(cardToPreviewData(row).frameStyle).toEqual({ finish: "foil", template: "m15" });
+    expect(cardToPreviewData(row).frameStyle).toEqual({ finish: "foil", template: "m15", twoColor: true });
 
     // Edit mode: the finish is locked structure — the payload has no key to
     // change it with, so the update action leaves the stored finish alone.

@@ -431,6 +431,15 @@ export type ArtWindowKnownFailure = {
   maxMissPx: number | Readonly<Record<string, number>>;
 };
 
+/** m15's two-colour pair masters (TODO 4.6b): gold-split `<pair>` and hybrid
+ *  `<pair>-h` — lib/cards/frame-reference-registry.ts TWO_COLOR_MASTER_KEYS
+ *  (this file imports nothing from "@/": the Card Conjurer importer loads it
+ *  through Node's type stripping; tests/unit/render/art-window-coverage.test.ts
+ *  keeps the two lists in step). */
+export const M15_PAIR_MASTER_KEYS: readonly string[] = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"].flatMap(
+  (pair) => [pair, `${pair}-h`],
+);
+
 /**
  * Template × colour masters whose art windows escape their art today, and
  * the TODO items that fix each (measured 2026-09-29 on every git master
@@ -450,7 +459,9 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why:
       "w/u/b/r/g/m: window 116–1384 × 238–1165 vs slot 117–1383 × 239.4–1163.4 — a 1–1.6 px hairline on every side " +
       "(4.4 (2): artSlot = CC artBounds 7.67/11.29/84.76×44.29); c: see-through, as m15devoid (4.17a)",
-    maxMissPx: { w: 3, u: 3, b: 3, r: 3, g: 3, m: 3, c: 26.5 },
+    // The two-colour pair masters (TODO 4.6b) are recipes over the same
+    // CC files: the mono masters' window, the same hairline.
+    maxMissPx: { w: 3, u: 3, b: 3, r: 3, g: 3, m: 3, c: 26.5, ...Object.fromEntries(M15_PAIR_MASTER_KEYS.map((key) => [key, 3])) },
   },
   m15artifact: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
   m15land: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },

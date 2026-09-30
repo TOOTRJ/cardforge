@@ -654,15 +654,20 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't draw the legendary crown yet",
     blockedBy: "4.6a",
   },
+  // 4.6b draws the pairs on m15 (split + hybrid), m15artifact and m15land
+  // (split): there these gaps drop. What is left is wave 2 (4.6f: snow,
+  // devoid, borderless, extended art, sagas / adventures) — and the tails
+  // it names (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003
+  // frame).
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
-    blockedBy: "4.6b",
+    blockedBy: "4.6f",
   },
   "two-colour-hybrid": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: true },
     reason: "two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one",
-    blockedBy: "4.6b",
+    blockedBy: "4.6f",
   },
   "colour-indicator": {
     match: { colorIndicator: true },
@@ -1727,9 +1732,9 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
 /** True when `template` draws the anatomy a gap names — its PROFILES entry
  *  declares the crown overlay or the two-colour dress (lib/cards/anatomy.ts,
- *  TODO 4.6.0). No template does yet; 4.6a / 4.6b declare them, and each gap
- *  then drops where the landing frame draws it, with nothing to keep in
- *  step here. */
+ *  TODO 4.6.0): each gap drops where the landing frame draws it, with
+ *  nothing to keep in step here (4.6b: the pairs on m15, m15artifact and
+ *  m15land; the crown is 4.6a's). */
 function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
   switch (gap) {
     case "crown":

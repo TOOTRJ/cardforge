@@ -242,9 +242,9 @@ describe("the general signatures (TODO 1.4)", () => {
     // Porcelain Legionnaire NPH #19: a white artifact creature on the 2003
     // frame prints the ARTIFACT frame, which only M15 has.
     ["nph-19", "nearest", "m15artifact", undefined],
-    // Flooded Strand KTK #233: a fetch land prints its two colours — a
-    // two-colour land frame PipGlyph draws gold (4.6).
-    ["ktk-233", "nearest", "m15land", undefined],
+    // Flooded Strand KTK #233: a fetch land prints its two colours — the
+    // two-colour land frame m15land draws (TODO 4.6b).
+    ["ktk-233", "exact", "m15land", undefined],
     // Evolving Wilds MSC #240 stays grey; Fabled Passage and Prismatic Vista
     // print the gold land frame (their scans).
     ["msc-240", "exact", "m15land", undefined],
@@ -278,11 +278,12 @@ describe("the general signatures (TODO 1.4)", () => {
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
     ["khm-244", "nearest", "m15snow", "m15artifact"],
-    // Anatomy gaps on the M15 era: the crown, the double-faced marks, a
-    // two-colour land, the silver border + Un-host layout.
+    // Anatomy gaps on the M15 era: the crown, the double-faced marks, the
+    // silver border + Un-host layout. A two-colour land is no gap since
+    // 4.6b: m15land draws its split (Bloodfell Caves KTK #229).
     ["dmu-107", "nearest", "m15", undefined],
     ["mid-7", "nearest", "m15", undefined],
-    ["ktk-229", "nearest", "m15land", undefined],
+    ["ktk-229", "exact", "m15land", undefined],
     ["ust-1", "nearest", "m15", undefined],
   ];
 
@@ -299,7 +300,8 @@ describe("the general signatures (TODO 1.4)", () => {
     });
     expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
-    expect(frameMatchFromScryfall(printing("ktk-233")).signature).toBe("era/2015+two-colour");
+    // The two-colour land frame is drawn (4.6b): the plain era signature.
+    expect(frameMatchFromScryfall(printing("ktk-233"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("nph-19")).signature).toBe("era/2003/coloured-artifact");
     expect(frameMatchFromScryfall(printing("fut-18"))).toMatchObject({
       signature: "future",

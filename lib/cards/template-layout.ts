@@ -2873,13 +2873,24 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // spread M15 don't inherit it.
   // The CC cost lift and type-line baseline (CC_M15_COST_DY /
   // CC_M15_TYPE_DY) are set here too, for the same reason.
+  // The two-colour pair masters (TODO 4.6b; `twoColorMasters`, opt-in per
+  // card — FrameStyle.twoColor): declared on these three PROFILES entries
+  // only, never on the M15 / M15LAND / M15ARTIFACT bases other profiles
+  // spread (M15 by 11, M15LAND by m15snowland). m15 draws print's gold-split
+  // (<pair>.png) and hybrid (<pair>-h.png) dresses; m15artifact and m15land
+  // the split only (a hybrid artifact has no hybrid plate yet, so it falls
+  // back to the gold-split master — lib/cards/anatomy.ts resolveTwoColor).
+  // The masters are Card Conjurer recipes over the verified masters' own
+  // files (scripts/lib/cc-frames.mjs pairMasterLayers), so a pair rides its
+  // template's "m" tick (owner decision 2026-09-29, V-A).
   m15: {
     ...M15,
     costDy: CC_M15_COST_DY,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    twoColorMasters: ["split", "hybrid"],
   },
-  m15land: M15LAND,
+  m15land: { ...M15LAND, twoColorMasters: ["split"] },
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
@@ -2900,7 +2911,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
-  m15artifact: M15ARTIFACT,
+  m15artifact: { ...M15ARTIFACT, twoColorMasters: ["split"] },
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15snow: M15SNOW,
