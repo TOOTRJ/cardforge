@@ -75,7 +75,7 @@ two-colour land stored with no frame template, like production's Shadowwood
 Hollow), likes / comments / follows (the triggers turn those
 into 19 notifications), two decks, an active + closed + upcoming challenge, a
 published + a scheduled site update, and production's verified frame combos
-(`supabase/seed.sql`: 97 as of 2026-09-28). A refresh of that list does not
+(`supabase/seed.sql`: 194 as of 2026-09-30). A refresh of that list does not
 reach this database on its own: it has already run `seed.sql`, and the CLI
 never re-runs a seed file (see below). Run the file's frame_reviews block in
 the dev branch's SQL editor after each refresh.
