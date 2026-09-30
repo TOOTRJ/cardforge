@@ -1991,6 +1991,27 @@ const M15BORDERLESSARTIFACT: FrameProfile = {
   label: "M15 Borderless Artifact",
   pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
 };
+// …and its nonbasic land (frames plan 4.34): the same pack and geometry —
+// the land prints' title bar, type bar and text box sit where the spells'
+// do (outline rows 88–89 / 222, 1167 / 1300 and 1950 px at HD on 14
+// borderless land prints and 5 spells, 2026-09-29) — with the land's
+// tinted type bar and box in the master (scripts/lib/cc-frames.mjs
+// borderlessLandLayers) and M15 Land's anatomy: no cost, and the rules
+// centred in the box (M15's vAlign, kept). The name keeps the borderless
+// band (8.5–92.2 %W): with no pips the prints set a long name across it
+// (Meduseld, Golden Hall of Edoras LTC #361). A land creature prints on
+// the borderless plates (m15borderless's, in the land's colour key).
+// ONE rules line starts at the box's left, like M15's (no alignSingleLine;
+// owner round 15, 2026-09-29): the only non-SLD borderless nonbasic lands
+// that print a single line, the ZNR / KHM pathways (#284, #286, #290,
+// #293: "{T}: Add {X}."), start it 35 px inside the box, 142–147 px at HD,
+// with ~900 px of room on its right. Only Secret Lair centres one — the
+// artifact lands SLD #300–304, ink centred on 748–756 px.
+const M15BORDERLESSLAND: FrameProfile = {
+  ...M15BORDERLESS,
+  label: "M15 Borderless Land",
+  hideCost: true,
+};
 
 // M15 Borderless Planeswalker — the light borderless walker (frames plan
 // 4.33; Card Conjurer 'Borderless' planeswalker pack, packPlaneswalker
@@ -3401,6 +3422,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
+  m15borderlessland: M15BORDERLESSLAND,
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
   m15snow: M15SNOW,

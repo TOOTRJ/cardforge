@@ -3118,6 +3118,376 @@
     ],
     "oracle_text": "{T}, Sacrifice this token: Add one mana of any color."
   },
+  "mh3-351": {
+    "id": "3d7d07bb-b875-4a6d-8b87-4187e823af75",
+    "name": "Arena of Glory",
+    "layout": "normal",
+    "set": "mh3",
+    "set_name": "Modern Horizons 3",
+    "set_type": "draft_innovation",
+    "collector_number": "351",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Exert"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Mountain.\n{T}: Add {R}.\n{R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste until end of turn. (An exerted permanent won't untap during your next untap step.)"
+  },
+  "fra-381": {
+    "id": "e8f607b3-f37c-49e7-8eb8-a14b2153f30e",
+    "name": "Theorist's Sanctum",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "381",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Behold"
+    ],
+    "type_line": "Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "oracle_text": "({T}: Add {U}.)\nAs this land enters, you may behold a Jace. If you don't, this land enters tapped. (To behold a Jace, choose a Jace you control or reveal a Jace card from your hand.)\n{2}{U}, {T}: Empower Jace 2."
+  },
+  "cmm-663": {
+    "id": "df2370ea-9bb8-496f-aaf5-f0bb3bb55f9b",
+    "name": "Reliquary Tower",
+    "layout": "normal",
+    "set": "cmm",
+    "set_name": "Commander Masters",
+    "set_type": "masters",
+    "collector_number": "663",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "You have no maximum hand size.\n{T}: Add {C}."
+  },
+  "cmm-659": {
+    "id": "24179418-d92c-43eb-a8f6-b8ea83f8c80f",
+    "name": "Command Tower",
+    "layout": "normal",
+    "set": "cmm",
+    "set_name": "Commander Masters",
+    "set_type": "masters",
+    "collector_number": "659",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}: Add one mana of any color in your commander's color identity."
+  },
+  "neo-413": {
+    "id": "7c31c48f-6275-4430-8dc9-05d70c332b7a",
+    "name": "Eiganjo, Seat of the Empire",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "413",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Channel"
+    ],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "{T}: Add {W}.\nChannel — {2}{W}, Discard this card: It deals 4 damage to target attacking or blocking creature. This ability costs {1} less to activate for each legendary creature you control."
+  },
+  "ltc-361": {
+    "id": "b65d2bc3-7f36-4c81-95da-a22c3a47b2e4",
+    "name": "Castle Ardenvale",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "361",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "flavor_name": "Meduseld, Golden Hall of Edoras",
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains.\n{T}: Add {W}.\n{2}{W}{W}, {T}: Create a 1/1 white Human creature token."
+  },
+  "tdm-393": {
+    "id": "85b84c4c-465d-4d8d-8d38-2ed08a9213b3",
+    "name": "Cori Mountain Monastery",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "393",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains or an Island.\n{T}: Add {R}.\n{3}{R}, {T}: Exile the top card of your library. Until the end of your next turn, you may play that card."
+  },
+  "snc-291": {
+    "id": "e4bb5f59-2a63-421b-94a1-4cbef00f0c7e",
+    "name": "Jetmir's Garden",
+    "layout": "normal",
+    "set": "snc",
+    "set_name": "Streets of New Capenna",
+    "set_type": "expansion",
+    "collector_number": "291",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Cycling"
+    ],
+    "type_line": "Land — Mountain Forest Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "R",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {R}, {G}, or {W}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)"
+  },
+  "sld-469": {
+    "id": "7a28aa07-8b36-4048-9b71-dcb34b96068a",
+    "name": "Ash Barrens",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "469",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "galaxyfoil"
+    ],
+    "keywords": [
+      "Landcycling",
+      "Basic landcycling",
+      "Typecycling",
+      "Cycling"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\nBasic landcycling {1} ({1}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"
+  },
+  "woe-303": {
+    "id": "901796b2-c567-41e2-a87b-6147a966c9a8",
+    "name": "Restless Bivouac",
+    "layout": "normal",
+    "set": "woe",
+    "set_name": "Wilds of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "303",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {R} or {W}.\n{1}{R}{W}: This land becomes a 2/2 red and white Ox creature until end of turn. It's still a land.\nWhenever this land attacks, put a +1/+1 counter on target creature you control."
+  },
+  "fra-379": {
+    "id": "fa63b3eb-292d-4d9d-9179-085566e82d37",
+    "name": "Hall of Echoes",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "379",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{5}: This land becomes a copy of target creature you control until end of turn. The \"legend rule\" doesn't apply to permanents you control this turn."
+  },
+  "hob-284": {
+    "id": "edff761b-2c2a-414f-b0a3-25c3fdbcb0bc",
+    "name": "The Lonely Mountain",
+    "layout": "normal",
+    "set": "hob",
+    "set_name": "The Hobbit",
+    "set_type": "expansion",
+    "collector_number": "284",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "surgefoil",
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land — Mountain",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "({T}: Add {R}.)\nThis land enters tapped unless you control an Equipment.\n{4}{R}, {T}: Create a 2/2 red Dwarf creature token. This ability costs {1} less to activate for each Equipment you control. Activate only as a sorcery."
+  },
   "tdm-401": {
     "id": "f421da3b-b88d-4e9f-865b-61120bff917a",
     "name": "Elspeth, Storm Slayer",
@@ -3211,6 +3581,82 @@
       "R",
       "U"
     ]
+  },
+  "spm-180": {
+    "id": "f5fb426a-5618-4dd4-9c51-0cc847be8c1d",
+    "name": "Multiversal Passage",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "set_type": "expansion",
+    "collector_number": "180",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
+  },
+  "spm-206": {
+    "id": "db88b6b6-7907-4c40-b712-4fa1456d8ad0",
+    "name": "Multiversal Passage",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "set_type": "expansion",
+    "collector_number": "206",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "fullart"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
+  },
+  "sld-2143": {
+    "id": "285b5f42-17e2-4036-a309-8abd393c6263",
+    "name": "Mystic Sanctuary",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "2143",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "oracle_text": "({T}: Add {U}.)\nThis land enters tapped unless you control three or more other Islands.\nWhen this land enters untapped, you may put target instant or sorcery card from your graveyard on top of your library."
   },
   "blc-78": {
     "id": "00e73c6f-bdbb-474b-9b24-44cb3fd5f751",

@@ -68,8 +68,8 @@ describe("the edge-contract table", () => {
     expect(missing).toEqual([]);
   });
 
-  it("declares 4.32 / 4.39's templates (7.7's fixtures)", () => {
-    for (const template of ["m15borderless", "m15borderlessartifact"]) {
+  it("declares 4.32 / 4.34 / 4.39's templates (7.7's fixtures)", () => {
+    for (const template of ["m15borderless", "m15borderlessartifact", "m15borderlessland"]) {
       expect(EDGE_CONTRACTS[template].bottom, template).toEqual({ kind: "bar", depthPct: 7.76 });
       expect(EDGE_CONTRACTS[template].top.kind, template).toBe("art");
       expect(EDGE_CONTRACTS[template].left, template).toEqual({ kind: "art", except: [[78, 100]] });

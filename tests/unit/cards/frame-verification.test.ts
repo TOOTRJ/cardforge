@@ -92,10 +92,12 @@ describe("frame reference registry", () => {
       (t) => eraForTemplate(t) === "m15",
     );
     // + the borderless skins of 4.32 (their set, Borderless, is M15-era)
-    // + 4.49 (b)'s two text-box tokens + 4.48 / 4.50's six full-art tokens
-    // + 4.33's two borderless planeswalkers (every colour referenced, the
-    // tall one's c by the serialized DFT #376) + 4.52's emblem.
-    expect(m15Templates.length).toBe(28);
+    // + 4.49 (b)'s two text-box tokens + 4.34's borderless land + 4.48 /
+    // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
+    // colour referenced, the tall one's c by the serialized DFT #376) +
+    // 4.52's emblem.
+    expect(m15Templates.length).toBe(29);
+    expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
         const key = frameComboKey(template, colorKey);

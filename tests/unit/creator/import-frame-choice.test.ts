@@ -173,6 +173,38 @@ describe("importFramePlan — borderless (1.18: lands on the bordered frame, Bor
   });
 });
 
+describe("importFramePlan — the borderless land (4.34)", () => {
+  const LAND = new Set([...STANDARD, ...verified("m15borderlessland")]);
+
+  it("an exact borderless land (Arena of Glory MH3 #351) asks: the land frame preselected, Borderless Land listed once verified", () => {
+    const plan = importFramePlan(namedPatch("mh3-351", LAND), LAND, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land" });
+    expect(plan.heading).toBe("PipGlyph has the Borderless land frame, but Scryfall's art won't fill it — pick one of these");
+    expect(plan.preselected).toEqual({ template: "m15land" });
+    expect(plan.windowCroppedNote).toBe(WINDOW_CROPPED_NOTE);
+    expect(plan.options.map((o) => o.template)).toEqual(["m15land", "m15borderlessland"]);
+    expect(plan.options[1]).toMatchObject({ nearest: false, edgeToEdge: true });
+  });
+
+  it("…and only the land frame while Borderless Land is unverified in red", () => {
+    const plan = importFramePlan(namedPatch("mh3-351", STANDARD), STANDARD, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "nearest", reason: "not yet verified in red" });
+    expect(plan.options.map((o) => o.template)).toEqual(["m15land"]);
+    expect(plan.preselected).toEqual({ template: "m15land" });
+  });
+
+  it("a two-colour land (Deserted Beach MID #281): the gold Borderless Land offered as the nearest look (4.6's split pinline)", () => {
+    const plan = importFramePlan(namedPatch("mid-281", LAND), LAND, "m15land");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "nearest", template: "m15borderlessland" });
+    expect(plan.heading).toBe("PipGlyph can't match this printing's Borderless land exactly yet — pick one of these");
+    expect(plan.options.map((o) => o.template)).toEqual(["m15land", "m15borderlessland"]);
+    expect(plan.keepCurrent).toEqual({ template: "m15land", available: true, reason: null });
+  });
+});
+
 describe("importFramePlan — the borderless planeswalkers (4.33)", () => {
   const WALKERS = new Set([...STANDARD, ...verified("m15borderlesspw", "m15borderlesspwtall")]);
 

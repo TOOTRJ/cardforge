@@ -659,6 +659,78 @@
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)"
     ]
   },
+  "m15borderlessland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the text-box structure of packGenericShowcase.js 'Borderless' (groupShowcase-5.js:48)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down 1081 px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (750, 160)) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameW.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameW.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameW.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameW.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "u": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameU.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameU.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameU.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameU.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "b": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameB.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameB.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameB.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameB.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "r": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameR.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameR.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameR.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameR.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "g": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameG.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameG.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameG.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameG.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "c": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameL.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "m": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameM.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameM.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameM.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/borderless/m15GenericShowcaseFrameB.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameG.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameR.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameU.png",
+      "img/frames/m15/borderless/m15GenericShowcaseFrameW.png",
+      "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png",
+      "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskType.png"
+    ],
+    "notes": [
+      "the print's land look (2026-09-29, 50+ borderless land printings): title bar, type bar and text box all wear the colour's title-bar tint; a borderless spell tints only its title bar (m15borderless)",
+      "colourless = CC's 'Land Frame' (m15GenericShowcaseFrameL.png): grey bars and box, the land's brown-grey pinline (the prints' #a5988a on CMM #663 / FRA #379), never the see-through 'Colorless Frame'",
+      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — 4.6's pair masters (borderlessLandLayers with a letter pair)",
+      "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)"
+    ]
+  },
   "m15borderlesspw": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

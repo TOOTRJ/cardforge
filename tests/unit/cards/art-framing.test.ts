@@ -122,16 +122,18 @@ describe("carryArtFraming", () => {
 describe("the Etched finish on edge-to-edge frames", () => {
   it("is hidden only where the art reaches the card's edge (the borderless frames)", () => {
     const edge = FRAME_TEMPLATE_VALUES.filter((t) => artReachesCardEdge(getFrameProfile(t)));
-    // 4.32's borderless M15 skins, 4.33's borderless planeswalkers and 4.39's
-    // borderless full-art basic; the black-bordered m15fullartland keeps
-    // Etched.
+    // 4.32's borderless M15 skins, 4.34's borderless land, 4.33's borderless
+    // planeswalkers and 4.39's borderless full-art basic; the black-bordered
+    // m15fullartland keeps Etched.
     expect(edge).toEqual([
       "m15borderless",
       "m15borderlessartifact",
+      "m15borderlessland",
       "m15borderlesspw",
       "m15borderlesspwtall",
       "fullartland",
     ]);
+    expect(finishAvailableOn(getFrameProfile("m15borderlessland"), "etched")).toBe(false);
     expect(finishAvailableOn(getFrameProfile("m15borderlesspw"), "etched")).toBe(false);
     expect(finishAvailableOn(getFrameProfile("m15borderlesspwtall"), "etched")).toBe(false);
     expect(finishAvailableOn(getFrameProfile("m15pw"), "etched")).toBe(true);

@@ -125,7 +125,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 24 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -134,6 +134,8 @@ into `.frames-build/` — 24 templates today (`CC_TEMPLATES` in
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates;
+- the borderless nonbasic land (4.34): m15borderlessland, a composite of
+  the same pack's pixels (below), on m15borderless's plates;
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
   black-bordered m15fullartland and the borderless fullartland (the same
   frame with its Border mask erased), each with CC's mana symbols at
@@ -205,6 +207,42 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   independently in the skeptic pass, which also measured CC's band 60–65 px
   above the prints and the re-cut within ±2 px). Provenance records the
   re-cut (`recut`, `transforms`).
+- **The borderless land (4.34).** A borderless land prints its colour on
+  the title bar, the type bar AND the text box, where a borderless spell
+  tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
+  file draws that — its 'Land Frame' is the spell look in grey — so
+  `borderlessLandLayers` (`scripts/lib/cc-frames.mjs`) builds it in four
+  layers: the colour's 'Borderless (Alt)' frame whole (its title bar,
+  pinline, bottom bar and fins; the grey Land Frame for colourless); the
+  same frame's title bar moved 1081 px down onto the type bar, replacing
+  it through CC's Type mask (`replace`: the layer stands instead of what is
+  under it, a premultiplied lerp by the mask); genericShowcase's neutral
+  text box (#9a9a9a α191 with its bevels and the shadow under the type bar)
+  re-tinted to the colour's title-bar tint (`retintStructure`, read at a
+  flat pixel the importer asserts), replacing the dark box through CC's
+  Rules mask; and the pinline through the pack's Pinline mask on top. `m`
+  is the three-and-more-colour land (gold bars, box and pinline); a
+  two-colour land prints grey bars with a split pinline and box, which are
+  4.6's pair masters (the same function with a letter pair). About a
+  quarter of the borderless nonbasic lands print the spells' look instead —
+  the colour's title bar over a dark type bar AND a dark box (TDM, WOE,
+  ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops) — a few a
+  dark type bar alone over the tinted box (FRA #380–381, SLD #250 /
+  #1989 / #2143 / #7112), and a few the short box (the SNC triomes): none
+  is drawn, no reference comes from them, and the registry pins them
+  `nearest` (4.37's variants; `BORDERLESS_LAND_DARK_PINS` /
+  `BORDERLESS_LAND_DARK_TYPE_BAR_PINS` / `BORDERLESS_LAND_SHORT_BOX_PINS`
+  in `lib/scryfall/frame-signatures.ts`, read by eye on every printing it
+  called `exact` — compare the title, type and box bands side by side: the
+  type bar is the easy one to miss). One rules line starts at the box's
+  left, as on M15: the only non-SLD borderless lands printing a single
+  line (the ZNR / KHM pathways) do; only SLD #300–304 centre it. w, u and
+  g keep ONE reference (MH3 #354 / #350 / #357): the other exact mono-u /
+  mono-g prints are Secret Lair scans whose bars show the art through
+  (owner round 15), and white dropped Ancient Den SLD #300, an offset scan
+  of the centred one-line print (owner round 16; it still imports as the
+  exact borderless land). The two-colour pair masters are TODO 4.56 (with
+  4.6b).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame, the
   colourless creature tokens (both token frames) and the colourless
   planeswalker are see-through, like the printed cards. The profile's
@@ -250,7 +288,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
 The M15 family shipped in 4.4 (#380): published, git copies deleted,
 profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
 followed the same path; a new template needs no sweep (no card sits on it),
-while fullartland's re-source was its own template-scoped v30 sweep. A new
+while fullartland's re-source was its own template-scoped v30 sweep. 4.34's
+borderless land is new too: no bump, no sweep, only its visual-regression
+cases added to the baseline. A new
 template stays out of the picker until the owner verifies each colour
 ([Verifying a frame](#verifying-a-frame)); an import never lands on one (the
 creator only offers it, once verified). The compare page's alignment score
@@ -850,11 +890,11 @@ cards it changes.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 34 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 35 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
-full-art tokens, 4.33's two borderless planeswalkers and the emblem, new
-templates that joined without a bump; split and battle join with 4.21)
-prints its names, type
+full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
+land and the emblem, new templates that joined without a bump; split and
+battle join with 4.21) prints its names, type
 lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
 the prints. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),

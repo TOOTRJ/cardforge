@@ -21,7 +21,7 @@ import {
 } from "@/lib/scryfall/frame-signatures";
 import { EDGE_CONTRACT_KNOWN_FAILURES } from "@/lib/frames/edge-contract";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import { withVerification } from "@/lib/creator/frame-resolve";
+import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -84,11 +84,36 @@ describe("borderless families (TODO 1.17)", () => {
     ["unf-275", "nearest", "m15borderlesspw", "m15pw"],
     ["sld-1619", "nearest", "m15borderlesspw", "m15pw"],
     ["sld-1622", "nearest", "m15borderlesspw", "m15pw"],
-    // Nonbasic lands (4.34).
-    ["mid-281", "nearest", "m15land", undefined],
-    ["otj-304", "nearest", "m15land", undefined],
+    // Nonbasic lands (4.34): the borderless land frame, exact — and, its art
+    // reaching the card edge, the import lands on the bordered land frame
+    // (1.18). A mono-colour (MH3 #351), a colourless (CMM #663) and a
+    // five-colour land (CMM #659, the gold master) are exact; the
+    // two-colour lands print a split pinline and box (4.6), a crowned one
+    // the floating crown (4.6), a nicknamed one its nickname line (6.3).
+    ["mh3-351", "exact", "m15borderlessland", "m15land"],
+    ["cmm-663", "exact", "m15borderlessland", "m15land"],
+    ["cmm-659", "exact", "m15borderlessland", "m15land"],
+    ["mid-281", "nearest", "m15borderlessland", "m15land"],
+    ["otj-304", "nearest", "m15borderlessland", "m15land"],
+    ["neo-413", "nearest", "m15borderlessland", "m15land"],
+    ["ltc-361", "nearest", "m15borderlessland", "m15land"],
+    // …and the two print variations Scryfall can't tell apart, pinned
+    // (4.34's skeptic pass, by eye): the spells' dark type bar and box
+    // (Cori Mountain Monastery TDM #393, Hall of Echoes FRA #379; Restless
+    // Bivouac WOE #303 on its two-colour gap too), and the short box (the
+    // triome SNC #291, the galaxy-foil SLD #469).
+    ["tdm-393", "nearest", "m15borderlessland", "m15land"],
+    ["fra-379", "nearest", "m15borderlessland", "m15land"],
+    ["woe-303", "nearest", "m15borderlessland", "m15land"],
+    ["snc-291", "nearest", "m15borderlessland", "m15land"],
+    // …and the third look the second skeptic pass found: a dark type bar
+    // alone over the tinted box (Theorist's Sanctum FRA #381, Mystic
+    // Sanctuary SLD #2143).
+    ["fra-381", "nearest", "m15borderlessland", "m15land"],
+    ["sld-2143", "nearest", "m15borderlessland", "m15land"],
+    ["sld-469", "nearest", "m15borderlessland", "m15land"],
     // MDFC (5.7), saga / adventure / room (4.38).
-    ["znr-284", "nearest", "m15land", undefined],
+    ["znr-284", "nearest", "m15borderlessland", "m15land"],
     ["tdm-383", "nearest", "saga", undefined],
     ["woe-298", "nearest", "adventure", undefined],
     ["dsk-334", "nearest", "m15borderless", "m15"],
@@ -110,10 +135,13 @@ describe("borderless families (TODO 1.17)", () => {
     // Posters: unsupported for good, Borderless offered as the nearest (the
     // import lands on bordered M15: SPG #119 crops to the window too).
     ["spg-119", "unsupported", "m15borderless", "m15"],
+    // …and HOB #284, the surge-foil twin of the HOB #248 book cover, which
+    // Scryfall doesn't flag `poster` (pinned; a land, so the land frame).
+    ["hob-284", "unsupported", "m15borderlessland", "m15land"],
     // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
     // Invocations unsupported.
     ["sta-1", "nearest", "m15borderless", "m15"],
-    ["eos-1", "nearest", "m15land", undefined],
+    ["eos-1", "nearest", "m15borderlessland", "m15land"],
     ["mp2-1", "unsupported", "m15borderless", "m15"],
     // Tokens (4.37).
     ["wone-1", "nearest", "m15token", undefined],
@@ -188,11 +216,108 @@ describe("borderless families (TODO 1.17)", () => {
         gaps: ["lettered-name"],
       });
     }
+    // Nonbasic lands (4.34): the land's own gaps, never "no borderless land
+    // frame" any more.
+    expect(frameMatchFromScryfall(printing("mh3-351"))).toMatchObject({
+      signature: "borderless/land",
+      exactLabel: "Borderless land",
+      reason: null,
+    });
+    expect(frameMatchFromScryfall(printing("mid-281"))).toMatchObject({
+      signature: "borderless/land+two-colour",
+      blockedBy: "4.6",
+      gaps: ["two-colour"],
+    });
+    expect(frameMatchFromScryfall(printing("neo-413"))).toMatchObject({
+      signature: "borderless/land+crown",
+      blockedBy: "4.6",
+    });
+    expect(frameMatchFromScryfall(printing("ltc-361"))).toMatchObject({
+      signature: "borderless/land+nickname",
+      blockedBy: "6.3",
+    });
+    for (const key of ["mh3-351", "mid-281", "znr-284", "eos-1"] as const) {
+      expect(frameMatchFromScryfall(printing(key)).blockedBy, key).not.toBe("4.34");
+    }
+    // The print variations the master doesn't draw (4.37's), pinned: the
+    // spells' dark type bar and box, the short box — each named, and every
+    // one that holds recorded (FrameMatch.gaps).
+    expect(frameMatchFromScryfall(printing("tdm-393"))).toMatchObject({
+      signature: "borderless/land+dark-type-and-box",
+      reason: "this printing's type bar and text box are dark, and PipGlyph's Borderless Land tints them",
+      blockedBy: "4.37",
+      gaps: ["dark-type-and-box"],
+    });
+    expect(frameMatchFromScryfall(printing("fra-379")).signature).toBe("borderless/land+dark-type-and-box");
+    expect(frameMatchFromScryfall(printing("woe-303"))).toMatchObject({
+      signature: "borderless/land+two-colour",
+      gaps: ["two-colour", "dark-type-and-box"],
+    });
+    expect(frameMatchFromScryfall(printing("snc-291"))).toMatchObject({
+      signature: "borderless/land+short-box",
+      reason: "this printing has the short text box, and PipGlyph's has the regular one",
+      blockedBy: "4.37",
+      gaps: ["short-box"],
+    });
+    expect(frameMatchFromScryfall(printing("sld-469"))).toMatchObject({
+      signature: "borderless/land+short-box",
+      gaps: ["short-box"],
+    });
+    for (const key of ["fra-381", "sld-2143"] as const) {
+      expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
+        signature: "borderless/land+dark-type-bar",
+        reason: "this printing's type bar is dark, and PipGlyph's Borderless Land tints it",
+        blockedBy: "4.37",
+        gaps: ["dark-type-bar"],
+      });
+    }
+    // The references stay exact: the pins name none of them.
+    for (const key of ["mh3-351", "cmm-663", "cmm-659"] as const) {
+      expect(frameMatchFromScryfall(printing(key)).gaps, key).toBeUndefined();
+    }
+    expect(frameMatchFromScryfall(printing("hob-284"))).toMatchObject({
+      signature: "borderless/poster",
+      forGood: true,
+    });
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",
       exactLabel: "Bloomburrow anime showcase",
     });
+  });
+});
+
+describe("the borderless land frame, verified or not (TODO 4.34)", () => {
+  const imported = (key: PrintingKey, verified: readonly string[]) =>
+    finalizeImportMatch(mapScryfallToFormPatch(printing(key), { artPreviewUrl: null }), new Set(verified));
+
+  it("is exact once verified in the card's colour, nearest ('not yet verified') until then — the import lands on the bordered land frame either way", () => {
+    const before = imported("mh3-351", []);
+    expect(before.frame_match).toMatchObject({
+      status: "nearest",
+      template: "m15borderlessland",
+      landOn: "m15land",
+      reason: "not yet verified in red",
+      unverified: true,
+    });
+    expect(before.frame_template).toBe("m15land");
+    const after = imported("mh3-351", [frameComboKey("m15borderlessland", "r")]);
+    expect(after.frame_match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land", reason: null });
+    expect("unverified" in (after.frame_match ?? {})).toBe(false);
+    expect(after.frame_template).toBe("m15land");
+    // Verified in another colour only: still nearest for a colourless land.
+    expect(imported("cmm-663", [frameComboKey("m15borderlessland", "r")]).frame_match).toMatchObject({
+      status: "nearest",
+      reason: "not yet verified in colorless",
+    });
+    expect(imported("cmm-663", [frameComboKey("m15borderlessland", "c")]).frame_match?.status).toBe("exact");
+  });
+
+  it("keeps a two-colour land nearest even when the gold master is verified: its split pinline is 4.6's", () => {
+    const out = imported("mid-281", [frameComboKey("m15borderlessland", "m")]);
+    expect(out.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6" });
+    expect(colorKeyOf("mid-281")).toBe("m");
+    expect(out.frame_template).toBe("m15land");
   });
 });
 
@@ -601,6 +726,23 @@ describe("fetch-land colours (landFrameColorRule)", () => {
     expect(colorKeyOf("msc-240")).toBe("c");
     expect(colorKeyOf("eld-244")).toBe("m");
     expect(colorKeyOf("mh1-244")).toBe("m");
+  });
+
+  it("Multiversal Passage prints gold on every printing, though Scryfall lists no mana (4.34's survey)", () => {
+    // "Choose a basic land type": no produced mana, no identity — the
+    // produced-mana rule read colourless (grey), and the borderless SPM
+    // #206 was the one borderless land called exact in the wrong colour.
+    for (const key of ["spm-180", "spm-206"] as const) {
+      expect(printing(key).produced_mana ?? [], key).toEqual([]);
+      expect(landFrameColorRule(printing(key)), key).toEqual(["W", "U", "B", "R", "G"]);
+      expect(colorKeyOf(key), key).toBe("m");
+    }
+    expect(frameMatchFromScryfall(printing("spm-180"))).toMatchObject({ status: "exact", template: "m15land" });
+    expect(frameMatchFromScryfall(printing("spm-206"))).toMatchObject({
+      status: "exact",
+      template: "m15borderlessland",
+      landOn: "m15land",
+    });
   });
 
   it("a land that produces mana keeps the produced-mana rule", () => {

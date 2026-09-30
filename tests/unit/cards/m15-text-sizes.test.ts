@@ -52,9 +52,10 @@ const font: { ascender: number; descender: number; unitsPerEm: number } = openty
 
 describe("one M15-era display size (layout v32)", () => {
   it("prints every family frame's name and type line at TITLE_SIZE_PCT / TYPE_SIZE_PCT — both halves of a flip or aftermath", () => {
-    // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.48 / 4.50's six
-    // full-art tokens, 4.33's two borderless planeswalkers and 4.52's emblem.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(34);
+    // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
+    // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
+    // planeswalkers and 4.52's emblem.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(35);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -161,6 +162,9 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15devoid", base.title, cc],
     ["m15borderless", base.title, cc],
     ["m15borderlessartifact", base.title, cc],
+    // 4.34's land: the same pack, its type line on the same prints'
+    // baseline (its bars sit where the spells' do, ±1 px, on 14 prints).
+    ["m15borderlessland", base.title, cc],
     // The planeswalker: its name centred on CC's plate (v27's relation to
     // the pips); its type line in M15's slot, on the prints' baseline.
     ["m15pw", undefined, cc],
@@ -272,7 +276,7 @@ describe("baselines (TextSlot.dy)", () => {
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
     const kept15 = getFrameProfile("extendedart").type.dy!;
     for (const t of [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15pw",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       "m15borderlesspw", "m15borderlesspwtall",
     ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);

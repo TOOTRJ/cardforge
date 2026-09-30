@@ -28,6 +28,7 @@ afterEach(() => cleanup());
 const ART_FIRST: FrameTemplate[] = [
   "m15borderless",
   "m15borderlessartifact",
+  "m15borderlessland",
   // 4.33's borderless planeswalkers: art to the edges, so art-first by rule.
   "m15borderlesspw",
   "m15borderlesspwtall",
@@ -41,13 +42,15 @@ const M20_TOKENS: FrameTemplate[] = [
 /** The owner's six (2026-09-27) and the full-art tokens, in
  *  FRAME_TEMPLATE_VALUES order. */
 const OPT_IN: FrameTemplate[] = [...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "m15textless", "m15textlessland", "nyx"];
-/** Every tile that draws the sample — exactly these 18 of the 51 templates,
+/** Every tile that draws the sample — exactly these 19 of the 52 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
 const SAMPLED: FrameTemplate[] = [
   ...M20_TOKENS,
   "m15borderless",
   "m15borderlessartifact",
+  // 4.34's borderless land: art-first like the other borderless frames.
+  "m15borderlessland",
   "m15borderlesspw",
   "m15borderlesspwtall",
   "bloomanime",
@@ -72,7 +75,7 @@ function tile(template: FrameTemplate, colorKey: string, type: TileType) {
 }
 
 describe("artFillsCard — which frames are art-first", () => {
-  it("is the borderless M15 skins, the borderless planeswalkers and both full-art basics, nothing else", () => {
+  it("is the borderless M15 skins, the borderless land, the borderless planeswalkers and both full-art basics, nothing else", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => artFillsCard(getFrameProfile(t)))).toEqual(ART_FIRST);
   });
 
@@ -116,7 +119,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 18 of the 51 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 19 of the 52 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -131,9 +134,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       expect(counts.with === 0 || counts.without === 0, template).toBe(true);
       if (counts.with > 0) drawn.add(template);
     }
-    // 48 + 4.33's two borderless planeswalkers + 4.52's emblem, whose silver
-    // master reads as itself on the tile.
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(51);
+    // 48 + 4.34's borderless land + 4.33's two borderless planeswalkers +
+    // 4.52's emblem, whose silver master reads as itself on the tile.
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(52);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

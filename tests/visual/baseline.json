@@ -19,7 +19,7 @@
       "public/fonts/Beleren-Bold.ttf": "00d9238fe4816e91",
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5"
     },
-    "manifest": "7fed5254ab2e74c9"
+    "manifest": "cbdbbbc2bd65c651"
   },
   "cases": {
     "adventure/b/adventure-long": "6c96b140017aa2cd:42614af9",
@@ -451,6 +451,23 @@
     "m15borderlessartifact/wu/creature-short": "3f910242236cfb73:550fcb0d",
     "m15borderlessartifact/wub/creature-long": "5f78657c643d0ec9:f6bc0e85",
     "m15borderlessartifact/wub/creature-short": "b39420af7caa1fad:a31500a3",
+    "m15borderlessland/b/land-long": "da65092f7671b868:e8912249",
+    "m15borderlessland/b/land-short": "0afeb03086977e20:ab9d73b0",
+    "m15borderlessland/c/land-long": "7c230696406e013c:653e5fdd",
+    "m15borderlessland/c/land-short": "7da688e0e4bb8bed:8f0a17a8",
+    "m15borderlessland/g/land-long": "fedb2f9be0308d01:a1f8edf6",
+    "m15borderlessland/g/land-long@hd": "4db3ddabba7cb629:d6fa69b0",
+    "m15borderlessland/g/land-short": "5a9ae59b374911e3:78961456",
+    "m15borderlessland/r/land-long": "da2ee954fabf594f:687c02ef",
+    "m15borderlessland/r/land-short": "3d236f40c9c43e62:837635bc",
+    "m15borderlessland/u/land-long": "1f81544c12896e18:4cff35ce",
+    "m15borderlessland/u/land-short": "ccb19d39fbe544ae:67602c36",
+    "m15borderlessland/w/land-long": "8b9f31b5f453b1ca:76daf27b",
+    "m15borderlessland/w/land-short": "646eb28ec73a61b6:2f6f7461",
+    "m15borderlessland/wu/land-long": "8956ae6b422175f4:c3ad255a",
+    "m15borderlessland/wu/land-short": "17afc1c0249a4756:2540cf3e",
+    "m15borderlessland/wub/land-long": "8956ae6b422175f4:249d98e7",
+    "m15borderlessland/wub/land-short": "17afc1c0249a4756:75f81cde",
     "m15borderlesspw/b/planeswalker-long": "584b72fd6a29f8d7:ea9cc1b2",
     "m15borderlesspw/b/planeswalker-short": "3eac0030ef920735:2c9fdc11",
     "m15borderlesspw/c/planeswalker-long": "66ea6b8f8c1202fd:eb7b7ecd",

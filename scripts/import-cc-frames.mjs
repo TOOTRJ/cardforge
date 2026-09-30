@@ -4,8 +4,9 @@
 // frame packs into .frames-build/ (frames plan 4.3; owner decision
 // 2026-09-25: Card Conjurer art for the M15 era, MSE for showcase families
 // and the old borders). Later runs of the same importer: 4.32's borderless
-// frame (m15borderless, m15borderlessartifact) and 4.39's full-art basics
-// (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
+// frame (m15borderless, m15borderlessartifact), 4.34's borderless land
+// (m15borderlessland, a composite of the same pack's pixels) and 4.39's
+// full-art basics (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
 // (m15tokentext, m15tokenartifacttext), re-cut onto the prints, 4.49's
 // textless-token re-cut (m15token, m15tokenartifact moved onto the prints),
 // 4.48 / 4.50's full-art tokens (m20token, m20tokentext, m20tokentall and
@@ -50,6 +51,7 @@ import {
   CORNER_RADIUS,
   OUT_H,
   OUT_W,
+  TINTED_BOX_STRUCTURE,
   WEBP,
   builtColors,
   compositeFinish,
@@ -60,8 +62,11 @@ import {
   applyTone,
   bridgeRayTip,
   finishFor,
+  flatPixelAt,
   recutBand,
+  retintStructure,
   roundCornersRgba8,
+  shiftRows,
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
@@ -168,11 +173,26 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const { width: W, height: H } = await sharp(baseFile).metadata();
     const images = [];
     for (const l of def.colors[key]) {
+      let data = await rgba(await fetchCached(l.src), W, H);
+      if (l.retint) {
+        // 4.34's tinted box: a neutral structure re-tinted to the flat tint
+        // read from another frame (both asserted flat where they are read).
+        const { from, tintOf } = l.retint;
+        const flat = flatPixelAt(data, W, H, TINTED_BOX_STRUCTURE.flatAt);
+        if (from.some((v, c) => v !== flat[c])) {
+          throw new Error(`${l.src}: its flat box is ${flat.slice(0, 3)}, the recipe says ${from} (the source moved?)`);
+        }
+        const tint = flatPixelAt(await rgba(await fetchCached(tintOf.src), W, H), W, H, tintOf);
+        data = retintStructure(data, from, tint.slice(0, 3));
+      }
+      // 4.34's type bar: the title bar moved down onto it.
+      if (l.dy) data = shiftRows(data, W, H, l.dy);
       images.push({
-        data: await rgba(await fetchCached(l.src), W, H),
+        data,
         mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
         invert: l.invert,
         opacity: l.opacity,
+        replace: l.replace,
         gain: l.gain,
         recolour: l.recolour,
         lumaRamp: l.lumaRamp,

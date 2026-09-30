@@ -1606,6 +1606,81 @@
       ]
     }
   },
+  "m15borderlessland": {
+    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — MH2 #325 is an offset scan (its whole card sits 4–11 px off, as SLD #300's does), kept as the second printing. w, u and g have ONE reference. White verifies against Monumental Henge MH3 #354 alone (owner round 16, 2026-09-29): Ancient Den SLD #300 — the offset scan, and Secret Lair's centred one-line print — is no longer a reference (it still imports as the exact borderless land). Owner round 15 (2026-09-29): Archway of Innovation and Shifting Woodland are the only mono-blue / mono-green borderless nonbasic lands that print the tinted look on a clean scan — Scryfall's other exact ones (Shelldock Isle SLD #230, Seat of the Synod SLD #301, Tree of Tales SLD #304) let the art through their bars (luminance σ 22–36 across the type bar, against 2–5 on MH3) and SLD #304 is a scaled scan; the rest print a crown, a nickname, dark bars or a dark type bar, or another frame (showcase, source material, a poster, a two-face layout). The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The TODO's two-colour references (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: 4.6's pair masters, not scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops, pinned nearest in the registry) — a dark type bar alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 / #7112 — the second skeptic pass moved u and g off Theorist's Sanctum and Roiling Canopy for it) and the short box (the SNC triomes) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Monumental Henge",
+          "set": "mh3",
+          "scryfallId": "85ae1a74-cbff-4d36-bfee-d1b6494114b4"
+        }
+      ],
+      "u": [
+        {
+          "name": "Archway of Innovation",
+          "set": "mh3",
+          "scryfallId": "472905ac-1eb9-4951-8180-b8c35fbab3d7"
+        }
+      ],
+      "b": [
+        {
+          "name": "Spymaster's Vault",
+          "set": "mh3",
+          "scryfallId": "33535dbf-203b-44c9-be20-67fafa0927ee"
+        },
+        {
+          "name": "Cabal Coffers",
+          "set": "mh2",
+          "scryfallId": "6cd01460-901c-4d75-bc29-e97ed26afc39"
+        }
+      ],
+      "r": [
+        {
+          "name": "Valakut, the Molten Pinnacle",
+          "set": "slp",
+          "scryfallId": "24b2acd2-ad1a-468c-bacf-00d94f642e6d"
+        },
+        {
+          "name": "Arena of Glory",
+          "set": "mh3",
+          "scryfallId": "3d7d07bb-b875-4a6d-8b87-4187e823af75"
+        }
+      ],
+      "g": [
+        {
+          "name": "Shifting Woodland",
+          "set": "mh3",
+          "scryfallId": "890e97b5-6750-4fae-8481-1244e311da7e"
+        }
+      ],
+      "c": [
+        {
+          "name": "Reliquary Tower",
+          "set": "cmm",
+          "scryfallId": "df2370ea-9bb8-496f-aaf5-f0bb3bb55f9b"
+        },
+        {
+          "name": "Myriad Landscape",
+          "set": "cmm",
+          "scryfallId": "5efb9b5a-f904-4934-9530-87d752eeae75"
+        }
+      ],
+      "m": [
+        {
+          "name": "Command Tower",
+          "set": "cmm",
+          "scryfallId": "24179418-d92c-43eb-a8f6-b8ea83f8c80f"
+        },
+        {
+          "name": "Avengers Tower",
+          "set": "msh",
+          "scryfallId": "1292713f-1462-438f-a3a2-1f69ece99668"
+        }
+      ]
+    }
+  },
   "m15borderlesspw": {
     "note": "The light borderless planeswalker (TODO 4.33): mono-colour printings with three printed ability rows (a run of statics shares a row) and NO inverted flag, checked by eye on the Scryfall scans 2026-09-29. Two-colour walkers (Oko ELD #271, Saheeli BRO #294) print a split frame (4.6) and the dark inverted ones (Ashiok WOE #297, Ajani ECL #284) have no frame yet: neither is a reference. m = three colours (Narset IKO #278), the gold frame our master draws. c = Card Conjurer's 'Artifact Frame' with its rim made opaque (see frame-sources.json); Ugin M21 #279 and Karn DMU #372 print the see-through grey bars. b: most mono-black borderless walkers print dark name and type bars with white ink (M21 #282, DMU #373, VOW #278, INR #322 — the registry's dark-bars gap); Card Conjurer's b master is the light dress (dark ink on light grey bars) that only a few print (LIGHT_BLACK_WALKER_PINS); the three-row ones are Mythic Edition's Liliana, the Last Hope MED #GR2 and Sorin Markov MED #RA3. BLC #78 looks light but is the dark dress: white ink on dark see-through bars over pale art. Rares and mythics print the holo stamp in the bottom bar.",
     "colors": {

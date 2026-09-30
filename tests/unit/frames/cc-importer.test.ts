@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  BORDERLESS_TINT_POINT,
+  BORDERLESS_TITLE_TO_TYPE_DY,
   CC_COMMIT,
   CC_DEFERRED,
   CC_TEMPLATES,
@@ -22,9 +24,11 @@ import {
   M20_COLOURLESS_TYPE_TINT,
   M20_TOKEN_SOLID_TYPE_PILL,
   M20_TOKEN_TEXTLESS_RECUT,
+  TINTED_BOX_STRUCTURE,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
   applyTone,
+  borderlessLandLayers,
   bridgeRayTip,
   builtColors,
   compositeFinish,
@@ -34,9 +38,12 @@ import {
   describeLayer,
   gainAt,
   finishFor,
+  flatPixelAt,
   recutBand,
+  retintStructure,
   roundCorners,
   roundCornersRgba8,
+  shiftRows,
   silverGainAt,
   sourceFilesFor,
   toRgba8,
@@ -64,6 +71,9 @@ type Layer = {
   mask?: string;
   invert?: boolean;
   opacity?: number;
+  replace?: boolean;
+  dy?: number;
+  retint?: { from: number[]; tintOf: { src: string; x: number; y: number } };
   gain?: number;
   recolour?: boolean;
   lumaRamp?: readonly number[];
@@ -111,6 +121,7 @@ describe("Card Conjurer recipe", () => {
       "m15artifact",
       "m15borderless",
       "m15borderlessartifact",
+      "m15borderlessland",
       "m15borderlesspw",
       "m15borderlesspwtall",
       "m15devoid",
@@ -525,7 +536,7 @@ describe("Card Conjurer recipe", () => {
   it("writes down every colourless substitution", () => {
     for (const template of [
       "m15land", "m15snow", "m15pw", "m15token", "m15tokentext", "m15devoid",
-      "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland",
+      "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15fullartland", "fullartland",
       "m15borderlesspw", "m15borderlesspwtall",
     ]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
@@ -618,6 +629,46 @@ describe("Card Conjurer recipe", () => {
       expect(artifact.plates?.[k]).toBe(plain.plates?.[k]);
     }
     for (const def of [plain, artifact]) expect(def.pack).toMatch(/^packBorderless[.]js/);
+  });
+
+  it("builds the borderless land from the same pack: the colour frame, its title bar moved onto the type bar, the tinted box, the pinline on top (4.34)", () => {
+    const frame = (k: string) => `img/frames/m15/borderless/m15GenericShowcaseFrame${k}.png`;
+    const land = templates.m15borderlessland;
+    const layers = (letter: string, box = letter, pinline = letter) => [
+      { src: frame(letter) },
+      { src: frame(letter), mask: "img/frames/m15/regular/m15MaskType.png", replace: true, dy: 1081 },
+      {
+        src: "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png",
+        mask: "img/frames/m15/regular/m15MaskRules.png",
+        replace: true,
+        retint: { from: [154, 154, 154], tintOf: { src: frame(box), x: 750, y: 160 } },
+      },
+      { src: frame(pinline), mask: "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png" },
+    ];
+    // Each colour dresses its title bar, type bar and box in its own tint
+    // (the prints), m is the gold three-and-more-colour land.
+    for (const k of ["w", "u", "b", "r", "g", "m"]) expect(land.colors[k], k).toEqual(layers(k.toUpperCase()));
+    // Colourless is CC's 'Land Frame' L, never the see-through spells' C.
+    expect(land.colors.c).toEqual(layers("L"));
+    expect(sourceFilesFor(land as never).some((f) => f.endsWith("FrameC.png"))).toBe(false);
+    // The recipe is one function of three letters: 4.6's pair masters pass
+    // the grey L bars and a letter pair.
+    expect(borderlessLandLayers({ frame: "l", box: "w", pinline: "u" })).toEqual(layers("L", "W", "U"));
+    expect(BORDERLESS_TITLE_TO_TYPE_DY).toBe(1081);
+    expect(BORDERLESS_TINT_POINT).toEqual({ x: 750, y: 160 });
+    expect(TINTED_BOX_STRUCTURE).toMatchObject({ from: [154, 154, 154], flatAt: { x: 750, y: 1600 } });
+    // Masters only: a land creature prints on m15borderless's plates.
+    expect(land.plates).toBeUndefined();
+    expect(land.pack).toMatch(/^packBorderless[.]js .*packGenericShowcase[.]js/);
+    expect(land.transforms).toMatch(/no resample/);
+    expect(describeLayer(land.colors.u[1])).toBe(
+      `${frame("U")} moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png`,
+    );
+    expect(describeLayer(land.colors.u[2])).toBe(
+      `img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of ${frame("U")} at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png`,
+    );
+    // The tint source is a file the import fetches.
+    expect(sourceFilesFor(land as never)).toContain(frame("U"));
   });
 
   it("builds both full-art basics from 'Fullart Basics (2022)': bordered whole, borderless without the Border mask (4.39)", () => {
@@ -1267,6 +1318,83 @@ describe("pixel operations", () => {
     expect([...out.subarray(20, 24)]).toEqual([228, 230, 230, 201]);
   });
 
+  describe("the borderless land's operations (TODO 4.34)", () => {
+    it("a replacing layer stands INSTEAD of what is under it through its mask, and blends on the mask's edge", () => {
+      // 3×1: a dark α128 box (the pack's), a tinted α191 box replacing it
+      // through a mask opaque at x=0, 50 % at x=1, clear at x=2.
+      const dark = { data: new Uint8Array([...px(0, 0, 0, 128), ...px(0, 0, 0, 128), ...px(0, 0, 0, 128)]) };
+      const tint = {
+        data: new Uint8Array([...px(0, 117, 190, 191), ...px(0, 117, 190, 191), ...px(0, 117, 190, 191)]),
+        mask: new Uint8Array([...px(0, 255, 0, 255), ...px(0, 255, 0, 128), ...px(0, 0, 0, 0)]),
+        replace: true,
+      };
+      const out = toRgba8(compositeLayers([dark, tint], 3, 1));
+      // Fully covered: the tint, not the tint over the dark box.
+      expect([...out.subarray(0, 4)]).toEqual([0, 117, 190, 191]);
+      // Half covered: a premultiplied mix — alpha halfway, colour by weight.
+      const m = 128 / 255;
+      const a = (128 / 255) * (1 - m) + (191 / 255) * m;
+      expect(out[7]).toBe(Math.round(a * 255));
+      expect(out[5]).toBe(Math.round((117 * (191 / 255) * m) / a));
+      // Uncovered: the box below, untouched.
+      expect([...out.subarray(8, 12)]).toEqual([0, 0, 0, 128]);
+      // Drawn over (not replacing), the same layer would have darkened it.
+      const over = toRgba8(compositeLayers([dark, { ...tint, replace: undefined }], 3, 1));
+      expect(over[3]).toBeGreaterThan(191);
+      expect(over[2]).toBeLessThan(190);
+    });
+
+    it("shiftRows moves every row down, opening transparent rows at the top", () => {
+      // 1×5, red = row index.
+      const col = Buffer.from([...px(10, 0, 0, 255), ...px(11, 0, 0, 255), ...px(12, 0, 0, 255), ...px(13, 0, 0, 255), ...px(14, 0, 0, 255)]);
+      const out = shiftRows(col, 1, 5, 2);
+      expect([...out].filter((_, i) => i % 4 === 0)).toEqual([0, 0, 10, 11, 12]);
+      expect([out[3], out[7], out[11]]).toEqual([0, 0, 255]);
+      expect(shiftRows(col, 1, 5, 0).equals(col)).toBe(true);
+      expect(() => shiftRows(col, 1, 5, 5)).toThrow(/bad shift/);
+      expect(() => shiftRows(col, 1, 5, 1.5)).toThrow(/bad shift/);
+      expect(col[0]).toBe(10); // never touches the source
+    });
+
+    it("retintStructure maps a neutral structure's flat, lighter and darker pixels onto the new tint, alpha kept", () => {
+      const from = [154, 154, 154];
+      const to = [0, 117, 190];
+      // flat · a bevel 35 % toward white · a shadow 2/3 toward black · white · black
+      const lit = Math.round(154 + 0.35 * 101);
+      const shade = Math.round(154 / 3);
+      const buf = Buffer.from([
+        ...px(154, 154, 154, 191),
+        ...px(lit, lit, lit, 209),
+        ...px(shade, shade, shade, 229),
+        ...px(255, 255, 255, 235),
+        ...px(0, 0, 0, 255),
+      ]);
+      const out = retintStructure(buf, from, to);
+      expect([...out.subarray(0, 4)]).toEqual([0, 117, 190, 191]);
+      // genericShowcase's own blue box bevel and shadow (89,165,213 α209 and
+      // 0,39,63 α229), within rounding of the structure's 8 bits.
+      const near = (got: number[], want: number[]) => got.forEach((v, c) => expect(Math.abs(v - want[c]), `${got} ≈ ${want}`).toBeLessThanOrEqual(1));
+      near([...out.subarray(4, 7)], [89, 165, 213]);
+      expect(out[7]).toBe(209);
+      near([...out.subarray(8, 11)], [0, 39, 63]);
+      expect([...out.subarray(12, 16)]).toEqual([255, 255, 255, 235]);
+      expect([...out.subarray(16, 20)]).toEqual([0, 0, 0, 255]);
+      expect(buf[0]).toBe(154); // never touches the source
+      expect(() => retintStructure(buf, [0, 0, 0], to)).toThrow(/mid tone/);
+    });
+
+    it("flatPixelAt reads a flat region's value and refuses a point next to an edge", () => {
+      const W = 7;
+      const H = 7;
+      const buf = Buffer.alloc(W * H * 4);
+      for (let i = 0; i < W * H; i += 1) buf.set([166, 155, 133, 173], i * 4);
+      expect(flatPixelAt(buf, W, H, { x: 3, y: 3 })).toEqual([166, 155, 133, 173]);
+      buf.set([206, 200, 188, 202], (1 * W + 2) * 4); // a bevel pixel 2 rows up
+      expect(() => flatPixelAt(buf, W, H, { x: 3, y: 3 })).toThrow(/not in a flat region/);
+      expect(() => flatPixelAt(buf, W, H, { x: 1, y: 5 })).toThrow(/not in a flat region/);
+    });
+  });
+
   it("lifts a see-through layer's alpha by its gain, clamped at 1 (4.33's colourless walker rim)", () => {
     // 3×1: the rim (α 234), a bar (α 191), clear art (α 0).
     const frame = {
@@ -1418,7 +1546,7 @@ describe("published to the frames bucket", () => {
     const restore = setFrameStorageForTests({ origin: "https://bucket.example/frames" });
     try {
       for (const template of [
-        "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland", "m15borderlesspw", "m15borderlesspwtall",
+        "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15fullartland", "fullartland", "m15borderlesspw", "m15borderlesspwtall",
       ]) {
         for (const [key] of outputsOf(template, templates[template])) {
           for (const variant of [key, key.replace(/\.png$/, ".webp")]) {
@@ -1454,7 +1582,7 @@ describe("provenance and hygiene", () => {
     expect(provenance.m15devoid.source).toBe("cardconjurer");
     // The later runs name their pack and what was done to its pixels.
     for (const template of [
-      "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland", "m15tokentext", "m15tokenartifacttext",
+      "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15fullartland", "fullartland", "m15tokentext", "m15tokenartifacttext",
       "m15borderlesspw", "m15borderlesspwtall",
     ]) {
       expect(provenance[template].pack, template).toBe(templates[template].pack);
@@ -1480,6 +1608,9 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].notes, template).toEqual(templates[template].notes);
     }
     expect(provenance.m15.recut).toBeUndefined();
+    // The borderless land records its composite layer by layer (4.34).
+    expect(provenance.m15borderlessland.colors.c).toEqual(templates.m15borderlessland.colors.c.map((l) => describeLayer(l)));
+    expect(provenance.m15borderlessland.notes).toEqual(templates.m15borderlessland.notes);
     // The emblem records its ray bridge, its tones and what they did to the
     // pixels (4.52).
     expect(provenance.emblem.recut).toBeUndefined();

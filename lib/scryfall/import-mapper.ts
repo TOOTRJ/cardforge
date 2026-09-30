@@ -623,10 +623,11 @@ export type PrintingTreatmentOffer = {
  * (`frame_template`). A borderless card lands on the bordered frame (1.18),
  * so Borderless stays an offer. An unverified frame is never offered:
  *   • borderless → the borderless M15 frame for a creature, instant, sorcery
- *     or enchantment, and its artifact dress for an artifact or an Artifact
- *     Creature; the borderless planeswalker (4.33) for a planeswalker, its
- *     tall box for four printed ability rows or more (walkerRowsFrameFor).
- *     Nothing for other lands, tokens, battles or layout cards (4.34–4.38).
+ *     or enchantment, its artifact dress for an artifact or an Artifact
+ *     Creature, and its land (4.34) for a nonbasic land that prints text;
+ *     the borderless planeswalker (4.33) for a planeswalker, its tall box
+ *     for four printed ability rows or more (walkerRowsFrameFor). Nothing
+ *     for tokens, battles or layout cards (4.35–4.38).
  *   • a borderless full-art basic that prints text → the borderless full-art
  *     basic (`fullartland`): FRA #382–396 print its bars (dark ones, so the
  *     nearest look), and 1.17 sends every other such basic to it as the
@@ -672,9 +673,14 @@ export function printingTreatmentOffer(
   const offer = (() => {
     if (treatment === "borderless") {
       if (kind === "land") {
-        return detail?.fullArt && !detail.textless && singleBasic()
-          ? { template: "fullartland" as const, frameLabel: "Borderless Full-Art Basic" }
-          : null;
+        if (singleBasic()) {
+          return detail?.fullArt && !detail.textless
+            ? { template: "fullartland" as const, frameLabel: "Borderless Full-Art Basic" }
+            : null;
+        }
+        // A nonbasic land: the borderless land frame (4.34), unless the
+        // printing is textless (m15textless*, 4.35).
+        return detail?.textless ? null : { template: "m15borderlessland" as const, frameLabel: "Borderless Land" };
       }
       if (kind === "planeswalker") {
         const template = walkerRowsFrameFor(

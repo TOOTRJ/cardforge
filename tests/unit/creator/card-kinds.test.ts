@@ -31,6 +31,7 @@ import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-reg
 import {
   FRAME_SET_ERA,
   FRAME_SET_LABELS,
+  FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
   FRAME_TEMPLATE_VALUES,
   isPremiumFrameTemplate,
@@ -132,7 +133,8 @@ describe("framesForKind", () => {
       expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless"]);
     }
     expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
-    expect(skinsFor("land")).toEqual(["m15snowland"]);
+    // The land's borderless dress (4.34).
+    expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland"]);
     // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's
     // full-art heights (the artifact ones are type-word dresses: the pickers
     // hide them, isTypeWordDress).
@@ -723,6 +725,37 @@ describe("the borderless M15 frame (4.32)", () => {
     for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"] as const) {
       expect(isPremiumFrameTemplate(template), template).toBe(false);
     }
+  });
+});
+
+describe("the borderless land (4.34)", () => {
+  const all = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))));
+
+  it("is a skin of the M15 land frame in the Borderless set, for the Land kind only — basics and nonbasics", () => {
+    expect(FRAME_TEMPLATE_SET.m15borderlessland).toBe("borderless");
+    expect(FRAME_TEMPLATE_LABELS.m15borderlessland).toBe("Borderless Land");
+    expect(baseFrameFor("land", "m15borderlessland")).toBe("m15land");
+    for (const kind of CARD_KIND_VALUES) {
+      expect(templateSupportsKind("m15borderlessland", kind), kind).toBe(kind === "land");
+      expect(templateRefusesKind("m15borderlessland", kind), kind).toBe(kind !== "land");
+    }
+    // Not basic-only: a nonbasic's rules print on its tinted box (unlike
+    // fullartland's bare art, 0.26).
+    expect(templateIsBasicOnly("m15borderlessland")).toBe(false);
+    const land = framesForKind("land", all).filter((f) => f.group === "skin").map((f) => f.template);
+    expect(land).toEqual(["m15snowland", "m15borderlessland"]);
+    // Offered to no other kind.
+    for (const kind of CARD_KIND_VALUES.filter((k) => k !== "land")) {
+      expect(framesForKind(kind, all).map((f) => f.template), kind).not.toContain("m15borderlessland");
+    }
+    expect(isPremiumFrameTemplate("m15borderlessland")).toBe(false);
+  });
+
+  it("a kind change leaves it for the new kind's M15 standard", () => {
+    expect(planKindChange("creature", { cardType: "land", template: "m15borderlessland" })).toEqual({
+      action: "apply",
+      patch: { card_type: "creature", template: "m15" },
+    });
   });
 });
 

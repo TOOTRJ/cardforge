@@ -57,10 +57,12 @@ describe("buildTreatmentView", () => {
     expect(view).not.toBeNull();
     expect(view!.key).toBe("borderless");
     expect(view!.label).toBe("Borderless");
-    // …and 4.33's borderless planeswalkers, the same frame set.
+    // 4.34's land is the third frame of the Borderless set, and 4.33's
+    // borderless planeswalkers are in the same frame set.
     expect(view!.templates.map((t) => t.template)).toEqual([
       "m15borderless",
       "m15borderlessartifact",
+      "m15borderlessland",
       "m15borderlesspw",
       "m15borderlesspwtall",
     ]);
@@ -68,16 +70,16 @@ describe("buildTreatmentView", () => {
     const states = Object.fromEntries(view!.templates[0].colours.map((c) => [c.colorKey, c.state]));
     expect(states).toMatchObject({ w: "scored", u: "scored", b: "stale", r: "unscored" });
 
-    // Every colour the four frames have a printing for (all seven, per the
+    // Every colour the five frames have a printing for (all seven, per the
     // registry).
-    expect(view!.combos).toHaveLength(28);
+    expect(view!.combos).toHaveLength(35);
 
-    // The artifact kind spreads the borderless profile: title is ONE slot,
-    // voted on by the three current colours of both frames (the walkers'
-    // title is m15pw's, another rect).
+    // The artifact kind and the land spread the borderless profile: title is
+    // ONE slot, voted on by the three current colours of the scored frames
+    // (the walkers' title is m15pw's, another rect).
     const title = view!.shared.find((row) => row.path === "title");
     expect(title).toMatchObject({
-      templates: ["m15borderless", "m15borderlessartifact"],
+      templates: ["m15borderless", "m15borderlessartifact", "m15borderlessland"],
       samples: 3,
       nudge: expect.objectContaining({ dyPct: 0.3, agree: 3, of: 3 }),
     });
@@ -95,10 +97,22 @@ describe("buildTreatmentView", () => {
       scores: new Map(),
       labelFor: (t) => t,
     });
-    // The walkers' own title (m15pw's rect) is still one row of theirs.
+    // The artifact frame's title leaves the pool; the land's still shares
+    // the standard's (4.34), and the walkers' own title (m15pw's rect) is
+    // still one row of theirs.
     const titles = view!.shared.filter((row) => row.path === "title");
-    expect(titles.some((row) => row.templates.includes("m15borderless"))).toBe(false);
-    expect(view!.shared.some((row) => row.path === "type")).toBe(true);
+    expect(titles.map((row) => row.templates)).toEqual([
+      ["m15borderless", "m15borderlessland"],
+      ["m15borderlesspw", "m15borderlesspwtall"],
+    ]);
+    // The type bar stays one slot: the land's and the regular walker's share
+    // the standard's rect (the tall walker's sits 138 px higher).
+    expect(view!.shared.find((row) => row.path === "type" && row.templates.includes("m15borderless"))?.templates).toEqual([
+      "m15borderless",
+      "m15borderlessartifact",
+      "m15borderlessland",
+      "m15borderlesspw",
+    ]);
   });
 
   it("the combos leave out the colours no printing covers", () => {
