@@ -59,6 +59,9 @@ describe("the declared pair masters", () => {
   it("no template has a pair master it doesn't declare", () => {
     for (const key of Object.keys(files)) {
       const [template, name] = key.split("/");
+      // Frame templates only: an overlay folder (4.6a's m15crown/<pair>.png
+      // crown bands) is no frame master.
+      if (!(FRAME_TEMPLATE_VALUES as readonly string[]).includes(template)) continue;
       const master = name?.replace(/\.(png|webp)$/, "");
       if (!master || !(TWO_COLOR_MASTER_KEYS as readonly string[]).includes(master) || key.split("/").length !== 2) continue;
       expect(declaredKeys(template), key).toContain(master);
