@@ -23,6 +23,7 @@ import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { describeFrame, withVerification } from "@/lib/creator/frame-resolve";
 import { qualifiesForCrown, twoColorPairOf, type TwoColorPair } from "@/lib/cards/anatomy";
+import { supertypeHasWord } from "@/lib/cards/card-display";
 import {
   FULL_ART_BASIC_2022_SETS,
   isM20DesignPrinting,
@@ -185,12 +186,13 @@ export type ScryfallImportPatch = {
    *  card's crown switch (crownSwitchFromPrinting):
    *   • `true` — it prints the standard legendary crown: Scryfall's
    *     `legendary` frame effect (DOM 2018 on);
-   *   • `false` — a SHOWCASE printing (the LTR ring and scroll, TDM
-   *     draconic, BLB woodland, TLA avatar, MUL's etched run …), which
+   *   • `false` — a Legendary SHOWCASE printing (the LTR ring and scroll,
+   *     TDM draconic, BLB woodland, TLA avatar, MUL's etched run …), which
    *     prints no standard crown ("match scan"), or a Legendary card printed
    *     without one (the M15–RIX legendaries, the List / playtest reprints);
-   *   • absent — a nonlegendary printing: nothing to follow, so the card
-   *     gets the new-card default (on) if it is made Legendary later. */
+   *   • absent — a nonlegendary printing, a showcase one included (owner
+   *     2026-09-30, pick (b)): nothing to follow, so the card gets the
+   *     new-card default (on) if it is made Legendary later. */
   printed_crown?: boolean;
   /** `true` when THIS printing's own frame is two-coloured (TODO 4.6b): a
    *  2015-frame printing whose front face is exactly two colours
@@ -928,14 +930,18 @@ export function printsTwoColorFrame(card: ScryfallCard): boolean {
 
 /**
  * The crown switch an import writes (ScryfallImportPatch.printed_crown) —
- * printing-only (owner round 17, 2026-09-30): `false` for any showcase
- * printing (Q6 → b: it prints no standard crown, and imports as its scan),
- * `true` for a printing with the standard crown (printsStandardCrown),
- * `false` for a Legendary card printed without one (owner 2026-09-29: "OFF
- * for M15–RIX legendaries"; the List reprints too), and nothing for any
- * other printing — a card the crown doesn't print on (qualifiesForCrown:
- * not Legendary, or a planeswalker, token, battle or emblem), whose switch
- * is left to the new-card default.
+ * printing-only (owner round 17, 2026-09-30):
+ *   • a SHOWCASE printing: `false` when the card is Legendary (Q6 → b: it
+ *     prints no standard crown, and imports as its scan), and nothing when it
+ *     isn't (owner 2026-09-30, pick (b): like any nonlegendary printing, so
+ *     the card gets the new-card default if it is made Legendary later);
+ *   • `true` for a printing with the standard crown (printsStandardCrown);
+ *   • `false` for a Legendary card printed without one (owner 2026-09-29:
+ *     "OFF for M15–RIX legendaries"; the List reprints too — kept as built,
+ *     owner 2026-09-30, pick (a));
+ *   • nothing for any other printing — a card the crown doesn't print on
+ *     (qualifiesForCrown: not Legendary, or a planeswalker, token, battle or
+ *     emblem), whose switch is left to the new-card default.
  */
 export function crownSwitchFromPrinting(
   card: ScryfallCard,
@@ -943,7 +949,9 @@ export function crownSwitchFromPrinting(
   face: { cardType?: string | null; supertype?: string | null },
 ): boolean | undefined {
   const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
-  if (effects.includes("showcase") || isShowcaseSignature(match.signature)) return false;
+  if (effects.includes("showcase") || isShowcaseSignature(match.signature)) {
+    return supertypeHasWord(face.supertype, "Legendary") ? false : undefined;
+  }
   if (printsStandardCrown(card, match)) return true;
   return qualifiesForCrown(face) ? false : undefined;
 }

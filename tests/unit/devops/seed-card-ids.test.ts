@@ -31,8 +31,9 @@ describe("seed card ids", () => {
   const defined = seedCardDefinitions(sql.map((s) => s.text));
 
   it("finds the card rows", () => {
-    // 25 in the main block, 8 in 2b (the 4.6 anatomy switches) at least.
-    expect(defined.length).toBeGreaterThanOrEqual(33);
+    // 25 in the main block, 9 in 2b (the 4.6 anatomy switches, and the
+    // round-17 land fix's no-template land) at least.
+    expect(defined.length).toBeGreaterThanOrEqual(34);
   });
 
   it("gives every card row its own id (a reused id is a row that silently never lands)", () => {

@@ -68,9 +68,11 @@ All five share `DEV_SEED_PASSWORD` once `npm run seed:dev` has run.
 | `artist@dev.pipglyph.test` | `dev_artist` | 16 cards across every verified frame kind (and an emblem) — gallery, profile, trending |
 | `new@dev.pipglyph.test` | `dev_new` | **Not onboarded** — exercises the first-run wizard |
 
-Plus 34 cards (public / unlisted / private, remixes, a planeswalker, a saga,
-snow, devoid, a token, an emblem, and dev_pro's 8 unlisted cards for the
-legendary crown and two-colour switches), likes / comments / follows (the triggers turn those
+Plus 35 cards (public / unlisted / private, remixes, a planeswalker, a saga,
+snow, devoid, a token, an emblem, and dev_pro's 9 unlisted cards for the
+legendary crown and two-colour switches — one of them, Duskmire Thicket, a
+two-colour land stored with no frame template, like production's Shadowwood
+Hollow), likes / comments / follows (the triggers turn those
 into 19 notifications), two decks, an active + closed + upcoming challenge, a
 published + a scheduled site update, and production's verified frame combos
 (`supabase/seed.sql`: 97 as of 2026-09-28). A refresh of that list does not

@@ -13,10 +13,13 @@ import signaturePrintings from "./fixtures/signature-printings.json";
 // (owner round 17, 2026-09-30: printing-only).
 //   • printed_crown: ON for Scryfall's `legendary` frame effect (DOM 2018
 //     on); OFF for a Legendary card printed without it (the M15–RIX
-//     legendaries, owner 2026-09-29) and for any SHOWCASE printing (the LTR
-//     ring and scroll, TDM draconic, BLB woodland, TLA avatar …), which
-//     prints no standard crown (owner's choice over the design's Q6
-//     recommendation); ABSENT for a nonlegendary printing.
+//     legendaries, owner 2026-09-29; kept as built, owner 2026-09-30 pick
+//     (a)) and for a Legendary SHOWCASE printing (the LTR ring and scroll,
+//     TDM draconic, BLB woodland, TLA avatar …), which prints no standard
+//     crown (owner's choice over the design's Q6 recommendation); ABSENT for
+//     a nonlegendary printing — a nonlegendary SHOWCASE too (owner
+//     2026-09-30, pick (b)), so it gets the new-card default if it is made
+//     Legendary later.
 //   • printed_two_color: ON for a 2015-frame printing whose front face is
 //     exactly two colours, else ABSENT (never false); color_pair: those two
 //     colours, printed order.
@@ -52,29 +55,68 @@ describe("printed_crown", () => {
     }
   });
 
-  it("is off for a showcase printing, which prints no standard crown", () => {
+  it("is off for a LEGENDARY showcase printing, which prints no standard crown (Q6 → b)", () => {
     expect(P["ltr-302"].frame_effects).toEqual(["legendary", "showcase"]);
     expect(patchOf("ltr-302").printed_crown).toBe(false); // Boromir, LTR ring
     expect(patchOf("ltr-321").printed_crown).toBe(false); // Galadriel, LTR ring
   });
 
-  it("is off for ANY showcase printing — a nonlegendary one too, explicitly (Q6 → b: match the scan)", () => {
+  it("names NO crown for a nonlegendary showcase — like any nonlegendary printing (owner 2026-09-30, pick (b))", () => {
     const S = signaturePrintings as unknown as Record<string, ScryfallCard>;
     // DSK #389 Overlord of the Floodpits, LTR #482 Slip On the Ring: not
-    // Legendary, Scryfall's `showcase` effect.
+    // Legendary, Scryfall's `showcase` effect. (2735012e wrote `false`.)
     for (const key of ["dsk-389", "ltr-482"]) {
       expect(S[key].type_line, key).not.toMatch(/Legendary/);
       expect(S[key].frame_effects, key).toContain("showcase");
-      expect(mapScryfallToFormPatch(S[key]).printed_crown, key).toBe(false);
+      const patch = mapScryfallToFormPatch(S[key]);
+      expect(patch.printed_crown, key).toBeUndefined();
+      expect("crown" in importedAnatomy(patch, patch.frame_template).style, key).toBe(false);
     }
     // A registry showcase signature without the effect (MUL, the Japan
-    // promos) on a nonlegendary card: off too.
+    // promos) on a nonlegendary card: no key either.
     const plain = P["stx-175"];
     const match = mapScryfallToFormPatch(plain).frame_match!;
     const face = { cardType: "creature", supertype: "" };
     expect(crownSwitchFromPrinting(plain, match, face)).toBeUndefined();
-    expect(crownSwitchFromPrinting(plain, { ...match, signature: "showcase/mul" }, face)).toBe(false);
-    expect(crownSwitchFromPrinting(plain, { ...match, signature: "japan-showcase" }, face)).toBe(false);
+    expect(crownSwitchFromPrinting(plain, { ...match, signature: "showcase/mul" }, face)).toBeUndefined();
+    expect(crownSwitchFromPrinting(plain, { ...match, signature: "japan-showcase" }, face)).toBeUndefined();
+    expect(crownSwitchFromPrinting(plain, { ...match, signature: "showcase" }, face)).toBeUndefined();
+  });
+
+  it("a showcase's crown key follows the Legendary word: `false` when Legendary, none when not", () => {
+    // The same printing and showcase signature, told apart only by the
+    // supertype — Legendary still stores the crown OFF (Q6 → b, "match
+    // scan"); nonlegendary names nothing. (2735012e wrote `false` for both.)
+    const plain = P["stx-175"];
+    const match = { ...mapScryfallToFormPatch(plain).frame_match!, signature: "showcase/mul" };
+    expect(crownSwitchFromPrinting(plain, match, { cardType: "creature", supertype: "Legendary" })).toBe(false);
+    expect(crownSwitchFromPrinting(plain, match, { cardType: "creature", supertype: "Legendary Snow" })).toBe(false);
+    expect(crownSwitchFromPrinting(plain, match, { cardType: "creature", supertype: "" })).toBeUndefined();
+    expect(crownSwitchFromPrinting(plain, match, { cardType: "creature", supertype: null })).toBeUndefined();
+    expect(crownSwitchFromPrinting(plain, match, { cardType: "creature", supertype: "Snow" })).toBeUndefined();
+
+    // Every showcase printing among the fixtures, through the mapper: a
+    // Legendary one (planeswalkers too, as before) stores `false`, any
+    // other stores no key.
+    const S = signaturePrintings as unknown as Record<string, ScryfallCard>;
+    const showcases = Object.entries({ ...S, ...P }).filter(([, card]) =>
+      (card.frame_effects ?? []).includes("showcase"),
+    );
+    let legendary = 0;
+    let nonlegendary = 0;
+    for (const [key, card] of showcases) {
+      const got = mapScryfallToFormPatch(card).printed_crown;
+      if (/\bLegendary\b/.test(card.type_line ?? "")) {
+        expect(got, key).toBe(false);
+        legendary += 1;
+      } else {
+        expect(got, key).toBeUndefined();
+        nonlegendary += 1;
+      }
+    }
+    // Both kinds are in the fixtures (not a vacuous pass).
+    expect(legendary).toBeGreaterThanOrEqual(10);
+    expect(nonlegendary).toBeGreaterThanOrEqual(10);
   });
 
   it("is off for a showcase frame the registry knows without Scryfall's `showcase` effect", () => {

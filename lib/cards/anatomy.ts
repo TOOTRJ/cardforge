@@ -176,8 +176,8 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
  * name defaults to its template's (anatomyDefaults) — an import names only
  * what its printing says (importedAnatomy), so the rest get this default
  * too — then the save rule applies (normalizeAnatomy, with the card's type).
- * An explicit `false` (a crownless Legendary printing, a showcase, the
- * creator's off switch) stays. The input itself when nothing changes.
+ * An explicit `false` (a crownless Legendary printing, a Legendary
+ * showcase, the creator's off switch) stays. The input itself when nothing changes.
  */
 export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType: string | null | undefined): T {
   const defaults = anatomyDefaults(frameStyle.template);
@@ -515,8 +515,9 @@ export type ImportedAnatomyFacts = {
   color_identity?: readonly ColorIdentity[];
   color_pair?: TwoColorPair;
   /** `true` — the printing prints the standard crown; `false` — a
-   *  Legendary card printed without it (M15–RIX, List reprints) or any
-   *  showcase; absent — nothing to follow (a nonlegendary printing). */
+   *  Legendary card printed without it (M15–RIX, List reprints) or a
+   *  Legendary showcase; absent — nothing to follow (a nonlegendary
+   *  printing, a showcase one included). */
   printed_crown?: boolean;
   /** `true` for a two-colour printing, else absent — never `false`. */
   printed_two_color?: true;
@@ -530,8 +531,8 @@ export type ImportedAnatomyFacts = {
  *   • The crown: the printing's own value for a Legendary card — on with
  *     the `legendary` frame effect, `false` for an M15–RIX legendary or a
  *     List reprint (owner 2026-09-29: "OFF for M15–RIX legendaries") and
- *     for any showcase (Q6 → b, "match scan"); a nonlegendary printing
- *     names none.
+ *     for a Legendary showcase (Q6 → b, "match scan"); a nonlegendary
+ *     printing names none, a showcase one included (owner 2026-09-30).
  *   • The two-colour frame: `true` for a two-colour printing, with its PAIR
  *     as the colour where the landed frame draws pairs; any other printing
  *     names none and keeps its own identity ("multicolor" for a two-colour

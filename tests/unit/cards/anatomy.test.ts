@@ -125,11 +125,15 @@ describe("the cards the two-colour frame is for (the creator's switch; 4.6 revie
   it("never a LAND on a nonland frame — only on the land frame (owner round 17, 2026-09-30)", () => {
     // Shadowwood Hollow / Sunfade Citadel: two-colour lands stored with no
     // template, drawn on m15 — m15's gold-split isn't a land's.
+    // The dev seed's Duskmire Thicket (owner pick (c), 2026-09-30) stores
+    // its pair the AI's way, with "multicolor" after the two words.
     for (const template of [undefined, null, "m15", "regular", "m15artifact"]) {
       expect(offersTwoColor(["black", "green"], null, { template, cardType: "land" }), String(template)).toBe(false);
+      expect(offersTwoColor(["black", "green", "multicolor"], null, { template, cardType: "land" }), String(template)).toBe(false);
       expect(offersTwoColor(["multicolor"], null, { template, cardType: "land" }), String(template)).toBe(false);
     }
     expect(offersTwoColor(["black", "green"], null, { template: "m15land", cardType: "land" })).toBe(true);
+    expect(offersTwoColor(["black", "green", "multicolor"], null, { template: "m15land", cardType: "land" })).toBe(true);
     expect(offersTwoColor(["multicolor"], null, { template: "m15land", cardType: "land" })).toBe(true);
     // The same pair on a nonland card keeps the switch on m15 and m15artifact.
     expect(offersTwoColor(["black", "green"], "{B}{G}", { template: undefined, cardType: "creature" })).toBe(true);

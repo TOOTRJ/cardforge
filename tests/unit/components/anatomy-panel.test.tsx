@@ -238,18 +238,23 @@ describe("the two-colour switch on a stored card", () => {
   it("never offered (switch or hint) for a LAND on a nonland frame — Shadowwood Hollow on m15 (owner round 17, 2026-09-30)", () => {
     // Shadowwood Hollow / Sunfade Citadel: two-colour lands stored with no
     // template (drawn on m15). The crown switch still shows for a Legendary one.
-    for (const frameStyle of [{}, { template: "m15" }, { template: "m15artifact" }] as FrameStyle[]) {
-      render(
-        <Harness
-          seed={{ colors: ["black", "green"], cardType: "land", supertype: "Legendary", frameStyle }}
-          stored={{ frameStyle, colorIdentity: ["black", "green"] }}
-        />,
-      );
-      const label = JSON.stringify(frameStyle);
-      expect(twoColorSwitch(), label).toBeNull();
-      expect(screen.queryByTestId("anatomy-hint-twoColor"), label).toBeNull();
-      expect(crownSwitch(), label).not.toBeNull();
-      cleanup();
+    // The dev seed's Duskmire Thicket (owner pick (c), 2026-09-30) stores its
+    // pair the AI's way, with "multicolor" after the two words.
+    const identities: ColorIdentity[][] = [["black", "green"], ["black", "green", "multicolor"]];
+    for (const colors of identities) {
+      for (const frameStyle of [{}, { template: "m15" }, { template: "m15artifact" }] as FrameStyle[]) {
+        render(
+          <Harness
+            seed={{ colors, cardType: "land", supertype: "Legendary", frameStyle }}
+            stored={{ frameStyle, colorIdentity: colors }}
+          />,
+        );
+        const label = `${colors.join(",")} ${JSON.stringify(frameStyle)}`;
+        expect(twoColorSwitch(), label).toBeNull();
+        expect(screen.queryByTestId("anatomy-hint-twoColor"), label).toBeNull();
+        expect(crownSwitch(), label).not.toBeNull();
+        cleanup();
+      }
     }
     // A plain Multicolor land on m15 neither.
     render(

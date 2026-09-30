@@ -218,14 +218,18 @@ on conflict (id) do nothing;
 --     frame (4.6b: Aurelian Tidewright — with the split crown — Hedgerow
 --     Mediator, Stormglass Strand, Brassbound Arbiter; Tidecaller Envoy and
 --     Rotbloom Pact are stored with no key — gold until switched on)
---     (lib/cards/anatomy.ts). dev_pro's cards, so dev_artist's public count
---     stays 15 (14 + Veyra's emblem, 6.23), and UNLISTED — their owner opens
---     them from My Cards, anyone by link — so the seeded public gallery stays
---     on one 24-card page: the e2e gallery specs (seeded-data, browse-filters,
---     like-toggle) read page 1, and 8 more public rows pushed Cinderwing
---     Matriarch, Emberlash and Thornback Behemoth off it. Ids …034–…041 (…026
---     is the emblems seed's: a reused id is a row that silently never lands —
---     tests/unit/devops/seed-card-ids.test.ts).
+--     (lib/cards/anatomy.ts). Duskmire Thicket is the owner's round-17 land
+--     fix (owner 2026-09-30, pick (c)): a B|G land stored with NO template,
+--     like production's Shadowwood Hollow / Sunfade Citadel — drawn on m15,
+--     whose gold-split isn't a land's, so its editor offers no two-colour
+--     switch or hint (twoColorFits). dev_pro's cards, so dev_artist's public
+--     count stays 15 (14 + Veyra's emblem, 6.23), and UNLISTED — their owner
+--     opens them from My Cards, anyone by link — so the seeded public gallery
+--     stays on one 24-card page: the e2e gallery specs (seeded-data,
+--     browse-filters, like-toggle) read page 1, and 8 more public rows pushed
+--     Cinderwing Matriarch, Emberlash and Thornback Behemoth off it. Ids
+--     …034–…042 (…026 is the emblems seed's: a reused id is a row that
+--     silently never lands — tests/unit/devops/seed-card-ids.test.ts).
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -280,7 +284,17 @@ from (values
   -- bars, the split pinline and text box.
   ('c0000000-0000-4000-a000-000000000041'::uuid, 'Brassbound Arbiter', 'brassbound-arbiter', '{2}{W}{U}', array['white','blue'], 'Artifact', 'creature', array['Construct'], 'rare',
      E'Vigilance\nArtifact spells you cast cost {1} less to cast.', '3', '4', 24,
-     '{"template":"m15artifact","finish":"regular","twoColor":true}'::jsonb, 1)
+     '{"template":"m15artifact","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- Owner round 17's land fix (pick (c), 2026-09-30): a B|G land stored
+  -- with NO template — frame_style '{}', exactly production's Shadowwood
+  -- Hollow — so it draws on m15. Its editor shows no two-colour switch or
+  -- hint (a land wears the pairs only on the land frame), and a save never
+  -- stores the switch; it stays gold. The pair is stored the way the AI
+  -- writes one (both words + "multicolor", colorWordsFromLetters); the pair
+  -- rule reads it as B|G, the same as Shadowwood Hollow's ['black','green'].
+  ('c0000000-0000-4000-a000-000000000042'::uuid, 'Duskmire Thicket', 'duskmire-thicket', null, array['black','green','multicolor'], null, 'land', array[]::text[], 'uncommon',
+     E'Duskmire Thicket enters tapped.\nWhen Duskmire Thicket enters, surveil 1.\n{T}: Add {B} or {G}.', null, null, 20,
+     '{}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

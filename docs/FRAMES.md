@@ -925,8 +925,9 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   follows the printing and names only what the printing says (owner round
   17, 2026-09-30: printing-only; `importedAnatomy`): `printed_crown` is
   `true` for Scryfall's `legendary` frame effect, `false` for a Legendary
-  card printed without it (M15–RIX, List reprints) and for any showcase,
-  and absent for a nonlegendary printing; `printed_two_color` is `true` (with
+  card printed without it (M15–RIX, List reprints) and for a Legendary
+  showcase, and absent for a nonlegendary printing, a showcase one included
+  (owner 2026-09-30); `printed_two_color` is `true` (with
   its pair) for a 2015-frame printing of exactly two colours, else absent —
   never `false`. A switch the printing doesn't name takes the new-card
   default (the save's stamp; the creator's form, `importedFormAnatomy`), so a
@@ -1016,10 +1017,11 @@ crowned prints the band is judged against (FDN #2 / #45 / #72 / #91 / #106 /
 them (a tick still records the combo's own reference). An import's switch is
 `printed_crown` (`crownSwitchFromPrinting`) — on for the `legendary` effect;
 off for a Legendary card printed without it (M15–RIX, List and playtest
-reprints) and for any showcase, by Scryfall's `showcase` effect or the
-registry's showcase signature (MUL's etched run carries only `legendary` +
-`etched`); not named for a nonlegendary printing, which gets the new-card
-default (owner round 17: printing-only). The standard crowns are Card
+reprints) and for a Legendary showcase, by Scryfall's `showcase` effect or
+the registry's showcase signature (MUL's etched run carries only
+`legendary` + `etched`); not named for a nonlegendary printing, a showcase
+one included (owner 2026-09-30), which gets the new-card default (owner
+round 17: printing-only). The standard crowns are Card
 Conjurer's as they are — u / r / g too, untinted (owner round 17). No tick
 changes: the owner signs the crown off once on a print sheet in the PR.
 

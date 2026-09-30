@@ -18,13 +18,17 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_COLOR_KEYS } from "@/lib/creator/card-kinds";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 import printings from "../scryfall/fixtures/anatomy-printings.json";
+import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6a / 4.6b, owner round 17 (2026-09-30) — IMPORTS = PRINTING-ONLY.
 // An import names a switch only where its printing says something about it:
 // the crown for a Legendary printing (on with the `legendary` frame effect,
-// off without it — the M15–RIX legendaries — and off on any showcase), the
-// two-colour frame (and its pair) for a two-colour printing. Every other
+// off without it — the M15–RIX legendaries, kept as built by the owner's
+// pick (a), 2026-09-30 — and off on a Legendary showcase), the two-colour
+// frame (and its pair) for a two-colour printing. A NONlegendary showcase
+// names no crown, like any nonlegendary printing (owner pick (b),
+// 2026-09-30). Every other
 // switch is left out, so the save stamps the NEW-card default (on) — and a
 // card later made Legendary, or given a pair, starts with the piece on like
 // any new card, where an explicit `false` from the import used to keep it
@@ -36,13 +40,14 @@ import printings from "../scryfall/fixtures/anatomy-printings.json";
 // ---------------------------------------------------------------------------
 
 const P = printings as unknown as Record<string, ScryfallCard>;
+const S = signaturePrintings as unknown as Record<string, ScryfallCard>;
 const EVERY_COMBO: ReadonlySet<string> = new Set(
   FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))),
 );
 
 /** What each path stores for a printing, on the frame the remix lands on. */
-function stored(key: string) {
-  const patch = mapScryfallToFormPatch(P[key]);
+function stored(key: string, card: ScryfallCard = P[key]) {
+  const patch = mapScryfallToFormPatch(card);
   const remix = scryfallRemixMechanics(patch, key, EVERY_COMBO);
   if (!remix.ok) throw new Error(`${key}: ${remix.error}`);
   const { frame_template: template, card_type: cardType, color_identity: colors } = remix.mechanics;
@@ -116,7 +121,7 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     expect(resolveTwoColor(getFrameProfile("m15"), ai, { colors: ["white", "blue"], cost: "{1}{W}{U}", cardType: "creature" })?.masterKey).toBe("wu");
   });
 
-  it("a crownless Legendary printing and a showcase stay OFF — explicit false", () => {
+  it("a crownless Legendary printing and a Legendary showcase stay OFF — explicit false", () => {
     // M15 #3 Avacyn (M15–RIX: no `legendary` effect — owner 2026-09-29).
     expect(stored("m15-3").ai).toMatchObject({ template: "m15", crown: false });
     // MUL #66 Anafenza (a showcase signature, landing on m15) — Q6 → b.
@@ -126,6 +131,54 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     expect(ltr.printed_crown).toBe(false);
     const onM15: FrameStyle = { template: "m15", ...importedFormAnatomy(importedAnatomy(ltr, "m15").style) };
     expect(newCardFrameStyle(onM15, ltr.card_type)).toMatchObject({ crown: false });
+  });
+
+  it("a NONlegendary showcase names no crown: the new-card default, the same through the creator and the AI deck remix (owner pick (b), 2026-09-30)", () => {
+    // Every showcase printing among the fixtures (Scryfall's `showcase`
+    // effect), plus MUL's etched run (a registry showcase signature).
+    const all = { ...S, ...P };
+    const showcases = Object.keys(all).filter(
+      (key) => (all[key].frame_effects ?? []).includes("showcase") || key.startsWith("mul-"),
+    );
+    let defaultedOnCrownFrames = 0;
+    let offOnCrownFrames = 0;
+    for (const key of showcases) {
+      const { patch, template, ai, creator, style } = stored(key, all[key]);
+      expect(creator, key).toEqual(ai);
+      const legendary = /\bLegendary\b/.test(all[key].type_line ?? "");
+      if (legendary) {
+        expect(patch.printed_crown, key).toBe(false);
+      } else {
+        expect(patch.printed_crown, key).toBeUndefined();
+        expect("crown" in style, key).toBe(false);
+      }
+      if (!frameAnatomyOf(template).crown) continue;
+      if (legendary) {
+        // TDM #327, MUL #5 / #66 land on m15: the crown stays OFF (Q6 → b).
+        expect(ai.crown, key).toBe(false);
+        offOnCrownFrames += 1;
+      } else {
+        // DSK #389 / #398, STA #1, FDN #428 on m15, TRK #392 on m15land:
+        // the new-card default, drawn only once the card is Legendary.
+        expect(ai.crown, key).toBe(true);
+        defaultedOnCrownFrames += 1;
+      }
+    }
+    expect(defaultedOnCrownFrames).toBeGreaterThanOrEqual(4);
+    expect(offOnCrownFrames).toBeGreaterThanOrEqual(3);
+  });
+
+  it("made Legendary later, a nonlegendary showcase import wears the crown like any new card (DSK #389 on m15)", () => {
+    const { template, cardType, colors, ai } = stored("dsk-389", S["dsk-389"]);
+    expect(template).toBe("m15");
+    // Stored as imported, it draws nothing: not Legendary.
+    expect(
+      crownKeyFor({ colorIdentity: colors as ColorIdentity[], cost: "{3}{U}{U}", cardType, supertype: "Enchantment", frameStyle: ai }, getFrameProfile("m15")),
+    ).toBeNull();
+    // Made Legendary: the crown draws in its colour.
+    expect(
+      crownKeyFor({ colorIdentity: colors as ColorIdentity[], cost: "{3}{U}{U}", cardType, supertype: "Legendary Enchantment", frameStyle: ai }, getFrameProfile("m15")),
+    ).toBe("u");
   });
 
   it("a two-colour printing and a crowned one name their switches ON", () => {
