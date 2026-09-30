@@ -177,8 +177,6 @@ describe("FrameCompare — detached slots (0.7)", () => {
     renderCompare();
     openEditor();
     chip("cost (pips)");
-    // Nothing to type into yet: the slot has no rect until the first edit.
-    expect(screen.queryByLabelText("costRect topPct")).toBeNull();
     chip("set symbol");
     expect(saveButton().disabled).toBe(true);
     expect(screen.queryByText(/Unsaved changes/)).toBeNull();

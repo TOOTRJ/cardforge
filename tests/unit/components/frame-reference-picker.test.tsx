@@ -66,7 +66,7 @@ afterEach(() => {
 });
 
 describe("FrameReferencePicker", () => {
-  it("searches through the proxy, debounced, and lists the printings with a low-res flag", async () => {
+  it("searches through the proxy and lists the printings with a low-res flag", async () => {
     render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
     await openAndSearch("gandalf e:ltr");
 
@@ -78,6 +78,22 @@ describe("FrameReferencePicker", () => {
     expect(url.searchParams.get("limit")).toBe("8");
     expect(screen.getByText(/ltr · low-res scan/)).toBeTruthy();
     expect(screen.getByText(ELROND.name)).toBeTruthy();
+  });
+
+  it("waits for the typing to pause: one search for the finished query, none per keystroke", async () => {
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    const input = await openAndSearch("g");
+    // Keystrokes 50 ms apart — well inside the 300 ms debounce.
+    for (const partial of ["ga", "gan", "gandalf"]) {
+      await new Promise((r) => setTimeout(r, 50));
+      fireEvent.change(input, { target: { value: partial } });
+    }
+
+    await screen.findByText(GANDALF.name);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = new URL(fetchMock.mock.calls[0][0] as string, "https://www.pipglyph.com");
+    expect(url.searchParams.get("q")).toBe("gandalf");
   });
 
   it("never searches for a blank query, and says when nothing matched", async () => {
