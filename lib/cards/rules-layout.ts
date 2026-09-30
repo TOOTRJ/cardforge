@@ -422,6 +422,17 @@ export type RulesLayoutInput = {
    *  keepOutInBoxFrame) no line's ink may enter: the stat badges the card
    *  DRAWS (statKeepOuts). A size where one does steps down. */
   keepOuts?: readonly Rect[];
+  /** TextSlot.paragraphGapMinPx (TODO 4.48, the full-art token's tall box):
+   *  before a size steps down, fitRulesLayout sets the text at that size with
+   *  its paragraph gaps squeezed — RULES_TEXT.paragraphGapPx down to this
+   *  (HD px), RULES_SIZE_PX.stepPx at a time — and takes the widest gap
+   *  that fits, as the prints do (TBLB #5 keeps 9 pt with 10–13 px gaps).
+   *  Unset: the gap never moves (every other box). */
+  paragraphGapMinPx?: number;
+  /** The paragraph gap (HD px) the layout was placed with — the squeeze's
+   *  pick, set by fitRulesLayout; unset, RULES_TEXT.paragraphGapPx. What
+   *  linePositions places, so both renderers draw the fitted gap. */
+  paragraphGapPx?: number;
 };
 
 /** One target's verdict on a layout. */
@@ -624,7 +635,11 @@ function placeBlocks(
 ): RulesPlacement {
   const orientation = orientationFromAspect(input.aspect);
   const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
-  const m = metricsFor(sizePx, lineHeight, target);
+  const base = metricsFor(sizePx, lineHeight, target);
+  // A squeezed paragraph gap (fitRulesLayout, paragraphGapMinPx): whole px
+  // at each target, like every gap.
+  const m =
+    input.paragraphGapPx === undefined ? base : { ...base, paragraphGapPx: targetPx(input.paragraphGapPx, base.scale) };
   const divider = input.divider ?? true;
   const box = rectPx(input.rect, orientation, input.aspect, target);
   const p = targetPad(padFor(input, sizePx), m.scale);
@@ -879,8 +894,10 @@ export function rulesLadderPx(sizePct: number, orientation: CardOrientation = "p
  * The largest ladder size at which `input`'s text fits at BOTH targets —
  * the block (with its ink headroom) within the box's interior, no line's
  * ink in a keep-out, no run wider than the column — with no safety margin:
- * the lines are exact. Nothing fits → the floor's layout, `clipped`.
- * Empty text → the ceiling, nothing to draw.
+ * the lines are exact. A slot that squeezes its paragraph gaps
+ * (paragraphGapMinPx) tries each size with them squeezed before the next
+ * size down (squeezeParagraphGaps). Nothing fits → the floor's layout,
+ * `clipped`. Empty text → the ceiling, nothing to draw.
  */
 export function fitRulesLayout(input: RulesLayoutInput): RulesLayout {
   const ladder = rulesLadderPx(input.sizePct, orientationFromAspect(input.aspect));
@@ -888,9 +905,37 @@ export function fitRulesLayout(input: RulesLayoutInput): RulesLayout {
   let layout = layoutParsedAt(input, ladder[0], parsed);
   for (const sizePx of ladder.slice(1)) {
     if (!layout.clipped) return layout;
+    const squeezed = squeezeParagraphGaps(layout);
+    if (squeezed) return squeezed;
     layout = layoutParsedAt(input, sizePx, parsed);
   }
-  return layout;
+  return layout.clipped ? (squeezeParagraphGaps(layout) ?? layout) : layout;
+}
+
+/**
+ * A clipped layout set again with its paragraph gaps squeezed (TODO 4.48:
+ * RulesLayoutInput.paragraphGapMinPx): the same size and lines — a gap never
+ * moves a break — at the widest gap from RULES_TEXT.paragraphGapPx down to
+ * the slot's minimum, RULES_SIZE_PX.stepPx at a time, at which the text
+ * fits at BOTH targets; null when none does, when the slot doesn't squeeze,
+ * or when the text has no paragraph gap to squeeze. Only the gaps between
+ * rules paragraphs (and blank lines) move — never the flavour's.
+ */
+function squeezeParagraphGaps(layout: RulesLayout): RulesLayout | null {
+  const { input, blocks } = layout;
+  const min = input.paragraphGapMinPx;
+  if (min === undefined || input.paragraphGapPx !== undefined) return null;
+  const gaps = blocks.filter((b, i) => i > 0 && b.kind !== "flavor").length;
+  if (gaps === 0 || RULES_TARGETS.some((t) => layout.checks[t].overwideRun)) return null;
+  for (let gap = RULES_TEXT.paragraphGapPx - RULES_SIZE_PX.stepPx; gap >= min; gap -= RULES_SIZE_PX.stepPx) {
+    const at = { ...input, paragraphGapPx: gap };
+    const checks = {
+      hd: checkPlacement(placeBlocks(blocks, layout.sizePx, at, "hd", layout.sideInsets.hd), blocks, at),
+      default: checkPlacement(placeBlocks(blocks, layout.sizePx, at, "default", layout.sideInsets.default), blocks, at),
+    };
+    if (checks.hd.fits && checks.default.fits) return { ...layout, input: at, checks, clipped: false };
+  }
+  return null;
 }
 
 /** Where every line of `layout` lands at `target` (see RulesPlacement). */

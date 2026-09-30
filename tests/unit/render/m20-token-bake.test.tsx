@@ -239,6 +239,34 @@ describe("the full-art token on real bakes (TODO 4.48 / 4.50)", () => {
     }
   }, 60_000);
 
+  // The tall box's calibration (2026-09-29): TBLB #5 Warren Warleader prints
+  // its modes and reminder at 9 pt, first baseline 1441, last 1846, its
+  // paragraph gaps squeezed to 10–13 px — the standard 24 px ran our last
+  // line into the P/T plate and stepped it down to 70 px.
+  it.each(PRESETS)("TBLB #5 on the tall box @%s: 9 pt, its gaps squeezed, the last line clear of the plate — where the print sets it", async (preset, s) => {
+    const warleader =
+      "Whenever you attack, choose one —\n• Create a 1/1 white Rabbit creature token that's tapped and attacking.\n• Attacking creatures you control get +1/+1 until end of turn.\n(This token's mana cost is {2}{W}{W}.)";
+    const b = await bake(token("m20tokentall", { rulesText: warleader, power: "1", toughness: "1", setIconUrl: null }), preset);
+    const plate = getFrameProfile("m20tokentall").pt!.plateRect!;
+    const area = rulesArea("m20tokentall", b);
+    // Left of the plate's column, so the plate and digits never join a band.
+    const bands = inkBands(b, { ...area, x1: (plate.leftPct / 100) * b.w - 2 }, dark);
+    expect(bands.length, JSON.stringify(bands)).toBe(6);
+    // Letters sit on the baseline; the first line's "W" and the reminder's
+    // "(" put the band's bottom at the baseline or a descender below it.
+    expect(Math.abs(bands[0].y0 - 1389 * s), `first line top ${bands[0].y0}`).toBeLessThanOrEqual(3 * s + 1);
+    // The squeezed gaps: the paragraphs' line pitch 74 + 12 (HD).
+    const pitch = (i: number) => bands[i].y0 - bands[i - 1].y0;
+    expect(Math.abs(pitch(1) - 86 * s), JSON.stringify(bands)).toBeLessThanOrEqual(2);
+    expect(Math.abs(pitch(2) - 74 * s), JSON.stringify(bands)).toBeLessThanOrEqual(2);
+    // The last line's ink — across the box, over the plate's columns too —
+    // ends above the plate's ink (1865; its digits start at ~1895).
+    const last = inkBox(b, { x0: area.x0, x1: area.x1, y0: bands[5].y0 - 2, y1: 1885 * s }, dark)!;
+    expect(last.x1, "the last line runs over the plate's columns").toBeGreaterThan((plate.leftPct / 100) * b.w);
+    expect(last.y1).toBeLessThanOrEqual(1866 * s);
+    expect(Math.abs(bands[5].y0 - 1795 * s), `last line top ${bands[5].y0}`).toBeLessThanOrEqual(3 * s + 1);
+  }, 60_000);
+
   it.each(PRESETS)("names white on a dark pill, dark on the white one (@%s)", async (preset, s) => {
     for (const [template, colour, hit] of [
       ["m20token", "blue", light],

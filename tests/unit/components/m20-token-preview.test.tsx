@@ -71,6 +71,24 @@ describe("CardPreview — the full-art token (TODO 4.48 / 4.50)", () => {
     },
   );
 
+  it("m20tokentall: draws TBLB #5 at 9 pt with the layout's squeezed paragraph gaps — the bake's", () => {
+    const warleader =
+      "Whenever you attack, choose one —\n• Create a 1/1 white Rabbit creature token that's tapped and attacking.\n• Attacking creatures you control get +1/+1 until end of turn.\n(This token's mana cost is {2}{W}{W}.)";
+    const { rulesBox } = render("m20tokentall", warleader);
+    expect(rulesBox?.getAttribute("data-rules-size")).toBe("76");
+    const layout = mainRulesLayout({ layout: getFrameProfile("m20tokentall"), rulesText: warleader, aspect: 7 / 5, show: { pt: true } });
+    expect(layout.input.paragraphGapPx).toBe(12);
+    const blocks = Array.from(rulesBox!.firstElementChild!.children);
+    const marginTop = (el: Element) => /(?:^|;)\s*margin-top:\s*([^;]+)/.exec(el.getAttribute("style") ?? "")?.[1].trim() ?? "";
+    expect(blocks).toHaveLength(4);
+    const draw = rulesDraw(layout, "hd").blocks;
+    for (let i = 1; i < 4; i += 1) {
+      const b = draw[i];
+      expect(b.kind === "rules" ? b.marginTop : null).toBe(12);
+      expect(marginTop(blocks[i]), `block ${i}`).toBe(cqw(12));
+    }
+  });
+
   it("draws two or more lines from the left, with no margin", () => {
     const { lines } = render("m20tokentext", "Flying\nVigilance\nLifelink");
     expect(lines).toHaveLength(3);

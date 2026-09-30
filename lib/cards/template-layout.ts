@@ -154,6 +154,15 @@ export type TextSlot = {
    *  the fit checked it. Unset: every line starts at the left (every
    *  profile before 4.49 (b)). Code-owned: not part of the override schema. */
   alignSingleLine?: "center";
+  /** RULES boxes only (TODO 4.48): the paragraph gap, HD px, a text may be
+   *  squeezed to before its size steps down — the full-art token's TALL box,
+   *  where the prints keep 9 pt by closing the gaps between abilities (TBLB
+   *  #5: 10–13 px) instead of shrinking. The shared fit tries each size with
+   *  the gaps from RULES_TEXT.paragraphGapPx down to this and takes the
+   *  widest that fits (lib/cards/rules-layout.ts); the layout carries the
+   *  gap it placed, so both renderers draw it. Unset: the gap never moves
+   *  (every other box). Code-owned: not part of the override schema. */
+  paragraphGapMinPx?: number;
 };
 
 /** TextSlot.fit's policies. */
@@ -1645,16 +1654,38 @@ const M20TOKEN: FrameProfile = {
   textlessTypeLine: true,
 };
 
+/** The tall box's rules rect, HD px: 3 px inside the box's top (1314) and
+ *  6 inside its bottom (1936) — 613 px, centred 2 px above the box's
+ *  middle. Calibrated on the tall prints set at 9 pt with our line breaks
+ *  (TBIG #7, TBLB #11 / #21, TLCI #17, TDRC #2, TMKC #5; Scryfall PNGs at
+ *  1500 × 2100, 2026-09-29): centred on the box's middle, our first and last
+ *  baselines sat +2 / +2.5 px below theirs (median); here, +0 / +0.5. */
+export const M20_TOKEN_TALL_RULES_PX = { top: 1317, bottom: 1930 } as const;
+/** The tall box closes the gaps between abilities before its text shrinks
+ *  (TextSlot.paragraphGapMinPx): TBLB #5 Warren Warleader prints its modes
+ *  and reminder at 9 pt with 10–13 px gaps, where the standard 24 px ran its
+ *  last line into the P/T plate and stepped it down to 70 px. */
+export const M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX = 10;
+
 /** The tall box (TLCI #17 Map, TBLB #5): the pill at 55.7 %H, the box
- *  1314–1936 px, the rect 5 px inside it at both ends (CC's rules 63.03 %H,
- *  28.75 %H tall): nine tall prints centre their block 1 px below its
- *  middle (the regular box's 2 px move put them 3 px low). */
+ *  1314–1936 px, the rules rect M20_TOKEN_TALL_RULES_PX (CC's rules 63.03
+ *  %H, 28.75 %H tall), its paragraph gaps squeezed before a size step
+ *  (M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX). */
 const M20TOKENTALL: FrameProfile = {
   ...M20TOKENTEXT,
   label: "Full-art Token, tall text box",
   symbolRect: m20TokenSymbolRect("tall"),
   type: m20TokenTypeSlot("tall"),
-  rules: { ...M20TOKENTEXT.rules, rect: { topPct: hdRowPct(1319), leftPct: 8.6, widthPct: 82.8, heightPct: hdRowPct(1932 - 1319) } },
+  rules: {
+    ...M20TOKENTEXT.rules,
+    rect: {
+      topPct: hdRowPct(M20_TOKEN_TALL_RULES_PX.top),
+      leftPct: 8.6,
+      widthPct: 82.8,
+      heightPct: hdRowPct(M20_TOKEN_TALL_RULES_PX.bottom - M20_TOKEN_TALL_RULES_PX.top),
+    },
+    paragraphGapMinPx: M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX,
+  },
 };
 
 /** An artifact token template (4.50): the silver pills take white name ink
