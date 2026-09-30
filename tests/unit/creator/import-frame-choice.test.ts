@@ -361,7 +361,7 @@ describe("the substitution chip and the deck-remix toast", () => {
     const hybridArtifact = hybridArtifactLegend(STANDARD).frame_match;
     expect(hybridArtifact?.gaps).toEqual(["two-colour-hybrid"]);
     expect(importSubstitutionMessage(hybridArtifact, "m15artifact", undefined, "m")).toBe(
-      "Two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one — using M15 (2015) Artifact.",
+      "Two-colour hybrid cards print a split hybrid frame, which PipGlyph doesn't draw on this frame yet — using M15 (2015) Artifact.",
     );
   });
 

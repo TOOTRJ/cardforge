@@ -76,7 +76,7 @@ describe("two-colour, by print's dress (4.6b: m15 draws both dresses, m15artifac
       template: "m15artifact",
       signature: "era/2015+two-colour-hybrid",
       blockedBy: "4.6f",
-      reason: "two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one",
+      reason: "two-colour hybrid cards print a split hybrid frame, which PipGlyph doesn't draw on this frame yet",
       gaps: ["two-colour-hybrid"],
     });
   });

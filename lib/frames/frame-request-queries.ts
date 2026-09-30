@@ -13,7 +13,7 @@ import {
   type FrameRequestCause,
   type FrameRequestStatus,
 } from "@/lib/frames/frame-requests";
-import { isKnownFrameSignature } from "@/lib/scryfall/frame-signatures";
+import { isKnownFrameSignature, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
 
 // ---------------------------------------------------------------------------
 // /admin/frame-requests reads (TODO 1.6, migration 0123): the requests per
@@ -58,8 +58,14 @@ export type FrameRequestRow = {
   sampleScryfallId: string | null;
   /** The sample printing's Scryfall page. */
   sampleUrl: string | null;
-  /** The TODO item that would make it exact, per the registry. */
+  /** The TODO item that would make it exact, per the registry — null once
+   *  the frame it landed on draws the missing piece (`drawnNow`). */
   blockedBy: string | null;
+  /** Logged before PipGlyph drew the missing piece, which the frame it
+   *  landed on draws now (a legendary crown or two-colour frame logged
+   *  before 4.6a / 4.6b; lib/scryfall/frame-signatures.ts signatureDrawnOn):
+   *  the same printing imports exact today — listed apart, not as open. */
+  drawnNow: boolean;
   /** PipGlyph will never build this family (collapsed by default). */
   forGood: boolean;
   /** The signature is a key of today's registry. False for a renamed or
@@ -97,27 +103,31 @@ const isTemplate = (value: string | null): value is FrameTemplate =>
 
 /** Pure: RPC rows → panel rows. */
 export function mapFrameRequestRows(rows: readonly RpcRow[]): FrameRequestRow[] {
-  return rows.map((row) => ({
-    signature: row.signature,
-    label: row.label,
-    setCode: row.set_code,
-    status: row.status === "unsupported" ? "unsupported" : "nearest",
-    cause: row.cause === "unverified" ? "unverified" : "missing",
-    count: Number(row.n) || 0,
-    users: Number(row.users) || 0,
-    lastSeen: row.last_seen,
-    template: row.template,
-    templateLabel: isTemplate(row.template) ? describeFrame(row.template) : row.template,
-    artFlags: (row.art_flags ?? []).filter((flag): flag is FrameRequestArtFlag =>
-      (FRAME_REQUEST_ART_FLAGS as readonly string[]).includes(flag),
-    ),
-    sampleCollector: row.sample_collector,
-    sampleScryfallId: row.sample_scryfall_id,
-    sampleUrl: scryfallPrintingUrl(row.set_code, row.sample_collector),
-    blockedBy: signatureBlockedBy(row.signature),
-    forGood: isForGoodSignature(row.signature),
-    inRegistry: isKnownFrameSignature(row.signature),
-  }));
+  return rows.map((row) => {
+    const drawnNow = signatureDrawnOn(row.signature, row.template);
+    return {
+      signature: row.signature,
+      label: row.label,
+      setCode: row.set_code,
+      status: row.status === "unsupported" ? "unsupported" : "nearest",
+      cause: row.cause === "unverified" ? "unverified" : "missing",
+      count: Number(row.n) || 0,
+      users: Number(row.users) || 0,
+      lastSeen: row.last_seen,
+      template: row.template,
+      templateLabel: isTemplate(row.template) ? describeFrame(row.template) : row.template,
+      artFlags: (row.art_flags ?? []).filter((flag): flag is FrameRequestArtFlag =>
+        (FRAME_REQUEST_ART_FLAGS as readonly string[]).includes(flag),
+      ),
+      sampleCollector: row.sample_collector,
+      sampleScryfallId: row.sample_scryfall_id,
+      sampleUrl: scryfallPrintingUrl(row.set_code, row.sample_collector),
+      blockedBy: drawnNow ? null : signatureBlockedBy(row.signature),
+      drawnNow,
+      forGood: isForGoodSignature(row.signature),
+      inRegistry: isKnownFrameSignature(row.signature),
+    };
+  });
 }
 
 /** The page's order (D4): most distinct users, then most requests, then the

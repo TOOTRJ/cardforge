@@ -728,7 +728,10 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   },
   "two-colour-hybrid": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: true },
-    reason: "two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one",
+    // Where this gap holds the frame draws either plain gold (wave 2, 4.6f)
+    // or — m15artifact, with its switch on — the gold two-colour pair (no
+    // hybrid plate yet): "uses its gold one" was wrong there (4.6 review).
+    reason: "two-colour hybrid cards print a split hybrid frame, which PipGlyph doesn't draw on this frame yet",
     blockedBy: "4.6f",
   },
   "colour-indicator": {
@@ -1706,6 +1709,36 @@ export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
   const of = (spec: TemplateSpec) => (typeof spec === "string" ? [spec] : FAMILIES[spec.family].produces);
   const later = rule.outcome.onceVerified;
   return later ? [...of(rule.outcome.template), ...of(later)] : of(rule.outcome.template);
+}
+
+const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));
+
+/**
+ * Whether a gap signature logged before its piece shipped ("era/2015+crown",
+ * "…+two-colour" — frame_requests rows keep their signature) is drawn today
+ * by `template`, the frame the logged import landed on (4.6 review
+ * 2026-09-29): the same printing imports exact now, so the admin page lists
+ * the row as answered, not as open and blocked by an item. Only when that
+ * frame is one the signature's own rule names (a borderless printing that
+ * landed on its bordered equivalent is still not exact) and draws the gap's
+ * piece (gapDrawnBy — never for a family that waits on another item for it,
+ * the M20 token's crown). A "two-colour" row logged before the hybrid dress
+ * had its own gap may be a hybrid printing: it counts only where the frame
+ * draws both dresses, or only lands (a land's split is never hybrid).
+ */
+export function signatureDrawnOn(signature: string, template: string | null | undefined): boolean {
+  const rule = RULE_BY_KEY.get(signature);
+  const plus = signature.lastIndexOf("+");
+  if (!rule || !template || plus < 0) return false;
+  const gap = signature.slice(plus + 1);
+  if (!Object.prototype.hasOwnProperty.call(GAPS, gap)) return false;
+  const key = gap as GapKey;
+  const on = template as FrameTemplate;
+  if (rule.gapBlockedBy?.[key] || !templatesOfRule(rule).includes(on) || !gapDrawnBy(key, on)) return false;
+  if (key === "two-colour" && !gapDrawnBy("two-colour-hybrid", on)) {
+    return templateSupportsKind(on, "land") && !templateSupportsKind(on, "creature");
+  }
+  return true;
 }
 
 /** Templates no printed signature resolves to exact or nearest. Empty today:
