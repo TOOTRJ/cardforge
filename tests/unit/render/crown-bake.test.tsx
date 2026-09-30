@@ -21,7 +21,8 @@ import { RENDER_PRESETS, frameAssetPathsFor, renderCardImage, type RenderPreset 
 //     art, text box and every slot move 0 px;
 //   • in those rows it IS the band composited over the uncrowned bake: 1:1 at
 //     HD (±2 levels of blending), resampled at 750 (the same picture);
-//   • the band follows the card's colour (the pinline of the master drawn);
+//   • the band follows the card's colour (the pinline of the master drawn) —
+//     a two-colour card drawn as its pair master (4.6b) wears the split band;
 //   • absent / off / a planeswalker / a token bake byte-identical to today;
 //   • foil and etched sparkle on the crown (it is inside their masks);
 //   • square print output keeps black corners.
@@ -41,7 +42,7 @@ function realBand(key: string): Buffer | null {
   const bytes = fs.readFileSync(file);
   return createHash("sha256").update(bytes).digest("hex") === REAL[rel].sha256 ? bytes : null;
 }
-const BAND_KEYS = ["w", "u", "m", "c", "a", "l", "g"];
+const BAND_KEYS = ["w", "u", "m", "c", "a", "l", "g", "wu", "br"];
 const bands = Object.fromEntries(BAND_KEYS.map((k) => [k, realBand(k)]));
 const available = BAND_KEYS.every((k) => bands[k] !== null);
 
@@ -77,7 +78,8 @@ beforeAll(async () => {
   artUrl = `data:image/png;base64,${(await png(1200, 900, ART_RGB)).toString("base64")}`;
   const plate = await png(377, 206, [90, 90, 90]);
   const files: Record<string, Buffer> = {};
-  for (const [template, keys] of Object.entries({ m15: ["w", "u", "m", "c", "g"], m15artifact: ["c", "u"], m15land: ["w", "c", "m"] })) {
+  // …and the pair masters a two-colour card paints with its switch on (4.6b).
+  for (const [template, keys] of Object.entries({ m15: ["w", "u", "m", "c", "g", "wu", "wu-h"], m15artifact: ["c", "u"], m15land: ["w", "c", "m", "br"] })) {
     const bytes = await master(template);
     for (const key of keys) {
       files[`${template}/${key}.png`] = bytes;
@@ -192,7 +194,22 @@ async function offComposite(crowned: Raw, plain: Raw, key: string) {
 const cases: Array<[string, Partial<CardPreviewData>, string]> = [
   ["legendary white creature (m15)", {}, "w"],
   ["legendary three-colour creature (gold)", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}" }, "m"],
-  ["legendary two-colour creature (drawn gold: no pair masters yet)", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}" }, "m"],
+  ["legendary two-colour creature, two-colour switch off (drawn gold: the gold crown)", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}" }, "m"],
+  [
+    "legendary two-colour creature, two-colour switch on (the pair master: the split crown)",
+    { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15", finish: "regular", crown: true, twoColor: true } },
+    "wu",
+  ],
+  [
+    "legendary hybrid creature, two-colour switch on (the hybrid master: the same split crown)",
+    { colorIdentity: ["white", "blue"], cost: "{W/U}{W/U}", frameStyle: { template: "m15", finish: "regular", crown: true, twoColor: true } },
+    "wu",
+  ],
+  [
+    "legendary two-colour land, two-colour switch on (the land pair: the split crown)",
+    { cardType: "land", colorIdentity: ["black", "red"], cost: null, power: null, toughness: null, frameStyle: { template: "m15land", finish: "regular", crown: true, twoColor: true } },
+    "br",
+  ],
   ["legendary colourless creature (m15's see-through grey)", { colorIdentity: ["colorless"], cost: "{10}" }, "c"],
   [
     "legendary colourless artifact (m15artifact: silver)",

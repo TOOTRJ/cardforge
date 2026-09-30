@@ -57,7 +57,7 @@ export const PAIR_CASES: readonly PairCase[] = [
     plate: "/frames/m15/pt/c.png",
   },
   {
-    id: "legendary pair: the pair master (the crown is 4.6a's)",
+    id: "legendary pair: the pair master, under the split crown (4.6a)",
     card: {
       supertype: "Legendary",
       colorIdentity: colours("blue", "red"),
