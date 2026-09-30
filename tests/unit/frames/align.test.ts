@@ -218,12 +218,15 @@ describe("alignAndScore", () => {
     expect(alignAndScore({ ours, scan, slots: SLOTS, exclude: [] })).toEqual(without);
   });
 
-  it("excludes the arch only for the borderless M15 frames", () => {
+  it("excludes the arch only for the borderless M15 frames and the borderless planeswalkers", () => {
     expect(scoreExclusionsFor("m15borderless")).toEqual([HOLO_STAMP_ARCH]);
     expect(scoreExclusionsFor("m15borderlessartifact")).toEqual([HOLO_STAMP_ARCH]);
     // 4.34's land: nearly every borderless nonbasic land is rare.
     expect(scoreExclusionsFor("m15borderlessland")).toEqual([HOLO_STAMP_ARCH]);
-    for (const template of ["m15", "m15land", "m15fullartland", "fullartland"]) {
+    // 4.33: the walkers' ability-window rim arches over the stamp too.
+    expect(scoreExclusionsFor("m15borderlesspw")).toEqual([HOLO_STAMP_ARCH]);
+    expect(scoreExclusionsFor("m15borderlesspwtall")).toEqual([HOLO_STAMP_ARCH]);
+    for (const template of ["m15", "m15land", "m15pw", "m15fullartland", "fullartland"]) {
       expect(scoreExclusionsFor(template), template).toEqual([]);
     }
     // x 640–860, y 1890–2000 on 1500 × 2100: the arch (656–850, from 1905)

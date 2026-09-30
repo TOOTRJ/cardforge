@@ -61,6 +61,13 @@ describe("frame reference registry", () => {
       "m15tokenartifacttext/r",
       "m15tokenartifacttext/g",
       "m15tokenartifacttext/m",
+      // 4.52's emblem: colourless by rule (CR 114), so `c` only.
+      "emblem/w",
+      "emblem/u",
+      "emblem/b",
+      "emblem/r",
+      "emblem/g",
+      "emblem/m",
       // 4.48 / 4.50's full-art tokens (Scryfall 2026-09-29, heights measured
       // on the prints): no red, colourless or three-colour tall token
       // outside a legend; no black (bar T40K's own layout), green or gold
@@ -86,8 +93,10 @@ describe("frame reference registry", () => {
     );
     // + the borderless skins of 4.32 (their set, Borderless, is M15-era)
     // + 4.49 (b)'s two text-box tokens + 4.34's borderless land + 4.48 /
-    // 4.50's six full-art tokens.
-    expect(m15Templates.length).toBe(26);
+    // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
+    // colour referenced, the tall one's c by the serialized DFT #376) +
+    // 4.52's emblem.
+    expect(m15Templates.length).toBe(29);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

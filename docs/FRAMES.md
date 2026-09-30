@@ -32,14 +32,15 @@ How a profile sets text and art
 13. [Rules text and the stat plates](#rules-text-and-the-stat-plates)
 14. [Tokens](#tokens)
 15. [Art under and around the frame](#art-under-and-around-the-frame)
+16. [Emblems](#emblems)
 
 Operations
-16. [Re-bakes after a deploy](#re-bakes-after-a-deploy)
-17. [Re-bake runbook](#re-bake-runbook)
-18. [Announcing a change](#announcing-a-change)
-19. [Environment setup](#environment-setup)
-20. [If the dev branch is reset](#if-the-dev-branch-is-reset)
-21. [Non-goals](#non-goals)
+17. [Re-bakes after a deploy](#re-bakes-after-a-deploy)
+18. [Re-bake runbook](#re-bake-runbook)
+19. [Announcing a change](#announcing-a-change)
+20. [Environment setup](#environment-setup)
+21. [If the dev branch is reset](#if-the-dev-branch-is-reset)
+22. [Non-goals](#non-goals)
 
 ## Where frame files live
 
@@ -124,7 +125,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 22 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -147,7 +148,26 @@ into `.frames-build/` — 22 templates today (`CC_TEMPLATES` in
   m20tokenartifacttall — the textless pair re-cut 5 px onto the prints, the
   colourless and artifact type pills darkened to the prints, every type pill
   solid, the artifact name pill slate and solid (PipGlyph composites,
-  "Full-art tokens" below).
+  "Full-art tokens" below);
+- the borderless planeswalkers from 'Borderless' and 'Tall Borderless'
+  (4.33): m15borderlesspw (three ability rows) and m15borderlesspwtall (four;
+  its type bar and ability window 138 px higher), each with the master's own
+  shield cut out to `loyalty/` as on m15pw. The regular pack has no
+  colourless frame: `c` is its see-through 'Artifact Frame' with its alpha
+  lifted ×255/234 (a layer's `gain`), so the rim is opaque like every other
+  colour's and the tall pack's 'Colorless Frame'. The gold `m` is MATCHED TO
+  THE PRINTS (owner round 15, 2026-09-29): CC's 'Multicolored Frame' paints
+  flat tan faces where every mono-gold borderless walker prints a pale cream
+  face veined with gold, so the pack's 'White Frame' recolours the m frame's
+  title and type faces through CC's Title and Type masks (a `recolour`
+  layer: colour only, the alpha below kept, weighted by the white face's own
+  luminance — `PW_GOLD_FACE`, fitted to the 13 exact prints;
+  `tests/unit/frames/gold-walker-faces.test.ts` holds a built master to
+  their range, `tests/unit/frames/fixtures/gold-walker-prints.json`);
+- the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
+  in every colour key (an emblem is colourless), its name pill, silver, type
+  pill and text box toned onto the prints and its spark's centre ray bridged
+  over above the art window (see [Emblems](#emblems)).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -759,6 +779,39 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   emblems" scope or the no-match fallback its Cards scope asks for
   (`fallback=tokens`; `lib/scryfall/search-scope.ts`, Scryfall's
   `include_extras`).
+- **The borderless planeswalker's tall box follows the rows (4.33).**
+  Card Conjurer draws two masters: the regular one for up to three printed
+  ability rows and the tall one for four (a loyalty ability is a row, a run
+  of static abilities shares one — `walkerRowCount` in
+  `lib/creator/card-kinds.ts`; 206 of the 210 printings the
+  `borderless/planeswalker` rule matches print the box it picks — Gideon
+  Blackblade MED #WS2 prints its two statics as two rows, and Comet UNF
+  #275 / #526 its die-roll table on the tall box, Nicol Bolas, Dragon-God
+  PS19 #207 four rows on the regular one; `WALKER_ROW_BOX_PINS` makes those
+  four `nearest`). Every path picks by
+  that count: the registry's borderless family, the creator (its one
+  "Borderless Planeswalker" chip stands for both, and the frame follows the
+  rows as they change), the import chooser and the AI's frame pick. A
+  borderless walker lands on the bordered m15pw (1.18) with Borderless
+  Planeswalker offered once verified; `inverted` printings, the
+  dark-barred ones (every mono-black one but `LIGHT_BLACK_WALKER_PINS`, and
+  `DARK_BAR_WALKER_PINS`' gold PS19 #207) and the two Secret Lair walkers
+  that letter their name across the art (`LETTERED_NAME_WALKER_PINS`, SLD
+  #1619 / #1622) are `nearest` (owner round 15, 2026-09-29: they stay so,
+  and the box stays automatic). A walker with no ability text shows the
+  light first stripe in its see-through window, never the bare art
+  (`rules.backdropWhenEmpty`, `drawsRulesBackdrop` in both renderers; the
+  editor keeps its hint rows).
+- **Emblems (TODO 1.23 / 6.23).** "Emblem" is the emblem card type, so
+  every `layout: emblem` printing imports on the emblem kind (the title
+  without Scryfall's " Emblem", colourless, common; a subtype only on the
+  2014–19 look and AFR, `emblemPrintsSubtype`). The M20 design is
+  `emblem/m20`, exact on the emblem frame; the 2014–19 EMBLEM bar
+  (`emblem/2014-19`, the tokens' date / List-prefix rule) and the 2003
+  plaque (`emblem/old-frame`) are nearest it; the Universes Beyond
+  full-bleed emblems, The Ring's two faces and MB2's playtest card are
+  `emblem/one-off`, unsupported and logged. Every one of the 141 is held by
+  `tests/unit/scryfall/emblem-imports.test.ts`.
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or
@@ -834,10 +887,11 @@ cards it changes.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 32 templates — the 23 of v32's frozen scope in
-`lib/cards/layout-version.ts`, plus the two text-box tokens, 4.34's
-borderless land and the six full-art tokens, new templates that joined
-without a bump; split and battle join with 4.21) prints its names, type
+`lib/cards/m15-family.ts`: 35 templates — the 23 of v32's frozen scope in
+`lib/cards/layout-version.ts`, plus the two text-box tokens, the six
+full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
+land and the emblem, new templates that joined without a bump; split and
+battle join with 4.21) prints its names, type
 lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
 the prints. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),
@@ -1371,6 +1425,97 @@ Previews: Vercel previews on the dev DB are never swept (the auto-rebake
 cron runs in production only), so a preview's stored bakes — gallery tiles,
 OG images, free downloads — stay at v34 while its creator draws v35. Judge a
 v35 change in the creator's live preview, or re-save a `dev_*` card.
+
+## Emblems
+
+TODO 4.52 + 6.23. CR 114: an emblem has no colour, mana cost, types, rarity
+or P/T, and every one printed since M20 (2019-07-12) is on one silver frame
+— the source planeswalker's name in a dark bar, the art in a
+planeswalker-spark cut-out, a type bar reading "Emblem", a light text box.
+The `emblem` template is Card Conjurer's 'Planeswalker Emblems' master
+(`CC_TEMPLATES.emblem`: its bars, box and border sit within 3 px of eight
+prints, so nothing moves), one master for every colour key (only `c` has
+references: TFDN #25 Vivien Reid, TFDN #24, TDSK #17), with these touches
+onto the prints (TFDN #24 / #25, TM20 #11, TDSK #17, TBLB #30, TFRA #16):
+
+- **The name pill, toned** (`EMBLEM_NAME_PILL_TONE`, `toneRegion`). CC's pack
+  draws `frame.png` alone — no darkening layer — and its pill is a light
+  gradient (median luma 90 over the name band) where the prints print a dark
+  one (52). The pill's body (inside its dark outline, under CC's highlight)
+  is multiplied by a gain fitted on the six M20 prints, by distance from the
+  pill's centre, and made opaque.
+- **The silver, the type pill and the text box, toned** (owner decision
+  2026-09-29: `EMBLEM_SILVER_TONE` with `toneSilver`; `EMBLEM_TYPE_PILL_TONE`
+  and `EMBLEM_TEXT_BOX_TONE` with `toneRegion`, `keepAlpha`). CC's silver
+  read 17–32 luma over the prints' median by region (the rails beside the
+  spark 141 against 101–113), its type pill 239 against 224–231 and its box
+  237 against 226–233. The silver — the body from the name bar's shadow to
+  the type bar's rim, and beside the bars each row from the edge to the
+  bar's light rim — is multiplied by a gain bilinear in the SIGNED offset
+  from the centre and the row, each side fitted on its own (round 12b,
+  owner decision 2026-09-29: CC lights its silver evenly, the prints do
+  not — beside the spark's base 113–122 on the left, 178–187 on the right,
+  and the right rail is the card's darkest silver). Five knots a side, 12
+  rows, 0.45–1.2; the segment between the halves' innermost knots (±100 px)
+  joins them, so there is no seam at the centre line and, bilinear, no step
+  anywhere. Each region's median sits on the prints' per side, and the 50 px
+  squares of pure silver land within 10 of the prints' median on 69 % of
+  the left half and 85 % of the right (round 12: 51 % and 31 %); what they
+  still miss is CC's brushed streaks against the prints'. The pill and the
+  box take one gain each (0.94, 0.96). A gain, not a fill: CC's highlights
+  and shading stay. The rims, the light bar under the name and the flat
+  strip above it keep CC's tone, and the spark's tail and glow (pure white,
+  translucent) stay as drawn; through the pill and the box the tail is
+  toned with them and keeps its alpha.
+- **The spark's centre ray, bridged over** (owner decision 2026-09-29,
+  `EMBLEM_RAY_BRIDGE`, `bridgeRayTip`). The art window starts at 250.4 px
+  (below); CC's centre ray runs on up to the bar under the name, where an
+  art_crop has no pixels (holding CC's black shadow there read as a dark
+  block on light art). The frame closes over it: the bar's shadow and the
+  silver under it are blended across from either side, and the ray ends at
+  251 px, 18 px short of the bar, its tip drawn with the colour profile of
+  its own right edge — dark over the top right, light down the left, like
+  the side rays' tips — with its corners rounded. Everything above 251 is
+  opaque, so only the art window's picture shows in the ray. (Against the
+  slot's 250.4 that is 0.6 px of overscan where layout v35's see-through
+  slot rule asks 1.05, so the emblem is listed in
+  `ART_WINDOW_KNOWN_FAILURES` under 4.52 — the art covers row 251 whole.)
+
+- **Profile** (`EMBLEM` in `lib/cards/template-layout.ts`, an M15-family
+  member): no cost or stat slot; the name white and centred, the type line
+  left from 8.54 %W on the pill's interior, each moved onto the prints'
+  baseline (`EMBLEM_TITLE_PRINT_DY`, `EMBLEM_TYPE_PRINT_DY`); CC's symbol
+  box; the rules in CC's box made 10 px wider on the right so ONE centred
+  line lands where the prints centre it (`alignSingleLine`), two or more
+  from the left.
+- **Art.** The window is Scryfall's emblem `art_crop` box exactly
+  (`EMBLEM_SCRYFALL_CROP_PX`): for an emblem that crop is cut from the
+  printed card around the spark, so an imported emblem's art registers
+  with the print at its printed size (grown to take in the ray's tip, it
+  drew the art 1.6–1.8 % larger — the frame closes over the tip now).
+  An older Scryfall crop (TM20 #11: 684 × 570) is too short to fill the
+  window at the print's scale and draws ~1.5–1.9 % larger; the owner
+  accepted that (2026-09-29).
+  CC's tall artBounds is the `underFrameArt` layer, which the spark's tail
+  (80 % white through the type bar and the box) shows faintly, as the
+  prints do.
+- **Kind.** The emblem is its own card type (migration 0130) and kind
+  (`KIND_DEFS.emblem`), reached from the token kind's "Token type" section
+  (the Emblem choice), never a kind chip of its own. It wears the emblem
+  frame and nothing else, and the emblem frame dresses nothing else
+  (`templateRefusesKind`, so the server's kind gate refuses both ways). The
+  card actions store every emblem colourless with no cost, supertype or
+  stats (`lib/cards/emblem.ts`); `buildTypeLine` prints "Emblem", or
+  "Emblem — Kaito" with the optional subtype.
+- **Page name** (owner decision 2026-09-29). The card prints the walker's
+  name; its page and address say "Emblem" as Scryfall's do ("Kaito, Cunning
+  Infiltrator Emblem", …/kaito-cunning-infiltrator-emblem): `cardPageName`
+  for the new card's slug, `<title>`, OG / Twitter, JSON-LD name, heading
+  and oEmbed.
+- **New and unverified.** The Emblem choice shows "Soon" until `emblem/c`
+  is verified; the walk-through reaches it
+  (`/create?previewFrames=emblem&kind=emblem&template=emblem&color=c&seed=reference`).
+  No stored card sits on it, so it shipped without a layout bump.
 
 ## Re-bakes after a deploy
 

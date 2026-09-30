@@ -165,6 +165,23 @@ const TEMPLATES = {
     q: (k) =>
       `border:borderless frame:2015 t:land -t:basic -is:showcase -frame:legendary -is:dfc -is:textless -is:flavorname -t:creature ${k === "m" ? "produces>=3 -produces:c" : `produces=${k}`}`,
   },
+  // The borderless planeswalkers (4.33): the light look (no `inverted`
+  // flag, whose scans print the same rows but stay nearest by the owner's
+  // 2026-09-26 decision). Split the candidates by PRINTED rows
+  // (walkerRowCount: a run of statics is one row) — three or fewer on
+  // m15borderlesspw, four or more on m15borderlesspwtall — and keep b to the
+  // light-barred prints (LIGHT_BLACK_WALKER_PINS; most black walkers print
+  // dark bars). m = three colours (two-colour walkers split the frame, 4.6).
+  m15borderlesspw: {
+    confirm: "Keep printings with three printed rows; b only the light-barred ones (dark ink: MED #GR2, MED #RA3 — not BLC #78, whose ink is white).",
+    q: (k) =>
+      `t:planeswalker border:borderless frame:2015 -is:showcase -is:dfc -frame:inverted -is:textless ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
+  },
+  m15borderlesspwtall: {
+    confirm: "Keep printings with four printed rows; b only the light-barred ones (dark ink: AFR #284, STX #276, CMR #512).",
+    q: (k) =>
+      `t:planeswalker border:borderless frame:2015 -is:showcase -is:dfc -frame:inverted -is:textless ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
+  },
   battle: {
     note: "Every printed battle is a transform DFC; the front face is the landscape siege.",
     q: (k) => `t:battle ${spellColor(k)}`,

@@ -114,6 +114,8 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   planeswalker: "u",
   battle: "r",
   token: "w",
+  // An emblem is colourless (CR 114); its frame hosts no other kind.
+  emblem: "c",
   saga: "r",
   adventure: "g",
   split: "wu",
@@ -161,6 +163,30 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour): F
             flavor_text: "Gold gleams brightest in a thief's eye.",
           }
         : { title: "Beast", card_type: "token", supertype: "Creature", subtypes: ["Beast"], cost: null, power: "3", toughness: "3" };
+    case "emblem":
+      // TODO 4.52 / 6.23: the walker's name on the bar, "Emblem" (+ the
+      // optional subtype on the long card), ONE rules line centred (short)
+      // or several from the left (long); saved common, no cost or stats.
+      return long
+        ? {
+            title: "Kaito, Cunning Infiltrator of the Hidden Blade",
+            card_type: "emblem",
+            supertype: null,
+            subtypes: ["Kaito"],
+            cost: null,
+            rarity: "common",
+            rules_text:
+              "Whenever a player casts a spell, you create a 2/1 blue Ninja creature token.\nAt the beginning of your end step, if you attacked with three or more Ninjas this turn, draw a card, then scry 2.",
+          }
+        : {
+            title: "Chandra",
+            card_type: "emblem",
+            supertype: null,
+            subtypes: [],
+            cost: null,
+            rarity: "common",
+            rules_text: "At the beginning of your upkeep, this emblem deals 1 damage to you.",
+          };
     case "planeswalker":
       return {
         title: long ? "Jace, Architect of Thought and Memory" : "Chandra",
@@ -361,6 +387,12 @@ const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["nyx", "w"],
   ["fullart", "g"],
 ];
+/** No ability text on a borderless walker (TODO 4.33, owner round 15): its
+ *  see-through window shows the light first stripe, never the bare art. */
+const NO_TEXT_CASES: readonly [FrameTemplate, VisualColour][] = [
+  ["m15borderlesspw", "w"],
+  ["m15borderlesspwtall", "wub"],
+];
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15", "w"],
   ["tarkirdragon", "u"],
@@ -402,13 +434,24 @@ export function visualCases(): VisualCase[] {
     kind: CardKind,
     colour: VisualColour,
     shape: VisualShape,
-    extra: { preset?: VisualPreset; corners?: "round" | "square"; finish?: VisualCase["finish"]; suffix?: string; noArt?: boolean } = {},
+    extra: {
+      preset?: VisualPreset;
+      corners?: "round" | "square";
+      finish?: VisualCase["finish"];
+      suffix?: string;
+      noArt?: boolean;
+      noText?: boolean;
+    } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = { ...rowFor(template, kind, colour, shape, finish, id), ...(extra.noArt ? { art_url: null } : {}) };
+    const row = {
+      ...rowFor(template, kind, colour, shape, finish, id),
+      ...(extra.noArt ? { art_url: null } : {}),
+      ...(extra.noText ? { rules_text: null, flavor_text: null, face_content: null } : {}),
+    };
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -444,6 +487,10 @@ export function visualCases(): VisualCase[] {
   for (const [template, colour] of NO_ART_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { suffix: "@noart", noArt: true });
+  }
+  for (const [template, colour] of NO_TEXT_CASES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, colour, "short", { suffix: "@notext", noText: true });
   }
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];

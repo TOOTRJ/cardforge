@@ -32,6 +32,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   "/frames/m15borderlessartifact/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
   // The planeswalker's starting-loyalty shield (cut out of each master).
   "/frames/m15pw/loyalty/{color}.png": { left: 0.025, top: 0.0389, right: 0.975, bottom: 0.9611 },
+  // …and the borderless planeswalkers' (4.33): CC's same shield, through
+  // the same mask.
+  "/frames/m15borderlesspw/loyalty/{color}.png": { left: 0.025, top: 0.0389, right: 0.975, bottom: 0.9611 },
+  "/frames/m15borderlesspwtall/loyalty/{color}.png": { left: 0.025, top: 0.0389, right: 0.975, bottom: 0.9611 },
   // Git plates: MSE's 2003 box and the Tarkir showcases' plates / ribbon.
   "/frames/modern/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   "/frames/tarkirdragon/pt/{color}.png": { left: 0.0036, top: 0.0067, right: 0.9964, bottom: 0.9933 },

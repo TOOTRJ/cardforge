@@ -16,6 +16,8 @@ import {
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
+  walkerRowCount,
+  walkerRowsFrameFits,
   type CardKind,
   type FrameChoice,
   type FrameColorKey,
@@ -156,6 +158,9 @@ export function frameFitsImport(
     return false;
   }
   if (templateIsBasicOnly(template) && !importIsSingleBasic(patch)) return false;
+  // The borderless planeswalker's regular or tall box, as the rows pick it
+  // (4.33): never the other one.
+  if (!walkerRowsFrameFits(kind, template, walkerRowCount({ rulesText: patch.rules_text }))) return false;
   return borrowedFrameFits(kind, template, {
     cardType: patch.card_type,
     supertype: patch.supertype,

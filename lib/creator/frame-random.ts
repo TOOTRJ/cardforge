@@ -19,6 +19,9 @@ import {
   tokenFrameFor,
   typeWordFrameFits,
   typeWordFrameFor,
+  walkerRowCount,
+  walkerRowsFrameFits,
+  walkerRowsFrameFor,
   type FrameChoice,
   type TokenFrameFace,
 } from "@/lib/creator/card-kinds";
@@ -103,19 +106,23 @@ export function resolveGeneratedFrame(input: {
       toughness: face?.toughness,
     }),
   };
+  const rows = walkerRowCount({ rulesText: face?.rulesText });
   const typed = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
       (basicLand || !templateIsBasicOnly(choice.template)) &&
       borrowedFrameFits(kind, choice.template, type) &&
-      typeWordFrameFits(kind, choice.template, face?.supertype),
+      typeWordFrameFits(kind, choice.template, face?.supertype) &&
+      // The borderless planeswalker's tall box is for four rows or more,
+      // the regular one for fewer (4.33): a gate, like the type words.
+      walkerRowsFrameFits(kind, choice.template, rows),
   );
   const boxed = typed.filter((choice) => tokenFrameFits(kind, choice.template, tokenFace));
   const pool = boxed.length > 0 ? boxed : typed;
 
   if (requested !== "random") {
-    const wanted = tokenFrameFor(kind, requested, tokenFace);
-    const asked = typeWordFrameFor(kind, requested, face?.supertype);
+    const wanted = walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);
+    const asked = walkerRowsFrameFor(kind, typeWordFrameFor(kind, requested, face?.supertype), rows);
     // The height asked for stands in only on the arch, whose textless frame
     // keeps the text on its scrim: a full-art height the text doesn't fit
     // would hide it (the textless height) or leave an empty box — the pool

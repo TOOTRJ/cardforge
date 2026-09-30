@@ -33,6 +33,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m15borderless",
   "m15borderlessartifact",
   "m15pw",
+  // The borderless planeswalkers (TODO 4.33): new templates with no stored
+  // card, so they joined without a bump (m15pw's slots and sizes).
+  "m15borderlesspw",
+  "m15borderlesspwtall",
   "m15token",
   "m15tokenartifact",
   // The text-box tokens (TODO 4.49 (b)): new templates with no stored card,
@@ -42,6 +46,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The borderless land (TODO 4.34): a new template, no stored card — it
   // joined without a bump too.
   "m15borderlessland",
+  // The emblem (TODO 4.52, CC 'Planeswalker Emblems'): a new template, no
+  // stored card, so it joined without a bump.
+  "emblem",
   // The full-art tokens (TODO 4.48 / 4.50): new templates with no stored
   // card — CC's name and type sizes are the family's (0.0381 H =
   // TITLE_SIZE_PCT, 0.0324 H = TYPE_SIZE_PCT) — so they joined without a

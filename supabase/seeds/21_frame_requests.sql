@@ -52,8 +52,9 @@ from (values
   ('fa000000-0000-4000-a000-000000000002', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', null, 'import', now() - interval '6 days'),
   ('fa000000-0000-4000-a000-000000000003', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', 'window-cropped', 'deck_prefill', now() - interval '45 days'),
   ('fa000000-0000-4000-a000-00000000000c', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '1 day'),
-  -- Oko, Thief of Crowns ELD #271: borderless planeswalker (4.33)
-  ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),
+  -- Oko, Thief of Crowns ELD #271: borderless planeswalker (4.33) in two
+  -- colours, whose split frame is 4.6's
+  ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),
   -- Plains ZNR #266: split-bar full-art basic (4.40)
   ('fa000000-0000-4000-a000-000000000005', null, 'fullart/basic/split-bar', 'Zendikar-style full-art basic land (split type bar)', 'znr', '266', '9591fd15-78d9-4089-a075-031ab2affd2d', 'nearest', 'missing', 'm15fullartland', 'frame-in-crop', 'import', now() - interval '9 days'),
   -- Valkyrie's Call FDN #27: the Nyx starfield on a modern enchantment (4.7)

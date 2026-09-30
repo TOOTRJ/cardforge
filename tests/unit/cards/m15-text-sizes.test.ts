@@ -53,8 +53,9 @@ const font: { ascender: number; descender: number; unitsPerEm: number } = openty
 describe("one M15-era display size (layout v32)", () => {
   it("prints every family frame's name and type line at TITLE_SIZE_PCT / TYPE_SIZE_PCT — both halves of a flip or aftermath", () => {
     // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
-    // land and 4.48 / 4.50's six full-art tokens.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(32);
+    // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
+    // planeswalkers and 4.52's emblem.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(35);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -95,6 +96,9 @@ describe("one M15-era display size (layout v32)", () => {
     // 0.041 H), so every family frame outside the thin-bar pair is 86 px.
     const box: Partial<Record<FrameTemplate, number | undefined>> = {
       m15pw: SET_SYMBOL_BOX_PCT_THIN_BAR,
+      // 4.33's borderless planeswalkers keep m15pw's symbol box.
+      m15borderlesspw: SET_SYMBOL_BOX_PCT_THIN_BAR,
+      m15borderlesspwtall: SET_SYMBOL_BOX_PCT_THIN_BAR,
       saga: SET_SYMBOL_BOX_PCT_THIN_BAR,
     };
     expect(SET_SYMBOL_BOX_PCT_THIN_BAR).toBe(0.0533);
@@ -164,6 +168,10 @@ describe("baselines (TextSlot.dy)", () => {
     // The planeswalker: its name centred on CC's plate (v27's relation to
     // the pips); its type line in M15's slot, on the prints' baseline.
     ["m15pw", undefined, cc],
+    // 4.33's borderless planeswalkers: m15pw's slots (the tall one's type
+    // band 138 px higher, its text on the same baseline in the band).
+    ["m15borderlesspw", undefined, cc],
+    ["m15borderlesspwtall", undefined, cc],
     // The tokens: the name's baseline kept; the type line's kept through its
     // band's move up onto CC's pill (82.6 → 82.14 %H), then onto the prints'
     // (TODO 4.49 (d)) from the re-cut pill's band (82.52 %H).
@@ -182,6 +190,12 @@ describe("baselines (TextSlot.dy)", () => {
       base.title,
       kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
     ],
+    // The emblem (TODO 4.52): a new template on Card Conjurer's master, set
+    // straight onto its prints' baselines — the name 3 px up from the band
+    // rule (193 → 190 px), "Emblem" 2 px up from the pill-centred band
+    // (1498 → 1496 px), measured on TFDN #24 / #25, TBLB #30, TDSK #17 and
+    // TFRA #16.
+    ["emblem", -3 / 1500, -2 / 1500],
     // The full-art tokens (TODO 4.48 / 4.50): new, set on the M20 prints'
     // baselines from CC's boxes — the name 4 px up, the type line 6 / 5 / 6
     // px up from its pill's centre (textless / regular / tall).
@@ -261,7 +275,10 @@ describe("baselines (TextSlot.dy)", () => {
 
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
     const kept15 = getFrameProfile("extendedart").type.dy!;
-    for (const t of ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw"]) {
+    for (const t of [
+      "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
+      "m15borderlesspw", "m15borderlesspwtall",
+    ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);
     }
     // Only on masters from the frames bucket (Card Conjurer's), and only on

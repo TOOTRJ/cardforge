@@ -34,6 +34,8 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/m15artifact/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "82954026d022", m: "21f2e51b2eac" },
   "/frames/m15borderless/pt/{color}.png": { w: "27f7c5b0b36d", u: "f5cfb86d08b1", b: "8aa1a934257b", r: "c04b88ddea3b", g: "22975809834a", c: "37051a7bc4ca", m: "d7d60b3cbd8e" },
   "/frames/m15borderlessartifact/pt/{color}.png": { w: "27f7c5b0b36d", u: "f5cfb86d08b1", b: "8aa1a934257b", r: "c04b88ddea3b", g: "22975809834a", c: "153362ead210", m: "d7d60b3cbd8e" },
+  "/frames/m15borderlesspw/loyalty/{color}.png": { w: "6af778da942a", u: "459f4b37f038", b: "5b45548e3899", r: "46f6a9e599dc", g: "d027941c7fd9", c: "ed5490591be4", m: "0d308c509dbb" },
+  "/frames/m15borderlesspwtall/loyalty/{color}.png": { w: "bf0ed1b51e08", u: "be312d933019", b: "d8c4a3ac7a57", r: "9ef2fcdad11f", g: "c13aed5d332d", c: "44a3d3324658", m: "4ac3957dae04" },
   "/frames/m15devoid/pt/{color}.png": { w: "aa94a0984a71", u: "aa94a0984a71", b: "aa94a0984a71", r: "aa94a0984a71", g: "aa94a0984a71", c: "aa94a0984a71", m: "aa94a0984a71" },
   "/frames/m15pw/loyalty/{color}.png": { w: "d69d28d0134d", u: "60a78b2232c6", b: "ca6ad18941f8", r: "ba92609978fb", g: "20f3cac491c6", c: "117ad7df3f73", m: "3437adf23b51" },
   "/frames/m15snow/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "82954026d022", m: "21f2e51b2eac" },

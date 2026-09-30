@@ -20,6 +20,7 @@ import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
 import {
   isBorrowedVariation,
+  isRowDress,
   isTextBoxDress,
   isTokenHeightDress,
   isTypeWordDress,
@@ -99,6 +100,9 @@ type AiFillDialogProps = {
   onGenerate: (options: AiFillOptions) => void;
   myDecks?: DeckOption[] | null;
   canDesignForDeck?: boolean;
+  /** Fields the open card can't have, never offered: an emblem's cost,
+   *  colour, rarity and stats (EMBLEM_UNFILLED_FIELDS, TODO 6.23). */
+  hiddenFields?: readonly CardFillField[];
 };
 
 export function AiFillDialog({
@@ -128,6 +132,7 @@ function AiFillDialogBody({
   onGenerate,
   myDecks = null,
   canDesignForDeck = false,
+  hiddenFields = [],
 }: Omit<AiFillDialogProps, "open" | "onOpenChange">) {
   const upgrade = useUpgradeModal();
   const [want, setWant] = useState<Set<CardFillField>>(
@@ -145,6 +150,7 @@ function AiFillDialogBody({
   const offered = CARD_FILL_FIELDS.filter(
     (field) =>
       (!revise || !CREATE_ONLY_FILL_FIELDS.includes(field)) &&
+      !hiddenFields.includes(field) &&
       // Stats only when the type prints them — unless the type itself is
       // being generated (create), in which case the AI decides.
       (field !== "stats" || statsAvailable || (!revise && want.has("card_type"))),
@@ -179,7 +185,8 @@ function AiFillDialogBody({
     // Nor is the token's text box: the text the AI writes picks it (TODO
     // 4.49 (b)) — "M15 Token" lands on it for a token with text — nor the
     // full-art token's height (4.48): "Token" lands on the regular or the
-    // tall box as the text asks.
+    // tall box as the text asks. Nor the borderless planeswalker's tall box:
+    // its rows pick it (4.33).
     const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>
@@ -188,7 +195,8 @@ function AiFillDialogBody({
         !isBorrowedVariation(kind, choice.template) &&
         !isTypeWordDress(kind, choice.template) &&
         !isTextBoxDress(kind, choice.template) &&
-        !isTokenHeightDress(kind, choice.template),
+        !isTokenHeightDress(kind, choice.template) &&
+        !isRowDress(kind, choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

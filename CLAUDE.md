@@ -337,6 +337,30 @@ Rules and gotchas:
   its height follows the text until a Variations pick
   (`lib/creator/token-frame-auto.ts`, wired into the form's round-11 effect;
   `docs/FRAMES.md` "Full-art tokens").
+- Emblems (TODO 4.52 + 6.23, migration 0130): `card_type` 'emblem' and the
+  `emblem` kind, reached ONLY through the token kind's Emblem choice
+  (`KIND_PICKER_KINDS` leaves it out of the kind chips; `kindPickerChip`
+  lights Token). The kind wears the `emblem` frame alone and the frame
+  dresses nothing else (`templateRefusesKind` both ways, so the server's
+  kind gate too); every save is colourless with no cost, supertype or stats
+  (`withEmblemShape` / `withEmblemUpdateShape`, `lib/cards/emblem.ts`), new
+  ones common, rarity chips hidden (`kindHidesRarity`); `buildTypeLine`
+  prints "Emblem" (+ " — subtype"). The frame is CC's one master in every
+  colour key (only `c` is referenced), its name pill, silver, type pill
+  and text box toned onto the prints (`EMBLEM_TONES`) and its spark's
+  centre ray bridged over above the art (`EMBLEM_RAY_BRIDGE`, CC
+  importer); its art window is
+  Scryfall's emblem `art_crop` box EXACTLY (a crop of the printed card, at
+  the prints' scale — never grown), CC's tall artBounds the `underFrameArt`
+  layer the spark's 80 % tail shows. Its page and new slug say "Emblem"
+  (`cardPageName`: "Kaito, Cunning Infiltrator Emblem", …-emblem, like
+  Scryfall) while the card prints the walker's name. Imports: "Emblem"
+  is the emblem card type (title minus " Emblem", subtype only on the
+  2014–19 look / AFR); registry `emblem/m20` exact, `emblem/2014-19` /
+  `emblem/old-frame` nearest, `emblem/one-off` unsupported. Emblems stay out
+  of the AI's design types AND its output enum (`designedCardsSchema`: a
+  fill may only PIN one); the lint errors on an emblem's cost or colour.
+  An emblem names no rarity on its card page (`cardTypeHasRarity`).
 - Art windows (TODO 7.6, layout v35): every art slot covers its master's
   see-through window with 0.05 % to spare and every translucent part the art
   shows through (`lib/frames/art-window.ts`; CI checks every template ×

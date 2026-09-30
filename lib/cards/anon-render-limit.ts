@@ -14,9 +14,9 @@ import type { RateLimitDenied } from "@/lib/api/responses";
 // when it can't:
 //   * a Square PNG or a JPEG of a card whose corner keeps what was drawn
 //     there (squareCornerFillsOf returns a null fill — the art-to-edge
-//     templates m15borderless, m15borderlessartifact, m15borderlessland,
-//     fullartland, and the drawn top corners of bloomburrow, lotr,
-//     tarkirdraconic);
+//     templates m15borderless, m15borderlessartifact, m15borderlessland, the
+//     borderless planeswalkers, fullartland, and the drawn top corners of
+//     bloomburrow, lotr, tarkirdraconic);
 //   * any download of a card with no servable stored bake (a missing bake, or
 //     a pending platform correction between a sweep bump's deploy and its
 //     sweep).

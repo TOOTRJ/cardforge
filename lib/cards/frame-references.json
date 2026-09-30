@@ -720,6 +720,35 @@
       "m": null
     }
   },
+  "emblem": {
+    "note": "The emblem (TODO 4.52, CC 'Planeswalker Emblems'): the M20 design every emblem since 2019-07-12 prints (the source's name in the dark bar, the art in the planeswalker spark, \"Emblem\" on the type bar). One colour key, c: an emblem is colourless (CR 114) and every one is on this silver frame. The 2014–19 EMBLEM-bar prints and the 2003 plaque resolve nearest (4.52 later / 4.43). Checked by eye too: TM20 #11 (the first M20 emblem), TBLB #30 (two lines, left), TFRA #16.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Vivien Reid Emblem",
+          "set": "tfdn",
+          "scryfallId": "a804d502-1092-4ff3-93d9-d1b0ac0f07d5",
+          "curated": true
+        },
+        {
+          "name": "Kaito, Cunning Infiltrator Emblem",
+          "set": "tfdn",
+          "scryfallId": "bfe4b1d5-f252-48fe-b4a1-7fbbc2523cf1"
+        },
+        {
+          "name": "Kaito, Bane of Nightmares Emblem",
+          "set": "tdsk",
+          "scryfallId": "435e707c-2b1d-48a7-ba75-c3c67824b50d"
+        }
+      ],
+      "m": null
+    }
+  },
   "m20token": {
     "note": "The full-art token design, M20 (2019-07-12) → today, textless height (CC 'Textless' token pack, its type pill re-cut 5 px onto the prints; TODO 4.48): M20+ prints with no rules text, measured textless (type pill ~81 %H). Mono-colour only: two colours print a gradient and legends a crown (4.6); m = three or more colours.",
     "colors": {
@@ -1653,6 +1682,200 @@
           "name": "Avengers Tower",
           "set": "msh",
           "scryfallId": "1292713f-1462-438f-a3a2-1f69ece99668"
+        }
+      ]
+    }
+  },
+  "m15borderlesspw": {
+    "note": "The light borderless planeswalker (TODO 4.33): mono-colour printings with three printed ability rows (a run of statics shares a row) and NO inverted flag, checked by eye on the Scryfall scans 2026-09-29. Two-colour walkers (Oko ELD #271, Saheeli BRO #294) print a split frame (4.6) and the dark inverted ones (Ashiok WOE #297, Ajani ECL #284) have no frame yet: neither is a reference. m = three colours (Narset IKO #278), the gold frame our master draws. c = Card Conjurer's 'Artifact Frame' with its rim made opaque (see frame-sources.json); Ugin M21 #279 and Karn DMU #372 print the see-through grey bars. b: most mono-black borderless walkers print dark name and type bars with white ink (M21 #282, DMU #373, VOW #278, INR #322 — the registry's dark-bars gap); Card Conjurer's b master is the light dress (dark ink on light grey bars) that only a few print (LIGHT_BLACK_WALKER_PINS); the three-row ones are Mythic Edition's Liliana, the Last Hope MED #GR2 and Sorin Markov MED #RA3. BLC #78 looks light but is the dark dress: white ink on dark see-through bars over pale art. Rares and mythics print the holo stamp in the bottom bar.",
+    "colors": {
+      "w": [
+        {
+          "name": "Basri Ket",
+          "set": "m21",
+          "scryfallId": "ed3906ea-df06-4299-a305-32e6ef476507"
+        },
+        {
+          "name": "Ajani, Caller of the Pride",
+          "set": "fdn",
+          "scryfallId": "9f329a0b-13cc-48c5-9fb7-38d8a537aa30"
+        },
+        {
+          "name": "Elspeth Resplendent",
+          "set": "snc",
+          "scryfallId": "66d75499-1be8-42a0-8520-9cd8adbd0ca3"
+        }
+      ],
+      "u": [
+        {
+          "name": "Mordenkainen",
+          "set": "afr",
+          "scryfallId": "a8df51c3-cd9c-45eb-ac70-d13976e0e1c4"
+        },
+        {
+          "name": "Jace, Mirror Mage",
+          "set": "znr",
+          "scryfallId": "961bb827-f13a-417d-8284-5cd2aac3d034"
+        }
+      ],
+      "b": [
+        {
+          "name": "Liliana, the Last Hope",
+          "set": "med",
+          "scryfallId": "7ffc77bf-21e7-4e1e-a635-d6b61213b3e1"
+        },
+        {
+          "name": "Sorin Markov",
+          "set": "med",
+          "scryfallId": "ab6ccbe1-937e-405b-afd5-333abfd5c6a5"
+        }
+      ],
+      "r": [
+        {
+          "name": "Chandra, Heart of Fire",
+          "set": "m21",
+          "scryfallId": "1e494793-ec53-46dc-a5db-90dadc8cc015"
+        },
+        {
+          "name": "Chandra, Flameshaper",
+          "set": "fdn",
+          "scryfallId": "02db5a2d-28d3-4f57-9045-f0ef16d8aad1"
+        },
+        {
+          "name": "Zariel, Archduke of Avernus",
+          "set": "afr",
+          "scryfallId": "6ad8828d-96b8-432f-bcee-3a60b6ef1270"
+        }
+      ],
+      "g": [
+        {
+          "name": "Garruk, Unleashed",
+          "set": "m21",
+          "scryfallId": "bd16e1a6-0ece-44d5-8221-25892178e927"
+        },
+        {
+          "name": "Vivien Reid",
+          "set": "fdn",
+          "scryfallId": "37cc3e80-2ffa-4d48-bd67-a6315375b236"
+        },
+        {
+          "name": "Vivien on the Hunt",
+          "set": "snc",
+          "scryfallId": "3979b3d5-7551-4161-bfe5-fe4b54fd96e5"
+        }
+      ],
+      "c": [
+        {
+          "name": "Ugin, the Spirit Dragon",
+          "set": "m21",
+          "scryfallId": "1bacda35-bb91-4537-a14d-846650fa85f6"
+        },
+        {
+          "name": "Karn, Living Legacy",
+          "set": "dmu",
+          "scryfallId": "493341c3-1f59-4d7e-b852-1449a2333be9"
+        }
+      ],
+      "m": [
+        {
+          "name": "Narset of the Ancient Way",
+          "set": "iko",
+          "scryfallId": "91ac6589-75ee-4fbf-8056-1860c1482592"
+        }
+      ]
+    }
+  },
+  "m15borderlesspwtall": {
+    "note": "The tall borderless planeswalker (TODO 4.33): four printed ability rows (a run of statics shares a row; The Wandering Emperor NEO #303 prints Flash and its static in one), light rows, checked by eye on the Scryfall scans 2026-09-29. c: The Aetherspark DFT #376 is the one light colourless tall printing — a serialized headliner (XXX/500 stamped on the art) and an Artifact Planeswalker: confirm the bars by eye. m = three colours (MH2 #304 / #305). b: the light dress of Card Conjurer's b master (AFR #284, STX #276); most black walkers print dark bars with white ink (FDN #359, FRA #303 — the dark-bars gap).",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Elspeth, Sun's Nemesis",
+          "set": "thb",
+          "scryfallId": "fedff53b-b5c7-470e-bb66-797d5d20b983"
+        },
+        {
+          "name": "The Wandering Emperor",
+          "set": "neo",
+          "scryfallId": "71327818-2784-4fde-8e19-ef8677694a5f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Teferi, Master of Time",
+          "set": "m21",
+          "scryfallId": "ba95c4fc-f0fc-4bfe-bef7-694c3d82a6c7"
+        },
+        {
+          "name": "Teferi, Temporal Pilgrim",
+          "set": "bro",
+          "scryfallId": "fee692dd-4030-4783-92a8-21304e40533a"
+        },
+        {
+          "name": "Kaito, Cunning Infiltrator",
+          "set": "fdn",
+          "scryfallId": "be447408-0846-49be-b47e-c6f256032deb"
+        }
+      ],
+      "b": [
+        {
+          "name": "Lolth, Spider Queen",
+          "set": "afr",
+          "scryfallId": "d00e1624-06f6-4377-96a4-842adfa78778"
+        },
+        {
+          "name": "Professor Onyx",
+          "set": "stx",
+          "scryfallId": "c2ad8536-15f6-42c1-8521-dc37feee8e67"
+        }
+      ],
+      "r": [
+        {
+          "name": "Jaya, Fiery Negotiator",
+          "set": "dmu",
+          "scryfallId": "2e4a532c-94c3-4302-9fba-af8396329890"
+        },
+        {
+          "name": "Chandra, Hope's Beacon",
+          "set": "mom",
+          "scryfallId": "62707510-96ae-492f-8b14-a34d0c9fb859"
+        }
+      ],
+      "g": [
+        {
+          "name": "Tyvar Kell",
+          "set": "khm",
+          "scryfallId": "a19b35ee-03ba-43f0-8c57-29718c899719"
+        },
+        {
+          "name": "Wrenn and Realmbreaker",
+          "set": "mom",
+          "scryfallId": "17269aae-10bc-49ef-b6a7-94e0dd6cf677"
+        },
+        {
+          "name": "Wrenn and Seven",
+          "set": "mid",
+          "scryfallId": "3628a023-3f69-4b7f-a6cc-42e4293ecfdd"
+        }
+      ],
+      "c": [
+        {
+          "name": "The Aetherspark",
+          "set": "dft",
+          "scryfallId": "934cc1ca-2ce8-4062-b1b7-1976e76da8b6"
+        }
+      ],
+      "m": [
+        {
+          "name": "Dakkon, Shadow Slayer",
+          "set": "mh2",
+          "scryfallId": "4538baaf-cb79-45f8-a06b-9f5e773920fa"
+        },
+        {
+          "name": "Geyadrone Dihada",
+          "set": "mh2",
+          "scryfallId": "69ef067b-58ac-4b88-a983-83316d157fcb"
         }
       ]
     }

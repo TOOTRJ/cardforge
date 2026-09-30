@@ -439,12 +439,17 @@ export function slotKindFor(path: string): SlotKind {
  *  the arch — so until then the score leaves this box out. */
 export const HOLO_STAMP_ARCH: Rect = { topPct: 90, leftPct: 42.67, widthPct: 14.67, heightPct: 5.24 };
 
-/** The borderless templates, whose rares and mythics print the arch (the
- *  land's too: nearly every borderless nonbasic land is rare, 4.34). */
+/** The templates whose prints arch a pinline around the holo stamp: the
+ *  borderless M15 pair and its land (nearly every borderless nonbasic land
+ *  is rare, 4.34), and 4.33's borderless planeswalkers, whose ability
+ *  window's bottom rim arches the same way over the stamp (Basri Ket M21
+ *  #280, Liliana FDN #359: ≈ 640–870 px, from ≈ 1915 px). */
 const HOLO_STAMP_ARCH_TEMPLATES: ReadonlySet<string> = new Set([
   "m15borderless",
   "m15borderlessartifact",
   "m15borderlessland",
+  "m15borderlesspw",
+  "m15borderlesspwtall",
 ]);
 
 /** The printed details a template's master doesn't draw, left out of its
