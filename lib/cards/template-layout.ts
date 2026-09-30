@@ -2867,19 +2867,61 @@ const M15TEXTLESSLAND: FrameProfile = {
   hideCost: true,
 };
 
+/**
+ * The standard legendary crown (TODO 4.6a; design 2026-09-29 §1.1) — Card
+ * Conjurer's M15 crown over its black "Legend Crown Border Cover", built by
+ * scripts/import-cc-frames.mjs (`--only m15crown`) as ONE band per key: the
+ * top 410 px of the 1500 × 2100 card (the crown's arms run down the frame
+ * beside the art to 19.4 %H), stretched over the card's full width. It
+ * repaints the frame's top border and draws the crown's scallops, arms and
+ * the soft shadow over the top ~8 px of the art (α ≤ 60), and nothing moves:
+ * the title bar, the art window and every slot keep their place (the band
+ * has a hole for the title bar). The prints: FDN #2 / #45 / #72 / #91 / #106
+ * (mono), #243 (gold), NEO #266–278 (lands), UMA #241 (colourless land),
+ * FDN #677 (colourless artifact) — peak at row 42 ± 2 at HD.
+ *
+ * Keys (resolveFrameOverlays: the pinline of the master actually drawn):
+ * the colour (w u b r g), "m" gold (three or more colours, or a pair drawn
+ * gold), "c" the colourless grey (m15's see-through Eldrazi frame, UMA #6),
+ * "a" the artifact silver and "l" the land grey (the entries' keyMap maps a
+ * colourless card there), and the ten pairs (the first colour's crown on the
+ * left, split through the untilted 43→55 %W ramp) — drawn only where the
+ * two-colour frame is (FrameProfile.twoColorMasters, 4.6b). Opt-in per card
+ * (FrameStyle.crown === true): declaring it changes no stored card.
+ *
+ * Set only on the PROFILES entries m15, m15artifact and m15land — never on
+ * M15 / M15LAND, which 12 other profiles spread (snow, devoid, borderless,
+ * extended art, the showcases and m15snowland draw other crowns, 4.6f).
+ */
+export const M15_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  // Rows 0–409 of the HD card, exactly (410 / 2100).
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (410 / 2100) * 100 },
+  assetPathTemplate: "/frames/m15crown/{key}.png",
+  // CROWN_BAND_KEYS in scripts/lib/cc-frames.mjs — the importer's list (a
+  // unit test holds them together); the pairs in printed order
+  // (TWO_COLOR_PAIRS).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
   // spread M15 don't inherit it.
   // The CC cost lift and type-line baseline (CC_M15_COST_DY /
   // CC_M15_TYPE_DY) are set here too, for the same reason.
+  // The legendary crown (TODO 4.6a) is set here too, and on the m15land
+  // and m15artifact entries below — never on a base another profile spreads.
   m15: {
     ...M15,
     costDy: CC_M15_COST_DY,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [M15_CROWN],
   },
-  m15land: M15LAND,
+  // A land's crown is its colour (NEO #266–278); a colourless land's the
+  // land grey "l" (UMA #241 Dark Depths).
+  m15land: { ...M15LAND, overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }] },
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
@@ -2900,7 +2942,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
-  m15artifact: M15ARTIFACT,
+  // A coloured artifact's crown is its colour (NEO #74, M20 #131); a
+  // colourless artifact's the artifact silver "a" (FDN #677).
+  m15artifact: { ...M15ARTIFACT, overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }] },
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15snow: M15SNOW,

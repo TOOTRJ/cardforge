@@ -338,6 +338,110 @@
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)"
     ]
   },
+  "m15crown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js, groupAccurate.js — the pack the M15 masters come from)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x410 overlay band: rows 0–409 of a 1500x2100 card composited at 2010x2814, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/w.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "u": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/u.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "b": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/b.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "r": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/r.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "g": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/g.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "m": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/m.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "a": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/a.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "l": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/l.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "c": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/c.png at 2.19/1.88/95.62×17.52 %"
+      ],
+      "wu": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "wb": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "ub": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "ur": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "br": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "bg": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "rg": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "rw": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "gw": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ],
+      "gu": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/black.png",
+      "img/frames/m15/crowns/new/a.png",
+      "img/frames/m15/crowns/new/b.png",
+      "img/frames/m15/crowns/new/c.png",
+      "img/frames/m15/crowns/new/g.png",
+      "img/frames/m15/crowns/new/l.png",
+      "img/frames/m15/crowns/new/m.png",
+      "img/frames/m15/crowns/new/r.png",
+      "img/frames/m15/crowns/new/u.png",
+      "img/frames/m15/crowns/new/w.png"
+    ],
+    "notes": [
+      "the standard legendary crown, drawn over the m15, m15artifact and m15land masters (TODO 4.6a; design 2026-09-29 §1.1): CC's autoM15NewFrame draws the black 'Legend Crown Border Cover' then the crown after the P/T plate — here composited alone at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
+      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 43→55 %W (the prints' crown split measures 42.7 / 48.5 / 53.0 %W at 10 / 50 / 90 % on FDN's gold pairs, 43.8 / 50.1 / 54.3 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
+      "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in"
+    ]
+  },
   "m15devoid": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
