@@ -352,31 +352,10 @@ Rules and gotchas:
   (adventure keeps that). A frame-compare save that moves an `artSlot`
   passes the same check on the bake's own masters or is refused
   (`lib/frames/art-window-override.ts`).
-- Printed pieces a card SWITCHES ON (TODO 4.6.0; the additions rule above):
-  `frame_style.crown` / `frame_style.twoColor`, drawn only when `=== true`
-  (`lib/cards/anatomy.ts`) — absent = the card's old look, so declaring a
-  piece changes no stored
-  card and needs no bump or sweep. New cards start on (`NEW_CARD_ANATOMY`;
-  `createCardAction` stamps `newCardFrameStyle`), every save drops a switch
-  its template can't draw (`normalizeAnatomy`), imports follow the printing
-  (`printed_crown` — off on a showcase — `printed_two_color`, `color_pair`),
-  and an edit sends only `frame_anatomy`, never frame_style. The colour PAIR
-  is card data (two WUBRG words; the multicolor token ignored; the "Two
-  colours" row, pre-filled from the cost — never derived at render); the
-  DRESS is `twoColorDressOf(cost)`. A template draws a piece only via its
-  PROFILES entry (`overlays`, `twoColorMasters` — never a spread base);
-  overlays draw right after the frame and in both finish masks, preloaded by
-  `frameAssetPathsFor`; the bake's master / plate / overlay keys match the
-  preview's (`anatomy-key-parity.test.ts`). `docs/FRAMES.md` "Printed pieces".
-  4.6a + 4.6b (one release): m15, m15artifact and m15land draw the crown
-  (`M15_CROWN`, a 1500×410 `m15crown/<key>` band, the drawn master's pinline
-  key, a pair master's split band; showcase imports crownless) and the pairs
-  — m15 gold-split `<pair>` + hybrid `<pair>-h`, the other two gold-split —
-  40 bucket masters the CC importer builds over
-  the verified masters' own files (`pairMasterLayers`), every split through
-  the ONE untilted ramp module `scripts/lib/pair-ramp.mjs` (pinline 40→60,
-  box 46→58, crown 43→55 %W, premultiplied lerp — never CC's tilted
-  `maskRightHalf`); a pair rides its template's `m` tick (owner, V-A).
+- Printed pieces a card SWITCHES ON (crown, two-colour; 4.6): `frame_style.crown`
+  / `twoColor`, drawn only `=== true` (`lib/cards/anatomy.ts`); new cards start
+  on, every save runs `normalizeAnatomy`, an edit sends only `frame_anatomy`,
+  and a piece is declared on a `PROFILES` entry only — `docs/FRAMES.md` "Printed pieces".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

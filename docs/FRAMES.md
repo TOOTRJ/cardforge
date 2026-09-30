@@ -235,7 +235,7 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   2010×2814, downscaled once, corner cut and cropped to rows 0–409: one
   1500×410 band per key, CC's nine (w u b r g, m, a, l, c) plus the ten
   pairs (the first colour's crown lerped into the second's across the
-  untilted 43→55 %W ramp). The importer fails a band with alpha below row
+  untilted 45→55 %W ramp). The importer fails a band with alpha below row
   409, a peak off row 42 ± 2 or more than a shadow (α ≤ 127) over the art.
   Build it with `node scripts/import-cc-frames.mjs --only m15crown`.
 
@@ -826,20 +826,29 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   no stored card, and needs no `CARD_LAYOUT_VERSION` bump.
 - **Who sets them:** a new card starts with every switch on
   (`NEW_CARD_ANATOMY` in the creator; `createCardAction` stamps
-  `newCardFrameStyle` for a payload that names none — the AI jobs). An import
+  `newCardFrameStyle` for a payload that names none — the AI jobs; a remix,
+  the creator's or the AI deck remix of an own card, keeps its parent's
+  explicit ones, `storedAnatomyOf`). An import
   follows the printing (`printed_crown`: Scryfall's `legendary` frame effect,
   off on a showcase printing; `printed_two_color`: a 2015-frame printing of
   exactly two colours). A stored card shows each switch OFF with a one-line
   hint in the editor (`AnatomyPanel`) until its owner turns it on; an edit
   sends only `frame_anatomy`, merged over the stored `frame_style`
-  (`applyFrameAnatomyPatch`).
+  (`applyFrameAnatomyPatch`). A switch (and its hint) shows only where it
+  can draw: the crown on a Legendary non-planeswalker; the two-colour frame
+  on a pair, or a plain `["multicolor"]` card whose cost spans two colours
+  or has no coloured pip (`offersTwoColor` — never three colour words, never
+  a Multicolor card whose cost spans one or three-plus).
 - **Every save** drops a switch its template can't draw (`normalizeAnatomy`),
   so a template that gains a piece later (4.6f) never changes a card stored
   on it before.
 - **The colour pair** is `color_identity` with exactly two WUBRG words (the
   AI's `multicolor` token is ignored), picked in the Colour step's "Two
   colours" row and pre-filled from the cost (`twoColorFromCost`,
-  `useTwoColorPairFollow`) — never derived at render. A stored
+  `useTwoColorPairFollow`, which also takes a pair it filled back to plain
+  Multicolor when the card moves to a frame that doesn't draw pairs) — never
+  derived at render. On the Pips step a card that holds a pair is prompted
+  when its cost names another pair or three colours (the "Switch" prompt). A stored
   `["multicolor"]` card gets it only when its owner switches the two-colour
   frame on (a refinement; a stored mono or three-colour card is never
   re-coloured). The **dress** is print's for the cost (`twoColorDressOf`):
@@ -866,7 +875,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   `twoColorRecipe` (CC's cardFrameProperties, corrected) and `CROWN_BAND`.
   The split itself lives in ONE module, `scripts/lib/pair-ramp.mjs`, which
   both the pair masters and the pair crown bands read: the untilted
-  `rampMask` (`PAIR_RAMPS`: pinline 40→60, text box 46→58, crown 43→55 %W)
+  `rampMask` (`PAIR_RAMPS`: pinline 40→60, a hybrid's outer frame 44→57,
+  text box 45→57, crown 45→55 %W)
   and the premultiplied `lerpLayers` (`blendPair` = the two together).
 
 Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
@@ -920,18 +930,29 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   it; m15artifact from regions only, like its coloured artifacts. A split
   region is its two colours' files blended across an UNTILTED ramp by a
   premultiplied lerp — `scripts/lib/pair-ramp.mjs`, the one module the pair
-  crown bands read too: pinline and a hybrid's frame 40→60 %W, text box
-  46→58, crown 43→55 (CC's `maskRightHalf.png` tilts +1.35 %W; the prints
-  don't). The same run rebuilds the templates' mono masters byte-identical
+  crown bands read too: pinline 40→60 %W, a hybrid's outer frame 44→57,
+  text box 45→57, crown 45→55 (CC's `maskRightHalf.png` tilts +1.35 %W; the
+  prints don't). The same run rebuilds the templates' mono masters byte-identical
   to the manifest, and every pair master passes the edge contract, the
   corner check, the square-corner table and the art-window check with no
   known-failure entry (v35's `CC_M15_ART_SLOT` covers their window like the
   mono masters').
 - **Measured like the prints** (`tests/unit/render/two-colour-bake-pixels.test.tsx`
   bakes them at HD): the pinline's 10 / 50 / 90 % points at 10.8 and
-  55.9 %H within ±1.5 %W of the 47 prints' 42.2 / 50.3 / 58.8 with no tilt,
-  the text box's within ±1.5 of the 37 prints' 47.2 / 51.3 / 56.8, the first
-  canonical colour (WU WB UB UR BR BG RG RW GW GU) on the left.
+  55.9 %H within ±1.5 %W of the 47 prints' 42.2 / 50.3 / 58.8 with no tilt;
+  the text box's, and a hybrid's outer frame band above the title bar
+  (2.95–4.15 %H), each pixel de-shaded against the same pixel of the two
+  single-colour bakes, within ±1.0 of the prints measured the same way —
+  45.9 / 50.6 / 55.3 (FDN, text-free rows) and 45.1 / 50.3 / 55.6 (TLA ×10);
+  the first canonical colour (WU WB UB UR BR BG RG RW GW GU) on the left.
+  **Re-measured 2026-09-29 (the 4.6 review), before any card used them:**
+  the design had folded the hybrid's frame band into the pinline's 40→60
+  (the prints split it steeper: FDN #656 / #668 show both on one card), and
+  its text-box and crown figures (47.2 / 51.3 / 56.8; 42.7 / 48.5 / 53.0)
+  came from a column profile that the text and the crown's own shading
+  skew — so the frame band went 40→60 → 44→57, the text box 46→58 → 45→57
+  and the crown 43→55 → 45→55, and the 40 pair masters and 10 pair crowns
+  were rebuilt (the mono masters and crowns byte-identical).
 - **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
@@ -941,11 +962,14 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   split and pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
-  the second's across 43→55 %W, the same `pair-ramp.mjs`), on every dress and
+  the second's across 45→55 %W, the same `pair-ramp.mjs`), on every dress and
   template; with the two-colour switch off it stays gold under a gold crown.
-  Measured in a real HD bake: 44.2 / 49.0 / 53.7–53.8 %W at 10 / 50 / 90 % on
-  all ten pairs (the prints: 42.7 / 48.5 / 53.0 on FDN's crowned gold pairs,
-  43.8 / 50.1 / 54.3 on TLA's hybrids).
+  Measured on the bands (each pixel de-shaded against the two single-colour
+  crowns, rows 4.42–4.66 %H): 46.0 / 50.0 / 54.0 %W at 10 / 50 / 90 % on all
+  ten pairs; the prints, measured the same way against their own
+  single-colour crowns: 45.5 / 49.3 / 53.6 on FDN's crowned gold pairs
+  (#122 #123 #115 #651 #126 #119 #245, MKM #238), 46.4 / 49.4 / 53.6 on
+  TLA's hybrids (`tests/unit/frames/crown-band.test.ts` holds ±1.0).
 - **Verification (owner decision 2026-09-29, V-A):** a pair rides its
   template's `m` tick — a deterministic recipe over the verified masters,
   like `a` riding `c` — and the owner signs off a pair sheet in the PR

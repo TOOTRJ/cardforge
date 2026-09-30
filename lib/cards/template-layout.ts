@@ -3203,7 +3203,10 @@ const M15TEXTLESSLAND: FrameProfile = {
  * top 410 px of the 1500 × 2100 card (the crown's arms run down the frame
  * beside the art to 19.4 %H), stretched over the card's full width. It
  * repaints the frame's top border and draws the crown's scallops, arms and
- * the soft shadow over the top ~8 px of the art (α ≤ 60), and nothing moves:
+ * a soft shadow over the top of the art — α ≤ 79 on the art you can see,
+ * rows 238–244 px (α ≤ 119 inside the art slot only where the frame's own
+ * window edge sits on top of it; the importer refuses a band above 127;
+ * measured on all 19 bands after v35) — and nothing moves:
  * the title bar, the art window and every slot keep their place (the band
  * has a hole for the title bar). The prints: FDN #2 / #45 / #72 / #91 / #106
  * (mono), #243 (gold), NEO #266–278 (lands), UMA #241 (colourless land),
