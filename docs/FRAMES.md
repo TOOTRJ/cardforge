@@ -663,7 +663,7 @@ The standard operating procedure for one template:
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
 move on fewer templates than its bakes change on) or the override changes;
-`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36) never stale one (v36's
+`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37) never stale one (v36's
 4.47 moved the planeswalkers' `symbolRect`, a box the alignment score reads,
 but the owner kept it neutral as v32's 15 px m15pw cost-box move was — owner
 round 18, 2026-09-30), and a
@@ -940,6 +940,28 @@ visual matrix (1,046 cases) against v35: 536 change, every one inside the
 scope, and the scope holds no unchanged case. Verification-neutral, the
 walkers included (owner round 18; `VERIFICATION_NEUTRAL_VERSIONS`, see
 [When a tick goes stale](#verifying-a-frame)): no tick goes stale.
+
+### Nyx's type bar and text box (layout v37)
+
+TODO 4.17e, owner rounds 13 and 18 (2026-09-29 / 30); its own small bump so
+v36 shipped without it. MSE's Theros constellation masters paint the type bar
+and the text box flat black at α 127.5 (50 %), and since v35 the art runs
+under both (4.17b). On the THB constellation prints (#258 Daxos, #259 Heliod,
+#268 Klothys; median luminance without the text over the art window's bottom
+strip) the box lets 0.28–0.39 of the art through (mean 0.33) and the bar
+0.36–0.46; ours let 0.50 through both. The seven masters are rebuilt from
+MSE's sources with the box's black at α 171 (0.33 through) and the bar's at
+α 150 (0.41, the range's middle; the prints' bar reads 1.19–1.35 × their box,
+and 150 over 171 gives 1.25): `node scripts/build-variation-frames.mjs --only
+nyx`, which runs `scripts/lib/nyx-tone.mjs` before the corner normalisation
+and refuses a master already toned; then the WebP siblings. Only MSE's black
+changes (122,130 px on the bar, 766,082 in the box) and the frame's
+anti-aliased edge within 3 px of it, which keeps its colour and coverage over
+the darker black — 907,896 px per master, rows 1197–1938. Template-scoped
+(`TEMPLATE_SCOPED_VERSIONS[37]` = nyx: every nyx card, art or none);
+production, anonymous read 2026-09-30: 0 cards on nyx. The visual matrix
+against v36: the 19 nyx cases change and no other. Verification-neutral (no
+slot moves, and nyx has no tick).
 
 ### Printed pieces a card switches on
 
@@ -1857,7 +1879,9 @@ verification-neutral (as v31–v33) and a "sweep"
   to 92.7 %): `artSlot` 6/11.2/88 × 81.8, to 93 % (was 70, ending at 81.2 %:
   the box's last 241 px were #101015 — a seam across the rules text). The
   window's crop comes from the taller slot, so a landscape picture sits
-  about 17 % larger in the window than before.
+  about 17 % larger in the window than before. The bar and box over it are
+  the prints' darkness since layout v37 (α 150 / 171, was MSE's 128 —
+  [Nyx's type bar and text box](#nyxs-type-bar-and-text-box-layout-v37)).
 - **fullart (4.17b).** `artSlot` 3.8/2.7/92.4 × 90.3: to 93 % (was 88.3: a
   31 px dark strip along the translucent box's bottom) and out to whole
   pixels past the hedron ring's anti-aliased rim (57–1443 × 56.7 px; the
