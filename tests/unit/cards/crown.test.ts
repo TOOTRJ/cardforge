@@ -61,8 +61,26 @@ describe("the crown's key — the pinline of the master drawn", () => {
   it("three or more colours, a multicolour token, and a pair drawn gold: the gold crown", () => {
     expect(crownKeyFor(legendary(["white", "blue", "black"]), m15)).toBe("m");
     expect(crownKeyFor(legendary(["multicolor"]), m15)).toBe("m");
-    // No pair masters on m15 yet (4.6b): a two-colour card is drawn gold.
-    expect(crownKeyFor(legendary(["white", "blue"], { cost: "{1}{W}{U}", frameStyle: { crown: true, twoColor: true } }), m15)).toBe("m");
+    // A pair with its two-colour switch off (or absent — a stored card) is
+    // drawn gold, so its crown is gold too.
+    expect(crownKeyFor(legendary(["white", "blue"], { cost: "{1}{W}{U}", frameStyle: { crown: true } }), m15)).toBe("m");
+    expect(crownKeyFor(legendary(["white", "blue"], { cost: "{1}{W}{U}", frameStyle: { crown: true, twoColor: false } }), m15)).toBe("m");
+  });
+
+  it("a pair drawn as its pair master (4.6b): the split crown in printed order, on every dress and template", () => {
+    const both = { crown: true, twoColor: true };
+    // Gold-split and hybrid on m15; the first canonical colour left (U|B,
+    // whatever order the identity was stored in).
+    expect(crownKeyFor(legendary(["white", "blue"], { cost: "{1}{W}{U}", frameStyle: both }), m15)).toBe("wu");
+    expect(crownKeyFor(legendary(["black", "blue"], { cost: "{U}{B}", frameStyle: both }), m15)).toBe("ub");
+    expect(crownKeyFor(legendary(["green", "white"], { cost: "{G/W}{G/W}", frameStyle: both }), m15)).toBe("gw");
+    // The artifact frame (its hybrid falls back to the gold-split master) and
+    // the land frame wear the same split band.
+    expect(crownKeyFor(legendary(["red", "white"], { cardType: "artifact", cost: "{R/W}{R/W}", frameStyle: both }), artifact)).toBe("rw");
+    expect(crownKeyFor(legendary(["black", "red"], { cardType: "land", cost: null, frameStyle: both }), land)).toBe("br");
+    // Three colours stay gold with the switch on; the crown switch off draws none.
+    expect(crownKeyFor(legendary(["white", "blue", "black"], { frameStyle: both }), m15)).toBe("m");
+    expect(crownKeyFor(legendary(["white", "blue"], { cost: "{1}{W}{U}", frameStyle: { twoColor: true } }), m15)).toBeNull();
   });
 
   it("colourless: m15's see-through grey, the artifact silver, the land grey", () => {
