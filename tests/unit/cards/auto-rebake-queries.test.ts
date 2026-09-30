@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // getAutoRebakeOverview: /admin/renders looks the poisoned cards up (title,
@@ -6,7 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // and prints only their count, so it must not query cards/profiles at all.
 // The tile also asks `cachePending: true`: the owed count (a service-role
 // head count over every published card) is reused for up to 60 s, while
-// /admin/renders keeps counting fresh (owner, 2026-09-29).
+// /admin/renders keeps counting fresh (owner, 2026-09-29). "Up to 60 s" is
+// a promise unstable_cache alone doesn't keep — past `revalidate` Next still
+// returns the stale entry (refreshing it in the background) — so the stand-in
+// below behaves the same way, and the tile must not print that stale count.
 // ---------------------------------------------------------------------------
 
 type CacheOptions = { revalidate?: number | false; tags?: string[] };
@@ -17,9 +20,12 @@ const mocks = vi.hoisted(() => ({
   countSweepCandidates: vi.fn(),
   // What unstable_cache was configured with, and a stand-in Data Cache that
   // keeps what the wrapped function resolved to per argument list — and,
-  // like Next's, nothing when it throws.
+  // like Next's, nothing when it throws. Like Next's in an App Router
+  // request (next/dist/server/web/spec-extension/unstable-cache.js), an
+  // entry past `revalidate` is still RETURNED and only refreshed in the
+  // background.
   cacheConfigs: [] as Array<{ keyParts: string[] | undefined; options: CacheOptions | undefined }>,
-  dataCache: new Map<string, unknown>(),
+  dataCache: new Map<string, { value: unknown; storedAt: number }>(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -31,10 +37,18 @@ vi.mock("next/cache", () => ({
     mocks.cacheConfigs.push({ keyParts, options });
     return async (...args: A): Promise<R> => {
       const key = JSON.stringify([keyParts, args]);
-      if (mocks.dataCache.has(key)) return mocks.dataCache.get(key) as R;
-      const value = await fn(...args);
-      mocks.dataCache.set(key, value);
-      return value;
+      const refresh = async () => {
+        const value = await fn(...args);
+        mocks.dataCache.set(key, { value, storedAt: Date.now() });
+        return value;
+      };
+      const entry = mocks.dataCache.get(key);
+      if (!entry) return refresh();
+      const revalidate = options?.revalidate;
+      if (typeof revalidate === "number" && Date.now() - entry.storedAt > revalidate * 1000) {
+        void refresh().catch(() => {});
+      }
+      return entry.value as R;
     };
   },
 }));
@@ -82,6 +96,10 @@ beforeEach(() => {
     poison: [{ id: ID, error: "Art unavailable", failures: 3, at: "2026-09-29T10:00:00.000Z" }],
   });
   mocks.countSweepCandidates.mockResolvedValue(5);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("getAutoRebakeOverview", () => {
@@ -139,6 +157,27 @@ describe("getAutoRebakeOverview — the owed count's cache", () => {
     const retried = await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
     expect(retried.pending).toBe(6);
     expect(mocks.countSweepCandidates).toHaveBeenLastCalledWith(expect.anything(), []);
+  });
+
+  it("never prints a count older than 60 s, though the Data Cache still hands back its stale entry", async () => {
+    const T0 = Date.parse("2026-09-29T09:00:00.000Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0);
+    // A sweep bump: 700 owed at 09:00; the cron clears them within the hour.
+    mocks.countSweepCandidates.mockResolvedValueOnce(700).mockResolvedValue(0);
+    const tile = () => getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+
+    expect((await tile()).pending).toBe(700);
+    vi.setSystemTime(T0 + 59_000);
+    expect((await tile()).pending).toBe(700);
+    expect(mocks.countSweepCandidates).toHaveBeenCalledTimes(1);
+
+    // The admin's next visit is after lunch: the entry is stale, and Next
+    // would return it as is — the tile counts now instead.
+    vi.setSystemTime(T0 + 4 * 60 * 60_000);
+    const later = await tile();
+    expect(later.pending).toBe(0);
+    expect(later.readAt).toBe(T0 + 4 * 60 * 60_000);
   });
 
   it("never caches a failed count: it reads null, and the next visit counts again", async () => {

@@ -45,20 +45,53 @@ export const REBAKE_OWED_TAG = "rebake-owed";
 /** How long the tile may reuse that count (seconds). */
 export const REBAKE_OWED_REVALIDATE_SECONDS = 60;
 
+/** A cached owed count and when it was taken (epoch ms). */
+type OwedCount = { count: number; countedAt: number };
+
 /**
  * The owed count (countSweepCandidates: a service-role head count over every
  * published card), reused across requests for up to a minute — /dashboard is
- * an admin's landing page, and the count needn't run on every visit. Keyed by
- * the excluded poison ids (a Retry or a new strike changes them → a fresh
- * count) and the sweep version (the Data Cache can outlive a deploy; a
- * sweep bump must not show the old version's count). A failed count throws, so
- * nothing is cached; the caller's catch turns it into null.
+ * an admin's landing page, and the count needn't run on every visit. It is
+ * one GLOBAL number (no viewer in it: service role, no cookies), so every
+ * admin may share it. Keyed by the excluded poison ids (a Retry or a new
+ * strike changes them → a fresh count) and the sweep version (the Data Cache
+ * can outlive a deploy; a sweep bump must not show the old version's count).
+ * A failed count throws, so nothing is cached; the caller's catch turns it
+ * into null. Read it through countOwedRebakes(), never directly: see there.
  */
 const countOwedRebakesCached = unstable_cache(
-  async (excludeIds: string[]): Promise<number> => countSweepCandidates(createAdminClient(), excludeIds),
+  async (excludeIds: string[]): Promise<OwedCount> => ({
+    count: await countSweepCandidates(createAdminClient(), excludeIds),
+    countedAt: Date.now(),
+  }),
   [REBAKE_OWED_TAG, `sweep-v${latestSweepVersion()}`],
   { revalidate: REBAKE_OWED_REVALIDATE_SECONDS, tags: [REBAKE_OWED_TAG] },
 );
+
+/**
+ * The owed count, at most REBAKE_OWED_REVALIDATE_SECONDS old. unstable_cache
+ * alone doesn't promise that: in an App Router request it is
+ * stale-while-revalidate — past `revalidate` it still RETURNS the old entry
+ * and only refreshes it in the background, so the first visit after a quiet
+ * afternoon would print the count from the previous visit (hours old, e.g.
+ * "700 owed" long after the cron cleared them). An entry older than the
+ * window (or of an unknown shape) is therefore counted again here.
+ */
+async function countOwedRebakes(
+  admin: ReturnType<typeof createAdminClient>,
+  excludeIds: string[],
+  nowMs: number,
+): Promise<number> {
+  const cached: Partial<OwedCount> | null = await countOwedRebakesCached(excludeIds);
+  if (
+    typeof cached?.count === "number" &&
+    typeof cached.countedAt === "number" &&
+    nowMs - cached.countedAt <= REBAKE_OWED_REVALIDATE_SECONDS * 1000
+  ) {
+    return cached.count;
+  }
+  return countSweepCandidates(admin, excludeIds);
+}
 
 /** `poisonDetails: false` skips looking the poisoned cards up (titles,
  *  links) — for the admin dashboard tile, which prints only their count.
@@ -91,7 +124,9 @@ export async function getAutoRebakeOverview(
 
   const poisonIds = state.poison.map((p) => p.id);
   const [pending, poisonCards] = await Promise.all([
-    (cachePending ? countOwedRebakesCached(poisonIds) : countSweepCandidates(admin, poisonIds)).catch(() => null),
+    (cachePending ? countOwedRebakes(admin, poisonIds, base.readAt) : countSweepCandidates(admin, poisonIds)).catch(
+      () => null,
+    ),
     poisonDetails ? describePoison(admin, state.poison) : Promise.resolve<PoisonCard[]>([]),
   ]);
   return { ...base, state, pending, poisonCards };
