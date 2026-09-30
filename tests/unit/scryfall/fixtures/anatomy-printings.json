@@ -675,5 +675,39 @@
       "U"
     ],
     "rarity": "rare"
+  },
+  "mul-66": {
+    "id": "cf348206-1dee-417c-a3e1-7430b84371c2",
+    "oracle_id": "f7fa6ac0-70db-4586-b881-5a19db644dfb",
+    "name": "Anafenza, Kin-Tree Spirit",
+    "released_at": "2023-04-21",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "66",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "etched"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Bolster"
+    ],
+    "type_line": "Legendary Creature — Spirit Soldier",
+    "mana_cost": "{W}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare"
   }
 }

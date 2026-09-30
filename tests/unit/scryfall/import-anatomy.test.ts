@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ScryfallCard } from "@/lib/scryfall/client";
-import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { mapScryfallToFormPatch, printsStandardCrown } from "@/lib/scryfall/import-mapper";
 import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import { importedAnatomy, twoColorDressOf } from "@/lib/cards/anatomy";
 import printings from "./fixtures/anatomy-printings.json";
@@ -41,6 +41,22 @@ describe("printed_crown", () => {
     expect(P["ltr-302"].frame_effects).toEqual(["legendary", "showcase"]);
     expect(patchOf("ltr-302").printed_crown).toBe(false); // Boromir, LTR ring
     expect(patchOf("ltr-321").printed_crown).toBe(false); // Galadriel, LTR ring
+  });
+
+  it("is off for a showcase frame the registry knows without Scryfall's `showcase` effect", () => {
+    // MUL's etched run (#66–130) prints the Multiverse Legends frames — no
+    // standard crown — and carries `legendary` + `etched`, not `showcase`.
+    expect(P["mul-66"].frame_effects).toEqual(["legendary", "inverted", "etched"]);
+    expect(patchOf("mul-66").frame_match?.signature).toBe("showcase/mul");
+    expect(patchOf("mul-66").printed_crown).toBe(false); // Anafenza, MUL #66 etched
+    // The Japan showcase promos: the registry's own showcase signature.
+    const legend = P["fdn-2"];
+    const match = mapScryfallToFormPatch(legend).frame_match!;
+    expect(printsStandardCrown(legend, match)).toBe(true);
+    expect(printsStandardCrown(legend, { ...match, signature: "japan-showcase" })).toBe(false);
+    expect(printsStandardCrown(legend, { ...match, signature: "showcase" })).toBe(false);
+    // A gap rule on the standard frame is not a showcase.
+    expect(printsStandardCrown(legend, { ...match, signature: "layout/2015+crown" })).toBe(true);
   });
 });
 

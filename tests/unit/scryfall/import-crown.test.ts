@@ -72,4 +72,11 @@ describe("a crownless printing imports without the crown", () => {
     expect(patch.printed_crown).toBe(false);
     expect(newCardFrameStyle({ template: "m15", ...importedAnatomy(patch, "m15").style })).toMatchObject({ crown: false });
   });
+
+  it("a Multiverse Legends etched printing (MUL #66) lands on m15 without the crown its frame never printed", () => {
+    const got = imported("mul-66");
+    expect(got.match).toMatchObject({ status: "nearest", template: "m15", signature: "showcase/mul" });
+    expect(got.frameStyle).toEqual({ template: "m15", crown: false });
+    expect(got.crown).toBeNull();
+  });
 });
