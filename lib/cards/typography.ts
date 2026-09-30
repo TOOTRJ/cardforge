@@ -96,9 +96,12 @@ export const KEYRUNE_EM_PER_BOX = 0.065 / SET_SYMBOL_BOX_PCT;
 export const SET_SYMBOL_BOX_PCT_THIN_BAR = 0.0533;
 
 /** The widest a fitted Keyrune glyph's ink may draw — CC's symbol box
- *  width, 0.12 W. No keyrune 3.19 glyph comes near it (the widest ink is
- *  1.004 em, 98 px at 0.065 W); it guards a wider glyph a later keyrune
- *  might add. */
+ *  width, 0.12 W. On v32's fit no keyrune 3.19 glyph comes near it (the
+ *  widest ink is 1.004 em, 98 px at 0.065 W); at a set's printed size (v36,
+ *  lib/cards/set-symbol-prints.ts) it binds nothing either — the three
+ *  core-set pills, M19 / M20 / M21, print 187.5–189 px wide and draw there
+ *  past it (SET_SYMBOL_PRINTED_PAST_CAP, owner round 18). It guards a wider
+ *  glyph a later keyrune might add. */
 export const SET_SYMBOL_MAX_WIDTH_PCT = 0.12;
 
 /** How far the white keyline a set symbol wears on a dark type bar

@@ -585,7 +585,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            default for small art-edge fixes, as v31–v33): no text, bar,
 //            pip, symbol or plate moves — see VERIFICATION_NEUTRAL_VERSIONS.
 //   36     — the second correction round (owner rule 2026-09-29: looks
-//            wrong against their own prints), ONE bump for four fixes,
+//            wrong against their own prints), ONE bump for three fixes,
 //            each measured on the prints (Scryfall PNGs, 745 px, scaled to
 //            the 1500 px card):
 //            * inline rules pips on the capitals (TODO 3.31; lib/cards/
@@ -610,13 +610,18 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              measured — the creator's 12 presets, the 4.20 check's sets
 //              and seven more — each on a rare and an uncommon; BFZ, WAR
 //              and ZNR already drew at their print's size to the whole px,
-//              so they stay on v32's fit); the glyph fitted inside its set's
-//              box by its ink, never past CC's 0.12 W. Ink height ÷ the
-//              print's, v35 → v36: NEO 0.64 → 0.97, DSK 0.64 → 1.00, M20 /
-//              M21 / M19 0.47 → 0.87 (the 180 px cap; 0.96 of the print's
-//              width), OTJ 0.58 → 0.90, FDN 0.88 → 1.00, DOM 0.97 → 1.00;
-//              every set 0.47–1.03 → 0.87–1.00, never past the print's
-//              height or width; the
+//              so they stay on v32's fit — on the walker and saga bars
+//              too, at 80 px where their prints set ~86: owner round 18,
+//              later); the glyph fitted inside its set's box by its ink,
+//              never past CC's 0.12 W but for the three core-set pills,
+//              which print wider (M19 / M20 / M21, 187.5–189 px:
+//              SET_SYMBOL_PRINTED_PAST_CAP, owner round 18). Ink height ÷
+//              the print's, v35 → v36: NEO 0.64 → 0.97, DSK 0.64 → 1.00,
+//              M20 / M21 / M19 0.47 → 0.91–0.92 (at the print's width;
+//              Keyrune's pill is 9 % longer in proportion), OTJ 0.58 →
+//              0.90, FDN 0.88 → 1.00 (keyline-inclusive, as measured —
+//              owner round 18: kept), DOM 0.97 → 1.00; every set 0.47–1.03
+//              → 0.88–1.00, never past the print's height or width; the
 //              walker, saga and token prints print it at the regular size
 //              (0.98–1.01), so the thin-bar box no longer shrinks a listed
 //              glyph there. The full-art basics keep 4.39's size
@@ -624,29 +629,31 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              boxes are keyline-inclusive, so the borderless bars, which
 //              draw a white keyline round the glyph (4.32), fit its ink AND
 //              the ring (review of this round: the ink alone stood 8–15 px
-//              past the box there, the core-set pill 198 px wide).
+//              past the box there, the core-set pill 198 px wide; now 85.5–
+//              86 × 182–183, the print's height binding).
 //            * the planeswalker's set symbol ends where M15's does (TODO
 //              4.47; M15PW.symbolRect left 79 → 80.2 %W, right edge 1365 →
 //              1383 px): seven walker prints put it where their set's
 //              regular cards do (+0.1 px on average), 1380–1392 px. The
 //              borderless walkers (4.33) spread m15pw's rect and move with
-//              it (their prints: 1383–1393 but ELD #271's 1369).
-//            * the nyx text box darkened to the THB constellation prints
-//              (TODO 4.17e; public/frames/nyx, scripts/lib/nyx-text-box.mjs):
-//              MSE's 50 % black → α 171 (a third of the art shows through:
-//              the prints' box reads L 32–33 over art of L 82–114).
+//              it (their prints: 1383–1393 but ELD #271's 1369; owner round
+//              18: move them). A symbol wider than a 12 %W symbolRect (the
+//              core-set pills) is never shrunk to it: it ends at the rect's
+//              right edge in both renderers.
 //            Card-scoped (VERSION_SCOPES[36] = v36Changed; no template list —
 //            the pips reach every template): every card on m15pw,
 //            m15borderlesspw, m15borderlesspwtall (every walker draws a
-//            symbol, the mark when it has none) and nyx; a card that may
-//            draw a listed set's Keyrune glyph on a printed-size template
+//            symbol, the mark when it has none); a card that may draw a
+//            listed set's Keyrune glyph on a printed-size template
 //            (its code is listed — an uploaded icon doesn't rule it out: the
 //            renderers drop one they may not draw and draw the glyph); a card
-//            whose printed text has an inline pip. "sweep". NOT fully
-//            verification-neutral: the pips (text inside the rules boxes,
-//            as v33), the symbol sizes (as v32) and nyx (no tick) stale no
-//            tick, but 4.47 moves a scored slot (the symbolRect box, lib/
-//            frames/align.ts) on the walkers — VERIFICATION_TEMPLATE_SCOPES[36].
+//            whose printed text has an inline pip. "sweep".
+//            VERIFICATION-NEUTRAL (owner round 18, 2026-09-30, on the
+//            walker sheet; VERIFICATION_NEUTRAL_VERSIONS): the pips (text
+//            inside the rules boxes, as v33) and the symbol sizes (as v32)
+//            move no slot, and 4.47's walker symbolRect move — a scored
+//            box, lib/frames/align.ts — follows v32, which moved
+//            m15pw's costRect onto the prints and stayed neutral.
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 36;
@@ -718,7 +725,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
     "m15token", "m15tokentext", "m15pw",
   ],
   // (v36, the second correction round: no template list — its inline pips
-  // reach every template; VERSION_SCOPES[36] holds the walkers, nyx, the
+  // reach every template; VERSION_SCOPES[36] holds the walkers, the
   // printed-size set symbols and the cards with an inline pip.)
 };
 
@@ -745,12 +752,12 @@ export const V35_ART_SLOT_TEMPLATES: readonly string[] = [
 ];
 export const V35_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15token", "m15tokentext", "m15pw"];
 
-// v36 — the second correction round (TODO 3.31, 4.46, 4.47, 4.17e). Frozen
+// v36 — the second correction round (TODO 3.31, 4.46, 4.47). Frozen
 // like the lists above: v36 is history once it ships.
 //   * EVERY card on these templates re-bakes: the planeswalkers' set symbol
 //     moved (4.47; every card draws one — the default mark when it has no
-//     icon or set), and nyx's master darkened (4.17e).
-export const V36_EVERY_CARD_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall", "nyx"];
+//     icon or set).
+export const V36_EVERY_CARD_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
 //   * The templates that draw a Keyrune glyph at its set's printed size
 //     (4.46, setSymbolFit "ink"): the M15-era family as it stood at v36,
 //     the full-art basics excepted ("ink-box").
@@ -802,15 +809,7 @@ export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "fl
  */
 const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> = {
   34: V34_TOKEN_FRAME_TEMPLATES,
-  // v36: only the planeswalkers' ticks (4.47 moved their symbolRect — a box
-  // slot the alignment score reads, lib/frames/align.ts; the seven m15pw
-  // ticks are legacy ones with no stored score or reference). The inline
-  // pips (text inside the rules boxes, as v33), the printed symbol sizes (as
-  // v32) and nyx's darker box (no tick) move no slot. The owner decides
-  // (sign-off sheet 3a): the closer precedent, v32, moved m15pw's costRect —
-  // the same scored box kind — 15 px right onto the prints and stayed
-  // neutral; following it moves 36 to VERIFICATION_NEUTRAL_VERSIONS.
-  36: ["m15pw", "m15borderlesspw", "m15borderlesspwtall"],
+  // (v36 is not here: verification-neutral, VERIFICATION_NEUTRAL_VERSIONS.)
 };
 
 /**
@@ -836,13 +835,16 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * may re-tick it by hand after the sheet). The frame a tick verified
  * against its prints is the same master in the same place; the owner signs
  * the art off on the v35 before/after sheet instead of re-ticking.
- * v36 is NOT here: its walker symbol move stales the planeswalkers' ticks
- * (VERIFICATION_TEMPLATE_SCOPES[36]); its other fixes are neutral by the
- * v32 / v33 precedents.
+ * v36 is (owner round 18, 2026-09-30, on the walker sheet): the inline pips
+ * move text inside the rules boxes (as v33), the printed set-symbol sizes
+ * move no slot (as v32), and 4.47 moves the walkers' symbolRect — a scored
+ * box — onto the prints, as v32 moved
+ * m15pw's costRect and stayed neutral. Production's seven m15pw ticks
+ * (legacy) stay fresh; the owner signed the walkers off on the sheet.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1127,8 +1129,8 @@ function v36FaceContentHasPip(faceContent: unknown): boolean {
 
 /**
  * Whether layout v36 (the second correction round) changed a card's bake:
- * every card on V36_EVERY_CARD_TEMPLATES (the walkers' moved symbol, nyx's
- * darker box); a card that may draw a listed set's Keyrune glyph (a code in
+ * every card on V36_EVERY_CARD_TEMPLATES (the walkers' moved symbol); a
+ * card that may draw a listed set's Keyrune glyph (a code in
  * V36_PRINTED_SYMBOL_CODES) on a printed-size template (4.46) — with or
  * without an uploaded icon: the renderers drop an icon URL they may not draw
  * (lib/cards/drawable-media.ts; a pre-0127 row can name an outside host, and
@@ -1212,7 +1214,7 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // slot moved, and a colourless card with art on the three whose
   // see-through master gained or moved its under-frame art — v35Changed.
   35: v35Changed,
-  // v36 — the second correction round: every walker and nyx card, a listed
+  // v36 — the second correction round: every walker card, a listed
   // set's printed-size glyph, an inline pip — v36Changed.
   36: v36Changed,
 };
@@ -1329,7 +1331,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   33: "sweep", // rules text by its real lines at the prints' spacing (3.29) — a measurement correction, never a badge
   34: "sweep", // token release: P/T plate, type line + symbol on the token frames (4.49), "Token" first (3b.15) — a platform correction
   35: "sweep", // art-area corrections: CC M15 art slot (4.4 (2)), under-frame art from the border (4.17a), nyx / fullart / m15pw-c (4.17b)
-  36: "sweep", // correction round 2: inline pips on the capitals (3.31), printed set-symbol sizes (4.46), walker symbol (4.47), nyx box (4.17e)
+  36: "sweep", // correction round 2: inline pips on the capitals (3.31), printed set-symbol sizes (4.46), walker symbol (4.47)
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

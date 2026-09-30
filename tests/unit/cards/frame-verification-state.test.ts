@@ -219,28 +219,28 @@ describe("verificationState", () => {
     }
   });
 
-  it("v36 (the second correction round) stales only the planeswalkers' ticks — the symbol moved onto the prints (4.47)", () => {
+  it("v36 (the second correction round) stales no tick — the walkers' included (owner round 18: verification-neutral)", () => {
     expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(36);
     const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
     const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
-    const walkers = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
-    // Production's seven m15pw ticks are legacy rows (2026-07-08, no score or
-    // reference): stale — still verified — until re-ticked at v36.
-    for (const template of walkers) {
-      const state = verificationState(legacy, template, "none", 36);
-      expect(state.verified, template).toBe(true);
-      expect(state.stale, template).toBe(true);
-      expect(verificationState(tick(35), template, "h", 36).stale, `${template}@35`).toBe(true);
-      expect(verificationState(tick(36), template, "h", 36).stale, `${template}@36`).toBe(false);
-    }
-    // Every other template keeps a v35 tick (and a legacy one, the token
-    // frames' v34 staleness aside) fresh: the pips move text inside the rules
-    // boxes (as v33), the set symbols change size (as v32), nyx has no tick.
-    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => !walkers.includes(t))) {
+    // Production's seven m15pw ticks are legacy rows (2026-07-08): they stay
+    // fresh — the owner signed 4.47's symbolRect move off on the round-18
+    // walker sheet, as v32's m15pw costRect move. The pips move text inside
+    // the rules boxes (as v33), the set symbols change size (as v32).
+    for (const template of FRAME_TEMPLATE_VALUES) {
       expect(verificationState(tick(35), template, "h", 36).stale, `${template}@35`).toBe(false);
+      expect(verificationState(tick(36), template, "h", 36).stale, `${template}@36`).toBe(false);
+      // (The token frames' legacy ticks stay stale from v34, not from v36.)
       if (template !== "m15token" && template !== "m15tokenartifact") {
-        expect(verificationState(legacy, template, "none", 36).stale, `${template} legacy`).toBe(false);
+        const state = verificationState(legacy, template, "none", 36);
+        expect(state.verified, `${template} legacy`).toBe(true);
+        expect(state.stale, `${template} legacy`).toBe(false);
       }
+    }
+    for (const template of ["m15token", "m15tokenartifact"]) {
+      expect(verificationState(legacy, template, "none", 36).reasons, template).toEqual([
+        "the renderer changed since this tick (made before layout v33; now v36)",
+      ]);
     }
   });
 });

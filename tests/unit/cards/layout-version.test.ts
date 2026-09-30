@@ -1056,7 +1056,7 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
   });
   const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
   /** The sweep / badge rules as they stood at v35 (v36 moves the walkers
-   *  and nyx on its own). */
+   *  on its own). */
   const AT_V35 = { current: 35 } as const;
   const UNDER = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
 
@@ -1122,7 +1122,7 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
       ]) {
         const label = `${t} ${JSON.stringify(row.color_identity)} ${row.art_url}`;
         expect(isRenderStale(34, t, undefined, 35, row), label).toBe(whole);
-        // (Pinned at v35: v36 moves the walkers and nyx on its own.)
+        // (Pinned at v35: v36 moves the walkers on its own.)
         expect(classifyForSweep(row, undefined, AT_V35), label).toBe(whole ? "rebake" : "stamp");
         expect(classifyForSweep(row, 35, AT_V35), label).toBe(whole ? "rebake" : "stamp");
         expect(hasPendingCorrection(row, AT_V35), label).toBe(whole);
@@ -1184,7 +1184,7 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
   });
 });
 
-describe("v36 — the second correction round: inline pips, printed set symbols, the walker symbol, nyx's box (one bump)", () => {
+describe("v36 — the second correction round: inline pips, printed set symbols, the walker symbol (one bump)", () => {
   const png = "https://x/y.png";
   /** A v35 bake. Its columns default to UNTOUCHED_SINCE_V22 (a blue one-word
    *  sorcery with no text, set icon or code), so only v36 can be pending. */
@@ -1205,9 +1205,11 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     expect(lv.latestSweepVersion(undefined, 36)).toBe(36);
     expect(lv.latestOptInVersion()).toBe(22);
     expect(lv.VERSION_SCOPES[36]).toBeTypeOf("function");
-    // Every template that draws ability rows (the walkers) and nyx.
+    // Every template that draws ability rows (the walkers) — and nothing
+    // else: v36 changes no frame master (nyx's darker box ships on its own).
     const rows = ALL.filter((t) => getFrameProfile(t).loyaltyRows);
-    expect(lv.V36_EVERY_CARD_TEMPLATES).toEqual([...rows, "nyx"]);
+    expect(lv.V36_EVERY_CARD_TEMPLATES).toEqual(rows);
+    expect(lv.V36_EVERY_CARD_TEMPLATES).not.toContain("nyx");
     // The printed-size templates: the profiles with setSymbolFit "ink".
     expect([...lv.V36_PRINTED_SYMBOL_TEMPLATES].sort()).toEqual(
       ALL.filter((t) => getFrameProfile(t).setSymbolFit === "ink").sort(),
@@ -1237,7 +1239,7 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     for (const t of rows) expect(getFrameProfile(t).symbolRect?.leftPct, t).toBe(80.2);
   });
 
-  it("re-bakes every walker and nyx card, and a text-free card nowhere else", async () => {
+  it("re-bakes every walker card, and a text-free card nowhere else", async () => {
     const { V36_EVERY_CARD_TEMPLATES, classifyForSweep, hasNewerLook, hasPendingCorrection } = await import(
       "@/lib/cards/layout-version"
     );
@@ -1249,6 +1251,17 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
       expect(hasNewerLook({ ...row, visibility: "public" }), t).toBe(false);
     }
     expect(classifyForSweep(at("m15", { layout_version: 36 }))).toBe("current");
+  });
+
+  it("treats nyx like any other printed-size template: a pip or a listed set's glyph, nothing else", async () => {
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    // (Pinned at v36: a later bump may move nyx on its own.)
+    const AT_V36 = { current: 36 } as const;
+    expect(classifyForSweep(at("nyx"), undefined, AT_V36)).toBe("stamp");
+    expect(classifyForSweep(at("nyx", { art_url: "https://x/a.png", rules_text: "Flying" }), undefined, AT_V36)).toBe("stamp");
+    expect(classifyForSweep(at("nyx", { rules_text: "{T}: Add {G}." }), undefined, AT_V36)).toBe("rebake");
+    expect(classifyForSweep(at("nyx", { set_icon_code: "thb" }), undefined, AT_V36)).toBe("rebake");
+    expect(classifyForSweep(at("nyx", { set_icon_code: "war" }), undefined, AT_V36)).toBe("stamp");
   });
 
   it("re-bakes a card whose printed text draws an inline pip (3.31), on any template that prints it", async () => {
@@ -1284,7 +1297,7 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     const { V36_PRINTED_SYMBOL_TEMPLATES, classifyForSweep } = await import("@/lib/cards/layout-version");
     for (const t of ALL) {
       const printed = V36_PRINTED_SYMBOL_TEMPLATES.includes(t);
-      const whole = ["m15pw", "m15borderlesspw", "m15borderlesspwtall", "nyx"].includes(t);
+      const whole = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"].includes(t);
       expect(classifyForSweep(at(t, { set_icon_code: "neo" })), `${t} neo`).toBe(printed || whole ? "rebake" : "stamp");
       // Case and the "ss-" prefix resolve as the renderers do.
       expect(classifyForSweep(at(t, { set_icon_code: "SS-DOM" })), `${t} dom`).toBe(printed || whole ? "rebake" : "stamp");
@@ -1367,15 +1380,20 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     expect(v36HasPip(null)).toBe(false);
   });
 
-  it("stales only the walkers' frame ticks: their symbolRect moved (VERIFICATION_TEMPLATE_SCOPES[36])", async () => {
+  it("is verification-neutral: no frame tick goes stale, the walkers' included (owner round 18)", async () => {
     const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
-    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(36);
-    expect(VERIFICATION_SCOPED_VERSIONS[36]).toEqual(["m15pw", "m15borderlesspw", "m15borderlesspwtall"]);
+    // The owner signed 4.47's walker symbolRect move off on the round-18
+    // sheet, as v32's m15pw costRect move: no re-tick.
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(36);
+    expect(VERIFICATION_SCOPED_VERSIONS[36]).toEqual([]);
     for (const t of ALL) {
       const regular = { frame_style: { template: t, finish: "regular" } };
-      expect(isRenderStale(35, t, VERIFICATION_SCOPED_VERSIONS, 36, regular), t).toBe(
-        ["m15pw", "m15borderlesspw", "m15borderlesspwtall"].includes(t),
-      );
+      expect(isRenderStale(35, t, VERIFICATION_SCOPED_VERSIONS, 36, regular), t).toBe(false);
+    }
+    // …while every walker card still owes the bake (the sweep).
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    for (const t of ["m15pw", "m15borderlesspw", "m15borderlesspwtall"]) {
+      expect(classifyForSweep(at(t)), t).toBe("rebake");
     }
   });
 });

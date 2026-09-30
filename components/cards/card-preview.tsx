@@ -291,6 +291,9 @@ type AdventureData = {
   rulesText: string | null;
 };
 
+/** A symbolRect's symbol: never shrunk to the rect (see its use). */
+const SYMBOL_RECT_STYLE: CSSProperties = { flexShrink: 0 };
+
 export function CardPreview(rawProps: CardPreviewProps) {
   // Only pictures lib/media/media-urls.ts accepts (migration 0127): a row
   // written before it could point its art, icon, watermark or pips at any
@@ -1189,6 +1192,9 @@ function CardFace({
             justifyContent: "flex-end",
           }}
         >
+          {/* Never shrunk: a symbol wider than the rect (the core-set pills
+              at their print's 188 px, v36) ends at its right edge and
+              reaches out on the left — the bake's SYMBOL_RECT_WRAP. */}
           <SetSymbol
             rarity={rarity}
             namesRarity={cardTypeHasRarity(face.cardType)}
@@ -1197,6 +1203,7 @@ function CardFace({
             size={cqw(setSymbol.sizePct)}
             width={cqw(setSymbol.drawnWidthPct)}
             keyline={layout.setSymbolKeyline}
+            style={SYMBOL_RECT_STYLE}
           />
         </div>
       ) : null}

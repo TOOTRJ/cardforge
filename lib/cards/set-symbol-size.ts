@@ -4,7 +4,7 @@ import {
   KEYRUNE_GLYPHS,
   KEYRUNE_UNITS_PER_EM,
 } from "@/lib/cards/keyrune-metrics";
-import { printedSetSymbolPx } from "@/lib/cards/set-symbol-prints";
+import { printedPastCap, printedSetSymbolPx } from "@/lib/cards/set-symbol-prints";
 import type { FrameProfile } from "@/lib/cards/template-layout";
 import {
   displayPct,
@@ -27,7 +27,9 @@ import {
 //   • a Keyrune glyph, on a profile with `setSymbolFit: "ink"` (the M15-era
 //     family): at the size its set PRINTS at when the set was measured
 //     (lib/cards/set-symbol-prints.ts, layout v36, TODO 4.46): fitted inside
-//     the printed box by its ink, never wider than CC's 0.12 W symbol box —
+//     the printed box by its ink, never wider than CC's 0.12 W symbol box
+//     but for the three core-set pills, which print wider (M19 / M20 / M21,
+//     SET_SYMBOL_PRINTED_PAST_CAP: their printed box alone binds) —
 //     by its ink AND the keyline's ring on a profile that draws one
 //     (`setSymbolKeyline`, the borderless bars): the printed box is
 //     keyline-inclusive;
@@ -133,15 +135,17 @@ export function setSymbolSize(profile: SymbolProfile, source: SetSymbolSource): 
       // box is keyline-inclusive, so a profile that draws a keyline round
       // the glyph (the borderless bars' white SET_SYMBOL_KEYLINE, 0.05 em
       // out on every side) fits the ink AND the ring — to the box and to
-      // CC's 0.12 W — and its type line stops a gap before the ring.
+      // CC's 0.12 W (the core-set pills: the box alone) — and its type line
+      // stops a gap before the ring.
       const ringEm = profile.setSymbolKeyline ? SET_SYMBOL_KEYLINE_EM : 0;
       const heightEm = inkHeightEm + 2 * ringEm;
       const widthEm = inkWidthEm + 2 * ringEm;
       const [heightPct, widthPct] = printed.map((px) => displayPct(px / RULES_HD_WIDTH.portrait, orientation));
+      const capPct = printedPastCap(glyphCodepoint(source.codepoint)) ? Infinity : maxWidthPct;
       sizePct = Math.min(
         heightEm > 0 ? heightPct / heightEm : Infinity,
         widthEm > 0 ? widthPct / widthEm : Infinity,
-        widthEm > 0 ? maxWidthPct / widthEm : Infinity,
+        widthEm > 0 ? capPct / widthEm : Infinity,
       );
       silhouetteLeftEm -= ringEm;
     } else {

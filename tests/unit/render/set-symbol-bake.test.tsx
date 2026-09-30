@@ -146,12 +146,12 @@ describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and 
     expect(Math.abs((box.top + box.bottom + 1) / 2 - centre)).toBeLessThanOrEqual(1);
   }, 60_000);
 
-  it("fits an unmeasured Keyrune glyph's ink to the box (XLN 86 px), and draws a measured set at its print's size (v36): DOM 88 px, M20 180 × 75", async () => {
+  it("fits an unmeasured Keyrune glyph's ink to the box (XLN 86 px), and draws a measured set at its print's size (v36): DOM 88 px, M20 187.5 × 78", async () => {
     const p = getFrameProfile("m15");
     for (const [code, expectedFontPx, printedH] of [
       ["xln", 86, null],
       ["dom", 89, 88.5],
-      ["m20", 180, null],
+      ["m20", 187, null],
     ] as const) {
       const fontPx = Math.round(setSymbolSize(p, setSymbolSource(null, code)).sizePct * W);
       expect(fontPx, code).toBe(expectedFontPx);
@@ -160,13 +160,16 @@ describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and 
       expect(Math.abs(box.h - inkHeightPx(code, fontPx)), code).toBeLessThanOrEqual(1.5);
       if (printedH) expect(Math.abs(box.h - printedH), code).toBeLessThanOrEqual(1.5);
     }
-    // M20's pill: CC's 0.12 W (180 px) binds — the print is 187.5 × 86.
+    // M20's pill at its print's width, past CC's 0.12 W (180 px; owner round
+    // 18): the print is 187.5 × 86, Keyrune's pill 9 % longer in proportion,
+    // so the width binds — 187.5 × 78, ending at the band's edge.
     const m20 = inkBox(await bake("m15", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), glyphInk);
-    expect(Math.abs(m20.w - 180)).toBeLessThanOrEqual(1.5);
-    expect(Math.abs(m20.h - 75)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.w - 187.5)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.h - 78.2)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 
-  it("fits a measured set's glyph AND its white keyline inside the printed box on the borderless bar (DMU 91.5 × 83, M20 at 180 px)", async () => {
+  it("fits a measured set's glyph AND its white keyline inside the printed box on the borderless bar (DMU 91.5 × 83, M20 86 × 183)", async () => {
     // The printed box is keyline-inclusive; m15borderless draws a white ring
     // 0.05 em round the glyph (SET_SYMBOL_KEYLINE). On the 128-grey stand-in
     // the silhouette is the dark ink plus the white ring.
@@ -178,8 +181,10 @@ describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and 
     const dmu = inkBox(await bake("m15borderless", { setIconCode: "dmu" }), p.type.rect, Math.round(W * 0.8), silhouette);
     expect(dmu.h).toBeLessThanOrEqual(91.5 + 1.5);
     expect(Math.abs(dmu.w - 83)).toBeLessThanOrEqual(1.5);
+    // The core-set pill with its ring: past CC's 180 px, its print's 86 px
+    // height binds (ink + ring 166 px font: 86 × 183).
     const m20 = inkBox(await bake("m15borderless", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), silhouette);
-    expect(Math.abs(m20.w - 180)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.w - 183)).toBeLessThanOrEqual(1.5);
     expect(m20.h).toBeLessThanOrEqual(86 + 1.5);
   }, 60_000);
 
@@ -196,5 +201,10 @@ describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and 
     const dom = inkBox(await bake("m15pw", { setIconCode: "dom" }), p.symbolRect!, Math.round(W * 0.7), glyphInk);
     expect(Math.abs(dom.h - 88.5)).toBeLessThanOrEqual(1.5);
     expect(Math.abs(dom.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
+    // The core-set pill is wider than the 12 %W rect (180 px): it still ends
+    // at the rect's right edge, reaching out on the left (owner round 18).
+    const m21 = inkBox(await bake("m15pw", { setIconCode: "m21" }), p.symbolRect!, Math.round(W * 0.6), glyphInk);
+    expect(Math.abs(m21.w - 189)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m21.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 });

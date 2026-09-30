@@ -663,11 +663,10 @@ The standard operating procedure for one template:
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
 move on fewer templates than its bakes change on) or the override changes;
-`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35) never stale one (v36
-stales only the planeswalkers' ticks: its 4.47 moved their `symbolRect`, a
-box the alignment score reads; its pips, symbol sizes and nyx box are
-neutral by the v32 / v33 precedents — the owner may make the walkers neutral
-too, as v32's 15 px m15pw cost-box move was), and a
+`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36) never stale one (v36's
+4.47 moved the planeswalkers' `symbolRect`, a box the alignment score reads,
+but the owner kept it neutral as v32's 15 px m15pw cost-box move was — owner
+round 18, 2026-09-30), and a
 pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` (33)
 (`lib/cards/frame-verification-state.ts`). A stale tick stays verified —
 the creator keeps offering the combo — and the admin pages show "needs
@@ -912,19 +911,18 @@ cards it changes.
 
 ### Correction round 2 (layout v36)
 
-One sweep for four looks the prints showed wrong (owner rule above; the
-before/after sheets are the sign-off): inline rules pips on the capitals at
-the prints' size (TODO 3.31, [Rules text and the stat
-plates](#rules-text-and-the-stat-plates)), Keyrune set symbols at their
-set's printed size (4.46) and the planeswalker's symbol at M15's right edge
-(4.47) ([Text sizes on the M15-era family](#text-sizes-on-the-m15-era-family)),
-and nyx's text box darkened to the THB prints (4.17e, [Art under and around
-the frame](#art-under-and-around-the-frame)). `VERSION_SCOPES[36]`
-(`v36Changed`): every card on m15pw, m15borderlesspw, m15borderlesspwtall and
-nyx; a listed set's code (its Keyrune glyph, or an uploaded icon the
-renderers may drop for it — a drawable icon re-bakes to the same pixels) on
-a printed-size template; a card whose
-PRINTED text has an inline pip (its rules text unless the frame prints none
+One sweep for three looks the prints showed wrong (owner rule above; the
+before/after sheets are the sign-off, owner round 18, 2026-09-30): inline
+rules pips on the capitals at the prints' size (TODO 3.31, [Rules text and
+the stat plates](#rules-text-and-the-stat-plates)), Keyrune set symbols at
+their set's printed size (4.46) and the planeswalker's symbol at M15's right
+edge (4.47) ([Text sizes on the M15-era
+family](#text-sizes-on-the-m15-era-family)). No frame master changes.
+`VERSION_SCOPES[36]` (`v36Changed`): every card on m15pw, m15borderlesspw
+and m15borderlesspwtall; a listed set's code (its Keyrune glyph, or an
+uploaded icon the renderers may drop for it — a drawable icon re-bakes to
+the same pixels) on a printed-size template; a card whose PRINTED text has
+an inline pip (its rules text unless the frame prints none
 or it is a basic land's, a saga's chapters, a back face's rules text where
 the adventure page or a second face draws it). No template list: the pips
 reach every template. Production, anonymous read 2026-09-30: 363 of 879
@@ -938,10 +936,10 @@ tokens, basic lands, flavor, icons, aliases, the keylined bars), bake as
 the scope says, but for its two conservative cases (a drawable icon beside
 a listed code; FDN on a keylined bar, whose ring-fitted size rounds to v32's
 px — a long type line there still loses the ring's room). The
-visual matrix (1,046 cases) against v35: 546 change, every one inside the
-scope, and the scope holds no unchanged case. Verification: only the
-walkers' ticks go stale (`VERIFICATION_TEMPLATE_SCOPES[36]`, see [When a
-tick goes stale](#verifying-a-frame)).
+visual matrix (1,046 cases) against v35: 536 change, every one inside the
+scope, and the scope holds no unchanged case. Verification-neutral, the
+walkers included (owner round 18; `VERIFICATION_NEUTRAL_VERSIONS`, see
+[When a tick goes stale](#verifying-a-frame)): no tick goes stale.
 
 ### Printed pieces a card switches on
 
@@ -1349,24 +1347,31 @@ A family profile:
   (Scryfall PNGs, the silhouette's half-darkness edge from the bar to the
   keyline). The glyph is fitted INSIDE its set's box by its ink (never
   bigger than the print in either direction) and never wider than CC's
-  0.12 W — by its ink AND its keyline's ring on the borderless bars, which
+  0.12 W but for the three core-set pills, M19 / M20 / M21, which print
+  187.5–189 px wide and draw at their print's width
+  (`SET_SYMBOL_PRINTED_PAST_CAP`, owner round 18) — by its ink AND its
+  keyline's ring on the borderless bars, which
   draw a white keyline 0.05 em round the glyph (`setSymbolKeyline`, 4.32;
   `SET_SYMBOL_KEYLINE_EM`): the box is keyline-inclusive, and there the
   type line stops a gap before the ring (`inkLeftPct` less the ring). An
   unlisted set on those bars keeps v32's fit, ring not counted, as since
   4.32. Our M15 glyph has no keyline: its flat rarity ink fills the whole
   printed silhouette (a common's reads about 12 px taller than the print's
-  black body inside its white keyline — sheet 2g). The walker, saga and token prints set a set's symbol at the same
+  black body inside its white keyline — sheet 2g; owner round 18 kept the
+  keyline-inclusive box, so FDN grows 78 → 88.5 px). The walker, saga and
+  token prints set a set's symbol at the same
   size as its regular cards (0.98–1.01 of the height), so the thin-bar box
   (80 px) no longer shrinks a listed glyph. v32's box fit drew these sets
   0.47–1.03 of the print's height (the wide ones — M20 / M21 / M19 0.47,
   NEO / DSK 0.64, OTJ 0.58 — capped by box × `KEYRUNE_EM_PER_BOX`); the
-  table draws them 0.87–1.00 (the core-set pills' 0.87 is CC's 180 px
-  width: Keyrune's pill is 10 % longer than the print's; EOE / OTJ / GRN
-  0.88–0.91 because Keyrune draws them wider in proportion than the print, so
-  their width binds). A set not in the table keeps v32's fit — BFZ, WAR and
-  ZNR are measured but left there (v32 already draws them at the print's
-  size to the whole px). A wide symbol at its printed width leaves the type
+  table draws them 0.88–1.00 (the core-set pills 0.91–0.92, 78 px tall at
+  their print's width — under CC's 180 px cap they were 0.87; they, EOE, OTJ
+  and GRN 0.88–0.92 because Keyrune draws them wider in proportion than the
+  print, so their width binds). A set not in the table keeps v32's fit
+  (owner round 18) — BFZ, WAR and ZNR are measured but left there (v32
+  already draws them at the print's size to the whole px on the M15 bars;
+  on the walker and saga bars they keep its 80 px box where their prints
+  set ~86 — later, TODO 4.46). A wide symbol at its printed width leaves the type
   line less room — DSK's "Enchantment Creature — Avatar Horror" 62 → 59 px
   beside its 151.5 px symbol, where the print keeps 68 (our display face sets
   it wider than the print's, TODO 4.8). The full-art basics keep 4.39's print-checked
@@ -1375,7 +1380,11 @@ A family profile:
   scope names the set. The planeswalkers' `symbolRect` ends where M15's
   band does (92.2 %W, 1383 px — layout v36, TODO 4.47): the walker prints
   put the symbol where their set's regular cards do (+0.1 px on average
-  over seven walkers, 1380–1392 px), where 79 %W ended it 18 px short.
+  over seven walkers, 1380–1392 px), where 79 %W ended it 18 px short; the
+  borderless walkers spread the rect and move with it (owner round 18). A
+  symbol wider than a 12 %W `symbolRect` (the core-set pills) is never
+  shrunk to it: it ends at the rect's right edge and reaches out on the
+  left, in both renderers (`flexShrink: 0`).
 
 Every frame outside the family keeps the old code paths byte-for-byte: no
 `fit` flag (the character estimate and the CSS ellipsis) and no box or ink
@@ -1849,21 +1858,6 @@ verification-neutral (as v31–v33) and a "sweep"
   the box's last 241 px were #101015 — a seam across the rules text). The
   window's crop comes from the taller slot, so a landscape picture sits
   about 17 % larger in the window than before.
-- **Nyx's text box, darker (4.17e, layout v36; owner round 13).** With the
-  art under the whole box, MSE's 50 % black box let half the art through,
-  and light rules text on light art lost the prints' contrast: the THB
-  constellation prints' box reads L 32–33 whatever the art (82–114 above
-  it; 0.28–0.39 of it, mean 0.33 — the art window's bottom strip as the
-  proxy for the art under the box). The masters' box is now α 171 / 255
-  (the same black; a third of the art shows through), set by
-  `scripts/lib/nyx-text-box.mjs` inside `scripts/build-variation-frames.mjs`
-  (`--only nyx` rebuilds them: MSE's pack, the tone, then the corner
-  normalisation; the frame's anti-aliased edge over the box keeps its
-  coverage).
-  The type bar keeps MSE's 50 % (the prints': 0.36–0.46 of the art). nyx is
-  an MSE frame in git (`public/frames/nyx`, WebP siblings regenerated), not
-  a bucket master: nothing to promote. 0 production cards, no
-  frame_reviews tick.
 - **fullart (4.17b).** `artSlot` 3.8/2.7/92.4 × 90.3: to 93 % (was 88.3: a
   31 px dark strip along the translucent box's bottom) and out to whole
   pixels past the hedron ring's anti-aliased rim (57–1443 × 56.7 px; the

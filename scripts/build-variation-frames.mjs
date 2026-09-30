@@ -9,11 +9,6 @@
 //   fullart      …showcase-zendikar            *card.png,  already alpha-cut
 //
 //   node scripts/build-variation-frames.mjs
-//   node scripts/build-variation-frames.mjs --only nyx     # one family
-//
-// nyx's text box is darkened to the THB constellation prints before the
-// corner normalisation (scripts/lib/nyx-text-box.mjs, TODO 4.17e: MSE's 50 %
-// black → α 171; the box is far from the corners).
 //
 // All of them start UNVERIFIED — they surface to users only after the owner
 // checks them in /admin/frame-compare.
@@ -32,12 +27,6 @@ import fs from "node:fs";
 // the write, so a rebuild can't bring the white paper back (extendedart,
 // fullart and m15textless* are allow-listed).
 import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
-import { toneNyxTextBox } from "./lib/nyx-text-box.mjs";
-
-// `--only a,b` rebuilds only those families (the output dir's basename).
-const onlyArg = process.argv.indexOf("--only");
-const ONLY = onlyArg > 0 ? new Set(process.argv[onlyArg + 1].split(",")) : null;
-const wanted = (outDir) => !ONLY || ONLY.has(path.basename(outDir));
 
 const DATA = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const W = 1500;
@@ -86,12 +75,9 @@ async function cutWindow(buf, fill, seeds, maxYFrac = 1) {
   };
 }
 
-async function writeOut(outDir, key, buf, transform) {
+async function writeOut(outDir, key, buf) {
   fs.mkdirSync(outDir, { recursive: true });
   const data = await sharp(buf).resize(W, H, { fit: "fill" }).ensureAlpha().raw().toBuffer();
-  // A family's own pass (nyx's text box) — away from the corners, so it runs
-  // before their normalisation and the write stays the gated pixels.
-  if (transform) transform(data, W, H);
   normaliseMasterCorners(path.basename(outDir), key, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png().toFile(path.join(outDir, `${key}.png`));
 }
@@ -119,7 +105,6 @@ const JPG_SETS = [
 ];
 
 for (const set of JPG_SETS) {
-  if (!wanted(set.out)) continue;
   for (const key of COLORS) {
     const src = path.join(set.pack, set.file(key));
     const { png, cutPct } = await cutWindow(
@@ -139,7 +124,6 @@ const PNG_SETS = [
     out: "public/frames/nyx",
     pack: `${DATA}/magic-m15-showcase-theros-constellation.mse-style/card`,
     file: (k) => `${k}card.png`,
-    transform: toneNyxTextBox,
   },
   {
     out: "public/frames/fullart",
@@ -163,9 +147,8 @@ const PNG_SETS = [
 ];
 
 for (const set of PNG_SETS) {
-  if (!wanted(set.out)) continue;
   for (const key of COLORS) {
-    await writeOut(set.out, key, fs.readFileSync(path.join(set.pack, set.file(key))), set.transform);
+    await writeOut(set.out, key, fs.readFileSync(path.join(set.pack, set.file(key))));
     console.log(`${path.basename(set.out)}/${key}.png ← ${set.file(key)}`);
   }
 }

@@ -25,24 +25,30 @@ import { KEYRUNE_CODEPOINTS } from "@/lib/cards/keyrune-metrics";
 // A glyph is drawn to fit INSIDE its set's printed box — font = min(height ÷
 // its ink height, width ÷ its ink width) — so where Keyrune's proportions
 // differ from the print's (EOE, OTJ, GRN, WOE, SNC 5–13 % wider in
-// proportion; MID 11 % narrower) it never draws bigger than the print in
-// either direction, and
-// never wider than CC's 0.12 W symbol box (the three core-set pills, M19 /
-// M20 / M21, print 187–189 px wide: they draw 180 × 75). The boxes are
-// keyline-INCLUSIVE, so a bar that draws a keyline round the glyph (the
-// borderless bars' white SET_SYMBOL_KEYLINE, 0.05 em out) fits the ink AND
-// its ring to them (DMU 91 × 83, the core-set pills 85 × 180 with the ring);
-// our M15 glyph has no keyline, so its flat ink fills the whole silhouette.
+// proportion; MID 11 % narrower; the core-set pills 9 %) it never draws
+// bigger than the print in either direction, and never wider than CC's
+// 0.12 W symbol box (180 px) — but the three core-set pills, M19 / M20 /
+// M21, which print 187.5–189 px wide: they draw at their print's width
+// (SET_SYMBOL_PRINTED_PAST_CAP; owner round 18, 2026-09-30), 188 × 78 on
+// M15 (Keyrune's pill is 2.40 : 1, the print's 2.20 : 1, so the width binds;
+// 180 × 75 under the cap). The boxes are keyline-INCLUSIVE, so a bar that
+// draws a keyline round the glyph (the borderless bars' white
+// SET_SYMBOL_KEYLINE, 0.05 em out) fits the ink AND its ring to them (DMU
+// 91 × 83, the core-set pills 85.5 × 182 with the ring: their print's
+// height binds there); our M15 glyph has no keyline, so its flat ink fills
+// the whole silhouette.
 //
 // Three measured sets are left out: v32's ink fit already draws them at the
 // print's size, to the same whole px at both bakes — BFZ 86.0 × 65.0 (v32
 // 86.1 × 59.5), WAR 86.0 × 74.5 (86.1 × 72.3), ZNR 85.5 × 77.0 (86.1 ×
 // 76.7; #22 / #18, #12 / #4, #2 / #1) — so listing them would only move the
 // type line's room by a fraction of a px. (On the planeswalker and saga bars
-// they keep v32's 80 px box, where their prints set ~86.)
+// they keep v32's 80 px box, where their prints set ~86 — owner round 18:
+// later, TODO 4.46.)
 //
-// A set not listed here keeps v32's ink fit. Adding a set (or re-measuring
-// one) changes its cards' bakes: a layout bump whose scope lists the set.
+// A set not listed here keeps v32's ink fit (owner round 18: kept). Adding a
+// set (or re-measuring one) changes its cards' bakes: a layout bump whose
+// scope lists the set.
 // ---------------------------------------------------------------------------
 
 /** Printed set-symbol boxes, keyline included: set code → [height, width] in
@@ -81,15 +87,29 @@ export const SET_SYMBOL_PRINTED_PX: Readonly<Record<string, readonly [height: nu
   woe: [87.5, 149], // WOE #1, #9
 };
 
+/** The listed sets whose printed symbol is wider than CC's 0.12 W symbol box
+ *  (SET_SYMBOL_MAX_WIDTH_PCT, 180 px at HD) and draws at the print's width
+ *  anyway: the core-set pills (M19 188, M20 187.5, M21 189 px; owner round
+ *  18, 2026-09-30 — "lift the cap for these three only"). Every other glyph
+ *  keeps the cap. */
+export const SET_SYMBOL_PRINTED_PAST_CAP: readonly string[] = ["m19", "m20", "m21"];
+
 /** The same boxes by the Keyrune glyph a set code draws (keyrune-metrics.ts):
  *  the printed size belongs to the symbol, so a code that shares a listed
  *  set's glyph shares its size. */
 const PRINTED_BY_CODEPOINT: ReadonlyMap<number, readonly [number, number]> = new Map(
   Object.entries(SET_SYMBOL_PRINTED_PX).map(([code, box]) => [KEYRUNE_CODEPOINTS[code], box]),
 );
+const PAST_CAP_CODEPOINTS: ReadonlySet<number> = new Set(SET_SYMBOL_PRINTED_PAST_CAP.map((code) => KEYRUNE_CODEPOINTS[code]));
 
 /** A glyph's printed box ([height, width], HD px on a 1500 px card), or null
  *  when its set was not measured. */
 export function printedSetSymbolPx(codepoint: number): readonly [number, number] | null {
   return PRINTED_BY_CODEPOINT.get(codepoint) ?? null;
+}
+
+/** Whether a glyph draws at its printed width past CC's 0.12 W cap
+ *  (SET_SYMBOL_PRINTED_PAST_CAP, by the glyph its code draws). */
+export function printedPastCap(codepoint: number): boolean {
+  return PAST_CAP_CODEPOINTS.has(codepoint);
 }

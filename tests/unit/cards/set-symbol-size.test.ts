@@ -14,7 +14,12 @@ import {
   KEYRUNE_UNITS_PER_EM,
 } from "@/lib/cards/keyrune-metrics";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
-import { SET_SYMBOL_PRINTED_PX, printedSetSymbolPx } from "@/lib/cards/set-symbol-prints";
+import {
+  SET_SYMBOL_PRINTED_PAST_CAP,
+  SET_SYMBOL_PRINTED_PX,
+  printedPastCap,
+  printedSetSymbolPx,
+} from "@/lib/cards/set-symbol-prints";
 import { getFrameProfile, SET_SYMBOL_KEYLINE } from "@/lib/cards/template-layout";
 import {
   KEYRUNE_EM_PER_BOX,
@@ -35,7 +40,8 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // type.sizePct × 1.1, byte for byte. Layout v36 (TODO 4.46): a set whose
 // printed symbol was measured (lib/cards/set-symbol-prints.ts) draws at the
 // print's size instead — its glyph fitted inside the printed box by its ink,
-// never wider than 0.12 W — on every family frame but the full-art basics
+// never wider than 0.12 W but for the core-set pills M19 / M20 / M21, which
+// print wider (owner round 18) — on every family frame but the full-art basics
 // (setSymbolFit "ink-box", 4.39's print-checked size). The printed box is
 // keyline-inclusive, so on a frame that draws a keyline round the glyph (the
 // borderless bars' white SET_SYMBOL_KEYLINE) the ink AND its ring fit it.
@@ -177,10 +183,12 @@ describe("setSymbolSize on the family", () => {
         const label = `${template} ${code}`;
         const inkH = s.sizePct * (heightEm + 2 * ringEm) * HD;
         const inkW = s.sizePct * (widthEm + 2 * ringEm) * HD;
-        // Inside the printed box and CC's 0.12 W width, touching one of them.
+        // Inside the printed box and CC's 0.12 W width (the core-set pills:
+        // the box alone), touching one of them.
+        const cap = SET_SYMBOL_PRINTED_PAST_CAP.includes(code) ? Infinity : SET_SYMBOL_MAX_WIDTH_PCT * HD;
         expect(inkH, label).toBeLessThanOrEqual(h + 1e-9);
-        expect(inkW, label).toBeLessThanOrEqual(Math.min(w, SET_SYMBOL_MAX_WIDTH_PCT * HD) + 1e-9);
-        const touches = Math.abs(inkH - h) < 1e-9 || Math.abs(inkW - w) < 1e-9 || Math.abs(inkW - SET_SYMBOL_MAX_WIDTH_PCT * HD) < 1e-9;
+        expect(inkW, label).toBeLessThanOrEqual(Math.min(w, cap) + 1e-9);
+        const touches = Math.abs(inkH - h) < 1e-9 || Math.abs(inkW - w) < 1e-9 || Math.abs(inkW - cap) < 1e-9;
         expect(touches, label).toBe(true);
         expect(s.drawnWidthPct, label).toBeCloseTo(advanceEm * s.sizePct, 12);
         // The type line stops a gap before the silhouette: the ink's side
@@ -207,9 +215,11 @@ describe("setSymbolSize on the family", () => {
       expect(dmu.sizePct * (widthEm + 0.1) * HD, template).toBeCloseTo(83, 9);
       expect(dmu.sizePct * (heightEm + 0.1) * HD, template).toBeLessThanOrEqual(91.5);
       expect(dmu.sizePct * heightEm * HD, template).toBeLessThan(setSymbolSize(m15, glyph("dmu")).sizePct * heightEm * HD - 8);
-      // The core-set pill: ink + ring at CC's 180 px, not past it.
+      // The core-set pill: past CC's 180 px (owner round 18), ink + ring at
+      // its print's 86 px height (183 px wide; the width, 187.5, has room).
       const m20 = setSymbolSize(p, glyph("m20"));
-      expect(m20.sizePct * (ink(KEYRUNE_CODEPOINTS.m20).widthEm + 0.1) * HD, template).toBeCloseTo(180, 9);
+      expect(m20.sizePct * (ink(KEYRUNE_CODEPOINTS.m20).heightEm + 0.1) * HD, template).toBeCloseTo(86, 9);
+      expect(m20.sizePct * (ink(KEYRUNE_CODEPOINTS.m20).widthEm + 0.1) * HD, template).toBeCloseTo(182.96, 2);
       // An unmeasured set keeps v32's fit exactly (its ring was never
       // counted there; changing that would re-bake unlisted cards).
       for (const code of ["xln", "m14", "war", "bfz"]) {
@@ -231,6 +241,45 @@ describe("setSymbolSize on the family", () => {
       expect(s.sizePct * (3000 / KEYRUNE_UNITS_PER_EM)).toBeCloseTo(SET_SYMBOL_MAX_WIDTH_PCT, 12);
     } finally {
       delete table[cp];
+    }
+  });
+
+  it("lifts CC's 0.12 W cap for the core-set pills only (M19 / M20 / M21 at their print's width; owner round 18)", () => {
+    expect([...SET_SYMBOL_PRINTED_PAST_CAP].sort()).toEqual(["m19", "m20", "m21"]);
+    const cap = SET_SYMBOL_MAX_WIDTH_PCT * HD;
+    for (const [code, [, w]] of Object.entries(SET_SYMBOL_PRINTED_PX)) {
+      const cp = KEYRUNE_CODEPOINTS[code];
+      const inkW = setSymbolSize(m15, glyph(code)).sizePct * ink(cp).widthEm * HD;
+      if (SET_SYMBOL_PRINTED_PAST_CAP.includes(code)) {
+        // Every one prints wider than the cap, and draws at its print's width.
+        expect(w, code).toBeGreaterThan(cap);
+        expect(printedPastCap(cp), code).toBe(true);
+        expect(inkW, code).toBeCloseTo(w, 9);
+      } else {
+        expect(printedPastCap(cp), code).toBe(false);
+        expect(inkW, code).toBeLessThanOrEqual(cap + 1e-9);
+      }
+    }
+    // Only these three print wider than the cap: the list is the whole set.
+    expect(Object.entries(SET_SYMBOL_PRINTED_PX).filter(([, [, w]]) => w > cap).map(([code]) => code).sort()).toEqual([
+      "m19",
+      "m20",
+      "m21",
+    ]);
+    // Their exact sizes on M15 (HD px, ink): M19 188 × 78.4, M20 187.5 × 78.2, M21 189 × 78.5.
+    for (const [code, w, h] of [
+      ["m19", 188, 78.42],
+      ["m20", 187.5, 78.21],
+      ["m21", 189, 78.44],
+    ] as const) {
+      const s = setSymbolSize(m15, glyph(code));
+      expect(s.sizePct * ink(KEYRUNE_CODEPOINTS[code]).widthEm * HD, code).toBeCloseTo(w, 9);
+      expect(s.sizePct * ink(KEYRUNE_CODEPOINTS[code]).heightEm * HD, code).toBeCloseTo(h, 1);
+    }
+    // The cap still holds for an unlisted glyph (the synthetic wide one
+    // above) and for the full-art basics, which never read the table.
+    for (const template of ["m15fullartland", "fullartland"]) {
+      expect(setSymbolSize(getFrameProfile(template), glyph("m20")).sizePct, template).toBe(0.065);
     }
   });
 
@@ -325,8 +374,9 @@ describe("setSymbolSize off the family (byte-identical fallback)", () => {
 // fit drew these 0.47–1.03 of the print's height — M20 / M21 / M19 0.47, NEO
 // / DSK 0.64, OTJ 0.58, FDN 0.88 — the table draws every one at the print's
 // height, but where Keyrune's glyph is wider than the print's in proportion
-// (the box's width binds: EOE 0.91, OTJ 0.90, GRN / WOE / SNC 0.89–0.95) or
-// wider than CC's 0.12 W (the core-set pills, 0.87).
+// (the box's width binds: EOE 0.91, OTJ 0.90, GRN / WOE / SNC 0.89–0.95, the
+// core-set pills 0.91 — at their print's 187.5–189 px width, past CC's 0.12 W
+// since owner round 18; 0.87 under it).
 describe("print check", () => {
   it("draws every measured set within its printed box, and its height to 0.87 of the print or better", () => {
     const m15 = getFrameProfile("m15");
@@ -345,7 +395,7 @@ describe("print check", () => {
     expect(px("dsk")).toBeCloseTo(73, 0);
     expect(px("fdn")).toBeCloseTo(88.5, 6);
     expect(px("dom")).toBeCloseTo(88.5, 6);
-    expect(Math.round(px("m20"))).toBe(75); // 180 px wide: CC's 0.12 W
+    expect(Math.round(px("m20"))).toBe(78); // 187.5 px wide, the print's (the 0.12 W cap drew 180 × 75)
   });
 
   it("lists every creator preset set (components/creator/panels/set-icon-panel.tsx) but the two v32 already drew at print size", () => {

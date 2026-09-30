@@ -1005,12 +1005,17 @@ function CardImage({
             justifyContent: "flex-end",
           }}
         >
+          {/* Never shrunk: a symbol wider than the rect (the core-set pills
+              at their print's 188 px, v36, in a 180 px rect) ends at its
+              right edge and reaches out on the left, as the preview's
+              does — shrunk, Satori ran the glyph 9 px past the edge. */}
           <SetSymbolGlyph
             rarity={(card.rarity as Rarity | null) ?? "common"}
             iconUrl={card.setIconUrl}
             setCode={card.setIconCode}
             fontSize={fpx(setSymbol.sizePct, width)}
             keyline={layout.setSymbolKeyline}
+            wrap={SYMBOL_RECT_WRAP}
           />
         </div>
       ) : null}
@@ -2282,6 +2287,9 @@ function LoyaltyRowsBake({
     </div>
   );
 }
+
+/** A symbolRect's symbol: never shrunk to the rect (see its use). */
+const SYMBOL_RECT_WRAP: React.CSSProperties = { flexShrink: 0 };
 
 function SetSymbolGlyph({
   rarity,

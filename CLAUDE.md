@@ -267,10 +267,11 @@ Rules and gotchas:
   code-owned `setSymbolFit: "ink"`; a Keyrune glyph of a set in
   `lib/cards/set-symbol-prints.ts` draws at that set's PRINTED size, v36 —
   keyline-inclusive boxes, so a `setSymbolKeyline` bar fits ink + ring;
-  adding or re-measuring a set is a bump; the full-art basics' "ink-box"
-  never reads the table). Frames outside the family keep the old
-  paths byte-for-byte — bringing one in is its own layout bump
-  (`docs/FRAMES.md`).
+  never past CC's 0.12 W but the core-set pills `SET_SYMBOL_PRINTED_PAST_CAP`,
+  which a symbolRect never shrinks; adding or re-measuring a set is a bump;
+  the full-art basics' "ink-box" never reads the table). Frames outside the
+  family keep the old paths byte-for-byte — bringing one in is its own
+  layout bump (`docs/FRAMES.md`).
 - ONE rules layout (layout v33, TODO 3.29): `lib/cards/rules-layout.ts`
   decides the size (the even HD-px ladder `RULES_SIZE_PX` 76 / 68 / 64 → 42;
   profiles use `rulesPxToPct(RULES_SIZE_PX.*)`, never a pt literal), every

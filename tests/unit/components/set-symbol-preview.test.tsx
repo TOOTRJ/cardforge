@@ -66,6 +66,16 @@ describe("CardPreview — set symbol size", () => {
     expect(cqw(setSymbolSize(getFrameProfile("m15"), setSymbolSource(null, "xln")).sizePct)).toBe("5.740cqw");
   });
 
+  it("never shrinks a symbolRect's symbol: the core-set pill (wider than the 12 %W rect, v36) ends at its right edge", () => {
+    const p = getFrameProfile("m15pw");
+    const size = setSymbolSize(p, setSymbolSource(null, "m21"));
+    // 189 px at HD — its print's width, past CC's 180 px (owner round 18).
+    expect(size.drawnWidthPct * 100).toBeGreaterThan(p.symbolRect!.widthPct);
+    const style = styleOf(markup("m15pw", { setIconCode: "m21" }), /i[^>]*ss-m21/);
+    expect(style).toContain(`width:${cqw(size.drawnWidthPct)}`);
+    expect(style).toContain("flex-shrink:0");
+  });
+
   it("keeps a frame outside the family at type.sizePct × 1.1 for every source", () => {
     const box = cqw(getFrameProfile("modern").type.sizePct * 1.1);
     expect(box).toBe("3.817cqw");

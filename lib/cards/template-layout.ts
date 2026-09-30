@@ -3312,12 +3312,10 @@ const EXPEDITIONLAND: FrameProfile = {
 // The art runs under the WHOLE translucent type bar and text box, as on the
 // Theros Beyond Death constellation prints (THB #258 Daxos, #259 Heliod,
 // #268 Klothys — one picture from the window to the box's bottom; owner
-// decision 2026-09-29, TODO 4.17b, layout v35). The box runs 110–1391 ×
-// 1319–1946 px — α 171 since layout v36 (TODO 4.17e: the THB prints' box
-// lets a third of the art through; MSE's was α ≈ 128); the slot used to end
-// at 81.2 % (1705 px), so the box's top showed the art and its last 241 px
-// #101015 — a seam across the rules text. It now ends at 93 % (1953 px),
-// under the opaque bottom border.
+// decision 2026-09-29, TODO 4.17b, layout v35). The box (α ≈ 128) runs
+// 110–1391 × 1319–1946 px; the slot used to end at 81.2 % (1705 px), so the
+// box's top showed the art and its last 241 px #101015 — a seam across the
+// rules text. It now ends at 93 % (1953 px), under the opaque bottom border.
 const NYX: FrameProfile = {
   ...M15,
   label: "Nyx Constellation",
