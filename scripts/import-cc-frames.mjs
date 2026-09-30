@@ -162,6 +162,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         invert: l.invert,
         opacity: l.opacity,
         gain: l.gain,
+        recolour: l.recolour,
+        lumaRamp: l.lumaRamp,
       });
     }
     const composite = toRgba8(compositeLayers(images, W, H));

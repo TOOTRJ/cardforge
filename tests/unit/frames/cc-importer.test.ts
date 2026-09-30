@@ -8,6 +8,7 @@ import {
   COLORS,
   CORNER_RADIUS,
   PW_COLOURLESS_RIM_GAIN,
+  PW_GOLD_FACE,
   SHIELD_BOX,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
@@ -36,7 +37,15 @@ import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/fra
 // pinned commit; the build folder is never committed.
 // ---------------------------------------------------------------------------
 
-type Layer = { src: string; mask?: string; invert?: boolean; opacity?: number; gain?: number };
+type Layer = {
+  src: string;
+  mask?: string;
+  invert?: boolean;
+  opacity?: number;
+  gain?: number;
+  recolour?: boolean;
+  lumaRamp?: readonly number[];
+};
 type Def = {
   colors: Record<string, Layer[]>;
   plates?: Record<string, string>;
@@ -230,7 +239,7 @@ describe("Card Conjurer recipe", () => {
   it("imports the borderless planeswalkers 1:1 per colour, with the same shield cut (4.33)", () => {
     const regular = templates.m15borderlesspw;
     const tall = templates.m15borderlesspwtall;
-    for (const k of ["w", "u", "b", "r", "g", "m"]) {
+    for (const k of ["w", "u", "b", "r", "g"]) {
       expect(regular.colors[k]).toEqual([{ src: `img/frames/planeswalker/borderless/${k}.png` }]);
       expect(tall.colors[k]).toEqual([{ src: `img/frames/planeswalker/tallBorderless/${k}.png` }]);
     }
@@ -250,6 +259,30 @@ describe("Card Conjurer recipe", () => {
     expect(tall.pack).toMatch(/^packPlaneswalkerTallBorderless[.]js/);
     expect(describeLayer(regular.colors.c[0])).toBe(
       "img/frames/planeswalker/borderless/a.png with its alpha ×1.0897 (clamped at 1)",
+    );
+  });
+
+  it("builds the gold walker's faces from the pack's white frame over its m frame — matched to the prints (4.33 round 15)", () => {
+    const title = "img/frames/planeswalker/regular/planeswalkerMaskTitle.png";
+    const face = { recolour: true, opacity: 0.9, lumaRamp: [235, 250] };
+    expect(PW_GOLD_FACE).toEqual({ opacity: 0.9, lumaRamp: [235, 250] });
+    expect(templates.m15borderlesspw.colors.m).toEqual([
+      { src: "img/frames/planeswalker/borderless/m.png" },
+      { src: "img/frames/planeswalker/borderless/w.png", mask: title, ...face },
+      { src: "img/frames/planeswalker/borderless/w.png", mask: "img/frames/planeswalker/regular/planeswalkerMaskType.png", ...face },
+    ]);
+    // The tall pack's own masters and its own Type mask (packPlaneswalkerTallBorderless.js).
+    expect(templates.m15borderlesspwtall.colors.m).toEqual([
+      { src: "img/frames/planeswalker/tallBorderless/m.png" },
+      { src: "img/frames/planeswalker/tallBorderless/w.png", mask: title, ...face },
+      { src: "img/frames/planeswalker/tallBorderless/w.png", mask: "img/frames/planeswalker/tall/planeswalkerTallMaskType.png", ...face },
+    ]);
+    for (const template of ["m15borderlesspw", "m15borderlesspwtall"]) {
+      expect(templates[template].notes.join(" "), template).toMatch(/gold \(m\) = MATCHED TO THE PRINTS/);
+      expect(sourceFilesFor(templates[template] as never)).toContain(title);
+    }
+    expect(describeLayer(templates.m15borderlesspw.colors.m[1])).toBe(
+      `img/frames/planeswalker/borderless/w.png through ${title} recolouring the layers below (their alpha kept) at 90%, weighted by its own luminance from 235 (0) to 250 (full)`,
     );
   });
 
@@ -306,6 +339,9 @@ describe("Card Conjurer recipe", () => {
 
   it("describes layers the way provenance prints them", () => {
     expect(describeLayer({ src: "a.png" })).toBe("a.png");
+    expect(describeLayer({ src: "a.png", mask: "m.png", recolour: true, opacity: 0.9, lumaRamp: [235, 250] })).toBe(
+      "a.png through m.png recolouring the layers below (their alpha kept) at 90%, weighted by its own luminance from 235 (0) to 250 (full)",
+    );
     expect(describeLayer({ src: "a.png", mask: "m.png" })).toBe("a.png through m.png");
     expect(describeLayer({ src: "a.png", mask: "m.png", opacity: 0.35 })).toBe("a.png through m.png at 35%");
     expect(describeLayer({ src: "a.png", mask: "m.png", invert: true })).toBe("a.png outside m.png");
@@ -460,6 +496,43 @@ describe("pixel operations", () => {
     // Above 234 it clamps (a join with the black bar, α 242).
     const join = toRgba8(compositeLayers([{ data: new Uint8Array(px(116, 120, 128, 242)), gain: 255 / 234 }], 1, 1));
     expect(join[3]).toBe(255);
+  });
+
+  it("recolours without touching the alpha, weighted by mask × opacity × the layer's own luminance ramp (4.33's gold walker)", () => {
+    // 5×1 over a tan base (α 255 ×3, then a see-through face α 217, then clear):
+    // a white ground (luma 251: full weight 0.9), a grey vein (luma 230: none),
+    // a mid pixel (luma 241: 0.4 × 0.9), the see-through face (as opaque as
+    // the base: full weight), clear art (nothing to recolour).
+    const tan = [205, 182, 125];
+    const base = {
+      data: new Uint8Array([
+        ...px(tan[0], tan[1], tan[2], 255), ...px(tan[0], tan[1], tan[2], 255), ...px(tan[0], tan[1], tan[2], 255),
+        ...px(tan[0], tan[1], tan[2], 217), ...px(0, 0, 0, 0),
+      ]),
+    };
+    const white = {
+      data: new Uint8Array([
+        ...px(251, 251, 251, 255), ...px(230, 230, 230, 255), ...px(241, 241, 241, 255),
+        ...px(251, 251, 251, 217), ...px(251, 251, 251, 255),
+      ]),
+      mask: new Uint8Array([...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255)]),
+      recolour: true,
+      opacity: 0.9,
+      lumaRamp: [235, 250],
+    };
+    const out = toRgba8(compositeLayers([base, white], 5, 1));
+    const at = (x: number) => [...out.subarray(x * 4, x * 4 + 4)];
+    expect(at(0)).toEqual([246, 244, 238, 255]); // tan × 0.1 + 251 × 0.9
+    expect(at(1)).toEqual([...tan, 255]);
+    expect(at(2)).toEqual([218, 203, 167, 255]); // tan × 0.64 + 241 × 0.36
+    // The see-through face keeps α 217 — recoloured, never made more opaque.
+    expect(at(3)).toEqual([246, 244, 238, 217]);
+    expect(at(4)).toEqual([0, 0, 0, 0]);
+    // Outside its mask it does nothing.
+    const masked = toRgba8(compositeLayers([base, { ...white, mask: new Uint8Array(20) }], 5, 1));
+    expect([...masked.subarray(0, 4)]).toEqual([...tan, 255]);
+    // It needs something below it.
+    expect(() => compositeLayers([white], 5, 1)).toThrow(/needs a layer below/);
   });
 
   it("blends a half-visible layer and rounds (not truncates) to 8 bits", () => {
