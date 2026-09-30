@@ -264,6 +264,7 @@ describe("summariseFrameDemand", () => {
     sampleScryfallId: null,
     sampleUrl: null,
     blockedBy: null,
+    drawnNow: false,
     forGood: false,
     inRegistry: true,
     ...patch,
@@ -289,6 +290,17 @@ describe("summariseFrameDemand", () => {
     expect(s).toMatchObject({ window: "30", requests: 38, missing: 3, unverified: 1, error: null });
     expect(s.top.map((r) => r.signature)).toEqual(["a", "b", "c"]);
     expect(s.top[1]).toEqual({ signature: "b", label: "Borderless B", setCode: "abc", cause: "unverified", users: 3, count: 3 });
+  });
+
+  it("leaves out a row its frame draws now, as the page does (a crown or two-colour request logged before 4.6a / 4.6b)", () => {
+    const s = summariseFrameDemand(
+      summary([
+        row({ signature: "era/2015+crown", label: "M15-era frame", users: 7, count: 12, drawnNow: true }),
+        row({ signature: "a", label: "Showcase A", users: 5, count: 8 }),
+      ]),
+    );
+    expect(s).toMatchObject({ missing: 1, unverified: 0 });
+    expect(s.top.map((r) => r.signature)).toEqual(["a"]);
   });
 
   it("counts FRAMES the way the page's group headings do: one signature under two set codes is one frame", () => {
