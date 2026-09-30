@@ -455,7 +455,9 @@ describe("templateRefusesKind", () => {
     expect(templateRefusesKind("nyx", "creature")).toBe(false);
     expect(templateRefusesKind("fullartland", "creature")).toBe(true);
     expect(templateRefusesKind("fullart", "creature")).toBe(false);
-    expect(templateRefusesKind("lotr", "planeswalker")).toBe(false);
+    // TODO 4.5a: the Ring frame prints P/T only — no loyalty, no defense.
+    expect(templateRefusesKind("lotr", "planeswalker")).toBe(true);
+    expect(templateRefusesKind("lotr", "creature")).toBe(false);
   });
 
   it("never refuses a border-era frame an off-kind legacy card sits on", () => {
@@ -466,6 +468,91 @@ describe("templateRefusesKind", () => {
     expect(templateRefusesKind("m15", "artifact")).toBe(false);
     expect(templateRefusesKind("m15", "token")).toBe(false);
     expect(templateRefusesKind("saga", "creature")).toBe(false);
+  });
+});
+
+// TODO 4.5a: eight IP showcases print P/T only — no loyalty shield, no
+// ability rows, no defense shield — so a planeswalker on them printed plain
+// ability lines and no loyalty, and a battle no defense. They now refuse the
+// two kinds (and, like fullart / m15textless / extendedart, every layout kind,
+// which they never dressed: 8 × 7 = 56 refusals).
+const STAT_LESS_SHOWCASES = [
+  "lotr",
+  "lotrscroll",
+  "avatar",
+  "bloomburrow",
+  "bloomanime",
+  "tarkirdraconic",
+  "tarkirghostfire",
+  "tarkirdragon",
+] as const;
+
+const EVERY_COMBO: ReadonlySet<string> = new Set(
+  FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))),
+);
+
+const drawsWalker = (template: (typeof FRAME_TEMPLATE_VALUES)[number]) => {
+  const profile = getFrameProfile(template);
+  return Boolean(profile.loyalty && profile.loyaltyRows);
+};
+const drawsBattle = (template: (typeof FRAME_TEMPLATE_VALUES)[number]) =>
+  Boolean(getFrameProfile(template).defense);
+
+describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
+  it("the eight IP showcases draw neither (the reason they refuse)", () => {
+    for (const template of STAT_LESS_SHOWCASES) {
+      expect(FRAME_SET_ERA[FRAME_TEMPLATE_SET[template]], template).toBe("showcase");
+      expect(drawsWalker(template), template).toBe(false);
+      expect(drawsBattle(template), template).toBe(false);
+    }
+  });
+
+  it("offers a planeswalker only on a frame that draws the loyalty shield and the ability rows, a battle only on one with the defense shield", () => {
+    const walkers = framesForKind("planeswalker", EVERY_COMBO).map((f) => f.template);
+    const battles = framesForKind("battle", EVERY_COMBO).map((f) => f.template);
+    expect(walkers.filter((t) => !drawsWalker(t))).toEqual([]);
+    expect(battles.filter((t) => !drawsBattle(t))).toEqual([]);
+    expect(walkers).toContain("m15pw");
+    expect(battles).toContain("battle");
+  });
+
+  it("the server refuses the two kinds on every showcase or borderless frame without the anatomy", () => {
+    const treatments = FRAME_TEMPLATE_VALUES.filter(
+      (t) => FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]] === "showcase" || FRAME_TEMPLATE_SET[t] === "borderless",
+    );
+    expect(treatments).toEqual(expect.arrayContaining([...STAT_LESS_SHOWCASES]));
+    const leaks = treatments.flatMap((t) => [
+      ...(!drawsWalker(t) && !templateRefusesKind(t, "planeswalker") ? [`${t}/planeswalker`] : []),
+      ...(!drawsBattle(t) && !templateRefusesKind(t, "battle") ? [`${t}/battle`] : []),
+    ]);
+    expect(leaks).toEqual([]);
+  });
+
+  it("refuses exactly planeswalker, battle and the layout kinds on the eight — 56 pairs — and keeps every standard kind", () => {
+    const refused: string[] = [];
+    for (const template of STAT_LESS_SHOWCASES) {
+      for (const kind of CARD_KIND_VALUES) {
+        const standard =
+          KIND_DEFS[kind].layoutTemplates === null && kind !== "planeswalker" && kind !== "battle";
+        expect(templateRefusesKind(template, kind), `${template}/${kind}`).toBe(!standard);
+        expect(templateSupportsKind(template, kind), `${template}/${kind}`).toBe(standard);
+        if (!standard) refused.push(`${template}/${kind}`);
+      }
+    }
+    expect(refused).toHaveLength(56);
+  });
+
+  it("drops them from the planeswalker and battle galleries only", () => {
+    const walkers = framesForKind("planeswalker", EVERY_COMBO).map((f) => f.template);
+    const battles = framesForKind("battle", EVERY_COMBO).map((f) => f.template);
+    const creatures = framesForKind("creature", EVERY_COMBO).map((f) => f.template);
+    const lands = framesForKind("land", EVERY_COMBO).map((f) => f.template);
+    for (const template of STAT_LESS_SHOWCASES) {
+      expect(walkers, template).not.toContain(template);
+      expect(battles, template).not.toContain(template);
+      expect(creatures, template).toContain(template);
+      expect(lands, template).toContain(template);
+    }
   });
 });
 

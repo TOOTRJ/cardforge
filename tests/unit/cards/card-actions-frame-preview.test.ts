@@ -159,6 +159,19 @@ describe("createCardAction — frame previews", () => {
     expect(result).toMatchObject({ ok: false, fieldErrors: { frame_style: expect.stringMatching(/doesn't dress Planeswalker/) } });
   });
 
+  it("an admin preview can't save a walker or a battle on an IP showcase either (TODO 4.5a)", async () => {
+    const stub = db();
+    const walker = await createCardAction(
+      payload({ frame_preview: true, card_type: "planeswalker", subtypes: [], frame_style: { template: "tarkirghostfire" } }),
+    );
+    expect(walker).toMatchObject({ ok: false, fieldErrors: { frame_style: expect.stringMatching(/Ghostfire frame doesn't dress Planeswalker/) } });
+    const battle = await createCardAction(
+      payload({ frame_preview: true, card_type: "battle", subtypes: [], frame_style: { template: "lotr" } }),
+    );
+    expect(battle).toMatchObject({ ok: false, fieldErrors: { frame_style: expect.stringMatching(/doesn't dress Battle/) } });
+    expect(stub.forTable("cards")).toHaveLength(0);
+  });
+
   it("an ordinary save never names the column", async () => {
     const stub = db();
     const result = await createCardAction(

@@ -88,7 +88,7 @@ import {
 import { artWindowFindings, artWindowSlotsOf, artWindowVerdict } from "../lib/frames/art-window.ts";
 import "./lib/ts-alias-hooks.mjs";
 
-const { getFrameProfile, underFrameArtRect } = await import("../lib/cards/template-layout.ts");
+const { getFrameProfile, underFrameArtRect, underFrameArtSlot } = await import("../lib/cards/template-layout.ts");
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -209,7 +209,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     {
       // A known failure fails only when it got worse than its entry's bound.
       const profile = getFrameProfile(template);
-      const findings = artWindowFindings(master, OUT_W, OUT_H, artWindowSlotsOf(profile, underFrameArtRect(profile, key)));
+      const findings = artWindowFindings(master, OUT_W, OUT_H, artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key)));
       const verdict = artWindowVerdict(template, key, findings);
       for (const v of verdict.fails) artWindowFailures.push(`${template}/${key} ${v}`);
       if (verdict.fixed) console.log(`${template}/${key}: its art window passes now — strike it from ART_WINDOW_KNOWN_FAILURES (lib/frames/art-window.ts)`);

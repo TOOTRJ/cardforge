@@ -11,6 +11,7 @@ import {
   parseWalkthroughSeed,
   walkthroughKind,
 } from "@/lib/creator/frame-preview";
+import { KIND_DEFS, templateRefusesKind } from "@/lib/creator/card-kinds";
 import {
   SAMPLE_SEED_NAME,
   sampleWalkthroughPatch,
@@ -95,6 +96,20 @@ export async function buildFrameWalkthrough(
   const payload = await buildFrameComparePayload(reference.scryfallId, template);
   if (!payload) {
     return sample(`the lookup of ${reference.name} failed (reload to retry)`);
+  }
+  // A reference the frame prints but the save refuses on it (the Ghostfire
+  // frame's Ugin #409, its only colourless printing: a walker, and the
+  // showcases draw no loyalty since TODO 4.5a) would walk a card that can't
+  // be saved — walk the frame's own kind with sample content instead. The
+  // SAVE's rule (templateRefusesKind, the kind gate), not the gallery's: a
+  // snow artifact on m15snow (Replicating Ring KHM #244) isn't in the
+  // Artifact gallery, but it saves and walks as the artifact it is.
+  const referenceKind = payload.patch.kind;
+  if (referenceKind && templateRefusesKind(template, referenceKind)) {
+    const label = KIND_DEFS[referenceKind].label.toLowerCase();
+    return sample(
+      `${payload.cardName} is ${/^[aeiou]/.test(label) ? "an" : "a"} ${label}, which this frame doesn't dress`,
+    );
   }
   const seed: WalkthroughSeed = {
     // Pinned to the frame under test: the import handler then lands on it

@@ -1,7 +1,8 @@
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
 import { basicLandManaKey } from "@/lib/cards/watermark";
-import type { CardType } from "@/types/card";
+import { isColorIdentity, type CardType } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // CARD_LAYOUT_VERSION — stamped onto `cards.layout_version` every time a card
@@ -521,9 +522,71 @@ import type { CardType } from "@/types/card";
 //            stays fresh (VERIFICATION_TEMPLATE_SCOPES[34]: the wording alone
 //            is verification-neutral). A stale tick is still verified: the
 //            creator keeps offering the frames.
+//   35     — the art-area corrections (owner decisions 2026-09-29), ONE bump
+//            for every place the bake showed its #101015 ground where the
+//            print shows art — found by 7.6's art-window check, each struck
+//            from ART_WINDOW_KNOWN_FAILURES (lib/frames/art-window.ts).
+//            Measured on the sha-checked masters (#101015 px a frame lets
+//            ≥ 2 % through with no art beneath, per master):
+//            * the CC M15 art slot (TODO 4.4 (2); CC_M15_ART_SLOT
+//              7.67/11.25/84.76 × 44.33 on m15, m15land, m15snowland,
+//              m15artifact, m15snow, m15devoid — was M15's MSE 7.8/11.4/
+//              84.4 × 44.0): the masters' window 116–1384 × 238–1165 now has
+//              0.95 / 2.45 / 1.75 / 2.18 px to spare; the 1–1.6 px hairline
+//              on every side goes, 10,046 → 0 px per master. The MSE-framed
+//              adventure keeps M15's slot.
+//            * under-frame art from the border's inner edge (4.17a;
+//              UNDER_FRAME_RECT 3.7/2.7/92.6 × 93.3, was 4/4/92 × 92): the
+//              see-through body starts 58–59 px in, the art started at 84 —
+//              a 25 px band above the title bar on m15/c, every m15devoid,
+//              m15token/c and m15tokentext/c (every pixel α < 250 not fully
+//              under art: 42,743 → 0 px on m15/c — 34,274 in the band above
+//              the title bar, 8,469 down the sides —, 37,514–37,530 → 0 on
+//              the token c's, 3,024 → 0 (sides) on the coloured devoids; the
+//              prints' border ends 2.69–2.88 %H / 3.76–4.16 %W in, nine
+//              prints).
+//            * nyx: the art runs under the whole translucent text box, as on
+//              the THB constellation prints (4.17b, owner decision; artSlot
+//              height 70 → 81.8, to 93 %): 308,720 → 0 px — the box's last
+//              241 px were #101015. fullart: artSlot 4/2.9/92 × 88.3 →
+//              3.8/2.7/92.4 × 90.3 — to 93 % (the 31 px strip) and out to
+//              whole pixels past the hedron ring's anti-aliased rim (α 128–
+//              249 on rows 59–60, columns 59 / 1440–1441): 46,500 → 9 px, a
+//              3 × 3 speck at α 246–249 just below the box (x 1401–1403,
+//              y 1953–1955). m15pw/c: underFrameArt for "c" as ONE picture — its
+//              window drawn in the under-frame rect too (UnderFrameArt
+//              .artSlot): CC's colourless walker is translucent from the
+//              border to the window with no outline down the ability box, so
+//              M15PW's slot over a separately cropped under-frame layer (the
+//              first build) seamed all round; 334,216 → 0 px, the window's
+//              picture ~14 % larger than on the coloured walkers.
+//            The art-window check (7.6) and the frame-compare save gate
+//            gained two see-through rules in the same round: the window's
+//            slot covers the window too, and meets the under-frame art on
+//            the frame's opaque outline (or is one picture) — the colourless
+//            tokens' seam, there since v34, is its known failure (4.17c).
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[35]) AND card-scoped
+//            (VERSION_SCOPES[35] = v35Changed): every card on the eight
+//            art-slot templates (V35_ART_SLOT_TEMPLATES — the empty-art box
+//            moves too), and on m15token / m15tokentext / m15pw only a
+//            colourless card with art (V35_SEE_THROUGH_C_TEMPLATES: the
+//            under-frame layer is drawn only under art). Public production
+//            (anonymous read, 2026-09-29): 740 of 827 public / unlisted cards
+//            — m15 611, m15land 49, m15artifact 37, m15devoid 20, m15snow 13,
+//            m15tokentext 9 of 33, m15pw 1 of 7, none on m15snowland,
+//            m15token, nyx, fullart; re-baked, all 740 change, only inside
+//            their art rects, and none outside the scope. The visual matrix
+//            (tests/visual), 841 cases (after #429's 16 removals) against
+//            v34: 162 stored cases change + 1 print-only one
+//            (m15/w/creature-short@square, which the gate exempts), every
+//            one inside the scope, and the scope selects no unchanged case;
+//            8 no-art cases are new (the empty-art box on v35's slots, and
+//            no under-frame change without art). "sweep". VERIFICATION-NEUTRAL (the
+//            default for small art-edge fixes, as v31–v33): no text, bar,
+//            pip, symbol or plate moves — see VERIFICATION_NEUTRAL_VERSIONS.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 34;
+export const CARD_LAYOUT_VERSION = 35;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -584,6 +647,13 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // (v34, the token release: no template list either — VERSION_SCOPES[34]
   // holds the two token frames' every card AND a token's wording on any
   // template; a list here would AND the second half away.)
+  // v35: the art-area corrections — the templates whose art slot or
+  // under-frame art moved (VERSION_SCOPES[35] narrows the three whose only
+  // change is the see-through colourless master's under-frame art).
+  35: [
+    "m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "nyx", "fullart",
+    "m15token", "m15tokentext", "m15pw",
+  ],
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -592,6 +662,22 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
 // once it ships, and a token template added later (4.48's m20token…, 4.49's
 // m15tokentext) is new — no card was baked on it before v34.
 export const V34_TOKEN_FRAME_TEMPLATES: readonly string[] = ["m15token", "m15tokenartifact"];
+
+// v35 — the art-area corrections (TODO 4.4 (2), 4.17a, 4.17b). Frozen like
+// the lists above: v35 is history once it ships.
+//   * EVERY card on these templates re-bakes: the Card Conjurer M15 family's
+//     art slot (m15 — the legacy templates drawn as m15 included —,
+//     m15artifact, m15land, m15snow, m15snowland, m15devoid; with no art the
+//     empty-art box moves with it), the under-frame art of m15/c and every
+//     m15devoid master, and the nyx / fullart slots that now run under the
+//     whole translucent text box.
+//   * On these, only a card that paints the see-through colourless master
+//     ("c") AND has art: their slot is unchanged, the under-frame layer
+//     (drawn only under art) is what moved or appeared.
+export const V35_ART_SLOT_TEMPLATES: readonly string[] = [
+  "m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "nyx", "fullart",
+];
+export const V35_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15token", "m15tokentext", "m15pw"];
 
 /**
  * Bumps whose frame SLOTS move on fewer templates than their stored bakes
@@ -618,10 +704,20 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * re-score — and the owner signs it off on the round-9 print comparison
  * (owner decision 2026-09-28). v34 is NOT here: 4.49 moves the token frames'
  * slots, so their ticks are re-verified (VERIFICATION_TEMPLATE_SCOPES).
+ * v35 is (the default for small art-edge fixes, as v31–v33): no title, type
+ * line, pip, symbol, rules box or plate moves — only where the ART is
+ * painted: the CC M15 family's slot by 0.95–2.45 px outward to cover the
+ * master's own window, the art under the see-through masters from the
+ * border's inner edge, nyx / fullart's art on down under their translucent
+ * text box, and m15pw/c's as one picture (its window's crop ~14 % larger —
+ * the one verified combo whose look changes beyond an art edge; the owner
+ * may re-tick it by hand after the sheet). The frame a tick verified
+ * against its prints is the same master in the same place; the owner signs
+ * the art off on the v35 before/after sheet instead of re-ticking.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -645,6 +741,10 @@ export type ScopeCard = {
   /** The raw `frame_style` jsonb — finish-scoped bumps read `.finish`.
    *  `undefined` = not selected (can't tell); null/{} = a regular card. */
   frame_style?: unknown;
+  /** v35: which frame master the card paints (pickFrameColorKey of the
+   *  identities the bake keeps) and whether it has art. */
+  color_identity?: readonly string[] | null;
+  art_url?: string | null;
   // v29: the display lines (word spacing) and the printed stats (3.18).
   title?: string | null;
   supertype?: string | null;
@@ -848,6 +948,25 @@ function v34Changed(card: ScopeCard): boolean {
   return tokenTypeLineChanged(card);
 }
 
+/**
+ * Whether layout v35 (the art-area corrections) changed a card's bake: every
+ * card on V35_ART_SLOT_TEMPLATES (drawn template: a {} frame_style is m15),
+ * and on V35_SEE_THROUGH_C_TEMPLATES a card that paints the colourless
+ * master — the bake's own pick, pickFrameColorKey of the identities it
+ * keeps (none of the three dresses a colour by type) — and has art (the
+ * under-frame layer is drawn only under art). Any column it needs that the
+ * row doesn't carry → affected.
+ */
+function v35Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  if (V35_ART_SLOT_TEMPLATES.includes(template)) return true;
+  if (!V35_SEE_THROUGH_C_TEMPLATES.includes(template)) return false;
+  if (card.color_identity === undefined || card.art_url === undefined) return true;
+  const identities = (card.color_identity ?? []).filter(isColorIdentity);
+  return pickFrameColorKey(identities) === "c" && Boolean(card.art_url);
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -882,6 +1001,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v34 — the token release: every card on the two token frames (4.49) and
   // a token's changed wording on any template (3b.15) — v34Changed.
   34: v34Changed,
+  // v35 — the art-area corrections: every card on the templates whose art
+  // slot moved, and a colourless card with art on the three whose
+  // see-through master gained or moved its under-frame art — v35Changed.
+  35: v35Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -995,6 +1118,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   32: "sweep", // one M15-era title / type size (4.20): the family's print sizes — a platform correction, never a badge
   33: "sweep", // rules text by its real lines at the prints' spacing (3.29) — a measurement correction, never a badge
   34: "sweep", // token release: P/T plate, type line + symbol on the token frames (4.49), "Token" first (3b.15) — a platform correction
+  35: "sweep", // art-area corrections: CC M15 art slot (4.4 (2)), under-frame art from the border (4.17a), nyx / fullart / m15pw-c (4.17b)
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

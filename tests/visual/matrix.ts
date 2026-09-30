@@ -16,12 +16,16 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     a three-colour card, plus a two-colour card for the split frames) × two
 //     content shapes of the template's first kind ("short" and "long");
 //   * every OTHER kind a template hosts (the creator's framesForKind offer —
-//     a showcase dresses nine kinds) once, in that kind's colour;
+//     at most seven on a showcase: no walker, battle or layout kind) once, in
+//     that kind's colour;
 //   * the finishes (foil, etched) on a spread of frames; the HD preset (the
 //     stored bake's size) for the long card on every template; square
 //     corners (print) on a few; an "edge" card (100/100, a four-mode
 //     Command, reversed-hybrid and unknown symbols — TODO 3.11) on one frame
-//     of each family;
+//     of each family; a card with NO art on the frames whose art layers
+//     differ from their empty-art box (the see-through masters, whose
+//     under-frame art is drawn only under art, and layout v35's art slots —
+//     the empty box is drawn in the slot);
 //   * the per-card anatomy switched ON (TODO 4.6a "@crown…", 4.6b
 //     "@pair…"): the long (Legendary) card with FrameStyle.crown on every
 //     template that draws the crown, in each crown key, plus HD, foil and
@@ -371,6 +375,20 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   ["m15land", ["g", "c", "wub"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
+/** No art (`art_url` null): the empty-art box, and no under-frame layer on a
+ *  see-through master — m15/c, devoid, the colourless tokens and walker
+ *  (m15pw/c's window is its under-frame picture only under art), and the
+ *  v35 art slots (CC M15, nyx, fullart). */
+const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
+  ["m15", "c"],
+  ["m15", "w"],
+  ["m15devoid", "b"],
+  ["m15token", "c"],
+  ["m15tokentext", "c"],
+  ["m15pw", "c"],
+  ["nyx", "w"],
+  ["fullart", "g"],
+];
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15", "w"],
   ["tarkirdragon", "u"],
@@ -417,6 +435,7 @@ export function visualCases(): VisualCase[] {
       corners?: "round" | "square";
       finish?: VisualCase["finish"];
       suffix?: string;
+      noArt?: boolean;
       crown?: boolean;
       /** Fields over the stored row (a switch on frame_style, a cost). */
       row?: Partial<CardRowForBake>;
@@ -426,7 +445,11 @@ export function visualCases(): VisualCase[] {
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = { ...rowFor(template, kind, colour, shape, finish, id, extra.crown ?? false), ...extra.row };
+    const row = {
+      ...rowFor(template, kind, colour, shape, finish, id, extra.crown ?? false),
+      ...(extra.noArt ? { art_url: null } : {}),
+      ...extra.row,
+    };
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -459,6 +482,10 @@ export function visualCases(): VisualCase[] {
     if (!artReachesCardEdge(getFrameProfile(template))) add(template, primary, "u", "long", { finish: "etched", suffix: "@etched" });
   }
   for (const template of EDGE_TEMPLATES) add(template, "creature", "b", "edge");
+  for (const [template, colour] of NO_ART_CASES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, colour, "short", { suffix: "@noart", noArt: true });
+  }
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });

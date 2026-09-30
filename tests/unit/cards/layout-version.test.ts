@@ -1,10 +1,12 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CARD_LAYOUT_VERSION,
   isRenderStale,
   templateOfFrameStyle,
 } from "@/lib/cards/layout-version";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { getFrameProfile, sameRect, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
@@ -30,6 +32,9 @@ const AT_V32 = { current: 32 } as const;
 /** …and at v33, before v34 (the token release) made every bake on the token
  *  frames stale again, text or no text. */
 const AT_V33 = { current: 33 } as const;
+/** …and at v34, before v35 (the art-area corrections) made every bake on the
+ *  CC M15 family, nyx and fullart stale again. */
+const AT_V34 = { current: 34 } as const;
 
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
@@ -896,7 +901,7 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
 
   it("is verification-neutral: a v32 / v31 / v30 frame_reviews tick stays fresh on every template", async () => {
     const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
-    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31, 32, 33]);
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual(expect.arrayContaining([31, 32, 33]));
     expect(VERIFICATION_SCOPED_VERSIONS[33]).toEqual([]);
     for (const t of [...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES]) {
       const regular = { frame_style: { template: t, finish: "regular" } };
@@ -926,9 +931,9 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
   it("is a sweep, never a badge, with the token frames frozen as a literal", async () => {
     const { CARD_LAYOUT_VERSION, V34_TOKEN_FRAME_TEMPLATES, VERSION_SCOPES, latestOptInVersion, latestSweepVersion, rolloutPolicy } =
       await import("@/lib/cards/layout-version");
-    expect(CARD_LAYOUT_VERSION).toBe(34);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(34);
     expect(rolloutPolicy(34)).toBe("sweep");
-    expect(latestSweepVersion()).toBe(34);
+    expect(latestSweepVersion(undefined, 34)).toBe(34);
     expect(latestOptInVersion()).toBe(22);
     expect(VERSION_SCOPES[34]).toBeTypeOf("function");
     expect(V34_TOKEN_FRAME_TEMPLATES).toEqual(["m15token", "m15tokenartifact"]);
@@ -945,7 +950,11 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
   });
 
   it("re-bakes EVERY card on the two token frames, and no non-token card on any other template", async () => {
-    const { V34_TOKEN_FRAME_TEMPLATES, classifyForSweep, hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    // Pinned at v34: v35 (the art-area corrections) re-bakes the CC M15
+    // family, nyx and fullart again.
+    const { V34_TOKEN_FRAME_TEMPLATES, hasNewerLook, hasPendingCorrection: pending } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(34);
+    const hasPendingCorrection = (row: Parameters<typeof pending>[0]) => pending(row, AT_V34);
     for (const t of ALL) {
       const frame = V34_TOKEN_FRAME_TEMPLATES.includes(t);
       // Whatever the card prints: text or none, a non-token or a bare token.
@@ -973,7 +982,7 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
   });
 
   it("re-bakes a token whose printed line changes on ANY template (alphatoken, a showcase, flip's Roles)", async () => {
-    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(34);
     for (const t of ALL) {
       // "Basic Token — Wastes" → "Token Basic — Wastes".
       expect(classifyForSweep(at(t, token({ supertype: "Basic", subtypes: ["Wastes"] }))), t).toBe("rebake");
@@ -1010,6 +1019,144 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
       const regular = { frame_style: { template: t, finish: "regular" } };
       expect(isRenderStale(33, t, VERIFICATION_SCOPED_VERSIONS, 34, regular), t).toBe(V34_TOKEN_FRAME_TEMPLATES.includes(t));
     }
+  });
+});
+
+describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, nyx / fullart / m15pw-c (one bump)", () => {
+  const png = "https://x/y.png";
+  const art = "https://x/art.png";
+  /** A v34 bake. Its columns default to UNTOUCHED_SINCE_V22 (a blue one-word
+   *  sorcery with no art), so only v35 can be pending on it. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 34,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const UNDER = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
+
+  it("is a sweep, never a badge, with its template lists frozen as literals and pinned to the profiles", async () => {
+    const { CARD_LAYOUT_VERSION, V35_ART_SLOT_TEMPLATES, V35_SEE_THROUGH_C_TEMPLATES, VERSION_SCOPES, latestOptInVersion, latestSweepVersion, rolloutPolicy } =
+      await import("@/lib/cards/layout-version");
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(35);
+    expect(rolloutPolicy(35)).toBe("sweep");
+    expect(latestSweepVersion(undefined, 35)).toBe(35);
+    expect(latestOptInVersion()).toBe(22);
+    expect(VERSION_SCOPES[35]).toBeTypeOf("function");
+    expect(V35_ART_SLOT_TEMPLATES).toEqual(["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "nyx", "fullart"]);
+    expect(V35_SEE_THROUGH_C_TEMPLATES).toEqual(["m15token", "m15tokentext", "m15pw"]);
+    // What moved: the CC M15 family's slot (4.4 (2)) …
+    const cc = { topPct: 11.25, leftPct: 7.67, widthPct: 84.76, heightPct: 44.33 };
+    for (const t of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid"]) expect(getFrameProfile(t).artSlot, t).toEqual(cc);
+    // … nyx and fullart's slots, now to 93 % under the whole text box (4.17b) …
+    expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
+    // (fullart's also out to whole pixels past its hedron ring's rim.)
+    expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
+    // … and the under-frame art, from the border's inner edge (4.17a), on every
+    // see-through master — m15pw's colourless one new (4.17b).
+    for (const t of ["m15", "m15token", "m15tokentext", "m15pw"]) {
+      expect(underFrameArtRect(getFrameProfile(t), "c"), t).toEqual(UNDER);
+      expect(underFrameArtRect(getFrameProfile(t), "w"), t).toBeNull();
+    }
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(underFrameArtRect(getFrameProfile("m15devoid"), key), key).toEqual(UNDER);
+    // m15pw/c draws ONE picture — its window in the under-frame rect too
+    // (only under art, like the layer: the scope's "colourless with art");
+    // no other see-through master has its own window slot.
+    expect(underFrameArtSlot(getFrameProfile("m15pw"), "c")).toEqual(UNDER);
+    for (const t of ["m15", "m15devoid", "m15token", "m15tokentext"]) expect(underFrameArtSlot(getFrameProfile(t), "c"), t).toBeNull();
+    // Every template that draws v35's under-frame rect is in the scope (one
+    // with a rect of its own — an emblem's — is not v35's business), and the
+    // three see-through-c templates paint the colour key itself (the
+    // scope's pickFrameColorKey).
+    for (const t of ALL) {
+      const u = getFrameProfile(t).underFrameArt;
+      if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
+        expect(["m15", "m15devoid", ...V35_SEE_THROUGH_C_TEMPLATES], t).toContain(t);
+      }
+    }
+    for (const t of V35_SEE_THROUGH_C_TEMPLATES) {
+      expect(getFrameProfile(t).artifactMasterKeys, t).toBeUndefined();
+      expect(getFrameProfile(t).twoColorSplit, t).toBeUndefined();
+    }
+    // The MSE-framed adventure keeps M15's slot (not in the bump).
+    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 });
+  });
+
+  it("re-bakes EVERY card on the art-slot templates, with or without art, and nothing on the templates it didn't touch", async () => {
+    const { V35_ART_SLOT_TEMPLATES, V35_SEE_THROUGH_C_TEMPLATES, classifyForSweep, hasNewerLook, hasPendingCorrection } = await import(
+      "@/lib/cards/layout-version"
+    );
+    for (const t of ALL) {
+      const whole = V35_ART_SLOT_TEMPLATES.includes(t);
+      const seeThrough = V35_SEE_THROUGH_C_TEMPLATES.includes(t);
+      for (const row of [
+        at(t),
+        at(t, { art_url: art }),
+        at(t, { color_identity: ["colorless"] }),
+        at(t, { color_identity: ["white", "blue"], art_url: art }),
+      ]) {
+        const label = `${t} ${JSON.stringify(row.color_identity)} ${row.art_url}`;
+        expect(isRenderStale(34, t, undefined, 35, row), label).toBe(whole);
+        expect(classifyForSweep(row), label).toBe(whole ? "rebake" : "stamp");
+        expect(classifyForSweep(row, 35), label).toBe(whole ? "rebake" : "stamp");
+        expect(hasPendingCorrection(row), label).toBe(whole);
+        expect(hasNewerLook({ ...row, visibility: "public" }), label).toBe(false);
+      }
+      // A colourless card with art: the see-through master's under-frame art.
+      const c = at(t, { color_identity: ["colorless"], art_url: art });
+      expect(classifyForSweep(c), `${t} colourless + art`).toBe(whole || seeThrough ? "rebake" : "stamp");
+    }
+    // A {} frame_style (and a retired template) draws m15: every card re-bakes.
+    expect(classifyForSweep(at("m15", { frame_style: {} }))).toBe("rebake");
+    expect(classifyForSweep(at("regular"))).toBe("rebake");
+    // A v35 bake is current.
+    expect(classifyForSweep(at("m15", { layout_version: 35 }))).toBe("current");
+  });
+
+  it("on m15token / m15tokentext / m15pw re-bakes exactly the colourless cards with art (the see-through master's under-frame art)", async () => {
+    const { V35_SEE_THROUGH_C_TEMPLATES, classifyForSweep } = await import("@/lib/cards/layout-version");
+    for (const t of V35_SEE_THROUGH_C_TEMPLATES) {
+      // The bake's pick: no identity, "colorless", or only unknown values paint "c".
+      for (const colours of [[], ["colorless"], ["purple"], null]) {
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: art })), `${t} ${JSON.stringify(colours)}`).toBe("rebake");
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: null })), `${t} ${JSON.stringify(colours)} no art`).toBe("stamp");
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: "" })), `${t} ${JSON.stringify(colours)} empty art`).toBe("stamp");
+      }
+      // A coloured or gold card paints an opaque master: stamped.
+      for (const colours of [["blue"], ["white", "blue"], ["multicolor"], ["colorless", "red"]]) {
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: art })), `${t} ${JSON.stringify(colours)}`).toBe("stamp");
+      }
+    }
+  });
+
+  it("answers conservatively (affected) for a row missing a column it reads", async () => {
+    const { VERSION_SCOPES } = await import("@/lib/cards/layout-version");
+    const v35 = VERSION_SCOPES[35];
+    expect(v35({ ...at("lotr"), frame_style: undefined })).toBe(true);
+    for (const column of ["color_identity", "art_url"]) {
+      expect(v35({ ...at("m15token"), [column]: undefined }), column).toBe(true);
+      // Off the see-through-c templates it needs nothing but the template.
+      expect(v35({ ...at("lotr"), [column]: undefined }), column).toBe(false);
+    }
+    expect(v35({ frame_style: { template: "nyx" } })).toBe(true);
+  });
+
+  it("is verification-neutral: a v34 frame_reviews tick stays fresh on every template", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31, 32, 33, 35]);
+    expect(VERIFICATION_SCOPED_VERSIONS[35]).toEqual([]);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(34, t, VERIFICATION_SCOPED_VERSIONS, 35, regular), t).toBe(false);
+    }
+  });
+
+  it("takes the frame colour pick from the leaf module, not the frame layer (API routes import this file)", () => {
+    const src = readFileSync(join(process.cwd(), "lib/cards/layout-version.ts"), "utf8");
+    expect(src).not.toMatch(/from "@\/components\//);
+    expect(src).toContain('import { pickFrameColorKey } from "@/lib/cards/frame-color-key";');
   });
 });
 

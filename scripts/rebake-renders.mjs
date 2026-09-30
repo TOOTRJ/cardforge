@@ -21,7 +21,12 @@
 //                the brand mark. The route refuses to write when the flag
 //                is off (layout v21, and again on 2026-09-16, were clean
 //                bakes from a server without it).
-//   CRON_SECRET  required when REBAKE_URL points at production
+//   CRON_SECRET  the route's bearer. Against production (REBAKE_URL on
+//                www.pipglyph.com — scripts/lib/prod-guard.mjs) leave it
+//                unset: the script asks for production's CRON_SECRET at a
+//                hidden prompt (scripts/lib/hidden-prompt.mjs, nothing
+//                echoed) and refuses to run without a terminal. It is never
+//                printed. scripts/lib/rebake-secret.mjs
 //   BATCH        cards per request (default 8, max 25)
 //   REBAKE_RETRIES  retries per request after a network failure (default 5;
 //                0 = stop on the first error). A dropped connection waits
@@ -36,9 +41,9 @@
 // ---------------------------------------------------------------------------
 
 import { postWithRetry, RebakeRequestError } from "./lib/rebake-request.mjs";
+import { RebakeSecretError, resolveRebakeSecret } from "./lib/rebake-secret.mjs";
 
 const URL_ = process.env.REBAKE_URL ?? "http://localhost:3000/api/admin/rebake";
-const SECRET = process.env.CRON_SECRET ?? "";
 const BATCH = process.env.BATCH ?? "8";
 const SCOPE = process.env.SCOPE ?? "";
 const VERSION = process.env.VERSION ?? "";
@@ -63,6 +68,16 @@ const scopeQs =
     : SCOPE === "sweep"
       ? "&scope=sweep"
       : `&scope=legacy-art&before=${encodeURIComponent(BEFORE)}`;
+// Production's secret is asked for here — after the argument checks, before
+// any request.
+let SECRET;
+try {
+  ({ secret: SECRET } = await resolveRebakeSecret(URL_, { envSecret: process.env.CRON_SECRET ?? "" }));
+} catch (err) {
+  if (!(err instanceof RebakeSecretError)) throw err;
+  console.error(`✗ ${err.message}`);
+  process.exit(1);
+}
 const headers = SECRET ? { Authorization: `Bearer ${SECRET}` } : {};
 
 async function call(extra) {

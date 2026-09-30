@@ -331,6 +331,24 @@ export async function preloadFrame(template: string, colorKey: string): Promise<
   }
 }
 
+/**
+ * One frame master's PNG bytes, through the same cache and sources as the
+ * bake (a bucket master sha256-checked against the manifest) — for checks
+ * that judge the master itself, like the art-window gate on a frame-layout
+ * save (lib/frames/art-window-override.ts). No fallback to the default
+ * template's master: null when the template has no master for that key; a
+ * bucket master that can't be loaded throws FrameAssetUnavailableError.
+ */
+export async function loadFrameMasterBytes(template: string, colorKey: string): Promise<Buffer | null> {
+  const rel = relPath(frameAssetPath(template, colorKey));
+  const value = await loadAsync(rel);
+  if (value === null) {
+    if (frameManifestEntry(rel)) throw new FrameAssetUnavailableError([rel]);
+    return null;
+  }
+  return Buffer.from(value.slice(value.indexOf(",") + 1), "base64");
+}
+
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import {
   Link2,
   Loader2,
   Lock,
+  Printer,
   Trash2,
   X,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   deleteCardsAction,
@@ -29,11 +31,16 @@ import type { Visibility } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // DashboardBulkBar — sticky bottom bar shown when ≥1 card is selected.
-// Renders two bulk actions: change visibility, delete.
-// Both call into server actions that pre-flight ownership and
-// abort the whole batch on any cross-user attempt. Making cards public or
-// unlisted skips an admin's frame previews (the server decides) and the
-// toast names how many it skipped.
+// Renders the bulk actions: print / download (TODO 6.15), change
+// visibility, delete. Visibility and delete call into server actions that
+// pre-flight ownership and abort the whole batch on any cross-user attempt.
+// Making cards public or unlisted skips an admin's frame previews (the
+// server decides) and the toast names how many it skipped.
+//
+// On the Liked tab the cards aren't yours: only "Print / download" is
+// offered (`ownedActions={false}`). The print button is the caller's —
+// it opens the print dialog, or the upgrade modal for a plan without the
+// deck export's entitlement (`printLocked` shows the Pro badge).
 // ---------------------------------------------------------------------------
 
 type DashboardBulkBarProps = {
@@ -42,12 +49,21 @@ type DashboardBulkBarProps = {
   /** Called when an action completes successfully — the parent uses this
    *  to clear selection + refresh the route. */
   onSuccess: () => void;
+  /** "Print / download" (TODO 6.15) — shown when given. */
+  onPrint?: () => void;
+  /** The viewer's plan doesn't include it (Pro): the button says so. */
+  printLocked?: boolean;
+  /** Visibility + delete — false on cards the viewer doesn't own. */
+  ownedActions?: boolean;
 };
 
 export function DashboardBulkBar({
   selectedIds,
   onClear,
   onSuccess,
+  onPrint,
+  printLocked = false,
+  ownedActions = true,
 }: DashboardBulkBarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -113,47 +129,68 @@ export function DashboardBulkBar({
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleVisibility("private")}
-              disabled={isPending}
-            >
-              <Lock className="h-3.5 w-3.5" aria-hidden />
-              Make private
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleVisibility("unlisted")}
-              disabled={isPending}
-            >
-              <Link2 className="h-3.5 w-3.5" aria-hidden />
-              Make unlisted
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleVisibility("public")}
-              disabled={isPending}
-            >
-              <Globe2 className="h-3.5 w-3.5" aria-hidden />
-              Make public
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-              disabled={isPending}
-              className="border-danger/50 text-danger hover:bg-danger/10"
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-              Delete
-            </Button>
+            {onPrint ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onPrint}
+                disabled={isPending}
+              >
+                <Printer className="h-3.5 w-3.5" aria-hidden />
+                Print / download
+                {printLocked ? (
+                  <Badge variant="accent" className="text-[10px]">
+                    Pro
+                  </Badge>
+                ) : null}
+              </Button>
+            ) : null}
+            {ownedActions ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleVisibility("private")}
+                  disabled={isPending}
+                >
+                  <Lock className="h-3.5 w-3.5" aria-hidden />
+                  Make private
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleVisibility("unlisted")}
+                  disabled={isPending}
+                >
+                  <Link2 className="h-3.5 w-3.5" aria-hidden />
+                  Make unlisted
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleVisibility("public")}
+                  disabled={isPending}
+                >
+                  <Globe2 className="h-3.5 w-3.5" aria-hidden />
+                  Make public
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteOpen(true)}
+                  disabled={isPending}
+                  className="border-danger/50 text-danger hover:bg-danger/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  Delete
+                </Button>
+              </>
+            ) : null}
             {isPending ? (
               <Loader2
                 className="ml-1 h-4 w-4 animate-spin text-muted"

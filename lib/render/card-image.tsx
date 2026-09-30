@@ -15,6 +15,7 @@
 // declares `display: flex`.
 
 import { pngImageResponse } from "@/lib/render/satori-png";
+import type { SatoriNode } from "satori";
 import { cardCornerRadiusPx, type CardCornerFills } from "@/lib/cards/card-corner";
 import { squareCornerFills } from "@/lib/frames/square-corners";
 import type { CardCorners } from "@/lib/cards/output-corners";
@@ -140,7 +141,7 @@ import {
   type Rect,
   type SlotAlign,
   type StatSlot,
-  underFrameArtRect,
+  artLayersFor,
   type TextSlot,
   type TypeLineSplit,
 } from "@/lib/cards/template-layout";
@@ -366,6 +367,7 @@ function CardImage({
   watermarkText,
   foilArt,
   secondArtSize,
+  omitArt = false,
 }: {
   card: CardPreviewData;
   width: number;
@@ -382,6 +384,12 @@ function CardImage({
   /** A rotated second art window's picture size (imageNaturalSize) — the
    *  bake places that art in px (RotatedArtBake). */
   secondArtSize?: { width: number; height: number } | null;
+  /** A PRINT layer (lib/render/card-print.ts, TODO 6.10): the card's art
+   *  (its window and the under-frame copy) is left out and the root is
+   *  see-through; each empty art box carries printArtMarker's data-* props
+   *  so the print path can composite the full-resolution art under this
+   *  layer with the same fit. Off for every stored/display render. */
+  omitArt?: boolean;
   /** NEVER rendered — Satori's image preload list (see renderCardImage). */
   children?: React.ReactNode;
 }) {
@@ -613,9 +621,14 @@ function CardImage({
       ? secondFaceRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats })
       : null;
 
-  const underArtRect = underFrameArtRect(layout, masterKey);
-  const artW = Math.round((layout.artSlot.widthPct / 100) * width);
-  const artH = Math.round((layout.artSlot.heightPct / 100) * height);
+  // Where the art is painted on this master (artLayersFor — the preview's
+  // and the foil mask's rects): the window's slot (a see-through master's
+  // own, under art) and the see-through master's under-frame rect.
+  const artLayers = artLayersFor(layout, masterKey, Boolean(card.artUrl));
+  const underArtRect = artLayers.under;
+  const artSlot = artLayers.slot;
+  const artW = Math.round((artSlot.widthPct / 100) * width);
+  const artH = Math.round((artSlot.heightPct / 100) * height);
 
   // Split's right-half art (back-face art in the second art window).
   const secondArtSlot = layout.secondFace?.artSlot;
@@ -643,48 +656,59 @@ function CardImage({
         width: "100%",
         height: "100%",
         position: "relative",
-        background: "#101015",
+        background: omitArt ? "transparent" : "#101015",
         fontFamily: BODY_FONT,
         color: layout.title.colorHex,
       }}
     >
       {/* See-through frames: the art also runs under the whole frame
-          (TODO 4.17) — same cover fit at the focal point as the preview. */}
+          (TODO 4.17) — same cover fit at the focal point as the preview; not
+          when the window's slot is that rect (one picture). */}
       {underArtRect && card.artUrl ? (
-        <div style={{ ...slotBox(underArtRect), display: "flex", overflow: "hidden" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={card.artUrl}
-            width={Math.round((underArtRect.widthPct / 100) * width)}
-            height={Math.round((underArtRect.heightPct / 100) * height)}
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: `${focalX}% ${focalY}%`,
-            }}
-          />
+        <div
+          {...(omitArt ? printArtMarker("under", focalX, focalY, 1) : {})}
+          style={{ ...slotBox(underArtRect), display: "flex", overflow: "hidden" }}
+        >
+          {omitArt ? null : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.artUrl}
+              width={Math.round((underArtRect.widthPct / 100) * width)}
+              height={Math.round((underArtRect.heightPct / 100) * height)}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: `${focalX}% ${focalY}%`,
+              }}
+            />
+          )}
         </div>
       ) : null}
       {/* Art — below the frame, in the transparent cut-out. */}
-      <div style={{ ...slotBox(layout.artSlot), display: "flex", overflow: "hidden" }}>
+      <div
+        {...(omitArt && card.artUrl ? printArtMarker("main", focalX, focalY, scale) : {})}
+        style={{ ...slotBox(artSlot), display: "flex", overflow: "hidden" }}
+      >
         {card.artUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={card.artUrl}
-            width={artW}
-            height={artH}
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: `${focalX}% ${focalY}%`,
-              transform: `scale(${scale})`,
-              transformOrigin: `${focalX}% ${focalY}%`,
-            }}
-          />
+          omitArt ? null : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={card.artUrl}
+              width={artW}
+              height={artH}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: `${focalX}% ${focalY}%`,
+                transform: `scale(${scale})`,
+                transformOrigin: `${focalX}% ${focalY}%`,
+              }}
+            />
+          )
         ) : (
           <div
             style={{
@@ -2931,6 +2955,68 @@ function SecondFaceBake({
 }
 
 // ---------------------------------------------------------------------------
+// Print layer markers (TODO 6.10, lib/render/card-print.ts)
+// ---------------------------------------------------------------------------
+
+/** Which art box a print layer left empty: the under-frame copy of a
+ *  see-through frame (4.17) or the art window. */
+export type PrintArtKind = "under" | "main";
+
+/** One empty art box of a print layer, as Satori laid it out: its box in
+ *  LAYOUT px (the render's width × height, before `outputWidth` scales it)
+ *  and the art's fit — focal point (0–1) and zoom — exactly as CardImage
+ *  resolved them for the <img> it would have drawn there (object-fit: cover
+ *  at the focal point, then scale() about it). */
+export type PrintArtBox = {
+  kind: PrintArtKind;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  focalX: number;
+  focalY: number;
+  scale: number;
+};
+
+/** The data-* props an empty art box carries in a print layer (focal in
+ *  percent, as CardImage holds it). Satori draws nothing for them; its
+ *  onNodeDetected hands them back with the box (readPrintArtBox). */
+function printArtMarker(kind: PrintArtKind, focalXPct: number, focalYPct: number, scale: number) {
+  return {
+    "data-print-art": kind,
+    "data-focal-x": String(focalXPct),
+    "data-focal-y": String(focalYPct),
+    "data-art-scale": String(scale),
+  };
+}
+
+/** A laid-out node → the print art box it marks, or null. */
+export function readPrintArtBox(node: {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  props: Record<string, unknown>;
+}): PrintArtBox | null {
+  const kind = node.props["data-print-art"];
+  if (kind !== "under" && kind !== "main") return null;
+  const num = (key: string, fallback: number) => {
+    const value = Number(node.props[key]);
+    return Number.isFinite(value) ? value : fallback;
+  };
+  return {
+    kind,
+    left: node.left,
+    top: node.top,
+    width: node.width,
+    height: node.height,
+    focalX: num("data-focal-x", 50) / 100,
+    focalY: num("data-focal-y", 50) / 100,
+    scale: num("data-art-scale", 1),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Public renderer
 // ---------------------------------------------------------------------------
 
@@ -3089,6 +3175,18 @@ export async function renderCardImage(
     /** The output's corner — "round" (default) or "square" for print; see
      *  CardCorners. */
     corners?: CardCorners;
+    /** A PRINT layer (lib/render/card-print.ts, TODO 6.10 / 6.1a / 6.1b):
+     *  the same layout, rasterized at `outputWidth`, with no corner cut
+     *  (`corners` is ignored — the print path cuts and squares the
+     *  composite) and, with `omitArt`, the art left out on a see-through
+     *  root (CardImage omitArt) for the print path to composite at full
+     *  resolution. `onNodeDetected` reports the empty art boxes
+     *  (readPrintArtBox). Never set for a stored or display render. */
+    printLayer?: {
+      omitArt: boolean;
+      outputWidth: number;
+      onNodeDetected?: (node: SatoriNode) => void;
+    };
   } = {},
 ): Promise<Response> {
   const corners: CardCorners = opts.corners ?? "round";
@@ -3131,6 +3229,7 @@ export async function renderCardImage(
       watermarkText={opts.watermarkText?.trim() || null}
       foilArt={isFoil ? { art: foilArt, secondArt: foilSecondArt } : undefined}
       secondArtSize={secondArtSize}
+      omitArt={opts.printLayer?.omitArt}
     >
       {/* Satori serialises an inline SVG's <image href> from its image
           cache, which it fills by pre-walking the ROOT element's children
@@ -3149,8 +3248,10 @@ export async function renderCardImage(
       // 4.3 % of the SHORT side — circular in both orientations, fractional
       // (64.5 px at HD, 32.25 at 750). A square output is the same raster
       // squared again with each corner's fill (squareCornerFillsOf).
-      cornerRadiusPx: cardCornerRadiusPx(width, height),
-      squareCornerFills: corners === "square" ? squareCornerFillsOf(source) : undefined,
+      cornerRadiusPx: opts.printLayer ? undefined : cardCornerRadiusPx(width, height),
+      squareCornerFills: !opts.printLayer && corners === "square" ? squareCornerFillsOf(source) : undefined,
+      outputWidth: opts.printLayer?.outputWidth,
+      onNodeDetected: opts.printLayer?.onNodeDetected,
       // MPlantin is the real MTG body font (ships with mana-font); Mana +
       // Keyrune supply the cost pips and set symbol. Satori has no auto-
       // fallback once explicit fonts are provided, so all three are registered.

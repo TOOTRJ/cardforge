@@ -12,7 +12,7 @@ import {
 } from "pdf-lib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { buildCardPdf, buildDeckPdf, type PdfLayout } from "@/lib/render/card-pdf";
+import { BLEED_PT, buildCardPdf, buildDeckPdf, SLUG_PT, type PdfLayout } from "@/lib/render/card-pdf";
 
 // ---------------------------------------------------------------------------
 // TODO 6.22 — the print PDF (single card, 3×3 sheets, the Pro deck export)
@@ -26,6 +26,10 @@ import { buildCardPdf, buildDeckPdf, type PdfLayout } from "@/lib/render/card-pd
 // These tests read the placement back out of the SAVED PDF: each image's
 // transformation matrix is replayed from the page's content stream (q/Q/cm
 // up to its Do), and the design's four corners are mapped through it.
+//
+// TODO 6.1a — the bleed page (last block): the render with its 1/8 in bleed
+// fills a 198 × 270 pt bleed box on a page with a 1/4 in slug; the crop
+// marks sit on the TRIM lines, in the slug only; TrimBox / BleedBox are set.
 // ---------------------------------------------------------------------------
 
 type Matrix = [number, number, number, number, number, number];
@@ -291,5 +295,66 @@ describe("card PDF — a landscape render is turned into the portrait slot (TODO
       expect([page.width, page.height]).toEqual([CARD_W, CARD_H]);
       expect(designCorners(page.images[0].ctm)).toEqual(expectedCorners(0, 0, "landscape"));
     }, 60_000);
+  });
+});
+
+describe("card PDF — the 1/8 in bleed page (TODO 6.1a)", () => {
+  const BLEED_W = CARD_W + 2 * BLEED_PT; // 198 pt = 2.75 in
+  const BLEED_H = CARD_H + 2 * BLEED_PT; // 270 pt = 3.75 in
+  const TRIM = { x0: SLUG_PT + BLEED_PT, y0: SLUG_PT + BLEED_PT, x1: SLUG_PT + BLEED_PT + CARD_W, y1: SLUG_PT + BLEED_PT + CARD_H };
+
+  /** The design's corners when it fills the bleed box (portrait or turned). */
+  function bleedCorners(orientation: "portrait" | "landscape") {
+    const [left, right, bottom, top] = [r2(SLUG_PT), r2(SLUG_PT + BLEED_W), r2(SLUG_PT), r2(SLUG_PT + BLEED_H)];
+    return orientation === "portrait"
+      ? { topLeft: [left, top], topRight: [right, top], bottomLeft: [left, bottom], bottomRight: [right, bottom] }
+      : { topLeft: [left, bottom], topRight: [left, top], bottomLeft: [right, bottom], bottomRight: [right, top] };
+  }
+
+  it("fills the bleed box on a slugged page, with TrimBox and BleedBox declared", async () => {
+    // 1650 × 2250: the 600 ppi render with 75 px of bleed (5:7 plus the margin).
+    const bytes = await buildCardPdf(await png(66, 90, [10, 10, 10]), "card", "Bleed", { bleed: true });
+    const [page] = await inspect(bytes);
+    expect([page.width, page.height]).toEqual([BLEED_W + 2 * SLUG_PT, BLEED_H + 2 * SLUG_PT]);
+    expect(page.images).toHaveLength(1);
+    expect(designCorners(page.images[0].ctm)).toEqual(bleedCorners("portrait"));
+
+    const doc = await PDFDocument.load(bytes);
+    const pdfPage = doc.getPage(0);
+    expect(pdfPage.getTrimBox()).toEqual({ x: TRIM.x0, y: TRIM.y0, width: CARD_W, height: CARD_H });
+    expect(pdfPage.getBleedBox()).toEqual({ x: SLUG_PT, y: SLUG_PT, width: BLEED_W, height: BLEED_H });
+  });
+
+  it("puts eight crop marks on the trim lines, all in the slug — none in the bleed", async () => {
+    const [page] = await inspect(await buildCardPdf(await png(66, 90, [10, 10, 10]), "card", "Bleed", { bleed: true }));
+    expect(page.segments).toHaveLength(8);
+    const inBleedBox = ([x, y]: Point) =>
+      x > SLUG_PT + 0.01 && x < SLUG_PT + BLEED_W - 0.01 && y > SLUG_PT + 0.01 && y < SLUG_PT + BLEED_H - 0.01;
+    for (const [a, b] of page.segments) {
+      // Vertical marks lie on a trim x, horizontal ones on a trim y.
+      const vertical = a[0] === b[0];
+      if (vertical) expect([r2(TRIM.x0), r2(TRIM.x1)]).toContain(a[0]);
+      else expect([r2(TRIM.y0), r2(TRIM.y1)]).toContain(a[1]);
+      expect(inBleedBox(a) || inBleedBox(b)).toBe(false);
+      // …and inside the page.
+      for (const [x, y] of [a, b]) {
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(x).toBeLessThanOrEqual(page.width);
+        expect(y).toBeLessThanOrEqual(page.height);
+      }
+    }
+  });
+
+  it("turns a landscape bleed render into the portrait bleed box", async () => {
+    const [page] = await inspect(await buildCardPdf(await png(90, 66, [10, 10, 10]), "card", "Battle", { bleed: true }));
+    expect(designCorners(page.images[0].ctm)).toEqual(bleedCorners("landscape"));
+  });
+
+  it("the plain card page is unchanged, and a bleed sheet is refused", async () => {
+    const [plain] = await inspect(await buildCardPdf(PORTRAIT, "card", "Plain"));
+    expect([plain.width, plain.height]).toEqual([CARD_W, CARD_H]);
+    expect(plain.segments).toHaveLength(0);
+    await expect(buildCardPdf(PORTRAIT, "sheet-letter", "Sheet", { bleed: true })).rejects.toThrow(/single-card/);
   });
 });

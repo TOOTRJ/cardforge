@@ -235,6 +235,17 @@ Rules and gotchas:
   `corners` is in the ETag. The CC importer cuts masters at the constant;
   the allow-listed MSE masters are normalised by Phase B
   (`scripts/lib/frame-corners.mjs`, run by the builders too) — `docs/FRAMES.md`.
+- PRINT exports (TODO 6.10 / 6.1a / 6.1b): the PDF (card + sheets) and the
+  800 ppi / 1/8″ bleed PNGs (`?ppi=800`, `?bleed=1`) render through
+  `lib/render/card-print.ts` — Satori draws the HD layout WITHOUT the art
+  (`renderCardImage` `printLayer`, CardImage `omitArt`; `outputWidth`
+  re-renders the vectors at 800 ppi) and sharp composites the ORIGINAL art
+  under it with the same fit (the boxes come from Satori's `onNodeDetected`),
+  then squares it; the bleed extends each edge by `EDGE_CONTRACTS`
+  (`lib/frames/edge-contract.ts`). Always live and square (the images PNG
+  only); the bleed follows the clean download, 800 ppi `PRINT_800_PPI_PAID_ONLY`
+  (`lib/cards/print-export.ts`). Never route a stored bake, thumb or OG image
+  through it.
 - ONE M15-era display size (layout v32, TODO 4.20): the family
   (`M15_FAMILY_TEMPLATES`, `lib/cards/m15-family.ts`; v32's scope is the
   frozen literal in `layout-version.ts`) prints names, type lines, pips and
@@ -299,6 +310,21 @@ Rules and gotchas:
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
   "Tokens").
+- Art windows (TODO 7.6, layout v35): every art slot covers its master's
+  see-through window with 0.05 % to spare and every translucent part the art
+  shows through (`lib/frames/art-window.ts`; CI checks every template ×
+  colour master, the bucket ones fetched by sha; a known failure is listed
+  with its TODO item and a `maxMissPx` it may not exceed — fixing one means
+  striking it). See-through masters (`underFrameArt`: m15/c, every devoid,
+  the colourless tokens and planeswalker) draw the art under the frame from
+  the border's inner edge (`UNDER_FRAME_RECT`); their window's slot must
+  cover the window too and meet that separately cropped layer on the frame's
+  OPAQUE outline — or be ONE picture (`underFrameArt.artSlot` = the rect,
+  m15pw/c); both renderers and the foil mask read `artLayersFor()`. The
+  CC-framed M15 profiles use `CC_M15_ART_SLOT`, never M15's MSE slot
+  (adventure keeps that). A frame-compare save that moves an `artSlot`
+  passes the same check on the bake's own masters or is refused
+  (`lib/frames/art-window-override.ts`).
 - Printed pieces a card SWITCHES ON (TODO 4.6.0; the additions rule above):
   `frame_style.crown` / `frame_style.twoColor`, drawn only when `=== true`
   (`lib/cards/anatomy.ts`) — absent = the card's old look, so declaring a
@@ -315,8 +341,11 @@ Rules and gotchas:
   overlays draw right after the frame and in both finish masks, preloaded by
   `frameAssetPathsFor`; the bake's master / plate / overlay keys match the
   preview's (`anatomy-key-parity.test.ts`). `docs/FRAMES.md` "Printed pieces".
-  4.6b: m15 (gold-split `<pair>` + hybrid `<pair>-h`), m15artifact and m15land
-  (gold-split) draw the pairs — 40 bucket masters the CC importer builds over
+  4.6a + 4.6b (one release): m15, m15artifact and m15land draw the crown
+  (`M15_CROWN`, a 1500×410 `m15crown/<key>` band, the drawn master's pinline
+  key, a pair master's split band; showcase imports crownless) and the pairs
+  — m15 gold-split `<pair>` + hybrid `<pair>-h`, the other two gold-split —
+  40 bucket masters the CC importer builds over
   the verified masters' own files (`pairMasterLayers`), every split through
   the ONE untilted ramp module `scripts/lib/pair-ramp.mjs` (pinline 40→60,
   box 46→58, crown 43→55 %W, premultiplied lerp — never CC's tilted
