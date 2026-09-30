@@ -45,6 +45,10 @@ const OBJECT_KEY = /^[a-z0-9-]+(\/[a-z0-9-]+)*\.[0-9a-f]{12}\.png$/;
  *  (TODO 3.10); not a problem with the case. */
 const IGNORED_WARNINGS = ["`z-index` is currently not supported."];
 
+/** lib/render/card-frames.ts loadSync's note for an asset the render read
+ *  without its preload (a transparent pixel on Vercel). Fails the case. */
+const PRELOAD_GAP = /\[card-frames\] .* was not preloaded/;
+
 const blocked: string[] = [];
 let restoreStorage: () => void = () => {};
 
@@ -130,6 +134,7 @@ it("bakes its shard of the visual-regression matrix", async () => {
   const { rowToPreviewData } = await import("@/lib/cards/bake-core");
   const { renderCardImage } = await import("@/lib/render/card-image");
   const { CARD_LAYOUT_VERSION, isRenderStale } = await import("@/lib/cards/layout-version");
+  const { resetFrameAssetCacheForTests } = await import("@/lib/render/card-frames");
 
   const art = await generatedArt(1000, 760, 30);
   const art2 = await generatedArt(760, 1000, 12);
@@ -151,6 +156,12 @@ it("bakes its shard of the visual-regression matrix", async () => {
   try {
     for (const c of cases) {
       current = [];
+      // Each case bakes COLD (TODO 4.5.0 review): the frame-asset cache is
+      // module-global, so an asset one case's preload left out would
+      // otherwise be served from an earlier case's — and a bake that needs a
+      // plate it didn't preload would pass here and draw a transparent pixel
+      // on a cold lambda. Frames come from the local cache dir: cheap.
+      resetFrameAssetCacheForTests();
       const t0 = Date.now();
       const result: CaseResult = { hash: null, input: c.input, ms: 0 };
       if (c.printOnly) result.printOnly = true;
@@ -174,6 +185,8 @@ it("bakes its shard of the visual-regression matrix", async () => {
       }
       result.ms = Date.now() - t0;
       if (current.length) result.warnings = [...new Set(current)];
+      const gaps = current.filter((w) => PRELOAD_GAP.test(w));
+      if (gaps.length && !result.error) result.error = `preload gap: ${gaps[0]}`.slice(0, 500);
       results[c.id] = result;
     }
   } finally {

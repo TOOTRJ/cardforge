@@ -1288,7 +1288,6 @@ const WALKER_MAX_SIZE_PCT = rulesPxToPct(RULES_SIZE_PX.compact);
 const M15PW_WALKER = walkerAnatomy({
   shield: ccWalkerShield("/frames/m15pw/loyalty/{color}.png"),
   stripes: { a: "rgba(244,238,226,0.78)", b: "rgba(229,221,202,0.78)" },
-  badges: "mse-m15",
   badgeTextHex: WALKER_BADGE_TEXT_HEX,
   maxSizePct: WALKER_MAX_SIZE_PCT,
   rulesBackdropHex: "rgba(244,238,226,0.72)",
@@ -2131,7 +2130,6 @@ function borderlessWalker(plateAssetPathTemplate: string) {
   return walkerAnatomy({
     shield: ccWalkerShield(plateAssetPathTemplate),
     stripes: { a: BORDERLESS_PW_STRIPE_A, b: BORDERLESS_PW_STRIPE_B },
-    badges: "mse-m15",
     badgeTextHex: WALKER_BADGE_TEXT_HEX,
     maxSizePct: WALKER_MAX_SIZE_PCT,
     rulesBackdropHex: BORDERLESS_PW_STRIPE_A,

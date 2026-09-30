@@ -81,7 +81,6 @@ describe("walkerAnatomy", () => {
     const w = walkerAnatomy({
       shield,
       stripes: { a: "rgba(1,1,1,0.5)", b: "rgba(2,2,2,0.5)" },
-      badges: "mse-m15",
       badgeTextHex: "#f5f0e4",
       maxSizePct: 0.031,
       rulesBackdropHex: "rgba(3,3,3,0.7)",

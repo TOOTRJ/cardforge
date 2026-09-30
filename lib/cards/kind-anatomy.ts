@@ -151,6 +151,13 @@ export type WalkerAnatomy = {
  * m15pw and the borderless walkers (4.33, both heights) are built with it;
  * 4.5b's bodies (the extended-art and Ghostfire walkers) will be too.
  *
+ * The rows' loyalty-cost badges are MSE's M15 set for every walker today
+ * (public/frames/m15pw/loyalty{up,down,naught}.png, loyaltyBadgeAssetFor),
+ * so there is no badge parameter yet: 4.5b b3 adds `badges` together with
+ * the field that carries it (LoyaltyRowsSlot.badgeSet, read by both
+ * renderers and the preload) — a parameter nothing reads would let a body
+ * ask for the Ghostfire badges and silently get M15's.
+ *
  * The output is deep-frozen (profiles spread it; an override is merged into
  * a copy, never into it).
  */
@@ -160,10 +167,6 @@ export function walkerAnatomy(p: {
   shield: StatSlot;
   /** The ability rows' alternating stripes (odd / even). */
   stripes: { a: string; b: string };
-  /** The loyalty-cost badges the rows draw: MSE's M15 badges
-   *  (public/frames/m15pw/loyalty{up,down,naught}.png — loyaltyBadgeAssetFor),
-   *  the only set today. 4.5b b3 adds the Ghostfire walker's own. */
-  badges?: "mse-m15";
   /** The badges' ink. */
   badgeTextHex: string;
   /** The walker text's ceiling (FrameProfile.loyaltyRows.maxSizePct). */

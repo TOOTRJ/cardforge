@@ -3115,13 +3115,15 @@ export function naturalRenderSize(landscape: boolean): { width: number; height: 
 }
 
 /**
- * The stat slots a card DRAWS on its frame — the bake's gates, twin of the
- * preview's (components/cards/card-preview.tsx, which also shows an empty
- * shield in the editor): the P/T where the card prints one
- * (printsPowerToughness), the loyalty shield on a planeswalker with a
- * starting loyalty, the defense shield on a battle with a defense — each
- * only where the profile has the slot. CardImage draws a stat plate only
- * under these, and frameAssetPathsFor preloads only these plates.
+ * The stat slots a card DRAWS on its frame in the BAKE: the P/T where the
+ * card prints one (printsPowerToughness), the loyalty shield on a
+ * planeswalker with a starting loyalty, the defense shield on a battle with
+ * a defense — each only where the profile has the slot. CardImage draws a
+ * stat plate only under these, and frameAssetPathsFor preloads exactly these
+ * plates. The preview (components/cards/card-preview.tsx) keeps its own
+ * copies of the same gates, with one difference: in the editor it shows the
+ * loyalty shield before a value is typed (staticInEditor); the bake never
+ * draws an empty shield.
  */
 export function drawnStatSlots(
   layout: FrameProfile,

@@ -19,8 +19,11 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // rewrite changed no number, no colour and no path.
 //
 // A PR that MEANS to change a profile (a new template, a moved rect under a
-// layout bump) regenerates the fixture — `node scripts/dump-frame-profiles.mjs`
-// — and says why; `--check` compares without writing.
+// layout bump) regenerates the fixture on its own tree —
+// `node scripts/dump-frame-profiles.mjs` — and says why in the PR: the
+// fixture diff IS the profile change, for review. `--check` compares
+// without writing. Keys no renderer reads (RENDERER_BLIND_KEYS, design §6:
+// pickerSampleArt) are left out on both sides.
 // ---------------------------------------------------------------------------
 
 type Fixture = {
@@ -34,6 +37,12 @@ type Fixture = {
 const fixture = JSON.parse(
   readFileSync(join(process.cwd(), "tests/unit/cards/fixtures/profiles-base.json"), "utf8"),
 ) as Fixture;
+
+/** scripts/dump-frame-profiles.mjs RENDERER_BLIND_KEYS — keep in step. */
+const RENDERER_BLIND_KEYS = ["pickerSampleArt"];
+
+const REGENERATE =
+  "the profile changed. If the PR means it (a new template, a moved rect under its layout bump), regenerate tests/unit/cards/fixtures/profiles-base.json with `node scripts/dump-frame-profiles.mjs` and say why in the PR; if it doesn't, the refactor moved a value";
 
 /** The dump's own normal form: keys sorted, undefined dropped. */
 function canonical(value: unknown): unknown {
@@ -50,6 +59,13 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
+/** A profile as the fixture holds it (the dump's profileView). */
+function profileView(profile: unknown): unknown {
+  const view = canonical(profile) as Record<string, unknown>;
+  for (const key of RENDERER_BLIND_KEYS) delete view[key];
+  return view;
+}
+
 describe("every frame profile deep-equals its 4.5.0 base", () => {
   it("covers exactly today's templates", () => {
     expect(Object.keys(fixture.profiles).sort()).toEqual([...FRAME_TEMPLATE_VALUES].sort());
@@ -57,12 +73,14 @@ describe("every frame profile deep-equals its 4.5.0 base", () => {
   });
 
   it.each(FRAME_TEMPLATE_VALUES)("%s: getFrameProfile is unchanged", (template) => {
-    expect(canonical(getFrameProfile(template))).toEqual(fixture.profiles[template]);
+    expect(profileView(getFrameProfile(template)), `${template}: ${REGENERATE}`).toEqual(fixture.profiles[template]);
   });
 
   it.each(Object.keys(fixture.sampleOverrides))("%s: resolveFrameProfile with its sample override is unchanged", (template) => {
     expect(fixture.resolved[template]).toBeDefined();
-    expect(canonical(resolveFrameProfile(template, fixture.sampleOverrides))).toEqual(fixture.resolved[template]);
+    expect(profileView(resolveFrameProfile(template, fixture.sampleOverrides)), `${template}: ${REGENERATE}`).toEqual(
+      fixture.resolved[template],
+    );
   });
 
   it("an override on one template never reaches another's resolved profile", () => {
@@ -72,7 +90,7 @@ describe("every frame profile deep-equals its 4.5.0 base", () => {
     expect(overridden.has("m15pw")).toBe(true);
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (overridden.has(template)) continue;
-      expect(canonical(resolveFrameProfile(template, fixture.sampleOverrides)), template).toEqual(
+      expect(profileView(resolveFrameProfile(template, fixture.sampleOverrides)), template).toEqual(
         fixture.profiles[template],
       );
     }

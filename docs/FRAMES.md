@@ -1123,13 +1123,16 @@ type (`printsPowerToughness`).
 (`capabilitiesOf` — a spread profile and a builder-made one count alike)
 and says whether a body draws a kind (`profileDrawsKind`). Bodies that share
 anatomy share a **builder call**, with every value the body's own:
-`walkerAnatomy({ shield, stripes, badges, rulesBackdropHex, … })` builds the
-walker anatomy of m15pw and both borderless walkers — the shield cut from
-that body's masters (the only field that differs between the three), its
-stripes, the badge ink, the walker text's ceiling and the see-through
-window's backdrop. Its output is deep-frozen. There is no registry of
-shared overlays: the P/T is per body (22 distinct `pt` slots over 44
-templates at 4.5.0), and so is every shield.
+`walkerAnatomy({ shield, stripes, badgeTextHex, maxSizePct,
+rulesBackdropHex, … })` builds the walker anatomy of m15pw and both
+borderless walkers — the shield (the three differ only by the plate cut
+from their own masters), the ability stripes, the badge ink, the walker
+text's ceiling and the see-through window's backdrop. Every walker draws
+MSE's M15 cost badges today, so the builder takes no badge set yet: 4.5b b3
+adds `badges` together with the `LoyaltyRowsSlot.badgeSet` field that
+carries it. The output is deep-frozen. There is no registry of shared
+overlays: the P/T is per body (22 distinct `pt` slots over 44 templates at
+4.5.0), and so is every shield.
 
 ### The kind gate
 
@@ -1174,20 +1177,33 @@ bump and a scoped sweep after the owner's sign-off.
 
 `tests/unit/cards/kind-capability-baseline.test.ts` pins every template's
 capabilities in `tests/unit/cards/fixtures/kind-capabilities.json`: a gain
-(or a loss) fails it, and so does a template with no row. The file is
-edited by hand, never regenerated: a PR that changes a row adds a line to
-its `changes` list saying why, for the owner to review.
+(or a loss) fails it, and so does a template with no row. The file holds
+the 4.5.0 base map (`baseCapabilities`, never edited — the test pins its
+sha256), a `changes` log, and today's map (`capabilities`), which must
+equal the base with every change applied. So a row can't change without a
+`changes` entry saying why (`gain` / `loss` of one capability,
+`new-template`, `removed-template`), for the owner to review. Edited by
+hand, never regenerated.
 
 ### Type-gated slots
 
-Both renderers draw a stat plate only for a card that prints the stat: the
-P/T under `printsPowerToughness`, the loyalty shield on a planeswalker with
-a starting loyalty, the defense shield on a battle with one
-(`drawnStatSlots` in `lib/render/card-image.tsx`, the preview's twin). The
-bake preloads exactly those plates (`frameAssetPathsFor`): a bucket plate
+The bake draws a stat plate only for a card that prints the stat: the P/T
+under `printsPowerToughness`, the loyalty shield on a planeswalker with a
+starting loyalty, the defense shield on a battle with one
+(`drawnStatSlots` in `lib/render/card-image.tsx`). It preloads exactly
+those plates (`frameAssetPathsFor` calls the same function): a bucket plate
 that can't load fails the whole bake, so before 4.5.0 one missing plate
-failed every card on its body; now it fails only the cards that draw it
-(`tests/unit/render/kind-anatomy-preload.test.tsx`).
+failed every card on its body; now it fails only the cards that draw it.
+The preview keeps its own copies of the same gates, except that the editor
+shows an empty loyalty shield before a value is typed.
+`tests/unit/render/kind-anatomy-preload.test.tsx` bakes every type-gated
+case (creature, Creature and word-less tokens, Vehicle, Spacecraft, the
+walkers, a battle, a saga creature, an instant with a stray P/T) with an
+empty frame cache over a stubbed bucket that publishes every plate, and
+fails on any "was not preloaded" warning; the visual bake
+(`tests/visual/bake.visual.ts`) empties the cache before every case and
+fails a case on the same warning, so a plate one case forgot can't be
+served from an earlier case's preload.
 
 The compare page's scoring follows the same split: `listSlotPaths(profile,
 kind)` (`lib/cards/profile-override.ts`) lists the loyalty shield, the
@@ -1224,14 +1240,23 @@ A change that must not move a pixel (4.5.0's builders) proves it four ways:
   and its merge with sample admin overrides, deep-equal
   `tests/unit/cards/fixtures/profiles-base.json` (the base commit is in the
   file; `tests/unit/cards/profile-refactor-baseline.test.ts` runs the same
-  comparison). Both renderers read a card's layout only through its profile
-  and its master path, so this covers every stored card, private ones too.
+  comparison; `pickerSampleArt`, which no renderer reads, is left out).
+  Both renderers read a card's layout only through its profile and its
+  master path, so this covers every stored card, private ones too. The
+  snapshot stays after 4.5.0: a PR that MEANS to change a profile (a new
+  template, a moved rect under its layout bump) regenerates it on its own
+  tree (`node scripts/dump-frame-profiles.mjs`) and says why — the fixture
+  diff is the profile change, for review. A refactor that has to be proven
+  again after main moved a profile regenerates it on the new base (a
+  detached worktree at the merge base), never on the branch.
 - `tests/unit/creator/kind-gate-baseline.test.ts`: every
   `templateRefusesKind` / `templateSupportsKind` pair, every
   `framesForKind` list and the matrix's kinds per template equal
   `tests/unit/creator/fixtures/kind-gate-base.json`
   (`UPDATE_KIND_GATE_FIXTURE=1` regenerates it, for a change the PR means).
 - `npm run test:visual`: every existing case keeps its hash, no bump.
+  Each case bakes with an empty frame cache and fails on a "was not
+  preloaded" warning.
 - A corpus replay: every visible production card baked at 750 px and HD
   on the base and on the branch, over sha-checked frames, byte-identical.
 
