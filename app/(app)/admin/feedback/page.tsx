@@ -137,9 +137,12 @@ export default async function AdminFeedbackPage({
                       href="/admin/frame-compare"
                       className="font-mono text-primary-bright hover:underline"
                     >
-                      {FRAME_TEMPLATE_LABELS[
-                        item.frameTemplate as FrameTemplate
-                      ] ?? item.frameTemplate}
+                      {/* The template key beside the label: labels repeat
+                          across eras ("Token" = m20token and alphatoken,
+                          TODO 4.48a; "Standard", "Land"). */}
+                      {FRAME_TEMPLATE_LABELS[item.frameTemplate as FrameTemplate]
+                        ? `${FRAME_TEMPLATE_LABELS[item.frameTemplate as FrameTemplate]} · ${item.frameTemplate}`
+                        : item.frameTemplate}
                     </Link>
                   </span>
                 ) : null}

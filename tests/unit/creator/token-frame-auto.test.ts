@@ -10,7 +10,15 @@ import {
   tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
+import {
+  FRAME_SET_ERA,
+  FRAME_TEMPLATE_LABELS,
+  FRAME_TEMPLATE_SET,
+  FRAME_TEMPLATE_VALUES,
+  type FrameTemplate,
+} from "@/types/card";
+import { describeFrame, eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { typeWordFrameFor } from "@/lib/creator/card-kinds";
 
 // ---------------------------------------------------------------------------
@@ -197,11 +205,41 @@ describe("pinsTokenHeight — which picks pin the height", () => {
 });
 
 describe("the arch and the full-art family, side by side", () => {
-  it("names the arch for its years (owner decision 2026-09-29) and the full-art design apart", () => {
+  it("names the arch for its years (owner decision 2026-09-29) and the full-art design plain \"Token\" (4.48a)", () => {
     expect(FRAME_TEMPLATE_LABELS.m15token).toBe("Token (2014–2019)");
     expect(FRAME_TEMPLATE_LABELS.m15tokenartifact).toBe("Artifact Token (2014–2019)");
     expect(FRAME_TEMPLATE_LABELS.m15tokentext).toBe("Token (2014–2019), text box");
-    for (const t of ALL_M20) expect(FRAME_TEMPLATE_LABELS[t as FrameTemplate], t).toMatch(/^Full-art (Artifact )?Token/);
+    expect(FRAME_TEMPLATE_LABELS.m15tokenartifacttext).toBe("Artifact Token (2014–2019), text box");
+    // Verified in every colour (owner 2026-09-30), the full-art design is
+    // what a token IS: the same suffixes as the arch, no "Full-art".
+    const fullArt = {
+      m20token: "Token",
+      m20tokentext: "Token, text box",
+      m20tokentall: "Token, tall text box",
+      m20tokenartifact: "Artifact Token",
+      m20tokenartifacttext: "Artifact Token, text box",
+      m20tokenartifacttall: "Artifact Token, tall text box",
+    } as const;
+    expect(Object.keys(fullArt).sort()).toEqual([...ALL_M20].sort());
+    for (const [t, label] of Object.entries(fullArt)) {
+      expect(FRAME_TEMPLATE_LABELS[t as FrameTemplate], t).toBe(label);
+      expect(getFrameProfile(t as FrameTemplate).label, t).toBe(label);
+    }
+  });
+
+  it("never reads two frames alike where the picker, the toasts or the admin checklist name them", () => {
+    // Toasts and import notes (describeFrame): "M15 (2015) Token" and
+    // "Classic (1993) Token" — one name per template.
+    const described = FRAME_TEMPLATE_VALUES.map((t) => describeFrame(t));
+    expect(new Set(described).size).toBe(described.length);
+    expect(describeFrame("m20token")).toBe("M15 (2015) Token");
+    expect(describeFrame("m15token")).toBe("M15 (2015) Token (2014–2019)");
+    expect(describeFrame("alphatoken")).toBe("Classic (1993) Token");
+    // The picker's chips, the admin checklist and the ops tile's template
+    // table list one era at a time (the sign-off's treatment table one
+    // frame set): no two labels alike inside an era.
+    const inEra = FRAME_TEMPLATE_VALUES.map((t) => `${FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]]} ${eraGroupFrameLabel(t)}`);
+    expect(new Set(inEra).size).toBe(inEra.length);
   });
 
   it("each height's artifact template is its Artifact-word dress (4.50)", () => {

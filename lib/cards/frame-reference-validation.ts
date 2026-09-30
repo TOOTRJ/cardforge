@@ -114,8 +114,14 @@ export function validateReferenceForCombo(
     const resolved = FRAME_TEMPLATE_LABELS[signature.template]
       ? eraGroupFrameLabel(signature.template)
       : signature.template;
+    // Two frames can share a label across eras ("Token" = m20token and
+    // alphatoken, TODO 4.48a): name the template keys then.
+    const [resolvedName, rowName] =
+      resolved === label
+        ? [`${resolved} (${signature.template})`, `${label} (${template})`]
+        : [resolved, label];
     warnings.push(
-      `This printing is the ${signature.exactLabel}; the frame signature registry resolves it to the ${resolved} frame, not ${label}.`,
+      `This printing is the ${signature.exactLabel}; the frame signature registry resolves it to the ${resolvedName} frame, not ${rowName}.`,
     );
   }
 

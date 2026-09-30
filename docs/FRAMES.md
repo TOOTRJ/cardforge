@@ -1812,6 +1812,10 @@ frames bucket — never git:
   it. The arch stays offered, labelled
   "Token (2014–2019)" — the new look's off switch — and stored cards keep
   their frame (an addition, not a correction: "Additions vs corrections").
+  Verified in every colour (2026-09-30), the full-art design is labelled
+  plain "Token" / "Artifact Token" (", text box" / ", tall text box"; TODO
+  4.48a, label-only): toasts read "M15 (2015) Token" beside Alpha's
+  "Classic (1993) Token", and the admin pages show the template key.
   The height then follows the text (`followTokenHeight`) with round 11's
   rules: any height picked in Variations sticks, the one the text asks for
   included (`pinsTokenHeight`: the form's one `manual` flag); a

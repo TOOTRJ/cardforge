@@ -439,12 +439,17 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15tokentext: "Token (2014–2019), text box",
   m15tokenartifacttext: "Artifact Token (2014–2019), text box",
   emblem: "Emblem",
-  m20token: "Full-art Token",
-  m20tokentext: "Full-art Token, text box",
-  m20tokentall: "Full-art Token, tall text box",
-  m20tokenartifact: "Full-art Artifact Token",
-  m20tokenartifacttext: "Full-art Artifact Token, text box",
-  m20tokenartifacttall: "Full-art Artifact Token, tall text box",
+  // The full-art design (TODO 4.48) is what a token IS now that it is
+  // verified (4.48a, owner round 14b; every colour verified 2026-09-30):
+  // plain "Token", beside the arch's "Token (2014–2019)". Alpha's token is
+  // "Token" too, under its own era — describeFrame reads "M15 (2015) Token"
+  // and "Classic (1993) Token", and the admin pages show the template key.
+  m20token: "Token",
+  m20tokentext: "Token, text box",
+  m20tokentall: "Token, tall text box",
+  m20tokenartifact: "Artifact Token",
+  m20tokenartifacttext: "Artifact Token, text box",
+  m20tokenartifacttall: "Artifact Token, tall text box",
   m15borderless: "Borderless",
   m15borderlessartifact: "Borderless Artifact",
   m15borderlessland: "Borderless Land",

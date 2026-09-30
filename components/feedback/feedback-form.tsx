@@ -20,7 +20,14 @@ import {
   feedbackSchema,
   type FeedbackCategory,
 } from "@/lib/feedback/schemas";
-import { FRAME_TEMPLATE_LABELS, FRAME_TEMPLATE_VALUES } from "@/types/card";
+import {
+  FRAME_ERA_LABELS,
+  FRAME_ERA_VALUES,
+  FRAME_SET_ERA,
+  FRAME_TEMPLATE_LABELS,
+  FRAME_TEMPLATE_SET,
+  FRAME_TEMPLATE_VALUES,
+} from "@/types/card";
 
 export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
   const params = useSearchParams();
@@ -182,10 +189,20 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
             className={inputClass(false)}
           >
             <option value="">Not sure / several</option>
-            {FRAME_TEMPLATE_VALUES.map((t) => (
-              <option key={t} value={t}>
-                {FRAME_TEMPLATE_LABELS[t]}
-              </option>
+            {/* One group per era, as the frame picker lists them: labels
+                are era-relative and repeat across eras ("Token" = the M15
+                full-art design and Alpha's, TODO 4.48a; "Standard",
+                "Land"), never inside one. */}
+            {FRAME_ERA_VALUES.map((era) => (
+              <optgroup key={era} label={FRAME_ERA_LABELS[era]}>
+                {FRAME_TEMPLATE_VALUES.filter(
+                  (t) => FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]] === era,
+                ).map((t) => (
+                  <option key={t} value={t}>
+                    {FRAME_TEMPLATE_LABELS[t]}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </FieldGroup>
