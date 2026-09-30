@@ -1427,7 +1427,7 @@
     "uppercase": true
    },
    "hideCost": true,
-   "label": "Full-art Token",
+   "label": "Token",
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {
@@ -1535,7 +1535,7 @@
     "uppercase": true
    },
    "hideCost": true,
-   "label": "Full-art Token, text box",
+   "label": "Token, text box",
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {
@@ -1641,7 +1641,7 @@
     "uppercase": true
    },
    "hideCost": true,
-   "label": "Full-art Token, tall text box",
+   "label": "Token, tall text box",
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {
@@ -1748,7 +1748,7 @@
     "uppercase": true
    },
    "hideCost": true,
-   "label": "Full-art Artifact Token",
+   "label": "Artifact Token",
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {
@@ -1851,7 +1851,7 @@
     "uppercase": true
    },
    "hideCost": true,
-   "label": "Full-art Artifact Token, text box",
+   "label": "Artifact Token, text box",
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {
@@ -1952,7 +1952,7 @@
     "uppercase": true
    },
    "hideCost": true,
-   "label": "Full-art Artifact Token, tall text box",
+   "label": "Artifact Token, tall text box",
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {

@@ -1704,7 +1704,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     await typeFlavour("A knight.");
     expect(preview().template).toBe("m20tokentext");
     await back(2);
-    await clickChip("Frame variations", /^Full-art Token, tall text box/);
+    await clickChip("Frame variations", /^Token, tall text box/);
     expect(preview().template).toBe("m20tokentall");
     await clickNext(2);
     await typeFlavour("");
@@ -1713,7 +1713,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     // …even the height the text asks for, picked by hand: it no longer
     // follows.
     await back(2);
-    await clickChip("Frame variations", /^Full-art Token, text box/);
+    await clickChip("Frame variations", /^Token, text box/);
     await clickNext(2);
     await typeFlavour(LONG);
     expect(preview().template).toBe("m20tokentext");
@@ -1735,7 +1735,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     await typeFlavour("A knight.");
     expect(preview().template).toBe("m20token");
     expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(
-      /Full-art Token, text box isn't verified in colorless yet — keeping M15 \(2015\) Full-art Token\./,
+      /M15 \(2015\) Token, text box isn't verified in colorless yet — keeping M15 \(2015\) Token\./,
     );
   });
 
@@ -1807,7 +1807,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     await pickColour(/^blue/i);
     expect(preview().template).toBe("m15token");
     expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(
-      /Full-art Token isn't verified in blue yet — using M15 \(2015\) Token \(2014–2019\)\./,
+      /M15 \(2015\) Token isn't verified in blue yet — using M15 \(2015\) Token \(2014–2019\)\./,
     );
     // With text: the arch's text box in blue, the full-art box in white.
     await clickNext(2);
@@ -1842,7 +1842,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     await pickColour(/^white/i);
     expect(preview().template).toBe("m15token");
     // A full-art height picked in Variations: its colours are its own.
-    await clickChip("Frame variations", /^Full-art Token, tall text box/);
+    await clickChip("Frame variations", /^Token, tall text box/);
     expect(preview().template).toBe("m20tokentall");
     expect(colourChip(/^blue/i).disabled).toBe(true);
     await pickColour(/^colorless/i);

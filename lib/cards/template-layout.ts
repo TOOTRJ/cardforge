@@ -1839,7 +1839,7 @@ const M20_TOKEN_TITLE_INK_DARK_ON: InkByColorKey = { w: { colorHex: INK_DARK } }
 
 /** The regular box (CC 'Short'): the base the other heights spread. */
 const M20TOKENTEXT: FrameProfile = {
-  label: "Full-art Token, text box",
+  label: "Token, text box",
   hideCost: true,
   // CC artBounds 4 / 2.86 / 92 × 89.53 (the black ring's inner edge, 60 px,
   // to the colour strip), with 7.6's overscan: the clear window runs
@@ -1906,7 +1906,7 @@ const M20TOKENTEXT: FrameProfile = {
  *  `textlessTypeLine` keeps the type pill's line (TFDN #6). */
 const M20TOKEN: FrameProfile = {
   ...M20TOKENTEXT,
-  label: "Full-art Token",
+  label: "Token",
   symbolRect: m20TokenSymbolRect("textless"),
   type: m20TokenTypeSlot("textless"),
   textless: true,
@@ -1936,7 +1936,7 @@ export const M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX = 10;
  *  (M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX). */
 const M20TOKENTALL: FrameProfile = {
   ...M20TOKENTEXT,
-  label: "Full-art Token, tall text box",
+  label: "Token, tall text box",
   symbolRect: m20TokenSymbolRect("tall"),
   type: m20TokenTypeSlot("tall"),
   rules: {
@@ -3572,14 +3572,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   },
   // TODO 4.52: the emblem (M20 design).
   emblem: EMBLEM,
-  // TODO 4.48 / 4.50: the full-art tokens. Their masters are clear almost
-  // everywhere, so the creator's tile draws its sample art (4.45).
+  // TODO 4.48 / 4.50: the full-art tokens, labelled plain "Token" now that
+  // they are verified (4.48a). Their masters are clear almost everywhere,
+  // so the creator's tile draws its sample art (4.45).
   m20token: { ...M20TOKEN, pickerSampleArt: true },
   m20tokentext: { ...M20TOKENTEXT, pickerSampleArt: true },
   m20tokentall: { ...M20TOKENTALL, pickerSampleArt: true },
-  m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Full-art Artifact Token"), pickerSampleArt: true },
-  m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Full-art Artifact Token, text box"), pickerSampleArt: true },
-  m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Full-art Artifact Token, tall text box"), pickerSampleArt: true },
+  m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Artifact Token"), pickerSampleArt: true },
+  m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Artifact Token, text box"), pickerSampleArt: true },
+  m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Artifact Token, tall text box"), pickerSampleArt: true },
   // A coloured artifact's crown is its colour (NEO #74, M20 #131); a
   // colourless artifact's the artifact silver "a" (FDN #677).
   m15artifact: {
