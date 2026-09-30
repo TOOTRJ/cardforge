@@ -1,0 +1,161 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+
+// ---------------------------------------------------------------------------
+// The reference pin (TODO 0.18) — "Change reference card" on the compare
+// page. Contract: the search goes through our /api/scryfall/search proxy,
+// debounced, only for a non-empty query; picking a printing pins exactly
+// that id for this (template, colour) — the server re-reads the card and
+// may refuse or warn — then closes the search and refreshes the page;
+// "Revert to default" shows only while a printing is pinned and sends null.
+// A refusal keeps the search open and refreshes nothing.
+// ---------------------------------------------------------------------------
+
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
+vi.mock("sonner", () => ({ toast }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const actions = vi.hoisted(() => ({ setFrameReferenceAction: vi.fn() }));
+vi.mock("@/lib/cards/frame-review-actions", () => ({
+  setFrameReferenceAction: actions.setFrameReferenceAction,
+}));
+const fetchMock = vi.hoisted(() => vi.fn());
+
+import { FrameReferencePicker } from "@/components/admin/frame-reference-picker";
+
+const GANDALF = {
+  id: "eae80537-f355-4aa3-8952-b08f3d1a1e41",
+  name: "Gandalf, Friend of the Shire",
+  set: "ltr",
+  thumb_url: null,
+  image_status: "lowres",
+};
+const ELROND = {
+  id: "308465a9-2143-49f2-b9d0-a09272dd1b62",
+  name: "Elrond, Lord of Rivendell",
+  set: "ltr",
+  thumb_url: null,
+  image_status: "highres_scan",
+};
+
+function searchAnswers(results: unknown[]) {
+  fetchMock.mockImplementation(async () => ({ ok: true, json: async () => ({ ok: true, results }) }));
+}
+
+async function openAndSearch(query: string) {
+  fireEvent.click(screen.getByRole("button", { name: /change reference card/i }));
+  const input = screen.getByRole("searchbox", { name: "Search Scryfall for a reference card" });
+  fireEvent.change(input, { target: { value: query } });
+  return input;
+}
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+  fetchMock.mockReset();
+  searchAnswers([GANDALF, ELROND]);
+  actions.setFrameReferenceAction.mockReset();
+  toast.success.mockReset();
+  toast.error.mockReset();
+  toast.message.mockReset();
+  router.refresh.mockReset();
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("FrameReferencePicker", () => {
+  it("searches through the proxy, debounced, and lists the printings with a low-res flag", async () => {
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    await openAndSearch("gandalf e:ltr");
+
+    await screen.findByText(GANDALF.name);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = new URL(fetchMock.mock.calls[0][0] as string, "https://www.pipglyph.com");
+    expect(url.pathname).toBe("/api/scryfall/search");
+    expect(url.searchParams.get("q")).toBe("gandalf e:ltr");
+    expect(url.searchParams.get("limit")).toBe("8");
+    expect(screen.getByText(/ltr · low-res scan/)).toBeTruthy();
+    expect(screen.getByText(ELROND.name)).toBeTruthy();
+  });
+
+  it("never searches for a blank query, and says when nothing matched", async () => {
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    const input = await openAndSearch("   ");
+    await new Promise((r) => setTimeout(r, 400));
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    searchAnswers([]);
+    fireEvent.change(input, { target: { value: "no such card" } });
+    await screen.findByText("No matches.");
+  });
+
+  it("pins the picked printing for this combo, then closes and refreshes the page", async () => {
+    actions.setFrameReferenceAction.mockResolvedValueOnce({ ok: true, warning: null, name: ELROND.name });
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    await openAndSearch("elrond");
+    fireEvent.click(await screen.findByRole("button", { name: /Elrond, Lord of Rivendell/ }));
+
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+    expect(actions.setFrameReferenceAction).toHaveBeenCalledWith({
+      template: "lotr",
+      colorKey: "u",
+      scryfallId: ELROND.id,
+    });
+    expect(toast.success).toHaveBeenCalledWith(`Reference set to ${ELROND.name}.`);
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("shows the server's warning with the pin (a low-res scan, an era mismatch)", async () => {
+    actions.setFrameReferenceAction.mockResolvedValueOnce({
+      ok: true,
+      warning: "This printing only has a low-resolution scan.",
+      name: GANDALF.name,
+    });
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    await openAndSearch("gandalf");
+    fireEvent.click(await screen.findByRole("button", { name: /Gandalf, Friend of the Shire/ }));
+
+    await waitFor(() =>
+      expect(toast.message).toHaveBeenCalledWith(`Reference set to ${GANDALF.name}`, {
+        description: "This printing only has a low-resolution scan.",
+      }),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the search open and refreshes nothing when the server refuses the printing", async () => {
+    actions.setFrameReferenceAction.mockResolvedValueOnce({
+      ok: false,
+      error: "That printing is white; this row is blue.",
+    });
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    await openAndSearch("gandalf");
+    fireEvent.click(await screen.findByRole("button", { name: /Gandalf, Friend of the Shire/ }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("That printing is white; this row is blue."));
+    expect(router.refresh).not.toHaveBeenCalled();
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(screen.getByText(GANDALF.name)).toBeTruthy();
+  });
+
+  it("offers Revert only while a printing is pinned, and reverts with null", async () => {
+    const { rerender } = render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    expect(screen.queryByRole("button", { name: /revert to default/i })).toBeNull();
+
+    actions.setFrameReferenceAction.mockResolvedValueOnce({ ok: true, warning: null, name: null });
+    rerender(<FrameReferencePicker template="lotr" colorKey="u" isCustom />);
+    fireEvent.click(screen.getByRole("button", { name: /revert to default/i }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Reverted to the default reference."));
+    expect(actions.setFrameReferenceAction).toHaveBeenCalledWith({
+      template: "lotr",
+      colorKey: "u",
+      scryfallId: null,
+    });
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
