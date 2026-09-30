@@ -1270,22 +1270,19 @@ route re-plans from what is still pending. It ends by re-planning (nothing
 may be left in scope) and checking that a few re-baked renders are
 reachable.
 
-Against production (owner; it needs production's `CRON_SECRET` from Vercel
-→ Settings → Environment Variables). Read it into an unexported shell
-variable without echo — the prompt waits silently; paste and press Enter —
-so it stays out of shell history and out of every other program's
-environment:
+Against production (owner), in a terminal:
 
 ```bash
-read -rs CRON_SECRET
+SCOPE=sweep REBAKE_URL=https://www.pipglyph.com/api/admin/rebake node scripts/rebake-renders.mjs
 ```
 
-```bash
-CRON_SECRET="$CRON_SECRET" SCOPE=sweep REBAKE_URL=https://www.pipglyph.com/api/admin/rebake node scripts/rebake-renders.mjs
-```
-
-That prints the plan. Add `CONFIRM=yes` to write, and `unset CRON_SECRET`
-when you are done. Other scopes:
+It first asks for production's `CRON_SECRET` (Vercel → Settings →
+Environment Variables) at a hidden prompt: paste it and press Enter. Nothing
+typed or pasted is echoed (`scripts/lib/hidden-prompt.mjs`), and the secret
+never enters your shell history or any other program's environment. Without
+a terminal (a pipe, CI) it refuses, and it refuses production over
+`http://`. Then it prints the plan. Add `CONFIRM=yes` to write; each run
+asks for the secret again. Other scopes:
 `SCOPE=version VERSION=<n>` (only the cards bump n changed; n must be a
 "sweep" version) and `SCOPE=legacy-art` (art on a legacy storage host,
 renders older than `BEFORE`). `BATCH` sets cards per request (default 8,

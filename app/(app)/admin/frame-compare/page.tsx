@@ -195,8 +195,18 @@ export default async function AdminFrameComparePage({
     const options = frameReferenceOptions(template, color);
     const { note, confirm } = frameReferenceNote(template);
     const tier = referenceTierLabel(reference);
+    // A lookup that THROWS (Scryfall unreachable, a reset connection — not a
+    // 404, which answers null) falls back to the sample content below with
+    // "Reference lookup failed", like the sign-off's side-by-side, instead
+    // of erroring the page.
     const payload = reference
-      ? await buildFrameComparePayload(reference.scryfallId, template)
+      ? await buildFrameComparePayload(reference.scryfallId, template).catch((error: unknown) => {
+          console.warn(
+            `[frame-compare] reference lookup failed for ${template}/${color} (${reference.scryfallId}):`,
+            error instanceof Error ? error.message : error,
+          );
+          return null;
+        })
       : null;
 
     const verified = review?.verified ?? false;
