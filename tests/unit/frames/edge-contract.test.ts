@@ -448,14 +448,18 @@ describe("the text-box tokens' re-cut window and 7.6's art-window coverage", () 
 
 // TODO 4.48 / 4.50: the full-art tokens are Card Conjurer's 'Textless',
 // 'Short' and 'Tall' token masters — the art runs to the 60 px black ring,
-// the pills and box are opaque (the colourless `c` translucent, α 166–204),
-// and the textless height's type pill is re-cut 5 px down onto the prints
-// (M20_TOKEN_TEXTLESS_RECUT). Here: each height's clear window and pill rows
-// on every colour, the re-cut pill interior the profile's type band centres
-// on (M20_TOKEN_PILL_INTERIOR_PX), and 7.6's art-window coverage (the art
-// slot covers the window flood-filled from its centre with ≥ 0.05 %
-// overscan). Run where the masters are available (the importer builds them;
-// CI has no bucket frames).
+// the box is translucent (α ≈ 205, the colourless `c` 166), and the textless
+// height's type pill is re-cut 5 px down onto the prints
+// (M20_TOKEN_TEXTLESS_RECUT). Two PipGlyph composites over CC's pixels
+// (owner decisions 2026-09-29; scripts/lib/cc-frames.mjs): the type pill is
+// SOLID, as printed (CC drew it at α 204 / `c` 166), and the artifact
+// templates' name pill is the prints' dark slate (CC's silver let a white
+// name nearly vanish). Here: each height's clear window and pill rows on
+// every colour, the re-cut pill interior the profile's type band centres on
+// (M20_TOKEN_PILL_INTERIOR_PX), the two composites, and 7.6's art-window
+// coverage (the art slot covers the window flood-filled from its centre
+// with ≥ 0.05 % overscan). Run where the masters are available (the importer
+// builds them; CI fetches them, scripts/frames-fetch.mjs).
 describe("the full-art tokens' windows, pills and 7.6's art-window coverage", () => {
   /** The α < 16 region 4-connected to (cx, cy): its bounding box. */
   function windowBox(data: Buffer, width: number, height: number, cx: number, cy: number) {
@@ -497,7 +501,8 @@ describe("the full-art tokens' windows, pills and 7.6's art-window coverage", ()
       it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
       continue;
     }
-    it(`${template}: every colour's window runs from the ring to its pill (rim at ${rim} px), inside the art slot`, async () => {
+    // Seven 3 Mpx masters decoded: a generous timeout for CI's V8 coverage.
+    it(`${template}: every colour's window runs from the ring to its pill (rim at ${rim} px), inside the art slot`, { timeout: 60_000 }, async () => {
       expect(masters).toHaveLength(7);
       const { M20_TOKEN_PILL_INTERIOR_PX } = await import("@/lib/cards/template-layout");
       const pill = M20_TOKEN_PILL_INTERIOR_PX[height];
@@ -508,12 +513,38 @@ describe("the full-art tokens' windows, pills and 7.6's art-window coverage", ()
         // The black ring and the clear window beside it, on the art's rows.
         expect(a(30, 1000), `${m.key} ring`).toBe(255);
         expect(a(750, 1000), `${m.key} art`).toBe(0);
-        // The pill: clear just above its glow, an opaque rim, a lightly
-        // see-through interior (CC's α 204; the colourless type pill's 166).
+        // The pill: clear just above its glow, an opaque rim, and a SOLID
+        // interior from end to end (owner decision 2026-09-29: CC's α 204,
+        // the colourless one's 166, let the art through).
         expect(a(750, rim - 20), `${m.key} above the pill`).toBe(0);
         expect(a(750, rim + 2), `${m.key} rim`).toBe(255);
-        for (const y of [pill.top + 4, Math.round((pill.top + pill.bottom) / 2), pill.bottom - 4]) {
-          expect(a(750, y), `${m.key} pill α at ${y}`).toBeGreaterThanOrEqual(m.key === "c" && !template.includes("artifact") ? 160 : 200);
+        for (let y = pill.top + 4; y <= pill.bottom - 4; y += 1) {
+          for (const x of [110, 300, 750, 1200, 1390]) expect(a(x, y), `${m.key} pill α at ${x}, ${y}`).toBe(255);
+        }
+        // The name pill (CC's, α 230): the artifact templates' is the prints'
+        // slate behind the name — luminance 54–71, white ink 9–11.5 : 1 on
+        // mid-grey art (16 M20+ artifact prints; CC's silver was 102–137,
+        // 3.5–5.7 : 1) — and every other template's keeps CC's pixels (its
+        // colour: the white pill stays white).
+        const zone: number[][] = [];
+        for (let y = 135; y < 190; y += 5) {
+          for (let x = 420; x < 1080; x += 20) {
+            const i = (y * width + x) * 4;
+            const al = data[i + 3] / 255;
+            zone.push([0, 1, 2].map((c) => data[i + c] * al + 118 * (1 - al)));
+          }
+        }
+        const med = [0, 1, 2].map((c) => zone.map((p) => p[c]).sort((p, q) => p - q)[Math.floor(zone.length / 2)]);
+        const lum = 0.299 * med[0] + 0.587 * med[1] + 0.114 * med[2];
+        const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+        const whiteInk = 1.05 / (0.2126 * lin(med[0]) + 0.7152 * lin(med[1]) + 0.0722 * lin(med[2]) + 0.05);
+        if (template.includes("artifact")) {
+          expect(lum, `${m.key} name pill luminance`).toBeGreaterThanOrEqual(54);
+          expect(lum, `${m.key} name pill luminance`).toBeLessThanOrEqual(71);
+          expect(whiteInk, `${m.key} white name ink`).toBeGreaterThanOrEqual(9);
+          expect(whiteInk, `${m.key} white name ink`).toBeLessThanOrEqual(11.5);
+        } else if (m.key === "w") {
+          expect(lum, "w name pill").toBeGreaterThan(200);
         }
         if (height === "textless") {
           // The re-cut: the pill's bottom rim ends at 1849 (CC's 1844 + 5),

@@ -8,12 +8,16 @@ import {
   COLORS,
   CORNER_RADIUS,
   SHIELD_BOX,
+  M20_ARTIFACT_NAME_SLATE,
+  M20_TOKEN_SOLID_TYPE_PILL,
   M20_TOKEN_TEXTLESS_RECUT,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
   builtColors,
+  compositeFinish,
   compositeLayers,
   cutThroughMask,
+  describeFinish,
   describeLayer,
   recutBand,
   roundCorners,
@@ -38,8 +42,12 @@ import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/fra
 // ---------------------------------------------------------------------------
 
 type Layer = { src: string; mask?: string; invert?: boolean; opacity?: number };
+type Finish =
+  | { op: "opaque"; mask: string }
+  | { op: "tint"; mask: string; rgb: [number, number, number]; opacity: number; alphaFull: number; alphaNone: number };
 type Def = {
   colors: Record<string, Layer[]>;
+  finish?: Finish[];
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
@@ -262,6 +270,38 @@ describe("Card Conjurer recipe", () => {
     for (let y = 1850; y < H; y += 1) expect(a(out, y), `${y}`).toBe(a(buf, y));
   });
 
+  it("makes every full-art token's type pill solid, and the artifact ones' name pill slate (owner decisions 2026-09-29)", () => {
+    const TYPE = {
+      m20token: "img/frames/token/tokenMaskTextlessType.png",
+      m20tokentext: "img/frames/token/short/m15MaskTypeShort.png",
+      m20tokentall: "img/frames/m15/regular/m15MaskType.png",
+    } as const;
+    for (const [plain, typeMask] of Object.entries(TYPE)) {
+      const artifact = plain.replace("m20token", "m20tokenartifact");
+      // The type pill through the pack's own Type mask, on both.
+      expect(templates[plain].finish, plain).toEqual([{ op: "opaque", mask: typeMask }]);
+      // The artifact template adds the slate through M15's Title mask (the
+      // three packs' name pill).
+      expect(templates[artifact].finish, artifact).toEqual([
+        { op: "opaque", mask: typeMask },
+        { ...M20_ARTIFACT_NAME_SLATE, mask: "img/frames/m15/regular/m15MaskTitle.png" },
+      ]);
+      for (const t of [plain, artifact]) {
+        // The masks are source files (provenance lists them), and the
+        // transforms and notes say what was composited, before the re-cut.
+        for (const f of templates[t].finish!) expect(sourceFilesFor(templates[t] as never), t).toContain(f.mask);
+        expect(templates[t].transforms, t).toContain(`PipGlyph composites over the flattened pixels: ${templates[t].finish!.map(describeFinish).join("; ")}`);
+        expect(templates[t].notes.join(" "), t).toMatch(/the type pill SOLID/);
+      }
+      expect(templates[artifact].notes.join(" ")).toMatch(/name pill darkened to the prints' slate/);
+      expect(templates[plain].notes.join(" ")).not.toMatch(/slate/);
+    }
+    expect(M20_TOKEN_SOLID_TYPE_PILL).toEqual({ op: "opaque" });
+    expect(M20_ARTIFACT_NAME_SLATE).toEqual({ op: "tint", rgb: [30, 40, 48], opacity: 0.65, alphaFull: 230, alphaNone: 244 });
+    // No other template composites anything of its own.
+    for (const [t, def] of Object.entries(templates)) if (!M20_TOKENS.includes(t)) expect(def.finish, t).toBeUndefined();
+  });
+
   it("imports the see-through frames now that art runs under the frame (4.17, owner decision)", () => {
     expect(builtColors(templates.m15 as never)).toContain("c");
     expect(templates.m15.colors.c[0].src).toBe("img/frames/m15/new/c.png");
@@ -367,6 +407,82 @@ describe("Card Conjurer recipe", () => {
 
 describe("pixel operations", () => {
   const px = (r: number, g: number, b: number, a: number) => [r, g, b, a];
+
+  describe("compositeFinish (the full-art tokens' composites, owner decisions 2026-09-29)", () => {
+    /** One row of pixels and a mask over it. */
+    const row = (pixels: number[][]) => Buffer.from(pixels.flat());
+    const maskOf = (alphas: number[]) => Buffer.from(alphas.flatMap((a) => [255, 0, 0, a]));
+
+    it("'opaque': a pixel the mask covers keeps its colour and becomes opaque; a partial mask adds its share", () => {
+      // CC's interior (α 204), the colourless one (166), the outline (255),
+      // a pixel outside the mask, one on the mask's anti-aliased edge.
+      const buf = row([px(243, 241, 232, 204), px(209, 209, 209, 166), px(0, 0, 0, 255), px(10, 20, 30, 0), px(243, 241, 232, 204)]);
+      const out = compositeFinish(buf, 5, 1, [{ op: "opaque", mask: "type" }], { type: maskOf([255, 255, 255, 0, 128]) });
+      expect([...out]).toEqual([
+        ...px(243, 241, 232, 255),
+        ...px(209, 209, 209, 255),
+        ...px(0, 0, 0, 255),
+        ...px(10, 20, 30, 0),
+        ...px(243, 241, 232, Math.round(204 + 51 * (128 / 255))),
+      ]);
+      // Pure: the input is untouched.
+      expect(buf[3]).toBe(204);
+    });
+
+    it("'tint': the slate goes source-over CC's translucent silver only — its interior fully, the rims not at all", () => {
+      const slate = { ...M20_ARTIFACT_NAME_SLATE, mask: "title" } as const;
+      // CC's pill: its middle (77), its end (246), both α 230; a rim pixel
+      // (α 246) and one half-way (α 237); one outside the mask.
+      const buf = row([px(77, 77, 77, 230), px(246, 246, 246, 230), px(246, 246, 246, 246), px(240, 240, 240, 237), px(77, 77, 77, 230)]);
+      const out = compositeFinish(buf, 5, 1, [slate], { title: maskOf([255, 255, 255, 255, 0]) });
+      const over = (c: number, s: number, a: number, t: number) => {
+        const outA = t + (a / 255) * (1 - t);
+        return Math.round((s * t + c * (a / 255) * (1 - t)) / outA);
+      };
+      const at = (i: number) => [...out.subarray(i * 4, i * 4 + 4)];
+      expect(at(0)).toEqual([over(77, 30, 230, 0.65), over(77, 40, 230, 0.65), over(77, 48, 230, 0.65), Math.round((0.65 + (230 / 255) * 0.35) * 255)]);
+      expect(at(1)[0]).toBe(over(246, 30, 230, 0.65));
+      // The rim keeps CC's pixel; the half-way pixel takes half the weight.
+      expect(at(2)).toEqual(px(246, 246, 246, 246));
+      expect(at(3)[0]).toBe(over(240, 30, 237, 0.65 * 0.5));
+      expect(at(4)).toEqual(px(77, 77, 77, 230));
+    });
+
+    it("the slate puts the prints' luminance behind the name on CC's silver, lighter towards the caps", () => {
+      // CC's tokenFrameA pill (α 230): ~77 at its middle, a median of ~110
+      // behind the name (x 420–1080 × y 135–190 px), 246 at the caps. On
+      // mid-grey art.
+      const lum = (p: number[]) => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+      const linear = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const whiteContrast = (p: number[]) => 1.05 / (0.2126 * linear(p[0]) + 0.7152 * linear(p[1]) + 0.0722 * linear(p[2]) + 0.05);
+      const onArt = (p: number[]) => [0, 1, 2].map((c) => p[c] * (p[3] / 255) + 118 * (1 - p[3] / 255));
+      const slate = { ...M20_ARTIFACT_NAME_SLATE, mask: "title" } as const;
+      const tint = (v: number) =>
+        onArt([...compositeFinish(row([px(v, v, v, 230)]), 1, 1, [slate], { title: maskOf([255]) })]);
+      // Behind the name, the prints' slate: luminance 54–71 and white ink
+      // 9–11 : 1 (16 M20+ artifact prints; CC's silver pill there was
+      // 102–137, 3.5–5.7 : 1).
+      const behind = tint(110);
+      expect(lum(behind)).toBeGreaterThanOrEqual(54);
+      expect(lum(behind)).toBeLessThanOrEqual(71);
+      expect(whiteContrast(behind)).toBeGreaterThanOrEqual(9);
+      expect(whiteContrast(behind)).toBeLessThanOrEqual(11.5);
+      // Blue-grey, as printed (the prints' 59 / 64 / 67).
+      expect(behind[2]).toBeGreaterThan(behind[0]);
+      // Darker still at the pill's middle; the caps stay lighter, as printed
+      // (the prints' ~130–150; CC's 246).
+      expect(lum(tint(77))).toBeLessThan(lum(behind));
+      expect(lum(tint(246))).toBeGreaterThan(95);
+      expect(lum(tint(246))).toBeLessThan(150);
+    });
+
+    it("refuses an unknown op or a missing mask", () => {
+      const buf = row([px(1, 2, 3, 4)]);
+      expect(() => compositeFinish(buf, 1, 1, [{ op: "opaque", mask: "x" }], {})).toThrow(/no 1x1 mask for x/);
+      expect(() => compositeFinish(buf, 1, 1, [{ op: "blur", mask: "x" } as never], { x: maskOf([255]) })).toThrow(/unknown op/);
+      expect(() => describeFinish({ op: "blur" } as never)).toThrow(/unknown op/);
+    });
+  });
 
   describe("recutBand (TODO 4.49's re-cuts: the textless and the text-box tokens)", () => {
     /** A 1-px-wide column of rows, each row's red = its index, alpha 255
@@ -621,6 +737,8 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].pack, template).toBe(templates[template].pack);
       expect(provenance[template].transforms, template).toMatch(/no resample/);
       expect(provenance[template].sourceFiles, template).toEqual(sourceFilesFor(templates[template] as never));
+      // Every PipGlyph composite is on the record (the full-art tokens').
+      expect(provenance[template].finish, template).toEqual(templates[template].finish?.map(describeFinish));
     }
     expect(Object.keys(provenance.fullartland.symbols).sort()).toEqual(["b", "c", "g", "output", "r", "u", "w"]);
     expect(provenance.fullartland.colors.w).toEqual([

@@ -195,10 +195,57 @@ const M20_TOKEN_PACKS = {
  */
 export const M20_TOKEN_TEXTLESS_RECUT = { fromY: 1687, toY: 1845, shift: 5, blend: 0, blendBottom: 0 };
 
+/** Each pack's own Type mask (packTokenTextless-1.js, packTokenShort-1.js;
+ *  the tall pack lists M15's): the type pill from its black outline in —
+ *  every pixel of the pill's interior, and nothing of the art window or
+ *  the pill's glow (checked on every master, 2026-09-29). */
+const M20_TOKEN_TYPE_MASK = {
+  textless: `${M20_TOKEN}/tokenMaskTextlessType.png`,
+  short: `${M20_TOKEN}/short/m15MaskTypeShort.png`,
+  tall: `${REG}/m15MaskType.png`,
+};
+/** The three packs' Title mask (M15's): the name pill, outline included. */
+const M20_TOKEN_TITLE_MASK = `${REG}/m15MaskTitle.png`;
+
+/**
+ * The type pill made SOLID, as printed (owner decision 2026-09-29, TODO
+ * 4.48 / 4.50): CC draws its interior at α 204 (`c` 166), so a fifth of the
+ * art showed through the pill; every M20+ print's pill is opaque cream (the
+ * colour's light tint). A PipGlyph composite over CC's pixels: each pixel
+ * the pack's Type mask covers keeps its colour and becomes opaque
+ * (compositeFinish "opaque").
+ */
+export const M20_TOKEN_SOLID_TYPE_PILL = { op: "opaque" };
+
+/**
+ * The ARTIFACT templates' name pill darkened to the prints' slate (owner
+ * decision 2026-09-29, TODO 4.50): CC's tokenFrameA pill is a silver
+ * gradient (luminance ~77 at its middle, ~246 at its ends), where 16 M20+
+ * artifact prints (TFDN #22/#23, TLCI #3/#17, TMKM #14, TDSK #7, TCMM #45,
+ * TNEO #6, T2XM #8, TMH3 #13/#17/#18, TMOC #25, TSOC #8, TM3C #7, TEOC #14)
+ * print a dark slate one — behind the name (x 420–1080 × y 135–190 px) the
+ * median is rgb 59/64/67 (luminance 63; white ink 10.5 : 1), lighter towards
+ * the caps. A flat slate drawn source-over CC's pill interior at 65 %: fitted
+ * to those prints behind the name (median rgb 58/64/69, luminance 63, white
+ * ink 10.5 : 1 on CC's pixels), the caps staying lighter as printed
+ * (~105). Only the pixels CC draws translucent take it — full weight at
+ * CC's interior α 230, none from α 244 (the rims, the bevel's outer rows,
+ * the outline) — so the rims keep CC's silver or colour
+ * (compositeFinish "tint").
+ */
+export const M20_ARTIFACT_NAME_SLATE = { op: "tint", rgb: [30, 40, 48], opacity: 0.65, alphaFull: 230, alphaNone: 244 };
+
 /** One full-art token template: the height's pack, plain or artifact. */
 function m20TokenTemplate(height, artifact) {
   const { dir, height: H, pack } = M20_TOKEN_PACKS[height];
   const recut = height === "textless" ? M20_TOKEN_TEXTLESS_RECUT : undefined;
+  // Owner decisions 2026-09-29: the type pill solid on every template, the
+  // artifact name pill slate. Composited over CC's flattened pixels BEFORE
+  // the re-cut (the masks are the packs' own geometry).
+  const finish = [
+    { ...M20_TOKEN_SOLID_TYPE_PILL, mask: M20_TOKEN_TYPE_MASK[dir] },
+    ...(artifact ? [{ ...M20_ARTIFACT_NAME_SLATE, mask: M20_TOKEN_TITLE_MASK }] : []),
+  ];
   const colors = artifact
     ? {
         c: [layer(m20TokenFrame(dir, H, "a"))],
@@ -220,11 +267,18 @@ function m20TokenTemplate(height, artifact) {
   if (height === "short") notes.push("CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn");
   if (height === "tall") notes.push("measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn");
   if (recut) notes.push("re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels");
+  notes.push("the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels");
+  if (artifact) {
+    notes.push(
+      "the name pill darkened to the prints' slate (owner decision 2026-09-29, TODO 4.50): a flat slate rgb 30/40/48 at 65 % source-over CC's translucent silver interior through M15's Title mask (the rims and outline keep CC's pixels) — behind the name luminance 63 and white ink 10.5 : 1, as 16 M20+ artifact prints (luminance 54–71, 9–11 : 1); CC's silver pill was 102–137 (3.5–5.7 : 1) — PipGlyph composite of CC pixels",
+    );
+  }
   return {
     colors,
+    finish,
     ...(recut ? { recut } : {}),
     pack,
-    transforms: recut ? m20TextlessRecutTransform(recut) : "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius",
+    transforms: `${recut ? m20TextlessRecutTransform(recut) : "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius"}; before any re-cut, PipGlyph composites over the flattened pixels: ${finish.map(describeFinish).join("; ")}`,
     notes,
   };
 }
@@ -258,8 +312,11 @@ const basics2022Frame = (k) => `${BASICS_2022}/${k === "c" ? "l" : k}.png`;
 const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${BASICS_2022}/s${k}.png`]));
 
 /**
- * template → { colors: colour → layers, plates?, symbols?, shield?, recut?,
- * excluded?, pack?, transforms?, notes }.
+ * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
+ * recut?, excluded?, pack?, transforms?, notes }.
+ * `finish` composites PipGlyph layers over each flattened composite, before
+ * any re-cut (compositeFinish; the full-art tokens' solid type pill and the
+ * artifact name pill's slate, owner decisions 2026-09-29).
  * `plates` are written at native size to <template>/pt/<colour>.png;
  * `symbols` (a basic land's mana-symbol disc, TODO 3.24) the same way to
  * <template>/symbol/<colour>.png, for the colours listed only.
@@ -649,6 +706,58 @@ export function describeLayer(l) {
   return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
 }
 
+/** One `finish` composite as provenance prints it. */
+export function describeFinish(f) {
+  if (f.op === "opaque") return `every pixel through ${f.mask} made opaque in its own colour (α' = α + (255 − α) × mask)`;
+  if (f.op === "tint") {
+    return `a flat rgb(${f.rgb.join(", ")}) at ${Math.round(f.opacity * 100)}% source-over through ${f.mask}, on the pixels CC draws translucent (full weight at α ≤ ${f.alphaFull}, none at α ≥ ${f.alphaNone})`;
+  }
+  throw new Error(`describeFinish: unknown op ${JSON.stringify(f)}`);
+}
+
+/**
+ * The `finish` composites (TODO 4.48 / 4.50, owner decisions 2026-09-29):
+ * PipGlyph composites over an 8-bit RGBA composite of CC's layers, each
+ * through a mask (its ALPHA, same size as the image; `masks` maps the mask
+ * path to its raw RGBA), in order. Colours are straight (not premultiplied).
+ *   "opaque" — each pixel the mask covers keeps its colour and gains
+ *              coverage: α' = α + (255 − α) × mask. (Every pixel a pack's
+ *              Type mask covers is pill: its outline, bevel and interior.)
+ *   "tint"   — a flat `rgb` drawn source-over at `opacity` × mask × w,
+ *              where w = 1 at α ≤ alphaFull, 0 at α ≥ alphaNone, linear
+ *              between: only what CC draws translucent takes it.
+ * Returns a new buffer.
+ */
+export function compositeFinish(buf, width, height, finish, masks) {
+  const out = Buffer.from(buf);
+  const n = width * height;
+  for (const f of finish) {
+    const mask = masks[f.mask];
+    if (!mask || mask.length !== n * 4) throw new Error(`compositeFinish: no ${width}x${height} mask for ${f.mask}`);
+    for (let p = 0; p < n; p += 1) {
+      const o = p * 4;
+      const m = mask[o + 3] / 255;
+      if (m === 0) continue;
+      const a = out[o + 3];
+      if (f.op === "opaque") {
+        out[o + 3] = Math.round(a + (255 - a) * m);
+        continue;
+      }
+      if (f.op !== "tint") throw new Error(`compositeFinish: unknown op ${f.op}`);
+      const w = a <= f.alphaFull ? 1 : a >= f.alphaNone ? 0 : (f.alphaNone - a) / (f.alphaNone - f.alphaFull);
+      const t = f.opacity * m * w;
+      if (t === 0) continue;
+      const ab = a / 255;
+      const outA = t + ab * (1 - t);
+      for (let c = 0; c < 3; c += 1) {
+        out[o + c] = Math.round((f.rgb[c] * t + out[o + c] * ab * (1 - t)) / outA);
+      }
+      out[o + 3] = Math.round(outA * 255);
+    }
+  }
+  return out;
+}
+
 /** The colours a template builds (all seven minus `excluded`). */
 export function builtColors(def) {
   return COLORS.filter((k) => def.colors[k] && !def.excluded?.[k]);
@@ -664,6 +773,7 @@ export function sourceFilesFor(def) {
       if (l.mask) files.add(l.mask);
     }
   }
+  for (const f of def.finish ?? []) files.add(f.mask);
   for (const plate of Object.values(def.plates ?? {})) files.add(plate);
   for (const symbol of Object.values(def.symbols ?? {})) files.add(symbol);
   if (def.shield) files.add(def.shield.mask);

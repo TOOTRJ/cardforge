@@ -49,8 +49,10 @@ import {
   OUT_W,
   WEBP,
   builtColors,
+  compositeFinish,
   compositeLayers,
   cutThroughMask,
+  describeFinish,
   describeLayer,
   recutBand,
   roundCornersRgba8,
@@ -149,7 +151,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
     if (dryRun) {
-      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}${def.finish ? `, then ${def.finish.map(describeFinish).join("; ")}` : ""}`);
       continue;
     }
     // Work at the base layer's native size; downscale once at the end.
@@ -164,7 +166,21 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         opacity: l.opacity,
       });
     }
-    const composite = toRgba8(compositeLayers(images, W, H));
+    const flat = toRgba8(compositeLayers(images, W, H));
+    // PipGlyph composites over CC's flattened pixels (the full-art tokens'
+    // solid type pill and artifact slate name pill, owner decisions
+    // 2026-09-29), before any re-cut: the masks are the pack's geometry.
+    const composite = def.finish
+      ? compositeFinish(
+          flat,
+          W,
+          H,
+          def.finish,
+          Object.fromEntries(
+            await Promise.all(def.finish.map(async (f) => [f.mask, await rgba(await fetchCached(f.mask), W, H)])),
+          ),
+        )
+      : flat;
     // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b)).
     const native = def.recut ? recutBand(composite, W, H, def.recut) : composite;
     const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
@@ -225,6 +241,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     output: `${OUT_W}x${OUT_H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
     ...(def.transforms ? { transforms: def.transforms } : {}),
     colors: recipe,
+    ...(def.finish ? { finish: def.finish.map(describeFinish) } : {}),
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
