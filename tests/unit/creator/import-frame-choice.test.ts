@@ -55,7 +55,8 @@ function variantPatch(
 }
 
 /** Sheoldred DMU #107 (legendary: the crown) as a black-red card: the crown
- *  AND the two-colour split frame PipGlyph paints gold. */
+ *  and the two-colour split frame — which m15 draws since 4.6b, so only the
+ *  crown holds. */
 const twoColourLegend = (keys: ReadonlySet<string>) =>
   variantPatch(
     "dmu-107",
@@ -72,6 +73,20 @@ const indicatorOnly = (keys: ReadonlySet<string>) =>
 /** …legendary with a colour-indicator dot: two details, both undrawn. */
 const legendWithIndicator = (keys: ReadonlySet<string>) =>
   variantPatch("dmu-107", { color_indicator: ["B"] }, keys);
+/** …as a W/U hybrid ARTIFACT creature (ELD #206-style cost): it lands on
+ *  m15artifact, which has no hybrid dress (TODO 4.6b), so the crown AND the
+ *  two-colour hybrid frame hold — a second gap PipGlyph paints differently. */
+const hybridArtifactLegend = (keys: ReadonlySet<string>) =>
+  variantPatch(
+    "dmu-107",
+    {
+      colors: ["W", "U"],
+      color_identity: ["W", "U"],
+      mana_cost: "{W/U}{W/U}{W/U}",
+      type_line: "Legendary Artifact Creature — Phyrexian Praetor",
+    },
+    keys,
+  );
 
 const STANDARD = verified("m15", "m15artifact", "m15land", "m15pw", "m15token", "saga");
 const WITH_BORDERLESS = new Set([...STANDARD, ...verified("m15borderless", "m15fullartland")]);
@@ -327,11 +342,17 @@ describe("the substitution chip and the deck-remix toast", () => {
     const both = legendWithIndicator(STANDARD).frame_match;
     expect(both?.gaps).toEqual(["crown", "colour-indicator"]);
     expect(importSubstitutionMessage(both, "m15", undefined, "b")).toBeNull();
-    // The crown and the gold frame for a black-red split: a real difference.
+    // A black-red legend: m15 draws the two-colour split (TODO 4.6b), so
+    // only the crown holds — quiet.
     const twoColour = twoColourLegend(STANDARD).frame_match;
-    expect(twoColour?.gaps).toEqual(["crown", "two-colour"]);
-    expect(importSubstitutionMessage(twoColour, "m15", undefined, "m")).toBe(
-      "PipGlyph doesn't draw the legendary crown yet — using M15 (2015) Standard.",
+    expect(twoColour?.gaps).toEqual(["crown"]);
+    expect(importSubstitutionMessage(twoColour, "m15", undefined, "m")).toBeNull();
+    // A hybrid artifact legend: the artifact frame has no hybrid dress — a
+    // real difference beside the crown.
+    const hybridArtifact = hybridArtifactLegend(STANDARD).frame_match;
+    expect(hybridArtifact?.gaps).toEqual(["crown", "two-colour-hybrid"]);
+    expect(importSubstitutionMessage(hybridArtifact, "m15artifact", undefined, "m")).toBe(
+      "PipGlyph doesn't draw the legendary crown yet — using M15 (2015) Artifact.",
     );
   });
 
@@ -378,13 +399,16 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(importFramePlan(legendWithIndicator(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
   });
 
-  it("asks when a second gap holds (the crown and the two-colour split frame)", () => {
-    const plan = importFramePlan(twoColourLegend(STANDARD), STANDARD, "m15");
+  it("asks when a second gap holds (the crown and a two-colour dress the frame doesn't draw)", () => {
+    const plan = importFramePlan(hybridArtifactLegend(STANDARD), STANDARD, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
     expect(plan.heading).toBe(
       "PipGlyph can't match this printing's M15 (2015) frame exactly yet — pick one of these",
     );
-    expect(plan.preselected).toEqual({ template: "m15" });
+    expect(plan.preselected).toEqual({ template: "m15artifact" });
+    // The black-red legend's split frame is drawn (4.6b): only the crown is
+    // left, a detail no frame draws — no chooser.
+    expect(importFramePlan(twoColourLegend(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
   });
 
   it("asks when the printing's own frame isn't published in its colour (a real substitution)", () => {
@@ -501,8 +525,8 @@ describe("A3 — the chooser dresses an Enchantment Creature in Nyx, never a pla
   });
 
   it("refuses Nyx for a creature that isn't an enchantment", () => {
-    const keys = new Set([...STANDARD, frameComboKey("nyx", "b")]);
-    const plan = importFramePlan(twoColourLegend(keys), keys, "m15");
+    const keys = new Set([...STANDARD, frameComboKey("nyx", "b"), frameComboKey("nyx", "m")]);
+    const plan = importFramePlan(hybridArtifactLegend(keys), keys, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
     expect([...plan.options, ...plan.moreOptions].map((o) => o.template)).not.toContain("nyx");
     expect(
