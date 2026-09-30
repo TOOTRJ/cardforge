@@ -9,9 +9,10 @@ import manifestJson from "@/lib/frames/frame-manifest.json";
 // TODO 4.52 on the emblem MASTER the bake draws (owner evidence and
 // decisions 2026-09-29): the name pill is the prints' dark pill, not Card
 // Conjurer's light gradient; the silver, the type pill and the text box sit
-// in the prints' range; the spark's centre ray is bridged over above the art
-// window. Scryfall PNGs of TFDN #24 / #25, TM20 #11, TDSK #17, TBLB #30 and
-// TFRA #16 at 1500 × 2100: the pill's median luma over the name band (rows
+// in the prints' range, the silver side by side (round 12b); the spark's
+// centre ray is bridged over above the art window. Scryfall PNGs of TFDN
+// #24 / #25, TM20 #11, TDSK #17, TBLB #30 and TFRA #16 at 1500 × 2100: the
+// pill's median luma over the name band (rows
 // 128–199 × 150–1349 px, the evidence's box) is 52 with the names' ink
 // masked out and 57–70 per print with it; CC's frame.png as it is, 90 (our
 // bakes read 94–97 with the name). The recipe tones it (scripts/lib/
@@ -115,27 +116,44 @@ describe("the emblem master (TODO 4.52, owner evidence and decisions 2026-09-29)
     return median(out);
   }
 
-  // Owner decision 2026-09-29 (round 12): the silver and the type bar were
-  // 10–45 luma lighter than the prints. Each region's median, on the six
-  // prints (the same boxes, the master's opaque pixels), from min to max:
-  // CC's own in brackets.
-  it("sits the silver, the type pill and the text box in the prints' range, region by region", async () => {
+  // Owner decisions 2026-09-29: round 12, the silver and the type bar were
+  // 10–45 luma lighter than the prints; round 12b, fit the silver on each
+  // side separately — the prints light it unevenly and round 12's gain, by
+  // distance from the centre, darkened both halves alike. Each region's
+  // median on the six prints (the same boxes, the master's opaque pixels),
+  // min–max, CC's own in brackets and round 12's master (133246f1,
+  // emblem/c.150232c61f71) after it, * where it fell outside.
+  it("sits the silver in the prints' range side by side, and the type pill and the text box in theirs", async () => {
     const { data, info } = await sharp(files[0].file!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const w = info.width;
     const within = (v: number, lo: number, hi: number, name: string) => {
       expect(v, name).toBeGreaterThanOrEqual(lo);
       expect(v, name).toBeLessThanOrEqual(hi);
     };
-    // Beside the name bar 120.6–128.0 (149); the rails beside the spark
-    // 101.4–113.0 (141); the body above the spark's arms 138.8–161.5 (160)
-    // and below 124.4–141.5 (159); beside the type bar 125.7–139.9 (149) and
-    // the box 126.2–131.4 (149).
-    within(region(data, w, 100, 216, [[60, 67], [1433, 1440]]), 120.6, 128.0, "beside the name bar");
-    within(region(data, w, 250, 1395, [[62, 97], [1403, 1438]]), 101.4, 113.0, "the rails");
-    within(region(data, w, 250, 700, [[100, 1400]]), 138.8, 161.5, "the upper body");
-    within(region(data, w, 700, 1395, [[100, 1400]]), 124.4, 141.5, "the lower body");
-    within(region(data, w, 1420, 1541, [[60, 65], [1435, 1440]]), 125.7, 139.9, "beside the type bar");
-    within(region(data, w, 1560, 1881, [[62, 83], [1417, 1438]]), 126.2, 131.4, "beside the box");
+    type Side = { cols: [number, number]; lo: number; hi: number };
+    const SILVER: { name: string; rows: [number, number]; left: Side; right: Side }[] = [
+      // Beside the name bar: left 110.3–128.0 (149; r12 124.8), right 124.7–130.9 (149; 124.8).
+      { name: "beside the name bar", rows: [100, 216], left: { cols: [60, 67], lo: 110.3, hi: 128.0 }, right: { cols: [1433, 1440], lo: 124.7, hi: 130.9 } },
+      // The rails beside the spark: left 117.0–123.6 (142; 111.7*), right 78.4–92.1 (137; 105.7*).
+      { name: "the rail", rows: [250, 1395], left: { cols: [62, 97], lo: 117.0, hi: 123.6 }, right: { cols: [1403, 1438], lo: 78.4, hi: 92.1 } },
+      // The body above the spark's arms: left 131.4–152.7 (158; 142.5), right 145.9–169.7 (161; 142.9*).
+      { name: "the upper body", rows: [250, 700], left: { cols: [100, 750], lo: 131.4, hi: 152.7 }, right: { cols: [750, 1400], lo: 145.9, hi: 169.7 } },
+      // And below them: left 117.2–125.5 (151; 126.9*), right 131.8–175.9 (170; 142.7).
+      { name: "the lower body", rows: [700, 1395], left: { cols: [100, 750], lo: 117.2, hi: 125.5 }, right: { cols: [750, 1400], lo: 131.8, hi: 175.9 } },
+      // Beside the spark's base (the owner's "113–122 left, 178–187 right"):
+      // left 113.4–121.5 (160; 137.3*), right 177.5–187.0 (179; 156.6*).
+      { name: "beside the spark's base", rows: [1230, 1370], left: { cols: [330, 510], lo: 113.4, hi: 121.5 }, right: { cols: [990, 1170], lo: 177.5, hi: 187.0 } },
+      // Beside the type bar: left 119.6–128.2 (149; 127.8), right 152.3–157.0 (149; 127.8*).
+      { name: "beside the type bar", rows: [1420, 1541], left: { cols: [60, 65], lo: 119.6, hi: 128.2 }, right: { cols: [1435, 1440], lo: 152.3, hi: 157.0 } },
+      // Beside the box: left 116.9–121.5 (149; 127.7*), right 161.9–167.5 (149; 127.7*).
+      { name: "beside the box", rows: [1560, 1881], left: { cols: [62, 83], lo: 116.9, hi: 121.5 }, right: { cols: [1417, 1438], lo: 161.9, hi: 167.5 } },
+    ];
+    for (const r of SILVER) {
+      const left = region(data, w, r.rows[0], r.rows[1], [r.left.cols]);
+      const right = region(data, w, r.rows[0], r.rows[1], [r.right.cols]);
+      within(left, r.left.lo, r.left.hi, `${r.name}, left`);
+      within(right, r.right.lo, r.right.hi, `${r.name}, right`);
+    }
     // The type pill 223.9–231.1 (239) and the box 226.0–232.8 (237), their
     // ink masked out on the prints (luma > 150).
     within(region(data, w, 1440, 1510, [[300, 1100]], 150), 223.9, 231.1, "the type pill");

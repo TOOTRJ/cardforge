@@ -643,6 +643,19 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   modern: { keys: "all", todo: ["4.10"], why: "window bottom 1163–1164 px vs slot 1163.4: 0.4 px of overscan to 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   modernland: { keys: "all", todo: ["4.10"], why: "window bottom 1164 px vs slot 1163.4: 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   alphatoken: { keys: "all", todo: ["4.54"], why: "window 162–1339 × 187–1295 vs slot 150–1350 × 189–1291.5: 2 px top, 3.5 px bottom (4.54 retires it)", maxMissPx: 5 },
+  // The emblem (found by v35's see-through slot rule when #421 merged main):
+  // two owner decisions (2026-09-29) meet at the window's top — the slot is
+  // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the
+  // spark's centre ray is bridged over down to 251 (EMBLEM_RAY_BRIDGE), so
+  // the slot covers the window's first row whole with 0.6 px to spare where
+  // the rule asks 1.05. No #101015 shows; closing it is an owner call
+  // (the tip one row lower, or the slot's top 0.45 px higher).
+  emblem: {
+    keys: "all",
+    todo: ["4.52"],
+    why: "the window starts at 251 px (the bridged ray's tip), the slot at Scryfall's art_crop top 250.4: 0.6 px of overscan, 1.05 needed (v35's see-through slot rule)",
+    maxMissPx: 0.6,
+  },
 };
 
 export function isKnownArtWindowFailure(template: string, key: string): boolean {

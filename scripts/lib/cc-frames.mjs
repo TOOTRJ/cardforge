@@ -267,15 +267,14 @@ export const EMBLEM_NAME_PILL_TONE = {
 };
 
 /**
- * The emblem's silver, toned onto the prints (owner decision 2026-09-29:
- * "the silver ~30–45 luma lighter" than the six M20-design prints). CC's
- * silver — the ring down both sides and the body round the spark — reads
- * luma 141–160 by region where the prints read 101–162 (the median by
- * region, CC vs the six prints: the rails beside the spark 141 vs 101–113,
- * the body under the spark 159 vs 124–142 and above it 160 vs 139–162, the
- * strips beside the name bar 149 vs 121–128, the type bar 149 vs 126–140 and
- * the box 149 vs 126–131); the prints also shade it more, darkest at the
- * sides half-way down (luma 71–80 at 880–980 px against CC's 131).
+ * The emblem's silver, toned onto the prints (owner decisions 2026-09-29:
+ * round 12 "the silver ~30–45 luma lighter" than the six M20-design prints;
+ * round 12b "fit each side separately"). CC's silver — the ring down both
+ * sides and the body round the spark — is lit evenly, left and right alike;
+ * the prints' is not: beside the spark's base it reads 113–122 on the left
+ * and 178–187 on the right (CC 160 and 179), beside the text box 117–122 and
+ * 162–168 (CC 149 both), and the right rail is the darkest silver on the
+ * card (78–92, the left 117–124; CC 137–142).
  *
  * The silver is every pixel of rows [bodyFromY, bodyToY) — from the name
  * bar's shadow down to the type bar's rim: the silver, the spark's outline,
@@ -285,11 +284,17 @@ export const EMBLEM_NAME_PILL_TONE = {
  * either edge inwards up to the first pixel of luma ≥ `stopLuma` (a bar's
  * light rim: the rims, the bars and the box keep CC's tone, which the prints
  * match or print lighter). Its colour is multiplied by a gain bilinear in the
- * distance from `centreX` (knots `d`) and the row (knots `rows`), held past
- * the outer knots; `gain[row][d]`. The gains were fitted on the prints'
- * per-pixel median in 100-row bands and three distance bands (< 450, 450–640,
- * ≥ 640 px from the centre), then corrected until each region's median sits
- * on the prints' median; the first row is 1 (the flat strip above the name
+ * SIGNED offset x − `centreX` (knots `dx`, the left half negative) and the
+ * row (knots `rows`), held past the outer knots; `gain[row][dx]`. Each half
+ * has its own five knots, fitted on its own side of the prints, and the
+ * centre segment (±100 px) runs straight from one side's inner knot to the
+ * other's, so the field is continuous everywhere: no seam at the centre line
+ * and, bilinear, no step anywhere (no banding). The gains are a
+ * least-squares fit of the prints' per-pixel median in the 50 px squares of
+ * pure silver (the round-12 square map) and in 20-row slices of the rails and
+ * the strips beside the bars, smoothed (second differences) and held to
+ * 0.45–1.2, with each region's median — per side — pinned to the prints'
+ * median (within 1.4 luma); the first row is 1 (the flat strip above the name
  * bar, which the prints print as a brushed pattern CC doesn't draw, keeps
  * CC's tone). A gain, not a fill: CC's highlights and shading stay.
  * Native px of the pack (1500 × 2100).
@@ -301,21 +306,21 @@ export const EMBLEM_SILVER_TONE = {
   toY: 1946,
   stopLuma: 170,
   centreX: 749.5,
-  d: [300, 545, 680],
+  dx: [-680, -590, -450, -300, -100, 100, 300, 450, 590, 680],
   rows: [60, 150, 300, 500, 700, 900, 1100, 1300, 1407, 1550, 1750, 1946],
   gain: [
-    [1, 1, 1],
-    [0.9, 0.91, 0.81],
-    [0.87, 0.98, 0.91],
-    [0.82, 0.99, 0.85],
-    [0.85, 0.88, 0.7],
-    [0.83, 0.74, 0.6],
-    [0.89, 0.81, 0.67],
-    [0.9, 0.78, 0.92],
-    [0.86, 0.79, 0.87],
-    [0.91, 0.9, 0.85],
-    [0.84, 0.84, 0.86],
-    [0.84, 0.84, 0.86],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0.79, 0.87, 0.92, 0.9, 0.96, 0.99, 0.99, 1.08, 0.99, 0.85],
+    [0.95, 0.85, 0.82, 0.74, 0.91, 0.96, 0.9, 1.2, 1.07, 0.8],
+    [0.92, 0.86, 0.88, 0.84, 0.81, 0.81, 0.82, 1.14, 1, 0.7],
+    [0.74, 0.82, 1.11, 0.78, 0.6, 1.08, 1.2, 1.19, 0.84, 0.55],
+    [0.68, 0.8, 1.1, 0.9, 0.76, 1.11, 1.2, 1.2, 0.78, 0.45],
+    [0.77, 0.94, 0.85, 1.2, 1.14, 1.12, 1.17, 1.08, 0.77, 0.45],
+    [0.91, 1, 0.69, 0.72, 1.2, 1.2, 0.99, 0.97, 0.8, 0.85],
+    [0.82, 0.89, 0.67, 0.5, 1.15, 1.2, 0.98, 0.96, 0.87, 0.98],
+    [0.84, 0.82, 0.72, 0.65, 0.97, 1.05, 0.95, 0.93, 0.99, 1.07],
+    [0.8, 0.79, 0.79, 0.8, 0.84, 0.87, 0.86, 0.91, 1.03, 1.14],
+    [0.62, 0.7, 0.81, 0.86, 0.83, 0.8, 0.82, 0.88, 0.96, 1.03],
   ],
 };
 
@@ -595,7 +600,8 @@ export const CC_TEMPLATES = {
       "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
       "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
       "the frame's silver closes over the top of the spark's centre ray (EMBLEM_RAY_BRIDGE, owner decision 2026-09-29): the art window is Scryfall's art_crop box at the prints' scale (from 250.4 px), where the prints' ray runs on up to the bar with art in it; the ray ends at 251 px, its tip drawn with the profile of its own right edge, and the bar's shadow and the silver run across",
-      "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints, the silver's by distance from the centre and by row; the spark's tail keeps its alpha; the light rims keep CC's tone",
+      "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints; the spark's tail keeps its alpha; the light rims keep CC's tone",
+      "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'",
     ],
   },
 };
@@ -618,7 +624,7 @@ function emblemTransform(b, [pill, silver, type, box]) {
     "native 1500x2100, pixels copied 1:1 (no resample) but for these touches:",
     `the spark's centre ray bridged over (rows ${b.fromY}–${b.toY - 1}, columns ${b.x0}–${b.x1 - 1} blended across from columns ${b.anchors[0]} and ${b.anchors[1]}, opaque; the ray's tip at row ${b.toY}, corners rounded to ${b.radius} px, drawn with its own right edge's profile, sampled on rows ${b.edgeRows[0]}–${b.edgeRows[1] - 1});`,
     `the name pill's body (rows ${pill.fromY}–${pill.toY - 1}, the pixels 4-connected to (${pill.seed.x}, ${pill.seed.y}) with luma ≥ ${pill.minLuma}, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x ${pill.centreX} (${gains} px) and is made opaque;`,
-    `the silver (rows ${silver.bodyFromY}–${silver.bodyToY - 1} but for the spark's pure-white tail and glow; rows ${silver.fromY}–${silver.bodyFromY - 1} and ${silver.bodyToY}–${silver.toY - 1} from either edge to the first pixel of luma ≥ ${silver.stopLuma}) has its colour multiplied by a gain bilinear in the distance from x ${silver.centreX} and the row (${silver.gain.length} × ${silver.d.length} knots, ${Math.min(...silver.gain.flat())}–${Math.max(...silver.gain.flat())});`,
+    `the silver (rows ${silver.bodyFromY}–${silver.bodyToY - 1} but for the spark's pure-white tail and glow; rows ${silver.fromY}–${silver.bodyFromY - 1} and ${silver.bodyToY}–${silver.toY - 1} from either edge to the first pixel of luma ≥ ${silver.stopLuma}) has its colour multiplied by a gain bilinear in the signed offset from x ${silver.centreX} — each half fitted on its own side of the prints, the centre segment joining them — and the row (${silver.gain.length} × ${silver.dx.length} knots, ${Math.min(...silver.gain.flat())}–${Math.max(...silver.gain.flat())});`,
     `the type pill's body (rows ${type.fromY}–${type.toY - 1}) × ${type.gain[0][1]} and the text box (rows ${box.fromY}–${box.toY - 1}, inside its light rim) × ${box.gain[0][1]}, alpha kept;`,
     "corners rounded to the importer radius",
   ].join(" ");
@@ -809,12 +815,14 @@ function knotAt(knots, v) {
   return [i, (v - knots[i]) / (knots[i + 1] - knots[i])];
 }
 
-/** EMBLEM_SILVER_TONE's gain at (d, y): bilinear in the knots `d` × `rows`,
- *  held past the outer ones. */
-export function silverGainAt({ d: dKnots, rows, gain }, d, y) {
-  const [i, t] = knotAt(dKnots, d);
+/** EMBLEM_SILVER_TONE's gain at (dx, y), dx = x − centreX (negative on the
+ *  left): bilinear in the knots `dx` × `rows`, held past the outer ones — so
+ *  each half follows its own knots and the segment between the halves'
+ *  innermost knots joins them without a seam. */
+export function silverGainAt({ dx: dxKnots, rows, gain }, dx, y) {
+  const [i, t] = knotAt(dxKnots, dx);
   const [j, u] = knotAt(rows, y);
-  const i1 = Math.min(i + 1, dKnots.length - 1);
+  const i1 = Math.min(i + 1, dxKnots.length - 1);
   const j1 = Math.min(j + 1, rows.length - 1);
   return (
     gain[j][i] * (1 - t) * (1 - u) + gain[j][i1] * t * (1 - u) + gain[j1][i] * (1 - t) * u + gain[j1][i1] * t * u
@@ -827,27 +835,27 @@ export function silverGainAt({ d: dKnots, rows, gain }, d, y) {
  * (the spark's tail and glow); in rows [fromY, bodyFromY) and [bodyToY,
  * toY), each row from either edge inwards up to (not including) its first
  * pixel of luma ≥ `stopLuma` — the silver beside the bars, not the bars'
- * rims. Colour × silverGainAt(spec, |x − centreX|, y), rounded, clamped to
+ * rims. Colour × silverGainAt(spec, x − centreX, y), rounded, clamped to
  * 255; alpha kept. Returns a new buffer.
  */
 export function toneSilver(buf, width, height, spec) {
-  const { fromY, bodyFromY, bodyToY, toY, stopLuma, centreX, d, rows, gain } = spec;
+  const { fromY, bodyFromY, bodyToY, toY, stopLuma, centreX, dx, rows, gain } = spec;
   const ascending = (k) => Array.isArray(k) && k.length > 0 && k.every((v, i) => Number.isFinite(v) && (i === 0 || v > k[i - 1]));
   if (
     !(fromY >= 0 && fromY <= bodyFromY && bodyFromY < bodyToY && bodyToY <= toY && toY <= height) ||
-    !ascending(d) ||
+    !ascending(dx) ||
     !ascending(rows) ||
     !Array.isArray(gain) ||
     gain.length !== rows.length ||
-    !gain.every((r) => Array.isArray(r) && r.length === d.length && r.every((g) => Number.isFinite(g) && g >= 0))
+    !gain.every((r) => Array.isArray(r) && r.length === dx.length && r.every((g) => Number.isFinite(g) && g >= 0))
   ) {
-    throw new Error(`toneSilver: bad tone ${JSON.stringify({ fromY, bodyFromY, bodyToY, toY, d, rows, width, height })}`);
+    throw new Error(`toneSilver: bad tone ${JSON.stringify({ fromY, bodyFromY, bodyToY, toY, dx, rows, width, height })}`);
   }
   const out = Buffer.from(buf);
   const tone = (x, y) => {
     const o = (y * width + x) * 4;
     if (buf[o + 3] === 0) return;
-    const g = silverGainAt(spec, Math.abs(x - centreX), y);
+    const g = silverGainAt(spec, x - centreX, y);
     for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
   };
   for (let y = fromY; y < toY; y += 1) {

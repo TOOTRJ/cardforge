@@ -174,14 +174,15 @@ describe("Card Conjurer recipe", () => {
     // beside the bars from the strip above the name bar to the box's foot.
     expect([s.fromY, s.bodyFromY, s.bodyToY, s.toY, s.stopLuma]).toEqual([60, 233, 1407, 1946, 170]);
     expect(s.gain).toHaveLength(s.rows.length);
-    for (const row of s.gain) expect(row).toHaveLength(s.d.length);
+    for (const row of s.gain) expect(row).toHaveLength(s.dx.length);
     // The strip above the name bar keeps CC's tone (first row 1); every
-    // other gain darkens, none below 0.6 (the prints' darkest band, at the
-    // sides half-way down).
-    expect(s.gain[0]).toEqual([1, 1, 1]);
+    // other gain within the fit's bounds, 0.45 (the right rail half-way
+    // down, the darkest silver on the prints) to 1.2 (the right half beside
+    // the spark, lit brighter than CC's).
+    expect(s.gain[0]).toEqual(s.dx.map(() => 1));
     for (const g of s.gain.slice(1).flat()) {
-      expect(g).toBeGreaterThanOrEqual(0.6);
-      expect(g).toBeLessThan(1);
+      expect(g).toBeGreaterThanOrEqual(0.45);
+      expect(g).toBeLessThanOrEqual(1.2);
     }
     // The type pill (238 → the prints' 219–228) and the box (237 → 226–232):
     // one gain each, the tail's alpha kept, CC's rims and highlights outside.
@@ -191,6 +192,37 @@ describe("Card Conjurer recipe", () => {
     expect(def.transforms).toMatch(/the silver \(rows 233–1406 but for the spark's pure-white tail and glow/);
     expect(def.transforms).toMatch(/the type pill's body \(rows 1429–1529\) × 0\.94 and the text box \(rows 1556–1937, inside its light rim\) × 0\.96, alpha kept/);
     expect(def.notes.some((n) => /EMBLEM_SILVER_TONE.*EMBLEM_TYPE_PILL_TONE.*EMBLEM_TEXT_BOX_TONE/.test(n))).toBe(true);
+  });
+
+  // Owner decision 2026-09-29 (round 12b, "fit each side separately"): the
+  // prints' silver is lit unevenly — beside the spark's base 113–122 on the
+  // left and 178–187 on the right, where round 12's gain, by distance from
+  // the centre, darkened both halves alike (137 and 157).
+  it("fits the emblem's silver on each side separately, joined across the centre without a seam (4.52, round 12b)", () => {
+    const s = EMBLEM_SILVER_TONE;
+    // Signed knots: five a side, the innermost at ±100 px.
+    expect(s).not.toHaveProperty("d");
+    expect(s.dx.filter((v) => v < 0)).toHaveLength(5);
+    expect(s.dx.filter((v) => v > 0)).toHaveLength(5);
+    expect([Math.max(...s.dx.filter((v) => v < 0)), Math.min(...s.dx.filter((v) => v > 0))]).toEqual([-100, 100]);
+    // The halves differ where the prints do: beside the spark's base (x 330–
+    // 510 and 990–1170, rows 1230–1370) the right is lit far brighter; the
+    // right rail (x ≈ 1420) is the darkest silver on the card, the left one
+    // is not.
+    const at = (x: number, y: number) => silverGainAt(s, x - s.centreX, y);
+    for (const y of [1250, 1300, 1350]) expect(at(1080, y) - at(420, y), `row ${y}`).toBeGreaterThan(0.2);
+    for (const y of [900, 1000, 1100]) expect(at(80, y) - at(1420, y), `row ${y}`).toBeGreaterThan(0.2);
+    // Smooth: no seam at the centre line, and no step anywhere — the gain
+    // moves < 0.005 between any two neighbouring pixels (bilinear knots).
+    for (let y = 60; y < 1946; y += 7) {
+      expect(Math.abs(at(749, y) - at(750, y)), `centre, row ${y}`).toBeLessThan(0.005);
+      for (let x = 0; x < 1499; x += 13) {
+        expect(Math.abs(at(x + 1, y) - at(x, y)), `(${x}, ${y}) across`).toBeLessThan(0.005);
+        expect(Math.abs(at(x, y + 1) - at(x, y)), `(${x}, ${y}) down`).toBeLessThan(0.005);
+      }
+    }
+    expect(templates.emblem.transforms).toMatch(/a gain bilinear in the signed offset from x 749\.5 — each half fitted on its own side of the prints, the centre segment joining them — and the row \(12 × 10 knots, 0\.45–1\.2\)/);
+    expect(templates.emblem.notes.some((n) => /fitted on each side separately \(owner decision 2026-09-29, round 12b\)/.test(n))).toBe(true);
   });
 
   // Owner decision 2026-09-29 (round 12, "exact slot + frame bridged over the
@@ -622,7 +654,7 @@ describe("pixel operations", () => {
       toY: 11,
       stopLuma: 170,
       centreX: 9.5,
-      d: [0, 10],
+      dx: [-10, 10],
       rows: [0, 12],
       gain: [
         [0.5, 0.5],
@@ -663,18 +695,44 @@ describe("pixel operations", () => {
       expect(at(out, 6, 5)).toEqual([7, 7, 7, 0]);
     });
 
-    it("multiplies by a gain bilinear in the distance from centreX and the row, held past the outer knots", () => {
-      const g = { d: [10, 20], rows: [100, 200], gain: [[0.2, 0.4], [0.6, 1]] };
+    it("multiplies by a gain bilinear in the signed offset from centreX and the row, held past the outer knots", () => {
+      const g = { dx: [10, 20], rows: [100, 200], gain: [[0.2, 0.4], [0.6, 1]] };
       expect(silverGainAt(g, 0, 0)).toBeCloseTo(0.2, 12);
       expect(silverGainAt(g, 15, 100)).toBeCloseTo(0.3, 12);
       expect(silverGainAt(g, 10, 150)).toBeCloseTo(0.4, 12);
       expect(silverGainAt(g, 15, 150)).toBeCloseTo(0.55, 12);
       expect(silverGainAt(g, 99, 999)).toBeCloseTo(1, 12);
+      // Signed: the left of the centre is its own side, not a mirror of the
+      // right (round 12b); between the halves' inner knots the gain runs
+      // straight across the centre.
+      const sides = { dx: [-20, -10, 10, 20], rows: [0], gain: [[0.4, 0.5, 0.9, 1]] };
+      expect(silverGainAt(sides, -15, 0)).toBeCloseTo(0.45, 12);
+      expect(silverGainAt(sides, 15, 0)).toBeCloseTo(0.95, 12);
+      expect(silverGainAt(sides, 0, 0)).toBeCloseTo(0.7, 12);
+      expect(silverGainAt(sides, -5, 0)).toBeCloseTo(0.6, 12);
+      expect(silverGainAt(sides, -99, 0)).toBeCloseTo(0.4, 12);
+      expect(silverGainAt(sides, 99, 0)).toBeCloseTo(1, 12);
       // One knot on an axis: held everywhere.
-      expect(silverGainAt({ d: [0], rows: [0, 10], gain: [[0.5], [0.7]] }, 50, 5)).toBeCloseTo(0.6, 12);
-      // The recipe's own: 1 above the name bar, darkest at the sides half-way down.
+      expect(silverGainAt({ dx: [0], rows: [0, 10], gain: [[0.5], [0.7]] }, 50, 5)).toBeCloseTo(0.6, 12);
+      // The recipe's own: 1 above the name bar; half-way down, the right rail
+      // darkest (0.45), the left one not.
       expect(silverGainAt(EMBLEM_SILVER_TONE, 0, 60)).toBe(1);
-      expect(silverGainAt(EMBLEM_SILVER_TONE, 700, 900)).toBeCloseTo(0.6, 12);
+      expect(silverGainAt(EMBLEM_SILVER_TONE, 700, 900)).toBeCloseTo(0.45, 12);
+      expect(silverGainAt(EMBLEM_SILVER_TONE, -700, 900)).toBeCloseTo(0.68, 12);
+    });
+
+    it("tones each half by its own knots, with no step across the centre", () => {
+      // Uniform silver (150), the left half's gain 0.5, the right's 1, the
+      // centre segment [-2, 2] between them.
+      const flat = Buffer.alloc(W * H * 4);
+      for (let i = 0; i < W * H; i += 1) flat.set([150, 150, 150, 255], i * 4);
+      const out = toneSilver(flat, W, H, { ...spec, dx: [-2, 2], rows: [0], gain: [[0.5, 1]] });
+      const row = Array.from({ length: W }, (_, x) => at(out, x, 5)[0]);
+      // x − 9.5: −9.5 … −2.5 → 75; 2.5 … 10.5 → 150; −1.5 … 1.5 between.
+      expect(row.slice(0, 8)).toEqual(Array(8).fill(75));
+      expect(row.slice(12)).toEqual(Array(8).fill(150));
+      expect(row.slice(8, 12)).toEqual([84, 103, 122, 141]);
+      for (let x = 1; x < W; x += 1) expect(row[x] - row[x - 1], `x ${x}`).toBeGreaterThanOrEqual(0);
     });
 
     it("refuses bad rows or knots; never touches the source; applyTone picks it for a silver spec", () => {
@@ -682,7 +740,11 @@ describe("pixel operations", () => {
       const copy = Buffer.from(src);
       expect(() => toneSilver(src, W, H, { ...spec, bodyFromY: 9 })).toThrow(/bad tone/);
       expect(() => toneSilver(src, W, H, { ...spec, toY: H + 1 })).toThrow(/bad tone/);
-      expect(() => toneSilver(src, W, H, { ...spec, d: [10, 0] })).toThrow(/bad tone/);
+      expect(() => toneSilver(src, W, H, { ...spec, dx: [10, 0] })).toThrow(/bad tone/);
+      // Round 12's recipe shape (distance knots `d`, mirrored halves) is refused.
+      const unsigned: Record<string, unknown> = { ...spec, d: [0, 10] };
+      delete unsigned.dx;
+      expect(() => toneSilver(src, W, H, unsigned as unknown as typeof spec)).toThrow(/bad tone/);
       expect(() => toneSilver(src, W, H, { ...spec, gain: [[0.5, 0.5]] })).toThrow(/bad tone/);
       expect(() => toneSilver(src, W, H, { ...spec, gain: [[0.5], [0.5]] })).toThrow(/bad tone/);
       const out = toneSilver(src, W, H, spec);

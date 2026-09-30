@@ -1201,14 +1201,22 @@ onto the prints (TFDN #24 / #25, TM20 #11, TDSK #17, TBLB #30, TFRA #16):
   spark 141 against 101–113), its type pill 239 against 224–231 and its box
   237 against 226–233. The silver — the body from the name bar's shadow to
   the type bar's rim, and beside the bars each row from the edge to the
-  bar's light rim — is multiplied by a gain bilinear in the distance from
-  the centre and the row (12 × 3 knots, 0.6–1: the prints shade the sides
-  darkest half-way down), fitted until each region's median sits on the
-  prints'; the pill and the box by one gain each (0.94, 0.96). A gain, not a
-  fill: CC's highlights and shading stay. The rims, the light bar under the
-  name and the flat strip above it keep CC's tone, and the spark's tail and
-  glow (pure white, translucent) stay as drawn; through the pill and the box
-  the tail is toned with them and keeps its alpha.
+  bar's light rim — is multiplied by a gain bilinear in the SIGNED offset
+  from the centre and the row, each side fitted on its own (round 12b,
+  owner decision 2026-09-29: CC lights its silver evenly, the prints do
+  not — beside the spark's base 113–122 on the left, 178–187 on the right,
+  and the right rail is the card's darkest silver). Five knots a side, 12
+  rows, 0.45–1.2; the segment between the halves' innermost knots (±100 px)
+  joins them, so there is no seam at the centre line and, bilinear, no step
+  anywhere. Each region's median sits on the prints' per side, and the 50 px
+  squares of pure silver land within 10 of the prints' median on 69 % of
+  the left half and 85 % of the right (round 12: 51 % and 31 %); what they
+  still miss is CC's brushed streaks against the prints'. The pill and the
+  box take one gain each (0.94, 0.96). A gain, not a fill: CC's highlights
+  and shading stay. The rims, the light bar under the name and the flat
+  strip above it keep CC's tone, and the spark's tail and glow (pure white,
+  translucent) stay as drawn; through the pill and the box the tail is
+  toned with them and keeps its alpha.
 - **The spark's centre ray, bridged over** (owner decision 2026-09-29,
   `EMBLEM_RAY_BRIDGE`, `bridgeRayTip`). The art window starts at 250.4 px
   (below); CC's centre ray runs on up to the bar under the name, where an
@@ -1218,7 +1226,10 @@ onto the prints (TFDN #24 / #25, TM20 #11, TDSK #17, TBLB #30, TFRA #16):
   251 px, 18 px short of the bar, its tip drawn with the colour profile of
   its own right edge — dark over the top right, light down the left, like
   the side rays' tips — with its corners rounded. Everything above 251 is
-  opaque, so only the art window's picture shows in the ray.
+  opaque, so only the art window's picture shows in the ray. (Against the
+  slot's 250.4 that is 0.6 px of overscan where layout v35's see-through
+  slot rule asks 1.05, so the emblem is listed in
+  `ART_WINDOW_KNOWN_FAILURES` under 4.52 — the art covers row 251 whole.)
 
 - **Profile** (`EMBLEM` in `lib/cards/template-layout.ts`, an M15-family
   member): no cost or stat slot; the name white and centred, the type line
