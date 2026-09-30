@@ -43,7 +43,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "Can I print my custom MTG cards?",
-    a: "Yes. Every account can download a card as a PNG to print at home. Plus and Pro download it without the watermark: as a PDF at true card size, or as a print PNG at 600 or 800 ppi, with an optional 1/8-inch bleed for print shops or sized for MakePlayingCards. Pro also prints sheets of any cards you pick, or a whole deck. Custom fan-made cards are intended for personal, non-commercial use — such as playtesting a new Commander deck or sharing with your playgroup. PipGlyph does not use official Wizards of the Coast card backs, fonts, or set symbols.",
+    a: "Yes. Every account can download a card as a PNG to print at home. Plus and Pro download it without the watermark: as a PDF at true card size, or as a print PNG at 600 or 800 ppi, with an optional 1/8-inch bleed for print shops or sized for MakePlayingCards. Pro also prints sheets of any cards you pick, or one of your decks. Custom fan-made cards are intended for personal, non-commercial use — such as playtesting a new Commander deck or sharing with your playgroup. PipGlyph does not use official Wizards of the Coast card backs, fonts, or set symbols.",
   },
   {
     q: "What is the difference between PipGlyph and MTG Cardsmith or Card Conjurer?",
@@ -147,11 +147,11 @@ const SHARING_FAQ: FaqEntry[] = [
 const EXPORTS_FAQ: FaqEntry[] = [
   {
     q: "What export formats does PipGlyph support?",
-    a: "Every account can download a card as a 750 × 1050 PNG or JPEG that carries the PipGlyph mark, with rounded or square corners. Plus and Pro download without the mark: a 1500 × 2100 PNG or JPEG; print PNGs at 600 or 800 ppi, with an optional 1/8-inch bleed or sized for MakePlayingCards; and a PDF of one card at true size, with or without the bleed. Pro adds print sheets (copies of one card, any cards you select in My Cards, or a whole deck) and ZIPs of card images. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
+    a: "Every account can download a card as a 750 × 1050 PNG or JPEG that carries the PipGlyph mark, with rounded or square corners. Plus and Pro download without the mark: a 1500 × 2100 PNG or JPEG; print PNGs at 600 or 800 ppi, with an optional 1/8-inch bleed or sized for MakePlayingCards; and a PDF of one card at true size, with or without the bleed. Pro adds print sheets (copies of one card, any cards you select in My Cards, or one of your decks) and ZIPs of card images. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
   },
   {
     q: "How do I print a custom card at real card size?",
-    a: "On Plus or Pro, open the card's Download menu, choose PDF, then One card. Print it at 100% scale, with 'fit to page' turned OFF in your print dialog. The page is exactly 2.5 × 3.5 inches, so the printed card matches a sleeved real card. On Pro, 'Sheet of copies' puts 9 copies on a US Letter or A4 page instead. Measure the first print with a ruler before printing the rest. For best results, print on heavy matte stock, or sleeve the cut-out in front of a basic land.",
+    a: "On Plus or Pro, open the card's Download menu, choose PDF, then One card. Print it at 100% scale, with 'fit to page' turned OFF in your print dialog. The page is exactly 2.5 × 3.5 inches, so the printed card matches a sleeved real card. On Pro, 'Sheet of copies' puts 9 copies on a US Letter or A4 page instead (6 or 8 with the bleed). Measure the first print with a ruler before printing the rest. For best results, print on heavy matte stock, or sleeve the cut-out in front of a basic land.",
   },
   {
     q: "Should I print at 600 or 800 ppi?",
@@ -167,7 +167,7 @@ const EXPORTS_FAQ: FaqEntry[] = [
   },
   {
     q: "Can I order my cards from MakePlayingCards?",
-    a: "Yes. PipGlyph exports the image MakePlayingCards asks for on its poker-size cards: 822 × 1122 at 300 dpi, delivered at 600 ppi as 1644 × 2244 pixels (2192 × 2992 at 800 ppi). The file includes MPC's own bleed and has square corners. It is always portrait: a Battle or Split is turned upright, the way it is printed. On Plus and Pro, choose MakePlayingCards as the Bleed on the download's Image tab. On Pro, a ZIP of MPC files comes from a selection in My Cards or from a deck's export. PipGlyph exports card fronts only, so set the back in MPC's builder. Proxies are for your own table, never for sale.",
+    a: "Yes. PipGlyph exports the image MakePlayingCards asks for on its poker-size cards: 822 × 1122 at 300 dpi, delivered at 600 ppi as 1644 × 2244 pixels (2192 × 2992 at 800 ppi). The file includes MPC's own bleed and has square corners. It is always portrait: a Battle or Split is turned sideways onto the card, the way it is printed. On Plus and Pro, choose MakePlayingCards as the Bleed on the download's Image tab. On Pro, a ZIP of MPC files comes from a selection in My Cards or from a deck's export. PipGlyph exports card fronts only, so set the back in MPC's builder. Proxies are for your own table, never for sale.",
   },
   {
     q: "Do print downloads use my full-resolution art?",
