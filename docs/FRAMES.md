@@ -236,10 +236,13 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   called `exact` — compare the title, type and box bands side by side: the
   type bar is the easy one to miss). One rules line starts at the box's
   left, as on M15: the only non-SLD borderless lands printing a single
-  line (the ZNR / KHM pathways) do; only SLD #300–304 centre it. u and g
-  keep ONE reference (MH3 #350 / #357): the other exact mono-u / mono-g
-  prints are Secret Lair scans whose bars show the art through. The
-  two-colour pair masters are TODO 4.56 (with 4.6b).
+  line (the ZNR / KHM pathways) do; only SLD #300–304 centre it. w, u and
+  g keep ONE reference (MH3 #354 / #350 / #357): the other exact mono-u /
+  mono-g prints are Secret Lair scans whose bars show the art through
+  (owner round 15), and white dropped Ancient Den SLD #300, an offset scan
+  of the centred one-line print (owner round 16; it still imports as the
+  exact borderless land). The two-colour pair masters are TODO 4.56 (with
+  4.6b).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame, the
   colourless creature tokens (both token frames) and the colourless
   planeswalker are see-through, like the printed cards. The profile's

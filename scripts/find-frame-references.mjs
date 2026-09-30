@@ -159,7 +159,9 @@ const TEMPLATES = {
   // drops; BORDERLESS_LAND_DARK_TYPE_BAR_PINS) and the short box (the SNC
   // triomes): the master tints the type bar and the box. Also drop scans
   // whose bars let the art through (SLD #230 / #301 / #304, owner round 15:
-  // u and g keep their one MH3 reference rather than take them).
+  // u and g keep their one MH3 reference rather than take them). w keeps
+  // Monumental Henge MH3 #354 alone too (owner round 16: not Ancient Den
+  // SLD #300, an offset scan of Secret Lair's centred one-line print).
   m15borderlessland: {
     confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop a dark type bar, with or without a dark box (BORDERLESS_LAND_DARK_PINS, BORDERLESS_LAND_DARK_TYPE_BAR_PINS), and the short box.",
     q: (k) =>
