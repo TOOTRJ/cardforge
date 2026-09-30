@@ -10,11 +10,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // tombstone — so finishes fired in parallel on one name would all read the
 // file first and each store a copy, on ONE counted start (the upload rate
 // limit counts the start). Storage can't arbitrate that: racing uploads of
-// one key without upsert all succeed. Migration 0131's primary key can:
+// one key without upsert all succeed. Migration 0132's primary key can:
 // claim_card_art_upload(user, name) returns true to exactly one caller per
 // (user, name), and the finish reads nothing unless it got that true.
 //
-// Service role only (0131: the table and function are revoked from every API
+// Service role only (0132: the table and function are revoked from every API
 // role). Fail-CLOSED: an error, a throw or any answer but `true` is "not
 // yours" — the upload is simply started again.
 // ---------------------------------------------------------------------------

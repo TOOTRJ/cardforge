@@ -41,7 +41,7 @@ function dbClient() {
 function storageClient() {
   return {
     // The upload limit (0127, fail-closed) answers "allowed", the card-art
-    // finish's claim (0131) wins once per name; the storage origin
+    // finish's claim (0132) wins once per name; the storage origin
     // registration (lib/media/storage-origin.ts) is a no-op upsert.
     rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) =>
       fn === "claim_card_art_upload"

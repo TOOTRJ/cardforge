@@ -46,7 +46,7 @@ import { claimStagedCardArt } from "@/lib/cards/art-upload-claim";
 //   2. The browser PUTs the file to that URL (Supabase Storage enforces the
 //      bucket's size and MIME limits).
 //   3. finishCardArtUploadAction(name) — CLAIMS the upload first
-//      (lib/cards/art-upload-claim.ts: migration 0131's primary key answers
+//      (lib/cards/art-upload-claim.ts: migration 0132's primary key answers
 //      true to exactly one of any number of finishes racing on one name),
 //      then reads the staged object back with the service role and runs
 //      what this action always ran on the bytes:

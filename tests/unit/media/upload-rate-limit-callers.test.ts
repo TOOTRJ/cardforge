@@ -57,7 +57,7 @@ vi.mock("@/lib/supabase/server", async () => {
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
-    // The card-art finish's claim (0131) — reached only under the limit.
+    // The card-art finish's claim (0132) — reached only under the limit.
     rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) =>
       fn === "claim_card_art_upload" ? claimRpc(args) : { data: null, error: { message: `unexpected rpc ${fn}` } },
     storage: {

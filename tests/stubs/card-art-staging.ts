@@ -15,7 +15,7 @@ export const staged = new Map<string, Uint8Array>();
 /** Keys the start action minted a signed upload URL for, in order. */
 export const signedKeys: string[] = [];
 
-/** Claims the finish won (`{userId}/{name}`) — migration 0131's
+/** Claims the finish won (`{userId}/{name}`) — migration 0132's
  *  card_art_upload_claims, whose primary key lets exactly one caller in. */
 export const claims = new Set<string>();
 

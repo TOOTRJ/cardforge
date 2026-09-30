@@ -156,7 +156,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // migration 0131 — one finish per staged card-art upload (service-role
+      // migration 0132 — one finish per staged card-art upload (service-role
       // only; lib/cards/art-upload-claim.ts).
       card_art_upload_claims: {
         Row: {
@@ -1827,7 +1827,7 @@ export type Database = {
         Args: { p_user_id: string; p_per_minute: number; p_per_day: number };
         Returns: { allowed: boolean; retry_after_seconds: number; limited_by: string | null }[];
       };
-      // migration 0131 — claim a staged card-art upload for ONE finish
+      // migration 0132 — claim a staged card-art upload for ONE finish
       // (service-role only; lib/cards/art-upload-claim.ts).
       claim_card_art_upload: {
         Args: { p_user_id: string; p_staged_name: string };

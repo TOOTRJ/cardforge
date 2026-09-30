@@ -49,7 +49,7 @@ replays every storage policy and fails if one appears, and
 `tests/e2e/storage-direct-writes.spec.ts` tries the direct writes with a
 real session.
 
-**The one browser upload: card art through a private staging bucket (0131).**
+**The one browser upload: card art through a private staging bucket (0131, 0132).**
 A Vercel Function takes at most 4.5 MB of request body, and print-quality
 art is 8–15 MiB (TODO 6.10), so card art no longer rides a server action.
 `startCardArtUploadAction` mints a signed upload URL (service role) for ONE
@@ -57,7 +57,7 @@ art is 8–15 MiB (TODO 6.10), so card art no longer rides a server action.
 image types only, and with no policy at all; the browser PUTs the file there
 (`lib/cards/art-upload-client.ts`, the only browser module
 `tests/unit/media/storage-callers.test.ts` lets touch Storage), and
-`finishCardArtUploadAction` claims it (0131's `claim_card_art_upload()`,
+`finishCardArtUploadAction` claims it (0132's `claim_card_art_upload()`,
 service role only: a primary key lets exactly one of any parallel finishes
 in — Storage can't, racing no-upsert uploads of one key all succeed), reads
 it back, runs the sniff / strip / scan, writes `card-art` and overwrites the

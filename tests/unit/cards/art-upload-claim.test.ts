@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // ONE finish per staged card-art upload (review 2026-09-29): finishes fired
 // in parallel on one name all read the staged file before the first one's
-// tombstone lands, so the finish claims the name first — migration 0131's
+// tombstone lands, so the finish claims the name first — migration 0132's
 // claim_card_art_upload(), whose primary key answers true to exactly one
 // caller. Storage can't do it (racing no-upsert uploads of one key all
 // succeed). The claim is service-role only and fails CLOSED.
@@ -59,8 +59,8 @@ describe("claimStagedCardArt", () => {
   });
 });
 
-describe("migration 0131's claim", () => {
-  const sql = readFileSync(path.resolve(__dirname, "../../../supabase/migrations/0131_card_art_upload_limit.sql"), "utf8");
+describe("migration 0132's claim", () => {
+  const sql = readFileSync(path.resolve(__dirname, "../../../supabase/migrations/0132_card_art_upload_claims.sql"), "utf8");
   const body = sql.replace(/--[^\n]*/g, "").replace(/\s+/g, " ");
 
   it("is decided by the primary key: insert … on conflict do nothing, `found` to the one that inserted", () => {
@@ -81,6 +81,15 @@ describe("migration 0131's claim", () => {
     expect(body).toContain("revoke all on function public.claim_card_art_upload(uuid, text) from public, anon, authenticated;");
     expect(body).toContain("grant execute on function public.claim_card_art_upload(uuid, text) to service_role;");
     expect(body).not.toMatch(/grant [^;]* to (anon|authenticated|public)\b/i);
+  });
+
+  it("is re-runnable and states its grants", () => {
+    expect(body).toContain("create index if not exists card_art_upload_claims_claimed_at_idx");
+    expect(body).not.toMatch(/create table (?!if not exists)|create function|create index (?!if not exists)/i);
+    expect(sql).toMatch(/^-- Grants: service_role only/m);
+    // 0131 stays as it was applied on the preview branch: buckets only.
+    const buckets = readFileSync(path.resolve(__dirname, "../../../supabase/migrations/0131_card_art_upload_limit.sql"), "utf8");
+    expect(buckets).not.toMatch(/card_art_upload_claims/);
   });
 
   it("prunes claims older than a day (the signed URL they guard lives 2 hours)", () => {

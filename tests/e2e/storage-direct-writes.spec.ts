@@ -146,7 +146,7 @@ test.describe("direct client writes (migration 0126)", () => {
 
     // Storage can't arbitrate finishes racing on one staged upload: racing
     // uploads of ONE key without upsert all succeed (seen here in CI, which
-    // is why the finish's claim is in the database). Migration 0131's
+    // is why the finish's claim is in the database). Migration 0132's
     // claim_card_art_upload() answers true to exactly one caller per
     // (user, name) — the finish reads nothing without it.
     const claimName = `${run}.upload`;

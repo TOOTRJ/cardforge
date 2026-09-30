@@ -55,7 +55,7 @@ const state = vi.hoisted(() => ({
   scans: [] as string[],
   /** Staging-bucket writes (the finish's tombstone) answer an error. */
   failStagingWrites: false,
-  /** The finish's claim RPC (0131) answers an error. */
+  /** The finish's claim RPC (0132) answers an error. */
   failClaims: false,
   /** The bytes each scan was handed (card art passes them, TODO 6.10). */
   scanBytes: [] as (number | undefined)[],
@@ -99,7 +99,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     return {
       // The upload limit (0127, fail-closed) answers "allowed"; the storage
       // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
-      // The finish's claim (0131, lib/cards/art-upload-claim.ts) wins once
+      // The finish's claim (0132, lib/cards/art-upload-claim.ts) wins once
       // per (user, name).
       rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) => {
         if (fn === "claim_card_art_upload") {
@@ -470,7 +470,7 @@ describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
     expect(result).toMatchObject({ ok: true });
     const stagedKey = started.ok ? started.path : "";
 
-    // Claimed for the caller (0131) BEFORE anything is read…
+    // Claimed for the caller (0132) BEFORE anything is read…
     expect([...claims]).toEqual([stagedKey]);
     expect(state.seq.indexOf(`claim:${stagedKey}`)).toBeLessThan(state.seq.indexOf(`download:${STAGING_BUCKET}:${stagedKey}`));
     // …then staging: read back, then overwritten with the tombstone — the
