@@ -47,6 +47,8 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
+import { crownReferenceFor } from "@/lib/cards/crown";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import type { CardPreviewData } from "@/components/cards/card-preview";
@@ -143,6 +145,48 @@ function ReferenceSwitcher({
   );
 }
 
+/** The "Legendary" toggle (TODO 4.6a): the combo with its crowned print and
+ *  the crown switched on, or back. Only where the template draws a crown. */
+function LegendaryToggle({
+  template,
+  color,
+  on,
+  available,
+}: {
+  template: FrameTemplate;
+  color: FrameColorKey;
+  on: boolean;
+  available: boolean;
+}) {
+  const base = `/admin/frame-compare?template=${template}&color=${color}`;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" data-testid="legendary-toggle">
+      <span className="text-[11px] uppercase tracking-wider text-subtle">Legendary crown</span>
+      {[
+        { label: "Off", href: base, active: !on },
+        { label: "On", href: `${base}&legendary=1`, active: on },
+      ].map((chip) => (
+        <Link
+          key={chip.label}
+          href={chip.href}
+          aria-current={chip.active ? "page" : undefined}
+          className={cn(
+            "rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+            chip.active
+              ? "border-primary/60 bg-primary/15 text-foreground"
+              : "border-border/50 text-muted hover:text-foreground",
+          )}
+        >
+          {chip.label}
+        </Link>
+      ))}
+      {on && !available ? (
+        <span className="text-[11px] text-muted">No crowned print for this colour — the sample render is crowned instead.</span>
+      ) : null}
+    </div>
+  );
+}
+
 /** Cards a frame-geometry change marked (null stamp) — never fatal. */
 async function markedRenderCount(): Promise<number> {
   if (!isAdminConfigured()) return 0;
@@ -156,13 +200,13 @@ async function markedRenderCount(): Promise<number> {
 export default async function AdminFrameComparePage({
   searchParams,
 }: {
-  searchParams: Promise<{ template?: string; color?: string; ref?: string }>;
+  searchParams: Promise<{ template?: string; color?: string; ref?: string; legendary?: string }>;
 }) {
   const profile = await getCurrentProfile();
   // Non-admins get a 404 (don't reveal the route exists).
   if (!profile?.is_admin) notFound();
 
-  const { template, color, ref } = await searchParams;
+  const { template, color, ref, legendary } = await searchParams;
   const [reviews, markedCount] = await Promise.all([getFrameReviews(), markedRenderCount()]);
 
   // ----- Sign-off mode (TODO 2.4): a template, no colour -----
@@ -190,8 +234,15 @@ export default async function AdminFrameComparePage({
             scryfallId: review.referenceScryfallId,
           }
         : null;
-    const chosen = findFrameReference(template, color, ref);
-    const reference = chosen ?? pinned ?? FRAME_REFERENCES[template][color];
+    // "Legendary" (TODO 4.6a): the crowned print and the crown switched on.
+    const drawsCrown = frameAnatomyOf(template).crown;
+    const crowned = drawsCrown && legendary === "1";
+    const crownRef = crowned ? crownReferenceFor(template, color) : null;
+    const chosen = crowned ? null : findFrameReference(template, color, ref);
+    // The combo's own reference — what a tick records, crowned or not.
+    const tickReference = chosen ?? pinned ?? FRAME_REFERENCES[template][color];
+    // Crowned with no crowned print for this colour: the sample, crowned.
+    const reference = crowned ? crownRef : tickReference;
     const options = frameReferenceOptions(template, color);
     const { note, confirm } = frameReferenceNote(template);
     const tier = referenceTierLabel(reference);
@@ -231,13 +282,24 @@ export default async function AdminFrameComparePage({
     const basePreview =
       payload?.preview ??
       (sampleFramePreview(template, color) as CardPreviewData);
-    const preview: CardPreviewData = { ...basePreview, profileOverrides: overrides };
+    const preview: CardPreviewData = crowned
+      ? {
+          ...basePreview,
+          // The sample stands in for a colour with no crowned print: make it
+          // Legendary so the crown shows.
+          supertype: /\blegendary\b/i.test(basePreview.supertype ?? "")
+            ? basePreview.supertype
+            : ["Legendary", basePreview.supertype].filter(Boolean).join(" "),
+          frameStyle: { ...basePreview.frameStyle, crown: true },
+          profileOverrides: overrides,
+        }
+      : { ...basePreview, profileOverrides: overrides };
 
     const referenceLine =
       reference && payload
         ? `Reference: ${reference.name} (${reference.set.toUpperCase()})${
-            chosen ? "" : pinned ? " — admin-pinned" : ""
-          }.${tier ? ` ⚠ ${tier[0].toUpperCase()}${tier.slice(1)}.` : ""}`
+            crownRef ? " — crowned print" : chosen ? "" : pinned ? " — admin-pinned" : ""
+          }.${tier && !crownRef ? ` ⚠ ${tier[0].toUpperCase()}${tier.slice(1)}.` : ""}`
         : reference
           ? `Reference lookup failed (${reference.name}) — showing sample content instead. Reload to retry.`
           : "No real printing exists for this combination — eyeball the sample render.";
@@ -265,7 +327,7 @@ export default async function AdminFrameComparePage({
                 template={template}
                 colorKey={color}
                 verified={verified}
-                referenceId={reference?.scryfallId ?? null}
+                referenceId={tickReference?.scryfallId ?? null}
                 withLabel
               />
             </span>
@@ -336,13 +398,18 @@ export default async function AdminFrameComparePage({
               Sign off {template}
             </Link>
           </p>
-          <ReferenceSwitcher
-            template={template}
-            color={color}
-            options={options}
-            activeId={chosen?.scryfallId ?? (pinned ? null : (reference?.scryfallId ?? null))}
-            pinned={pinned}
-          />
+          {drawsCrown ? (
+            <LegendaryToggle template={template} color={color} on={crowned} available={crownRef !== null} />
+          ) : null}
+          {crowned ? null : (
+            <ReferenceSwitcher
+              template={template}
+              color={color}
+              options={options}
+              activeId={chosen?.scryfallId ?? (pinned ? null : (reference?.scryfallId ?? null))}
+              pinned={pinned}
+            />
+          )}
           {confirm || note ? (
             <p
               className={cn(
@@ -363,7 +430,7 @@ export default async function AdminFrameComparePage({
         <div className="mt-6 flex flex-col gap-4">
           <FrameGuide />
           <FrameCompare
-            key={`${template}/${color}/${reference?.scryfallId ?? "sample"}`}
+            key={`${template}/${color}/${reference?.scryfallId ?? "sample"}${crowned ? "/crowned" : ""}`}
             preview={preview}
             scanUrl={payload?.scanUrl ?? null}
             scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}

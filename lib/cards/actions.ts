@@ -44,6 +44,12 @@ import {
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
+import {
+  applyFrameAnatomyPatch,
+  newCardFrameStyle,
+  normalizeAnatomy,
+  type FrameAnatomyStyle,
+} from "@/lib/cards/anatomy";
 import { cardPageName, withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
@@ -404,7 +410,13 @@ export async function createCardAction(
     artist_credit: data.artist_credit ?? null,
     art_url: media.art_url ?? null,
     art_position: data.art_position ?? {},
-    frame_style: data.frame_style ?? {},
+    // The anatomy switches (TODO 4.6.0, owner rule 2026-09-29): a new card
+    // gets every piece its template draws unless the payload says otherwise
+    // (the AI jobs name none; an import names only what its printing says —
+    // false for a crownless Legendary or a Legendary showcase printing), and never a
+    // switch its template can't draw for the card — a land's two-colour
+    // frame only on a land frame (lib/cards/anatomy.ts).
+    frame_style: newCardFrameStyle(data.frame_style ?? {}, data.card_type),
     // No art or a frame preview → private (storedVisibility, above).
     visibility: storedVisibility,
     // Only a preview names the column, so an ordinary save never depends on
@@ -672,7 +684,48 @@ export async function updateCardAction(
   if (data.artist_credit !== undefined) update.artist_credit = data.artist_credit ?? null;
   if (data.art_url !== undefined) update.art_url = data.art_url ?? null;
   if (data.art_position !== undefined) update.art_position = data.art_position;
-  if (data.frame_style !== undefined) update.frame_style = data.frame_style;
+  // The card's type as it will be saved: a land keeps the two-colour switch
+  // only on a land frame (lib/cards/anatomy.ts twoColorFits).
+  const savedCardType = data.card_type !== undefined ? data.card_type : existing.card_type;
+  if (data.frame_style !== undefined) {
+    // Never a switch the saved template can't draw for the card
+    // (lib/cards/anatomy.ts): a template that gains the piece later must not
+    // change this card.
+    update.frame_style = normalizeAnatomy(
+      data.frame_style,
+      data.frame_style.template ??
+        (existing.frame_style as { template?: string } | null)?.template,
+      savedCardType,
+    );
+  }
+  // An edit's switch flip (frame_anatomy — edits never send frame_style):
+  // merged over the stored frame_style, which otherwise stays exactly as
+  // stored, and a confirmed colour pair for a multicolour card. A crafted
+  // two-colour flip for a land on a nonland frame is dropped.
+  if (data.frame_anatomy !== undefined) {
+    const applied = applyFrameAnatomyPatch(
+      {
+        frameStyle: (update.frame_style ?? existing.frame_style ?? {}) as Record<string, unknown>,
+        colorIdentity: data.color_identity ?? existing.color_identity ?? [],
+        cardType: savedCardType,
+      },
+      data.frame_anatomy,
+    );
+    if (!applied.ok) {
+      return { ok: false, fieldErrors: { color_identity: applied.error } };
+    }
+    update.frame_style = applied.frameStyle as CardUpdate["frame_style"];
+    if (applied.colorIdentity) update.color_identity = applied.colorIdentity;
+  }
+  // A type change alone (card_type is locked in the editor, so a crafted
+  // payload): the stored frame_style is judged by the new type too, so a
+  // card turned into a LAND on a nonland frame loses the two-colour switch
+  // it had as a creature (twoColorFits). Untouched when nothing is dropped.
+  if (data.card_type !== undefined && update.frame_style === undefined && existing.frame_style) {
+    const storedStyle = existing.frame_style as FrameAnatomyStyle & { template?: string };
+    const normalized = normalizeAnatomy(storedStyle, storedStyle.template, savedCardType);
+    if (normalized !== storedStyle) update.frame_style = normalized as CardUpdate["frame_style"];
+  }
   if (data.visibility !== undefined) update.visibility = data.visibility;
   // No artwork → no gallery (same rule as create). The EFFECTIVE art is the
   // patched value when present, else what the row already stores — so both

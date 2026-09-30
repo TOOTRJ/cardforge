@@ -184,7 +184,7 @@ describe("GET /api/scryfall/printings — each printing's match and facts", () =
         exactLabel: "Borderless frame",
         template: "m15borderless",
         landOn: "m15",
-        reason: "PipGlyph doesn't draw the legendary crown yet",
+        reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
       },
     });
     // A full-art Plains (ONE #262) — its badge says so.

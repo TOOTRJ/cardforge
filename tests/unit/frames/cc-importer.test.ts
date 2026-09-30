@@ -6,6 +6,7 @@ import {
   BORDERLESS_TITLE_TO_TYPE_DY,
   CC_COMMIT,
   CC_DEFERRED,
+  CC_OVERLAY_BANDS,
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
@@ -51,7 +52,8 @@ import {
   toneSilver,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
-import { M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
+import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
+import { getFrameProfile, M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
 import { applyCardCornerMask, cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
@@ -99,6 +101,13 @@ const templates = CC_TEMPLATES as Record<string, Def>;
 /** The re-cut templates (TODO 4.49): each pair has its own band. */
 const TEXTLESS_TOKENS = ["m15token", "m15tokenartifact"];
 const TEXT_BOX_TOKENS = ["m15tokentext", "m15tokenartifacttext"];
+/** The two-colour pair masters a template's profile declares (TODO 4.6b,
+ *  FrameProfile.twoColorMasters): gold-split `<pair>`, hybrid `<pair>-h` —
+ *  the importer must build exactly those, besides the seven colours. */
+const pairKeysOf = (template: string): string[] =>
+  (getFrameProfile(template).twoColorMasters ?? []).flatMap((dress) =>
+    TWO_COLOR_PAIRS.map((pair) => (dress === "hybrid" ? `${pair}-h` : pair)),
+  );
 /** The full-art tokens' textless height (TODO 4.48): its own band. */
 const M20_TEXTLESS_TOKENS = ["m20token", "m20tokenartifact"];
 const M20_TOKENS = ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"];
@@ -144,7 +153,7 @@ describe("Card Conjurer recipe", () => {
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
       const covered = [...builtColors(def as never), ...Object.keys(def.excluded ?? {})].sort();
-      expect(covered, template).toEqual([...COLORS].sort());
+      expect(covered, template).toEqual([...COLORS, ...pairKeysOf(template)].sort());
       for (const file of sourceFilesFor(def as never)) {
         expect(file, `${template}: ${file}`).toMatch(/^img\/frames\/[\w/]+\.(png|svg)$/);
       }
@@ -1570,14 +1579,16 @@ describe("published to the frames bucket", () => {
 describe("provenance and hygiene", () => {
   it("records the pinned commit and the recipe for every imported template", () => {
     const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
-    expect(Object.keys(provenance).sort()).toEqual(Object.keys(templates).sort());
+    // Every template, and every overlay band (4.6a's crown; its own test:
+    // tests/unit/frames/crown-band.test.ts).
+    expect(Object.keys(provenance).sort()).toEqual([...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS)].sort());
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);
       // Every master was cut at the one card corner (TODO 3.26's re-import).
       expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
-      expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS].sort());
+      expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS, ...pairKeysOf(template)].sort());
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");
     // The later runs name their pack and what was done to its pixels.

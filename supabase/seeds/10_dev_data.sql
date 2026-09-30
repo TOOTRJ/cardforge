@@ -207,6 +207,99 @@ from (values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
+-- 2b. The anatomy switches (TODO 4.6.0; owner rule 2026-09-29): the printed
+--     legendary crown and the two-colour frame are opt-in per card, stored as
+--     frame_style.crown / frame_style.twoColor — absent = off. Both states of
+--     each: Cinderwing Matriarch and Oath of the Hollow Crown (above) are the
+--     cards stored before the pieces shipped (no key: drawn as before, the
+--     editor shows the switch off with a hint); these carry the keys a new
+--     card, an import or an owner's switch writes. m15 / m15artifact /
+--     m15land draw the crown (4.6a: Kesh on, Varro off) and the two-colour
+--     frame (4.6b: Aurelian Tidewright — with the split crown — Hedgerow
+--     Mediator, Stormglass Strand, Brassbound Arbiter; Tidecaller Envoy and
+--     Rotbloom Pact are stored with no key — gold until switched on)
+--     (lib/cards/anatomy.ts). Duskmire Thicket is the owner's round-17 land
+--     fix (owner 2026-09-30, pick (c)): a B|G land stored with NO template,
+--     like production's Shadowwood Hollow / Sunfade Citadel — drawn on m15,
+--     whose gold-split isn't a land's, so its editor offers no two-colour
+--     switch or hint (twoColorFits). dev_pro's cards, so dev_artist's public
+--     count stays 15 (14 + Veyra's emblem, 6.23), and UNLISTED — their owner
+--     opens them from My Cards, anyone by link — so the seeded public gallery
+--     stays on one 24-card page: the e2e gallery specs (seeded-data,
+--     browse-filters, like-toggle) read page 1, and 8 more public rows pushed
+--     Cinderwing Matriarch, Emberlash and Thornback Behemoth off it. Ids
+--     …034–…042 (…026 is the emblems seed's: a reused id is a row that
+--     silently never lands — tests/unit/devops/seed-card-ids.test.ts).
+-- ---------------------------------------------------------------------------
+
+insert into public.cards (
+  id, owner_id, game_system_id, title, slug, cost, color_identity, supertype,
+  card_type, subtypes, rarity, rules_text, flavor_text, power, toughness,
+  artist_credit, art_url, frame_style, visibility, created_at, updated_at
+)
+select
+  c.id, 'd0000000-0000-4000-a000-000000000002'::uuid,
+  (select id from public.game_systems order by created_at limit 1),
+  c.title, c.slug, c.cost, c.colors, c.supertype, c.card_type, c.subtypes,
+  c.rarity, c.rules_text, null, c.power, c.toughness,
+  'PipGlyph Studio',
+  'https://pipglyph.com/defaults/avatars/avatar-' || lpad(c.art::text, 2, '0') || '.webp',
+  c.frame_style, 'unlisted',
+  now() - (c.age_days || ' days')::interval,
+  now() - (c.age_days || ' days')::interval
+from (values
+  -- A legendary mono card with the crown on (a new card's default).
+  ('c0000000-0000-4000-a000-000000000034'::uuid, 'Kesh, Emberforge Warden', 'kesh-emberforge-warden', '{2}{R}{R}', array['red'], 'Legendary', 'creature', array['Dwarf','Artificer'], 'rare',
+     E'Whenever an artifact you control enters, Kesh deals 1 damage to each opponent.', '3', '4', 3,
+     '{"template":"m15","finish":"regular","crown":true}'::jsonb, 2),
+  -- A legendary mono card with the crown explicitly off (an import of a
+  -- crownless pre-2018 printing, or its owner's choice).
+  ('c0000000-0000-4000-a000-000000000035'::uuid, 'Varro, the Unadorned', 'varro-the-unadorned', '{1}{B}{B}', array['black'], 'Legendary', 'creature', array['Human','Rogue'], 'rare',
+     E'Menace\nVarro can''t be the target of spells your opponents control during your turn.', '3', '2', 6,
+     '{"template":"m15","finish":"regular","crown":false}'::jsonb, 2),
+  -- A WU gold legendary with both switches on: the gold-split frame and
+  -- the split crown (4.6a + 4.6b).
+  ('c0000000-0000-4000-a000-000000000036'::uuid, 'Aurelian Tidewright', 'aurelian-tidewright', '{1}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Wizard'], 'mythic',
+     E'Flying\nWhenever you cast your second spell each turn, draw a card.', '2', '3', 9,
+     '{"template":"m15","finish":"regular","crown":true,"twoColor":true}'::jsonb, 1),
+  -- A hybrid cost with the two-colour frame on: the hybrid dress.
+  ('c0000000-0000-4000-a000-000000000037'::uuid, 'Hedgerow Mediator', 'hedgerow-mediator', '{G/W}{G/W}', array['green','white'], null, 'creature', array['Elf','Cleric'], 'uncommon',
+     E'Vigilance\nWhen Hedgerow Mediator enters, you gain 2 life.', '2', '2', 12,
+     '{"template":"m15","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- A WU land with the two-colour frame on: the land split.
+  ('c0000000-0000-4000-a000-000000000038'::uuid, 'Stormglass Strand', 'stormglass-strand', null, array['white','blue'], null, 'land', array[]::text[], 'rare',
+     E'Stormglass Strand enters tapped.\n{T}: Add {W} or {U}.', null, null, 15,
+     '{"template":"m15land","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- TODO 4.6b: a WU pair stored BEFORE the two-colour frame shipped (no
+  -- key): gold as always; the editor shows the switch off with the hint.
+  ('c0000000-0000-4000-a000-000000000039'::uuid, 'Tidecaller Envoy', 'tidecaller-envoy', '{1}{W}{U}', array['white','blue'], null, 'creature', array['Merfolk','Advisor'], 'uncommon',
+     E'Flying\nWhen Tidecaller Envoy enters, scry 2.', '2', '2', 18,
+     '{"template":"m15","finish":"regular"}'::jsonb, 3),
+  -- A plain "multicolor" card with a two-colour cost and no key: switching
+  -- the frame on pre-fills Black + Green from the cost for its owner.
+  ('c0000000-0000-4000-a000-000000000040'::uuid, 'Rotbloom Pact', 'rotbloom-pact', '{2}{B}{G}', array['multicolor'], null, 'creature', array['Fungus','Shaman'], 'rare',
+     E'Deathtouch\nWhen Rotbloom Pact dies, create two 1/1 green Saproling creature tokens.', '3', '3', 21,
+     '{"template":"m15","finish":"regular"}'::jsonb, 3),
+  -- A WU artifact with the two-colour frame on: the artifact frame, gold
+  -- bars, the split pinline and text box.
+  ('c0000000-0000-4000-a000-000000000041'::uuid, 'Brassbound Arbiter', 'brassbound-arbiter', '{2}{W}{U}', array['white','blue'], 'Artifact', 'creature', array['Construct'], 'rare',
+     E'Vigilance\nArtifact spells you cast cost {1} less to cast.', '3', '4', 24,
+     '{"template":"m15artifact","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- Owner round 17's land fix (pick (c), 2026-09-30): a B|G land stored
+  -- with NO template — frame_style '{}', exactly production's Shadowwood
+  -- Hollow — so it draws on m15. Its editor shows no two-colour switch or
+  -- hint (a land wears the pairs only on the land frame), and a save never
+  -- stores the switch; it stays gold. The pair is stored the way the AI
+  -- writes one (both words + "multicolor", colorWordsFromLetters); the pair
+  -- rule reads it as B|G, the same as Shadowwood Hollow's ['black','green'].
+  ('c0000000-0000-4000-a000-000000000042'::uuid, 'Duskmire Thicket', 'duskmire-thicket', null, array['black','green','multicolor'], null, 'land', array[]::text[], 'uncommon',
+     E'Duskmire Thicket enters tapped.\nWhen Duskmire Thicket enters, surveil 1.\n{T}: Add {B} or {G}.', null, null, 20,
+     '{}'::jsonb, 1)
+) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
+        rules_text, power, toughness, art, frame_style, age_days)
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
 -- 3. Social graph. The like / comment / follow / remix triggers turn these
 --    into notification rows for free, so the bell has something in it.
 -- ---------------------------------------------------------------------------

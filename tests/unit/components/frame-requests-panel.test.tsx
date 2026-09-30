@@ -40,6 +40,7 @@ function row(overrides: Partial<FrameRequestRow>): FrameRequestRow {
     sampleScryfallId: "8df6603a-38c1-4d18-8b84-6211e9a7cc09",
     sampleUrl: "https://scryfall.com/card/dmu/435",
     blockedBy: "4.6",
+    drawnNow: false,
     forGood: false,
     inRegistry: true,
     ...overrides,
@@ -96,6 +97,25 @@ function summary(overrides: Partial<FrameRequestSummary> = {}): FrameRequestSumm
 afterEach(cleanup);
 
 describe("FrameRequestsPanel", () => {
+  it("lists a row its frame draws now (logged before 4.6a / 4.6b) apart, collapsed — never as an open missing frame", () => {
+    const answered = row({
+      signature: "era/2015+crown",
+      label: "M15-era frame",
+      setCode: "fdn",
+      count: 5,
+      blockedBy: null,
+      drawnNow: true,
+    });
+    render(<FrameRequestsPanel summary={summary({ rows: [...summary().rows, answered] })} now={NOW} />);
+    const missing = screen.getByRole("table", { name: "Missing frames" });
+    expect(within(missing).queryByText("era/2015+crown")).toBeNull();
+    expect(screen.getByText("4 requests for 2 missing frames")).toBeTruthy();
+    const drawn = screen.getByTestId("drawn-now");
+    expect(drawn.textContent).toContain("5 requests, 1 row");
+    expect(within(drawn).getByText("era/2015+crown")).toBeTruthy();
+    expect(drawn.textContent).not.toContain("TODO");
+  });
+
   it("lists the missing frames with users, count, landed frame, art flags and a Scryfall sample", () => {
     render(<FrameRequestsPanel summary={summary()} now={NOW} />);
     const table = screen.getByRole("table", { name: "Missing frames" });

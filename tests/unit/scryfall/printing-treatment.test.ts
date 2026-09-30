@@ -272,7 +272,7 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     // Deserted Beach MID #281, two colours: the gold land, nearest until
     // 4.6's split pinline — offered like a two-colour spell's gold frame.
     const mid = patchOf("mid-281");
-    expect(mid.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6" });
+    expect(mid.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6f" });
     expect(printingTreatmentOffer(mid, verified(["m15borderlessland", "m"]))?.template).toBe("m15borderlessland");
     // A basic keeps its full-art offers, never the nonbasic land's.
     const keys = verified(["m15borderlessland", "w"], ["fullartland", "w"]);

@@ -53,7 +53,11 @@ export function FrameRequestsPanel({
   /** Fixed clock for tests; the page leaves it to Date.now(). */
   now?: number;
 }) {
-  const open = summary.rows.filter((row) => !row.forGood);
+  // A row whose missing piece its frame draws now (a crown or two-colour
+  // frame logged before 4.6a / 4.6b) is answered: the same printing imports
+  // exact today. It is listed apart, never as open.
+  const open = summary.rows.filter((row) => !row.forGood && !row.drawnNow);
+  const drawnNow = summary.rows.filter((row) => !row.forGood && row.drawnNow);
   const forGood = summary.rows.filter((row) => row.forGood);
   const missing = open.filter((row) => row.cause === "missing");
   const unverified = open.filter((row) => row.cause === "unverified");
@@ -144,6 +148,17 @@ export function FrameRequestsPanel({
           />
         </>
       )}
+
+      {drawnNow.length > 0 ? (
+        <details className="group rounded-lg border border-border/60 bg-background/40" data-testid="drawn-now">
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-muted hover:text-foreground">
+            Drawn since they were logged ({drawnNow.reduce((sum, row) => sum + row.count, 0)} requests,{" "}
+            {drawnNow.length} row{drawnNow.length === 1 ? "" : "s"}) — the frame they landed on draws the
+            missing piece now, so these printings import exact
+          </summary>
+          <RequestTable rows={drawnNow} now={now} caption="Requests PipGlyph has answered since" />
+        </details>
+      ) : null}
 
       {forGood.length > 0 ? (
         <details className="group rounded-lg border border-border/60 bg-background/40">

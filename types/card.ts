@@ -741,6 +741,22 @@ export type FrameStyle = {
   finish?: CardFinish;
   /** Which frame PNG asset to layer behind the card sections. */
   template?: FrameTemplate;
+  /** The printed legendary crown (TODO 4.6a) — an ADDITION, so it is opt-in
+   *  per card (owner rule 2026-09-29, docs/FRAMES.md "Additions vs
+   *  corrections"): the renderers draw it only when this is `true`, the
+   *  card is Legendary and its template draws one (lib/cards/anatomy.ts).
+   *  Absent = off: every card stored before the crown shipped keeps its
+   *  look. A new card starts `true`; the save drops the switch where its
+   *  template can't draw a crown (normalizeAnatomy), so a template that
+   *  gains the crown later never changes a stored card. */
+  crown?: boolean;
+  /** The printed two-colour frame (TODO 4.6b): split pinline + text box on
+   *  the gold frame, or the hybrid frame when every coloured pip is hybrid.
+   *  Opt-in per card like `crown`; drawn only for a stored colour PAIR
+   *  (exactly two WUBRG words in color_identity) on a template with pair
+   *  masters — for a land, only a land frame's (twoColorFits; the save drops
+   *  it elsewhere). Absent = off = the gold frame, as before. */
+  twoColor?: boolean;
 };
 
 // ---------------------------------------------------------------------------

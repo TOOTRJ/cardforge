@@ -261,7 +261,7 @@ describe("registry facts for the admin page", () => {
   });
 
   it("names the TODO item that would make a signature exact", () => {
-    expect(signatureBlockedBy("borderless/standard+crown")).toBe("4.6");
+    expect(signatureBlockedBy("borderless/standard+crown")).toBe("4.6f");
     expect(signatureBlockedBy("era/2015")).toBeNull();
     expect(signatureBlockedBy("made/up")).toBeNull();
   });

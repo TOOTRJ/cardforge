@@ -75,9 +75,11 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tdsk-10", "nearest", "m15token", "token/m20+nyx-dress", "4.51"],
     // …and on the 2014–19 arch (TC15 #23, a W/B Nyx-textured Spirit).
     ["tc15-23", "nearest", "m15tokentext", "era/2015+nyx-dress", "4.51"],
-    // The crown and the two-colour blend: 4.6.
-    ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.6"],
-    ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.6"],
+    // The crown and the two-colour blend: the M20 token's own pill crown and
+    // its central rim split are 4.48 (design 2026-09-29 hand-offs; 4.6a's
+    // band and 4.6b's pair masters are never a token's).
+    ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.48"],
+    ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.48"],
     // Double-faced token: its front face's frame.
     ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
     // The List follows its collector prefix: TXLN is pre-M20, TKHM isn't.
@@ -113,7 +115,7 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
       reason: "PipGlyph's full-art token frame isn't verified yet",
     });
     expect(match("tmkm-13").reason).toBe(
-      "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the legendary crown yet",
+      "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the legendary crown on this frame yet",
     );
     expect(match("tdsk-4").reason).toBe(
       "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the Nyx dress on its token frames yet",
@@ -201,8 +203,10 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
 
   it("keeps a gap the full-art template doesn't draw either: nearest, its own reason, item and gaps", () => {
     const cases: [Key, FrameTemplate, string, string, string[]][] = [
-      ["tmkm-13", "m20tokentext", "PipGlyph doesn't draw the legendary crown yet", "4.6", ["crown", "two-colour"]],
-      ["tmkm-10", "m20token", "two-colour cards print a split frame, and PipGlyph uses its gold one", "4.6", ["two-colour"]],
+      // The M20 token's crown and pair are 4.48's (its pill crown, the rims'
+      // central split), not 4.6's M15 pieces.
+      ["tmkm-13", "m20tokentext", "PipGlyph doesn't draw the legendary crown on this frame yet", "4.48", ["crown", "two-colour"]],
+      ["tmkm-10", "m20token", "two-colour cards print a split frame, and PipGlyph uses its gold one", "4.48", ["two-colour"]],
       ["tdsk-4", "m20token", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
       ["teoc-13", "m20tokenartifact", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
     ];

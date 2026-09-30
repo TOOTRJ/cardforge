@@ -20,6 +20,7 @@ import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-pa
 import { remixFrameFor } from "@/lib/creator/frame-resolve";
 import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
 import type { CardBackFace, CardType, ColorIdentity, FrameTemplate } from "@/types/card";
+import { importedAnatomy, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
 
 export type ScryfallRemixMechanics = {
   title: string;
@@ -37,6 +38,13 @@ export type ScryfallRemixMechanics = {
   defense?: string;
   source_scryfall_id?: string;
   frame_template: FrameTemplate;
+  /** The printing's own anatomy switches (the crown, the two-colour frame —
+   *  lib/cards/anatomy.ts importedAnatomy), saved with the frame: the remix
+   *  follows its printing, and only where the printing says something (owner
+   *  round 17: printing-only) — createCardAction stamps the new-card default
+   *  for the rest, as the creator's form holds it (importedFormAnatomy), and
+   *  keeps only what the frame draws. */
+  anatomy: FrameAnatomyStyle;
   /** The second half a layout frame paints (the adventure's storybook
    *  page, the split / aftermath / flip half) — set only when the landed
    *  template paints one, so a card that fell back to a standard frame
@@ -60,6 +68,8 @@ export function scryfallRemixMechanics(
   const back = templatePaintsSecondFace(frame.template)
     ? backFaceFromPatch(patch.back_face)
     : null;
+  // The printing's pair where the landed frame draws the two-colour frame.
+  const anatomy = importedAnatomy(patch, frame.template);
 
   return {
     ok: true,
@@ -70,7 +80,7 @@ export function scryfallRemixMechanics(
       supertype: patch.supertype,
       subtypes: splitSubtypes(patch.subtypes_text),
       rarity: patch.rarity,
-      color_identity: patch.color_identity ? [...patch.color_identity] : undefined,
+      color_identity: anatomy.colorIdentity,
       rules_text: patch.rules_text,
       flavor_text: patch.flavor_text,
       power: patch.power,
@@ -79,6 +89,7 @@ export function scryfallRemixMechanics(
       defense: patch.defense,
       source_scryfall_id: patch.source_scryfall_id,
       frame_template: frame.template,
+      anatomy: anatomy.style,
       // The half keeps the printing's rules, never its artist: the remix's
       // art is new (the front's credit is the remixer's). Its name and
       // flavour are the AI identity's (applyRemixNames, B3).

@@ -276,7 +276,10 @@ export function summariseFrameDemand(
   summary: FrameRequestSummary,
   limit: number = FRAME_DEMAND_TOP,
 ): FrameDemandSummary {
-  const open = summary.rows.filter((row) => !row.forGood);
+  // As /admin/frame-requests: a family PipGlyph won't build, and a row its
+  // frame draws now (logged before 4.6a / 4.6b — FrameRequestRow.drawnNow),
+  // are not open requests.
+  const open = summary.rows.filter((row) => !row.forGood && !row.drawnNow);
   const frames = (cause: FrameRequestCause) =>
     new Set(open.filter((row) => row.cause === cause).map((row) => row.signature)).size;
   return {

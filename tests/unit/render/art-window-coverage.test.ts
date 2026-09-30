@@ -23,7 +23,7 @@ import {
 } from "@/lib/frames/art-window";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
-import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
+import { FRAME_MASTER_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -562,6 +562,24 @@ describe("layout v35 covers the Card Conjurer masters' measured art windows", { 
 // ---------------------------------------------------------------------------
 // The known-failure table.
 // ---------------------------------------------------------------------------
+describe("the two-colour pair masters (TODO 4.6b) are held to the check like the mono masters", () => {
+  it("every declared template's pair masters are checked, and none of them is a known failure", () => {
+    for (const template of ["m15", "m15artifact", "m15land"]) {
+      const dresses = getFrameProfile(template).twoColorMasters ?? [];
+      const expected = TWO_COLOR_MASTER_KEYS.filter((key) => (key.endsWith("-h") ? dresses.includes("hybrid") : dresses.includes("split")));
+      // Checked here, or (without a local copy) listed as missing — which the
+      // STRICT CI run turns red — never silently skipped.
+      const { masters, missing } = mastersOf(template);
+      const enumerated = [...masters.map((m) => m.key), ...missing.map((rel) => path.basename(rel, ".png"))];
+      for (const key of expected) expect(enumerated, `${template}/${key}`).toContain(key);
+      // Layout v35 put the CC M15 family on CC's window (CC_M15_ART_SLOT):
+      // a pair master, a recipe over the mono masters' files, has their
+      // window and passes with no entry.
+      expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
+    }
+  });
+});
+
 describe("the art-window known failures", () => {
   const todo = fs.readFileSync(path.join(ROOT, "TODO.md"), "utf8");
 

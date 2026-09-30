@@ -22,6 +22,8 @@ import {
   frameImageUrl,
   frameMasterKey,
   frameSplitFor,
+  FrameOverlayLayer,
+  frameOverlayImageUrl,
   pickFrameColorKey,
   webpVariant,
 } from "@/components/cards/frame-layer";
@@ -116,6 +118,12 @@ import {
   resolveFrameProfile,
   type FrameProfileOverridesMap,
 } from "@/lib/cards/profile-override";
+import {
+  plateKeyFor,
+  resolveFrameOverlays,
+  resolveTwoColor,
+  type FrameAnatomyStyle,
+} from "@/lib/cards/anatomy";
 import type {
   ArtPosition,
   CardBackFace,
@@ -423,6 +431,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
         pipOverrides: backCard.pipOverrides ?? pipOverrides ?? null,
         footerWatermark: backCard.footerWatermark ?? footerWatermark ?? null,
         brandMark,
+        anatomy: backCard.frameStyle ?? null,
       } as const)
     : null;
 
@@ -455,6 +464,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
     pipOverrides: pipOverrides ?? null,
     footerWatermark: footerWatermark ?? null,
     brandMark,
+    anatomy: frameStyle ?? null,
   } as const;
 
   return (
@@ -623,6 +633,7 @@ function CardFace({
   secondFace = null,
   footerWatermark = null,
   brandMark = false,
+  anatomy = null,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -642,13 +653,29 @@ function CardFace({
   footerWatermark?: string | null;
   /** pipglyph.com overlay bottom-right — the bake's brand mark. */
   brandMark?: boolean;
+  /** The card's anatomy switches (FrameStyle.crown / twoColor, TODO 4.6.0):
+   *  a piece draws only when its switch is true — absent is today's look. */
+  anatomy?: FrameAnatomyStyle | null;
 }) {
   // The card's colour (plates, watermark tint) and the frame master it
   // paints — the same, but where the profile dresses a colour by type:
-  // Alpha's colourless artifact paints the artifact card "a" (frameMasterKey,
-  // the bake's twin).
+  // Alpha's colourless artifact paints the artifact card "a", and a stored
+  // pair with the two-colour frame on its pair master (frameMasterKey, the
+  // bake's twin).
   const colorKey = pickFrameColorKey(colorIdentity);
-  const masterKey = frameMasterKey(layout, colorIdentity, face);
+  const masterKey = frameMasterKey(layout, colorIdentity, face, anatomy);
+  // The two-colour look (TODO 4.6b) picks the stat plate (plateKeyFor: a
+  // hybrid's grey "c"), and the anatomy overlays (the crown, 4.6a) are drawn
+  // over the master — the bake's twins. Both are nothing until a profile
+  // declares pair masters / an overlay and the card's switch is on.
+  const anatomyFacts = {
+    colors: colorIdentity,
+    cost: face.cost,
+    cardType: face.cardType,
+    supertype: face.supertype,
+  };
+  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts));
+  const overlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(layout, colorIdentity);
@@ -961,6 +988,10 @@ function CardFace({
         zIndex={5}
         split={frameSplit}
       />
+      {/* Anatomy overlays (the legendary crown band, TODO 4.6.0) — over the
+          master at its z-index, under every text layer: the bake draws them
+          right after its frame image. Nothing when the card draws none. */}
+      <FrameOverlayLayer overlays={overlays} zIndex={5} />
 
       {/* Premium finish: etched — fine cross-hatch + sheen on the FRAME only
           (masked by the frame's own luminance), just above the frame and
@@ -978,6 +1009,7 @@ function CardFace({
                 }
               : null
           }
+          overlays={overlays.map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect }))}
           landscape={layout.orientation === "landscape"}
           width="100%"
           height="100%"
@@ -1009,6 +1041,7 @@ function CardFace({
             secondArt: foilSecondArt,
             secondArtPosition: secondFace?.artPosition,
           })}
+          overlays={overlays.map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect }))}
           landscape={layout.orientation === "landscape"}
           width="100%"
           height="100%"
@@ -1021,7 +1054,7 @@ function CardFace({
         <StatOverlay
           slot={layout.pt}
           value={ptValue(face.power, face.toughness)}
-          colorKey={colorKey}
+          colorKey={plateKey}
           masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-pt` }}
@@ -1031,7 +1064,7 @@ function CardFace({
         <StatOverlay
           slot={layout.loyalty}
           value={String(face.loyalty ?? "")}
-          colorKey={colorKey}
+          colorKey={plateKey}
           masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-loyalty` }}
@@ -1041,7 +1074,7 @@ function CardFace({
         <StatOverlay
           slot={layout.defense}
           value={String(face.defense)}
-          colorKey={colorKey}
+          colorKey={plateKey}
           masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-defense` }}

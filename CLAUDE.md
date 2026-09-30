@@ -376,6 +376,10 @@ Rules and gotchas:
   (adventure keeps that). A frame-compare save that moves an `artSlot`
   passes the same check on the bake's own masters or is refused
   (`lib/frames/art-window-override.ts`).
+- Printed pieces a card SWITCHES ON (crown, two-colour; 4.6): `frame_style.crown`
+  / `twoColor`, drawn only `=== true` (`lib/cards/anatomy.ts`); new cards start
+  on, every save runs `normalizeAnatomy`, an edit sends only `frame_anatomy`,
+  and a piece is declared on a `PROFILES` entry only — `docs/FRAMES.md` "Printed pieces".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

@@ -16,6 +16,7 @@
 // The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
+import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName } from "./pair-ramp.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
@@ -100,6 +101,85 @@ const colouredArtifact = (base, colour, baseMasks, colourMasks) => [
  *  frame list: Border, Frame, then Rules, Title, Type, Pinline on top). */
 const M15_BASE_MASKS = [`${NEW}/border.png`, `${NEW}/frame.png`];
 const M15_INTERIOR_MASKS = [`${NEW}/rules.png`, `${NEW}/title.png`, `${NEW}/type.png`, `${NEW}/pinline.png`];
+
+/**
+ * The two-colour pair masters (TODO 4.6b; design 2026-09-29 §1.2), a recipe
+ * over the SAME Card Conjurer files as each template's verified masters,
+ * drawn the way that template's masters are:
+ *   • m15 / m15land — CC's whole image (m.png, a hybrid's two colours
+ *     blended across the frame ramp, l.png) under the split regions, as their
+ *     mono masters are the whole new/<k>.png / new/l<k>.png;
+ *   • m15artifact — regions only, like its coloured artifacts
+ *     (colouredArtifact): the artifact frame + border, the split text box,
+ *     GOLD title and type bars, the split pinline.
+ * Regions follow twoColorRecipe (CC's cardFrameProperties, corrected): a
+ * split region is its two colours' files blended across the region's
+ * UNTILTED ramp (pair-ramp.mjs PAIR_RAMPS: pinline 40→60 %W, a hybrid's
+ * frame 44→57, text box 45→57) by a premultiplied lerp (pairLayer), then drawn
+ * through CC's mask in CC's order (frame, rules, title, type, pinline).
+ * Keys: gold-split `<pair>`, hybrid `<pair>-h`.
+ */
+const M15_MASK = {
+  border: `${NEW}/border.png`,
+  frame: `${NEW}/frame.png`,
+  rules: `${NEW}/rules.png`,
+  title: `${NEW}/title.png`,
+  type: `${NEW}/type.png`,
+  pinline: `${NEW}/pinline.png`,
+};
+
+/** A twoColorRecipe letter → its accurate-M15 file: a colour, "m", "a" or
+ *  "l" → new/<k>.png; a land tint "wl" → new/lw.png (CC reverses it). */
+function m15FrameFile(letter) {
+  return letter.length === 2 && letter[1] === "l" ? `${NEW}/l${letter[0]}.png` : `${NEW}/${letter}.png`;
+}
+
+/** A pair layer: the recipe region's left file blended into its right file
+ *  across the region's ramp (lerpLayers over rampMask), through `mask`. */
+function pairLayer(region, mask) {
+  return {
+    src: m15FrameFile(region.left),
+    right: m15FrameFile(region.right),
+    ramp: [...region.ramp],
+    ...(mask ? { mask } : {}),
+  };
+}
+
+/** The layers of one pair master (see above). `kind`: "m15", "artifact" or
+ *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). */
+export function pairMasterLayers(pair, dress, kind) {
+  const r = twoColorRecipe(pair, dress, kind);
+  if (kind === "artifact") {
+    return [
+      layer(m15FrameFile(r.frame.left), M15_MASK.border),
+      layer(m15FrameFile(r.frame.left), M15_MASK.frame),
+      pairLayer(r.rules, M15_MASK.rules),
+      layer(m15FrameFile(r.typeTitle), M15_MASK.title),
+      layer(m15FrameFile(r.typeTitle), M15_MASK.type),
+      pairLayer(r.pinline, M15_MASK.pinline),
+    ];
+  }
+  const base = r.frame.right ? pairLayer(r.frame) : layer(m15FrameFile(r.frame.left));
+  // The bars are the base's own unless the base is a split frame (hybrid:
+  // grey l bars over a two-colour frame).
+  const bars = r.frame.right
+    ? [layer(m15FrameFile(r.typeTitle), M15_MASK.title), layer(m15FrameFile(r.typeTitle), M15_MASK.type)]
+    : [];
+  return [base, pairLayer(r.rules, M15_MASK.rules), ...bars, pairLayer(r.pinline, M15_MASK.pinline)];
+}
+
+/** A template's pair masters: `{ wu: layers, …, "wu-h": layers, … }`. */
+function pairMasters(kind, dresses) {
+  return Object.fromEntries(
+    dresses.flatMap((dress) =>
+      TWO_COLOR_PAIRS.map((pair) => [dress === "hybrid" ? `${pair}-h` : pair, pairMasterLayers(pair, dress, kind)]),
+    ),
+  );
+}
+
+/** How provenance records the pair masters (notes). */
+const PAIR_NOTE =
+  "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2)";
 /** CC's textless bordered token pack masks (packTokenTextlessM15.js). */
 const TOKEN_BASE_MASKS = [`${REG}/m15MaskBorder.png`, `${TOKEN}/frame.svg`];
 const TOKEN_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/tokenMaskTextlessType.png", `${TOKEN}/pinline.svg`];
@@ -743,23 +823,37 @@ export const EMBLEM_TONES = [EMBLEM_NAME_PILL_TONE, EMBLEM_SILVER_TONE, EMBLEM_T
  */
 export const CC_TEMPLATES = {
   m15: {
-    colors: perColor((k) => [layer(`${NEW}/${k}.png`)]),
+    colors: {
+      ...perColor((k) => [layer(`${NEW}/${k}.png`)]),
+      ...pairMasters("m15", ["split", "hybrid"]),
+    },
     plates: REG_PT,
     notes: [
       "colourless = CC's see-through 'Eldrazi' frame (new/c.png): the M15 profile draws the art under the frame for 'c' (underFrameArt, TODO 4.17), like printed colourless Eldrazi (owner decision 2026-09-25)",
+      `${PAIR_NOTE}. Gold-split <pair> = m.png with the split text box and pinline (FDN #122 / #123 / #115 / #651 / #126); hybrid <pair>-h = the two colours' frames split across the frame ramp, CC's grey land bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (TLA #212, TLA #223–252)`,
     ],
   },
   m15artifact: {
     colors: {
       c: [layer(`${NEW}/a.png`)],
       ...perColor((k) => colouredArtifact(`${NEW}/a.png`, `${NEW}/${k}.png`, M15_BASE_MASKS, M15_INTERIOR_MASKS), WUBRGM),
+      ...pairMasters("artifact", ["split"]),
     },
     plates: ARTIFACT_PT,
-    notes: ["coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks"],
+    notes: [
+      "coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks",
+      `${PAIR_NOTE}. <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (DFT #188–220 gearhulks, MH3 #195, EOE #223); no hybrid dress (no hybrid plate on this template yet: a hybrid artifact draws the gold-split master)`,
+    ],
   },
   m15land: {
-    colors: perColor((k) => [layer(k === "c" ? `${NEW}/l.png` : `${NEW}/l${k}.png`)]),
-    notes: ["colourless land = CC's land frame new/l.png"],
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${NEW}/l.png` : `${NEW}/l${k}.png`)]),
+      ...pairMasters("land", ["split"]),
+    },
+    notes: [
+      "colourless land = CC's land frame new/l.png",
+      `${PAIR_NOTE}. <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print`,
+    ],
   },
   m15snow: {
     colors: perColor((k) => [layer(k === "c" ? `${SNOW}/a.png` : `${SNOW}/${k}.png`)]),
@@ -1055,7 +1149,8 @@ export const CC_DEFERRED = {};
 
 /**
  * Composite RGBA layers (each `{ data, mask?, invert?, opacity?, gain?, recolour?, lumaRamp? }`, raw 8-bit
- * RGBA of the same size) in order: a layer's alpha is multiplied by its
+ * RGBA of the same size; `mask` may be a LIST, whose alphas multiply — CC's
+ * intersection) in order: a layer's alpha is multiplied by its
  * mask's ALPHA, then drawn source-over onto the accumulator — exactly CC's
  * drawFrames (a black canvas, the masks drawn 'source-in', the image drawn
  * 'source-in', the result 'source-over'). CC's masks are solid colours
@@ -1117,7 +1212,11 @@ export function compositeLayers(images, width, height) {
         continue;
       }
       if (img.mask) {
-        const m = img.mask[o + 3] / 255;
+        // A list of masks is CC's intersection (each drawn 'source-in'):
+        // their alphas multiply (TODO 4.6.0 — a region through a ramp).
+        const m = Array.isArray(img.mask)
+          ? img.mask.reduce((k, mask) => k * (mask[o + 3] / 255), 1)
+          : img.mask[o + 3] / 255;
         a = img.invert ? Math.max(0, a - m) : a * m;
       }
       if (img.opacity !== undefined) a *= img.opacity;
@@ -1576,21 +1675,25 @@ export function toRgba8(acc) {
 }
 
 /** One layer as provenance prints it: "src", "src through mask",
- *  "src outside mask", "… at 35%", "… recolouring the layers below …", and
- *  4.34's "src moved down N px replacing through mask", "src re-tinted from
- *  r,g,b to the tint of other at (x, y) replacing through mask". */
+ *  "src through maskA ∩ maskB", "src outside mask", "… at 35%", "… recolouring
+ *  the layers below …", and 4.34's "src moved down N px replacing through
+ *  mask", "src re-tinted from r,g,b to the tint of other at (x, y) replacing
+ *  through mask". */
 export function describeLayer(l) {
   const moved = l.dy ? ` moved down ${l.dy} px` : "";
   const tint = l.retint
     ? ` re-tinted from ${l.retint.from.join(",")} to the tint of ${l.retint.tintOf.src} at (${l.retint.tintOf.x}, ${l.retint.tintOf.y})`
     : "";
-  const mask = l.mask ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${l.mask}` : "";
+  const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
+  const mask = masks ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${masks}` : "";
   const gain = l.gain !== undefined ? ` with its alpha ×${l.gain.toFixed(4)} (clamped at 1)` : "";
+  // A pair layer (pairLayer, TODO 4.6b): two files blended across a ramp.
+  const src = l.right ? `(${l.src} | ${l.right} across ${rampName(l.ramp)})` : l.src;
   if (l.recolour) {
     const ramp = l.lumaRamp ? `, weighted by its own luminance from ${l.lumaRamp[0]} (0) to ${l.lumaRamp[1]} (full)` : "";
-    return `${l.src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}`;
+    return `${src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}`;
   }
-  return `${l.src}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
+  return `${src}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
 }
 
 /** One `finish` composite as provenance prints it. */
@@ -1653,9 +1756,16 @@ export function compositeFinish(buf, width, height, finish, masks) {
   return out;
 }
 
-/** The colours a template builds (all seven minus `excluded`). */
+
+/** Every master key a recipe may name, in build order: the seven colours,
+ *  then the two-colour pair masters (TODO 4.6b: gold-split `<pair>`, hybrid
+ *  `<pair>-h`; lib/cards/frame-reference-registry.ts TWO_COLOR_MASTER_KEYS). */
+export const MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`)];
+
+/** The masters a template builds (every key its recipe names, minus
+ *  `excluded`), in MASTER_KEYS order. */
 export function builtColors(def) {
-  return COLORS.filter((k) => def.colors[k] && !def.excluded?.[k]);
+  return MASTER_KEYS.filter((k) => def.colors[k] && !def.excluded?.[k]);
 }
 
 /** Every Card Conjurer file a template needs (layers, masks, plates,
@@ -1665,7 +1775,11 @@ export function sourceFilesFor(def) {
   for (const layers of Object.values(def.colors)) {
     for (const l of layers) {
       files.add(l.src);
-      if (l.mask) files.add(l.mask);
+      if (l.right) files.add(l.right);
+      // A procedural mask (a ramp) is no Card Conjurer file.
+      for (const mask of Array.isArray(l.mask) ? l.mask : l.mask ? [l.mask] : []) {
+        if (!mask.startsWith("procedural:")) files.add(mask);
+      }
       if (l.retint) files.add(l.retint.tintOf.src);
     }
   }
@@ -1674,4 +1788,235 @@ export function sourceFilesFor(def) {
   for (const symbol of Object.values(def.symbols ?? {})) files.add(symbol);
   if (def.shield) files.add(def.shield.mask);
   return [...files].sort();
+}
+
+// ---------------------------------------------------------------------------
+// Two-colour frames and the crown band (TODO 4.6.0 — the importer half of
+// the plumbing, additive: nothing above builds with it yet; 4.6a / 4.6b
+// build the crown bands and pair masters with it). Design 2026-09-29 §1.1 /
+// §1.2, measured on the prints:
+//   • every split ramp is UNTILTED — the prints measure 0.00 ± 0.36 %W from
+//     10.8 to 55.9 %H, where CC's maskRightHalf.png tilts +1.35 %W;
+//   • a mixed cost (hybrid and mono pips) prints GOLD-SPLIT, not hybrid;
+//   • a pair is a premultiplied LERP of the two colours' layers, never CC's
+//     stacking: opaque pixels come out the same, but stacking doubles a
+//     translucent edge (the crown's shadow over the art, α 160 against 99).
+// ---------------------------------------------------------------------------
+
+// The ramps (PAIR_RAMPS: pinline 40→60, a hybrid's frame band 44→57, text
+// box 45→57, crown 45→55 %W), the untilted ramp mask, the premultiplied lerp
+// and the ten pairs live in ./pair-ramp.mjs ONLY — the one module the pair
+// masters (4.6b) and the pair crown bands (4.6a) both read; import them from
+// there, never through this file.
+
+/**
+ * What each region of a two-colour master is made of — a pure port of Card
+ * Conjurer's cardFrameProperties (creator-23.js:577–755, its default M15
+ * style) with the corrections above. `kind`: "m15" (a nonland card),
+ * "artifact" (the m15artifact frame) or "land" (m15land); `dress`: "split"
+ * (the gold card) or "hybrid". Keys are CC's frame letters, lower-cased:
+ * a colour (w u b r g), "m" gold, "a" artifact, "l" the land / grey bars;
+ * a land's colour regions are its land tints ("wl"). `right` is the
+ * second colour through the region's ramp (PAIR_RAMPS), null for a
+ * region drawn whole. `pt` is the plate (none on a land). A hybrid ARTIFACT
+ * is the gold-split recipe: m15artifact has no hybrid plate yet (`pt/h`).
+ */
+export function twoColorRecipe(pair, dress, kind) {
+  if (!TWO_COLOR_PAIRS.includes(pair)) throw new Error(`twoColorRecipe: not a pair in printed order: ${pair}`);
+  const [a, b] = pair.split("");
+  if (kind === "land") {
+    return {
+      frame: { left: "l", right: null },
+      pinline: { left: `${a}l`, right: `${b}l`, ramp: PAIR_RAMPS.pinline },
+      rules: { left: `${a}l`, right: `${b}l`, ramp: PAIR_RAMPS.rules },
+      typeTitle: "l",
+      pt: null,
+      crown: { left: a, right: b, ramp: PAIR_RAMPS.crown },
+    };
+  }
+  const hybrid = dress === "hybrid" && kind !== "artifact";
+  return {
+    frame: kind === "artifact"
+      ? { left: "a", right: null }
+      : hybrid
+        ? { left: a, right: b, ramp: PAIR_RAMPS.frame }
+        : { left: "m", right: null },
+    pinline: { left: a, right: b, ramp: PAIR_RAMPS.pinline },
+    rules: { left: a, right: b, ramp: PAIR_RAMPS.rules },
+    typeTitle: hybrid ? "l" : "m",
+    pt: hybrid ? "c" : "m",
+    crown: { left: a, right: b, ramp: PAIR_RAMPS.crown },
+  };
+}
+
+/**
+ * The standard legendary crown band (TODO 4.6a; design §1.1): CC's
+ * `img/frames/m15/crowns/new/<key>.png` (1922 × 493, native 2010 × 2814)
+ * over CC's black "Legend Crown Border Cover", composited at 2010 × 2814,
+ * downscaled once to 1500 × 2100, corner cut, and cropped to the rows the
+ * band covers — the overlay FrameProfile.overlays stretches over
+ * 0 / 0 / 100 × 19.52 %. Rects in card %.
+ */
+export const CROWN_BAND = {
+  source: "img/frames/m15/crowns/new",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+  crown: { leftPct: 2.19, topPct: 1.88, widthPct: 95.62, heightPct: 17.52 },
+  cover: { leftPct: 0, topPct: 0, widthPct: 100, heightPct: 4.87 },
+  compositeSize: { width: 2010, height: 2814 },
+  rows: 410,
+};
+
+/** The top `rows` rows of an 8-bit RGBA image (the crown band's crop). */
+export function cropRows(buf, width, rows) {
+  return Buffer.from(buf.subarray(0, width * rows * 4));
+}
+
+// ---------------------------------------------------------------------------
+// Overlay bands (TODO 4.6a): printed anatomy drawn OVER a frame master
+// (FrameProfile.overlays in lib/cards/template-layout.ts). Built by
+// scripts/import-cc-frames.mjs (`--only m15crown`) into
+// .frames-build/<folder>/<key>.png + .webp, published to the bucket like a
+// master, never committed.
+// ---------------------------------------------------------------------------
+
+/** The crown band's keys, in the order the importer builds them: CC's nine
+ *  crown letters (w u b r g, m gold, a artifact silver, l land grey, c the
+ *  colourless grey), then the ten pairs in printed order — a pair is the
+ *  first colour's crown on the left, lerped into the second's through the
+ *  untilted crown ramp (pair-ramp.mjs PAIR_RAMPS.crown, 45→55 %W: the same
+ *  module and the same canonical order as 4.6b's pair masters). The
+ *  profile's slot lists the same keys (lib/cards/template-layout.ts
+ *  M15_CROWN; a unit test holds them together). */
+export const CROWN_BAND_KEYS = [...CROWN_BAND.keys, ...TWO_COLOR_PAIRS];
+
+/** CC's 'Legend Crown Border Cover': img/black.png (1×1 black) stretched
+ *  over the cover rect, drawn under the crown and over the frame. */
+const CROWN_COVER_SRC = "img/black.png";
+
+/** The overlay bands the importer builds, by bucket folder. */
+export const CC_OVERLAY_BANDS = {
+  m15crown: {
+    pack: "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js, groupAccurate.js — the pack the M15 masters come from)",
+    band: CROWN_BAND,
+    keys: CROWN_BAND_KEYS,
+    notes: [
+      "the standard legendary crown, drawn over the m15, m15artifact and m15land masters (TODO 4.6a; design 2026-09-29 §1.1): CC's autoM15NewFrame draws the black 'Legend Crown Border Cover' then the crown after the P/T plate — here composited alone at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
+      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 45→55 %W (the prints' crown split, each pixel de-shaded against the two single-colour crowns, measures 45.5 / 49.3 / 53.6 %W at 10 / 50 / 90 % on FDN's gold pairs, 46.4 / 49.4 / 53.6 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
+      "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in",
+    ],
+  },
+};
+
+/** A card-% rect as a pixel box on a W × H canvas (CC's bounds, rounded). */
+export function rectPx(rect, width, height) {
+  return {
+    x: Math.round((rect.leftPct / 100) * width),
+    y: Math.round((rect.topPct / 100) * height),
+    width: Math.round((rect.widthPct / 100) * width),
+    height: Math.round((rect.heightPct / 100) * height),
+  };
+}
+
+/** A W × H transparent 8-bit RGBA canvas with `img` (box.width ×
+ *  box.height RGBA) placed at the box — CC drawing an image at its bounds. */
+export function placeOnCanvas(img, box, width, height) {
+  const out = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < box.height; y += 1) {
+    const ty = box.y + y;
+    if (ty < 0 || ty >= height) continue;
+    for (let x = 0; x < box.width; x += 1) {
+      const tx = box.x + x;
+      if (tx < 0 || tx >= width) continue;
+      img.copy(out, (ty * width + tx) * 4, (y * box.width + x) * 4, (y * box.width + x) * 4 + 4);
+    }
+  }
+  return out;
+}
+
+/**
+ * One crown band key's recipe: the black cover, then the crown — a mono key
+ * CC's crown letter as it is, a pair the first colour's crown lerped into
+ * the second's through the crown ramp. Throws for a key the band doesn't
+ * build.
+ */
+export function crownBandRecipe(key) {
+  if (TWO_COLOR_PAIRS.includes(key)) {
+    const [a, b] = key.split("");
+    return {
+      cover: CROWN_COVER_SRC,
+      left: `${CROWN_BAND.source}/${a}.png`,
+      right: `${CROWN_BAND.source}/${b}.png`,
+      ramp: PAIR_RAMPS.crown,
+    };
+  }
+  if (!CROWN_BAND.keys.includes(key)) throw new Error(`crownBandRecipe: no crown for key ${key}`);
+  return { cover: CROWN_COVER_SRC, left: `${CROWN_BAND.source}/${key}.png`, right: null, ramp: null };
+}
+
+const pctBox = (r) => `${r.leftPct}/${r.topPct}/${r.widthPct}×${r.heightPct} %`;
+
+/** How provenance prints a crown band key's recipe. */
+export function describeCrownBand(recipe) {
+  const crown = recipe.right
+    ? `${recipe.left} ⟷ ${recipe.right} lerped through ${rampName(recipe.ramp)}`
+    : recipe.left;
+  return [`${recipe.cover} over ${pctBox(CROWN_BAND.cover)}`, `${crown} at ${pctBox(CROWN_BAND.crown)}`];
+}
+
+/** Every Card Conjurer file the crown band reads. */
+export function crownBandSourceFiles(keys = CROWN_BAND_KEYS) {
+  const files = new Set();
+  for (const key of keys) {
+    const recipe = crownBandRecipe(key);
+    files.add(recipe.cover);
+    files.add(recipe.left);
+    if (recipe.right) files.add(recipe.right);
+  }
+  return [...files].sort();
+}
+
+/**
+ * What the importer checks on a full 1500 × 2100 crown composite before it
+ * crops the band (pure; the numbers go in its log and the unit test):
+ *   • `lastAlphaRow` — the lowest row with any alpha; the crop keeps rows
+ *     0 … rows − 1, so it must be below `rows`;
+ *   • `peakRow` — the first row at the card's centre column that is not the
+ *     cover's black (the crown's peak; the prints: row 42 ± 2 at HD);
+ *   • `artMaxAlpha` / `artPartial` — inside `artSlot` (card %), the most
+ *     opaque pixel and the share with α > 0.05: the crown only shadows the
+ *     top of the art, never covers it — α ≤ 119 in the M15 slot, where the
+ *     frame's own window edge sits over the darkest of it; α ≤ 79 on the art
+ *     you can see, rows 238–244 px (all 19 bands, after v35). The importer
+ *     refuses a band above 127.
+ */
+export function crownBandFindings(buf, width, height, rows, artSlot) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  const cx = Math.floor(width / 2);
+  let peakRow = -1;
+  for (let y = 0; y < rows; y += 1) {
+    const o = (y * width + cx) * 4;
+    if (buf[o + 3] > 0 && buf[o] + buf[o + 1] + buf[o + 2] > 3 * 40) {
+      peakRow = y;
+      break;
+    }
+  }
+  const box = rectPx(artSlot, width, height);
+  let artMaxAlpha = 0;
+  let artPartial = 0;
+  for (let y = box.y; y < box.y + box.height; y += 1) {
+    for (let x = box.x; x < box.x + box.width; x += 1) {
+      const a = buf[(y * width + x) * 4 + 3];
+      if (a > artMaxAlpha) artMaxAlpha = a;
+      if (a > 0.05 * 255) artPartial += 1;
+    }
+  }
+  return { lastAlphaRow, peakRow, artMaxAlpha, artPartialPct: (artPartial / (box.width * box.height)) * 100 };
 }

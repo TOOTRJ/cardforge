@@ -9,6 +9,7 @@ import {
   getCurrentProfile,
   getCurrentUser,
 } from "@/lib/supabase/server";
+import { storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
 import {
   createCardAction,
   updateCardAction,
@@ -1382,6 +1383,11 @@ async function executeDeckRemixStep(
     parent_card_id?: string;
     source_scryfall_id?: string;
     frame_template?: string;
+    /** The crown / two-colour switches: a Scryfall entry's printing's
+     *  (importedAnatomy); an own card's EXPLICIT ones (storedAnatomyOf — the
+     *  creator's remix keeps them too), so a parent switched off stays off.
+     *  A switch nobody set gets the new-card default (createCardAction). */
+    anatomy?: FrameAnatomyStyle;
     /** A layout frame's second half (TODO 1.22), Scryfall entries only. */
     back_face?: CardBackFace;
     art_url?: string | null;
@@ -1409,6 +1415,7 @@ async function executeDeckRemixStep(
       defense: source.defense ?? undefined,
       parent_card_id: source.id,
       art_url: source.art_url,
+      anatomy: storedAnatomyOf(source.frame_style),
     };
   } else if (entry.scryfall_id) {
     const scry = await getScryfallCardById(entry.scryfall_id);
@@ -1575,7 +1582,16 @@ async function executeDeckRemixStep(
       loyalty: mechanics.loyalty,
       defense: mechanics.defense,
       art_url: artUrl,
-      frame_style: frameTemplate ? { template: frameTemplate } : undefined,
+      // The printing's own crown / two-colour switches (importedAnatomy), or
+      // an own card's explicit ones (it carries no template: the remix lands
+      // on its kind's default frame, as before); createCardAction stamps the
+      // new-card default for a switch nobody set and keeps only what the
+      // frame draws.
+      frame_style: frameTemplate
+        ? { template: frameTemplate, ...mechanics.anatomy }
+        : mechanics.anatomy && Object.keys(mechanics.anatomy).length > 0
+          ? { ...mechanics.anatomy }
+          : undefined,
       back_face: named.back_face,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,

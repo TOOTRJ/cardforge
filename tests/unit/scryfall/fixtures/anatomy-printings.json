@@ -1,0 +1,713 @@
+{
+  "dft-219": {
+    "id": "44bfb0f7-18ca-4f6e-ba64-92120010456e",
+    "oracle_id": "f3838ff1-5403-4f3f-8531-36029c13fcfc",
+    "name": "Riptide Gearhulk",
+    "released_at": "2025-02-14",
+    "layout": "normal",
+    "set": "dft",
+    "set_name": "Aetherdrift",
+    "set_type": "expansion",
+    "collector_number": "219",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Prowess",
+      "Double strike"
+    ],
+    "type_line": "Artifact Creature — Construct",
+    "mana_cost": "{1}{W}{W}{U}{U}",
+    "power": "2",
+    "toughness": "5",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "rarity": "mythic"
+  },
+  "eld-244": {
+    "id": "b841bfa8-7c17-4df2-8466-780ab9a4a53a",
+    "oracle_id": "0c85b8f7-0bd0-4680-9ec5-d4b110460a54",
+    "name": "Fabled Passage",
+    "released_at": "2019-10-04",
+    "layout": "normal",
+    "set": "eld",
+    "set_name": "Throne of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "244",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "rare"
+  },
+  "fdn-122": {
+    "id": "6c980998-7124-4ec6-a0b6-e8d9a2364925",
+    "oracle_id": "0156c94b-e64c-49de-a46c-a203c5e05e98",
+    "name": "Kykar, Zephyr Awakener",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "122",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Legendary Creature — Bird Wizard",
+    "mana_cost": "{2}{W}{U}",
+    "power": "3",
+    "toughness": "4",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "rarity": "rare"
+  },
+  "fdn-2": {
+    "id": "524a5d93-26ed-436d-a437-dc9460acce98",
+    "oracle_id": "dfec65a0-6fb6-463d-aa62-e84a427db217",
+    "name": "Arahbo, the First Fang",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "2",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Creature — Cat Avatar",
+    "mana_cost": "{2}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare"
+  },
+  "fdn-243": {
+    "id": "51710b19-68e3-4853-901f-e618bde61161",
+    "oracle_id": "e4625704-1d52-44e4-804f-2f45644d76ac",
+    "name": "Muldrotha, the Gravetide",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "243",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Creature — Elemental Avatar",
+    "mana_cost": "{3}{B}{G}{U}",
+    "power": "6",
+    "toughness": "6",
+    "colors": [
+      "B",
+      "G",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "U"
+    ],
+    "rarity": "mythic"
+  },
+  "ltr-302": {
+    "id": "e186ef93-f369-4b4d-a683-36f338b6ce3f",
+    "oracle_id": "d72b57e5-1c6e-4f02-968f-7e2dd24f0d3c",
+    "name": "Boromir, Warden of the Tower",
+    "released_at": "2023-06-23",
+    "layout": "normal",
+    "set": "ltr",
+    "set_name": "The Lord of the Rings: Tales of Middle-earth",
+    "set_type": "draft_innovation",
+    "collector_number": "302",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [
+      "Vigilance"
+    ],
+    "type_line": "Legendary Creature — Human Soldier",
+    "mana_cost": "{2}{W}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare"
+  },
+  "ltr-321": {
+    "id": "a971745b-5d5c-46bb-95ca-329b6ee7ed75",
+    "oracle_id": "8d3c9646-2b6b-4315-939d-5a920efc0a60",
+    "name": "Galadriel of Lothlórien",
+    "released_at": "2023-06-23",
+    "layout": "normal",
+    "set": "ltr",
+    "set_name": "The Lord of the Rings: Tales of Middle-earth",
+    "set_type": "draft_innovation",
+    "collector_number": "321",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [
+      "Scry"
+    ],
+    "type_line": "Legendary Creature — Elf Noble",
+    "mana_cost": "{1}{G}{U}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "G",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "rarity": "rare"
+  },
+  "m15-3": {
+    "id": "a79662d5-3b6f-4c5a-8540-63c201027b66",
+    "oracle_id": "6da0b6d2-3c5e-49ef-9264-076269c04744",
+    "name": "Avacyn, Guardian Angel",
+    "released_at": "2014-07-18",
+    "layout": "normal",
+    "set": "m15",
+    "set_name": "Magic 2015",
+    "set_type": "core",
+    "collector_number": "3",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying",
+      "Vigilance"
+    ],
+    "type_line": "Legendary Creature — Angel",
+    "mana_cost": "{2}{W}{W}{W}",
+    "power": "5",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare"
+  },
+  "mh2-186": {
+    "id": "d99a9a7d-d9ca-4c11-80ab-e39d5943a315",
+    "oracle_id": "1f74e26f-5cf3-4b0e-bcc6-f858599474fc",
+    "name": "Asmoranomardicadaistinaculdacar",
+    "released_at": "2021-06-18",
+    "layout": "normal",
+    "set": "mh2",
+    "set_name": "Modern Horizons 2",
+    "set_type": "draft_innovation",
+    "collector_number": "186",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Creature — Human Wizard",
+    "mana_cost": "",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "B",
+      "R"
+    ],
+    "color_indicator": [
+      "B",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "rarity": "rare"
+  },
+  "mkm-238": {
+    "id": "329f3aca-6db7-41d3-95b2-c479d14b7fa3",
+    "oracle_id": "5c90b951-826e-4595-aacc-958904f3f794",
+    "name": "Trostani, Three Whispers",
+    "released_at": "2024-02-09",
+    "layout": "normal",
+    "set": "mkm",
+    "set_name": "Murders at Karlov Manor",
+    "set_type": "expansion",
+    "collector_number": "238",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Creature — Dryad",
+    "mana_cost": "{G}{G/W}{W}",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "rarity": "mythic"
+  },
+  "mkm-264": {
+    "id": "652236c2-84ef-45e4-b5fc-ed6170bc3d6c",
+    "oracle_id": "ccfb8b4d-651c-418a-aa19-cb23105b3f2f",
+    "name": "Meticulous Archive",
+    "released_at": "2024-02-09",
+    "layout": "normal",
+    "set": "mkm",
+    "set_name": "Murders at Karlov Manor",
+    "set_type": "expansion",
+    "collector_number": "264",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Surveil"
+    ],
+    "type_line": "Land — Plains Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "rarity": "rare"
+  },
+  "rtr-145": {
+    "id": "26adc211-d089-4102-91e5-225bbeb5f382",
+    "oracle_id": "e7592863-4aee-47b3-9abf-4b863ab0b6ec",
+    "name": "Azorius Charm",
+    "released_at": "2012-10-05",
+    "layout": "normal",
+    "set": "rtr",
+    "set_name": "Return to Ravnica",
+    "set_type": "expansion",
+    "collector_number": "145",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Instant",
+    "mana_cost": "{W}{U}",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon"
+  },
+  "neo-268": {
+    "id": "c375a022-5b57-496d-a802-e4ea8376e9e4",
+    "oracle_id": "7edb3d15-4f70-4ebe-8c5e-caf6a225076d",
+    "name": "Eiganjo, Seat of the Empire",
+    "released_at": "2022-02-18",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "268",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Channel"
+    ],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "rarity": "rare"
+  },
+  "stx-175": {
+    "id": "c965cbe3-50e5-41bb-bdb9-e65d97aab716",
+    "oracle_id": "290323d7-d8cb-4706-87d9-b920a4e2f680",
+    "name": "Daemogoth Woe-Eater",
+    "released_at": "2021-04-23",
+    "layout": "normal",
+    "set": "stx",
+    "set_name": "Strixhaven: School of Mages",
+    "set_type": "expansion",
+    "collector_number": "175",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Demon",
+    "mana_cost": "{1}{B}{B/G}{G}",
+    "power": "7",
+    "toughness": "6",
+    "colors": [
+      "B",
+      "G"
+    ],
+    "color_identity": [
+      "B",
+      "G"
+    ],
+    "rarity": "uncommon"
+  },
+  "tla-212": {
+    "id": "d7df3391-dbe5-4eb4-85c1-037c5f3ea971",
+    "oracle_id": "ba6840a6-b6fd-4b91-ac1a-a61b7b15849a",
+    "name": "Cat-Owl",
+    "released_at": "2025-11-21",
+    "layout": "normal",
+    "set": "tla",
+    "set_name": "Avatar: The Last Airbender",
+    "set_type": "expansion",
+    "collector_number": "212",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Creature — Cat Bird",
+    "mana_cost": "{3}{W/U}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "rarity": "common"
+  },
+  "uma-241": {
+    "id": "e00d16f9-ea27-4aa3-a134-4e04f934d020",
+    "oracle_id": "c9b82110-7dfd-4617-9399-9510be449043",
+    "name": "Dark Depths",
+    "released_at": "2018-12-07",
+    "layout": "normal",
+    "set": "uma",
+    "set_name": "Ultimate Masters",
+    "set_type": "masters",
+    "collector_number": "241",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Snow Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "mythic"
+  },
+  "woe-220": {
+    "id": "3f5acc0d-33a6-476f-95ca-a1ad788334dd",
+    "oracle_id": "06374e6d-62fa-4833-81cd-b4d0a35e7365",
+    "name": "Beluna Grandsquall // Seek Thrills",
+    "released_at": "2023-09-08",
+    "layout": "adventure",
+    "set": "woe",
+    "set_name": "Wilds of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "220",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Trample",
+      "Mill"
+    ],
+    "type_line": "Legendary Creature — Giant Noble // Instant — Adventure",
+    "mana_cost": "{G}{U}{R} // {2}{G}{U}{R}",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "G",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "R",
+      "U"
+    ],
+    "rarity": "mythic",
+    "card_faces": [
+      {
+        "object": "card_face",
+        "name": "Beluna Grandsquall",
+        "mana_cost": "{G}{U}{R}",
+        "type_line": "Legendary Creature — Giant Noble",
+        "power": "4",
+        "toughness": "4"
+      },
+      {
+        "object": "card_face",
+        "name": "Seek Thrills",
+        "mana_cost": "{2}{G}{U}{R}",
+        "type_line": "Instant — Adventure"
+      }
+    ]
+  },
+  "khm-201": {
+    "id": "d18396f9-ae20-4471-84ab-a2148319bc39",
+    "oracle_id": "7cb47a7e-fe60-45a2-9c07-bd5c6ddca82d",
+    "name": "Arni Slays the Troll",
+    "released_at": "2021-02-05",
+    "layout": "saga",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "201",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Fight"
+    ],
+    "type_line": "Enchantment — Saga",
+    "mana_cost": "{R}{G}",
+    "colors": [
+      "G",
+      "R"
+    ],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "rarity": "uncommon"
+  },
+  "eld-206": {
+    "id": "b42e1359-c79d-4848-a0f1-3f274e0bf0d9",
+    "oracle_id": "4bd38337-fb79-4809-848a-308c682825d1",
+    "name": "Arcanist's Owl",
+    "released_at": "2019-10-04",
+    "layout": "normal",
+    "set": "eld",
+    "set_name": "Throne of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "206",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Artifact Creature — Bird",
+    "mana_cost": "{W/U}{W/U}{W/U}{W/U}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon"
+  },
+  "fdn-677": {
+    "id": "f340d8a4-196a-4433-807c-b7124e96e44f",
+    "oracle_id": "f76bcbfe-483f-4e63-8425-76feca1abf3e",
+    "name": "Pyromancer's Goggles",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "677",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Artifact",
+    "mana_cost": "{5}",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "rarity": "mythic"
+  },
+  "neo-74": {
+    "id": "d859de3a-0be1-4e66-b438-1c3d4ee756cd",
+    "oracle_id": "751f22bc-bcea-4213-a37b-b5f72448a4c4",
+    "name": "The Reality Chip",
+    "released_at": "2022-02-18",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "74",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Reconfigure"
+    ],
+    "type_line": "Legendary Artifact Creature — Equipment Jellyfish",
+    "mana_cost": "{1}{U}",
+    "power": "0",
+    "toughness": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "rare"
+  },
+  "mul-66": {
+    "id": "cf348206-1dee-417c-a3e1-7430b84371c2",
+    "oracle_id": "f7fa6ac0-70db-4586-b881-5a19db644dfb",
+    "name": "Anafenza, Kin-Tree Spirit",
+    "released_at": "2023-04-21",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "66",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "etched"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Bolster"
+    ],
+    "type_line": "Legendary Creature — Spirit Soldier",
+    "mana_cost": "{W}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare"
+  }
+}

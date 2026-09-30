@@ -176,6 +176,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
 - **Source.** The fork at the pinned commit, cached under
   `~/.cache/pipglyph-cc/<commit>`, or set `CC_CACHE`. It takes about
   4 minutes for the M15 family; `--only` builds a subset.
+- **Pairs.** m15, m15artifact and m15land also build their two-colour pair
+  masters (`<pair>.png`, and m15's hybrid `<pair>-h.png`; TODO 4.6b —
+  [The two-colour frames](#the-two-colour-frames-46b)).
 - **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Layers are composited
   exactly as Card Conjurer draws them: only each mask's alpha counts, in
   CC's draw order, at the pack's native size, then downscaled once. A
@@ -284,6 +287,15 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   runs the edge contract, the corner check and the art-window coverage on
   every master it builds and exits non-zero on a violation ([Checks every
   master passes](#checks-every-master-passes)).
+- **Overlay bands** (`CC_OVERLAY_BANDS`) are printed pieces drawn OVER a
+  master, not templates. `m15crown` (4.6a) is CC's black 'Legend Crown
+  Border Cover' then the crown (`crowns/new/<k>.png`), composited at
+  2010×2814, downscaled once, corner cut and cropped to rows 0–409: one
+  1500×410 band per key, CC's nine (w u b r g, m, a, l, c) plus the ten
+  pairs (the first colour's crown lerped into the second's across the
+  untilted 45→55 %W ramp). The importer fails a band with alpha below row
+  409, a peak off row 42 ± 2 or more than a shadow (α ≤ 127) over the art.
+  Build it with `node scripts/import-cc-frames.mjs --only m15crown`.
 
 The M15 family shipped in 4.4 (#380): published, git copies deleted,
 profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
@@ -478,7 +490,8 @@ frame change](#shipping-a-frame-change)).
    Card Conjurer frame lives in the bucket only; an MSE frame lives in git.
 2. **Build the masters.** One 1500×2100 PNG per colour key
    `w u b r g c m` (`FRAME_COLOR_KEYS`; plus `a` only for a profile with
-   `artifactMasterKeys`), 2100×1500 for a landscape frame. The art window
+   `artifactMasterKeys`, and the pair masters only for one with
+   `twoColorMasters`), 2100×1500 for a landscape frame. The art window
    is cut to α = 0 so the art renders below the frame; the corners are cut
    at the one card corner; each PNG has its WebP sibling.
    - Card Conjurer: a recipe in `CC_TEMPLATES` (`scripts/lib/cc-frames.mjs`),
@@ -751,10 +764,12 @@ published frames in the card's colour, the import's own landing preselected
 and listed first with the printing's own frame, the kind's M15 standard and
 the printing's family (its frame set — a skin only when it IS the printing's
 frame); every other frame sits behind "Show all frames". A printing short of
-nothing but a detail no frame draws — the legendary crown, a colour
-indicator (`FrameMatch.gaps` ⊆ `UNDRAWN_DETAIL_GAPS`) — doesn't ask: it
+nothing but a detail no frame draws — a colour indicator
+(`FrameMatch.gaps` ⊆ `UNDRAWN_DETAIL_GAPS`) — doesn't ask: it
 lands on its own frame, the Card step shows "Nearest frame" with the reason,
-and the deck pre-fill doesn't toast (owner decisions C1–C3, 2026-09-29).
+and the deck pre-fill doesn't toast (owner decisions C1–C3, 2026-09-29). The
+legendary crown left that list with 4.6a: m15, m15artifact and m15land draw
+it, so a crowned printing whose own frame doesn't (snow, devoid …) asks.
 So a newly verified frame shows up in the chooser and turns its printings'
 badges to Exact the moment its `frame_reviews` row is ticked.
 
@@ -886,6 +901,196 @@ each affected card, `hasNewerLook`) predates this rule; v22 is the one bump
 that uses it. `lib/cards/layout-version.ts` explains both policies and
 `TEMPLATE_SCOPED_VERSIONS` / `VERSION_SCOPES`, which limit a bump to the
 cards it changes.
+
+### Printed pieces a card switches on
+
+TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
+additions (above): opt-in per card, never a sweep, never a badge. The
+plumbing is `lib/cards/anatomy.ts`; 4.6.0 shipped it with no template drawing
+anything, and a template only draws a piece once its `PROFILES` entry
+declares it — and even then no stored card changes, because only a switch set
+to `true` draws it (4.6a: the crown, 4.6b: the two-colour frames, both on
+m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
+
+- **The switches are card data:** `frame_style.crown` and
+  `frame_style.twoColor` (booleans, `frameStyleBaseSchema`). Both renderers
+  draw a piece only when its switch is exactly `true`; absent and `false` are
+  the look the card always had. So declaring a piece on a template changes
+  no stored card, and needs no `CARD_LAYOUT_VERSION` bump.
+- **Who sets them:** a new card starts with every switch on
+  (`NEW_CARD_ANATOMY` in the creator; `createCardAction` stamps
+  `newCardFrameStyle` for a payload that names none — the AI jobs; a remix,
+  the creator's or the AI deck remix of an own card, keeps its parent's
+  explicit ones, `storedAnatomyOf`). An import
+  follows the printing and names only what the printing says (owner round
+  17, 2026-09-30: printing-only; `importedAnatomy`): `printed_crown` is
+  `true` for Scryfall's `legendary` frame effect, `false` for a Legendary
+  card printed without it (M15–RIX, List reprints) and for a Legendary
+  showcase, and absent for a nonlegendary printing, a showcase one included
+  (owner 2026-09-30); `printed_two_color` is `true` (with
+  its pair) for a 2015-frame printing of exactly two colours, else absent —
+  never `false`. A switch the printing doesn't name takes the new-card
+  default (the save's stamp; the creator's form, `importedFormAnatomy`), so a
+  card made Legendary or given a pair later starts on, like any new card.
+  A stored card shows each switch OFF with a one-line
+  hint in the editor (`AnatomyPanel`) until its owner turns it on; an edit
+  sends only `frame_anatomy`, merged over the stored `frame_style`
+  (`applyFrameAnatomyPatch`). A switch (and its hint) shows only where it
+  can draw: the crown on a Legendary non-planeswalker; the two-colour frame
+  on a pair, or a plain `["multicolor"]` card whose cost spans two colours
+  or has no coloured pip (`offersTwoColor` — never three colour words, never
+  a Multicolor card whose cost spans one or three-plus), and for a LAND only
+  on a land frame (`twoColorFits`: m15land, `twoColorForLands`). A two-colour
+  land stored with no template draws on m15, whose gold-split isn't a
+  land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
+  the save drops it and the renderers don't draw it (owner round 17).
+- **Every save** drops a switch its template can't draw for the card
+  (`normalizeAnatomy`, with the card's type), so a template that gains a
+  piece later (4.6f) never changes a card stored on it before, and a crafted
+  payload can't give a land on m15 or m15artifact the two-colour frame —
+  judged by the type the card is SAVED with, so a crafted `card_type` change
+  to Land drops a switch it had as a creature too (`updateCardAction`).
+- **The colour pair** is `color_identity` with exactly two WUBRG words (the
+  AI's `multicolor` token is ignored), picked in the Colour step's "Two
+  colours" row and pre-filled from the cost (`twoColorFromCost`,
+  `useTwoColorPairFollow`, which also takes a pair it filled back to plain
+  Multicolor when the card moves to a frame that doesn't draw pairs) — never
+  derived at render. On the Pips step a card that holds a pair is prompted
+  when its cost names another pair or three colours (the "Switch" prompt). A stored
+  `["multicolor"]` card gets it only when its owner switches the two-colour
+  frame on (a refinement; a stored mono or three-colour card is never
+  re-coloured). The **dress** is print's for the cost (`twoColorDressOf`):
+  hybrid when every coloured pip is a two-colour hybrid (or a nonland has
+  none), gold-split otherwise — a mixed cost too.
+- **A template draws a piece** only through its `PROFILES` entry:
+  `overlays` (the crown band: `FrameOverlaySlot` — rect, `{key}` image,
+  published `keys`, `keyMap`), `twoColorMasters` (`<template>/<pair>.png`
+  split, `<pair>-h.png` hybrid) and `twoColorForLands` (its pairs are a land
+  frame's: only there does a land card wear them). Never on a base another
+  profile spreads (`M15` is spread by 11 profiles, `M15LAND` by
+  m15snowland). All three are code-owned (the override schema refuses them).
+- **Renderers:** the overlays draw right after the frame master
+  (`FrameOverlayLayer` / the bake's `<img>`s, never a Fragment) and inside
+  both finish masks; `frameAssetPathsFor` preloads them;
+  `frameMasterKey(..., frameStyle)` paints the pair master; `plateKeyFor`
+  gives a hybrid its grey plate. The bake keeps one key list per asset
+  family (`FRAME_MASTER_KEYS` with the pair masters, `FRAME_PLATE_KEYS`) and
+  loads an overlay with no fallback key (`getFrameOverlayDataUrl`), so it
+  reads the file the preview shows (`tests/unit/render/anatomy-key-parity.test.ts`).
+- **Registry:** the `crown`, `two-colour` and `two-colour-hybrid` gaps
+  (`hybridCost`) drop where the frame the import lands on draws the piece
+  (`gapDrawnBy`) — nothing to keep in step by hand.
+- **Importer** (`scripts/lib/cc-frames.mjs`): a layer through a list of masks,
+  `twoColorRecipe` (CC's cardFrameProperties, corrected) and `CROWN_BAND`.
+  The split itself lives in ONE module, `scripts/lib/pair-ramp.mjs`, which
+  both the pair masters and the pair crown bands read: the untilted
+  `rampMask` (`PAIR_RAMPS`: pinline 40→60, a hybrid's outer frame 44→57,
+  text box 45→57, crown 45→55 %W)
+  and the premultiplied `lerpLayers` (`blendPair` = the two together).
+
+Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
+into `.frames-build`, publish to the dev bucket, declare it on the
+`PROFILES` entry, update the pinned sets in `tests/unit/cards/anatomy.test.ts`,
+add its cases to the visual matrix (`tests/visual/matrix.ts`: new cases, no
+bump), sign it off on a print sheet in the PR, promote, merge, and post the
+site update ([Announcing a change](#announcing-a-change)). No bump, no sweep:
+a card gets the look when its owner switches it on, and new cards get it by
+default.
+
+**The legendary crown (4.6a)** is `M15_CROWN` in
+`lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
+only (never snow, devoid, borderless, extended art, adventure, saga, the
+tokens or a showcase: 4.6f and the token items). It draws when the switch is
+`true`, the supertype has the word Legendary and the card is not a
+planeswalker, token, battle or emblem (`qualifiesForCrown`). Its key is the
+pinline of the master actually drawn (`resolveFrameOverlays`): the colour,
+gold `m` for three or more colours or a pair drawn gold, the pair where the
+two-colour frame is drawn (4.6b), and for a colourless card the frame's own
+grey — `c` on m15, `a` on m15artifact, `l` on m15land (the slot's
+`keyMap`). The band is the top 410 / 2100 of the card at full width; nothing
+else moves, and its only mark on the art is the crown's soft shadow over the
+window's top rows. `lib/cards/crown.ts` answers `showsCrown` / `crownKeyFor`
+for the creator and the admin page, and holds `CROWN_REFERENCES`, the
+crowned prints the band is judged against (FDN #2 / #45 / #72 / #91 / #106 /
+#243, UMA #6 / #241, FDN #677, NEO #74 / #266–278, M20 #131): the
+/admin/frame-compare "Legendary" toggle renders the sample crowned beside
+them (a tick still records the combo's own reference). An import's switch is
+`printed_crown` (`crownSwitchFromPrinting`) — on for the `legendary` effect;
+off for a Legendary card printed without it (M15–RIX, List and playtest
+reprints) and for a Legendary showcase, by Scryfall's `showcase` effect or
+the registry's showcase signature (MUL's etched run carries only
+`legendary` + `etched`); not named for a nonlegendary printing, a showcase
+one included (owner 2026-09-30), which gets the new-card default (owner
+round 17: printing-only). The standard crowns are Card
+Conjurer's as they are — u / r / g too, untinted (owner round 17). No tick
+changes: the owner signs the crown off once on a print sheet in the PR.
+
+#### The two-colour frames (4.6b)
+
+40 pair masters in the frames bucket: m15 draws both of print's dresses —
+gold-split `<pair>.png` (the gold frame and bars, the pinline and text box
+split; FDN #122) and hybrid `<pair>-h.png` (the outer frame split too, CC's
+grey land bars, the grey plate `pt/c`; TLA #212 and TLA #223–252) — and
+m15artifact (the artifact frame, gold bars and plate; DFT gearhulks) and
+m15land (the land frame and bars, the split in the two land tints; MKM
+#259–271) the gold-split one. `twoColorMasters` says which, on those three
+`PROFILES` entries only.
+
+- **Built by the Card Conjurer importer** (`pairMasterLayers` in
+  `scripts/lib/cc-frames.mjs`) over the SAME pack files as each template's
+  verified masters, drawn the way those are: m15 and m15land from CC's whole
+  image (m.png / a hybrid's two colours / l.png) with the split regions over
+  it; m15artifact from regions only, like its coloured artifacts. A split
+  region is its two colours' files blended across an UNTILTED ramp by a
+  premultiplied lerp — `scripts/lib/pair-ramp.mjs`, the one module the pair
+  crown bands read too: pinline 40→60 %W, a hybrid's outer frame 44→57,
+  text box 45→57, crown 45→55 (CC's `maskRightHalf.png` tilts +1.35 %W; the
+  prints don't). The same run rebuilds the templates' mono masters byte-identical
+  to the manifest, and every pair master passes the edge contract, the
+  corner check, the square-corner table and the art-window check with no
+  known-failure entry (v35's `CC_M15_ART_SLOT` covers their window like the
+  mono masters').
+- **Measured like the prints** (`tests/unit/render/two-colour-bake-pixels.test.tsx`
+  bakes them at HD): the pinline's 10 / 50 / 90 % points at 10.8 and
+  55.9 %H within ±1.5 %W of the 47 prints' 42.2 / 50.3 / 58.8 with no tilt;
+  the text box's, and a hybrid's outer frame band above the title bar
+  (2.95–4.15 %H), each pixel de-shaded against the same pixel of the two
+  single-colour bakes, within ±1.0 of the prints measured the same way —
+  45.9 / 50.6 / 55.3 (FDN, text-free rows) and 45.1 / 50.3 / 55.6 (TLA ×10);
+  the first canonical colour (WU WB UB UR BR BG RG RW GW GU) on the left.
+  **Re-measured 2026-09-29 (the 4.6 review), before any card used them:**
+  the design had folded the hybrid's frame band into the pinline's 40→60
+  (the prints split it steeper: FDN #656 / #668 show both on one card), and
+  its text-box and crown figures (47.2 / 51.3 / 56.8; 42.7 / 48.5 / 53.0)
+  came from a column profile that the text and the crown's own shading
+  skew — so the frame band went 40→60 → 44→57, the text box 46→58 → 45→57
+  and the crown 43→55 → 45→55, and the 40 pair masters and 10 pair crowns
+  were rebuilt (the mono masters and crowns byte-identical).
+- **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
+  no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
+  (the creator says so under the switch) and its import stays `nearest`
+  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
+  devoid, borderless, extended art — keeps the `two-colour` gaps, now
+  pointing at 4.6f; an M20 token's gaps point at 4.48 (its own central rim
+  split and pill crown).
+- **With the crown:** a two-colour legend drawn as its pair master wears the
+  split crown band `m15crown/<pair>` (the first colour's crown lerped into
+  the second's across 45→55 %W, the same `pair-ramp.mjs`), on every dress and
+  template; with the two-colour switch off it stays gold under a gold crown.
+  Measured on the bands (each pixel de-shaded against the two single-colour
+  crowns, rows 4.42–4.66 %H): 46.0 / 50.0 / 54.0 %W at 10 / 50 / 90 % on all
+  ten pairs; the prints, measured the same way against their own
+  single-colour crowns: 45.5 / 49.3 / 53.6 on FDN's crowned gold pairs
+  (#122 #123 #115 #651 #126 #119 #245, MKM #238), 46.4 / 49.4 / 53.6 on
+  TLA's hybrids (`tests/unit/frames/crown-band.test.ts` holds ±1.0).
+- **Verification (owner decision 2026-09-29, V-A):** a pair rides its
+  template's `m` tick — a deterministic recipe over the verified masters,
+  like `a` riding `c` — and the owner signs off a pair sheet in the PR
+  (10 pairs × dress × template beside the FDN / TLA / DFT / MKM prints, and
+  the ramp table). No migration, no tick goes stale. Signed off in round 17
+  (2026-09-30), with FDN's UNCROWNED gold prints as the references for the
+  W|B, B|G and R|G split crowns (FDN #120 / #125 / #117: FDN printed no
+  crowned card in those pairs).
 
 ## Text sizes on the M15-era family
 

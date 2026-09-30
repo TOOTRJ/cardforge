@@ -98,7 +98,7 @@ describe("getFrameRequestSummary", () => {
       users: 2,
       forGood: false,
       inRegistry: true,
-      blockedBy: "4.6",
+      blockedBy: "4.6f",
       artFlags: ["window-cropped"],
       sampleUrl: "https://scryfall.com/card/dmu/435",
       templateLabel: "M15 (2015) Standard",
@@ -198,6 +198,44 @@ describe("window helpers", () => {
     ]);
     expect(known.inRegistry).toBe(true);
     expect(retired).toMatchObject({ inRegistry: false, forGood: false, blockedBy: null });
+  });
+
+  it("answers a crown / two-colour row logged before 4.6a / 4.6b where its frame draws the piece now (4.6 review)", () => {
+    const at = (signature: string, template: string) =>
+      mapFrameRequestRows([{ ...RPC_ROWS[0], signature, template }])[0];
+    // Drawn now: the same printing imports exact today, and no item blocks it.
+    for (const [signature, template] of [
+      ["era/2015+crown", "m15"],
+      ["era/2015+crown", "m15artifact"],
+      ["era/2015+crown", "m15land"],
+      ["era/2015+two-colour", "m15"],
+      ["era/2015+two-colour", "m15land"],
+      ["era/2015+two-colour-hybrid", "m15"],
+    ]) {
+      expect(at(signature, template), `${signature} on ${template}`).toMatchObject({ drawnNow: true, blockedBy: null });
+    }
+    // Still open, with the item that finishes it:
+    for (const [signature, template] of [
+      ["era/2015+crown", "m15snow"], // 4.6f's snow crown
+      ["era/2015+crown", "m15devoid"],
+      ["layout/2015+crown", "adventure"],
+      // A borderless printing that landed on its bordered equivalent is not
+      // exact however the landing frame is dressed.
+      ["borderless/standard+crown", "m15"],
+      ["token/m20+crown", "m15token"], // 4.48's pill crown
+      // Logged before the hybrid dress had its own gap: may be a hybrid
+      // artifact, which m15artifact doesn't draw yet.
+      ["era/2015+two-colour", "m15artifact"],
+      ["era/2015+two-colour-hybrid", "m15artifact"],
+      ["era/2003+two-colour", "modern"],
+    ]) {
+      const row = at(signature, template);
+      expect(row.drawnNow, `${signature} on ${template}`).toBe(false);
+      expect(row.blockedBy, `${signature} on ${template}`).not.toBeNull();
+    }
+    // No template recorded, or an unknown signature: never answered.
+    expect(at("era/2015+crown", null as unknown as string).drawnNow).toBe(false);
+    expect(at("retired/seed+crown", "m15").drawnNow).toBe(false);
   });
 
   it("keeps an unknown template's raw key as its label", () => {

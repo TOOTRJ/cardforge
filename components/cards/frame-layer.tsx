@@ -2,7 +2,12 @@ import { cn } from "@/lib/utils";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { COLOR_KEY_LETTER, pickFrameColorKey } from "@/lib/cards/frame-color-key";
-import type { FrameMasterKey, TwoColorSplit } from "@/lib/cards/template-layout";
+import type { FrameMasterKey, Rect, TwoColorDress, TwoColorSplit } from "@/lib/cards/template-layout";
+import {
+  resolveTwoColor,
+  type FrameAnatomyStyle,
+  type ResolvedFrameOverlay,
+} from "@/lib/cards/anatomy";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -21,6 +26,10 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 //     colours' frames, split down a vertical seam (frameSplitFor)
 //   - a colour the profile dresses by TYPE (`artifactMasterKeys`: Alpha's
 //     colourless artifact) → that master, "a" (frameMasterKey)
+//   - a stored colour PAIR with the two-colour frame switched on, on a
+//     profile with pair masters (`twoColorMasters`, TODO 4.6b) → the pair
+//     master of print's dress, "wu" / "wu-h" (frameMasterKey →
+//     lib/cards/anatomy.ts resolveTwoColor). Opt-in per card: absent = gold.
 //
 // The PNGs are MSE-derived frames converted by scripts/convert-mse-frame.mjs
 // and its siblings (build-era-frames / build-variation-frames); see the
@@ -115,10 +124,12 @@ export function frameSplitFor(
 
 /** What a card's type line tells its frame: the card type and the
  *  supertype words (CardPreviewData, a preview face and the creator form all
- *  carry both). */
+ *  carry both) — and its mana cost, which picks a two-colour card's dress
+ *  (twoColorDressOf: hybrid only when every coloured pip is hybrid). */
 export type FrameTypeInfo = {
   cardType?: string | null;
   supertype?: string | null;
+  cost?: string | null;
 };
 
 /** An artifact, as far as the frame goes: the Artifact card type, or
@@ -132,8 +143,14 @@ export function isArtifactFrameType(type: FrameTypeInfo | null | undefined): boo
     .some((word) => word.toLowerCase() === "artifact");
 }
 
-/** A profile's type-dressed masters (FrameProfile.artifactMasterKeys). */
-type MasterDress = { artifactMasterKeys?: Partial<Record<string, FrameMasterKey>> };
+/** A profile's type-dressed masters (FrameProfile.artifactMasterKeys) and
+ *  its two-colour pair masters (FrameProfile.twoColorMasters; a land wears
+ *  them only where they are a land frame's, twoColorForLands). */
+type MasterDress = {
+  artifactMasterKeys?: Partial<Record<string, FrameMasterKey>>;
+  twoColorMasters?: readonly TwoColorDress[];
+  twoColorForLands?: boolean;
+};
 
 /** The frame master (public/frames/{template}/{key}.png) a card of frame
  *  colour `colorKey` paints on `profile`: the colour key itself, unless the
@@ -154,15 +171,25 @@ export function frameMasterKeyForColor(
  *  frameSplitFor's two halves instead) — the ONE rule the preview
  *  (FrameLayer), the bake, the foil and etched masks, the bake's frame
  *  preload (frameColorKeysFor) and the ink maps (inkByColorKey) share.
- *  pickFrameColorKey's key, dressed by the card's type (frameMasterKeyForColor).
- *  The colour key itself still decides everything that is about the card's
- *  COLOUR rather than the file painted: the frame_reviews gate, the stat
- *  plates and the watermark tint. */
+ *  A stored pair with the two-colour frame on (`style.twoColor === true`) on
+ *  a profile with pair masters paints its pair master (resolveTwoColor);
+ *  otherwise pickFrameColorKey's key, dressed by the card's type
+ *  (frameMasterKeyForColor). The colour key itself still decides everything
+ *  that is about the card's COLOUR rather than the file painted: the
+ *  frame_reviews gate, the watermark tint and the stat plates (plateKeyFor:
+ *  the colour key, but a hybrid pair's grey "c"). */
 export function frameMasterKey(
   profile: MasterDress,
   colors: readonly ColorIdentity[] | null | undefined,
   type: FrameTypeInfo | null | undefined,
+  style?: FrameAnatomyStyle | null,
 ): string {
+  const look = resolveTwoColor(profile, style, {
+    colors,
+    cost: type?.cost,
+    cardType: type?.cardType,
+  });
+  if (look) return look.masterKey;
   return frameMasterKeyForColor(profile, pickFrameColorKey(colors), type);
 }
 
@@ -174,9 +201,10 @@ export function frameColorKeysFor(
   profile: { twoColorSplit?: TwoColorSplit } & MasterDress,
   colors: readonly ColorIdentity[] | null | undefined,
   type: FrameTypeInfo | null | undefined,
+  style?: FrameAnatomyStyle | null,
 ): string[] {
   const split = frameSplitFor(profile, colors);
-  return split ? [split.leftKey, split.rightKey] : [frameMasterKey(profile, colors, type)];
+  return split ? [split.leftKey, split.rightKey] : [frameMasterKey(profile, colors, type, style)];
 }
 
 export function frameAssetPath(
@@ -278,5 +306,61 @@ export function FrameLayer({
         ...zStyle,
       }}
     />
+  );
+}
+
+/** The browser URL of an overlay image (FrameProfile.overlays — the crown
+ *  band): its WebP variant, from the frames bucket when the manifest lists
+ *  it, like frameImageUrl. BROWSER ONLY; the bake reads the PNG
+ *  (getFrameOverlayDataUrl). */
+export function frameOverlayImageUrl(path: string): string {
+  return frameUrl(webpVariant(path));
+}
+
+const overlayBox = (rect: Rect) => ({
+  top: `${rect.topPct}%`,
+  left: `${rect.leftPct}%`,
+  width: `${rect.widthPct}%`,
+  height: `${rect.heightPct}%`,
+});
+
+/**
+ * The anatomy overlays of one face (resolveFrameOverlays: the legendary
+ * crown band, TODO 4.6.0), drawn right after FrameLayer at the frame's own
+ * z-index — later in DOM order, so over the master and under every text and
+ * stat layer, as the bake draws them right after its frame image. Renders
+ * nothing (no element at all) when the card draws none, which is every card
+ * until a profile declares an overlay.
+ */
+export function FrameOverlayLayer({
+  overlays,
+  zIndex,
+}: {
+  overlays: readonly ResolvedFrameOverlay[];
+  zIndex?: number;
+}) {
+  if (overlays.length === 0) return null;
+  return (
+    <div
+      aria-hidden
+      data-frame-overlays=""
+      className={cn("pointer-events-none absolute inset-0", zIndex === undefined ? "z-0" : "")}
+      style={zIndex === undefined ? undefined : { zIndex }}
+    >
+      {overlays.map((overlay) => (
+        <div
+          key={`${overlay.anatomy}-${overlay.key}`}
+          data-frame-overlay={overlay.anatomy}
+          data-overlay-key={overlay.key}
+          className="absolute"
+          style={{
+            ...overlayBox(overlay.rect),
+            backgroundImage: `url("${frameOverlayImageUrl(overlay.path)}")`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+      ))}
+    </div>
   );
 }

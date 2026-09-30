@@ -362,6 +362,20 @@ describe("normalizeColorSelection", () => {
     // Duplicates don't fake a multicolor.
     expect(normalizeColorSelection(["red", "red"])).toEqual(["red"]);
   });
+
+  it("keeps exactly two real colors as the card's pair on a frame that draws the two-colour frame (TODO 4.6b)", () => {
+    const keepPair = { keepPair: true };
+    // Printed order, whatever order they came in; the AI's multicolor token dropped.
+    expect(normalizeColorSelection(["blue", "white"], keepPair)).toEqual(["white", "blue"]);
+    expect(normalizeColorSelection(["blue", "white", "multicolor"], keepPair)).toEqual(["white", "blue"]);
+    expect(normalizeColorSelection(["green", "red"], keepPair)).toEqual(["red", "green"]);
+    // Three colours stay one gold multicolor; singles pass through.
+    expect(normalizeColorSelection(["white", "blue", "black"], keepPair)).toEqual(["multicolor"]);
+    expect(normalizeColorSelection(["multicolor"], keepPair)).toEqual(["multicolor"]);
+    expect(normalizeColorSelection(["red"], keepPair)).toEqual(["red"]);
+    // Elsewhere a pair is the gold multicolor, as before.
+    expect(normalizeColorSelection(["blue", "white"], { keepPair: false })).toEqual(["multicolor"]);
+  });
 });
 
 describe("baseFrameFor", () => {

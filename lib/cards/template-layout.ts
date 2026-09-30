@@ -346,8 +346,64 @@ export type TwoColorSplit = {
   atPct: number;
 };
 
+/** How a two-colour card's frame prints (TODO 4.6b; lib/cards/anatomy.ts
+ *  twoColorDressOf): "split" — the gold frame with a split pinline and text
+ *  box, the printed look of any two-colour cost; "hybrid" — the split outer
+ *  frame with grey bars, when every coloured pip is a two-colour hybrid (or
+ *  a nonland has no coloured pip). */
+export type TwoColorDress = "split" | "hybrid";
+
+/** A piece of printed anatomy drawn OVER the frame master (TODO 4.6.0): the
+ *  legendary crown band (4.6a). One image per key, stretched over `rect`,
+ *  right after the frame master in both renderers and inside both finish
+ *  masks (lib/cards/anatomy.ts resolveFrameOverlays). Code-owned: never part
+ *  of the override schema. Set only on a PROFILES entry, never on a base
+ *  another profile spreads (M15 is spread by 11 profiles, M15LAND by
+ *  m15snowland), so a template gains an overlay only on purpose. */
+export type FrameOverlaySlot = {
+  /** The per-card switch that turns it on (FrameStyle[anatomy] === true),
+   *  and the rule that decides whether the card qualifies (the crown: a
+   *  Legendary card that is not a planeswalker, token or battle). */
+  anatomy: "crown";
+  /** Where the image is stretched, in card percent. */
+  rect: Rect;
+  /** The image per key: `{key}` → the key, e.g. "/frames/m15crown/{key}.png"
+   *  (a frames-bucket path, like the masters). */
+  assetPathTemplate: string;
+  /** Every key the slot publishes. A card whose key is not listed draws no
+   *  overlay — never a stand-in ("c" was the masters' old fallback, which
+   *  would crown a land in the Eldrazi colourless band). */
+  keys: readonly string[];
+  /** The frame colour key → the slot's key where they differ: the crown of
+   *  a colourless artifact is the artifact silver ("c" → "a" on
+   *  m15artifact), a colourless land's the land grey ("c" → "l" on
+   *  m15land). */
+  keyMap?: Readonly<Record<string, string>>;
+};
+
 export type FrameProfile = {
   label: string;
+  /** Printed anatomy drawn over the frame master — see FrameOverlaySlot.
+   *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
+   *  stored card. Code-owned. */
+  overlays?: readonly FrameOverlaySlot[];
+  /** The two-colour dresses this template has pair masters for (TODO 4.6b):
+   *  `<template>/<pair>.png` for "split", `<template>/<pair>-h.png` for
+   *  "hybrid" (TWO_COLOR_MASTER_KEYS). A card with a stored colour pair and
+   *  FrameStyle.twoColor === true paints its dress's pair master instead of
+   *  the gold "m" (lib/cards/anatomy.ts resolveTwoColor). Unrelated to
+   *  `twoColorSplit` (Dragon Wing's older two-halves rule, which reads the
+   *  pair with no switch). Code-owned; set only on PROFILES entries. */
+  twoColorMasters?: readonly TwoColorDress[];
+  /** The pair masters are a LAND frame's split (m15land: the land frame and
+   *  bars in the two land tints, MKM #259–271). A land card draws the
+   *  two-colour frame only on a profile that says so: on m15 or m15artifact
+   *  it would wear a nonland frame's gold-split (Shadowwood Hollow and
+   *  Sunfade Citadel, lands stored with no template and drawn on m15), so
+   *  the creator hides its switch there, the save drops it and the renderers
+   *  don't draw it (owner round 17, 2026-09-30; lib/cards/anatomy.ts
+   *  twoColorFits). Code-owned; set only on PROFILES entries. */
+  twoColorForLands?: boolean;
   /** Two-colour cards draw the frame SPLIT down a hard vertical seam — the
    *  first colour's PNG left of `atPct`, the second's right of it, in printed
    *  pair order (twoColorFrameKeys: WU WB UB UR BR BG RG RW GW GU) — instead
@@ -3375,20 +3431,84 @@ const M15TEXTLESSLAND: FrameProfile = {
   hideCost: true,
 };
 
+/**
+ * The standard legendary crown (TODO 4.6a; design 2026-09-29 §1.1) — Card
+ * Conjurer's M15 crown over its black "Legend Crown Border Cover", built by
+ * scripts/import-cc-frames.mjs (`--only m15crown`) as ONE band per key: the
+ * top 410 px of the 1500 × 2100 card (the crown's arms run down the frame
+ * beside the art to 19.4 %H), stretched over the card's full width. It
+ * repaints the frame's top border and draws the crown's scallops, arms and
+ * a soft shadow over the top of the art — α ≤ 79 on the art you can see,
+ * rows 238–244 px (α ≤ 119 inside the art slot only where the frame's own
+ * window edge sits on top of it; the importer refuses a band above 127;
+ * measured on all 19 bands after v35) — and nothing moves:
+ * the title bar, the art window and every slot keep their place (the band
+ * has a hole for the title bar). The prints: FDN #2 / #45 / #72 / #91 / #106
+ * (mono), #243 (gold), NEO #266–278 (lands), UMA #241 (colourless land),
+ * FDN #677 (colourless artifact) — peak at row 42 ± 2 at HD.
+ *
+ * Keys (resolveFrameOverlays: the pinline of the master actually drawn):
+ * the colour (w u b r g), "m" gold (three or more colours, or a pair drawn
+ * gold), "c" the colourless grey (m15's see-through Eldrazi frame, UMA #6),
+ * "a" the artifact silver and "l" the land grey (the entries' keyMap maps a
+ * colourless card there), and the ten pairs (the first colour's crown on the
+ * left, split through the untilted 45→55 %W ramp) — drawn only where the
+ * two-colour frame is (FrameProfile.twoColorMasters, 4.6b). Opt-in per card
+ * (FrameStyle.crown === true): declaring it changes no stored card.
+ *
+ * Set only on the PROFILES entries m15, m15artifact and m15land — never on
+ * M15 / M15LAND, which 12 other profiles spread (snow, devoid, borderless,
+ * extended art, the showcases and m15snowland draw other crowns, 4.6f).
+ */
+export const M15_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  // Rows 0–409 of the HD card, exactly (410 / 2100).
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (410 / 2100) * 100 },
+  assetPathTemplate: "/frames/m15crown/{key}.png",
+  // CROWN_BAND_KEYS in scripts/lib/cc-frames.mjs — the importer's list (a
+  // unit test holds them together); the pairs in printed order
+  // (TWO_COLOR_PAIRS).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
   // spread M15 don't inherit it.
   // The CC cost lift, type-line baseline and art slot (CC_M15_COST_DY /
   // CC_M15_TYPE_DY / CC_M15_ART_SLOT) are set here too, for the same reason.
+  // The legendary crown (TODO 4.6a) is set here too, and on the m15land
+  // and m15artifact entries below — never on a base another profile spreads.
+  // The two-colour pair masters (TODO 4.6b; `twoColorMasters`, opt-in per
+  // card — FrameStyle.twoColor): declared on these three PROFILES entries
+  // only, never on the M15 / M15LAND / M15ARTIFACT bases other profiles
+  // spread (M15 by 11, M15LAND by m15snowland). m15 draws print's gold-split
+  // (<pair>.png) and hybrid (<pair>-h.png) dresses; m15artifact and m15land
+  // the split only (a hybrid artifact has no hybrid plate yet, so it falls
+  // back to the gold-split master — lib/cards/anatomy.ts resolveTwoColor).
+  // The masters are Card Conjurer recipes over the verified masters' own
+  // files (scripts/lib/cc-frames.mjs pairMasterLayers), so a pair rides its
+  // template's "m" tick (owner decision 2026-09-29, V-A). A card drawn as a
+  // pair master wears the matching split crown band (m15crown/<pair>).
   m15: {
     ...M15,
     costDy: CC_M15_COST_DY,
     artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [M15_CROWN],
+    twoColorMasters: ["split", "hybrid"],
   },
-  m15land: M15LAND,
+  // A land's crown is its colour (NEO #266–278); a colourless land's the
+  // land grey "l" (UMA #241 Dark Depths).
+  m15land: {
+    ...M15LAND,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }],
+    twoColorMasters: ["split"],
+    // Its pairs are a land's (the only frame a two-colour LAND draws them
+    // on — owner round 17, 2026-09-30).
+    twoColorForLands: true,
+  },
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
@@ -3419,7 +3539,13 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Full-art Artifact Token"), pickerSampleArt: true },
   m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Full-art Artifact Token, text box"), pickerSampleArt: true },
   m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Full-art Artifact Token, tall text box"), pickerSampleArt: true },
-  m15artifact: M15ARTIFACT,
+  // A coloured artifact's crown is its colour (NEO #74, M20 #131); a
+  // colourless artifact's the artifact silver "a" (FDN #677).
+  m15artifact: {
+    ...M15ARTIFACT,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
+    twoColorMasters: ["split"],
+  },
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15borderlessland: M15BORDERLESSLAND,

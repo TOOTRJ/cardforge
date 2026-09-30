@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { importedAnatomy } from "@/lib/cards/anatomy";
 import printingsData from "./fixtures/signature-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import {
@@ -164,13 +165,24 @@ describe("borderless families (TODO 1.17)", () => {
   it("names why a borderless printing isn't exact", () => {
     expect(frameMatchFromScryfall(printing("dmu-435"))).toMatchObject({
       signature: "borderless/standard+crown",
-      blockedBy: "4.6",
+      // The borderless floating crown is wave 2 (4.6f); m15 draws the
+      // standard one (4.6a).
+      blockedBy: "4.6f",
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
     expect(frameMatchFromScryfall(printing("eld-271"))).toMatchObject({
       signature: "borderless/planeswalker+two-colour",
-      blockedBy: "4.6",
+      blockedBy: "4.6f",
     });
+    // A walker whose every coloured pip is hybrid keeps a two-colour gap —
+    // the hybrid dress's own (4.6b split the gap; merged over 4.33's list).
+    // Ajani DMU #375 prints a mixed cost (the gold-split dress); here its
+    // cost made all hybrid.
+    expect(frameMatchFromScryfall({ ...printing("dmu-375"), mana_cost: "{2}{G/W}{G/W}" })).toMatchObject({
+      signature: "borderless/planeswalker+two-colour-hybrid",
+      blockedBy: "4.6f",
+    });
+    expect(frameMatchFromScryfall(printing("dmu-375")).signature).toBe("borderless/planeswalker+two-colour");
     // `inverted`: the light frame is its nearest (owner decision
     // 2026-09-26), under a key of its own for the 1.6 log; so is a black
     // walker's dark-barred dress, which no Scryfall field names.
@@ -225,12 +237,12 @@ describe("borderless families (TODO 1.17)", () => {
     });
     expect(frameMatchFromScryfall(printing("mid-281"))).toMatchObject({
       signature: "borderless/land+two-colour",
-      blockedBy: "4.6",
+      blockedBy: "4.6f",
       gaps: ["two-colour"],
     });
     expect(frameMatchFromScryfall(printing("neo-413"))).toMatchObject({
       signature: "borderless/land+crown",
-      blockedBy: "4.6",
+      blockedBy: "4.6f",
     });
     expect(frameMatchFromScryfall(printing("ltc-361"))).toMatchObject({
       signature: "borderless/land+nickname",
@@ -315,7 +327,7 @@ describe("the borderless land frame, verified or not (TODO 4.34)", () => {
 
   it("keeps a two-colour land nearest even when the gold master is verified: its split pinline is 4.6's", () => {
     const out = imported("mid-281", [frameComboKey("m15borderlessland", "m")]);
-    expect(out.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6" });
+    expect(out.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6f" });
     expect(colorKeyOf("mid-281")).toBe("m");
     expect(out.frame_template).toBe("m15land");
   });
@@ -486,9 +498,9 @@ describe("the general signatures (TODO 1.4)", () => {
     // Porcelain Legionnaire NPH #19: a white artifact creature on the 2003
     // frame prints the ARTIFACT frame, which only M15 has.
     ["nph-19", "nearest", "m15artifact", undefined],
-    // Flooded Strand KTK #233: a fetch land prints its two colours — a
-    // two-colour land frame PipGlyph draws gold (4.6).
-    ["ktk-233", "nearest", "m15land", undefined],
+    // Flooded Strand KTK #233: a fetch land prints its two colours — the
+    // two-colour land frame m15land draws (TODO 4.6b).
+    ["ktk-233", "exact", "m15land", undefined],
     // Evolving Wilds MSC #240 stays grey; Fabled Passage and Prismatic Vista
     // print the gold land frame (their scans).
     ["msc-240", "exact", "m15land", undefined],
@@ -527,11 +539,13 @@ describe("the general signatures (TODO 1.4)", () => {
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
     ["khm-244", "nearest", "m15snow", "m15artifact"],
-    // Anatomy gaps on the M15 era: the crown, the double-faced marks, a
-    // two-colour land, the silver border + Un-host layout.
-    ["dmu-107", "nearest", "m15", undefined],
+    // Anatomy gaps on the M15 era: the double-faced marks, the silver
+    // border + Un-host layout. The crown is drawn on m15 since TODO 4.6a (a
+    // crowned mono legendary is exact), and a two-colour land is no gap
+    // since 4.6b: m15land draws its split (Bloodfell Caves KTK #229).
+    ["dmu-107", "exact", "m15", undefined],
     ["mid-7", "nearest", "m15", undefined],
-    ["ktk-229", "nearest", "m15land", undefined],
+    ["ktk-229", "exact", "m15land", undefined],
     ["ust-1", "nearest", "m15", undefined],
   ];
 
@@ -541,14 +555,19 @@ describe("the general signatures (TODO 1.4)", () => {
   });
 
   it("names the anatomy gap and the blocking item", () => {
-    expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({
+    // The crown on a frame that doesn't draw it (snow: 4.6f); m15 does (4.6a).
+    const snow = scryfallCardSchema.parse({ ...printingsData["dmu-107"], frame_effects: ["legendary", "snow"] });
+    expect(frameMatchFromScryfall(snow)).toMatchObject({
       signature: "era/2015+crown",
-      blockedBy: "4.6",
-      reason: "PipGlyph doesn't draw the legendary crown yet",
+      template: "m15snow",
+      blockedBy: "4.6f",
+      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     });
+    expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
-    expect(frameMatchFromScryfall(printing("ktk-233")).signature).toBe("era/2015+two-colour");
+    // The two-colour land frame is drawn (4.6b): the plain era signature.
+    expect(frameMatchFromScryfall(printing("ktk-233"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("nph-19")).signature).toBe("era/2003/coloured-artifact");
     expect(frameMatchFromScryfall(printing("fut-18"))).toMatchObject({
       signature: "future",
@@ -558,16 +577,27 @@ describe("the general signatures (TODO 1.4)", () => {
   });
 
   it("lists every anatomy gap that holds, the reason's first (FrameMatch.gaps, for the import dialog's C1)", () => {
-    expect(frameMatchFromScryfall(printing("dmu-107")).gaps).toEqual(["crown"]);
-    // The nickname names the reason; the crown and the two-colour frame hold too.
+    // The crown m15 draws is no gap (4.6a).
+    expect(frameMatchFromScryfall(printing("dmu-107")).gaps).toBeUndefined();
+    // The nickname names the reason; the crown (Borderless draws none yet,
+    // 4.6f) and the two-colour frame hold too.
     expect(frameMatchFromScryfall(printing("iko-275")).gaps).toEqual(["nickname", "crown", "two-colour"]);
-    expect(frameMatchFromScryfall(printing("thb-18")).gaps).toEqual(["nyx", "crown"]);
-    // A synthetic colour-indicator dot on a legendary: both details, in order.
+    // A Nyx legendary lands on m15, which draws its crown: the starfield only.
+    expect(frameMatchFromScryfall(printing("thb-18")).gaps).toEqual(["nyx"]);
+    // A synthetic colour-indicator dot on a legendary: the crown is drawn,
+    // the dot isn't.
     const indicator = scryfallCardSchema.parse({ ...printingsData["dmu-107"], color_indicator: ["B"] });
     expect(frameMatchFromScryfall(indicator)).toMatchObject({
-      signature: "era/2015+crown",
-      gaps: ["crown", "colour-indicator"],
+      signature: "era/2015+colour-indicator",
+      gaps: ["colour-indicator"],
     });
+    // …and on the snow frame, both, in order.
+    const snowIndicator = scryfallCardSchema.parse({
+      ...printingsData["dmu-107"],
+      frame_effects: ["legendary", "snow"],
+      color_indicator: ["B"],
+    });
+    expect(frameMatchFromScryfall(snowIndicator).gaps).toEqual(["crown", "colour-indicator"]);
     // No gap rule matched: no list (an exact frame, a nearest showcase).
     expect(frameMatchFromScryfall(printing("m21-315")).gaps).toBeUndefined();
     expect(frameMatchFromScryfall(printing("blb-343")).gaps).toBeUndefined();
@@ -661,10 +691,15 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(colorKeyOf("nph-19")).toBe("w");
   });
 
-  it("Flooded Strand KTK #233 → m15land, multicolour", () => {
+  it("Flooded Strand KTK #233 → m15land, multicolour — its pair and two-colour frame from the fetched lands (TODO 4.6b)", () => {
     const patch = mapScryfallToFormPatch(printing("ktk-233"));
     expect(patch.frame_template).toBe("m15land");
     expect(patch.color_identity).toEqual(["multicolor"]);
+    // m15land draws the pair: the land imports W|U with the switch on.
+    expect(patch).toMatchObject({ color_pair: "wu", printed_two_color: true });
+    // Not Legendary: the import names no crown switch (printing-only, owner
+    // round 17), so the new-card default applies.
+    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { twoColor: true }, colorIdentity: ["white", "blue"] });
   });
 
   it("Bident of Thassa THS #42 → nyx, nearest", () => {

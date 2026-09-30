@@ -22,6 +22,8 @@ import {
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { describeFrame, withVerification } from "@/lib/creator/frame-resolve";
+import { qualifiesForCrown, twoColorPairOf, type TwoColorPair } from "@/lib/cards/anatomy";
+import { supertypeHasWord } from "@/lib/cards/card-display";
 import {
   FULL_ART_BASIC_2022_SETS,
   isM20DesignPrinting,
@@ -173,6 +175,32 @@ export type ScryfallImportPatch = {
    *  Scryfall directly (lib/decks/import-resolution.ts), not through this
    *  mapper. */
   color_identity?: ColorIdentity[];
+  /** The front face's colour PAIR when it is exactly two colours, in
+   *  printed order (TODO 4.6b, lib/cards/anatomy.ts). The creator and the
+   *  AI deck remix store it as the card's color_identity where the frame
+   *  the card lands on draws the two-colour frame (importedAnatomy);
+   *  elsewhere `color_identity`'s "multicolor" stands. */
+  color_pair?: TwoColorPair;
+  /** THIS printing's crown (TODO 4.6a, owner decisions 2026-09-29 and
+   *  round 17, 2026-09-30: printing-only) — the import's value for the
+   *  card's crown switch (crownSwitchFromPrinting):
+   *   • `true` — it prints the standard legendary crown: Scryfall's
+   *     `legendary` frame effect (DOM 2018 on);
+   *   • `false` — a Legendary SHOWCASE printing (the LTR ring and scroll,
+   *     TDM draconic, BLB woodland, TLA avatar, MUL's etched run …), which
+   *     prints no standard crown ("match scan"), or a Legendary card printed
+   *     without one (the M15–RIX legendaries, the List / playtest reprints);
+   *   • absent — a nonlegendary printing, a showcase one included (owner
+   *     2026-09-30, pick (b)): nothing to follow, so the card gets the
+   *     new-card default (on) if it is made Legendary later. */
+  printed_crown?: boolean;
+  /** `true` when THIS printing's own frame is two-coloured (TODO 4.6b): a
+   *  2015-frame printing whose front face is exactly two colours
+   *  (color_pair) — the import then switches the two-colour frame on and
+   *  stores the pair. Absent otherwise, never `false` (owner round 17,
+   *  2026-09-30: printing-only), so a card given a pair later starts with
+   *  the switch on like any new card. */
+  printed_two_color?: true;
   rules_text?: string;
   flavor_text?: string;
   power?: string;
@@ -863,6 +891,71 @@ export function frameColorsFromScryfall(card: ScryfallCard): ColorIdentity[] {
   );
 }
 
+/** The front face's colour pair (frontFaceColors, exactly two colours), in
+ *  printed order, or null. */
+export function frontFacePairFromScryfall(card: ScryfallCard): TwoColorPair | null {
+  const colors = frontFaceColors(card);
+  return colors.length === 2
+    ? twoColorPairOf(colors.map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]))
+    : null;
+}
+
+/** The registry's showcase signatures that carry no `showcase` frame effect
+ *  on every printing: MUL's etched run (#66–130: `legendary` + `etched`,
+ *  the Multiverse Legends frames) and the Japan showcase promos. */
+function isShowcaseSignature(signature: string): boolean {
+  return signature === "showcase" || signature.startsWith("showcase/") || signature === "japan-showcase";
+}
+
+/** Whether a printing prints the STANDARD legendary crown (see
+ *  ScryfallImportPatch.printed_crown): the `legendary` frame effect, on a
+ *  printing that isn't a showcase — neither Scryfall's `showcase` effect nor
+ *  a showcase frame of the registry (`match`, THIS printing's signature),
+ *  which prints its own frame and no standard crown (owner decision
+ *  2026-09-29: showcase printings import with the crown off, as the scan). */
+export function printsStandardCrown(
+  card: ScryfallCard,
+  match: FrameMatch = frameMatchFromScryfall(card),
+): boolean {
+  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+  return effects.includes("legendary") && !effects.includes("showcase") && !isShowcaseSignature(match.signature);
+}
+
+/** Whether a printing's own frame is two-coloured (see
+ *  ScryfallImportPatch.printed_two_color): the 2015 frame, and a front face
+ *  of exactly two colours. */
+export function printsTwoColorFrame(card: ScryfallCard): boolean {
+  return (card.frame ?? "").trim() === "2015" && frontFacePairFromScryfall(card) !== null;
+}
+
+/**
+ * The crown switch an import writes (ScryfallImportPatch.printed_crown) —
+ * printing-only (owner round 17, 2026-09-30):
+ *   • a SHOWCASE printing: `false` when the card is Legendary (Q6 → b: it
+ *     prints no standard crown, and imports as its scan), and nothing when it
+ *     isn't (owner 2026-09-30, pick (b): like any nonlegendary printing, so
+ *     the card gets the new-card default if it is made Legendary later);
+ *   • `true` for a printing with the standard crown (printsStandardCrown);
+ *   • `false` for a Legendary card printed without one (owner 2026-09-29:
+ *     "OFF for M15–RIX legendaries"; the List reprints too — kept as built,
+ *     owner 2026-09-30, pick (a));
+ *   • nothing for any other printing — a card the crown doesn't print on
+ *     (qualifiesForCrown: not Legendary, or a planeswalker, token, battle or
+ *     emblem), whose switch is left to the new-card default.
+ */
+export function crownSwitchFromPrinting(
+  card: ScryfallCard,
+  match: FrameMatch,
+  face: { cardType?: string | null; supertype?: string | null },
+): boolean | undefined {
+  const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+  if (effects.includes("showcase") || isShowcaseSignature(match.signature)) {
+    return supertypeHasWord(face.supertype, "Legendary") ? false : undefined;
+  }
+  if (printsStandardCrown(card, match)) return true;
+  return qualifiesForCrown(face) ? false : undefined;
+}
+
 /**
  * The colours /admin/frame-compare renders a REAL printing with: like
  * frameColorsFromScryfall, except a two-colour printing keeps both colours,
@@ -1000,6 +1093,16 @@ export function mapScryfallToFormPatch(
       : colorIdentity.length > 0
         ? colorIdentity
         : undefined,
+    color_pair: frontFacePairFromScryfall(card) ?? undefined,
+    // The printing's own anatomy (TODO 4.6.0): the import's values for the
+    // card's crown and two-colour switches, named only where the printing
+    // says something (owner round 17: printing-only). The save keeps only
+    // what the frame the card lands on draws (lib/cards/anatomy.ts).
+    printed_crown: crownSwitchFromPrinting(card, frameMatch, {
+      cardType,
+      supertype: typeParts.supertype,
+    }),
+    printed_two_color: printsTwoColorFrame(card) ? true : undefined,
     rules_text: pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),

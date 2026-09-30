@@ -72,9 +72,14 @@ describe("a saved card's finish in the creator", () => {
       finish: "regular",
       template: "tarkirdragon",
     });
+    // A remix is a NEW card: it also starts with the anatomy switches on
+    // (TODO 4.6.0, owner rule 2026-09-29) — the save keeps only what its
+    // template draws.
     expect(remixValuesFrom(legacy, []).frame_style).toEqual({
       finish: "regular",
       template: "tarkirdragon",
+      crown: true,
+      twoColor: true,
     });
   });
 
@@ -137,5 +142,24 @@ describe("blankSecondFaceFor / isBlankBackFace (3b.8)", () => {
     expect(isBlankBackFace({ ...EMPTY_BACK_FACE, card_type: "sorcery" })).toBe(true);
     expect(isBlankBackFace({ ...EMPTY_BACK_FACE, rules_text: "Draw a card." })).toBe(false);
     expect(isBlankBackFace({ ...EMPTY_BACK_FACE, art_url: "https://example.com/a.png" })).toBe(false);
+  });
+});
+
+describe("the anatomy switches in the editor (TODO 4.6.0)", () => {
+  it("a stored card's switches load exactly as stored — absent stays absent, never a default", () => {
+    const stored = (frame_style: unknown) => savedCard(frame_style);
+    expect(defaultValuesFor(stored({ template: "m15", finish: "foil" }), []).frame_style).toEqual({ finish: "foil", template: "m15" });
+    expect(defaultValuesFor(stored({ template: "m15", crown: true, twoColor: false }), []).frame_style).toEqual({
+      finish: "regular",
+      template: "m15",
+      crown: true,
+      twoColor: false,
+    });
+    // Anything but a boolean is not a switch.
+    expect(defaultValuesFor(stored({ template: "m15", crown: "yes" }), []).frame_style).toEqual({ finish: "regular", template: "m15" });
+  });
+
+  it("a new card starts with every switch on", () => {
+    expect(defaultValuesFor(null, []).frame_style).toMatchObject({ crown: true, twoColor: true });
   });
 });

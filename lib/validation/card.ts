@@ -226,14 +226,47 @@ const cardFinishSchema = z.preprocess(
   z.enum(CARD_FINISH_VALUES),
 );
 
+// The per-card anatomy switches (lib/cards/anatomy.ts; TODO 4.6.0): the
+// legendary crown and the two-colour frame are ADDITIONS, opt-in per card
+// (owner rule 2026-09-29). Booleans only; absent = off. No DB CHECK exists on
+// frame_style, so the schema is the one gate.
 const frameStyleBaseSchema = z
   .object({
     finish: cardFinishSchema.optional(),
     template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
+    crown: z.boolean().optional(),
+    twoColor: z.boolean().optional(),
   })
   .strict();
 
 export const frameStyleSchema = frameStyleBaseSchema.default({});
+
+const pairColorSchema = z.enum(["white", "blue", "black", "red", "green"]);
+
+/**
+ * An EDIT's change to the anatomy switches (updateCardAction). Edits never
+ * send frame_style — the frame, finish and colour are locked structure
+ * (lib/creator/revise.ts) — so the switches travel on their own key and the
+ * action merges them over the STORED frame_style. `pair` confirms the colour
+ * pair of a stored "multicolor" card when its owner switches the two-colour
+ * frame on (owner decision 2026-09-29: pre-filled from the cost, never
+ * derived at render); the action accepts it only as a refinement of a
+ * multicolour identity that names no other colour.
+ */
+export const frameAnatomyPatchSchema = z
+  .object({
+    crown: z.boolean().optional(),
+    twoColor: z.boolean().optional(),
+    pair: z
+      .tuple([pairColorSchema, pairColorSchema])
+      .refine(([a, b]) => a !== b, "Pick two different colours.")
+      .optional(),
+  })
+  .strict()
+  .refine((patch) => !patch.pair || patch.twoColor === true, {
+    message: "A colour pair comes with the two-colour frame switched on.",
+    path: ["pair"],
+  });
 
 const uuidSchema = z.string().uuid("Must be a valid UUID.");
 
@@ -477,6 +510,7 @@ export const updateCardSchema = baseCardSchema.partial().extend({
   visibility: cardVisibilityBaseSchema.optional(),
   art_position: artPositionBaseSchema.optional(),
   frame_style: frameStyleBaseSchema.optional(),
+  frame_anatomy: frameAnatomyPatchSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------
