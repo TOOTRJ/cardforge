@@ -41,28 +41,32 @@
 // TRIM lines, stopping short of the bleed so they never print into it, and
 // the page declares its TrimBox (the card) and BleedBox (card + bleed) for
 // print software.
+//
+// SHEETS (TODO 6.15): a sheet's grid comes from lib/render/sheet-layout.ts
+// — paper, gap (none or 1/16 in), cut guides (corner marks or full-length
+// lines), card size (2.5 × 3.5 in or 63 × 88 mm) and the bleed. The default
+// is the 3 × 3 butted sheet with corner marks, at the positions it always
+// had. The guides are drawn FIRST, beneath the cards, so they show only in
+// the margins and gaps — a mark never prints on a neighbouring card or into
+// a bleed. A bleed sheet puts each card's bleed box in its cell; the marks
+// sit on its trim lines, outside the bleed.
 // ---------------------------------------------------------------------------
 
 import fontkit from "@pdf-lib/fontkit";
 import { degrees, PDFDocument, PDFFont, PDFImage, PDFPage, rgb, StandardFonts } from "pdf-lib";
+import {
+  DEFAULT_SHEET_OPTIONS,
+  PAPER_PT,
+  planSheet,
+  sheetGuides,
+  type SheetOptions,
+  type SheetPaper,
+  type SheetPlan,
+} from "@/lib/render/sheet-layout";
 
 // PDF point dimensions for a standard MTG card (72pt = 1 inch).
 const CARD_W_PT = 180; // 2.5"
 const CARD_H_PT = 252; // 3.5"
-
-// Paper sizes in PDF points.
-const LETTER_W_PT = 612; // 8.5"
-const LETTER_H_PT = 792; // 11"
-const A4_W_PT = 595.276; // 210mm × (72/25.4)
-const A4_H_PT = 841.890; // 297mm × (72/25.4)
-
-// Sheet layout: 3 columns × 3 rows.
-const COLS = 3;
-const ROWS = 3;
-
-// Crop mark length and inset from card corner.
-const CROP_LEN = 6; // pt
-const CROP_GAP = 2; // pt gap between card edge and mark start
 
 // The single-card bleed page (TODO 6.1a): 1/8 in bleed, 1/4 in slug.
 export const BLEED_PT = 9; // 0.125"
@@ -81,31 +85,6 @@ async function embedImage(doc: PDFDocument, pngBytes: Uint8Array): Promise<PDFIm
   } catch {
     return await doc.embedJpg(pngBytes);
   }
-}
-
-function drawCropMark(
-  page: ReturnType<PDFDocument["addPage"]>,
-  cx: number,
-  cy: number,
-  hDir: number,
-  vDir: number,
-): void {
-  const color = rgb(0, 0, 0);
-  const thickness = 0.25;
-
-  page.drawLine({
-    start: { x: cx + hDir * CROP_GAP, y: cy },
-    end: { x: cx + hDir * (CROP_GAP + CROP_LEN), y: cy },
-    thickness,
-    color,
-  });
-
-  page.drawLine({
-    start: { x: cx, y: cy + vDir * CROP_GAP },
-    end: { x: cx, y: cy + vDir * (CROP_GAP + CROP_LEN) },
-    thickness,
-    color,
-  });
 }
 
 /** How a render fills the portrait card slot whose lower-left corner is
@@ -208,41 +187,49 @@ function addBleedCardPage(doc: PDFDocument, img: PDFImage): void {
 
 /** Paper for a sheet layout — A4 when asked for, US Letter otherwise
  *  ("sheet", "sheet-letter", and the checklist pages of a "pages" deck). */
-function sheetSize(layout: string): readonly [number, number] {
-  return layout === "sheet-a4" ? [A4_W_PT, A4_H_PT] : [LETTER_W_PT, LETTER_H_PT];
+function sheetPaper(layout: string): SheetPaper {
+  return layout === "sheet-a4" ? "a4" : "letter";
 }
 
-/** A 3×3 proxy sheet with crop marks. `slots` fills the grid row by row —
- *  at most COLS × ROWS images; fewer leaves the remaining cells blank. */
+function sheetSize(layout: string): readonly [number, number] {
+  const { width, height } = PAPER_PT[sheetPaper(layout)];
+  return [width, height];
+}
+
+/** One sheet page: the cut guides first (beneath — they show only in the
+ *  margins and gaps), then `slots` into the plan's cells row by row. At
+ *  most `plan.perPage` images; fewer leaves the remaining cells blank. */
 function drawSheetPage(
   doc: PDFDocument,
   slots: readonly PDFImage[],
-  pageWidth: number,
-  pageHeight: number,
+  plan: SheetPlan,
+  marks: SheetOptions["marks"],
 ): void {
-  const page = doc.addPage([pageWidth, pageHeight]);
-  const marginX = (pageWidth - COLS * CARD_W_PT) / 2;
-  const marginY = (pageHeight - ROWS * CARD_H_PT) / 2;
-
-  slots.slice(0, COLS * ROWS).forEach((img, i) => {
-    const row = Math.floor(i / COLS);
-    const col = i % COLS;
-    const x = marginX + col * CARD_W_PT;
-    const y = pageHeight - marginY - (row + 1) * CARD_H_PT;
-
-    drawCardInSlot(page, img, x, y);
-
-    // The marks bracket the slot, which a turned landscape card fills exactly.
-    const corners = [
-      { cx: x, cy: y, hDir: -1, vDir: -1 },
-      { cx: x + CARD_W_PT, cy: y, hDir: 1, vDir: -1 },
-      { cx: x, cy: y + CARD_H_PT, hDir: -1, vDir: 1 },
-      { cx: x + CARD_W_PT, cy: y + CARD_H_PT, hDir: 1, vDir: 1 },
-    ] as const;
-    for (const corner of corners) {
-      drawCropMark(page, corner.cx, corner.cy, corner.hDir, corner.vDir);
-    }
+  const page = doc.addPage([plan.pageWidth, plan.pageHeight]);
+  const used = Math.min(slots.length, plan.perPage);
+  for (const { x1, y1, x2, y2 } of sheetGuides(plan, marks, used)) {
+    page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: 0.25, color: rgb(0, 0, 0) });
+  }
+  slots.slice(0, used).forEach((img, i) => {
+    // A cell is the card's bleed box (its trim box without a bleed); a
+    // landscape render is turned into it like everywhere else.
+    const cell = plan.cells[i];
+    drawCardInSlot(page, img, cell.x, cell.y, cell.width, cell.height);
   });
+}
+
+/** Lay `slots` out on as many sheet pages as they need. */
+function drawSheets(doc: PDFDocument, slots: readonly PDFImage[], plan: SheetPlan, marks: SheetOptions["marks"]): void {
+  for (let start = 0; start < slots.length; start += plan.perPage) {
+    drawSheetPage(doc, slots.slice(start, start + plan.perPage), plan, marks);
+  }
+}
+
+/** `partial` without its undefined keys, so a spread keeps the defaults. */
+function definedOnly<T extends object>(partial: Partial<T> | undefined): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(partial ?? {}).filter(([, value]) => value !== undefined),
+  ) as Partial<T>;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,9 +276,10 @@ export async function buildCardPdf(
     if (options.bleed) addBleedCardPage(doc, img);
     else addCardPage(doc, img);
   } else {
-    // "sheet" (legacy) and "sheet-letter" both produce the US Letter sheet.
-    const [pageWidth, pageHeight] = sheetSize(layout);
-    drawSheetPage(doc, Array.from({ length: COLS * ROWS }, () => img), pageWidth, pageHeight);
+    // "sheet" (legacy) and "sheet-letter" both produce the US Letter sheet:
+    // one page of the default grid (3 × 3), every cell the same card.
+    const plan = planSheet(sheetPaper(layout), DEFAULT_SHEET_OPTIONS);
+    drawSheetPage(doc, Array.from({ length: plan.perPage }, () => img), plan, DEFAULT_SHEET_OPTIONS.marks);
   }
 
   return doc.save();
@@ -393,14 +381,25 @@ function drawChecklistPages(
   }
 }
 
+/** The sheet options a caller may set; the bleed is its own option (it
+ *  also applies to one-per-page PDFs). */
+export type DeckPdfSheetOptions = Partial<Omit<SheetOptions, "bleed">>;
+
 /**
- * Build a whole-deck PDF.
+ * Build a whole-deck PDF — or any list of cards (TODO 6.15, the selection
+ * export in My Cards).
  *
  * - "pages": one page per UNIQUE card at 2.5"×3.5" — `copies` is ignored
  *   and nothing records the quantity (a 100-page PDF helps nobody; the
  *   export route's checklist lists only un-remixed real cards, not counts).
- * - "sheet-letter" / "sheet-a4": 3×3 proxy sheets with crop marks, each
- *   card repeated `copies` times, different cards mixed onto shared pages.
+ *   With `bleed`, each page is the single-card bleed page (addBleedCardPage).
+ * - "sheet-letter" / "sheet-a4": proxy sheets (3×3 by default), each card
+ *   repeated `copies` times, different cards mixed onto shared pages;
+ *   `sheet` picks the gap, the cut guides and the card size, `bleed` gives
+ *   every cell its bleed box (lib/render/sheet-layout.ts).
+ *
+ * `bleed` says the PNGs CARRY a 1/8 in bleed (the print renders of
+ * lib/render/card-print.ts) — this module never adds one.
  *
  * `checklist` (optional) appends text pages listing whatever wasn't
  * printed — un-remixed real cards, per the no-Scryfall-scans decision.
@@ -413,18 +412,30 @@ export async function buildDeckPdf(
     checklist?: DeckPdfChecklist | null;
     /** TTF bytes for the checklist text (see embedChecklistFont). */
     checklistFont?: Uint8Array | ArrayBuffer | null;
+    /** Sheet layouts: gap, cut guides, card size (defaults: the 3×3). */
+    sheet?: DeckPdfSheetOptions;
+    /** The PNGs carry a 1/8 in bleed (TODO 6.1a). */
+    bleed?: boolean;
+    /** The PDF's metadata subject line. */
+    subject?: string;
   },
 ): Promise<Uint8Array> {
-  const { title = "PipGlyph Deck", layout, checklist = null, checklistFont = null } = options;
-  const doc = await newDocument(
-    title,
-    "Custom MTG-style deck — fan-made, not affiliated with Wizards of the Coast.",
-  );
+  const {
+    title = "PipGlyph Deck",
+    layout,
+    checklist = null,
+    checklistFont = null,
+    bleed = false,
+    subject = "Custom MTG-style deck — fan-made, not affiliated with Wizards of the Coast.",
+  } = options;
+  const doc = await newDocument(title, subject);
   const [pageWidth, pageHeight] = sheetSize(layout);
 
   if (layout === "pages") {
     for (const entry of entries) {
-      addCardPage(doc, await embedImage(doc, entry.png));
+      const img = await embedImage(doc, entry.png);
+      if (bleed) addBleedCardPage(doc, img);
+      else addCardPage(doc, img);
     }
   } else {
     // Embed each unique PNG once; the slot list repeats the PDFImage.
@@ -436,10 +447,8 @@ export async function buildDeckPdf(
       }
     }
 
-    const perPage = COLS * ROWS;
-    for (let start = 0; start < slots.length; start += perPage) {
-      drawSheetPage(doc, slots.slice(start, start + perPage), pageWidth, pageHeight);
-    }
+    const sheet: SheetOptions = { ...DEFAULT_SHEET_OPTIONS, ...definedOnly(options.sheet), bleed };
+    drawSheets(doc, slots, planSheet(sheetPaper(layout), sheet), sheet.marks);
   }
 
   if (checklist && checklist.lines.length > 0) {

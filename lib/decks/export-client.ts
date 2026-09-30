@@ -1,6 +1,8 @@
 import JSZip from "jszip";
-import { buildDeckPdf, type DeckPdfLayout } from "@/lib/render/card-pdf";
+import { buildDeckPdf, type DeckPdfLayout, type DeckPdfSheetOptions } from "@/lib/render/card-pdf";
 import { cardPngHref } from "@/lib/cards/output-corners";
+import { cardPrintPngHref } from "@/lib/cards/print-export";
+import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/print-selection";
 
 // ---------------------------------------------------------------------------
 // Client-side deck export pipeline — runs in the browser (no server-only
@@ -16,6 +18,14 @@ import { cardPngHref } from "@/lib/cards/output-corners";
 //                 border's colour, never transparent.
 //   3. package    ZIP → cover + deck.pdf report + decklist.txt + PNGs
 //                 PDF → pdf-lib pages / 3×3 sheets + checklist page
+//
+// runCardsExport (TODO 6.15) is the same pipeline for ANY selection of cards
+// (My Cards' "Print / download" bulk action): the manifest comes from
+// POST /api/cards/export, the sheets take the selection's options (gap, cut
+// guides, card size — lib/render/sheet-layout.ts) and, with a bleed, every
+// card is fetched as its 600 ppi print render with the 1/8 in bleed
+// (/api/cards/[id]/png?ppi=600&corners=square&bleed=1, TODO 6.1a) instead of
+// the HD square render.
 //
 /** The card body face, shipped as a static asset. Null on any failure. */
 async function fetchChecklistFont(
@@ -44,6 +54,14 @@ export type DeckExportManifest = {
   totalEntries: number;
 };
 
+/** A selection's manifest (POST /api/cards/export): the printable cards in
+ *  the order asked, copies budgeted; `skipped` = ids it can't print. */
+export type CardsExportManifest = {
+  cards: Array<{ id: string; slug: string; title: string; copies: number }>;
+  skipped: string[];
+  totalCopies: number;
+};
+
 export type DeckExportKind = "zip" | "pdf";
 export type DeckExportQuality = "hd" | "default";
 
@@ -55,6 +73,28 @@ export type DeckExportRequest = {
   /** PDF only. */
   layout: DeckPdfLayout;
 };
+
+/** Print / download a selection of cards (TODO 6.15). */
+export type CardsExportRequest = {
+  cards: Array<{ id: string; copies: number }>;
+  kind: DeckExportKind;
+  /** ZIP: image size (a bleed ZIP is always the 600 ppi print render). PDF:
+   *  always HD (print). */
+  quality: DeckExportQuality;
+  /** PDF only. */
+  layout: SelectionPdfLayout;
+  /** PDF sheets only: gap, cut guides, card size. */
+  sheet?: DeckPdfSheetOptions;
+  /** Every card with a 1/8 in bleed (the print render) — PDF and ZIP. */
+  bleed?: boolean;
+};
+
+/** Either export; DeckExportProvider runs one at a time. */
+export type ExportRequest = DeckExportRequest | CardsExportRequest;
+
+export function isCardsExportRequest(request: ExportRequest): request is CardsExportRequest {
+  return "cards" in request;
+}
 
 export type DeckExportProgress = {
   phase: "preparing" | "rendering" | "packaging";
@@ -114,10 +154,11 @@ async function fetchDeckExportManifest(
   return (await response.json()) as DeckExportManifest;
 }
 
-/** Fetch every card's PNG with a small worker pool, reporting each finish. */
+/** Fetch every card's PNG with a small worker pool, reporting each finish.
+ *  `hrefOf` names the render (HD square, or the print render with bleed). */
 async function fetchCardPngs(
-  cards: DeckExportManifest["cards"],
-  quality: DeckExportQuality,
+  cards: ReadonlyArray<{ id: string; title: string }>,
+  hrefOf: (card: { id: string }) => string,
   fetchImpl: FetchLike,
   signal: AbortSignal | undefined,
   onOne: (title: string, ok: boolean) => void,
@@ -129,10 +170,7 @@ async function fetchCardPngs(
       if (signal?.aborted) return;
       const card = cards[cursor++];
       try {
-        const response = await fetchImpl(
-          cardPngHref(card.id, { preset: quality, corners: "square" }),
-          { signal },
-        );
+        const response = await fetchImpl(hrefOf(card), { signal });
         if (!response.ok) {
           onOne(card.title, false);
           continue;
@@ -179,7 +217,8 @@ export async function runDeckExport(
   emit();
 
   const quality: DeckExportQuality = request.kind === "pdf" ? "hd" : request.quality;
-  const pngs = await fetchCardPngs(manifest.cards, quality, fetchImpl, signal, (title, ok) => {
+  const hrefOf = (card: { id: string }) => cardPngHref(card.id, { preset: quality, corners: "square" });
+  const pngs = await fetchCardPngs(manifest.cards, hrefOf, fetchImpl, signal, (title, ok) => {
     progress.done += 1;
     if (!ok) progress.failed.push(title);
     emit();
@@ -267,4 +306,123 @@ export async function runDeckExport(
     failed: progress.failed,
     deck: manifest.deck,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Print / download a SELECTION of cards (TODO 6.15).
+// ---------------------------------------------------------------------------
+
+export type CardsExportResult = {
+  blob: Blob;
+  filename: string;
+  cardsIncluded: number;
+  /** Titles of the cards left out: gone / not printable (the manifest's
+   *  `skipped`), then any that failed to render. */
+  failed: string[];
+  /** "Stone Matriarch" for one card, "12 cards" for more. */
+  title: string;
+};
+
+async function fetchCardsExportManifest(
+  cards: CardsExportRequest["cards"],
+  fetchImpl: FetchLike,
+  signal?: AbortSignal,
+): Promise<CardsExportManifest> {
+  const response = await fetchImpl("/api/cards/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cards: cards.map(({ id, copies }) => ({ id, copies })) }),
+    signal,
+  });
+  if (!response.ok) throw await readError(response, "Couldn't start the export.");
+  return (await response.json()) as CardsExportManifest;
+}
+
+/** One card goes by its title; a bigger selection by its count. */
+function selectionTitle(cards: CardsExportManifest["cards"]): string {
+  return cards.length === 1 ? cards[0].title : `${cards.length} cards`;
+}
+
+export async function runCardsExport(
+  request: CardsExportRequest & {
+    /** Titles the dialog knows, so a skipped id can be named. */
+    titles?: Record<string, string>;
+  },
+  options: {
+    onProgress: (progress: DeckExportProgress) => void;
+    signal?: AbortSignal;
+    fetchImpl?: FetchLike;
+  },
+): Promise<CardsExportResult> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const { signal } = options;
+  const progress: DeckExportProgress = { phase: "preparing", total: 0, done: 0, failed: [], deckTitle: "" };
+  const emit = () => options.onProgress({ ...progress, failed: [...progress.failed] });
+  emit();
+
+  const manifest = await fetchCardsExportManifest(request.cards, fetchImpl, signal);
+  const title = selectionTitle(manifest.cards);
+  progress.deckTitle = title;
+  progress.total = manifest.cards.length;
+  progress.failed = manifest.skipped.map((id) => request.titles?.[id] ?? "A card that is no longer available");
+  progress.phase = "rendering";
+  emit();
+
+  // With a bleed every card is its 600 ppi PRINT render (1650 × 2250, the
+  // art at full resolution, always square); without one, the HD square
+  // render the deck export uses (the ZIP may ask for the standard size).
+  const bleed = request.bleed === true;
+  const quality: DeckExportQuality = request.kind === "pdf" ? "hd" : request.quality;
+  const hrefOf = (card: { id: string }) =>
+    bleed
+      ? cardPrintPngHref(card.id, { ppi: 600, bleed: true })
+      : cardPngHref(card.id, { preset: quality, corners: "square" });
+  const pngs = await fetchCardPngs(manifest.cards, hrefOf, fetchImpl, signal, (cardTitle, ok) => {
+    progress.done += 1;
+    if (!ok) progress.failed.push(cardTitle);
+    emit();
+  });
+
+  progress.phase = "packaging";
+  emit();
+
+  const filename = selectionExportFilename(manifest.cards, { kind: request.kind, layout: request.layout, bleed });
+  const rendered = manifest.cards.filter((card) => pngs.has(card.id));
+  if (rendered.length === 0) {
+    throw new DeckExportError("None of the cards could be rendered — try again in a moment.");
+  }
+
+  if (request.kind === "pdf") {
+    const bytes = await buildDeckPdf(
+      rendered.map((card) => ({ png: pngs.get(card.id) as Uint8Array, copies: card.copies })),
+      {
+        title,
+        layout: request.layout,
+        sheet: request.sheet,
+        bleed,
+        subject: "Custom MTG-style cards — fan-made, not affiliated with Wizards of the Coast.",
+      },
+    );
+    return {
+      blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
+      filename,
+      cardsIncluded: rendered.length,
+      failed: progress.failed,
+      title,
+    };
+  }
+
+  const zip = new JSZip();
+  rendered.forEach((card, index) => {
+    zip.file(
+      `cards/${String(index + 1).padStart(2, "0")}-${card.slug}${bleed ? "-bleed" : ""}.png`,
+      pngs.get(card.id) as Uint8Array,
+    );
+  });
+  if (progress.failed.length > 0) {
+    zip.file("MISSING.txt", `These cards were skipped:\n${progress.failed.join("\n")}\n`);
+  }
+  // PNGs are already compressed — STORE keeps packaging near-instant.
+  const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
+  return { blob, filename, cardsIncluded: rendered.length, failed: progress.failed, title };
 }
