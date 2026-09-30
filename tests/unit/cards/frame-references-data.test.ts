@@ -218,11 +218,14 @@ describe("4.32 / 4.34 / 4.39 references", () => {
   it("m15borderlessland: non-legendary prints whose type bar wears the title's tint, the best-registered first (TODO 4.34)", () => {
     expect(ids("m15borderlessland", "w")).toEqual(["mh3 Monumental Henge", "sld Ancient Den"]);
     // Not FRA #380 / #381: they print a DARK type bar over the tinted box
-    // (4.34's second skeptic pass; BORDERLESS_LAND_DARK_TYPE_BAR_PINS).
-    expect(ids("m15borderlessland", "u")).toEqual(["mh3 Archway of Innovation", "sld Shelldock Isle"]);
+    // (4.34's second skeptic pass; BORDERLESS_LAND_DARK_TYPE_BAR_PINS). One
+    // reference each for u and g (owner round 15): the only other exact
+    // mono-u / mono-g prints (SLD #230 / #301 / #304) show the art through
+    // their bars, and SLD #304 is a scaled scan.
+    expect(ids("m15borderlessland", "u")).toEqual(["mh3 Archway of Innovation"]);
     expect(ids("m15borderlessland", "b")).toEqual(["mh3 Spymaster's Vault", "mh2 Cabal Coffers"]);
     expect(ids("m15borderlessland", "r")).toEqual(["slp Valakut, the Molten Pinnacle", "mh3 Arena of Glory"]);
-    expect(ids("m15borderlessland", "g")).toEqual(["mh3 Shifting Woodland", "sld Tree of Tales"]);
+    expect(ids("m15borderlessland", "g")).toEqual(["mh3 Shifting Woodland"]);
     // c = colourless lands; m = three and more colours (gold bars and box).
     expect(ids("m15borderlessland", "c")).toEqual(["cmm Reliquary Tower", "cmm Myriad Landscape"]);
     expect(ids("m15borderlessland", "m")).toEqual(["cmm Command Tower", "msh Avengers Tower"]);
@@ -231,6 +234,8 @@ describe("4.32 / 4.34 / 4.39 references", () => {
         // Never a set that prints the DARK type bar, never a two-colour print.
         expect(["woe", "acr", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
         expect(["Deserted Beach", "Spirebluff Canal"], ref.name).not.toContain(ref.name);
+        // Never the see-through SLD prints the owner turned down (round 15).
+        expect(["Shelldock Isle", "Seat of the Synod", "Tree of Tales"], ref.name).not.toContain(ref.name);
       }
     }
     expect(frameReferenceNote("m15borderlessland").confirm).toBe(true);

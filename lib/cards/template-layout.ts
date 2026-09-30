@@ -1620,6 +1620,12 @@ const M15BORDERLESSARTIFACT: FrameProfile = {
 // band (8.5–92.2 %W): with no pips the prints set a long name across it
 // (Meduseld, Golden Hall of Edoras LTC #361). A land creature prints on
 // the borderless plates (m15borderless's, in the land's colour key).
+// ONE rules line starts at the box's left, like M15's (no alignSingleLine;
+// owner round 15, 2026-09-29): the only non-SLD borderless nonbasic lands
+// that print a single line, the ZNR / KHM pathways (#284, #286, #290,
+// #293: "{T}: Add {X}."), start it 35 px inside the box, 142–147 px at HD,
+// with ~900 px of room on its right. Only Secret Lair centres one — the
+// artifact lands SLD #300–304, ink centred on 748–756 px.
 const M15BORDERLESSLAND: FrameProfile = {
   ...M15BORDERLESS,
   label: "M15 Borderless Land",
