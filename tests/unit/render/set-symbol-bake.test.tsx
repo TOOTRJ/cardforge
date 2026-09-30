@@ -32,7 +32,7 @@ beforeAll(async () => {
   })
     .png()
     .toBuffer();
-  const files: Record<string, Buffer> = { "m15/w.png": frame, "m15pw/w.png": frame };
+  const files: Record<string, Buffer> = { "m15/w.png": frame, "m15pw/w.png": frame, "m15borderless/w.png": frame };
   const entries = Object.entries(files).map(([key, buf]) => {
     const sha256 = createHash("sha256").update(buf).digest("hex");
     return [key, { hash: sha256.slice(0, 12), sha256, bytes: buf.length, width: 1, height: 1 }] as const;
@@ -134,7 +134,7 @@ const inkHeightPx = (code: string, fontPx: number) => {
   return ((yMax - yMin) / KEYRUNE_UNITS_PER_EM) * fontPx;
 };
 
-describe("the set symbol on a real HD bake (layout v32)", () => {
+describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and walker rect)", () => {
   it("fills M15's 86 px box with an icon, right-aligned and centred on the type band", async () => {
     const p = getFrameProfile("m15");
     const box = inkBox(await bake("m15", { setIconUrl: icon }), p.type.rect, Math.round(W * 0.7), magenta);
@@ -146,26 +146,65 @@ describe("the set symbol on a real HD bake (layout v32)", () => {
     expect(Math.abs((box.top + box.bottom + 1) / 2 - centre)).toBeLessThanOrEqual(1);
   }, 60_000);
 
-  it("fits a Keyrune glyph's ink to the box: DOM 86 px tall, the wide M20 41 px at 0.065 W", async () => {
+  it("fits an unmeasured Keyrune glyph's ink to the box (XLN 86 px), and draws a measured set at its print's size (v36): DOM 88 px, M20 187.5 × 78", async () => {
     const p = getFrameProfile("m15");
-    for (const [code, expectedFontPx] of [
-      ["dom", 87],
-      ["m20", 98],
+    for (const [code, expectedFontPx, printedH] of [
+      ["xln", 86, null],
+      ["dom", 89, 88.5],
+      ["m20", 187, null],
     ] as const) {
       const fontPx = Math.round(setSymbolSize(p, setSymbolSource(null, code)).sizePct * W);
       expect(fontPx, code).toBe(expectedFontPx);
-      const box = inkBox(await bake("m15", { setIconCode: code }), p.type.rect, Math.round(W * 0.7), glyphInk);
+      const box = inkBox(await bake("m15", { setIconCode: code }), p.type.rect, Math.round(W * 0.6), glyphInk);
       // Anti-aliased edges count from half coverage: ±1 px of the outline.
       expect(Math.abs(box.h - inkHeightPx(code, fontPx)), code).toBeLessThanOrEqual(1.5);
-      expect(box.h, code).toBeLessThanOrEqual(87);
+      if (printedH) expect(Math.abs(box.h - printedH), code).toBeLessThanOrEqual(1.5);
     }
+    // M20's pill at its print's width, past CC's 0.12 W (180 px; owner round
+    // 18): the print is 187.5 × 86, Keyrune's pill 9 % longer in proportion,
+    // so the width binds — 187.5 × 78, ending at the band's edge.
+    const m20 = inkBox(await bake("m15", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), glyphInk);
+    expect(Math.abs(m20.w - 187.5)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.h - 78.2)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 
-  it("uses the planeswalker's 80 px box, in its symbolRect", async () => {
+  it("fits a measured set's glyph AND its white keyline inside the printed box on the borderless bar (DMU 91.5 × 83, M20 86 × 183)", async () => {
+    // The printed box is keyline-inclusive; m15borderless draws a white ring
+    // 0.05 em round the glyph (SET_SYMBOL_KEYLINE). On the 128-grey stand-in
+    // the silhouette is the dark ink plus the white ring.
+    const p = getFrameProfile("m15borderless");
+    const silhouette = (r: number, g: number, b: number) => {
+      const l = 0.299 * r + 0.587 * g + 0.114 * b;
+      return l < 72 || l > 192;
+    };
+    const dmu = inkBox(await bake("m15borderless", { setIconCode: "dmu" }), p.type.rect, Math.round(W * 0.8), silhouette);
+    expect(dmu.h).toBeLessThanOrEqual(91.5 + 1.5);
+    expect(Math.abs(dmu.w - 83)).toBeLessThanOrEqual(1.5);
+    // The core-set pill with its ring: past CC's 180 px, its print's 86 px
+    // height binds (ink + ring 166 px font: 86 × 183).
+    const m20 = inkBox(await bake("m15borderless", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), silhouette);
+    expect(Math.abs(m20.w - 183)).toBeLessThanOrEqual(1.5);
+    expect(m20.h).toBeLessThanOrEqual(86 + 1.5);
+  }, 60_000);
+
+  it("uses the planeswalker's 80 px box in its symbolRect, ending where M15's does (4.47: 1383 px, was 1365)", async () => {
     const p = getFrameProfile("m15pw");
     const icon80 = inkBox(await bake("m15pw", { setIconUrl: icon }), p.symbolRect!, Math.round(W * 0.7), magenta);
     expect([icon80.w, icon80.h]).toEqual([80, 80]);
+    // The walker prints put the symbol's right edge where their set's regular
+    // cards do: M15's band edge, 92.2 %W.
+    expect(Math.abs(icon80.right + 1 - 1383)).toBeLessThanOrEqual(1);
+    const m15 = getFrameProfile("m15");
+    expect(p.symbolRect!.leftPct + p.symbolRect!.widthPct).toBeCloseTo(m15.type.rect.leftPct + m15.type.rect.widthPct, 9);
+    // A measured set prints at its regular size on the walkers too (v36).
     const dom = inkBox(await bake("m15pw", { setIconCode: "dom" }), p.symbolRect!, Math.round(W * 0.7), glyphInk);
-    expect(Math.abs(dom.h - 80)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(dom.h - 88.5)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(dom.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
+    // The core-set pill is wider than the 12 %W rect (180 px): it still ends
+    // at the rect's right edge, reaching out on the left (owner round 18).
+    const m21 = inkBox(await bake("m15pw", { setIconCode: "m21" }), p.symbolRect!, Math.round(W * 0.6), glyphInk);
+    expect(Math.abs(m21.w - 189)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m21.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 });

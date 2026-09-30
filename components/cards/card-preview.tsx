@@ -291,6 +291,9 @@ type AdventureData = {
   rulesText: string | null;
 };
 
+/** A symbolRect's symbol: never shrunk to the rect (see its use). */
+const SYMBOL_RECT_STYLE: CSSProperties = { flexShrink: 0 };
+
 export function CardPreview(rawProps: CardPreviewProps) {
   // Only pictures lib/media/media-urls.ts accepts (migration 0127): a row
   // written before it could point its art, icon, watermark or pips at any
@@ -1189,6 +1192,9 @@ function CardFace({
             justifyContent: "flex-end",
           }}
         >
+          {/* Never shrunk: a symbol wider than the rect (the core-set pills
+              at their print's 188 px, v36) ends at its right edge and
+              reaches out on the left — the bake's SYMBOL_RECT_WRAP. */}
           <SetSymbol
             rarity={rarity}
             namesRarity={cardTypeHasRarity(face.cardType)}
@@ -1197,6 +1203,7 @@ function CardFace({
             size={cqw(setSymbol.sizePct)}
             width={cqw(setSymbol.drawnWidthPct)}
             keyline={layout.setSymbolKeyline}
+            style={SYMBOL_RECT_STYLE}
           />
         </div>
       ) : null}
@@ -2219,7 +2226,8 @@ function hdCqw(px: number, orientation: CardOrientation = "portrait"): string {
 // rail's text. The browser never wraps them: each line is a `nowrap` flex
 // row one line box tall, its runs `flexShrink: 0`, a word gap as the
 // marginLeft of every run after the first, every word its ceiled box
-// (wordWidthPx — the width Satori gives it), pips centred. U+2212 draws as
+// (wordWidthPx — the width Satori gives it), each run the line box tall and
+// its pips at the layout's pipTopPx (layout v36). U+2212 draws as
 // the hyphen MPlantin has (the bake's bakeText) — the advance the layout
 // measured. Mirrors RulesLinesBake.
 function RulesLines({
@@ -2264,6 +2272,7 @@ function RulesLines({
                 display: "inline-flex",
                 alignItems: "center",
                 flexShrink: 0,
+                height: px(m.linePx),
                 ...(ri > 0 ? { marginLeft: px(m.wordGapPx) } : {}),
               }}
             >
@@ -2313,6 +2322,7 @@ function RulesLineItem({
       <RulesPip
         suffix={item.suffix}
         fontSize={hdCqw(m.pipPx / MS_COST_DISC_EM, orientation)}
+        top={hdCqw(m.pipTopPx, orientation)}
         gapBefore={pipGapBefore ? hdCqw(m.pipGapPx, orientation) : null}
         overrides={overrides}
       />
@@ -2346,17 +2356,30 @@ function RulesLineItem({
 function RulesPip({
   suffix,
   fontSize,
+  top,
   gapBefore,
   overrides,
 }: {
   suffix: string;
   fontSize: string;
+  /** The disc's top in its line box (RulesMetrics.pipTopPx, in cqw): the
+   *  run is the line box tall, so the wrapper sits at exactly that top. */
+  top: string;
   gapBefore: string | null;
   overrides: PipOverrides | null;
 }) {
   const overrideSrc = pipOverrideForSuffix(suffix, overrides);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, ...(gapBefore ? { paddingLeft: gapBefore } : {}) }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        alignSelf: "flex-start",
+        marginTop: top,
+        flexShrink: 0,
+        ...(gapBefore ? { paddingLeft: gapBefore } : {}),
+      }}
+    >
       {overrideSrc ? (
         <PipOverrideImg src={overrideSrc} style={{ fontSize, flexShrink: 0 }} />
       ) : (
@@ -2458,7 +2481,8 @@ function RulesBox({
   );
 }
 
-// One drawn line: a nowrap row of runs, the line box tall, runs centred on it
+// One drawn line: a nowrap row of runs, the line box tall, each run the line
+// box tall too (its pips at the layout's pipTopPx, layout v36), centred on it
 // — indented from the column's left by the layout's whole px when it is a
 // centred single line (TextSlot.alignSingleLine), as the bake draws it.
 function RulesBoxLine({
@@ -2495,6 +2519,7 @@ function RulesBoxLine({
             display: "flex",
             alignItems: "center",
             flexShrink: 0,
+            height: hd(d.linePx),
             ...(ri > 0 ? { marginLeft: hd(d.wordGapPx) } : {}),
           }}
         >
@@ -2505,6 +2530,7 @@ function RulesBoxLine({
                   key={i}
                   suffix={item.suffix}
                   fontSize={pipFontSize}
+                  top={hd(d.pipTopPx)}
                   gapBefore={i > 0 && run[i - 1].t === "m" ? hd(d.pipGapPx) : null}
                   overrides={overrides}
                 />

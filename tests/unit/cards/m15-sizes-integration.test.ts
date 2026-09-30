@@ -84,7 +84,11 @@ describe("layout v32 — the live family profiles with the measured fits and the
     const m15 = getFrameProfile("m15");
     for (const [line, code, px] of [
       ["Legendary Creature — Phyrexian Angel", "one", 64], // ONE #196 Atraxa (was 61)
-      ["Enchantment Creature — Avatar Horror", "dsk", 62], // DSK #113 (was 60)
+      // DSK #113 (was 60; 62 at v32–v35): layout v36 (4.46) draws DSK's
+      // symbol at the print's 151.5 px, 54 px wider than v32's capped
+      // glyph, so the line's room follows the print's symbol — our display
+      // face sets it wider than the print's (TODO 4.8).
+      ["Enchantment Creature — Avatar Horror", "dsk", 59],
       ["Legendary Enchantment Creature — Nymph", "mh2", 57], // MH2 #214 Sythis (was 54; the print ≈ 58)
       ["Legendary Creature — Human Wizard", "mh2", 66],
     ] as const) {

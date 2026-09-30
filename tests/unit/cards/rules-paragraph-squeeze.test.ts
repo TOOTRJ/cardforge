@@ -172,17 +172,18 @@ describe("fitRulesLayout's paragraph squeeze (RulesLayoutInput.paragraphGapMinPx
 });
 
 describe("TBLB #5 Warren Warleader on the tall box: 9 pt, as printed", () => {
-  it("keeps 76 px with its gaps at 12 px, its last line clear of the P/T plate — where 24 px gaps stepped it down to 70", () => {
+  it("keeps 76 px with its gaps at 12 px, its last line clear of the P/T plate — where 24 px gaps stepped it down to 72", () => {
     for (const t of TALL) {
       const fit = layoutOf(t, WARLEADER);
       expect(fit.sizePx, t).toBe(76);
       expect(fit.clipped, t).toBe(false);
       expect(fit.input.paragraphGapPx, t).toBe(12);
-      // Without the squeeze (the rect as it is), the plate stepped it down.
+      // Without the squeeze (the rect as it is), the plate stepped it down
+      // (to 70 before layout v36's narrower inline pips, TODO 3.31).
       const { paragraphGapMinPx: _min, paragraphGapPx: _gap, ...unsqueezed } = fit.input;
       void _min;
       void _gap;
-      expect(fitRulesLayout(unsqueezed).sizePx, t).toBe(70);
+      expect(fitRulesLayout(unsqueezed).sizePx, t).toBe(72);
     }
     // Where the print sets it (Scryfall PNG at 1500 × 2100): baselines 1441
     // … 1846, gaps 10–13 px — ours 1441 … 1847.

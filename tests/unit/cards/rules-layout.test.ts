@@ -87,7 +87,8 @@ describe("metricsFor — whole px per target", () => {
       fontPx: 76,
       linePx: 74, // 0.98 em
       wordGapPx: 20,
-      pipPx: 65,
+      pipPx: 60, // 0.785 em (layout v36, TODO 3.31; 65 at 0.86)
+      pipTopPx: 3, // centre 25 px above the baseline (it sat at 21)
       pipGapPx: 8,
       paragraphGapPx: 24,
       flavorGapPx: 30,
@@ -100,7 +101,8 @@ describe("metricsFor — whole px per target", () => {
       fontPx: 38,
       linePx: 37,
       wordGapPx: 10,
-      pipPx: 33,
+      pipPx: 30,
+      pipTopPx: 1,
       pipGapPx: 4,
       paragraphGapPx: 12,
       flavorGapPx: 15,
@@ -108,6 +110,30 @@ describe("metricsFor — whole px per target", () => {
       barPx: 1,
       blankLinePx: 23,
     });
+  });
+
+  it("centres an inline pip on the capitals at the prints' size — every ladder size, both targets (3.31)", () => {
+    // 37 inline discs on 14 prints (DOM #168, AER #106, FIN #188, BFZ #223,
+    // MH1 #230, ELD #196, SOI #258, M20 #178, TDM #126, EOE #170, TFDN #22 /
+    // #23, TLCI #17, TMKM #14): the disc's centre 0.323–0.348 em above its
+    // line's baseline (mean 0.334), its diameter 0.754–0.812 em (mean
+    // 0.785). Centred in the line box at 0.86 em it sat 0.276 em up at
+    // 76 px (21 px, the prints' 25) and 65 px tall (the prints' 60).
+    for (const s of EVEN_LADDER) {
+      for (const target of ["hd", "default"] as const) {
+        const m = metricsFor(s, RULES_TEXT.lineHeight, target);
+        const centreAbove = m.baselinePx.regular - (m.pipTopPx + m.pipPx / 2);
+        expect(centreAbove / m.fontPx, `${s} ${target} centre`).toBeGreaterThan(0.3);
+        expect(Math.abs(centreAbove - 0.334 * m.fontPx), `${s} ${target} centre`).toBeLessThanOrEqual(1);
+        expect(Math.abs(m.pipPx - 0.785 * m.fontPx), `${s} ${target} disc`).toBeLessThanOrEqual(0.5);
+        // The disc stays inside its line box but for a px at the 750 bake's
+        // smallest sizes (the ink model counts it either way).
+        expect(m.pipTopPx, `${s} ${target} top`).toBeGreaterThanOrEqual(target === "hd" ? 0 : -1);
+        expect(m.pipTopPx + m.pipPx, `${s} ${target} bottom`).toBeLessThanOrEqual(m.linePx);
+      }
+    }
+    expect(RULES_TEXT.pipDiscEm).toBe(0.785);
+    expect(RULES_TEXT.pipCentreEm).toBe(0.334);
   });
 
   it("gives every ladder size a whole-px font at both targets, each rounding its own vertical metrics", () => {

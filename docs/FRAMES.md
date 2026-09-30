@@ -663,7 +663,10 @@ The standard operating procedure for one template:
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
 move on fewer templates than its bakes change on) or the override changes;
-`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33) never stale one, and a
+`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36) never stale one (v36's
+4.47 moved the planeswalkers' `symbolRect`, a box the alignment score reads,
+but the owner kept it neutral as v32's 15 px m15pw cost-box move was — owner
+round 18, 2026-09-30), and a
 pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` (33)
 (`lib/cards/frame-verification-state.ts`). A stale tick stays verified —
 the creator keeps offering the combo — and the admin pages show "needs
@@ -905,6 +908,38 @@ each affected card, `hasNewerLook`) predates this rule; v22 is the one bump
 that uses it. `lib/cards/layout-version.ts` explains both policies and
 `TEMPLATE_SCOPED_VERSIONS` / `VERSION_SCOPES`, which limit a bump to the
 cards it changes.
+
+### Correction round 2 (layout v36)
+
+One sweep for three looks the prints showed wrong (owner rule above; the
+before/after sheets are the sign-off, owner round 18, 2026-09-30): inline
+rules pips on the capitals at the prints' size (TODO 3.31, [Rules text and
+the stat plates](#rules-text-and-the-stat-plates)), Keyrune set symbols at
+their set's printed size (4.46) and the planeswalker's symbol at M15's right
+edge (4.47) ([Text sizes on the M15-era
+family](#text-sizes-on-the-m15-era-family)). No frame master changes.
+`VERSION_SCOPES[36]` (`v36Changed`): every card on m15pw, m15borderlesspw
+and m15borderlesspwtall; a listed set's code (its Keyrune glyph, or an
+uploaded icon the renderers may drop for it — a drawable icon re-bakes to
+the same pixels) on a printed-size template; a card whose PRINTED text has
+an inline pip (its rules text unless the frame prints none
+or it is a basic land's, a saga's chapters, a back face's rules text where
+the adventure page or a second face draws it). No template list: the pips
+reach every template. Production, anonymous read 2026-09-30: 363 of 879
+public / unlisted cards (m15 217, m15land 36, m15artifact 34, m15tokentext
+25, m15borderlessartifact 15, m15borderless 10, m15pw 8, m15snow 7, m15devoid
+5, modern 3, agclassic / tarkirghostfire / tarkirdragon 1 each; 8 walkers,
+14 Keyrune glyphs, 341 pip-only). Real HD bakes of all 879 on v35 and v36
+(sha-checked dev-bucket frames): exactly those 363 change and no other; 80
+synthetic cards, one per branch of the scope (back faces, sagas, textless
+tokens, basic lands, flavor, icons, aliases, the keylined bars), bake as
+the scope says, but for its two conservative cases (a drawable icon beside
+a listed code; FDN on a keylined bar, whose ring-fitted size rounds to v32's
+px — a long type line there still loses the ring's room). The
+visual matrix (1,046 cases) against v35: 536 change, every one inside the
+scope, and the scope holds no unchanged case. Verification-neutral, the
+walkers included (owner round 18; `VERIFICATION_NEUTRAL_VERSIONS`, see
+[When a tick goes stale](#verifying-a-frame)): no tick goes stale.
 
 ### Printed pieces a card switches on
 
@@ -1305,6 +1340,51 @@ A family profile:
   in a square of the box and fits a Keyrune glyph to it by its ink, from
   `lib/cards/keyrune-metrics.ts`. After a keyrune upgrade, run
   `node scripts/generate-keyrune-metrics.mjs`; its test fails until then.
+- draws a Keyrune glyph of a MEASURED set at the size that set prints at
+  (layout v36, TODO 4.46; `lib/cards/set-symbol-prints.ts`): a per-set table
+  of the prints' keyline-inclusive symbol boxes, [height, width] in HD px —
+  30 sets, each measured on a rare and an uncommon regular M15-frame print
+  (Scryfall PNGs, the silhouette's half-darkness edge from the bar to the
+  keyline). The glyph is fitted INSIDE its set's box by its ink (never
+  bigger than the print in either direction) and never wider than CC's
+  0.12 W but for the three core-set pills, M19 / M20 / M21, which print
+  187.5–189 px wide and draw at their print's width
+  (`SET_SYMBOL_PRINTED_PAST_CAP`, owner round 18) — by its ink AND its
+  keyline's ring on the borderless bars, which
+  draw a white keyline 0.05 em round the glyph (`setSymbolKeyline`, 4.32;
+  `SET_SYMBOL_KEYLINE_EM`): the box is keyline-inclusive, and there the
+  type line stops a gap before the ring (`inkLeftPct` less the ring). An
+  unlisted set on those bars keeps v32's fit, ring not counted, as since
+  4.32. Our M15 glyph has no keyline: its flat rarity ink fills the whole
+  printed silhouette (a common's reads about 12 px taller than the print's
+  black body inside its white keyline — sheet 2g; owner round 18 kept the
+  keyline-inclusive box, so FDN grows 78 → 88.5 px). The walker, saga and
+  token prints set a set's symbol at the same
+  size as its regular cards (0.98–1.01 of the height), so the thin-bar box
+  (80 px) no longer shrinks a listed glyph. v32's box fit drew these sets
+  0.47–1.03 of the print's height (the wide ones — M20 / M21 / M19 0.47,
+  NEO / DSK 0.64, OTJ 0.58 — capped by box × `KEYRUNE_EM_PER_BOX`); the
+  table draws them 0.88–1.00 (the core-set pills 0.91–0.92, 78 px tall at
+  their print's width — under CC's 180 px cap they were 0.87; they, EOE, OTJ
+  and GRN 0.88–0.92 because Keyrune draws them wider in proportion than the
+  print, so their width binds). A set not in the table keeps v32's fit
+  (owner round 18) — BFZ, WAR and ZNR are measured but left there (v32
+  already draws them at the print's size to the whole px on the M15 bars;
+  on the walker and saga bars they keep its 80 px box where their prints
+  set ~86 — later, TODO 4.46). A wide symbol at its printed width leaves the type
+  line less room — DSK's "Enchantment Creature — Avatar Horror" 62 → 59 px
+  beside its 151.5 px symbol, where the print keeps 68 (our display face sets
+  it wider than the print's, TODO 4.8). The full-art basics keep 4.39's print-checked
+  0.065 W glyph (`setSymbolFit: "ink-box"`), whatever the set. A NEW entry
+  (or a re-measured one) changes its set's stored bakes: a layout bump whose
+  scope names the set. The planeswalkers' `symbolRect` ends where M15's
+  band does (92.2 %W, 1383 px — layout v36, TODO 4.47): the walker prints
+  put the symbol where their set's regular cards do (+0.1 px on average
+  over seven walkers, 1380–1392 px), where 79 %W ended it 18 px short; the
+  borderless walkers spread the rect and move with it (owner round 18). A
+  symbol wider than a 12 %W `symbolRect` (the core-set pills) is never
+  shrunk to it: it ends at the rect's right edge and reaches out on the
+  left, in both renderers (`flexShrink: 0`).
 
 Every frame outside the family keeps the old code paths byte-for-byte: no
 `fit` flag (the character estimate and the CSS ellipsis) and no box or ink
@@ -1340,6 +1420,23 @@ How rules text is sized and set:
   (42 px on a frame without one). A lone em dash after a word ("choose one
   —", "Landfall —") never starts a line: it breaks with its word, as the
   prints set it.
+- **Inline pips** (layout v36, TODO 3.31): a disc `RULES_TEXT.pipDiscEm`
+  0.785 em across, centred `pipCentreEm` 0.334 em above the line's baseline
+  — on the capitals (half MPlantin's 0.682 em cap height), not on the
+  x-height and not in the middle of the line box. 37 inline discs on 14
+  prints (DOM #168, AER #106, FIN #188, BFZ #223, MH1 #230, ELD #196, SOI
+  #258, M20 #178, TDM #126, EOE #170, TFDN #22 / #23, TLCI #17, TMKM #14;
+  each disc circle-fitted, the em from its line's cap height) measure
+  0.754–0.812 em across and centre 0.323–0.348 em up: 60 px and 25 px at
+  76 px type, where v33–v35 drew 65 px centred in the line box (21 px up;
+  its bottom 11.5 px below the baseline against the prints' 4.5). The layout
+  gives the disc's top in its line box (`metricsFor(…).pipTopPx`, whole px
+  per bake: 3 px at 76 HD px, 1 at the 750 bake's 38) and both renderers put
+  it there — each run is the line box tall and the pip `alignSelf:
+  flex-start` with that margin — and the ink model (headroom, keep-outs)
+  reads the same box. A narrower disc makes a pip-bearing line shorter, so
+  a line break or a size step can move on such a text. (The prints' inline
+  pips have no shadow: TODO 3.17, not part of v36.)
 - **Positions per bake**: the lines are the same at 750 and HD, but each
   rounds its own px, so the 750 bake's pitch is 0.962–0.974 em (1.0 em from
   42 to 50 px) against HD's 0.974–0.986, and its line tops drift up to 6 HD

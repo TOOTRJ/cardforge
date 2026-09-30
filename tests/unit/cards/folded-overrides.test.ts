@@ -49,12 +49,14 @@ const MOVED_AFTER_FOLD: Record<string, (p: FrameProfile) => FrameProfile> = {
   // Layout v32 (TODO 4.20): its type line took M15's slot (top 56.5, on the
   // prints' baseline), so the old override's 56.8 would put it back too, and
   // its cost box moved right onto the print's pips (51.2 → 52.2, ending at
-  // M15's 92.2 %W).
+  // M15's 92.2 %W). Layout v36 (TODO 4.47): its set symbol too, onto the
+  // prints (symbolRect left 79 → 80.2, ending at M15's 92.2 %W).
   m15pw: (p) => ({
     ...p,
     title: { ...p.title, rect: { ...p.title.rect, topPct: 3.8 } },
     type: { ...p.type, rect: { ...p.type.rect, topPct: 56.8 } },
     costRect: { ...p.costRect!, leftPct: 51.2 },
+    symbolRect: { ...p.symbolRect!, leftPct: 79 },
   }),
 };
 
@@ -67,7 +69,7 @@ describe("folded production overrides (migration 0114)", () => {
     });
   }
 
-  it("m15pw: only the name's top (round 4), the type line's slot and the cost box's left (v32) moved after the fold", () => {
+  it("m15pw: only the name's top (round 4), the type line's slot, the cost box's left (v32) and the symbol box's left (v36) moved after the fold", () => {
     const code = getFrameProfile("m15pw");
     const folded = mergeProfile(code, PRODUCTION_OVERRIDES_2026_09_24.m15pw);
     expect(code.title.rect.topPct).toBe(4.18);
@@ -76,6 +78,8 @@ describe("folded production overrides (migration 0114)", () => {
     expect(folded.type.rect.topPct).toBe(56.8);
     expect(code.costRect!.leftPct).toBe(52.2);
     expect(folded.costRect!.leftPct).toBe(51.2);
+    expect(code.symbolRect!.leftPct).toBe(80.2);
+    expect(folded.symbolRect!.leftPct).toBe(79);
   });
 
   it("the snow land keeps its own title inset, distinct from the plain land", () => {

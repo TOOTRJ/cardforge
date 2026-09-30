@@ -584,9 +584,79 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            no under-frame change without art). "sweep". VERIFICATION-NEUTRAL (the
 //            default for small art-edge fixes, as v31–v33): no text, bar,
 //            pip, symbol or plate moves — see VERIFICATION_NEUTRAL_VERSIONS.
+//   36     — the second correction round (owner rule 2026-09-29: looks
+//            wrong against their own prints), ONE bump for three fixes,
+//            each measured on the prints (Scryfall PNGs, 745 px, scaled to
+//            the 1500 px card):
+//            * inline rules pips on the capitals (TODO 3.31; lib/cards/
+//              typography.ts RULES_TEXT, rules-layout.ts metricsFor
+//              .pipTopPx): 37 inline discs on 14 prints (DOM #168, AER
+//              #106, FIN #188, BFZ #223, MH1 #230, ELD #196, SOI #258, M20
+//              #178, TDM #126, EOE #170, TFDN #22 / #23, TLCI #17, TMKM
+//              #14; each disc circle-fitted, the em from its line's cap
+//              height) centre 0.323–0.348 em above the baseline (mean
+//              0.334, half the 0.682 em cap height — not the x-height) and
+//              measure 0.754–0.812 em across (mean 0.785). Ours were
+//              centred in the line box at 0.86 em: 21 px up and 65 px wide
+//              at 76 px type where the prints put 25 px and 60 px. Now
+//              pipDiscEm 0.785 (60 px) and pipCentreEm 0.334 (25 px up;
+//              13 at the 750 bake's 38 px); both renderers draw the disc at
+//              the layout's pipTopPx. The narrower disc can move a line
+//              break or a size step on text with pips (the list is in the
+//              PR); 3.17's flat pips are not part of it.
+//            * Keyrune set symbols at their set's printed size (TODO 4.46;
+//              lib/cards/set-symbol-prints.ts): a per-set table of the
+//              prints' keyline-inclusive symbol boxes, 30 sets (33
+//              measured — the creator's 12 presets, the 4.20 check's sets
+//              and seven more — each on a rare and an uncommon; BFZ, WAR
+//              and ZNR already drew at their print's size to the whole px,
+//              so they stay on v32's fit — on the walker and saga bars
+//              too, at 80 px where their prints set ~86: owner round 18,
+//              later); the glyph fitted inside its set's box by its ink,
+//              never past CC's 0.12 W but for the three core-set pills,
+//              which print wider (M19 / M20 / M21, 187.5–189 px:
+//              SET_SYMBOL_PRINTED_PAST_CAP, owner round 18). Ink height ÷
+//              the print's, v35 → v36: NEO 0.64 → 0.97, DSK 0.64 → 1.00,
+//              M20 / M21 / M19 0.47 → 0.91–0.92 (at the print's width;
+//              Keyrune's pill is 9 % longer in proportion), OTJ 0.58 →
+//              0.90, FDN 0.88 → 1.00 (keyline-inclusive, as measured —
+//              owner round 18: kept), DOM 0.97 → 1.00; every set 0.47–1.03
+//              → 0.88–1.00, never past the print's height or width; the
+//              walker, saga and token prints print it at the regular size
+//              (0.98–1.01), so the thin-bar box no longer shrinks a listed
+//              glyph there. The full-art basics keep 4.39's size
+//              (setSymbolFit "ink-box"), an unlisted set v32's ink fit. The
+//              boxes are keyline-inclusive, so the borderless bars, which
+//              draw a white keyline round the glyph (4.32), fit its ink AND
+//              the ring (review of this round: the ink alone stood 8–15 px
+//              past the box there, the core-set pill 198 px wide; now 85.5–
+//              86 × 182–183, the print's height binding).
+//            * the planeswalker's set symbol ends where M15's does (TODO
+//              4.47; M15PW.symbolRect left 79 → 80.2 %W, right edge 1365 →
+//              1383 px): seven walker prints put it where their set's
+//              regular cards do (+0.1 px on average), 1380–1392 px. The
+//              borderless walkers (4.33) spread m15pw's rect and move with
+//              it (their prints: 1383–1393 but ELD #271's 1369; owner round
+//              18: move them). A symbol wider than a 12 %W symbolRect (the
+//              core-set pills) is never shrunk to it: it ends at the rect's
+//              right edge in both renderers.
+//            Card-scoped (VERSION_SCOPES[36] = v36Changed; no template list —
+//            the pips reach every template): every card on m15pw,
+//            m15borderlesspw, m15borderlesspwtall (every walker draws a
+//            symbol, the mark when it has none); a card that may draw a
+//            listed set's Keyrune glyph on a printed-size template
+//            (its code is listed — an uploaded icon doesn't rule it out: the
+//            renderers drop one they may not draw and draw the glyph); a card
+//            whose printed text has an inline pip. "sweep".
+//            VERIFICATION-NEUTRAL (owner round 18, 2026-09-30, on the
+//            walker sheet; VERIFICATION_NEUTRAL_VERSIONS): the pips (text
+//            inside the rules boxes, as v33) and the symbol sizes (as v32)
+//            move no slot, and 4.47's walker symbolRect move — a scored
+//            box, lib/frames/align.ts — follows v32, which moved
+//            m15pw's costRect onto the prints and stayed neutral.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 35;
+export const CARD_LAYOUT_VERSION = 36;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -654,6 +724,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
     "m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "nyx", "fullart",
     "m15token", "m15tokentext", "m15pw",
   ],
+  // (v36, the second correction round: no template list — its inline pips
+  // reach every template; VERSION_SCOPES[36] holds the walkers, the
+  // printed-size set symbols and the cards with an inline pip.)
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -679,6 +752,53 @@ export const V35_ART_SLOT_TEMPLATES: readonly string[] = [
 ];
 export const V35_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15token", "m15tokentext", "m15pw"];
 
+// v36 — the second correction round (TODO 3.31, 4.46, 4.47). Frozen
+// like the lists above: v36 is history once it ships.
+//   * EVERY card on these templates re-bakes: the planeswalkers' set symbol
+//     moved (4.47; every card draws one — the default mark when it has no
+//     icon or set).
+export const V36_EVERY_CARD_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+//   * The templates that draw a Keyrune glyph at its set's printed size
+//     (4.46, setSymbolFit "ink"): the M15-era family as it stood at v36,
+//     the full-art basics excepted ("ink-box").
+export const V36_PRINTED_SYMBOL_TEMPLATES: readonly string[] = [
+  "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact",
+  "m15pw", "m15borderlesspw", "m15borderlesspwtall", "m15token", "m15tokenartifact", "m15tokentext",
+  "m15tokenartifacttext", "m15borderlessland", "emblem", "m20token", "m20tokentext", "m20tokentall",
+  "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall", "saga", "adventure", "flip", "aftermath",
+  "extendedart", "expeditionland", "nyx", "fullart", "m15textless", "m15textlessland",
+];
+//   * The sets whose printed size the table held at v36
+//     (lib/cards/set-symbol-prints.ts SET_SYMBOL_PRINTED_PX): a card draws
+//     one through the Keyrune glyph its code selects.
+export const V36_PRINTED_SYMBOL_SETS: readonly string[] = [
+  "afr", "blb", "dmu", "dom", "dsk", "eld", "eoe", "fdn", "fin", "grn", "iko", "khm", "ktk", "ltr", "m19", "m20",
+  "m21", "mh3", "mid", "mkm", "neo", "one", "otj", "snc", "spm", "stx", "tdm", "thb", "tla", "woe",
+];
+//   * Every set code whose Keyrune glyph is one of those sets' at v36 — the
+//     sets themselves and the four codes keyrune draws with one of their
+//     glyphs (gk1, xdnd, xkld, xssm) — as set-symbol-size.ts's
+//     keyruneCodepointFor looks a code up (lower case, "ss-" dropped; an
+//     unknown code draws the default glyph, which is not listed). Literal,
+//     so this module (imported by client code) never pulls in the keyrune
+//     tables; a test holds it to them.
+export const V36_PRINTED_SYMBOL_CODES: readonly string[] = [
+  "afr", "blb", "dmu", "dom", "dsk", "eld", "eoe", "fdn", "fin", "gk1", "grn", "iko", "khm", "ktk", "ltr", "m19",
+  "m20", "m21", "mh3", "mid", "mkm", "neo", "one", "otj", "snc", "spm", "stx", "tdm", "thb", "tla", "woe", "xdnd",
+  "xkld", "xssm",
+];
+/** Whether a set code draws a v36-listed set's glyph (V36_PRINTED_SYMBOL_CODES). */
+export function v36PrintedSymbolCode(setCode: string): boolean {
+  return V36_PRINTED_SYMBOL_CODES.includes(setCode.toLowerCase().replace(/^ss-/, ""));
+}
+//   * Where a card's text draws its inline pips (3.31) at v36: nowhere on a
+//     frame that prints no text (FrameProfile.textless); a back face's rules
+//     text only on the adventure page and the second faces; face_content's
+//     chapters only on the saga rail (the walkers' rows are on the
+//     every-card templates above).
+export const V36_TEXTLESS_TEMPLATES: readonly string[] = ["m20token", "m20tokenartifact"];
+export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "flip", "split", "aftermath"];
+
 /**
  * Bumps whose frame SLOTS move on fewer templates than their stored bakes
  * change on: frame verification judges a tick by this list instead of the
@@ -689,6 +809,7 @@ export const V35_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15token", "m15t
  */
 const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> = {
   34: V34_TOKEN_FRAME_TEMPLATES,
+  // (v36 is not here: verification-neutral, VERIFICATION_NEUTRAL_VERSIONS.)
 };
 
 /**
@@ -714,10 +835,16 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * may re-tick it by hand after the sheet). The frame a tick verified
  * against its prints is the same master in the same place; the owner signs
  * the art off on the v35 before/after sheet instead of re-ticking.
+ * v36 is (owner round 18, 2026-09-30, on the walker sheet): the inline pips
+ * move text inside the rules boxes (as v33), the printed set-symbol sizes
+ * move no slot (as v32), and 4.47 moves the walkers' symbolRect — a scored
+ * box — onto the prints, as v32 moved
+ * m15pw's costRect and stayed neutral. Production's seven m15pw ticks
+ * (legacy) stay fresh; the owner signed the walkers off on the sheet.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -967,6 +1094,88 @@ function v35Changed(card: ScopeCard): boolean {
   return pickFrameColorKey(identities) === "c" && Boolean(card.art_url);
 }
 
+/** A mana token the rules tokenizer draws as a disc: braces around
+ *  anything but whitespace (lib/cards/rules-text.ts tokenizeRulesText —
+ *  every such token has a pip suffix; "{ }" draws nothing). A regex, not
+ *  the tokenizer, so this module stays free of the components tree; a test
+ *  holds the two to the same answer. */
+const V36_PIP_TOKEN = /\{[^}]*[^}\s][^}]*\}/;
+
+/** Whether a rules text holds an inline pip. */
+export function v36HasPip(value: unknown): boolean {
+  return typeof value === "string" && V36_PIP_TOKEN.test(value);
+}
+
+/** Whether a `face_content` jsonb holds a pip the rows or the rail draw: a
+ *  loyalty ability's text, a saga chapter's text or its intro. */
+function v36FaceContentHasPip(faceContent: unknown): boolean {
+  if (!faceContent || typeof faceContent !== "object") return false;
+  const { loyalty, saga } = faceContent as { loyalty?: unknown; saga?: unknown };
+  const abilities = loyalty && typeof loyalty === "object" ? (loyalty as { abilities?: unknown }).abilities : undefined;
+  if (
+    Array.isArray(abilities) &&
+    abilities.some((a) => Boolean(a) && typeof a === "object" && v36HasPip((a as { text?: unknown }).text))
+  ) {
+    return true;
+  }
+  if (!saga || typeof saga !== "object") return false;
+  const { intro, chapters } = saga as { intro?: unknown; chapters?: unknown };
+  return (
+    v36HasPip(intro) ||
+    (Array.isArray(chapters) &&
+      chapters.some((ch) => Boolean(ch) && typeof ch === "object" && v36HasPip((ch as { text?: unknown }).text)))
+  );
+}
+
+/**
+ * Whether layout v36 (the second correction round) changed a card's bake:
+ * every card on V36_EVERY_CARD_TEMPLATES (the walkers' moved symbol); a
+ * card that may draw a listed set's Keyrune glyph (a code in
+ * V36_PRINTED_SYMBOL_CODES) on a printed-size template (4.46) — with or
+ * without an uploaded icon: the renderers drop an icon URL they may not draw
+ * (lib/cards/drawable-media.ts; a pre-0127 row can name an outside host, and
+ * which host is "ours" is the deployment's), and then draw the code's glyph,
+ * so an icon never rules the glyph out here (a drawable one re-bakes to the
+ * same pixels); a card whose PRINTED text has an inline pip (3.31): its
+ * rules text unless it is a basic land's or the frame prints none, a saga's
+ * chapters, a back face's rules text on the templates that draw it —
+ * flavor draws none. Templates are judged as drawn (a {} frame_style is
+ * m15). Any column it needs that the row doesn't carry → affected.
+ */
+function v36Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  if (V36_EVERY_CARD_TEMPLATES.includes(template)) return true;
+  if (card.set_icon_code === undefined) return true;
+  if (
+    typeof card.set_icon_code === "string" &&
+    card.set_icon_code &&
+    V36_PRINTED_SYMBOL_TEMPLATES.includes(template) &&
+    v36PrintedSymbolCode(card.set_icon_code)
+  ) {
+    return true;
+  }
+  if (V36_TEXTLESS_TEMPLATES.includes(template)) return false;
+  if ([card.rules_text, card.face_content, card.back_face].some((v) => v === undefined)) return true;
+  if (V33_CHAPTER_TEMPLATES.includes(template)) {
+    return v36FaceContentHasPip(card.face_content) || v36HasPip(card.rules_text);
+  }
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  if (V36_BACK_FACE_TEXT_TEMPLATES.includes(template) && back && v36HasPip(back.rules_text)) return true;
+  if (!v36HasPip(card.rules_text)) return false;
+  if ([card.card_type, card.supertype, card.subtypes, card.title].some((v) => v === undefined)) return true;
+  // The renderers' isBasicLand (lib/cards/watermark.ts): its text is never drawn.
+  return (
+    basicLandManaKey({
+      cardType: card.card_type,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
+      title: card.title,
+      rulesText: card.rules_text,
+    }) === null
+  );
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -1005,6 +1214,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // slot moved, and a colourless card with art on the three whose
   // see-through master gained or moved its under-frame art — v35Changed.
   35: v35Changed,
+  // v36 — the second correction round: every walker card, a listed
+  // set's printed-size glyph, an inline pip — v36Changed.
+  36: v36Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -1119,6 +1331,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   33: "sweep", // rules text by its real lines at the prints' spacing (3.29) — a measurement correction, never a badge
   34: "sweep", // token release: P/T plate, type line + symbol on the token frames (4.49), "Token" first (3b.15) — a platform correction
   35: "sweep", // art-area corrections: CC M15 art slot (4.4 (2)), under-frame art from the border (4.17a), nyx / fullart / m15pw-c (4.17b)
+  36: "sweep", // correction round 2: inline pips on the capitals (3.31), printed set-symbol sizes (4.46), walker symbol (4.47)
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

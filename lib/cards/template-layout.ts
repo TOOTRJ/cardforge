@@ -489,12 +489,15 @@ export type FrameProfile = {
    *  equals it (every frame outside the M15-era family, unchanged). */
   symbolSizePct?: number;
   /** How a Keyrune glyph fills the set-symbol box (layout v32, TODO 4.20):
-   *  "ink" fits it by its ink (lib/cards/set-symbol-size.ts); unset, its
-   *  font size IS the box, as before v32. Set on the M15-era family only
-   *  (lib/cards/m15-family.ts). Code-owned: not part of the override schema,
-   *  so an override's symbolSizePct resizes the box but never switches a
-   *  frame outside the family to the ink fit. */
-  setSymbolFit?: "ink";
+   *  "ink" draws it at the size its set PRINTS at when the set was measured
+   *  (lib/cards/set-symbol-prints.ts, layout v36, TODO 4.46), else fits it
+   *  to the box by its ink (lib/cards/set-symbol-size.ts); "ink-box" is the
+   *  box fit alone (the full-art basics, whose glyph size 4.39 print-checked
+   *  in their own pill); unset, its font size IS the box, as before v32. Set
+   *  on the M15-era family only (lib/cards/m15-family.ts). Code-owned: not
+   *  part of the override schema, so an override's symbolSizePct resizes the
+   *  box but never switches a frame outside the family to the ink fit. */
+  setSymbolFit?: "ink" | "ink-box";
   /** When true, never render the mana cost (tokens/emblems have none, and the
    *  frame's title bar has no cost area). */
   hideCost?: boolean;
@@ -1326,7 +1329,12 @@ const M15PW: FrameProfile = {
   // an 80 px name — owner decision 2026-09-28). The row stays centred in
   // costRect, so the pips' centre does not move.
   costSizePct: COST_DISC_PCT,
-  symbolRect: { topPct: 56.9, leftPct: 79, widthPct: 12, heightPct: 3.8 },
+  // Layout v36 (TODO 4.47): the symbol ends where M15's does (92.2 %W, 1383
+  // px at HD) — the walker prints put it where their set's regular cards do
+  // (BFZ #29, DOM #1, WAR #1, DMU #1, M19 #3, M20 #2, M21 #1: +0.1 px from
+  // the regular prints on average, −3.1 … +4.7), 1380–1392 px; at 79 %W it
+  // ended 18 px short (1365).
+  symbolRect: { topPct: 56.9, leftPct: 80.2, widthPct: 12, heightPct: 3.8 },
   // CC's planeswalker symbol box (0.12 W × 0.0381 H = 80 px, the rect's
   // height; layout v32) — see M15's symbolSizePct.
   symbolSizePct: SET_SYMBOL_BOX_PCT_THIN_BAR,
@@ -3407,8 +3415,11 @@ const FULL_ART_BASIC: FrameProfile = {
   symbolRect: { topPct: 85.34, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
   // CC's box, the rect's height (layout v32; it was a 0.065 font size, which
   // drew the mark and an icon at 97.5 px, past the rect). A Keyrune glyph
-  // still draws at 0.065 W unless its ink would stand taller than the box.
+  // still draws at 0.065 W unless its ink would stand taller than the box —
+  // never at the type bars' printed sizes (layout v36, TODO 4.46): its size
+  // here was print-checked on the basics' own pill (4.39).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink-box",
   rules: {
     rect: { topPct: 16, leftPct: 15, widthPct: 70, heightPct: 62 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.standard),

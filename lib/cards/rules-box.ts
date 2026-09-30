@@ -197,6 +197,8 @@ export type RulesDraw = {
   wordGapPx: number;
   pipPx: number;
   pipGapPx: number;
+  /** The pip disc's top in its line box (RulesMetrics.pipTopPx). */
+  pipTopPx: number;
   /** The box's padding. */
   pad: { top: number; right: number; bottom: number; left: number };
   insetTop: number;
@@ -240,6 +242,7 @@ export function rulesDraw(layout: RulesLayout, target: RulesTarget): RulesDraw {
     wordGapPx: m.wordGapPx,
     pipPx: m.pipPx,
     pipGapPx: m.pipGapPx,
+    pipTopPx: m.pipTopPx,
     pad: {
       top: interior.top - box.top,
       left: interior.left - box.left,

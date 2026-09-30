@@ -59,8 +59,21 @@ describe("CardPreview — set symbol size", () => {
       const style = styleOf(markup(template, { setIconCode: code }), new RegExp(`i[^>]*ss-${code}`));
       expect(style, `${template} ${code}`).toContain(`font-size:${cqw(size.sizePct)};width:${cqw(size.drawnWidthPct)}`);
     }
-    // DOM on M15: 0.058 W (87 px at HD), its ink exactly the box.
-    expect(cqw(setSymbolSize(getFrameProfile("m15"), setSymbolSource(null, "dom")).sizePct)).toBe("5.802cqw");
+    // DOM on M15: its print's size (layout v36, TODO 4.46) — 0.0596 W (89 px
+    // at HD), its ink the print's 88.5 px; an unmeasured tall glyph (XLN)
+    // still fills the 86 px box exactly.
+    expect(cqw(setSymbolSize(getFrameProfile("m15"), setSymbolSource(null, "dom")).sizePct)).toBe("5.964cqw");
+    expect(cqw(setSymbolSize(getFrameProfile("m15"), setSymbolSource(null, "xln")).sizePct)).toBe("5.740cqw");
+  });
+
+  it("never shrinks a symbolRect's symbol: the core-set pill (wider than the 12 %W rect, v36) ends at its right edge", () => {
+    const p = getFrameProfile("m15pw");
+    const size = setSymbolSize(p, setSymbolSource(null, "m21"));
+    // 189 px at HD — its print's width, past CC's 180 px (owner round 18).
+    expect(size.drawnWidthPct * 100).toBeGreaterThan(p.symbolRect!.widthPct);
+    const style = styleOf(markup("m15pw", { setIconCode: "m21" }), /i[^>]*ss-m21/);
+    expect(style).toContain(`width:${cqw(size.drawnWidthPct)}`);
+    expect(style).toContain("flex-shrink:0");
   });
 
   it("keeps a frame outside the family at type.sizePct × 1.1 for every source", () => {
