@@ -103,6 +103,7 @@ function fitSlot(
       padPx: slot.padPx ?? defaults.pad,
       vAlign: slot.vAlign ?? "start",
       ...(slot.alignSingleLine ? { alignSingleLine: slot.alignSingleLine } : {}),
+      ...(slot.paragraphGapMinPx !== undefined ? { paragraphGapMinPx: slot.paragraphGapMinPx } : {}),
       divider: layout.flavorDivider !== false,
       keepOuts: rulesKeepOuts(drawnStatInk(layout, show, aspect), slot.rect, defaults.rotation, aspect),
     }),

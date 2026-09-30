@@ -1258,5 +1258,373 @@
       "source: CC 'Regular (Bordered M15)' — the arch token with a cream type pill and a text box, re-cut onto the prints (TODO 4.49 (b)): CC's lower band sits ~3 %H above TXLN #10, TDOM #2, TM19 #1 and TC17 #9",
       "colourless = PipGlyph composite like m15token's: CC's silver token frame at 35 % (frame) / 80 % (type pill and text box) opacity over the art, as BFZ #2 / OGW #1 Eldrazi Scion print"
     ]
+  },
+  "m20token": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenTextless-1.js 'Textless' (groupToken-2.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1687–1844 (the type pill with its glow and bottom rim) moved down 5 px as one piece over the top 5 rows of the clear lower window, the rows opened above them repeating the clear window and the black ring (hard cuts: only the ring and clear art meet either seam); corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "colors": {
+      "w": [
+        "img/frames/token/textless/tokenFrameWTextless.png"
+      ],
+      "u": [
+        "img/frames/token/textless/tokenFrameUTextless.png"
+      ],
+      "b": [
+        "img/frames/token/textless/tokenFrameBTextless.png"
+      ],
+      "r": [
+        "img/frames/token/textless/tokenFrameRTextless.png"
+      ],
+      "g": [
+        "img/frames/token/textless/tokenFrameGTextless.png"
+      ],
+      "c": [
+        "img/frames/token/textless/frameC.png"
+      ],
+      "m": [
+        "img/frames/token/textless/tokenFrameMTextless.png"
+      ]
+    },
+    "finish": [
+      "a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only)",
+      "every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask)"
+    ],
+    "recut": {
+      "fromY": 1687,
+      "toY": 1845,
+      "shift": 5,
+      "blend": 0,
+      "blendBottom": 0
+    },
+    "sourceFiles": [
+      "img/frames/token/textless/frameC.png",
+      "img/frames/token/textless/tokenFrameBTextless.png",
+      "img/frames/token/textless/tokenFrameGTextless.png",
+      "img/frames/token/textless/tokenFrameMTextless.png",
+      "img/frames/token/textless/tokenFrameRTextless.png",
+      "img/frames/token/textless/tokenFrameUTextless.png",
+      "img/frames/token/textless/tokenFrameWTextless.png",
+      "img/frames/token/tokenMaskTextlessType.png"
+    ],
+    "notes": [
+      "source: CC 'Textless' token pack (tokenFrame{W,U,B,R,G,M}Textless.png) — the full-art token design, M20 → today (TODO 4.48)",
+      "colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)",
+      "re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels",
+      "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
+      "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
+    ]
+  },
+  "m20tokenartifact": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenTextless-1.js 'Textless' (groupToken-2.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1687–1844 (the type pill with its glow and bottom rim) moved down 5 px as one piece over the top 5 rows of the clear lower window, the rows opened above them repeating the clear window and the black ring (hard cuts: only the ring and clear art meet either seam); corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(151, 170, 181) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216); every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask); a flat rgb(30, 40, 48) at 65% source-over through img/frames/m15/regular/m15MaskTitle.png, on the pixels CC draws translucent (full weight at α ≤ 230, none at α ≥ 244); every pixel through img/frames/m15/regular/m15MaskTitle.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "colors": {
+      "w": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "img/frames/token/textless/tokenFrameWTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "u": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "img/frames/token/textless/tokenFrameUTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "b": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "img/frames/token/textless/tokenFrameBTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "r": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "img/frames/token/textless/tokenFrameRTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "g": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "img/frames/token/textless/tokenFrameGTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "c": [
+        "img/frames/token/textless/tokenFrameATextless.png"
+      ],
+      "m": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "img/frames/token/textless/tokenFrameMTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ]
+    },
+    "finish": [
+      "a flat rgb(151, 170, 181) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216)",
+      "every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+      "a flat rgb(30, 40, 48) at 65% source-over through img/frames/m15/regular/m15MaskTitle.png, on the pixels CC draws translucent (full weight at α ≤ 230, none at α ≥ 244)",
+      "every pixel through img/frames/m15/regular/m15MaskTitle.png made opaque in its own colour (α' = α + (255 − α) × mask)"
+    ],
+    "recut": {
+      "fromY": 1687,
+      "toY": 1845,
+      "shift": 5,
+      "blend": 0,
+      "blendBottom": 0
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/token/textless/tokenFrameATextless.png",
+      "img/frames/token/textless/tokenFrameBTextless.png",
+      "img/frames/token/textless/tokenFrameGTextless.png",
+      "img/frames/token/textless/tokenFrameMTextless.png",
+      "img/frames/token/textless/tokenFrameRTextless.png",
+      "img/frames/token/textless/tokenFrameUTextless.png",
+      "img/frames/token/textless/tokenFrameWTextless.png",
+      "img/frames/token/tokenMaskTextlessPinline.png",
+      "img/frames/token/tokenMaskTextlessType.png"
+    ],
+    "notes": [
+      "source: CC 'Textless' token pack Artifact Frame (tokenFrameATextless.png) — TODO 4.50",
+      "coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (img/frames/token/tokenMaskTextlessPinline.png): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)",
+      "re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels",
+      "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels",
+      "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels",
+      "the name pill darkened to the prints' slate (owner decision 2026-09-29, TODO 4.50): a flat slate rgb 30/40/48 at 65 % source-over CC's translucent silver interior through M15's Title mask (the rims and outline keep CC's pixels) — behind the name luminance 63 and white ink 10.5 : 1, as 16 M20+ artifact prints (luminance 54–71, 9–11 : 1); CC's silver pill was 102–137 (3.5–5.7 : 1) — PipGlyph composite of CC pixels",
+      "the name pill SOLID (owner decision round 14, 2026-09-29): after the slate its interior was α ≈ 246; every pixel M15's Title mask covers made opaque in its own colour (the mask covers nothing CC draws below α 230) — PipGlyph composite of CC pixels"
+    ]
+  },
+  "m20tokenartifacttall": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenTall-1.js 'Tall' (groupToken-2.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(151, 170, 181) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216); every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask); a flat rgb(30, 40, 48) at 65% source-over through img/frames/m15/regular/m15MaskTitle.png, on the pixels CC draws translucent (full weight at α ≤ 230, none at α ≥ 244); every pixel through img/frames/m15/regular/m15MaskTitle.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "colors": {
+      "w": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "img/frames/token/tall/tokenFrameWTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "u": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "img/frames/token/tall/tokenFrameUTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "b": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "img/frames/token/tall/tokenFrameBTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "r": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "img/frames/token/tall/tokenFrameRTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "g": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "img/frames/token/tall/tokenFrameGTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "c": [
+        "img/frames/token/tall/tokenFrameATall.png"
+      ],
+      "m": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "img/frames/token/tall/tokenFrameMTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ]
+    },
+    "finish": [
+      "a flat rgb(151, 170, 181) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216)",
+      "every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+      "a flat rgb(30, 40, 48) at 65% source-over through img/frames/m15/regular/m15MaskTitle.png, on the pixels CC draws translucent (full weight at α ≤ 230, none at α ≥ 244)",
+      "every pixel through img/frames/m15/regular/m15MaskTitle.png made opaque in its own colour (α' = α + (255 − α) × mask)"
+    ],
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskPinline.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/token/tall/tokenFrameATall.png",
+      "img/frames/token/tall/tokenFrameBTall.png",
+      "img/frames/token/tall/tokenFrameGTall.png",
+      "img/frames/token/tall/tokenFrameMTall.png",
+      "img/frames/token/tall/tokenFrameRTall.png",
+      "img/frames/token/tall/tokenFrameUTall.png",
+      "img/frames/token/tall/tokenFrameWTall.png"
+    ],
+    "notes": [
+      "source: CC 'Tall' token pack Artifact Frame (tokenFrameATall.png) — TODO 4.50",
+      "coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (img/frames/m15/regular/m15MaskPinline.png): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)",
+      "measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn",
+      "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels",
+      "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels",
+      "the name pill darkened to the prints' slate (owner decision 2026-09-29, TODO 4.50): a flat slate rgb 30/40/48 at 65 % source-over CC's translucent silver interior through M15's Title mask (the rims and outline keep CC's pixels) — behind the name luminance 63 and white ink 10.5 : 1, as 16 M20+ artifact prints (luminance 54–71, 9–11 : 1); CC's silver pill was 102–137 (3.5–5.7 : 1) — PipGlyph composite of CC pixels",
+      "the name pill SOLID (owner decision round 14, 2026-09-29): after the slate its interior was α ≈ 246; every pixel M15's Title mask covers made opaque in its own colour (the mask covers nothing CC draws below α 230) — PipGlyph composite of CC pixels"
+    ]
+  },
+  "m20tokenartifacttext": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenShort-1.js 'Short' (groupToken-2.js) — the printed regular box",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(151, 170, 181) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216); every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask); a flat rgb(30, 40, 48) at 65% source-over through img/frames/m15/regular/m15MaskTitle.png, on the pixels CC draws translucent (full weight at α ≤ 230, none at α ≥ 244); every pixel through img/frames/m15/regular/m15MaskTitle.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "colors": {
+      "w": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "img/frames/token/short/tokenFrameWShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "u": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "img/frames/token/short/tokenFrameUShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "b": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "img/frames/token/short/tokenFrameBShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "r": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "img/frames/token/short/tokenFrameRShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "g": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "img/frames/token/short/tokenFrameGShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "c": [
+        "img/frames/token/short/tokenFrameAShort.png"
+      ],
+      "m": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "img/frames/token/short/tokenFrameMShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ]
+    },
+    "finish": [
+      "a flat rgb(151, 170, 181) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216)",
+      "every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+      "a flat rgb(30, 40, 48) at 65% source-over through img/frames/m15/regular/m15MaskTitle.png, on the pixels CC draws translucent (full weight at α ≤ 230, none at α ≥ 244)",
+      "every pixel through img/frames/m15/regular/m15MaskTitle.png made opaque in its own colour (α' = α + (255 − α) × mask)"
+    ],
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/token/short/m15MaskPinlineSuperShort.png",
+      "img/frames/token/short/m15MaskTypeShort.png",
+      "img/frames/token/short/tokenFrameAShort.png",
+      "img/frames/token/short/tokenFrameBShort.png",
+      "img/frames/token/short/tokenFrameGShort.png",
+      "img/frames/token/short/tokenFrameMShort.png",
+      "img/frames/token/short/tokenFrameRShort.png",
+      "img/frames/token/short/tokenFrameUShort.png",
+      "img/frames/token/short/tokenFrameWShort.png"
+    ],
+    "notes": [
+      "source: CC 'Short' token pack Artifact Frame (tokenFrameAShort.png) — TODO 4.50",
+      "coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (img/frames/token/short/m15MaskPinlineSuperShort.png): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)",
+      "CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn",
+      "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels",
+      "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels",
+      "the name pill darkened to the prints' slate (owner decision 2026-09-29, TODO 4.50): a flat slate rgb 30/40/48 at 65 % source-over CC's translucent silver interior through M15's Title mask (the rims and outline keep CC's pixels) — behind the name luminance 63 and white ink 10.5 : 1, as 16 M20+ artifact prints (luminance 54–71, 9–11 : 1); CC's silver pill was 102–137 (3.5–5.7 : 1) — PipGlyph composite of CC pixels",
+      "the name pill SOLID (owner decision round 14, 2026-09-29): after the slate its interior was α ≈ 246; every pixel M15's Title mask covers made opaque in its own colour (the mask covers nothing CC draws below α 230) — PipGlyph composite of CC pixels"
+    ]
+  },
+  "m20tokentall": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenTall-1.js 'Tall' (groupToken-2.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "colors": {
+      "w": [
+        "img/frames/token/tall/tokenFrameWTall.png"
+      ],
+      "u": [
+        "img/frames/token/tall/tokenFrameUTall.png"
+      ],
+      "b": [
+        "img/frames/token/tall/tokenFrameBTall.png"
+      ],
+      "r": [
+        "img/frames/token/tall/tokenFrameRTall.png"
+      ],
+      "g": [
+        "img/frames/token/tall/tokenFrameGTall.png"
+      ],
+      "c": [
+        "img/frames/token/tall/frameC.png"
+      ],
+      "m": [
+        "img/frames/token/tall/tokenFrameMTall.png"
+      ]
+    },
+    "finish": [
+      "a flat rgb(164, 149, 143) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only)",
+      "every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask)"
+    ],
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/token/tall/frameC.png",
+      "img/frames/token/tall/tokenFrameBTall.png",
+      "img/frames/token/tall/tokenFrameGTall.png",
+      "img/frames/token/tall/tokenFrameMTall.png",
+      "img/frames/token/tall/tokenFrameRTall.png",
+      "img/frames/token/tall/tokenFrameUTall.png",
+      "img/frames/token/tall/tokenFrameWTall.png"
+    ],
+    "notes": [
+      "source: CC 'Tall' token pack (tokenFrame{W,U,B,R,G,M}Tall.png) — the full-art token design, M20 → today (TODO 4.48)",
+      "colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)",
+      "measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn",
+      "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
+      "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
+    ]
+  },
+  "m20tokentext": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTokenShort-1.js 'Short' (groupToken-2.js) — the printed regular box",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "colors": {
+      "w": [
+        "img/frames/token/short/tokenFrameWShort.png"
+      ],
+      "u": [
+        "img/frames/token/short/tokenFrameUShort.png"
+      ],
+      "b": [
+        "img/frames/token/short/tokenFrameBShort.png"
+      ],
+      "r": [
+        "img/frames/token/short/tokenFrameRShort.png"
+      ],
+      "g": [
+        "img/frames/token/short/tokenFrameGShort.png"
+      ],
+      "c": [
+        "img/frames/token/short/frameC.png"
+      ],
+      "m": [
+        "img/frames/token/short/tokenFrameMShort.png"
+      ]
+    },
+    "finish": [
+      "a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only)",
+      "every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask)"
+    ],
+    "sourceFiles": [
+      "img/frames/token/short/frameC.png",
+      "img/frames/token/short/m15MaskTypeShort.png",
+      "img/frames/token/short/tokenFrameBShort.png",
+      "img/frames/token/short/tokenFrameGShort.png",
+      "img/frames/token/short/tokenFrameMShort.png",
+      "img/frames/token/short/tokenFrameRShort.png",
+      "img/frames/token/short/tokenFrameUShort.png",
+      "img/frames/token/short/tokenFrameWShort.png"
+    ],
+    "notes": [
+      "source: CC 'Short' token pack (tokenFrame{W,U,B,R,G,M}Short.png) — the full-art token design, M20 → today (TODO 4.48)",
+      "colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)",
+      "CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn",
+      "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
+      "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
+    ]
   }
 }

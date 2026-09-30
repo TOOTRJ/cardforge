@@ -33,7 +33,12 @@ import sharp from "sharp";
 // the stored bake, named <slug>-800ppi.png / -bleed.png / -800ppi-bleed.png,
 // with their own ETag — and follow the clean download's entitlement: a
 // watermarked viewer gets 403 UPGRADE_REQUIRED (800 ppi while
-// PRINT_800_PPI_PAID_ONLY). `ppi=600` alone is the plain download.
+// PRINT_800_PPI_PAID_ONLY). `ppi=600` alone is the plain download;
+// `print=1` (TODO 6.15) asks for the 600 ppi print render without a bleed —
+// what the Pro exports print from — named <slug>-print.png, clean-only
+// whatever the 800 ppi switch says. `bleed=mpc` (TODO 6.1) is
+// MakePlayingCards' file: the bleed's rules, named <slug>(-800ppi)-mpc.png,
+// with an ETag of its own (never the 1/8 in bleed's).
 // ---------------------------------------------------------------------------
 
 const ID = "22222222-2222-4222-8222-222222222222";
@@ -606,6 +611,13 @@ describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", 
     ["ppi=800&corners=round&bleed=1", { ppi: 800, bleed: true }, "c-800ppi-bleed.png"],
     // The resolution is the ppi; a stray preset changes nothing.
     ["preset=default&ppi=800", { ppi: 800, bleed: false }, "c-800ppi.png"],
+    // TODO 6.15: the exports' 600 ppi print render (the art at full
+    // resolution), not the plain HD render.
+    ["ppi=600&corners=square&print=1", { ppi: 600, bleed: false }, "c-print.png"],
+    ["preset=hd&print=1", { ppi: 600, bleed: false }, "c-print.png"],
+    // TODO 6.1: MakePlayingCards' file.
+    ["ppi=600&corners=square&bleed=mpc", { ppi: 600, bleed: "mpc" }, "c-mpc.png"],
+    ["ppi=800&bleed=mpc", { ppi: 800, bleed: "mpc" }, "c-800ppi-mpc.png"],
   ] as const)("paid: %s renders live through the print path, never the bake", async (query, print, filename) => {
     state.paid = true;
     state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
@@ -618,7 +630,7 @@ describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", 
     expect((await sharp(Buffer.from(await res.arrayBuffer())).metadata()).width).toBe(2200);
   });
 
-  it.each(["ppi=800", "bleed=1", "ppi=800&bleed=1"])(
+  it.each(["ppi=800", "bleed=1", "ppi=800&bleed=1", "print=1", "ppi=600&print=1", "bleed=mpc", "ppi=800&bleed=mpc"])(
     "a watermarked (free) viewer asking %s gets 403 UPGRADE_REQUIRED, and nothing renders",
     async (query) => {
       state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
@@ -635,6 +647,8 @@ describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", 
     state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
     expect((await printDownload("ppi=800&format=jpeg")).status).toBe(400);
     expect((await printDownload("bleed=1&format=jpeg")).status).toBe(400);
+    expect((await printDownload("print=1&format=jpeg")).status).toBe(400);
+    expect((await printDownload("bleed=mpc&format=jpeg")).status).toBe(400);
     expect(state.print).not.toHaveBeenCalled();
   });
 
@@ -653,14 +667,17 @@ describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", 
     state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
     const tags = new Set<string | null>();
     tags.add((await download("hd", {}, "square")).headers.get("etag"));
-    for (const query of ["ppi=800", "bleed=1", "ppi=800&bleed=1"]) {
+    for (const query of ["ppi=800", "bleed=1", "ppi=800&bleed=1", "print=1", "bleed=mpc", "ppi=800&bleed=mpc"]) {
       const tag = (await printDownload(query)).headers.get("etag");
       tags.add(tag);
       state.print.mockClear();
       expect((await printDownload(query, { "if-none-match": tag! })).status).toBe(304);
       expect(state.print).not.toHaveBeenCalled();
     }
-    expect(tags.size).toBe(4);
+    // The 600 ppi print render is not the plain HD square download's bytes,
+    // and MPC's file is not the 1/8 in bleed's (a 304 there would hand back
+    // the other file).
+    expect(tags.size).toBe(7);
   });
 
   it("records the resolution and the bleed for a signed-in viewer", async () => {
@@ -673,6 +690,20 @@ describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", 
       kind: "download",
       props: { format: "png", preset: "800ppi", clean: true, corners: "square", layout: "bleed" },
     });
+    state.activity.mockClear();
+    await printDownload("bleed=mpc");
+    expect(state.activity).toHaveBeenCalledWith(expect.anything(), {
+      userId: "viewer-1",
+      kind: "download",
+      props: { format: "png", preset: "600ppi", clean: true, corners: "square", layout: "mpc" },
+    });
+  });
+
+  it("a watermarked viewer asking for MPC's file is told it is a Plus feature", async () => {
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    const res = await printDownload("bleed=mpc");
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "MakePlayingCards files are a Plus feature.", code: "UPGRADE_REQUIRED" });
   });
 });
 
@@ -688,7 +719,8 @@ describe("print downloads with PRINT_800_PPI_PAID_ONLY off (the 6.1b [decide]'s 
     const res = await printDownload("ppi=800");
     expect(res.status).toBe(200);
     expect(state.print).toHaveBeenCalledWith(expect.anything(), { ppi: 800, bleed: false, brandMark: true, watermarkText: null });
-    for (const query of ["bleed=1", "ppi=800&bleed=1"]) {
+    // …and so does the 600 ppi print render (a free image is 750 px).
+    for (const query of ["bleed=1", "ppi=800&bleed=1", "print=1", "bleed=mpc", "ppi=800&bleed=mpc"]) {
       state.print.mockClear();
       const refused = await printDownload(query);
       expect(refused.status).toBe(403);

@@ -653,8 +653,11 @@ function CardFace({
   const frameSplit = frameSplitFor(layout, colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
   const markLayout = brandMarkLayout(layout);
-  // A textless frame (TODO 3.24) prints no type line and no text box.
+  // A textless frame (TODO 3.24) prints no type line and no text box — but
+  // the full-art token's textless height keeps its type line (4.48,
+  // FrameProfile.textlessTypeLine).
   const textless = Boolean(layout.textless);
+  const hidesTypeLine = textless && !layout.textlessTypeLine;
   // The set symbol's size and drawn width (lib/cards/set-symbol-size.ts) —
   // the bake's twin: the same box, glyph fit and width in both renderers.
   const setSymbol = setSymbolSize(layout, setSymbolSource(setIconUrl, setIconCode));
@@ -1096,9 +1099,10 @@ function CardFace({
           profile defines a symbolRect, the symbol renders in its OWN
           absolutely positioned box so it can be aligned independently. */}
       {/* A textless frame (TODO 3.24) prints no type line — nor the set
-          symbol beside it (a symbolRect box still prints, below). A split
+          symbol beside it (a symbolRect box still prints, below) — unless
+          it keeps its type line (textlessTypeLine, the full-art token). A split
           type line prints its two halves in their own boxes. */}
-      {textless ? null : layout.type.split && typeSplit ? (
+      {hidesTypeLine ? null : layout.type.split && typeSplit ? (
         <SplitTypeLine
           slot={{
             ...layout.type,

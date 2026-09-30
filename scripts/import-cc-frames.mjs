@@ -6,8 +6,10 @@
 // and the old borders). Later runs of the same importer: 4.32's borderless
 // frame (m15borderless, m15borderlessartifact) and 4.39's full-art basics
 // (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
-// (m15tokentext, m15tokenartifacttext), re-cut onto the prints, and 4.49's
-// textless-token re-cut (m15token, m15tokenartifact moved onto the prints).
+// (m15tokentext, m15tokenartifacttext), re-cut onto the prints, 4.49's
+// textless-token re-cut (m15token, m15tokenartifact moved onto the prints),
+// and 4.48 / 4.50's full-art tokens (m20token, m20tokentext, m20tokentall and
+// their artifact templates; the textless pair re-cut 5 px onto the prints).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
@@ -49,11 +51,14 @@ import {
   OUT_W,
   WEBP,
   builtColors,
+  compositeFinish,
   compositeLayers,
   cutThroughMask,
+  describeFinish,
   describeLayer,
   applyTone,
   bridgeRayTip,
+  finishFor,
   recutBand,
   roundCornersRgba8,
   sourceFilesFor,
@@ -150,8 +155,11 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
+    // This colour's PipGlyph composites (a composite may name its colours:
+    // round 14's colourless type pill is the plain templates' `c` only).
+    const finish = finishFor(def, key);
     if (dryRun) {
-      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}${finish.length ? `, then ${finish.map(describeFinish).join("; ")}` : ""}`);
       continue;
     }
     // Work at the base layer's native size; downscale once at the end.
@@ -166,7 +174,22 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         opacity: l.opacity,
       });
     }
-    const composite = toRgba8(compositeLayers(images, W, H));
+    const flat = toRgba8(compositeLayers(images, W, H));
+    // PipGlyph composites over CC's flattened pixels (the full-art tokens'
+    // type pill darkened and solid, the artifact name pill slate and solid;
+    // owner decisions 2026-09-29), before any re-cut: the masks are the
+    // pack's geometry.
+    const composite = finish.length
+      ? compositeFinish(
+          flat,
+          W,
+          H,
+          finish,
+          Object.fromEntries(
+            await Promise.all(finish.map(async (f) => [f.mask, await rgba(await fetchCached(f.mask), W, H)])),
+          ),
+        )
+      : flat;
     // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b)).
     const recut = def.recut ? recutBand(composite, W, H, def.recut) : composite;
     // A ray's top closed over by the frame (the emblem's spark, 4.52).
@@ -232,6 +255,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     output: `${OUT_W}x${OUT_H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
     ...(def.transforms ? { transforms: def.transforms } : {}),
     colors: recipe,
+    ...(def.finish ? { finish: def.finish.map(describeFinish) } : {}),
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),

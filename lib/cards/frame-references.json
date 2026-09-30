@@ -749,6 +749,356 @@
       "m": null
     }
   },
+  "m20token": {
+    "note": "The full-art token design, M20 (2019-07-12) → today, textless height (CC 'Textless' token pack, its type pill re-cut 5 px onto the prints; TODO 4.48): M20+ prints with no rules text, measured textless (type pill ~81 %H). Mono-colour only: two colours print a gradient and legends a crown (4.6); m = three or more colours.",
+    "colors": {
+      "w": [
+        {
+          "name": "Soldier",
+          "set": "tfdn",
+          "scryfallId": "d093322e-a717-4e2d-8199-fa560792bcf6"
+        },
+        {
+          "name": "Soldier",
+          "set": "tm20",
+          "scryfallId": "a491d9da-a58d-4423-b565-c5a99ef63132"
+        },
+        {
+          "name": "Cat",
+          "set": "t2xm",
+          "scryfallId": "f859b55c-0b49-4190-b1fa-94f97a59b57c"
+        }
+      ],
+      "u": [
+        {
+          "name": "Ninja",
+          "set": "tfdn",
+          "scryfallId": "aeec04b1-475c-4e55-b72f-327ea5258146"
+        },
+        {
+          "name": "Illusion",
+          "set": "tsoc",
+          "scryfallId": "f6469938-5af9-4f0a-9f2e-603c833e48ba"
+        }
+      ],
+      "b": [
+        {
+          "name": "Zombie",
+          "set": "tfdn",
+          "scryfallId": "e29a360b-11fd-42ba-82ba-de8f7e136c20"
+        },
+        {
+          "name": "Zombie",
+          "set": "tfdc",
+          "scryfallId": "f7a49477-b7b5-4f0e-885f-e1d2b580c52e"
+        }
+      ],
+      "r": [
+        {
+          "name": "Goblin",
+          "set": "tfdn",
+          "scryfallId": "70f8a1de-cd4c-4afa-bf03-0245d375d42e"
+        },
+        {
+          "name": "Rebel",
+          "set": "tfic",
+          "scryfallId": "6afbbdad-aeed-428a-b840-c33f59a18d0b"
+        }
+      ],
+      "g": [
+        {
+          "name": "Raccoon",
+          "set": "tfdn",
+          "scryfallId": "1b8d8730-d6bd-4525-96e9-0513ed02de37"
+        },
+        {
+          "name": "Squirrel",
+          "set": "tpip",
+          "scryfallId": "f90bb066-79fd-48cd-ab5a-eaed71139b4e"
+        }
+      ],
+      "c": [
+        {
+          "name": "Sliver",
+          "set": "teoe",
+          "scryfallId": "bf7501ee-783d-49c6-b381-1db056360b40"
+        },
+        {
+          "name": "Eldrazi",
+          "set": "tcmm",
+          "scryfallId": "1a2f00da-1c4d-45d4-af34-9216a34bff2a"
+        }
+      ],
+      "m": [
+        {
+          "name": "Sand Warrior",
+          "set": "tm3c",
+          "scryfallId": "17812f4e-a10c-472b-970f-35a8f392235a"
+        },
+        {
+          "name": "Sand Warrior",
+          "set": "tdmu",
+          "scryfallId": "124ea959-742a-4914-9bca-1075ccd0cb22"
+        }
+      ]
+    }
+  },
+  "m20tokentext": {
+    "note": "The full-art token design with the regular text box (CC 'Short' token pack; TODO 4.48): M20+ prints measured on the regular box (type pill ~67 %H). Mono-colour only (two colours and legends are 4.6); m = three or more colours.",
+    "colors": {
+      "w": [
+        {
+          "name": "Cat",
+          "set": "tfdn",
+          "scryfallId": "86701490-17ac-4253-810d-6cfd7a46594c"
+        },
+        {
+          "name": "Spirit",
+          "set": "tfdn",
+          "scryfallId": "278adad2-49a6-4baa-8dbe-93474545eef7"
+        }
+      ],
+      "u": [
+        {
+          "name": "Drake",
+          "set": "tfdn",
+          "scryfallId": "f4a73034-e20f-4e7e-ac15-3460b1e9c69b"
+        },
+        {
+          "name": "Faerie",
+          "set": "tfdn",
+          "scryfallId": "d1c0556e-ba3c-4a8e-b704-8eaa7c4dba1c"
+        }
+      ],
+      "b": [
+        {
+          "name": "Rat",
+          "set": "tfdn",
+          "scryfallId": "7384238b-cffb-4946-96de-dc6b7a37b979"
+        },
+        {
+          "name": "Insect",
+          "set": "teoc",
+          "scryfallId": "2172a126-2ea6-4b5c-84c2-7879c1982a3a"
+        }
+      ],
+      "r": [
+        {
+          "name": "Dragon",
+          "set": "tfdn",
+          "scryfallId": "55c6be20-b65a-4b1e-8133-4c2d88c1f6f9"
+        },
+        {
+          "name": "Dragon",
+          "set": "tfdc",
+          "scryfallId": "7fc0760c-495a-4737-8d9e-4110344af99e"
+        }
+      ],
+      "g": [
+        {
+          "name": "Spider",
+          "set": "tdsk",
+          "scryfallId": "4f8852eb-1318-40c2-aa2a-8c0e830cca71"
+        },
+        {
+          "name": "Spider",
+          "set": "tfdc",
+          "scryfallId": "5547973c-b0df-4103-a657-ac20611bd600"
+        }
+      ],
+      "c": [
+        {
+          "name": "Eldrazi Spawn",
+          "set": "tmh3",
+          "scryfallId": "e32795e1-5548-43ef-8cd6-c605a19ef708"
+        },
+        {
+          "name": "Copy",
+          "set": "tfdn",
+          "scryfallId": "fc586e46-b7d0-4c84-8678-3542cd390de1"
+        }
+      ],
+      "m": [
+        {
+          "name": "Reliquary Dragon",
+          "set": "ttdm",
+          "scryfallId": "44465924-8cc2-49a4-bc07-8dbae7570af6"
+        },
+        {
+          "name": "Elemental",
+          "set": "tfin",
+          "scryfallId": "fe592a5c-5e6e-40ed-8818-f4651bcf2fe8"
+        }
+      ]
+    }
+  },
+  "m20tokentall": {
+    "note": "The full-art token design with the tall text box (CC 'Tall' token pack; TODO 4.48): M20+ prints measured on the tall box (type pill ~56 %H). No red, colourless or three-colour non-legendary tall print was found (Scryfall 2026-09-29).",
+    "colors": {
+      "w": [
+        {
+          "name": "Warren Warleader",
+          "set": "tblb",
+          "scryfallId": "5cc9b628-0a3a-4d09-ae4a-57c7f6f9ac36"
+        },
+        {
+          "name": "Angel of Sanctions",
+          "set": "tdrc",
+          "scryfallId": "eee11a08-6cdc-4c47-9ad4-26b766e4a839"
+        }
+      ],
+      "u": [
+        {
+          "name": "Thundertrap Trainer",
+          "set": "tblb",
+          "scryfallId": "80bcbe35-7764-4c75-b954-cbba11372dec"
+        }
+      ],
+      "b": [
+        {
+          "name": "Darkstar Augur",
+          "set": "tblb",
+          "scryfallId": "01b55966-0910-484d-9b2b-0a59233c44c4"
+        }
+      ],
+      "r": null,
+      "g": [
+        {
+          "name": "Pawpatch Recruit",
+          "set": "tblb",
+          "scryfallId": "7cdd8679-93a7-4e58-a6f3-b48897697e89"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "m20tokenartifact": {
+    "note": "The full-art artifact token, textless height (CC 'Textless' Artifact Frame, re-cut like m20token; TODO 4.50): silver pills, the colour on the rims, pinline and strip. No mono-black (T40K #14 prints its own layout), green or three-colour textless artifact token.",
+    "colors": {
+      "w": [
+        {
+          "name": "Toy",
+          "set": "tdsk",
+          "scryfallId": "5e6d479d-c30d-4048-b250-5233358a174c"
+        }
+      ],
+      "u": [
+        {
+          "name": "Phyrexian Myr",
+          "set": "tsoc",
+          "scryfallId": "ca7e566f-5eb4-4f0f-bf87-5788c57ba1e4"
+        },
+        {
+          "name": "Phyrexian Myr",
+          "set": "tm3c",
+          "scryfallId": "51649b34-3e27-4005-85e3-9393ca7e663d"
+        }
+      ],
+      "b": null,
+      "r": [
+        {
+          "name": "Gremlin",
+          "set": "tmoc",
+          "scryfallId": "23854999-2691-491c-aa7d-81f269e23b4e"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Golem",
+          "set": "teoc",
+          "scryfallId": "f2f589ac-991f-4f26-8fd4-0d903683f15a"
+        },
+        {
+          "name": "Servo",
+          "set": "tcmm",
+          "scryfallId": "e6a5faa3-b86e-4e05-93db-5db9507ae7d0"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20tokenartifacttext": {
+    "note": "The full-art artifact token with the regular text box (CC 'Short' Artifact Frame; TODO 4.50). No green or non-legendary three-colour print; TMOC #23 / TIKO #9 Feather tint their box and are not references.",
+    "colors": {
+      "w": [
+        {
+          "name": "Gnome Soldier",
+          "set": "tlci",
+          "scryfallId": "cbe7c36a-77b7-4418-9e2d-b6aeea61502e"
+        }
+      ],
+      "u": [
+        {
+          "name": "Thopter",
+          "set": "tmh3",
+          "scryfallId": "e0a7adb3-8e66-4e63-95f2-1a5f5827b676"
+        },
+        {
+          "name": "Thopter",
+          "set": "t2xm",
+          "scryfallId": "eef8b4fc-238f-4c1f-ad98-a1769fd44eab"
+        }
+      ],
+      "b": [
+        {
+          "name": "Phyrexian Wurm",
+          "set": "tmh3",
+          "scryfallId": "1482ab42-875c-46fc-aa0b-b18154488985"
+        },
+        {
+          "name": "Phyrexian Wurm",
+          "set": "tmh3",
+          "scryfallId": "1a7800c9-6808-4f33-87ad-50ad8c79f2d7"
+        }
+      ],
+      "r": [
+        {
+          "name": "Construct",
+          "set": "tneo",
+          "scryfallId": "cbafdfc0-380a-482b-b5f8-a7a00ecf8da6"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Treasure",
+          "set": "tfdn",
+          "scryfallId": "21210145-8edd-41f5-9a64-9f0b5be79864"
+        },
+        {
+          "name": "Food",
+          "set": "tfdn",
+          "scryfallId": "6f1077f8-9e2a-4155-a7f0-4604bc0f94e8"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20tokenartifacttall": {
+    "note": "The full-art artifact token with the tall text box (CC 'Tall' Artifact Frame; TODO 4.50): Map (TLCI #17) and MKM's Clues print it. Only colourless ones were found.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Map",
+          "set": "tlci",
+          "scryfallId": "64839118-09d2-4645-9d3c-f80755ac781f"
+        },
+        {
+          "name": "Clue",
+          "set": "tmkm",
+          "scryfallId": "ee022200-f589-4f06-8de8-d313e29f7be8"
+        }
+      ],
+      "m": null
+    }
+  },
   "m15snow": {
     "note": "Gold snow spells only exist as legendaries (crown) — the m reference is accepted with that caveat.",
     "colors": {

@@ -180,7 +180,7 @@ describe("validateReferenceForCombo", () => {
     });
     expect(validateReferenceForCombo(emblem, "emblem", "c")).toEqual({ errors: [], warnings: [] });
     expect(validateReferenceForCombo(emblem, "m15token", "c").errors).toEqual([
-      "Kaito, Cunning Infiltrator Emblem is an emblem; the Token frame doesn't dress that kind.",
+      "Kaito, Cunning Infiltrator Emblem is an emblem; the Token (2014–2019) frame doesn't dress that kind.",
     ]);
   });
 

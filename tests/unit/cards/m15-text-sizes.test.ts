@@ -52,8 +52,9 @@ const font: { ascender: number; descender: number; unitsPerEm: number } = openty
 
 describe("one M15-era display size (layout v32)", () => {
   it("prints every family frame's name and type line at TITLE_SIZE_PCT / TYPE_SIZE_PCT — both halves of a flip or aftermath", () => {
-    // v32's 23, plus 4.49 (b)'s two text-box tokens and 4.52's emblem.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(26);
+    // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.48 / 4.50's six
+    // full-art tokens and 4.52's emblem.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(32);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -184,6 +185,15 @@ describe("baselines (TextSlot.dy)", () => {
     // (1498 → 1496 px), measured on TFDN #24 / #25, TBLB #30, TDSK #17 and
     // TFRA #16.
     ["emblem", -3 / 1500, -2 / 1500],
+    // The full-art tokens (TODO 4.48 / 4.50): new, set on the M20 prints'
+    // baselines from CC's boxes — the name 4 px up, the type line 6 / 5 / 6
+    // px up from its pill's centre (textless / regular / tall).
+    ["m20token", -4 / 1500, -6 / 1500],
+    ["m20tokentext", -4 / 1500, -5 / 1500],
+    ["m20tokentall", -4 / 1500, -6 / 1500],
+    ["m20tokenartifact", -4 / 1500, -6 / 1500],
+    ["m20tokenartifacttext", -4 / 1500, -5 / 1500],
+    ["m20tokenartifacttall", -4 / 1500, -6 / 1500],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
     ["adventure", base.title, base.type],
     ["extendedart", base.title, base.type],
@@ -246,6 +256,10 @@ describe("baselines (TextSlot.dy)", () => {
     expect(at("fullart")).toEqual([-2, -5, -1, -3]);
     expect(at("aftermath")).toEqual([-2, -1, -1, 0]);
     expect(at("m15fullartland")).toEqual([0, 0, 0, 0]);
+    // The full-art tokens: whole px at both sizes, onto the prints'.
+    expect(at("m20token")).toEqual([-4, -6, -2, -3]);
+    expect(at("m20tokentext")).toEqual([-4, -5, -2, -2]);
+    expect(at("m20tokentall")).toEqual([-4, -6, -2, -3]);
   });
 
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {

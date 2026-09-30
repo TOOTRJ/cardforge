@@ -23,8 +23,9 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // Fixtures are real Scryfall payloads (/cards/:id, captured once on
 // 2026-09-28 for the references the import fixtures lack — TKLD #2 on
 // 2026-09-29, after TODO 4.49's token re-pin, and TDOM #2 / TXLN #7 (with
-// their rules text) for 4.49 (b)'s text-box tokens, TFDN #25 (2026-09-29)
-// for 4.52's emblem; the rest reuse
+// their rules text) for 4.49 (b)'s text-box tokens, the six full-art
+// token references of 4.48 / 4.50 (2026-09-29, with their text), TFDN #25
+// (2026-09-29) for 4.52's emblem; the rest reuse
 // tests/unit/scryfall/fixtures/import-printings.json), trimmed like those to
 // identity + the frame fields (no rules or flavour text) and parsed through
 // the routes' zod schema. No network. The walk's skins/treatments ride the
@@ -168,6 +169,17 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   // TODO 4.52's unverified emblem frame: its reference TFDN #25 lands on the
   // emblem kind with the walker's name (Scryfall's "Vivien Reid Emblem").
   ["emblem", "c", "Vivien Reid", ""],
+  // TODO 4.48 / 4.50's unverified full-art tokens: every height and its
+  // artifact template, from their measured references (TFDN #6 Soldier,
+  // TFDN #27 Cat, TBLB #5 Warren Warleader; TDSK #7 Toy, TFDN #23 Treasure,
+  // TLCI #17 Map) — captured with their text, so the registry's height rule
+  // names the height they print.
+  ["m20token", "w", "Soldier", ""],
+  ["m20tokentext", "w", "Cat", ""],
+  ["m20tokentall", "w", "Warren Warleader", ""],
+  ["m20tokenartifact", "w", "Toy", ""],
+  ["m20tokenartifacttext", "c", "Treasure", ""],
+  ["m20tokenartifacttall", "c", "Map", ""],
 ];
 
 describe("walking a layout frame from its real reference printing", () => {
