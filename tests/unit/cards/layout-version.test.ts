@@ -400,6 +400,12 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15borderless", "m15borderlessartifact", "m15fullartland",
   // TODO 4.49 (b)'s text-box tokens.
   "m15tokentext", "m15tokenartifacttext",
+  // TODO 4.52's emblem.
+  "emblem",
+  // TODO 4.48 / 4.50's full-art tokens.
+  "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+  // TODO 4.33's borderless planeswalkers.
+  "m15borderlesspw", "m15borderlesspwtall",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -709,9 +715,15 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     const { M15_FAMILY_TEMPLATES } = await import("@/lib/cards/m15-family");
     // The family changed? Don't edit the frozen v32 list: ship the change in
     // its own bump, and record it here (the family = v32's list ± it).
-    // + 4.49 (b)'s text-box tokens: NEW templates, no card ever baked on
-    // them before, so they joined without a bump.
-    const joinedLater = ["m15tokentext", "m15tokenartifacttext"];
+    // + 4.49 (b)'s text-box tokens, 4.48 / 4.50's full-art tokens, 4.33's
+    // borderless planeswalkers and 4.52's emblem: NEW templates, no card ever
+    // baked on them before, so they joined without a bump.
+    const joinedLater = [
+      "m15tokentext", "m15tokenartifacttext",
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      "m15borderlesspw", "m15borderlesspwtall",
+      "emblem",
+    ];
     expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
     for (const t of joinedLater) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
     expect(new Set(V32_M15_FAMILY_TEMPLATES).size).toBe(V32_M15_FAMILY_TEMPLATES.length);
@@ -894,8 +906,12 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     const { V33_SCOPE_TEMPLATES } = await import("@/lib/cards/layout-version");
     const all = [...FRAME_TEMPLATE_VALUES];
     // A template that becomes textless or gains a chapter rail later brings
-    // its own bump: record it here, never in the frozen lists.
-    expect([...V33_SCOPE_TEMPLATES.textless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
+    // its own bump: record it here, never in the frozen lists. A NEW
+    // textless template no card was ever baked on needs none: 4.48's
+    // full-art token's textless height (and its artifact template).
+    const newTextless = ["m20token", "m20tokenartifact"];
+    expect([...V33_SCOPE_TEMPLATES.textless, ...newTextless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
+    for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
     expect([...V33_SCOPE_TEMPLATES.chapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
   });
 

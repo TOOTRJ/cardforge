@@ -14,6 +14,8 @@ faq:
     a: "\"Token\" comes first, then the token's types, then a dash and its subtypes: \"Token Creature — Soldier\", \"Token Artifact — Treasure\", \"Token Enchantment Creature — Glimmer\", \"Token Legendary Creature — Wolf\". Only a creature token has power and toughness, so a Treasure has none. A copy token prints just \"Token\", and a token is named after its subtypes unless it has a proper name."
   - q: "Can I design custom token cards in PipGlyph?"
     a: "Yes. Pick Token as the card type in the editor at /create, then turn on its types — Creature, Artifact, Enchantment, and Legendary for a named one. The type line prints \"Token\" first, an Artifact token wears the artifact token frame, power and toughness appear only for a creature token, and the name follows the subtypes until you type your own. You can publish tokens to the gallery next to the spell or permanent that creates them so the pair shares context."
+  - q: "How do I make an emblem?"
+    a: "An emblem is what a planeswalker's ability leaves behind: a lasting effect with no color, mana cost, types, or power and toughness. In the editor at /create, pick Token as the card type, then turn on Emblem next to the token's types. Name it after the planeswalker that makes it, and write the effect as its rules text. The card prints \"Emblem\" on the silver emblem frame, with the art in the planeswalker spark; add a subtype such as Kaito only if you want the older \"Emblem — Kaito\" line."
 ---
 
 A token is a marker that represents a creature or other permanent on the battlefield, created by another card's ability rather than cast from your deck. Tokens have no mana cost, are never in your deck or hand, and cease to exist the moment they leave the battlefield. Designing one is really two jobs: building the token itself, and building the card or ability that makes it.
@@ -102,3 +104,7 @@ Price the maker, not the token. Add up quantity, the size and abilities of each 
 ### Can I design custom token cards in PipGlyph?
 
 Yes. Pick Token as the card type in the editor at [/create](/create), then turn on its types — Creature, Artifact, Enchantment, and Legendary for a named one. The type line prints "Token" first, an Artifact token wears the artifact token frame, power and toughness appear only for a creature token, and the name follows the subtypes until you type your own. You can publish tokens to the [gallery](/gallery) next to the spell or permanent that creates them so the pair shares context.
+
+### How do I make an emblem?
+
+An emblem is what a planeswalker's ability leaves behind: a lasting effect with no color, mana cost, types, or power and toughness. In the editor at [/create](/create), pick Token as the card type, then turn on Emblem next to the token's types. Name it after the planeswalker that makes it, and write the effect as its rules text. The card prints "Emblem" on the silver emblem frame, with the art in the planeswalker spark; add a subtype such as Kaito only if you want the older "Emblem — Kaito" line.

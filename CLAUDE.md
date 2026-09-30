@@ -317,7 +317,50 @@ Rules and gotchas:
   later bump whose slots move on fewer templates than its bakes change on
   lists them in `VERIFICATION_TEMPLATE_SCOPES`; legacy ticks
   are judged at `LEGACY_TICK_LAYOUT_VERSION` (33) (`docs/FRAMES.md`
-  "Tokens").
+  "Tokens"). M20+ tokens (4.48 / 4.50) = six NEW templates `m20token` /
+  `m20tokentext` / `m20tokentall` + `m20tokenartifact…` (CC's 'Textless' —
+  re-cut 5 px, `M20_TOKEN_TEXTLESS_RECUT` — 'Short' and 'Tall' packs; never
+  CC's 'Regular'; the importer's `finish` composites darken the colourless
+  and artifact type pills to the prints and make every type pill solid, and
+  the artifact name pill slate and solid): the textless height is 3.24's
+  `textless` with `textlessTypeLine`; the height follows the text
+  (`tokenHeightForText`, `lib/cards/token-height.ts`: the regular box down
+  to 72 px — the import's rule too; `tokenFrameFor` applies it for the
+  pickers, AI jobs and remix); `token/m20` is exact on them once verified
+  (`onceVerified` + `exactOnceVerified` → `FrameMatch.onceVerifiedMatch`,
+  applied by `withVerification`; `borderless/token` names them too, still
+  nearest). The tall box squeezes its paragraph gaps before its size steps
+  down (`TextSlot.paragraphGapMinPx`, that box only). A NEW token starts on
+  the full-art design only where its template/colour is VERIFIED, else on
+  round 11's arch ("Token (2014–2019)") — re-applied when a colour is
+  picked after the type, until a frame pick (`defaultTokenFrameIn`) — and
+  its height follows the text until a Variations pick
+  (`lib/creator/token-frame-auto.ts`, wired into the form's round-11 effect;
+  `docs/FRAMES.md` "Full-art tokens").
+- Emblems (TODO 4.52 + 6.23, migration 0130): `card_type` 'emblem' and the
+  `emblem` kind, reached ONLY through the token kind's Emblem choice
+  (`KIND_PICKER_KINDS` leaves it out of the kind chips; `kindPickerChip`
+  lights Token). The kind wears the `emblem` frame alone and the frame
+  dresses nothing else (`templateRefusesKind` both ways, so the server's
+  kind gate too); every save is colourless with no cost, supertype or stats
+  (`withEmblemShape` / `withEmblemUpdateShape`, `lib/cards/emblem.ts`), new
+  ones common, rarity chips hidden (`kindHidesRarity`); `buildTypeLine`
+  prints "Emblem" (+ " — subtype"). The frame is CC's one master in every
+  colour key (only `c` is referenced), its name pill, silver, type pill
+  and text box toned onto the prints (`EMBLEM_TONES`) and its spark's
+  centre ray bridged over above the art (`EMBLEM_RAY_BRIDGE`, CC
+  importer); its art window is
+  Scryfall's emblem `art_crop` box EXACTLY (a crop of the printed card, at
+  the prints' scale — never grown), CC's tall artBounds the `underFrameArt`
+  layer the spark's 80 % tail shows. Its page and new slug say "Emblem"
+  (`cardPageName`: "Kaito, Cunning Infiltrator Emblem", …-emblem, like
+  Scryfall) while the card prints the walker's name. Imports: "Emblem"
+  is the emblem card type (title minus " Emblem", subtype only on the
+  2014–19 look / AFR); registry `emblem/m20` exact, `emblem/2014-19` /
+  `emblem/old-frame` nearest, `emblem/one-off` unsupported. Emblems stay out
+  of the AI's design types AND its output enum (`designedCardsSchema`: a
+  fill may only PIN one); the lint errors on an emblem's cost or colour.
+  An emblem names no rarity on its card page (`cardTypeHasRarity`).
 - Art windows (TODO 7.6, layout v35): every art slot covers its master's
   see-through window with 0.05 % to spare and every translucent part the art
   shows through (`lib/frames/art-window.ts`; CI checks every template ×

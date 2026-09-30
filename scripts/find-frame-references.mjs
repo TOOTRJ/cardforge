@@ -96,6 +96,35 @@ const TEMPLATES = {
     note: "Text-box arch artifact prints only (released before M20); drop the tall box by eye.",
     q: (k) => `t:token t:artifact frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase ${spellColor(k)}`,
   },
+  // TODO 4.48 / 4.50: the full-art token design (M20, 2019-07-12 → today).
+  // Scryfall has no field for the printed height, so every candidate is
+  // MEASURED on its PNG (the type pill at ~81, ~67 or ~56 %H) before it
+  // lands on a height; mono-colour and non-legendary only (two colours print
+  // a gradient and legends a crown, 4.6), m = three or more colours.
+  m20token: {
+    note: "Full-art (M20+) token prints with no text; measure the height (type pill ~81 %H).",
+    q: (k) => `t:token -t:artifact -t:legendary -t:emblem frame:2015 date>=2019-07-12 border:black -o:/./ -ft:/./ -set:plst ${k === "m" ? "c>=3" : spellColor(k)}`,
+  },
+  m20tokentext: {
+    note: "Full-art (M20+) token prints with text; keep the REGULAR box by measurement (type pill ~67 %H).",
+    q: (k) => `t:token -t:artifact -t:legendary -t:emblem frame:2015 date>=2019-07-12 border:black (o:/./ or ft:/./) -set:plst ${k === "m" ? "c>=3" : spellColor(k)}`,
+  },
+  m20tokentall: {
+    note: "Full-art (M20+) token prints with long text; keep the TALL box by measurement (type pill ~56 %H).",
+    q: (k) => `t:token -t:artifact -t:legendary -t:emblem frame:2015 date>=2019-07-12 border:black o:/.{120,}/ -set:plst ${k === "m" ? "c>=3" : spellColor(k)}`,
+  },
+  m20tokenartifact: {
+    note: "Full-art (M20+) artifact token prints with no text; measure the height.",
+    q: (k) => `t:token t:artifact -t:legendary frame:2015 date>=2019-07-12 border:black -o:/./ -ft:/./ -set:plst ${k === "m" ? "c>=3" : spellColor(k)}`,
+  },
+  m20tokenartifacttext: {
+    note: "Full-art (M20+) artifact token prints with text; keep the REGULAR box by measurement. Drop the Feathers (TIKO #9, TMOC #23): they tint their box.",
+    q: (k) => `t:token t:artifact -t:legendary frame:2015 date>=2019-07-12 border:black (o:/./ or ft:/./) -set:plst ${k === "m" ? "c>=3" : spellColor(k)}`,
+  },
+  m20tokenartifacttall: {
+    note: "Full-art (M20+) artifact token prints with the TALL box (Maps, MKM's Clues) — measure the height.",
+    q: (k) => `t:token t:artifact -t:legendary frame:2015 date>=2019-07-12 border:black (o:/./ or ft:/./) -set:plst ${k === "m" ? "c>=3" : spellColor(k)}`,
+  },
   m15snow: {
     q: (k) => `frame:2015 frame:snow -t:land -t:token ${STANDARD_EXCLUSIONS} ${spellColor(k)}`,
   },
@@ -119,6 +148,23 @@ const TEMPLATES = {
     confirm: "Coloured borderless artifacts print the colour's bars (FDN, FRA) or silver artifact bars (SNC, SLC) — confirm the thumbnail.",
     q: (k) =>
       `border:borderless frame:2015 -is:showcase -frame:legendary -is:dfc -is:textless t:artifact -t:land -t:token -t:vehicle ${spellColor(k)}`,
+  },
+  // The borderless planeswalkers (4.33): the light look (no `inverted`
+  // flag, whose scans print the same rows but stay nearest by the owner's
+  // 2026-09-26 decision). Split the candidates by PRINTED rows
+  // (walkerRowCount: a run of statics is one row) — three or fewer on
+  // m15borderlesspw, four or more on m15borderlesspwtall — and keep b to the
+  // light-barred prints (LIGHT_BLACK_WALKER_PINS; most black walkers print
+  // dark bars). m = three colours (two-colour walkers split the frame, 4.6).
+  m15borderlesspw: {
+    confirm: "Keep printings with three printed rows; b only the light-barred ones (dark ink: MED #GR2, MED #RA3 — not BLC #78, whose ink is white).",
+    q: (k) =>
+      `t:planeswalker border:borderless frame:2015 -is:showcase -is:dfc -frame:inverted -is:textless ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
+  },
+  m15borderlesspwtall: {
+    confirm: "Keep printings with four printed rows; b only the light-barred ones (dark ink: AFR #284, STX #276, CMR #512).",
+    q: (k) =>
+      `t:planeswalker border:borderless frame:2015 -is:showcase -is:dfc -frame:inverted -is:textless ${k === "m" ? "c>=3 -is:hybrid" : spellColor(k)}`,
   },
   battle: {
     note: "Every printed battle is a transform DFC; the front face is the landscape siege.",

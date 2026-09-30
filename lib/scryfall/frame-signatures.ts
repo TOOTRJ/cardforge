@@ -10,11 +10,14 @@ import {
   borrowedTypeWord,
   templateIsBasicOnly,
   templateSupportsKind,
+  walkerRowCount,
+  walkerRowsFrameFor,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
+import { m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, with 1.17's borderless families and
@@ -76,6 +79,21 @@ export type FrameMatch = {
    *  the textless frame isn't verified (owner decision A9, 2026-09-29).
    *  withVerification (lib/creator/frame-resolve.ts) swaps it in. */
   onceVerified?: FrameTemplate;
+  /** What the match says once `onceVerified` takes over, when that differs
+   *  from the answer before it: the M20 token design (TODO 1.23 / 4.48) is
+   *  `nearest` on the 2014–19 arch until its own template is verified in the
+   *  card's colour, then `exact` on it — or `nearest` for a gap the full-art
+   *  template doesn't draw either (the crown, two colours, the Nyx dress),
+   *  its reason, item and gaps (C1 applies: it is the printing's own frame
+   *  by then). withVerification applies it with the swap. Absent: the
+   *  swap keeps the status, reason and item (a 2003-frame textless promo,
+   *  A9: nearest either way). */
+  onceVerifiedMatch?: {
+    status: FrameMatchStatus;
+    reason: string | null;
+    blockedBy?: string;
+    gaps?: readonly FrameGap[];
+  };
   /** Set by withVerification only: the registry answered `exact`, but that
    *  frame isn't verified in the card's colour yet, so the match was
    *  downgraded to `nearest`. The frame request log files it under "Not yet
@@ -205,6 +223,59 @@ export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = 
   tust: ["18"],
 };
 
+/** The mono-black borderless planeswalkers that print Card Conjurer's
+ *  light black dress — light grey name and type bars with dark ink, the
+ *  m15borderlesspw / m15borderlesspwtall `b` masters (4.33). Most black
+ *  borderless walkers print dark bars with white ink instead (M21 #282, DMU
+ *  #373, VOW #278, INR #322, FDN #359, FRA #303, 2X2 #333, WOE #297, SOS
+ *  #282; checked by eye on the Scryfall scans 2026-09-29), and no Scryfall
+ *  field tells them apart (`inverted` doesn't: FDN #359 and M21 #282 carry
+ *  none), so the light ones are pinned and every other mono-black walker is
+ *  the `dark-bars` gap. Every mono-black borderless walker's title ink was
+ *  checked on the scans (2026-09-29): these six print dark ink on light
+ *  bars. BLC #78 is NOT one — its dark bars print white ink over pale art,
+ *  so they only look light. SLD #1593 is the nickname gap's either way. */
+export const LIGHT_BLACK_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  afr: ["284"],
+  stx: ["276"],
+  cmr: ["512"],
+  med: ["RA3", "GR2"],
+  sld: ["1593"],
+};
+
+/** Borderless planeswalkers outside mono-black that print the dark dress —
+ *  dark name and type bars with white ink — with no `inverted` flag: the
+ *  SDCC 2019 Nicol Bolas, Dragon-God (PS19 #207, gold rims). Found by a
+ *  title- and type-bar luminance sweep of every borderless walker scan,
+ *  checked by eye (4.33 skeptic, 2026-09-29). */
+export const DARK_BAR_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  ps19: ["207"],
+};
+
+/** Borderless planeswalkers whose PRINTED ability box is not the one their
+ *  rows pick (walkerRowCount, TALL_WALKER_MIN_ROWS): Gideon Blackblade MED
+ *  #WS2 sets its two statics in two rows on the tall box, Comet, Stellar
+ *  Pup UNF #275 / #526 its die-roll table on the tall box, and Nicol Bolas,
+ *  Dragon-God PS19 #207 four rows (a static + three abilities) on the
+ *  regular one. The type-bar height of every borderless walker scan was
+ *  checked against the pick (4.33 skeptic, 2026-09-29): 206 of the 210 the
+ *  borderless/planeswalker rule matches print the box it picks; these four
+ *  don't. The creator follows the rows (no pick to pin), so they are
+ *  `nearest`, never a pinned box. */
+export const WALKER_ROW_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
+  med: ["WS2"],
+  unf: ["275", "526"],
+  ps19: ["207"],
+};
+
+/** Borderless planeswalkers that letter the card's name across the art in
+ *  place of a name bar (Secret Lair: Tezzeret the Seeker SLD #1619, Nicol
+ *  Bolas, Planeswalker SLD #1622) — no Scryfall field says so (no `poster`
+ *  promo, no frame effect). */
+export const LETTERED_NAME_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  sld: ["1619", "1622"],
+};
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -289,6 +360,10 @@ type Match = {
   collectors?: Readonly<Record<string, readonly Range[]>>;
   /** Per-set exact collector numbers ("UGL-84" on The List). */
   collectorIds?: Readonly<Record<string, readonly string[]>>;
+  /** …and the printings NOT among these. */
+  notCollectorIds?: Readonly<Record<string, readonly string[]>>;
+  /** The front face's frame colours are exactly these WUBRG letters. */
+  colorsExactly?: readonly string[];
   kinds?: readonly CardKind[];
   notKinds?: readonly CardKind[];
   /** The kind is undefined (no card type PipGlyph makes). */
@@ -313,7 +388,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -328,6 +403,10 @@ type Outcome = {
   blockedBy?: string;
   /** FrameMatch.onceVerified: the frame named instead once verified. */
   onceVerified?: TemplateSpec;
+  /** Once `onceVerified` takes over the match is `exact` on it — `nearest`
+   *  only for a gap that frame doesn't draw either (FrameMatch
+   *  .onceVerifiedMatch; the M20 token design, TODO 4.48). */
+  exactOnceVerified?: true;
 };
 
 type Rule = {
@@ -340,6 +419,10 @@ type Rule = {
   /** A gap rule's gaps (withGaps): its own first — it holds when the rule
    *  matches — then the base's later ones, which may hold too. */
   gaps?: readonly GapKey[];
+  /** The same list on a gap rule whose `nearest` base becomes exact once its
+   *  `onceVerified` frame is verified (Outcome.exactOnceVerified): the gaps
+   *  the match records after the swap. */
+  gapsOnceVerified?: readonly GapKey[];
 };
 
 type Ctx = {
@@ -403,6 +486,11 @@ function matches(match: Match, ctx: Ctx): boolean {
     const ids = match.collectorIds[ctx.set];
     if (!ids || !ids.includes(ctx.collector)) return false;
   }
+  if (match.notCollectorIds?.[ctx.set]?.includes(ctx.collector)) return false;
+  if (match.colorsExactly) {
+    const want = [...match.colorsExactly].sort().join("");
+    if ([...facts.colors].sort().join("") !== want) return false;
+  }
   if (match.noKind && facts.kind !== undefined) return false;
   if (match.kinds && (!facts.kind || !match.kinds.includes(facts.kind))) return false;
   if (match.notKinds && facts.kind && match.notKinds.includes(facts.kind)) return false;
@@ -445,6 +533,33 @@ export function printsTokenTextBox(card: Pick<ScryfallCard, "oracle_text" | "fla
   const text = (face ? face.oracle_text : card.oracle_text) ?? "";
   const flavor = (face ? face.flavor_text : card.flavor_text) ?? "";
   return text.trim() !== "" || flavor.trim() !== "";
+}
+
+/** The front face's rules text (a planeswalker's ability rows, 4.33). */
+function frontOracleText(card: Pick<ScryfallCard, "oracle_text" | "card_faces">): string {
+  const face = card.card_faces?.[0];
+  return (face ? face.oracle_text : card.oracle_text) ?? "";
+}
+
+/** The full-art token template a printing wears (TODO 4.48 / 4.50): the
+ *  artifact template for an Artifact, at the height its text asks for —
+ *  Scryfall has no field for the printed height, so 4.48's rule decides it
+ *  from the front face's rules and flavour text and its P/T
+ *  (lib/cards/token-height.ts: the regular box while it holds the text at
+ *  M20_TOKEN_REGULAR_MIN_PX (72 px) or more, the tall box otherwise, no box
+ *  without text). */
+function m20TokenFrame(ctx: Ctx): FrameTemplate {
+  const face = ctx.card.card_faces?.[0];
+  const power = face ? face.power : ctx.card.power;
+  const toughness = face ? face.toughness : ctx.card.toughness;
+  const artifact = ctx.facts.cardTypes.has("artifact");
+  const height = tokenHeightForText({
+    rulesText: face ? face.oracle_text : ctx.card.oracle_text,
+    flavorText: face ? face.flavor_text : ctx.card.flavor_text,
+    printsPowerToughness: Boolean(power || toughness),
+    artifact,
+  });
+  return m20TokenTemplate(height, artifact);
 }
 
 /** The 2014–19 arch token a token printing wears: its artifact dress for an
@@ -498,14 +613,17 @@ const FAMILIES: Record<
       return "m15";
     },
   },
-  // The 2019+ borderless dress (4.32) where it exists; the bordered M15
-  // standard for the kinds it can't dress yet (4.33–4.38).
+  // The 2019+ borderless dress (4.32, the planeswalkers 4.33) where it
+  // exists; the bordered M15 standard for the kinds it can't dress yet
+  // (4.34–4.38). A planeswalker takes the tall box for four ability rows
+  // or more (walkerRowsFrameFor), as the prints do.
   borderless: {
     produces: [
       "saga", "adventure", "split", "aftermath", "flip", "m15token", "m15land",
-      "m15pw", "battle", "m15borderlessartifact", "m15borderless",
+      "m15borderlesspwtall", "m15borderlesspw", "battle", "m15borderlessartifact",
+      "m15borderless",
     ],
-    pick: ({ facts }) => {
+    pick: ({ card, facts }) => {
       const layout = layoutTemplateOf(facts.kind);
       if (layout) return layout;
       switch (facts.kind) {
@@ -514,7 +632,11 @@ const FAMILIES: Record<
         case "land":
           return "m15land";
         case "planeswalker":
-          return "m15pw";
+          return walkerRowsFrameFor(
+            "planeswalker",
+            "m15borderlesspw",
+            walkerRowCount({ rulesText: frontOracleText(card) }),
+          );
         case "battle":
           return "battle";
         default:
@@ -541,6 +663,14 @@ const FAMILIES: Record<
   textless: {
     produces: ["m15textlessland", "m15textless"],
     pick: ({ facts }) => (facts.kind === "land" ? "m15textlessland" : "m15textless"),
+  },
+  // The full-art token design, M20 → today (TODO 4.48 / 4.50).
+  m20: {
+    produces: [
+      "m20token", "m20tokentext", "m20tokentall",
+      "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+    ],
+    pick: (ctx) => m20TokenFrame(ctx),
   },
 };
 
@@ -595,6 +725,10 @@ function kindFallback(ctx: Ctx): FrameTemplate {
 const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15borderless: "m15",
   m15borderlessartifact: "m15artifact",
+  // The bordered walker has the regular rows' window; with four rows or
+  // more its rows are just shorter (3.13).
+  m15borderlesspw: "m15pw",
+  m15borderlesspwtall: "m15pw",
 };
 
 // ---------------------------------------------------------------------------
@@ -621,6 +755,10 @@ type GapKey =
   | "nyx-dress"
   | "nyx"
   | "light-box"
+  | "inverted"
+  | "dark-bars"
+  | "lettered-name"
+  | "row-box"
   | "tall-box";
 
 const BORDER_WORD: Record<string, string> = {
@@ -727,6 +865,43 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "this printing has the light text box, and PipGlyph's has the dark one",
     blockedBy: "4.37",
   },
+  // The borderless planeswalker's two (4.33). `inverted` (46 of the 245
+  // non-showcase printings) stays the light frame's nearest, as the owner
+  // decided on 2026-09-26 — although the scans checked (WOE #297, ECL
+  // #284, FRA #291 / #300 / #303, SOS #282, 2X2 #333, MKM #335, DSK #328,
+  // TDM #398, EOE #287) print the same light rows as the rest; BLC's
+  // raised-foil inverted walkers (#93 blue, #94 black, #96 green) print dark
+  // name and type bars with white ink in any colour. And a mono-black
+  // walker off the pinned light ones prints dark name and type bars with
+  // white ink (LIGHT_BLACK_WALKER_PINS).
+  inverted: {
+    match: { effectsAny: ["inverted"] },
+    reason: "Scryfall marks this printing's frame inverted, which PipGlyph's borderless planeswalker doesn't claim to match yet",
+    blockedBy: "4.33",
+  },
+  "dark-bars": {
+    match: {
+      anyOf: [
+        { colorsExactly: ["B"], notCollectorIds: LIGHT_BLACK_WALKER_PINS },
+        { collectorIds: DARK_BAR_WALKER_PINS },
+      ],
+    },
+    reason: "this printing has dark name and type bars with white ink, and PipGlyph's borderless planeswalker has light ones",
+    blockedBy: "4.33",
+  },
+  // Two more the scans found that no Scryfall field names: a name lettered
+  // across the art (LETTERED_NAME_WALKER_PINS), and an ability box that
+  // isn't the one the rows pick (WALKER_ROW_BOX_PINS).
+  "lettered-name": {
+    match: { collectorIds: LETTERED_NAME_WALKER_PINS },
+    reason: "this printing letters its name across the art, and PipGlyph's borderless planeswalker has a name bar",
+    blockedBy: "4.33",
+  },
+  "row-box": {
+    match: { collectorIds: WALKER_ROW_BOX_PINS },
+    reason: "this printing sets its abilities on the other ability box (regular or tall) than the one PipGlyph picks for its rows",
+    blockedBy: "4.33",
+  },
 };
 
 /** The base rule, preceded by one `nearest` rule per gap ('era/2015+crown').
@@ -757,6 +932,8 @@ function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
         // The earlier gaps didn't hold (first match wins); the later ones are
         // checked at resolve time (FrameMatch.gaps).
         ...(exactBase ? { gaps: gaps.slice(index) } : {}),
+        // …and after the swap on a base that is exact once verified.
+        ...(!exactBase && base.outcome.exactOnceVerified ? { gapsOnceVerified: gaps.slice(index) } : {}),
       };
     }),
     base,
@@ -832,7 +1009,78 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "unsupported",
       template: "m15",
-      reason: "PipGlyph doesn't make this kind of card (emblems, planes, schemes)",
+      reason: "PipGlyph doesn't make this kind of card (planes, schemes, vanguards)",
+    },
+  },
+
+  // --- 6.23 / 4.52: emblems (layout `emblem`, the emblem kind) -------------
+  // 141 printed (Scryfall `t:emblem`, 2026-09-29). The one-offs PipGlyph
+  // won't build (4.52's "not planned", logged for 1.6): the Universes
+  // Beyond full-bleed emblems (TACR #7, TFIN #24, WFIN #1), The Ring's two
+  // faces (TLTR #H13, `double_faced_token`) and the Mystery Booster playtest
+  // card (MB2 #513). They import on the emblem kind, nearest its frame.
+  {
+    key: "emblem/one-off",
+    exactLabel: ({ card }) =>
+      (card.layout ?? "").toLowerCase() === "double_faced_token"
+        ? "Double-faced emblem"
+        : (card.promo_types ?? []).includes("playtest")
+          ? "Playtest emblem"
+          : "Universes Beyond full-bleed emblem",
+    match: {
+      kinds: ["emblem"],
+      anyOf: [{ layouts: ["double_faced_token"] }, { promosAny: ["universesbeyond", "playtest"] }],
+    },
+    outcome: {
+      status: "unsupported",
+      template: "emblem",
+      reason: "PipGlyph doesn't make this one-off emblem design; the import uses its emblem frame",
+    },
+  },
+  // The first emblems (DKA 2012 → BNG / MD1 2014; 13 printings) print a
+  // gold-rimmed "EMBLEM" plaque on the 2003 frame: 4.43 with the old
+  // borders (4.52, P3).
+  {
+    key: "emblem/old-frame",
+    exactLabel: ({ frame }) => `${frame} frame emblem`,
+    match: { kinds: ["emblem"], frames: ["1993", "1997", "2003"] },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "PipGlyph has no emblem frame for this border era yet",
+      blockedBy: "4.43",
+    },
+  },
+  // M15 → MH1 (2014-07-18 → 2019-05-30, and The List's pre-M20 prefixes:
+  // isM20DesignPrinting, the tokens' rule) print a black "EMBLEM" bar and
+  // "Emblem — Ajani": 4.52's later variant (P3, only if people ask).
+  {
+    key: "emblem/2014-19",
+    exactLabel: "2014–19 emblem frame",
+    match: { kinds: ["emblem"], frames: ["2015"], m20Design: false },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "PipGlyph draws today's emblem frame, not the 2014–19 one with the EMBLEM bar",
+      blockedBy: "4.52",
+    },
+  },
+  // M20 on (2019-07-12): today's emblem — the source's name in the dark
+  // bar, the spark cut-out, "Emblem" on the type bar. This is 4.52's frame.
+  {
+    key: "emblem/m20",
+    exactLabel: "Emblem frame",
+    match: { kinds: ["emblem"], frames: ["2015"], m20Design: true },
+    outcome: { status: "exact", template: "emblem" },
+  },
+  {
+    key: "emblem/other",
+    exactLabel: ({ frame }) => (frame ? `${frame} frame emblem` : "Emblem"),
+    match: { kinds: ["emblem"] },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "Scryfall reports a frame PipGlyph doesn't know",
     },
   },
   {
@@ -1025,17 +1273,26 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "5.7",
     },
   },
-  {
-    key: "borderless/planeswalker",
-    exactLabel: "Borderless planeswalker",
-    match: { borders: ["borderless"], kinds: ["planeswalker"] },
-    outcome: {
-      status: "nearest",
-      template: "m15pw",
-      reason: "PipGlyph doesn't have the borderless planeswalker frame yet",
-      blockedBy: "4.33",
+  // The light borderless planeswalker (4.33; 199 of the 245 non-showcase
+  // printings: Oko ELD #271, Basri Ket M21 #280), regular or tall by its
+  // ability rows. Like every edge-to-edge frame it lands on its bordered
+  // twin, m15pw (1.18), and is exact only once verified in the card's colour
+  // (withVerification). `inverted` printings (Ashiok WOE #297, Ajani ECL
+  // #284) are the light frame's nearest (owner decision 2026-09-26), the
+  // dark-barred black walkers too (LIGHT_BLACK_WALKER_PINS; PS19 #207 in
+  // gold), a two-colour walker's split frame (Oko, Saheeli BRO #294) is
+  // 4.6's, and — last, so no earlier key moves — a lettered name (SLD #1619
+  // / #1622) and a printed box the rows don't pick (MED #WS2, UNF #275 /
+  // #526, PS19 #207).
+  ...withGaps(
+    {
+      key: "borderless/planeswalker",
+      exactLabel: "Borderless planeswalker",
+      match: { borders: ["borderless"], kinds: ["planeswalker"] },
+      outcome: { status: "exact", template: { family: "borderless" } },
     },
-  },
+    ["inverted", "dark-bars", "etched", "nickname", "colour-indicator", "two-colour", "lettered-name", "row-box"],
+  ),
   {
     key: "borderless/land",
     exactLabel: "Borderless land",
@@ -1076,6 +1333,12 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       // for a token that prints text (4.49 (b), owner decision 5) — never
       // its text on the textless arch's scrim.
       template: { family: "m15" },
+      // …and, once the full-art token design is verified in the card's
+      // colour (1.23, token design 4: every borderless token is an M20+
+      // printing — WONE, WMOM, SLD, 19 of 19 on Scryfall 2026-09-29), that
+      // design at the height its text asks for: still `nearest` (the
+      // borderless dress is 4.37), but the bordered design it prints.
+      onceVerified: { family: "m20" },
       reason: "PipGlyph doesn't have the borderless token frame yet",
       blockedBy: "4.37",
     },
@@ -1148,12 +1411,14 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
           : "PipGlyph's token frames don't print a land token yet",
     },
   },
-  // Every token from Core Set 2020 on wears the full-art token design, which
-  // PipGlyph doesn't draw yet (4.48): the 2014–19 arch (m15token, or the
-  // artifact arch for an Artifact) is the nearest. Once 4.48's templates are
-  // verified this rule names them instead (`onceVerified`) and becomes exact
-  // with these gaps; until then a gap only names the item that finishes the
-  // match. The earlier 2015-frame tokens ARE the arch: era/2015, exact.
+  // Every token from Core Set 2020 on wears the full-art token design (4.48 /
+  // 4.50): its template at the height the text asks for, the artifact one
+  // for an Artifact (the "m20" family). Until that template is verified in
+  // the card's colour the 2014–19 arch (m15token, or its text box or
+  // artifact dress) is the nearest; once it is, this rule names it instead
+  // (`onceVerified`) and is exact (`exactOnceVerified`), a gap still naming
+  // the item that finishes the match. The earlier 2015-frame tokens ARE the
+  // arch: era/2015, exact.
   ...withGaps(
     {
       key: "token/m20",
@@ -1162,7 +1427,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       outcome: {
         status: "nearest",
         template: { family: "m15" },
-        reason: "PipGlyph doesn't have the current full-art token frame yet",
+        onceVerified: { family: "m20" },
+        exactOnceVerified: true,
+        reason: "PipGlyph's full-art token frame isn't verified yet",
         blockedBy: "4.48",
       },
     },
@@ -1584,8 +1851,9 @@ export function isKnownFrameSignature(key: string | null | undefined): boolean {
 
 /** The templates a rule can produce (for the completeness check). */
 export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
-  const spec = rule.outcome.template;
-  return typeof spec === "string" ? [spec] : FAMILIES[spec.family].produces;
+  const of = (spec: TemplateSpec) => (typeof spec === "string" ? [spec] : FAMILIES[spec.family].produces);
+  const later = rule.outcome.onceVerified;
+  return later ? [...of(rule.outcome.template), ...of(later)] : of(rule.outcome.template);
 }
 
 /** Templates no printed signature resolves to exact or nearest. Empty today:
@@ -1668,9 +1936,29 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
   // Every anatomy gap that holds: the matched gap rule's own, then the
   // base's later ones (FrameMatch.gaps).
-  const gaps = rule.gaps
-    ? rule.gaps.filter((gap, index) => index === 0 || matches(GAPS[gap].match, ctx))
-    : [];
+  const holding = (list: readonly GapKey[] | undefined) =>
+    list ? list.filter((gap, index) => index === 0 || matches(GAPS[gap].match, ctx)) : [];
+  const gaps = holding(rule.gaps);
+
+  // What the match says after the swap, on a rule exact once verified: the
+  // first gap that still holds (or the later frame's border) keeps it
+  // nearest, with its own reason and item; nothing → exact.
+  let onceVerifiedMatch: FrameMatch["onceVerifiedMatch"];
+  if (onceVerified && rule.outcome.exactOnceVerified) {
+    const laterGaps = holding(rule.gapsOnceVerified);
+    if (laterGaps.length > 0) {
+      const first = GAPS[laterGaps[0]!];
+      onceVerifiedMatch = { status: "nearest", reason: textOf(first.reason, ctx), blockedBy: first.blockedBy, gaps: laterGaps };
+    } else if (isBorderPending(onceVerified, colorKeyOf(facts))) {
+      onceVerifiedMatch = {
+        status: "nearest",
+        reason: `PipGlyph's ${describeFrame(onceVerified)} frame doesn't have the printed border yet`,
+        blockedBy: "4.35",
+      };
+    } else {
+      onceVerifiedMatch = { status: "exact", reason: null };
+    }
+  }
 
   return {
     status,
@@ -1683,6 +1971,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(rule.outcome.forGood ? { forGood: true as const } : {}),
     ...(status !== "exact" && blockedBy ? { blockedBy } : {}),
     ...(onceVerified ? { onceVerified } : {}),
+    ...(onceVerifiedMatch ? { onceVerifiedMatch } : {}),
     ...(gaps.length > 0 ? { gaps } : {}),
   };
 }

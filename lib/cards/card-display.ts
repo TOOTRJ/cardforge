@@ -299,10 +299,14 @@ export function buildTypeLine({
   cardType?: CardType | null;
   subtypes?: readonly string[];
 }): string {
+  // An emblem prints "Emblem" alone (CR 114: no supertypes), or "Emblem —
+  // Kaito" with its optional subtype (TODO 6.23).
   const left = (
     cardType === "token"
       ? ["Token", supertype?.trim()]
-      : [supertype, cardType ? capitalize(cardType) : null]
+      : cardType === "emblem"
+        ? ["Emblem"]
+        : [supertype, cardType ? capitalize(cardType) : null]
   )
     .filter(Boolean)
     .join(" ");

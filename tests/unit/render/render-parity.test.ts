@@ -370,7 +370,10 @@ describe("edge-to-edge and full-art pieces (TODO 3.23 / 3.24)", () => {
       // textless frame skips the rules layout and every rules layer.
       expect(src).toMatch(/effectiveWatermark &&\s*!textless &&\s*!basicSymbolPlan &&/);
       expect(src).toMatch(/const drawsRulesBox =\s*!textless &&/);
-      expect(src).toMatch(/\{textless \? null : layout\.type\.split && typeSplit \?/);
+      // …and its type line too, unless it keeps it (textlessTypeLine: the
+      // full-art token's textless height, TODO 4.48).
+      expect(src).toContain("const hidesTypeLine = textless && !layout.textlessTypeLine;");
+      expect(src).toMatch(/\{hidesTypeLine \? null : layout\.type\.split && typeSplit \?/);
     }
   });
 
@@ -486,5 +489,21 @@ describe("rules text (layout v33, TODO 3.29)", () => {
     // Each word's line height is its line box.
     expect(bake).toContain("lineHeight: d.lineHeight");
     expect(preview).toContain("lineHeight: hd(d.linePx)");
+  });
+});
+
+describe("rules-box backdrop", () => {
+  it("is drawn by ONE rule in both renderers (drawsRulesBackdrop — 4.33's empty walker window)", () => {
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).toContain('import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";');
+      expect(src.match(/drawsRulesBackdrop\(layout\.rules, \{/g)).toHaveLength(1);
+      // The old inline condition (text only) is gone from both.
+      expect(src).not.toMatch(/layout\.rules\.backdropHex &&\s*hasRulesContent &&/);
+    }
+    // Neither draws it under ability rows; the preview's hint rows count as rows.
+    expect(BAKE).toContain("rowsDrawn: Boolean(layout.loyaltyRows) && loyaltyAbilities.length > 0,");
+    expect(PREVIEW).toContain(
+      "rowsDrawn: Boolean(layout.loyaltyRows) && (loyaltyAbilities.length > 0 || hintRowsLayout !== null),",
+    );
   });
 });

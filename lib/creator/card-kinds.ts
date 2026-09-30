@@ -25,9 +25,11 @@ import {
   FRAME_TEMPLATE_SET,
   FRAME_TEMPLATE_VALUES,
   type CardType,
+  type FaceContent,
   type FrameEra,
   type FrameTemplate,
 } from "@/types/card";
+import { resolveLoyaltyRows } from "@/lib/cards/face-content";
 import {
   TOKEN_TYPE_WORDS,
   hasRulesBoxText,
@@ -39,6 +41,12 @@ import {
   type TokenTypeWord,
 } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import {
+  isM20ArtifactTokenTemplate,
+  m20TokenHeightOf,
+  m20TokenTemplate,
+  tokenHeightForText,
+} from "@/lib/cards/token-height";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
@@ -67,6 +75,10 @@ export const CARD_KIND_VALUES = [
   "planeswalker",
   "battle",
   "token",
+  // The emblem (TODO 6.23): reached from the token kind's picker, never a
+  // chip of its own in the kind picker (KIND_PICKER_KINDS), stored as its
+  // own card type.
+  "emblem",
   // Layout kinds — structural M15 layouts promoted to first-class picks.
   "saga",
   "adventure",
@@ -157,6 +169,12 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     cardType: "token",
     layoutTemplates: null,
     previewTemplate: "m15token",
+  },
+  emblem: {
+    label: "Emblem",
+    cardType: "emblem",
+    layoutTemplates: null,
+    previewTemplate: "emblem",
   },
   saga: {
     label: "Saga",
@@ -313,6 +331,95 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
     (t) => FRAME_SET_ERA[FRAME_TEMPLATE_SET[t]] === "showcase",
   );
 
+// ---------------------------------------------------------------------------
+// The emblem (TODO 6.23 + 4.52). CR 114: an emblem is its own object — no
+// colour, mana cost, types, rarity or stats — and every printed one sits on
+// the emblem frame. So the emblem kind wears the emblem frame and nothing
+// else (no other era, skin or showcase), and the emblem frame dresses
+// nothing else: templateRefusesKind refuses both ways, so the server's kind
+// gate does too.
+// ---------------------------------------------------------------------------
+
+/** Kinds that wear only their own frames, and those frames. */
+const KIND_OWN_TEMPLATES: Partial<Record<CardKind, readonly FrameTemplate[]>> = {
+  emblem: ["emblem"],
+};
+
+/** Own template → the one kind it dresses (built from KIND_OWN_TEMPLATES). */
+const OWN_TEMPLATE_KIND: ReadonlyMap<FrameTemplate, CardKind> = new Map(
+  (Object.entries(KIND_OWN_TEMPLATES) as [CardKind, readonly FrameTemplate[]][]).flatMap(
+    ([kind, templates]) => templates.map((t) => [t, kind] as const),
+  ),
+);
+
+/** The kinds the Card step's kind picker lists as chips. The emblem is not
+ *  one of them (owner 2026-09-29): the token kind's picker offers it. */
+export const KIND_PICKER_KINDS: readonly CardKind[] = CARD_KIND_VALUES.filter(
+  (kind) => kind !== "emblem",
+);
+
+/** The kind-picker chip that stands for `kind`: an emblem sits under Token. */
+export function kindPickerChip(kind: CardKind): CardKind {
+  return kind === "emblem" ? "token" : kind;
+}
+
+/** The token and emblem kinds hide the rarity chips (owner 2026-09-29): a
+ *  token prints a black set symbol and a T, an emblem an E (4.9), never a
+ *  rarity. A new one (and a remix) saves as common; a stored one keeps its
+ *  rarity. */
+export function kindHidesRarity(kind: CardKind): boolean {
+  return kind === "token" || kind === "emblem";
+}
+
+/** What a card becomes on entering the emblem kind (TODO 6.23): an emblem
+ *  has no colour (the frame is silver whatever the walker's colour), cost,
+ *  supertype, stats or rarity (common, the chips hidden). Its optional
+ *  subtype ("Emblem — Kaito") starts off (owner 2026-09-29): a token's
+ *  "Soldier" would print "Emblem — Soldier". The name, rules, art and set
+ *  icon stay. */
+export const EMBLEM_ENTRY_VALUES = {
+  color_identity: ["colorless"],
+  cost: "",
+  supertype: "",
+  subtypes_text: "",
+  power: "",
+  toughness: "",
+  loyalty: "",
+  defense: "",
+  rarity: "common",
+} as const;
+
+/**
+ * The title a card keeps on entering the emblem kind (TODO 6.23): an emblem
+ * is named after its planeswalker, so a token's name that only restates its
+ * subtypes — the one the token's name-follow wrote (`lastAuto`), or any
+ * title equal to its subtypes' name ("Soldier", an import's, one typed to
+ * match), case and spacing aside — would stay behind as a stale "Soldier"
+ * over the emblem once its subtypes clear (owner evidence 2026-09-29). It
+ * goes (""), and the Identity step asks for the walker's name; any other
+ * name stays.
+ */
+export function titleEnteringEmblem(input: {
+  title: string;
+  subtypes: readonly string[];
+  lastAuto: string | null;
+}): string {
+  const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const title = norm(input.title);
+  if (!title) return input.title;
+  if (input.lastAuto !== null && input.title === input.lastAuto) return "";
+  const subtypeName = norm(tokenNameFromSubtypes(input.subtypes));
+  return subtypeName && title === subtypeName ? "" : input.title;
+}
+
+/** The colour key a kind's frame is resolved in (the creator's kind change):
+ *  an emblem's frame is silver whatever the card's colour (CR 114), so the
+ *  emblem kind resolves in `c` — entering it from a red token is no "isn't
+ *  available in red" colour switch. Every other kind keeps the card's. */
+export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): FrameColorKey {
+  return kind === "emblem" ? "c" : colorKey;
+}
+
 // Kinds a frame can only draw through a stat overlay its profile must carry:
 // a planeswalker needs the loyalty shield and the ability rows
 // (`loyaltyRows`), a battle its defense shield. Of the frames that dress
@@ -324,7 +431,8 @@ const STAT_OVERLAY_KINDS: readonly CardKind[] = ["planeswalker", "battle"];
 const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
   (kind) =>
     RAW_KIND_DEFS[kind].layoutTemplates === null &&
-    !STAT_OVERLAY_KINDS.includes(kind),
+    !STAT_OVERLAY_KINDS.includes(kind) &&
+    !KIND_OWN_TEMPLATES[kind],
 );
 
 // Type-specific showcase treatments: real expeditions / full-art basics are
@@ -351,6 +459,8 @@ const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
 // the server refuses it on any other kind: CC's pack has no planeswalker,
 // land, token or battle frame (those are 4.33 / 4.34 / 4.37). The artifact
 // dress also serves an Artifact Creature, borrowed like m15artifact (1.7).
+// The borderless planeswalkers (4.33) are skins of m15pw, for planeswalkers
+// only (the rows and the shield are the frame's).
 const SHOWCASE_KIND_RESTRICTION: Partial<
   Record<FrameTemplate, readonly CardKind[]>
 > = {
@@ -360,6 +470,8 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
   m15textlessland: ["land"],
   m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
+  m15borderlesspw: ["planeswalker"],
+  m15borderlesspwtall: ["planeswalker"],
   nyx: ["enchantment", "creature"],
   fullart: KINDS_WITHOUT_STAT_OVERLAY,
   m15textless: KINDS_WITHOUT_STAT_OVERLAY,
@@ -384,6 +496,11 @@ export function templateRefusesKind(
   template: FrameTemplate,
   kind: CardKind,
 ): boolean {
+  // The emblem kind and its frame belong to each other only (TODO 6.23).
+  const own = KIND_OWN_TEMPLATES[kind];
+  if (own) return !own.includes(template);
+  const owner = OWN_TEMPLATE_KIND.get(template);
+  if (owner) return owner !== kind;
   const allowed = SHOWCASE_KIND_RESTRICTION[template];
   return allowed !== undefined && !allowed.includes(kind);
 }
@@ -563,10 +680,12 @@ export function withoutTypeWord(
 // import's Basic). None on is allowed — the bare "Token" of a Copy (TFDN
 // #26, owner 2026-09-29). Creature is on for a new token.
 //
-// Seam for 6.23: an "Emblem" choice sits here too (owner 2026-09-29: inside
-// the Token kind, next to the types — not its own kind chip), switching the
-// card to the emblem kind, which stores its own card type. It is not built
-// until that kind exists: no dead button.
+// The "Emblem" choice sits here too (TODO 6.23, owner 2026-09-29: inside
+// the Token kind, next to the types — not its own kind chip): it switches
+// the card to the emblem kind (KIND_PICKER_KINDS leaves it out of the kind
+// chips, kindPickerChip lights Token for it), which stores its own card
+// type; turning it off returns to the token kind. It is a kind change, not a
+// word: TOKEN_PICKER_WORDS stays the four type words.
 // ---------------------------------------------------------------------------
 
 /** The picker's toggles, in display order (the type chips, then Legendary). */
@@ -681,15 +800,19 @@ export function followTokenName(input: {
 // toggle writes the word and the frame follows — so the "Artifact Token"
 // chip is no longer a choice of its own (stored cards keep their template).
 // Keyed by kind, then by the base frame the word re-dresses. Enchantment's
-// Nyx dress joins here with 4.51; the full-art family's artifact templates
-// with 4.48 / 4.50. The text-box token (4.49 (b)) has its own artifact
-// dress, as the textless one does.
+// Nyx dress joins here with 4.51. The text-box token (4.49 (b)) has its own
+// artifact dress, as the textless one does, and so does each height of the
+// full-art token (4.48 / 4.50).
 const TYPE_WORD_DRESSES: Partial<
   Record<CardKind, Partial<Record<FrameTemplate, { word: TokenTypeWord; template: FrameTemplate }>>>
 > = {
   token: {
     m15token: { word: "Artifact", template: "m15tokenartifact" },
     m15tokentext: { word: "Artifact", template: "m15tokenartifacttext" },
+    // The full-art tokens' artifact templates (TODO 4.50), one per height.
+    m20token: { word: "Artifact", template: "m20tokenartifact" },
+    m20tokentext: { word: "Artifact", template: "m20tokenartifacttext" },
+    m20tokentall: { word: "Artifact", template: "m20tokenartifacttall" },
   },
 };
 
@@ -793,14 +916,62 @@ export function textBoxFrameFits(kind: CardKind, template: FrameTemplate, hasTex
   return textBoxFrameFor(kind, template, hasText) === template;
 }
 
-/** Both of the token's automatic frame rules at once: the type words'
- *  dress (typeWordFrameFor) and the text's box (textBoxFrameFor). */
-export function tokenFrameFor(
-  kind: CardKind,
-  template: FrameTemplate,
-  face: { supertype?: string | null; rulesText?: string | null; flavorText?: string | null },
-): FrameTemplate {
-  return textBoxFrameFor(kind, typeWordFrameFor(kind, template, face.supertype), hasRulesBoxText(face));
+/** A token face as far as its automatic frame goes: the type words, the
+ *  text, and whether it prints a P/T (the plate keeps the rules out, so it
+ *  can take a full-art token to the tall box). Unknown P/T: a Creature
+ *  token prints one. */
+export type TokenFrameFace = {
+  supertype?: string | null;
+  rulesText?: string | null;
+  flavorText?: string | null;
+  printsPowerToughness?: boolean;
+};
+
+/**
+ * The full-art token's height (TODO 4.48, owner decisions 2026-09-29): on
+ * the token kind, a full-art template at the height its text asks for
+ * (tokenHeightForText — no text → no box, the regular box while it holds
+ * the text at 72 px or more, else the tall box); any other template, and
+ * every other kind's, as it is. It never changes the Artifact dress.
+ */
+export function tokenHeightFrameFor(kind: CardKind, template: FrameTemplate, face: TokenFrameFace): FrameTemplate {
+  if (kind !== "token" || m20TokenHeightOf(template) === null) return template;
+  const artifact = isM20ArtifactTokenTemplate(template);
+  const height = tokenHeightForText({
+    rulesText: face.rulesText,
+    flavorText: face.flavorText,
+    printsPowerToughness: face.printsPowerToughness ?? supertypeHasWord(face.supertype, "Creature"),
+    artifact,
+  });
+  return m20TokenTemplate(height, artifact);
+}
+
+/** Every one of the token's automatic frame rules at once: the type words'
+ *  dress (typeWordFrameFor), the text's box on the 2014–19 arch
+ *  (textBoxFrameFor) and the text's height on the full-art design
+ *  (tokenHeightFrameFor). */
+export function tokenFrameFor(kind: CardKind, template: FrameTemplate, face: TokenFrameFace): FrameTemplate {
+  return tokenHeightFrameFor(
+    kind,
+    textBoxFrameFor(kind, typeWordFrameFor(kind, template, face.supertype), hasRulesBoxText(face)),
+    face,
+  );
+}
+
+/** True when the template is the one the token's rules pick (tokenFrameFor)
+ *  — a random or requested frame never puts a token on another dress, box
+ *  or height than its words and text ask for. Every other kind: true. */
+export function tokenFrameFits(kind: CardKind, template: FrameTemplate, face: TokenFrameFace): boolean {
+  return tokenFrameFor(kind, template, face) === template;
+}
+
+/** True when the template is one of the full-art token's text heights (the
+ *  regular or the tall box, plain or artifact): the text picks it, as it
+ *  picks the arch's text box (isTextBoxDress) — a frame list that lets the
+ *  text decide leaves them out. */
+export function isTokenHeightDress(kind: CardKind, template: FrameTemplate): boolean {
+  const height = kind === "token" ? m20TokenHeightOf(template) : null;
+  return height === "regular" || height === "tall";
 }
 
 /**
@@ -823,6 +994,121 @@ export function followTokenTextBox(input: {
   if (textBoxFrameFor(kind, template, !hasText) !== template) return null;
   const next = textBoxFrameFor(kind, template, hasText);
   return next === template ? null : next;
+}
+
+// The borderless planeswalker's tall box follows the ability rows (frames
+// plan 4.33): Card Conjurer's 'Tall Borderless' master moves the type bar
+// and the ability window's top 138 px up for FOUR rows, as the prints do
+// (Teferi, Master of Time M21 #281; Liliana, Dreadhorde General FDN #359;
+// Ajani, Sleeper Agent DMU #375), and three or fewer print on the regular
+// one. The rows are the PRINTED ones (walkerRowCount): every loyalty
+// ability is a row, and a run of static abilities shares one — The
+// Wandering Emperor NEO #303 (Flash + a static + three abilities) prints
+// four rows on the tall frame, Jace, Mirror Mage ZNR #281 and Vivien,
+// Monsters' Advocate IKO #277 (two statics + two abilities) three on the
+// regular one (checked on the scans of all 210 printings the registry's
+// borderless/planeswalker rule matches, 2026-09-29: 206 print the box this
+// count picks; Gideon Blackblade MED #WS2 sets its two statics in two rows
+// and Comet UNF #275 / #526 its die-roll table on the tall box, and Nicol
+// Bolas, Dragon-God PS19 #207 four rows on the regular one — the registry's
+// WALKER_ROW_BOX_PINS, `nearest`). Keyed by kind, then the regular frame →
+// its tall dress.
+//
+// Always automatic, in every path: the tall frame is no choice of its own
+// (the picker's one Borderless Planeswalker chip stands for both, like the
+// Artifact type word's token frame), the creator follows the rows as they
+// change (followWalkerRows), a Frame or Variations pick lands on the one
+// the rows pick, and the import (lib/scryfall/frame-signatures.ts), the
+// import chooser (frameFitsImport) and the AI's frame pick
+// (lib/creator/frame-random.ts) take the same rule. An unverified tall
+// frame never replaces a verified one: the card keeps its frame and the
+// creator says so, as the token text box does.
+export const TALL_WALKER_MIN_ROWS = 4;
+const ROW_DRESSES: Partial<Record<CardKind, Partial<Record<FrameTemplate, FrameTemplate>>>> = {
+  planeswalker: { m15borderlesspw: "m15borderlesspwtall" },
+};
+
+/** The ability rows a planeswalker PRINTS: one per loyalty ability, and one
+ *  for each run of static abilities (the prints set consecutive statics in
+ *  one row). The abilities are the renderers' own (resolveLoyaltyRows: the
+ *  structured rows when there are any, else a line of the rules text each);
+ *  `editorRows` are the creator's row editor (liveFaceContent: the rows with
+ *  text, when there are any). */
+export function walkerRowCount(input: {
+  faceContent?: FaceContent | null;
+  rulesText?: string | null;
+  editorRows?: readonly { cost?: string | null; text: string }[] | null;
+}): number {
+  const edited = (input.editorRows ?? []).filter((row) => row.text.trim());
+  const abilities =
+    edited.length > 0
+      ? edited.map((row) => ({ cost: row.cost?.trim() ? row.cost : null }))
+      : resolveLoyaltyRows(input.faceContent, input.rulesText);
+  let rows = 0;
+  let inStatics = false;
+  for (const ability of abilities) {
+    const isStatic = !ability.cost;
+    if (!isStatic || !inStatics) rows += 1;
+    inStatics = isStatic;
+  }
+  return rows;
+}
+
+/** True when the template is a frame the kind wears by its row count (the
+ *  tall borderless planeswalker): the pickers don't offer it. */
+export function isRowDress(kind: CardKind, template: FrameTemplate): boolean {
+  return Object.values(ROW_DRESSES[kind] ?? {}).includes(template);
+}
+
+/** True when the template has a row dress (the regular borderless
+ *  planeswalker): the Variations section says the box follows the rows. */
+export function hasRowDress(kind: CardKind, template: FrameTemplate): boolean {
+  return ROW_DRESSES[kind]?.[template] !== undefined;
+}
+
+/** The frame a row dress re-dresses (m15borderlesspwtall →
+ *  m15borderlesspw); any other template as it is — what the Variations
+ *  chips compare against. */
+export function rowDressBaseFor(kind: CardKind, template: FrameTemplate): FrameTemplate {
+  for (const [base, tall] of Object.entries(ROW_DRESSES[kind] ?? {}) as [FrameTemplate, FrameTemplate][]) {
+    if (template === tall) return base;
+  }
+  return template;
+}
+
+/**
+ * The frame the ability rows pick for a card on `template`: on the regular
+ * borderless planeswalker or its tall dress, the tall one for
+ * TALL_WALKER_MIN_ROWS rows or more (walkerRowCount) and the regular one
+ * otherwise; any other template (m15pw, a showcase, every other kind) as it
+ * is.
+ */
+export function walkerRowsFrameFor(kind: CardKind, template: FrameTemplate, rows: number): FrameTemplate {
+  for (const [base, tall] of Object.entries(ROW_DRESSES[kind] ?? {}) as [FrameTemplate, FrameTemplate][]) {
+    if (template !== base && template !== tall) continue;
+    return rows >= TALL_WALKER_MIN_ROWS ? tall : base;
+  }
+  return template;
+}
+
+/** True when the template is the one the rows pick (walkerRowsFrameFor). */
+export function walkerRowsFrameFits(kind: CardKind, template: FrameTemplate, rows: number): boolean {
+  return walkerRowsFrameFor(kind, template, rows) === template;
+}
+
+/**
+ * The creator's row follow: when the walker's rows change, the frame they
+ * now pick, or null to leave the frame alone (not a row-dressed frame, or
+ * already the right one). Unlike the token text box there is no manual pick
+ * to respect — the tall box has no chip of its own.
+ */
+export function followWalkerRows(input: {
+  kind: CardKind;
+  template: FrameTemplate;
+  rows: number;
+}): FrameTemplate | null {
+  const next = walkerRowsFrameFor(input.kind, input.template, input.rows);
+  return next === input.template ? null : next;
 }
 
 /** withTypeWord for the artifact frame a creature borrows (TODO 1.7). */
@@ -854,6 +1140,17 @@ export function framesForKind(
       template: t,
       era: eraForTemplate(t),
       group: "layout" as const,
+      availableColorKeys: colors(t),
+    }));
+  }
+  // The emblem wears its own frame and nothing else (TODO 6.23): no other
+  // era, skin or showcase treatment.
+  const own = KIND_OWN_TEMPLATES[kind];
+  if (own) {
+    return own.map((t) => ({
+      template: t,
+      era: eraForTemplate(t),
+      group: "standard" as const,
       availableColorKeys: colors(t),
     }));
   }

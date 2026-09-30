@@ -4,6 +4,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
+import { cardPageName } from "@/lib/cards/emblem";
 
 // ---------------------------------------------------------------------------
 // oEmbed provider endpoint (https://oembed.com) for public card pages.
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
   let card: {
     id: string;
     title: string;
+    card_type: string | null;
     updated_at: string;
     rendered_at: string | null;
     frame_style: unknown;
@@ -85,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     const { data } = await supabase
       .from("cards")
-      .select("id, title, updated_at, rendered_at, visibility, frame_style")
+      .select("id, title, card_type, updated_at, rendered_at, visibility, frame_style")
       .eq("owner_id", profile.id)
       .eq("slug", slug)
       .in("visibility", ["public", "unlisted"])
@@ -118,7 +120,8 @@ export async function GET(request: NextRequest) {
     {
       version: "1.0",
       type: "photo",
-      title: card.title,
+      // An emblem is "<walker> Emblem", as on its page (cardPageName).
+      title: cardPageName(card.title, card.card_type),
       url: imageUrl,
       width,
       height,

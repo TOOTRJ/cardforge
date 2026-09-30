@@ -57,16 +57,24 @@ describe("buildTreatmentView", () => {
     expect(view).not.toBeNull();
     expect(view!.key).toBe("borderless");
     expect(view!.label).toBe("Borderless");
-    expect(view!.templates.map((t) => t.template)).toEqual(["m15borderless", "m15borderlessartifact"]);
+    // …and 4.33's borderless planeswalkers, the same frame set.
+    expect(view!.templates.map((t) => t.template)).toEqual([
+      "m15borderless",
+      "m15borderlessartifact",
+      "m15borderlesspw",
+      "m15borderlesspwtall",
+    ]);
     expect(view!.templates[0].label).toBe("label:m15borderless");
     const states = Object.fromEntries(view!.templates[0].colours.map((c) => [c.colorKey, c.state]));
     expect(states).toMatchObject({ w: "scored", u: "scored", b: "stale", r: "unscored" });
 
-    // Every colour both frames have a printing for (all seven, per the registry).
-    expect(view!.combos).toHaveLength(14);
+    // Every colour the four frames have a printing for (all seven, per the
+    // registry).
+    expect(view!.combos).toHaveLength(28);
 
     // The artifact kind spreads the borderless profile: title is ONE slot,
-    // voted on by the three current colours of both frames.
+    // voted on by the three current colours of both frames (the walkers'
+    // title is m15pw's, another rect).
     const title = view!.shared.find((row) => row.path === "title");
     expect(title).toMatchObject({
       templates: ["m15borderless", "m15borderlessartifact"],
@@ -87,7 +95,9 @@ describe("buildTreatmentView", () => {
       scores: new Map(),
       labelFor: (t) => t,
     });
-    expect(view!.shared.some((row) => row.path === "title")).toBe(false);
+    // The walkers' own title (m15pw's rect) is still one row of theirs.
+    const titles = view!.shared.filter((row) => row.path === "title");
+    expect(titles.some((row) => row.templates.includes("m15borderless"))).toBe(false);
     expect(view!.shared.some((row) => row.path === "type")).toBe(true);
   });
 

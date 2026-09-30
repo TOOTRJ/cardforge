@@ -24,6 +24,12 @@ const VERIFIED = [
   "m15tokenartifact",
   "m15tokentext",
   "m15tokenartifacttext",
+  "m20token",
+  "m20tokentext",
+  "m20tokentall",
+  "m20tokenartifact",
+  "m20tokenartifacttext",
+  "m20tokenartifacttall",
 ].flatMap((template) =>
   ["w", "c"].map((colour) => frameComboKey(template, colour)),
 );
@@ -74,5 +80,13 @@ describe("AI fill dialog — frame options", () => {
     expect(options).toContain("m15token");
     expect(options).not.toContain("m15tokentext");
     expect(options).not.toContain("m15tokenartifacttext");
+  });
+
+  it("offers the full-art token once, never its heights: the text picks the box (TODO 4.48)", () => {
+    const options = frameOptionsFor("token");
+    expect(options).toContain("m20token");
+    for (const t of ["m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"]) {
+      expect(options, t).not.toContain(t);
+    }
   });
 });

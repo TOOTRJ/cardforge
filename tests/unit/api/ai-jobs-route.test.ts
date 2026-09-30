@@ -131,3 +131,18 @@ describe("POST /api/ai/jobs", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// TODO 6.23: a per-field fill on an open emblem pins the card's own type
+// (`locked`), while the design types the dialogs offer stay the nine
+// standard ones (emblems are kept out until asked).
+describe("POST /api/ai/jobs — an emblem's per-field fill", () => {
+  it("accepts an emblem as the locked card type, and never as a design type", async () => {
+    const locked = await post({ kind: "card_fill", want: ["art"], locked: { card_type: "emblem", title: "Kaito" } });
+    expect(locked.status).toBe(200);
+    expect(s.created.at(-1)?.kind).toBe("card_fill");
+    const steered = await post({ kind: "card_fill", want: ["card_type"], steer: { card_type: "emblem" } });
+    expect(steered.status).toBe(400);
+    const designed = await post({ kind: "card", card_type: "emblem" });
+    expect(designed.status).toBe(400);
+  });
+});

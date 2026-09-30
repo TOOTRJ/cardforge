@@ -40,20 +40,25 @@ import {
 } from "@/components/creator/frame-pickers";
 import {
   BASIC_ONLY_FRAME_REASON,
-  CARD_KIND_VALUES,
   KIND_DEFS,
   baseFrameFor,
   borrowedTypeWord,
   framesForKind,
   isSingleBasicLand,
   kindHasAvailableFrame,
+  hasRowDress,
+  isRowDress,
   isTextBoxDress,
+  isTokenHeightDress,
   isTypeWordDress,
+  rowDressBaseFor,
   skinVariantsFor,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
   tokenFrameFor,
+  walkerRowCount,
+  walkerRowsFrameFor,
   tokenPickerWordsOf,
   typeLineHasWord,
   typeWordBaseFor,
@@ -66,6 +71,9 @@ import {
   type FrameChoice,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
+// The emblem (TODO 6.23): a choice inside the token kind, not a kind chip.
+import { KIND_PICKER_KINDS, kindPickerChip } from "@/lib/creator/card-kinds";
+import { EmblemChoice } from "@/components/creator/panels/emblem-choice";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   COLOR_IDENTITY_VALUES,
@@ -82,6 +90,8 @@ import {
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
+import { tokenFrameText } from "@/lib/creator/token-frame-auto";
+import { m20TokenHeightOf } from "@/lib/cards/token-height";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
   frameSubstitutionLabel,
@@ -186,6 +196,14 @@ type CardSetupPanelProps = {
    *  uses it to keep a pristine basic-land name/subtype in step with the
    *  color. */
   onColorIdentityChange?: (next: ColorIdentity[]) => void;
+  /** A NEW token still on the default switch's pick (TODO 4.48, owner
+   *  decision 1): the frame it would wear in each colour
+   *  (lib/creator/token-frame-auto.ts defaultTokenFrameIn; null = none is
+   *  verified there). Its colour tiles show that frame and offer every
+   *  colour it is verified in, and a pick moves it there (the
+   *  orchestrator's onColorIdentityChange). Absent: each tile shows the
+   *  card's own frame, offered where that is verified. */
+  colorFrameFor?: (colorKey: string) => FrameTemplate | null;
   /** Lands only: Basic (big symbol, no text) vs Nonbasic (rules text) —
    *  rendered as the Land kind's first Variation. */
   landMode?: LandMode;
@@ -202,6 +220,7 @@ export function CardSetupPanel({
   onFramePick,
   onKindSelect,
   onColorIdentityChange,
+  colorFrameFor,
   landMode,
   landBasicDisabledReason = null,
   onLandModeChange,
@@ -271,11 +290,11 @@ export function CardSetupPanel({
     if (next !== before) setValue("supertype", next, { shouldDirty: true });
   }, [kind, watchedTemplate, getValues, setValue]);
 
-  const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
+  const kindOptions: ChipOption<CardKind>[] = KIND_PICKER_KINDS.map((k) => {
     // A kind is pickable only when at least one of its frames has a
     // published color — otherwise selecting the type would bypass the
     // verification gate and land on an unreviewed frame.
-    const available = k === kind || kindHasAvailableFrame(k, verifiedKeys);
+    const available = k === kindPickerChip(kind) || kindHasAvailableFrame(k, verifiedKeys);
     return {
       value: k,
       label: KIND_DEFS[k].label,
@@ -328,7 +347,7 @@ export function CardSetupPanel({
           ariaLabel="Card type"
           layout="grid-2"
           size="md"
-          value={kind}
+          value={kindPickerChip(kind)}
           onChange={(next) => {
             clearErrors("frame_style");
             onKindSelect(next);
@@ -340,8 +359,16 @@ export function CardSetupPanel({
       {/* 1b · The token's types (TODO 3b.15) — the words its type line
           prints after "Token". The frame follows them (the orchestrator's
           effect): Artifact → the artifact token frame. */}
-      {kind === "token" ? (
+      {kind === "token" || kind === "emblem" ? (
         <TokenTypeSection
+          emblem={{
+            on: kind === "emblem",
+            available: kindHasAvailableFrame("emblem", verifiedKeys),
+            onChange: (on) => {
+              clearErrors("frame_style");
+              onKindSelect(on ? "emblem" : "token");
+            },
+          }}
           supertype={supertype ?? ""}
           onToggle={(word, on) =>
             setValue("supertype", toggleTokenWord(getValues("supertype"), word, on), {
@@ -375,25 +402,34 @@ export function CardSetupPanel({
           // is no choice of its own: the Token type section's Artifact
           // toggle picks it (TODO 3b.15), and the Standard chip stands for
           // whichever of the two the type words pick.
+          // Nor is the borderless planeswalker's tall box (4.33): the
+          // ability rows pick it, and the Borderless Planeswalker chip
+          // stands for both.
           const skinChoices = choices.filter(
             (c) =>
               c.group === "skin" &&
               skinVariantsFor(kind, base).includes(c.template) &&
-              !isTypeWordDress(kind, c.template),
+              !isTypeWordDress(kind, c.template) &&
+              !isRowDress(kind, c.template),
           );
           // The variation the card wears with its type-word dress taken
           // off (an Artifact token's text-box frame is the text-box
-          // variation): what the Variations chips compare against, so the
-          // Artifact word never hides the text box.
-          const undressed = typeWordBaseFor(kind, normalized);
+          // variation) and its row dress (the tall borderless walker is
+          // the Borderless Planeswalker variation): what the Variations
+          // chips compare against, so neither hides the variation.
+          const undressed = rowDressBaseFor(kind, typeWordBaseFor(kind, normalized));
           const wearsTypeWordDress = undressed !== normalized;
           const showcaseChoices = choices.filter(
             (c) => c.group === "showcase",
           );
           const variationChoices = [...skinChoices, ...showcaseChoices];
-          // The token's text box follows the text (owner decision 5): say
-          // so beside the chips, and that picking one keeps it.
+          // The token's text box follows the text (owner decision 5) — on
+          // the full-art design, its height too (TODO 4.48): say so beside
+          // the chips, and that picking one keeps it.
           const textBoxFollows = variationChoices.some((c) => isTextBoxDress(kind, c.template));
+          // …and the borderless walker's tall box follows the rows (4.33).
+          const rowsFollow = variationChoices.some((c) => hasRowDress(kind, c.template));
+          const heightFollows = variationChoices.some((c) => isTokenHeightDress(kind, c.template));
 
           const frameSummary =
             eraForTemplate(base) === "showcase"
@@ -440,16 +476,32 @@ export function CardSetupPanel({
             // the arch lets the text pick its text box too (TODO 4.49 (b),
             // owner decision 5); a Variations chip is the box the user
             // chose, and it sticks.
-            const next = variation
+            // The borderless planeswalker takes the box its ability rows
+            // pick (4.33), from either section; while that one isn't
+            // published, the other one in the same colour.
+            const dressed = variation
               ? typeWordFrameFor(kind, picked, getValues("supertype"))
-              : tokenFrameFor(kind, picked, {
-                  supertype: getValues("supertype"),
-                  rulesText: getValues("rules_text"),
-                  flavorText: getValues("flavor_text"),
-                });
+              : tokenFrameFor(
+                  kind,
+                  picked,
+                  tokenFrameText({
+                    cardType: getValues("card_type") || null,
+                    supertype: getValues("supertype"),
+                    subtypes: parseSubtypes(getValues("subtypes_text") ?? ""),
+                    rulesText: getValues("rules_text"),
+                    flavorText: getValues("flavor_text"),
+                    power: getValues("power"),
+                    toughness: getValues("toughness"),
+                  }),
+                );
+            const next = walkerRowsFrameFor(
+              kind,
+              dressed,
+              walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }),
+            );
             const resolution = resolvePublishedFrame({
               kind,
-              candidates: [next],
+              candidates: next === dressed ? [next] : [next, dressed],
               colorKey: colorKey as FrameColorKey,
               verifiedKeys,
               prefer: "colour",
@@ -517,9 +569,11 @@ export function CardSetupPanel({
                       ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
                       : isTextBoxDress(kind, choice.template)
                         ? "A text box for rules and flavour text"
-                        : choice.group === "skin"
-                          ? "Same layout, different dress"
-                          : undefined,
+                        : kind === "token" && m20TokenHeightOf(choice.template)
+                          ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
+                          : choice.group === "skin"
+                            ? "Same layout, different dress"
+                            : undefined,
               leading: (
                 <FrameThumb
                   template={
@@ -655,10 +709,17 @@ export function CardSetupPanel({
                             ...variationChoices.map(toOption),
                           ]}
                         />
-                        {textBoxFollows ? (
+                        {textBoxFollows || heightFollows ? (
                           <p className="text-[11px] leading-4 text-subtle">
-                            The text box comes and goes with the card&apos;s rules and flavour
-                            text. Pick one here to keep it.
+                            {heightFollows
+                              ? "The text box comes and goes with the card's rules and flavour text, and on the full-art token grows with it. Pick one here to keep it."
+                              : "The text box comes and goes with the card's rules and flavour text. Pick one here to keep it."}
+                          </p>
+                        ) : null}
+                        {rowsFollow ? (
+                          <p className="text-[11px] leading-4 text-subtle">
+                            The borderless planeswalker takes its tall box at four abilities or
+                            more, as the printed ones do.
                           </p>
                         ) : null}
                       </div>
@@ -671,7 +732,9 @@ export function CardSetupPanel({
         }}
       />
 
-      {/* 3 · Color — last on purpose (pure PNG swap; never moves layout). */}
+      {/* 3 · Color — last on purpose (pure PNG swap; never moves layout).
+          An emblem has none (TODO 6.23): its frame is silver. */}
+      {kind === "emblem" ? null : (
       <Controller
         control={control}
         name="color_identity"
@@ -686,12 +749,22 @@ export function CardSetupPanel({
             }}
             verifiedKeys={verifiedKeys}
             frameType={frameType}
+            frameFor={colorFrameFor}
           />
         )}
       />
+      )}
     </div>
   );
 }
+
+/** The full-art token's heights, as the Variations chips describe them
+ *  (TODO 4.48): the text picks one until the user does. */
+const M20_TOKEN_HEIGHT_HINTS = {
+  textless: "Art to the border, no text box",
+  regular: "Art to the border, a text box",
+  tall: "Art to the border, a tall text box for long text",
+} as const;
 
 const TOKEN_WORD_HINTS: Record<TokenPickerWord, string> = {
   Creature: "Prints a power / toughness",
@@ -702,15 +775,30 @@ const TOKEN_WORD_HINTS: Record<TokenPickerWord, string> = {
 
 /** The token kind's type picker (TODO 3b.15): Creature · Artifact ·
  *  Enchantment, and Legendary. Each chip writes or removes only its own
- *  word; none on prints a bare "Token" (a Copy). The Emblem choice joins
- *  here with 6.23 (lib/creator/card-kinds.ts). */
+ *  word; none on prints a bare "Token" (a Copy). The Emblem choice (6.23)
+ *  switches the card to the emblem kind, which has no type words: while it
+ *  is on, only it shows. */
 function TokenTypeSection({
   supertype,
   onToggle,
+  emblem,
 }: {
   supertype: string;
   onToggle: (word: TokenPickerWord, on: boolean) => void;
+  emblem: { on: boolean; available: boolean; onChange: (on: boolean) => void };
 }) {
+  if (emblem.on) {
+    return (
+      <SetupSection title="Token type" value="Emblem" autoClose={false}>
+        <EmblemChoice {...emblem} />
+        <p className="text-[11px] leading-4 text-subtle">
+          An emblem prints &ldquo;Emblem&rdquo; on a silver frame, with its
+          planeswalker&apos;s name on top: no colour, cost, rarity or power /
+          toughness. Turn it off to make a token again.
+        </p>
+      </SetupSection>
+    );
+  }
   const active = tokenPickerWordsOf(supertype);
   const toOption = (word: TokenPickerWord): ChipOption<TokenPickerWord> => ({
     value: word,
@@ -751,6 +839,7 @@ function TokenTypeSection({
         }
         options={[toOption("Legendary")]}
       />
+      <EmblemChoice {...emblem} />
       <p className="text-[11px] leading-4 text-subtle">
         None on prints a bare &ldquo;Token&rdquo;, like a Copy token. The
         power / toughness shows for a Creature token only.
@@ -765,6 +854,7 @@ function ColorSection({
   onChange,
   verifiedKeys,
   frameType,
+  frameFor,
 }: {
   summary: string;
   selection: ColorIdentity[];
@@ -774,6 +864,10 @@ function ColorSection({
    *  paint in that colour (Alpha's colourless tile: the artifact card for an
    *  artifact, the grey card otherwise). */
   frameType: FrameTypeInfo;
+  /** The frame a pick of each colour lands the card on (a new token on the
+   *  default switch's pick, CardSetupPanelProps.colorFrameFor); null = no
+   *  frame of it is verified there. Absent: the card's own frame. */
+  frameFor?: (colorKey: string) => FrameTemplate | null;
 }) {
   // Live template so chip availability + thumbnails track frame changes.
   const { watch } = useFormContext<FormValues>();
@@ -798,16 +892,17 @@ function ColorSection({
 
   const options: ChipOption<ColorIdentity>[] = COLOR_IDENTITY_VALUES.map(
     (color) => {
-      const reachable = isFrameComboAvailable(
-        template,
-        IDENTITY_COLOR_KEY[color],
-        verifiedKeys,
-      );
+      const key = IDENTITY_COLOR_KEY[color];
+      // The card's own colour keeps the card's frame (picking it again
+      // changes nothing); another colour, the frame a pick lands on.
+      const there = frameFor && key !== currentKey ? frameFor(key) : template;
+      const reachable =
+        there !== null && isFrameComboAvailable(there, key, verifiedKeys);
       return {
         value: color,
         label: color,
         leading: (
-          <FrameThumb template={template} colorKey={IDENTITY_COLOR_KEY[color]} type={frameType} />
+          <FrameThumb template={there ?? template} colorKey={key} type={frameType} />
         ),
         disabled: !reachable,
         badge: reachable ? undefined : <SoonBadge />,

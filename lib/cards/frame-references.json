@@ -720,6 +720,385 @@
       "m": null
     }
   },
+  "emblem": {
+    "note": "The emblem (TODO 4.52, CC 'Planeswalker Emblems'): the M20 design every emblem since 2019-07-12 prints (the source's name in the dark bar, the art in the planeswalker spark, \"Emblem\" on the type bar). One colour key, c: an emblem is colourless (CR 114) and every one is on this silver frame. The 2014–19 EMBLEM-bar prints and the 2003 plaque resolve nearest (4.52 later / 4.43). Checked by eye too: TM20 #11 (the first M20 emblem), TBLB #30 (two lines, left), TFRA #16.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Vivien Reid Emblem",
+          "set": "tfdn",
+          "scryfallId": "a804d502-1092-4ff3-93d9-d1b0ac0f07d5",
+          "curated": true
+        },
+        {
+          "name": "Kaito, Cunning Infiltrator Emblem",
+          "set": "tfdn",
+          "scryfallId": "bfe4b1d5-f252-48fe-b4a1-7fbbc2523cf1"
+        },
+        {
+          "name": "Kaito, Bane of Nightmares Emblem",
+          "set": "tdsk",
+          "scryfallId": "435e707c-2b1d-48a7-ba75-c3c67824b50d"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20token": {
+    "note": "The full-art token design, M20 (2019-07-12) → today, textless height (CC 'Textless' token pack, its type pill re-cut 5 px onto the prints; TODO 4.48): M20+ prints with no rules text, measured textless (type pill ~81 %H). Mono-colour only: two colours print a gradient and legends a crown (4.6); m = three or more colours.",
+    "colors": {
+      "w": [
+        {
+          "name": "Soldier",
+          "set": "tfdn",
+          "scryfallId": "d093322e-a717-4e2d-8199-fa560792bcf6"
+        },
+        {
+          "name": "Soldier",
+          "set": "tm20",
+          "scryfallId": "a491d9da-a58d-4423-b565-c5a99ef63132"
+        },
+        {
+          "name": "Cat",
+          "set": "t2xm",
+          "scryfallId": "f859b55c-0b49-4190-b1fa-94f97a59b57c"
+        }
+      ],
+      "u": [
+        {
+          "name": "Ninja",
+          "set": "tfdn",
+          "scryfallId": "aeec04b1-475c-4e55-b72f-327ea5258146"
+        },
+        {
+          "name": "Illusion",
+          "set": "tsoc",
+          "scryfallId": "f6469938-5af9-4f0a-9f2e-603c833e48ba"
+        }
+      ],
+      "b": [
+        {
+          "name": "Zombie",
+          "set": "tfdn",
+          "scryfallId": "e29a360b-11fd-42ba-82ba-de8f7e136c20"
+        },
+        {
+          "name": "Zombie",
+          "set": "tfdc",
+          "scryfallId": "f7a49477-b7b5-4f0e-885f-e1d2b580c52e"
+        }
+      ],
+      "r": [
+        {
+          "name": "Goblin",
+          "set": "tfdn",
+          "scryfallId": "70f8a1de-cd4c-4afa-bf03-0245d375d42e"
+        },
+        {
+          "name": "Rebel",
+          "set": "tfic",
+          "scryfallId": "6afbbdad-aeed-428a-b840-c33f59a18d0b"
+        }
+      ],
+      "g": [
+        {
+          "name": "Raccoon",
+          "set": "tfdn",
+          "scryfallId": "1b8d8730-d6bd-4525-96e9-0513ed02de37"
+        },
+        {
+          "name": "Squirrel",
+          "set": "tpip",
+          "scryfallId": "f90bb066-79fd-48cd-ab5a-eaed71139b4e"
+        }
+      ],
+      "c": [
+        {
+          "name": "Sliver",
+          "set": "teoe",
+          "scryfallId": "bf7501ee-783d-49c6-b381-1db056360b40"
+        },
+        {
+          "name": "Eldrazi",
+          "set": "tcmm",
+          "scryfallId": "1a2f00da-1c4d-45d4-af34-9216a34bff2a"
+        }
+      ],
+      "m": [
+        {
+          "name": "Sand Warrior",
+          "set": "tm3c",
+          "scryfallId": "17812f4e-a10c-472b-970f-35a8f392235a"
+        },
+        {
+          "name": "Sand Warrior",
+          "set": "tdmu",
+          "scryfallId": "124ea959-742a-4914-9bca-1075ccd0cb22"
+        }
+      ]
+    }
+  },
+  "m20tokentext": {
+    "note": "The full-art token design with the regular text box (CC 'Short' token pack; TODO 4.48): M20+ prints measured on the regular box (type pill ~67 %H). Mono-colour only (two colours and legends are 4.6); m = three or more colours.",
+    "colors": {
+      "w": [
+        {
+          "name": "Cat",
+          "set": "tfdn",
+          "scryfallId": "86701490-17ac-4253-810d-6cfd7a46594c"
+        },
+        {
+          "name": "Spirit",
+          "set": "tfdn",
+          "scryfallId": "278adad2-49a6-4baa-8dbe-93474545eef7"
+        }
+      ],
+      "u": [
+        {
+          "name": "Drake",
+          "set": "tfdn",
+          "scryfallId": "f4a73034-e20f-4e7e-ac15-3460b1e9c69b"
+        },
+        {
+          "name": "Faerie",
+          "set": "tfdn",
+          "scryfallId": "d1c0556e-ba3c-4a8e-b704-8eaa7c4dba1c"
+        }
+      ],
+      "b": [
+        {
+          "name": "Rat",
+          "set": "tfdn",
+          "scryfallId": "7384238b-cffb-4946-96de-dc6b7a37b979"
+        },
+        {
+          "name": "Insect",
+          "set": "teoc",
+          "scryfallId": "2172a126-2ea6-4b5c-84c2-7879c1982a3a"
+        }
+      ],
+      "r": [
+        {
+          "name": "Dragon",
+          "set": "tfdn",
+          "scryfallId": "55c6be20-b65a-4b1e-8133-4c2d88c1f6f9"
+        },
+        {
+          "name": "Dragon",
+          "set": "tfdc",
+          "scryfallId": "7fc0760c-495a-4737-8d9e-4110344af99e"
+        }
+      ],
+      "g": [
+        {
+          "name": "Spider",
+          "set": "tdsk",
+          "scryfallId": "4f8852eb-1318-40c2-aa2a-8c0e830cca71"
+        },
+        {
+          "name": "Spider",
+          "set": "tfdc",
+          "scryfallId": "5547973c-b0df-4103-a657-ac20611bd600"
+        }
+      ],
+      "c": [
+        {
+          "name": "Eldrazi Spawn",
+          "set": "tmh3",
+          "scryfallId": "e32795e1-5548-43ef-8cd6-c605a19ef708"
+        },
+        {
+          "name": "Copy",
+          "set": "tfdn",
+          "scryfallId": "fc586e46-b7d0-4c84-8678-3542cd390de1"
+        }
+      ],
+      "m": [
+        {
+          "name": "Reliquary Dragon",
+          "set": "ttdm",
+          "scryfallId": "44465924-8cc2-49a4-bc07-8dbae7570af6"
+        },
+        {
+          "name": "Elemental",
+          "set": "tfin",
+          "scryfallId": "fe592a5c-5e6e-40ed-8818-f4651bcf2fe8"
+        }
+      ]
+    }
+  },
+  "m20tokentall": {
+    "note": "The full-art token design with the tall text box (CC 'Tall' token pack; TODO 4.48): M20+ prints measured on the tall box (type pill ~56 %H). No red, colourless or three-colour non-legendary tall print was found (Scryfall 2026-09-29).",
+    "colors": {
+      "w": [
+        {
+          "name": "Warren Warleader",
+          "set": "tblb",
+          "scryfallId": "5cc9b628-0a3a-4d09-ae4a-57c7f6f9ac36"
+        },
+        {
+          "name": "Angel of Sanctions",
+          "set": "tdrc",
+          "scryfallId": "eee11a08-6cdc-4c47-9ad4-26b766e4a839"
+        }
+      ],
+      "u": [
+        {
+          "name": "Thundertrap Trainer",
+          "set": "tblb",
+          "scryfallId": "80bcbe35-7764-4c75-b954-cbba11372dec"
+        }
+      ],
+      "b": [
+        {
+          "name": "Darkstar Augur",
+          "set": "tblb",
+          "scryfallId": "01b55966-0910-484d-9b2b-0a59233c44c4"
+        }
+      ],
+      "r": null,
+      "g": [
+        {
+          "name": "Pawpatch Recruit",
+          "set": "tblb",
+          "scryfallId": "7cdd8679-93a7-4e58-a6f3-b48897697e89"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "m20tokenartifact": {
+    "note": "The full-art artifact token, textless height (CC 'Textless' Artifact Frame, re-cut like m20token; TODO 4.50): silver pills, the colour on the rims, pinline and strip. No mono-black (T40K #14 prints its own layout), green or three-colour textless artifact token.",
+    "colors": {
+      "w": [
+        {
+          "name": "Toy",
+          "set": "tdsk",
+          "scryfallId": "5e6d479d-c30d-4048-b250-5233358a174c"
+        }
+      ],
+      "u": [
+        {
+          "name": "Phyrexian Myr",
+          "set": "tsoc",
+          "scryfallId": "ca7e566f-5eb4-4f0f-bf87-5788c57ba1e4"
+        },
+        {
+          "name": "Phyrexian Myr",
+          "set": "tm3c",
+          "scryfallId": "51649b34-3e27-4005-85e3-9393ca7e663d"
+        }
+      ],
+      "b": null,
+      "r": [
+        {
+          "name": "Gremlin",
+          "set": "tmoc",
+          "scryfallId": "23854999-2691-491c-aa7d-81f269e23b4e"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Golem",
+          "set": "teoc",
+          "scryfallId": "f2f589ac-991f-4f26-8fd4-0d903683f15a"
+        },
+        {
+          "name": "Servo",
+          "set": "tcmm",
+          "scryfallId": "e6a5faa3-b86e-4e05-93db-5db9507ae7d0"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20tokenartifacttext": {
+    "note": "The full-art artifact token with the regular text box (CC 'Short' Artifact Frame; TODO 4.50). No green or non-legendary three-colour print; TMOC #23 / TIKO #9 Feather tint their box and are not references.",
+    "colors": {
+      "w": [
+        {
+          "name": "Gnome Soldier",
+          "set": "tlci",
+          "scryfallId": "cbe7c36a-77b7-4418-9e2d-b6aeea61502e"
+        }
+      ],
+      "u": [
+        {
+          "name": "Thopter",
+          "set": "tmh3",
+          "scryfallId": "e0a7adb3-8e66-4e63-95f2-1a5f5827b676"
+        },
+        {
+          "name": "Thopter",
+          "set": "t2xm",
+          "scryfallId": "eef8b4fc-238f-4c1f-ad98-a1769fd44eab"
+        }
+      ],
+      "b": [
+        {
+          "name": "Phyrexian Wurm",
+          "set": "tmh3",
+          "scryfallId": "1482ab42-875c-46fc-aa0b-b18154488985"
+        },
+        {
+          "name": "Phyrexian Wurm",
+          "set": "tmh3",
+          "scryfallId": "1a7800c9-6808-4f33-87ad-50ad8c79f2d7"
+        }
+      ],
+      "r": [
+        {
+          "name": "Construct",
+          "set": "tneo",
+          "scryfallId": "cbafdfc0-380a-482b-b5f8-a7a00ecf8da6"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Treasure",
+          "set": "tfdn",
+          "scryfallId": "21210145-8edd-41f5-9a64-9f0b5be79864"
+        },
+        {
+          "name": "Food",
+          "set": "tfdn",
+          "scryfallId": "6f1077f8-9e2a-4155-a7f0-4604bc0f94e8"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20tokenartifacttall": {
+    "note": "The full-art artifact token with the tall text box (CC 'Tall' Artifact Frame; TODO 4.50): Map (TLCI #17) and MKM's Clues print it. Only colourless ones were found.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Map",
+          "set": "tlci",
+          "scryfallId": "64839118-09d2-4645-9d3c-f80755ac781f"
+        },
+        {
+          "name": "Clue",
+          "set": "tmkm",
+          "scryfallId": "ee022200-f589-4f06-8de8-d313e29f7be8"
+        }
+      ],
+      "m": null
+    }
+  },
   "m15snow": {
     "note": "Gold snow spells only exist as legendaries (crown) — the m reference is accepted with that caveat.",
     "colors": {
@@ -1223,6 +1602,200 @@
           "name": "Shardless Agent",
           "set": "mh2",
           "scryfallId": "7db7fa4d-5190-4f2b-a8ae-933bdab3bfc5"
+        }
+      ]
+    }
+  },
+  "m15borderlesspw": {
+    "note": "The light borderless planeswalker (TODO 4.33): mono-colour printings with three printed ability rows (a run of statics shares a row) and NO inverted flag, checked by eye on the Scryfall scans 2026-09-29. Two-colour walkers (Oko ELD #271, Saheeli BRO #294) print a split frame (4.6) and the dark inverted ones (Ashiok WOE #297, Ajani ECL #284) have no frame yet: neither is a reference. m = three colours (Narset IKO #278), the gold frame our master draws. c = Card Conjurer's 'Artifact Frame' with its rim made opaque (see frame-sources.json); Ugin M21 #279 and Karn DMU #372 print the see-through grey bars. b: most mono-black borderless walkers print dark name and type bars with white ink (M21 #282, DMU #373, VOW #278, INR #322 — the registry's dark-bars gap); Card Conjurer's b master is the light dress (dark ink on light grey bars) that only a few print (LIGHT_BLACK_WALKER_PINS); the three-row ones are Mythic Edition's Liliana, the Last Hope MED #GR2 and Sorin Markov MED #RA3. BLC #78 looks light but is the dark dress: white ink on dark see-through bars over pale art. Rares and mythics print the holo stamp in the bottom bar.",
+    "colors": {
+      "w": [
+        {
+          "name": "Basri Ket",
+          "set": "m21",
+          "scryfallId": "ed3906ea-df06-4299-a305-32e6ef476507"
+        },
+        {
+          "name": "Ajani, Caller of the Pride",
+          "set": "fdn",
+          "scryfallId": "9f329a0b-13cc-48c5-9fb7-38d8a537aa30"
+        },
+        {
+          "name": "Elspeth Resplendent",
+          "set": "snc",
+          "scryfallId": "66d75499-1be8-42a0-8520-9cd8adbd0ca3"
+        }
+      ],
+      "u": [
+        {
+          "name": "Mordenkainen",
+          "set": "afr",
+          "scryfallId": "a8df51c3-cd9c-45eb-ac70-d13976e0e1c4"
+        },
+        {
+          "name": "Jace, Mirror Mage",
+          "set": "znr",
+          "scryfallId": "961bb827-f13a-417d-8284-5cd2aac3d034"
+        }
+      ],
+      "b": [
+        {
+          "name": "Liliana, the Last Hope",
+          "set": "med",
+          "scryfallId": "7ffc77bf-21e7-4e1e-a635-d6b61213b3e1"
+        },
+        {
+          "name": "Sorin Markov",
+          "set": "med",
+          "scryfallId": "ab6ccbe1-937e-405b-afd5-333abfd5c6a5"
+        }
+      ],
+      "r": [
+        {
+          "name": "Chandra, Heart of Fire",
+          "set": "m21",
+          "scryfallId": "1e494793-ec53-46dc-a5db-90dadc8cc015"
+        },
+        {
+          "name": "Chandra, Flameshaper",
+          "set": "fdn",
+          "scryfallId": "02db5a2d-28d3-4f57-9045-f0ef16d8aad1"
+        },
+        {
+          "name": "Zariel, Archduke of Avernus",
+          "set": "afr",
+          "scryfallId": "6ad8828d-96b8-432f-bcee-3a60b6ef1270"
+        }
+      ],
+      "g": [
+        {
+          "name": "Garruk, Unleashed",
+          "set": "m21",
+          "scryfallId": "bd16e1a6-0ece-44d5-8221-25892178e927"
+        },
+        {
+          "name": "Vivien Reid",
+          "set": "fdn",
+          "scryfallId": "37cc3e80-2ffa-4d48-bd67-a6315375b236"
+        },
+        {
+          "name": "Vivien on the Hunt",
+          "set": "snc",
+          "scryfallId": "3979b3d5-7551-4161-bfe5-fe4b54fd96e5"
+        }
+      ],
+      "c": [
+        {
+          "name": "Ugin, the Spirit Dragon",
+          "set": "m21",
+          "scryfallId": "1bacda35-bb91-4537-a14d-846650fa85f6"
+        },
+        {
+          "name": "Karn, Living Legacy",
+          "set": "dmu",
+          "scryfallId": "493341c3-1f59-4d7e-b852-1449a2333be9"
+        }
+      ],
+      "m": [
+        {
+          "name": "Narset of the Ancient Way",
+          "set": "iko",
+          "scryfallId": "91ac6589-75ee-4fbf-8056-1860c1482592"
+        }
+      ]
+    }
+  },
+  "m15borderlesspwtall": {
+    "note": "The tall borderless planeswalker (TODO 4.33): four printed ability rows (a run of statics shares a row; The Wandering Emperor NEO #303 prints Flash and its static in one), light rows, checked by eye on the Scryfall scans 2026-09-29. c: The Aetherspark DFT #376 is the one light colourless tall printing — a serialized headliner (XXX/500 stamped on the art) and an Artifact Planeswalker: confirm the bars by eye. m = three colours (MH2 #304 / #305). b: the light dress of Card Conjurer's b master (AFR #284, STX #276); most black walkers print dark bars with white ink (FDN #359, FRA #303 — the dark-bars gap).",
+    "confirm": true,
+    "colors": {
+      "w": [
+        {
+          "name": "Elspeth, Sun's Nemesis",
+          "set": "thb",
+          "scryfallId": "fedff53b-b5c7-470e-bb66-797d5d20b983"
+        },
+        {
+          "name": "The Wandering Emperor",
+          "set": "neo",
+          "scryfallId": "71327818-2784-4fde-8e19-ef8677694a5f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Teferi, Master of Time",
+          "set": "m21",
+          "scryfallId": "ba95c4fc-f0fc-4bfe-bef7-694c3d82a6c7"
+        },
+        {
+          "name": "Teferi, Temporal Pilgrim",
+          "set": "bro",
+          "scryfallId": "fee692dd-4030-4783-92a8-21304e40533a"
+        },
+        {
+          "name": "Kaito, Cunning Infiltrator",
+          "set": "fdn",
+          "scryfallId": "be447408-0846-49be-b47e-c6f256032deb"
+        }
+      ],
+      "b": [
+        {
+          "name": "Lolth, Spider Queen",
+          "set": "afr",
+          "scryfallId": "d00e1624-06f6-4377-96a4-842adfa78778"
+        },
+        {
+          "name": "Professor Onyx",
+          "set": "stx",
+          "scryfallId": "c2ad8536-15f6-42c1-8521-dc37feee8e67"
+        }
+      ],
+      "r": [
+        {
+          "name": "Jaya, Fiery Negotiator",
+          "set": "dmu",
+          "scryfallId": "2e4a532c-94c3-4302-9fba-af8396329890"
+        },
+        {
+          "name": "Chandra, Hope's Beacon",
+          "set": "mom",
+          "scryfallId": "62707510-96ae-492f-8b14-a34d0c9fb859"
+        }
+      ],
+      "g": [
+        {
+          "name": "Tyvar Kell",
+          "set": "khm",
+          "scryfallId": "a19b35ee-03ba-43f0-8c57-29718c899719"
+        },
+        {
+          "name": "Wrenn and Realmbreaker",
+          "set": "mom",
+          "scryfallId": "17269aae-10bc-49ef-b6a7-94e0dd6cf677"
+        },
+        {
+          "name": "Wrenn and Seven",
+          "set": "mid",
+          "scryfallId": "3628a023-3f69-4b7f-a6cc-42e4293ecfdd"
+        }
+      ],
+      "c": [
+        {
+          "name": "The Aetherspark",
+          "set": "dft",
+          "scryfallId": "934cc1ca-2ce8-4062-b1b7-1976e76da8b6"
+        }
+      ],
+      "m": [
+        {
+          "name": "Dakkon, Shadow Slayer",
+          "set": "mh2",
+          "scryfallId": "4538baaf-cb79-45f8-a06b-9f5e773920fa"
+        },
+        {
+          "name": "Geyadrone Dihada",
+          "set": "mh2",
+          "scryfallId": "69ef067b-58ac-4b88-a983-83316d157fcb"
         }
       ]
     }

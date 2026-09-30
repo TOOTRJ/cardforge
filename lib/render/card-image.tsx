@@ -40,6 +40,7 @@ import {
   secondFaceRulesLayout,
   type RulesDraw,
 } from "@/lib/cards/rules-box";
+import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
@@ -374,8 +375,11 @@ function CardImage({
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const markLayout = brandMarkLayout(layout);
-  // A textless frame (TODO 3.24) prints no type line and no text box.
+  // A textless frame (TODO 3.24) prints no type line and no text box — but
+  // the full-art token's textless height keeps its type line (4.48,
+  // FrameProfile.textlessTypeLine).
   const textless = Boolean(layout.textless);
+  const hidesTypeLine = textless && !layout.textlessTypeLine;
   const finish = card.frameStyle?.finish ?? "regular";
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -831,11 +835,15 @@ function CardImage({
           type bands (see the preview's twin comment: z9 under their z20).
           Satori paints in document order, so it comes BEFORE the bands:
           where a rules box overlaps the type bar (Expedition, 60.5 %H) the
-          backdrop used to dim the bake's type line and set symbol only. */}
+          backdrop used to dim the bake's type line and set symbol only.
+          WHEN it is drawn is the preview's rule too (drawsRulesBackdrop). */}
       {layout.rules.backdropHex &&
-      hasRulesContent &&
-      !layout.chapters &&
-      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+      drawsRulesBackdrop(layout.rules, {
+        hasRulesContent,
+        textless,
+        chapters: Boolean(layout.chapters),
+        rowsDrawn: Boolean(layout.loyaltyRows) && loyaltyAbilities.length > 0,
+      }) ? (
         <div
           style={{
             ...slotBox(layout.rules.rect),
@@ -916,9 +924,10 @@ function CardImage({
           symbolRect the symbol gets its own absolute box (mirrors the
           preview) so it can be aligned independently of the type line. */}
       {/* A textless frame (TODO 3.24) prints no type line — nor the set
-          symbol beside it (a symbolRect box still prints, below). A split
+          symbol beside it (a symbolRect box still prints, below) — unless
+          it keeps its type line (textlessTypeLine, the full-art token). A split
           type line (TODO 3.24) prints its two halves in their own boxes. */}
-      {textless ? null : layout.type.split && typeSplit ? (
+      {hidesTypeLine ? null : layout.type.split && typeSplit ? (
         SplitTypeBake({ slot: typeSlot, split: layout.type.split, parts: typeSplit, ink: typeInk, cardWidth: width })
       ) : (
       <Band slot={typeSlot} cardWidth={width}>

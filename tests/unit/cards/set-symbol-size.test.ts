@@ -69,7 +69,8 @@ describe("setSymbolSource / keyruneCodepointFor", () => {
 
 describe("the family's set-symbol boxes", () => {
   it("are set on every M15-era family profile and on nothing else", () => {
-    const thin = new Set(["m15pw", "saga"]);
+    // …and 4.33's borderless planeswalkers, which keep m15pw's box.
+    const thin = new Set(["m15pw", "m15borderlesspw", "m15borderlesspwtall", "saga"]);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       if (!M15_FAMILY_TEMPLATES.includes(template)) {
@@ -194,7 +195,7 @@ describe("setSymbolSize on the family", () => {
   });
 
   it("uses the thin-bar box on the planeswalker and saga (80 px; DOM's ink 80 px)", () => {
-    for (const template of ["m15pw", "saga"]) {
+    for (const template of ["m15pw", "m15borderlesspw", "m15borderlesspwtall", "saga"]) {
       const p = getFrameProfile(template);
       expect(setSymbolSize(p, MARK).sizePct * HD, template).toBeCloseTo(79.95, 6);
       const dom = setSymbolSize(p, glyph("dom"));

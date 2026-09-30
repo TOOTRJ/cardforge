@@ -15,6 +15,7 @@ import {
   type PipOverrides,
 } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
+import { cardTypeHasRarity } from "@/lib/cards/emblem";
 import { drawableCardMedia } from "@/lib/cards/drawable-media";
 import {
   FrameLayer,
@@ -74,6 +75,7 @@ import {
   type DrawnStats,
   type RulesDraw,
 } from "@/lib/cards/rules-box";
+import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";
 import type { RulesItem } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
@@ -652,8 +654,11 @@ function CardFace({
   const frameSplit = frameSplitFor(layout, colorIdentity);
   const safeTitle = face.title?.trim() || "Untitled Card";
   const markLayout = brandMarkLayout(layout);
-  // A textless frame (TODO 3.24) prints no type line and no text box.
+  // A textless frame (TODO 3.24) prints no type line and no text box — but
+  // the full-art token's textless height keeps its type line (4.48,
+  // FrameProfile.textlessTypeLine).
   const textless = Boolean(layout.textless);
+  const hidesTypeLine = textless && !layout.textlessTypeLine;
   // The set symbol's size and drawn width (lib/cards/set-symbol-size.ts) —
   // the bake's twin: the same box, glyph fit and width in both renderers.
   const setSymbol = setSymbolSize(layout, setSymbolSource(setIconUrl, setIconCode));
@@ -1095,9 +1100,10 @@ function CardFace({
           profile defines a symbolRect, the symbol renders in its OWN
           absolutely positioned box so it can be aligned independently. */}
       {/* A textless frame (TODO 3.24) prints no type line — nor the set
-          symbol beside it (a symbolRect box still prints, below). A split
+          symbol beside it (a symbolRect box still prints, below) — unless
+          it keeps its type line (textlessTypeLine, the full-art token). A split
           type line prints its two halves in their own boxes. */}
-      {textless ? null : layout.type.split && typeSplit ? (
+      {hidesTypeLine ? null : layout.type.split && typeSplit ? (
         <SplitTypeLine
           slot={{
             ...layout.type,
@@ -1129,6 +1135,7 @@ function CardFace({
         {!layout.symbolRect ? (
           <SetSymbol
             rarity={rarity}
+            namesRarity={cardTypeHasRarity(face.cardType)}
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(setSymbol.sizePct)}
@@ -1151,6 +1158,7 @@ function CardFace({
         >
           <SetSymbol
             rarity={rarity}
+            namesRarity={cardTypeHasRarity(face.cardType)}
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(setSymbol.sizePct)}
@@ -1166,11 +1174,15 @@ function CardFace({
           sit between it and the text (backdrop z9 < watermark z10 < text
           z20). Previously the backdrop was the text container's background,
           which painted over the watermark — basic lands' big mana symbol
-          vanished behind the tinted land text box. */}
+          vanished behind the tinted land text box. WHEN it is drawn is the
+          bake's rule too (drawsRulesBackdrop). */}
       {layout.rules.backdropHex &&
-      hasRulesContent &&
-      !layout.chapters &&
-      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+      drawsRulesBackdrop(layout.rules, {
+        hasRulesContent,
+        textless,
+        chapters: Boolean(layout.chapters),
+        rowsDrawn: Boolean(layout.loyaltyRows) && (loyaltyAbilities.length > 0 || hintRowsLayout !== null),
+      }) ? (
         <div
           aria-hidden
           style={{

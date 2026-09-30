@@ -27,9 +27,16 @@ const layoutOf = (template: string, rulesText: string | null, flavorText: string
   mainRulesLayout({ layout: getFrameProfile(template), rulesText, flavorText, aspect: PORTRAIT, show: { pt } });
 
 describe("which profiles centre a single line", () => {
-  it("only the text-box tokens' rules slot sets alignSingleLine (no other box, no other slot)", () => {
+  it("only the token frames' and the emblem's rules slot sets alignSingleLine (no other box, no other slot)", () => {
     const centring = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.alignSingleLine);
-    expect(centring).toEqual(["m15tokentext", "m15tokenartifacttext"]);
+    // The 2014–19 text-box tokens (4.49 (b)), 4.52's emblem (TDSK #17 /
+    // TFRA #16 centre their one line) and the full-art tokens (4.48, every
+    // height: the textless one's slot is never drawn).
+    expect(centring).toEqual([
+      "m15tokentext", "m15tokenartifacttext",
+      "emblem",
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+    ]);
     for (const t of centring) expect(getFrameProfile(t).rules.alignSingleLine).toBe("center");
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);
