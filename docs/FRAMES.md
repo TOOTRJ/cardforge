@@ -113,9 +113,15 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   Rules mask; and the pinline through the pack's Pinline mask on top. `m`
   is the three-and-more-colour land (gold bars, box and pinline); a
   two-colour land prints grey bars with a split pinline and box, which are
-  4.6's pair masters (the same function with a letter pair). Some sets
-  (WOE, ACR, TDM, EOE, FIC) print a dark type bar over the tinted box: not
-  drawn, and no reference comes from them.
+  4.6's pair masters (the same function with a letter pair). About a
+  quarter of the borderless nonbasic lands print the spells' look instead —
+  the colour's title bar over a dark type bar AND a dark box (TDM, WOE,
+  ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops) — and a few
+  the short box (the SNC triomes): neither is drawn, no reference comes
+  from them, and the registry pins them `nearest` (4.37's variants;
+  `BORDERLESS_LAND_DARK_PINS` / `BORDERLESS_LAND_SHORT_BOX_PINS` in
+  `lib/scryfall/frame-signatures.ts`, read by eye on every printing it
+  called `exact`).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame and
   the colourless creature token are see-through, like the printed cards. The
   profile's `underFrameArt` draws the art under the whole frame (TODO 4.17);

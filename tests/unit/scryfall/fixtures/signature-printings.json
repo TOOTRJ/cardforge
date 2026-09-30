@@ -3077,5 +3077,192 @@
       "W"
     ],
     "oracle_text": "This land enters tapped unless you control a Plains.\n{T}: Add {W}.\n{2}{W}{W}, {T}: Create a 1/1 white Human creature token."
+  },
+  "tdm-393": {
+    "id": "85b84c4c-465d-4d8d-8d38-2ed08a9213b3",
+    "name": "Cori Mountain Monastery",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "393",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains or an Island.\n{T}: Add {R}.\n{3}{R}, {T}: Exile the top card of your library. Until the end of your next turn, you may play that card."
+  },
+  "snc-291": {
+    "id": "e4bb5f59-2a63-421b-94a1-4cbef00f0c7e",
+    "name": "Jetmir's Garden",
+    "layout": "normal",
+    "set": "snc",
+    "set_name": "Streets of New Capenna",
+    "set_type": "expansion",
+    "collector_number": "291",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Cycling"
+    ],
+    "type_line": "Land — Mountain Forest Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "R",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {R}, {G}, or {W}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)"
+  },
+  "sld-469": {
+    "id": "7a28aa07-8b36-4048-9b71-dcb34b96068a",
+    "name": "Ash Barrens",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "469",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "galaxyfoil"
+    ],
+    "keywords": [
+      "Landcycling",
+      "Basic landcycling",
+      "Typecycling",
+      "Cycling"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\nBasic landcycling {1} ({1}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"
+  },
+  "woe-303": {
+    "id": "901796b2-c567-41e2-a87b-6147a966c9a8",
+    "name": "Restless Bivouac",
+    "layout": "normal",
+    "set": "woe",
+    "set_name": "Wilds of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "303",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {R} or {W}.\n{1}{R}{W}: This land becomes a 2/2 red and white Ox creature until end of turn. It's still a land.\nWhenever this land attacks, put a +1/+1 counter on target creature you control."
+  },
+  "fra-379": {
+    "id": "fa63b3eb-292d-4d9d-9179-085566e82d37",
+    "name": "Hall of Echoes",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "379",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{5}: This land becomes a copy of target creature you control until end of turn. The \"legend rule\" doesn't apply to permanents you control this turn."
+  },
+  "hob-284": {
+    "id": "edff761b-2c2a-414f-b0a3-25c3fdbcb0bc",
+    "name": "The Lonely Mountain",
+    "layout": "normal",
+    "set": "hob",
+    "set_name": "The Hobbit",
+    "set_type": "expansion",
+    "collector_number": "284",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "surgefoil",
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land — Mountain",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "({T}: Add {R}.)\nThis land enters tapped unless you control an Equipment.\n{4}{R}, {T}: Create a 2/2 red Dwarf creature token. This ability costs {1} less to activate for each Equipment you control. Activate only as a sorcery."
   }
 }

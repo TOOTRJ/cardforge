@@ -69,6 +69,16 @@ describe("borderless families (TODO 1.17)", () => {
     ["otj-304", "nearest", "m15borderlessland", "m15land"],
     ["neo-413", "nearest", "m15borderlessland", "m15land"],
     ["ltc-361", "nearest", "m15borderlessland", "m15land"],
+    // …and the two print variations Scryfall can't tell apart, pinned
+    // (4.34's skeptic pass, by eye): the spells' dark type bar and box
+    // (Cori Mountain Monastery TDM #393, Hall of Echoes FRA #379; Restless
+    // Bivouac WOE #303 on its two-colour gap too), and the short box (the
+    // triome SNC #291, the galaxy-foil SLD #469).
+    ["tdm-393", "nearest", "m15borderlessland", "m15land"],
+    ["fra-379", "nearest", "m15borderlessland", "m15land"],
+    ["woe-303", "nearest", "m15borderlessland", "m15land"],
+    ["snc-291", "nearest", "m15borderlessland", "m15land"],
+    ["sld-469", "nearest", "m15borderlessland", "m15land"],
     // MDFC (5.7), saga / adventure / room (4.38).
     ["znr-284", "nearest", "m15borderlessland", "m15land"],
     ["tdm-383", "nearest", "saga", undefined],
@@ -92,6 +102,9 @@ describe("borderless families (TODO 1.17)", () => {
     // Posters: unsupported for good, Borderless offered as the nearest (the
     // import lands on bordered M15: SPG #119 crops to the window too).
     ["spg-119", "unsupported", "m15borderless", "m15"],
+    // …and HOB #284, the surge-foil twin of the HOB #248 book cover, which
+    // Scryfall doesn't flag `poster` (pinned; a land, so the land frame).
+    ["hob-284", "unsupported", "m15borderlessland", "m15land"],
     // Set frames: Mystical Archive, Stellar Sights (4.11); Amonkhet
     // Invocations unsupported.
     ["sta-1", "nearest", "m15borderless", "m15"],
@@ -145,6 +158,38 @@ describe("borderless families (TODO 1.17)", () => {
     for (const key of ["mh3-351", "mid-281", "znr-284", "eos-1"] as const) {
       expect(frameMatchFromScryfall(printing(key)).blockedBy, key).not.toBe("4.34");
     }
+    // The print variations the master doesn't draw (4.37's), pinned: the
+    // spells' dark type bar and box, the short box — each named, and every
+    // one that holds recorded (FrameMatch.gaps).
+    expect(frameMatchFromScryfall(printing("tdm-393"))).toMatchObject({
+      signature: "borderless/land+dark-bars",
+      reason: "this printing's type bar and text box are dark, and PipGlyph's Borderless Land tints them",
+      blockedBy: "4.37",
+      gaps: ["dark-bars"],
+    });
+    expect(frameMatchFromScryfall(printing("fra-379")).signature).toBe("borderless/land+dark-bars");
+    expect(frameMatchFromScryfall(printing("woe-303"))).toMatchObject({
+      signature: "borderless/land+two-colour",
+      gaps: ["two-colour", "dark-bars"],
+    });
+    expect(frameMatchFromScryfall(printing("snc-291"))).toMatchObject({
+      signature: "borderless/land+short-box",
+      reason: "this printing has the short text box, and PipGlyph's has the regular one",
+      blockedBy: "4.37",
+      gaps: ["short-box"],
+    });
+    expect(frameMatchFromScryfall(printing("sld-469"))).toMatchObject({
+      signature: "borderless/land+short-box",
+      gaps: ["short-box"],
+    });
+    // The references stay exact: the pins name none of them.
+    for (const key of ["mh3-351", "fra-381", "cmm-663", "cmm-659"] as const) {
+      expect(frameMatchFromScryfall(printing(key)).gaps, key).toBeUndefined();
+    }
+    expect(frameMatchFromScryfall(printing("hob-284"))).toMatchObject({
+      signature: "borderless/poster",
+      forGood: true,
+    });
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",

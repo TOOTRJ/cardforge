@@ -123,10 +123,12 @@ const TEMPLATES = {
   // The borderless nonbasic land (4.34). A land's frame colour follows the
   // mana it makes: c = colourless lands, m = three and more colours (two
   // split the pinline and box, 4.6). No crown or nickname line until 4.6 /
-  // 6.3. Curate by eye: drop the sets that print a DARK type bar (WOE, ACR,
-  // TDM, EOE, FIC) — the master tints it like the title bar.
+  // 6.3. Curate by eye: drop the prints of the spells' look — a DARK type
+  // bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC,
+  // many 2024+ SLD drops; the registry pins them, BORDERLESS_LAND_DARK_PINS)
+  // — and the short box (the SNC triomes): the master tints both parts.
   m15borderlessland: {
-    confirm: "Keep prints whose type bar wears the title bar's tint (most sets); WOE, ACR, TDM, EOE and FIC print it dark.",
+    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop the dark type bar and box (BORDERLESS_LAND_DARK_PINS) and the short box.",
     q: (k) =>
       `border:borderless frame:2015 t:land -t:basic -is:showcase -frame:legendary -is:dfc -is:textless -is:flavorname -t:creature ${k === "m" ? "produces>=3 -produces:c" : `produces=${k}`}`,
   },

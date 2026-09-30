@@ -205,6 +205,47 @@ export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = 
   tust: ["18"],
 };
 
+/** Borderless nonbasic lands that print the SPELLS' look — the colour's
+ *  title bar over a DARK type bar and text box, m15borderless's master —
+ *  not the tinted type bar and box of 4.34's m15borderlessland. Scryfall
+ *  can't tell the two apart (both carry `inverted`), so they are pinned:
+ *  every borderless nonbasic land the registry resolved `exact` (117
+ *  printings, Scryfall 2026-09-29) was read against its print by eye (31
+ *  are dark), plus the two-colour runs of the sets that print the dark look
+ *  throughout (ACR, FRA #397–401, WOE). Not pinned: the crowned and
+ *  nicknamed LTC / LTR / HOC lands, most of them dark too — their crown and
+ *  nickname gaps already make them `nearest` (4.6 / 6.3 re-check them). */
+export const BORDERLESS_LAND_DARK_PINS: Readonly<Record<string, readonly string[]>> = {
+  acr: ["111", "112", "114", "115", "116"],
+  eoe: ["316"],
+  fic: ["462"],
+  fra: ["379", "397", "398", "399", "400", "401"],
+  hob: ["207"],
+  hoc: ["8", "97"],
+  lci: ["410a", "410b", "410c", "410d", "410e", "410f"],
+  pmei: ["2026-13"],
+  sld: ["914", "917", "1994", "2310", "2626", "2652", "2699", "2818", "7063", "7064", "7067", "7097", "7104"],
+  tdm: ["393", "394", "395", "396", "397"],
+  woe: ["303", "304", "305", "306", "307"],
+};
+
+/** Borderless nonbasic lands that print the SHORT text box (4.37's short
+ *  and mid boxes: the type bar at ~70 %H, not 56 %H) among the ones the
+ *  registry resolved `exact` (checked by eye, 2026-09-29): the SNC triomes
+ *  and SLD #469–472. The two-colour short-box lands (UNF's shocks, SLD
+ *  #456–460, TLE #58–59, FCA #64) are `nearest` on their two-colour gap. */
+export const BORDERLESS_LAND_SHORT_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
+  snc: ["291", "292", "293", "294", "295"],
+  sld: ["469", "470", "471", "472"],
+};
+
+/** Posters Scryfall doesn't flag `poster`: The Lonely Mountain HOB #284 is
+ *  the surge-foil twin of HOB #248's artist-lettered book cover (checked by
+ *  eye 2026-09-29), which carries the promo type. */
+const UNFLAGGED_POSTER_PINS: Readonly<Record<string, readonly string[]>> = {
+  hob: ["284"],
+};
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -623,6 +664,8 @@ type GapKey =
   | "nyx-dress"
   | "nyx"
   | "light-box"
+  | "dark-bars"
+  | "short-box"
   | "tall-box";
 
 const BORDER_WORD: Record<string, string> = {
@@ -727,6 +770,18 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   "light-box": {
     match: { effectsNone: ["inverted"] },
     reason: "this printing has the light text box, and PipGlyph's has the dark one",
+    blockedBy: "4.37",
+  },
+  // The borderless land's two print variations the registry can't read
+  // from Scryfall's fields (4.34's skeptic pass): pinned.
+  "dark-bars": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_DARK_PINS },
+    reason: "this printing's type bar and text box are dark, and PipGlyph's Borderless Land tints them",
+    blockedBy: "4.37",
+  },
+  "short-box": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_SHORT_BOX_PINS },
+    reason: "this printing has the short text box, and PipGlyph's has the regular one",
     blockedBy: "4.37",
   },
 };
@@ -864,7 +919,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   {
     key: "borderless/poster",
     exactLabel: "Artist-lettered borderless poster",
-    match: { borders: ["borderless"], promosAny: ["poster"] },
+    match: {
+      borders: ["borderless"],
+      anyOf: [{ promosAny: ["poster"] }, { collectorIds: UNFLAGGED_POSTER_PINS }],
+    },
     outcome: {
       status: "unsupported",
       template: { family: "borderless" },
@@ -1045,7 +1103,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // Borderless Land offered once verified. The two-colour lands — most of
   // them: MID #281, OTJ #304, the RVR shocks, the MKM surveil lands — print
   // a split pinline and box on grey bars, 4.6's pair masters: nearest on
-  // the gold `m` until then, like the two-colour spells.
+  // the gold `m` until then, like the two-colour spells. Two print
+  // variations are pinned `nearest` (Scryfall has no field for either):
+  // the spells' dark type bar and box (TDM, WOE, ACR, EOE, many SLD drops)
+  // and the short box (the SNC triomes) — 4.37's variants.
   ...withGaps(
     {
       key: "borderless/land",
@@ -1053,7 +1114,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"], kinds: ["land"] },
       outcome: { status: "exact", template: { family: "borderless" } },
     },
-    ["etched", "nickname", "crown", "nyx", "two-colour", "light-box"],
+    ["etched", "nickname", "crown", "nyx", "two-colour", "short-box", "dark-bars", "light-box"],
   ),
   {
     key: "borderless/layout",
