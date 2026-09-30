@@ -24,9 +24,11 @@
 --    the browser PUTs the file to a signed upload URL that
 --    startCardArtUploadAction mints (service role) for ONE server-made name,
 --    `{userId}/{uuid}.upload`, in this bucket; finishCardArtUploadAction
---    reads it back with the service role, runs the byte sniff, the metadata
---    strip and the moderation scan, writes the real object into card-art and
---    overwrites the staged one with an 8-byte non-image tombstone
+--    first claims it (a `{uuid}.claim` marker written without upsert —
+--    object keys are unique, so of finishes fired in parallel exactly one
+--    goes on), reads it back with the service role, runs the byte sniff, the
+--    metadata strip and the moderation scan, writes the real object into
+--    card-art and overwrites the staged one with an 8-byte non-image tombstone
 --    (lib/cards/upload-art-server.ts, lib/media/user-storage.ts
 --    userUploadStaging): a signed upload URL only refuses to OVERWRITE, so a
 --    deleted key could be put again with the same token and finished twice
@@ -39,7 +41,7 @@
 --        card-art / set-covers / profile-media / custom-pips objects only.
 --      * Storage enforces this row's file_size_limit and allowed_mime_types
 --        on the signed upload itself.
---      * An upload whose finish never came, and a tombstone, is removed by
+--      * An upload whose finish never came, a tombstone and a claim are removed by
 --        the same user's next start (older than 3 hours, past the token's 2)
 --        and by account deletion
 --        (lib/account/actions.ts); nothing else reads the bucket.

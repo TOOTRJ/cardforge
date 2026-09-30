@@ -286,5 +286,5 @@ describe("the AI remix source reaches the model without camera metadata", () => 
     const meta = await sharp(sent.image!).metadata();
     expect([meta.width, meta.height]).toEqual([1463, 2048]);
     expect(sent.image!.byteLength).toBeLessThan(8 * 1024 * 1024);
-  });
+  }, 30_000); // encodes + decodes a 16 MiB PNG: seconds on a loaded runner
 });

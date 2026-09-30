@@ -44,8 +44,11 @@ import { isUuid, randomId } from "@/lib/ids";
 //      never public, and no picture column accepts it — 0127).
 //   2. The browser PUTs the file to that URL (Supabase Storage enforces the
 //      bucket's size and MIME limits).
-//   3. finishCardArtUploadAction(name) — reads the staged object back with
-//      the service role and runs what this action always ran on the bytes:
+//   3. finishCardArtUploadAction(name) — CLAIMS the upload first (creates
+//      `{uuid}.claim` only if it doesn't exist: Storage keys are unique, so
+//      of any number of finishes racing on one name exactly one goes on),
+//      then reads the staged object back with the service role and runs
+//      what this action always ran on the bytes:
 //        * size check against the actual bytes, not the declared length;
 //        * Sharp decodes the header — throws on non-images;
 //        * format whitelist: png / jpeg / webp / gif (not svg, avif, heif,
@@ -59,8 +62,10 @@ import { isUuid, randomId } from "@/lib/ids";
 //        * the NSFW scan (a downscaled copy above 8 MiB, lib/media/
 //          model-input.ts), and a flagged object removed.
 //      Once read, the staged object is replaced by a tombstone (not
-//      deleted: the signed URL could put a deleted key again), so one
-//      counted start stores at most one file.
+//      deleted: the signed URL could put a deleted key again). The claim
+//      makes one counted start store at most one file — even with finishes
+//      fired in parallel, which a tombstone written AFTER the read can't
+//      stop (they would all read the file before the first overwrote it).
 //
 // Why the byte sniff matters: a bucket validates the DECLARED Content-Type,
 // not the file bytes. Sharp reads the actual bytes and rejects anything that
@@ -85,6 +90,10 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
 
 /** A staged object's name: `{uuid}.upload`, made by the start action. */
 const STAGED_SUFFIX = ".upload";
+/** The finish's claim on it: `{uuid}.claim` (user-storage claim()). */
+const CLAIM_SUFFIX = ".claim";
+
+const UPLOAD_NOT_FOUND = "That upload wasn't found — try again.";
 
 export type UploadArtServerResult =
   | { ok: true; publicUrl: string; path: string }
@@ -186,19 +195,28 @@ export async function finishCardArtUploadAction(
   const ready = await uploader();
   if (!ready.ok) return ready;
   if (!isStagedName(stagedName)) {
-    return { ok: false, error: "That upload wasn't found — try again." };
+    return { ok: false, error: UPLOAD_NOT_FOUND };
   }
 
   const staging = userUploadStaging(ready.userId);
+  // ONE finish per staged upload, even when several arrive at once: only
+  // the call that creates the claim goes on. A failed claim (taken, or a
+  // storage error) stores nothing — the upload is started again.
+  const claimName = `${stagedName.slice(0, -STAGED_SUFFIX.length)}${CLAIM_SUFFIX}`;
+  const claimed = await staging.claim(claimName).catch(() => ({ error: { message: "claim failed" } }));
+  if (claimed.error) {
+    return { ok: false, error: UPLOAD_NOT_FOUND };
+  }
   const staged = await staging.download(stagedName);
   if (!staged.bytes || isTombstone(staged.bytes)) {
-    return { ok: false, error: "That upload wasn't found — try again." };
+    return { ok: false, error: UPLOAD_NOT_FOUND };
   }
   // The staged file has served its purpose once read: its bytes never
   // outlive this call. It is REPLACED by a tombstone rather than deleted —
   // the signed URL (valid 2 hours) only refuses to overwrite, so a deleted
   // key could be put again and finished again on this one counted upload.
-  // The tombstone goes with the user's next start once the URL has expired.
+  // The tombstone (and the claim) go with the user's next start once the
+  // URL has expired.
   const consumed = await staging.markConsumed(stagedName).catch(() => ({ error: { message: "tombstone failed" } }));
   if (consumed.error) {
     await staging.remove([stagedName]).catch(() => undefined);

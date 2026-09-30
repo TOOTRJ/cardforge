@@ -35,7 +35,7 @@ describe("modelInputImage", () => {
     expect([meta.width, meta.height]).toEqual([1463, 2048]);
     // Far under both models' 20 MB, base64 included.
     expect((out.bytes.byteLength * 4) / 3).toBeLessThan(8 * 1024 * 1024);
-  });
+  }, 30_000); // encodes + decodes a 16 MiB PNG: seconds on a loaded runner
 
   it("never enlarges a small-pixel file that is over the byte cap", async () => {
     const png = await sharp({ create: { width: 300, height: 200, channels: 3, background: "#123" } }).png().toBuffer();

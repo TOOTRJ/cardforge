@@ -42,12 +42,25 @@ export function stagingBucketApi(bucket: string) {
 }
 
 /** Record a service-role write into the staging bucket (the finish action's
- *  tombstone, user-storage markConsumed). */
-export function stageWrite(bucket: string, key: string, body: unknown): void {
-  if (bucket === STAGING_BUCKET) staged.set(key, new Uint8Array(body as Uint8Array));
+ *  claim and tombstone, user-storage claim / markConsumed). Like Storage, a
+ *  write without `upsert` onto a key that exists is refused (409) — checked
+ *  and set in one tick, so parallel callers see one winner. */
+export function stageWrite(
+  bucket: string,
+  key: string,
+  body: unknown,
+  opts?: { upsert?: boolean },
+): { message: string; statusCode: string } | null {
+  if (bucket !== STAGING_BUCKET) return null;
+  if (!opts?.upsert && staged.has(key)) return { message: "The resource already exists", statusCode: "409" };
+  staged.set(key, new Uint8Array(body as Uint8Array));
+  return null;
 }
 
-/** The 8 bytes a consumed staged object holds (lib/media/user-storage.ts). */
+/** The finish's claim on a staged key: `{userId}/{uuid}.upload` → `….claim`. */
+export const claimKeyOf = (stagedKey: string): string => stagedKey.replace(/\.upload$/, ".claim");
+
+/** The 8 bytes a consumed staged object (and a claim) holds (lib/media/user-storage.ts). */
 export const TOMBSTONE = new TextEncoder().encode("consumed");
 
 /** Drop staged bytes when the staging bucket's remove is called. */

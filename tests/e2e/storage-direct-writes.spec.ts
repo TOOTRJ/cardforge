@@ -144,6 +144,22 @@ test.describe("direct client writes (migration 0126)", () => {
     created.push({ bucket, key: `${userId}/${run}-other.upload` });
     expect(elsewhere.error, "a token is for its own key only").not.toBeNull();
 
+    // The finish action CLAIMS an upload before reading it (user-storage
+    // claim(): a `{uuid}.claim` marker written without upsert), so finishes
+    // fired in parallel store the file once. Of claims racing on one key,
+    // exactly one lands — Storage's object keys are unique…
+    const claimKey = `${userId}/${run}.claim`;
+    created.push({ bucket, key: claimKey });
+    const claims = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        admin.storage.from(bucket).upload(claimKey, new TextEncoder().encode("consumed"), { upsert: false, contentType: "image/png" }),
+      ),
+    );
+    expect(claims.filter((c) => !c.error), "exactly one racing claim may land").toHaveLength(1);
+    // …and the user's token can't reach the claim, upsert or not.
+    const overClaim = await user.storage.from(bucket).uploadToSignedUrl(claimKey, token, png(), { contentType: "image/png", upsert: true });
+    expect(overClaim.error, "a token can't write the claim").not.toBeNull();
+
     // Private: no public URL, no read or list with the user's own session.
     expect((await fetch(`${url}/storage/v1/object/public/${bucket}/${key}`)).ok).toBe(false);
     expect((await user.storage.from(bucket).download(key)).error).not.toBeNull();

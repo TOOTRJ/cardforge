@@ -140,6 +140,6 @@ describe("the image moderation scan", () => {
       const meta = await sharp(copy).metadata();
       expect([meta.format, meta.width, meta.height]).toEqual(["jpeg", 1463, 2048]);
       expect(url.length).toBeLessThan(20 * 1000 * 1000);
-    });
+    }, 30_000); // encodes + decodes a 16 MiB PNG: seconds on a loaded runner
   });
 });
