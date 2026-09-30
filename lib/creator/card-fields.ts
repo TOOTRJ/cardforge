@@ -41,7 +41,7 @@ import {
   NEW_CARD_ANATOMY,
   pairColorIdentity,
   twoColorPairOf,
-  type FrameAnatomyStyle,
+  storedAnatomyOf,
 } from "@/lib/cards/anatomy";
 
 /** Hydrate the structured row editors from a persisted card: structured
@@ -322,15 +322,6 @@ export function remixValuesFrom(
     back_card_id: "",
     deck_id: "",
   };
-}
-
-/** The anatomy switches a stored frame_style names (booleans only). */
-function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
-  const stored = (frameStyle ?? {}) as Record<string, unknown>;
-  const out: FrameAnatomyStyle = {};
-  if (typeof stored.crown === "boolean") out.crown = stored.crown;
-  if (typeof stored.twoColor === "boolean") out.twoColor = stored.twoColor;
-  return out;
 }
 
 function watermarkFormValuesFrom(card: Card): WatermarkFormValues {
