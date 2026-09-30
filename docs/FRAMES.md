@@ -207,7 +207,12 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   `BORDERLESS_LAND_DARK_TYPE_BAR_PINS` / `BORDERLESS_LAND_SHORT_BOX_PINS`
   in `lib/scryfall/frame-signatures.ts`, read by eye on every printing it
   called `exact` — compare the title, type and box bands side by side: the
-  type bar is the easy one to miss).
+  type bar is the easy one to miss). One rules line starts at the box's
+  left, as on M15: the only non-SLD borderless lands printing a single
+  line (the ZNR / KHM pathways) do; only SLD #300–304 centre it. u and g
+  keep ONE reference (MH3 #350 / #357): the other exact mono-u / mono-g
+  prints are Secret Lair scans whose bars show the art through. The
+  two-colour pair masters are TODO 4.56 (with 4.6b).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame, the
   colourless creature tokens (both token frames) and the colourless
   planeswalker are see-through, like the printed cards. The profile's
