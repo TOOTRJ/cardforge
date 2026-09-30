@@ -161,6 +161,44 @@ export async function resolveRenderableImage(
 }
 
 /**
+ * The ORIGINAL bytes of an art source, for a print render (TODO 6.10,
+ * lib/render/card-print.ts): no transcode and no MAX_INLINE_EDGE fit — the
+ * print path decodes them with sharp and composites the art at the output's
+ * own resolution, so nothing is inlined into Satori's SVG. The same gate as
+ * resolveRenderableImage: a data: URL (base64) is decoded, an http(s) URL
+ * is fetched only from an allowlisted host (isAllowedServerImageFetchUrl),
+ * within FETCH_TIMEOUT_MS and MAX_IMAGE_BYTES. Null for anything else, or
+ * on any failure — the caller then lets the renderer draw the art its usual
+ * way. (The stored bake never comes here.)
+ */
+export async function fetchImageBytes(url: string | null | undefined): Promise<Buffer | null> {
+  if (!url) return null;
+  try {
+    if (url.startsWith("data:")) {
+      const comma = url.indexOf(",");
+      if (comma < 0 || !url.slice(5, comma).includes("base64")) return null;
+      const bytes = Buffer.from(url.slice(comma + 1), "base64");
+      return bytes.byteLength > 0 && bytes.byteLength <= MAX_IMAGE_BYTES ? bytes : null;
+    }
+    if (!/^https?:\/\//i.test(url) || !isAllowedServerImageFetchUrl(url)) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+      if (!response.ok) return null;
+      const length = Number(response.headers.get("content-length") ?? 0);
+      if (length > MAX_IMAGE_BYTES) return null;
+      const bytes = Buffer.from(await response.arrayBuffer());
+      return bytes.byteLength > 0 && bytes.byteLength <= MAX_IMAGE_BYTES ? bytes : null;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The pixel size of an inlined (data: URL) image — sharp reads the header,
  * nothing is decoded — or null for anything else. The bake places a rotated
  * art window from it (lib/render/card-image.tsx RotatedArtBake), which

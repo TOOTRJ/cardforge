@@ -105,6 +105,22 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     ]);
   });
 
+  it("keeps the Ghostfire walker references through the 'this printing is that frame' warning (TODO 4.5a)", () => {
+    // The Ghostfire frame dresses no planeswalker since 4.5a, but its w and
+    // (only) c references are the Elspeth #411 / Ugin #409 walkers, which
+    // print it: accepted with a warning until 4.5b re-homes them.
+    for (const [colour, name] of [
+      ["c", "Ugin"],
+      ["w", "Elspeth"],
+    ] as const) {
+      const result = validateReferenceForCombo(card(idOf("tarkirghostfire", colour, name)), "tarkirghostfire", colour);
+      expect(result.errors, name).toEqual([]);
+      expect(result.warnings.join(" "), name).toMatch(
+        /is a planeswalker, which the .*Ghostfire frame doesn't dress in the creator yet — accepted because this printing is that frame/,
+      );
+    }
+  });
+
   it("accepts a snow artifact on the snow frame (Replicating Ring KHM #244)", () => {
     const ring = card(idOf("m15snow", "c", "Replicating Ring"));
     expect(validateReferenceForCombo(ring, "m15snow", "c").errors).toEqual([]);

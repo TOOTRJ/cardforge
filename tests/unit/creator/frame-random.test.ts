@@ -239,6 +239,61 @@ describe("resolveGeneratedFrame — basic-only frames", () => {
   });
 });
 
+// TODO 4.5a: the IP showcases print P/T only, so the AI never dresses a
+// planeswalker or a battle in one — asked for by name or picked at random —
+// even with every colour of them published.
+describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (TODO 4.5a)", () => {
+  const SHOWCASES = [
+    "lotr",
+    "lotrscroll",
+    "avatar",
+    "bloomburrow",
+    "bloomanime",
+    "tarkirdraconic",
+    "tarkirghostfire",
+    "tarkirdragon",
+  ] as const;
+  const everyColour = (...templates: string[]) =>
+    keys(...templates.flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((c) => [t, c] as [string, string])));
+
+  it("degrades a requested showcase to the walker or battle frame", () => {
+    for (const template of SHOWCASES) {
+      const verified = everyColour(template, "m15pw", "battle");
+      expect(
+        resolveGeneratedFrame({ cardType: "planeswalker", requested: template, colorIdentity: ["red"], verifiedKeys: verified, random: () => 0 }),
+        template,
+      ).toBe("m15pw");
+      expect(
+        resolveGeneratedFrame({ cardType: "battle", requested: template, colorIdentity: ["red"], verifiedKeys: verified, random: () => 0 }),
+        template,
+      ).toBe("battle");
+      // A creature still gets it.
+      expect(
+        resolveGeneratedFrame({ cardType: "creature", requested: template, colorIdentity: ["red"], verifiedKeys: verified }),
+        template,
+      ).toBe(template);
+    }
+  });
+
+  it("never picks one at random, nor offers it in the options dialog", () => {
+    const verified = everyColour(...SHOWCASES, "m15pw", "battle");
+    for (const cardType of ["planeswalker", "battle"] as const) {
+      const offered = frameChoicesForType(cardType, verified).map((choice) => choice.template);
+      for (const template of SHOWCASES) expect(offered, `${cardType}/${template}`).not.toContain(template);
+      for (let i = 0; i < 20; i++) {
+        const picked = resolveGeneratedFrame({
+          cardType,
+          requested: "random",
+          colorIdentity: ["blue"],
+          verifiedKeys: verified,
+          random: () => i / 20,
+        });
+        expect(picked).toBe(cardType === "planeswalker" ? "m15pw" : "battle");
+      }
+    }
+  });
+});
+
 describe("colorHintsForFrame", () => {
   it("maps a frame's published color keys to identity words", () => {
     const hints = colorHintsForFrame(
