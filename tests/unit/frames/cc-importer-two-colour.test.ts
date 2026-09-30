@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  CC_TEMPLATES,
   CROWN_BAND,
   OUT_H,
   OUT_W,
   TWO_COLOR_PAIRS,
   TWO_COLOR_RAMPS,
+  builtColors,
   compositeLayers,
   cropRows,
   describeLayer,
   lerpLayers,
+  pairMasterLayers,
   rampMask,
   rampName,
   sourceFilesFor,
@@ -171,5 +174,88 @@ describe("the crown band", () => {
     expect(CROWN_BAND.crown).toEqual({ leftPct: 2.19, topPct: 1.88, widthPct: 95.62, heightPct: 17.52 });
     const img = solid(3, 5, [1, 2, 3, 255]);
     expect(cropRows(img, 3, 2).length).toBe(3 * 2 * 4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 4.6b — the pair masters the importer builds (pairMasterLayers): each
+// template's pair masters are drawn the way its verified masters are, over
+// the SAME Card Conjurer files (m15 / m15land: CC's whole image; m15artifact:
+// regions only, like its coloured artifacts), each split region's two files
+// blended across its untilted ramp.
+// ---------------------------------------------------------------------------
+
+const NEW = "img/frames/m15/new";
+const PAIR = (l: string, r: string, ramp: [number, number], mask?: string) => ({
+  src: `${NEW}/${l}.png`,
+  right: `${NEW}/${r}.png`,
+  ramp,
+  ...(mask ? { mask: `${NEW}/${mask}.png` } : {}),
+});
+const WHOLE = (k: string, mask?: string) => ({ src: `${NEW}/${k}.png`, ...(mask ? { mask: `${NEW}/${mask}.png` } : {}) });
+
+describe("pairMasterLayers — the pair masters, over the verified masters' files", () => {
+  it("m15 gold-split: the whole gold image, the split text box and pinline over it (bars stay gold)", () => {
+    expect(pairMasterLayers("ur", "split", "m15")).toEqual([
+      WHOLE("m"),
+      PAIR("u", "r", [46, 58], "rules"),
+      PAIR("u", "r", [40, 60], "pinline"),
+    ]);
+  });
+
+  it("m15 hybrid: the two colours' whole images across the frame ramp, grey bars, the split box and pinline", () => {
+    expect(pairMasterLayers("ur", "hybrid", "m15")).toEqual([
+      PAIR("u", "r", [40, 60]),
+      PAIR("u", "r", [46, 58], "rules"),
+      WHOLE("l", "title"),
+      WHOLE("l", "type"),
+      PAIR("u", "r", [40, 60], "pinline"),
+    ]);
+  });
+
+  it("m15land: the land frame whole, the split in the two land tints", () => {
+    expect(pairMasterLayers("wu", "split", "land")).toEqual([
+      WHOLE("l"),
+      PAIR("lw", "lu", [46, 58], "rules"),
+      PAIR("lw", "lu", [40, 60], "pinline"),
+    ]);
+  });
+
+  it("m15artifact: regions only, as its coloured artifacts — artifact frame + border, split box, gold bars, split pinline", () => {
+    expect(pairMasterLayers("gw", "split", "artifact")).toEqual([
+      WHOLE("a", "border"),
+      WHOLE("a", "frame"),
+      PAIR("g", "w", [46, 58], "rules"),
+      WHOLE("m", "title"),
+      WHOLE("m", "type"),
+      PAIR("g", "w", [40, 60], "pinline"),
+    ]);
+    // Its mono coloured artifacts use the same masks in the same order.
+    expect(CC_TEMPLATES.m15artifact.colors.g.map((l: { mask?: string }) => l.mask)).toEqual(
+      pairMasterLayers("gw", "split", "artifact").map((l: { mask?: string }) => l.mask),
+    );
+  });
+
+  it("the templates build every pair of every dress their profile declares, in printed order", () => {
+    const pairs = [...TWO_COLOR_PAIRS];
+    expect(builtColors(CC_TEMPLATES.m15)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((p) => `${p}-h`)]);
+    expect(builtColors(CC_TEMPLATES.m15artifact)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+    expect(builtColors(CC_TEMPLATES.m15land)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+    expect(CC_TEMPLATES.m15.colors["gw-h"]).toEqual(pairMasterLayers("gw", "hybrid", "m15"));
+    // The mono masters are untouched by the pair recipe.
+    expect(CC_TEMPLATES.m15.colors.w).toEqual([WHOLE("w")]);
+    // No other template builds a pair (wave 2 is 4.6f).
+    for (const [template, def] of Object.entries(CC_TEMPLATES)) {
+      if (["m15", "m15artifact", "m15land"].includes(template)) continue;
+      expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
+    }
+  });
+
+  it("provenance names both files and the ramp; the ramp is no source file", () => {
+    expect(describeLayer(PAIR("u", "r", [40, 60], "pinline"))).toBe(
+      `(${NEW}/u.png | ${NEW}/r.png across procedural:ramp(40→60 %W)) through ${NEW}/pinline.png`,
+    );
+    const files = sourceFilesFor({ colors: { ur: pairMasterLayers("ur", "hybrid", "m15") }, notes: [] } as never);
+    expect(files).toEqual([`${NEW}/l.png`, `${NEW}/pinline.png`, `${NEW}/r.png`, `${NEW}/rules.png`, `${NEW}/title.png`, `${NEW}/type.png`, `${NEW}/u.png`]);
   });
 });

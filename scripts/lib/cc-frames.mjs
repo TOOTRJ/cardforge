@@ -16,6 +16,7 @@
 // The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
+import { PAIR_RAMPS, TWO_COLOR_PAIRS, lerpLayers, rampMask, rampName } from "./pair-ramp.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
@@ -81,6 +82,85 @@ const colouredArtifact = (base, colour, baseMasks, colourMasks) => [
  *  frame list: Border, Frame, then Rules, Title, Type, Pinline on top). */
 const M15_BASE_MASKS = [`${NEW}/border.png`, `${NEW}/frame.png`];
 const M15_INTERIOR_MASKS = [`${NEW}/rules.png`, `${NEW}/title.png`, `${NEW}/type.png`, `${NEW}/pinline.png`];
+
+/**
+ * The two-colour pair masters (TODO 4.6b; design 2026-09-29 §1.2), a recipe
+ * over the SAME Card Conjurer files as each template's verified masters,
+ * drawn the way that template's masters are:
+ *   • m15 / m15land — CC's whole image (m.png, a hybrid's two colours
+ *     blended across the frame ramp, l.png) under the split regions, as their
+ *     mono masters are the whole new/<k>.png / new/l<k>.png;
+ *   • m15artifact — regions only, like its coloured artifacts
+ *     (colouredArtifact): the artifact frame + border, the split text box,
+ *     GOLD title and type bars, the split pinline.
+ * Regions follow twoColorRecipe (CC's cardFrameProperties, corrected): a
+ * split region is its two colours' files blended across the region's
+ * UNTILTED ramp (pair-ramp.mjs PAIR_RAMPS: pinline and a hybrid's frame
+ * 40→60 %W, text box 46→58) by a premultiplied lerp (pairLayer), then drawn
+ * through CC's mask in CC's order (frame, rules, title, type, pinline).
+ * Keys: gold-split `<pair>`, hybrid `<pair>-h`.
+ */
+const M15_MASK = {
+  border: `${NEW}/border.png`,
+  frame: `${NEW}/frame.png`,
+  rules: `${NEW}/rules.png`,
+  title: `${NEW}/title.png`,
+  type: `${NEW}/type.png`,
+  pinline: `${NEW}/pinline.png`,
+};
+
+/** A twoColorRecipe letter → its accurate-M15 file: a colour, "m", "a" or
+ *  "l" → new/<k>.png; a land tint "wl" → new/lw.png (CC reverses it). */
+function m15FrameFile(letter) {
+  return letter.length === 2 && letter[1] === "l" ? `${NEW}/l${letter[0]}.png` : `${NEW}/${letter}.png`;
+}
+
+/** A pair layer: the recipe region's left file blended into its right file
+ *  across the region's ramp (lerpLayers over rampMask), through `mask`. */
+function pairLayer(region, mask) {
+  return {
+    src: m15FrameFile(region.left),
+    right: m15FrameFile(region.right),
+    ramp: [...region.ramp],
+    ...(mask ? { mask } : {}),
+  };
+}
+
+/** The layers of one pair master (see above). `kind`: "m15", "artifact" or
+ *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). */
+export function pairMasterLayers(pair, dress, kind) {
+  const r = twoColorRecipe(pair, dress, kind);
+  if (kind === "artifact") {
+    return [
+      layer(m15FrameFile(r.frame.left), M15_MASK.border),
+      layer(m15FrameFile(r.frame.left), M15_MASK.frame),
+      pairLayer(r.rules, M15_MASK.rules),
+      layer(m15FrameFile(r.typeTitle), M15_MASK.title),
+      layer(m15FrameFile(r.typeTitle), M15_MASK.type),
+      pairLayer(r.pinline, M15_MASK.pinline),
+    ];
+  }
+  const base = r.frame.right ? pairLayer(r.frame) : layer(m15FrameFile(r.frame.left));
+  // The bars are the base's own unless the base is a split frame (hybrid:
+  // grey l bars over a two-colour frame).
+  const bars = r.frame.right
+    ? [layer(m15FrameFile(r.typeTitle), M15_MASK.title), layer(m15FrameFile(r.typeTitle), M15_MASK.type)]
+    : [];
+  return [base, pairLayer(r.rules, M15_MASK.rules), ...bars, pairLayer(r.pinline, M15_MASK.pinline)];
+}
+
+/** A template's pair masters: `{ wu: layers, …, "wu-h": layers, … }`. */
+function pairMasters(kind, dresses) {
+  return Object.fromEntries(
+    dresses.flatMap((dress) =>
+      TWO_COLOR_PAIRS.map((pair) => [dress === "hybrid" ? `${pair}-h` : pair, pairMasterLayers(pair, dress, kind)]),
+    ),
+  );
+}
+
+/** How provenance records the pair masters (notes). */
+const PAIR_NOTE =
+  "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline and a hybrid's frame 40→60 %W, text box 46→58) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2)";
 /** CC's textless bordered token pack masks (packTokenTextlessM15.js). */
 const TOKEN_BASE_MASKS = [`${REG}/m15MaskBorder.png`, `${TOKEN}/frame.svg`];
 const TOKEN_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/tokenMaskTextlessType.png", `${TOKEN}/pinline.svg`];
@@ -192,23 +272,37 @@ const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].ma
  */
 export const CC_TEMPLATES = {
   m15: {
-    colors: perColor((k) => [layer(`${NEW}/${k}.png`)]),
+    colors: {
+      ...perColor((k) => [layer(`${NEW}/${k}.png`)]),
+      ...pairMasters("m15", ["split", "hybrid"]),
+    },
     plates: REG_PT,
     notes: [
       "colourless = CC's see-through 'Eldrazi' frame (new/c.png): the M15 profile draws the art under the frame for 'c' (underFrameArt, TODO 4.17), like printed colourless Eldrazi (owner decision 2026-09-25)",
+      `${PAIR_NOTE}. Gold-split <pair> = m.png with the split text box and pinline (FDN #122 / #123 / #115 / #651 / #126); hybrid <pair>-h = the two colours' frames split across the frame ramp, CC's grey land bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (TLA #212, TLA #223–252)`,
     ],
   },
   m15artifact: {
     colors: {
       c: [layer(`${NEW}/a.png`)],
       ...perColor((k) => colouredArtifact(`${NEW}/a.png`, `${NEW}/${k}.png`, M15_BASE_MASKS, M15_INTERIOR_MASKS), WUBRGM),
+      ...pairMasters("artifact", ["split"]),
     },
     plates: ARTIFACT_PT,
-    notes: ["coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks"],
+    notes: [
+      "coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks",
+      `${PAIR_NOTE}. <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (DFT #188–220 gearhulks, MH3 #195, EOE #223); no hybrid dress (no hybrid plate on this template yet: a hybrid artifact draws the gold-split master)`,
+    ],
   },
   m15land: {
-    colors: perColor((k) => [layer(k === "c" ? `${NEW}/l.png` : `${NEW}/l${k}.png`)]),
-    notes: ["colourless land = CC's land frame new/l.png"],
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${NEW}/l.png` : `${NEW}/l${k}.png`)]),
+      ...pairMasters("land", ["split"]),
+    },
+    notes: [
+      "colourless land = CC's land frame new/l.png",
+      `${PAIR_NOTE}. <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print`,
+    ],
   },
   m15snow: {
     colors: perColor((k) => [layer(k === "c" ? `${SNOW}/a.png` : `${SNOW}/${k}.png`)]),
@@ -552,12 +646,20 @@ export function toRgba8(acc) {
 export function describeLayer(l) {
   const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
   const mask = masks ? ` ${l.invert ? "outside" : "through"} ${masks}` : "";
-  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
+  // A pair layer (pairLayer, TODO 4.6b): two files blended across a ramp.
+  const src = l.right ? `(${l.src} | ${l.right} across ${rampName(l.ramp)})` : l.src;
+  return `${src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
 }
 
-/** The colours a template builds (all seven minus `excluded`). */
+/** Every master key a recipe may name, in build order: the seven colours,
+ *  then the two-colour pair masters (TODO 4.6b: gold-split `<pair>`, hybrid
+ *  `<pair>-h`; lib/cards/frame-reference-registry.ts TWO_COLOR_MASTER_KEYS). */
+export const MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`)];
+
+/** The masters a template builds (every key its recipe names, minus
+ *  `excluded`), in MASTER_KEYS order. */
 export function builtColors(def) {
-  return COLORS.filter((k) => def.colors[k] && !def.excluded?.[k]);
+  return MASTER_KEYS.filter((k) => def.colors[k] && !def.excluded?.[k]);
 }
 
 /** Every Card Conjurer file a template needs (layers, masks, plates,
@@ -567,6 +669,7 @@ export function sourceFilesFor(def) {
   for (const layers of Object.values(def.colors)) {
     for (const l of layers) {
       files.add(l.src);
+      if (l.right) files.add(l.right);
       // A procedural mask (a ramp) is no Card Conjurer file.
       for (const mask of Array.isArray(l.mask) ? l.mask : l.mask ? [l.mask] : []) {
         if (!mask.startsWith("procedural:")) files.add(mask);
@@ -592,66 +695,14 @@ export function sourceFilesFor(def) {
 //     translucent edge (the crown's shadow over the art, α 160 against 99).
 // ---------------------------------------------------------------------------
 
-/** The split ramps, in % of the card's width: the second colour's share goes
- *  0 → 1 from `from` to `to`, the same on every row. `frame` is the hybrid
- *  dress's outer frame band. 10/50/90 on the prints: pinline 42.2 / 50.3 /
- *  58.8, text box 47.2 / 51.3 / 56.8, crown 42.7 / 48.5 / 53.0 (gold) and
- *  43.8 / 50.1 / 54.3 (hybrid). */
-export const TWO_COLOR_RAMPS = {
-  pinline: [40, 60],
-  frame: [40, 60],
-  rules: [46, 58],
-  crown: [43, 55],
-};
-
-/** How provenance names a ramp mask (never a Card Conjurer file). */
-export function rampName([from, to]) {
-  return `procedural:ramp(${from}→${to} %W)`;
-}
-
-/**
- * An untilted horizontal ramp as an 8-bit RGBA mask of `width` × `height`
- * (black, alpha only): 0 left of `from` %W, 255 right of `to` %W, linear
- * between, measured at pixel centres; every row the same.
- */
-export function rampMask(width, height, [from, to]) {
-  if (!(to > from)) throw new Error(`rampMask: bad ramp ${from}→${to}`);
-  const row = Buffer.alloc(width * 4);
-  for (let x = 0; x < width; x += 1) {
-    const pct = ((x + 0.5) / width) * 100;
-    const t = Math.min(1, Math.max(0, (pct - from) / (to - from)));
-    row[x * 4 + 3] = Math.round(t * 255);
-  }
-  const out = Buffer.alloc(width * height * 4);
-  for (let y = 0; y < height; y += 1) row.copy(out, y * width * 4);
-  return out;
-}
-
-/**
- * The premultiplied lerp of two 8-bit RGBA layers by a ramp mask's alpha t:
- * left · (1 − t) + right · t, in premultiplied space. Where both are opaque
- * it equals drawing `right` through the ramp over `left` (CC's stacking);
- * where both are translucent to the same alpha it keeps that alpha, which
- * stacking would raise. Returns 8-bit RGBA.
- */
-export function lerpLayers(left, right, ramp) {
-  const out = Buffer.alloc(left.length);
-  for (let o = 0; o < left.length; o += 4) {
-    const t = ramp[o + 3] / 255;
-    const al = (left[o + 3] / 255) * (1 - t);
-    const ar = (right[o + 3] / 255) * t;
-    const alpha = al + ar;
-    for (let c = 0; c < 3; c += 1) {
-      out[o + c] = alpha === 0 ? 0 : Math.round((left[o + c] * al + right[o + c] * ar) / alpha);
-    }
-    out[o + 3] = Math.round(alpha * 255);
-  }
-  return out;
-}
-
-/** The ten pairs in printed order (lib/cards/frame-reference-registry.ts
- *  TWO_COLOR_PAIRS): the first colour on the left. */
-export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+// The ramps, the untilted ramp mask, the premultiplied lerp and the ten
+// pairs live in ./pair-ramp.mjs — the one module the pair masters (4.6b) and
+// the pair crown bands share; re-exported here under the 4.6.0 names.
+/** The split ramps, in % of the card's width (pair-ramp.mjs PAIR_RAMPS):
+ *  pinline 40→60, a hybrid's frame band 40→60, text box 46→58, crown
+ *  43→55. */
+export const TWO_COLOR_RAMPS = PAIR_RAMPS;
+export { TWO_COLOR_PAIRS, lerpLayers, rampMask, rampName };
 
 /**
  * What each region of a two-colour master is made of — a pure port of Card
@@ -661,7 +712,7 @@ export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", 
  * (the gold card) or "hybrid". Keys are CC's frame letters, lower-cased:
  * a colour (w u b r g), "m" gold, "a" artifact, "l" the land / grey bars;
  * a land's colour regions are its land tints ("wl"). `right` is the
- * second colour through the region's ramp (TWO_COLOR_RAMPS), null for a
+ * second colour through the region's ramp (PAIR_RAMPS), null for a
  * region drawn whole. `pt` is the plate (none on a land). A hybrid ARTIFACT
  * is the gold-split recipe: m15artifact has no hybrid plate yet (`pt/h`).
  */
@@ -671,11 +722,11 @@ export function twoColorRecipe(pair, dress, kind) {
   if (kind === "land") {
     return {
       frame: { left: "l", right: null },
-      pinline: { left: `${a}l`, right: `${b}l`, ramp: TWO_COLOR_RAMPS.pinline },
-      rules: { left: `${a}l`, right: `${b}l`, ramp: TWO_COLOR_RAMPS.rules },
+      pinline: { left: `${a}l`, right: `${b}l`, ramp: PAIR_RAMPS.pinline },
+      rules: { left: `${a}l`, right: `${b}l`, ramp: PAIR_RAMPS.rules },
       typeTitle: "l",
       pt: null,
-      crown: { left: a, right: b, ramp: TWO_COLOR_RAMPS.crown },
+      crown: { left: a, right: b, ramp: PAIR_RAMPS.crown },
     };
   }
   const hybrid = dress === "hybrid" && kind !== "artifact";
@@ -683,13 +734,13 @@ export function twoColorRecipe(pair, dress, kind) {
     frame: kind === "artifact"
       ? { left: "a", right: null }
       : hybrid
-        ? { left: a, right: b, ramp: TWO_COLOR_RAMPS.frame }
+        ? { left: a, right: b, ramp: PAIR_RAMPS.frame }
         : { left: "m", right: null },
-    pinline: { left: a, right: b, ramp: TWO_COLOR_RAMPS.pinline },
-    rules: { left: a, right: b, ramp: TWO_COLOR_RAMPS.rules },
+    pinline: { left: a, right: b, ramp: PAIR_RAMPS.pinline },
+    rules: { left: a, right: b, ramp: PAIR_RAMPS.rules },
     typeTitle: hybrid ? "l" : "m",
     pt: hybrid ? "c" : "m",
-    crown: { left: a, right: b, ramp: TWO_COLOR_RAMPS.crown },
+    crown: { left: a, right: b, ramp: PAIR_RAMPS.crown },
   };
 }
 

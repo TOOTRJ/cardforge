@@ -21,7 +21,8 @@
 // accurate M15 pack), downscales once with Lanczos to 1500×2100, cuts the
 // one card corner (lib/cards/card-corner.ts, 64.5 px), checks the edge
 // contract (7.7), the corner (3.26) and the art window (7.6), and writes
-// <out>/<template>/<colour>.png + .webp, plus P/T plates at native size
+// <out>/<template>/<colour>.png + .webp (and a template's two-colour pair
+// masters, <pair>.png / <pair>-h.png, TODO 4.6b), plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
 // (re-cut templates) a band moved down before the downscale (recut),
 // and a planeswalker's loyalty shield cut out of each master under loyalty/. Provenance (which source files made which
@@ -55,6 +56,7 @@ import {
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
+import { blendPair } from "./lib/pair-ramp.mjs";
 // The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
 // checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
 // here after the downscale and the corner cut.
@@ -155,8 +157,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const { width: W, height: H } = await sharp(baseFile).metadata();
     const images = [];
     for (const l of def.colors[key]) {
+      // A pair layer (TODO 4.6b, pairLayer): its two files blended across
+      // the region's untilted ramp (scripts/lib/pair-ramp.mjs) first.
+      const data = l.right
+        ? blendPair(await rgba(await fetchCached(l.src), W, H), await rgba(await fetchCached(l.right), W, H), W, H, l.ramp)
+        : await rgba(await fetchCached(l.src), W, H);
       images.push({
-        data: await rgba(await fetchCached(l.src), W, H),
+        data,
         mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
         invert: l.invert,
         opacity: l.opacity,
