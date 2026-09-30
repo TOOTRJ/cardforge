@@ -161,10 +161,12 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     const expected: Record<string, [number, number]> = {
       bloomanime: [93, 92],
       tarkirghostfire: [93, 92],
-      fullart: [92, 88.3],
+      // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
+      // box (fullart's out past its ring's rim too).
+      fullart: [92.4, 90.3],
       m15textless: [84, 80.7],
       m15textlessland: [84, 80.7],
-      nyx: [88, 70],
+      nyx: [88, 81.8],
       // The full-art tokens: CC's art bounds with 7.6's overscan.
       ...Object.fromEntries(M20_TOKENS.map((t) => [t, [92.2, 89.6] as [number, number]])),
     };

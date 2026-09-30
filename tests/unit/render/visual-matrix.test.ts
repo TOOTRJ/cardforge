@@ -58,8 +58,23 @@ describe("visual-regression matrix", () => {
 
   it("has unique, stable ids", () => {
     expect(new Set(ids).size).toBe(ids.length);
-    for (const id of ids) expect(id).toMatch(/^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square))?$/);
+    for (const id of ids) expect(id).toMatch(/^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart))?$/);
     expect(ids).toEqual([...ids].sort());
+  });
+
+  it("bakes a card without art on the see-through masters and v35's art slots (the empty-art box; no under-frame layer)", () => {
+    const noArt = cases.filter((c) => c.id.endsWith("@noart"));
+    expect(noArt.map((c) => `${c.template}/${c.colour}`)).toEqual([
+      "fullart/g",
+      "m15/c",
+      "m15/w",
+      "m15devoid/b",
+      "m15pw/c",
+      "m15token/c",
+      "m15tokentext/c",
+      "nyx/w",
+    ]);
+    for (const c of noArt) expect(c.row.art_url, c.id).toBeNull();
   });
 
   it("names no picture outside the harness (hermetic: the generated art placeholders only)", () => {

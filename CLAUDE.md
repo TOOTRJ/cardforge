@@ -312,8 +312,9 @@ Rules and gotchas:
   "Tokens"). M20+ tokens (4.48 / 4.50) = six NEW templates `m20token` /
   `m20tokentext` / `m20tokentall` + `m20tokenartifact…` (CC's 'Textless' —
   re-cut 5 px, `M20_TOKEN_TEXTLESS_RECUT` — 'Short' and 'Tall' packs; never
-  CC's 'Regular'; the importer's `finish` composites make the type pill
-  solid and the artifact name pill slate): the textless height is 3.24's
+  CC's 'Regular'; the importer's `finish` composites darken the colourless
+  and artifact type pills to the prints and make every type pill solid, and
+  the artifact name pill slate and solid): the textless height is 3.24's
   `textless` with `textlessTypeLine`; the height follows the text
   (`tokenHeightForText`, `lib/cards/token-height.ts`: the regular box down
   to 72 px — the import's rule too; `tokenFrameFor` applies it for the
@@ -328,6 +329,21 @@ Rules and gotchas:
   its height follows the text until a Variations pick
   (`lib/creator/token-frame-auto.ts`, wired into the form's round-11 effect;
   `docs/FRAMES.md` "Full-art tokens").
+- Art windows (TODO 7.6, layout v35): every art slot covers its master's
+  see-through window with 0.05 % to spare and every translucent part the art
+  shows through (`lib/frames/art-window.ts`; CI checks every template ×
+  colour master, the bucket ones fetched by sha; a known failure is listed
+  with its TODO item and a `maxMissPx` it may not exceed — fixing one means
+  striking it). See-through masters (`underFrameArt`: m15/c, every devoid,
+  the colourless tokens and planeswalker) draw the art under the frame from
+  the border's inner edge (`UNDER_FRAME_RECT`); their window's slot must
+  cover the window too and meet that separately cropped layer on the frame's
+  OPAQUE outline — or be ONE picture (`underFrameArt.artSlot` = the rect,
+  m15pw/c); both renderers and the foil mask read `artLayersFor()`. The
+  CC-framed M15 profiles use `CC_M15_ART_SLOT`, never M15's MSE slot
+  (adventure keeps that). A frame-compare save that moves an `artSlot`
+  passes the same check on the bake's own masters or is refused
+  (`lib/frames/art-window-override.ts`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

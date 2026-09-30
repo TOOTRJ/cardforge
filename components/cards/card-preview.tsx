@@ -106,7 +106,7 @@ import {
   type Rect,
   type SlotAlign,
   type StatSlot,
-  underFrameArtRect,
+  artLayersFor,
   type TextSlot,
   type TypeLineSplit,
 } from "@/lib/cards/template-layout";
@@ -868,10 +868,14 @@ function CardFace({
       ? { flexShrink: 0, ...(symbolPull ? { marginLeft: `-${cqw(symbolPull)}` } : {}) }
       : undefined;
 
-  // See-through frames (colourless Eldrazi, devoid, colourless token): the
-  // art also runs under the whole frame (TODO 4.17). Same object-fit cover
-  // at the card's focal point in both renderers; the window keeps its crop.
-  const underArtRect = underFrameArtRect(layout, masterKey);
+  // See-through frames (colourless Eldrazi, devoid, colourless token and
+  // walker): the art also runs under the whole frame (TODO 4.17). Same
+  // object-fit cover at the card's focal point in both renderers; the window
+  // keeps its crop — in the master's own slot when it has one, and one
+  // picture when that slot is the under-frame rect (artLayersFor, the
+  // bake's rects).
+  const artLayers = artLayersFor(layout, masterKey, Boolean(face.artUrl));
+  const underArtRect = artLayers.under;
 
   return (
     <div className="absolute inset-0">
@@ -889,7 +893,7 @@ function CardFace({
       <div
         aria-hidden
         className="absolute overflow-hidden"
-        style={{ ...rectStyle(layout.artSlot), zIndex: 0 }}
+        style={{ ...rectStyle(artLayers.slot), zIndex: 0 }}
       >
         {face.artUrl ? (
           <ArtImage

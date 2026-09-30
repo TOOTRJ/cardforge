@@ -135,7 +135,7 @@ import {
   type Rect,
   type SlotAlign,
   type StatSlot,
-  underFrameArtRect,
+  artLayersFor,
   type TextSlot,
   type TypeLineSplit,
 } from "@/lib/cards/template-layout";
@@ -594,9 +594,14 @@ function CardImage({
       ? secondFaceRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats })
       : null;
 
-  const underArtRect = underFrameArtRect(layout, masterKey);
-  const artW = Math.round((layout.artSlot.widthPct / 100) * width);
-  const artH = Math.round((layout.artSlot.heightPct / 100) * height);
+  // Where the art is painted on this master (artLayersFor — the preview's
+  // and the foil mask's rects): the window's slot (a see-through master's
+  // own, under art) and the see-through master's under-frame rect.
+  const artLayers = artLayersFor(layout, masterKey, Boolean(card.artUrl));
+  const underArtRect = artLayers.under;
+  const artSlot = artLayers.slot;
+  const artW = Math.round((artSlot.widthPct / 100) * width);
+  const artH = Math.round((artSlot.heightPct / 100) * height);
 
   // Split's right-half art (back-face art in the second art window).
   const secondArtSlot = layout.secondFace?.artSlot;
@@ -630,7 +635,8 @@ function CardImage({
       }}
     >
       {/* See-through frames: the art also runs under the whole frame
-          (TODO 4.17) — same cover fit at the focal point as the preview. */}
+          (TODO 4.17) — same cover fit at the focal point as the preview; not
+          when the window's slot is that rect (one picture). */}
       {underArtRect && card.artUrl ? (
         <div
           {...(omitArt ? printArtMarker("under", focalX, focalY, 1) : {})}
@@ -656,7 +662,7 @@ function CardImage({
       {/* Art — below the frame, in the transparent cut-out. */}
       <div
         {...(omitArt && card.artUrl ? printArtMarker("main", focalX, focalY, scale) : {})}
-        style={{ ...slotBox(layout.artSlot), display: "flex", overflow: "hidden" }}
+        style={{ ...slotBox(artSlot), display: "flex", overflow: "hidden" }}
       >
         {card.artUrl ? (
           omitArt ? null : (
