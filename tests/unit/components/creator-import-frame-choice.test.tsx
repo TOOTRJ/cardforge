@@ -12,6 +12,10 @@ import {
 import type { GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { card, json, namedBody } from "./scryfall-import-stubs";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
+import anatomyPrintings from "../scryfall/fixtures/anatomy-printings.json";
 
 // ---------------------------------------------------------------------------
 // The creator's side of TODO 1.5 / 1.18, through the real CardCreatorForm:
@@ -93,11 +97,12 @@ vi.mock("@/components/creator/scryfall-import-dialog", () => ({
 vi.mock("@/components/creator/ai-fill-dialog", () => ({ AiFillDialog: () => null }));
 vi.mock("@/components/creator/card-ideas-dialog", () => ({ CardIdeasDialog: () => null }));
 vi.mock("@/components/cards/card-preview", () => ({
-  CardPreview: (props: { frameStyle?: { template?: string; crown?: boolean } }) => (
+  CardPreview: (props: { frameStyle?: { template?: string; crown?: boolean; twoColor?: boolean } }) => (
     <div
       data-testid="card-preview"
       data-template={props.frameStyle?.template ?? ""}
       data-crown={String(props.frameStyle?.crown ?? "")}
+      data-two-color={String(props.frameStyle?.twoColor ?? "")}
     />
   ),
 }));
@@ -390,6 +395,39 @@ describe("the deck-remix pre-fill (/create?deckCard=): no dialog, ONE toast", ()
     await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
     expect(template()).toBe("m15");
     expect(toast.info).not.toHaveBeenCalled();
+  });
+});
+
+describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
+  /** A real printing of anatomy-printings.json through the /named route's
+   *  own mapper + finalize, as the dialog hands it over. */
+  function printing(key: keyof typeof anatomyPrintings) {
+    const c = scryfallCardSchema.parse(anatomyPrintings[key]);
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(c), new Set(WITH_BORDERLESS));
+    return {
+      patch: JSON.parse(JSON.stringify(patch)),
+      importedArtUrl: null,
+      source: { name: c.name, scryfallUri: null },
+    };
+  }
+  const preview = () => screen.getAllByTestId("card-preview")[0]!.dataset;
+
+  it("a switch the printing names none for takes the new-card default, whatever an earlier import left", async () => {
+    renderForm();
+    // M15 #3 Avacyn: a Legendary card printed without the crown — OFF.
+    await importPayload(printing("m15-3"));
+    expect(preview().template).toBe("m15");
+    expect(preview().crown).toBe("false");
+    expect(preview().twoColor).toBe("true");
+    // STX #175 Daemogoth Woe-Eater isn't Legendary: its printing says
+    // nothing about the crown, so the form holds the new-card default (on),
+    // not the off the previous import left — as the AI deck remix stores.
+    await importPayload(printing("stx-175"));
+    expect(preview().crown).toBe("true");
+    expect(preview().twoColor).toBe("true");
+    // LTR #302 Boromir, a showcase: OFF again, explicitly.
+    await importPayload(printing("ltr-302"));
+    expect(preview().crown).toBe("false");
   });
 });
 

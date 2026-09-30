@@ -853,7 +853,9 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
 - **Every save** drops a switch its template can't draw for the card
   (`normalizeAnatomy`, with the card's type), so a template that gains a
   piece later (4.6f) never changes a card stored on it before, and a crafted
-  payload can't give a land on m15 or m15artifact the two-colour frame.
+  payload can't give a land on m15 or m15artifact the two-colour frame —
+  judged by the type the card is SAVED with, so a crafted `card_type` change
+  to Land drops a switch it had as a creature too (`updateCardAction`).
 - **The colour pair** is `color_identity` with exactly two WUBRG words (the
   AI's `multicolor` token is ignored), picked in the Colour step's "Two
   colours" row and pre-filled from the cost (`twoColorFromCost`,

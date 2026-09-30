@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ScryfallCard } from "@/lib/scryfall/client";
-import { mapScryfallToFormPatch, printsStandardCrown } from "@/lib/scryfall/import-mapper";
+import { crownSwitchFromPrinting, mapScryfallToFormPatch, printsStandardCrown } from "@/lib/scryfall/import-mapper";
 import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import { importedAnatomy, twoColorDressOf } from "@/lib/cards/anatomy";
 import printings from "./fixtures/anatomy-printings.json";
+import signaturePrintings from "./fixtures/signature-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6.0 — "imports follow the printing" (owner rule 2026-09-29): the
@@ -55,6 +56,25 @@ describe("printed_crown", () => {
     expect(P["ltr-302"].frame_effects).toEqual(["legendary", "showcase"]);
     expect(patchOf("ltr-302").printed_crown).toBe(false); // Boromir, LTR ring
     expect(patchOf("ltr-321").printed_crown).toBe(false); // Galadriel, LTR ring
+  });
+
+  it("is off for ANY showcase printing — a nonlegendary one too, explicitly (Q6 → b: match the scan)", () => {
+    const S = signaturePrintings as unknown as Record<string, ScryfallCard>;
+    // DSK #389 Overlord of the Floodpits, LTR #482 Slip On the Ring: not
+    // Legendary, Scryfall's `showcase` effect.
+    for (const key of ["dsk-389", "ltr-482"]) {
+      expect(S[key].type_line, key).not.toMatch(/Legendary/);
+      expect(S[key].frame_effects, key).toContain("showcase");
+      expect(mapScryfallToFormPatch(S[key]).printed_crown, key).toBe(false);
+    }
+    // A registry showcase signature without the effect (MUL, the Japan
+    // promos) on a nonlegendary card: off too.
+    const plain = P["stx-175"];
+    const match = mapScryfallToFormPatch(plain).frame_match!;
+    const face = { cardType: "creature", supertype: "" };
+    expect(crownSwitchFromPrinting(plain, match, face)).toBeUndefined();
+    expect(crownSwitchFromPrinting(plain, { ...match, signature: "showcase/mul" }, face)).toBe(false);
+    expect(crownSwitchFromPrinting(plain, { ...match, signature: "japan-showcase" }, face)).toBe(false);
   });
 
   it("is off for a showcase frame the registry knows without Scryfall's `showcase` effect", () => {

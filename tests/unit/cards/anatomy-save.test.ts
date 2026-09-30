@@ -205,3 +205,98 @@ describe("updateCardAction — an edit", () => {
     expect(written(stub, "update")?.frame_style).toEqual({ template: "m15snow" });
   });
 });
+
+// Owner round 17 (2026-09-30), LAND FIX = HIDE: a LAND wears the two-colour
+// frame only on a land frame (lib/cards/anatomy.ts twoColorFits). The creator
+// never offers the switch elsewhere, and the actions drop it whatever a
+// crafted payload says — Shadowwood Hollow / Sunfade Citadel, two-colour
+// lands stored with no template (drawn on m15).
+describe("a LAND's two-colour switch through the actions (owner round 17)", () => {
+  const land = (over: Record<string, unknown> = {}) =>
+    payload({
+      title: "Shadowwood Hollow",
+      cost: "",
+      color_identity: ["black", "green"],
+      supertype: "",
+      card_type: "land",
+      power: undefined,
+      toughness: undefined,
+      ...over,
+    });
+  const storedLand = (over: Record<string, unknown> = {}) =>
+    stored({
+      title: "Shadowwood Hollow",
+      color_identity: ["black", "green"],
+      card_type: "land",
+      supertype: null,
+      frame_style: { finish: "regular" },
+      ...over,
+    });
+
+  it("createCardAction drops it for a land on a nonland frame — a crafted payload or the default stamp", async () => {
+    const crafted = db();
+    await createCardAction(land({ frame_style: { template: "m15", crown: true, twoColor: true } }));
+    expect(written(crafted, "insert")?.frame_style).toEqual({ template: "m15", crown: true });
+    // No frame_style (an AI job): the land is drawn on m15, so no stamp.
+    const stamped = db();
+    await createCardAction(land());
+    expect(written(stamped, "insert")?.frame_style).toEqual({ crown: true });
+    // On the land frame it is kept.
+    const onLandFrame = db();
+    await createCardAction(land({ frame_style: { template: "m15land", twoColor: true } }));
+    expect(written(onLandFrame, "insert")?.frame_style).toEqual({ template: "m15land", twoColor: true, crown: true });
+  });
+
+  it("updateCardAction drops an edit's crafted flip — and its pair — for a land stored with no template", async () => {
+    state.existing = storedLand();
+    const flip = db();
+    const result = await updateCardAction(CARD, { frame_anatomy: { twoColor: true } });
+    expect(result.ok).toBe(true);
+    expect(written(flip, "update")?.frame_style).toEqual({ finish: "regular" });
+
+    state.existing = storedLand({ color_identity: ["multicolor"] });
+    const withPair = db();
+    await updateCardAction(CARD, { frame_anatomy: { twoColor: true, pair: ["black", "green"] } });
+    expect(written(withPair, "update")?.frame_style).toEqual({ finish: "regular" });
+    expect(written(withPair, "update")).not.toHaveProperty("color_identity");
+
+    // A full frame_style saying the same is normalised the same way.
+    state.existing = storedLand();
+    const full = db();
+    await updateCardAction(CARD, { frame_style: { finish: "regular", twoColor: true } });
+    expect(written(full, "update")?.frame_style).toEqual({ finish: "regular" });
+
+    // On the land frame the flip is kept.
+    state.existing = storedLand({ frame_style: { template: "m15land" } });
+    const onLandFrame = db();
+    await updateCardAction(CARD, { frame_anatomy: { twoColor: true } });
+    expect(written(onLandFrame, "update")?.frame_style).toEqual({ template: "m15land", twoColor: true });
+  });
+
+  it("judges the card by the type it will be SAVED with: a crafted change to Land drops the switch", async () => {
+    // A multicolour creature on m15 turned into a land by the same payload
+    // that flips the switch (card_type is locked in the editor — crafted).
+    state.existing = stored({ color_identity: ["multicolor"], cost: "{B}{G}", frame_style: { template: "m15" } });
+    const flip = db();
+    await updateCardAction(CARD, { card_type: "land", frame_anatomy: { twoColor: true, pair: ["black", "green"] } });
+    expect(written(flip, "update")?.frame_style).toEqual({ template: "m15" });
+    expect(written(flip, "update")).not.toHaveProperty("color_identity");
+
+    state.existing = stored({ color_identity: ["black", "green"], frame_style: { template: "m15" } });
+    const full = db();
+    await updateCardAction(CARD, { card_type: "land", frame_style: { template: "m15", twoColor: true } });
+    expect(written(full, "update")?.frame_style).toEqual({ template: "m15" });
+
+    // The type change alone: the switch its owner set while it was a
+    // creature goes too — no save leaves a land on a nonland frame with it.
+    state.existing = stored({ color_identity: ["black", "green"], frame_style: { template: "m15", crown: true, twoColor: true } });
+    const typeOnly = db();
+    await updateCardAction(CARD, { card_type: "land" });
+    expect(written(typeOnly, "update")?.frame_style).toEqual({ template: "m15", crown: true });
+    // …while a type change that keeps it drawable leaves frame_style alone.
+    state.existing = stored({ color_identity: ["black", "green"], frame_style: { template: "m15", twoColor: true } });
+    const stays = db();
+    await updateCardAction(CARD, { card_type: "artifact" });
+    expect(written(stays, "update")).not.toHaveProperty("frame_style");
+  });
+});

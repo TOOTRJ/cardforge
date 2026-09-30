@@ -44,7 +44,12 @@ import {
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
-import { applyFrameAnatomyPatch, newCardFrameStyle, normalizeAnatomy } from "@/lib/cards/anatomy";
+import {
+  applyFrameAnatomyPatch,
+  newCardFrameStyle,
+  normalizeAnatomy,
+  type FrameAnatomyStyle,
+} from "@/lib/cards/anatomy";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -704,6 +709,15 @@ export async function updateCardAction(
     }
     update.frame_style = applied.frameStyle as CardUpdate["frame_style"];
     if (applied.colorIdentity) update.color_identity = applied.colorIdentity;
+  }
+  // A type change alone (card_type is locked in the editor, so a crafted
+  // payload): the stored frame_style is judged by the new type too, so a
+  // card turned into a LAND on a nonland frame loses the two-colour switch
+  // it had as a creature (twoColorFits). Untouched when nothing is dropped.
+  if (data.card_type !== undefined && update.frame_style === undefined && existing.frame_style) {
+    const storedStyle = existing.frame_style as FrameAnatomyStyle & { template?: string };
+    const normalized = normalizeAnatomy(storedStyle, storedStyle.template, savedCardType);
+    if (normalized !== storedStyle) update.frame_style = normalized as CardUpdate["frame_style"];
   }
   if (data.visibility !== undefined) update.visibility = data.visibility;
   // No artwork → no gallery (same rule as create). The EFFECTIVE art is the
