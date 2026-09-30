@@ -551,8 +551,9 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              241 px were #101015. fullart: artSlot 4/2.9/92 × 88.3 →
 //              3.8/2.7/92.4 × 90.3 — to 93 % (the 31 px strip) and out to
 //              whole pixels past the hedron ring's anti-aliased rim (α 128–
-//              249 on rows 59–60, columns 59 / 1440–1441): 46,500 → 9 px, all
-//              α 249. m15pw/c: underFrameArt for "c" as ONE picture — its
+//              249 on rows 59–60, columns 59 / 1440–1441): 46,500 → 9 px, a
+//              3 × 3 speck at α 246–249 just below the box (x 1401–1403,
+//              y 1953–1955). m15pw/c: underFrameArt for "c" as ONE picture — its
 //              window drawn in the under-frame rect too (UnderFrameArt
 //              .artSlot): CC's colourless walker is translucent from the
 //              border to the window with no outline down the ability box, so

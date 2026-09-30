@@ -661,7 +661,6 @@ function CardImage({
         {...(omitArt && card.artUrl ? printArtMarker("main", focalX, focalY, scale) : {})}
         style={{ ...slotBox(artSlot), display: "flex", overflow: "hidden" }}
       >
-
         {card.artUrl ? (
           omitArt ? null : (
             // eslint-disable-next-line @next/next/no-img-element
