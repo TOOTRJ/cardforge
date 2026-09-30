@@ -214,6 +214,24 @@ describe("Card Conjurer recipe", () => {
     for (const y of [900, 1000, 1100]) expect(at(80, y) - at(1420, y), `row ${y}`).toBeGreaterThan(0.2);
     // Smooth: no seam at the centre line, and no step anywhere — the gain
     // moves < 0.005 between any two neighbouring pixels (bilinear knots).
+    // Exactly, knot by knot: bilinear, the gain's slope along a row is a
+    // blend of its two knot rows' slopes (and down a column, of its two knot
+    // columns'), and it is flat past the outer knots — so every knot-to-knot
+    // slope under 0.005 per px bounds every pixel's step, including a steep
+    // ramp between two close knots that falls between the sampled pixels
+    // below.
+    for (let j = 0; j < s.rows.length; j += 1) {
+      for (let i = 0; i < s.dx.length; i += 1) {
+        if (i > 0) {
+          const across = Math.abs(s.gain[j][i] - s.gain[j][i - 1]) / (s.dx[i] - s.dx[i - 1]);
+          expect(across, `across, row ${s.rows[j]}, dx ${s.dx[i - 1]}…${s.dx[i]}`).toBeLessThan(0.005);
+        }
+        if (j > 0) {
+          const down = Math.abs(s.gain[j][i] - s.gain[j - 1][i]) / (s.rows[j] - s.rows[j - 1]);
+          expect(down, `down, dx ${s.dx[i]}, rows ${s.rows[j - 1]}…${s.rows[j]}`).toBeLessThan(0.005);
+        }
+      }
+    }
     for (let y = 60; y < 1946; y += 7) {
       expect(Math.abs(at(749, y) - at(750, y)), `centre, row ${y}`).toBeLessThan(0.005);
       for (let x = 0; x < 1499; x += 13) {
