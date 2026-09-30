@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { MDXRemoteProps } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import { Info, Lightbulb, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
@@ -16,6 +18,7 @@ import { slugifyTag } from "@/lib/content/articles";
 // h2/h3 are overridden to carry slugified ids so the table of contents (built
 // from the same slugifyTag in extractToc) links to real anchors. Links to
 // internal paths use next/link; external links open safely in a new tab.
+// Tables (GFM, via articleMdxOptions below) sit in a horizontal scroll box.
 // ---------------------------------------------------------------------------
 
 /** Flatten heading children to their visible text so the generated id matches
@@ -95,10 +98,34 @@ function MdxLink({
   );
 }
 
+/** A wide table (the color pie's five columns) scrolls inside its own box on
+ *  a phone instead of pushing the whole page sideways. Focusable so a
+ *  keyboard user can scroll it too (axe: scrollable-region-focusable). */
+function Table({ children }: { children?: ReactNode }) {
+  return (
+    <div
+      tabIndex={0}
+      className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+    >
+      <table>{children}</table>
+    </div>
+  );
+}
+
 export const mdxComponents = {
   h2: Heading2,
   h3: Heading3,
   a: MdxLink,
+  table: Table,
   Mana,
   Callout,
 };
+
+/** Compile options for article bodies. next-mdx-remote parses CommonMark
+ *  only, so without remark-gfm every `| a | b |` table rendered as one
+ *  paragraph of pipes. GFM also turns on ~~strikethrough~~, task lists,
+ *  footnotes and bare-URL autolinks — tests/unit/content/article-mdx.test.tsx
+ *  renders every guide with these options to keep that honest. */
+export const articleMdxOptions = {
+  mdxOptions: { remarkPlugins: [remarkGfm] },
+} satisfies MDXRemoteProps["options"];
