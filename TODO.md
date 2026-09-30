@@ -1192,7 +1192,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - the 9 visible two-faced cards keep today's flip path; moving onto face bodies is opt-in.
       - **Order** (owner 2026-09-29): 4.5a now; 4.5.0 after the art-area corrections (v35) and the crowns plumbing (4.6.0) merge; 4.5b–4.5e after 4.5.0. No migration anywhere in 4.5; the only layout bump is 4.5c's saga-creature correction.
 - [ ] **4.5a [P1] Close the 16 kind holes** (4.5 design 2026-09-29; now, ½–1 day, independent)
-      - **Change.** `SHOWCASE_KIND_RESTRICTION` (`lib/creator/card-kinds.ts`:344–357) gives lotr, lotrscroll, avatar, bloomburrow, bloomanime, tarkirdraconic, tarkirghostfire and tarkirdragon `KINDS_WITHOUT_STAT_OVERLAY`. bloomanime stays refused for good (owner 2026-09-29: no derived Anime walker body).
+      - **Change.** `SHOWCASE_KIND_RESTRICTION` (`lib/creator/card-kinds.ts`:344–357) gives lotr, lotrscroll, avatar, bloomburrow, bloomanime, tarkirdraconic, tarkirghostfire and tarkirdragon `KINDS_WITHOUT_STAT_OVERLAY`. bloomanime stays refused (owner 2026-09-29): no derived Anime walker body unless the request log (1.6) asks for one (4.5b).
       - **Effect.** It flips 56 `templateRefusesKind` pairs:
         - the 16 planeswalker/battle holes;
         - 40 layout-kind pairs (saga, adventure, split, aftermath, flip × 8). `templateSupportsKind` already refuses these and `kindFromCard` never reaches them.
@@ -1201,7 +1201,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **Imports.** TDM #399/#401/#409/#411 (Ghostfire Ugin and Elspeth) and BLB #353 (Anime Ral) now land on `m15pw` as `nearest`, "doesn't dress planeswalkers yet". Update `tests/unit/scryfall/frame-signatures.test.ts`:272–274 (`tdm-399`, `tdm-409` gain `landOn: "m15pw"`). `frame_requests` logs them.
       - **Reference registry.** `tarkirghostfire`'s w (Elspeth #411) and its only c reference (Ugin #409) are walkers. They pass only through the "this printing is that frame" warning until 4.5b b3 re-homes them.
       - **Class N.** No stored pixel changes. Stored rows stay editable through the legacy pin. The kind gate also blocks new admin `frame_preview` walker saves on these frames.
-      - **Cards.** 0 visible walkers or battles on the eight frames (827 visible; the eight frames hold 6 cards). Private: `owner-count.final.sql` q1 (owner, read-only). Rows it finds keep their frame (owner rule: stored cards keep their look), with an editor hint that offers the print-backed body (`tarkirghostfirepw` for a Ghostfire walker once b3 ships, `m15pw` / `battle` otherwise), opt-in per card.
+      - **Cards.** 0 visible walkers or battles on the eight frames (827 visible; the eight frames hold 6 cards). Private: `owner-count.final.sql` q1 (owner, read-only). If q1 returns rows, confirm with the owner before merging (the design's one open question, asked only then). The default keeps them on their frame (owner rule: stored cards keep their look), with an editor hint that offers the print-backed body (`tarkirghostfirepw` for a Ghostfire walker once b3 ships, `m15pw` / `battle` otherwise), opt-in per card.
       - **Regression (Lane B).** 16 matrix cases disappear (`<frame>/u/planeswalker-short`, `<frame>/r/battle-short`). The baseline is regenerated for that removal only, with no bump, and every remaining case keeps its hash.
       - **Conflicts** (mechanical):
         - `feat/emblems-final` (same lines);
@@ -1305,11 +1305,12 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - UB crowns (4.25); transform/MDFC crowns (5.1); Nyx/companion inner crowns at 16.37/2.49/67.31×2.27.
       - Colour follows the pinline letter, split for two colours; auto from Legendary, with an opt-out.
 
-      Vehicle is a full treatment, not just a P/T box: CC `v.png` as the Frame + Border layers (colour or artifact bars stay), the `m15PTV` plate fitted to 4.18's plate box, white P/T ink. Reference: Smuggler's Copter (KLD). owner 2026-09-29 (4.5 design, 4.5c): a borrowed, STORED template (`m15vehicle`). New Vehicle cards default to it and stored ones keep their frame (owner rule: the vehicle P/T plate is an addition); imports follow the printing. No render-time pick from the Vehicle subtype (it would re-dress every stored vehicle). Spacecraft wait for 4.27.
+      Vehicle is a full treatment, not just a P/T box: CC `v.png` as the Frame + Border layers (colour or artifact bars stay), the `m15PTV` plate fitted to 4.18's plate box, white P/T ink. Reference: Smuggler's Copter (KLD). owner 2026-09-29 (4.5 design, 4.5c): a borrowed, STORED template (`m15vehicle`). New Vehicle cards default to it and stored ones keep their frame (owner rule: the vehicle P/T plate is an addition); imports follow the printing. No render-time pick from the Vehicle subtype (it would re-dress every stored vehicle). Spacecraft wait for 4.27. It replaces the 4.6 design's 4.6d model (a per-card `frame_style.vehicle` switch over type-dressed `v-*` masters on m15 / m15artifact), which is the option the owner declined in 4.5's Q5.
 
       Colour indicator: base at 7.67/57.48/4.67×3.34, the type slot indented when shown, 2–3 colours via CC's half/third masks, 4–5 colours drawn by us, the base redrawn as vector for 800 ppi.
 
       'Coloured-artifact blend' is replaced by 4.16, because the current blend is inverted. (4.16 shipped in #380.)
+      **Sub-item names used by 4.5, 4.9 and 4.21** (from the 4.6 design 2026-09-29, `scratchpad/crowns/final/`; this file doesn't split 4.6 yet): 4.6.0 = the anatomy plumbing (`wf/crowns-plumbing`: per-card crown / two-colour switches, overlays, pair master keys; no pixel change), 4.6a = the legendary crown on m15, m15artifact and m15land, 4.6b = the two-colour frames, wave 1. "The crowns" below means 4.6.0 + 4.6a.
       **Edit lock relaxed for look switches (owner 2026-09-29, the 4.9 design's Q1; ships with the crowns).** Since 2026-09-16 a saved card's frame and finish are locked and an edit sends no frame data. From the crowns on, the look switches — the crown and the two-colour frame here, the collector line, foil star and stamp in 4.9 — may change on an existing card (edit or remix); frame, finish and colours stay locked. The server merges the switches into the STORED `frame_style` and checks them against the stored template (`normalizeAnatomy`); `frame_style` itself never joins `REVISABLE_PAYLOAD_KEYS`. On `wf/crowns-plumbing` (4.6.0) this is the `frame_anatomy` edit key (`applyFrameAnatomyPatch`); a colour pair there only refines a stored multicolour card, never re-colours one. Without it an owner could not save the "switch it on" hint.
       **4.9 design 2026-09-29 — the switch plumbing is shared** (4.6.0; status on `wf/crowns-plumbing` `aa9e2c69`):
       (1) `lib/cards/anatomy.ts` owns the key list — `FRAME_ANATOMY_KEYS` (the 4.9 design says `ANATOMY_KEYS`); 4.9b appends `collector` / `star`, 4.9c `stamp`.
@@ -1370,19 +1371,19 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - pre-2015 = 10 (never; 4.8's anatomy).
         - Private rows: `owner-count-final.sql` (read-only).
       - **Kept research:**
-        - CC geometry: lines at 6.47 %W, 93.77–95.48 / 95.48–97.19 %H; © right at 93.54 %W, down 1.72 %H with a P/T.
+        - CC geometry: lines at 6.47 %W, 93.77–95.48 / 95.48–97.19 %H, text 0.024 W (≈ 36 px); © right at 93.54 %W, down 1.72 %H with a P/T.
         - Stamps: M15 43.6/90.34/12.8×4.58 (oval 45.54/91.72/8.94×3.2); PW 43.94/90.15/12.14×5.1; saga 43.8/91.2/12.4×3.72; battle vertical 4.9/43.8/4.43×12.4; UB triangle bounds over 2010 (CC divides by 2015). CC's stamp pieces are 1500-scale: 800 ppi (6.1b) needs vectors.
-        - The borderless pinline arch (FRA #447, FDN #292; print review 2026-09-26): on a borderless rare or mythic the rules-box pinline arches up ~40 px around the oval (x ≈ 656–850, top ≈ 1905 px against the straight pinline at ≈ 1945); CC's borderless master has none, and 0.9's score leaves the box out on the borderless templates until 4.9d (`HOLO_STAMP_ARCH`, `lib/frames/align.ts`).
+        - The borderless pinline arch (FRA #447, FDN #292; print review 2026-09-26): on a borderless rare or mythic the rules-box pinline arches up ~40 px around the oval (x ≈ 656–850, top ≈ 1905 px against the straight pinline at ≈ 1945). 18 of the 25 borderless references carry `security_stamp: oval`; commons and uncommons print the pinline straight (INR #301, FDN #311). CC's borderless master has no arch, and 0.9's score leaves the box out on the borderless templates until 4.9d (`HOLO_STAMP_ARCH`, `lib/frames/align.ts`).
         - The P3 serial plate ('n / total', our own plate art) and gold date-stamp follow-ups stay.
       - **Corrections to the earlier notes (CC audit 2026-09-25):**
-        - The © line is never WotC's, and never the creator's '© {year} {display name}' on display: there it is the pipglyph.com mark (owner 2026-09-29), and on a paid clean download the card's `footer_text`.
+        - The © line is never WotC's, and never the creator's '© {year} {display name}' on display: there it is the pipglyph.com mark (owner 2026-09-29), and on a paid clean download the card's `footer_text`. (CC stores a © line in 31 packs, and its converter stamps it.)
         - Styles: "2015" (`107/281 M`, M15 → ONE / ONC 2023-02-03, the letter in a column above the brush) and "2023" (`R 0009`, from ≤ SLD #1242 2023-03-26, not MOM).
         - Printed language codes: es = **SP**, ko = **KR** (not ES / KO); all 12 are scan-verified.
         - Tokens and emblems print their PARENT set code (TDOM #1 `DOM • EN`); PW23 prints `PRM`.
       - **From 4.21 (design 2026-09-29):** 4.9d's saga placement waits for 4.21c's CC saga master. On split and battle the band up the left border gets 4.21's ARTIST credit (3.8's slice, a correction); 4.9 adds the collector number, set and language beside it, opt-in, reusing 4.21b's rotated-text helper. Flip and aftermath take the M15 footer position on their CC borders.
       - **Order** (owner 2026-09-29): 4.9 after the crowns (4.6.0 + 4.6a): 4.9b and 4.9c build on 4.6.0's switch plumbing and the edit-lock relaxation that ships with the crowns. 4.9a's data work can be built before.
 - [ ] **4.9a [P1] Collector fields + import (data only, 0 pixels)** (4.9 design 2026-09-29; folds in 6.6) — can be built **now**, in parallel with round 11, 4.6.0 and #421; it merges in the 4.9 order, after the crowns (owner 2026-09-29).
-      - **Migration** (next free number, 0131 unless 4.6 V-B takes it):
+      - **Migration** (the next free number at PR time: 0131 after #421's 0130, unless a 4.6 migration lands first):
         - `cards.set_code` (the PRINTED code, `^[A-Z0-9]{2,6}$`; comment: not `deck_cards.set_code`, which is Scryfall's);
         - `cards.collector_number` (1–12 of `[0-9A-Za-z★†/-]`);
         - `cards.lang` (not null, default `'en'`, CHECK over all 18 Scryfall codes: en es fr de it pt ja ko ru zhs zht ph he la grc ar sa qya).
