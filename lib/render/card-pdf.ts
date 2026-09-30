@@ -33,6 +33,14 @@
 // with its design printed sideways, read by turning the card clockwise. The
 // card stays 2.5" × 3.5", the 3×3 sheet and its crop marks stay as they are,
 // and the PNG itself (stored bake, download) stays landscape.
+//
+// BLEED (TODO 6.1a, the single-card page only): the render carries 1/8 in
+// (9 pt) of bleed on every side (lib/render/card-print.ts), so it is drawn
+// 198 × 270 pt — the trim 180 × 252 plus the bleed — centred on a page with
+// a 1/4 in slug all round (234 × 306 pt). Crop marks sit in the slug on the
+// TRIM lines, stopping short of the bleed so they never print into it, and
+// the page declares its TrimBox (the card) and BleedBox (card + bleed) for
+// print software.
 // ---------------------------------------------------------------------------
 
 import fontkit from "@pdf-lib/fontkit";
@@ -55,6 +63,12 @@ const ROWS = 3;
 // Crop mark length and inset from card corner.
 const CROP_LEN = 6; // pt
 const CROP_GAP = 2; // pt gap between card edge and mark start
+
+// The single-card bleed page (TODO 6.1a): 1/8 in bleed, 1/4 in slug.
+export const BLEED_PT = 9; // 0.125"
+export const SLUG_PT = 18; // 0.25"
+/** Gap between the bleed box and a trim-line crop mark in the slug. */
+const BLEED_MARK_GAP = 2; // pt
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,16 +124,26 @@ function cardSlotPlacement(
   image: { width: number; height: number },
   x: number,
   y: number,
+  slotW: number = CARD_W_PT,
+  slotH: number = CARD_H_PT,
 ): { x: number; y: number; width: number; height: number; rotateDeg: 0 | 90 } {
   if (image.width > image.height) {
-    return { x: x + CARD_W_PT, y, width: CARD_H_PT, height: CARD_W_PT, rotateDeg: 90 };
+    return { x: x + slotW, y, width: slotH, height: slotW, rotateDeg: 90 };
   }
-  return { x, y, width: CARD_W_PT, height: CARD_H_PT, rotateDeg: 0 };
+  return { x, y, width: slotW, height: slotH, rotateDeg: 0 };
 }
 
-/** Draw a render into the portrait card slot at (x, y) — see cardSlotPlacement. */
-function drawCardInSlot(page: PDFPage, img: PDFImage, x: number, y: number): void {
-  const { rotateDeg, ...box } = cardSlotPlacement(img, x, y);
+/** Draw a render into the portrait card slot at (x, y) — see cardSlotPlacement.
+ *  The slot is the card (180 × 252 pt) unless a bleed page passes its own. */
+function drawCardInSlot(
+  page: PDFPage,
+  img: PDFImage,
+  x: number,
+  y: number,
+  slotW: number = CARD_W_PT,
+  slotH: number = CARD_H_PT,
+): void {
+  const { rotateDeg, ...box } = cardSlotPlacement(img, x, y, slotW, slotH);
   page.drawImage(img, { ...box, rotate: degrees(rotateDeg) });
 }
 
@@ -139,6 +163,47 @@ async function newDocument(title: string, subject: string): Promise<PDFDocument>
 function addCardPage(doc: PDFDocument, img: PDFImage): void {
   const page = doc.addPage([CARD_W_PT, CARD_H_PT]);
   drawCardInSlot(page, img, 0, 0);
+}
+
+/**
+ * One card WITH its bleed (TODO 6.1a) on a page with a 1/4 in slug: the
+ * render (trim + 1/8 in every side) fills the bleed box, portrait (a
+ * landscape render is turned into it, like addCardPage); crop marks on the
+ * four trim lines run through the slug, never into the bleed; TrimBox and
+ * BleedBox say which is which.
+ */
+function addBleedCardPage(doc: PDFDocument, img: PDFImage): void {
+  const bleedW = CARD_W_PT + 2 * BLEED_PT;
+  const bleedH = CARD_H_PT + 2 * BLEED_PT;
+  const page = doc.addPage([bleedW + 2 * SLUG_PT, bleedH + 2 * SLUG_PT]);
+  drawCardInSlot(page, img, SLUG_PT, SLUG_PT, bleedW, bleedH);
+  const trimX = SLUG_PT + BLEED_PT;
+  const trimY = SLUG_PT + BLEED_PT;
+  page.setBleedBox(SLUG_PT, SLUG_PT, bleedW, bleedH);
+  page.setTrimBox(trimX, trimY, CARD_W_PT, CARD_H_PT);
+
+  const color = rgb(0, 0, 0);
+  const thickness = 0.25;
+  const near = BLEED_PT + BLEED_MARK_GAP; // mark start, from the trim line
+  const far = BLEED_PT + SLUG_PT - BLEED_MARK_GAP; // mark end
+  for (const x of [trimX, trimX + CARD_W_PT]) {
+    for (const [from, dir] of [
+      [trimY, -1],
+      [trimY + CARD_H_PT, 1],
+    ] as const) {
+      // Vertical mark on the trim line x, above / below the card.
+      page.drawLine({ start: { x, y: from + dir * near }, end: { x, y: from + dir * far }, thickness, color });
+    }
+  }
+  for (const y of [trimY, trimY + CARD_H_PT]) {
+    for (const [from, dir] of [
+      [trimX, -1],
+      [trimX + CARD_W_PT, 1],
+    ] as const) {
+      // Horizontal mark on the trim line y, left / right of the card.
+      page.drawLine({ start: { x: from + dir * near, y }, end: { x: from + dir * far, y }, thickness, color });
+    }
+  }
 }
 
 /** Paper for a sheet layout — A4 when asked for, US Letter otherwise
@@ -200,13 +265,20 @@ export type PdfLayout = "card" | "sheet" | "sheet-letter" | "sheet-a4";
  *                   "sheet" or "sheet-letter" → 9-up Letter sheet;
  *                   "sheet-a4" → 9-up A4 sheet.
  * @param cardTitle  Used in the PDF metadata `title` field.
+ * @param options    `bleed`: the PNG carries a 1/8 in bleed (TODO 6.1a) —
+ *                   "card" only: a bleed page with trim-line crop marks
+ *                   (addBleedCardPage). Sheets have no bleed layout (6.15).
  * @returns          A Uint8Array of PDF bytes ready to stream to the client.
  */
 export async function buildCardPdf(
   pngBytes: Uint8Array,
   layout: PdfLayout = "card",
   cardTitle = "PipGlyph Card",
+  options: { bleed?: boolean } = {},
 ): Promise<Uint8Array> {
+  if (options.bleed && layout !== "card") {
+    throw new Error("A bleed PDF is a single-card page.");
+  }
   const doc = await newDocument(
     cardTitle,
     "Custom MTG card — fan-made, not affiliated with Wizards of the Coast.",
@@ -214,7 +286,8 @@ export async function buildCardPdf(
   const img = await embedImage(doc, pngBytes);
 
   if (layout === "card") {
-    addCardPage(doc, img);
+    if (options.bleed) addBleedCardPage(doc, img);
+    else addCardPage(doc, img);
   } else {
     // "sheet" (legacy) and "sheet-letter" both produce the US Letter sheet.
     const [pageWidth, pageHeight] = sheetSize(layout);

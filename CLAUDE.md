@@ -235,6 +235,17 @@ Rules and gotchas:
   `corners` is in the ETag. The CC importer cuts masters at the constant;
   the allow-listed MSE masters are normalised by Phase B
   (`scripts/lib/frame-corners.mjs`, run by the builders too) — `docs/FRAMES.md`.
+- PRINT exports (TODO 6.10 / 6.1a / 6.1b): the PDF (card + sheets) and the
+  800 ppi / 1/8″ bleed PNGs (`?ppi=800`, `?bleed=1`) render through
+  `lib/render/card-print.ts` — Satori draws the HD layout WITHOUT the art
+  (`renderCardImage` `printLayer`, CardImage `omitArt`; `outputWidth`
+  re-renders the vectors at 800 ppi) and sharp composites the ORIGINAL art
+  under it with the same fit (the boxes come from Satori's `onNodeDetected`),
+  then squares it; the bleed extends each edge by `EDGE_CONTRACTS`
+  (`lib/frames/edge-contract.ts`). Always live and square (the images PNG
+  only); the bleed follows the clean download, 800 ppi `PRINT_800_PPI_PAID_ONLY`
+  (`lib/cards/print-export.ts`). Never route a stored bake, thumb or OG image
+  through it.
 - ONE M15-era display size (layout v32, TODO 4.20): the family
   (`M15_FAMILY_TEMPLATES`, `lib/cards/m15-family.ts`; v32's scope is the
   frozen literal in `layout-version.ts`) prints names, type lines, pips and
