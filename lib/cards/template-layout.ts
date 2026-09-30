@@ -2912,16 +2912,32 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // CC_M15_TYPE_DY) are set here too, for the same reason.
   // The legendary crown (TODO 4.6a) is set here too, and on the m15land
   // and m15artifact entries below — never on a base another profile spreads.
+  // The two-colour pair masters (TODO 4.6b; `twoColorMasters`, opt-in per
+  // card — FrameStyle.twoColor): declared on these three PROFILES entries
+  // only, never on the M15 / M15LAND / M15ARTIFACT bases other profiles
+  // spread (M15 by 11, M15LAND by m15snowland). m15 draws print's gold-split
+  // (<pair>.png) and hybrid (<pair>-h.png) dresses; m15artifact and m15land
+  // the split only (a hybrid artifact has no hybrid plate yet, so it falls
+  // back to the gold-split master — lib/cards/anatomy.ts resolveTwoColor).
+  // The masters are Card Conjurer recipes over the verified masters' own
+  // files (scripts/lib/cc-frames.mjs pairMasterLayers), so a pair rides its
+  // template's "m" tick (owner decision 2026-09-29, V-A). A card drawn as a
+  // pair master wears the matching split crown band (m15crown/<pair>).
   m15: {
     ...M15,
     costDy: CC_M15_COST_DY,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
     overlays: [M15_CROWN],
+    twoColorMasters: ["split", "hybrid"],
   },
   // A land's crown is its colour (NEO #266–278); a colourless land's the
   // land grey "l" (UMA #241 Dark Depths).
-  m15land: { ...M15LAND, overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }] },
+  m15land: {
+    ...M15LAND,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }],
+    twoColorMasters: ["split"],
+  },
   m15snowland: M15SNOWLAND,
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
@@ -2944,7 +2960,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   },
   // A coloured artifact's crown is its colour (NEO #74, M20 #131); a
   // colourless artifact's the artifact silver "a" (FDN #677).
-  m15artifact: { ...M15ARTIFACT, overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }] },
+  m15artifact: {
+    ...M15ARTIFACT,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
+    twoColorMasters: ["split"],
+  },
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15snow: M15SNOW,

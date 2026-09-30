@@ -659,15 +659,20 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     blockedBy: "4.6f",
   },
+  // 4.6b draws the pairs on m15 (split + hybrid), m15artifact and m15land
+  // (split): there these gaps drop. What is left is wave 2 (4.6f: snow,
+  // devoid, borderless, extended art, sagas / adventures) — and the tails
+  // it names (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003
+  // frame).
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
-    blockedBy: "4.6b",
+    blockedBy: "4.6f",
   },
   "two-colour-hybrid": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: true },
     reason: "two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one",
-    blockedBy: "4.6b",
+    blockedBy: "4.6f",
   },
   "colour-indicator": {
     match: { colorIndicator: true },
@@ -1204,8 +1209,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     ["nyx-dress", "border", "crown", "two-colour", "two-colour-hybrid"],
     // The M20 token's crown is its own pill crown (TFDN #13; 4.48), never
-    // the standard band 4.6a draws.
-    { crown: "4.48" },
+    // the standard band 4.6a draws; its two-colour look is a central split
+    // of the rims (TMKM #10), 4.48's too — not the M15 pair masters 4.6b
+    // draws (design 2026-09-29 hand-offs).
+    { crown: "4.48", "two-colour": "4.48", "two-colour-hybrid": "4.48" },
   ),
   {
     key: "fullart/basic/coloured-border",
@@ -1741,10 +1748,9 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
 /** True when `template` draws the anatomy a gap names — its PROFILES entry
  *  declares the crown overlay or the two-colour dress (lib/cards/anatomy.ts,
- *  TODO 4.6.0). m15, m15artifact and m15land draw the crown (4.6a); 4.6b
- *  declares the pair dresses, 4.6f the rest — each gap
- *  then drops where the landing frame draws it, with nothing to keep in
- *  step here. */
+ *  TODO 4.6.0): each gap drops where the landing frame draws it, with
+ *  nothing to keep in step here (m15, m15artifact and m15land draw the
+ *  crown, 4.6a, and the pairs, 4.6b; 4.6f the rest). */
 function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
   switch (gap) {
     case "crown":

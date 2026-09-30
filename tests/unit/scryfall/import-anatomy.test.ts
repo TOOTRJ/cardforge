@@ -91,25 +91,41 @@ describe("the colour pair and printed_two_color", () => {
   });
 });
 
-describe("what the import stores on the frame it lands on (4.6.0: no frame draws the pieces yet)", () => {
-  it("the switches take the printing's values; the colour stays the patch's multicolor", () => {
+describe("what the import stores on the frame it lands on (4.6b: m15, m15artifact and m15land draw pairs)", () => {
+  it("a two-colour printing stores its PAIR and the two-colour switch on a frame with pair masters", () => {
+    // Kykar FDN #122 (gold WU, crowned): the pair on m15.
     expect(importedAnatomy(patchOf("fdn-122"), "m15")).toEqual({
       style: { crown: true, twoColor: true },
-      colorIdentity: ["multicolor"],
+      colorIdentity: ["white", "blue"],
     });
+    // Cat-Owl TLA #212 (hybrid), Daemogoth Woe-Eater STX #175 (mixed cost).
+    expect(importedAnatomy(patchOf("tla-212"), "m15").colorIdentity).toEqual(["white", "blue"]);
+    expect(importedAnatomy(patchOf("stx-175"), "m15").colorIdentity).toEqual(["black", "green"]);
+    // Riptide Gearhulk DFT #219 on the artifact frame, Meticulous Archive
+    // MKM #264 on the land frame.
+    expect(importedAnatomy(patchOf("dft-219"), "m15artifact")).toMatchObject({ style: { twoColor: true }, colorIdentity: ["white", "blue"] });
+    expect(importedAnatomy(patchOf("mkm-264"), "m15land")).toMatchObject({ style: { twoColor: true }, colorIdentity: ["white", "blue"] });
+  });
+
+  it("mono, three colours and the gold fetch lands keep their colour and the gold frame", () => {
     expect(importedAnatomy(patchOf("m15-3"), "m15")).toEqual({
       style: { crown: false, twoColor: false },
       colorIdentity: ["white"],
     });
+    expect(importedAnatomy(patchOf("fdn-243"), "m15")).toMatchObject({ style: { twoColor: false }, colorIdentity: ["multicolor"] });
+    // Fabled Passage ELD #244 prints the gold land frame (landFrameColorRule).
+    expect(importedAnatomy(patchOf("eld-244"), "m15land")).toMatchObject({ style: { twoColor: false } });
+    // Azorius Charm RTR #145: the 2003 frame prints gold, and modern draws no pair.
+    expect(importedAnatomy(patchOf("rtr-145"), "modern")).toMatchObject({ style: { twoColor: false }, colorIdentity: ["multicolor"] });
   });
 
-  it("the AI deck remix carries the printing's switches onto its frame", () => {
+  it("the AI deck remix carries the printing's switches and pair onto its frame", () => {
     const remix = scryfallRemixMechanics(patchOf("fdn-122"), "Kykar", new Set(["m15/m"]));
     expect(remix.ok).toBe(true);
     if (remix.ok) {
       expect(remix.mechanics.frame_template).toBe("m15");
       expect(remix.mechanics.anatomy).toEqual({ crown: true, twoColor: true });
-      expect(remix.mechanics.color_identity).toEqual(["multicolor"]);
+      expect(remix.mechanics.color_identity).toEqual(["white", "blue"]);
     }
   });
 });

@@ -216,42 +216,64 @@ describe("the crown", () => {
   });
 });
 
-describe("4.6a: the crown is declared on m15, m15artifact and m15land; no pair masters yet", () => {
-  const CROWNED = ["m15", "m15land", "m15artifact"];
+describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters)", () => {
+  const DRAWN = ["m15", "m15land", "m15artifact"];
 
-  it("only those three PROFILES entries draw the crown, and none draws a pair master (4.6b)", () => {
+  it("the crown and the pair masters on exactly the m15, m15artifact and m15land PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
-    const paired = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0);
-    expect(crowned).toEqual(CROWNED);
-    expect(paired).toEqual([]);
-    // Never a profile that spreads M15 / M15LAND: snow, snow land, devoid,
-    // borderless, extended art, the layout frames and the showcases draw
-    // other crowns (4.6f); planeswalkers and tokens none here.
-    for (const t of ["m15snow", "m15snowland", "m15devoid", "m15borderless", "extendedart", "adventure", "saga", "m15pw", "m15token", "nyx", "fullart"] as const) {
+    expect(crowned).toEqual(DRAWN);
+    const paired = Object.fromEntries(
+      FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
+    );
+    expect(paired).toEqual({ m15: ["split", "hybrid"], m15land: ["split"], m15artifact: ["split"] });
+    // Every profile that spreads M15 / M15LAND draws neither: m15snowland
+    // spreads M15LAND, m15snow / m15devoid / m15borderless / the layouts /
+    // the showcases spread M15 (their crowns and pairs are 4.6f);
+    // planeswalkers and tokens none here.
+    for (const t of ["m15snow", "m15snowland", "m15devoid", "m15borderless", "extendedart", "adventure", "saga", "nyx", "fullart"]) {
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [] });
+    }
+    for (const t of ["m15pw", "m15token"] as const) {
       expect(frameAnatomyOf(t).crown, t).toBe(false);
     }
-    // A legacy template draws the m15 frame, so it draws m15's crown.
+    // A legacy template draws the m15 frame, so it draws m15's crown and pairs.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
 
-  it("every save keeps the crown switch only where it draws, and a new card stores the crown on", () => {
+  it("a save keeps each switch only where the template draws it; a new card starts with both on there", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      const draws = CROWNED.includes(template);
-      expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true } : {});
-      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template)).toEqual(
-        draws ? { template, finish: "foil", crown: true } : { template, finish: "foil" },
+      const draws = DRAWN.includes(template);
+      expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true, twoColor: true } : {});
+      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template), template).toEqual(
+        draws ? { template, finish: "foil", crown: true, twoColor: false } : { template, finish: "foil" },
       );
-      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY })).toEqual(
-        draws ? { template, finish: "regular", crown: true } : { template, finish: "regular" },
+      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY }), template).toEqual(
+        draws ? { template, finish: "regular", crown: true, twoColor: true } : { template, finish: "regular" },
       );
     }
-    // The AI jobs send no frame_style: the default template (m15) draws it.
-    expect(newCardFrameStyle({})).toEqual({ crown: true });
-    // A stored card (no key) is never touched by a save.
+    // The AI jobs send no frame_style: the default template (m15) draws both.
+    expect(newCardFrameStyle({})).toEqual({ crown: true, twoColor: true });
+    // A stored card names no switch: nothing to drop, the same object back.
     const untouched: FrameStyle = { template: "m15", finish: "regular" };
     expect(normalizeAnatomy(untouched, "m15")).toBe(untouched);
+    expect(normalizeAnatomy(untouched, "m15snow")).toBe(untouched);
     const off: FrameStyle = { template: "m15", finish: "regular", crown: false };
     expect(normalizeAnatomy(off, "m15")).toBe(off);
+  });
+
+  it("the real m15 profile draws print's dress; m15artifact's hybrid falls back to its gold-split", () => {
+    const on = { twoColor: true };
+    const m15 = getFrameProfile("m15");
+    expect(resolveTwoColor(m15, on, { colors: ["white", "blue"], cost: "{1}{W}{U}", cardType: "creature" })).toEqual({
+      pair: "wu",
+      dress: "split",
+      masterKey: "wu",
+    });
+    expect(resolveTwoColor(m15, on, { colors: ["green", "white"], cost: "{G/W}{G/W}", cardType: "creature" })?.masterKey).toBe("gw-h");
+    const artifact = getFrameProfile("m15artifact");
+    expect(resolveTwoColor(artifact, on, { colors: ["white", "blue"], cost: "{W/U}{W/U}", cardType: "artifact" })?.masterKey).toBe("wu");
+    const land = getFrameProfile("m15land");
+    expect(resolveTwoColor(land, on, { colors: ["white", "blue"], cost: null, cardType: "land" })?.masterKey).toBe("wu");
   });
 
   it("an overlay or pair masters can never come from an admin override (code-owned)", () => {
@@ -262,34 +284,49 @@ describe("4.6a: the crown is declared on m15, m15artifact and m15land; no pair m
 
 describe("an edit's switch flip (frame_anatomy)", () => {
   it("merges over the STORED frame_style, keeping every other key as stored", () => {
-    // A legacy template draws m15's crown: the switch is kept, the template
-    // is never rewritten.
+    // A legacy template draws the m15 frame: both switches are kept, the
+    // template is never rewritten.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "regular", finish: "foil" }, colorIdentity: ["red"] }, { crown: true }),
-    ).toEqual({ ok: true, frameStyle: { template: "regular", finish: "foil", crown: true }, colorIdentity: null });
-    // A frame without the crown drops the switch.
+      applyFrameAnatomyPatch({ frameStyle: { template: "regular", finish: "foil" }, colorIdentity: ["red"] }, { crown: true, twoColor: true }),
+    ).toEqual({ ok: true, frameStyle: { template: "regular", finish: "foil", crown: true, twoColor: true }, colorIdentity: null });
+    // A frame that draws neither drops both switches.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: ["red"] }, { crown: true }),
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: ["red"] }, { crown: true, twoColor: true }),
     ).toEqual({ ok: true, frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: null });
   });
 
-  it("refuses a pair that would re-colour a stored card", () => {
-    // No template draws the two-colour frame before 4.6b: the switch is
-    // normalised away and the pair ignored.
+  it("stores a pair only as a refinement of a multicolour card; refuses one that would re-colour it", () => {
     expect(
       applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["multicolor"] }, { twoColor: true, pair: ["white", "blue"] }),
-    ).toEqual({ ok: true, frameStyle: { template: "m15" }, colorIdentity: null });
+    ).toEqual({ ok: true, frameStyle: { template: "m15", twoColor: true }, colorIdentity: ["white", "blue"] });
+    expect(
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["black"] }, { twoColor: true, pair: ["blue", "black"] }),
+    ).toMatchObject({ ok: false });
+    expect(
+      applyFrameAnatomyPatch(
+        { frameStyle: { template: "m15" }, colorIdentity: ["white", "blue", "black"] },
+        { twoColor: true, pair: ["white", "blue"] },
+      ),
+    ).toMatchObject({ ok: false });
+    // On a frame without pair masters the switch and the pair are ignored.
+    expect(
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"] }, { twoColor: true, pair: ["white", "blue"] }),
+    ).toEqual({ ok: true, frameStyle: { template: "m15snow" }, colorIdentity: null });
   });
 });
 
 describe("imports follow the printing", () => {
-  it("the switches take the printing's own values, the colour its identity where no frame draws a pair", () => {
+  it("the switches take the printing's own values; the colour is the printing's pair where the frame draws pairs", () => {
     expect(
       importedAnatomy(
         { color_identity: ["multicolor"], color_pair: "wu", printed_crown: true, printed_two_color: true },
         "m15",
       ),
-    ).toEqual({ style: { crown: true, twoColor: true }, colorIdentity: ["multicolor"] });
+    ).toEqual({ style: { crown: true, twoColor: true }, colorIdentity: ["white", "blue"] });
+    // m15snow draws no pair: the patch's own "multicolor" stays.
+    expect(
+      importedAnatomy({ color_identity: ["multicolor"], color_pair: "wu", printed_two_color: true }, "m15snow"),
+    ).toEqual({ style: { twoColor: true }, colorIdentity: ["multicolor"] });
     expect(importedAnatomy({ color_identity: ["black"], printed_crown: false, printed_two_color: false }, "m15")).toEqual({
       style: { crown: false, twoColor: false },
       colorIdentity: ["black"],

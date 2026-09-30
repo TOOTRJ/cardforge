@@ -56,7 +56,8 @@ function variantPatch(
 }
 
 /** Sheoldred DMU #107 (legendary: the crown) as a black-red card: the crown
- *  AND the two-colour split frame PipGlyph paints gold. */
+ *  and the two-colour split frame — which m15 draws since 4.6b, so only the
+ *  crown holds. */
 const twoColourLegend = (keys: ReadonlySet<string>) =>
   variantPatch(
     "dmu-107",
@@ -78,6 +79,21 @@ const legendWithIndicator = (keys: ReadonlySet<string>) =>
  *  (4.6f), where m15 does — a real choice. */
 const snowLegend = (keys: ReadonlySet<string>) =>
   variantPatch("dmu-107", { frame_effects: ["legendary", "snow"] }, keys);
+/** …as a W/U hybrid ARTIFACT creature (ELD #206-style cost): it lands on
+ *  m15artifact, which draws the crown (4.6a) but has no hybrid dress (TODO
+ *  4.6b), so the two-colour hybrid frame holds — a gap PipGlyph paints
+ *  differently. */
+const hybridArtifactLegend = (keys: ReadonlySet<string>) =>
+  variantPatch(
+    "dmu-107",
+    {
+      colors: ["W", "U"],
+      color_identity: ["W", "U"],
+      mana_cost: "{W/U}{W/U}{W/U}",
+      type_line: "Legendary Artifact Creature — Phyrexian Praetor",
+    },
+    keys,
+  );
 
 const STANDARD = verified("m15", "m15artifact", "m15land", "m15pw", "m15token", "saga");
 const WITH_BORDERLESS = new Set([...STANDARD, ...verified("m15borderless", "m15fullartland")]);
@@ -334,11 +350,18 @@ describe("the substitution chip and the deck-remix toast", () => {
     const both = legendWithIndicator(STANDARD).frame_match;
     expect(both?.gaps).toEqual(["colour-indicator"]);
     expect(importSubstitutionMessage(both, "m15", undefined, "b")).toBeNull();
-    // The gold frame for a black-red split: a real difference (4.6b).
+    // A black-red legend: m15 draws the crown (4.6a) and the two-colour
+    // split (4.6b) — its own frame exactly, quiet.
     const twoColour = twoColourLegend(STANDARD).frame_match;
-    expect(twoColour?.gaps).toEqual(["two-colour"]);
-    expect(importSubstitutionMessage(twoColour, "m15", undefined, "m")).toBe(
-      "Two-colour cards print a split frame, and PipGlyph uses its gold one — using M15 (2015) Standard.",
+    expect(twoColour).toMatchObject({ status: "exact", template: "m15" });
+    expect(twoColour?.gaps).toBeUndefined();
+    expect(importSubstitutionMessage(twoColour, "m15", undefined, "m")).toBeNull();
+    // A hybrid artifact legend: the artifact frame draws the crown but has no
+    // hybrid dress — a real difference.
+    const hybridArtifact = hybridArtifactLegend(STANDARD).frame_match;
+    expect(hybridArtifact?.gaps).toEqual(["two-colour-hybrid"]);
+    expect(importSubstitutionMessage(hybridArtifact, "m15artifact", undefined, "m")).toBe(
+      "Two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one — using M15 (2015) Artifact.",
     );
   });
 
@@ -385,13 +408,16 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(importFramePlan(legendWithIndicator(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
   });
 
-  it("asks when a gap PipGlyph paints differently holds (the two-colour split frame)", () => {
-    const plan = importFramePlan(twoColourLegend(STANDARD), STANDARD, "m15");
+  it("asks when a gap PipGlyph paints differently holds (a two-colour hybrid dress the artifact frame doesn't draw)", () => {
+    const plan = importFramePlan(hybridArtifactLegend(STANDARD), STANDARD, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
     expect(plan.heading).toBe(
       "PipGlyph can't match this printing's M15 (2015) frame exactly yet — pick one of these",
     );
-    expect(plan.preselected).toEqual({ template: "m15" });
+    expect(plan.preselected).toEqual({ template: "m15artifact" });
+    // The black-red legend's crown and split frame are both drawn on m15
+    // (4.6a / 4.6b): its own frame exactly — no chooser.
+    expect(importFramePlan(twoColourLegend(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
   });
 
   it("asks when the printing's own frame isn't published in its colour (a real substitution)", () => {
@@ -519,8 +545,8 @@ describe("A3 — the chooser dresses an Enchantment Creature in Nyx, never a pla
   });
 
   it("refuses Nyx for a creature that isn't an enchantment", () => {
-    const keys = new Set([...STANDARD, frameComboKey("nyx", "b")]);
-    const plan = importFramePlan(twoColourLegend(keys), keys, "m15");
+    const keys = new Set([...STANDARD, frameComboKey("nyx", "b"), frameComboKey("nyx", "m")]);
+    const plan = importFramePlan(hybridArtifactLegend(keys), keys, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
     expect([...plan.options, ...plan.moreOptions].map((o) => o.template)).not.toContain("nyx");
     expect(

@@ -24,7 +24,8 @@
 // accurate M15 pack), downscales once with Lanczos to 1500×2100, cuts the
 // one card corner (lib/cards/card-corner.ts, 64.5 px), checks the edge
 // contract (7.7), the corner (3.26) and the art window (7.6), and writes
-// <out>/<template>/<colour>.png + .webp, plus P/T plates at native size
+// <out>/<template>/<colour>.png + .webp (and a template's two-colour pair
+// masters, <pair>.png / <pair>-h.png, TODO 4.6b), plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
 // (re-cut templates) a band moved down before the downscale (recut),
 // and a planeswalker's loyalty shield cut out of each master under loyalty/.
@@ -62,15 +63,14 @@ import {
   cutThroughMask,
   describeCrownBand,
   describeLayer,
-  lerpLayers,
   placeOnCanvas,
-  rampMask,
   recutBand,
   rectPx,
   roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
+import { blendPair } from "./lib/pair-ramp.mjs";
 // The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
 // checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
 // here after the downscale and the corner cut.
@@ -175,8 +175,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const { width: W, height: H } = await sharp(baseFile).metadata();
     const images = [];
     for (const l of def.colors[key]) {
+      // A pair layer (TODO 4.6b, pairLayer): its two files blended across
+      // the region's untilted ramp (scripts/lib/pair-ramp.mjs) first.
+      const data = l.right
+        ? blendPair(await rgba(await fetchCached(l.src), W, H), await rgba(await fetchCached(l.right), W, H), W, H, l.ramp)
+        : await rgba(await fetchCached(l.src), W, H);
       images.push({
-        data: await rgba(await fetchCached(l.src), W, H),
+        data,
         mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
         invert: l.invert,
         opacity: l.opacity,
@@ -264,7 +269,6 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
   const coverBox = rectPx(band.cover, W, H);
   const crownBox = rectPx(band.crown, W, H);
   let cover = null;
-  const ramps = new Map();
   const bandFailures = [];
   const m15Art = getFrameProfile("m15").artSlot;
   for (const key of def.keys) {
@@ -277,12 +281,10 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     }
     cover ??= placeOnCanvas(await rgba(await fetchCached(r.cover), coverBox.width, coverBox.height), coverBox, W, H);
     const place = async (src) => placeOnCanvas(await rgba(await fetchCached(src), crownBox.width, crownBox.height), crownBox, W, H);
-    let crown = await place(r.left);
-    if (r.right) {
-      const rampKey = r.ramp.join("-");
-      if (!ramps.has(rampKey)) ramps.set(rampKey, rampMask(W, H, r.ramp));
-      crown = lerpLayers(crown, await place(r.right), ramps.get(rampKey));
-    }
+    // A pair: the two crowns blended across the crown ramp by the same
+    // helper the pair masters use (scripts/lib/pair-ramp.mjs blendPair).
+    const left = await place(r.left);
+    const crown = r.right ? blendPair(left, await place(r.right), W, H, r.ramp) : left;
     const composite = toRgba8(compositeLayers([{ data: cover }, { data: crown }], W, H));
     const full = await sharp(composite, { raw: { width: W, height: H, channels: 4 } })
       .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })

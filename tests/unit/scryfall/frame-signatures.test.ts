@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { importedAnatomy } from "@/lib/cards/anatomy";
 import printingsData from "./fixtures/signature-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import {
@@ -244,9 +245,9 @@ describe("the general signatures (TODO 1.4)", () => {
     // Porcelain Legionnaire NPH #19: a white artifact creature on the 2003
     // frame prints the ARTIFACT frame, which only M15 has.
     ["nph-19", "nearest", "m15artifact", undefined],
-    // Flooded Strand KTK #233: a fetch land prints its two colours — a
-    // two-colour land frame PipGlyph draws gold (4.6).
-    ["ktk-233", "nearest", "m15land", undefined],
+    // Flooded Strand KTK #233: a fetch land prints its two colours — the
+    // two-colour land frame m15land draws (TODO 4.6b).
+    ["ktk-233", "exact", "m15land", undefined],
     // Evolving Wilds MSC #240 stays grey; Fabled Passage and Prismatic Vista
     // print the gold land frame (their scans).
     ["msc-240", "exact", "m15land", undefined],
@@ -280,12 +281,13 @@ describe("the general signatures (TODO 1.4)", () => {
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
     ["khm-244", "nearest", "m15snow", "m15artifact"],
-    // Anatomy gaps on the M15 era: the double-faced marks, a two-colour
-    // land, the silver border + Un-host layout. The crown is drawn on m15
-    // since TODO 4.6a: a crowned mono legendary is exact.
+    // Anatomy gaps on the M15 era: the double-faced marks, the silver
+    // border + Un-host layout. The crown is drawn on m15 since TODO 4.6a (a
+    // crowned mono legendary is exact), and a two-colour land is no gap
+    // since 4.6b: m15land draws its split (Bloodfell Caves KTK #229).
     ["dmu-107", "exact", "m15", undefined],
     ["mid-7", "nearest", "m15", undefined],
-    ["ktk-229", "nearest", "m15land", undefined],
+    ["ktk-229", "exact", "m15land", undefined],
     ["ust-1", "nearest", "m15", undefined],
   ];
 
@@ -306,7 +308,8 @@ describe("the general signatures (TODO 1.4)", () => {
     expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
-    expect(frameMatchFromScryfall(printing("ktk-233")).signature).toBe("era/2015+two-colour");
+    // The two-colour land frame is drawn (4.6b): the plain era signature.
+    expect(frameMatchFromScryfall(printing("ktk-233"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("nph-19")).signature).toBe("era/2003/coloured-artifact");
     expect(frameMatchFromScryfall(printing("fut-18"))).toMatchObject({
       signature: "future",
@@ -400,10 +403,13 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(colorKeyOf("nph-19")).toBe("w");
   });
 
-  it("Flooded Strand KTK #233 → m15land, multicolour", () => {
+  it("Flooded Strand KTK #233 → m15land, multicolour — its pair and two-colour frame from the fetched lands (TODO 4.6b)", () => {
     const patch = mapScryfallToFormPatch(printing("ktk-233"));
     expect(patch.frame_template).toBe("m15land");
     expect(patch.color_identity).toEqual(["multicolor"]);
+    // m15land draws the pair: the land imports W|U with the switch on.
+    expect(patch).toMatchObject({ color_pair: "wu", printed_two_color: true });
+    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { crown: false, twoColor: true }, colorIdentity: ["white", "blue"] });
   });
 
   it("Bident of Thassa THS #42 → nyx, nearest", () => {

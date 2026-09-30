@@ -165,9 +165,10 @@ describe("saving a finish (free account, verified frame)", () => {
     const stub = db();
     const result = await createCardAction(payload(finish));
     expect(result).toEqual({ ok: true, cardId: CARD_ID, slug: "sunforged-paladin" });
-    // A new card on m15 also stores the legendary crown switch on (TODO
-    // 4.6a: an addition, on by default for new cards).
-    expect(insertOf(stub)?.frame_style).toEqual({ finish, template: "m15", crown: true });
+    // A new card on m15 also stores the legendary crown (TODO 4.6a) and the
+    // two-colour frame (4.6b) switches on: additions, on by default for new
+    // cards (createCardAction's newCardFrameStyle).
+    expect(insertOf(stub)?.frame_style).toEqual({ finish, template: "m15", crown: true, twoColor: true });
   });
 
   it("gates on the frame, not the finish: an unverified colour is refused in foil exactly as in regular", async () => {
@@ -203,9 +204,9 @@ describe("a saved foil card round-trips", () => {
     const row = storedRow(insertOf(stub)?.frame_style);
 
     const edit = defaultValuesFor(row, []);
-    expect(edit.frame_style).toEqual({ finish: "foil", template: "m15", crown: true });
+    expect(edit.frame_style).toEqual({ finish: "foil", template: "m15", crown: true, twoColor: true });
     expect(remixValuesFrom(row, []).frame_style.finish).toBe("foil");
-    expect(cardToPreviewData(row).frameStyle).toEqual({ finish: "foil", template: "m15", crown: true });
+    expect(cardToPreviewData(row).frameStyle).toEqual({ finish: "foil", template: "m15", crown: true, twoColor: true });
 
     // Edit mode: the finish is locked structure — the payload has no key to
     // change it with, so the update action leaves the stored finish alone.

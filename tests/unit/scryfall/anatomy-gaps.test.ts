@@ -5,17 +5,18 @@ import { FRAME_SIGNATURE_KEYS } from "@/lib/scryfall/frame-signatures";
 import printings from "./fixtures/anatomy-printings.json";
 
 // ---------------------------------------------------------------------------
-// TODO 4.6.0 — the registry's anatomy gaps (lib/scryfall/frame-signatures.ts)
-// before any frame draws the crown or a two-colour dress:
+// TODO 4.6.0 / 4.6a / 4.6b — the registry's anatomy gaps
+// (lib/scryfall/frame-signatures.ts), on the real profiles (m15, m15artifact
+// and m15land draw the crown, 4.6a, and the pairs, 4.6b):
 //   • the layout frames gain the crown and two-colour gaps — a crowned
 //     adventure (WOE #220 Beluna) or a two-colour saga (KHM #201) used to
 //     import `exact` on a frame that draws gold with no crown;
 //   • `two-colour` splits by print's dress: `two-colour-hybrid` when every
 //     coloured pip is a two-colour hybrid (twoColorDressOf), so a hybrid
 //     printing can't import `exact` onto a gold-split dress later;
-//   • the crown → 4.6f wherever it is still a gap (m15, m15artifact and
-//     m15land draw it since 4.6a, so it drops there), the pairs → 4.6b.
-// The same printings with the pair dresses declared too:
+//   • m15, m15artifact and m15land draw the crown (4.6a) and the pairs
+//     (4.6b), so those gaps drop there; what is left of either is 4.6f.
+// The same rules on a synthetic profile that declares every piece:
 // anatomy-gaps-declared.test.ts.
 // ---------------------------------------------------------------------------
 
@@ -46,35 +47,38 @@ describe("the layout frames' new gaps", () => {
     });
   });
 
-  it("a two-colour saga is nearest, blocked by the two-colour frame", () => {
+  it("a two-colour saga is nearest, blocked by the two-colour frame's wave 2", () => {
     expect(match("khm-201")).toMatchObject({
       status: "nearest",
       template: "saga",
       signature: "layout/2015+two-colour",
-      blockedBy: "4.6b",
+      blockedBy: "4.6f",
     });
   });
 });
 
-describe("two-colour, by print's dress", () => {
-  it("a gold-split printing — a two-colour or mixed cost — is `two-colour`", () => {
-    expect(match("stx-175")).toMatchObject({ signature: "era/2015+two-colour", blockedBy: "4.6b", gaps: ["two-colour"] });
-    expect(match("dft-219")).toMatchObject({ signature: "era/2015+two-colour", template: "m15artifact" });
-    // The crown is drawn on m15 (4.6a): only the pair is missing.
-    expect(match("fdn-122")).toMatchObject({ signature: "era/2015+two-colour", gaps: ["two-colour"] });
-    expect(match("mkm-238").gaps).toEqual(["two-colour"]);
+describe("two-colour, by print's dress (4.6b: m15 draws both dresses, m15artifact and m15land the split)", () => {
+  it("a gold-split printing — a two-colour or mixed cost — imports exact where its frame draws the split", () => {
+    expect(match("stx-175")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15" });
+    expect(match("stx-175").gaps).toBeUndefined();
+    expect(match("dft-219")).toMatchObject({ status: "exact", template: "m15artifact" });
+    expect(match("mkm-264")).toMatchObject({ status: "exact", template: "m15land" });
+    // A crowned pair: m15 draws the crown (4.6a) and the split (4.6b) — exact.
+    expect(match("fdn-122")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15" });
+    expect(match("fdn-122").gaps).toBeUndefined();
+    expect(match("mkm-238")).toMatchObject({ status: "exact", template: "m15" });
   });
 
-  it("an all-hybrid printing is `two-colour-hybrid`", () => {
-    expect(match("tla-212")).toMatchObject({
+  it("an all-hybrid printing imports exact on m15; the artifact frame has no hybrid dress, so it stays a gap", () => {
+    expect(match("tla-212")).toMatchObject({ status: "exact", template: "m15", signature: "era/2015" });
+    expect(match("eld-206")).toMatchObject({
       status: "nearest",
-      template: "m15",
+      template: "m15artifact",
       signature: "era/2015+two-colour-hybrid",
-      blockedBy: "4.6b",
+      blockedBy: "4.6f",
       reason: "two-colour hybrid cards print a split hybrid frame, and PipGlyph uses its gold one",
       gaps: ["two-colour-hybrid"],
     });
-    expect(match("eld-206")).toMatchObject({ signature: "era/2015+two-colour-hybrid", template: "m15artifact" });
   });
 
   it("the new signatures are in the vocabulary the request log stores", () => {

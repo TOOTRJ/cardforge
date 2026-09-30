@@ -206,9 +206,12 @@ on conflict (id) do nothing;
 --     each: Cinderwing Matriarch and Oath of the Hollow Crown (above) are the
 --     cards stored before the pieces shipped (no key: drawn as before, the
 --     editor shows the switch off with a hint); these carry the keys a new
---     card, an import or an owner's switch writes. Until 4.6a / 4.6b draw the
---     pieces (lib/cards/anatomy.ts), every one renders exactly as without
---     them. dev_pro's cards, so dev_artist's public count stays 14.
+--     card, an import or an owner's switch writes. 4.6b draws the two-colour
+--     frame on m15 / m15artifact / m15land (Aurelian Tidewright, Hedgerow
+--     Mediator, Stormglass Strand, Brassbound Arbiter; Tidecaller Envoy and
+--     Rotbloom Pact are stored with no key — gold until switched on); the
+--     crown waits for 4.6a (lib/cards/anatomy.ts). dev_pro's cards, so
+--     dev_artist's public count stays 14.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -248,7 +251,22 @@ from (values
   -- A WU land with the two-colour frame on: the land split.
   ('c0000000-0000-4000-a000-000000000030'::uuid, 'Stormglass Strand', 'stormglass-strand', null, array['white','blue'], null, 'land', array[]::text[], 'rare',
      E'Stormglass Strand enters tapped.\n{T}: Add {W} or {U}.', null, null, 15,
-     '{"template":"m15land","finish":"regular","twoColor":true}'::jsonb, 1)
+     '{"template":"m15land","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- TODO 4.6b: a WU pair stored BEFORE the two-colour frame shipped (no
+  -- key): gold as always; the editor shows the switch off with the hint.
+  ('c0000000-0000-4000-a000-000000000031'::uuid, 'Tidecaller Envoy', 'tidecaller-envoy', '{1}{W}{U}', array['white','blue'], null, 'creature', array['Merfolk','Advisor'], 'uncommon',
+     E'Flying\nWhen Tidecaller Envoy enters, scry 2.', '2', '2', 18,
+     '{"template":"m15","finish":"regular"}'::jsonb, 3),
+  -- A plain "multicolor" card with a two-colour cost and no key: switching
+  -- the frame on pre-fills Black + Green from the cost for its owner.
+  ('c0000000-0000-4000-a000-000000000032'::uuid, 'Rotbloom Pact', 'rotbloom-pact', '{2}{B}{G}', array['multicolor'], null, 'creature', array['Fungus','Shaman'], 'rare',
+     E'Deathtouch\nWhen Rotbloom Pact dies, create two 1/1 green Saproling creature tokens.', '3', '3', 21,
+     '{"template":"m15","finish":"regular"}'::jsonb, 3),
+  -- A WU artifact with the two-colour frame on: the artifact frame, gold
+  -- bars, the split pinline and text box.
+  ('c0000000-0000-4000-a000-000000000033'::uuid, 'Brassbound Arbiter', 'brassbound-arbiter', '{2}{W}{U}', array['white','blue'], 'Artifact', 'creature', array['Construct'], 'rare',
+     E'Vigilance\nArtifact spells you cast cost {1} less to cast.', '3', '4', 24,
+     '{"template":"m15artifact","finish":"regular","twoColor":true}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

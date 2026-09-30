@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   ART_WINDOW_KNOWN_FAILURES,
   ART_WINDOW_OVERSCAN_PCT,
+  M15_PAIR_MASTER_KEYS,
   SEE_THROUGH_FRAME_ALPHA_MAX,
   TRANSLUCENT_RIM_PCT,
   artWindowFindings,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/frames/art-window";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
-import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
+import { FRAME_MASTER_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile, underFrameArtRect } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -347,6 +348,14 @@ describe("see-through masters (4.17): the under-frame art covers the window and 
 // ---------------------------------------------------------------------------
 // The known-failure table.
 // ---------------------------------------------------------------------------
+describe("the m15 pair masters' known-failure bound (TODO 4.6b)", () => {
+  it("names exactly the registry's pair master keys, each with the mono masters' hairline bound", () => {
+    expect([...M15_PAIR_MASTER_KEYS].sort()).toEqual([...TWO_COLOR_MASTER_KEYS].sort());
+    const bound = ART_WINDOW_KNOWN_FAILURES.m15.maxMissPx as Record<string, number>;
+    for (const key of TWO_COLOR_MASTER_KEYS) expect(bound[key], key).toBe(bound.w);
+  });
+});
+
 describe("the art-window known failures", () => {
   const todo = fs.readFileSync(path.join(ROOT, "TODO.md"), "utf8");
 

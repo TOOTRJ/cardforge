@@ -22,6 +22,8 @@ import {
   toRgba8,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { applyCardCornerMask, cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
@@ -52,6 +54,13 @@ const templates = CC_TEMPLATES as Record<string, Def>;
 /** The re-cut templates (TODO 4.49): each pair has its own band. */
 const TEXTLESS_TOKENS = ["m15token", "m15tokenartifact"];
 const TEXT_BOX_TOKENS = ["m15tokentext", "m15tokenartifacttext"];
+/** The two-colour pair masters a template's profile declares (TODO 4.6b,
+ *  FrameProfile.twoColorMasters): gold-split `<pair>`, hybrid `<pair>-h` —
+ *  the importer must build exactly those, besides the seven colours. */
+const pairKeysOf = (template: string): string[] =>
+  (getFrameProfile(template).twoColorMasters ?? []).flatMap((dress) =>
+    TWO_COLOR_PAIRS.map((pair) => (dress === "hybrid" ? `${pair}-h` : pair)),
+  );
 
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
@@ -75,7 +84,7 @@ describe("Card Conjurer recipe", () => {
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
       const covered = [...builtColors(def as never), ...Object.keys(def.excluded ?? {})].sort();
-      expect(covered, template).toEqual([...COLORS].sort());
+      expect(covered, template).toEqual([...COLORS, ...pairKeysOf(template)].sort());
       for (const file of sourceFilesFor(def as never)) {
         expect(file, `${template}: ${file}`).toMatch(/^img\/frames\/[\w/]+\.(png|svg)$/);
       }
@@ -536,7 +545,7 @@ describe("provenance and hygiene", () => {
       // Every master was cut at the one card corner (TODO 3.26's re-import).
       expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
-      expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS].sort());
+      expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS, ...pairKeysOf(template)].sort());
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");
     // The later runs name their pack and what was done to its pixels.

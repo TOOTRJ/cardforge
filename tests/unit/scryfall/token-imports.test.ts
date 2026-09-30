@@ -73,11 +73,11 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tdsk-10", "nearest", "m15token", "token/m20+nyx-dress", "4.51"],
     // …and on the 2014–19 arch (TC15 #23, a W/B Nyx-textured Spirit).
     ["tc15-23", "nearest", "m15tokentext", "era/2015+nyx-dress", "4.51"],
-    // The crown and the two-colour blend: the M20 token's own pill crown is
-    // 4.48 (design 2026-09-29 hand-off; 4.6a's band is never a token's), the
-    // two-colour blend 4.6b.
+    // The crown and the two-colour blend: the M20 token's own pill crown and
+    // its central rim split are 4.48 (design 2026-09-29 hand-offs; 4.6a's
+    // band and 4.6b's pair masters are never a token's).
     ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.48"],
-    ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.6b"],
+    ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.48"],
     // Double-faced token: its front face's frame.
     ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
     // The List follows its collector prefix: TXLN is pre-M20, TKHM isn't.

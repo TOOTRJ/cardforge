@@ -315,6 +315,12 @@ Rules and gotchas:
   overlays draw right after the frame and in both finish masks, preloaded by
   `frameAssetPathsFor`; the bake's master / plate / overlay keys match the
   preview's (`anatomy-key-parity.test.ts`). `docs/FRAMES.md` "Printed pieces".
+  4.6b: m15 (gold-split `<pair>` + hybrid `<pair>-h`), m15artifact and m15land
+  (gold-split) draw the pairs — 40 bucket masters the CC importer builds over
+  the verified masters' own files (`pairMasterLayers`), every split through
+  the ONE untilted ramp module `scripts/lib/pair-ramp.mjs` (pinline 40→60,
+  box 46→58, crown 43→55 %W, premultiplied lerp — never CC's tilted
+  `maskRightHalf`); a pair rides its template's `m` tick (owner, V-A).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

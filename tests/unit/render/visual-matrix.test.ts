@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
-import { VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
+import { PAIR_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
 // The visual-regression matrix (tests/visual/matrix.ts, TODO 7.1) and its
@@ -60,7 +61,9 @@ describe("visual-regression matrix", () => {
   it("has unique, stable ids", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
-      expect(id).toMatch(/^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|crown(-(hd|foil|etched|square))?))?$/);
+      expect(id).toMatch(
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?))?$/,
+      );
     }
     expect(ids).toEqual([...ids].sort());
   });
@@ -83,21 +86,39 @@ describe("visual-regression matrix", () => {
     }
   });
 
-  it("switches the legendary crown on only in its @crown cases, on each template that draws it (TODO 4.6a)", () => {
+  it("switches the legendary crown on only in its crown cases, on each template that draws it (TODO 4.6a)", () => {
     const crowned = cases.filter((c) => (c.row.frame_style as { crown?: boolean }).crown === true);
-    expect(crowned.map((c) => c.id)).toEqual(cases.filter((c) => c.id.includes("@crown")).map((c) => c.id));
+    expect(crowned.map((c) => c.id)).toEqual(cases.filter((c) => /@(pair(-hybrid)?-)?crown/.test(c.id)).map((c) => c.id));
     expect([...new Set(crowned.map((c) => c.template))].sort()).toEqual(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown).sort(),
     );
     // Every one is Legendary (it draws the crown), in every finish and at HD;
-    // every other case is a stored card, which names no switch.
+    // every case with neither switch is a stored card, which names none.
     for (const c of crowned) expect(c.row.supertype, c.id).toMatch(/Legendary/);
     expect(new Set(crowned.map((c) => `${c.preset}/${c.finish}/${c.corners}`))).toEqual(
       new Set(["default/regular/round", "hd/regular/round", "default/foil/round", "default/etched/round", "default/regular/square"]),
     );
-    for (const c of cases.filter((x) => !crowned.includes(x))) {
+    const paired = cases.filter((c) => (c.row.frame_style as { twoColor?: boolean }).twoColor === true);
+    for (const c of cases.filter((x) => !crowned.includes(x) && !paired.includes(x))) {
       expect(Object.keys(c.row.frame_style as object).sort(), c.id).toEqual(["finish", "template"]);
     }
+    // The split crown: both switches on, on every template that draws both.
+    const both = crowned.filter((c) => paired.includes(c));
+    expect([...new Set(both.map((c) => c.template))].sort()).toEqual([...PAIR_TEMPLATES].sort());
+  });
+
+  it("bakes the two-colour frame (TODO 4.6b) on every template that draws pairs, in each dress it draws", () => {
+    const paired = FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).twoColorMasters ?? []).length > 0);
+    expect([...PAIR_TEMPLATES].sort()).toEqual([...paired].sort());
+    const on = cases.filter((c) => (c.row.frame_style as { twoColor?: boolean }).twoColor === true);
+    for (const template of paired) expect(on.some((c) => c.template === template && c.colour === "wu"), template).toBe(true);
+    // The hybrid dress (every coloured pip hybrid), a foil and an etched pair,
+    // and the stored bake's HD size.
+    expect(on.some((c) => c.template === "m15" && /^(\{[^}]*\/[^}]*\})+$/.test(String(c.row.cost)))).toBe(true);
+    expect(new Set(on.map((c) => c.finish))).toEqual(new Set(["regular", "foil", "etched"]));
+    expect(on.some((c) => c.preset === "hd")).toBe(true);
+    // Every other case is a stored card: it never names the switch.
+    for (const c of cases.filter((x) => !on.includes(x))) expect(c.row.frame_style, c.id).not.toHaveProperty("twoColor");
   });
 
   it("fingerprints what each case draws: the row, preset and corners — not the field order", () => {

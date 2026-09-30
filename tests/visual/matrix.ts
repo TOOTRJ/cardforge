@@ -22,10 +22,13 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     corners (print) on a few; an "edge" card (100/100, a four-mode
 //     Command, reversed-hybrid and unknown symbols — TODO 3.11) on one frame
 //     of each family;
-//   * the per-card anatomy switched ON (TODO 4.6a, "@crown…"): the long
-//     (Legendary) card with FrameStyle.crown on every template that draws the
-//     crown, in each crown key, plus HD, foil and etched on m15. The same
-//     cards without the switch are the plain cases — every stored card.
+//   * the per-card anatomy switched ON (TODO 4.6a "@crown…", 4.6b
+//     "@pair…"): the long (Legendary) card with FrameStyle.crown on every
+//     template that draws the crown, in each crown key, plus HD, foil and
+//     etched on m15; the two-colour pair (FrameStyle.twoColor) on every
+//     template that draws pairs, in each dress, and with both switches on
+//     (the split crown). The same cards without the switches are the plain
+//     cases — every stored card.
 //
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
@@ -359,8 +362,9 @@ const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agcla
 /** The legendary crown switched on (TODO 4.6a): the long card (Legendary) on
  *  every template that draws the crown, in every colour that picks a
  *  different band — m15: w u b r g, c (the see-through grey), wu and wub
- *  (gold: no pair masters yet); m15artifact: c (the silver), u; m15land: g,
- *  c (the land grey), wub (gold). */
+ *  (gold: a pair with its two-colour switch off draws gold; the split
+ *  crown is the "@pair-crown" cases); m15artifact: c (the silver), u;
+ *  m15land: g, c (the land grey), wub (gold). */
 const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   ["m15", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15artifact", ["c", "u"]],
@@ -414,13 +418,15 @@ export function visualCases(): VisualCase[] {
       finish?: VisualCase["finish"];
       suffix?: string;
       crown?: boolean;
+      /** Fields over the stored row (a switch on frame_style, a cost). */
+      row?: Partial<CardRowForBake>;
     } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = rowFor(template, kind, colour, shape, finish, id, extra.crown ?? false);
+    const row = { ...rowFor(template, kind, colour, shape, finish, id, extra.crown ?? false), ...extra.row };
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -466,9 +472,41 @@ export function visualCases(): VisualCase[] {
   add("m15", "creature", "r", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   add("m15", "creature", "u", "long", { crown: true, finish: "etched", suffix: "@crown-etched" });
   add("m15", "creature", "w", "long", { crown: true, corners: "square", suffix: "@crown-square" });
+  // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
+  // no stored card has the switch, so these are NEW cases, no bump): the
+  // gold-split pair on every template that draws one, the hybrid dress on
+  // m15, a finish of each dress and the stored bake's HD size.
+  const pairStyle = (template: FrameTemplate, finish: VisualCase["finish"] = "regular", crown = false) => ({
+    frame_style: crown ? { template, finish, crown: true, twoColor: true } : { template, finish, twoColor: true },
+  });
+  for (const template of PAIR_TEMPLATES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, "wu", "short", { suffix: "@pair", row: pairStyle(template) });
+    // A two-colour legend with both switches on: the split crown over its
+    // pair master (4.6a + 4.6b, one release).
+    add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
+  }
+  add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
+  add("m15", "creature", "wu", "long", {
+    suffix: "@pair-etched",
+    finish: "etched",
+    row: { ...pairStyle("m15", "etched"), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
+  add("m15", "creature", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15") });
+  // The split crown on the hybrid dress, and at the stored bake's size.
+  add("m15", "creature", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("m15", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
+  add("m15", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15", "regular", true) });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }
+
+/** The templates whose PROFILES entry declares two-colour pair masters
+ *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
+export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land"];
 
 /** A case's rough bake cost, for balancing shards: the HD bake rasterises
  *  four times the pixels and its masters at full size (~10× on the

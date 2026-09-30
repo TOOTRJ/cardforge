@@ -7,9 +7,9 @@
 // owner has never set it — and nothing changes until the owner turns it on.
 // A switch shows only where it can draw something: the template draws the
 // piece (its PROFILES entry declares it) and the card qualifies (Legendary
-// for the crown; a multicolour card for the two-colour frame). The crown
-// shows on m15 / m15artifact / m15land (4.6a); the two-colour frame comes
-// with 4.6b's pair masters.
+// for the crown; a multicolour card for the two-colour frame). Both draw on
+// the m15 / m15artifact / m15land PROFILES entries: the crown (4.6a) and the
+// two-colour pair masters (4.6b).
 //
 // The two-colour frame needs the card's colour PAIR (color_identity): the
 // "Two colours" row (TwoColorPairRow) — under the Multicolor chip on the
@@ -25,6 +25,7 @@ import {
   frameAnatomyOf,
   pairColorIdentity,
   qualifiesForCrown,
+  twoColorDressOf,
   twoColorFromCost,
   twoColorPairOf,
   type FrameAnatomyKey,
@@ -51,6 +52,13 @@ const ANATOMY_COPY: Record<FrameAnatomyKey, { label: string; help: string }> = {
     help: "The frame printed in the card's two colours. A cost made only of hybrid pips gets the hybrid frame.",
   },
 };
+
+/** Shown under the two-colour switch when the card's cost asks for the
+ *  hybrid dress on a frame that has none (m15artifact: no hybrid P/T plate
+ *  yet, TODO 4.6b) — the render falls back to the gold-split pair master
+ *  (lib/cards/anatomy.ts resolveTwoColor), and the owner should know why. */
+export const HYBRID_FALLBACK_NOTE =
+  "This frame has no hybrid version yet, so an all-hybrid cost gets the gold two-colour frame.";
 
 const PAIR_COLORS = ["white", "blue", "black", "red", "green"] as const;
 type PairColor = (typeof PAIR_COLORS)[number];
@@ -269,6 +277,11 @@ export function AnatomyPanel({
   const setPair = (next: TwoColorPair | null) =>
     setValue("color_identity", next ? pairColorIdentity(next) : ["multicolor"], { shouldDirty: true });
 
+  // An all-hybrid cost on a frame with no hybrid dress draws the gold-split
+  // pair (resolveTwoColor's fallback): say so under the switch.
+  const hybridFallback =
+    showTwoColor && twoColorDressOf(cost, cardType) === "hybrid" && !anatomy.twoColor.includes("hybrid");
+
   // A stored card that already names a pair keeps it: its colours are locked
   // like the rest of its colour. A stored plain-multicolour card gets the
   // row, pre-filled from the cost, once its owner switches the frame on.
@@ -305,6 +318,11 @@ export function AnatomyPanel({
               }
             }}
           >
+            {hybridFallback ? (
+              <p className="text-xs leading-5 text-muted" data-testid="anatomy-note-twoColor">
+                {HYBRID_FALLBACK_NOTE}
+              </p>
+            ) : null}
             {pairRow && twoColor === true && pairEditable ? (
               <TwoColorPairRow
                 pair={pair}

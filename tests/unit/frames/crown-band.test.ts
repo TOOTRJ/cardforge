@@ -11,19 +11,16 @@ import {
   CROWN_BAND_KEYS,
   OUT_H,
   OUT_W,
-  TWO_COLOR_PAIRS,
-  TWO_COLOR_RAMPS,
   compositeLayers,
   crownBandFindings,
   crownBandRecipe,
   crownBandSourceFiles,
   describeCrownBand,
-  lerpLayers,
   placeOnCanvas,
-  rampMask,
   rectPx,
   toRgba8,
 } from "@/scripts/lib/cc-frames.mjs";
+import { PAIR_RAMPS, TWO_COLOR_PAIRS, lerpLayers, rampMask } from "@/scripts/lib/pair-ramp.mjs";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
 
@@ -79,7 +76,7 @@ describe("the crown band's recipe", () => {
       right: "img/frames/m15/crowns/new/r.png",
       ramp: [43, 55],
     });
-    expect(TWO_COLOR_RAMPS.crown).toEqual([43, 55]);
+    expect(PAIR_RAMPS.crown).toEqual([43, 55]);
     expect(() => crownBandRecipe("uw")).toThrow();
     expect(() => crownBandRecipe("x")).toThrow();
     expect(describeCrownBand(crownBandRecipe("gu"))).toEqual([
@@ -98,7 +95,7 @@ describe("the crown band's recipe", () => {
     const box = { x: 0, y: 0, width: W, height: H };
     const left = placeOnCanvas(solidCanvas(W, H, [255, 0, 0, 255]), box, W, H);
     const right = placeOnCanvas(solidCanvas(W, H, [0, 0, 255, 255]), box, W, H);
-    const crown = lerpLayers(left, right, rampMask(W, H, TWO_COLOR_RAMPS.crown as [number, number]));
+    const crown = lerpLayers(left, right, rampMask(W, H, PAIR_RAMPS.crown as [number, number]));
     const cover = solidCanvas(W, H, [0, 0, 0, 0]);
     const out = toRgba8(compositeLayers([{ data: cover }, { data: crown }], W, H));
     const at = (x: number, y: number) => [...out.subarray((y * W + x) * 4, (y * W + x) * 4 + 4)];
@@ -111,7 +108,7 @@ describe("the crown band's recipe", () => {
     // A translucent shadow (both crowns α 99) stays α 99 through the split —
     // CC's stacking would raise it (α 160 on the prints' measure).
     const shade = (rgb: [number, number, number]) => placeOnCanvas(solidCanvas(W, H, [...rgb, 99]), box, W, H);
-    const shadow = lerpLayers(shade([0, 0, 0]), shade([0, 0, 0]), rampMask(W, H, TWO_COLOR_RAMPS.crown as [number, number]));
+    const shadow = lerpLayers(shade([0, 0, 0]), shade([0, 0, 0]), rampMask(W, H, PAIR_RAMPS.crown as [number, number]));
     for (let x = 0; x < W; x += 1) expect(shadow[x * 4 + 3], `x ${x}`).toBe(99);
   });
 
