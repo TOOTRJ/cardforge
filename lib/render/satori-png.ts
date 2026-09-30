@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ReactNode } from "react";
-import satori, { type Font } from "satori";
+import satori, { type Font, type SatoriNode } from "satori";
 import sharp from "sharp";
 import { applyCardCornerMask, squareCardCorners, type CardCornerFills } from "@/lib/cards/card-corner";
 import { loadLocalAdditionalAsset } from "@/lib/render/fallback-assets";
@@ -36,6 +36,13 @@ import { loadLocalAdditionalAsset } from "@/lib/render/fallback-assets";
 // in the corner, made opaque as drawn — the same function a free Square
 // download runs on the stored round bake. Unset — every OG / brand image —
 // the bytes are exactly what they were.
+//
+// A PRINT layer (lib/render/card-print.ts, TODO 6.10/6.1b) lays the card out
+// at the HD size and rasterizes it at `outputWidth` — sharp re-renders the
+// SVG's vectors at the target scale (the same pixels as a density bump, not
+// an upsample), so an 800 ppi card is the HD layout with 800 ppi text — and
+// may watch Satori's layout (`onNodeDetected`) to find the boxes it leaves
+// empty for the art. Unset (every other render) changes nothing.
 // ---------------------------------------------------------------------------
 
 export type PngRenderOptions = {
@@ -50,6 +57,13 @@ export type PngRenderOptions = {
    *  arc in its fill (null: as drawn) — lib/cards/card-corner.ts
    *  squareCardCorners. Opaque. */
   squareCornerFills?: CardCornerFills;
+  /** Rasterize at this width instead of `width` (the layout's): the vectors
+   *  are drawn at the target scale, embedded rasters are resampled. Print
+   *  layers only (lib/render/card-print.ts); unset = `width`. */
+  outputWidth?: number;
+  /** Satori's layout callback — every node's absolute box and props. Print
+   *  layers only; never changes the drawing. */
+  onNodeDetected?: (node: SatoriNode) => void;
 };
 
 export async function renderPng(element: ReactNode, options: PngRenderOptions): Promise<Buffer> {
@@ -62,8 +76,9 @@ export async function renderPng(element: ReactNode, options: PngRenderOptions): 
     // would carry one card's fallbacks into the next card's text layout.
     fonts: [...options.fonts],
     loadAdditionalAsset: loadLocalAdditionalAsset,
+    ...(options.onNodeDetected ? { onNodeDetected: options.onNodeDetected } : {}),
   });
-  const raster = sharp(new TextEncoder().encode(svg)).resize(options.width);
+  const raster = sharp(new TextEncoder().encode(svg)).resize(options.outputWidth ?? options.width);
   if (options.cornerRadiusPx === undefined) return raster.png().toBuffer();
   // Straight (unpremultiplied) RGBA out of the rasterizer, the corner cut
   // into its alpha, then the same PNG encode as the square path.

@@ -27,6 +27,13 @@ import sharp from "sharp";
 // servable bake — are capped per network (lib/cards/anon-render-limit.ts,
 // migration 0125 modelled by tests/stubs/anon-render-db.ts): over it, 429 +
 // Retry-After. Signed-in viewers, stored-bake serves and 304s never count.
+//
+// PRINT (TODO 6.1a / 6.1b): `?ppi=800` and/or `?bleed=1` render live through
+// lib/render/card-print.ts — always square, PNG only (a JPEG → 400), never
+// the stored bake, named <slug>-800ppi.png / -bleed.png / -800ppi-bleed.png,
+// with their own ETag — and follow the clean download's entitlement: a
+// watermarked viewer gets 403 UPGRADE_REQUIRED (800 ppi while
+// PRINT_800_PPI_PAID_ONLY). `ppi=600` alone is the plain download.
 // ---------------------------------------------------------------------------
 
 const ID = "22222222-2222-4222-8222-222222222222";
@@ -38,6 +45,7 @@ const state = vi.hoisted(() => ({
   card: null as Record<string, unknown> | null,
   paid: false,
   render: vi.fn(),
+  print: vi.fn(),
   viewer: null as { id: string } | null,
   activity: vi.fn(),
   admin: null as unknown,
@@ -66,6 +74,7 @@ vi.mock("@/lib/render/card-image", async (orig) => ({
   ...(await orig<typeof import("@/lib/render/card-image")>()),
   renderCardImage: state.render,
 }));
+vi.mock("@/lib/render/card-print", () => ({ renderCardPrint: state.print }));
 // Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
 // at v31 no older bake has only the v22 opt-in pending (the "owner kept the
 // older look" case). tests/stubs/layout-version-at.ts explains.
@@ -144,6 +153,10 @@ beforeEach(async () => {
   state.admin = limiter.client;
   // A fresh Response per call: a body can only be read once.
   state.render.mockImplementation(async () => new Response(new Uint8Array(livePng)));
+  state.print.mockReset();
+  state.print.mockImplementation(async () =>
+    sharp({ create: { width: 2200, height: 3000, channels: 3, background: "#00ff00" } }).png().toBuffer(),
+  );
   state.paid = false;
 });
 
@@ -568,5 +581,88 @@ describe("anonymous live renders are rate-limited (TODO 7.8)", () => {
     }
     expect((await download("default", ip("203.0.113.7"), "square")).status).toBe(429);
     expect((await download("default", { ...ip("203.0.113.7"), "if-none-match": tag }, "square")).status).toBe(304);
+  });
+});
+
+describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", () => {
+  async function printDownload(query: string, headers: Record<string, string> = {}) {
+    return GET(new NextRequest(`http://localhost/api/cards/${ID}/png?${query}`, { headers }), {
+      params: Promise.resolve({ id: ID }),
+    });
+  }
+
+  it.each([
+    ["ppi=800&corners=square", { ppi: 800, bleed: false }, "c-800ppi.png"],
+    ["ppi=600&corners=square&bleed=1", { ppi: 600, bleed: true }, "c-bleed.png"],
+    ["ppi=800&corners=round&bleed=1", { ppi: 800, bleed: true }, "c-800ppi-bleed.png"],
+    // The resolution is the ppi; a stray preset changes nothing.
+    ["preset=default&ppi=800", { ppi: 800, bleed: false }, "c-800ppi.png"],
+  ] as const)("paid: %s renders live through the print path, never the bake", async (query, print, filename) => {
+    state.paid = true;
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    const res = await printDownload(query);
+    expect(res.status).toBe(200);
+    expect(state.render).not.toHaveBeenCalled();
+    expect(state.print).toHaveBeenCalledWith(expect.anything(), { ...print, brandMark: false, watermarkText: null });
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("content-disposition")).toBe(`attachment; filename="${filename}"`);
+    expect((await sharp(Buffer.from(await res.arrayBuffer())).metadata()).width).toBe(2200);
+  });
+
+  it.each(["ppi=800", "bleed=1", "ppi=800&bleed=1"])(
+    "a watermarked (free) viewer asking %s gets 403 UPGRADE_REQUIRED, and nothing renders",
+    async (query) => {
+      state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+      const res = await printDownload(`${query}&corners=square`);
+      expect(res.status).toBe(403);
+      expect((await res.json()).code).toBe("UPGRADE_REQUIRED");
+      expect(state.print).not.toHaveBeenCalled();
+      expect(state.render).not.toHaveBeenCalled();
+    },
+  );
+
+  it("is PNG only: a JPEG print request is a 400", async () => {
+    state.paid = true;
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    expect((await printDownload("ppi=800&format=jpeg")).status).toBe(400);
+    expect((await printDownload("bleed=1&format=jpeg")).status).toBe(400);
+    expect(state.print).not.toHaveBeenCalled();
+  });
+
+  it("ppi=600 without bleed is the plain download — same bytes path, same ETag", async () => {
+    state.paid = true;
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    const plain = await download("hd", {}, "square");
+    const same = await printDownload("preset=hd&corners=square&ppi=600&bleed=0");
+    expect(state.print).not.toHaveBeenCalled();
+    expect(same.headers.get("etag")).toBe(plain.headers.get("etag"));
+    expect(same.headers.get("content-disposition")).toBe('attachment; filename="c-square.png"');
+  });
+
+  it("each print render has its own ETag (and a repeat answers 304)", async () => {
+    state.paid = true;
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    const tags = new Set<string | null>();
+    tags.add((await download("hd", {}, "square")).headers.get("etag"));
+    for (const query of ["ppi=800", "bleed=1", "ppi=800&bleed=1"]) {
+      const tag = (await printDownload(query)).headers.get("etag");
+      tags.add(tag);
+      state.print.mockClear();
+      expect((await printDownload(query, { "if-none-match": tag! })).status).toBe(304);
+      expect(state.print).not.toHaveBeenCalled();
+    }
+    expect(tags.size).toBe(4);
+  });
+
+  it("records the resolution and the bleed for a signed-in viewer", async () => {
+    state.paid = true;
+    state.viewer = { id: "viewer-1" };
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    await printDownload("ppi=800&bleed=1");
+    expect(state.activity).toHaveBeenCalledWith(expect.anything(), {
+      userId: "viewer-1",
+      kind: "download",
+      props: { format: "png", preset: "800ppi", clean: true, corners: "square", layout: "bleed" },
+    });
   });
 });

@@ -3,7 +3,8 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/analytics/funnel-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { renderCardImage } from "@/lib/render/card-image";
+import { renderCardPrint } from "@/lib/render/card-print";
+import { parseBleedParam } from "@/lib/cards/print-export";
 import {
   downloadBrandMark,
   getEntitlements,
@@ -22,6 +23,15 @@ import { isUuid } from "@/lib/ids";
 //   ?layout=card                  → single card on a 2.5"×3.5" page (default)
 //   ?layout=sheet&paper=letter    → 9-up US Letter sheet with crop marks
 //   ?layout=sheet&paper=a4        → 9-up A4 sheet with crop marks
+//   ?layout=card&bleed=1          → single card WITH a 1/8" bleed (TODO 6.1a):
+//                                   a 2.75"×3.75" bleed box on a page with a
+//                                   1/4" slug, crop marks on the trim lines,
+//                                   TrimBox + BleedBox set. Single card only
+//                                   (a sheet with bleed → 400; 6.15).
+//
+// Every PDF renders through the PRINT path (lib/render/card-print.ts, TODO
+// 6.10): square corners, the art composited at full resolution under the
+// HD layout — never the art's 1600 px inline copy.
 //
 // Legacy alias (preserved for existing share/embed links):
 //   ?sheet=true                   ≡ ?layout=sheet&paper=letter
@@ -57,6 +67,7 @@ export async function GET(
   const sheetParam = params2.get("sheet");
   const layoutParam = params2.get("layout");
   const paperParam = params2.get("paper");
+  const bleed = parseBleedParam(params2.get("bleed"));
 
   // Resolve the effective layout. Order of precedence:
   //   1. ?layout=<value> when valid
@@ -77,6 +88,16 @@ export async function GET(
     layout = "sheet-a4";
   } else if (layout === "sheet" && paperParam === "letter") {
     layout = "sheet-letter";
+  }
+
+  // The bleed is laid out for the single-card page only (TODO 6.1a); a 3×3
+  // bleed sheet doesn't fit US Letter (8.25" × 11.25") — sheet options are
+  // TODO 6.15.
+  if (bleed && layout !== "card") {
+    return NextResponse.json(
+      { error: "Bleed is available on the single-card PDF only." },
+      { status: 400 },
+    );
   }
 
   // Fetch the card row (RLS applies — anon can read public/unlisted).
@@ -128,9 +149,10 @@ export async function GET(
     profileOverrides,
   );
 
-  // The print source is the HD (1500×2100) render. The stored bake is the
-  // always-watermarked display copy (layout v20); a PDF is a paid feature
-  // and therefore clean, so it always renders live.
+  // The print source is the HD (1500×2100, 600 ppi) layout through the print
+  // path (full-resolution art — TODO 6.10), plus the bleed when asked. The
+  // stored bake is the always-watermarked display copy (layout v20); a PDF
+  // is a paid feature and therefore clean, so it always renders live.
   const stamp = await ownerExportStamp(card.owner_id);
   const footerText = stamp.brandMark
     ? null
@@ -144,13 +166,16 @@ export async function GET(
     // Print is always SQUARE (TODO 3.26): the card page and the 3×3 sheets
     // are cut along the rectangle and its crop marks, and the corner outside
     // the arc prints in the card's border colour (the border black, #101015
-    // on a ring — lib/frames/square-corners.ts), never transparent.
-    const imgResponse = await renderCardImage(previewData, "hd", {
-      brandMark,
-      watermarkText: footerText,
-      corners: "square",
-    });
-    pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+    // on a ring — lib/frames/square-corners.ts), never transparent. The
+    // print path squares every render it makes.
+    pngBytes = new Uint8Array(
+      await renderCardPrint(previewData, {
+        ppi: 600,
+        bleed,
+        brandMark,
+        watermarkText: footerText,
+      }),
+    );
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(
@@ -162,7 +187,7 @@ export async function GET(
   // Build the PDF.
   let pdfBytes: Uint8Array;
   try {
-    pdfBytes = await buildCardPdf(pngBytes, layout, card.title);
+    pdfBytes = await buildCardPdf(pngBytes, layout, card.title, { bleed });
   } catch (err) {
     const detail = err instanceof Error ? err.message : "PDF error";
     return NextResponse.json(
@@ -176,7 +201,9 @@ export async function GET(
       ? `${card.slug}-sheet-a4.pdf`
       : layout === "sheet" || layout === "sheet-letter"
         ? `${card.slug}-sheet.pdf`
-        : `${card.slug}.pdf`;
+        : bleed
+          ? `${card.slug}-bleed.pdf`
+          : `${card.slug}.pdf`;
 
   // PDFs are entitlement-scoped downloads — never shared-cache them.
   const cacheControl = "private, no-store";
@@ -188,7 +215,7 @@ export async function GET(
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",
-      props: { format: "pdf", layout },
+      props: { format: "pdf", layout: bleed ? `${layout}-bleed` : layout },
     });
   }
 
