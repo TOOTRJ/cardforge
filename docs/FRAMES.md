@@ -146,6 +146,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
 - **Source.** The fork at the pinned commit, cached under
   `~/.cache/pipglyph-cc/<commit>`, or set `CC_CACHE`. It takes about
   4 minutes for the M15 family; `--only` builds a subset.
+- **Pairs.** m15, m15artifact and m15land also build their two-colour pair
+  masters (`<pair>.png`, and m15's hybrid `<pair>-h.png`; TODO 4.6b —
+  [The two-colour frames](#the-two-colour-frames-46b)).
 - **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Layers are composited
   exactly as Card Conjurer draws them: only each mask's alpha counts, in
   CC's draw order, at the pack's native size, then downscaled once. A
@@ -373,7 +376,8 @@ frame change](#shipping-a-frame-change)).
    Card Conjurer frame lives in the bucket only; an MSE frame lives in git.
 2. **Build the masters.** One 1500×2100 PNG per colour key
    `w u b r g c m` (`FRAME_COLOR_KEYS`; plus `a` only for a profile with
-   `artifactMasterKeys`), 2100×1500 for a landscape frame. The art window
+   `artifactMasterKeys`, and the pair masters only for one with
+   `twoColorMasters`), 2100×1500 for a landscape frame. The art window
    is cut to α = 0 so the art renders below the frame; the corners are cut
    at the one card corner; each PNG has its WebP sibling.
    - Card Conjurer: a recipe in `CC_TEMPLATES` (`scripts/lib/cc-frames.mjs`),
@@ -747,8 +751,10 @@ cards it changes.
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
 additions (above): opt-in per card, never a sweep, never a badge. The
-plumbing is `lib/cards/anatomy.ts`; 4.6.0 ships it with no template drawing
-anything, so it changes no card.
+plumbing is `lib/cards/anatomy.ts`; 4.6.0 shipped it with no template drawing
+anything, and a template only draws a piece once its `PROFILES` entry
+declares it, so no stored card ever changes (4.6b: the two-colour frames on
+m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
 
 - **The switches are card data:** `frame_style.crown` and
   `frame_style.twoColor` (booleans, `frameStyleBaseSchema`). Both renderers
@@ -801,10 +807,52 @@ anything, so it changes no card.
 Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
 into `.frames-build`, publish to the dev bucket, declare it on the
 `PROFILES` entry, update the pinned sets in `tests/unit/cards/anatomy.test.ts`,
-sign it off on a print sheet in the PR, promote, merge, and post the site
-update ([Announcing a change](#announcing-a-change)). No bump, no sweep: a
-card gets the look when its owner switches it on, and new cards get it by
+add its cases to the visual matrix (`tests/visual/matrix.ts`: new cases, no
+bump), sign it off on a print sheet in the PR, promote, merge, and post the
+site update ([Announcing a change](#announcing-a-change)). No bump, no sweep:
+a card gets the look when its owner switches it on, and new cards get it by
 default.
+
+#### The two-colour frames (4.6b)
+
+40 pair masters in the frames bucket: m15 draws both of print's dresses —
+gold-split `<pair>.png` (the gold frame and bars, the pinline and text box
+split; FDN #122) and hybrid `<pair>-h.png` (the outer frame split too, CC's
+grey land bars, the grey plate `pt/c`; TLA #212 and TLA #223–252) — and
+m15artifact (the artifact frame, gold bars and plate; DFT gearhulks) and
+m15land (the land frame and bars, the split in the two land tints; MKM
+#259–271) the gold-split one. `twoColorMasters` says which, on those three
+`PROFILES` entries only.
+
+- **Built by the Card Conjurer importer** (`pairMasterLayers` in
+  `scripts/lib/cc-frames.mjs`) over the SAME pack files as each template's
+  verified masters, drawn the way those are: m15 and m15land from CC's whole
+  image (m.png / a hybrid's two colours / l.png) with the split regions over
+  it; m15artifact from regions only, like its coloured artifacts. A split
+  region is its two colours' files blended across an UNTILTED ramp by a
+  premultiplied lerp — `scripts/lib/pair-ramp.mjs`, the one module the pair
+  crown bands read too: pinline and a hybrid's frame 40→60 %W, text box
+  46→58, crown 43→55 (CC's `maskRightHalf.png` tilts +1.35 %W; the prints
+  don't). The same run rebuilds the templates' mono masters byte-identical
+  to the manifest, and every pair master passes the edge contract, the
+  corner check, the square-corner table and the art-window check (the mono
+  masters' 2.65 px hairline).
+- **Measured like the prints** (`tests/unit/render/two-colour-bake-pixels.test.tsx`
+  bakes them at HD): the pinline's 10 / 50 / 90 % points at 10.8 and
+  55.9 %H within ±1.5 %W of the 47 prints' 42.2 / 50.3 / 58.8 with no tilt,
+  the text box's within ±1.5 of the 37 prints' 47.2 / 51.3 / 56.8, the first
+  canonical colour (WU WB UB UR BR BG RG RW GW GU) on the left.
+- **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
+  no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
+  (the creator says so under the switch) and its import stays `nearest`
+  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
+  devoid, borderless, extended art, tokens — keeps the `two-colour` gaps,
+  now pointing at 4.6f.
+- **Verification (owner decision 2026-09-29, V-A):** a pair rides its
+  template's `m` tick — a deterministic recipe over the verified masters,
+  like `a` riding `c` — and the owner signs off a pair sheet in the PR
+  (10 pairs × dress × template beside the FDN / TLA / DFT / MKM prints, and
+  the ramp table). No migration, no tick goes stale.
 
 ## Text sizes on the M15-era family
 
