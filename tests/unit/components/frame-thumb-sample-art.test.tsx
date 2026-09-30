@@ -17,21 +17,39 @@ import { FRAME_TEMPLATE_VALUES, type CardType, type ColorIdentity, type FrameTem
 // master read as a black tile. The owner added six more near-black tiles on
 // 2026-09-27 (Anime, Ghostfire, the ZNR hedron, both textless frames, Nyx):
 // no rule picks exactly those, so they opt in by name
-// (FrameProfile.pickerSampleArt). Every other tile is drawn exactly as
-// before, and no card surface ever draws the sample.
+// (FrameProfile.pickerSampleArt). The full-art tokens (TODO 4.48 / 4.50,
+// 2026-09-29) opt in too: their art runs to the black ring, so their bare
+// masters are two pills on a clear card. Every other tile is drawn exactly
+// as before, and no card surface ever draws the sample.
 // ---------------------------------------------------------------------------
 
 afterEach(() => cleanup());
 
-const ART_FIRST: FrameTemplate[] = ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"];
-/** The owner's six (2026-09-27), in FRAME_TEMPLATE_VALUES order. */
-const OPT_IN: FrameTemplate[] = ["bloomanime", "tarkirghostfire", "fullart", "m15textless", "m15textlessland", "nyx"];
-/** Every tile that draws the sample — exactly these 10 of the 42 templates,
+const ART_FIRST: FrameTemplate[] = [
+  "m15borderless",
+  "m15borderlessartifact",
+  // 4.33's borderless planeswalkers: art to the edges, so art-first by rule.
+  "m15borderlesspw",
+  "m15borderlesspwtall",
+  "m15fullartland",
+  "fullartland",
+];
+/** The full-art tokens (4.48 / 4.50), in FRAME_TEMPLATE_VALUES order. */
+const M20_TOKENS: FrameTemplate[] = [
+  "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+];
+/** The owner's six (2026-09-27) and the full-art tokens, in
+ *  FRAME_TEMPLATE_VALUES order. */
+const OPT_IN: FrameTemplate[] = [...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "m15textless", "m15textlessland", "nyx"];
+/** Every tile that draws the sample — exactly these 18 of the 51 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
 const SAMPLED: FrameTemplate[] = [
+  ...M20_TOKENS,
   "m15borderless",
   "m15borderlessartifact",
+  "m15borderlesspw",
+  "m15borderlesspwtall",
   "bloomanime",
   "tarkirghostfire",
   "fullart",
@@ -54,7 +72,7 @@ function tile(template: FrameTemplate, colorKey: string, type: TileType) {
 }
 
 describe("artFillsCard — which frames are art-first", () => {
-  it("is the borderless M15 skins and both full-art basics, nothing else", () => {
+  it("is the borderless M15 skins, the borderless planeswalkers and both full-art basics, nothing else", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => artFillsCard(getFrameProfile(t)))).toEqual(ART_FIRST);
   });
 
@@ -78,8 +96,8 @@ describe("artFillsCard — which frames are art-first", () => {
   });
 });
 
-describe("pickerSampleArt — the owner's six near-black tiles opt in by name", () => {
-  it("is set (to true) on exactly the six profiles, none of them art-first", () => {
+describe("pickerSampleArt — the owner's six near-black tiles (and the full-art tokens) opt in by name", () => {
+  it("is set (to true) on exactly the six profiles and the six full-art tokens, none of them art-first", () => {
     const flagged = FRAME_TEMPLATE_VALUES.filter((t) => "pickerSampleArt" in getFrameProfile(t));
     expect(flagged).toEqual(OPT_IN);
     for (const t of OPT_IN) {
@@ -98,7 +116,7 @@ describe("pickerSampleArt — the owner's six near-black tiles opt in by name", 
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 10 of the 42 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 18 of the 51 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -113,7 +131,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       expect(counts.with === 0 || counts.without === 0, template).toBe(true);
       if (counts.with > 0) drawn.add(template);
     }
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(42);
+    // 48 + 4.33's two borderless planeswalkers + 4.52's emblem, whose silver
+    // master reads as itself on the tile.
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(51);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 
@@ -153,10 +173,14 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     const expected: Record<string, [number, number]> = {
       bloomanime: [93, 92],
       tarkirghostfire: [93, 92],
-      fullart: [92, 88.3],
+      // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
+      // box (fullart's out past its ring's rim too).
+      fullart: [92.4, 90.3],
       m15textless: [84, 80.7],
       m15textlessland: [84, 80.7],
-      nyx: [88, 70],
+      nyx: [88, 81.8],
+      // The full-art tokens: CC's art bounds with 7.6's overscan.
+      ...Object.fromEntries(M20_TOKENS.map((t) => [t, [92.2, 89.6] as [number, number]])),
     };
     for (const t of OPT_IN) {
       const art = tile(t, "u", null).querySelector<HTMLElement>("[data-frame-sample-art]")!;

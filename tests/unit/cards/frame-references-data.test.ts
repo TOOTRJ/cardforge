@@ -55,6 +55,28 @@ const DOCUMENTED_NULLS = new Set([
   // either (4.49 (b)).
   "m15tokenartifacttext/w", "m15tokenartifacttext/b", "m15tokenartifacttext/r", "m15tokenartifacttext/g",
   "m15tokenartifacttext/m",
+  // The emblem (TODO 4.52): colourless by rule (CR 114) — every printed one
+  // is on the one silver frame, so only `c` has printings.
+  "emblem/w", "emblem/u", "emblem/b", "emblem/r", "emblem/g", "emblem/m",
+  // The full-art tokens (4.48 / 4.50; heights measured on the prints,
+  // Scryfall 2026-09-29): no red, colourless or three-colour tall token
+  // outside a legend; no black (T40K #14 prints its own layout), green or
+  // three-colour textless artifact token; no green or non-legendary gold
+  // text-box one; tall artifact tokens are colourless (Map, MKM's Clues).
+  "m20tokentall/r",
+  "m20tokentall/c",
+  "m20tokentall/m",
+  "m20tokenartifact/b",
+  "m20tokenartifact/g",
+  "m20tokenartifact/m",
+  "m20tokenartifacttext/g",
+  "m20tokenartifacttext/m",
+  "m20tokenartifacttall/w",
+  "m20tokenartifacttall/u",
+  "m20tokenartifacttall/b",
+  "m20tokenartifacttall/r",
+  "m20tokenartifacttall/g",
+  "m20tokenartifacttall/m",
   "adventure/c",
   "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
   "aftermath/c",
@@ -316,6 +338,58 @@ describe("4.49 (b) text-box token references", () => {
         for (const ref of frameReferenceOptions(template, key)) expect(ARCH.has(ref.set), `${template}/${key} ${ref.set}`).toBe(true);
       }
       expect(frameReferenceNote(template).note).toMatch(/2014–19 arch/);
+    }
+  });
+});
+
+// TODO 4.48 / 4.50: the full-art tokens are referenced to M20+ prints of
+// their own height — measured on the Scryfall PNGs (the type pill at ~81,
+// ~67 or ~56 %H), since Scryfall has no field for it — mono-colour, no
+// legend (the crown and two-colour gradients are 4.6), m = three colours.
+describe("4.48 / 4.50 full-art token references", () => {
+  const ids = (template: string, key: string) =>
+    frameReferenceOptions(template, key).map((r) => `${r.set} ${r.name}`);
+
+  it("m20token: textless prints, TFDN first; the first-year TM20 #2 and T2XM #4 on white", () => {
+    expect(ids("m20token", "w")).toEqual(["tfdn Soldier", "tm20 Soldier", "t2xm Cat"]);
+    expect(ids("m20token", "u")).toEqual(["tfdn Ninja", "tsoc Illusion"]);
+    expect(ids("m20token", "b")).toEqual(["tfdn Zombie", "tfdc Zombie"]);
+    expect(ids("m20token", "r")).toEqual(["tfdn Goblin", "tfic Rebel"]);
+    expect(ids("m20token", "g")).toEqual(["tfdn Raccoon", "tpip Squirrel"]);
+    expect(ids("m20token", "c")).toEqual(["teoe Sliver", "tcmm Eldrazi"]);
+    expect(ids("m20token", "m")).toEqual(["tm3c Sand Warrior", "tdmu Sand Warrior"]);
+  });
+
+  it("m20tokentext: the regular box (TFDN #27 Cat, TFDN #26 Copy)", () => {
+    expect(ids("m20tokentext", "w")).toEqual(["tfdn Cat", "tfdn Spirit"]);
+    expect(ids("m20tokentext", "c")).toEqual(["tmh3 Eldrazi Spawn", "tfdn Copy"]);
+    expect(ids("m20tokentext", "m")).toEqual(["ttdm Reliquary Dragon", "tfin Elemental"]);
+  });
+
+  it("m20tokentall: the tall box (TBLB #5 Warren Warleader)", () => {
+    expect(ids("m20tokentall", "w")).toEqual(["tblb Warren Warleader", "tdrc Angel of Sanctions"]);
+    expect(ids("m20tokentall", "u")).toEqual(["tblb Thundertrap Trainer"]);
+    for (const key of ["r", "c", "m"] as const) expect(FRAME_REFERENCES.m20tokentall[key]).toBeNull();
+  });
+
+  it("the artifact templates: TFDN #23 Treasure, TDSK #7 Toy, TSOC #8 Myr, TMH3 #18 Wurm, TMOC #25 Gremlin, TLCI #17 Map", () => {
+    expect(ids("m20tokenartifact", "c")).toEqual(["teoc Golem", "tcmm Servo"]);
+    expect(ids("m20tokenartifact", "w")).toEqual(["tdsk Toy"]);
+    expect(ids("m20tokenartifact", "u")).toEqual(["tsoc Phyrexian Myr", "tm3c Phyrexian Myr"]);
+    expect(ids("m20tokenartifact", "r")).toEqual(["tmoc Gremlin"]);
+    expect(ids("m20tokenartifacttext", "c")).toEqual(["tfdn Treasure", "tfdn Food"]);
+    expect(ids("m20tokenartifacttext", "b")).toEqual(["tmh3 Phyrexian Wurm", "tmh3 Phyrexian Wurm"]);
+    expect(ids("m20tokenartifacttall", "c")).toEqual(["tlci Map", "tmkm Clue"]);
+    expect(FRAME_REFERENCES.m20tokenartifacttext.c?.scryfallId).toBe("21210145-8edd-41f5-9a64-9f0b5be79864");
+  });
+
+  it("lists only M20+ prints (released from 2019-07-12), none on the 2014–19 arch frames", () => {
+    const ARCH = new Set(["tdom", "tm19", "tm15", "tc16", "twar", "tsoi", "txln", "tc17", "tbfz", "togw", "tc18", "tkld", "tmh1", "temn"]);
+    for (const template of ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"]) {
+      for (const key of FRAME_COLOR_KEYS) {
+        for (const ref of frameReferenceOptions(template, key)) expect(ARCH.has(ref.set), `${template}/${key} ${ref.set}`).toBe(false);
+      }
+      expect(frameReferenceNote(template).note).toMatch(/full-art/);
     }
   });
 });

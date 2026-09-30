@@ -44,7 +44,12 @@ const slot = (score: number, best: number, dxPct: number, dyPct: number): SlotSc
 
 describe("scope", () => {
   it("a treatment is its frame set, base frame first", () => {
-    expect(templatesForTreatment("borderless")).toEqual(["m15borderless", "m15borderlessartifact"]);
+    expect(templatesForTreatment("borderless")).toEqual([
+      "m15borderless",
+      "m15borderlessartifact",
+      "m15borderlesspw",
+      "m15borderlesspwtall",
+    ]);
     expect(templatesForTreatment("fullartset")).toEqual([
       "m15fullartland",
       "fullartland",

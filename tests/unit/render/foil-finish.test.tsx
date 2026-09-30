@@ -110,6 +110,14 @@ describe("foilArtLayers", () => {
     expect(foilArtLayers({ layout: m15, colorKey: "w", art: null, artPosition: {} })).toEqual([]);
   });
 
+  it("masks m15pw/c's ONE picture as one layer, in the under-frame rect at the card's zoom (layout v35)", () => {
+    const walker = getFrameProfile("m15pw");
+    const c = foilArtLayers({ layout: walker, colorKey: "c", art, artPosition: { scale: 2 } });
+    expect(c.map((l) => [l.rect, l.scale])).toEqual([[{ topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 }, 2]]);
+    // A coloured walker: its own slot, no under-frame layer.
+    expect(foilArtLayers({ layout: walker, colorKey: "u", art, artPosition: {} }).map((l) => l.rect)).toEqual([walker.artSlot]);
+  });
+
   it("rotates a split's second window with its face", () => {
     const split = getFrameProfile("split");
     const layers = foilArtLayers({ layout: split, colorKey: "w", art, artPosition: {}, secondArt: art, secondArtPosition: {} });
@@ -493,11 +501,22 @@ const cardSpaceBox = (r: { topPct: number; leftPct: number; widthPct: number; he
     .join(" ");
 
 describe("foil backdrops — which frames have one", () => {
-  it("is exactly the six templates whose foil bakes FoilBackdropSheen changes", () => {
+  it("is exactly the eight templates whose foil bakes FoilBackdropSheen changes", () => {
     // A frame that gains a rules backdrop changes its foil bakes, so it
-    // needs a layout-version bump scoped to it.
+    // needs a layout-version bump scoped to it — but for a NEW template no
+    // card was ever baked on (4.33's borderless planeswalkers, which keep
+    // m15pw's box for a walker with no ability text).
     const withBackdrop = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.backdropHex);
-    expect(withBackdrop).toEqual(["m15token", "m15pw", "m15tokenartifact", "alphatoken", "bloomanime", "expeditionland"]);
+    expect(withBackdrop).toEqual([
+      "m15token",
+      "m15pw",
+      "m15tokenartifact",
+      "m15borderlesspw",
+      "m15borderlesspwtall",
+      "alphatoken",
+      "bloomanime",
+      "expeditionland",
+    ]);
     // The renderers read only the rules slot's.
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);

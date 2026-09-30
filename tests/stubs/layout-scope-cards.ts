@@ -30,4 +30,8 @@ export const UNTOUCHED_SINCE_V22 = {
   rules_text: null,
   flavor_text: null,
   face_content: null,
+  // v35 (the art-area corrections) reads the master it paints and its art:
+  // a blue card with no art.
+  color_identity: ["blue"],
+  art_url: null,
 };

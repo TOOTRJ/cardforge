@@ -143,6 +143,12 @@ export const TYPE_HUB_COPY: Record<CardType, TypeHubCopy> = {
       "Tokens are the game pieces other cards make — creatures, treasures and emblems worth printing for your own deck. These public custom tokens were designed with PipGlyph's token frame.",
     guide: { href: "/articles/designing-custom-mtg-tokens", label: "Designing custom MTG tokens" },
   },
+  emblem: {
+    title: "Custom MTG emblem cards",
+    intro:
+      "Emblems are what a planeswalker's ultimate leaves behind: a lasting effect with no colour, cost or stats, printed on a silver frame with the planeswalker's name on top. These public custom emblems were made with PipGlyph's emblem frame.",
+    guide: { href: "/articles/designing-custom-mtg-tokens", label: "Designing custom MTG tokens and emblems" },
+  },
   spell: { title: "Custom MTG spells", intro: "" },
 };
 

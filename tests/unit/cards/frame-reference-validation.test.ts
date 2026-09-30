@@ -155,13 +155,33 @@ describe("validateReferenceForCombo", () => {
   });
 
   it("warns when the kind cannot be derived", () => {
+    // A Plane (no PipGlyph card type). An emblem used to be the example;
+    // since TODO 6.23 it is the emblem kind (below).
     const result = validateReferenceForCombo(
-      card({ type_line: "Emblem", layout: "emblem", color_identity: [], colors: [] }),
+      card({ type_line: "Plane — Dominaria", layout: "planar", color_identity: [], colors: [] }),
       "m15",
       "c",
     );
     expect(result.errors).toEqual([]);
     expect(result.warnings.some((w) => /kind of card/.test(w))).toBe(true);
+  });
+
+  // TODO 6.23 / 4.52: an emblem is the emblem kind, on the emblem frame only.
+  it("accepts an M20-design emblem on emblem/c and refuses it on any other frame", () => {
+    const emblem = card({
+      name: "Kaito, Cunning Infiltrator Emblem",
+      type_line: "Emblem",
+      layout: "emblem",
+      set: "tfdn",
+      collector_number: "24",
+      released_at: "2024-11-15",
+      color_identity: [],
+      colors: [],
+    });
+    expect(validateReferenceForCombo(emblem, "emblem", "c")).toEqual({ errors: [], warnings: [] });
+    expect(validateReferenceForCombo(emblem, "m15token", "c").errors).toEqual([
+      "Kaito, Cunning Infiltrator Emblem is an emblem; the Token (2014–2019) frame doesn't dress that kind.",
+    ]);
   });
 
   // TODO 1.7: the curated m15artifact/c reference IS an Artifact Creature

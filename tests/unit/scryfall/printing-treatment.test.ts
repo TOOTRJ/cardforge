@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import printings from "./fixtures/treatment-printings.json";
+import signaturePrintings from "./fixtures/signature-printings.json";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import {
   frameTemplateFromScryfall,
@@ -184,7 +185,7 @@ describe("printingTreatmentNotice — the creator's toast after the frame lands"
       "This printing is full art — PipGlyph used the M15 (2015) Land frame.",
     );
     expect(printingTreatmentNotice("fullart", "m15token")).toBe(
-      "This printing is full art — PipGlyph used the M15 (2015) Token frame.",
+      "This printing is full art — PipGlyph used the M15 (2015) Token (2014–2019) frame.",
     );
     expect(printingTreatmentNotice("textless", "m15")).toBe(
       "This printing is textless — PipGlyph used the M15 (2015) Standard frame.",
@@ -249,6 +250,25 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     for (const kind of ["planeswalker", "land", "token", "saga", "battle"] as const) {
       expect(printingTreatmentOffer({ ...base, kind }, keys), kind).toBeNull();
     }
+  });
+
+  it("offers the borderless planeswalker (4.33) — the tall box for four printed rows — once verified in its colour", () => {
+    // Basri Ket M21 #280 (three rows) and Teferi, Master of Time M21 #281
+    // (a static + three abilities) land on the bordered m15pw (1.18).
+    const walkerOf = (key: "m21-280" | "m21-281") =>
+      mapScryfallToFormPatch(scryfallCardSchema.parse(signaturePrintings[key]));
+    expect(walkerOf("m21-280").frame_template).toBe("m15pw");
+    expect(printingTreatmentOffer(walkerOf("m21-280"), verified(["m15borderlesspw", "w"]))).toEqual({
+      template: "m15borderlesspw",
+      frameLabel: "Borderless Planeswalker",
+      actionLabel: "Use Borderless Planeswalker",
+    });
+    expect(printingTreatmentOffer(walkerOf("m21-281"), verified(["m15borderlesspwtall", "u"]))?.template).toBe(
+      "m15borderlesspwtall",
+    );
+    // Only the box the rows pick, and only verified in the card's colour.
+    expect(printingTreatmentOffer(walkerOf("m21-281"), verified(["m15borderlesspw", "u"]))).toBeNull();
+    expect(printingTreatmentOffer(walkerOf("m21-280"), verified(["m15borderlesspw", "u"]))).toBeNull();
   });
 
   it("lands a full-art basic on the black-bordered full-art basic itself, once verified (no offer)", () => {

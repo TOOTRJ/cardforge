@@ -71,13 +71,28 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
       );
       return;
     }
-    expect(match.template, `${row.combo} ${match.signature} ${match.reason ?? ""}`).toBe(row.template);
+    // A full-art token (TODO 4.48) resolves to its own template through
+    // `onceVerified`: the 2014–19 arch stands in until it is verified.
+    expect(match.onceVerified ?? match.template, `${row.combo} ${match.signature} ${match.reason ?? ""}`).toBe(row.template);
     expect(match.status).not.toBe("unsupported");
   });
 
   it("every allowlisted combo is still in the registry", () => {
     const combos = new Set(rows.map((row) => row.combo));
     for (const combo of Object.keys(ALLOWLIST)) expect(combos.has(combo), combo).toBe(true);
+  });
+
+  // The borderless planeswalkers (TODO 4.33) are verified against these
+  // printings, so each must print the dress the master draws: the light
+  // bars with dark ink, in one colour, no nickname or indicator — `exact`,
+  // no gap. A dark-barred black walker (BLC #78's white ink only looks
+  // light over its pale art) or an `inverted` one would verify the frame
+  // against a look it doesn't draw.
+  const walkerRows = rows.filter((row) => row.template === "m15borderlesspw" || row.template === "m15borderlesspwtall");
+  it.each(walkerRows)("$combo $ref.name prints the light borderless walker itself (4.33)", (row) => {
+    const match = frameMatchFromScryfall(scryfallCardSchema.parse(printings[row.ref.scryfallId]));
+    expect(match, `${row.combo} ${match.signature}`).toMatchObject({ status: "exact", signature: "borderless/planeswalker" });
+    expect(match.gaps ?? []).toEqual([]);
   });
 });
 
@@ -131,7 +146,7 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     const treasure = card("720f3e68-84c0-462e-a0d1-90236ccc494a");
     expect(treasure.name).toBe("Treasure");
     expect(validateReferenceForCombo(treasure, "m15token", "c").warnings.join(" ")).toMatch(
-      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token\./,
+      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token \(2014–2019\)\./,
     );
     expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });

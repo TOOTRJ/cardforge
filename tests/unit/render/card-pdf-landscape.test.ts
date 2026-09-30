@@ -351,10 +351,22 @@ describe("card PDF — the 1/8 in bleed page (TODO 6.1a)", () => {
     expect(designCorners(page.images[0].ctm)).toEqual(bleedCorners("landscape"));
   });
 
-  it("the plain card page is unchanged, and a bleed sheet is refused", async () => {
+  it("the plain card page is unchanged", async () => {
     const [plain] = await inspect(await buildCardPdf(PORTRAIT, "card", "Plain"));
     expect([plain.width, plain.height]).toEqual([CARD_W, CARD_H]);
     expect(plain.segments).toHaveLength(0);
-    await expect(buildCardPdf(PORTRAIT, "sheet-letter", "Sheet", { bleed: true })).rejects.toThrow(/single-card/);
+  });
+
+  it("a bleed SHEET (TODO 6.15) is the selection export's grid: Letter prints landscape, 3 × 2 bleed boxes", async () => {
+    // It used to throw ("single-card page"): a 3 × 3 bleed sheet needs
+    // 8.25 × 11.25 in, more than Letter.
+    const [sheet] = await inspect(await buildCardPdf(await png(66, 90, [10, 10, 10]), "sheet-letter", "Sheet", { bleed: true }));
+    expect([sheet.width, sheet.height]).toEqual([792, 612]);
+    expect(sheet.images).toHaveLength(6);
+    for (const image of sheet.images) {
+      const { topLeft, bottomRight } = designCorners(image.ctm);
+      expect(r2(bottomRight[0] - topLeft[0])).toBe(BLEED_W);
+      expect(r2(topLeft[1] - bottomRight[1])).toBe(BLEED_H);
+    }
   });
 });

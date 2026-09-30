@@ -84,7 +84,9 @@ export type SelectionExportKind = (typeof SELECTION_EXPORT_KINDS)[number];
 export const SELECTION_PDF_LAYOUTS = ["sheet-letter", "sheet-a4", "pages"] as const;
 export type SelectionPdfLayout = (typeof SELECTION_PDF_LAYOUTS)[number];
 
-export const SELECTION_IMAGE_SIZES = ["hd", "default"] as const;
+/** A ZIP's image size: HD, standard, or MakePlayingCards' poker-size file
+ *  (TODO 6.1 — MPC's bleed, always portrait; lib/cards/print-export.ts). */
+export const SELECTION_IMAGE_SIZES = ["hd", "default", "mpc"] as const;
 export type SelectionImageSize = (typeof SELECTION_IMAGE_SIZES)[number];
 
 export type PrintSelectionSettings = {
@@ -93,9 +95,11 @@ export type PrintSelectionSettings = {
   gap: SheetGap;
   marks: SheetMarks;
   cardSize: SheetCardSize;
-  /** 1/8 in bleed — PDF (pages and sheets) and the HD ZIP images. */
+  /** 1/8 in bleed — PDF (pages and sheets) and the HD ZIP images (an MPC
+   *  image carries MPC's own). */
   bleed: boolean;
-  /** ZIP image size; the PDF is always HD. */
+  /** ZIP image size (HD, standard, MPC); the PDF is always HD. Shared with
+   *  the deck export's ZIP. */
   quality: SelectionImageSize;
 };
 
@@ -154,13 +158,16 @@ export function savePrintSelectionSettings(settings: PrintSelectionSettings): vo
 }
 
 /** The file name of a selection export: one card is named after it, more
- *  after the count — `pipglyph-12-cards-sheets-a4-bleed.pdf`. */
+ *  after the count — `pipglyph-12-cards-sheets-a4-bleed.pdf`,
+ *  `pipglyph-12-cards-mpc.zip`. */
 export function selectionExportFilename(
   cards: ReadonlyArray<{ slug: string }>,
-  opts: { kind: SelectionExportKind; layout: SelectionPdfLayout; bleed: boolean },
+  opts: { kind: SelectionExportKind; layout: SelectionPdfLayout; bleed: boolean; quality?: SelectionImageSize },
 ): string {
   const base = cards.length === 1 ? cards[0].slug : `pipglyph-${cards.length}-cards`;
-  if (opts.kind === "zip") return `${base}${opts.bleed ? "-bleed" : ""}.zip`;
+  if (opts.kind === "zip") {
+    return `${base}${opts.quality === "mpc" ? "-mpc" : opts.bleed ? "-bleed" : ""}.zip`;
+  }
   const layout = opts.layout === "pages" ? "" : opts.layout === "sheet-a4" ? "-sheets-a4" : "-sheets";
   return `${base}${layout}${opts.bleed ? "-bleed" : ""}.pdf`;
 }

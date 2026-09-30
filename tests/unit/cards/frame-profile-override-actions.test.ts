@@ -38,6 +38,18 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => state.configured,
 }));
 vi.mock("next/cache", () => cache);
+// The art-window gate (lib/frames/art-window-override.ts) is tested on its
+// own; here, what the action does with its answer.
+const artGate = vi.hoisted(() => ({
+  refusal: null as string | null,
+  calls: [] as unknown[][],
+}));
+vi.mock("@/lib/frames/art-window-override", () => ({
+  artSlotOverrideRefusal: async (...args: unknown[]) => {
+    artGate.calls.push(args);
+    return artGate.refusal;
+  },
+}));
 // Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
 // at v31 no older bake has only the v22 opt-in pending (the "kept for the
 // owner" case). tests/stubs/layout-version-at.ts explains.
@@ -96,6 +108,8 @@ function db(opts: { existingRow?: boolean; staleIds?: string[]; candidates?: Can
 beforeEach(() => {
   state.profile = { id: ADMIN, is_admin: true };
   state.configured = true;
+  artGate.refusal = null;
+  artGate.calls = [];
   cache.updateTag.mockClear();
   cache.revalidatePath.mockClear();
   cache.revalidateTag.mockClear();
@@ -143,6 +157,33 @@ describe("saveFrameProfileOverrideAction", () => {
     expect(stale.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["a", "b", "c"]);
     expect(cache.updateTag).toHaveBeenCalledWith(FRAME_PROFILE_OVERRIDES_TAG);
     expect(cache.revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it("refuses an art slot the art-window check fails — before any write", async () => {
+    artGate.refusal = "The art slot leaves the m15/w frame's art window uncovered (the art-window check, TODO 7.6) — nothing was saved. …";
+    const stub = db();
+    const overrides = { artSlot: { topPct: 11.4, heightPct: 44 } };
+    const result = await saveFrameProfileOverrideAction({ template: "m15", overrides });
+    expect(result).toEqual({ ok: false, error: artGate.refusal });
+    expect(artGate.calls).toEqual([["m15", overrides]]);
+    // Nothing saved, no render marked, no cache refreshed, no history row.
+    expect(stub.log).toHaveLength(0);
+    expect(cache.updateTag).not.toHaveBeenCalled();
+  });
+
+  it("asks the art-window check on every save that writes a row, and saves when it passes", async () => {
+    const stub = db({ staleIds: ["a"] });
+    const overrides = { artSlot: { topPct: 11.25 } };
+    const result = await saveFrameProfileOverrideAction({ template: "m15", overrides });
+    expect(result).toEqual({ ok: true, staleCount: 1, keptForOwner: 0, changed: true });
+    expect(artGate.calls).toEqual([["m15", overrides]]);
+    expect(payloadOf(stub.forTable("frame_profile_overrides")[0].calls, "upsert")).toMatchObject({ template: "m15", overrides });
+    // A reset (an empty override) never asks: it returns to the code profile.
+    artGate.calls = [];
+    db({ existingRow: true });
+    await saveFrameProfileOverrideAction({ template: "m15", overrides: {} });
+    await resetFrameProfileOverrideAction({ template: "m15" });
+    expect(artGate.calls).toEqual([]);
   });
 
   it("treats an empty override as a reset and is a no-op without a saved row", async () => {

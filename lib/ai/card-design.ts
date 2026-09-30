@@ -54,6 +54,16 @@ export function clampedText(max: number, min = 1) {
     .transform((value) => value.trim().slice(0, max));
 }
 
+/**
+ * The card types a design may come back as. An emblem (TODO 6.23) only when
+ * a slot asks for one — a per-field fill on an open emblem pins it; emblems
+ * stay out of the AI's type lists otherwise (a random card, a deck, a set
+ * of cards), so a fresh design never lands on the emblem kind.
+ */
+export const DESIGNABLE_CARD_TYPES = CARD_TYPE_VALUES.filter(
+  (type) => type !== "emblem",
+) as [CardType, ...CardType[]];
+
 const designedCardSchema = z
   .object({
     title: clampedText(80).describe(
@@ -109,7 +119,22 @@ const designedCardSchema = z
   })
   .strict();
 
+/** Every other design: the same card without the emblem type. */
+const freshDesignedCardSchema = designedCardSchema.extend({
+  card_type: z.enum(DESIGNABLE_CARD_TYPES),
+});
+
 export type DesignedCard = z.infer<typeof designedCardSchema>;
+
+/** The `cards` object a design or repair call asks for: an emblem only when
+ *  `allowEmblem` (a slot pinned one, or the card under repair is one). */
+export function designedCardsSchema(allowEmblem: boolean) {
+  return z
+    .object({
+      cards: z.array(allowEmblem ? designedCardSchema : freshDesignedCardSchema).min(1),
+    })
+    .strict();
+}
 
 export type DesignReport = {
   /** Warnings that survived the judge pass, per card index. */
@@ -219,12 +244,6 @@ function batchPrompt(input: DesignBatchInput): string {
 // Judge → fix
 // ---------------------------------------------------------------------------
 
-const repairSchema = z
-  .object({
-    cards: z.array(designedCardSchema).min(1),
-  })
-  .strict();
-
 const JUDGE_SYSTEM = `You are the rules editor for a Magic: The Gathering-style card designer. You receive drafted cards plus lint findings. Fix every ERROR exactly (mana-cost grammar, stat slots per card type, color identity). Address WARNINGS with the lightest possible touch: adjust a cost or stat line for balance flags, modernize templating, add reminder text to unknown keywords — keep each card's concept, name, and feel intact. Return the corrected cards in the SAME order, complete (every field, changed or not).`;
 
 async function judgeRepair(
@@ -241,7 +260,9 @@ async function judgeRepair(
   try {
     const { object } = await generateObject({
       model: judgeModel(),
-      schema: repairSchema,
+      // The judge keeps each card's type: an emblem only when one is under
+      // repair (a fill on an open emblem is a batch of one).
+      schema: designedCardsSchema(flawed.some(({ card }) => card.card_type === "emblem")),
       system: JUDGE_SYSTEM,
       prompt,
       temperature: 0.2,
@@ -262,12 +283,6 @@ export type DesignBatchResult = {
   cards: DesignedCard[];
   report: DesignReport;
 };
-
-const batchSchema = z
-  .object({
-    cards: z.array(designedCardSchema).min(1),
-  })
-  .strict();
 
 /** Most cards one structured-output call is asked to emit. A 100-card
  *  Commander deck as a single object is where the plan route would fail
@@ -336,7 +351,7 @@ export async function designCards(
 async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> {
   const { object } = await generateObject({
     model: designModel(),
-    schema: batchSchema,
+    schema: designedCardsSchema(input.slots.some((slot) => slot.cardType === "emblem")),
     system: SYSTEM_PROMPT,
     prompt: batchPrompt(input),
     temperature: 0.9,

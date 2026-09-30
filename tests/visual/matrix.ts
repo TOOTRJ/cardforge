@@ -22,7 +22,10 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     stored bake's size) for the long card on every template; square
 //     corners (print) on a few; an "edge" card (100/100, a four-mode
 //     Command, reversed-hybrid and unknown symbols — TODO 3.11) on one frame
-//     of each family.
+//     of each family; a card with NO art on the frames whose art layers
+//     differ from their empty-art box (the see-through masters, whose
+//     under-frame art is drawn only under art, and layout v35's art slots —
+//     the empty box is drawn in the slot).
 //
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
@@ -111,6 +114,8 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   planeswalker: "u",
   battle: "r",
   token: "w",
+  // An emblem is colourless (CR 114); its frame hosts no other kind.
+  emblem: "c",
   saga: "r",
   adventure: "g",
   split: "wu",
@@ -158,6 +163,30 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour): F
             flavor_text: "Gold gleams brightest in a thief's eye.",
           }
         : { title: "Beast", card_type: "token", supertype: "Creature", subtypes: ["Beast"], cost: null, power: "3", toughness: "3" };
+    case "emblem":
+      // TODO 4.52 / 6.23: the walker's name on the bar, "Emblem" (+ the
+      // optional subtype on the long card), ONE rules line centred (short)
+      // or several from the left (long); saved common, no cost or stats.
+      return long
+        ? {
+            title: "Kaito, Cunning Infiltrator of the Hidden Blade",
+            card_type: "emblem",
+            supertype: null,
+            subtypes: ["Kaito"],
+            cost: null,
+            rarity: "common",
+            rules_text:
+              "Whenever a player casts a spell, you create a 2/1 blue Ninja creature token.\nAt the beginning of your end step, if you attacked with three or more Ninjas this turn, draw a card, then scry 2.",
+          }
+        : {
+            title: "Chandra",
+            card_type: "emblem",
+            supertype: null,
+            subtypes: [],
+            cost: null,
+            rarity: "common",
+            rules_text: "At the beginning of your upkeep, this emblem deals 1 damage to you.",
+          };
     case "planeswalker":
       return {
         title: long ? "Jace, Architect of Thought and Memory" : "Chandra",
@@ -344,6 +373,26 @@ const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15
 /** The edge card (3.11's content cases) on one frame of each family. */
 const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agclassic", "retro", "lotr", "tarkirdragon"];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
+/** No art (`art_url` null): the empty-art box, and no under-frame layer on a
+ *  see-through master — m15/c, devoid, the colourless tokens and walker
+ *  (m15pw/c's window is its under-frame picture only under art), and the
+ *  v35 art slots (CC M15, nyx, fullart). */
+const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
+  ["m15", "c"],
+  ["m15", "w"],
+  ["m15devoid", "b"],
+  ["m15token", "c"],
+  ["m15tokentext", "c"],
+  ["m15pw", "c"],
+  ["nyx", "w"],
+  ["fullart", "g"],
+];
+/** No ability text on a borderless walker (TODO 4.33, owner round 15): its
+ *  see-through window shows the light first stripe, never the bare art. */
+const NO_TEXT_CASES: readonly [FrameTemplate, VisualColour][] = [
+  ["m15borderlesspw", "w"],
+  ["m15borderlesspwtall", "wub"],
+];
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15", "w"],
   ["tarkirdragon", "u"],
@@ -385,13 +434,24 @@ export function visualCases(): VisualCase[] {
     kind: CardKind,
     colour: VisualColour,
     shape: VisualShape,
-    extra: { preset?: VisualPreset; corners?: "round" | "square"; finish?: VisualCase["finish"]; suffix?: string } = {},
+    extra: {
+      preset?: VisualPreset;
+      corners?: "round" | "square";
+      finish?: VisualCase["finish"];
+      suffix?: string;
+      noArt?: boolean;
+      noText?: boolean;
+    } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = rowFor(template, kind, colour, shape, finish, id);
+    const row = {
+      ...rowFor(template, kind, colour, shape, finish, id),
+      ...(extra.noArt ? { art_url: null } : {}),
+      ...(extra.noText ? { rules_text: null, flavor_text: null, face_content: null } : {}),
+    };
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -424,6 +484,14 @@ export function visualCases(): VisualCase[] {
     if (!artReachesCardEdge(getFrameProfile(template))) add(template, primary, "u", "long", { finish: "etched", suffix: "@etched" });
   }
   for (const template of EDGE_TEMPLATES) add(template, "creature", "b", "edge");
+  for (const [template, colour] of NO_ART_CASES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, colour, "short", { suffix: "@noart", noArt: true });
+  }
+  for (const [template, colour] of NO_TEXT_CASES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, colour, "short", { suffix: "@notext", noText: true });
+  }
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });

@@ -98,6 +98,14 @@ export type TextSlot = {
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
    *  words stay legible regardless of the artwork underneath. */
   backdropHex?: string;
+  /** Draw `backdropHex` even when the box has no text (TODO 4.33, owner
+   *  round 15, 2026-09-29): a borderless walker's ability window is a
+   *  see-through cut-out, so a walker with no ability text shows the first
+   *  stripe's light ground instead of the bare art — in both renderers,
+   *  which ask drawsRulesBackdrop (lib/cards/rules-backdrop.ts). Never under
+   *  ability rows, the editor's hint rows or a saga rail, never on a
+   *  textless frame. Code-owned: not part of the override schema. */
+  backdropWhenEmpty?: boolean;
   /** TYPE LINE ONLY — print it in two boxes split at the em dash (TODO
    *  3.24): "Basic Land" in `leftRect`, "Forest" in `rightRect`, the way
    *  Zendikar-style basics print either side of their medallion. Both parts
@@ -147,6 +155,15 @@ export type TextSlot = {
    *  the fit checked it. Unset: every line starts at the left (every
    *  profile before 4.49 (b)). Code-owned: not part of the override schema. */
   alignSingleLine?: "center";
+  /** RULES boxes only (TODO 4.48): the paragraph gap, HD px, a text may be
+   *  squeezed to before its size steps down — the full-art token's TALL box,
+   *  where the prints keep 9 pt by closing the gaps between abilities (TBLB
+   *  #5: 10–13 px) instead of shrinking. The shared fit tries each size with
+   *  the gaps from RULES_TEXT.paragraphGapPx down to this and takes the
+   *  widest that fits (lib/cards/rules-layout.ts); the layout carries the
+   *  gap it placed, so both renderers draw it. Unset: the gap never moves
+   *  (every other box). Code-owned: not part of the override schema. */
+  paragraphGapMinPx?: number;
 };
 
 /** TextSlot.fit's policies. */
@@ -279,11 +296,47 @@ export function bandTextStyle(slot: TextSlot, masterKey: string): { color?: stri
  *  seam. `colors` limits it to some frame MASTER keys (M15's "c" only) —
  *  underFrameArtRect is given the master the card paints (frameMasterKey), so
  *  a profile that also dresses a colour by type (artifactMasterKeys) lists
- *  the dressed master too if that one is see-through as well. */
+ *  the dressed master too if that one is see-through as well.
+ *
+ *  The two layers are cropped separately (each its own cover fit), so where
+ *  they meet the picture jumps: the join must lie on an OPAQUE part of the
+ *  master — the window's own outline (m15/c, devoid; the art-window check
+ *  holds every see-through master to it, lib/frames/art-window.ts). A
+ *  see-through master whose window has no outline where the profile's slot
+ *  ends draws its window in `artSlot` instead (layout v35): a slot of its
+ *  own on that outline, or `rect` itself — ONE picture, the window a part of
+ *  it and no second layer (m15pw/c: translucent from the border to the
+ *  window, no outline down the ability box). (The colourless tokens' join
+ *  lies in their silver too, but their arched window has translucent silver
+ *  above it, so no rectangle would do — TODO 4.17c.) Only under art, like
+ *  the under-frame layer: a card without art draws its empty-art box in the
+ *  profile's own `artSlot`. */
 export type UnderFrameArt = {
   rect: Rect;
   colors?: readonly string[];
+  artSlot?: Rect;
 };
+
+/** The art a face paints under its frame on master `colorKey`, as both
+ *  renderers and the foil mask draw it: the window's `slot` (a see-through
+ *  master's own UnderFrameArt.artSlot when it has one and there is art) and
+ *  the see-through master's `under` rect (only under art) — null when there
+ *  is none, or when the slot IS that rect (one picture: no second layer). */
+export function artLayersFor(
+  profile: FrameProfile,
+  colorKey: string,
+  hasArt: boolean,
+): { slot: Rect; under: Rect | null } {
+  const under = hasArt ? underFrameArtRect(profile, colorKey) : null;
+  if (!under) return { slot: profile.artSlot, under: null };
+  const slot = underFrameArtSlot(profile, colorKey) ?? profile.artSlot;
+  return { slot, under: sameRect(slot, under) ? null : under };
+}
+
+/** Two rects with the same four numbers. */
+export function sameRect(a: Rect, b: Rect): boolean {
+  return a.topPct === b.topPct && a.leftPct === b.leftPct && a.widthPct === b.widthPct && a.heightPct === b.heightPct;
+}
 
 /** A frame drawn in two halves for a two-colour card — see
  *  FrameProfile.twoColorSplit. */
@@ -496,6 +549,13 @@ export type FrameProfile = {
    *  symbol; the rules fit estimate is skipped. The card keeps its text (the
    *  Text step says so) and prints it on any other frame. Code-owned, opt-in. */
   textless?: boolean;
+  /** A `textless` frame that still prints its TYPE LINE (and the set symbol
+   *  beside it): the full-art token's textless height has no box but a type
+   *  pill (TODO 4.48, TFDN #6 "Token Creature — Soldier"). Both renderers
+   *  draw the type band as on any frame; the rules, flavour, watermark and
+   *  their box stay hidden. Code-owned, opt-in; meaningless without
+   *  `textless`. */
+  textlessTypeLine?: boolean;
   /** The creator's frame tile (FrameThumb) draws its sample art in this
    *  profile's art slot under the master, as it does for every art-first
    *  frame (artFillsCard) — TODO 4.45, owner decision 2026-09-27. For a tall
@@ -867,6 +927,19 @@ const M15_TYPE_DY = keepBaseline(0.0435, TYPE_SIZE_PCT);
  *  type line down instead (TOKEN_TYPE_PRINT_DY). */
 const CC_M15_TYPE_PRINT_DY = -0.0028;
 const CC_M15_TYPE_DY = M15_TYPE_DY + CC_M15_TYPE_PRINT_DY;
+/** The art slot of the Card Conjurer M15 masters (TODO 4.4 (2), layout v35):
+ *  their window is 116–1384 × 238–1165 px on every colour of m15, land,
+ *  snow land, artifact, snow and devoid, 1–1.6 px wider and taller on every
+ *  side than the inherited MSE slot 7.8/11.4/84.4 × 44.0 (117–1383 ×
+ *  239.4–1163.4), so a #101015 hairline framed every such card's art. CC's
+ *  own artBounds (packM15RegularNew.js: 7.67/11.29/84.76 × 44.29 →
+ *  115.05–1386.45 × 237.09–1167.18) cover it but for the top: 0.91 px of
+ *  overscan there, and the art-window check (TODO 7.6) asks 1.05 px. So:
+ *  CC's left, width and bottom edge, the top 0.04 % higher (11.25 %,
+ *  236.25 px). Overscan 0.95 / 2.45 / 1.75 / 2.18 px (left, right, top,
+ *  bottom). Only on the profiles that draw those masters, NOT on M15, whose
+ *  slot the MSE-framed adventure spreads (as with CC_M15_COST_DY). */
+const CC_M15_ART_SLOT: Rect = { topPct: 11.25, leftPct: 7.67, widthPct: 84.76, heightPct: 44.33 };
 
 // ---------------------------------------------------------------------------
 // Profiles. Coordinates measured from the 1500×2100 white frame PNGs by
@@ -994,11 +1067,12 @@ const M15: FrameProfile = {
 //     (migration 0114). The band keeps its 77.5% width; keep the right edge
 //     with M15 (14 + 77.5 = 91.5 ≈ 8.5 + 83).
 // A Card Conjurer master (4.4): the type line sits on the prints' baseline
-// (CC_M15_TYPE_DY).
+// (CC_M15_TYPE_DY), the art on CC's window (CC_M15_ART_SLOT, layout v35).
 const M15LAND: FrameProfile = {
   ...M15,
   label: "M15 Land",
   hideCost: true,
+  artSlot: CC_M15_ART_SLOT,
   title: {
     ...M15.title,
     rect: { ...M15.title.rect, leftPct: 8.4, widthPct: 77.5 },
@@ -1451,6 +1525,363 @@ const M15TOKENTEXT: FrameProfile = {
   // average over nine text-box prints), 1.4 px after the move.
 };
 
+// The emblem — TODO 4.52: Card Conjurer 'Planeswalker Emblems'
+// (packEmblem.js), the M20 design every emblem since 2019-07-12 prints (TM20
+// #11, TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16). One silver master for
+// every colour (CR 114: an emblem is colourless; the emblem kind forces c).
+// CC's master sits on the prints as it is (feature registration over those
+// six plus TKHM #20 and TAFR #16: the title bar, type bar, box bottom and
+// sides within 3 px), so it is imported 1:1 — no re-cut. CC's box runs to
+// 1946 px (92.67 %H) like the prints' (1947); 4.52's "90.24 %H" was where
+// the spark's tail ends inside it.
+/** The emblem's slots, measured on the master and the prints (HD px):
+ *  the type pill's interior (between its outlines) and the text box's. */
+export const EMBLEM_TYPE_PILL_INTERIOR_PX = { top: 1422, bottom: 1528 };
+export const EMBLEM_BOX_INTERIOR_PX = { top: 1556, bottom: 1937 };
+/** Scryfall's emblem art_crop box on the card (HD px): a 603 × 576 crop at
+ *  72.5 / 124 of the 744 × 1040 scan. */
+export const EMBLEM_SCRYFALL_CROP_PX = { x: 146.2, y: 250.4, width: 1215.7, height: 1163.1 };
+/** The art window: that box exactly, so the art_crop an import brings is
+ *  drawn at the print's own scale and place (owner evidence 2026-09-29: the
+ *  box grown up to 232 px, 1.6 % taller and wider, drew the art 1.6–1.8 %
+ *  larger than the prints; the registration's best fit is now 1.002 — the
+ *  744 × 1040 scan's own 0.16 % stretch). */
+const EMBLEM_ART_SLOT: Rect = {
+  topPct: (EMBLEM_SCRYFALL_CROP_PX.y / 2100) * 100,
+  leftPct: (EMBLEM_SCRYFALL_CROP_PX.x / 1500) * 100,
+  widthPct: (EMBLEM_SCRYFALL_CROP_PX.width / 1500) * 100,
+  heightPct: (EMBLEM_SCRYFALL_CROP_PX.height / 2100) * 100,
+};
+/** The name's print offset: the band rule's baseline (193 px) up to the
+ *  prints' 190, as a fraction of card WIDTH (dy's unit). */
+const EMBLEM_TITLE_PRINT_DY = -3 / 1500;
+/** The type line's print offset: the pill-centred band's baseline (1498 px)
+ *  up to the prints' 1496. */
+const EMBLEM_TYPE_PRINT_DY = -2 / 1500;
+/** CC's rules box (82.8 %W) plus 10 px on the right: 129–1381 px. */
+const EMBLEM_RULES_WIDTH_PCT = ((1381 - 129) / 1500) * 100;
+const EMBLEM: FrameProfile = {
+  label: "Emblem",
+  // No cost, P/T, loyalty or defense slot: an emblem has none (CR 114).
+  hideCost: true,
+  // The art window is Scryfall's emblem art_crop box, which IS a crop of the
+  // printed card around the spark (603 × 576 px at 72.5 / 124 on the 744 px
+  // scans of TFDN #24 / #25 and TDSK #17, matched pixel for pixel at scale
+  // 1: 146 / 250 px, 1216 × 1163 at HD), so an imported emblem's art lands
+  // where it printed, at its printed size. The spark's clear cut-out is
+  // inside it: CC's centre ray (732–767 px across) ran on up to the bar,
+  // above the crop, where an art_crop has no pixels; the master's silver
+  // closes over its top instead and the ray ends at 251 px (owner decision
+  // 2026-09-29; scripts/lib/cc-frames.mjs EMBLEM_RAY_BRIDGE), so no second
+  // picture shows there. CC's artBounds (14.2 / 4.96 / 71.6 × 85.48 — a
+  // tall box, which blew a landscape art up ~2.3× past the prints') is the
+  // under-frame layer: the spark's tail runs on through the type bar and
+  // the box as CC's 80 % white (α 204) to 1896 px, and the art shows
+  // faintly there, as on the prints.
+  artSlot: EMBLEM_ART_SLOT,
+  underFrameArt: { rect: { topPct: 4.96, leftPct: 14.2, widthPct: 71.6, heightPct: 85.48 } },
+  // M15's 86 px symbol box with the ink fit, in CC's setSymbolBounds (right
+  // edge 92.13 %W, centred on 70.43 %H — the pill's centre). The symbol is
+  // black on the prints; ours keeps the card's rarity ink (an emblem saves
+  // as common — 4.9's E and black symbol come later).
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
+  symbolRect: { topPct: 70.43 - 4.1 / 2, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  // The source's name, white and centred on the dark bar (CC: 8.54 / 5.22 /
+  // 82.92 × 5.43, Beleren Small Caps at 0.0381 H = 80 px = TITLE_SIZE_PCT;
+  // small caps are 4.8). The band rule sets the baseline at 193 px; the
+  // prints' is 190 (the name's last ink row 189 on TFDN #24 / #25, TBLB #30,
+  // TDSK #17, TFRA #16 and TKHM #20; 192 on TM20 #11), so the text rises
+  // 3 px (EMBLEM_TITLE_PRINT_DY).
+  title: {
+    rect: { topPct: 5.22, leftPct: 8.54, widthPct: 82.92, heightPct: 5.43 },
+    sizePct: TITLE_SIZE_PCT,
+    dy: EMBLEM_TITLE_PRINT_DY,
+    fit: "measured",
+    colorHex: INK_LIGHT,
+    weight: 600,
+    align: "center",
+    font: "display",
+    letterSpacingEm: 0.01,
+  },
+  // "Emblem", left from CC's 8.54 %W on the light pill, in dark ink, fitted
+  // to the set symbol's box. The band is the pill's interior
+  // (EMBLEM_TYPE_PILL_INTERIOR_PX), whose centre sets the baseline at
+  // 1498 px; the prints' "Emblem" ends at 1495–1496 on all eight, so the
+  // text rises 2 px (EMBLEM_TYPE_PRINT_DY).
+  type: {
+    rect: {
+      topPct: (EMBLEM_TYPE_PILL_INTERIOR_PX.top / 2100) * 100,
+      leftPct: 8.54,
+      widthPct: 83.59,
+      heightPct: ((EMBLEM_TYPE_PILL_INTERIOR_PX.bottom - EMBLEM_TYPE_PILL_INTERIOR_PX.top) / 2100) * 100,
+    },
+    sizePct: TYPE_SIZE_PCT,
+    dy: EMBLEM_TYPE_PRINT_DY,
+    fit: "measured",
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  // CC's rules box (8.6 / 74.43 / 82.8 × 17.48), dark ink on the light box,
+  // centred vertically, ONE line centred on it (TDSK #17 "Ninjas you control
+  // get +1/+1.", TFRA #16) and two or more from the left (TFDN #24, TBLB
+  // #30) — 4.49 (b)'s alignSingleLine. The prints' ink starts at 131–134 px
+  // and a centred line centres on 751–753 px (TDSK #17, TFRA #16), 10 px
+  // right of the drawn box's own centre (its inner lines run 95–1385):
+  // CC's box, 1242 px wide, centred ours on 745–748. The rect keeps CC's
+  // left edge and runs 10 px further right (1381 px, still inside the box's
+  // inner line), which puts a centred line on 751–753 and changes no wrap
+  // of the prints' texts. Vertically the lines land within 2 px of the
+  // prints' (one, two and three lines).
+  rules: {
+    rect: { topPct: 74.43, leftPct: 8.6, widthPct: EMBLEM_RULES_WIDTH_PCT, heightPct: 17.48 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    alignSingleLine: "center",
+    font: "body",
+    padPx: { x: 2, y: 0 },
+  },
+  // The artist line in the black border under the box (the prints' collector
+  // line sits at 1995–2030 px); the brand mark keeps its default place,
+  // bottom right in the same border.
+  footer: M15.footer,
+};
+
+// ---------------------------------------------------------------------------
+// The full-art token design, M20 (2019-07-12) → today — TODO 4.48 / 4.50:
+// Card Conjurer's 'Textless', 'Short' and 'Tall' token packs
+// (packTokenTextless-1.js, packTokenShort-1.js, packTokenTall-1.js; the
+// importer's m20TokenTemplate). The art runs to the 60 px black ring; a name
+// pill in the token's colour (89–232 px), a light type pill, and — on the two
+// text heights — a translucent box down to the colour strip (1937–1948 px);
+// the P/T on M15's plate, the artist line in the bottom border. Three
+// printed heights, one design: the type pill's top at 81.0 %H (textless,
+// re-cut 5 px onto the prints: M20_TOKEN_TEXTLESS_RECUT), 66.9 (the regular
+// box: CC 'Short') and 55.7 (the tall box). New templates, no stored card:
+// no layout bump (4.48 "Rollout").
+// ---------------------------------------------------------------------------
+
+/** The printed heights of the full-art token (TODO 4.48). */
+export type M20TokenHeight = "textless" | "regular" | "tall";
+
+/** The textless master's re-cut (scripts/lib/cc-frames.mjs
+ *  M20_TOKEN_TEXTLESS_RECUT, whose `shift` a unit test holds to this): its
+ *  type pill 5 px below CC's, where 28 M20+ prints put it. HD px. */
+export const M20_TOKEN_TEXTLESS_RECUT_PX = 5;
+
+/** Each height's type pill on its master, HD px (interior rows, inclusive:
+ *  below the rim's dark top line, down to the bottom outline). The type band
+ *  centres on it; a unit test reads the masters. */
+export const M20_TOKEN_PILL_INTERIOR_PX: Readonly<Record<M20TokenHeight, { top: number; bottom: number }>> = {
+  textless: { top: 1719 + M20_TOKEN_TEXTLESS_RECUT_PX, bottom: 1829 + M20_TOKEN_TEXTLESS_RECUT_PX },
+  regular: { top: 1422, bottom: 1532 },
+  tall: { top: 1188, bottom: 1298 },
+};
+
+/** The name's ink on the dark pills: white, as printed (CC's title colour). */
+const M20_TOKEN_TITLE_INK = "#ffffff";
+/** The name's baseline, onto the prints': centred in CC's name box the
+ *  line sets it at 194 px; 63 M20+ prints (Scryfall PNGs at 1500 × 2100,
+ *  every height) set it at 190 (median; the ink's last full row). A fraction
+ *  of card WIDTH (dy's unit): 4 px up at HD, 2 at 750. */
+const M20_TOKEN_TITLE_PRINT_DY = -4 / 1500;
+/** The type line's baseline per height, onto the prints': the band centres
+ *  its line box on the pill (M20_TOKEN_PILL_INTERIOR_PX), which sets the
+ *  baseline at 1803 / 1501 / 1267 px; the prints set it at 1797 (28
+ *  textless), 1496 (19 regular) and 1261 (16 tall) — medians, ~18 px below
+ *  the pill's centre on all three. Whole HD px, as fractions of card WIDTH. */
+const M20_TOKEN_TYPE_PRINT_DY: Readonly<Record<M20TokenHeight, number>> = {
+  textless: -6 / 1500,
+  regular: -5 / 1500,
+  tall: -6 / 1500,
+};
+/** Each height's set-symbol centre, HD px: the prints' (the symbol's ink box
+ *  centre inside the pill, medians of 22 / 16 / 14 prints from 2023 on;
+ *  Keyrune glyphs differ by set, so the box centre, not the ink, is what a
+ *  frame fixes). CC's setSymbolBounds centres are 1772 + the 5 px re-cut
+ *  (1777), 1475 and 1241. */
+export const M20_TOKEN_SYMBOL_CENTRE_PX: Readonly<Record<M20TokenHeight, number>> = {
+  textless: 1775,
+  regular: 1476,
+  tall: 1241.5,
+};
+/** The P/T digits sit 3.5 px higher on the M20 prints than M15's value box
+ *  sets them (the digits' ink box, 14 / 12 / 28 regular / tall / textless
+ *  prints with a P/T: +3.5 px median at HD), on M15's plate, which the
+ *  prints put where CC's box does (its profile within ±1 px). An em of the
+ *  value's 0.05 W (75 px at HD) size, on top of M15's valueDyEm. */
+const M20_TOKEN_PT_PRINT_DY_EM = -3.5 / 75;
+
+/** Card %H of an HD px row (2100 px card). */
+const hdRowPct = (px: number) => (px / 2100) * 100;
+
+/** The name band's box, HD px: CC's name box (109.62 + 114.03 px) on whole
+ *  px at both bake targets — even HD rows, so the 750 px bake's box is whole
+ *  px too (55 + 57). A unit test holds every full-art token to it. */
+export const M20_TOKEN_TITLE_BOX_PX = { top: 110, height: 114 } as const;
+
+/** CC's set-symbol box (0.12 W × 0.041 H — M15's 86 px box, layout v32),
+ *  its right edge at CC's 92.13 %W (setSymbolBounds x 0.9213,
+ *  right-anchored), centred where the prints centre theirs
+ *  (M20_TOKEN_SYMBOL_CENTRE_PX). */
+function m20TokenSymbolRect(height: M20TokenHeight): Rect {
+  return { topPct: hdRowPct(M20_TOKEN_SYMBOL_CENTRE_PX[height]) - 2.05, leftPct: 80.13, widthPct: 12, heightPct: 4.1 };
+}
+
+/** The type band on a pill: its interior, left from CC's 8.54 %W to the
+ *  symbol box's right edge (92.13 %W; the measured fit keeps
+ *  TYPE_SYMBOL_GAP_PCT before the glyph's ink), dark ink. The band centres
+ *  its line box on the pill, and `dy` sets the baseline where the prints
+ *  do (M20_TOKEN_TYPE_PRINT_DY). */
+function m20TokenTypeSlot(height: M20TokenHeight): TextSlot {
+  const { top, bottom } = M20_TOKEN_PILL_INTERIOR_PX[height];
+  return {
+    rect: { topPct: hdRowPct(top), leftPct: 8.54, widthPct: 83.59, heightPct: hdRowPct(bottom + 1 - top) },
+    sizePct: TYPE_SIZE_PCT,
+    dy: M20_TOKEN_TYPE_PRINT_DY[height],
+    fit: "measured",
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  };
+}
+
+/** The name pill's ink (4.48): white on the blue, black, red, green, gold
+ *  and colourless pills and on every artifact template's silver pill; dark
+ *  on the white pill (TFDN #6 / #27). Keyed by frame master. */
+const M20_TOKEN_TITLE_INK_DARK_ON: InkByColorKey = { w: { colorHex: INK_DARK } };
+
+/** The regular box (CC 'Short'): the base the other heights spread. */
+const M20TOKENTEXT: FrameProfile = {
+  label: "Full-art Token, text box",
+  hideCost: true,
+  // CC artBounds 4 / 2.86 / 92 × 89.53 (the black ring's inner edge, 60 px,
+  // to the colour strip), with 7.6's overscan: the clear window runs
+  // 60–1439 × 60–1936 px on every master.
+  artSlot: { topPct: 2.8, leftPct: 3.9, widthPct: 92.2, heightPct: 89.6 },
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
+  symbolRect: m20TokenSymbolRect("regular"),
+  // CC's name box (x 0.0854, y 0.0522, 0.8292 × 0.0543 — the name pill's
+  // interior, 104–217 px), centred, the M15 name size (CC 0.0381 H =
+  // TITLE_SIZE_PCT); Beleren Small Caps waits for 4.8. Its rows snapped to
+  // whole px at BOTH bake targets (M20_TOKEN_TITLE_BOX_PX: 110 + 114 px at
+  // HD, 55 + 57 at 750): CC's 109.62 + 114.03 px put the band's edges
+  // between pixels, and the browser and Satori round a fractional box
+  // differently — the preview's name sat 2 px above the 750 bake's (1 px
+  // on the arch token's whole-px box). The bake's baseline is unchanged.
+  title: {
+    rect: {
+      topPct: hdRowPct(M20_TOKEN_TITLE_BOX_PX.top),
+      leftPct: 8.54,
+      widthPct: 82.92,
+      heightPct: hdRowPct(M20_TOKEN_TITLE_BOX_PX.height),
+    },
+    sizePct: TITLE_SIZE_PCT,
+    dy: M20_TOKEN_TITLE_PRINT_DY,
+    fit: "measured",
+    colorHex: M20_TOKEN_TITLE_INK,
+    inkByColorKey: M20_TOKEN_TITLE_INK_DARK_ON,
+    weight: 600,
+    align: "center",
+    font: "display",
+    letterSpacingEm: 0.01,
+  },
+  type: m20TokenTypeSlot("regular"),
+  // The translucent box (1548–1936 px on every master), 7 px inside its top
+  // and 2 px inside its bottom, CC's 8.6 / 82.8 %W across (CC's rules y
+  // 74.24 %H, 17.67 %H tall, sat 11 px inside the top and 6 px inside the
+  // bottom): dark ink, the block centred in the box, ONE line centred on it
+  // (TFDN #7 "Flying", TFDN #30 "This token can't block."), two or more from
+  // the left (TFDN #27). The prints centre their block 2 px lower than the
+  // box's middle (single lines and the regular prints' multi-line blocks,
+  // 15 prints: our block 2–3 px high in the drawn box's middle), so the rect
+  // sits 2 px below it.
+  rules: {
+    rect: { topPct: hdRowPct(1555), leftPct: 8.6, widthPct: 82.8, heightPct: hdRowPct(1934 - 1555) },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    alignSingleLine: "center",
+    font: "body",
+    padPx: { x: 2, y: 0 },
+  },
+  // The artist line in the bottom border, as on M15.
+  footer: M15.footer,
+  // M15's P/T slot: CC's plate box (the token packs' bounds 0.7573 / 0.8848
+  // / 0.188 × 0.0733 — where the prints put the plate: its profile within
+  // ±1 px on 63 prints), the 4.18 value box, its ink span and dark ink; the
+  // digits 3.5 px higher, as the M20 prints set them.
+  pt: { ...M15.pt!, valueDyEm: (M15.pt!.valueDyEm ?? 0) + M20_TOKEN_PT_PRINT_DY_EM },
+};
+
+/** The textless height (no box): `textless` hides the rules, flavour and
+ *  watermark — the card keeps its text, and the Text step says so — and
+ *  `textlessTypeLine` keeps the type pill's line (TFDN #6). */
+const M20TOKEN: FrameProfile = {
+  ...M20TOKENTEXT,
+  label: "Full-art Token",
+  symbolRect: m20TokenSymbolRect("textless"),
+  type: m20TokenTypeSlot("textless"),
+  textless: true,
+  textlessTypeLine: true,
+};
+
+/** The tall box's rules rect, HD px: 1326–1922, 596 px — the fullest tall
+ *  prints' text block (TLCI #17 / TBIG #7 Map: eight lines at 9 pt, ink
+ *  1335–1920; no tall print sets more), on even rows so the 750 px bake's
+ *  box is whole px too, centred 1 px above the box's middle (1314–1936).
+ *  Calibrated on the tall prints set at 9 pt with our line breaks (TBIG #7,
+ *  TBLB #11 / #21, TLCI #17, TDRC #2, TMKC #5; Scryfall PNGs at 1500 × 2100,
+ *  2026-09-29): centred on the box's middle our first and last baselines sat
+ *  +2 / +2.5 px below theirs (median); here +0.5 / +1. The 1319–1932 rect
+ *  let a text run right up to the box's top edge (TBLB #9, squeezed into
+ *  eight lines), where the prints keep ≥ 20 px. */
+export const M20_TOKEN_TALL_RULES_PX = { top: 1326, bottom: 1922 } as const;
+/** The tall box closes the gaps between abilities before its text shrinks
+ *  (TextSlot.paragraphGapMinPx): TBLB #5 Warren Warleader prints its modes
+ *  and reminder at 9 pt with 10–13 px gaps, where the standard 24 px ran its
+ *  last line into the P/T plate and stepped it down to 70 px. */
+export const M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX = 10;
+
+/** The tall box (TLCI #17 Map, TBLB #5): the pill at 55.7 %H, the box
+ *  1314–1936 px, the rules rect M20_TOKEN_TALL_RULES_PX (CC's rules 63.03
+ *  %H, 28.75 %H tall), its paragraph gaps squeezed before a size step
+ *  (M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX). */
+const M20TOKENTALL: FrameProfile = {
+  ...M20TOKENTEXT,
+  label: "Full-art Token, tall text box",
+  symbolRect: m20TokenSymbolRect("tall"),
+  type: m20TokenTypeSlot("tall"),
+  rules: {
+    ...M20TOKENTEXT.rules,
+    rect: {
+      topPct: hdRowPct(M20_TOKEN_TALL_RULES_PX.top),
+      leftPct: 8.6,
+      widthPct: 82.8,
+      heightPct: hdRowPct(M20_TOKEN_TALL_RULES_PX.bottom - M20_TOKEN_TALL_RULES_PX.top),
+    },
+    paragraphGapMinPx: M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX,
+  },
+};
+
+/** An artifact token template (4.50): the silver pills take white name ink
+ *  on every colour, and the plates are M15's artifact set (CC's silver
+ *  m15PTa for colourless — TEOC #14 Golem — the colour's plate on a
+ *  coloured one, TDSK #7 Toy, TMOC #25 Gremlin). */
+function m20ArtifactToken(profile: FrameProfile, label: string): FrameProfile {
+  const title: TextSlot = { ...profile.title };
+  delete title.inkByColorKey;
+  return {
+    ...profile,
+    label,
+    title,
+    pt: { ...profile.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+  };
+}
+
 // M15 Snow (Kaldheim/Coldsnap frosty frame) and M15 Devoid (Eldrazi washed-out
 // colorless frame) share the M15 geometry exactly — same title/art/type/text
 // regions and the same painted P/T plate — so they're straight clones with a
@@ -1463,12 +1894,14 @@ const M15TOKENTEXT: FrameProfile = {
 // (owner review 2026-09-25). Lift them 0.55 %H on the CC-framed profiles —
 // NOT on M15 itself, whose geometry the older MSE-framed families spread.
 // The same profiles put the type line on the prints' baseline
-// (CC_M15_TYPE_DY, layout v32).
+// (CC_M15_TYPE_DY, layout v32) and the art on CC's window (CC_M15_ART_SLOT,
+// layout v35).
 const CC_M15_COST_DY = -0.0077;
 const M15ARTIFACT: FrameProfile = {
   ...M15,
   label: "M15 Artifact",
   costDy: CC_M15_COST_DY,
+  artSlot: CC_M15_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
 };
@@ -1476,12 +1909,23 @@ const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
   costDy: CC_M15_COST_DY,
+  artSlot: CC_M15_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15snow/pt/{color}.png" },
 };
 
-/** Inside the black border — where the art runs under see-through frames. */
-const UNDER_FRAME_RECT = { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 };
+/** Where the art runs under see-through frames: from the black border's
+ *  inner edge (TODO 4.17a, layout v35) — 55.5–1444.5 × 56.7–2016 px. The
+ *  see-through body of CC's colourless M15 / devoid / token / planeswalker
+ *  masters starts at the border's inner edge, 58–59 px in (α 7–89 between the
+ *  border and the title bar); v24's 4/4/92 × 92 started 84 px down and left
+ *  a 25 px #101015 band above every such title bar. The prints' border ends
+ *  2.69–2.88 %H down and 3.76–4.16 %W in (BFZ #10/#15/#57, OGW #13, TBFZ
+ *  #1/#2, DOM #1, M21 #1, STX #4, measured 2026-09-29), so this starts at or
+ *  outside every one of them; the bottom stays at 96 %, under the opaque
+ *  bottom border. The art-window check (lib/frames/art-window.ts) holds it
+ *  to the window and the whole see-through body with 0.05 % to spare. */
+const UNDER_FRAME_RECT: Rect = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
 // Devoid re-dresses the M15 frame; the Eldrazi type bar sits 0.1% higher
 // than the plain frame's and the set symbol lives in its own box
 // (production override 2026-07-14, folded 2026-09-25).
@@ -1489,6 +1933,7 @@ const M15DEVOID: FrameProfile = {
   ...M15,
   label: "M15 Devoid (Eldrazi)",
   costDy: CC_M15_COST_DY,
+  artSlot: CC_M15_ART_SLOT,
   // Every devoid frame is see-through (CC text box alpha ~179): the art
   // runs under the whole frame like printed devoid cards (4.17).
   underFrameArt: { rect: UNDER_FRAME_RECT },
@@ -1545,6 +1990,79 @@ const M15BORDERLESSARTIFACT: FrameProfile = {
   ...M15BORDERLESS,
   label: "M15 Borderless Artifact",
   pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
+};
+
+// M15 Borderless Planeswalker — the light borderless walker (frames plan
+// 4.33; Card Conjurer 'Borderless' planeswalker pack, packPlaneswalker
+// Borderless.js @2fcddba, frames bucket only; 199 of the 245 non-showcase
+// borderless walker printings, e.g. Oko ELD #271, Basri Ket M21 #280). Card
+// Conjurer's regular planeswalker master with the frame body and border
+// taken away: the same title bar (57–211 px), type bar (1160–1313 px),
+// ability window (x 180–1383, from 1315 px), badge rim and shield, over art
+// that runs to the top and side edges (CC artBounds 0/0/100 × 91.53) down to
+// an opaque black bottom bar from 1922 px, with fins up the side edges from
+// ~80 % H. So m15pw's anatomy carries over whole (4.19 / 3.13 — the rail,
+// the rows sized by their text, the detached cost, M15's type slot, the
+// footer and brand mark in the bottom bar), with the full-bleed art slot and
+// the master's own shield (cut out of each master like m15pw's, loyalty/, and
+// drawn above the stripes). The rows are Card Conjurer's NEUTRAL light
+// stripes (versionPlaneswalker.js: white at 0.608, #a4a4a4 at 0.706), as the
+// light prints show them (Oko ELD #271: a white row, then a grey one) — not
+// m15pw's cream, which 4.19 still owes the bordered frame. Dark ink on the
+// light bars and rows, as on m15pw. Printings with `inverted` rows (dark
+// stripes, white ink: Ashiok WOE #297) resolve to this frame as `nearest`
+// (owner decision 2026-09-26).
+const BORDERLESS_PW_STRIPE_A = "rgba(255,255,255,0.608)";
+const BORDERLESS_PW_STRIPE_B = "rgba(164,164,164,0.706)";
+const M15BORDERLESSPW: FrameProfile = {
+  ...M15PW,
+  label: "M15 Borderless Planeswalker",
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 91.53 },
+  // A walker whose text isn't ability rows, or another card forced onto the
+  // frame, gets the plain box on the first stripe's light ground — and so
+  // does a walker with NO ability text (owner round 15, 2026-09-29): the
+  // window is a see-through cut-out, never left showing the bare art. The
+  // editor still shows its hint rows there (as on m15pw).
+  rules: { ...M15PW.rules, backdropHex: BORDERLESS_PW_STRIPE_A, backdropWhenEmpty: true },
+  loyaltyRows: {
+    ...M15PW.loyaltyRows!,
+    stripeAHex: BORDERLESS_PW_STRIPE_A,
+    stripeBHex: BORDERLESS_PW_STRIPE_B,
+  },
+  loyalty: { ...M15PW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspw/loyalty/{color}.png" },
+};
+/** How far Card Conjurer's TALL planeswalker masters draw the type bar and
+ *  the ability window above the regular ones: the type bar's top edge at
+ *  1022 px vs 1160 px on every colour of both packs (CC type y 0.4967 vs
+ *  0.5625, first ability 0.5581 vs 0.6239, set symbol 0.5234 vs 0.5891), as
+ *  a percent of the card's height. */
+export const TALL_WALKER_SHIFT_PCT = (138 / 2100) * 100;
+// …and its tall twin (Card Conjurer 'Tall Borderless', packPlaneswalker
+// TallBorderless.js): the same master with the type bar and the ability
+// window's top 138 px higher, for four ability rows (Teferi, Master of Time
+// M21 #281; Liliana, Dreadhorde General FDN #359; Ajani, Sleeper Agent DMU
+// #375). The title, rail, shield, bottom bar and footer stay put; the type
+// slot, the set symbol and the rules box's top move up with the bar.
+const M15BORDERLESSPWTALL: FrameProfile = {
+  ...M15BORDERLESSPW,
+  label: "M15 Borderless Planeswalker, tall",
+  type: {
+    ...M15BORDERLESSPW.type,
+    rect: { ...M15BORDERLESSPW.type.rect, topPct: M15BORDERLESSPW.type.rect.topPct - TALL_WALKER_SHIFT_PCT },
+  },
+  symbolRect: {
+    ...M15BORDERLESSPW.symbolRect!,
+    topPct: M15BORDERLESSPW.symbolRect!.topPct - TALL_WALKER_SHIFT_PCT,
+  },
+  rules: {
+    ...M15BORDERLESSPW.rules,
+    rect: {
+      ...M15BORDERLESSPW.rules.rect,
+      topPct: M15BORDERLESSPW.rules.rect.topPct - TALL_WALKER_SHIFT_PCT,
+      heightPct: M15BORDERLESSPW.rules.rect.heightPct + TALL_WALKER_SHIFT_PCT,
+    },
+  },
+  loyalty: { ...M15BORDERLESSPW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspwtall/loyalty/{color}.png" },
 };
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
@@ -2665,10 +3183,17 @@ const EXPEDITIONLAND: FrameProfile = {
 
 // Nyx constellation — M15 layout at 750×1046 with a starfield border and a
 // baked-in translucent dark text box (light ink).
+// The art runs under the WHOLE translucent type bar and text box, as on the
+// Theros Beyond Death constellation prints (THB #258 Daxos, #259 Heliod,
+// #268 Klothys — one picture from the window to the box's bottom; owner
+// decision 2026-09-29, TODO 4.17b, layout v35). The box (α ≈ 128) runs
+// 110–1391 × 1319–1946 px; the slot used to end at 81.2 % (1705 px), so the
+// box's top showed the art and its last 241 px #101015 — a seam across the
+// rules text. It now ends at 93 % (1953 px), under the opaque bottom border.
 const NYX: FrameProfile = {
   ...M15,
   label: "Nyx Constellation",
-  artSlot: { topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 70 },
+  artSlot: { topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 },
   title: { ...M15.title, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
   type: { ...M15.type, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
   rules: { ...M15.rules, colorHex: INK_LIGHT },
@@ -2678,10 +3203,19 @@ const NYX: FrameProfile = {
 // Zendikar Rising showcase (the hedron frame; key `fullart` for history, not
 // full art) — a tall art window inside the border, floating title bar, and a
 // baked-in translucent text box in the bottom quarter.
+// The art fills the whole translucent text box (α ≈ 179, 59–1442 ×
+// 1239–1946 px): the slot used to end at 91.2 % (1915 px), leaving a 31 px
+// #101015 strip along the box's bottom (TODO 4.17b, layout v35); it ends at
+// 93 % (1953 px) now, under the opaque bottom border. (The ZNR prints paint
+// that box as an opaque hedron panel — a re-source question, not this fix.)
+// Its left, top and right edges moved out to whole pixels past the hedron
+// ring's anti-aliased rim too (v35): 57–1443 × 56.7 px (was 60–1440 × 60.9),
+// where the ring (α 128–249 on rows 59–60 and columns 59 / 1440–1441) left
+// 7,956 px half-dark over #101015 — a thin line along the art's top.
 const FULLART: FrameProfile = {
   ...M15,
   label: "Zendikar Rising Hedron",
-  artSlot: { topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 88.3 },
+  artSlot: { topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 },
   title: {
     ...M15.title,
     rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 5 },
@@ -2824,11 +3358,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
   // spread M15 don't inherit it.
-  // The CC cost lift and type-line baseline (CC_M15_COST_DY /
-  // CC_M15_TYPE_DY) are set here too, for the same reason.
+  // The CC cost lift, type-line baseline and art slot (CC_M15_COST_DY /
+  // CC_M15_TYPE_DY / CC_M15_ART_SLOT) are set here too, for the same reason.
   m15: {
     ...M15,
     costDy: CC_M15_COST_DY,
+    artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
   },
@@ -2853,12 +3388,34 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
+  // TODO 4.52: the emblem (M20 design).
+  emblem: EMBLEM,
+  // TODO 4.48 / 4.50: the full-art tokens. Their masters are clear almost
+  // everywhere, so the creator's tile draws its sample art (4.45).
+  m20token: { ...M20TOKEN, pickerSampleArt: true },
+  m20tokentext: { ...M20TOKENTEXT, pickerSampleArt: true },
+  m20tokentall: { ...M20TOKENTALL, pickerSampleArt: true },
+  m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Full-art Artifact Token"), pickerSampleArt: true },
+  m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Full-art Artifact Token, text box"), pickerSampleArt: true },
+  m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Full-art Artifact Token, tall text box"), pickerSampleArt: true },
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
+  m15borderlesspw: M15BORDERLESSPW,
+  m15borderlesspwtall: M15BORDERLESSPWTALL,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
-  m15pw: M15PW,
+  // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
+  // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through
+  // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35)
+  // as ONE picture — the window drawn in the under-frame rect too. Its body
+  // is translucent from the border to the window and has no outline down
+  // the ability box, so M15PW's slot (5 px into the silver) and a second,
+  // separately cropped layer met in a seam the frame showed all round
+  // (x ≈ 100 / 1397, y ≈ 207; the art-window check's seam rule). The window
+  // shows ~14 % more of the picture's zoom than on the coloured walkers
+  // (a 1959 px cover height, not 1716).
+  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT } },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,
@@ -2911,4 +3468,11 @@ export function underFrameArtRect(profile: FrameProfile, colorKey: string): Rect
   if (!u) return null;
   if (u.colors && !u.colors.includes(colorKey)) return null;
   return u.rect;
+}
+
+/** A see-through master's own window slot (UnderFrameArt.artSlot) for a
+ *  profile + frame colour key, or null (the profile's artSlot paints it). */
+export function underFrameArtSlot(profile: FrameProfile, colorKey: string): Rect | null {
+  if (!underFrameArtRect(profile, colorKey)) return null;
+  return profile.underFrameArt?.artSlot ?? null;
 }

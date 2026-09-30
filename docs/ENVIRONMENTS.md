@@ -65,11 +65,11 @@ All five share `DEV_SEED_PASSWORD` once `npm run seed:dev` has run.
 | `admin@dev.pipglyph.test` | `dev_admin` | `is_admin` + comped Pro — `/admin/*`, challenge authoring |
 | `pro@dev.pipglyph.test` | `dev_pro` | Paid Pro, 200 credits — premium/export/deck tools |
 | `free@dev.pipglyph.test` | `dev_free` | Free tier, 5 credits — upgrade prompts, drafts |
-| `artist@dev.pipglyph.test` | `dev_artist` | 15 cards across every verified frame kind — gallery, profile, trending |
+| `artist@dev.pipglyph.test` | `dev_artist` | 16 cards across every verified frame kind (and an emblem) — gallery, profile, trending |
 | `new@dev.pipglyph.test` | `dev_new` | **Not onboarded** — exercises the first-run wizard |
 
-Plus 22 cards (public / unlisted / private, remixes, a planeswalker, a saga,
-snow, devoid, a token), likes / comments / follows (the triggers turn those
+Plus 26 cards (public / unlisted / private, remixes, a planeswalker, a saga,
+snow, devoid, a token, an emblem), likes / comments / follows (the triggers turn those
 into 19 notifications), two decks, an active + closed + upcoming challenge, a
 published + a scheduled site update, and production's verified frame combos
 (`supabase/seed.sql`: 97 as of 2026-09-28). A refresh of that list does not

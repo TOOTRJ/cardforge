@@ -229,8 +229,9 @@ function consumersOf(template: FrameTemplate, text: RulesCase): Consumer[] {
     secondFacePt: Boolean(layout.secondFace?.pt),
   };
   const out: Consumer[] = [];
-  // The saga's rail replaces its box; a walker with abilities draws rows.
-  if (!layout.chapters) {
+  // The saga's rail replaces its box; a walker with abilities draws rows; a
+  // textless frame (the full-art token's textless height) draws no box.
+  if (!layout.chapters && !layout.textless) {
     out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show }) });
   }
   if (layout.loyalty) {
@@ -277,12 +278,17 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "lotr/main", "m15/main",
       "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15devoid/main", "m15land/main",
       "m15pw/main", "m15pw/walker", "m15snow/main", "m15snowland/main", "modern/main", "modernland/main",
+      // 4.33's borderless planeswalkers: m15pw's box, and the tall one's
+      // 138 px taller still can't hold them.
+      "m15borderlesspw/main", "m15borderlesspw/walker", "m15borderlesspwtall/main", "m15borderlesspwtall/walker",
       "nyx/main", "retro/main", "retroland/main", "tarkirdraconic/main", "tarkirdragon/main", "tarkirghostfire/main",
     ],
     ["1200 chars"],
   ],
   // The shorter boxes: level-up's seven paragraphs too.
-  [["avatar/main", "battle/main", "bloomburrow/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
+  // …and the emblem's box (TODO 4.52: 74.4–91.9 %H, no plate; an emblem's
+  // text is a sentence or two).
+  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
   // Split's halves set their text inside the textbox border their boxes
   // hold (SPLIT_TEXTBOX_BORDER_PX): 400 characters no longer fit either.
   [["split/main", "split/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
@@ -290,6 +296,12 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The text-box tokens' box (TODO 4.49 (b): 74.5–92.5 %H, the P/T plate in
   // its corner) holds 400 characters but not a planeswalker's worth.
   [["m15tokentext/main", "m15tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
+  // The full-art tokens (TODO 4.48): the regular box (73.9–92.1 %H, the
+  // plate in its corner) holds what the arch's does; the tall box (62.8 %H
+  // down) everything but 1,200 characters. The textless height draws no box
+  // (no consumer: the renderers skip a textless frame's rules).
+  [["m20tokentext/main", "m20tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
+  [["m20tokentall/main", "m20tokenartifacttall/main"], ["1200 chars"]],
   [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112"]],
   [["adventure/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
@@ -322,7 +334,8 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
     const keys = new Set(cases.flatMap((c) => c.keys.map((k) => k.split(" · ")[0])));
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);
-      if (!p.chapters) expect(keys.has(`${t}/main`), t).toBe(true);
+      if (!p.chapters && !p.textless) expect(keys.has(`${t}/main`), t).toBe(true);
+      if (p.textless) expect(keys.has(`${t}/main`), t).toBe(false);
     }
     expect(keys.has("adventure/adventure")).toBe(true);
     for (const t of ["flip", "split", "aftermath"]) expect(keys.has(`${t}/second face`), t).toBe(true);

@@ -6,6 +6,7 @@ import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { buildCardPath } from "@/lib/cards/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { cardTypeHasRarity } from "@/lib/cards/emblem";
 
 // Public card thumbnail + owner/like footer. Shared by the gallery grid and the
 // following feed so they stay visually identical.
@@ -47,7 +48,8 @@ export function GalleryCardTile({
               renderedImageUrl={card.rendered_image_url}
               renderedThumbUrl={card.rendered_thumb_url}
               title={card.title}
-              alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity ? `, ${card.rarity} rarity` : ""}`}
+              // An emblem names no rarity (CR 114, TODO 6.23).
+              alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity && cardTypeHasRarity(card.card_type) ? `, ${card.rarity} rarity` : ""}`}
               previewData={cardToPreviewData(card, null)}
             />
           </CardHoverEffect>

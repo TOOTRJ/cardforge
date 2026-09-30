@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
+import { COLOR_KEY_LETTER, pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { FrameMasterKey, TwoColorSplit } from "@/lib/cards/template-layout";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
@@ -29,15 +30,9 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 // change.
 // ---------------------------------------------------------------------------
 
-const COLOR_KEY_LETTER: Record<ColorIdentity, string> = {
-  white: "w",
-  blue: "u",
-  black: "b",
-  red: "r",
-  green: "g",
-  colorless: "c",
-  multicolor: "m",
-};
+// The pick lives in a leaf module (lib/cards/frame-color-key.ts) so server
+// code that needs only it doesn't import this file's URL resolver.
+export { pickFrameColorKey };
 
 /** Human word for a frame colour key — toast/error copy ("blue", "multicolor"). */
 export const COLOR_KEY_WORDS: Record<string, string> = {
@@ -61,14 +56,6 @@ export function colorIdentityForKey(colorKey: string): ColorIdentity {
     ([, letter]) => letter === colorKey,
   );
   return found?.[0] ?? "colorless";
-}
-
-export function pickFrameColorKey(
-  colors: readonly ColorIdentity[] | null | undefined,
-): string {
-  if (!colors || colors.length === 0) return "c";
-  if (colors.length > 1) return "m";
-  return COLOR_KEY_LETTER[colors[0]] ?? "c";
 }
 
 /** The [first, second] frame colour keys of an exactly-two-colour identity,

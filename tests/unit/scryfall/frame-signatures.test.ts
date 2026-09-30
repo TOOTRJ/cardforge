@@ -20,6 +20,8 @@ import {
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
 import { EDGE_CONTRACT_KNOWN_FAILURES } from "@/lib/frames/edge-contract";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { withVerification } from "@/lib/creator/frame-resolve";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -50,9 +52,38 @@ describe("borderless families (TODO 1.17)", () => {
     // line (IKO #275).
     ["dmu-435", "nearest", "m15borderless", "m15"],
     ["iko-275", "nearest", "m15borderless", "m15"],
-    // Planeswalkers (4.33), light (ELD #271) and dark (WOE #297).
-    ["eld-271", "nearest", "m15pw", undefined],
-    ["woe-297", "nearest", "m15pw", undefined],
+    // Planeswalkers (4.33): the light borderless walker, regular (three
+    // printed rows) or tall (four), landing on the bordered m15pw (the art
+    // crop is the window, 1.18). A run of statics shares a printed row: NEO
+    // #303 (Flash + a static + three abilities) is tall, ZNR #281 (two
+    // statics + two abilities) regular. An `inverted` printing (WOE #297),
+    // a black walker with dark bars (FDN #359, and BLC #78, whose dark bars
+    // only look light over its pale art; AFR #284, CMR #512 and MED #GR2
+    // are pinned light ones) and a two-colour split frame (ELD #271 GU,
+    // DMU #375 GW) are nearest.
+    ["m21-280", "exact", "m15borderlesspw", "m15pw"],
+    ["m21-279", "exact", "m15borderlesspw", "m15pw"],
+    ["znr-281", "exact", "m15borderlesspw", "m15pw"],
+    ["m21-281", "exact", "m15borderlesspwtall", "m15pw"],
+    ["neo-303", "exact", "m15borderlesspwtall", "m15pw"],
+    ["afr-284", "exact", "m15borderlesspwtall", "m15pw"],
+    ["cmr-512", "exact", "m15borderlesspwtall", "m15pw"],
+    ["med-GR2", "exact", "m15borderlesspw", "m15pw"],
+    ["blc-78", "nearest", "m15borderlesspw", "m15pw"],
+    ["eld-271", "nearest", "m15borderlesspw", "m15pw"],
+    ["woe-297", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["fdn-359", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["dmu-375", "nearest", "m15borderlesspwtall", "m15pw"],
+    // What only the scans show (4.33 skeptic): the SDCC Bolas (PS19 #207)
+    // prints the dark dress in gold and four rows on the regular box, Gideon
+    // Blackblade (MED #WS2) two statics as two rows on the tall box, Comet
+    // (UNF #275) a die-roll table on the tall box, and two Secret Lair
+    // walkers (SLD #1619 / #1622) their names lettered across the art.
+    ["ps19-207", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["med-WS2", "nearest", "m15borderlesspw", "m15pw"],
+    ["unf-275", "nearest", "m15borderlesspw", "m15pw"],
+    ["sld-1619", "nearest", "m15borderlesspw", "m15pw"],
+    ["sld-1622", "nearest", "m15borderlesspw", "m15pw"],
     // Nonbasic lands (4.34).
     ["mid-281", "nearest", "m15land", undefined],
     ["otj-304", "nearest", "m15land", undefined],
@@ -108,7 +139,55 @@ describe("borderless families (TODO 1.17)", () => {
       blockedBy: "4.6",
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
-    expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
+    expect(frameMatchFromScryfall(printing("eld-271"))).toMatchObject({
+      signature: "borderless/planeswalker+two-colour",
+      blockedBy: "4.6",
+    });
+    // `inverted`: the light frame is its nearest (owner decision
+    // 2026-09-26), under a key of its own for the 1.6 log; so is a black
+    // walker's dark-barred dress, which no Scryfall field names.
+    expect(frameMatchFromScryfall(printing("woe-297"))).toMatchObject({
+      signature: "borderless/planeswalker+inverted",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/inverted/),
+    });
+    expect(frameMatchFromScryfall(printing("fdn-359"))).toMatchObject({
+      signature: "borderless/planeswalker+dark-bars",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/dark name and type bars/),
+    });
+    expect(frameMatchFromScryfall(printing("m21-280")).signature).toBe("borderless/planeswalker");
+    expect(frameMatchFromScryfall(printing("afr-284")).signature).toBe("borderless/planeswalker");
+    expect(frameMatchFromScryfall(printing("med-GR2")).signature).toBe("borderless/planeswalker");
+    // BLC #78's bars look light over its pale art, but its ink is white:
+    // the dark dress, never the pinned light one.
+    expect(frameMatchFromScryfall(printing("blc-78")).signature).toBe("borderless/planeswalker+dark-bars");
+    // No Scryfall field names these; the pins do, each under a key of its own
+    // for the 1.6 log, every gap that holds listed (C1 reads them).
+    expect(frameMatchFromScryfall(printing("ps19-207"))).toMatchObject({
+      signature: "borderless/planeswalker+dark-bars",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/dark name and type bars/),
+      gaps: ["dark-bars", "row-box"],
+    });
+    expect(frameMatchFromScryfall(printing("med-WS2"))).toMatchObject({
+      signature: "borderless/planeswalker+row-box",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/other ability box/),
+      gaps: ["row-box"],
+    });
+    expect(frameMatchFromScryfall(printing("unf-275"))).toMatchObject({
+      signature: "borderless/planeswalker+two-colour",
+      gaps: ["two-colour", "row-box"],
+    });
+    for (const key of ["sld-1619", "sld-1622"] as const) {
+      expect(frameMatchFromScryfall(printing(key))).toMatchObject({
+        signature: "borderless/planeswalker+lettered-name",
+        blockedBy: "4.33",
+        reason: expect.stringMatching(/letters its name across the art/),
+        gaps: ["lettered-name"],
+      });
+    }
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",
@@ -222,11 +301,51 @@ describe("full-art and textless families (TODO 1.19)", () => {
     );
     expect(walker).toMatchObject({ signature: "textless/old-frame", template: "m15pw" });
     expect(walker.onceVerified).toBeUndefined();
-    // No other fixture names a frame for later.
+    // No other fixture names a frame for later — but the M20+ tokens, whose
+    // full-art template takes over once verified (TODO 4.48, token/m20; the
+    // borderless ones too, still nearest, 1.23).
     for (const key of Object.keys(printingsData) as PrintingKey[]) {
       const match = frameMatchFromScryfall(printing(key));
-      if (match.onceVerified) expect(match.signature, key).toBe("textless/old-frame");
+      if (!match.onceVerified) continue;
+      if (match.signature.startsWith("token/m20") || match.signature === "borderless/token") {
+        expect(match.onceVerified, key).toMatch(/^m20token/);
+        continue;
+      }
+      expect(match.signature, key).toBe("textless/old-frame");
     }
+  });
+
+  it("names the full-art token design for a borderless token once it is verified — still nearest (1.23: every borderless token is M20+)", () => {
+    // WONE #1 Cat (2023, borderless, vanilla 2/2): the textless arch stands
+    // in, the full-art textless template takes over once verified in white.
+    const cat = frameMatchFromScryfall(printing("wone-1"));
+    expect(cat).toMatchObject({ signature: "borderless/token", status: "nearest", template: "m15token", onceVerified: "m20token", blockedBy: "4.37" });
+    const allM20 = new Set(
+      ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"].flatMap((t) =>
+        ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t as FrameTemplate, k)),
+      ),
+    );
+    const verified = withVerification(cat, "w", allM20);
+    expect(verified).toMatchObject({ status: "nearest", template: "m20token", blockedBy: "4.37", reason: "PipGlyph doesn't have the borderless token frame yet" });
+    expect(verified.onceVerified).toBeUndefined();
+    // Not verified in the card's colour: the arch stands, and no "not yet
+    // verified" rewrite (a borderless token is nearest either way).
+    const waiting = withVerification(cat, "w", new Set([...allM20].filter((k) => !k.endsWith("/w"))));
+    expect(waiting).toMatchObject({ status: "nearest", template: "m15token", reason: "PipGlyph doesn't have the borderless token frame yet" });
+    expect(waiting.unverified).toBeUndefined();
+    // The height follows the text (4.48's rule), the Artifact word the
+    // artifact template.
+    const withText = (extra: Record<string, unknown>) =>
+      frameMatchFromScryfall(scryfallCardSchema.parse({ ...printingsData["wone-1"], ...extra }));
+    expect(withText({ oracle_text: "Vigilance" }).onceVerified).toBe("m20tokentext");
+    expect(
+      withText({
+        type_line: "Token Artifact — Food",
+        oracle_text: "{2}, {T}, Sacrifice this token: You gain 3 life.",
+        power: undefined,
+        toughness: undefined,
+      }).onceVerified,
+    ).toBe("m20tokenartifacttext");
   });
 
   it("keys the full-art basics on set lists, never on the full_art flag alone", () => {

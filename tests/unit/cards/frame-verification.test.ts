@@ -61,13 +61,41 @@ describe("frame reference registry", () => {
       "m15tokenartifacttext/r",
       "m15tokenartifacttext/g",
       "m15tokenartifacttext/m",
+      // 4.52's emblem: colourless by rule (CR 114), so `c` only.
+      "emblem/w",
+      "emblem/u",
+      "emblem/b",
+      "emblem/r",
+      "emblem/g",
+      "emblem/m",
+      // 4.48 / 4.50's full-art tokens (Scryfall 2026-09-29, heights measured
+      // on the prints): no red, colourless or three-colour tall token
+      // outside a legend; no black (bar T40K's own layout), green or gold
+      // textless artifact token; no green or gold text-box one; only
+      // colourless tall artifact tokens (Map, MKM's Clues).
+      "m20tokentall/r",
+      "m20tokentall/c",
+      "m20tokentall/m",
+      "m20tokenartifact/b",
+      "m20tokenartifact/g",
+      "m20tokenartifact/m",
+      "m20tokenartifacttext/g",
+      "m20tokenartifacttext/m",
+      "m20tokenartifacttall/w",
+      "m20tokenartifacttall/u",
+      "m20tokenartifacttall/b",
+      "m20tokenartifacttall/r",
+      "m20tokenartifacttall/g",
+      "m20tokenartifacttall/m",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
     );
     // + the borderless skins of 4.32 (their set, Borderless, is M15-era)
-    // + 4.49 (b)'s two text-box tokens.
-    expect(m15Templates.length).toBe(19);
+    // + 4.49 (b)'s two text-box tokens + 4.48 / 4.50's six full-art tokens
+    // + 4.33's two borderless planeswalkers (every colour referenced, the
+    // tall one's c by the serialized DFT #376) + 4.52's emblem.
+    expect(m15Templates.length).toBe(28);
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
         const key = frameComboKey(template, colorKey);

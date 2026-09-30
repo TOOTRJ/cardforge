@@ -23,15 +23,27 @@
 // inside it, give or take TRANSLUCENT_RIM_PCT (a window's or a bar's
 // anti-aliased rim). One that runs on past the slot shows the art through
 // part of it and #101015 through the rest — a hard seam across the text box
-// (nyx at 81.2 %, fullart's last 31 px, m15pw/c's sides and type bar).
+// (until layout v35: nyx at 81.2 %, fullart's last 31 px, m15pw/c's sides
+// and type bar — TODO 4.17b).
 //
-// See-through frames (TODO 4.17: `underFrameArt` — the colourless M15 and
-// token masters, every devoid one) are asserted differently: the art runs
-// under the whole frame there, so it is the under-frame rect, not the art
-// slot, that must cover the window — and every pixel the see-through frame
-// lets ≥ 2 % through (α < SEE_THROUGH_FRAME_ALPHA_MAX, anywhere on the card
-// but the corner cut) — with the same overscan. (The exact crop still sits
-// in the art slot; the frame's opaque window border hides the seam.)
+// See-through frames (TODO 4.17: `underFrameArt` — the colourless M15,
+// token and planeswalker masters, every devoid one) are asserted
+// differently: the art runs under the whole frame there, so the under-frame
+// rect must cover the window — and every pixel the see-through frame lets
+// ≥ 2 % through (α < SEE_THROUGH_FRAME_ALPHA_MAX, anywhere on the card but
+// the corner cut) — with the same overscan. The window's exact crop still
+// sits in its slot (the master's own `underFrameArt.artSlot`, else the
+// profile's), so that slot must cover the window too, with the same
+// overscan (layout v35: a slot moved inside the window left the window two
+// crops of the art with a hard seam through it, and only the opaque colour
+// masters caught it). And the two layers are cropped separately, so the
+// picture jumps where they meet: the first pixels outside the slot, all
+// round, must be the frame's OPAQUE outline (α ≥ SEE_THROUGH_FRAME_ALPHA_MAX).
+// A slot that IS the under-frame rect is one picture, with no seam to hide
+// — m15pw/c's, whose silver runs translucent from the border to the window
+// with no outline down its ability box (layout v35). The colourless tokens'
+// slot ends 2.5 px short of their outline, in the silver (4.17c, a known
+// failure).
 //
 // This module imports only the import-free lib/cards/card-corner.ts, with an
 // explicit .ts specifier, like edge-contract.ts: scripts/import-cc-frames.mjs
@@ -71,22 +83,28 @@ export type ArtWindowSlot = {
    *  front face). */
   rotation?: 0 | 90 | 180 | 270;
   /** A see-through master (4.17): the art also covers this rect UNDER the
-   *  whole frame, and it — not `rect` — must cover the window and the
-   *  see-through body. */
+   *  whole frame, and it must cover the window and the see-through body;
+   *  `rect` (the window's own crop) must cover the window too, and meet it
+   *  on the frame's opaque outline — unless `rect` is this rect (one
+   *  picture). */
   underFrame?: ArtWindowRect | null;
 };
 
-/** The art slots a profile paints on one master: its `artSlot` (with the
- *  master's under-frame rect — `underFrameArtRect(profile, key)` — when the
- *  master is see-through) and a second face's own `secondFace.artSlot`. */
+/** The art slots a profile paints on one master: its `artSlot` — or, on a
+ *  see-through master with one, the master's own window slot
+ *  (`underFrameArtSlot(profile, key)`) — with the master's under-frame rect
+ *  (`underFrameArtRect(profile, key)`) when the master is see-through, and a
+ *  second face's own `secondFace.artSlot`. */
 export function artWindowSlotsOf(
   profile: {
     artSlot: ArtWindowRect;
     secondFace?: { rotation: 0 | 90 | 180 | 270; artSlot?: ArtWindowRect };
   },
   underFrame: ArtWindowRect | null,
+  windowSlot: ArtWindowRect | null = null,
 ): ArtWindowSlot[] {
-  const slots: ArtWindowSlot[] = [{ name: "artSlot", rect: profile.artSlot, rotation: 0, underFrame }];
+  const rect = (underFrame && windowSlot) || profile.artSlot;
+  const slots: ArtWindowSlot[] = [{ name: "artSlot", rect, rotation: 0, underFrame }];
   const second = profile.secondFace;
   if (second?.artSlot) slots.push({ name: "secondFace.artSlot", rect: second.artSlot, rotation: second.rotation });
   return slots;
@@ -337,17 +355,71 @@ function regionMisses(
 
 const describeBox = (b: PixelBox) => `${fmt(b.x0)}–${fmt(b.x1)} × ${fmt(b.y0)}–${fmt(b.y1)} px`;
 
+const sameRect = (a: ArtWindowRect, b: ArtWindowRect) =>
+  a.topPct === b.topPct && a.leftPct === b.leftPct && a.widthPct === b.widthPct && a.heightPct === b.heightPct;
+
+/** One side of a slot where a see-through master's two art layers meet:
+ *  the row or column of pixels just outside it (`at`), how many pixels long
+ *  that is, and how many of them the frame lets ≥ 2 % through (`seam`). */
+export type SlotSeam = { side: "left" | "right" | "top" | "bottom"; at: number; pixels: number; seam: number };
+
+/**
+ * Where a see-through master's two art layers meet (TODO 4.17, layout v35):
+ * the first column or row of pixels outside `box` on each side — by centre,
+ * as translucentRegionsUnder counts a pixel in: the under-frame art's
+ * pixels beside the slot's — over the slot's extent on the other axis, and
+ * how many of them the frame lets ≥ 2 % through (α < `alphaMax`, the corner
+ * cut left out). Each such pixel shows the picture jump from one crop to
+ * the other; on the frame's opaque outline none does. A side on the card's
+ * edge has nothing outside it and is left out.
+ */
+export function slotSeams(
+  rgba: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number,
+  box: PixelBox,
+  alphaMax = SEE_THROUGH_FRAME_ALPHA_MAX,
+): SlotSeam[] {
+  const mask = translucentMask(rgba, width, height, alphaMax);
+  // The pixels inside by centre: x in [xa, xb), y in [ya, yb).
+  const xa = Math.max(0, Math.ceil(box.x0 - 0.5));
+  const xb = Math.min(width, Math.ceil(box.x1 - 0.5));
+  const ya = Math.max(0, Math.ceil(box.y0 - 0.5));
+  const yb = Math.min(height, Math.ceil(box.y1 - 0.5));
+  const out: SlotSeam[] = [];
+  const column = (side: SlotSeam["side"], x: number) => {
+    if (x < 0 || x >= width) return;
+    let seam = 0;
+    for (let y = ya; y < yb; y += 1) seam += mask[y * width + x];
+    out.push({ side, at: x, pixels: Math.max(0, yb - ya), seam });
+  };
+  const row = (side: SlotSeam["side"], y: number) => {
+    if (y < 0 || y >= height) return;
+    let seam = 0;
+    for (let x = xa; x < xb; x += 1) seam += mask[y * width + x];
+    out.push({ side, at: y, pixels: Math.max(0, xb - xa), seam });
+  };
+  column("left", xa - 1);
+  column("right", xb);
+  row("top", ya - 1);
+  row("bottom", yb);
+  return out;
+}
+
 /** One way a master's art windows escape their art: the message, and how
  *  far (px) the worst side misses — Infinity when the slot's centre has no
- *  window at all. */
+ *  window at all; for a see-through master's seam, how long it is (px the
+ *  frame lets through on its worst side). */
 export type ArtWindowFinding = { message: string; missPx: number };
 
 /**
  * Every way a master's art windows escape the art that fills them — empty
- * when each slot (or, on a see-through master, its under-frame rect)
- * covers its window, and the see-through body, with the overscan to spare,
- * and every translucent region the slot's art shows through stays inside
- * it. Build `slots` with artWindowSlotsOf.
+ * when each slot covers its window with the overscan to spare and every
+ * translucent region the slot's art shows through stays inside it; on a
+ * see-through master, when the under-frame rect covers the window and the
+ * see-through body with the overscan, the slot covers the window too, and
+ * the two meet only on the frame's opaque outline (or are one picture).
+ * Build `slots` with artWindowSlotsOf.
  */
 export function artWindowFindings(
   rgba: Uint8Array | Uint8ClampedArray,
@@ -380,6 +452,19 @@ export function artWindowFindings(
       });
     }
     if (slot.underFrame) {
+      const onePicture = sameRect(slot.rect, slot.underFrame);
+      // The window shows the slot's own crop: the slot must cover it too
+      // (a slot that IS the under-frame rect was judged just above).
+      const slotMiss = onePicture ? null : coverMisses(box, win, width, height);
+      if (slotMiss?.misses.length) {
+        out.push({
+          message:
+            `${slot.name}: the slot ${describeBox(box)} doesn't cover the window ${describeBox(win)} ` +
+            `(${win.pixels} px, α < ${ART_WINDOW_ALPHA_MAX}) ${spare} — a see-through master's window shows the slot's crop, ` +
+            `the under-frame art's only beside it: ${slotMiss.misses.join(", ")}`,
+          missPx: slotMiss.missPx,
+        });
+      }
       const body = seeThroughBody(rgba, width, height);
       const bodyMisses = body ? coverMisses(cover, body, width, height) : null;
       if (body && bodyMisses?.misses.length) {
@@ -388,6 +473,20 @@ export function artWindowFindings(
             `${slot.name}: the under-frame art ${describeBox(cover)} doesn't cover the see-through frame ` +
             `${describeBox(body)} (${body.pixels} px, α < ${SEE_THROUGH_FRAME_ALPHA_MAX}) ${spare}: ${bodyMisses.misses.join(", ")}`,
           missPx: bodyMisses.missPx,
+        });
+      }
+      // The two crops meet all round the slot: on the frame's opaque
+      // outline, or the picture jumps where the frame shows it. missPx here
+      // is the worst side's seam LENGTH (px of it the frame lets through).
+      const seams = onePicture ? [] : slotSeams(rgba, width, height, box).filter((s) => s.seam > 0);
+      if (seams.length) {
+        out.push({
+          message:
+            `${slot.name}: the slot ${describeBox(box)} meets the under-frame art where the frame lets it through ` +
+            `(α < ${SEE_THROUGH_FRAME_ALPHA_MAX}) — a seam where the two crops of the picture meet; it must end on the ` +
+            `frame's opaque outline, or be the under-frame rect: ` +
+            seams.map((s) => `${s.side} (${s.side === "left" || s.side === "right" ? "column" : "row"} ${s.at}) ${s.seam} of ${s.pixels} px`).join(", "),
+          missPx: Math.max(...seams.map((s) => s.seam)),
         });
       }
       // Every pixel α < 250 is the body's: the regions below are inside it.
@@ -435,48 +534,39 @@ export type ArtWindowKnownFailure = {
  * Template × colour masters whose art windows escape their art today, and
  * the TODO items that fix each (measured 2026-09-29 on every git master
  * and every bucket master at the manifest's sha256; px on a 1500 × 2100
- * master, 2100 × 1500 for the landscape split and battle). The test asserts
+ * master, 2100 × 1500 for the landscape split and battle). Layout v35 struck
+ * the CC M15 family's hairline (4.4 (2)), the see-through masters' band
+ * (4.17a) and the nyx / fullart / m15pw-c seams (4.17b), and added the
+ * see-through slot and seam rules, which list the colourless tokens (4.17c,
+ * there since v34). The test asserts
  * each one STILL fails, and by no more than `maxMissPx` (today's worst miss
  * rounded up to the next half pixel, +0.1 px) — so fixing one turns it red
  * until it is struck from this list, and a master that gets worse behind
  * its entry turns it red too. Never loosen the check instead.
  */
 export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFailure>> = {
-  // The Card Conjurer M15 family: CC's window is 1 px wider on each side
-  // and 1.4 / 1.6 px taller than the inherited artSlot 7.8/11.4/84.4×44.0.
-  m15: {
-    keys: "all",
-    todo: ["4.4", "4.17a"],
-    why:
-      "w/u/b/r/g/m: window 116–1384 × 238–1165 vs slot 117–1383 × 239.4–1163.4 — a 1–1.6 px hairline on every side " +
-      "(4.4 (2): artSlot = CC artBounds 7.67/11.29/84.76×44.29); c: see-through, as m15devoid (4.17a)",
-    maxMissPx: { w: 3, u: 3, b: 3, r: 3, g: 3, m: 3, c: 26.5 },
-  },
-  m15artifact: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  m15land: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  m15snow: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  m15snowland: { keys: "all", todo: ["4.4"], why: "the M15 hairline, 1–1.6 px on every side (4.4 (2): CC artBounds)", maxMissPx: 3 },
-  // See-through masters (4.17): UNDER_FRAME_RECT 4/4/92×92 starts at 84 px
-  // down, but the see-through body runs from the border's inner edge at
-  // 59 px — a 25 px band above the title bar (and 1–2 px down each side)
-  // shows #101015 through a frame that is α 7–89 there.
-  m15devoid: {
-    keys: "all",
-    todo: ["4.17a"],
-    why: "see-through body 58–1443 × 59–1938 vs under-frame art 60–1440 × 84–2016: a 25 px dark band above the title bar",
-    maxMissPx: { w: 2, u: 2, b: 2, r: 2, g: 2, m: 2, c: 26.5 },
-  },
+  // The colourless tokens' see-through silver (found by the seam rule,
+  // layout v35 — there since v34's re-cut): the token slot, shared with the
+  // opaque colour masters, ends 2.5 px short of the window's outline in the
+  // α 89 silver, and the window's top is an arch with translucent silver
+  // above it — so no rectangle's edges lie on an opaque outline all round.
+  // The window's crop and the under-frame art (cropped separately) meet in
+  // a hard seam the frame shows; ONE picture (m15pw/c's fix) would zoom the
+  // token window 1.34× (textless) to 1.69× (text box) for a landscape
+  // picture — an owner decision (4.17c). missPx = the seam's length.
   m15token: {
     keys: ["c"],
-    todo: ["4.17a"],
-    why: "c: see-through body 59–1441 × 59–1949 vs under-frame art 60–1440 × 84–2016: a 25 px dark band above the title bar",
-    maxMissPx: 26.5,
+    todo: ["4.17c"],
+    why:
+      "c: slot 97.5–1402.5 × 252–1709 in the translucent silver (the outline is x 100–110; the arch above the window is α 89): " +
+      "a seam on all four sides (columns 96 / 1402 all 1457 px, row 251 1155 px, row 1709 1283 px), and the slot's bottom flush with the window's (1709)",
+    maxMissPx: 1457.5,
   },
   m15tokentext: {
     keys: ["c"],
-    todo: ["4.17a"],
-    why: "c: see-through body 59–1441 × 59–1949 vs under-frame art 60–1440 × 84–2016: a 25 px dark band above the title bar",
-    maxMissPx: 26.5,
+    todo: ["4.17c"],
+    why: "c: slot 97.5–1402.5 × 252–1411.2 in the translucent silver: a seam down both sides (columns 96 / 1402, 1159 px) and along the arch (row 251, 1155 px)",
+    maxMissPx: 1159.5,
   },
   m15tokenartifact: {
     keys: ["w", "u", "b", "r", "g", "m"],
@@ -553,25 +643,18 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   modern: { keys: "all", todo: ["4.10"], why: "window bottom 1163–1164 px vs slot 1163.4: 0.4 px of overscan to 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   modernland: { keys: "all", todo: ["4.10"], why: "window bottom 1164 px vs slot 1163.4: 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   alphatoken: { keys: "all", todo: ["4.54"], why: "window 162–1339 × 187–1295 vs slot 150–1350 × 189–1291.5: 2 px top, 3.5 px bottom (4.54 retires it)", maxMissPx: 5 },
-  // Translucent frame parts the art only partly shows through (the region
-  // rule above; 4.17b): a hard seam where the art slot ends.
-  nyx: {
+  // The emblem (found by v35's see-through slot rule when #421 merged main):
+  // two owner decisions (2026-09-29) meet at the window's top — the slot is
+  // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the
+  // spark's centre ray is bridged over down to 251 (EMBLEM_RAY_BRIDGE), so
+  // the slot covers the window's first row whole with 0.6 px to spare where
+  // the rule asks 1.05. No #101015 shows; closing it is an owner call
+  // (the tip one row lower, or the slot's top 0.45 px higher).
+  emblem: {
     keys: "all",
-    todo: ["4.17b"],
-    why: "the translucent text box 110–1391 × 1319–1946 (α ≈ 135) runs 240.8 px past the slot's bottom at 1705.2 (81.2 %): art through its top, #101015 through the rest",
-    maxMissPx: 241,
-  },
-  fullart: {
-    keys: "all",
-    todo: ["4.17b"],
-    why: "the translucent text box ends at 1945–1946 px, the slot at 1915.2 (91.2 %): a 30–31 px #101015 strip along its bottom",
-    maxMissPx: 31,
-  },
-  m15pw: {
-    keys: ["c"],
-    todo: ["4.17b"],
-    why: "c: CC's colourless planeswalker is see-through like m15/c (α ≈ 180), but has no under-frame art: the body 60–1440 × 60–1932 runs 40–148 px past the slot and the type bar 87–1413 13.5 / 16.5 px past its sides",
-    maxMissPx: { c: 148 },
+    todo: ["4.52"],
+    why: "the window starts at 251 px (the bridged ray's tip), the slot at Scryfall's art_crop top 250.4: 0.6 px of overscan, 1.05 needed (v35's see-through slot rule)",
+    maxMissPx: 0.6,
   },
 };
 

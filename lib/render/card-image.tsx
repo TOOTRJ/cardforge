@@ -40,6 +40,7 @@ import {
   secondFaceRulesLayout,
   type RulesDraw,
 } from "@/lib/cards/rules-box";
+import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
 import { ROSE_STAR_PATH, SET_MARK_GEM_PATH, SET_MARK_RING, SET_MARK_STAR_PATH } from "@/lib/brand/geometry";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
@@ -135,7 +136,7 @@ import {
   type Rect,
   type SlotAlign,
   type StatSlot,
-  underFrameArtRect,
+  artLayersFor,
   type TextSlot,
   type TypeLineSplit,
 } from "@/lib/cards/template-layout";
@@ -374,8 +375,11 @@ function CardImage({
   const template = normalizeFrameTemplate(card.frameStyle?.template);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const markLayout = brandMarkLayout(layout);
-  // A textless frame (TODO 3.24) prints no type line and no text box.
+  // A textless frame (TODO 3.24) prints no type line and no text box — but
+  // the full-art token's textless height keeps its type line (4.48,
+  // FrameProfile.textlessTypeLine).
   const textless = Boolean(layout.textless);
+  const hidesTypeLine = textless && !layout.textlessTypeLine;
   const finish = card.frameStyle?.finish ?? "regular";
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -591,9 +595,14 @@ function CardImage({
       ? secondFaceRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats })
       : null;
 
-  const underArtRect = underFrameArtRect(layout, masterKey);
-  const artW = Math.round((layout.artSlot.widthPct / 100) * width);
-  const artH = Math.round((layout.artSlot.heightPct / 100) * height);
+  // Where the art is painted on this master (artLayersFor — the preview's
+  // and the foil mask's rects): the window's slot (a see-through master's
+  // own, under art) and the see-through master's under-frame rect.
+  const artLayers = artLayersFor(layout, masterKey, Boolean(card.artUrl));
+  const underArtRect = artLayers.under;
+  const artSlot = artLayers.slot;
+  const artW = Math.round((artSlot.widthPct / 100) * width);
+  const artH = Math.round((artSlot.heightPct / 100) * height);
 
   // Split's right-half art (back-face art in the second art window).
   const secondArtSlot = layout.secondFace?.artSlot;
@@ -627,7 +636,8 @@ function CardImage({
       }}
     >
       {/* See-through frames: the art also runs under the whole frame
-          (TODO 4.17) — same cover fit at the focal point as the preview. */}
+          (TODO 4.17) — same cover fit at the focal point as the preview; not
+          when the window's slot is that rect (one picture). */}
       {underArtRect && card.artUrl ? (
         <div
           {...(omitArt ? printArtMarker("under", focalX, focalY, 1) : {})}
@@ -653,7 +663,7 @@ function CardImage({
       {/* Art — below the frame, in the transparent cut-out. */}
       <div
         {...(omitArt && card.artUrl ? printArtMarker("main", focalX, focalY, scale) : {})}
-        style={{ ...slotBox(layout.artSlot), display: "flex", overflow: "hidden" }}
+        style={{ ...slotBox(artSlot), display: "flex", overflow: "hidden" }}
       >
         {card.artUrl ? (
           omitArt ? null : (
@@ -825,11 +835,15 @@ function CardImage({
           type bands (see the preview's twin comment: z9 under their z20).
           Satori paints in document order, so it comes BEFORE the bands:
           where a rules box overlaps the type bar (Expedition, 60.5 %H) the
-          backdrop used to dim the bake's type line and set symbol only. */}
+          backdrop used to dim the bake's type line and set symbol only.
+          WHEN it is drawn is the preview's rule too (drawsRulesBackdrop). */}
       {layout.rules.backdropHex &&
-      hasRulesContent &&
-      !layout.chapters &&
-      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+      drawsRulesBackdrop(layout.rules, {
+        hasRulesContent,
+        textless,
+        chapters: Boolean(layout.chapters),
+        rowsDrawn: Boolean(layout.loyaltyRows) && loyaltyAbilities.length > 0,
+      }) ? (
         <div
           style={{
             ...slotBox(layout.rules.rect),
@@ -910,9 +924,10 @@ function CardImage({
           symbolRect the symbol gets its own absolute box (mirrors the
           preview) so it can be aligned independently of the type line. */}
       {/* A textless frame (TODO 3.24) prints no type line — nor the set
-          symbol beside it (a symbolRect box still prints, below). A split
+          symbol beside it (a symbolRect box still prints, below) — unless
+          it keeps its type line (textlessTypeLine, the full-art token). A split
           type line (TODO 3.24) prints its two halves in their own boxes. */}
-      {textless ? null : layout.type.split && typeSplit ? (
+      {hidesTypeLine ? null : layout.type.split && typeSplit ? (
         SplitTypeBake({ slot: typeSlot, split: layout.type.split, parts: typeSplit, ink: typeInk, cardWidth: width })
       ) : (
       <Band slot={typeSlot} cardWidth={width}>

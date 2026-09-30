@@ -133,13 +133,18 @@ describe("framesForKind", () => {
     }
     expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
     expect(skinsFor("land")).toEqual(["m15snowland"]);
-    // The artifact dress and 4.49 (b)'s text-box variations (the artifact
-    // ones are type-word dresses: the pickers hide them, isTypeWordDress).
-    expect(skinsFor("token")).toEqual(["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"]);
-    // Standards with their own geometry and no skin set stay bare.
-    for (const kind of ["planeswalker", "battle"] as CardKind[]) {
-      expect(skinsFor(kind)).toEqual([]);
-    }
+    // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's
+    // full-art heights (the artifact ones are type-word dresses: the pickers
+    // hide them, isTypeWordDress).
+    expect(skinsFor("token")).toEqual([
+      "m15tokenartifact", "m15tokentext", "m15tokenartifacttext",
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+    ]);
+    // 4.33's borderless planeswalkers; the tall one is a row dress (the
+    // pickers hide it, isRowDress).
+    expect(skinsFor("planeswalker")).toEqual(["m15borderlesspw", "m15borderlesspwtall"]);
+    // A standard with its own geometry and no skin set stays bare.
+    expect(skinsFor("battle")).toEqual([]);
   });
 
   it("appends showcase treatments for every standard kind", () => {
@@ -514,18 +519,22 @@ describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
     expect(leaks).toEqual([]);
   });
 
-  it("refuses exactly planeswalker, battle and the layout kinds on the eight — 56 pairs — and keeps every standard kind", () => {
+  it("refuses exactly planeswalker, battle, the layout kinds and the emblem on the eight — 64 pairs — and keeps every standard kind", () => {
     const refused: string[] = [];
     for (const template of STAT_LESS_SHOWCASES) {
       for (const kind of CARD_KIND_VALUES) {
+        // The emblem wears its own frame and nothing else (TODO 6.23).
         const standard =
-          KIND_DEFS[kind].layoutTemplates === null && kind !== "planeswalker" && kind !== "battle";
+          KIND_DEFS[kind].layoutTemplates === null &&
+          kind !== "planeswalker" &&
+          kind !== "battle" &&
+          kind !== "emblem";
         expect(templateRefusesKind(template, kind), `${template}/${kind}`).toBe(!standard);
         expect(templateSupportsKind(template, kind), `${template}/${kind}`).toBe(standard);
         if (!standard) refused.push(`${template}/${kind}`);
       }
     }
-    expect(refused).toHaveLength(56);
+    expect(refused).toHaveLength(64);
   });
 
   it("drops them from the planeswalker and battle galleries only", () => {

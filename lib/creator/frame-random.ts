@@ -15,14 +15,19 @@ import {
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
-  textBoxFrameFits,
+  tokenFrameFits,
   tokenFrameFor,
   typeWordFrameFits,
   typeWordFrameFor,
+  walkerRowCount,
+  walkerRowsFrameFits,
+  walkerRowsFrameFor,
   type FrameChoice,
+  type TokenFrameFace,
 } from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import { hasRulesBoxText } from "@/lib/cards/card-display";
+import { printsPowerToughness } from "@/lib/cards/card-display";
+import { isM20TokenTemplate } from "@/lib/cards/token-height";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -58,8 +63,10 @@ export function resolveGeneratedFrame(input: {
   /** The generated card's identity. A basic-only frame (the full-art basic
    *  land) is a candidate only when this is one basic land; without it,
    *  those frames are left out. Its rules and flavour text pick a token's
-   *  text box (TODO 4.49 (b)); without them, the textless frame. */
-  face?: BasicLandFace & { flavorText?: string | null };
+   *  text box (TODO 4.49 (b)) and a full-art token's height (4.48; its P/T,
+   *  when printed, keeps the rules clear of the plate); without them, the
+   *  textless frame. */
+  face?: BasicLandFace & { flavorText?: string | null; power?: string | null; toughness?: string | null };
   /** Injectable RNG for tests. Defaults to Math.random. */
   random?: () => number;
 }): FrameTemplate | null {
@@ -82,29 +89,47 @@ export function resolveGeneratedFrame(input: {
   // preference, not a gate: while the box isn't published in the card's
   // colour, the textless arch (whose scrim keeps the text) is what was asked
   // for, as in the creator.
+  // …and on the full-art token design (TODO 4.48) the text picks the
+  // height the same way — no text → no box, the regular box, the tall box —
+  // whichever height was asked for.
   const kind = kindFromCard(cardType, undefined);
   const type = { cardType, supertype: face?.supertype };
-  const hasText = hasRulesBoxText({ rulesText: face?.rulesText, flavorText: face?.flavorText });
+  const tokenFace: TokenFrameFace = {
+    supertype: face?.supertype,
+    rulesText: face?.rulesText,
+    flavorText: face?.flavorText,
+    printsPowerToughness: printsPowerToughness({
+      cardType: cardType,
+      supertype: face?.supertype,
+      subtypes: face?.subtypes,
+      power: face?.power,
+      toughness: face?.toughness,
+    }),
+  };
+  const rows = walkerRowCount({ rulesText: face?.rulesText });
   const typed = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
       (basicLand || !templateIsBasicOnly(choice.template)) &&
       borrowedFrameFits(kind, choice.template, type) &&
-      typeWordFrameFits(kind, choice.template, face?.supertype),
+      typeWordFrameFits(kind, choice.template, face?.supertype) &&
+      // The borderless planeswalker's tall box is for four rows or more,
+      // the regular one for fewer (4.33): a gate, like the type words.
+      walkerRowsFrameFits(kind, choice.template, rows),
   );
-  const boxed = typed.filter((choice) => textBoxFrameFits(kind, choice.template, hasText));
+  const boxed = typed.filter((choice) => tokenFrameFits(kind, choice.template, tokenFace));
   const pool = boxed.length > 0 ? boxed : typed;
 
   if (requested !== "random") {
-    const wanted = tokenFrameFor(kind, requested, {
-      supertype: face?.supertype,
-      rulesText: face?.rulesText,
-      flavorText: face?.flavorText,
-    });
-    const asked = typeWordFrameFor(kind, requested, face?.supertype);
+    const wanted = walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);
+    const asked = walkerRowsFrameFor(kind, typeWordFrameFor(kind, requested, face?.supertype), rows);
+    // The height asked for stands in only on the arch, whose textless frame
+    // keeps the text on its scrim: a full-art height the text doesn't fit
+    // would hide it (the textless height) or leave an empty box — the pool
+    // below picks a published frame the text fits.
     const match =
       typed.find((choice) => choice.template === wanted) ??
-      typed.find((choice) => choice.template === asked);
+      (isM20TokenTemplate(asked) ? undefined : typed.find((choice) => choice.template === asked));
     if (match) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
     // that color isn't published) — degrade to a random valid one.
