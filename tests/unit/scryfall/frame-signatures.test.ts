@@ -384,9 +384,14 @@ describe("the general signatures (TODO 1.4)", () => {
     ["ltr-602", "nearest", "lotrscroll", "saga"],
     ["tdm-303", "nearest", "tarkirdraconic", undefined],
     ["tdm-320", "nearest", "tarkirdraconic", "adventure"],
-    ["tdm-399", "nearest", "tarkirghostfire", undefined],
+    // The Ghostfire walkers (Ugin #399 / #409, Elspeth #401 / #411) print
+    // the frame, but it draws no loyalty shield or ability rows: they land
+    // on m15pw until the walker body exists (TODO 4.5a / 4.5b).
+    ["tdm-399", "nearest", "tarkirghostfire", "m15pw"],
     ["tdm-400", "nearest", "tarkirghostfire", undefined],
-    ["tdm-409", "nearest", "tarkirghostfire", undefined],
+    ["tdm-401", "nearest", "tarkirghostfire", "m15pw"],
+    ["tdm-409", "nearest", "tarkirghostfire", "m15pw"],
+    ["tdm-411", "nearest", "tarkirghostfire", "m15pw"],
     ["mul-1", "nearest", "tarkirdragon", undefined],
     ["mul-60", "nearest", "tarkirdragon", undefined],
     ["mul-5", "nearest", "m15", undefined],
@@ -444,7 +449,9 @@ describe("the general signatures (TODO 1.4)", () => {
       signature: "showcase/tdm/ghostfire/white",
       blockedBy: "4.30",
     });
-    expect(frameMatchFromScryfall(printing("tdm-399"))).toMatchObject({
+    // The black run's creature (Ugin #399 is a planeswalker, which the kind
+    // check caps first — TODO 4.5a).
+    expect(frameMatchFromScryfall(printing("tdm-400"))).toMatchObject({
       signature: "showcase/tdm/ghostfire",
       blockedBy: "4.35",
     });
@@ -454,6 +461,34 @@ describe("the general signatures (TODO 1.4)", () => {
     expect(frameMatchFromScryfall(printing("khm-244")).reason).toBe(
       "PipGlyph's M15 (2015) Snow frame doesn't dress artifacts yet",
     );
+  });
+
+  // TODO 4.5a: the IP showcases draw no loyalty shield and no ability rows,
+  // so their walker printings land on m15pw — the Ghostfire run (a walker
+  // body is 4.5b's) and the Bloomburrow anime Ral (BLB #353, which the owner
+  // refused a body for, 2026-09-29). Captured from Scryfall 2026-09-29.
+  it("lands a showcase walker printing on m15pw, naming the missing kind", () => {
+    expect(frameMatchFromScryfall(printing("tdm-399"))).toMatchObject({
+      status: "nearest",
+      template: "tarkirghostfire",
+      landOn: "m15pw",
+      reason: "PipGlyph's Tarkir: Dragonstorm Ghostfire frame doesn't dress planeswalkers yet",
+    });
+    expect(frameMatchFromScryfall(printing("blb-353"))).toMatchObject({
+      status: "nearest",
+      signature: "showcase/blb/anime",
+      template: "bloomanime",
+      landOn: "m15pw",
+      reason: "PipGlyph's Bloomburrow Anime frame doesn't dress planeswalkers yet",
+    });
+    // The white run keeps its border blocker next to the kind.
+    expect(frameMatchFromScryfall(printing("tdm-411"))).toMatchObject({
+      landOn: "m15pw",
+      blockedBy: "4.30",
+      reason: "PipGlyph doesn't print a white border yet; PipGlyph's Tarkir: Dragonstorm Ghostfire frame doesn't dress planeswalkers yet",
+    });
+    // The anime run's creatures still land on the anime frame.
+    expect(frameMatchFromScryfall(printing("blb-343")).landOn).toBeUndefined();
   });
 
   it("dresses a Theros god on Nyx because its type line says Enchantment (A3)", () => {
@@ -526,6 +561,14 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
       status: "exact",
       template: "m15fullartland",
     });
+  });
+
+  it("a showcase walker imports as a planeswalker on m15pw (TODO 4.5a)", () => {
+    for (const key of ["blb-353", "tdm-399", "tdm-401", "tdm-409", "tdm-411"] as const) {
+      const patch = mapScryfallToFormPatch(printing(key));
+      expect(patch.kind, key).toBe("planeswalker");
+      expect(patch.frame_template, key).toBe("m15pw");
+    }
   });
 
   it("layout kinds keep frame_template undefined (the kind fixes it) but carry the match", () => {

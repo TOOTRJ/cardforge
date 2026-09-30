@@ -13,8 +13,10 @@ import type { FrameProfileOverride } from "@/lib/cards/profile-override";
 //     explicit registry pick (the route's schema refuses a null) — shows the
 //     frame score, and is off while the draft is unsaved (the score measures
 //     the SAVED layout);
-//   * selecting the cost / set-symbol slot leaves the draft clean; the first
-//     edit seeds the COMPLETE rect (a bare { topPct } breaks the renderer);
+//   * selecting the cost / set-symbol slot leaves the draft clean and shows
+//     its fields at once (the region it occupies inline); the first edit —
+//     a nudge or a typed value — seeds the COMPLETE rect (a bare { topPct }
+//     breaks the renderer);
 //   * keyboard nudges: 0.1 %, Alt / Option 0.5 %, physical keys (Option+]
 //     types a quote on macOS), never with Cmd / Ctrl (browser shortcuts),
 //     never while typing in a field;
@@ -42,7 +44,7 @@ vi.mock("@/components/admin/rebake-marked-store", () => ({
 const fetchMock = vi.hoisted(() => vi.fn());
 
 import { FrameCompare } from "@/components/admin/frame-compare";
-import { defaultCostRect, resolveFrameProfile, slotRect } from "@/lib/cards/profile-override";
+import { defaultCostRect, defaultSymbolRect, resolveFrameProfile, slotRect } from "@/lib/cards/profile-override";
 
 const REF = "308465a9-2143-49f2-b9d0-a09272dd1b62";
 const SCAN = "https://cards.scryfall.io/png/front/3/0/scan.png";
@@ -181,6 +183,48 @@ describe("FrameCompare — detached slots (0.7)", () => {
     expect(saveButton().disabled).toBe(true);
     expect(screen.queryByText(/Unsaved changes/)).toBeNull();
     expect(scoreButton().disabled).toBe(false);
+  });
+
+  it("a selected cost or set-symbol slot shows its fields — the region it occupies inline — before the first nudge", () => {
+    const cost = defaultCostRect(M15);
+    const symbol = defaultSymbolRect(M15);
+    renderCompare();
+    openEditor();
+    chip("cost (pips)");
+    expect(Number(field("costRect topPct").value)).toBe(cost.topPct);
+    expect(Number(field("costRect leftPct").value)).toBe(cost.leftPct);
+    expect(Number(field("costRect widthPct").value)).toBe(cost.widthPct);
+    expect(Number(field("costRect heightPct").value)).toBe(cost.heightPct);
+    expect(screen.getByTestId("inline-slot-note").textContent).toMatch(/inline in the title band/);
+    chip("set symbol");
+    expect(Number(field("symbolRect topPct").value)).toBe(symbol.topPct);
+    expect(Number(field("symbolRect leftPct").value)).toBe(symbol.leftPct);
+    expect(Number(field("symbolRect widthPct").value)).toBe(symbol.widthPct);
+    expect(Number(field("symbolRect heightPct").value)).toBe(symbol.heightPct);
+    expect(screen.getByTestId("inline-slot-note").textContent).toMatch(/inline in the type band/);
+    // Showing them is not an edit.
+    expect(saveButton().disabled).toBe(true);
+    // A slot with a rect of its own carries no inline note.
+    chip("title (name)");
+    expect(screen.queryByTestId("inline-slot-note")).toBeNull();
+  });
+
+  it("typing into a detached slot's field detaches it with the complete rect", async () => {
+    const seed = defaultSymbolRect(M15);
+    renderCompare();
+    openEditor();
+    chip("set symbol");
+    fireEvent.change(field("symbolRect widthPct"), { target: { value: String(seed.widthPct + 1) } });
+    expect(saveButton().disabled).toBe(false);
+    // Detached now: the note is gone, the other fields kept their values.
+    expect(screen.queryByTestId("inline-slot-note")).toBeNull();
+    expect(Number(field("symbolRect topPct").value)).toBe(seed.topPct);
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(actions.saveFrameProfileOverrideAction).toHaveBeenCalledTimes(1));
+    expect(actions.saveFrameProfileOverrideAction.mock.calls[0][0].overrides).toEqual({
+      symbolRect: { ...seed, widthPct: round(seed.widthPct + 1) },
+    });
   });
 
   it("the first edit seeds the complete rect, which is what Save sends", async () => {
