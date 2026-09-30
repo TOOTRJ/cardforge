@@ -16,7 +16,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     a three-colour card, plus a two-colour card for the split frames) × two
 //     content shapes of the template's first kind ("short" and "long");
 //   * every OTHER kind a template hosts (the creator's framesForKind offer —
-//     a showcase dresses the seven standard kinds) once, in that kind's colour;
+//     at most seven on a showcase: no walker, battle or layout kind) once, in
+//     that kind's colour;
 //   * the finishes (foil, etched) on a spread of frames; the HD preset (the
 //     stored bake's size) for the long card on every template; square
 //     corners (print) on a few; an "edge" card (100/100, a four-mode

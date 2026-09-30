@@ -182,6 +182,36 @@ describe("buildFrameWalkthrough", () => {
     expect(walk?.note).toMatch(/Ugin, Eye of the Storms is a planeswalker, which this frame doesn't dress/);
   });
 
+  it("a reference the save accepts still walks from the reference, even off its kind's gallery (the snow artifact on m15snow)", async () => {
+    // m15snow is a skin of the M15 standard, so the Artifact gallery doesn't
+    // list it, but the kind gate doesn't refuse it: Replicating Ring KHM
+    // #244 walks as the artifact it is (only a refused kind falls back).
+    const reference = FRAME_REFERENCES.m15snow.c!;
+    expect(reference.name).toBe("Replicating Ring");
+    state.payload = {
+      cardName: reference.name,
+      scryfallUri: "https://scryfall.com/card/x",
+      patch: { title: reference.name, kind: "artifact", frame_template: "m15snow", card_type: "artifact" },
+    };
+    const walk = await buildFrameWalkthrough({ template: "m15snow", color: "c", seed: "reference" });
+    expect(walk?.seed?.fromReference).toBe(true);
+    expect(walk?.kind).toBe("artifact");
+    expect(walk?.seed?.patch).toMatchObject({ kind: "artifact", frame_template: "m15snow" });
+  });
+
+  it("names a refused kind with the right article", async () => {
+    // A land on the Nyx frame (enchantment and creature only) — made up, to
+    // reach a vowel-initial kind label.
+    state.payload = {
+      cardName: "Made-up Artifact",
+      scryfallUri: null,
+      patch: { title: "Made-up Artifact", kind: "artifact", frame_template: "nyx", card_type: "artifact" },
+    };
+    const walk = await buildFrameWalkthrough({ template: "nyx", color: "w", seed: "reference" });
+    expect(walk?.seed?.fromReference).toBe(false);
+    expect(walk?.note).toMatch(/Made-up Artifact is an artifact, which this frame doesn't dress/);
+  });
+
   it("seed=sample never looks anything up", async () => {
     const walk = await buildFrameWalkthrough({ template: "saga", color: "w", seed: "sample" });
     expect(state.lookups).toHaveLength(0);
