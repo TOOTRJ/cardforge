@@ -28,6 +28,8 @@ import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
 import { listMyCards } from "@/lib/cards/queries";
 import { listMyDecks } from "@/lib/decks/queries";
 import { CardsSummaryCard } from "@/components/dashboard/cards-summary";
+import { AdminOpsTile } from "@/components/admin/ops-tile";
+import { getAdminOpsSummary } from "@/lib/admin/ops-summary-queries";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -138,6 +140,15 @@ export default async function DashboardPage() {
             <Link href="/settings">Complete profile</Link>
           </Button>
         </SurfaceCard>
+      ) : null}
+
+      {/* Admins: frame verification, the automatic re-bake and frame-request
+          demand at a glance (TODO 7.4). The loader re-checks is_admin before
+          any read; it streams behind its own skeleton. */}
+      {profile?.is_admin ? (
+        <Suspense fallback={<AdminOpsSkeleton />}>
+          <AdminOpsSection />
+        </Suspense>
       ) : null}
 
       {/* AI credits — remaining balance, used this month, monthly allotment.
@@ -319,6 +330,24 @@ async function DashboardStats() {
 
       <RenderUpdateAll staleCount={staleRenderCount} />
     </>
+  );
+}
+
+async function AdminOpsSection() {
+  const summary = await getAdminOpsSummary();
+  return summary ? <AdminOpsTile summary={summary} /> : null;
+}
+
+function AdminOpsSkeleton() {
+  return (
+    <SurfaceCard className="mt-6 flex flex-col gap-4 p-6">
+      <Skeleton className="h-4 w-40" />
+      <div className="grid gap-3 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-44" />
+        ))}
+      </div>
+    </SurfaceCard>
   );
 }
 
