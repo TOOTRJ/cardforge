@@ -15,6 +15,13 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 //     layout_version: writable like any other column of your own card — now
 //     cards_guard_render_columns lets an API role only clear them.
 //
+// Card art (TODO 6.10, migration 0131) is the one file a browser sends to
+// Storage itself: too big for a Vercel Function's body, it goes to a signed
+// URL the server mints for ONE object in the PRIVATE `card-art-incoming`
+// bucket. The last test holds that bucket to it: no direct write, one
+// object per token, nobody but the service role reads it back, and the
+// bucket's own size / type limits apply.
+//
 // This runs the attack itself, with the seeded e2e user's real session over
 // PostgREST / Storage (no browser needed). Needs the local stack
 // (tests/README.md); CI boots one with every migration applied.
@@ -34,7 +41,7 @@ const PNG = Buffer.from(
   "base64",
 );
 
-const USER_BUCKETS = ["card-art", "card-exports", "set-covers", "card-renders", "profile-media", "custom-pips"];
+const USER_BUCKETS = ["card-art", "card-art-incoming", "card-exports", "set-covers", "card-renders", "profile-media", "custom-pips"];
 
 test.describe("direct client writes (migration 0126)", () => {
   test.skip(!hasStack, "Needs the local Supabase stack (.env.e2e).");
@@ -100,6 +107,52 @@ test.describe("direct client writes (migration 0126)", () => {
     // the proof is that the object is still there.
     await user.storage.from("card-renders").remove([key]);
     expect(await exists("card-renders", name)).toBe(true);
+  });
+
+  test("card-art-incoming: a server-signed URL takes ONE object from the user; only the service role reads it", async () => {
+    const bucket = "card-art-incoming";
+    const png = () => new Blob([new Uint8Array(PNG)], { type: "image/png" });
+    const sign = async (name: string) => {
+      const key = `${userId}/${name}`;
+      created.push({ bucket, key });
+      const { data, error } = await admin.storage.from(bucket).createSignedUploadUrl(key);
+      expect(error).toBeNull();
+      return { key, token: data!.token };
+    };
+
+    // The user's own client PUTs to the URL the server minted — no policy,
+    // just the token (what lib/cards/art-upload-client.ts does).
+    const { key, token } = await sign(`${run}.upload`);
+    const put = await user.storage.from(bucket).uploadToSignedUrl(key, token, png(), { contentType: "image/png" });
+    expect(put.error).toBeNull();
+    // Once: the same token can't overwrite it.
+    const again = await user.storage.from(bucket).uploadToSignedUrl(key, token, png(), { contentType: "image/png" });
+    expect(again.error, "a second PUT with the same token must be refused").not.toBeNull();
+    // …nor reach another key.
+    const elsewhere = await user.storage.from(bucket).uploadToSignedUrl(`${userId}/${run}-other.upload`, token, png(), { contentType: "image/png" });
+    created.push({ bucket, key: `${userId}/${run}-other.upload` });
+    expect(elsewhere.error, "a token is for its own key only").not.toBeNull();
+
+    // Private: no public URL, no read or list with the user's own session.
+    expect((await fetch(`${url}/storage/v1/object/public/${bucket}/${key}`)).ok).toBe(false);
+    expect((await user.storage.from(bucket).download(key)).error).not.toBeNull();
+    expect((await user.storage.from(bucket).list(userId)).data ?? []).toEqual([]);
+    // The service role (the finish action) reads it.
+    const read = await admin.storage.from(bucket).download(key);
+    expect(read.error).toBeNull();
+    expect(Buffer.from(await read.data!.arrayBuffer()).equals(PNG)).toBe(true);
+
+    // The bucket's own limits apply to a signed PUT: 20 MiB, image types only.
+    const big = await sign(`${run}-big.upload`);
+    const tooBig = await user.storage
+      .from(bucket)
+      .uploadToSignedUrl(big.key, big.token, new Blob([new Uint8Array(20 * 1024 * 1024 + 1)], { type: "image/png" }), { contentType: "image/png" });
+    expect(tooBig.error, "over 20 MiB must be refused").not.toBeNull();
+    const text = await sign(`${run}-text.upload`);
+    const wrongType = await user.storage
+      .from(bucket)
+      .uploadToSignedUrl(text.key, text.token, new Blob(["<svg/>"], { type: "text/plain" }), { contentType: "text/plain" });
+    expect(wrongType.error, "a non-image type must be refused").not.toBeNull();
   });
 
   test("cards: the owner can clear their card's render pointer but never point it at a picture", async () => {

@@ -42,8 +42,9 @@ const toast = vi.hoisted(() => ({
   info: vi.fn(),
 }));
 vi.mock("sonner", () => ({ toast }));
-// The Art panel's uploader imports a server action; nothing here uploads.
-vi.mock("@/lib/cards/upload-art-server", () => ({ uploadCardArtServerAction: vi.fn() }));
+// The Art panel's uploader imports the upload flow (server actions + the
+// browser Supabase client); nothing here uploads.
+vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }));
 
 import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";

@@ -5,6 +5,7 @@ import { experimental_generateImage as generateImage, generateText } from "ai";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 import { autoOrientBytes } from "@/lib/media/orientation";
 import { imageWithoutMetadata } from "@/lib/media/upload-bytes";
+import { modelInputImage } from "@/lib/media/model-input";
 
 // ---------------------------------------------------------------------------
 // Image generation + image-to-image restyle. ALL image generation goes through
@@ -127,7 +128,12 @@ export async function restyleImage(input: {
   // no camera metadata (TODO 3.14a): a file stored before uploads were
   // stripped may still carry the owner's GPS, and this goes to a third party.
   const upright = await autoOrientBytes(input.source, input.sourceContentType);
-  const source = await imageWithoutMetadata(upright.bytes, upright.contentType);
+  const clean = await imageWithoutMetadata(upright.bytes, upright.contentType);
+  // Card art may be 20 MiB since TODO 6.10; the image goes to Gemini inline
+  // (base64) in a request capped at 20 MB, so a big file goes as a 2048 px
+  // copy (lib/media/model-input.ts) — anything that uploaded before goes
+  // untouched.
+  const source = await modelInputImage(clean.bytes, clean.contentType, { keepAlpha: true });
   return restyleViaGateway(
     source.bytes,
     source.contentType,

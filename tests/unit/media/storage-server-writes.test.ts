@@ -2,6 +2,14 @@ import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { called, chainClient, type ChainAnswer } from "@/tests/stubs/supabase-chain";
 import { cameraPhoto, expectNoCameraMetadata } from "@/tests/stubs/metadata-fixtures";
+import {
+  STAGING_BUCKET,
+  forgetStaged,
+  resetStaging,
+  signedKeys,
+  staged,
+  stagingBucketApi,
+} from "@/tests/stubs/card-art-staging";
 
 // ---------------------------------------------------------------------------
 // Migration 0126 took every user write policy off storage.objects: a signed-in
@@ -21,19 +29,28 @@ import { cameraPhoto, expectNoCameraMetadata } from "@/tests/stubs/metadata-fixt
 // …and the "Remove" flows (replaced / default avatar, deleted pip) only ever
 // delete the caller's own objects — a profile URL pointing into ANOTHER
 // user's folder is left alone by the service role.
+//
+// Card art is the one upload whose bytes don't ride the action (TODO 6.10:
+// too big for a Vercel Function's 4.5 MB body): the start action signs ONE
+// object in the caller's folder of the PRIVATE staging bucket, the browser
+// PUTs it there, and the finish action reads it back and runs the same
+// sniff / strip / write / scan. Its block below holds that flow to the same
+// rules.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER = "99999999-9999-4999-8999-999999999999";
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
-type Op = { bucket: string; op: "upload" | "remove"; keys: string[]; body?: Buffer };
+type Op = { bucket: string; op: "upload" | "remove" | "sign" | "download" | "list"; keys: string[]; body?: Buffer };
 
 const state = vi.hoisted(() => ({
   user: null as { id: string } | null,
   adminConfigured: true,
   flagged: false,
   scans: [] as string[],
+  /** The bytes each scan was handed (card art passes them, TODO 6.10). */
+  scanBytes: [] as (number | undefined)[],
   ops: [] as Op[],
   /** Storage ops and row writes, in the order they happened. */
   seq: [] as string[],
@@ -78,6 +95,20 @@ vi.mock("@/lib/supabase/admin", () => ({
       from: () => ({ upsert: async () => ({ error: null }) }),
       storage: {
         from: (bucket: string) => ({
+          createSignedUploadUrl: async (key: string) => {
+            state.ops.push({ bucket, op: "sign", keys: [key] });
+            state.seq.push(`sign:${bucket}:${key}`);
+            return stagingBucketApi(bucket).createSignedUploadUrl(key);
+          },
+          download: async (key: string) => {
+            state.ops.push({ bucket, op: "download", keys: [key] });
+            state.seq.push(`download:${bucket}:${key}`);
+            return stagingBucketApi(bucket).download(key);
+          },
+          list: async (folder: string) => {
+            state.ops.push({ bucket, op: "list", keys: [folder] });
+            return stagingBucketApi(bucket).list();
+          },
           upload: async (key: string, body: Uint8Array | ArrayBuffer) => {
             state.ops.push({ bucket, op: "upload", keys: [key], body: Buffer.from(body as Uint8Array) });
             state.seq.push(`upload:${bucket}:${key}`);
@@ -86,6 +117,7 @@ vi.mock("@/lib/supabase/admin", () => ({
           remove: async (keys: string[]) => {
             state.ops.push({ bucket, op: "remove", keys });
             state.seq.push(`remove:${bucket}:${keys.join(",")}`);
+            forgetStaged(bucket, keys);
             return { data: [], error: null };
           },
           getPublicUrl: (key: string) => ({
@@ -98,8 +130,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/moderation/image-scan", () => ({
-  scanImageUrl: async (url: string) => {
+  scanImageUrl: async (url: string, opts?: { bytes?: Uint8Array }) => {
     state.scans.push(url);
+    state.scanBytes.push(opts?.bytes?.byteLength);
     return { flagged: state.flagged, categories: [] };
   },
 }));
@@ -112,7 +145,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("@/lib/profile/username", () => ({ revalidateProfilePage: vi.fn(), revalidateProfileMedia: vi.fn() }));
 vi.mock("@/lib/cards/bake-render", () => ({ bakeAndPersistCardRender: vi.fn() }));
 
-import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
+import { finishCardArtUploadAction, startCardArtUploadAction } from "@/lib/cards/upload-art-server";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
 import { uploadCoverServerAction } from "@/lib/media/upload-cover-server";
 import {
@@ -156,7 +189,6 @@ const jpeg = async () => ({ bytes: await cameraPhoto("jpeg"), type: "image/jpeg"
 const png = async () => ({ bytes: await cameraPhoto("png", { alpha: true }), type: "image/png" });
 
 const CASES: Case[] = [
-  { label: "card art", bucket: "card-art", name: new RegExp(`^${UUID}\\.jpg$`), stripped: true, file: jpeg, run: uploadCardArtServerAction },
   { label: "design watermark / land icon", bucket: "card-art", name: new RegExp(`^wm-${UUID}\\.png$`), stripped: true, file: png, run: uploadWatermarkServerAction },
   { label: "deck cover / card set icon", bucket: "set-covers", name: new RegExp(`^${UUID}\\.jpg$`), stripped: true, file: jpeg, run: uploadCoverServerAction },
   { label: "avatar", bucket: "profile-media", name: new RegExp(`^avatar-${UUID}\\.jpg$`), stripped: true, file: jpeg, run: (fd) => uploadProfileMediaServerAction("avatar", fd) },
@@ -181,12 +213,14 @@ beforeEach(() => {
   state.adminConfigured = true;
   state.flagged = false;
   state.scans.length = 0;
+  state.scanBytes.length = 0;
   state.ops.length = 0;
   state.seq.length = 0;
   state.adminClients = 0;
   state.profileRow = {};
   state.profileUpdateError = null;
   vi.mocked(prepareUploadBytes).mockClear();
+  resetStaging();
 });
 
 describe.each(CASES)("$label upload", (c) => {
@@ -349,5 +383,134 @@ describe("AI art lands in the caller's card-art folder", () => {
     state.user = null;
     expect((await persistGeneratedArt(new Uint8Array([1]), "image/png")).ok).toBe(false);
     expect(state.ops).toEqual([]);
+  });
+});
+
+describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
+  const STAGED = new RegExp(`^${USER}/${UUID}\\.upload$`);
+  const MAX = 20 * 1024 * 1024;
+
+  /** The browser's PUT: bytes land under the key the start action signed. */
+  async function stageAndFinish(bytes: Uint8Array, type = "image/jpeg") {
+    const started = await startCardArtUploadAction({ size: bytes.byteLength, type });
+    expect(started).toMatchObject({ ok: true });
+    if (!started.ok) throw new Error("start refused");
+    staged.set(started.path, bytes);
+    return { started, result: await finishCardArtUploadAction(started.name) };
+  }
+
+  it("refuses a signed-out caller before any storage call — start and finish", async () => {
+    state.user = null;
+    expect((await startCardArtUploadAction({ size: 1000, type: "image/png" })).ok).toBe(false);
+    expect((await finishCardArtUploadAction(`${"1".repeat(8)}-1111-4111-8111-111111111111.upload`)).ok).toBe(false);
+    expect(state.ops).toEqual([]);
+    expect(state.adminClients).toBe(0);
+  });
+
+  it("start signs ONE server-made name in the caller's staging folder — never anything from the request", async () => {
+    const hostile = { size: 1000, type: "image/png", path: `${OTHER}/evil.png`, userId: OTHER, name: "../evil" };
+    const started = await startCardArtUploadAction(hostile);
+    expect(started).toMatchObject({ ok: true, token: expect.any(String) });
+    expect(signedKeys).toHaveLength(1);
+    expect(signedKeys[0]).toMatch(STAGED);
+    expect(started.ok && started.path).toBe(signedKeys[0]);
+    expect(started.ok && `${USER}/${started.name}`).toBe(signedKeys[0]);
+    // Only the staging bucket was touched: its stale-upload list, then the sign.
+    expect(state.ops.map((o) => [o.bucket, o.op])).toEqual([
+      [STAGING_BUCKET, "list"],
+      [STAGING_BUCKET, "sign"],
+    ]);
+  });
+
+  it.each([
+    ["an SVG", { size: 1000, type: "image/svg+xml" }, "Only PNG, JPEG, WebP, and GIF images are allowed."],
+    ["no type", { size: 1000, type: "" }, "Only PNG, JPEG, WebP, and GIF images are allowed."],
+    ["an empty file", { size: 0, type: "image/png" }, "Empty file."],
+    ["a file over 20 MB", { size: MAX + 1, type: "image/png" }, "Image must be 20 MB or smaller."],
+  ])("start refuses %s before any storage call", async (_label, input, error) => {
+    expect(await startCardArtUploadAction(input)).toEqual({ ok: false, error });
+    expect(state.ops).toEqual([]);
+  });
+
+  it("start takes a 20 MB file (the old 8 MB cap refused one over 8 MB)", async () => {
+    expect(await startCardArtUploadAction({ size: 12 * 1024 * 1024, type: "image/png" })).toMatchObject({ ok: true });
+    expect(await startCardArtUploadAction({ size: MAX, type: "image/png" })).toMatchObject({ ok: true });
+  });
+
+  it("finish refuses a name the start action didn't make, without touching storage", async () => {
+    for (const name of [`../${OTHER}/x.upload`, `${OTHER}/x.upload`, "x.upload", `${USER}`, "a.png", ""]) {
+      expect((await finishCardArtUploadAction(name)).ok, name).toBe(false);
+    }
+    expect(state.ops).toEqual([]);
+  });
+
+  it("finish reads the caller's staged object, writes card-art stripped, scans it with its bytes, and drops the staged copy", async () => {
+    const { bytes } = await jpeg();
+    const { started, result } = await stageAndFinish(bytes);
+    expect(result).toMatchObject({ ok: true });
+    const stagedKey = started.ok ? started.path : "";
+
+    // Staging: read back, then removed — the only staging ops finish makes.
+    const stagingOps = state.ops.filter((o) => o.bucket === STAGING_BUCKET && o.op !== "list" && o.op !== "sign");
+    expect(stagingOps.map((o) => [o.op, o.keys])).toEqual([
+      ["download", [stagedKey]],
+      ["remove", [stagedKey]],
+    ]);
+    expect(staged.size).toBe(0);
+
+    // card-art: one object, the caller's folder, a server-made name.
+    const [stored] = uploads("card-art");
+    expect(uploads("card-art")).toHaveLength(1);
+    expect(stored.keys[0]).toMatch(new RegExp(`^${USER}/${UUID}\\.jpg$`));
+    expect(prepareUploadBytes).toHaveBeenCalledTimes(1);
+    await expectNoCameraMetadata(stored.body!);
+    expect(result.ok && result.publicUrl).toBe(publicUrl("card-art", stored.keys[0]));
+
+    // Scanned: the stored object's URL, with its bytes (so a big one goes as
+    // a downscaled copy — lib/media/model-input.ts).
+    expect(state.scans).toEqual([publicUrl("card-art", stored.keys[0])]);
+    expect(state.scanBytes).toEqual([stored.body!.byteLength]);
+    for (const key of state.ops.flatMap((o) => o.keys)) expect(key.startsWith(`${USER}`), key).toBe(true);
+  });
+
+  it("a flagged image is removed from card-art, the staged copy too, and the upload is refused", async () => {
+    state.flagged = true;
+    const { bytes } = await jpeg();
+    const { result } = await stageAndFinish(bytes);
+    expect(result.ok).toBe(false);
+    const [stored] = uploads("card-art");
+    expect(removes().filter((o) => o.bucket === "card-art")).toEqual([{ bucket: "card-art", op: "remove", keys: stored.keys }]);
+    expect(staged.size).toBe(0);
+  });
+
+  it("staged bytes that aren't an image never reach card-art — and the staged copy is still dropped", async () => {
+    const { result } = await stageAndFinish(new TextEncoder().encode("<svg onload=alert(1)></svg>"), "image/png");
+    expect(result).toEqual({ ok: false, error: "That doesn't look like a valid image." });
+    expect(uploads("card-art")).toEqual([]);
+    expect(staged.size).toBe(0);
+  });
+
+  it("a staged object over 20 MB is refused on its real size, whatever the start was told", async () => {
+    const started = await startCardArtUploadAction({ size: 1000, type: "image/png" });
+    if (!started.ok) throw new Error("start refused");
+    staged.set(started.path, new Uint8Array(MAX + 1));
+    expect(await finishCardArtUploadAction(started.name)).toEqual({ ok: false, error: "Image must be 20 MB or smaller." });
+    expect(uploads("card-art")).toEqual([]);
+    expect(staged.size).toBe(0);
+  });
+
+  it("a finish with nothing staged (the PUT never landed) answers plainly and writes nothing", async () => {
+    const started = await startCardArtUploadAction({ size: 1000, type: "image/png" });
+    if (!started.ok) throw new Error("start refused");
+    expect(await finishCardArtUploadAction(started.name)).toEqual({ ok: false, error: "That upload wasn't found — try again." });
+    expect(uploads("card-art")).toEqual([]);
+  });
+
+  it("without service-role storage, start and finish answer plainly and touch nothing", async () => {
+    state.adminConfigured = false;
+    expect(await startCardArtUploadAction({ size: 1000, type: "image/png" })).toMatchObject({ ok: false, error: expect.any(String) });
+    expect((await finishCardArtUploadAction(`${USER}.upload`)).ok).toBe(false);
+    expect(state.ops).toEqual([]);
+    expect(state.adminClients).toBe(0);
   });
 });

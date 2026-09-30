@@ -87,10 +87,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
   },
-  // Phase 11 chunk 14: bump the server-action body size limit so the
-  // Sharp-validated card-art upload (max 8 MB enforced server-side) can
-  // actually receive 8 MB images. Default is 1 MB, which would reject
-  // most uploads before our own size check runs.
+  // Server-action body limit (default 1 MB) — the upload actions that still
+  // take a FormData file (profile media, deck covers, watermarks, pips) need
+  // more. Card ART no longer rides a server action at all: it goes to a
+  // private staging bucket through a signed URL (TODO 6.10,
+  // lib/cards/upload-art-server.ts), because on Vercel a Function's request
+  // body is capped at 4.5 MB whatever this says (413
+  // FUNCTION_PAYLOAD_TOO_LARGE) — raising it would change nothing there and
+  // only let every server action accept a bigger unauthenticated body.
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",

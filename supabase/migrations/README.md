@@ -49,6 +49,19 @@ replays every storage policy and fails if one appears, and
 `tests/e2e/storage-direct-writes.spec.ts` tries the direct writes with a
 real session.
 
+**The one browser upload: card art through a private staging bucket (0131).**
+A Vercel Function takes at most 4.5 MB of request body, and print-quality
+art is 8–15 MiB (TODO 6.10), so card art no longer rides a server action.
+`startCardArtUploadAction` mints a signed upload URL (service role) for ONE
+`{userId}/{uuid}.upload` object in `card-art-incoming` — PRIVATE, 20 MiB,
+image types only, and with no policy at all; the browser PUTs the file there
+(`lib/cards/art-upload-client.ts`, the only browser module
+`tests/unit/media/storage-callers.test.ts` lets touch Storage), and
+`finishCardArtUploadAction` reads it back, runs the sniff / strip / scan,
+writes `card-art` and removes the staged copy. A signed upload URL is
+Storage's own one-object grant, not a policy — never add a policy for that
+bucket either, and never let a picture column (0127) accept it.
+
 **A card's render pointer is the server's too.** `cards_guard_render_columns`
 (0126) lets `anon` / `authenticated` only keep or clear
 `rendered_image_url`, `rendered_thumb_url`, `rendered_at` and
