@@ -1,25 +1,22 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  ARCH_TOKEN_STANDARD,
-  TOKEN_FRAME_LABELS_AFTER_SWITCH,
-  TOKEN_SKINS_AFTER_SWITCH,
-  TOKEN_STANDARD_ONCE_VERIFIED,
   autoM20TokenFrame,
   followTokenHeight,
+  isArchTokenFrame,
   newTokenFrame,
   pinsTokenHeight,
+  sameTokenFrameText,
+  tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import { FRAME_TEMPLATE_VALUES, TEMPLATE_SKIN_VARIANTS, type FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 import { typeWordFrameFor } from "@/lib/creator/card-kinds";
 
 // ---------------------------------------------------------------------------
 // TODO 4.48 / 4.50 (owner decisions 2026-09-29): the creator's default
-// switch to the full-art token and its automatic height — a module on its
-// own, NOT wired into the form until round 11's arch auto-pick merges
-// (feat/token-textbox-move); these tests hold its behaviour for that wiring.
+// switch to the full-art token and its automatic height, wired into round
+// 11's text-box follow (components/creator/card-creator-form.tsx; the form's
+// half is tests/unit/components/creator-form-reliability.test.tsx "4.48").
 // ---------------------------------------------------------------------------
 
 const ALL_M20 = ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"];
@@ -54,11 +51,13 @@ describe("autoM20TokenFrame — the height the text asks for, dressed by the Art
 });
 
 describe("newTokenFrame — the default switch (owner 2026-09-29: new tokens default to the full-art design once verified)", () => {
-  it("starts on the arch while the full-art template isn't verified in the colour", () => {
-    expect(newTokenFrame(FLYING, "w", new Set())).toBe("m15token");
-    expect(newTokenFrame(TREASURE, "c", new Set())).toBe("m15tokenartifact");
+  it("starts on the arch round 11 picks while the full-art template isn't verified in the colour — its text box for text, its artifact dress", () => {
+    expect(newTokenFrame(NONE, "w", new Set())).toBe("m15token");
+    expect(newTokenFrame(FLYING, "w", new Set())).toBe("m15tokentext");
+    expect(newTokenFrame(TREASURE, "c", new Set())).toBe("m15tokenartifacttext");
+    expect(newTokenFrame({ ...NONE, supertype: "Artifact" }, "c", new Set())).toBe("m15tokenartifact");
     // Verified in another colour only.
-    expect(newTokenFrame(FLYING, "w", everyM20("u"))).toBe("m15token");
+    expect(newTokenFrame(FLYING, "w", everyM20("u"))).toBe("m15tokentext");
   });
 
   it("starts on the full-art template the text asks for once it is verified in the colour", () => {
@@ -67,12 +66,31 @@ describe("newTokenFrame — the default switch (owner 2026-09-29: new tokens def
     expect(newTokenFrame(LONG, "b", everyM20("b"))).toBe("m20tokentall");
     expect(newTokenFrame(TREASURE, "c", everyM20("c"))).toBe("m20tokenartifacttext");
     // Only the textless height verified: a token with text keeps the arch.
-    expect(newTokenFrame(FLYING, "w", verified(["m20token", "w"]))).toBe("m15token");
+    expect(newTokenFrame(FLYING, "w", verified(["m20token", "w"]))).toBe("m15tokentext");
+    expect(newTokenFrame(NONE, "w", verified(["m20token", "w"]))).toBe("m20token");
   });
 
-  it("names the kind's standard it replaces", () => {
-    expect(TOKEN_STANDARD_ONCE_VERIFIED).toBe("m20token");
-    expect(ARCH_TOKEN_STANDARD).toBe("m15token");
+  it("knows the arch in every dress — where a token entering the kind on the M15 era lands", () => {
+    for (const t of ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"]) expect(isArchTokenFrame(t), t).toBe(true);
+    for (const t of ["m20token", "m20tokentall", "alphatoken", "m15", "nyx", null, undefined]) expect(isArchTokenFrame(t), String(t)).toBe(false);
+  });
+});
+
+describe("tokenFrameText / sameTokenFrameText — what the form follows", () => {
+  it("reads the words, the text and whether the face prints a P/T", () => {
+    expect(
+      tokenFrameText({ cardType: "token", supertype: "Creature", subtypes: ["Knight"], rulesText: "Vigilance", flavorText: null, power: "2", toughness: "2" }),
+    ).toEqual({ supertype: "Creature", rulesText: "Vigilance", flavorText: null, printsPowerToughness: true });
+    // A Treasure prints none, whatever the form still holds.
+    expect(tokenFrameText({ cardType: "token", supertype: "Artifact", rulesText: "x", flavorText: "", power: "1", toughness: "1" }).printsPowerToughness).toBe(false);
+  });
+
+  it("compares them field by field, blank and null alike", () => {
+    const a = tokenFrameText({ cardType: "token", supertype: "Creature", rulesText: null, flavorText: null, power: "1", toughness: "1" });
+    expect(sameTokenFrameText(a, { ...a, rulesText: "" })).toBe(true);
+    expect(sameTokenFrameText(a, { ...a, flavorText: "Hi." })).toBe(false);
+    expect(sameTokenFrameText(a, { ...a, supertype: "Artifact Creature" })).toBe(false);
+    expect(sameTokenFrameText(a, { ...a, printsPowerToughness: false })).toBe(false);
   });
 });
 
@@ -124,6 +142,11 @@ describe("followTokenHeight — automatic, with a manual choice that sticks (own
     expect(followTokenHeight({ ...onlyTextless, ...FLYING, previous: NONE, template: "m20token" })).toBe("m20token");
   });
 
+  it("without verified keys, names the target itself — the form checks it and says why it stays", () => {
+    expect(followTokenHeight({ heightPinned: false, ...FLYING, previous: NONE, template: "m20token" })).toBe("m20tokentext");
+    expect(followTokenHeight({ heightPinned: true, ...FLYING, previous: NONE, template: "m20token" })).toBe("m20token");
+  });
+
   it("leaves every other frame alone (the arch, a showcase): round 11's pick owns the arch", () => {
     for (const template of ["m15token", "m15tokentext", "m15tokenartifact", "nyx", "m15"] as FrameTemplate[]) {
       expect(followTokenHeight({ ...base, ...LONG, previous: NONE, template }), template).toBe(template);
@@ -147,18 +170,12 @@ describe("pinsTokenHeight — which picks pin the height", () => {
   });
 });
 
-describe("the tables the switch applies", () => {
-  it("names real templates: the full-art family 'Token', the arch 'Token (2014–2019)'", () => {
-    for (const t of Object.keys(TOKEN_FRAME_LABELS_AFTER_SWITCH)) expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(t);
-    expect(TOKEN_FRAME_LABELS_AFTER_SWITCH.m20token).toBe("Token");
-    expect(TOKEN_FRAME_LABELS_AFTER_SWITCH.m15token).toBe("Token (2014–2019)");
-    for (const t of ALL_M20) expect(TOKEN_FRAME_LABELS_AFTER_SWITCH[t as FrameTemplate], t).toBeDefined();
-  });
-
-  it("keeps every token frame offered: today's variations of the arch are the switch's variations of the full-art standard", () => {
-    const today = new Set<FrameTemplate>(["m15token", ...(TEMPLATE_SKIN_VARIANTS.m15token ?? [])]);
-    const after = new Set<FrameTemplate>([TOKEN_STANDARD_ONCE_VERIFIED, ...TOKEN_SKINS_AFTER_SWITCH]);
-    expect([...after].sort()).toEqual([...today].sort());
+describe("the arch and the full-art family, side by side", () => {
+  it("names the arch for its years (owner decision 2026-09-29) and the full-art design apart", () => {
+    expect(FRAME_TEMPLATE_LABELS.m15token).toBe("Token (2014–2019)");
+    expect(FRAME_TEMPLATE_LABELS.m15tokenartifact).toBe("Artifact Token (2014–2019)");
+    expect(FRAME_TEMPLATE_LABELS.m15tokentext).toBe("Token (2014–2019), text box");
+    for (const t of ALL_M20) expect(FRAME_TEMPLATE_LABELS[t as FrameTemplate], t).toMatch(/^Full-art (Artifact )?Token/);
   });
 
   it("each height's artifact template is its Artifact-word dress (4.50)", () => {
@@ -166,22 +183,5 @@ describe("the tables the switch applies", () => {
     expect(typeWordFrameFor("token", "m20tokentext", "Artifact Creature")).toBe("m20tokenartifacttext");
     expect(typeWordFrameFor("token", "m20tokentall", "Artifact")).toBe("m20tokenartifacttall");
     expect(typeWordFrameFor("token", "m20tokenartifacttall", "Creature")).toBe("m20tokentall");
-  });
-});
-
-describe("not wired yet (round 11's arch auto-pick lands first)", () => {
-  it("no app code imports the module until then", () => {
-    const root = process.cwd();
-    const importers: string[] = [];
-    const walk = (dir: string) => {
-      for (const name of readdirSync(dir)) {
-        const file = path.join(dir, name);
-        if (statSync(file).isDirectory()) walk(file);
-        else if (/\.(ts|tsx)$/.test(name) && /from ["']@\/lib\/creator\/token-frame-auto["']/.test(readFileSync(file, "utf8")))
-          importers.push(path.relative(root, file));
-      }
-    };
-    for (const dir of ["app", "components", "lib"]) walk(path.join(root, dir));
-    expect(importers).toEqual([]);
   });
 });

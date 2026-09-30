@@ -117,7 +117,7 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     const treasure = card("720f3e68-84c0-462e-a0d1-90236ccc494a");
     expect(treasure.name).toBe("Treasure");
     expect(validateReferenceForCombo(treasure, "m15token", "c").warnings.join(" ")).toMatch(
-      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token\./,
+      /frame signature registry resolves it to the Artifact Token \(2014–2019\), text box frame, not Token \(2014–2019\)\./,
     );
     expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });

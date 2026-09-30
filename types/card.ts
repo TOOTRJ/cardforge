@@ -404,12 +404,14 @@ export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
 export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15: "Standard",
   m15land: "Land",
-  m15token: "Token",
+  // The 2014–19 arch, named for its years (owner decision 2026-09-29) now
+  // that new tokens default to the full-art design once it is verified.
+  m15token: "Token (2014–2019)",
   m15artifact: "Artifact",
   m15snow: "Snow",
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
-  m15tokenartifact: "Artifact Token",
+  m15tokenartifact: "Artifact Token (2014–2019)",
   m15tokentext: "Token (2014–2019), text box",
   m15tokenartifacttext: "Artifact Token (2014–2019), text box",
   m20token: "Full-art Token",

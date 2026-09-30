@@ -48,6 +48,7 @@ import {
   isSingleBasicLand,
   kindHasAvailableFrame,
   isTextBoxDress,
+  isTokenHeightDress,
   isTypeWordDress,
   skinVariantsFor,
   templateIsBasicOnly,
@@ -82,6 +83,8 @@ import {
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
+import { tokenFrameText } from "@/lib/creator/token-frame-auto";
+import { m20TokenHeightOf } from "@/lib/cards/token-height";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
   frameSubstitutionLabel,
@@ -391,9 +394,11 @@ export function CardSetupPanel({
             (c) => c.group === "showcase",
           );
           const variationChoices = [...skinChoices, ...showcaseChoices];
-          // The token's text box follows the text (owner decision 5): say
-          // so beside the chips, and that picking one keeps it.
+          // The token's text box follows the text (owner decision 5) — on
+          // the full-art design, its height too (TODO 4.48): say so beside
+          // the chips, and that picking one keeps it.
           const textBoxFollows = variationChoices.some((c) => isTextBoxDress(kind, c.template));
+          const heightFollows = variationChoices.some((c) => isTokenHeightDress(kind, c.template));
 
           const frameSummary =
             eraForTemplate(base) === "showcase"
@@ -442,11 +447,19 @@ export function CardSetupPanel({
             // chose, and it sticks.
             const next = variation
               ? typeWordFrameFor(kind, picked, getValues("supertype"))
-              : tokenFrameFor(kind, picked, {
-                  supertype: getValues("supertype"),
-                  rulesText: getValues("rules_text"),
-                  flavorText: getValues("flavor_text"),
-                });
+              : tokenFrameFor(
+                  kind,
+                  picked,
+                  tokenFrameText({
+                    cardType: getValues("card_type") || null,
+                    supertype: getValues("supertype"),
+                    subtypes: parseSubtypes(getValues("subtypes_text") ?? ""),
+                    rulesText: getValues("rules_text"),
+                    flavorText: getValues("flavor_text"),
+                    power: getValues("power"),
+                    toughness: getValues("toughness"),
+                  }),
+                );
             const resolution = resolvePublishedFrame({
               kind,
               candidates: [next],
@@ -517,9 +530,11 @@ export function CardSetupPanel({
                       ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
                       : isTextBoxDress(kind, choice.template)
                         ? "A text box for rules and flavour text"
-                        : choice.group === "skin"
-                          ? "Same layout, different dress"
-                          : undefined,
+                        : kind === "token" && m20TokenHeightOf(choice.template)
+                          ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
+                          : choice.group === "skin"
+                            ? "Same layout, different dress"
+                            : undefined,
               leading: (
                 <FrameThumb
                   template={
@@ -655,10 +670,11 @@ export function CardSetupPanel({
                             ...variationChoices.map(toOption),
                           ]}
                         />
-                        {textBoxFollows ? (
+                        {textBoxFollows || heightFollows ? (
                           <p className="text-[11px] leading-4 text-subtle">
-                            The text box comes and goes with the card&apos;s rules and flavour
-                            text. Pick one here to keep it.
+                            {heightFollows
+                              ? "The text box comes and goes with the card's rules and flavour text, and on the full-art token grows with it. Pick one here to keep it."
+                              : "The text box comes and goes with the card's rules and flavour text. Pick one here to keep it."}
                           </p>
                         ) : null}
                       </div>
@@ -692,6 +708,14 @@ export function CardSetupPanel({
     </div>
   );
 }
+
+/** The full-art token's heights, as the Variations chips describe them
+ *  (TODO 4.48): the text picks one until the user does. */
+const M20_TOKEN_HEIGHT_HINTS = {
+  textless: "Art to the border, no text box",
+  regular: "Art to the border, a text box",
+  tall: "Art to the border, a tall text box for long text",
+} as const;
 
 const TOKEN_WORD_HINTS: Record<TokenPickerWord, string> = {
   Creature: "Prints a power / toughness",

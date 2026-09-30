@@ -1496,7 +1496,7 @@ describe("4.49 (b) the token text box follows the text", () => {
     await typeFlavour("A knight.");
     expect(preview().template).toBe("m15token");
     expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(
-      /text box isn't verified in colorless yet — keeping M15 \(2015\) Token\./,
+      /text box isn't verified in colorless yet — keeping M15 \(2015\) Token \(2014–2019\)\./,
     );
   });
 
@@ -1583,6 +1583,211 @@ describe("4.49 (b) the token text box follows the text", () => {
       fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// 4.48 / 4.50 (owner decisions 2026-09-29) — the full-art token, wired into
+// the text-box follow above: once its template is VERIFIED in the card's
+// colour a NEW token starts on it (else on the arch, as above), its height
+// follows the text (no box → the regular box → the tall box) until the user
+// picks one in Variations (it sticks), and a stored card keeps its frame.
+// Flavour text drives the text here (the rules field is a rich editor); the
+// height rule counts it like rules text.
+// ---------------------------------------------------------------------------
+
+describe("4.48 the full-art token: the default switch and the automatic height", () => {
+  const M20 = ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"];
+  const ARCH = ["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"];
+  const combos = (templates: string[], colours = EVERY_COLOUR) => templates.flatMap((t) => colours.map((k) => frameComboKey(t, k)));
+  const ALL = [...VERIFIED, ...combos(ARCH), ...combos(M20)];
+  // Long enough that the regular box would hold it only below 72 px.
+  const LONG =
+    "When this creature enters, look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.";
+  const flavour = () => screen.getByPlaceholderText("A coil of fire, bound by oath.") as HTMLTextAreaElement;
+  async function typeFlavour(value: string) {
+    await act(async () => {
+      fireEvent.change(flavour(), { target: { value } });
+    });
+  }
+  async function back(times = 1) {
+    for (let i = 0; i < times; i += 1) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+      });
+    }
+  }
+  async function toggleToken(label: RegExp) {
+    const chip = Array.from(document.querySelectorAll("[aria-label='Token types'] button")).find((el) =>
+      label.test(el.textContent ?? ""),
+    ) as HTMLButtonElement;
+    await act(async () => {
+      fireEvent.click(chip);
+    });
+  }
+  async function goToText() {
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);
+    });
+  }
+
+  it("a new token starts on the full-art design once it is verified, its height following the text", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: ALL });
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m20token");
+    await clickNext(2);
+    await typeFlavour("Enemies of the heir, beware.");
+    expect(preview().template).toBe("m20tokentext");
+    await typeFlavour(LONG);
+    expect(preview().template).toBe("m20tokentall");
+    await typeFlavour("Short again.");
+    expect(preview().template).toBe("m20tokentext");
+    await typeFlavour("   ");
+    expect(preview().template).toBe("m20token");
+    // The Artifact word dresses whichever height the card wears.
+    await typeFlavour(LONG);
+    await back(2);
+    await toggleToken(/^Creature/);
+    await toggleToken(/^Artifact/);
+    expect(preview().template).toBe("m20tokenartifacttall");
+    await clickNext(2);
+    await typeFlavour("");
+    expect(preview().template).toBe("m20tokenartifact");
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
+  it("starts on the arch while the full-art template isn't verified in the card's colour — round 11's pick", async () => {
+    // Verified in every colour but colourless (a new card's colour).
+    renderForm({ mode: "create", verifiedFrameKeys: [...VERIFIED, ...combos(ARCH), ...combos(M20, ["w", "u", "b", "r", "g", "m"])] });
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m15token");
+    await clickNext(2);
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m15tokentext");
+    // A token entered with text: the arch's text box, no full-art height.
+    await back(2);
+    await pickKind(/^Creature/);
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m15tokentext");
+  });
+
+  it("a card turned into a token with text starts on the height its text asks for", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: ALL });
+    await pickKind(/^Creature/);
+    await clickNext(2);
+    await typeFlavour(LONG);
+    await back(2);
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m20tokentall");
+  });
+
+  it("an idea for a token with text lands on the full-art text box", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: ALL });
+    await applyIdea({
+      title: "Knight",
+      card_type: "token",
+      supertype: "Creature",
+      subtypes_text: "Knight",
+      color_identity: ["white"],
+      rules_text: "Vigilance",
+      flavor_text: "",
+      power: "2",
+      toughness: "2",
+    });
+    expect(preview().cardType).toBe("token");
+    expect(preview().template).toBe("m20tokentext");
+  });
+
+  it("a height picked by hand in Variations sticks, whatever the text does after", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: ALL });
+    await pickKind(/^Token/);
+    await clickNext(2);
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m20tokentext");
+    await back(2);
+    await clickChip("Frame variations", /^Full-art Token, tall text box/);
+    expect(preview().template).toBe("m20tokentall");
+    await clickNext(2);
+    await typeFlavour("");
+    await typeFlavour("A knight, again.");
+    expect(preview().template).toBe("m20tokentall");
+    // …even the height the text asks for, picked by hand: it no longer
+    // follows.
+    await back(2);
+    await clickChip("Frame variations", /^Full-art Token, text box/);
+    await clickNext(2);
+    await typeFlavour(LONG);
+    expect(preview().template).toBe("m20tokentext");
+    // A Frame-section pick of the arch is the arch, automatic again.
+    await back(2);
+    await clickChip("M15 (2015) frames", /^Token \(2014–2019\)/);
+    expect(preview().template).toBe("m15tokentext");
+    await clickNext(2);
+    await typeFlavour("");
+    expect(preview().template).toBe("m15token");
+  });
+
+  it("never moves onto a height that isn't verified in the colour, and says so", async () => {
+    // Only the textless height verified.
+    renderForm({ mode: "create", verifiedFrameKeys: [...VERIFIED, ...combos(ARCH), ...combos(["m20token", "m20tokenartifact"])] });
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m20token");
+    await clickNext(2);
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m20token");
+    expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(
+      /Full-art Token, text box isn't verified in colorless yet — keeping M15 \(2015\) Full-art Token\./,
+    );
+  });
+
+  it("a saved full-art token keeps a height that disagrees with its text; one that agrees follows it", async () => {
+    const saved = (template: string, flavor: string | null) =>
+      savedCard({
+        title: "Knight",
+        card_type: "token",
+        supertype: "Creature",
+        subtypes: ["Knight"],
+        power: "2",
+        toughness: "2",
+        cost: null,
+        rules_text: null,
+        flavor_text: flavor,
+        color_identity: ["white"],
+        frame_style: { finish: "regular", template },
+      });
+    const { unmount } = renderForm({ mode: "edit", verifiedFrameKeys: ALL, card: saved("m20tokentall", "A knight.") });
+    expect(preview().template).toBe("m20tokentall");
+    await goToText();
+    await typeFlavour("A knight, still.");
+    expect(preview().template).toBe("m20tokentall");
+    unmount();
+    renderForm({ mode: "edit", verifiedFrameKeys: ALL, card: saved("m20tokentext", "A knight.") });
+    await goToText();
+    await typeFlavour(LONG);
+    expect(preview().template).toBe("m20tokentall");
+  });
+
+  it("a stored arch token stays on the arch: the switch is for new tokens only", async () => {
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: ALL,
+      card: savedCard({
+        title: "Soldier",
+        card_type: "token",
+        supertype: "Creature",
+        subtypes: ["Soldier"],
+        power: "1",
+        toughness: "1",
+        cost: null,
+        rules_text: null,
+        flavor_text: null,
+        color_identity: ["white"],
+        frame_style: { finish: "regular", template: "m15token" },
+      }),
+    });
+    await goToText();
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15tokentext");
+  });
 });
 
 // ---------------------------------------------------------------------------
