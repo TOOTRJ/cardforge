@@ -134,7 +134,7 @@ const inkHeightPx = (code: string, fontPx: number) => {
   return ((yMax - yMin) / KEYRUNE_UNITS_PER_EM) * fontPx;
 };
 
-describe("the set symbol on a real HD bake (layout v32)", () => {
+describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and walker rect)", () => {
   it("fills M15's 86 px box with an icon, right-aligned and centred on the type band", async () => {
     const p = getFrameProfile("m15");
     const box = inkBox(await bake("m15", { setIconUrl: icon }), p.type.rect, Math.round(W * 0.7), magenta);
@@ -146,26 +146,38 @@ describe("the set symbol on a real HD bake (layout v32)", () => {
     expect(Math.abs((box.top + box.bottom + 1) / 2 - centre)).toBeLessThanOrEqual(1);
   }, 60_000);
 
-  it("fits a Keyrune glyph's ink to the box: DOM 86 px tall, the wide M20 41 px at 0.065 W", async () => {
+  it("fits an unmeasured Keyrune glyph's ink to the box (XLN 86 px), and draws a measured set at its print's size (v36): DOM 88 px, M20 180 × 75", async () => {
     const p = getFrameProfile("m15");
-    for (const [code, expectedFontPx] of [
-      ["dom", 87],
-      ["m20", 98],
+    for (const [code, expectedFontPx, printedH] of [
+      ["xln", 86, null],
+      ["dom", 89, 88.5],
+      ["m20", 180, null],
     ] as const) {
       const fontPx = Math.round(setSymbolSize(p, setSymbolSource(null, code)).sizePct * W);
       expect(fontPx, code).toBe(expectedFontPx);
-      const box = inkBox(await bake("m15", { setIconCode: code }), p.type.rect, Math.round(W * 0.7), glyphInk);
+      const box = inkBox(await bake("m15", { setIconCode: code }), p.type.rect, Math.round(W * 0.6), glyphInk);
       // Anti-aliased edges count from half coverage: ±1 px of the outline.
       expect(Math.abs(box.h - inkHeightPx(code, fontPx)), code).toBeLessThanOrEqual(1.5);
-      expect(box.h, code).toBeLessThanOrEqual(87);
+      if (printedH) expect(Math.abs(box.h - printedH), code).toBeLessThanOrEqual(1.5);
     }
+    // M20's pill: CC's 0.12 W (180 px) binds — the print is 187.5 × 86.
+    const m20 = inkBox(await bake("m15", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), glyphInk);
+    expect(Math.abs(m20.w - 180)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(m20.h - 75)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 
-  it("uses the planeswalker's 80 px box, in its symbolRect", async () => {
+  it("uses the planeswalker's 80 px box in its symbolRect, ending where M15's does (4.47: 1383 px, was 1365)", async () => {
     const p = getFrameProfile("m15pw");
     const icon80 = inkBox(await bake("m15pw", { setIconUrl: icon }), p.symbolRect!, Math.round(W * 0.7), magenta);
     expect([icon80.w, icon80.h]).toEqual([80, 80]);
+    // The walker prints put the symbol's right edge where their set's regular
+    // cards do: M15's band edge, 92.2 %W.
+    expect(Math.abs(icon80.right + 1 - 1383)).toBeLessThanOrEqual(1);
+    const m15 = getFrameProfile("m15");
+    expect(p.symbolRect!.leftPct + p.symbolRect!.widthPct).toBeCloseTo(m15.type.rect.leftPct + m15.type.rect.widthPct, 9);
+    // A measured set prints at its regular size on the walkers too (v36).
     const dom = inkBox(await bake("m15pw", { setIconCode: "dom" }), p.symbolRect!, Math.round(W * 0.7), glyphInk);
-    expect(Math.abs(dom.h - 80)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(dom.h - 88.5)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(dom.right + 1 - 1383)).toBeLessThanOrEqual(1.5);
   }, 60_000);
 });

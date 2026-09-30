@@ -19,9 +19,11 @@
 //     size and one type size instead of per-frame literals. Frames outside
 //     that family keep their own measured sizes.
 //   • Inline mana symbols print a touch taller than the capitals of the line
-//     they sit in and are centred on the x-height, with a hairline between
-//     adjacent symbols ("{G}{G}") and none between a symbol and its
-//     punctuation ("{T}:").
+//     they sit in (0.785 em) and are centred on the capitals — the disc's
+//     centre 0.334 em above the baseline, about half MPlantin's 0.682 em cap
+//     height, not on the x-height (layout v36, TODO 3.31: 37 discs on 14
+//     prints) — with a hairline between adjacent symbols ("{G}{G}") and none
+//     between a symbol and its punctuation ("{T}:").
 //   • Leading is solid: 0.98 × size, rules and flavor alike (the prints'
 //     line pitch, 74–75 HD px at 9 pt, measured three ways — layout v33,
 //     TODO 3.29). Abilities are separated by a FIXED gap (≈1 mm, 24 HD px
@@ -147,8 +149,17 @@ export const RULES_TEXT = {
   blankLineEm: 0.6,
   /** Word gap (em) — MPlantin's space width. */
   wordGapEm: 0.26,
-  /** Inline pip disc diameter as a fraction of the font size. */
-  pipDiscEm: 0.86,
+  /** Inline pip disc diameter as a fraction of the font size. Layout v36
+   *  (TODO 3.31): 0.785 em — 37 inline discs on 14 prints (Scryfall PNGs at
+   *  1500 px, circle-fitted, em from the line's cap height) measure 0.754–
+   *  0.812 em, mean 0.785 (sd 0.014): 60 px at 76 px type where 0.86 drew 65. */
+  pipDiscEm: 0.785,
+  /** How far above its line's baseline an inline pip's disc is centred (em):
+   *  on the capitals (half MPlantin's 0.682 em cap height is 0.341). The
+   *  same 37 discs: 0.323–0.348 em, mean 0.334 (sd 0.006) — 25 px at 76 px
+   *  type, where centring the disc in the line box put it 21 px up
+   *  (layout v36, TODO 3.31). */
+  pipCentreEm: 0.334,
   /** Gap between two adjacent pips (em). */
   pipGapEm: 0.1,
 } as const;

@@ -183,24 +183,24 @@ describe("verificationState", () => {
     );
     expect(ticks).toHaveLength(14);
     for (const { template, color } of ticks) {
-      const state = verificationState(legacy, template, "none");
+      const state = verificationState(legacy, template, "none", 34);
       // Still verified: the creator keeps offering the frame…
       expect(state.verified, `${template}/${color}`).toBe(true);
       // …and the admin pages say "needs re-verification".
       expect(state.stale, `${template}/${color}`).toBe(true);
-      expect(state.reasons).toEqual([`the renderer changed since this tick (made before layout v33; now v${CARD_LAYOUT_VERSION})`]);
+      expect(state.reasons).toEqual(["the renderer changed since this tick (made before layout v33; now v34)"]);
     }
     // A stamped tick from v33 / v32 / v30 on them goes stale too; a v34 re-tick is fresh.
     const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
     for (const template of ["m15token", "m15tokenartifact"]) {
-      for (const v of [33, 32, 30]) expect(verificationState(tick(v), template, "h").stale, `${template}@${v}`).toBe(true);
-      expect(verificationState(tick(34), template, "h").stale, template).toBe(false);
+      for (const v of [33, 32, 30]) expect(verificationState(tick(v), template, "h", 34).stale, `${template}@${v}`).toBe(true);
+      expect(verificationState(tick(34), template, "h", 34).stale, template).toBe(false);
     }
     // Every other template's tick — a legacy one or a v33 one — stays fresh:
     // the token wording (alphatoken, the showcases, flip's Roles) moves no slot.
     for (const template of FRAME_TEMPLATE_VALUES.filter((t) => t !== "m15token" && t !== "m15tokenartifact")) {
-      expect(verificationState(legacy, template, "none").stale, `${template} legacy`).toBe(false);
-      expect(verificationState(tick(33), template, "h").stale, `${template}@33`).toBe(false);
+      expect(verificationState(legacy, template, "none", 34).stale, `${template} legacy`).toBe(false);
+      expect(verificationState(tick(33), template, "h", 34).stale, `${template}@33`).toBe(false);
     }
   });
 
@@ -212,9 +212,34 @@ describe("verificationState", () => {
     // masters, nyx, fullart — keep a v34 tick fresh, and a legacy one too
     // (the token frames' legacy ticks stay stale from v34, not from v35).
     for (const template of FRAME_TEMPLATE_VALUES) {
-      expect(verificationState(tick(34), template, "h").stale, `${template}@34`).toBe(false);
+      expect(verificationState(tick(34), template, "h", 35).stale, `${template}@34`).toBe(false);
       if (template !== "m15token" && template !== "m15tokenartifact") {
-        expect(verificationState(legacy, template, "none").stale, `${template} legacy`).toBe(false);
+        expect(verificationState(legacy, template, "none", 35).stale, `${template} legacy`).toBe(false);
+      }
+    }
+  });
+
+  it("v36 (the second correction round) stales only the planeswalkers' ticks — the symbol moved onto the prints (4.47)", () => {
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(36);
+    const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
+    const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
+    const walkers = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+    // Production's seven m15pw ticks are legacy rows (2026-07-08, no score or
+    // reference): stale — still verified — until re-ticked at v36.
+    for (const template of walkers) {
+      const state = verificationState(legacy, template, "none", 36);
+      expect(state.verified, template).toBe(true);
+      expect(state.stale, template).toBe(true);
+      expect(verificationState(tick(35), template, "h", 36).stale, `${template}@35`).toBe(true);
+      expect(verificationState(tick(36), template, "h", 36).stale, `${template}@36`).toBe(false);
+    }
+    // Every other template keeps a v35 tick (and a legacy one, the token
+    // frames' v34 staleness aside) fresh: the pips move text inside the rules
+    // boxes (as v33), the set symbols change size (as v32), nyx has no tick.
+    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => !walkers.includes(t))) {
+      expect(verificationState(tick(35), template, "h", 36).stale, `${template}@35`).toBe(false);
+      if (template !== "m15token" && template !== "m15tokenartifact") {
+        expect(verificationState(legacy, template, "none", 36).stale, `${template} legacy`).toBe(false);
       }
     }
   });

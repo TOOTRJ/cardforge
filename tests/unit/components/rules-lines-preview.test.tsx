@@ -81,6 +81,8 @@ function expectDrawn(box: HTMLElement, layout: RulesLayout, template: FrameTempl
     expect(css(line, "flex-wrap")).toBe("nowrap");
     Array.from(line.children).forEach((run, ri) => {
       expect(css(run, "flex-shrink")).toBe("0");
+      // Each run the line box tall, so a pip's top is the layout's (3.31).
+      expect(css(run, "height")).toBe(cqwOf(d.linePx, template));
       Array.from(run.children).forEach((item, ii) => {
         expect(css(item, "flex-shrink")).toBe("0");
         const word = model[li].runs[ri][ii];
@@ -94,6 +96,11 @@ function expectDrawn(box: HTMLElement, layout: RulesLayout, template: FrameTempl
           expect(css(pip, "margin-left")).toBe("");
           const gapBefore = ii > 0 && model[li].runs[ri][ii - 1].t === "m";
           expect(css(item, "padding-left")).toBe(gapBefore ? cqwOf(d.pipGapPx, template) : "");
+          // The disc at the layout's top in its line box — centred on the
+          // capitals like the prints (layout v36, TODO 3.31), never centred
+          // in the line box.
+          expect(css(item, "align-self")).toBe("flex-start");
+          expect(css(item, "margin-top")).toBe(cqwOf(d.pipTopPx, template));
         } else if (item.tagName === "SPAN" && !item.className) {
           expect(word.t).toBe("w");
           expect(css(item, "white-space")).toBe("nowrap");

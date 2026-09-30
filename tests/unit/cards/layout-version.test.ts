@@ -1055,6 +1055,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     ...over,
   });
   const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  /** The sweep / badge rules as they stood at v35 (v36 moves the walkers
+   *  and nyx on its own). */
+  const AT_V35 = { current: 35 } as const;
   const UNDER = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
 
   it("is a sweep, never a badge, with its template lists frozen as literals and pinned to the profiles", async () => {
@@ -1119,20 +1122,21 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
       ]) {
         const label = `${t} ${JSON.stringify(row.color_identity)} ${row.art_url}`;
         expect(isRenderStale(34, t, undefined, 35, row), label).toBe(whole);
-        expect(classifyForSweep(row), label).toBe(whole ? "rebake" : "stamp");
-        expect(classifyForSweep(row, 35), label).toBe(whole ? "rebake" : "stamp");
-        expect(hasPendingCorrection(row), label).toBe(whole);
-        expect(hasNewerLook({ ...row, visibility: "public" }), label).toBe(false);
+        // (Pinned at v35: v36 moves the walkers and nyx on its own.)
+        expect(classifyForSweep(row, undefined, AT_V35), label).toBe(whole ? "rebake" : "stamp");
+        expect(classifyForSweep(row, 35, AT_V35), label).toBe(whole ? "rebake" : "stamp");
+        expect(hasPendingCorrection(row, AT_V35), label).toBe(whole);
+        expect(hasNewerLook({ ...row, visibility: "public" }, AT_V35), label).toBe(false);
       }
       // A colourless card with art: the see-through master's under-frame art.
       const c = at(t, { color_identity: ["colorless"], art_url: art });
-      expect(classifyForSweep(c), `${t} colourless + art`).toBe(whole || seeThrough ? "rebake" : "stamp");
+      expect(classifyForSweep(c, undefined, AT_V35), `${t} colourless + art`).toBe(whole || seeThrough ? "rebake" : "stamp");
     }
     // A {} frame_style (and a retired template) draws m15: every card re-bakes.
-    expect(classifyForSweep(at("m15", { frame_style: {} }))).toBe("rebake");
-    expect(classifyForSweep(at("regular"))).toBe("rebake");
-    // A v35 bake is current.
-    expect(classifyForSweep(at("m15", { layout_version: 35 }))).toBe("current");
+    expect(classifyForSweep(at("m15", { frame_style: {} }), undefined, AT_V35)).toBe("rebake");
+    expect(classifyForSweep(at("regular"), undefined, AT_V35)).toBe("rebake");
+    // A v35 bake is current (at v35).
+    expect(classifyForSweep(at("m15", { layout_version: 35 }), undefined, AT_V35)).toBe("current");
   });
 
   it("on m15token / m15tokentext / m15pw re-bakes exactly the colourless cards with art (the see-through master's under-frame art)", async () => {
@@ -1140,13 +1144,13 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     for (const t of V35_SEE_THROUGH_C_TEMPLATES) {
       // The bake's pick: no identity, "colorless", or only unknown values paint "c".
       for (const colours of [[], ["colorless"], ["purple"], null]) {
-        expect(classifyForSweep(at(t, { color_identity: colours, art_url: art })), `${t} ${JSON.stringify(colours)}`).toBe("rebake");
-        expect(classifyForSweep(at(t, { color_identity: colours, art_url: null })), `${t} ${JSON.stringify(colours)} no art`).toBe("stamp");
-        expect(classifyForSweep(at(t, { color_identity: colours, art_url: "" })), `${t} ${JSON.stringify(colours)} empty art`).toBe("stamp");
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: art }), undefined, AT_V35), `${t} ${JSON.stringify(colours)}`).toBe("rebake");
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: null }), undefined, AT_V35), `${t} ${JSON.stringify(colours)} no art`).toBe("stamp");
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: "" }), undefined, AT_V35), `${t} ${JSON.stringify(colours)} empty art`).toBe("stamp");
       }
       // A coloured or gold card paints an opaque master: stamped.
       for (const colours of [["blue"], ["white", "blue"], ["multicolor"], ["colorless", "red"]]) {
-        expect(classifyForSweep(at(t, { color_identity: colours, art_url: art })), `${t} ${JSON.stringify(colours)}`).toBe("stamp");
+        expect(classifyForSweep(at(t, { color_identity: colours, art_url: art }), undefined, AT_V35), `${t} ${JSON.stringify(colours)}`).toBe("stamp");
       }
     }
   });
@@ -1165,7 +1169,7 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
 
   it("is verification-neutral: a v34 frame_reviews tick stays fresh on every template", async () => {
     const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
-    expect(VERIFICATION_NEUTRAL_VERSIONS).toEqual([31, 32, 33, 35]);
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(35);
     expect(VERIFICATION_SCOPED_VERSIONS[35]).toEqual([]);
     for (const t of ALL) {
       const regular = { frame_style: { template: t, finish: "regular" } };
@@ -1177,6 +1181,163 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     const src = readFileSync(join(process.cwd(), "lib/cards/layout-version.ts"), "utf8");
     expect(src).not.toMatch(/from "@\/components\//);
     expect(src).toContain('import { pickFrameColorKey } from "@/lib/cards/frame-color-key";');
+  });
+});
+
+describe("v36 — the second correction round: inline pips, printed set symbols, the walker symbol, nyx's box (one bump)", () => {
+  const png = "https://x/y.png";
+  /** A v35 bake. Its columns default to UNTOUCHED_SINCE_V22 (a blue one-word
+   *  sorcery with no text, set icon or code), so only v36 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 35,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+
+  it("is a sweep, never a badge, with its lists frozen as literals and pinned to the profiles and the table", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const { SET_SYMBOL_PRINTED_PX } = await import("@/lib/cards/set-symbol-prints");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(36);
+    expect(lv.rolloutPolicy(36)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 36)).toBe(36);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[36]).toBeTypeOf("function");
+    // Every template that draws ability rows (the walkers) and nyx.
+    const rows = ALL.filter((t) => getFrameProfile(t).loyaltyRows);
+    expect(lv.V36_EVERY_CARD_TEMPLATES).toEqual([...rows, "nyx"]);
+    // The printed-size templates: the profiles with setSymbolFit "ink".
+    expect([...lv.V36_PRINTED_SYMBOL_TEMPLATES].sort()).toEqual(
+      ALL.filter((t) => getFrameProfile(t).setSymbolFit === "ink").sort(),
+    );
+    expect(lv.V36_PRINTED_SYMBOL_SETS).toEqual(Object.keys(SET_SYMBOL_PRINTED_PX).sort());
+    expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless));
+    expect(lv.V36_BACK_FACE_TEXT_TEMPLATES).toEqual(
+      ALL.filter((t) => getFrameProfile(t).adventure || getFrameProfile(t).secondFace),
+    );
+    // What moved on the walkers (4.47): the symbolRect, onto M15's right edge.
+    for (const t of rows) expect(getFrameProfile(t).symbolRect?.leftPct, t).toBe(80.2);
+  });
+
+  it("re-bakes every walker and nyx card, and a text-free card nowhere else", async () => {
+    const { V36_EVERY_CARD_TEMPLATES, classifyForSweep, hasNewerLook, hasPendingCorrection } = await import(
+      "@/lib/cards/layout-version"
+    );
+    for (const t of ALL) {
+      const whole = V36_EVERY_CARD_TEMPLATES.includes(t);
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(whole ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row), t).toBe(whole);
+      expect(hasNewerLook({ ...row, visibility: "public" }), t).toBe(false);
+    }
+    expect(classifyForSweep(at("m15", { layout_version: 36 }))).toBe("current");
+  });
+
+  it("re-bakes a card whose printed text draws an inline pip (3.31), on any template that prints it", async () => {
+    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    const pip = "{T}: Add {G}.";
+    for (const t of ["m15", "lotr", "retro", "adventure", "flip", "m15tokentext", "emblem", "saga", "battle"]) {
+      expect(classifyForSweep(at(t, { rules_text: pip })), t).toBe("rebake");
+      expect(classifyForSweep(at(t, { rules_text: "Flying" })), `${t} no pip`).toBe("stamp");
+    }
+    // A {} frame_style draws m15.
+    expect(classifyForSweep(at("m15", { frame_style: {}, rules_text: pip }))).toBe("rebake");
+    // In reminder text too; "{ }" draws nothing; flavor draws no pips.
+    expect(classifyForSweep(at("m15", { rules_text: "Mana (({T}: Add {C}.))" }))).toBe("rebake");
+    expect(classifyForSweep(at("m15", { rules_text: "Odd { } braces" }))).toBe("stamp");
+    expect(classifyForSweep(at("m15", { flavor_text: "{T}", rules_text: null }))).toBe("stamp");
+    // A basic land's text is never drawn; the full-art token's textless
+    // height prints no text.
+    expect(classifyForSweep(at("m15land", { card_type: "land", supertype: "Basic", subtypes: ["Forest"], title: "Forest", rules_text: pip }))).toBe("stamp");
+    expect(classifyForSweep(at("m15land", { card_type: "land", title: "Grove", rules_text: pip }))).toBe("rebake");
+    for (const t of ["m20token", "m20tokenartifact"]) expect(classifyForSweep(at(t, { rules_text: pip })), t).toBe("stamp");
+    // A back face's text only where the adventure page or a second face draws it.
+    const back = { title: "B", rules_text: "{1}: Scry 1." };
+    expect(classifyForSweep(at("adventure", { back_face: back }))).toBe("rebake");
+    expect(classifyForSweep(at("split", { back_face: back }))).toBe("rebake");
+    expect(classifyForSweep(at("m15", { back_face: back }))).toBe("stamp");
+    // A saga's chapters (face_content) on the saga rail only.
+    const saga = { saga: { chapters: [{ text: "Add {R}." }] } };
+    expect(classifyForSweep(at("saga", { face_content: saga }))).toBe("rebake");
+    expect(classifyForSweep(at("m15", { face_content: saga }))).toBe("stamp");
+  });
+
+  it("re-bakes a listed set's Keyrune glyph on a printed-size template (4.46), and nothing else of the symbol", async () => {
+    const { V36_PRINTED_SYMBOL_TEMPLATES, classifyForSweep } = await import("@/lib/cards/layout-version");
+    for (const t of ALL) {
+      const printed = V36_PRINTED_SYMBOL_TEMPLATES.includes(t);
+      const whole = ["m15pw", "m15borderlesspw", "m15borderlesspwtall", "nyx"].includes(t);
+      expect(classifyForSweep(at(t, { set_icon_code: "neo" })), `${t} neo`).toBe(printed || whole ? "rebake" : "stamp");
+      // Case and the "ss-" prefix resolve as the renderers do.
+      expect(classifyForSweep(at(t, { set_icon_code: "SS-DOM" })), `${t} dom`).toBe(printed || whole ? "rebake" : "stamp");
+      // WAR / ZNR / BFZ stay on v32's fit (their print's size is its px).
+      for (const code of ["war", "znr", "bfz", "xln", "zzz9"]) {
+        expect(classifyForSweep(at(t, { set_icon_code: code })), `${t} ${code}`).toBe(whole ? "rebake" : "stamp");
+      }
+      // An uploaded icon wins over the code: no glyph drawn.
+      expect(classifyForSweep(at(t, { set_icon_code: "neo", set_icon_url: "https://x/i.png" })), `${t} icon`).toBe(
+        whole ? "rebake" : "stamp",
+      );
+    }
+    // The full-art basics keep 4.39's glyph size.
+    for (const t of ["m15fullartland", "fullartland"]) expect(V36_PRINTED_SYMBOL_TEMPLATES).not.toContain(t);
+  });
+
+  it("answers conservatively (affected) for a row missing a column it reads", async () => {
+    const { VERSION_SCOPES } = await import("@/lib/cards/layout-version");
+    const v36 = VERSION_SCOPES[36];
+    expect(v36({ ...at("lotr"), frame_style: undefined })).toBe(true);
+    for (const column of ["set_icon_url", "set_icon_code", "rules_text", "face_content", "back_face"]) {
+      expect(v36({ ...at("lotr"), [column]: undefined }), column).toBe(true);
+    }
+    for (const column of ["card_type", "supertype", "subtypes", "title"]) {
+      expect(v36({ ...at("m15", { rules_text: "{T}: Draw." }), [column]: undefined }), column).toBe(true);
+      expect(v36({ ...at("m15"), [column]: undefined }), `${column} no pip`).toBe(false);
+    }
+    expect(v36({ frame_style: { template: "m15pw" } })).toBe(true);
+  });
+
+  it("finds a pip exactly where the rules tokenizer draws one", async () => {
+    const { v36HasPip } = await import("@/lib/cards/layout-version");
+    const { tokenizeRulesText } = await import("@/lib/cards/rules-text");
+    const texts = [
+      "{T}: Add {G}.",
+      "Flying",
+      "Kicker {2}{R}",
+      "Equip {1}",
+      "({T}: Add {C}.)",
+      "Odd { } braces",
+      "{",
+      "}{",
+      "{W/U}",
+      "{2/B} and {G/P}",
+      "{E}{E}",
+      "{Q}, untap",
+      "{x}",
+      "Landfall — {T}: Draw.",
+      "no {braces here",
+      "",
+      "{ T }",
+    ];
+    for (const text of texts) {
+      const drawn = tokenizeRulesText(text).some((p) => p.some((item) => item.t === "m"));
+      expect(v36HasPip(text), text).toBe(drawn);
+    }
+    expect(v36HasPip(null)).toBe(false);
+  });
+
+  it("stales only the walkers' frame ticks: their symbolRect moved (VERIFICATION_TEMPLATE_SCOPES[36])", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(36);
+    expect(VERIFICATION_SCOPED_VERSIONS[36]).toEqual(["m15pw", "m15borderlesspw", "m15borderlesspwtall"]);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(35, t, VERIFICATION_SCOPED_VERSIONS, 36, regular), t).toBe(
+        ["m15pw", "m15borderlesspw", "m15borderlesspwtall"].includes(t),
+      );
+    }
   });
 });
 

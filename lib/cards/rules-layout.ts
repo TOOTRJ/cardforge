@@ -123,6 +123,13 @@ export type RulesMetrics = {
   /** Inline pip disc diameter, and the hairline between adjacent pips. */
   pipPx: number;
   pipGapPx: number;
+  /** The pip disc's top below its line box's top (layout v36, TODO 3.31):
+   *  the disc centred RULES_TEXT.pipCentreEm above the regular baseline, as
+   *  the prints centre it on the capitals, rounded to the px. Both renderers
+   *  draw the disc at exactly this top — never centred in the line box, which
+   *  put its centre 21 px above the baseline at 76 px type against the
+   *  prints' 25. May be 0 (or a px negative at the smallest 750 px sizes). */
+  pipTopPx: number;
   /** How far a pip's hard shadow reaches below its disc, and left of it. */
   pipShadowPx: number;
   pipShadowLeftPx: number;
@@ -162,6 +169,7 @@ export function metricsFor(
   const pipPx = Math.round(fontPx * RULES_TEXT.pipDiscEm);
   const baseline = (face: { ascent: number; descent: number }) =>
     Math.round(face.ascent * fontPx + (linePx - (face.ascent + face.descent) * fontPx) / 2);
+  const regularBaseline = baseline(MPLANTIN_LINE_METRICS.regular);
   return {
     target,
     scale,
@@ -171,6 +179,7 @@ export function metricsFor(
     wordGapPx: Math.round(fontPx * RULES_TEXT.wordGapEm),
     pipPx,
     pipGapPx: Math.max(1, Math.round(fontPx * RULES_TEXT.pipGapEm)),
+    pipTopPx: Math.round(regularBaseline - RULES_TEXT.pipCentreEm * fontPx - pipPx / 2),
     pipShadowPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_DOWN)),
     pipShadowLeftPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_LEFT)),
     paragraphGapPx: targetPx(RULES_TEXT.paragraphGapPx, scale),
@@ -178,7 +187,7 @@ export function metricsFor(
     flavorGapNoBarPx: targetPx(RULES_TEXT.flavorGapNoBarPx, scale),
     barPx: 1,
     blankLinePx: Math.round(fontPx * RULES_TEXT.blankLineEm),
-    baselinePx: { regular: baseline(MPLANTIN_LINE_METRICS.regular), italic: baseline(MPLANTIN_LINE_METRICS.italic) },
+    baselinePx: { regular: regularBaseline, italic: baseline(MPLANTIN_LINE_METRICS.italic) },
   };
 }
 
@@ -537,8 +546,8 @@ function lineInk(line: RulesLine, m: RulesMetrics): { top: number; bottom: numbe
   for (const run of line.runs) {
     for (const item of run) {
       if (item.t === "m") {
-        top = Math.min(top, (m.linePx - m.pipPx) / 2);
-        bottom = Math.max(bottom, (m.linePx + m.pipPx) / 2 + m.pipShadowPx);
+        top = Math.min(top, m.pipTopPx);
+        bottom = Math.max(bottom, m.pipTopPx + m.pipPx + m.pipShadowPx);
       } else {
         const ink = rulesTextInkEm(item.v);
         const baseline = item.em ? m.baselinePx.italic : m.baselinePx.regular;
@@ -755,8 +764,8 @@ function lineInkBoxes(line: RulesLine, m: RulesMetrics): InkBox[] {
           clamp({
             left: x - m.pipShadowLeftPx,
             right: x + m.pipPx,
-            top: (m.linePx - m.pipPx) / 2,
-            bottom: (m.linePx + m.pipPx) / 2 + m.pipShadowPx,
+            top: m.pipTopPx,
+            bottom: m.pipTopPx + m.pipPx + m.pipShadowPx,
           }),
         );
         x += m.pipPx;

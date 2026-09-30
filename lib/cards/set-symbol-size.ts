@@ -4,8 +4,9 @@ import {
   KEYRUNE_GLYPHS,
   KEYRUNE_UNITS_PER_EM,
 } from "@/lib/cards/keyrune-metrics";
+import { printedSetSymbolPx } from "@/lib/cards/set-symbol-prints";
 import type { FrameProfile } from "@/lib/cards/template-layout";
-import { displayPct, KEYRUNE_EM_PER_BOX, SET_SYMBOL_MAX_WIDTH_PCT } from "@/lib/cards/typography";
+import { displayPct, KEYRUNE_EM_PER_BOX, RULES_HD_WIDTH, SET_SYMBOL_MAX_WIDTH_PCT } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
 // How big a card's set symbol draws (TODO 4.20, layout v32) — the ONE size
@@ -18,12 +19,16 @@ import { displayPct, KEYRUNE_EM_PER_BOX, SET_SYMBOL_MAX_WIDTH_PCT } from "@/lib/
 //   • an uploaded icon and the default PipGlyph mark: contained in a square
 //     of the box;
 //   • a Keyrune glyph, on a profile with `setSymbolFit: "ink"` (the M15-era
-//     family): fitted by its INK (lib/cards/keyrune-metrics.ts, read from
-//     keyrune.ttf) — the font is box × KEYRUNE_EM_PER_BOX (0.065 W on M15,
-//     the full-art basics' print-checked size), or smaller when the glyph's
-//     ink would then stand taller than the box (a compact glyph like DOM's
-//     fills it exactly) or wider than CC's 0.12 W symbol box (owner decision
-//     2026-09-28);
+//     family): at the size its set PRINTS at when the set was measured
+//     (lib/cards/set-symbol-prints.ts, layout v36, TODO 4.46): fitted inside
+//     the printed box by its ink, never wider than CC's 0.12 W symbol box;
+//   • otherwise — a set with no print measurement, or `setSymbolFit:
+//     "ink-box"` (the full-art basics) — fitted by its INK
+//     (lib/cards/keyrune-metrics.ts, read from keyrune.ttf) to the box: the
+//     font is box × KEYRUNE_EM_PER_BOX (0.065 W on M15, the full-art basics'
+//     print-checked size), or smaller when the glyph's ink would then stand
+//     taller than the box (a compact glyph like DOM's fills it exactly) or
+//     wider than CC's 0.12 W symbol box (owner decision 2026-09-28);
 //   • a Keyrune glyph on any other profile: the box IS its font size, as
 //     before — so those frames bake byte-identically, whatever an override
 //     sets symbolSizePct to (the flag is code-owned).
@@ -82,8 +87,14 @@ export type SetSymbolSize = {
   inkLeftPct: number;
 };
 
+/** The glyph a codepoint draws: itself, or the default glyph for one
+ *  keyrune.ttf lacks. */
+function glyphCodepoint(codepoint: number): number {
+  return KEYRUNE_GLYPHS[codepoint] ? codepoint : KEYRUNE_DEFAULT_CODEPOINT;
+}
+
 function glyphMetrics(codepoint: number) {
-  return KEYRUNE_GLYPHS[codepoint] ?? KEYRUNE_GLYPHS[KEYRUNE_DEFAULT_CODEPOINT];
+  return KEYRUNE_GLYPHS[glyphCodepoint(codepoint)];
 }
 
 /** The set symbol's size on `profile` for `source` (setSymbolSource). */
@@ -94,15 +105,28 @@ export function setSymbolSize(profile: SymbolProfile, source: SetSymbolSource): 
   }
   const [advance, xMin, yMin, xMax, yMax] = glyphMetrics(source.codepoint);
   let sizePct = boxPct;
-  if (profile.setSymbolFit === "ink") {
+  if (profile.setSymbolFit === "ink" || profile.setSymbolFit === "ink-box") {
     const inkHeightEm = (yMax - yMin) / KEYRUNE_UNITS_PER_EM;
     const inkWidthEm = (xMax - xMin) / KEYRUNE_UNITS_PER_EM;
-    const maxWidthPct = displayPct(SET_SYMBOL_MAX_WIDTH_PCT, profile.orientation ?? "portrait");
-    sizePct = Math.min(
-      boxPct * KEYRUNE_EM_PER_BOX,
-      inkHeightEm > 0 ? boxPct / inkHeightEm : Infinity,
-      inkWidthEm > 0 ? maxWidthPct / inkWidthEm : Infinity,
-    );
+    const orientation = profile.orientation ?? "portrait";
+    const maxWidthPct = displayPct(SET_SYMBOL_MAX_WIDTH_PCT, orientation);
+    const printed = profile.setSymbolFit === "ink" ? printedSetSymbolPx(glyphCodepoint(source.codepoint)) : null;
+    if (printed) {
+      // The set's printed box (HD px on the portrait card, the same physical
+      // size on a landscape one), the glyph fitted inside it by its ink.
+      const [heightPct, widthPct] = printed.map((px) => displayPct(px / RULES_HD_WIDTH.portrait, orientation));
+      sizePct = Math.min(
+        inkHeightEm > 0 ? heightPct / inkHeightEm : Infinity,
+        inkWidthEm > 0 ? widthPct / inkWidthEm : Infinity,
+        inkWidthEm > 0 ? maxWidthPct / inkWidthEm : Infinity,
+      );
+    } else {
+      sizePct = Math.min(
+        boxPct * KEYRUNE_EM_PER_BOX,
+        inkHeightEm > 0 ? boxPct / inkHeightEm : Infinity,
+        inkWidthEm > 0 ? maxWidthPct / inkWidthEm : Infinity,
+      );
+    }
   }
   return {
     boxPct,

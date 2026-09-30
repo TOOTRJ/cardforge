@@ -1794,18 +1794,29 @@ function CostGlyphs({
 
 // One rules item inside a run — a word or an inline pip. Real cards print
 // reminder text full-ink italic (no dimming), so emphasis is italics only.
+// A pip sits at the layout's own top in its line box (`top`, the metrics'
+// pipTopPx: centred on the capitals, layout v36) — its run is the line box
+// tall, so `alignSelf: flex-start` + that margin place the disc exactly.
 function RulesItemBake({
   item,
   glyph,
+  top,
   gapBefore,
   overrides,
 }: {
   item: RulesItem;
   glyph: number;
+  /** A pip's top in its line box (RulesMetrics.pipTopPx). */
+  top: number;
   gapBefore: number;
   overrides?: PipOverrides | null;
 }) {
   if (item.t === "m") {
+    const place: React.CSSProperties = {
+      alignSelf: "flex-start",
+      marginTop: top,
+      ...(gapBefore ? { marginLeft: gapBefore } : {}),
+    };
     const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
     if (overrideSrc) {
       // Same box + hard shadow as the ManaGem disc it replaces.
@@ -1823,18 +1834,12 @@ function RulesItemBake({
             borderRadius: glyph,
             objectFit: "cover",
             boxShadow: shadow,
-            ...(gapBefore ? { marginLeft: gapBefore } : {}),
+            ...place,
           }}
         />
       );
     }
-    return (
-      <ManaGem
-        suffix={item.suffix}
-        size={glyph}
-        style={gapBefore ? { marginLeft: gapBefore } : undefined}
-      />
-    );
+    return <ManaGem suffix={item.suffix} size={glyph} style={place as Record<string, unknown>} />;
   }
   return (
     <span
@@ -1856,7 +1861,8 @@ function RulesItemBake({
 // `flexShrink: 0`, a word gap as the marginLeft of every run after the first
 // (no container `gap` — Satori does that with negative margins), every word
 // its own span (Satori ceils each text node's width, which is how the layout
-// measured it) set at the line box's height, pips centred. A paragraph
+// measured it) set at the line box's height, each run the line box tall and
+// its pips at the layout's pipTopPx (layout v36). A paragraph
 // starts the fixed gap below the last. The preview's RulesLines draws the
 // same lines.
 function RulesLinesBake({
@@ -1900,6 +1906,7 @@ function RulesLinesBake({
                 flexDirection: "row",
                 alignItems: "center",
                 flexShrink: 0,
+                height: m.linePx,
                 ...(ri > 0 ? { marginLeft: m.wordGapPx } : {}),
               }}
             >
@@ -1909,6 +1916,7 @@ function RulesLinesBake({
                     key={i}
                     item={it}
                     glyph={m.pipPx}
+                    top={m.pipTopPx}
                     overrides={overrides}
                     gapBefore={i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0}
                   />
@@ -2045,7 +2053,8 @@ export function RulesBoxBake({
   );
 }
 
-// One drawn line: a nowrap row of runs, `linePx` tall, runs centred on it —
+// One drawn line: a nowrap row of runs, `linePx` tall, each run `linePx` tall
+// too (its pips at the layout's pipTopPx, layout v36), centred on it —
 // indented by the layout's whole px when it is a centred single line
 // (TextSlot.alignSingleLine), as the preview's RulesBoxLine draws it.
 function RulesBoxLineBake({
@@ -2079,6 +2088,7 @@ function RulesBoxLineBake({
             flexDirection: "row",
             alignItems: "center",
             flexShrink: 0,
+            height: d.linePx,
             ...(ri > 0 ? { marginLeft: d.wordGapPx } : {}),
           }}
         >
@@ -2087,7 +2097,16 @@ function RulesBoxLineBake({
             // word glued to a pip ("{T}:") none.
             const gapBefore = i > 0 && item.t === "m" && run[i - 1].t === "m" ? d.pipGapPx : 0;
             if (item.t === "m") {
-              return <RulesItemBake key={i} item={item} glyph={d.pipPx} gapBefore={gapBefore} overrides={overrides} />;
+              return (
+                <RulesItemBake
+                  key={i}
+                  item={item}
+                  glyph={d.pipPx}
+                  top={d.pipTopPx}
+                  gapBefore={gapBefore}
+                  overrides={overrides}
+                />
+              );
             }
             return (
               <span

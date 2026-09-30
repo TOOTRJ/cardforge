@@ -264,7 +264,10 @@ Rules and gotchas:
   `fitTypeLineBand` in BOTH renderers (bake: `measuredLinePx`; preview: the
   HD bake's px); `TextSlot.dy` moves the text only; the set symbol's size and
   drawn width come from `setSymbolSize()` (the ink fit only with the
-  code-owned `setSymbolFit: "ink"`). Frames outside the family keep the old
+  code-owned `setSymbolFit: "ink"`; a Keyrune glyph of a set in
+  `lib/cards/set-symbol-prints.ts` draws at that set's PRINTED size, v36 —
+  adding or re-measuring a set is a bump; the full-art basics' "ink-box"
+  never reads the table). Frames outside the family keep the old
   paths byte-for-byte — bringing one in is its own layout bump
   (`docs/FRAMES.md`).
 - ONE rules layout (layout v33, TODO 3.29): `lib/cards/rules-layout.ts`
@@ -276,7 +279,10 @@ Rules and gotchas:
   30 + 1 + 30 around the flavor bar) of rules, flavor, walker rows and the
   saga rail. Both renderers only DRAW its lines (`rulesDraw` → `RulesBox` /
   `RulesBoxBake`, `RulesLines*`: nowrap rows, word gaps as `marginLeft`, each
-  preview word at its ceiled `wordWidthPx`) — never a box that wraps.
+  preview word at its ceiled `wordWidthPx`) — never a box that wraps. An
+  inline pip is a 0.785 em disc centred 0.334 em above the baseline (on the
+  capitals, v36), drawn at the layout's `pipTopPx` in a run the line box tall
+  — never centred by flexbox.
   `TextSlot.padPx` pads past any textbox border the rect holds (split).
   Keep-outs = the stat badges the card DRAWS (`statKeepOuts`; plate ink in
   `lib/cards/plate-ink.ts` — a new or replaced plate needs
