@@ -1647,13 +1647,17 @@ const M20TOKEN: FrameProfile = {
   textlessTypeLine: true,
 };
 
-/** The tall box's rules rect, HD px: 3 px inside the box's top (1314) and
- *  6 inside its bottom (1936) — 613 px, centred 2 px above the box's
- *  middle. Calibrated on the tall prints set at 9 pt with our line breaks
- *  (TBIG #7, TBLB #11 / #21, TLCI #17, TDRC #2, TMKC #5; Scryfall PNGs at
- *  1500 × 2100, 2026-09-29): centred on the box's middle, our first and last
- *  baselines sat +2 / +2.5 px below theirs (median); here, +0 / +0.5. */
-export const M20_TOKEN_TALL_RULES_PX = { top: 1317, bottom: 1930 } as const;
+/** The tall box's rules rect, HD px: 1326–1922, 596 px — the fullest tall
+ *  prints' text block (TLCI #17 / TBIG #7 Map: eight lines at 9 pt, ink
+ *  1335–1920; no tall print sets more), on even rows so the 750 px bake's
+ *  box is whole px too, centred 1 px above the box's middle (1314–1936).
+ *  Calibrated on the tall prints set at 9 pt with our line breaks (TBIG #7,
+ *  TBLB #11 / #21, TLCI #17, TDRC #2, TMKC #5; Scryfall PNGs at 1500 × 2100,
+ *  2026-09-29): centred on the box's middle our first and last baselines sat
+ *  +2 / +2.5 px below theirs (median); here +0.5 / +1. The 1319–1932 rect
+ *  let a text run right up to the box's top edge (TBLB #9, squeezed into
+ *  eight lines), where the prints keep ≥ 20 px. */
+export const M20_TOKEN_TALL_RULES_PX = { top: 1326, bottom: 1922 } as const;
 /** The tall box closes the gaps between abilities before its text shrinks
  *  (TextSlot.paragraphGapMinPx): TBLB #5 Warren Warleader prints its modes
  *  and reminder at 9 pt with 10–13 px gaps, where the standard 24 px ran its

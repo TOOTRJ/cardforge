@@ -1133,21 +1133,25 @@ frames bucket — never git:
   (TBLB #1, TBLC #23, TINR #13, TMID #7, TSPM #1, TTSR #5) go tall, listed
   in the fixture.
 - **The tall box** (calibrated 2026-09-29 on the 17 tall prints): its rules
-  rect is 1317–1930 px (`M20_TOKEN_TALL_RULES_PX`, 2 px above the box's
-  middle: the six prints set at 9 pt with our line breaks put their first
-  and last baselines there, ±0.5 px median), and it closes the gaps between
-  abilities before its text shrinks (`TextSlot.paragraphGapMinPx`, 10 px —
-  the tall box only): the fit sets each size with the paragraph gaps
-  squeezed, 2 px at a time, before the next size down, and the layout
-  carries the gap it placed, so both renderers draw it. TBLB #5 Warren
-  Warleader prints at 9 pt with 10–13 px gaps; with 24 px our last line ran
-  into the P/T plate and stepped down to 70 px — now 76 px with 12 px gaps,
-  baselines within 1 px of the print's. What it doesn't reach: prints set
-  below 9 pt with tighter leading (TBLB #9 prints at ~8.5–8.75 pt, line
-  pitch 71 px; ours sets it at 9 pt in eight lines with a 20 px gap, one
-  line more than the print, whose glyphs run ~3 % narrower), and the
-  Universes Beyond boxes (TWHO #32 / #64 run their text under the plate's
-  top).
+  rect is 1326–1922 px (`M20_TOKEN_TALL_RULES_PX`): the prints' fullest
+  text block — eight lines at 9 pt, TLCI #17 / TBIG #7, ink 1335–1920 — on
+  even rows, centred 1 px above the box's middle, where the six prints set
+  at 9 pt with our line breaks put their first and last baselines (+0.5 /
+  +1 px median; the box-centred 1319–1932 rect set them +2 / +2.5 low, and
+  let a text run up to the box's top edge, where the prints keep ≥ 20 px).
+  It closes the gaps between abilities before its text shrinks
+  (`TextSlot.paragraphGapMinPx`, 10 px — the tall box only): the fit sets
+  each size with the paragraph gaps squeezed, 2 px at a time, before the
+  next size down, and the layout carries the gap it placed, so both
+  renderers draw it. TBLB #5 Warren Warleader prints at 9 pt with 10–13 px
+  gaps; with 24 px our last line ran into the P/T plate and stepped down to
+  70 px — now 76 px with 12 px gaps, baselines within 2 px of the print's.
+  TBLB #9 prints below 9 pt (cap height 51 vs 53 px, line pitch 71 vs
+  74–75: ~8.5–8.75 pt, tighter leading) in seven lines; ours is 74 px in
+  seven. What the box doesn't reach: the prints' glyphs run ~3 % narrower
+  than MPlantin's advances, so a few print one line fewer (TDRC #1), and
+  the Universes Beyond boxes (TWHO #32 / #64 run their text past the
+  plate's top) stay at 70 px.
 - **Import** (TODO 1.23). `token/m20` names the height's template through
   `onceVerified` (family `m20`) and is `exactOnceVerified`: until the
   template is verified in the card's colour the 2014–19 arch stands in —

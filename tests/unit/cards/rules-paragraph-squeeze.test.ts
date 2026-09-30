@@ -11,9 +11,10 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The full-art token's TALL box (TODO 4.48, tall-box calibration 2026-09-29):
-//   * its rules rect sits where the tall prints set their text — 1317–1930 px
-//     (centred on the box's middle, 1319–1932, our first and last baselines
-//     ran +2 / +2.5 px below six 9 pt prints'; now +0 / +0.5);
+//   * its rules rect is the tall prints' fullest text block, where they set
+//     it — 1326–1922 px (eight lines at 9 pt, TLCI #17's; centred on the
+//     box's middle, 1319–1932, our first and last baselines ran +2 / +2.5 px
+//     below six 9 pt prints'; now +0.5 / +1);
 //   * before a size steps down, the text is set with its paragraph gaps
 //     squeezed (TextSlot.paragraphGapMinPx), as the prints do: TBLB #5
 //     Warren Warleader prints its modes and reminder at 9 pt with 10–13 px
@@ -58,13 +59,32 @@ describe("which boxes squeeze their paragraph gaps", () => {
     expect("paragraphGapMinPx" in layoutOf("m20tokentext", "Flying").input).toBe(false);
   });
 
-  it("puts the tall rules rect at 1317–1930 px, 613 px tall", () => {
-    expect(M20_TOKEN_TALL_RULES_PX).toEqual({ top: 1317, bottom: 1930 });
+  it("puts the tall rules rect at 1326–1922 px: the prints' fullest block, eight lines at 9 pt", () => {
+    expect(M20_TOKEN_TALL_RULES_PX).toEqual({ top: 1326, bottom: 1922 });
+    // Even HD rows: the 750 px bake's box is whole px too (a half-px edge
+    // let Satori and the browser round its centring apart).
+    expect(M20_TOKEN_TALL_RULES_PX.top % 2).toBe(0);
+    expect(M20_TOKEN_TALL_RULES_PX.bottom % 2).toBe(0);
     for (const t of TALL) {
       const placed = linePositions(layoutOf(t, "Flying"), "hd");
-      expect(placed.box.top, t).toBe(1317);
-      expect(placed.box.top + placed.box.height, t).toBe(1930);
+      expect(placed.box.top, t).toBe(1326);
+      expect(placed.box.top + placed.box.height, t).toBe(1922);
     }
+    // TLCI #17 Map (eight lines at 9 pt on the print, ink 1335–1920) still
+    // fits at 76 px…
+    const map =
+      "{1}, {T}, Sacrifice this artifact: Target creature you control explores. Activate only as a sorcery. (Reveal the top card of your library. Put that card into your hand if it's a land. Otherwise, put a +1/+1 counter on that creature, then put the card back or put it into your graveyard.)";
+    const fit = layoutOf("m20tokenartifacttall", map, null, false);
+    expect(fit.sizePx).toBe(76);
+    expect(linePositions(fit, "hd").lines).toHaveLength(8);
+    // …and TBLB #9 Otter Wizard, which prints seven lines at ~8.5–8.75 pt
+    // (line pitch 71 px), steps down to 74 px in seven rather than squeeze
+    // eight lines up to the box's edge.
+    const otter =
+      "When this creature enters, look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.\n(This token's mana cost is {1}{U}.)";
+    const wizard = layoutOf("m20tokentall", otter);
+    expect(wizard.sizePx).toBe(74);
+    expect(linePositions(wizard, "hd").lines).toHaveLength(7);
   });
 });
 
