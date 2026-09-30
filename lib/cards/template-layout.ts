@@ -1495,10 +1495,10 @@ const EMBLEM: FrameProfile = {
   // scans of TFDN #24 / #25 and TDSK #17, matched pixel for pixel at scale
   // 1: 146 / 250 px, 1216 × 1163 at HD), so an imported emblem's art lands
   // where it printed, at its printed size. The spark's clear cut-out is
-  // inside it: the top of its centre ray (732–767 px across), which CC left
-  // clear from 245 px — above the crop, where an art_crop has no pixels —
-  // keeps CC's black shadow (α ~191) down to 250 px in the master
-  // (scripts/lib/cc-frames.mjs EMBLEM_RAY_SHADOW_RECUT), so no second
+  // inside it: CC's centre ray (732–767 px across) ran on up to the bar,
+  // above the crop, where an art_crop has no pixels; the master's silver
+  // closes over its top instead and the ray ends at 251 px (owner decision
+  // 2026-09-29; scripts/lib/cc-frames.mjs EMBLEM_RAY_BRIDGE), so no second
   // picture shows there. CC's artBounds (14.2 / 4.96 / 71.6 × 85.48 — a
   // tall box, which blew a landscape art up ~2.3× past the prints') is the
   // under-frame layer: the spark's tail runs on through the type bar and

@@ -142,9 +142,9 @@ describe("CardPreview — the emblem frame (TODO 4.52)", () => {
     expect(slot.x1).toBeCloseTo(crop.x + crop.width, 6);
     expect(slot.y1).toBeCloseTo(crop.y + crop.height, 6);
     // It covers the master's clear spark (215–1284 px across, down to the
-    // type bar's outline at 1407): the top of its centre ray, above the
-    // crop, keeps CC's shadow down to 250 px in the master (the recipe's
-    // EMBLEM_RAY_SHADOW_RECUT; tests/unit/frames/emblem-master.test.ts).
+    // type bar's outline at 1407): above the crop, the frame closes over the
+    // top of the spark's centre ray, which ends at 251 px in the master (the
+    // recipe's EMBLEM_RAY_BRIDGE; tests/unit/frames/emblem-master.test.ts).
     expect(slot.y0).toBeGreaterThan(250);
     expect(slot.y0).toBeLessThan(251);
     expect(slot.y1).toBeGreaterThanOrEqual(1407);

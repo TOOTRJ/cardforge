@@ -140,8 +140,9 @@ into `.frames-build/` — 16 templates today (`CC_TEMPLATES` in
 - the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
   m15tokentext and its artifact dress m15tokenartifacttext;
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
-  in every colour key (an emblem is colourless), its name pill toned and its
-  spark ray's shadow held onto the prints (see [Emblems](#emblems)).
+  in every colour key (an emblem is colourless), its name pill, silver, type
+  pill and text box toned onto the prints and its spark's centre ray bridged
+  over above the art window (see [Emblems](#emblems)).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -1075,8 +1076,8 @@ planeswalker-spark cut-out, a type bar reading "Emblem", a light text box.
 The `emblem` template is Card Conjurer's 'Planeswalker Emblems' master
 (`CC_TEMPLATES.emblem`: its bars, box and border sit within 3 px of eight
 prints, so nothing moves), one master for every colour key (only `c` has
-references: TFDN #25 Vivien Reid, TFDN #24, TDSK #17), with two touches onto
-the prints:
+references: TFDN #25 Vivien Reid, TFDN #24, TDSK #17), with these touches
+onto the prints (TFDN #24 / #25, TM20 #11, TDSK #17, TBLB #30, TFRA #16):
 
 - **The name pill, toned** (`EMBLEM_NAME_PILL_TONE`, `toneRegion`). CC's pack
   draws `frame.png` alone — no darkening layer — and its pill is a light
@@ -1084,11 +1085,31 @@ the prints:
   one (52). The pill's body (inside its dark outline, under CC's highlight)
   is multiplied by a gain fitted on the six M20 prints, by distance from the
   pill's centre, and made opaque.
-- **The spark ray's shadow, held** (`EMBLEM_RAY_SHADOW_RECUT`, `recutBand`
-  with a column window and a held fill). The art window starts at 250.4 px
-  (below); CC's centre ray is clear from 245 under its black shadow, and
-  those rows showed the under-frame layer at another scale. The ray keeps its
-  shadow down to 250 and fades it out over the window's own picture.
+- **The silver, the type pill and the text box, toned** (owner decision
+  2026-09-29: `EMBLEM_SILVER_TONE` with `toneSilver`; `EMBLEM_TYPE_PILL_TONE`
+  and `EMBLEM_TEXT_BOX_TONE` with `toneRegion`, `keepAlpha`). CC's silver
+  read 17–32 luma over the prints' median by region (the rails beside the
+  spark 141 against 101–113), its type pill 239 against 224–231 and its box
+  237 against 226–233. The silver — the body from the name bar's shadow to
+  the type bar's rim, and beside the bars each row from the edge to the
+  bar's light rim — is multiplied by a gain bilinear in the distance from
+  the centre and the row (12 × 3 knots, 0.6–1: the prints shade the sides
+  darkest half-way down), fitted until each region's median sits on the
+  prints'; the pill and the box by one gain each (0.94, 0.96). A gain, not a
+  fill: CC's highlights and shading stay. The rims, the light bar under the
+  name and the flat strip above it keep CC's tone, and the spark's tail and
+  glow (pure white, translucent) stay as drawn; through the pill and the box
+  the tail is toned with them and keeps its alpha.
+- **The spark's centre ray, bridged over** (owner decision 2026-09-29,
+  `EMBLEM_RAY_BRIDGE`, `bridgeRayTip`). The art window starts at 250.4 px
+  (below); CC's centre ray runs on up to the bar under the name, where an
+  art_crop has no pixels (holding CC's black shadow there read as a dark
+  block on light art). The frame closes over it: the bar's shadow and the
+  silver under it are blended across from either side, and the ray ends at
+  251 px, 18 px short of the bar, its tip drawn with the colour profile of
+  its own right edge — dark over the top right, light down the left, like
+  the side rays' tips — with its corners rounded. Everything above 251 is
+  opaque, so only the art window's picture shows in the ray.
 
 - **Profile** (`EMBLEM` in `lib/cards/template-layout.ts`, an M15-family
   member): no cost or stat slot; the name white and centred, the type line
@@ -1101,9 +1122,10 @@ the prints:
   (`EMBLEM_SCRYFALL_CROP_PX`): for an emblem that crop is cut from the
   printed card around the spark, so an imported emblem's art registers
   with the print at its printed size (grown to take in the ray's tip, it
-  drew the art 1.6–1.8 % larger — the ray's shadow covers the tip now).
+  drew the art 1.6–1.8 % larger — the frame closes over the tip now).
   An older Scryfall crop (TM20 #11: 684 × 570) is too short to fill the
-  window at the print's scale and draws ~1.5–1.9 % larger.
+  window at the print's scale and draws ~1.5–1.9 % larger; the owner
+  accepted that (2026-09-29).
   CC's tall artBounds is the `underFrameArt` layer, which the spark's tail
   (80 % white through the type bar and the box) shows faintly, as the
   prints do.

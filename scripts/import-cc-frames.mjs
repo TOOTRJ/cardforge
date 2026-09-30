@@ -24,7 +24,8 @@
 // <out>/<template>/<colour>.png + .webp, plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
 // (re-cut templates) a band moved down before the downscale (recut),
-// (toned templates: the emblem's name pill) one region toned onto the prints,
+// (the emblem) its spark's ray bridged over and its regions toned onto the
+// prints,
 // and a planeswalker's loyalty shield cut out of each master under loyalty/. Provenance (which source files made which
 // frame, and every substitution) goes to lib/cards/frame-sources.json.
 //
@@ -51,11 +52,12 @@ import {
   compositeLayers,
   cutThroughMask,
   describeLayer,
+  applyTone,
+  bridgeRayTip,
   recutBand,
   roundCornersRgba8,
   sourceFilesFor,
   toRgba8,
-  toneRegion,
 } from "./lib/cc-frames.mjs";
 // The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
 // checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
@@ -167,8 +169,11 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const composite = toRgba8(compositeLayers(images, W, H));
     // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b)).
     const recut = def.recut ? recutBand(composite, W, H, def.recut) : composite;
-    // A toned region, onto the prints' tone (the emblem's name pill, 4.52).
-    const native = def.tone ? toneRegion(recut, W, H, def.tone) : recut;
+    // A ray's top closed over by the frame (the emblem's spark, 4.52).
+    const bridged = def.bridge ? bridgeRayTip(recut, W, H, def.bridge) : recut;
+    // Toned regions, onto the prints' tone (the emblem's silver, name pill,
+    // type pill and text box, 4.52), in order.
+    const native = (def.tones ?? []).reduce((img, tone) => applyTone(img, W, H, tone), bridged);
     const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
       .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
       .raw()
@@ -232,7 +237,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
-    ...(def.tone ? { tone: def.tone } : {}),
+    ...(def.bridge ? { bridge: def.bridge } : {}),
+    ...(def.tones ? { tones: def.tones } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
   };

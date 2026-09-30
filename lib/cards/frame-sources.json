@@ -6,7 +6,7 @@
     "pack": "packEmblem.js 'Planeswalker Emblems'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, pixels copied 1:1 (no resample) but for two touches: the spark's centre ray (columns 732–767) holds its shadow's row 239 down to 250 and fades out 11 px lower (rows 240–246 moved down 11), so the ray is shadowed down to the art window's top; the name pill's body (rows 111–210, the pixels 4-connected to (750, 160) with luma ≥ 30, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x 749.5 (0.8 at 0, 0.6 at 100, 0.64 at 200, 0.54 at 300, 0.52 at 400, 0.58 at 500, 0.66 at 600, 0.83 at 700 px) and is made opaque; corners rounded to the importer radius",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample) but for these touches: the spark's centre ray bridged over (rows 233–250, columns 723–779 blended across from columns 720 and 780, opaque; the ray's tip at row 251, corners rounded to 4 px, drawn with its own right edge's profile, sampled on rows 255–300); the name pill's body (rows 111–210, the pixels 4-connected to (750, 160) with luma ≥ 30, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x 749.5 (0.8 at 0, 0.6 at 100, 0.64 at 200, 0.54 at 300, 0.52 at 400, 0.58 at 500, 0.66 at 600, 0.83 at 700 px) and is made opaque; the silver (rows 233–1406 but for the spark's pure-white tail and glow; rows 60–232 and 1407–1945 from either edge to the first pixel of luma ≥ 170) has its colour multiplied by a gain bilinear in the distance from x 749.5 and the row (12 × 3 knots, 0.6–1); the type pill's body (rows 1429–1529) × 0.94 and the text box (rows 1556–1937, inside its light rim) × 0.96, alpha kept; corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/token/emblem/frame.png"
@@ -30,59 +30,192 @@
         "img/frames/token/emblem/frame.png"
       ]
     },
-    "recut": {
-      "fromY": 240,
-      "toY": 247,
-      "shift": 11,
-      "blend": 0,
-      "x0": 732,
-      "x1": 768,
-      "fill": "hold"
-    },
-    "tone": {
-      "seed": {
-        "x": 750,
-        "y": 160
-      },
-      "fromY": 111,
-      "toY": 211,
-      "minLuma": 30,
-      "centreX": 749.5,
-      "gain": [
-        [
-          0,
-          0.8
-        ],
-        [
-          100,
-          0.6
-        ],
-        [
-          200,
-          0.64
-        ],
-        [
-          300,
-          0.54
-        ],
-        [
-          400,
-          0.52
-        ],
-        [
-          500,
-          0.58
-        ],
-        [
-          600,
-          0.66
-        ],
-        [
-          700,
-          0.83
-        ]
+    "bridge": {
+      "fromY": 233,
+      "toY": 251,
+      "x0": 723,
+      "x1": 780,
+      "anchors": [
+        720,
+        780
+      ],
+      "fadeRows": 5,
+      "radius": 4,
+      "fadePow": 2,
+      "edgeRows": [
+        255,
+        301
       ]
     },
+    "tones": [
+      {
+        "seed": {
+          "x": 750,
+          "y": 160
+        },
+        "fromY": 111,
+        "toY": 211,
+        "minLuma": 30,
+        "centreX": 749.5,
+        "gain": [
+          [
+            0,
+            0.8
+          ],
+          [
+            100,
+            0.6
+          ],
+          [
+            200,
+            0.64
+          ],
+          [
+            300,
+            0.54
+          ],
+          [
+            400,
+            0.52
+          ],
+          [
+            500,
+            0.58
+          ],
+          [
+            600,
+            0.66
+          ],
+          [
+            700,
+            0.83
+          ]
+        ]
+      },
+      {
+        "fromY": 60,
+        "bodyFromY": 233,
+        "bodyToY": 1407,
+        "toY": 1946,
+        "stopLuma": 170,
+        "centreX": 749.5,
+        "d": [
+          300,
+          545,
+          680
+        ],
+        "rows": [
+          60,
+          150,
+          300,
+          500,
+          700,
+          900,
+          1100,
+          1300,
+          1407,
+          1550,
+          1750,
+          1946
+        ],
+        "gain": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            0.9,
+            0.91,
+            0.81
+          ],
+          [
+            0.87,
+            0.98,
+            0.91
+          ],
+          [
+            0.82,
+            0.99,
+            0.85
+          ],
+          [
+            0.85,
+            0.88,
+            0.7
+          ],
+          [
+            0.83,
+            0.74,
+            0.6
+          ],
+          [
+            0.89,
+            0.81,
+            0.67
+          ],
+          [
+            0.9,
+            0.78,
+            0.92
+          ],
+          [
+            0.86,
+            0.79,
+            0.87
+          ],
+          [
+            0.91,
+            0.9,
+            0.85
+          ],
+          [
+            0.84,
+            0.84,
+            0.86
+          ],
+          [
+            0.84,
+            0.84,
+            0.86
+          ]
+        ]
+      },
+      {
+        "seed": {
+          "x": 400,
+          "y": 1470
+        },
+        "fromY": 1429,
+        "toY": 1530,
+        "minLuma": 150,
+        "centreX": 749.5,
+        "gain": [
+          [
+            0,
+            0.94
+          ]
+        ],
+        "keepAlpha": true
+      },
+      {
+        "seed": {
+          "x": 400,
+          "y": 1700
+        },
+        "fromY": 1556,
+        "toY": 1938,
+        "minLuma": 215,
+        "centreX": 749.5,
+        "gain": [
+          [
+            0,
+            0.96
+          ]
+        ],
+        "keepAlpha": true
+      }
+    ],
     "sourceFiles": [
       "img/frames/token/emblem/frame.png"
     ],
@@ -91,7 +224,8 @@
       "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
       "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
       "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
-      "the spark's centre ray keeps CC's black shadow down to the art window's top (EMBLEM_RAY_SHADOW_RECUT): the window is Scryfall's art_crop box at the prints' scale (from 250.4 px), and the ray's clear rows above it (245–250) showed the under-frame layer at another scale"
+      "the frame's silver closes over the top of the spark's centre ray (EMBLEM_RAY_BRIDGE, owner decision 2026-09-29): the art window is Scryfall's art_crop box at the prints' scale (from 250.4 px), where the prints' ray runs on up to the bar with art in it; the ray ends at 251 px, its tip drawn with the profile of its own right edge, and the bar's shadow and the silver run across",
+      "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints, the silver's by distance from the centre and by row; the spark's tail keeps its alpha; the light rims keep CC's tone"
     ]
   },
   "fullartland": {

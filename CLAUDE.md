@@ -308,9 +308,10 @@ Rules and gotchas:
   (`withEmblemShape` / `withEmblemUpdateShape`, `lib/cards/emblem.ts`), new
   ones common, rarity chips hidden (`kindHidesRarity`); `buildTypeLine`
   prints "Emblem" (+ " — subtype"). The frame is CC's one master in every
-  colour key (only `c` is referenced), its name pill toned and its spark
-  ray's shadow held onto the prints (`EMBLEM_NAME_PILL_TONE`,
-  `EMBLEM_RAY_SHADOW_RECUT` in the CC importer); its art window is
+  colour key (only `c` is referenced), its name pill, silver, type pill
+  and text box toned onto the prints (`EMBLEM_TONES`) and its spark's
+  centre ray bridged over above the art (`EMBLEM_RAY_BRIDGE`, CC
+  importer); its art window is
   Scryfall's emblem `art_crop` box EXACTLY (a crop of the printed card, at
   the prints' scale — never grown), CC's tall artBounds the `underFrameArt`
   layer the spark's 80 % tail shows. Its page and new slug say "Emblem"

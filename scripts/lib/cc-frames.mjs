@@ -183,21 +183,45 @@ const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].ma
 const EMBLEM = "img/frames/token/emblem/frame.png";
 
 /**
- * The emblem's spark ray tip, shadowed down to the art window (owner
- * evidence 2026-09-29: the art window is Scryfall's art_crop box at the
- * prints' scale, from 250.4 px). The spark is clear (α < 16) from 245 px,
- * and the one part of it above the window is the top of its centre ray
- * (732–767 px across): CC shades it with its own black shadow under the
- * silver bar — α ~191 over 233–240, fading out over 241–246 — so its clear
- * rows 245–250 had no art of their own and showed the under-frame layer,
- * the same picture at CC's tall artBounds (1.55× the window's scale): a
- * mismatched strip in the tip, white on TFDN #24. The ray's columns hold
- * the shadow's row 239 down to 250 and fade out over 251–257 (the rows
- * 240–246 moved down 11), over the art window's own picture; the frame
- * beside the ray, where the shadow already ends by 245, is untouched.
- * Native px of the pack (1500 × 2100).
+ * The emblem's spark ray, bridged over at the art window's top (owner
+ * decision 2026-09-29, "exact slot + frame bridged over the tip"). The art
+ * window is Scryfall's art_crop box at the prints' scale, from 250.4 px, and
+ * the one part of the spark above it is the top of the centre ray: CC's ray
+ * runs up to the silver bar under the name (its clear rows start under the
+ * bar's black shadow, 233–246), where an art_crop has no pixels. So the
+ * frame's silver closes over the ray's top instead and the ray ends 18 px
+ * short of the bar, at 251 — the first row the art covers whole:
+ *
+ * - rows [fromY, toY) × columns [x0, x1) — the bar's shadow and the silver
+ *   under it, across the ray and its two edges — take the frame on either
+ *   side (each row's pixel at `anchors[0]` and `anchors[1]`, the plain silver
+ *   beyond the ray's highlight line and its outline), blended across, so the
+ *   bar's shadow runs on unbroken and the silver below it joins up; left of
+ *   the ray, the frame's own pixels (its bevel and highlight line) fade back
+ *   in over the last `fadeRows` rows above the new tip;
+ * - the tip is the spark's own edge turned across the top: the colour
+ *   profile of the ray's right edge (its dark outline into the silver, by
+ *   distance from the edge's α-½ line, sampled on rows [edgeRows) of the
+ *   composite itself) is drawn by distance from the new tip — its top edge at
+ *   `toY`, its corners rounded to `radius` — and it lightens towards the
+ *   left edge (× the fraction across, to the power `fadePow`), which has no
+ *   outline: the side rays' tips are drawn that way, dark over the top right
+ *   and light down the left.
+ *
+ * Everything above `toY` is opaque, so nothing but the art window's own
+ * picture shows in the ray. Native px of the pack (1500 × 2100).
  */
-export const EMBLEM_RAY_SHADOW_RECUT = { fromY: 240, toY: 247, shift: 11, blend: 0, x0: 732, x1: 768, fill: "hold" };
+export const EMBLEM_RAY_BRIDGE = {
+  fromY: 233,
+  toY: 251,
+  x0: 723,
+  x1: 780,
+  anchors: [720, 780],
+  fadeRows: 5,
+  radius: 4,
+  fadePow: 2,
+  edgeRows: [255, 301],
+};
 
 /**
  * The emblem's name pill, toned onto the prints (owner evidence
@@ -208,8 +232,9 @@ export const EMBLEM_RAY_SHADOW_RECUT = { fromY: 240, toY: 247, shift: 11, blend:
  * ~50 at the centre (median 90 over the name band, rows 128–199 ×
  * 150–1349), where the six M20-design prints (TFDN #24 / #25, TM20 #11,
  * TDSK #17, TBLB #30, TFRA #16; Scryfall PNGs at 1500 × 2100) print a dark
- * pill, luma ~97 at the ends and 45–60 across its length. The silver
- * around it is within the prints' range, so only the pill is toned.
+ * pill, luma ~97 at the ends and 45–60 across its length. (The silver, the
+ * type pill and the text box are toned too: EMBLEM_SILVER_TONE,
+ * EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE.)
  *
  * The pill's body — rows [fromY, toY): under CC's top highlight (105–110,
  * kept), above its lower lip (211–216, kept); the pixels 4-connected to
@@ -242,8 +267,108 @@ export const EMBLEM_NAME_PILL_TONE = {
 };
 
 /**
+ * The emblem's silver, toned onto the prints (owner decision 2026-09-29:
+ * "the silver ~30–45 luma lighter" than the six M20-design prints). CC's
+ * silver — the ring down both sides and the body round the spark — reads
+ * luma 141–160 by region where the prints read 101–162 (the median by
+ * region, CC vs the six prints: the rails beside the spark 141 vs 101–113,
+ * the body under the spark 159 vs 124–142 and above it 160 vs 139–162, the
+ * strips beside the name bar 149 vs 121–128, the type bar 149 vs 126–140 and
+ * the box 149 vs 126–131); the prints also shade it more, darkest at the
+ * sides half-way down (luma 71–80 at 880–980 px against CC's 131).
+ *
+ * The silver is every pixel of rows [bodyFromY, bodyToY) — from the name
+ * bar's shadow down to the type bar's rim: the silver, the spark's outline,
+ * the bar's shadow — but the spark's tail and the glow above the type bar
+ * (CC paints both pure white, translucent: they stay as drawn), and in the
+ * rows [fromY, bodyFromY) and [bodyToY, toY) beside the bars, each row from
+ * either edge inwards up to the first pixel of luma ≥ `stopLuma` (a bar's
+ * light rim: the rims, the bars and the box keep CC's tone, which the prints
+ * match or print lighter). Its colour is multiplied by a gain bilinear in the
+ * distance from `centreX` (knots `d`) and the row (knots `rows`), held past
+ * the outer knots; `gain[row][d]`. The gains were fitted on the prints'
+ * per-pixel median in 100-row bands and three distance bands (< 450, 450–640,
+ * ≥ 640 px from the centre), then corrected until each region's median sits
+ * on the prints' median; the first row is 1 (the flat strip above the name
+ * bar, which the prints print as a brushed pattern CC doesn't draw, keeps
+ * CC's tone). A gain, not a fill: CC's highlights and shading stay.
+ * Native px of the pack (1500 × 2100).
+ */
+export const EMBLEM_SILVER_TONE = {
+  fromY: 60,
+  bodyFromY: 233,
+  bodyToY: 1407,
+  toY: 1946,
+  stopLuma: 170,
+  centreX: 749.5,
+  d: [300, 545, 680],
+  rows: [60, 150, 300, 500, 700, 900, 1100, 1300, 1407, 1550, 1750, 1946],
+  gain: [
+    [1, 1, 1],
+    [0.9, 0.91, 0.81],
+    [0.87, 0.98, 0.91],
+    [0.82, 0.99, 0.85],
+    [0.85, 0.88, 0.7],
+    [0.83, 0.74, 0.6],
+    [0.89, 0.81, 0.67],
+    [0.9, 0.78, 0.92],
+    [0.86, 0.79, 0.87],
+    [0.91, 0.9, 0.85],
+    [0.84, 0.84, 0.86],
+    [0.84, 0.84, 0.86],
+  ],
+};
+
+/**
+ * The emblem's type pill, toned onto the prints (owner decision 2026-09-29:
+ * it read 238 against the prints' 219–228). Its body — rows [fromY, toY),
+ * under CC's top highlight (1422–1428, kept, as the prints print one); the
+ * pixels 4-connected to `seed` with luma ≥ `minLuma`, which the pill's dark
+ * outline bounds — has its colour multiplied by `gain`, a least-squares fit
+ * on the prints' per-pixel median with "Emblem" and the set symbol masked
+ * out (one gain: the fit by distance from the centre varied 0.93–0.98). The
+ * spark's tail crosses the pill as CC's translucent white: it is toned with
+ * the pill and keeps its alpha (`keepAlpha`), so the art still shows through
+ * it. Native px of the pack.
+ */
+export const EMBLEM_TYPE_PILL_TONE = {
+  seed: { x: 400, y: 1470 },
+  fromY: 1429,
+  toY: 1530,
+  minLuma: 150,
+  centreX: 749.5,
+  gain: [[0, 0.94]],
+  keepAlpha: true,
+};
+
+/**
+ * The emblem's text box, toned onto the prints (owner decision 2026-09-29:
+ * only if the prints measurably differ — they do: CC's box reads 237 where
+ * all six prints read 226–232, a light blue-grey). Its interior — rows
+ * [fromY, toY), the pixels 4-connected to `seed` with luma ≥ `minLuma`,
+ * inside the box's light rim (202, kept: the prints print it lighter) — has
+ * its colour multiplied by `gain`, a least-squares fit on the prints'
+ * per-pixel median with the rules text masked out (one gain: by distance it
+ * varied 0.94–0.98). The spark's tail keeps its alpha, as in the type pill.
+ * Native px of the pack.
+ */
+export const EMBLEM_TEXT_BOX_TONE = {
+  seed: { x: 400, y: 1700 },
+  fromY: 1556,
+  toY: 1938,
+  minLuma: 215,
+  centreX: 749.5,
+  gain: [[0, 0.96]],
+  keepAlpha: true,
+};
+
+/** The emblem's tones, in the order the importer applies them (their
+ *  regions don't overlap). */
+export const EMBLEM_TONES = [EMBLEM_NAME_PILL_TONE, EMBLEM_SILVER_TONE, EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE];
+
+/**
  * template → { colors: colour → layers, plates?, symbols?, shield?, recut?,
- * tone?, excluded?, pack?, transforms?, notes }.
+ * bridge?, tones?, excluded?, pack?, transforms?, notes }.
  * `plates` are written at native size to <template>/pt/<colour>.png;
  * `symbols` (a basic land's mana-symbol disc, TODO 3.24) the same way to
  * <template>/symbol/<colour>.png, for the colours listed only.
@@ -251,10 +376,14 @@ export const EMBLEM_NAME_PILL_TONE = {
  * into <template>/loyalty/<colour>.png, cropped to `box`.
  * `recut` moves a band of each composite down before the downscale
  * (recutBand; the textless tokens, TOKEN_TEXTLESS_RECUT; the text-box
- * tokens, TOKEN_REGULAR_RECUT; the emblem's ray shadow, a column window
- * only, EMBLEM_RAY_SHADOW_RECUT).
- * `tone` multiplies one outlined region of each composite by a gain before
- * the downscale (toneRegion; the emblem's name pill, EMBLEM_NAME_PILL_TONE).
+ * tokens, TOKEN_REGULAR_RECUT).
+ * `bridge` closes the frame over the top of a clear ray (bridgeRayTip; the
+ * emblem's spark, EMBLEM_RAY_BRIDGE), after any re-cut.
+ * `tones` multiply regions of each composite by print-fitted gains, in
+ * order, before the downscale (applyTone: toneSilver for the emblem's
+ * silver, EMBLEM_SILVER_TONE; toneRegion for an outlined region — its name
+ * pill, type pill and text box, EMBLEM_NAME_PILL_TONE, EMBLEM_TYPE_PILL_TONE,
+ * EMBLEM_TEXT_BOX_TONE).
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
@@ -456,16 +585,17 @@ export const CC_TEMPLATES = {
   // a stray coloured card on the frame still draws it); never offered.
   emblem: {
     colors: perColor(() => [layer(EMBLEM)]),
-    recut: EMBLEM_RAY_SHADOW_RECUT,
-    tone: EMBLEM_NAME_PILL_TONE,
+    bridge: EMBLEM_RAY_BRIDGE,
+    tones: EMBLEM_TONES,
     pack: "packEmblem.js 'Planeswalker Emblems'",
-    transforms: emblemTransform(EMBLEM_RAY_SHADOW_RECUT, EMBLEM_NAME_PILL_TONE),
+    transforms: emblemTransform(EMBLEM_RAY_BRIDGE, EMBLEM_TONES),
     notes: [
       "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
       "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
       "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
       "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
-      "the spark's centre ray keeps CC's black shadow down to the art window's top (EMBLEM_RAY_SHADOW_RECUT): the window is Scryfall's art_crop box at the prints' scale (from 250.4 px), and the ray's clear rows above it (245–250) showed the under-frame layer at another scale",
+      "the frame's silver closes over the top of the spark's centre ray (EMBLEM_RAY_BRIDGE, owner decision 2026-09-29): the art window is Scryfall's art_crop box at the prints' scale (from 250.4 px), where the prints' ray runs on up to the bar with art in it; the ray ends at 251 px, its tip drawn with the profile of its own right edge, and the bar's shadow and the silver run across",
+      "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints, the silver's by distance from the centre and by row; the spark's tail keeps its alpha; the light rims keep CC's tone",
     ],
   },
 };
@@ -480,11 +610,18 @@ function textlessRecutTransform(r) {
   return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows, the shadow's last ${r.blendBottom} rows faded into the texture (premultiplied); corners rounded to the importer radius`;
 }
 
-/** How provenance describes the emblem's two touches (EMBLEM_RAY_SHADOW_RECUT,
- *  EMBLEM_NAME_PILL_TONE). */
-function emblemTransform(r, t) {
-  const gains = t.gain.map(([d, g]) => `${g} at ${d}`).join(", ");
-  return `native 1500x2100, pixels copied 1:1 (no resample) but for two touches: the spark's centre ray (columns ${r.x0}–${r.x1 - 1}) holds its shadow's row ${r.fromY - 1} down to ${r.fromY + r.shift - 1} and fades out ${r.shift} px lower (rows ${r.fromY}–${r.toY - 1} moved down ${r.shift}), so the ray is shadowed down to the art window's top; the name pill's body (rows ${t.fromY}–${t.toY - 1}, the pixels 4-connected to (${t.seed.x}, ${t.seed.y}) with luma ≥ ${t.minLuma}, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x ${t.centreX} (${gains} px) and is made opaque; corners rounded to the importer radius`;
+/** How provenance describes the emblem's touches (EMBLEM_RAY_BRIDGE, then
+ *  EMBLEM_TONES). */
+function emblemTransform(b, [pill, silver, type, box]) {
+  const gains = pill.gain.map(([d, g]) => `${g} at ${d}`).join(", ");
+  return [
+    "native 1500x2100, pixels copied 1:1 (no resample) but for these touches:",
+    `the spark's centre ray bridged over (rows ${b.fromY}–${b.toY - 1}, columns ${b.x0}–${b.x1 - 1} blended across from columns ${b.anchors[0]} and ${b.anchors[1]}, opaque; the ray's tip at row ${b.toY}, corners rounded to ${b.radius} px, drawn with its own right edge's profile, sampled on rows ${b.edgeRows[0]}–${b.edgeRows[1] - 1});`,
+    `the name pill's body (rows ${pill.fromY}–${pill.toY - 1}, the pixels 4-connected to (${pill.seed.x}, ${pill.seed.y}) with luma ≥ ${pill.minLuma}, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x ${pill.centreX} (${gains} px) and is made opaque;`,
+    `the silver (rows ${silver.bodyFromY}–${silver.bodyToY - 1} but for the spark's pure-white tail and glow; rows ${silver.fromY}–${silver.bodyFromY - 1} and ${silver.bodyToY}–${silver.toY - 1} from either edge to the first pixel of luma ≥ ${silver.stopLuma}) has its colour multiplied by a gain bilinear in the distance from x ${silver.centreX} and the row (${silver.gain.length} × ${silver.d.length} knots, ${Math.min(...silver.gain.flat())}–${Math.max(...silver.gain.flat())});`,
+    `the type pill's body (rows ${type.fromY}–${type.toY - 1}) × ${type.gain[0][1]} and the text box (rows ${box.fromY}–${box.toY - 1}, inside its light rim) × ${box.gain[0][1]}, alpha kept;`,
+    "corners rounded to the importer radius",
+  ].join(" ");
 }
 
 /** Templates deliberately NOT imported yet, and why. */
@@ -541,23 +678,15 @@ export function compositeLayers(images, width, height) {
 
 /**
  * Move a horizontal band of an 8-bit RGBA image down (TOKEN_TEXTLESS_RECUT,
- * TOKEN_REGULAR_RECUT, EMBLEM_RAY_SHADOW_RECUT): rows [fromY, toY) land
- * `shift` px lower, the `shift` rows that opens at fromY repeat the rows
- * just above it (`fill: "repeat"`, the default) or hold the one row above
- * it (`fill: "hold"`: row fromY − 1, stretched), and the rows below the
- * moved band keep their place, so the band covers the top `shift` rows of
- * what was below it. Only columns [x0, x1) move (default: every column).
- * Each seam is cross-faded in premultiplied space: the top one over `blend`
- * rows, from the original rows into the repeated ones; the bottom one over
- * `blendBottom` rows (default `blend`; 0 = a hard cut), from the moved rows
- * into the original ones. Returns a new buffer.
+ * TOKEN_REGULAR_RECUT): rows [fromY, toY) land `shift` px lower, the `shift`
+ * rows that opens at fromY repeat the rows just above it, and the rows below
+ * the moved band keep their place, so the band covers the top `shift` rows
+ * of what was below it. Each seam is cross-faded in premultiplied space: the top one over
+ * `blend` rows, from the original rows into the repeated ones; the bottom
+ * one over `blendBottom` rows (default `blend`; 0 = a hard cut), from the
+ * moved rows into the original ones. Returns a new buffer.
  */
-export function recutBand(
-  buf,
-  width,
-  height,
-  { fromY, toY, shift, blend, blendBottom = blend, x0 = 0, x1 = width, fill = "repeat" },
-) {
+export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendBottom = blend }) {
   if (
     !(shift > 0) ||
     !(fromY >= shift) ||
@@ -565,17 +694,15 @@ export function recutBand(
     toY + shift > height ||
     !(blend >= 0) ||
     !(blendBottom >= 0) ||
-    fromY + blend > toY + shift - blendBottom ||
-    !(x0 >= 0 && x1 > x0 && x1 <= width) ||
-    (fill !== "repeat" && fill !== "hold")
+    fromY + blend > toY + shift - blendBottom
   ) {
-    throw new Error(`recutBand: bad band ${JSON.stringify({ fromY, toY, shift, blend, blendBottom, x0, x1, fill, width, height })}`);
+    throw new Error(`recutBand: bad band ${JSON.stringify({ fromY, toY, shift, blend, blendBottom, height })}`);
   }
   const out = Buffer.from(buf);
   const row = width * 4;
   const mix = (y, a, b, t) => {
     // premultiplied lerp of row a (weight 1 − t) and row b (weight t) into y
-    for (let x = x0; x < x1; x += 1) {
+    for (let x = 0; x < width; x += 1) {
       const ia = a * row + x * 4;
       const ib = b * row + x * 4;
       const o = y * row + x * 4;
@@ -589,12 +716,10 @@ export function recutBand(
     }
   };
   for (let y = fromY; y < toY + shift; y += 1) {
-    // The row this one takes: the band's own, `shift` rows up — or, for a
-    // held fill, the row above the band throughout the opened rows.
-    const src = fill === "hold" && y < fromY + shift ? fromY - 1 : y - shift;
+    const src = y - shift;
     if (y < fromY + blend) mix(y, y, src, (y - fromY + 1) / (blend + 1));
     else if (y >= toY + shift - blendBottom) mix(y, src, y, (y - (toY + shift - blendBottom) + 1) / (blendBottom + 1));
-    else buf.copy(out, y * row + x0 * 4, src * row + x0 * 4, src * row + x1 * 4);
+    else buf.copy(out, y * row, src * row, (src + 1) * row);
   }
   return out;
 }
@@ -619,13 +744,15 @@ export function gainAt(knots, d) {
 }
 
 /**
- * Tone one region of an 8-bit RGBA image (EMBLEM_NAME_PILL_TONE): the pixels
- * 4-connected to `seed` within rows [fromY, toY) whose luma is ≥ `minLuma`
- * — a dark outline bounds the region — get their colour multiplied by
- * gainAt(gain, |x − centreX|) (rounded, clamped to 255) and alpha 255.
- * Everything else is copied as it is. Returns a new buffer.
+ * Tone one region of an 8-bit RGBA image (EMBLEM_NAME_PILL_TONE,
+ * EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE): the pixels 4-connected to
+ * `seed` within rows [fromY, toY) whose luma is ≥ `minLuma` — a darker
+ * outline bounds the region — get their colour multiplied by
+ * gainAt(gain, |x − centreX|) (rounded, clamped to 255) and alpha 255, or
+ * their own alpha with `keepAlpha`. Everything else is copied as it is.
+ * Returns a new buffer.
  */
-export function toneRegion(buf, width, height, { seed, fromY, toY, minLuma, centreX, gain }) {
+export function toneRegion(buf, width, height, { seed, fromY, toY, minLuma, centreX, gain, keepAlpha = false }) {
   const knotsOk =
     Array.isArray(gain) &&
     gain.length > 0 &&
@@ -654,7 +781,7 @@ export function toneRegion(buf, width, height, { seed, fromY, toY, minLuma, cent
     const o = p * 4;
     const g = gainAt(gain, Math.abs(x - centreX));
     for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
-    out[o + 3] = 255;
+    if (!keepAlpha) out[o + 3] = 255;
     for (const [nx, ny] of [
       [x - 1, y],
       [x + 1, y],
@@ -666,6 +793,202 @@ export function toneRegion(buf, width, height, { seed, fromY, toY, minLuma, cent
       if (taken[q] || lumaAt(buf, q * 4) < minLuma) continue;
       taken[q] = 1;
       stack.push(q);
+    }
+  }
+  return out;
+}
+
+/** Knots at `v`: the segment [i, i + 1] and the fraction along it, held
+ *  at the ends. */
+function knotAt(knots, v) {
+  if (v <= knots[0]) return [0, 0];
+  const last = knots.length - 1;
+  if (v >= knots[last]) return [Math.max(0, last - 1), last === 0 ? 0 : 1];
+  let i = 0;
+  while (v > knots[i + 1]) i += 1;
+  return [i, (v - knots[i]) / (knots[i + 1] - knots[i])];
+}
+
+/** EMBLEM_SILVER_TONE's gain at (d, y): bilinear in the knots `d` × `rows`,
+ *  held past the outer ones. */
+export function silverGainAt({ d: dKnots, rows, gain }, d, y) {
+  const [i, t] = knotAt(dKnots, d);
+  const [j, u] = knotAt(rows, y);
+  const i1 = Math.min(i + 1, dKnots.length - 1);
+  const j1 = Math.min(j + 1, rows.length - 1);
+  return (
+    gain[j][i] * (1 - t) * (1 - u) + gain[j][i1] * t * (1 - u) + gain[j1][i] * (1 - t) * u + gain[j1][i1] * t * u
+  );
+}
+
+/**
+ * Tone the emblem's silver (EMBLEM_SILVER_TONE): in rows [bodyFromY,
+ * bodyToY) every pixel with alpha > 0 but the translucent pure-white ones
+ * (the spark's tail and glow); in rows [fromY, bodyFromY) and [bodyToY,
+ * toY), each row from either edge inwards up to (not including) its first
+ * pixel of luma ≥ `stopLuma` — the silver beside the bars, not the bars'
+ * rims. Colour × silverGainAt(spec, |x − centreX|, y), rounded, clamped to
+ * 255; alpha kept. Returns a new buffer.
+ */
+export function toneSilver(buf, width, height, spec) {
+  const { fromY, bodyFromY, bodyToY, toY, stopLuma, centreX, d, rows, gain } = spec;
+  const ascending = (k) => Array.isArray(k) && k.length > 0 && k.every((v, i) => Number.isFinite(v) && (i === 0 || v > k[i - 1]));
+  if (
+    !(fromY >= 0 && fromY <= bodyFromY && bodyFromY < bodyToY && bodyToY <= toY && toY <= height) ||
+    !ascending(d) ||
+    !ascending(rows) ||
+    !Array.isArray(gain) ||
+    gain.length !== rows.length ||
+    !gain.every((r) => Array.isArray(r) && r.length === d.length && r.every((g) => Number.isFinite(g) && g >= 0))
+  ) {
+    throw new Error(`toneSilver: bad tone ${JSON.stringify({ fromY, bodyFromY, bodyToY, toY, d, rows, width, height })}`);
+  }
+  const out = Buffer.from(buf);
+  const tone = (x, y) => {
+    const o = (y * width + x) * 4;
+    if (buf[o + 3] === 0) return;
+    const g = silverGainAt(spec, Math.abs(x - centreX), y);
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
+  };
+  for (let y = fromY; y < toY; y += 1) {
+    if (y >= bodyFromY && y < bodyToY) {
+      for (let x = 0; x < width; x += 1) {
+        const o = (y * width + x) * 4;
+        const pureWhite = buf[o] === 255 && buf[o + 1] === 255 && buf[o + 2] === 255;
+        if (pureWhite && buf[o + 3] < 255) continue;
+        tone(x, y);
+      }
+      continue;
+    }
+    let x = 0;
+    for (; x < width && lumaAt(buf, (y * width + x) * 4) < stopLuma; x += 1) tone(x, y);
+    // A row with no rim (the strip above the name bar) was toned whole.
+    for (let r = width - 1; r > x && lumaAt(buf, (y * width + r) * 4) < stopLuma; r -= 1) tone(r, y);
+  }
+  return out;
+}
+
+/** One entry of a recipe's `tones`: the silver (it has `bodyFromY`) or an
+ *  outlined region (toneRegion). */
+export function applyTone(buf, width, height, tone) {
+  return "bodyFromY" in tone ? toneSilver(buf, width, height, tone) : toneRegion(buf, width, height, tone);
+}
+
+/**
+ * Close the frame over the top of a clear ray (EMBLEM_RAY_BRIDGE; see it for
+ * the why). On an 8-bit RGBA composite:
+ *  1. the ray's right edge profile — on rows [edgeRows), the edge's α-½ line
+ *     (scanning right from x0 + 10 for the first α ≥ ½ past the clear run)
+ *     and the mean colour 0–10 px outside it, by whole px of distance; the
+ *     outline's colour is the mean at 2–4 px, the silver's at 10;
+ *  2. the ray's two edges at row `toY` (the α-½ lines of the clear run
+ *     scanning right from x0), xl and xr;
+ *  3. rows [fromY, toY) × columns [x0, x1): each row's pixels at the two
+ *     anchors blended across (alpha 255); left of xl, the frame's own pixels
+ *     fade back in over the last `fadeRows` rows;
+ *  4. the tip: every pixel within the profile's reach of the rounded-top
+ *     cut-out (top edge at toY, from xl to xr, corners of `radius`) — above
+ *     it, or in its rounded corners — takes the outline's colour mixed
+ *     towards the silver under it by the profile at that distance, and
+ *     towards it again by ((xr − x) / (xr − xl)) ^ fadePow (light at the
+ *     left edge); a rounded corner's pixels take its alpha from the distance
+ *     (½ px anti-aliasing), never less than their own.
+ * Returns a new buffer.
+ */
+export function bridgeRayTip(buf, width, height, { fromY, toY, x0, x1, anchors, fadeRows, radius, fadePow, edgeRows }) {
+  if (
+    !(fromY >= 0 && toY > fromY && toY + radius + 1 < height) ||
+    !(anchors[0] >= 0 && anchors[0] < x0 && x0 < x1 && x1 <= anchors[1] && anchors[1] < width) ||
+    !(fadeRows > 0 && fadeRows <= toY - fromY) ||
+    !(radius >= 0 && fadePow > 0) ||
+    !(edgeRows[0] > toY && edgeRows[1] > edgeRows[0] && edgeRows[1] <= height)
+  ) {
+    throw new Error(`bridgeRayTip: bad bridge ${JSON.stringify({ fromY, toY, x0, x1, anchors, fadeRows, radius, fadePow, edgeRows })}`);
+  }
+  const at = (x, y) => (y * width + x) * 4;
+  const alpha = (x, y) => buf[at(x, y) + 3] / 255;
+  const rgb = (x, y) => [buf[at(x, y)], buf[at(x, y) + 1], buf[at(x, y) + 2]];
+  const luma3 = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  /** The α-½ lines of the first clear run right of `from` on row y. */
+  const edges = (y, from) => {
+    let x = from;
+    while (x < x1 && alpha(x, y) >= 0.5) x += 1;
+    if (x >= x1 || x === 0) return null;
+    const left = x - 0.5 + (alpha(x - 1, y) - 0.5) / (alpha(x - 1, y) - alpha(x, y));
+    while (x < x1 && alpha(x, y) < 0.5) x += 1;
+    if (x >= x1) return null;
+    const right = x - 0.5 + (0.5 - alpha(x - 1, y)) / (alpha(x, y) - alpha(x - 1, y));
+    return { left, right, firstOpaque: x };
+  };
+  // 1. The right edge's profile.
+  const sums = Array.from({ length: 11 }, () => [0, 0, 0, 0]);
+  for (let y = edgeRows[0]; y < edgeRows[1]; y += 1) {
+    const e = edges(y, x0);
+    if (!e) throw new Error(`bridgeRayTip: no clear ray on row ${y}`);
+    for (let x = e.firstOpaque; x <= e.firstOpaque + 10 && x < width; x += 1) {
+      const d = Math.round(x + 0.5 - e.right);
+      if (d < 0 || d > 10) continue;
+      const c = rgb(x, y);
+      for (let k = 0; k < 3; k += 1) sums[d][k] += c[k];
+      sums[d][3] += 1;
+    }
+  }
+  const mean = (d) => {
+    if (!sums[d][3]) throw new Error(`bridgeRayTip: no edge sample ${d} px out`);
+    return sums[d].slice(0, 3).map((v) => v / sums[d][3]);
+  };
+  const outline = [0, 1, 2].map((k) => (mean(2)[k] + mean(3)[k] + mean(4)[k]) / 3);
+  const lo = luma3(outline);
+  const hi = luma3(mean(10));
+  /** 0 = the outline, 1 = the silver, at `d` px out (0 inside 2 px). */
+  const profile = [0, 0, ...[2, 3, 4, 5, 6, 7, 8, 9, 10].map((d) => Math.min(1, Math.max(0, (luma3(mean(d)) - lo) / (hi - lo))))];
+  const profileAt = (d) => {
+    if (d >= 10) return 1;
+    const i = Math.floor(d);
+    return profile[i] + (profile[i + 1] - profile[i]) * (d - i);
+  };
+  // 2. The ray's edges where its new tip sits.
+  const tip = edges(toY, x0);
+  if (!tip) throw new Error(`bridgeRayTip: no clear ray on row ${toY}`);
+  const { left: xl, right: xr } = tip;
+  const out = Buffer.from(buf);
+  // 3. The silver closed over.
+  const base = new Float64Array((toY - fromY) * (x1 - x0) * 3);
+  for (let y = fromY; y < toY; y += 1) {
+    const a = rgb(anchors[0], y);
+    const b = rgb(anchors[1], y);
+    for (let x = x0; x < x1; x += 1) {
+      const t = (x - anchors[0]) / (anchors[1] - anchors[0]);
+      const keep = x + 0.5 < xl ? Math.min(1, Math.max(0, (y + 0.5 - (toY - fadeRows)) / fadeRows)) : 0;
+      const own = rgb(x, y);
+      const o = at(x, y);
+      const bi = ((y - fromY) * (x1 - x0) + (x - x0)) * 3;
+      for (let k = 0; k < 3; k += 1) {
+        const v = (a[k] * (1 - t) + b[k] * t) * (1 - keep) + own[k] * keep;
+        base[bi + k] = v;
+        out[o + k] = Math.round(v);
+      }
+      out[o + 3] = 255;
+    }
+  }
+  // 4. The tip.
+  const leftSilver = rgb(Math.floor(xl) - 1, toY);
+  for (let y = fromY; y <= toY + Math.ceil(radius); y += 1) {
+    for (let x = x0; x < x1; x += 1) {
+      const cx = x + 0.5;
+      const cy = y + 0.5;
+      const qx = Math.max(xl + radius - cx, cx - (xr - radius), 0);
+      const qy = Math.max(toY + radius - cy, 0);
+      const d = Math.hypot(qx, qy) - radius;
+      const o = at(x, y);
+      if (y >= toY && (d <= -0.5 || buf[o + 3] === 255)) continue;
+      if (d >= 10) continue;
+      const f = Math.min(1, Math.max(0, (xr - cx) / (xr - xl))) ** fadePow;
+      const p = profileAt(Math.max(d, 0));
+      const w = p + (1 - p) * f;
+      const under = y < toY ? [0, 1, 2].map((k) => base[((y - fromY) * (x1 - x0) + (x - x0)) * 3 + k]) : cx < (xl + xr) / 2 ? leftSilver : outline;
+      for (let k = 0; k < 3; k += 1) out[o + k] = Math.min(255, Math.max(0, Math.round(outline[k] * (1 - w) + under[k] * w)));
+      out[o + 3] = y < toY ? 255 : Math.max(buf[o + 3], Math.round(Math.min(1, Math.max(0, d + 0.5)) * 255));
     }
   }
   return out;
