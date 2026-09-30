@@ -1819,7 +1819,11 @@ const WUBRG = ["W", "U", "B", "R", "G"] as const;
 //   • "gold" — fetch lands for "a basic land card" that print the gold land
 //     frame although Scryfall lists no mana and no identity (Fabled Passage
 //     ELD #244, Prismatic Vista MH1 #244; checked 2026-09-28). Evolving Wilds
-//     (MSC #240) prints the grey colourless frame and needs no entry.
+//     (MSC #240) prints the grey colourless frame and needs no entry. So
+//     does Multiversal Passage — "choose a basic land type", no mana listed
+//     — on every printing (SPM #180, OM1 #181, the borderless SPM #206;
+//     checked 2026-09-29, 4.34's survey: it was the one borderless land the
+//     registry called exact in the wrong colour).
 const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless" | "gold"> = new Map([
   ["Vivid Crag", "identity"],
   ["Vivid Creek", "identity"],
@@ -1833,6 +1837,7 @@ const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless" | "gold
   ["Urborg, Tomb of Yawgmoth", "colorless"],
   ["Fabled Passage", "gold"],
   ["Prismatic Vista", "gold"],
+  ["Multiversal Passage", "gold"],
 ]);
 
 const BASIC_TYPE_LETTER: Record<string, string> = {

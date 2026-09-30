@@ -599,6 +599,23 @@ describe("fetch-land colours (landFrameColorRule)", () => {
     expect(colorKeyOf("mh1-244")).toBe("m");
   });
 
+  it("Multiversal Passage prints gold on every printing, though Scryfall lists no mana (4.34's survey)", () => {
+    // "Choose a basic land type": no produced mana, no identity — the
+    // produced-mana rule read colourless (grey), and the borderless SPM
+    // #206 was the one borderless land called exact in the wrong colour.
+    for (const key of ["spm-180", "spm-206"] as const) {
+      expect(printing(key).produced_mana ?? [], key).toEqual([]);
+      expect(landFrameColorRule(printing(key)), key).toEqual(["W", "U", "B", "R", "G"]);
+      expect(colorKeyOf(key), key).toBe("m");
+    }
+    expect(frameMatchFromScryfall(printing("spm-180"))).toMatchObject({ status: "exact", template: "m15land" });
+    expect(frameMatchFromScryfall(printing("spm-206"))).toMatchObject({
+      status: "exact",
+      template: "m15borderlessland",
+      landOn: "m15land",
+    });
+  });
+
   it("a land that produces mana keeps the produced-mana rule", () => {
     expect(landFrameColorRule(printing("ktk-229"))).toBeNull();
     expect(colorKeyOf("ktk-229")).toBe("m");

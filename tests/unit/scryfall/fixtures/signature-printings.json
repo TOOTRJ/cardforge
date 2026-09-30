@@ -3358,5 +3358,54 @@
       "R",
       "U"
     ]
+  },
+  "spm-180": {
+    "id": "f5fb426a-5618-4dd4-9c51-0cc847be8c1d",
+    "name": "Multiversal Passage",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "set_type": "expansion",
+    "collector_number": "180",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
+  },
+  "spm-206": {
+    "id": "db88b6b6-7907-4c40-b712-4fa1456d8ad0",
+    "name": "Multiversal Passage",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "set_type": "expansion",
+    "collector_number": "206",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "fullart"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
   }
 }
