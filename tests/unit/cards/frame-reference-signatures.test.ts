@@ -181,4 +181,16 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     );
     expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });
+
+  it("names the template keys when the two frames share a label (\"Token\", TODO 4.48a)", () => {
+    // The full-art design (m20token) and Alpha's token (alphatoken) are both
+    // "Token" since 4.48a: a 1993-frame token pinned on the m20token row
+    // must not read "resolves it to the Token frame, not Token".
+    const soldier = card(idOf("m20token", "w", "Soldier"));
+    const oldBorder = scryfallCardSchema.parse({ ...(printings[soldier.id] as object), frame: "1993" });
+    expect(frameMatchFromScryfall(oldBorder).template).toBe("alphatoken");
+    expect(validateReferenceForCombo(oldBorder, "m20token", "w").warnings.join(" ")).toMatch(
+      /resolves it to the Token \(alphatoken\) frame, not Token \(m20token\)\./,
+    );
+  });
 });
