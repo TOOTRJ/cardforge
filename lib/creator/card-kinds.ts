@@ -41,6 +41,7 @@ import {
   type TokenTypeWord,
 } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { profileDrawsKind } from "@/lib/cards/kind-anatomy";
 import {
   isM20ArtifactTokenTemplate,
   m20TokenHeightOf,
@@ -336,21 +337,10 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
 // colour, mana cost, types, rarity or stats — and every printed one sits on
 // the emblem frame. So the emblem kind wears the emblem frame and nothing
 // else (no other era, skin or showcase), and the emblem frame dresses
-// nothing else: templateRefusesKind refuses both ways, so the server's kind
-// gate does too.
+// nothing else: its trade dress (TREATMENT_KINDS, below) names the emblem
+// alone and the emblem is an EXCLUSIVE kind, so templateRefusesKind refuses
+// both ways, and the server's kind gate does too.
 // ---------------------------------------------------------------------------
-
-/** Kinds that wear only their own frames, and those frames. */
-const KIND_OWN_TEMPLATES: Partial<Record<CardKind, readonly FrameTemplate[]>> = {
-  emblem: ["emblem"],
-};
-
-/** Own template → the one kind it dresses (built from KIND_OWN_TEMPLATES). */
-const OWN_TEMPLATE_KIND: ReadonlyMap<FrameTemplate, CardKind> = new Map(
-  (Object.entries(KIND_OWN_TEMPLATES) as [CardKind, readonly FrameTemplate[]][]).flatMap(
-    ([kind, templates]) => templates.map((t) => [t, kind] as const),
-  ),
-);
 
 /** The kinds the Card step's kind picker lists as chips. The emblem is not
  *  one of them (owner 2026-09-29): the token kind's picker offers it. */
@@ -420,51 +410,61 @@ export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): F
   return kind === "emblem" ? "c" : colorKey;
 }
 
-// Kinds a frame can only draw through a stat overlay its profile must carry:
-// a planeswalker needs the loyalty shield and the ability rows
-// (`loyaltyRows`), a battle its defense shield. Of the frames that dress
-// every kind, only m15pw and battle have them. A showcase treatment gets a
-// walker as a NEW body template of its own (TODO 4.5b: `tarkirghostfirepw`,
-// `extendedartpw`), never by adding the anatomy to the template it has — that
-// would re-dress every stored card of that kind on it at its next bake.
-const STAT_OVERLAY_KINDS: readonly CardKind[] = ["planeswalker", "battle"];
-const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
-  (kind) =>
-    RAW_KIND_DEFS[kind].layoutTemplates === null &&
-    !STAT_OVERLAY_KINDS.includes(kind) &&
-    !KIND_OWN_TEMPLATES[kind],
-);
-
-// Type-specific showcase treatments: real expeditions / full-art basics are
-// land trade dress, Nyx constellation is enchantment dress — which an
-// Enchantment Creature borrows (the Theros Beyond Death gods, owner decision
-// A3 2026-09-29; see BORROWED_SHOWCASES below). The Zendikar
-// Rising hedron (`fullart`), textless and extended-art frames have no
-// loyalty or defense slot, so a planeswalker would print no loyalty and
-// plain ability lines, and a battle no defense (full-art research
-// 2026-09-26, TODO 0.26) — they take every kind but those two until 4.5.
-// The same holds for the IP showcases (TODO 4.5a, 2026-09-29): the Ring and
-// Scroll (LTR), Avatar, Bloomburrow woodland and anime, and the three Tarkir
-// frames print P/T only — no loyalty shield, no ability rows, no defense —
-// so they refuse planeswalkers and battles too. A Ghostfire or Anime walker
-// printing imports onto m15pw (`nearest`): the Ghostfire walker gets its own
-// body in 4.5b, Anime walkers stay refused (owner decision 2026-09-29).
-// tests/unit/creator/card-kinds.test.ts derives this from the profiles, so
-// a showcase added without the anatomy can't offer the two kinds either.
-// Absent = any standard kind (stats still gate on type).
+// ---------------------------------------------------------------------------
+// The kind gate (TODO 4.5.0): which kinds a template may dress. Two rules,
+// and either refuses:
 //
-// The borderless M15 frame (4.32) is a SKIN of the M15 standard and of the
-// M15 artifact frame, so the gallery only offers it where those are — but
-// it is new (no legacy card sits on it), so it carries a restriction too and
-// the server refuses it on any other kind: CC's pack has no planeswalker,
-// token or battle frame (those are 4.33 / 4.37). The artifact dress also
-// serves an Artifact Creature, borrowed like m15artifact (1.7). Its land
-// (4.34) is a skin of the M15 land frame and dresses the Land kind only.
-// The borderless planeswalkers (4.33) are skins of m15pw, for planeswalkers
-// only (the rows and the shield are the frame's).
-const SHOWCASE_KIND_RESTRICTION: Partial<
-  Record<FrameTemplate, readonly CardKind[]>
-> = {
+//  1. CAPABILITY — "the body draws what the kind needs"
+//     (lib/cards/kind-anatomy.ts profileDrawsKind, read from the profile's
+//     fields): on the showcase treatments and the Borderless skins, a
+//     planeswalker needs the loyalty shield and the ability rows, a battle
+//     the defense shield on the landscape card, a creature the P/T, a saga
+//     the chapter rail, an adventure / split / aftermath / flip card its
+//     page or second face. So the Zendikar Rising hedron (`fullart`), the
+//     textless and extended-art frames (full-art research 2026-09-26, TODO
+//     0.26) and the IP showcases — the Ring and Scroll (LTR), Avatar,
+//     Bloomburrow woodland and anime, the three Tarkir frames (TODO 4.5a) —
+//     which print P/T only, refuse planeswalkers, battles and every layout
+//     kind, and a showcase added without the anatomy can't offer them
+//     either. A treatment's walker is a NEW body template (TODO 4.5b:
+//     `tarkirghostfirepw`, `extendedartpw`), never the anatomy added to the
+//     template it has — that would re-dress every stored card of that kind
+//     on it at its next bake (tests/unit/cards/kind-capability-baseline
+//     .test.ts). A Ghostfire walker printing imports onto m15pw (`nearest`);
+//     Anime walkers stay refused (owner decision 2026-09-29).
+//     Border-era standards and layout templates are NOT judged: an off-kind
+//     legacy card (an artifact on the plain m15 frame, a creature on the
+//     saga frame) stays savable, and their galleries come from
+//     ERA_TYPE_FRAME / the skins / a kind's layoutTemplates anyway.
+//
+//  2. TRADE DRESS — TREATMENT_KINDS: what a capability can't say, because
+//     the body COULD draw the kind but the print is one kind's dress:
+//       • real expeditions and full-art basics are land dress;
+//       • the Nyx constellation frame is enchantment dress — which an
+//         Enchantment Creature borrows (the Theros Beyond Death gods, owner
+//         decision A3 2026-09-29; BORROWED_SHOWCASES below);
+//       • the borderless M15 frame (4.32) is a SKIN of the M15 standard and
+//         of the M15 artifact frame, so the gallery only offers it where
+//         those are — but it is new (no legacy card sits on it), so the
+//         server refuses it on any other kind: CC's pack has no token frame
+//         (4.37). The artifact dress also serves an Artifact Creature,
+//         borrowed like m15artifact (1.7). Its land (4.34) is a skin of the
+//         M15 land frame and dresses the Land kind only;
+//       • the borderless planeswalkers (4.33) are skins of m15pw, for
+//         planeswalkers only;
+//       • the emblem frame dresses the emblem alone, and the emblem is an
+//         EXCLUSIVE kind: it wears only a template whose dress names it.
+//     No row: the capability rule alone on a showcase or Borderless body,
+//     no refusal anywhere else.
+//
+// `basicOnly` (BASIC_ONLY_TEMPLATES, below) stays its own per-card check:
+// the Land kind covers basics and nonbasics alike, so no kind rule can tell
+// them apart. The full-art basics' land dress is here all the same.
+// ---------------------------------------------------------------------------
+
+/** The kinds a template's trade dress lets it dress (the capability rule
+ *  still applies on top on a showcase or Borderless body). */
+const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   expeditionland: ["land"],
   m15fullartland: ["land"],
   fullartland: ["land"],
@@ -475,22 +475,24 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
   m15borderlesspw: ["planeswalker"],
   m15borderlesspwtall: ["planeswalker"],
   nyx: ["enchantment", "creature"],
-  fullart: KINDS_WITHOUT_STAT_OVERLAY,
-  m15textless: KINDS_WITHOUT_STAT_OVERLAY,
-  extendedart: KINDS_WITHOUT_STAT_OVERLAY,
-  lotr: KINDS_WITHOUT_STAT_OVERLAY,
-  lotrscroll: KINDS_WITHOUT_STAT_OVERLAY,
-  avatar: KINDS_WITHOUT_STAT_OVERLAY,
-  bloomburrow: KINDS_WITHOUT_STAT_OVERLAY,
-  bloomanime: KINDS_WITHOUT_STAT_OVERLAY,
-  tarkirdraconic: KINDS_WITHOUT_STAT_OVERLAY,
-  tarkirghostfire: KINDS_WITHOUT_STAT_OVERLAY,
-  tarkirdragon: KINDS_WITHOUT_STAT_OVERLAY,
+  emblem: ["emblem"],
 };
 
-/** True when a showcase treatment's kind restriction leaves this kind out
- *  (a planeswalker on the Zendikar Rising hedron frame, an artifact on Nyx,
- *  a land on the borderless M15 frame). Unlike `!templateSupportsKind`, it
+/** Kinds that wear ONLY a template whose trade dress names them. */
+const EXCLUSIVE_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(["emblem"]);
+
+/** True when the capability rule judges the template: a showcase treatment
+ *  or a Borderless skin — the bodies whose anatomy decides their kinds. */
+function capabilityJudges(template: FrameTemplate): boolean {
+  const set = FRAME_TEMPLATE_SET[template];
+  return FRAME_SET_ERA[set] === "showcase" || set === "borderless";
+}
+
+/** True when the template refuses this kind: its trade dress leaves the
+ *  kind out, the kind is exclusive to other templates, or — on a showcase
+ *  or Borderless body — the body doesn't draw the kind's anatomy (a
+ *  planeswalker on the Zendikar Rising hedron frame, an artifact on Nyx, a
+ *  land on the borderless M15 frame). Unlike `!templateSupportsKind`, it
  *  never refuses a border-era standard or a layout frame, so an off-kind
  *  legacy card (an artifact on the plain m15 frame) isn't caught. The
  *  server's frame gate uses this. */
@@ -498,13 +500,10 @@ export function templateRefusesKind(
   template: FrameTemplate,
   kind: CardKind,
 ): boolean {
-  // The emblem kind and its frame belong to each other only (TODO 6.23).
-  const own = KIND_OWN_TEMPLATES[kind];
-  if (own) return !own.includes(template);
-  const owner = OWN_TEMPLATE_KIND.get(template);
-  if (owner) return owner !== kind;
-  const allowed = SHOWCASE_KIND_RESTRICTION[template];
-  return allowed !== undefined && !allowed.includes(kind);
+  const dress = TREATMENT_KINDS[template];
+  if (dress && !dress.includes(kind)) return true;
+  if (EXCLUSIVE_KINDS.has(kind) && !dress?.includes(kind)) return true;
+  return capabilityJudges(template) && !profileDrawsKind(getFrameProfile(template), kind);
 }
 
 // ---------------------------------------------------------------------------
@@ -1145,18 +1144,9 @@ export function framesForKind(
       availableColorKeys: colors(t),
     }));
   }
-  // The emblem wears its own frame and nothing else (TODO 6.23): no other
-  // era, skin or showcase treatment.
-  const own = KIND_OWN_TEMPLATES[kind];
-  if (own) {
-    return own.map((t) => ({
-      template: t,
-      era: eraForTemplate(t),
-      group: "standard" as const,
-      availableColorKeys: colors(t),
-    }));
-  }
-
+  // The emblem (TODO 6.23) comes out of this loop as the M15 era's one
+  // emblem frame alone: no other era prints today's emblem, it has no
+  // skins, and as an exclusive kind it refuses every showcase.
   const out: FrameChoice[] = [];
   for (const era of FRAME_ERA_VALUES) {
     if (era === "showcase") continue; // appended below, after border eras
@@ -1181,11 +1171,11 @@ export function framesForKind(
       });
     }
   }
-  // Showcase treatments dress any standard kind (stats still gate on type),
-  // except the type-restricted premium dresses above.
+  // Showcase treatments dress a standard kind their body draws (stats still
+  // gate on type), except where their trade dress says otherwise; the
+  // emblem, an exclusive kind, takes none (templateRefusesKind).
   for (const t of SHOWCASE_TEMPLATES) {
-    const restriction = SHOWCASE_KIND_RESTRICTION[t];
-    if (restriction && !restriction.includes(kind)) continue;
+    if (templateRefusesKind(t, kind)) continue;
     out.push({
       template: t,
       era: "showcase",

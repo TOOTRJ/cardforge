@@ -8,7 +8,9 @@
 // outer black card border is never touched because the cream plates isolate the
 // art window from it.
 //
-// HOW TO ADD A FRAME
+// HOW TO BUILD A NEW MSE FRAME'S MASTERS WITH IT (step 2 of docs/FRAMES.md
+// "Adding a frame" — that section is the whole checklist; the steps below
+// are only this script's part):
 //   1. Point PACK at your Full-Magic-Pack `.mse-include/cards/<set>` dir.
 //   2. Set OUT to public/frames/<name> and fill MAP with color → source file.
 //   3. If the frame's art window isn't near (50%,33%), adjust SEEDS. For frames
@@ -16,13 +18,16 @@
 //   4. node scripts/convert-mse-frame.mjs
 //      Templates on the Phase B allow-list (scripts/lib/frame-corners.mjs)
 //      get their card corners normalised before the write (TODO 3.26).
-//   5. Register it in types/card.ts (FRAME_TEMPLATE_VALUES, FRAME_TEMPLATE_LABELS,
-//      FRAME_TEMPLATE_SET — the last two are exhaustive) and wire it into the
-//      picker via ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / a showcase set, or
-//      a kind's layoutTemplates in lib/creator/card-kinds.ts; add a profile in
-//      lib/cards/template-layout.ts; run `npm run assets:frame-webp`; then
-//      verify each color in /admin/frame-compare — combos stay hidden until
-//      checked.
+//   5. npm run assets:frame-webp (the browser's WebP siblings).
+// Then carry on with "Adding a frame": register the template (types/card.ts
+// and the picker, lib/creator/card-kinds.ts), write its profile — a BODY
+// whose kind anatomy (P/T, walker shield + rows, defense, chapter rail)
+// decides the kinds it dresses (docs/FRAMES.md "Kind anatomy and bodies";
+// a walker through walkerAnatomy(), and never a kind's anatomy added to a
+// template that already exists) — declare its checks (edge contract, square
+// corners, art window), teach the import, run the tests and the visual
+// matrix, ship, and have each colour verified in /admin/frame-compare
+// (combos stay hidden until checked).
 //
 // Requires `sharp` (already a dependency). Run from the project root.
 // ---------------------------------------------------------------------------

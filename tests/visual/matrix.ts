@@ -26,6 +26,9 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     differ from their empty-art box (the see-through masters, whose
 //     under-frame art is drawn only under art, and layout v35's art slots —
 //     the empty box is drawn in the slot);
+//   * the kind anatomy a card TYPE prints on a body (TODO 4.5.0): a saga
+//     creature ("@creature"), a Vehicle and a Spacecraft ("@vehicle",
+//     "@spacecraft") — their P/T as it draws today;
 //   * the per-card anatomy switched ON (TODO 4.6a "@crown…", 4.6b
 //     "@pair…"): the long (Legendary) card with FrameStyle.crown on every
 //     template that draws the crown, in each crown key, plus HD, foil and
@@ -421,6 +424,67 @@ const NO_TEXT_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15borderlesspw", "w"],
   ["m15borderlesspwtall", "wub"],
 ];
+/** Kind anatomy a card TYPE prints on a body (TODO 4.5.0), pinned as it
+ *  draws today — new cases (a regenerated baseline, no bump):
+ *   • a saga creature: a FIN "Summon" ("Enchantment Creature — Saga
+ *     Dragon") is stored as the saga kind's enchantment with "Creature" in
+ *     its supertype (TODO 1.3 / 1.21; the words print in 1.20's order) and a
+ *     P/T the saga body doesn't draw yet — 4.5c's correction changes this
+ *     case under its bump, every other saga case keeps its hash;
+ *   • a Vehicle on m15/c (the one visible production Vehicle's frame) and on
+ *     m15artifact/c, and a Spacecraft on m15artifact/c: a P/T through the
+ *     subtype on a non-creature. 4.5c's vehicle template is an addition, so
+ *     these keep their hashes. */
+const VEHICLE_ROW: Partial<CardRowForBake> = {
+  title: "Skysail Runabout",
+  card_type: "artifact",
+  supertype: null,
+  subtypes: ["Vehicle"],
+  cost: "{2}",
+  rules_text: "Flying\nCrew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)",
+  power: "3",
+  toughness: "3",
+};
+const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, string, Partial<CardRowForBake>][] = [
+  [
+    "saga",
+    "saga",
+    "w",
+    "@creature",
+    { title: "Summon: Leviathan", supertype: "Creature", subtypes: ["Saga", "Dragon"], power: "3", toughness: "3" },
+  ],
+  [
+    "m15",
+    "artifact",
+    "c",
+    "@vehicle",
+    VEHICLE_ROW,
+  ],
+  [
+    "m15artifact",
+    "artifact",
+    "c",
+    "@vehicle",
+    VEHICLE_ROW,
+  ],
+  [
+    "m15artifact",
+    "artifact",
+    "c",
+    "@spacecraft",
+    {
+      title: "Orbital Lance",
+      card_type: "artifact",
+      supertype: null,
+      subtypes: ["Spacecraft"],
+      cost: "{5}",
+      rules_text:
+        "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\nFlying",
+      power: "7",
+      toughness: "7",
+    },
+  ],
+];
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15", "w"],
   ["tarkirdragon", "u"],
@@ -524,6 +588,7 @@ export function visualCases(): VisualCase[] {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { suffix: "@notext", noText: true });
   }
+  for (const [template, kind, colour, suffix, row] of KIND_ANATOMY_CASES) add(template, kind, colour, "short", { suffix, row });
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });

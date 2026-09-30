@@ -26,7 +26,14 @@
 // template registration in types/card.ts, one entry in PROFILES below, the
 // checks every master passes (edge contract, art window, square corners),
 // the import registry, and verification. No renderer code changes — both
-// consume this profile generically. An edge-to-edge or full-art frame opts
+// consume this profile generically. A template is a BODY: the kind anatomy
+// it draws (P/T, the walker shield + ability rows, defense, the chapter
+// rail…) is declared here, on its own entry — a walker body through
+// walkerAnatomy() — and decides which kinds it may dress
+// (lib/cards/kind-anatomy.ts; docs/FRAMES.md "Kind anatomy and bodies").
+// Never add a kind's anatomy to a template that already exists: that
+// re-dresses its stored cards (tests/unit/cards/kind-capability-baseline
+// .test.ts). An edge-to-edge or full-art frame opts
 // into the pieces it needs (TODO 3.23 / 3.24): `brandMark:
 // BRAND_MARK_ON_ART` and `footerOnArt` where the bottom corner is art,
 // `basicSymbol` for a basic land's symbol socket, `type.split` for a
@@ -57,6 +64,7 @@ import {
   TYPE_SIZE_PCT,
   rulesPxToPct,
 } from "@/lib/cards/typography";
+import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
  *  full outer rect (corner to corner, the area the frame PNG fills) is the
@@ -1239,11 +1247,59 @@ const AGCLASSIC: FrameProfile = {
   },
 };
 
+/**
+ * Card Conjurer's starting-loyalty shield, drawn on every CC-cut walker body
+ * (m15pw, the borderless walkers) with THAT body's plate: the value's box is
+ * CC's loyalty box (packPlaneswalkerRegular.js: x .806, y .902, 14 × 3.72 %;
+ * digits 0.0372 of the card HEIGHT = 0.052 of the width). CC draws the
+ * ability stripes BEFORE the frame, so the shield painted into its masters
+ * sits on top of them; ours are an overlay above the frame and washed the
+ * shield out (owner review 2026-09-25). The importer cuts each master's
+ * shield out (SHIELD_BOX in scripts/lib/cc-frames.mjs — plateRect is that
+ * box in percent) and it is drawn again here, above the stripes,
+ * pixel-for-pixel on the frame's. A walker body is built with
+ * walkerAnatomy() (lib/cards/kind-anatomy.ts, TODO 4.5.0).
+ */
+function ccWalkerShield(plateAssetPathTemplate: string): StatSlot {
+  return {
+    rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
+    // The shield's dark face is 1233–1395 px wide on the digits' upper rows
+    // and tapers to its point below them, so the ink keeps to 1239–1389 px
+    // (three digits fit) instead of printing over the silver rim.
+    inkSpanPct: { leftPct: 82.6, rightPct: 92.6 },
+    plateRect: { topPct: 87.667, leftPct: 79.6, widthPct: 16, heightPct: 7.333 },
+    plateAssetPathTemplate,
+    sizePct: 0.052,
+    colorHex: "#ffffff",
+    weight: 700,
+    shadowCss: OUTLINE_SHADOW,
+  };
+}
+/** The M15 walker's badge ink and text ceiling (layout v33: the walker
+ *  prints' 7.5 pt), shared by every CC walker body. */
+const WALKER_BADGE_TEXT_HEX = "#f5f0e4";
+const WALKER_MAX_SIZE_PCT = rulesPxToPct(RULES_SIZE_PX.compact);
+
+// Printed planeswalkers stripe each ability row and badge its loyalty cost
+// in the left rail; parseLoyaltyAbilities supplies the rows. The lower
+// window is a transparent cut-out, so the rules slot gets a translucent
+// cream backdrop for legibility (a walker's rows, or any other card's
+// rules on the frame).
+const M15PW_WALKER = walkerAnatomy({
+  shield: ccWalkerShield("/frames/m15pw/loyalty/{color}.png"),
+  stripes: { a: "rgba(244,238,226,0.78)", b: "rgba(229,221,202,0.78)" },
+  badges: "mse-m15",
+  badgeTextHex: WALKER_BADGE_TEXT_HEX,
+  maxSizePct: WALKER_MAX_SIZE_PCT,
+  rulesBackdropHex: "rgba(244,238,226,0.72)",
+});
+
 // M15 Planeswalker — title plate (3.5–8.5%), upper art window (10–55%), type
 // bar (56–61%), and a LOWER cut-out (63–91%) that is also transparent: the art
 // fills both windows and the abilities text floats over the art, so its rules
 // slot gets a translucent cream backdrop for legibility. The loyalty shield is
-// the frame's own, redrawn above that backdrop (see `loyalty`).
+// the frame's own, redrawn above that backdrop (see `loyalty`). Its walker
+// anatomy (shield, rows, backdrop) is M15PW_WALKER above.
 const M15PW: FrameProfile = {
   label: "M15 Planeswalker",
   // MSE m15-planeswalker spec: name 23–46px, image 52–479.5, type 296–316,
@@ -1309,16 +1365,9 @@ const M15PW: FrameProfile = {
     colorHex: INK_DARK,
     vAlign: "start",
     font: "body",
-    backdropHex: "rgba(244,238,226,0.72)",
+    ...M15PW_WALKER.rulesPatch,
   },
-  // Printed planeswalkers stripe each ability row and badge its loyalty cost
-  // in the left rail; parseLoyaltyAbilities supplies the rows.
-  loyaltyRows: {
-    maxSizePct: rulesPxToPct(RULES_SIZE_PX.compact),
-    badgeTextHex: "#f5f0e4",
-    stripeAHex: "rgba(244,238,226,0.78)",
-    stripeBHex: "rgba(229,221,202,0.78)",
-  },
+  loyaltyRows: M15PW_WALKER.loyaltyRows,
   footer: {
     rect: { topPct: 93.4, leftPct: 9, widthPct: 70, heightPct: 3.0 },
     sizePct: 0.016,
@@ -1327,27 +1376,7 @@ const M15PW: FrameProfile = {
     letterSpacingEm: 0.05,
     font: "display",
   },
-  loyalty: {
-    // Card Conjurer's loyalty box (packPlaneswalkerRegular.js: x .806,
-    // y .902, 14 × 3.72 %; digits 0.0372 of the card HEIGHT = 0.052 of the
-    // width). CC draws the ability stripes BEFORE the frame, so the shield
-    // painted into its masters sits on top of them; ours are an overlay
-    // above the frame and washed the shield out (owner review 2026-09-25).
-    // The importer cuts each master's shield out (SHIELD_BOX in
-    // scripts/lib/cc-frames.mjs — plateRect is that box in percent) and it
-    // is drawn again here, above the stripes, pixel-for-pixel on the frame's.
-    rect: { topPct: 90.2, leftPct: 80.6, widthPct: 14, heightPct: 3.72 },
-    // The shield's dark face is 1233–1395 px wide on the digits' upper rows
-    // and tapers to its point below them, so the ink keeps to 1239–1389 px
-    // (three digits fit) instead of printing over the silver rim.
-    inkSpanPct: { leftPct: 82.6, rightPct: 92.6 },
-    plateRect: { topPct: 87.667, leftPct: 79.6, widthPct: 16, heightPct: 7.333 },
-    plateAssetPathTemplate: "/frames/m15pw/loyalty/{color}.png",
-    sizePct: 0.052,
-    colorHex: "#ffffff",
-    weight: 700,
-    shadowCss: OUTLINE_SHADOW,
-  },
+  loyalty: M15PW_WALKER.loyalty,
 };
 
 // M15 Token — the 2014–19 arch token frame (CC 'Textless (Bordered M15)').
@@ -2091,22 +2120,33 @@ const M15BORDERLESSLAND: FrameProfile = {
 // (owner decision 2026-09-26).
 const BORDERLESS_PW_STRIPE_A = "rgba(255,255,255,0.608)";
 const BORDERLESS_PW_STRIPE_B = "rgba(164,164,164,0.706)";
+/** The borderless walkers' anatomy (4.5b b1, through walkerAnatomy): the
+ *  CC shield cut from their own masters, the neutral stripes, and the plain
+ *  box on the first stripe's light ground — a walker whose text isn't
+ *  ability rows, another card forced onto the frame, and a walker with NO
+ *  ability text (owner round 15, 2026-09-29): the window is a see-through
+ *  cut-out, never left showing the bare art. The editor still shows its
+ *  hint rows there (as on m15pw). */
+function borderlessWalker(plateAssetPathTemplate: string) {
+  return walkerAnatomy({
+    shield: ccWalkerShield(plateAssetPathTemplate),
+    stripes: { a: BORDERLESS_PW_STRIPE_A, b: BORDERLESS_PW_STRIPE_B },
+    badges: "mse-m15",
+    badgeTextHex: WALKER_BADGE_TEXT_HEX,
+    maxSizePct: WALKER_MAX_SIZE_PCT,
+    rulesBackdropHex: BORDERLESS_PW_STRIPE_A,
+    rulesBackdropWhenEmpty: true,
+  });
+}
+const M15BORDERLESSPW_WALKER = borderlessWalker("/frames/m15borderlesspw/loyalty/{color}.png");
+const M15BORDERLESSPWTALL_WALKER = borderlessWalker("/frames/m15borderlesspwtall/loyalty/{color}.png");
 const M15BORDERLESSPW: FrameProfile = {
   ...M15PW,
   label: "M15 Borderless Planeswalker",
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 91.53 },
-  // A walker whose text isn't ability rows, or another card forced onto the
-  // frame, gets the plain box on the first stripe's light ground — and so
-  // does a walker with NO ability text (owner round 15, 2026-09-29): the
-  // window is a see-through cut-out, never left showing the bare art. The
-  // editor still shows its hint rows there (as on m15pw).
-  rules: { ...M15PW.rules, backdropHex: BORDERLESS_PW_STRIPE_A, backdropWhenEmpty: true },
-  loyaltyRows: {
-    ...M15PW.loyaltyRows!,
-    stripeAHex: BORDERLESS_PW_STRIPE_A,
-    stripeBHex: BORDERLESS_PW_STRIPE_B,
-  },
-  loyalty: { ...M15PW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspw/loyalty/{color}.png" },
+  rules: { ...M15PW.rules, ...M15BORDERLESSPW_WALKER.rulesPatch },
+  loyaltyRows: M15BORDERLESSPW_WALKER.loyaltyRows,
+  loyalty: M15BORDERLESSPW_WALKER.loyalty,
 };
 /** How far Card Conjurer's TALL planeswalker masters draw the type bar and
  *  the ability window above the regular ones: the type bar's top edge at
@@ -2139,7 +2179,10 @@ const M15BORDERLESSPWTALL: FrameProfile = {
       heightPct: M15BORDERLESSPW.rules.rect.heightPct + TALL_WALKER_SHIFT_PCT,
     },
   },
-  loyalty: { ...M15BORDERLESSPW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspwtall/loyalty/{color}.png" },
+  // Its own walker anatomy: the same rows and backdrop as the regular
+  // borderless walker, the shield cut from the tall masters.
+  loyaltyRows: M15BORDERLESSPWTALL_WALKER.loyaltyRows,
+  loyalty: M15BORDERLESSPWTALL_WALKER.loyalty,
 };
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from

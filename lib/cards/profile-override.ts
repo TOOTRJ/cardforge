@@ -3,6 +3,8 @@ import {
   getFrameProfile,
   type FrameProfile,
 } from "@/lib/cards/template-layout";
+import { kindDrawsSlot, type KindOnlySlot } from "@/lib/cards/kind-anatomy";
+import type { CardKind } from "@/lib/creator/card-kinds";
 
 // ---------------------------------------------------------------------------
 // Frame-profile overrides — deep-partial FrameProfile objects stored per
@@ -207,16 +209,23 @@ export type SlotPath =
   | "secondFace.pt"
   | "secondFace.artSlot";
 
-/** The slot paths a template actually renders, in editor display order. */
-export function listSlotPaths(profile: FrameProfile): SlotPath[] {
+/** The slot paths a template actually renders, in editor display order.
+ *  With a `kind` (TODO 4.5.0), only the ones a card of that kind draws: the
+ *  kind-only anatomy — the walker's loyalty shield, the battle's defense,
+ *  the saga's chapter rail (lib/cards/kind-anatomy.ts KIND_ONLY_SLOTS) — is
+ *  listed for its own kind alone, so a reference printing of another kind
+ *  is never scored against it. Without one, every slot (the layout
+ *  editor). */
+export function listSlotPaths(profile: FrameProfile, kind?: CardKind): SlotPath[] {
+  const draws = (slot: KindOnlySlot) => kind === undefined || kindDrawsSlot(kind, slot);
   const paths: SlotPath[] = ["artSlot", "title"];
   if (!profile.hideCost) paths.push("costRect");
   paths.push("type", "symbolRect", "rules");
   if (profile.footer) paths.push("footer");
   if (profile.pt) paths.push("pt");
-  if (profile.loyalty) paths.push("loyalty");
-  if (profile.defense) paths.push("defense");
-  if (profile.chapters) paths.push("chapters");
+  if (profile.loyalty && draws("loyalty")) paths.push("loyalty");
+  if (profile.defense && draws("defense")) paths.push("defense");
+  if (profile.chapters && draws("chapters")) paths.push("chapters");
   if (profile.adventure) {
     paths.push("adventure.title", "adventure.type", "adventure.rules");
   }

@@ -20,6 +20,7 @@ import {
   type ScoreBatchCombo,
   type SharedSlotRow,
 } from "@/lib/frames/score-batch";
+import type { CardKind } from "@/lib/creator/card-kinds";
 import { FRAME_SET_LABELS, FRAME_TEMPLATE_SET, type FrameSet, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -49,14 +50,19 @@ export type TreatmentView = {
   shared: SharedSlotRow[];
 };
 
-/** The slot rects a template draws today (its layout override applied). */
+/** The slot rects a template draws today (its layout override applied) —
+ *  for a card of `kind` only, when one is given (listSlotPaths). The
+ *  treatment view pools every slot the frame has: each colour's scores
+ *  already hold only the slots its reference's kind draws (score-combo.ts),
+ *  so a slot no reference scored pools nothing. */
 export function slotRectsFor(
   template: FrameTemplate,
   overrides: FrameProfileOverridesMap,
+  kind?: CardKind,
 ): Record<string, Rect> {
   const profile = resolveFrameProfile(template, overrides);
   const rects: Record<string, Rect> = {};
-  for (const path of listSlotPaths(profile)) {
+  for (const path of listSlotPaths(profile, kind)) {
     const rect = slotRect(profile, path);
     if (rect) rects[path] = rect;
   }
