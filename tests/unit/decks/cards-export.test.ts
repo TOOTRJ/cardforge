@@ -13,8 +13,10 @@ import {
 // ---------------------------------------------------------------------------
 // TODO 6.15 — runCardsExport: the deck export's browser pipeline for any
 // selection. The manifest comes from POST /api/cards/export (ids + copies);
-// each card is its HD square render — or, with the bleed, its 600 ppi print
-// render (?ppi=600&corners=square&bleed=1); the PDF takes the sheet options.
+// each PDF card and HD image is its 600 ppi PRINT render — the art at full
+// resolution (?ppi=600&corners=square&print=1, or &bleed=1 with the bleed);
+// a standard ZIP image the 750 px square render; the PDF takes the sheet
+// options.
 // ---------------------------------------------------------------------------
 
 const manifest: CardsExportManifest = {
@@ -61,7 +63,7 @@ const request = {
 };
 
 describe("runCardsExport", () => {
-  it("POSTs the ids and copies, then builds the sheets from HD square renders with the sheet options", async () => {
+  it("POSTs the ids and copies, then builds the sheets from 600 ppi print renders with the sheet options", async () => {
     const calls: Call[] = [];
     const seen: string[] = [];
     const result = await runCardsExport(
@@ -82,8 +84,10 @@ describe("runCardsExport", () => {
     });
     const cardUrls = calls.slice(1).map((c) => c.url);
     expect(cardUrls).toHaveLength(3);
-    // A PDF is always HD, and print is square.
-    expect(cardUrls.every((u) => u.endsWith("/png?preset=hd&corners=square"))).toBe(true);
+    // A PDF is always the 600 ppi PRINT render (the art at full resolution,
+    // TODO 6.10 — no longer the HD square render with its 1600 px art), and
+    // print is square.
+    expect(cardUrls.every((u) => u.endsWith("/png?ppi=600&corners=square&print=1"))).toBe(true);
 
     expect(result.filename).toBe("pipglyph-3-cards-sheets-a4.pdf");
     expect(result.title).toBe("3 cards");
@@ -162,6 +166,18 @@ describe("runCardsExport", () => {
       "cards/02-petrifying-glance.png",
     ]);
     expect(await zip.file("MISSING.txt")!.async("string")).toContain("Old Draft");
+  });
+
+  it("ZIP of HD images without the bleed: the 600 ppi print renders, named as before", async () => {
+    const calls: Call[] = [];
+    const result = await runCardsExport(
+      { ...request, kind: "zip", quality: "hd", layout: "pages" },
+      { fetchImpl: await fakeFetch(calls), onProgress: () => {} },
+    );
+    expect(calls.slice(1).every((c) => c.url.endsWith("/png?ppi=600&corners=square&print=1"))).toBe(true);
+    const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+    expect(Object.keys(zip.files)).toContain("cards/01-stone-matriarch.png");
+    expect(result.filename).toBe("pipglyph-3-cards.zip");
   });
 
   it("ZIP with the bleed: the print renders, named -bleed", async () => {

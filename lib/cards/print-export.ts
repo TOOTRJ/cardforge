@@ -21,6 +21,12 @@ import { z } from "zod";
 // Entitlement: the bleed is a clean-download feature (the same gate as the
 // clean HD PNG — TODO 6.1a). 800 ppi is paid-only too, behind the ONE
 // constant below while its [decide] is open (TODO 6.1b).
+//
+// The 600 ppi PRINT render without a bleed (`print=1`, TODO 6.15): the HD
+// card's 1500 × 2100 with the art at full resolution (6.10) instead of the
+// bake's 1600 px inlined copy — what every Pro export (deck and selection
+// PDFs, their HD ZIP images) prints from. Clean-download only, like the
+// bleed: a watermarked viewer's image is capped at 750 px.
 // ---------------------------------------------------------------------------
 
 /** The print resolutions a card image comes in: 600 ppi is the HD render
@@ -102,24 +108,37 @@ export function parseBleedParam(value: string | null | undefined): boolean {
   return value === "1" || value === "true";
 }
 
-/** True when a request asks for a print render (800 ppi and/or bleed)
- *  rather than the plain HD/default image. */
-export function isPrintRequest(opts: { ppi: PrintPpi; bleed: boolean }): boolean {
-  return opts.ppi !== DEFAULT_PRINT_PPI || opts.bleed;
+/** The png route's `print` query value: "1" or "true" asks for the PRINT
+ *  render even at 600 ppi without a bleed (TODO 6.15 — the exports). */
+export function parsePrintParam(value: string | null | undefined): boolean {
+  return value === "1" || value === "true";
+}
+
+/** What the png route is asked to print: the resolution, the bleed, and
+ *  whether the plain 600 ppi card is wanted as the print render (`print`). */
+export type PrintRequest = { ppi: PrintPpi; bleed: boolean; print?: boolean };
+
+/** True when a request asks for a print render (800 ppi, the bleed, or
+ *  `print`) rather than the plain HD/default image. */
+export function isPrintRequest(opts: PrintRequest): boolean {
+  return opts.print === true || opts.ppi !== DEFAULT_PRINT_PPI || opts.bleed;
 }
 
 /** A card's print PNG URL: always square, never a preset (the resolution is
- *  the `ppi`). */
+ *  the `ppi`), and always a PRINT render — at 600 ppi without a bleed it
+ *  says so (`print=1`), since `ppi=600` alone is the plain HD download. */
 export function cardPrintPngHref(cardId: string, opts: { ppi: PrintPpi; bleed: boolean }): string {
-  return `/api/cards/${cardId}/png?ppi=${opts.ppi}&corners=square${opts.bleed ? "&bleed=1" : ""}`;
+  const print = isPrintRequest(opts) ? "" : "&print=1";
+  return `/api/cards/${cardId}/png?ppi=${opts.ppi}&corners=square${opts.bleed ? "&bleed=1" : ""}${print}`;
 }
 
-/** The print PNG's file name: `<slug>-800ppi.png`, `<slug>-bleed.png` or
- *  `<slug>-800ppi-bleed.png`. */
+/** The print PNG's file name: `<slug>-800ppi.png`, `<slug>-bleed.png`,
+ *  `<slug>-800ppi-bleed.png`, or `<slug>-print.png` (600 ppi, no bleed). */
 export function cardPrintFilename(slug: string, opts: { ppi: PrintPpi; bleed: boolean }): string {
   const parts = [slug];
   if (opts.ppi !== DEFAULT_PRINT_PPI) parts.push(`${opts.ppi}ppi`);
   if (opts.bleed) parts.push("bleed");
+  if (parts.length === 1) parts.push("print");
   return `${parts.join("-")}.png`;
 }
 
