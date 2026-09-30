@@ -3217,7 +3217,7 @@ const M15TEXTLESSLAND: FrameProfile = {
  * gold), "c" the colourless grey (m15's see-through Eldrazi frame, UMA #6),
  * "a" the artifact silver and "l" the land grey (the entries' keyMap maps a
  * colourless card there), and the ten pairs (the first colour's crown on the
- * left, split through the untilted 43→55 %W ramp) — drawn only where the
+ * left, split through the untilted 45→55 %W ramp) — drawn only where the
  * two-colour frame is (FrameProfile.twoColorMasters, 4.6b). Opt-in per card
  * (FrameStyle.crown === true): declaring it changes no stored card.
  *
