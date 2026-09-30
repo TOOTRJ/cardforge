@@ -64,8 +64,11 @@ describe("the untilted ramp", () => {
   });
 
   it("the design's ramps, measured on the prints", () => {
-    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [40, 60], rules: [46, 58], crown: [43, 55] });
-    expect(rampName([46, 58])).toBe("procedural:ramp(46→58 %W)");
+    // Re-measured 2026-09-29 (the 4.6 review): a hybrid's frame band is
+    // steeper than its pinline; the text box and the crown sit where the
+    // prints put them once each pixel is de-shaded (pair-ramp.mjs).
+    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55] });
+    expect(rampName([45, 57])).toBe("procedural:ramp(45→57 %W)");
     expect(() => rampMask(10, 1, [50, 50])).toThrow();
   });
 });
@@ -127,21 +130,21 @@ describe("twoColorRecipe — CC's cardFrameProperties, corrected", () => {
     expect(twoColorRecipe("ur", "split", "m15")).toEqual({
       frame: { left: "m", right: null },
       pinline: { left: "u", right: "r", ramp: [40, 60] },
-      rules: { left: "u", right: "r", ramp: [46, 58] },
+      rules: { left: "u", right: "r", ramp: [45, 57] },
       typeTitle: "m",
       pt: "m",
-      crown: { left: "u", right: "r", ramp: [43, 55] },
+      crown: { left: "u", right: "r", ramp: [45, 55] },
     });
   });
 
   it("hybrid: the split outer frame, grey bars and the grey plate", () => {
     expect(twoColorRecipe("ur", "hybrid", "m15")).toEqual({
-      frame: { left: "u", right: "r", ramp: [40, 60] },
+      frame: { left: "u", right: "r", ramp: [44, 57] },
       pinline: { left: "u", right: "r", ramp: [40, 60] },
-      rules: { left: "u", right: "r", ramp: [46, 58] },
+      rules: { left: "u", right: "r", ramp: [45, 57] },
       typeTitle: "l",
       pt: "c",
-      crown: { left: "u", right: "r", ramp: [43, 55] },
+      crown: { left: "u", right: "r", ramp: [45, 55] },
     });
   });
 
@@ -149,10 +152,10 @@ describe("twoColorRecipe — CC's cardFrameProperties, corrected", () => {
     expect(twoColorRecipe("wu", "split", "land")).toEqual({
       frame: { left: "l", right: null },
       pinline: { left: "wl", right: "ul", ramp: [40, 60] },
-      rules: { left: "wl", right: "ul", ramp: [46, 58] },
+      rules: { left: "wl", right: "ul", ramp: [45, 57] },
       typeTitle: "l",
       pt: null,
-      crown: { left: "w", right: "u", ramp: [43, 55] },
+      crown: { left: "w", right: "u", ramp: [45, 55] },
     });
   });
 
@@ -194,15 +197,15 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
   it("m15 gold-split: the whole gold image, the split text box and pinline over it (bars stay gold)", () => {
     expect(pairMasterLayers("ur", "split", "m15")).toEqual([
       WHOLE("m"),
-      PAIR("u", "r", [46, 58], "rules"),
+      PAIR("u", "r", [45, 57], "rules"),
       PAIR("u", "r", [40, 60], "pinline"),
     ]);
   });
 
   it("m15 hybrid: the two colours' whole images across the frame ramp, grey bars, the split box and pinline", () => {
     expect(pairMasterLayers("ur", "hybrid", "m15")).toEqual([
-      PAIR("u", "r", [40, 60]),
-      PAIR("u", "r", [46, 58], "rules"),
+      PAIR("u", "r", [44, 57]),
+      PAIR("u", "r", [45, 57], "rules"),
       WHOLE("l", "title"),
       WHOLE("l", "type"),
       PAIR("u", "r", [40, 60], "pinline"),
@@ -212,7 +215,7 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
   it("m15land: the land frame whole, the split in the two land tints", () => {
     expect(pairMasterLayers("wu", "split", "land")).toEqual([
       WHOLE("l"),
-      PAIR("lw", "lu", [46, 58], "rules"),
+      PAIR("lw", "lu", [45, 57], "rules"),
       PAIR("lw", "lu", [40, 60], "pinline"),
     ]);
   });
@@ -221,7 +224,7 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
     expect(pairMasterLayers("gw", "split", "artifact")).toEqual([
       WHOLE("a", "border"),
       WHOLE("a", "frame"),
-      PAIR("g", "w", [46, 58], "rules"),
+      PAIR("g", "w", [45, 57], "rules"),
       WHOLE("m", "title"),
       WHOLE("m", "type"),
       PAIR("g", "w", [40, 60], "pinline"),

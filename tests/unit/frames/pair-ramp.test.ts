@@ -17,8 +17,9 @@ import { TWO_COLOR_PAIRS as REGISTRY_PAIRS } from "@/lib/cards/frame-reference-r
 // TODO 4.6b — scripts/lib/pair-ramp.mjs, the ONE two-colour split both
 // builders read: the pair frame masters (cc-frames.mjs pairMasterLayers) and
 // the pair crown bands. Design 2026-09-29 §1.2: untilted linear ramps in % of
-// the card width, measured on the prints (pinline and a hybrid's frame
-// 40→60, text box 46→58, crown 43→55), blended by a premultiplied lerp.
+// the card width, measured on the prints (pinline 40→60, a hybrid's outer
+// frame 44→57, text box 45→57, crown 45→55 — re-measured in the 4.6 review,
+// 2026-09-29), blended by a premultiplied lerp.
 // ---------------------------------------------------------------------------
 
 function solid(width: number, height: number, [r, g, b, a]: [number, number, number, number]): Buffer {
@@ -34,7 +35,7 @@ function solid(width: number, height: number, [r, g, b, a]: [number, number, num
 
 describe("the ramps", () => {
   it("are the design's, measured on the prints, and live in this ONE module (cc-frames re-exports none)", () => {
-    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [40, 60], rules: [46, 58], crown: [43, 55] });
+    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55] });
     // The pair masters (4.6b) and the pair crown bands (4.6a) read the same
     // helpers: no second name for them anywhere in the importer's library.
     for (const name of ["TWO_COLOR_RAMPS", "PAIR_RAMPS", "TWO_COLOR_PAIRS", "rampMask", "lerpLayers", "rampName", "blendPair"]) {
@@ -44,23 +45,31 @@ describe("the ramps", () => {
     expect(Object.isFrozen(PAIR_RAMPS)).toBe(true);
   });
 
-  it("put the 10 / 50 / 90 % points where the prints measure them (±1.5 %W), with no tilt", () => {
-    // The medians of the prints (design §1.2): pinline 42.2 / 50.3 / 58.8,
-    // text box 47.2 / 51.3 / 56.8, crown 42.7 / 48.5 / 53.0 (gold) and
-    // 43.8 / 50.1 / 54.3 (hybrid).
+  it("put the 10 / 50 / 90 % points where the prints measure them (±1.0 %W), with no tilt", () => {
+    // The medians of the prints, each print pixel de-shaded against the same
+    // pixel of its set's two single-colour prints (so the region's texture,
+    // shading and text cancel — the 4.6 review's re-measure, 2026-09-29):
+    // pinline 42.1 / 50.1 / 57.9 (20 FDN + TLA pairs); a hybrid's outer
+    // frame band above the title bar 45.1 / 50.3 / 55.6 (TLA ×10 — steeper
+    // than its own pinline: FDN #656 / #668 show both on one card); text box,
+    // text-free rows, 45.9 / 50.6 / 55.3 (FDN, 8 prints); crown, rows
+    // 4.42–4.66 %H, 45.5 / 49.3 / 53.6 (FDN gold pairs + MKM #238) and
+    // 46.4 / 49.4 / 53.6 (TLA hybrids). The first ramps (frame 40→60 = the
+    // pinline's, text box 46→58, crown 43→55) miss the frame band by 3.1,
+    // the text box by 1.3–1.5 and the hybrid crown by 2.2 here.
     const prints: [keyof typeof PAIR_RAMPS, number[]][] = [
-      ["pinline", [42.2, 50.3, 58.8]],
-      ["rules", [47.2, 51.3, 56.8]],
-      ["crown", [42.7, 48.5, 53.0]],
-      ["crown", [43.8, 50.1, 54.3]],
+      ["pinline", [42.1, 50.1, 57.9]],
+      ["frame", [45.1, 50.3, 55.6]],
+      ["rules", [45.9, 50.6, 55.3]],
+      ["crown", [45.5, 49.3, 53.6]],
+      ["crown", [46.4, 49.4, 53.6]],
     ];
     for (const [region, measured] of prints) {
       const mask = rampMask(1500, 3, PAIR_RAMPS[region]);
       const shares = Array.from({ length: 1500 }, (_, x) => mask[x * 4 + 3] / 255);
       const at = shareCrossings(shares);
-      // ±1.5 %W, plus one pixel's quantisation (the crown's 10 % point is
-      // the design's 44.2 against the gold prints' 42.7: exactly 1.5).
-      at.forEach((x, i) => expect(Math.abs((x ?? 0) - measured[i]), `${region} ${i}`).toBeLessThanOrEqual(1.5 + 100 / 1500));
+      // ±1.0 %W, plus one pixel's quantisation.
+      at.forEach((x, i) => expect(Math.abs((x ?? 0) - measured[i]), `${region} ${i}`).toBeLessThanOrEqual(1.0 + 100 / 1500));
       // Every row is the first row.
       expect(mask.subarray(1500 * 4, 1500 * 8).equals(mask.subarray(0, 1500 * 4))).toBe(true);
       expect(mask.subarray(1500 * 8).equals(mask.subarray(0, 1500 * 4))).toBe(true);
@@ -73,7 +82,7 @@ describe("the ramps", () => {
     expect(rampShare(90, [40, 60])).toBe(1);
     expect(() => rampShare(50, [60, 40])).toThrow();
     expect(() => rampMask(10, 1, [50, 50])).toThrow();
-    expect(rampName([43, 55])).toBe("procedural:ramp(43→55 %W)");
+    expect(rampName([45, 55])).toBe("procedural:ramp(45→55 %W)");
   });
 });
 

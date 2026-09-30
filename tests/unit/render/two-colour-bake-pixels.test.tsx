@@ -15,7 +15,13 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 // pinline, 37 for the text box):
 //   • pinline at 10.8 and 55.9 %H: 10 / 50 / 90 % of the second colour within
 //     ±1.5 %W of 42.2 / 50.3 / 58.8, and no tilt (|Δ50| ≤ 0.4 %W);
-//   • text box: within ±1.5 %W of 47.2 / 51.3 / 56.8;
+//   • text box, and a hybrid's OUTER frame band above the title bar: each
+//     pixel de-shaded against the same pixel of the two single-colour bakes
+//     (so the texture cancels), within ±1.0 %W of the prints measured the
+//     same way — 45.9 / 50.6 / 55.3 (FDN, text-free rows) and 45.1 / 50.3 /
+//     55.6 (TLA ×10; the 4.6 review, 2026-09-29: the first masters split the
+//     frame band like the pinline, 42 / 50 / 58, and the box at 47.2 / 52 /
+//     56.8);
 //   • the first canonical colour on the left; gold bars on the gold-split and
 //     artifact dresses, grey bars on the hybrid and land ones.
 // The bucket masters are read from a local build (FRAMES_BUILD_DIR, else
@@ -76,6 +82,14 @@ const CARDS = {
   }),
   artifactWU: card({ supertype: "Artifact", cost: "{1}{W}{W}{U}{U}", frameStyle: { template: "m15artifact", twoColor: true } }),
   goldBG: card({ colorIdentity: ["black", "green"], cost: "{1}{B}{G}" }),
+  // The single-colour bakes a pair's split is de-shaded against.
+  monoW: card({ colorIdentity: ["white"], cost: "{2}{W}", frameStyle: { template: "m15" } }),
+  monoU: card({ colorIdentity: ["blue"], cost: "{2}{U}", frameStyle: { template: "m15" } }),
+  monoR: card({ colorIdentity: ["red"], cost: "{2}{R}", frameStyle: { template: "m15" } }),
+  landW: card({ colorIdentity: ["white"], cardType: "land", subtypes: [], cost: null, power: null, toughness: null, frameStyle: { template: "m15land" } }),
+  landU: card({ colorIdentity: ["blue"], cardType: "land", subtypes: [], cost: null, power: null, toughness: null, frameStyle: { template: "m15land" } }),
+  artifactW: card({ colorIdentity: ["white"], supertype: "Artifact", cost: "{2}{W}", frameStyle: { template: "m15artifact" } }),
+  artifactU: card({ colorIdentity: ["blue"], supertype: "Artifact", cost: "{2}{U}", frameStyle: { template: "m15artifact" } }),
 };
 
 /** Every bucket object a bake of these cards reads (masters, plates). */
@@ -205,7 +219,42 @@ function expectWithin(at: number[], target: number[], tol: number, label: string
 }
 
 const PINLINE = [42.2, 50.3, 58.8];
-const TEXT_BOX = [47.2, 51.3, 56.8];
+/** The prints, de-shaded (pair-ramp.mjs PAIR_RAMPS): the text box's
+ *  text-free rows on FDN, and a hybrid's frame band on TLA ×10. */
+const TEXT_BOX = [45.9, 50.6, 55.3];
+const HYBRID_FRAME_BAND = [45.1, 50.3, 55.6];
+
+/** The share of the second colour per column, each pixel of rows
+ *  [y0, y1] %H read as (1 − s)·a + s·b against the SAME pixel of the two
+ *  single-colour bakes (least squares over the rows; columns where a and b
+ *  are alike give no reading), and the first x in 30–70 %W where it
+ *  reaches 10 / 50 / 90 %. */
+function deshaded(pair: Raw, a: Raw, b: Raw, y0Pct: number, y1Pct: number): number[] {
+  const W = pair.width;
+  const num = new Float64Array(W);
+  const den = new Float64Array(W);
+  for (let y = Math.round((y0Pct / 100) * pair.height); y <= Math.round((y1Pct / 100) * pair.height); y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      const i = (y * W + x) * 3;
+      let dot = 0;
+      let n2 = 0;
+      for (let c = 0; c < 3; c += 1) {
+        const d = b.data[i + c] - a.data[i + c];
+        dot += (pair.data[i + c] - a.data[i + c]) * d;
+        n2 += d * d;
+      }
+      if (n2 < 144) continue;
+      num[x] += dot;
+      den[x] += n2;
+    }
+  }
+  return [0.1, 0.5, 0.9].map((level) => {
+    for (let x = Math.round(0.3 * W); x < Math.round(0.7 * W); x += 1) {
+      if (den[x] > 0 && num[x] / den[x] >= level) return ((x + 0.5) / W) * 100;
+    }
+    return NaN;
+  });
+}
 const pinTop = (raw: Raw) => split(columnProfile(raw, 10.78, 10.94));
 const pinType = (raw: Raw) => split(columnProfile(raw, 55.9, 56.12));
 const box = (raw: Raw) =>
@@ -229,11 +278,25 @@ describe.skipIf(!available)("the pair masters, baked at HD and measured like the
     60_000,
   );
 
-  it.each(["goldWU", "hybridUR", "landWU", "artifactWU"] as const)("%s: the text box splits where the prints do", (name) => {
+  it.each([
+    ["goldWU", "monoW", "monoU"],
+    ["hybridUR", "monoU", "monoR"],
+    ["landWU", "landW", "landU"],
+    ["artifactWU", "artifactW", "artifactU"],
+  ] as const)("%s: the text box splits where the prints do (de-shaded)", (name, a, b) => {
     const raw = baked[name]!;
-    const b = box(raw);
-    expect(b.contrast, "a real split").toBeGreaterThan(15);
-    expectWithin(b.at, TEXT_BOX, 1.5, `${name} text box`);
+    expect(box(raw).contrast, "a real split").toBeGreaterThan(15);
+    expectWithin(deshaded(raw, baked[a]!, baked[b]!, 64, 90), TEXT_BOX, 1.0, `${name} text box`);
+  });
+
+  it("the hybrid's OUTER frame band above the title bar splits where the prints do — steeper than its pinline (de-shaded)", () => {
+    const raw = baked.hybridUR!;
+    for (const [y0, y1] of [
+      [2.95, 3.55],
+      [3.55, 4.15],
+    ]) {
+      expectWithin(deshaded(raw, baked.monoU!, baked.monoR!, y0, y1), HYBRID_FRAME_BAND, 1.0, `hybrid frame band ${y0}–${y1} %H`);
+    }
   });
 
   it("the first canonical colour is on the LEFT: white | blue, blue | red, black | green", () => {

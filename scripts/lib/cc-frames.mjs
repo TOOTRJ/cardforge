@@ -95,8 +95,8 @@ const M15_INTERIOR_MASKS = [`${NEW}/rules.png`, `${NEW}/title.png`, `${NEW}/type
  *     GOLD title and type bars, the split pinline.
  * Regions follow twoColorRecipe (CC's cardFrameProperties, corrected): a
  * split region is its two colours' files blended across the region's
- * UNTILTED ramp (pair-ramp.mjs PAIR_RAMPS: pinline and a hybrid's frame
- * 40→60 %W, text box 46→58) by a premultiplied lerp (pairLayer), then drawn
+ * UNTILTED ramp (pair-ramp.mjs PAIR_RAMPS: pinline 40→60 %W, a hybrid's
+ * frame 44→57, text box 45→57) by a premultiplied lerp (pairLayer), then drawn
  * through CC's mask in CC's order (frame, rules, title, type, pinline).
  * Keys: gold-split `<pair>`, hybrid `<pair>-h`.
  */
@@ -160,7 +160,7 @@ function pairMasters(kind, dresses) {
 
 /** How provenance records the pair masters (notes). */
 const PAIR_NOTE =
-  "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline and a hybrid's frame 40→60 %W, text box 46→58) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2)";
+  "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2)";
 /** CC's textless bordered token pack masks (packTokenTextlessM15.js). */
 const TOKEN_BASE_MASKS = [`${REG}/m15MaskBorder.png`, `${TOKEN}/frame.svg`];
 const TOKEN_INTERIOR_MASKS = [`${REG}/m15MaskTitle.png`, "img/frames/token/tokenMaskTextlessType.png", `${TOKEN}/pinline.svg`];
@@ -972,8 +972,8 @@ export function sourceFilesFor(def) {
 //     translucent edge (the crown's shadow over the art, α 160 against 99).
 // ---------------------------------------------------------------------------
 
-// The ramps (PAIR_RAMPS: pinline 40→60, a hybrid's frame band 40→60, text
-// box 46→58, crown 43→55 %W), the untilted ramp mask, the premultiplied lerp
+// The ramps (PAIR_RAMPS: pinline 40→60, a hybrid's frame band 44→57, text
+// box 45→57, crown 45→55 %W), the untilted ramp mask, the premultiplied lerp
 // and the ten pairs live in ./pair-ramp.mjs ONLY — the one module the pair
 // masters (4.6b) and the pair crown bands (4.6a) both read; import them from
 // there, never through this file.
@@ -1052,7 +1052,7 @@ export function cropRows(buf, width, rows) {
  *  crown letters (w u b r g, m gold, a artifact silver, l land grey, c the
  *  colourless grey), then the ten pairs in printed order — a pair is the
  *  first colour's crown on the left, lerped into the second's through the
- *  untilted crown ramp (pair-ramp.mjs PAIR_RAMPS.crown, 43→55 %W: the same
+ *  untilted crown ramp (pair-ramp.mjs PAIR_RAMPS.crown, 45→55 %W: the same
  *  module and the same canonical order as 4.6b's pair masters). The
  *  profile's slot lists the same keys (lib/cards/template-layout.ts
  *  M15_CROWN; a unit test holds them together). */
@@ -1070,7 +1070,7 @@ export const CC_OVERLAY_BANDS = {
     keys: CROWN_BAND_KEYS,
     notes: [
       "the standard legendary crown, drawn over the m15, m15artifact and m15land masters (TODO 4.6a; design 2026-09-29 §1.1): CC's autoM15NewFrame draws the black 'Legend Crown Border Cover' then the crown after the P/T plate — here composited alone at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
-      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 43→55 %W (the prints' crown split measures 42.7 / 48.5 / 53.0 %W at 10 / 50 / 90 % on FDN's gold pairs, 43.8 / 50.1 / 54.3 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
+      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 45→55 %W (the prints' crown split, each pixel de-shaded against the two single-colour crowns, measures 45.5 / 49.3 / 53.6 %W at 10 / 50 / 90 % on FDN's gold pairs, 46.4 / 49.4 / 53.6 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
       "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in",
     ],
   },
@@ -1153,7 +1153,10 @@ export function crownBandSourceFiles(keys = CROWN_BAND_KEYS) {
  *     cover's black (the crown's peak; the prints: row 42 ± 2 at HD);
  *   • `artMaxAlpha` / `artPartial` — inside `artSlot` (card %), the most
  *     opaque pixel and the share with α > 0.05: the crown only shadows the
- *     top of the art (α ≤ 99 on the prints' digital renders), never covers it.
+ *     top of the art, never covers it — α ≤ 119 in the M15 slot, where the
+ *     frame's own window edge sits over the darkest of it; α ≤ 79 on the art
+ *     you can see, rows 238–244 px (all 19 bands, after v35). The importer
+ *     refuses a band above 127.
  */
 export function crownBandFindings(buf, width, height, rows, artSlot) {
   let lastAlphaRow = -1;

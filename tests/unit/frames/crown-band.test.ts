@@ -32,7 +32,7 @@ import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
 // downscaled once, the card corner cut, cropped to rows 0–409 — the overlay
 // the m15 / m15artifact / m15land profiles stretch over the top 410 / 2100
 // of the card (M15_CROWN). A pair's crown is the first colour's crown lerped
-// into the second's through the UNTILTED crown ramp (43→55 %W), in printed
+// into the second's through the UNTILTED crown ramp (45→55 %W), in printed
 // order. The published bands' own pixels are checked when a local copy at
 // the manifest's sha256 is on disk (FRAMES_BUILD_DIR, else .frames-build;
 // CI fetches them).
@@ -62,7 +62,7 @@ describe("the crown band's recipe", () => {
     expect(rectPx(CROWN_BAND.cover, width, height)).toEqual({ x: 0, y: 0, width: 2010, height: 137 });
   });
 
-  it("a mono key is its crown letter; a pair is the first colour left, lerped into the second through 43→55 %W", () => {
+  it("a mono key is its crown letter; a pair is the first colour left, lerped into the second through 45→55 %W", () => {
     expect(crownBandRecipe("w")).toEqual({
       cover: "img/black.png",
       left: "img/frames/m15/crowns/new/w.png",
@@ -74,14 +74,14 @@ describe("the crown band's recipe", () => {
       cover: "img/black.png",
       left: "img/frames/m15/crowns/new/u.png",
       right: "img/frames/m15/crowns/new/r.png",
-      ramp: [43, 55],
+      ramp: [45, 55],
     });
-    expect(PAIR_RAMPS.crown).toEqual([43, 55]);
+    expect(PAIR_RAMPS.crown).toEqual([45, 55]);
     expect(() => crownBandRecipe("uw")).toThrow();
     expect(() => crownBandRecipe("x")).toThrow();
     expect(describeCrownBand(crownBandRecipe("gu"))).toEqual([
       "img/black.png over 0/0/100×4.87 %",
-      "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %",
+      "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
     ]);
     expect(crownBandSourceFiles()).toEqual([
       "img/black.png",
@@ -100,7 +100,7 @@ describe("the crown band's recipe", () => {
     const out = toRgba8(compositeLayers([{ data: cover }, { data: crown }], W, H));
     const at = (x: number, y: number) => [...out.subarray((y * W + x) * 4, (y * W + x) * 4 + 4)];
     for (const y of [0, H - 1]) {
-      expect(at(40, y)).toEqual([255, 0, 0, 255]); // left of 43 %W: the first colour
+      expect(at(40, y)).toEqual([255, 0, 0, 255]); // left of 45 %W: the first colour
       expect(at(60, y)).toEqual([0, 0, 255, 255]); // right of 55 %W: the second
       expect(at(49, y)[0]).toBeGreaterThan(100); // the middle blends
       expect(at(49, y)[2]).toBeGreaterThan(100);
@@ -182,6 +182,62 @@ describe("published to the frames bucket", () => {
   if (local.length === 0) {
     it.skip("the published bands' pixels (no local copy; set FRAMES_BUILD_DIR)", () => {});
   }
+  // A pair band's split, measured the way the prints were (the 4.6 review,
+  // 2026-09-29): each pixel of rows 4.42–4.66 %H de-shaded against the SAME
+  // pixel of its two single-colour bands — the share s that best explains
+  // it as (1 − s)·left + s·right, so the crown's own shading cancels — and
+  // the first x where the share reaches 10 / 50 / 90 %. The prints, measured
+  // the same way against their own single-colour crowns: 45.5 / 49.3 / 53.6
+  // %W (FDN #122 #123 #115 #651 #126 #119 #245, MKM #238, gold) and 46.4 /
+  // 49.4 / 53.6 (TLA ×9, hybrid). The first bands (43→55: 44.2 / 49.0 /
+  // 53.8) missed the hybrid prints' 10 % point by 2.2.
+  const byKey = new Map(local.map((entry) => [entry.key, entry.file]));
+  const pairsHere = TWO_COLOR_PAIRS.filter((pair) => byKey.has(pair) && byKey.has(pair[0]!) && byKey.has(pair[1]!));
+  if (pairsHere.length === 0) {
+    it.skip("the published pair bands' split (no local copy; set FRAMES_BUILD_DIR)", () => {});
+  }
+  for (const pair of pairsHere) {
+    it(`m15crown/${pair}: splits where the crowned prints do (de-shaded, ±1.0 %W of the gold and hybrid medians)`, async () => {
+      const raw = async (key: string) =>
+        (await sharp(byKey.get(key)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true })).data;
+      const [both, left, right] = await Promise.all([raw(pair), raw(pair[0]!), raw(pair[1]!)]);
+      const y0 = Math.floor((4.42 / 100) * OUT_H);
+      const y1 = Math.floor((4.66 / 100) * OUT_H);
+      const num = new Float64Array(OUT_W);
+      const den = new Float64Array(OUT_W);
+      for (let y = y0; y <= y1; y += 1) {
+        for (let x = 0; x < OUT_W; x += 1) {
+          const o = (y * OUT_W + x) * 4;
+          if (both[o + 3] < 251 || left[o + 3] < 251 || right[o + 3] < 251) continue;
+          let dot = 0;
+          let n2 = 0;
+          for (let c = 0; c < 3; c += 1) {
+            const d = right[o + c] - left[o + c];
+            dot += (both[o + c] - left[o + c]) * d;
+            n2 += d * d;
+          }
+          if (n2 < 144) continue; // the two crowns alike here: no reading
+          num[x] += dot;
+          den[x] += n2;
+        }
+      }
+      const at = [0.1, 0.5, 0.9].map((level) => {
+        for (let x = Math.round(0.3 * OUT_W); x < Math.round(0.7 * OUT_W); x += 1) {
+          if (den[x] > 0 && num[x] / den[x] >= level) return ((x + 0.5) / OUT_W) * 100;
+        }
+        return NaN;
+      });
+      for (const prints of [
+        [45.5, 49.3, 53.6],
+        [46.4, 49.4, 53.6],
+      ]) {
+        at.forEach((x, i) =>
+          expect(Math.abs(x - prints[i]!), `${pair} ${[10, 50, 90][i]} %: ${x.toFixed(2)} vs ${prints[i]}`).toBeLessThanOrEqual(1.0),
+        );
+      }
+    });
+  }
+
   for (const { key, file } of local) {
     it(`m15crown/${key}: black cover, the crown's peak at row 42 ± 2, only a shadow over the art, corners cut`, async () => {
       const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });

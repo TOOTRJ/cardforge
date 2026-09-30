@@ -93,120 +93,120 @@
       ],
       "wu": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "wb": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "ub": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "ur": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "br": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "bg": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "rg": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "rw": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "gw": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "gu": [
         "img/frames/m15/new/m.png",
-        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "wu-h": [
-        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "wb-h": [
-        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "ub-h": [
-        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "ur-h": [
-        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "br-h": [
-        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "bg-h": [
-        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "rg-h": [
-        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "rw-h": [
-        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "gw-h": [
-        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "gu-h": [
-        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W))",
-        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -244,7 +244,7 @@
     ],
     "notes": [
       "colourless = CC's see-through 'Eldrazi' frame (new/c.png): the M15 profile draws the art under the frame for 'c' (underFrameArt, TODO 4.17), like printed colourless Eldrazi (owner decision 2026-09-25)",
-      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline and a hybrid's frame 40→60 %W, text box 46→58) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). Gold-split <pair> = m.png with the split text box and pinline (FDN #122 / #123 / #115 / #651 / #126); hybrid <pair>-h = the two colours' frames split across the frame ramp, CC's grey land bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (TLA #212, TLA #223–252)"
+      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). Gold-split <pair> = m.png with the split text box and pinline (FDN #122 / #123 / #115 / #651 / #126); hybrid <pair>-h = the two colours' frames split across the frame ramp, CC's grey land bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (TLA #212, TLA #223–252)"
     ]
   },
   "m15artifact": {
@@ -308,7 +308,7 @@
       "wu": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -316,7 +316,7 @@
       "wb": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -324,7 +324,7 @@
       "ub": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -332,7 +332,7 @@
       "ur": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -340,7 +340,7 @@
       "br": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -348,7 +348,7 @@
       "bg": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -356,7 +356,7 @@
       "rg": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -364,7 +364,7 @@
       "rw": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -372,7 +372,7 @@
       "gw": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -380,7 +380,7 @@
       "gu": [
         "img/frames/m15/new/a.png through img/frames/m15/new/border.png",
         "img/frames/m15/new/a.png through img/frames/m15/new/frame.png",
-        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
@@ -419,7 +419,7 @@
     ],
     "notes": [
       "coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks",
-      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline and a hybrid's frame 40→60 %W, text box 46→58) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (DFT #188–220 gearhulks, MH3 #195, EOE #223); no hybrid dress (no hybrid plate on this template yet: a hybrid artifact draws the gold-split master)"
+      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (DFT #188–220 gearhulks, MH3 #195, EOE #223); no hybrid dress (no hybrid plate on this template yet: a hybrid artifact draws the gold-split master)"
     ]
   },
   "m15borderless": {
@@ -592,43 +592,43 @@
       ],
       "wu": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "wb": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "ub": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "ur": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "br": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "bg": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "rg": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "rw": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "gw": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ],
       "gu": [
         "img/black.png over 0/0/100×4.87 %",
-        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(43→55 %W) at 2.19/1.88/95.62×17.52 %"
+        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
       ]
     },
     "sourceFiles": [
@@ -645,7 +645,7 @@
     ],
     "notes": [
       "the standard legendary crown, drawn over the m15, m15artifact and m15land masters (TODO 4.6a; design 2026-09-29 §1.1): CC's autoM15NewFrame draws the black 'Legend Crown Border Cover' then the crown after the P/T plate — here composited alone at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
-      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 43→55 %W (the prints' crown split measures 42.7 / 48.5 / 53.0 %W at 10 / 50 / 90 % on FDN's gold pairs, 43.8 / 50.1 / 54.3 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
+      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 45→55 %W (the prints' crown split, each pixel de-shaded against the two single-colour crowns, measures 45.5 / 49.3 / 53.6 %W at 10 / 50 / 90 % on FDN's gold pairs, 46.4 / 49.4 / 53.6 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
       "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in"
     ]
   },
@@ -793,52 +793,52 @@
       ],
       "wu": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lw.png | img/frames/m15/new/lu.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lw.png | img/frames/m15/new/lu.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lw.png | img/frames/m15/new/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "wb": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lw.png | img/frames/m15/new/lb.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lw.png | img/frames/m15/new/lb.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lw.png | img/frames/m15/new/lb.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "ub": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lu.png | img/frames/m15/new/lb.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lu.png | img/frames/m15/new/lb.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lu.png | img/frames/m15/new/lb.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "ur": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lu.png | img/frames/m15/new/lr.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lu.png | img/frames/m15/new/lr.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lu.png | img/frames/m15/new/lr.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "br": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lb.png | img/frames/m15/new/lr.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lb.png | img/frames/m15/new/lr.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lb.png | img/frames/m15/new/lr.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "bg": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lb.png | img/frames/m15/new/lg.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lb.png | img/frames/m15/new/lg.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lb.png | img/frames/m15/new/lg.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "rg": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lr.png | img/frames/m15/new/lg.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lr.png | img/frames/m15/new/lg.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lr.png | img/frames/m15/new/lg.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "rw": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lr.png | img/frames/m15/new/lw.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lr.png | img/frames/m15/new/lw.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lr.png | img/frames/m15/new/lw.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "gw": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lg.png | img/frames/m15/new/lw.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lg.png | img/frames/m15/new/lw.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lg.png | img/frames/m15/new/lw.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ],
       "gu": [
         "img/frames/m15/new/l.png",
-        "(img/frames/m15/new/lg.png | img/frames/m15/new/lu.png across procedural:ramp(46→58 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/lg.png | img/frames/m15/new/lu.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
         "(img/frames/m15/new/lg.png | img/frames/m15/new/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
@@ -855,7 +855,7 @@
     ],
     "notes": [
       "colourless land = CC's land frame new/l.png",
-      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline and a hybrid's frame 40→60 %W, text box 46→58) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print"
+      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print"
     ]
   },
   "m15pw": {

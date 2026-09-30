@@ -24,14 +24,28 @@ export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", 
 
 /** The split ramps, [from, to] in % of the card's width — the second
  *  colour's share is 0 left of `from` and 1 right of `to`. 10/50/90 on the
- *  prints (median): pinline 42.2 / 50.3 / 58.8 (47 prints; a hybrid's outer
- *  frame band follows it), text box 47.2 / 51.3 / 56.8 (37), crown 42.7 /
- *  48.5 / 53.0 (FDN gold pairs) and 43.8 / 50.1 / 54.3 (TLA hybrids). */
+ *  prints, each print pixel de-shaded against the SAME pixel of the two
+ *  single-colour prints of its set (the share s that best explains it as
+ *  (1 − s)·A + s·B, so the region's own texture and shading cancel; the
+ *  4.6 review's re-measure, 2026-09-29), medians:
+ *   • pinline 42.1 / 50.1 / 57.9 (20 FDN + TLA pairs) → 40→60 (42 / 50 / 58);
+ *   • a hybrid's OUTER frame band above the title bar 45.1 / 50.3 / 55.6
+ *     (TLA ×10, four row bands; FDN #656 / #668, BLB #226, GRN #216 agree)
+ *     — steeper than its own pinline → 44→57 (45.3 / 50.5 / 55.7);
+ *   • text box, text-free rows only, 45.9 / 50.6 / 55.3 (FDN, the 8 prints
+ *     with ≥ 10 clean rows; MKM lands 45.7 / 50.8 / 55.8) → 45→57
+ *     (46.2 / 51.0 / 55.8);
+ *   • crown, rows 4.42–4.66 %H, 45.5 / 49.3 / 53.6 (gold: FDN #122 #123
+ *     #115 #651 #126 #119 #245, MKM #238) and 46.4 / 49.4 / 53.6 (hybrid:
+ *     TLA ×9) → 45→55 (46 / 50 / 54).
+ *  The design's first figures (text box 47.2 / 51.3 / 56.8, crown 42.7 /
+ *  48.5 / 53.0) came from a column profile the text and the crown's own
+ *  shading skew; the frame band had been folded into the pinline's ramp. */
 export const PAIR_RAMPS = Object.freeze({
   pinline: Object.freeze([40, 60]),
-  frame: Object.freeze([40, 60]),
-  rules: Object.freeze([46, 58]),
-  crown: Object.freeze([43, 55]),
+  frame: Object.freeze([44, 57]),
+  rules: Object.freeze([45, 57]),
+  crown: Object.freeze([45, 55]),
 });
 
 /** How provenance names a ramp (never a Card Conjurer file). */
