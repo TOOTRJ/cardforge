@@ -27,8 +27,8 @@ import { renderCardPrint } from "@/lib/render/card-print";
 import {
   cardPrintFilename,
   isPrintRequest,
-  parseBleedParam,
   parsePpiParam,
+  parsePrintBleedParam,
   parsePrintParam,
   PRINT_800_PPI_PAID_ONLY,
 } from "@/lib/cards/print-export";
@@ -85,6 +85,14 @@ import { isUuid } from "@/lib/ids";
 //                      (or for 800 ppi while PRINT_800_PPI_PAID_ONLY) gets
 //                      403 UPGRADE_REQUIRED. `ppi=600` alone is the plain HD
 //                      download, as before (lib/cards/print-export.ts).
+//   ?bleed=mpc       → PRINT (TODO 6.1): MakePlayingCards' poker-size file —
+//                      MPC's bleed on each axis (MPC_BLEED_IN: 822 × 1122 at
+//                      300 dpi, so 1644 × 2244 at 600 ppi, 2192 × 2992 at
+//                      800) instead of the 1/8", and ALWAYS PORTRAIT (a
+//                      Battle or Split is turned into the card). The bleed's
+//                      rules otherwise: square, live, PNG only, clean-only
+//                      (403 UPGRADE_REQUIRED), named <slug>-mpc.png /
+//                      -800ppi-mpc.png, its own ETag.
 //   ?print=1         → PRINT (TODO 6.15): the print render even at 600 ppi
 //                      without a bleed — 1500×2100, the art at full
 //                      resolution — what the Pro exports print from (deck and
@@ -135,7 +143,7 @@ export async function GET(
   // A print render (800 ppi, the bleed, or `print`) — TODO 6.1a/6.1b/6.15.
   const print = {
     ppi: parsePpiParam(request.nextUrl.searchParams.get("ppi")),
-    bleed: parseBleedParam(request.nextUrl.searchParams.get("bleed")),
+    bleed: parsePrintBleedParam(request.nextUrl.searchParams.get("bleed")),
     print: parsePrintParam(request.nextUrl.searchParams.get("print")),
   };
   const printMode = isPrintRequest(print);
@@ -214,9 +222,11 @@ export async function GET(
   if (printMode && watermark && !freePrint) {
     return NextResponse.json(
       {
-        error: print.bleed
-          ? "Bleed downloads are a Plus feature."
-          : print.ppi === 800
+        error: print.bleed === "mpc"
+          ? "MakePlayingCards files are a Plus feature."
+          : print.bleed
+            ? "Bleed downloads are a Plus feature."
+            : print.ppi === 800
             ? "800 ppi downloads are a Plus feature."
             : "Print downloads are a Plus feature.",
         code: "UPGRADE_REQUIRED",
@@ -254,7 +264,10 @@ export async function GET(
         // PNG keeps the ETag it had (a repeat download still answers 304).
         ...(format === "jpeg" ? ["jpeg"] : []),
         // …and a print render (its own bytes; folded in only for one).
-        ...(printMode ? [`print:${print.ppi}:${print.bleed ? "bleed" : "trim"}`] : []),
+        // (MPC's bleed is not the 1/8 in one: its own bytes, its own tag.)
+        ...(printMode
+          ? [`print:${print.ppi}:${print.bleed === "mpc" ? "mpc" : print.bleed ? "bleed" : "trim"}`]
+          : []),
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
@@ -355,7 +368,7 @@ export async function GET(
         preset: printMode ? `${print.ppi}ppi` : preset,
         clean: !watermark,
         corners,
-        ...(print.bleed ? { layout: "bleed" } : {}),
+        ...(print.bleed ? { layout: print.bleed === "mpc" ? "mpc" : "bleed" } : {}),
       },
     });
   }

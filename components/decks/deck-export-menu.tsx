@@ -44,8 +44,10 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // DeckExportMenu — the deck owner's export hub (Pro). Two builds, both run
 // in the background by DeckExportProvider with a progress card:
-//   Deck ZIP   — clean card images (HD or standard), cover, deck.pdf report
-//                (stats, decklist, AI guide + combos), decklist.txt
+//   Deck ZIP   — clean card images (HD, standard, or MakePlayingCards' poker-
+//                size files — TODO 6.1, MPC's bleed, always portrait), cover,
+//                deck.pdf report (stats, decklist, AI guide + combos),
+//                decklist.txt
 //   Print PDF  — one card per page, or proxy sheets (Letter / A4) with the
 //                print options of My Cards' selection export (TODO 6.15,
 //                components/cards/print-sheet-options.tsx): spacing, cut
@@ -77,9 +79,15 @@ type DeckExportMenuProps = {
   hasCover: boolean;
 };
 
-const QUALITY_OPTIONS: Array<{ value: DeckExportQuality; label: string; detail: string }> = [
+const QUALITY_OPTIONS: Array<{ value: DeckExportQuality; label: string; detail: string; wide?: boolean }> = [
   { value: "hd", label: "HD", detail: "1500 × 2100 · print quality" },
   { value: "default", label: "Standard", detail: "750 × 1050 · sharing & screens" },
+  {
+    value: "mpc",
+    label: "MakePlayingCards",
+    detail: "1644 × 2244 · MPC's poker-size upload, bleed included",
+    wide: true,
+  },
 ];
 
 const LAYOUT_OPTIONS: Array<{ value: DeckPdfLayout; label: string }> = [
@@ -220,6 +228,7 @@ export function DeckExportMenu({
                     onChange={() => patch({ quality: option.value })}
                     label={option.label}
                     detail={option.detail}
+                    className={option.wide ? "col-span-2" : undefined}
                   />
                 ))}
               </div>
@@ -322,12 +331,14 @@ function ChoiceTile({
   onChange,
   label,
   detail,
+  className,
 }: {
   name: string;
   checked: boolean;
   onChange: () => void;
   label: string;
   detail: string;
+  className?: string;
 }) {
   return (
     <label
@@ -336,6 +347,7 @@ function ChoiceTile({
         checked
           ? "border-primary-bright/60 bg-primary/10"
           : "border-border/60 bg-surface/40 hover:border-border hover:bg-elevated/60",
+        className,
       )}
     >
       <input type="radio" name={name} className="sr-only" checked={checked} onChange={onChange} />

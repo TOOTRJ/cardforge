@@ -105,6 +105,20 @@ describe("DeckExportMenu — the print options (TODO 6.15)", () => {
     expect(layoutTile("Sheets · Letter").closest("label")?.textContent).toMatch(/6 per sheet \(landscape page\)/);
   });
 
+  it("the ZIP's images can be MakePlayingCards' files (TODO 6.1) — shared with the selection export", async () => {
+    storage.set(PRINT_SELECTION_SETTINGS_KEY, JSON.stringify({ kind: "zip", quality: "mpc", bleed: true }));
+    await openMenu();
+    const mpc = screen.getByRole("radio", { name: /^MakePlayingCards/ }) as HTMLInputElement;
+    expect(mpc.checked).toBe(true);
+    expect(mpc.closest("label")?.textContent).toMatch(/1644 × 2244/);
+    await click(screen.getByRole("radio", { name: /^HD/ }));
+    expect(mpc.checked).toBe(false);
+    await click(mpc);
+    await click(screen.getByRole("button", { name: /build zip/i }));
+    expect(exporter.start).toHaveBeenCalledWith(expect.objectContaining({ kind: "zip", quality: "mpc", bleed: false }));
+    expect(JSON.parse(storage.get(PRINT_SELECTION_SETTINGS_KEY)!)).toMatchObject({ kind: "zip", quality: "mpc" });
+  });
+
   it("the ZIP never carries the bleed (a PDF option), and keeps its image size", async () => {
     storage.set(PRINT_SELECTION_SETTINGS_KEY, JSON.stringify({ layout: "pages", bleed: true, quality: "default" }));
     await openMenu();

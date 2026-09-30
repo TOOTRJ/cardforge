@@ -14,12 +14,15 @@
 //                  the border's colour, for printing. Both ask the png route
 //                  by name (corners=…). A JPEG has no transparency, so it is
 //                  always Square (format=jpeg; the switch shows it).
-//                  PAID viewers also pick the print options (TODO 6.1a/6.1b,
-//                  lib/cards/print-export.ts): Resolution 600 ppi (1500 ×
-//                  2100) or 800 ppi (2000 × 2800), and a 1/8″ bleed
-//                  checkbox. Either one is a PRINT render: square, PNG only
-//                  (the JPEG chip and Rounded are disabled while one is on,
-//                  and the print options while JPEG is), ?ppi=…&bleed=1.
+//                  PAID viewers also pick the print options (TODO 6.1a/6.1b/
+//                  6.1, lib/cards/print-export.ts): Resolution 600 ppi (1500
+//                  × 2100) or 800 ppi (2000 × 2800), and the Bleed — None,
+//                  1/8″ (2.75″ × 3.75″), or MakePlayingCards (MPC's poker-
+//                  size upload: its own bleed, 1644 × 2244 at 600 ppi, a
+//                  Battle or Split turned upright). Any of them is a PRINT
+//                  render: square, PNG only (the JPEG chip and Rounded are
+//                  disabled while one is on, and the print options while
+//                  JPEG is), ?ppi=…&bleed=1|mpc.
 //                  800 ppi says when the frame is upscaled
 //                  (printFrameUpscaledAt800 — every template, today).
 //   PDF          — Layout: One card — a 2.5"×3.5" page sized exactly to the
@@ -84,6 +87,7 @@ import {
   printFrameUpscaledAt800,
   printPixelSize,
   PRINT_800_PPI_PAID_ONLY,
+  type PrintBleed,
   type PrintPpi,
 } from "@/lib/cards/print-export";
 import { cardPdfFilename, cardPdfHref, type CardPdfLayout } from "@/lib/cards/card-pdf-link";
@@ -177,9 +181,9 @@ export function DownloadModal({
   // JPEG is always square — the PNG's choice is kept for switching back.
   const [format, setFormat] = useState<CardImageFormat>("png");
   const [pngCorners, setPngCorners] = useState<CardCorners>("round");
-  // Print options (paid; TODO 6.1a/6.1b): a print render is square + PNG.
+  // Print options (paid; TODO 6.1a/6.1b/6.1): a print render is square + PNG.
   const [ppi, setPpi] = useState<PrintPpi>(DEFAULT_PRINT_PPI);
-  const [bleed, setBleed] = useState(false);
+  const [bleed, setBleed] = useState<PrintBleed>(false);
   // The PDF tab (TODO 6.15): the layout opens on One card; the sheet's
   // paper and options and the bleed start from the settings this browser
   // printed with last (loaded as the dialog opens — never during SSR).
@@ -210,7 +214,7 @@ export function DownloadModal({
   // 800 ppi follows PRINT_800_PPI_PAID_ONLY (the open 6.1b [decide]); the
   // bleed is always a clean-download feature.
   const can800 = isPaid || !PRINT_800_PPI_PAID_ONLY;
-  const printOptions = { ppi: can800 ? ppi : DEFAULT_PRINT_PPI, bleed: isPaid && bleed };
+  const printOptions = { ppi: can800 ? ppi : DEFAULT_PRINT_PPI, bleed: isPaid ? bleed : false };
   const print = format === "png" && isPrintRequest(printOptions);
   const corners = print ? "square" : effectiveCorners(format, pngCorners);
   const preset = isPaid ? "hd" : "default";
@@ -329,7 +333,7 @@ export function DownloadModal({
                         ? // Only when PRINT_800_PPI_PAID_ONLY is off: a free
                           // viewer's 800 ppi file keeps the mark (the bleed
                           // stays paid, so this is never a bleed file).
-                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed.`
+                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed or MakePlayingCards' size.`
                         : "750 × 1050 with the PipGlyph mark — fine for sharing and playtesting. Plus and Pro download a clean, print-ready 1500 × 2100 image."}
                     </p>
                   </div>
@@ -467,9 +471,23 @@ const PPI_OPTIONS: ChipOption<"600" | "800">[] = [
   { value: "800", label: "800 ppi · 2000 × 2800" },
 ];
 
-/** "800 ppi PNG with bleed", "PNG with bleed", "800 ppi PNG". */
-function printTitle(opts: { ppi: PrintPpi; bleed: boolean }): string {
+/** The Bleed choice's chip values. */
+type BleedChoice = "none" | "eighth" | "mpc";
+
+const BLEED_OPTIONS: ChipOption<BleedChoice>[] = [
+  { value: "none", label: "None" },
+  { value: "eighth", label: "1/8″" },
+  { value: "mpc", label: "MakePlayingCards" },
+];
+
+const bleedChoiceOf = (bleed: PrintBleed): BleedChoice => (bleed === "mpc" ? "mpc" : bleed ? "eighth" : "none");
+const bleedOfChoice = (choice: BleedChoice): PrintBleed => (choice === "mpc" ? "mpc" : choice === "eighth");
+
+/** "800 ppi PNG with bleed", "PNG with bleed", "800 ppi PNG", "PNG for
+ *  MakePlayingCards". */
+function printTitle(opts: { ppi: PrintPpi; bleed: PrintBleed }): string {
   const res = opts.ppi === DEFAULT_PRINT_PPI ? "" : `${opts.ppi} ppi `;
+  if (opts.bleed === "mpc") return `${res}PNG for MakePlayingCards`;
   return `${res}PNG${opts.bleed ? " with 1/8″ bleed" : ""} for print`;
 }
 
@@ -479,14 +497,18 @@ function freePrintSize(ppi: PrintPpi): string {
   return `${width} × ${height} (${ppi} ppi)`;
 }
 
-function printDescription(opts: { ppi: PrintPpi; bleed: boolean }, frameUpscaled: boolean): string {
-  const trim = opts.ppi === 800 ? "2000 × 2800" : "1500 × 2100";
-  const size = opts.bleed ? (opts.ppi === 800 ? "2200 × 3000" : "1650 × 2250") : trim;
+function printDescription(opts: { ppi: PrintPpi; bleed: PrintBleed }, frameUpscaled: boolean): string {
+  const trimSize = printPixelSize(opts.ppi, { bleed: false });
+  const trim = `${trimSize.width} × ${trimSize.height}`;
+  const out = printPixelSize(opts.ppi, { bleed: opts.bleed });
+  const size = `${out.width} × ${out.height}`;
   const parts = [
     `Clean ${size} render with square corners, the art at full resolution.`,
-    opts.bleed
-      ? `The card (${trim} at the trim) runs 1/8″ past the trim line on every side (2.75″ × 3.75″) — cut along the card's edge.`
-      : null,
+    opts.bleed === "mpc"
+      ? `MakePlayingCards' poker-size upload (822 × 1122 at 300 dpi, here at ${opts.ppi}): the card (${trim} at the trim) plus MPC's bleed, ${out.bleedX} px on every side. A Battle or Split comes upright, as MPC prints it.`
+      : opts.bleed
+        ? `The card (${trim} at the trim) runs 1/8″ past the trim line on every side (2.75″ × 3.75″) — cut along the card's edge.`
+        : null,
     opts.ppi === 800
       ? frameUpscaled
         ? "Text and symbols are drawn at 800 ppi; this frame is upscaled from its 600 ppi master."
@@ -496,7 +518,7 @@ function printDescription(opts: { ppi: PrintPpi; bleed: boolean }, frameUpscaled
   return parts.filter(Boolean).join(" ");
 }
 
-/** Resolution + bleed (paid; TODO 6.1a/6.1b) — PNG only. */
+/** Resolution + bleed (paid; TODO 6.1a/6.1b/6.1) — PNG only. */
 function PrintOptions({
   ppi,
   onPpiChange,
@@ -507,12 +529,13 @@ function PrintOptions({
 }: {
   ppi: PrintPpi;
   onPpiChange: (next: PrintPpi) => void;
-  bleed: boolean;
+  bleed: PrintBleed;
   /** Null: no bleed for this viewer (it follows the clean download). */
-  onBleedChange: ((next: boolean) => void) | null;
+  onBleedChange: ((next: PrintBleed) => void) | null;
   disabled: boolean;
   frameUpscaled: boolean;
 }) {
+  const choice = disabled ? "none" : bleedChoiceOf(bleed);
   return (
     <div className="mb-4 flex flex-col gap-3" data-testid="download-print">
       <div className="flex flex-col gap-1.5">
@@ -532,13 +555,20 @@ function PrintOptions({
         </p>
       </div>
       {onBleedChange ? (
-        <PrintBleedCheckbox
-          checked={bleed && !disabled}
-          onChange={onBleedChange}
-          disabled={disabled}
-          testId="download-bleed"
-          hint="Extends the card 1/8″ past the trim on every side (2.75″ × 3.75″) for print shops."
-        />
+        <div className="flex flex-col gap-1.5" data-testid="download-bleed">
+          <span className="text-xs font-medium text-foreground">Bleed</span>
+          <ChipGroup
+            ariaLabel="Bleed"
+            options={BLEED_OPTIONS.map((option) => ({ ...option, disabled }))}
+            value={choice}
+            onChange={(next) => onBleedChange(bleedOfChoice(next))}
+          />
+          <p className="text-[11px] leading-4 text-subtle">
+            {choice === "mpc"
+              ? "Sized for MakePlayingCards' poker-size cards: MPC's own bleed, always upright."
+              : "1/8″ extends the card past the trim on every side (2.75″ × 3.75″) for print shops."}
+          </p>
+        </div>
       ) : null}
     </div>
   );

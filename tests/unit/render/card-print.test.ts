@@ -26,6 +26,10 @@ import { imageNaturalSize, toSatoriDataUrl } from "@/lib/render/art-source";
 //     `art` continues the art with the TRIM transform (real source pixels
 //     where the cover crop left them, mirrored where the source runs out),
 //     `bar` copies the bar out (borderless M15, whose fins continue too).
+//   * MakePlayingCards (TODO 6.1): MPC's bleed (72 px a side at 600 ppi,
+//     96 at 800) around the same trim box, and a landscape card turned 90°
+//     anticlockwise into the portrait card; a bleed PER AXIS keeps the trim
+//     and the `art` edge's trim transform on each axis.
 //
 // Bucket masters (m15, fullartland, m15borderless) are stand-ins served by a
 // stubbed bucket, as in edge-to-edge-bake.test.tsx; git masters (extended
@@ -222,7 +226,11 @@ const at = (img: Image, x: number, y: number) => {
   return [img.data[i], img.data[i + 1], img.data[i + 2], img.data[i + 3]];
 };
 
-async function print(c: CardPreviewData, opts: { ppi: 600 | 800; bleed: boolean }, name?: string): Promise<Image> {
+async function print(
+  c: CardPreviewData,
+  opts: { ppi: 600 | 800; bleed: boolean | "mpc" | { x: number; y: number } },
+  name?: string,
+): Promise<Image> {
   const { renderCardPrint } = await import("@/lib/render/card-print");
   const bytes = await renderCardPrint(c, { ...opts, brandMark: false, watermarkText: null });
   if (EVIDENCE_DIR && name) fs.writeFileSync(path.join(EVIDENCE_DIR, `${name}.png`), bytes);
@@ -518,5 +526,93 @@ describe("TODO 6.1a — the 1/8 in bleed", () => {
     }
     // Beside a fin, and below the bar: the frame's colour.
     for (const [x, y] of [[10, 2600], [w - 10, 2600], [w / 2, h - 10], [w / 2, h - b]]) expect(isBar(at(img, x, y))).toBe(true);
+  }, 60_000);
+});
+
+describe("TODO 6.1 — MakePlayingCards and a bleed per axis", () => {
+  /** A rect of an image, as its own image. */
+  async function crop(img: Image, left: number, top: number, width: number, height: number): Promise<Image> {
+    return decode(
+      await sharp(img.data, { raw: { width: img.width, height: img.height, channels: 4 } })
+        .extract({ left, top, width, height })
+        .png()
+        .toBuffer(),
+    );
+  }
+
+  it("MPC: 1644 × 2244 at 600 ppi (2192 × 2992 at 800) — the same trim box, MPC's bleed round it", async () => {
+    const c = card("m15", { artUrl: await smoothArt(1200, 900), rulesText: "Draw two cards." });
+    for (const [ppi, b, size] of [
+      [600, 72, [1644, 2244]],
+      [800, 96, [2192, 2992]],
+    ] as const) {
+      const [mpc, plain] = await Promise.all([print(c, { ppi, bleed: "mpc" }, `m15-mpc-${ppi}ppi`), print(c, { ppi, bleed: false })]);
+      expect([mpc.width, mpc.height, mpc.density]).toEqual([...size, ppi]);
+      const trim = await crop(mpc, b, b, plain.width, plain.height);
+      expect(trim.data.equals(plain.data)).toBe(true);
+      // `border`: M15's black runs out to the file's edge.
+      for (const [x, y] of [[0, 0], [size[0] - 1, size[1] - 1], [b - 1, size[1] / 2], [size[0] / 2, 0]]) {
+        expect(Math.max(...at(mpc, x, y).slice(0, 3))).toBeLessThanOrEqual(6);
+      }
+    }
+  }, 120_000);
+
+  it("MPC turns a landscape card (Battle) upright: 1644 × 2244, the landscape card turned 90° anticlockwise", async () => {
+    const battle = card("battle", { artUrl: await smoothArt(1200, 900), cardType: "battle", defense: "5" } as Partial<CardPreviewData>);
+    const [mpc, plain] = await Promise.all([
+      print(battle, { ppi: 600, bleed: "mpc" }, "battle-mpc-600ppi"),
+      print(battle, { ppi: 600, bleed: false }),
+    ]);
+    expect([plain.width, plain.height]).toEqual([2100, 1500]);
+    expect([mpc.width, mpc.height, mpc.density]).toEqual([1644, 2244, 600]);
+    // The trim box is the landscape card turned anticlockwise: its top edge
+    // up the left side, its top-left corner at the bottom left — the way
+    // the PDF turns it (card-pdf.ts cardSlotPlacement).
+    const turned = await decode(
+      await sharp(plain.data, { raw: { width: 2100, height: 1500, channels: 4 } }).rotate(270).png().toBuffer(),
+    );
+    expect([turned.width, turned.height]).toEqual([1500, 2100]);
+    expect(at(turned, 0, 2099)).toEqual(at(plain, 0, 0));
+    const trim = await crop(mpc, 72, 72, 1500, 2100);
+    expect(trim.data.equals(turned.data)).toBe(true);
+  }, 120_000);
+
+  it("a bleed per axis: the trim box stays the card, each axis extends by its own bleed", async () => {
+    const perAxis = { x: 0.125, y: 0.1 }; // 75 × 60 px at 600 ppi
+    const c = card("m15", { artUrl: await smoothArt(1200, 900) });
+    const [bled, plain] = await Promise.all([print(c, { ppi: 600, bleed: perAxis }), print(c, { ppi: 600, bleed: false })]);
+    expect([bled.width, bled.height]).toEqual([1650, 2220]);
+    expect((await crop(bled, 75, 60, 1500, 2100)).data.equals(plain.data)).toBe(true);
+
+    // A landscape render is the card turned: its left and right edges take
+    // the card's y bleed, its top and bottom the x.
+    const battle = card("battle", { artUrl: await smoothArt(1200, 900), cardType: "battle", defense: "5" } as Partial<CardPreviewData>);
+    const [wide, widePlain] = await Promise.all([print(battle, { ppi: 600, bleed: perAxis }), print(battle, { ppi: 600, bleed: false })]);
+    expect([wide.width, wide.height]).toEqual([2220, 1650]);
+    expect((await crop(wide, 60, 75, 2100, 1500)).data.equals(widePlain.data)).toBe(true);
+  }, 120_000);
+
+  it("`art` with a bleed per axis: the art keeps the TRIM transform on each axis — source pixels at the side, mirrored above", async () => {
+    // As the 1/8 in `art` test: 2400 × 2800 on fullartland's 2000 × 2800
+    // slot at 800 ppi (cover 1, 200 source px cropped each side) — with
+    // 100 px of bleed at the sides and 80 px at the top and bottom.
+    const img = await print(card("fullartland", { artUrl: await patternArt(2400, 2800) }), { ppi: 800, bleed: { x: 0.125, y: 0.1 } });
+    const [bx, by] = [100, 80];
+    expect([img.width, img.height]).toEqual([2200, 2960]);
+    const src = (sx: number, sy: number) => [sx & 255, sy & 255, (sx ^ sy) & 255];
+    const rgb = (x: number, y: number) => at(img, x, y).slice(0, 3);
+    let wrong = 0;
+    for (let y = 1200; y < 1300; y += 1) {
+      for (let x = 0; x < bx; x += 1) {
+        const sy = y - by;
+        if (rgb(x, y).join() !== src(x + 100, sy).join()) wrong += 1;
+        const rx = 2200 - bx + x;
+        if (rgb(rx, y).join() !== src(rx - bx + 200, sy).join()) wrong += 1;
+      }
+    }
+    for (let d = 1; d <= by; d += 1) {
+      for (let x = 900; x < 1000; x += 1) if (rgb(x, by - d).join() !== src(x - bx + 200, d - 1).join()) wrong += 1;
+    }
+    expect(wrong).toBe(0);
   }, 60_000);
 });

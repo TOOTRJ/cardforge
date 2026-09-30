@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
-// The download modal's PRINT options (TODO 6.1a bleed, 6.1b 800 ppi): a paid
-// viewer picks the resolution (600 ppi = 1500 × 2100, 800 ppi = 2000 × 2800)
-// and a 1/8″ bleed on the Image tab, and the bleed on the single-card PDF.
-// Either print option is a square PNG: the link asks the png route for
-// `ppi=…&corners=square(&bleed=1)`, names <slug>-800ppi(-bleed).png, and
+// The download modal's PRINT options (TODO 6.1a bleed, 6.1b 800 ppi, 6.1
+// MakePlayingCards): a paid viewer picks the resolution (600 ppi = 1500 ×
+// 2100, 800 ppi = 2000 × 2800) and the Bleed — None, 1/8″, or
+// MakePlayingCards (MPC's poker-size file, 1644 × 2244 at 600 ppi) — on the
+// Image tab, and the 1/8″ bleed on the single-card PDF. Any print option is
+// a square PNG: the link asks the png route for
+// `ppi=…&corners=square(&bleed=1|mpc)`, names <slug>-800ppi(-bleed|-mpc).png, and
 // Rounded and JPEG are disabled while one is on (the print options while
 // JPEG is). 800 ppi says the frame is upscaled — every template's is today
 // (lib/cards/print-export.ts PRINT_NATIVE_800_TEMPLATES). A free viewer
@@ -59,6 +61,11 @@ const resolution = (label: RegExp) =>
     name: label,
   });
 
+const bleedChip = (label: RegExp) =>
+  within(within(screen.getByTestId("download-bleed")).getByRole("radiogroup", { name: "Bleed" })).getByRole("radio", {
+    name: label,
+  });
+
 async function click(el: HTMLElement) {
   await act(async () => {
     fireEvent.click(el);
@@ -69,7 +76,7 @@ describe("DownloadModal print options (paid)", () => {
   it("600 ppi and no bleed by default — the plain HD link, as before", async () => {
     await open(true);
     expect(resolution(/600 ppi/).getAttribute("aria-checked")).toBe("true");
-    expect((screen.getByTestId("download-bleed") as HTMLInputElement).checked).toBe(false);
+    expect(bleedChip(/^None$/).getAttribute("aria-checked")).toBe("true");
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=hd&corners=round");
   });
 
@@ -87,26 +94,49 @@ describe("DownloadModal print options (paid)", () => {
     expect((radio("download-format", "File type", "JPEG") as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("the bleed checkbox adds &bleed=1 at either resolution", async () => {
+  it("the 1/8″ bleed adds &bleed=1 at either resolution", async () => {
     await open(true);
-    await click(screen.getByTestId("download-bleed"));
+    await click(bleedChip(/1\/8″/));
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?ppi=600&corners=square&bleed=1");
     expect(link("/png?").getAttribute("download")).toBe("grizzly-bleed.png");
     expect(screen.getByText(/1650 × 2250 render/)).toBeTruthy();
     await click(resolution(/800 ppi/));
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?ppi=800&corners=square&bleed=1");
     expect(link("/png?").getAttribute("download")).toBe("grizzly-800ppi-bleed.png");
-    // Unticked, and back at 600: the plain link again, with the corner the
+    // No bleed, and back at 600: the plain link again, with the corner the
     // viewer had.
-    await click(screen.getByTestId("download-bleed"));
+    await click(bleedChip(/^None$/));
     await click(resolution(/600 ppi/));
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=hd&corners=round");
+  });
+
+  it("MakePlayingCards (TODO 6.1): MPC's poker-size file — &bleed=mpc, <slug>-mpc.png, 1644 × 2244 (2192 × 2992 at 800)", async () => {
+    await open(true);
+    await click(bleedChip(/makeplayingcards/i));
+    const a = link("/png?");
+    expect(a.getAttribute("href")).toBe("/api/cards/c1/png?ppi=600&corners=square&bleed=mpc");
+    expect(a.getAttribute("download")).toBe("grizzly-mpc.png");
+    expect(screen.getByText("PNG for MakePlayingCards")).toBeTruthy();
+    expect(screen.getByText(/^Clean 1644 × 2244 render/)).toBeTruthy();
+    expect(screen.getByText(/822 × 1122 at 300 dpi, here at 600\): the card \(1500 × 2100 at the trim\) plus MPC's bleed, 72 px on every side/)).toBeTruthy();
+    expect(screen.getByText(/A Battle or Split comes upright/)).toBeTruthy();
+    // Print: square, PNG only.
+    expect(radio("download-corners", "Corners", "Square").getAttribute("aria-checked")).toBe("true");
+    expect((radio("download-format", "File type", "JPEG") as HTMLButtonElement).disabled).toBe(true);
+    await click(resolution(/800 ppi/));
+    expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?ppi=800&corners=square&bleed=mpc");
+    expect(link("/png?").getAttribute("download")).toBe("grizzly-800ppi-mpc.png");
+    expect(screen.getByText(/^Clean 2192 × 2992 render/)).toBeTruthy();
+    // The 1/8″ bleed is the other choice, not an addition.
+    await click(bleedChip(/1\/8″/));
+    expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?ppi=800&corners=square&bleed=1");
   });
 
   it("JPEG turns the print options off (PNG only)", async () => {
     await open(true);
     await click(radio("download-format", "File type", "JPEG"));
-    expect((screen.getByTestId("download-bleed") as HTMLInputElement).disabled).toBe(true);
+    expect((bleedChip(/makeplayingcards/i) as HTMLButtonElement).disabled).toBe(true);
+    expect((bleedChip(/1\/8″/) as HTMLButtonElement).disabled).toBe(true);
     expect((resolution(/800 ppi/) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("800 ppi and bleed are PNG only.")).toBeTruthy();
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=hd&format=jpeg");
