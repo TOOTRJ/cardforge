@@ -4,7 +4,14 @@ import sharp, { type OverlayOptions } from "sharp";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { applyCardCornerMask, cardCornerRadiusPx, squareCardCorners } from "@/lib/cards/card-corner";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
-import { bleedPx, printScale, type PrintPpi } from "@/lib/cards/print-export";
+import {
+  bleedPxPerAxis,
+  printScale,
+  printTurnsPortrait,
+  type BleedInches,
+  type PrintBleed,
+  type PrintPpi,
+} from "@/lib/cards/print-export";
 import { EDGE_CONTRACTS, EDGE_NAMES, type EdgeContract, type EdgeName } from "@/lib/frames/edge-contract";
 import { browserAppliesOrientation } from "@/lib/media/orientation";
 import { fetchImageBytes, TRANSPARENT_PIXEL_DATA_URL, toSatoriDataUrl } from "@/lib/render/art-source";
@@ -66,6 +73,17 @@ import {
 //            borderless frame's fins, a bar crossing it) are copied out on
 //            top, so they continue into the bleed too.
 // Corners are square whenever the bleed is on.
+//
+// The bleed is PER AXIS (TODO 6.1): `x` on the portrait card's left and
+// right edges, `y` on its top and bottom — the 1/8 in bleed is 1/8 in on
+// both, MakePlayingCards' is MPC_BLEED_IN (lib/cards/print-export.ts), and
+// any other per-axis bleed is drawn the same way. A landscape render
+// (Battle, Split) IS the portrait card turned, so its left and right edges
+// take `y` and its top and bottom `x`. MPC's file is always PORTRAIT: the
+// landscape card is drawn with its bleed, then turned 90° anticlockwise into
+// the portrait card — as every print turns it (lib/render/card-pdf.ts
+// cardSlotPlacement: its top edge up the card's left side, the title reading
+// bottom to top).
 // ---------------------------------------------------------------------------
 
 /** CardImage's root background (the ring colour of a see-through edge). */
@@ -84,7 +102,9 @@ const ALL_BORDER: EdgeContract = {
 
 export type PrintRenderOptions = {
   ppi: PrintPpi;
-  bleed: boolean;
+  /** None (false), the 1/8 in bleed (true), MakePlayingCards' ("mpc" — also
+   *  turns a landscape card portrait), or a bleed per axis in inches. */
+  bleed: PrintBleed | BleedInches;
   /** The free-tier brand mark (downloadBrandMark — the VIEWER's plan). */
   brandMark: boolean;
   /** The owner's custom footer mark (paid perk), or null. */
@@ -169,8 +189,9 @@ function source(art: ArtSource) {
 const clampInt = (value: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, value));
 
 /**
- * The art of one box as a raw RGBA overlay on a canvas `offset` px in from
- * the trim (0, or the bleed), at `scale` output px per layout px. The fit is
+ * The art of one box as a raw RGBA overlay on a canvas whose trim sits
+ * `offsetX` × `offsetY` px in (0, or the bleed on each axis), at `scale`
+ * output px per layout px. The fit is
  * CSS's (and Satori's): cover the box at the focal point, then scale() about
  * the focal point; the box is the clip. On each edge in `extend` that the
  * box touches, the clip runs on to the canvas edge (the bleed) with the SAME
@@ -182,7 +203,9 @@ export async function artOverlay(
   box: PrintArtBox,
   frame: {
     scale: number;
-    offset: number;
+    /** The trim's offset on the canvas: 0, or the bleed on each axis. */
+    offsetX: number;
+    offsetY: number;
     canvasWidth: number;
     canvasHeight: number;
     /** The card's layout size (the touch test). */
@@ -191,9 +214,9 @@ export async function artOverlay(
     extend: ReadonlySet<EdgeName>;
   },
 ): Promise<OverlayOptions | null> {
-  const { scale: s, offset: o } = frame;
-  const bx = o + s * box.left;
-  const by = o + s * box.top;
+  const { scale: s, offsetX: ox0, offsetY: oy0 } = frame;
+  const bx = ox0 + s * box.left;
+  const by = oy0 + s * box.top;
   const bw = s * box.width;
   const bh = s * box.height;
   if (!(bw > 0 && bh > 0)) return null;
@@ -304,8 +327,9 @@ function copyRect(from: Buffer, to: Buffer, width: number, rect: { x0: number; y
 /**
  * Render a card for print: square corners, the art at full resolution, at
  * `ppi` (600 = the HD layout's 1500 × 2100, 800 = 2000 × 2800), with an
- * optional 1/8 in bleed on every side. Returns opaque RGB PNG bytes tagged
- * with the resolution (pHYs = ppi, sRGB).
+ * optional bleed — 1/8 in on every side, MakePlayingCards' (turned portrait),
+ * or any bleed per axis. Returns opaque RGB PNG bytes tagged with the
+ * resolution (pHYs = ppi, sRGB).
  *
  * Art sharp can't decode in full (a truncated or corrupt file whose header
  * reads fine) is drawn the way the bake draws it — Satori's inlined copy in
@@ -367,7 +391,8 @@ async function renderPrint(card: CardPreviewData, opts: PrintRenderOptions, art:
 
   const trimFrame = {
     scale,
-    offset: 0,
+    offsetX: 0,
+    offsetY: 0,
     canvasWidth: trimW,
     canvasHeight: trimH,
     layoutWidth,
@@ -387,22 +412,26 @@ async function renderPrint(card: CardPreviewData, opts: PrintRenderOptions, art:
 
   // Opaque (squared) → RGB, no alpha channel for print software to guess
   // about; tagged sRGB with the resolution (pHYs), so 2000 px reads as
-  // 2.5 in.
-  const encode = (data: Buffer, width: number, height: number) =>
-    sharp(data, { raw: { width, height, channels: 4 } })
-      .removeAlpha()
-      .withMetadata({ density: opts.ppi })
-      .png()
-      .toBuffer();
+  // 2.5 in. A file that is always portrait (MPC) turns a landscape card 90°
+  // anticlockwise into it.
+  const turn = landscape && printTurnsPortrait(opts.bleed);
+  const encode = (data: Buffer, width: number, height: number) => {
+    const rgb = sharp(data, { raw: { width, height, channels: 4 } }).removeAlpha();
+    return (turn ? rgb.rotate(270) : rgb).withMetadata({ density: opts.ppi }).png().toBuffer();
+  };
 
-  if (!opts.bleed) return encode(trim, trimW, trimH);
+  // The bleed per side in the RENDER's orientation: a landscape render is
+  // the portrait card turned, so its left and right edges take the card's y.
+  const axis = bleedPxPerAxis(opts.ppi, opts.bleed);
+  const bleedH = landscape ? axis.y : axis.x;
+  const bleedV = landscape ? axis.x : axis.y;
+  if (bleedH === 0 && bleedV === 0) return encode(trim, trimW, trimH);
 
   // The bleed: the trim card with its edge pixels copied out (border, bar)…
-  const b = bleedPx(opts.ppi);
-  const width = trimW + 2 * b;
-  const height = trimH + 2 * b;
+  const width = trimW + 2 * bleedH;
+  const height = trimH + 2 * bleedV;
   const out = await sharp(trim, { raw: { width: trimW, height: trimH, channels: 4 } })
-    .extend({ top: b, bottom: b, left: b, right: b, extendWith: "copy" })
+    .extend({ top: bleedV, bottom: bleedV, left: bleedH, right: bleedH, extendWith: "copy" })
     .raw()
     .toBuffer();
 
@@ -413,19 +442,26 @@ async function renderPrint(card: CardPreviewData, opts: PrintRenderOptions, art:
   if (art && artEdges.size > 0) {
     const copied = Buffer.from(out);
     const layerOut = await sharp(layer)
-      .extend({ top: b, bottom: b, left: b, right: b, extendWith: "copy" })
+      .extend({ top: bleedV, bottom: bleedV, left: bleedH, right: bleedH, extendWith: "copy" })
       .png()
       .toBuffer();
-    const bleedFrame = { ...trimFrame, offset: b, canvasWidth: width, canvasHeight: height, extend: artEdges };
+    const bleedFrame = {
+      ...trimFrame,
+      offsetX: bleedH,
+      offsetY: bleedV,
+      canvasWidth: width,
+      canvasHeight: height,
+      extend: artEdges,
+    };
     const drawn = await sharp({ create: { width, height, channels: 4, background: ROOT_BACKGROUND } })
       .composite([...(await artOverlays(art, boxes, bleedFrame)), { input: layerOut, left: 0, top: 0 }])
       .raw()
       .toBuffer();
     const bands: Record<EdgeName, { x0: number; y0: number; x1: number; y1: number }> = {
-      top: { x0: 0, y0: 0, x1: width, y1: b },
-      bottom: { x0: 0, y0: height - b, x1: width, y1: height },
-      left: { x0: 0, y0: b, x1: b, y1: height - b },
-      right: { x0: width - b, y0: b, x1: width, y1: height - b },
+      top: { x0: 0, y0: 0, x1: width, y1: bleedV },
+      bottom: { x0: 0, y0: height - bleedV, x1: width, y1: height },
+      left: { x0: 0, y0: bleedV, x1: bleedH, y1: height - bleedV },
+      right: { x0: width - bleedH, y0: bleedV, x1: width, y1: height - bleedV },
     };
     for (const edge of artEdges) copyRect(drawn, out, width, bands[edge]);
     // Beside a corner the square filled (the border black, a bar's colour —
@@ -436,20 +472,20 @@ async function renderPrint(card: CardPreviewData, opts: PrintRenderOptions, art:
     const [tl, tr, bl, br] = cornerFills.map((fill) => fill !== null);
     const zones: Record<EdgeName, [boolean, { x0: number; y0: number; x1: number; y1: number }][]> = {
       top: [
-        [tl, { x0: 0, y0: 0, x1: b + r, y1: b }],
-        [tr, { x0: width - b - r, y0: 0, x1: width, y1: b }],
+        [tl, { x0: 0, y0: 0, x1: bleedH + r, y1: bleedV }],
+        [tr, { x0: width - bleedH - r, y0: 0, x1: width, y1: bleedV }],
       ],
       bottom: [
-        [bl, { x0: 0, y0: height - b, x1: b + r, y1: height }],
-        [br, { x0: width - b - r, y0: height - b, x1: width, y1: height }],
+        [bl, { x0: 0, y0: height - bleedV, x1: bleedH + r, y1: height }],
+        [br, { x0: width - bleedH - r, y0: height - bleedV, x1: width, y1: height }],
       ],
       left: [
-        [tl, { x0: 0, y0: b, x1: b, y1: b + r }],
-        [bl, { x0: 0, y0: height - b - r, x1: b, y1: height - b }],
+        [tl, { x0: 0, y0: bleedV, x1: bleedH, y1: bleedV + r }],
+        [bl, { x0: 0, y0: height - bleedV - r, x1: bleedH, y1: height - bleedV }],
       ],
       right: [
-        [tr, { x0: width - b, y0: b, x1: width, y1: b + r }],
-        [br, { x0: width - b, y0: height - b - r, x1: width, y1: height - b }],
+        [tr, { x0: width - bleedH, y0: bleedV, x1: width, y1: bleedV + r }],
+        [br, { x0: width - bleedH, y0: height - bleedV - r, x1: width, y1: height - bleedV }],
       ],
     };
     for (const edge of artEdges) {

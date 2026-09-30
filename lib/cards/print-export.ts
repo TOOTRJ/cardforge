@@ -27,6 +27,12 @@ import { z } from "zod";
 // bake's 1600 px inlined copy — what every Pro export (deck and selection
 // PDFs, their HD ZIP images) prints from. Clean-download only, like the
 // bleed: a watermarked viewer's image is capped at 750 px.
+//
+// MakePlayingCards (TODO 6.1, `bleed=mpc`): the image MPC's upload asks for
+// on a poker-size card — its own bleed PER AXIS (MPC_BLEED_IN), always
+// PORTRAIT (a Battle or Split is turned into the card the way every print
+// turns it, lib/render/card-pdf.ts). Otherwise the bleed's rules: square,
+// live, PNG only, clean-download only.
 // ---------------------------------------------------------------------------
 
 /** The print resolutions a card image comes in: 600 ppi is the HD render
@@ -43,6 +49,48 @@ export const CARD_TRIM_IN = { width: 2.5, height: 3.5 } as const;
 
 /** The bleed on every side, in inches: 1/8 in = 3.175 mm (TODO 6.1a). */
 export const BLEED_IN = 0.125;
+
+/** A bleed PER AXIS, in inches, on the PORTRAIT card: `x` on its left and
+ *  right edges, `y` on its top and bottom (a landscape render is the card
+ *  turned, so its horizontal edges take `y` — lib/render/card-print.ts). */
+export type BleedInches = { x: number; y: number };
+
+/**
+ * MakePlayingCards' poker-size card (2.5 × 3.5 in), as MPC's own upload pages
+ * ask for it (checked 2026-09-29): "the minimum image upload size
+ * requirements are 822 x 1122 pixels (300DPI)", of which "36 pixels each
+ * side based on a 300DPI image" is bleed, scaled with the resolution ("If
+ * your image upload is 900DPI, then the bleeding area for each side would
+ * multiply to 108px") — https://www.makeplayingcards.com/pops/faq-photo.html,
+ * and the product page's "1/8" (approx 36 pixels based on a 300dpi image)"
+ * (…/design/custom-blank-card-traditional-size.html). So 36 / 300 in =
+ * 0.12 in on BOTH axes: 822 × 1122 at 300 dpi, 1644 × 2244 at 600, 2192 ×
+ * 2992 at 800. (816 × 1110 — Card Conjurer's margin pack, 33 × 30 px — is the
+ * older size; MPC asks for 822 × 1122 now.) MPC's safe area is a further
+ * 36 px (0.12 in) inside each side of the trim: MPC_SAFE_IN.
+ */
+export const MPC_BLEED_IN: BleedInches = { x: 0.12, y: 0.12 };
+
+/** MPC's safe area: keep text this far inside the trim, in inches. */
+export const MPC_SAFE_IN = 0.12;
+
+/** A print render's bleed: none (`false`), the 1/8 in bleed (`true` — TODO
+ *  6.1a), or MakePlayingCards' (`"mpc"` — TODO 6.1). */
+export type PrintBleed = boolean | "mpc";
+
+/** The bleed per axis, in inches, of a named bleed (or a per-axis one, as
+ *  is). */
+export function printBleedInches(bleed: PrintBleed | BleedInches): BleedInches {
+  if (typeof bleed === "object") return bleed;
+  if (bleed === "mpc") return MPC_BLEED_IN;
+  return bleed ? { x: BLEED_IN, y: BLEED_IN } : { x: 0, y: 0 };
+}
+
+/** True when the print file is always PORTRAIT — MPC's card has one
+ *  orientation, so a landscape render (Battle, Split) is turned into it. */
+export function printTurnsPortrait(bleed: PrintBleed | BleedInches): boolean {
+  return bleed === "mpc";
+}
 
 /**
  * TODO 6.1b [decide]: is the 800 ppi export paid-only? RECOMMENDED yes, the
@@ -77,22 +125,33 @@ export function printScale(ppi: PrintPpi): number {
   return ppi / 600;
 }
 
-/** The bleed in px on every side at `ppi`: 75 at 600, 100 at 800. */
+/** The 1/8 in bleed in px on every side at `ppi`: 75 at 600, 100 at 800. */
 export function bleedPx(ppi: PrintPpi): number {
   return Math.round(BLEED_IN * ppi);
 }
 
-/** The output's pixel size: the trim at `ppi` (landscape swapped), plus the
- *  bleed on every side when asked. */
+/** A bleed in px per axis of the portrait card at `ppi` (a whole number of
+ *  px — MPC's is 72 at 600 ppi, 96 at 800). */
+export function bleedPxPerAxis(ppi: number, bleed: PrintBleed | BleedInches): { x: number; y: number } {
+  const inches = printBleedInches(bleed);
+  return { x: Math.round(inches.x * ppi), y: Math.round(inches.y * ppi) };
+}
+
+/** The output's pixel size: the trim at `ppi` (landscape swapped — unless
+ *  the file is always portrait, MPC), plus the bleed per axis when asked.
+ *  `bleedX` / `bleedY` are the file's own left-right / top-bottom bleed. */
 export function printPixelSize(
-  ppi: PrintPpi,
-  opts: { bleed: boolean; landscape?: boolean },
-): { width: number; height: number; bleed: number } {
+  ppi: number,
+  opts: { bleed: PrintBleed | BleedInches; landscape?: boolean },
+): { width: number; height: number; bleedX: number; bleedY: number } {
   const w = Math.round(CARD_TRIM_IN.width * ppi);
   const h = Math.round(CARD_TRIM_IN.height * ppi);
-  const bleed = opts.bleed ? bleedPx(ppi) : 0;
-  const [tw, th] = opts.landscape ? [h, w] : [w, h];
-  return { width: tw + 2 * bleed, height: th + 2 * bleed, bleed };
+  const axis = bleedPxPerAxis(ppi, opts.bleed);
+  if (opts.landscape && !printTurnsPortrait(opts.bleed)) {
+    // The card turned: its long side runs across, its x bleed up and down.
+    return { width: h + 2 * axis.y, height: w + 2 * axis.x, bleedX: axis.y, bleedY: axis.x };
+  }
+  return { width: w + 2 * axis.x, height: h + 2 * axis.y, bleedX: axis.x, bleedY: axis.y };
 }
 
 const ppiParam = z.enum(["600", "800"]);
@@ -103,9 +162,21 @@ export function parsePpiParam(value: string | null | undefined): PrintPpi {
   return parsed.success ? (Number(parsed.data) as PrintPpi) : DEFAULT_PRINT_PPI;
 }
 
-/** The routes' `bleed` query value: "1" or "true" adds the bleed. */
+/** The routes' `bleed` query value: "1" or "true" adds the 1/8 in bleed
+ *  (the PDF route reads only this). */
 export function parseBleedParam(value: string | null | undefined): boolean {
   return value === "1" || value === "true";
+}
+
+/** The png route's `bleed` query value: "mpc" is MakePlayingCards' file
+ *  (TODO 6.1), "1" / "true" the 1/8 in bleed, anything else none. */
+export function parsePrintBleedParam(value: string | null | undefined): PrintBleed {
+  return value === "mpc" ? "mpc" : parseBleedParam(value);
+}
+
+/** The query value of a bleed (null: none). */
+function bleedQueryValue(bleed: PrintBleed): string | null {
+  return bleed === "mpc" ? "mpc" : bleed ? "1" : null;
 }
 
 /** The png route's `print` query value: "1" or "true" asks for the PRINT
@@ -114,30 +185,34 @@ export function parsePrintParam(value: string | null | undefined): boolean {
   return value === "1" || value === "true";
 }
 
-/** What the png route is asked to print: the resolution, the bleed, and
- *  whether the plain 600 ppi card is wanted as the print render (`print`). */
-export type PrintRequest = { ppi: PrintPpi; bleed: boolean; print?: boolean };
+/** What the png route is asked to print: the resolution, the bleed (none,
+ *  1/8 in, MPC's), and whether the plain 600 ppi card is wanted as the
+ *  print render (`print`). */
+export type PrintRequest = { ppi: PrintPpi; bleed: PrintBleed; print?: boolean };
 
-/** True when a request asks for a print render (800 ppi, the bleed, or
+/** True when a request asks for a print render (800 ppi, a bleed, or
  *  `print`) rather than the plain HD/default image. */
 export function isPrintRequest(opts: PrintRequest): boolean {
-  return opts.print === true || opts.ppi !== DEFAULT_PRINT_PPI || opts.bleed;
+  return opts.print === true || opts.ppi !== DEFAULT_PRINT_PPI || opts.bleed !== false;
 }
 
 /** A card's print PNG URL: always square, never a preset (the resolution is
  *  the `ppi`), and always a PRINT render — at 600 ppi without a bleed it
  *  says so (`print=1`), since `ppi=600` alone is the plain HD download. */
-export function cardPrintPngHref(cardId: string, opts: { ppi: PrintPpi; bleed: boolean }): string {
+export function cardPrintPngHref(cardId: string, opts: { ppi: PrintPpi; bleed: PrintBleed }): string {
   const print = isPrintRequest(opts) ? "" : "&print=1";
-  return `/api/cards/${cardId}/png?ppi=${opts.ppi}&corners=square${opts.bleed ? "&bleed=1" : ""}${print}`;
+  const bleed = bleedQueryValue(opts.bleed);
+  return `/api/cards/${cardId}/png?ppi=${opts.ppi}&corners=square${bleed ? `&bleed=${bleed}` : ""}${print}`;
 }
 
 /** The print PNG's file name: `<slug>-800ppi.png`, `<slug>-bleed.png`,
- *  `<slug>-800ppi-bleed.png`, or `<slug>-print.png` (600 ppi, no bleed). */
-export function cardPrintFilename(slug: string, opts: { ppi: PrintPpi; bleed: boolean }): string {
+ *  `<slug>-800ppi-bleed.png`, `<slug>-mpc.png`, `<slug>-800ppi-mpc.png`, or
+ *  `<slug>-print.png` (600 ppi, no bleed). */
+export function cardPrintFilename(slug: string, opts: { ppi: PrintPpi; bleed: PrintBleed }): string {
   const parts = [slug];
   if (opts.ppi !== DEFAULT_PRINT_PPI) parts.push(`${opts.ppi}ppi`);
-  if (opts.bleed) parts.push("bleed");
+  if (opts.bleed === "mpc") parts.push("mpc");
+  else if (opts.bleed) parts.push("bleed");
   if (parts.length === 1) parts.push("print");
   return `${parts.join("-")}.png`;
 }

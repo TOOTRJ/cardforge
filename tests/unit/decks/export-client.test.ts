@@ -138,6 +138,40 @@ describe("runDeckExport", () => {
     }
   });
 
+  it("an MPC ZIP (TODO 6.1): MakePlayingCards' files, named -mpc, in a -mpc ZIP", async () => {
+    const mpcPng = new Uint8Array(
+      await sharp({ create: { width: 1644, height: 2244, channels: 3, background: { r: 0, g: 0, b: 0 } } }).png().toBuffer(),
+    );
+    const urls: string[] = [];
+    const inner = fakeFetch();
+    const result = await runDeckExport(
+      { deckId: "d1", kind: "zip", quality: "mpc", layout: "pages", bleed: true },
+      {
+        fetchImpl: async (input, init) => {
+          urls.push(input);
+          if (input.includes("/api/cards/c1/png") || input.includes("/api/cards/c2/png")) {
+            return new Response(mpcPng as BodyInit, { headers: { "content-type": "image/png" } });
+          }
+          // c3 answers the 1 px render (not MPC's file): left out as failed.
+          return inner(input, init);
+        },
+        onProgress: () => {},
+      },
+    );
+    const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+    expect(cardUrls).toHaveLength(3);
+    expect(cardUrls.every((u) => u.endsWith("/png?ppi=600&corners=square&bleed=mpc"))).toBe(true);
+    expect(result.filename).toBe("gorgon-gaze-deck-mpc.zip");
+    expect(result.failed).toEqual(["Broken One"]);
+    const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+    expect(Object.keys(zip.files).filter((name) => name.startsWith("cards/")).sort()).toEqual([
+      "cards/",
+      "cards/01-stone-matriarch-mpc.png",
+      "cards/02-petrifying-glance-mpc.png",
+    ]);
+    expect(APPROX_BYTES_PER_CARD.mpc).toBeGreaterThan(APPROX_BYTES_PER_CARD.hd);
+  });
+
   it("takes the print options: sheet gap / guides / size and the bleed (TODO 6.15)", async () => {
     const bleedPng = new Uint8Array(
       await sharp({ create: { width: 66, height: 90, channels: 3, background: "#000000" } }).png().toBuffer(),

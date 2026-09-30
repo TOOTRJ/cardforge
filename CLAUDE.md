@@ -235,8 +235,10 @@ Rules and gotchas:
   `corners` is in the ETag. The CC importer cuts masters at the constant;
   the allow-listed MSE masters are normalised by Phase B
   (`scripts/lib/frame-corners.mjs`, run by the builders too) — `docs/FRAMES.md`.
-- PRINT exports (TODO 6.10 / 6.1a / 6.1b / 6.15): the PDF (card + sheets),
-  the 800 ppi / 1/8″ bleed PNGs (`?ppi=800`, `?bleed=1`) and the Pro
+- PRINT exports (TODO 6.10 / 6.1a / 6.1b / 6.15 / 6.1): the PDF (card + sheets),
+  the 800 ppi / 1/8″ bleed PNGs (`?ppi=800`, `?bleed=1`), MakePlayingCards'
+  file (`?bleed=mpc` — MPC's own bleed per axis, `MPC_BLEED_IN`, always
+  portrait; the MPC ZIP image size) and the Pro
   exports' 600 ppi print render (`?print=1` — every deck/selection PDF card
   and HD ZIP image, `exportCardHref` in `lib/decks/export-client.ts`) render
   through `lib/render/card-print.ts` — Satori draws the HD layout WITHOUT the art
