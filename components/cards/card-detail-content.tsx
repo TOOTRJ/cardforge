@@ -32,6 +32,7 @@ import { CardPreview } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
+import { frameTemplateOf } from "@/lib/cards/print-export";
 import { LikeButton } from "@/components/cards/like-button";
 import { RemixButton } from "@/components/cards/remix-button";
 import { ShareTargets } from "@/components/cards/share-targets";
@@ -384,6 +385,7 @@ export async function CardDetailContent({
               isPaid={entitlements.isPaid}
               canBatch={entitlements.allowBatchExport}
               downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
+              frameTemplate={frameTemplateOf(card.frame_style)}
             />
             <ShareTargets
               title={card.title}

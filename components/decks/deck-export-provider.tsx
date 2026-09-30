@@ -27,10 +27,13 @@ import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import {
   DeckExportError,
   formatBytes,
+  isCardsExportRequest,
+  runCardsExport,
   runDeckExport,
+  type CardsExportRequest,
   type DeckExportKind,
   type DeckExportProgress,
-  type DeckExportRequest,
+  type ExportRequest,
 } from "@/lib/decks/export-client";
 
 // ---------------------------------------------------------------------------
@@ -41,11 +44,22 @@ import {
 // ignore, clickable for stats + time left, with cancel; a toast + auto-save
 // when the file is ready, and a "Save file" fallback in case the browser
 // blocked the automatic download. One export at a time.
+//
+// It also runs My Cards' "Print / download selected" (TODO 6.15): a
+// CardsExportRequest goes through runCardsExport with the same card, toasts
+// and dialog — named "Card ZIP" instead of "Deck ZIP".
 // ---------------------------------------------------------------------------
+
+/** What is being exported — a deck, or a selection of cards. */
+type ExportSubject = "deck" | "cards";
+
+/** A selection export may carry its cards' titles, to name skipped ones. */
+export type StartExportRequest = ExportRequest | (CardsExportRequest & { titles?: Record<string, string> });
 
 export type DeckExportState = {
   id: number;
   kind: DeckExportKind;
+  subject: ExportSubject;
   deckTitle: string;
   status: "preparing" | "rendering" | "packaging" | "done" | "failed" | "cancelled";
   total: number;
@@ -61,7 +75,7 @@ export type DeckExportState = {
 type DeckExportContextValue = {
   active: DeckExportState | null;
   busy: boolean;
-  start: (request: DeckExportRequest) => void;
+  start: (request: StartExportRequest) => void;
   cancel: () => void;
   openDetails: () => void;
 };
@@ -74,10 +88,16 @@ export function useDeckExport(): DeckExportContextValue {
   return value;
 }
 
-const KIND_LABEL: Record<DeckExportKind, string> = {
-  zip: "Building deck ZIP",
-  pdf: "Building print PDF",
-};
+/** "Deck ZIP" / "Card ZIP" / "Print PDF". */
+function fileLabel(kind: DeckExportKind, subject: ExportSubject): string {
+  if (kind === "pdf") return "Print PDF";
+  return subject === "deck" ? "Deck ZIP" : "Card ZIP";
+}
+
+/** Mid-sentence: "deck ZIP", "card ZIP", "print PDF". */
+function inSentence(label: string): string {
+  return label.charAt(0).toLowerCase() + label.slice(1);
+}
 
 function saveBlobUrl(url: string, name: string) {
   const anchor = document.createElement("a");
@@ -108,7 +128,7 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
   }, [fileUrl]);
 
   const start = useCallback(
-    (request: DeckExportRequest) => {
+    (request: StartExportRequest) => {
       if (busy) {
         toast.message("An export is already running — it'll finish first.");
         setDetailsOpen(true);
@@ -117,10 +137,13 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
       const controller = new AbortController();
       abortRef.current = controller;
       const id = Date.now();
+      const subject: ExportSubject = isCardsExportRequest(request) ? "cards" : "deck";
+      const file = fileLabel(request.kind, subject);
       setDismissed(false);
       setState({
         id,
         kind: request.kind,
+        subject,
         deckTitle: "",
         status: "preparing",
         total: 0,
@@ -132,9 +155,9 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
         error: null,
         file: null,
       });
-      toast.message(request.kind === "zip" ? "Building your deck ZIP in the background" : "Building your print PDF in the background", {
+      toast.message(`Building your ${inSentence(file)} in the background`, {
         description:
-          "Every card renders clean at full resolution, so a big deck can take a few minutes. Keep browsing — we'll let you know when it's ready.",
+          `Every card renders clean at full resolution, so a big ${subject === "deck" ? "deck" : "selection"} can take a few minutes. Keep browsing — we'll let you know when it's ready.`,
         duration: 8000,
       });
 
@@ -155,7 +178,13 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
         });
       };
 
-      void runDeckExport(request, { onProgress, signal: controller.signal })
+      const run = isCardsExportRequest(request)
+        ? runCardsExport(request, { onProgress, signal: controller.signal })
+        : runDeckExport(request, { onProgress, signal: controller.signal }).then((result) => ({
+            ...result,
+            title: result.deck.title,
+          }));
+      void run
         .then((result) => {
           const url = URL.createObjectURL(result.blob);
           setState((prev) =>
@@ -163,14 +192,14 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
               ? {
                   ...prev,
                   status: "done",
-                  deckTitle: result.deck.title,
+                  deckTitle: result.title,
                   finishedAt: Date.now(),
                   file: { url, name: result.filename, bytes: result.blob.size, cards: result.cardsIncluded },
                 }
               : prev,
           );
           saveBlobUrl(url, result.filename);
-          toast.success(`${result.deck.title} — ${request.kind === "zip" ? "deck ZIP" : "print PDF"} ready`, {
+          toast.success(`${result.title} — ${inSentence(file)} ready`, {
             description:
               result.failed.length > 0
                 ? `${result.failed.length} card${result.failed.length === 1 ? "" : "s"} couldn't render and ${result.failed.length === 1 ? "was" : "were"} skipped. Check your downloads.`
@@ -191,7 +220,7 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
             return;
           }
           if (error instanceof DeckExportError && error.code === "UPGRADE_REQUIRED") {
-            upgrade.open("deck_export");
+            upgrade.open(subject === "deck" ? "deck_export" : "batch_export");
           }
           toast.error(message);
         })
@@ -217,7 +246,13 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
   const generationActive = generation.phase !== "idle";
   const percent =
     state && state.total > 0 ? Math.round((state.done / state.total) * 100) : state?.status === "done" ? 100 : 0;
-  const label = state ? (state.status === "done" ? (state.kind === "zip" ? "Deck ZIP ready" : "Print PDF ready") : state.status === "failed" ? "Export failed" : KIND_LABEL[state.kind]) : "";
+  const label = state
+    ? state.status === "done"
+      ? `${fileLabel(state.kind, state.subject)} ready`
+      : state.status === "failed"
+        ? "Export failed"
+        : `Building ${inSentence(fileLabel(state.kind, state.subject))}`
+    : "";
 
   return (
     <DeckExportContext.Provider value={value}>
@@ -277,7 +312,7 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
             </span>
             <span className="text-xs leading-5 text-muted">
               {state.status === "preparing" ? (
-                <>Reading the deck…</>
+                <>{state.subject === "deck" ? "Reading the deck…" : "Reading your selection…"}</>
               ) : state.status === "rendering" ? (
                 <>Rendering cards clean at full size. Tap for time left — safe to keep browsing.</>
               ) : state.status === "packaging" ? (
@@ -357,7 +392,7 @@ function DeckExportDetailsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Icon className="h-4 w-4 text-accent" aria-hidden />
-            {state.kind === "zip" ? "Deck ZIP" : "Print PDF"}
+            {fileLabel(state.kind, state.subject)}
             {state.deckTitle ? <span className="font-normal text-muted">· {state.deckTitle}</span> : null}
           </DialogTitle>
           <DialogDescription>

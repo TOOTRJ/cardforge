@@ -203,8 +203,10 @@ describe("every caller names its corner", () => {
     // The stored PNG (save-time bake and the platform re-bake): round.
     expect(read("lib/cards/bake-render.ts")).toMatch(/renderCardImage\(previewData, "hd", \{[^}]*corners: "round"/);
     expect(read("lib/cards/rebake-batch.ts")).toMatch(/renderCardImage\(previewData, "hd", \{[^}]*corners: "round"/);
-    // The PDF card and sheets: square.
-    expect(read("app/api/cards/[id]/pdf/route.ts")).toMatch(/renderCardImage\(previewData, "hd", \{[^}]*corners: "square"/);
+    // The PDF card and sheets: the PRINT path (TODO 6.10), which squares
+    // every render it makes — as do the 800 ppi / bleed PNGs.
+    expect(read("app/api/cards/[id]/pdf/route.ts")).toMatch(/renderCardPrint\(previewData, \{/);
+    expect(read("lib/render/card-print.ts")).toMatch(/squareCardCorners\(trim, trimW, trimH, cornerFills, radius\)/);
     // The deck export (PDF sheets AND the ZIP): square, named explicitly.
     expect(read("lib/decks/export-client.ts")).toContain('cardPngHref(card.id, { preset: quality, corners: "square" })');
   });

@@ -66,8 +66,9 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
       description: "Clean, print-ready PDF export is a Plus feature.",
     },
     batch_export: {
-      title: "Batch & whole-deck export",
-      description: "Export a whole deck in one click with Pro.",
+      title: "Print sheets & batch export",
+      description:
+        "Pro prints any cards you pick onto sheets — mixed, with your own copies, spacing and cut guides — and exports a whole deck in one click.",
     },
     // AI deck/card generation itself is open to every tier — credits are
     // the only limiter (owner decision 2026-07-28). The ONE tier-gated AI
