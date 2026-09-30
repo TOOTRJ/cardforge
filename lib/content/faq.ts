@@ -43,7 +43,7 @@ export const CARD_MAKER_FAQ: FaqEntry[] = [
   },
   {
     q: "Can I print my custom MTG cards?",
-    a: "You can export your card as a high-resolution PNG and then print it at home or at a print shop. Custom fan-made cards are intended for personal, non-commercial use — such as playtesting a new Commander deck or sharing with your playgroup. PipGlyph does not use official Wizards of the Coast card backs, fonts, or set symbols.",
+    a: "Yes. Every account can download a card as a PNG to print at home. Plus and Pro download it without the watermark: as a PDF at true card size, or as a print PNG at 600 or 800 ppi, with an optional 1/8-inch bleed for print shops or sized for MakePlayingCards. Pro also prints sheets of any cards you pick, or a whole deck. Custom fan-made cards are intended for personal, non-commercial use — such as playtesting a new Commander deck or sharing with your playgroup. PipGlyph does not use official Wizards of the Coast card backs, fonts, or set symbols.",
   },
   {
     q: "What is the difference between PipGlyph and MTG Cardsmith or Card Conjurer?",
@@ -147,11 +147,31 @@ const SHARING_FAQ: FaqEntry[] = [
 const EXPORTS_FAQ: FaqEntry[] = [
   {
     q: "What export formats does PipGlyph support?",
-    a: "Cards export as PNG at two sizes — a share-friendly 750×1050 and a print-oriented 1500×2100 — and as a print-ready PDF sized for standard card dimensions (2.5 × 3.5 inches). Every account gets the 750×1050 PNG with the PipGlyph mark; the 1500×2100 PNG and the PDF are watermark-free on Plus and Pro, and Pro also exports a deck's custom cards as 3 × 3 proxy sheets. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
+    a: "Every account can download a card as a 750 × 1050 PNG or JPEG that carries the PipGlyph mark, with rounded or square corners. Plus and Pro download without the mark: a 1500 × 2100 PNG or JPEG; print PNGs at 600 or 800 ppi, with an optional 1/8-inch bleed or sized for MakePlayingCards; and a PDF of one card at true size, with or without the bleed. Pro adds print sheets (copies of one card, any cards you select in My Cards, or a whole deck) and ZIPs of card images. Your account data (profile, cards, decks, comments) downloads as JSON from Settings.",
   },
   {
     q: "How do I print a custom card at real card size?",
-    a: "On Plus or Pro, use the PDF export from the card page's download menu and print it at 100% scale (turn OFF 'fit to page' in your print dialog). The PDF is laid out for standard MTG card dimensions — 63 × 88 mm — so the printed card matches a sleeved real card. For best results print on heavy matte stock or insert the cut-out in a sleeve in front of a basic land.",
+    a: "On Plus or Pro, open the card's Download menu, choose PDF, then One card. Print it at 100% scale, with 'fit to page' turned OFF in your print dialog. The page is exactly 2.5 × 3.5 inches, so the printed card matches a sleeved real card. On Pro, 'Sheet of copies' puts 9 copies on a US Letter or A4 page instead. Measure the first print with a ruler before printing the rest. For best results, print on heavy matte stock, or sleeve the cut-out in front of a basic land.",
+  },
+  {
+    q: "Should I print at 600 or 800 ppi?",
+    a: "600 ppi (1500 × 2100 pixels) is plenty for home printers and most print shops, and every PDF is printed from it. Choose 800 ppi (2000 × 2800) when a shop asks for it. At 800 ppi the text, mana symbols and your art are drawn at 800 ppi, but the frame artwork is enlarged from its 600 ppi master, and the download says so. The 800 ppi file is a PNG with square corners, on Plus and Pro.",
+  },
+  {
+    q: "What is a bleed, and do I need one?",
+    a: "A bleed is extra card printed past the cut line. If the cut drifts, you see a little more card instead of a white sliver. Print shops usually ask for 1/8 inch, and that is what PipGlyph adds on every side: the file becomes 2.75 × 3.75 inches (1650 × 2250 pixels at 600 ppi). The bleed continues the card's own edge outward: the border where the card has one, the art where the art runs to the edge. Nothing is scaled, so the card inside the cut line is unchanged. It comes as a PNG, or as a PDF with crop marks on the cut lines, on Plus and Pro; Pro's print sheets take it too. At home it is optional, and fewer cards fit on a sheet with it.",
+  },
+  {
+    q: "Can I print different cards on one sheet?",
+    a: "Yes, on Pro. In My Cards, select the cards (your own, or ones on the Liked tab) and choose Print / download. Print PDF lays them out on US Letter or A4 sheets, or one card per page. On sheets you choose copies per card, no gap or a 1/16-inch gap, corner marks or full-length cut lines, and a card size of 2.5 × 3.5 inches or 63 × 88 mm. A sheet holds 9 cards. With the 1/8-inch bleed it holds 6 on Letter or 8 on A4, printed landscape. Cut guides print only in the margins and gaps, never on a card, and one export takes up to 150 cards. The same options are in a deck's export and in a single card's 'Sheet of copies'.",
+  },
+  {
+    q: "Can I order my cards from MakePlayingCards?",
+    a: "Yes. PipGlyph exports the image MakePlayingCards asks for on its poker-size cards: 822 × 1122 at 300 dpi, delivered at 600 ppi as 1644 × 2244 pixels (2192 × 2992 at 800 ppi). The file includes MPC's own bleed and has square corners. It is always portrait: a Battle or Split is turned upright, the way it is printed. On Plus and Pro, choose MakePlayingCards as the Bleed on the download's Image tab. On Pro, a ZIP of MPC files comes from a selection in My Cards or from a deck's export. PipGlyph exports card fronts only, so set the back in MPC's builder. Proxies are for your own table, never for sale.",
+  },
+  {
+    q: "Do print downloads use my full-resolution art?",
+    a: "Yes. Every PDF (one card, a sheet or a deck), the 800 ppi, bleed and MakePlayingCards images, and the HD and MakePlayingCards images in a Pro ZIP place your original uploaded art at full resolution. This matters most on full-art and borderless frames, where the art fills the card. The whole card is 1500 × 2100 pixels at 600 ppi and 2000 × 2800 at 800 ppi, so art that large prints without being enlarged.",
   },
   {
     q: "Do exported cards look exactly like the editor preview?",
