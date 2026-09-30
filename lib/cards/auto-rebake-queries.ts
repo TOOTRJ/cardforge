@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { buildCardPath } from "@/lib/cards/utils";
@@ -39,12 +40,35 @@ export type AutoRebakeOverview = {
   readAt: number;
 };
 
+/** Cache tag of the owed-re-bake count the admin dashboard tile reads. */
+export const REBAKE_OWED_TAG = "rebake-owed";
+/** How long the tile may reuse that count (seconds). */
+export const REBAKE_OWED_REVALIDATE_SECONDS = 60;
+
+/**
+ * The owed count (countSweepCandidates: a service-role head count over every
+ * published card), reused across requests for up to a minute — /dashboard is
+ * an admin's landing page, and the count needn't run on every visit. Keyed by
+ * the excluded poison ids (a Retry or a new strike changes them → a fresh
+ * count) and the sweep version (the Data Cache can outlive a deploy; a
+ * sweep bump must not show the old version's count). A failed count throws, so
+ * nothing is cached; the caller's catch turns it into null.
+ */
+const countOwedRebakesCached = unstable_cache(
+  async (excludeIds: string[]): Promise<number> => countSweepCandidates(createAdminClient(), excludeIds),
+  [REBAKE_OWED_TAG, `sweep-v${latestSweepVersion()}`],
+  { revalidate: REBAKE_OWED_REVALIDATE_SECONDS, tags: [REBAKE_OWED_TAG] },
+);
+
 /** `poisonDetails: false` skips looking the poisoned cards up (titles,
- *  links) — for the admin dashboard tile, which prints only their count. */
+ *  links) — for the admin dashboard tile, which prints only their count.
+ *  `cachePending: true` reads the owed count through the ≤60 s cache above
+ *  (the tile); /admin/renders keeps the default, a fresh count, because its
+ *  Pause / Resume / Retry act on what it shows. */
 export async function getAutoRebakeOverview(
-  options: { poisonDetails?: boolean } = {},
+  options: { poisonDetails?: boolean; cachePending?: boolean } = {},
 ): Promise<AutoRebakeOverview> {
-  const { poisonDetails = true } = options;
+  const { poisonDetails = true, cachePending = false } = options;
   const base: AutoRebakeOverview = {
     state: EMPTY_AUTO_REBAKE_STATE,
     pending: null,
@@ -67,7 +91,7 @@ export async function getAutoRebakeOverview(
 
   const poisonIds = state.poison.map((p) => p.id);
   const [pending, poisonCards] = await Promise.all([
-    countSweepCandidates(admin, poisonIds).catch(() => null),
+    (cachePending ? countOwedRebakesCached(poisonIds) : countSweepCandidates(admin, poisonIds)).catch(() => null),
     poisonDetails ? describePoison(admin, state.poison) : Promise.resolve<PoisonCard[]>([]),
   ]);
   return { ...base, state, pending, poisonCards };

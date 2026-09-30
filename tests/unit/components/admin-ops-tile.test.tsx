@@ -35,7 +35,10 @@ afterEach(cleanup);
 
 const NOW = Date.parse("2026-09-29T12:00:00.000Z");
 const tick: VerificationReview = { verified: true, verifiedLayoutVersion: CARD_LAYOUT_VERSION, verifiedOverrideHash: "none", scoreJson: { overall: 12 } };
-const staleTick: VerificationReview = { ...tick, verifiedOverrideHash: "deadbeef", scoreJson: null };
+// A stale tick carrying a LOW recorded score: it was measured against an
+// older override, so it counts only as "need re-verification" — never in the
+// worst match or the "scored under 90 %" line (owner, 2026-09-29).
+const staleTick: VerificationReview = { ...tick, verifiedOverrideHash: "deadbeef", scoreJson: { overall: 40 } };
 
 const frames = summariseFrameVerification(
   new Map<string, VerificationReview>([
@@ -104,11 +107,17 @@ describe("AdminOpsTile", () => {
     const table = screen.getByTestId("admin-ops-templates");
     expect(table.querySelectorAll("tr[data-template]")).toHaveLength(FRAME_TEMPLATE_VALUES.length);
     const m15 = table.querySelector('tr[data-template="m15"]')!;
+    // m15/b's stale 60 % is left out: the worst CURRENT match is 88 %.
     expect([...m15.querySelectorAll("td")].map((td) => td.textContent)).toEqual([eraGroupFrameLabel("m15"), "3/7", "1", "4", "88%"]);
-    expect(screen.getByTestId("admin-ops-frames-low-match").textContent).toBe(" 2 ticks scored under a 90% frame match.");
+    // The two current m15 ticks — not the two stale ones.
+    expect(screen.getByTestId("admin-ops-frames-low-match").textContent).toBe(
+      " 2 current ticks scored under a 90% frame match.",
+    );
     expect(m15.querySelector("a")!.getAttribute("href")).toBe("/admin/frame-compare?template=m15");
-    const untouched = table.querySelector('tr[data-template="retro"]')!;
-    expect(untouched.querySelectorAll("td")[4].textContent).toBe("—");
+    // retro's only tick is stale (its score came from an older override):
+    // no current score, no worst match.
+    const staleOnly = table.querySelector('tr[data-template="retro"]')!;
+    expect(staleOnly.querySelectorAll("td")[4].textContent).toBe("—");
   });
 
   it("shows an idle sweep's owed count, last run and poison count, linking /admin/renders", () => {

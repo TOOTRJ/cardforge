@@ -36,9 +36,15 @@ import type {
 //   * frames   = /admin/frame-compare's checklist: every template in
 //                FRAME_TEMPLATE_VALUES × FRAME_COLOR_KEYS, "needs
 //                re-verification" from verificationState() (a stale tick is
-//                still verified — the creator still offers the combo);
+//                still verified — the creator still offers the combo). The
+//                recorded frame match (worst match, "scored under 90 %")
+//                reads CURRENT ticks only: a stale tick's score was measured
+//                against an older renderer or override, so it stays in the
+//                "needs re-verification" count and nowhere else (owner,
+//                2026-09-29);
 //   * re-bake  = /admin/renders: the pending estimate (countSweepCandidates,
-//                poison list excluded), the poison list, the lease/pause;
+//                poison list excluded — here reused for up to 60 s, the page
+//                counts fresh), the poison list, the lease/pause;
 //   * requests = /admin/frame-requests' default 30-day window.
 //
 // Nothing that names a card leaves the server: the poison list is a count
@@ -65,12 +71,13 @@ export type TemplateVerificationRow = {
   /** Ticked, but the renderer or the layout override moved since. */
   stale: number;
   unverified: number;
-  /** The worst frame match recorded with a tick, in percent (100 − the
-   *  recorded edge difference, frameMatchPct); null when no tick carries a
-   *  score. */
+  /** The worst frame match recorded with a CURRENT tick, in percent (100 −
+   *  the recorded edge difference, frameMatchPct); null when no current tick
+   *  carries a score. A stale tick's score came from an older renderer or
+   *  override — it counts in `stale` only. */
   worstMatchPct: number | null;
-  /** Ticks whose recorded match is below the sign-off's warning line
-   *  (isLowFrameScore). */
+  /** CURRENT ticks whose recorded match is below the sign-off's warning line
+   *  (isLowFrameScore); stale ticks are left out, as for worstMatchPct. */
   lowMatch: number;
 };
 
@@ -79,7 +86,8 @@ export type FrameVerificationSummary = {
   verified: number;
   stale: number;
   unverified: number;
-  /** Ticks whose recorded frame match is below the warning line. */
+  /** Current ticks whose recorded frame match is below the warning line
+   *  (stale ticks are only in `stale`). */
   lowMatch: number;
   /** Templates with every combo verified and none stale. */
   completeTemplates: number;
@@ -125,7 +133,13 @@ export function summariseFrameVerification(
         );
         if (!state.verified) continue;
         verified += 1;
-        if (state.stale) stale += 1;
+        // A stale tick's recorded score was measured against an older
+        // renderer or override: it needs re-verification, and that is the
+        // only count it joins — never the worst match or the low-match count.
+        if (state.stale) {
+          stale += 1;
+          continue;
+        }
         const difference = recordedOverall(review?.scoreJson);
         if (difference == null) continue;
         worstDifference = worstDifference == null ? difference : Math.max(worstDifference, difference);
@@ -183,7 +197,8 @@ export type RebakeTileSummary = {
   /** Who holds the live lease (null when none). */
   runner: LeaseHolder | null;
   /** Published cards that may owe a re-bake (an upper bound, the poison
-   *  list excluded) — null when the count failed. */
+   *  list excluded; counted at most REBAKE_OWED_REVALIDATE_SECONDS ago) —
+   *  null when the count failed. */
   owed: number | null;
   /** Cards on the poison list (skipped until an admin retries them). */
   poisoned: number;

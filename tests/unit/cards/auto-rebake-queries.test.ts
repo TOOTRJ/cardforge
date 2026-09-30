@@ -4,12 +4,39 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // getAutoRebakeOverview: /admin/renders looks the poisoned cards up (title,
 // link); the admin dashboard tile (TODO 7.4) asks for `poisonDetails: false`
 // and prints only their count, so it must not query cards/profiles at all.
+// The tile also asks `cachePending: true`: the owed count (a service-role
+// head count over every published card) is reused for up to 60 s, while
+// /admin/renders keeps counting fresh (owner, 2026-09-29).
 // ---------------------------------------------------------------------------
+
+type CacheOptions = { revalidate?: number | false; tags?: string[] };
 
 const mocks = vi.hoisted(() => ({
   tables: [] as string[],
   readSweepState: vi.fn(),
   countSweepCandidates: vi.fn(),
+  // What unstable_cache was configured with, and a stand-in Data Cache that
+  // keeps what the wrapped function resolved to per argument list — and,
+  // like Next's, nothing when it throws.
+  cacheConfigs: [] as Array<{ keyParts: string[] | undefined; options: CacheOptions | undefined }>,
+  dataCache: new Map<string, unknown>(),
+}));
+
+vi.mock("next/cache", () => ({
+  unstable_cache: <A extends unknown[], R>(
+    fn: (...args: A) => Promise<R>,
+    keyParts?: string[],
+    options?: CacheOptions,
+  ) => {
+    mocks.cacheConfigs.push({ keyParts, options });
+    return async (...args: A): Promise<R> => {
+      const key = JSON.stringify([keyParts, args]);
+      if (mocks.dataCache.has(key)) return mocks.dataCache.get(key) as R;
+      const value = await fn(...args);
+      mocks.dataCache.set(key, value);
+      return value;
+    };
+  },
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -36,13 +63,20 @@ vi.mock("@/lib/cards/auto-rebake", () => ({
   countSweepCandidates: mocks.countSweepCandidates,
 }));
 
-import { getAutoRebakeOverview } from "@/lib/cards/auto-rebake-queries";
+import {
+  getAutoRebakeOverview,
+  REBAKE_OWED_REVALIDATE_SECONDS,
+  REBAKE_OWED_TAG,
+} from "@/lib/cards/auto-rebake-queries";
 import { EMPTY_AUTO_REBAKE_STATE } from "@/lib/cards/auto-rebake-state";
+import { latestSweepVersion } from "@/lib/cards/layout-version";
 
 const ID = "44444444-4444-4444-8444-444444444444";
 
 beforeEach(() => {
   mocks.tables.length = 0;
+  mocks.dataCache.clear();
+  mocks.countSweepCandidates.mockReset();
   mocks.readSweepState.mockResolvedValue({
     ...EMPTY_AUTO_REBAKE_STATE,
     poison: [{ id: ID, error: "Art unavailable", failures: 3, at: "2026-09-29T10:00:00.000Z" }],
@@ -69,5 +103,51 @@ describe("getAutoRebakeOverview", () => {
     // The pending count still leaves the poisoned cards out.
     expect(mocks.countSweepCandidates).toHaveBeenCalledWith(expect.anything(), [ID]);
     expect(overview.pending).toBe(5);
+  });
+});
+
+describe("getAutoRebakeOverview — the owed count's cache", () => {
+  it("caches the count for 60 s under its tag, keyed by the sweep version", () => {
+    expect(REBAKE_OWED_REVALIDATE_SECONDS).toBe(60);
+    expect(mocks.cacheConfigs).toEqual([
+      {
+        keyParts: [REBAKE_OWED_TAG, `sweep-v${latestSweepVersion()}`],
+        options: { revalidate: 60, tags: [REBAKE_OWED_TAG] },
+      },
+    ]);
+  });
+
+  it("reuses the count with cachePending: true — and /admin/renders' default still counts every time", async () => {
+    mocks.countSweepCandidates.mockResolvedValueOnce(5).mockResolvedValueOnce(4).mockResolvedValue(3);
+    const tile = await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+    const again = await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+    expect([tile.pending, again.pending]).toEqual([5, 5]);
+    expect(mocks.countSweepCandidates).toHaveBeenCalledTimes(1);
+    // The poisoned cards are still left out of the cached count.
+    expect(mocks.countSweepCandidates).toHaveBeenCalledWith(expect.anything(), [ID]);
+
+    const page = await getAutoRebakeOverview();
+    const pageAgain = await getAutoRebakeOverview();
+    expect([page.pending, pageAgain.pending]).toEqual([4, 3]);
+    expect(mocks.countSweepCandidates).toHaveBeenCalledTimes(3);
+  });
+
+  it("counts afresh when the poison list changes (a Retry, a new strike)", async () => {
+    mocks.countSweepCandidates.mockResolvedValueOnce(5).mockResolvedValueOnce(6);
+    await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+    mocks.readSweepState.mockResolvedValue({ ...EMPTY_AUTO_REBAKE_STATE, poison: [] });
+    const retried = await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+    expect(retried.pending).toBe(6);
+    expect(mocks.countSweepCandidates).toHaveBeenLastCalledWith(expect.anything(), []);
+  });
+
+  it("never caches a failed count: it reads null, and the next visit counts again", async () => {
+    mocks.countSweepCandidates.mockRejectedValueOnce(new Error("Counting pending re-bakes failed: timeout"));
+    mocks.countSweepCandidates.mockResolvedValueOnce(5);
+    const failed = await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+    expect(failed.pending).toBeNull();
+    const next = await getAutoRebakeOverview({ poisonDetails: false, cachePending: true });
+    expect(next.pending).toBe(5);
+    expect(mocks.countSweepCandidates).toHaveBeenCalledTimes(2);
   });
 });

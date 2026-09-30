@@ -81,6 +81,37 @@ describe("summariseFrameVerification", () => {
     expect(s.templates.find((row) => row.template === "m15")).toMatchObject({ worstMatchPct: null, lowMatch: 0 });
   });
 
+  it("reads the recorded match from CURRENT ticks only — a stale tick's score is only a re-verification", () => {
+    // Stale by a moved override, and stale by a renderer bump (m15token's
+    // tick predates v34 below): both scores were measured against a frame
+    // that no longer renders, so they join `stale` and nothing else.
+    const movedOverride = (overall: number) => current({ verifiedOverrideHash: "deadbeef", scoreJson: { overall } });
+    const s = summariseFrameVerification(
+      reviewsOf([
+        ["saga", "w", current({ verifiedLayoutVersion: 34, scoreJson: { overall: 4 } })],
+        ["saga", "u", movedOverride(30)],
+        ["saga", "b", movedOverride(15)],
+        ["m15token", "w", current({ verifiedLayoutVersion: 33, scoreJson: { overall: 40 } })],
+      ]),
+      {},
+      { currentVersion: 34 },
+    );
+    expect(s.templates.find((row) => row.template === "saga")).toMatchObject({
+      verified: 3,
+      stale: 2,
+      worstMatchPct: 96,
+      lowMatch: 0,
+    });
+    // Only a stale score recorded: no worst match to print.
+    expect(s.templates.find((row) => row.template === "m15token")).toMatchObject({
+      verified: 1,
+      stale: 1,
+      worstMatchPct: null,
+      lowMatch: 0,
+    });
+    expect(s).toMatchObject({ verified: 4, stale: 3, lowMatch: 0 });
+  });
+
   it("judges a tick against the template's CURRENT override hash", () => {
     const override = { title: { rect: { topPct: 5 } } };
     const hash = overrideHash(override);

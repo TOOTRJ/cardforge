@@ -28,7 +28,9 @@ export async function getAdminOpsSummary(): Promise<AdminOpsSummary | null> {
   const [reviews, overrides, rebake, requests] = await Promise.all([
     getFrameReviews(),
     getFrameProfileOverrides(),
-    getAutoRebakeOverview({ poisonDetails: false }),
+    // The owed count is a service-role head count over every published
+    // card: reused for up to a minute (REBAKE_OWED_REVALIDATE_SECONDS).
+    getAutoRebakeOverview({ poisonDetails: false, cachePending: true }),
     getFrameRequestSummary("30"),
   ]);
   // getFrameRequestSummary re-checks is_admin (same request-cached profile).

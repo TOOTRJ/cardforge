@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // non-admin (or signed-out) caller gets null before ANY read, so the
 // service-role render_sweep_state read can't run for them even if a page
 // forgot its own gate. For an admin it reads the four sources once each,
-// without looking up the poisoned cards (the tile prints a count).
+// without looking up the poisoned cards (the tile prints a count), and reads
+// the owed count through its minute-long cache.
 // ---------------------------------------------------------------------------
 
 const mocks = vi.hoisted(() => ({
@@ -78,7 +79,8 @@ describe("getAdminOpsSummary", () => {
     const summary = await getAdminOpsSummary();
     expect(summary).not.toBeNull();
     for (const reader of readers()) expect(reader).toHaveBeenCalledTimes(1);
-    expect(mocks.getAutoRebakeOverview).toHaveBeenCalledWith({ poisonDetails: false });
+    // No poisoned-card lookup, and the owed count through its ≤60 s cache.
+    expect(mocks.getAutoRebakeOverview).toHaveBeenCalledWith({ poisonDetails: false, cachePending: true });
     expect(mocks.getFrameRequestSummary).toHaveBeenCalledWith("30");
 
     expect(summary!.readAt).toBe(READ_AT);

@@ -136,7 +136,7 @@ function FramesSection({ frames }: { frames: FrameVerificationSummary }) {
         {`${fmt(frames.completeTemplates)} of ${plural(frames.templates.length, "template")} fully verified.`}
         {frames.lowMatch > 0 ? (
           <span className="text-gold" data-testid="admin-ops-frames-low-match">
-            {` ${plural(frames.lowMatch, "tick")} scored under a ${SIGN_OFF_LOW_MATCH_PCT}% frame match.`}
+            {` ${plural(frames.lowMatch, "current tick")} scored under a ${SIGN_OFF_LOW_MATCH_PCT}% frame match.`}
           </span>
         ) : null}
       </p>
@@ -280,7 +280,7 @@ function TemplateTable({ frames }: { frames: FrameVerificationSummary }) {
               <th className="px-3 py-2 text-right font-medium">Unverified</th>
               <th
                 className="px-4 py-2 text-right font-medium"
-                title="The worst frame match recorded with a tick (100 − the recorded edge difference)"
+                title="The worst frame match recorded with a current tick (100 − the recorded edge difference). Ticks that need re-verification are left out: their scores were measured before the renderer or the layout override changed."
               >
                 Worst match
               </th>
