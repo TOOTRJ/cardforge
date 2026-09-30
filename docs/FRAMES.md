@@ -143,7 +143,8 @@ into `.frames-build/` — 21 templates today (`CC_TEMPLATES` in
   token packs (4.48 / 4.50): m20token, m20tokentext, m20tokentall and their
   artifact templates m20tokenartifact, m20tokenartifacttext and
   m20tokenartifacttall — the textless pair re-cut 5 px onto the prints, the
-  type pill solid and the artifact name pill slate (PipGlyph composites,
+  colourless and artifact type pills darkened to the prints, every type pill
+  solid, the artifact name pill slate and solid (PipGlyph composites,
   "Full-art tokens" below).
 
 ```bash
@@ -1132,10 +1133,25 @@ frames bucket — never git:
   4.16's `m15artifact` recipe; their plates are M15's artifact set.
 - **PipGlyph composites** (owner decisions 2026-09-29; `finish` in the
   recipe, `compositeFinish` in `scripts/lib/cc-frames.mjs`, applied to CC's
-  flattened pixels before the re-cut and recorded in provenance):
+  flattened pixels before the re-cut, in order, and recorded in provenance;
+  an entry may name the colours it applies to, `finishFor`):
+  - the colourless and artifact TYPE pills are darkened to the prints
+    (round 14): the same print-fitted "tint" as the name pill's slate, on
+    CC's flat pill interior only (full weight at its α, none from the first
+    bevel α — the bevel, outline and rim keep CC's pixels). Measured behind
+    the type line (the pill's interior rows inset 25 px, x 620–1080, the ink
+    left out): the plain templates' `c` (`frameC`, a flat 209) takes a flat
+    rgb 164/149/143 at 65 % (`M20_COLOURLESS_TYPE_TINT`, `c` only) → rgb
+    176/165/160, luminance 168, the median of 4 colourless prints
+    (157–180); every colour of the artifact templates (the silver
+    `tokenFrameA`, 193) takes rgb 151/170/181 at 65 %
+    (`M20_ARTIFACT_TYPE_TINT`) → rgb 160/178/188, luminance 174, the median
+    of 16 artifact prints (160–190). The five coloured pills and the gold one
+    keep CC's colour (4–12 lighter than the scans: their offset);
   - the TYPE pill is solid, as every print's: CC draws its interior at
     α 204 (`c` 166), so a fifth of the art showed through; every pixel the
-    pack's Type mask covers keeps its colour and becomes opaque;
+    pack's Type mask covers keeps its colour and becomes opaque (after the
+    tint: a tint weighs CC's α);
   - the ARTIFACT templates' name pill is the prints' dark slate: CC's
     `tokenFrameA` pill is a silver gradient (luminance ~77 in the middle,
     ~246 at the caps: a white name read 3.5–5.7 : 1 in the bake), where 16
@@ -1144,8 +1160,13 @@ frames bucket — never git:
     interior through M15's Title mask (`M20_ARTIFACT_NAME_SLATE`; full weight
     at CC's α 230, none from α 244, so the rims and outline keep CC's silver
     or colour): luminance 63.5 behind the name, white ink 10.4 : 1, the caps
-    lighter (~105) as printed. `tests/unit/frames/edge-contract.test.ts`
-    holds every master to both.
+    lighter (~105) as printed. Then that pill is made SOLID (round 14,
+    `M20_ARTIFACT_SOLID_NAME_PILL`: α ≈ 246 → 255 through the same mask,
+    which covers nothing CC draws below α 230): on flat mid-grey art 61.5
+    behind the name, white ink 10.8 : 1.
+    `tests/unit/frames/edge-contract.test.ts` holds every master to all of
+    them (the tones within the prints' range and 2 of their median, the
+    coloured pills at CC's, the artifact name pill at α 255).
 - **Profile** (`M20TOKENTEXT` and the heights spread from it,
   `lib/cards/template-layout.ts`): the art to the ring (CC's bounds with
   7.6's overscan), the name in CC's box at `TITLE_SIZE_PCT` — snapped to
