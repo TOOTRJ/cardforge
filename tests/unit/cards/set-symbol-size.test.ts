@@ -15,11 +15,12 @@ import {
 } from "@/lib/cards/keyrune-metrics";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
 import { SET_SYMBOL_PRINTED_PX, printedSetSymbolPx } from "@/lib/cards/set-symbol-prints";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { getFrameProfile, SET_SYMBOL_KEYLINE } from "@/lib/cards/template-layout";
 import {
   KEYRUNE_EM_PER_BOX,
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
+  SET_SYMBOL_KEYLINE_EM,
   SET_SYMBOL_MAX_WIDTH_PCT,
 } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -35,7 +36,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // printed symbol was measured (lib/cards/set-symbol-prints.ts) draws at the
 // print's size instead — its glyph fitted inside the printed box by its ink,
 // never wider than 0.12 W — on every family frame but the full-art basics
-// (setSymbolFit "ink-box", 4.39's print-checked size).
+// (setSymbolFit "ink-box", 4.39's print-checked size). The printed box is
+// keyline-inclusive, so on a frame that draws a keyline round the glyph (the
+// borderless bars' white SET_SYMBOL_KEYLINE) the ink AND its ring fit it.
 // ---------------------------------------------------------------------------
 
 const HD = 1500;
@@ -164,18 +167,53 @@ describe("setSymbolSize on the family", () => {
     for (const template of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(template);
       if (p.setSymbolFit !== "ink") continue;
+      // A keylined bar draws the ring 0.05 em out on every side: it is part
+      // of the symbol as drawn, as the keyline is of the printed box.
+      const ringEm = p.setSymbolKeyline ? SET_SYMBOL_KEYLINE_EM : 0;
       for (const [code, [h, w]] of Object.entries(SET_SYMBOL_PRINTED_PX)) {
         const s = setSymbolSize(p, glyph(code));
         const { heightEm, widthEm, advanceEm } = ink(KEYRUNE_CODEPOINTS[code]);
+        const [, xMin] = KEYRUNE_GLYPHS[KEYRUNE_CODEPOINTS[code]];
         const label = `${template} ${code}`;
-        const inkH = s.sizePct * heightEm * HD;
-        const inkW = s.sizePct * widthEm * HD;
+        const inkH = s.sizePct * (heightEm + 2 * ringEm) * HD;
+        const inkW = s.sizePct * (widthEm + 2 * ringEm) * HD;
         // Inside the printed box and CC's 0.12 W width, touching one of them.
         expect(inkH, label).toBeLessThanOrEqual(h + 1e-9);
         expect(inkW, label).toBeLessThanOrEqual(Math.min(w, SET_SYMBOL_MAX_WIDTH_PCT * HD) + 1e-9);
         const touches = Math.abs(inkH - h) < 1e-9 || Math.abs(inkW - w) < 1e-9 || Math.abs(inkW - SET_SYMBOL_MAX_WIDTH_PCT * HD) < 1e-9;
         expect(touches, label).toBe(true);
         expect(s.drawnWidthPct, label).toBeCloseTo(advanceEm * s.sizePct, 12);
+        // The type line stops a gap before the silhouette: the ink's side
+        // bearing, less the ring on a keylined bar.
+        expect(s.inkLeftPct, label).toBeCloseTo((Math.max(0, xMin) / KEYRUNE_UNITS_PER_EM - ringEm) * s.sizePct, 12);
+      }
+    }
+  });
+
+  it("fits the ink AND the keyline's ring on the keylined borderless bars, and nowhere else (4.46 review)", () => {
+    // SET_SYMBOL_KEYLINE's axis copies sit SET_SYMBOL_KEYLINE_EM out.
+    const axis = SET_SYMBOL_KEYLINE.split(",").map((layer) => layer.trim().split(/\s+/).slice(0, 2).map((v) => Math.abs(parseFloat(v))));
+    expect(Math.max(...axis.flat())).toBe(SET_SYMBOL_KEYLINE_EM);
+    const keylined = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).setSymbolKeyline);
+    expect(keylined.sort()).toEqual(["m15borderless", "m15borderlessartifact", "m15borderlessland"]);
+    const m15 = getFrameProfile("m15");
+    for (const template of keylined) {
+      const p = getFrameProfile(template);
+      // DMU (the matrix's set): 91.5 × 83 printed, keyline included. M15
+      // draws the ink at 91.5 px tall; the borderless bar fits the ink + ring
+      // (83 px wide binds: 91.0 × 83.0).
+      const dmu = setSymbolSize(p, glyph("dmu"));
+      const { heightEm, widthEm } = ink(KEYRUNE_CODEPOINTS.dmu);
+      expect(dmu.sizePct * (widthEm + 0.1) * HD, template).toBeCloseTo(83, 9);
+      expect(dmu.sizePct * (heightEm + 0.1) * HD, template).toBeLessThanOrEqual(91.5);
+      expect(dmu.sizePct * heightEm * HD, template).toBeLessThan(setSymbolSize(m15, glyph("dmu")).sizePct * heightEm * HD - 8);
+      // The core-set pill: ink + ring at CC's 180 px, not past it.
+      const m20 = setSymbolSize(p, glyph("m20"));
+      expect(m20.sizePct * (ink(KEYRUNE_CODEPOINTS.m20).widthEm + 0.1) * HD, template).toBeCloseTo(180, 9);
+      // An unmeasured set keeps v32's fit exactly (its ring was never
+      // counted there; changing that would re-bake unlisted cards).
+      for (const code of ["xln", "m14", "war", "bfz"]) {
+        expect(setSymbolSize(p, glyph(code)), `${template} ${code}`).toEqual(setSymbolSize(m15, glyph(code)));
       }
     }
   });

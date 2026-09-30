@@ -744,8 +744,12 @@ describe("the set symbol's white keyline on a dark type bar (4.32)", () => {
   const ink = (p: [number, number, number]) => lum(p) < 25; // #0f0f12 on the dark art
 
   it("rings a common in white where it all but vanished, and keeps its ink on top", async () => {
-    const plain = await bake(onHost(false));
-    const ringed = await bake(onHost(true));
+    // A set left on v32's fit (BFZ): its size doesn't depend on the
+    // keyline. A set in the printed-size table fits its ink AND the ring to
+    // the print's keyline-inclusive box on a keylined bar (layout v36), so
+    // there the ringed glyph is drawn smaller — the next test.
+    const plain = await bake(onHost(false, { setIconCode: "bfz" }));
+    const ringed = await bake(onHost(true, { setIconCode: "bfz" }));
     // Before: nothing light at all — the #0f0f12 glyph on the dark bar.
     expect(count(plain, HOST_SYMBOL, white)).toBe(0);
     expect(count(plain, HOST_SYMBOL, ink)).toBeGreaterThan(150);
@@ -764,14 +768,20 @@ describe("the set symbol's white keyline on a dark type bar (4.32)", () => {
     // Satori merges a multi-layer text-shadow into one filter and librsvg
     // keeps only the last layer (up-left here): offset copies ring all four
     // sides. HD: the DOM glyph at its print's size (layout v36, TODO 4.46,
-    // lib/cards/set-symbol-prints.ts; v32 fitted it to the box, 87 px) —
-    // 0.0596 W = 89 px — the keyline 4.45 px.
+    // lib/cards/set-symbol-prints.ts: 88.5 × 70 keyline-inclusive), its ink
+    // AND ring fitted to it on a keylined bar — 0.054 W = 81 px (89 without
+    // the keyline) — the keyline 4.05 px.
     const b = await bake(onHost(true), false, "hd");
     const glyph = inkBox(b, HOST_SYMBOL, ink);
     const ring = inkBox(b, HOST_SYMBOL, white);
     expect(glyph.n).toBeGreaterThan(600);
-    const em = Math.round(setSymbolSize(getFrameProfile(HOST), setSymbolSource(null, "dom")).sizePct * b.w);
-    expect(em).toBe(89);
+    const keylined = { ...getFrameProfile(HOST), setSymbolKeyline: SET_SYMBOL_KEYLINE };
+    const em = Math.round(setSymbolSize(keylined, setSymbolSource(null, "dom")).sizePct * b.w);
+    expect(em).toBe(81);
+    expect(Math.round(setSymbolSize(getFrameProfile(HOST), setSymbolSource(null, "dom")).sizePct * b.w)).toBe(89);
+    // The ringed silhouette is the print's box: 88.5 px tall (±1.5 px of
+    // anti-aliasing), where the ink alone filled it before the review.
+    expect(Math.abs(ring.maxY - ring.minY + 1 - 88.5)).toBeLessThanOrEqual(1.5);
     const out = {
       left: glyph.minX - ring.minX,
       right: ring.maxX - glyph.maxX,

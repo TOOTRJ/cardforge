@@ -1213,6 +1213,22 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
       ALL.filter((t) => getFrameProfile(t).setSymbolFit === "ink").sort(),
     );
     expect(lv.V36_PRINTED_SYMBOL_SETS).toEqual(Object.keys(SET_SYMBOL_PRINTED_PX).sort());
+    // The codes: exactly those whose glyph (as the renderers look it up) the
+    // table sizes — the sets and the aliases keyrune draws with their glyphs.
+    const { KEYRUNE_CODEPOINTS } = await import("@/lib/cards/keyrune-metrics");
+    const { keyruneCodepointFor } = await import("@/lib/cards/set-symbol-size");
+    const { printedSetSymbolPx } = await import("@/lib/cards/set-symbol-prints");
+    const sized = Object.keys(KEYRUNE_CODEPOINTS)
+      .filter((code) => printedSetSymbolPx(keyruneCodepointFor(code)) !== null)
+      .sort();
+    expect(lv.V36_PRINTED_SYMBOL_CODES).toEqual(sized);
+    for (const code of Object.keys(KEYRUNE_CODEPOINTS)) {
+      expect(lv.v36PrintedSymbolCode(code), code).toBe(sized.includes(code));
+      expect(lv.v36PrintedSymbolCode(`SS-${code.toUpperCase()}`), code).toBe(sized.includes(code));
+    }
+    // An unknown code draws the default glyph, which the table doesn't size.
+    expect(printedSetSymbolPx(keyruneCodepointFor("zzz9"))).toBeNull();
+    expect(lv.v36PrintedSymbolCode("zzz9")).toBe(false);
     expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless));
     expect(lv.V36_BACK_FACE_TEXT_TEMPLATES).toEqual(
       ALL.filter((t) => getFrameProfile(t).adventure || getFrameProfile(t).secondFace),
@@ -1276,8 +1292,24 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
       for (const code of ["war", "znr", "bfz", "xln", "zzz9"]) {
         expect(classifyForSweep(at(t, { set_icon_code: code })), `${t} ${code}`).toBe(whole ? "rebake" : "stamp");
       }
-      // An uploaded icon wins over the code: no glyph drawn.
+      // An alias keyrune draws with a listed set's glyph (GK1 = GRN's).
+      expect(classifyForSweep(at(t, { set_icon_code: "gk1" })), `${t} gk1`).toBe(printed || whole ? "rebake" : "stamp");
+      // An uploaded icon never rules the code's glyph out: the renderers drop
+      // an icon they may not draw (an outside host here) and draw the glyph.
       expect(classifyForSweep(at(t, { set_icon_code: "neo", set_icon_url: "https://x/i.png" })), `${t} icon`).toBe(
+        printed || whole ? "rebake" : "stamp",
+      );
+      // …and a drawable one (it wins; the re-bake draws the same pixels) is
+      // judged the same way — which host is drawable is the deployment's.
+      const stored = "https://abcdefghijklmnopqrst.supabase.co/storage/v1/object/public/set-covers/00000000-0000-4000-8000-000000000000/icon.png";
+      expect(classifyForSweep(at(t, { set_icon_code: "neo", set_icon_url: stored })), `${t} stored icon`).toBe(
+        printed || whole ? "rebake" : "stamp",
+      );
+      // An icon with an unlisted code, or none, draws no listed glyph.
+      expect(classifyForSweep(at(t, { set_icon_code: "war", set_icon_url: stored })), `${t} icon war`).toBe(
+        whole ? "rebake" : "stamp",
+      );
+      expect(classifyForSweep(at(t, { set_icon_code: null, set_icon_url: stored })), `${t} icon only`).toBe(
         whole ? "rebake" : "stamp",
       );
     }
@@ -1289,14 +1321,21 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     const { VERSION_SCOPES } = await import("@/lib/cards/layout-version");
     const v36 = VERSION_SCOPES[36];
     expect(v36({ ...at("lotr"), frame_style: undefined })).toBe(true);
-    for (const column of ["set_icon_url", "set_icon_code", "rules_text", "face_content", "back_face"]) {
+    for (const column of ["set_icon_code", "rules_text", "face_content", "back_face"]) {
       expect(v36({ ...at("lotr"), [column]: undefined }), column).toBe(true);
     }
+    // The icon column is never read (an icon never rules the glyph out).
+    expect(v36({ ...at("lotr"), set_icon_url: undefined })).toBe(false);
     for (const column of ["card_type", "supertype", "subtypes", "title"]) {
       expect(v36({ ...at("m15", { rules_text: "{T}: Draw." }), [column]: undefined }), column).toBe(true);
       expect(v36({ ...at("m15"), [column]: undefined }), `${column} no pip`).toBe(false);
     }
     expect(v36({ frame_style: { template: "m15pw" } })).toBe(true);
+  });
+
+  it("keeps the keyrune tables out of the module (client code imports it)", () => {
+    const source = readFileSync(join(process.cwd(), "lib/cards/layout-version.ts"), "utf8");
+    expect(source).not.toMatch(/from "@\/lib\/cards\/(set-symbol-size|set-symbol-prints|keyrune-metrics)"/);
   });
 
   it("finds a pip exactly where the rules tokenizer draws one", async () => {

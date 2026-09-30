@@ -266,6 +266,7 @@ Rules and gotchas:
   drawn width come from `setSymbolSize()` (the ink fit only with the
   code-owned `setSymbolFit: "ink"`; a Keyrune glyph of a set in
   `lib/cards/set-symbol-prints.ts` draws at that set's PRINTED size, v36 —
+  keyline-inclusive boxes, so a `setSymbolKeyline` bar fits ink + ring;
   adding or re-measuring a set is a bump; the full-art basics' "ink-box"
   never reads the table). Frames outside the family keep the old
   paths byte-for-byte — bringing one in is its own layout bump

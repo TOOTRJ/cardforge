@@ -101,6 +101,12 @@ export const SET_SYMBOL_BOX_PCT_THIN_BAR = 0.0533;
  *  might add. */
 export const SET_SYMBOL_MAX_WIDTH_PCT = 0.12;
 
+/** How far the white keyline a set symbol wears on a dark type bar
+ *  (SET_SYMBOL_KEYLINE in lib/cards/template-layout.ts, the borderless bars)
+ *  reaches past the glyph's ink on every side, in em of the glyph's font:
+ *  its axis copies' offset. A test holds the shadow string to it. */
+export const SET_SYMBOL_KEYLINE_EM = 0.05;
+
 /** Adventure panel name and type line — CC name2 / type2, 0.0296 H = 62 px
  *  at HD. */
 export const ADVENTURE_PANEL_PCT = 0.0414;

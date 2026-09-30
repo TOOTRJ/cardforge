@@ -1,6 +1,5 @@
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
-import { keyruneCodepointFor } from "@/lib/cards/set-symbol-size";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { isColorIdentity, type CardType } from "@/types/card";
@@ -621,7 +620,11 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              walker, saga and token prints print it at the regular size
 //              (0.98–1.01), so the thin-bar box no longer shrinks a listed
 //              glyph there. The full-art basics keep 4.39's size
-//              (setSymbolFit "ink-box"), an unlisted set v32's ink fit.
+//              (setSymbolFit "ink-box"), an unlisted set v32's ink fit. The
+//              boxes are keyline-inclusive, so the borderless bars, which
+//              draw a white keyline round the glyph (4.32), fit its ink AND
+//              the ring (review of this round: the ink alone stood 8–15 px
+//              past the box there, the core-set pill 198 px wide).
 //            * the planeswalker's set symbol ends where M15's does (TODO
 //              4.47; M15PW.symbolRect left 79 → 80.2 %W, right edge 1365 →
 //              1383 px): seven walker prints put it where their set's
@@ -635,8 +638,10 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            Card-scoped (VERSION_SCOPES[36] = v36Changed; no template list —
 //            the pips reach every template): every card on m15pw,
 //            m15borderlesspw, m15borderlesspwtall (every walker draws a
-//            symbol, the mark when it has none) and nyx; a card that draws a
-//            listed set's Keyrune glyph on a printed-size template; a card
+//            symbol, the mark when it has none) and nyx; a card that may
+//            draw a listed set's Keyrune glyph on a printed-size template
+//            (its code is listed — an uploaded icon doesn't rule it out: the
+//            renderers drop one they may not draw and draw the glyph); a card
 //            whose printed text has an inline pip. "sweep". NOT fully
 //            verification-neutral: the pips (text inside the rules boxes,
 //            as v33), the symbol sizes (as v32) and nyx (no tick) stale no
@@ -763,7 +768,22 @@ export const V36_PRINTED_SYMBOL_SETS: readonly string[] = [
   "afr", "blb", "dmu", "dom", "dsk", "eld", "eoe", "fdn", "fin", "grn", "iko", "khm", "ktk", "ltr", "m19", "m20",
   "m21", "mh3", "mid", "mkm", "neo", "one", "otj", "snc", "spm", "stx", "tdm", "thb", "tla", "woe",
 ];
-const V36_PRINTED_SYMBOL_GLYPHS: ReadonlySet<number> = new Set(V36_PRINTED_SYMBOL_SETS.map(keyruneCodepointFor));
+//   * Every set code whose Keyrune glyph is one of those sets' at v36 — the
+//     sets themselves and the four codes keyrune draws with one of their
+//     glyphs (gk1, xdnd, xkld, xssm) — as set-symbol-size.ts's
+//     keyruneCodepointFor looks a code up (lower case, "ss-" dropped; an
+//     unknown code draws the default glyph, which is not listed). Literal,
+//     so this module (imported by client code) never pulls in the keyrune
+//     tables; a test holds it to them.
+export const V36_PRINTED_SYMBOL_CODES: readonly string[] = [
+  "afr", "blb", "dmu", "dom", "dsk", "eld", "eoe", "fdn", "fin", "gk1", "grn", "iko", "khm", "ktk", "ltr", "m19",
+  "m20", "m21", "mh3", "mid", "mkm", "neo", "one", "otj", "snc", "spm", "stx", "tdm", "thb", "tla", "woe", "xdnd",
+  "xkld", "xssm",
+];
+/** Whether a set code draws a v36-listed set's glyph (V36_PRINTED_SYMBOL_CODES). */
+export function v36PrintedSymbolCode(setCode: string): boolean {
+  return V36_PRINTED_SYMBOL_CODES.includes(setCode.toLowerCase().replace(/^ss-/, ""));
+}
 //   * Where a card's text draws its inline pips (3.31) at v36: nowhere on a
 //     frame that prints no text (FrameProfile.textless); a back face's rules
 //     text only on the adventure page and the second faces; face_content's
@@ -786,7 +806,10 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
   // slot the alignment score reads, lib/frames/align.ts; the seven m15pw
   // ticks are legacy ones with no stored score or reference). The inline
   // pips (text inside the rules boxes, as v33), the printed symbol sizes (as
-  // v32) and nyx's darker box (no tick) move no slot.
+  // v32) and nyx's darker box (no tick) move no slot. The owner decides
+  // (sign-off sheet 3a): the closer precedent, v32, moved m15pw's costRect —
+  // the same scored box kind — 15 px right onto the prints and stayed
+  // neutral; following it moves 36 to VERIFICATION_NEUTRAL_VERSIONS.
   36: ["m15pw", "m15borderlesspw", "m15borderlesspwtall"],
 };
 
@@ -1105,9 +1128,13 @@ function v36FaceContentHasPip(faceContent: unknown): boolean {
 /**
  * Whether layout v36 (the second correction round) changed a card's bake:
  * every card on V36_EVERY_CARD_TEMPLATES (the walkers' moved symbol, nyx's
- * darker box); a card that draws a listed set's Keyrune glyph (no uploaded
- * icon, a code whose glyph is V36_PRINTED_SYMBOL_SETS') on a printed-size
- * template (4.46); a card whose PRINTED text has an inline pip (3.31): its
+ * darker box); a card that may draw a listed set's Keyrune glyph (a code in
+ * V36_PRINTED_SYMBOL_CODES) on a printed-size template (4.46) — with or
+ * without an uploaded icon: the renderers drop an icon URL they may not draw
+ * (lib/cards/drawable-media.ts; a pre-0127 row can name an outside host, and
+ * which host is "ours" is the deployment's), and then draw the code's glyph,
+ * so an icon never rules the glyph out here (a drawable one re-bakes to the
+ * same pixels); a card whose PRINTED text has an inline pip (3.31): its
  * rules text unless it is a basic land's or the frame prints none, a saga's
  * chapters, a back face's rules text on the templates that draw it —
  * flavor draws none. Templates are judged as drawn (a {} frame_style is
@@ -1117,12 +1144,12 @@ function v36Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
   const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
   if (V36_EVERY_CARD_TEMPLATES.includes(template)) return true;
-  if (card.set_icon_url === undefined || card.set_icon_code === undefined) return true;
+  if (card.set_icon_code === undefined) return true;
   if (
-    !card.set_icon_url &&
+    typeof card.set_icon_code === "string" &&
     card.set_icon_code &&
     V36_PRINTED_SYMBOL_TEMPLATES.includes(template) &&
-    V36_PRINTED_SYMBOL_GLYPHS.has(keyruneCodepointFor(card.set_icon_code))
+    v36PrintedSymbolCode(card.set_icon_code)
   ) {
     return true;
   }

@@ -28,7 +28,11 @@ import { KEYRUNE_CODEPOINTS } from "@/lib/cards/keyrune-metrics";
 // proportion; MID 11 % narrower) it never draws bigger than the print in
 // either direction, and
 // never wider than CC's 0.12 W symbol box (the three core-set pills, M19 /
-// M20 / M21, print 187–189 px wide: they draw 180 × 75).
+// M20 / M21, print 187–189 px wide: they draw 180 × 75). The boxes are
+// keyline-INCLUSIVE, so a bar that draws a keyline round the glyph (the
+// borderless bars' white SET_SYMBOL_KEYLINE, 0.05 em out) fits the ink AND
+// its ring to them (DMU 91 × 83, the core-set pills 85 × 180 with the ring);
+// our M15 glyph has no keyline, so its flat ink fills the whole silhouette.
 //
 // Three measured sets are left out: v32's ink fit already draws them at the
 // print's size, to the same whole px at both bakes — BFZ 86.0 × 65.0 (v32

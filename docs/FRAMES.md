@@ -666,7 +666,8 @@ move on fewer templates than its bakes change on) or the override changes;
 `VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35) never stale one (v36
 stales only the planeswalkers' ticks: its 4.47 moved their `symbolRect`, a
 box the alignment score reads; its pips, symbol sizes and nyx box are
-neutral by the v32 / v33 precedents), and a
+neutral by the v32 / v33 precedents — the owner may make the walkers neutral
+too, as v32's 15 px m15pw cost-box move was), and a
 pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` (33)
 (`lib/cards/frame-verification-state.ts`). A stale tick stays verified —
 the creator keeps offering the combo — and the admin pages show "needs
@@ -920,17 +921,24 @@ set's printed size (4.46) and the planeswalker's symbol at M15's right edge
 and nyx's text box darkened to the THB prints (4.17e, [Art under and around
 the frame](#art-under-and-around-the-frame)). `VERSION_SCOPES[36]`
 (`v36Changed`): every card on m15pw, m15borderlesspw, m15borderlesspwtall and
-nyx; a listed set's Keyrune glyph on a printed-size template; a card whose
+nyx; a listed set's code (its Keyrune glyph, or an uploaded icon the
+renderers may drop for it — a drawable icon re-bakes to the same pixels) on
+a printed-size template; a card whose
 PRINTED text has an inline pip (its rules text unless the frame prints none
 or it is a basic land's, a saga's chapters, a back face's rules text where
 the adventure page or a second face draws it). No template list: the pips
-reach every template. Production, anonymous read 2026-09-30: 361 of 876
-public / unlisted cards (m15 216, m15land 36, m15artifact 33, m15tokentext
+reach every template. Production, anonymous read 2026-09-30: 363 of 879
+public / unlisted cards (m15 217, m15land 36, m15artifact 34, m15tokentext
 25, m15borderlessartifact 15, m15borderless 10, m15pw 8, m15snow 7, m15devoid
 5, modern 3, agclassic / tarkirghostfire / tarkirdragon 1 each; 8 walkers,
-14 Keyrune glyphs, 339 pip-only). Real HD bakes of all 876 on v35 and v36
-(sha-checked dev-bucket frames): exactly those 361 change and no other. The
-visual matrix (1,042 cases) against v35: 546 change, every one inside the
+14 Keyrune glyphs, 341 pip-only). Real HD bakes of all 879 on v35 and v36
+(sha-checked dev-bucket frames): exactly those 363 change and no other; 80
+synthetic cards, one per branch of the scope (back faces, sagas, textless
+tokens, basic lands, flavor, icons, aliases, the keylined bars), bake as
+the scope says, but for its two conservative cases (a drawable icon beside
+a listed code; FDN on a keylined bar, whose ring-fitted size rounds to v32's
+px — a long type line there still loses the ring's room). The
+visual matrix (1,046 cases) against v35: 546 change, every one inside the
 scope, and the scope holds no unchanged case. Verification: only the
 walkers' ticks go stale (`VERIFICATION_TEMPLATE_SCOPES[36]`, see [When a
 tick goes stale](#verifying-a-frame)).
@@ -1341,7 +1349,14 @@ A family profile:
   (Scryfall PNGs, the silhouette's half-darkness edge from the bar to the
   keyline). The glyph is fitted INSIDE its set's box by its ink (never
   bigger than the print in either direction) and never wider than CC's
-  0.12 W. The walker, saga and token prints set a set's symbol at the same
+  0.12 W — by its ink AND its keyline's ring on the borderless bars, which
+  draw a white keyline 0.05 em round the glyph (`setSymbolKeyline`, 4.32;
+  `SET_SYMBOL_KEYLINE_EM`): the box is keyline-inclusive, and there the
+  type line stops a gap before the ring (`inkLeftPct` less the ring). An
+  unlisted set on those bars keeps v32's fit, ring not counted, as since
+  4.32. Our M15 glyph has no keyline: its flat rarity ink fills the whole
+  printed silhouette (a common's reads about 12 px taller than the print's
+  black body inside its white keyline — sheet 2g). The walker, saga and token prints set a set's symbol at the same
   size as its regular cards (0.98–1.01 of the height), so the thin-bar box
   (80 px) no longer shrinks a listed glyph. v32's box fit drew these sets
   0.47–1.03 of the print's height (the wide ones — M20 / M21 / M19 0.47,

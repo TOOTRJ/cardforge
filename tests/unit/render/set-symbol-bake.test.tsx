@@ -32,7 +32,7 @@ beforeAll(async () => {
   })
     .png()
     .toBuffer();
-  const files: Record<string, Buffer> = { "m15/w.png": frame, "m15pw/w.png": frame };
+  const files: Record<string, Buffer> = { "m15/w.png": frame, "m15pw/w.png": frame, "m15borderless/w.png": frame };
   const entries = Object.entries(files).map(([key, buf]) => {
     const sha256 = createHash("sha256").update(buf).digest("hex");
     return [key, { hash: sha256.slice(0, 12), sha256, bytes: buf.length, width: 1, height: 1 }] as const;
@@ -164,6 +164,23 @@ describe("the set symbol on a real HD bake (layout v32; v36's printed sizes and 
     const m20 = inkBox(await bake("m15", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), glyphInk);
     expect(Math.abs(m20.w - 180)).toBeLessThanOrEqual(1.5);
     expect(Math.abs(m20.h - 75)).toBeLessThanOrEqual(1.5);
+  }, 60_000);
+
+  it("fits a measured set's glyph AND its white keyline inside the printed box on the borderless bar (DMU 91.5 × 83, M20 at 180 px)", async () => {
+    // The printed box is keyline-inclusive; m15borderless draws a white ring
+    // 0.05 em round the glyph (SET_SYMBOL_KEYLINE). On the 128-grey stand-in
+    // the silhouette is the dark ink plus the white ring.
+    const p = getFrameProfile("m15borderless");
+    const silhouette = (r: number, g: number, b: number) => {
+      const l = 0.299 * r + 0.587 * g + 0.114 * b;
+      return l < 72 || l > 192;
+    };
+    const dmu = inkBox(await bake("m15borderless", { setIconCode: "dmu" }), p.type.rect, Math.round(W * 0.8), silhouette);
+    expect(dmu.h).toBeLessThanOrEqual(91.5 + 1.5);
+    expect(Math.abs(dmu.w - 83)).toBeLessThanOrEqual(1.5);
+    const m20 = inkBox(await bake("m15borderless", { setIconCode: "m20" }), p.type.rect, Math.round(W * 0.6), silhouette);
+    expect(Math.abs(m20.w - 180)).toBeLessThanOrEqual(1.5);
+    expect(m20.h).toBeLessThanOrEqual(86 + 1.5);
   }, 60_000);
 
   it("uses the planeswalker's 80 px box in its symbolRect, ending where M15's does (4.47: 1383 px, was 1365)", async () => {
