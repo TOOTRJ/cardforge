@@ -396,7 +396,11 @@ frame change](#shipping-a-frame-change)).
    `FRAME_TEMPLATE_LABELS` and `FRAME_TEMPLATE_SET` (exhaustive: the
    compiler names what is missing), and where the picker offers it:
    `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, a showcase set, or a kind's
-   `layoutTemplates` and restrictions in `lib/creator/card-kinds.ts`.
+   `layoutTemplates` and restrictions in `lib/creator/card-kinds.ts`. A
+   showcase whose profile has no `loyalty` + `loyaltyRows` or no `defense`
+   refuses planeswalkers or battles in `SHOWCASE_KIND_RESTRICTION` (a unit
+   test derives it from the profiles; TODO 4.5a). A walker body for a
+   treatment is a new template, never anatomy added to one that exists.
 4. **Write the profile**: one entry in `PROFILES`
    (`lib/cards/template-layout.ts`). Spread the closest verified profile,
    measure the bands on the master (a column scan: the transparent run is
@@ -1343,22 +1347,19 @@ route re-plans from what is still pending. It ends by re-planning (nothing
 may be left in scope) and checking that a few re-baked renders are
 reachable.
 
-Against production (owner; it needs production's `CRON_SECRET` from Vercel
-→ Settings → Environment Variables). Read it into an unexported shell
-variable without echo — the prompt waits silently; paste and press Enter —
-so it stays out of shell history and out of every other program's
-environment:
+Against production (owner), in a terminal:
 
 ```bash
-read -rs CRON_SECRET
+SCOPE=sweep REBAKE_URL=https://www.pipglyph.com/api/admin/rebake node scripts/rebake-renders.mjs
 ```
 
-```bash
-CRON_SECRET="$CRON_SECRET" SCOPE=sweep REBAKE_URL=https://www.pipglyph.com/api/admin/rebake node scripts/rebake-renders.mjs
-```
-
-That prints the plan. Add `CONFIRM=yes` to write, and `unset CRON_SECRET`
-when you are done. Other scopes:
+It first asks for production's `CRON_SECRET` (Vercel → Settings →
+Environment Variables) at a hidden prompt: paste it and press Enter. Nothing
+typed or pasted is echoed (`scripts/lib/hidden-prompt.mjs`), and the secret
+never enters your shell history or any other program's environment. Without
+a terminal (a pipe, CI) it refuses, and it refuses production over
+`http://`. Then it prints the plan. Add `CONFIRM=yes` to write; each run
+asks for the secret again. Other scopes:
 `SCOPE=version VERSION=<n>` (only the cards bump n changed; n must be a
 "sweep" version) and `SCOPE=legacy-art` (art on a legacy storage host,
 renders older than `BEFORE`). `BATCH` sets cards per request (default 8,

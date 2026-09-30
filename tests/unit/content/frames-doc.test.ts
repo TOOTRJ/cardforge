@@ -266,6 +266,20 @@ describe("docs/FRAMES.md", () => {
     }
   });
 
+  it("runs the manual script against production with the script's own hidden prompt, never a secret on the command line", () => {
+    const text = subsection("The manual script");
+    const commands = [...text.matchAll(/```bash\n([\s\S]*?)\n```/g)].map((m) => m[1]);
+    const production = commands.filter((c) => c.includes("REBAKE_URL=https://www.pipglyph.com/"));
+    expect(production, "a production command").toHaveLength(1);
+    expect(production[0]).toMatch(/node scripts\/rebake-renders\.mjs$/);
+    // The secret is asked for by the script (scripts/lib/rebake-secret.mjs);
+    // the old `read -rs` + `CRON_SECRET="$CRON_SECRET"` dance is gone.
+    for (const command of commands) expect(command, command).not.toMatch(/CRON_SECRET|read -rs/);
+    expect(text).not.toMatch(/read -rs|unset CRON_SECRET/);
+    expect(text.replace(/\s+/g, " ")).toMatch(/asks for production's `CRON_SECRET` .*at a hidden prompt/);
+    expect(read("scripts/rebake-renders.mjs")).toMatch(/resolveRebakeSecret\(URL_/);
+  });
+
   it("points at a FAQ entry that exists, under the anchor it gives", () => {
     const text = section("Announcing a change").replace(/\s+/g, " ");
     const question = /The FAQ entry "([^"]+)"/.exec(text)?.[1];

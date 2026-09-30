@@ -415,8 +415,10 @@ export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): F
 // Kinds a frame can only draw through a stat overlay its profile must carry:
 // a planeswalker needs the loyalty shield and the ability rows
 // (`loyaltyRows`), a battle its defense shield. Of the frames that dress
-// every kind, only m15pw and battle have them; 4.5's overlay model brings
-// them to the showcase frames.
+// every kind, only m15pw and battle have them. A showcase treatment gets a
+// walker as a NEW body template of its own (TODO 4.5b: `tarkirghostfirepw`,
+// `extendedartpw`), never by adding the anatomy to the template it has — that
+// would re-dress every stored card of that kind on it at its next bake.
 const STAT_OVERLAY_KINDS: readonly CardKind[] = ["planeswalker", "battle"];
 const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
   (kind) =>
@@ -433,6 +435,14 @@ const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
 // loyalty or defense slot, so a planeswalker would print no loyalty and
 // plain ability lines, and a battle no defense (full-art research
 // 2026-09-26, TODO 0.26) — they take every kind but those two until 4.5.
+// The same holds for the IP showcases (TODO 4.5a, 2026-09-29): the Ring and
+// Scroll (LTR), Avatar, Bloomburrow woodland and anime, and the three Tarkir
+// frames print P/T only — no loyalty shield, no ability rows, no defense —
+// so they refuse planeswalkers and battles too. A Ghostfire or Anime walker
+// printing imports onto m15pw (`nearest`): the Ghostfire walker gets its own
+// body in 4.5b, Anime walkers stay refused (owner decision 2026-09-29).
+// tests/unit/creator/card-kinds.test.ts derives this from the profiles, so
+// a showcase added without the anatomy can't offer the two kinds either.
 // Absent = any standard kind (stats still gate on type).
 //
 // The borderless M15 frame (4.32) is a SKIN of the M15 standard and of the
@@ -454,6 +464,14 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
   fullart: KINDS_WITHOUT_STAT_OVERLAY,
   m15textless: KINDS_WITHOUT_STAT_OVERLAY,
   extendedart: KINDS_WITHOUT_STAT_OVERLAY,
+  lotr: KINDS_WITHOUT_STAT_OVERLAY,
+  lotrscroll: KINDS_WITHOUT_STAT_OVERLAY,
+  avatar: KINDS_WITHOUT_STAT_OVERLAY,
+  bloomburrow: KINDS_WITHOUT_STAT_OVERLAY,
+  bloomanime: KINDS_WITHOUT_STAT_OVERLAY,
+  tarkirdraconic: KINDS_WITHOUT_STAT_OVERLAY,
+  tarkirghostfire: KINDS_WITHOUT_STAT_OVERLAY,
+  tarkirdragon: KINDS_WITHOUT_STAT_OVERLAY,
 };
 
 /** True when a showcase treatment's kind restriction leaves this kind out

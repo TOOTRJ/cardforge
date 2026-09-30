@@ -104,13 +104,27 @@ function getNodeAtPath(obj: unknown, path: string): unknown {
   return node;
 }
 
-/** Resolved (base + draft) value for a slot field. */
+/** The cost pips and the set symbol: inline in the title / type band until
+ *  the first edit gives them a rect of their own (FrameCompare seeds it). */
+const DETACHED_PATHS: ReadonlySet<string> = new Set(["costRect", "symbolRect"]);
+
+/** True when `path` is a detached slot the profile has no rect for yet. */
+export function isInlineDetachedSlot(profile: FrameProfile, path: SlotPath): boolean {
+  return DETACHED_PATHS.has(path) && !getNodeAtPath(profile, path);
+}
+
+/** Resolved (base + draft) value for a slot field. A detached slot with no
+ *  rect yet reads the region it occupies inline (`slotRect`'s default — the
+ *  same box the outline draws and the first edit seeds), so its fields show
+ *  before the first nudge and typing into one detaches it. */
 function readSlotField(
   profile: FrameProfile,
   path: SlotPath,
   field: EditorField,
 ): number | null {
-  const node = getNodeAtPath(profile, path);
+  const node = isInlineDetachedSlot(profile, path)
+    ? slotRect(profile, path)
+    : getNodeAtPath(profile, path);
   if (!node || typeof node !== "object") return null;
   const slot = node as Record<string, unknown>;
   const holder =
@@ -346,6 +360,12 @@ export function EditorPanel({
           <span className="text-[11px] uppercase tracking-wider text-subtle">
             {slotLabel(selected)} — arrows nudge position (Alt / Option for 0.5%), [ ] width, {"{ }"} height
           </span>
+          {isInlineDetachedSlot(profile, selected) ? (
+            <p className="text-[10px] leading-4 text-subtle" data-testid="inline-slot-note">
+              Drawn inline in the {selected === "costRect" ? "title" : "type"} band — these numbers
+              are the region it occupies. The first nudge or typed value gives it a box of its own.
+            </p>
+          ) : null}
           {fieldsForSlot(profile, selected).map((field) => {
             const value = readSlotField(profile, selected, field);
             if (value === null) return null;
