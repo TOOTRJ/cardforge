@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { importedAnatomy } from "@/lib/cards/anatomy";
 import printingsData from "./fixtures/signature-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import {
@@ -384,10 +385,13 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(colorKeyOf("nph-19")).toBe("w");
   });
 
-  it("Flooded Strand KTK #233 → m15land, multicolour", () => {
+  it("Flooded Strand KTK #233 → m15land, multicolour — its pair and two-colour frame from the fetched lands (TODO 4.6b)", () => {
     const patch = mapScryfallToFormPatch(printing("ktk-233"));
     expect(patch.frame_template).toBe("m15land");
     expect(patch.color_identity).toEqual(["multicolor"]);
+    // m15land draws the pair: the land imports W|U with the switch on.
+    expect(patch).toMatchObject({ color_pair: "wu", printed_two_color: true });
+    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { crown: false, twoColor: true }, colorIdentity: ["white", "blue"] });
   });
 
   it("Bident of Thassa THS #42 → nyx, nearest", () => {
