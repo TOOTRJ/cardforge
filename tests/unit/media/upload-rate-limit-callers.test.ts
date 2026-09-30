@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cameraPhoto } from "@/tests/stubs/metadata-fixtures";
-import { forgetStaged, resetStaging, stagingBucketApi, uploadCardArtViaStaging } from "@/tests/stubs/card-art-staging";
+import { claimRpc, forgetStaged, resetStaging, stagingBucketApi, uploadCardArtViaStaging } from "@/tests/stubs/card-art-staging";
 
 // ---------------------------------------------------------------------------
 // Every upload is rate-limited per user (owner decision 2026-09-29, TODO
@@ -57,6 +57,9 @@ vi.mock("@/lib/supabase/server", async () => {
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
+    // The card-art finish's claim (0131) — reached only under the limit.
+    rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) =>
+      fn === "claim_card_art_upload" ? claimRpc(args) : { data: null, error: { message: `unexpected rpc ${fn}` } },
     storage: {
       from: (bucket: string) => ({
         ...stagingBucketApi(bucket),

@@ -27,6 +27,7 @@ import {
   isCardArtMimeType,
 } from "@/lib/cards/art-upload-limits";
 import { isUuid, randomId } from "@/lib/ids";
+import { claimStagedCardArt } from "@/lib/cards/art-upload-claim";
 
 // ---------------------------------------------------------------------------
 // Server-side card-art upload (Phase 11 chunk 14 — M1 hardening; TODO 6.10:
@@ -44,9 +45,9 @@ import { isUuid, randomId } from "@/lib/ids";
 //      never public, and no picture column accepts it — 0127).
 //   2. The browser PUTs the file to that URL (Supabase Storage enforces the
 //      bucket's size and MIME limits).
-//   3. finishCardArtUploadAction(name) — CLAIMS the upload first (creates
-//      `{uuid}.claim` only if it doesn't exist: Storage keys are unique, so
-//      of any number of finishes racing on one name exactly one goes on),
+//   3. finishCardArtUploadAction(name) — CLAIMS the upload first
+//      (lib/cards/art-upload-claim.ts: migration 0131's primary key answers
+//      true to exactly one of any number of finishes racing on one name),
 //      then reads the staged object back with the service role and runs
 //      what this action always ran on the bytes:
 //        * size check against the actual bytes, not the declared length;
@@ -90,8 +91,6 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
 
 /** A staged object's name: `{uuid}.upload`, made by the start action. */
 const STAGED_SUFFIX = ".upload";
-/** The finish's claim on it: `{uuid}.claim` (user-storage claim()). */
-const CLAIM_SUFFIX = ".claim";
 
 const UPLOAD_NOT_FOUND = "That upload wasn't found — try again.";
 
@@ -198,15 +197,13 @@ export async function finishCardArtUploadAction(
     return { ok: false, error: UPLOAD_NOT_FOUND };
   }
 
-  const staging = userUploadStaging(ready.userId);
   // ONE finish per staged upload, even when several arrive at once: only
-  // the call that creates the claim goes on. A failed claim (taken, or a
-  // storage error) stores nothing — the upload is started again.
-  const claimName = `${stagedName.slice(0, -STAGED_SUFFIX.length)}${CLAIM_SUFFIX}`;
-  const claimed = await staging.claim(claimName).catch(() => ({ error: { message: "claim failed" } }));
-  if (claimed.error) {
+  // the call that wins the claim goes on. A lost or failed claim reads and
+  // stores nothing — the upload is started again.
+  if (!(await claimStagedCardArt(ready.userId, stagedName))) {
     return { ok: false, error: UPLOAD_NOT_FOUND };
   }
+  const staging = userUploadStaging(ready.userId);
   const staged = await staging.download(stagedName);
   if (!staged.bytes || isTombstone(staged.bytes)) {
     return { ok: false, error: UPLOAD_NOT_FOUND };
@@ -215,8 +212,7 @@ export async function finishCardArtUploadAction(
   // outlive this call. It is REPLACED by a tombstone rather than deleted —
   // the signed URL (valid 2 hours) only refuses to overwrite, so a deleted
   // key could be put again and finished again on this one counted upload.
-  // The tombstone (and the claim) go with the user's next start once the
-  // URL has expired.
+  // The tombstone goes with the user's next start once the URL has expired.
   const consumed = await staging.markConsumed(stagedName).catch(() => ({ error: { message: "tombstone failed" } }));
   if (consumed.error) {
     await staging.remove([stagedName]).catch(() => undefined);

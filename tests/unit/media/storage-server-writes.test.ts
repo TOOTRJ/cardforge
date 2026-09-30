@@ -5,7 +5,8 @@ import { cameraPhoto, expectNoCameraMetadata } from "@/tests/stubs/metadata-fixt
 import {
   STAGING_BUCKET,
   TOMBSTONE,
-  claimKeyOf,
+  claimRpc,
+  claims,
   forgetStaged,
   resetStaging,
   signedKeys,
@@ -52,11 +53,10 @@ const state = vi.hoisted(() => ({
   adminConfigured: true,
   flagged: false,
   scans: [] as string[],
-  /** The finish's tombstone overwrite (a staging write with upsert) answers
-   *  an error. */
+  /** Staging-bucket writes (the finish's tombstone) answer an error. */
   failStagingWrites: false,
-  /** The finish's claim (a staging write without upsert) answers an error. */
-  failStagingClaims: false,
+  /** The finish's claim RPC (0131) answers an error. */
+  failClaims: false,
   /** The bytes each scan was handed (card art passes them, TODO 6.10). */
   scanBytes: [] as (number | undefined)[],
   ops: [] as Op[],
@@ -99,7 +99,15 @@ vi.mock("@/lib/supabase/admin", () => ({
     return {
       // The upload limit (0127, fail-closed) answers "allowed"; the storage
       // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
-      rpc: async () => ({ data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null }),
+      // The finish's claim (0131, lib/cards/art-upload-claim.ts) wins once
+      // per (user, name).
+      rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) => {
+        if (fn === "claim_card_art_upload") {
+          state.seq.push(`claim:${args.p_user_id}/${args.p_staged_name}`);
+          return state.failClaims ? { data: null, error: { message: "boom" } } : claimRpc(args);
+        }
+        return { data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null };
+      },
       from: () => ({ upsert: async () => ({ error: null }) }),
       storage: {
         from: (bucket: string) => ({
@@ -117,14 +125,12 @@ vi.mock("@/lib/supabase/admin", () => ({
             state.ops.push({ bucket, op: "list", keys: [folder] });
             return stagingBucketApi(bucket).list();
           },
-          upload: async (key: string, body: Uint8Array | ArrayBuffer, opts?: { upsert?: boolean }) => {
-            if (bucket === STAGING_BUCKET && (opts?.upsert ? state.failStagingWrites : state.failStagingClaims)) {
-              return { data: null, error: { message: "boom" } };
-            }
+          upload: async (key: string, body: Uint8Array | ArrayBuffer) => {
+            if (bucket === STAGING_BUCKET && state.failStagingWrites) return { data: null, error: { message: "boom" } };
             state.ops.push({ bucket, op: "upload", keys: [key], body: Buffer.from(body as Uint8Array) });
             state.seq.push(`upload:${bucket}:${key}`);
-            const taken = stageWrite(bucket, key, body, opts);
-            return taken ? { data: null, error: taken } : { data: null, error: null };
+            stageWrite(bucket, key, body);
+            return { data: null, error: null };
           },
           remove: async (keys: string[]) => {
             state.ops.push({ bucket, op: "remove", keys });
@@ -227,7 +233,7 @@ beforeEach(() => {
   state.scans.length = 0;
   state.scanBytes.length = 0;
   state.failStagingWrites = false;
-  state.failStagingClaims = false;
+  state.failClaims = false;
   state.ops.length = 0;
   state.seq.length = 0;
   state.adminClients = 0;
@@ -464,22 +470,18 @@ describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
     expect(result).toMatchObject({ ok: true });
     const stagedKey = started.ok ? started.path : "";
 
-    // Staging: claimed (a `.claim` marker, created only if absent), read
-    // back, then overwritten with the tombstone — the only staging ops
-    // finish makes. The file's bytes are gone; the key stays occupied so
-    // the signed URL can't put it again.
-    const claimKey = claimKeyOf(stagedKey);
-    expect(claimKey).toMatch(new RegExp(`^${USER}/${UUID}\\.claim$`));
+    // Claimed for the caller (0131) BEFORE anything is read…
+    expect([...claims]).toEqual([stagedKey]);
+    expect(state.seq.indexOf(`claim:${stagedKey}`)).toBeLessThan(state.seq.indexOf(`download:${STAGING_BUCKET}:${stagedKey}`));
+    // …then staging: read back, then overwritten with the tombstone — the
+    // only staging ops finish makes. The file's bytes are gone; the key
+    // stays occupied so the signed URL can't put it again.
     const stagingOps = state.ops.filter((o) => o.bucket === STAGING_BUCKET && o.op !== "list" && o.op !== "sign");
     expect(stagingOps.map((o) => [o.op, o.keys])).toEqual([
-      ["upload", [claimKey]],
       ["download", [stagedKey]],
       ["upload", [stagedKey]],
     ]);
-    expect([...staged.entries()]).toEqual([
-      [stagedKey, TOMBSTONE],
-      [claimKey, TOMBSTONE],
-    ]);
+    expect([...staged.entries()]).toEqual([[stagedKey, TOMBSTONE]]);
 
     // card-art: one object, the caller's folder, a server-made name.
     const [stored] = uploads("card-art");
@@ -503,14 +505,14 @@ describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
     expect(result.ok).toBe(false);
     const [stored] = uploads("card-art");
     expect(removes().filter((o) => o.bucket === "card-art")).toEqual([{ bucket: "card-art", op: "remove", keys: stored.keys }]);
-    expect([...staged.values()]).toEqual([TOMBSTONE, TOMBSTONE]);
+    expect([...staged.values()]).toEqual([TOMBSTONE]);
   });
 
   it("staged bytes that aren't an image never reach card-art — and the staged copy is still consumed", async () => {
     const { result } = await stageAndFinish(new TextEncoder().encode("<svg onload=alert(1)></svg>"), "image/png");
     expect(result).toEqual({ ok: false, error: "That doesn't look like a valid image." });
     expect(uploads("card-art")).toEqual([]);
-    expect([...staged.values()]).toEqual([TOMBSTONE, TOMBSTONE]);
+    expect([...staged.values()]).toEqual([TOMBSTONE]);
   });
 
   it("one counted start stores at most one file: finishing the same name again stores nothing", async () => {
@@ -552,7 +554,7 @@ describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
     expect(removes().filter((o) => o.bucket === STAGING_BUCKET).map((o) => o.keys)).toEqual([[started.path]]);
     // The file's bytes are gone; the claim stays, so a PUT the URL now lets
     // through can never be finished.
-    expect([...staged.keys()]).toEqual([claimKeyOf(started.path)]);
+    expect(staged.size).toBe(0);
     expect(uploads("card-art")).toHaveLength(1);
     staged.set(started.path, bytes);
     expect(await finishCardArtUploadAction(started.name)).toEqual({ ok: false, error: "That upload wasn't found — try again." });
@@ -564,7 +566,7 @@ describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
     const started = await startCardArtUploadAction({ size: bytes.byteLength, type: "image/jpeg" });
     if (!started.ok) throw new Error("start refused");
     staged.set(started.path, bytes);
-    state.failStagingClaims = true;
+    state.failClaims = true;
     expect(await finishCardArtUploadAction(started.name)).toEqual({ ok: false, error: "That upload wasn't found — try again." });
     expect(state.ops.filter((o) => o.op === "download")).toEqual([]);
     expect(uploads("card-art")).toEqual([]);
@@ -577,7 +579,7 @@ describe("card art: start → staged PUT → finish (TODO 6.10)", () => {
     staged.set(started.path, new Uint8Array(MAX + 1));
     expect(await finishCardArtUploadAction(started.name)).toEqual({ ok: false, error: "Image must be 20 MB or smaller." });
     expect(uploads("card-art")).toEqual([]);
-    expect([...staged.values()]).toEqual([TOMBSTONE, TOMBSTONE]);
+    expect([...staged.values()]).toEqual([TOMBSTONE]);
   });
 
   it("a finish with nothing staged (the PUT never landed) answers plainly and writes nothing", async () => {

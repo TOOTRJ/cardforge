@@ -57,11 +57,12 @@ art is 8–15 MiB (TODO 6.10), so card art no longer rides a server action.
 image types only, and with no policy at all; the browser PUTs the file there
 (`lib/cards/art-upload-client.ts`, the only browser module
 `tests/unit/media/storage-callers.test.ts` lets touch Storage), and
-`finishCardArtUploadAction` claims it (a `{uuid}.claim` marker written
-without upsert, so parallel finishes store it once), reads it back, runs the
-sniff / strip / scan, writes `card-art` and overwrites the staged copy with a
-tombstone (a signed URL only refuses to overwrite, so a deleted key could be
-put again). A
+`finishCardArtUploadAction` claims it (0131's `claim_card_art_upload()`,
+service role only: a primary key lets exactly one of any parallel finishes
+in — Storage can't, racing no-upsert uploads of one key all succeed), reads
+it back, runs the sniff / strip / scan, writes `card-art` and overwrites the
+staged copy with a tombstone (a signed URL only refuses to overwrite, so a
+deleted key could be put again). A
 signed upload URL is Storage's own one-object grant, not a policy — never
 add a policy for that bucket either, and never let a picture column (0127)
 accept it.

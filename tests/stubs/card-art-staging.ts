@@ -15,9 +15,24 @@ export const staged = new Map<string, Uint8Array>();
 /** Keys the start action minted a signed upload URL for, in order. */
 export const signedKeys: string[] = [];
 
+/** Claims the finish won (`{userId}/{name}`) — migration 0131's
+ *  card_art_upload_claims, whose primary key lets exactly one caller in. */
+export const claims = new Set<string>();
+
 export function resetStaging(): void {
   staged.clear();
   signedKeys.length = 0;
+  claims.clear();
+}
+
+/** The `claim_card_art_upload` RPC (lib/cards/art-upload-claim.ts): true to
+ *  the first caller per (user, name), false after — checked and set in one
+ *  tick, so parallel callers see one winner, as the primary key does. */
+export function claimRpc(args: { p_user_id: string; p_staged_name: string }): { data: boolean; error: null } {
+  const key = `${args.p_user_id}/${args.p_staged_name}`;
+  if (claims.has(key)) return { data: false, error: null };
+  claims.add(key);
+  return { data: true, error: null };
 }
 
 /** The staging-only storage methods (createSignedUploadUrl, download, list,
@@ -42,25 +57,12 @@ export function stagingBucketApi(bucket: string) {
 }
 
 /** Record a service-role write into the staging bucket (the finish action's
- *  claim and tombstone, user-storage claim / markConsumed). Like Storage, a
- *  write without `upsert` onto a key that exists is refused (409) — checked
- *  and set in one tick, so parallel callers see one winner. */
-export function stageWrite(
-  bucket: string,
-  key: string,
-  body: unknown,
-  opts?: { upsert?: boolean },
-): { message: string; statusCode: string } | null {
-  if (bucket !== STAGING_BUCKET) return null;
-  if (!opts?.upsert && staged.has(key)) return { message: "The resource already exists", statusCode: "409" };
-  staged.set(key, new Uint8Array(body as Uint8Array));
-  return null;
+ *  tombstone, user-storage markConsumed). */
+export function stageWrite(bucket: string, key: string, body: unknown): void {
+  if (bucket === STAGING_BUCKET) staged.set(key, new Uint8Array(body as Uint8Array));
 }
 
-/** The finish's claim on a staged key: `{userId}/{uuid}.upload` → `….claim`. */
-export const claimKeyOf = (stagedKey: string): string => stagedKey.replace(/\.upload$/, ".claim");
-
-/** The 8 bytes a consumed staged object (and a claim) holds (lib/media/user-storage.ts). */
+/** The 8 bytes a consumed staged object holds (lib/media/user-storage.ts). */
 export const TOMBSTONE = new TextEncoder().encode("consumed");
 
 /** Drop staged bytes when the staging bucket's remove is called. */

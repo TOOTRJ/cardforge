@@ -44,11 +44,10 @@ import { CARD_ART_INCOMING_BUCKET } from "@/lib/cards/art-upload-limits";
 // big for a Vercel Function's 4.5 MB request body, so the browser PUTs it to
 // a signed URL this module mints for ONE server-made name in the caller's
 // folder of a PRIVATE bucket. Nothing there is public or referenceable; the
-// finish action (lib/cards/upload-art-server.ts) first claims the upload
-// (a `{uuid}.claim` marker created only if absent, so racing finishes store
-// it once), downloads it here, sniffs, strips and scans it like any upload,
-// writes the real object through userFolder("card-art") and replaces the
-// staged one with a tombstone (so the signed URL can't be used again).
+// finish action (lib/cards/upload-art-server.ts) downloads it here, sniffs,
+// strips and scans it like any upload, writes the real object through
+// userFolder("card-art") and replaces the staged one with a tombstone (so
+// the signed URL can't be used again).
 // ---------------------------------------------------------------------------
 
 export type UserStorageBucket =
@@ -218,25 +217,6 @@ export function userUploadStaging(userId: string) {
     },
 
     remove,
-
-    /**
-     * Claim `name` for ONE finish: create it holding STAGED_TOMBSTONE, only if
-     * it doesn't exist yet (upsert off). Storage keys are unique, so of any
-     * number of finishes racing on one staged upload exactly one gets past
-     * this; the others get an error. The user's signed URL can't touch it (a
-     * token is for its own key only). Cleared like any staged object, by
-     * removeOlderThan once the token has long expired.
-     */
-    async claim(name: string): Promise<UserStorageResult> {
-      const key = keyOf(name);
-      if (!key) return refused("Invalid storage path.");
-      const { error } = await objects().upload(key, STAGED_TOMBSTONE, {
-        upsert: false,
-        contentType: "image/png",
-        cacheControl: "0",
-      });
-      return { error: error ? { message: error.message } : null };
-    },
 
     /**
      * Replace a staged object with STAGED_TOMBSTONE once its bytes are read.

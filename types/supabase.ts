@@ -156,6 +156,26 @@ export type Database = {
         };
         Relationships: [];
       };
+      // migration 0131 — one finish per staged card-art upload (service-role
+      // only; lib/cards/art-upload-claim.ts).
+      card_art_upload_claims: {
+        Row: {
+          user_id: string;
+          staged_name: string;
+          claimed_at: string;
+        };
+        Insert: {
+          user_id: string;
+          staged_name: string;
+          claimed_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          staged_name?: string;
+          claimed_at?: string;
+        };
+        Relationships: [];
+      };
       upload_hits: {
         Row: {
           user_id: string;
@@ -1806,6 +1826,12 @@ export type Database = {
       hit_upload_limit: {
         Args: { p_user_id: string; p_per_minute: number; p_per_day: number };
         Returns: { allowed: boolean; retry_after_seconds: number; limited_by: string | null }[];
+      };
+      // migration 0131 — claim a staged card-art upload for ONE finish
+      // (service-role only; lib/cards/art-upload-claim.ts).
+      claim_card_art_upload: {
+        Args: { p_user_id: string; p_staged_name: string };
+        Returns: boolean;
       };
       media_url_allowed: {
         Args: { p_kind: string; p_url: string; p_owner: string };

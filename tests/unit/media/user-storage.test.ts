@@ -241,15 +241,6 @@ describe("userUploadStaging", () => {
     expect(state.calls).toHaveLength(1);
   });
 
-  it("claim creates the marker only if it doesn't exist (upsert off), inside `{userId}/`", async () => {
-    expect(await userUploadStaging(ME).claim("u.claim")).toEqual({ error: null });
-    expect(state.calls).toEqual([
-      { op: "upload", args: [`${ME}/u.claim`, STAGED_TOMBSTONE, { upsert: false, contentType: "image/png", cacheControl: "0" }] },
-    ]);
-    expect((await userUploadStaging(ME).claim("../x.claim")).error).not.toBeNull();
-    expect(state.calls).toHaveLength(1);
-  });
-
   it("never registers a storage origin (nothing here becomes a stored URL)", async () => {
     await userUploadStaging(ME).createUploadUrl("u.upload");
     expect(state.calls.map((c) => c.op)).toEqual(["sign"]);

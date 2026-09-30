@@ -60,12 +60,20 @@ describe("the card-art cap", () => {
     expect(incoming).toEqual({ file: "0131_card_art_upload_limit.sql", isPublic: "false", size: CARD_ART_MAX_BYTES, mimes: [...CARD_ART_MIME_TYPES] });
   });
 
-  it("0131 is idempotent and changes no grant or policy", () => {
+  it("0131 is idempotent, adds no storage policy, and grants only to service_role", () => {
     const sql = readFileSync(path.join(MIGRATIONS, "0131_card_art_upload_limit.sql"), "utf8");
     const body = sql.replace(/--[^\n]*/g, "");
     expect(body.match(/on conflict \(id\) do update/gi)).toHaveLength(2);
-    expect(body).not.toMatch(/\b(grant|revoke|create policy|drop policy|alter policy|create table|create function)\b/i);
-    expect(sql).toMatch(/Grants: none changed/);
+    expect(body).not.toMatch(/\b(create policy|drop policy|alter policy)\b/i);
+    expect(body).not.toMatch(/storage\.objects/i);
+    // The claim table (review 2026-09-29) is re-runnable, and service-role only
+    // (tests/unit/cards/art-upload-claim.test.ts holds its statements).
+    expect(body).toMatch(/create table if not exists public\.card_art_upload_claims/);
+    expect(body).toMatch(/create index if not exists card_art_upload_claims_claimed_at_idx/);
+    expect(body).toMatch(/create or replace function public\.claim_card_art_upload/);
+    expect(body).not.toMatch(/create table (?!if not exists)|create function/i);
+    for (const grant of body.match(/^\s*grant [^;]*;/gim) ?? []) expect(grant).toMatch(/to service_role;$/);
+    expect(sql).toMatch(/Grants: storage\.buckets \/ storage\.objects privileges are Supabase-managed/);
   });
 });
 

@@ -13,7 +13,7 @@ import {
 } from "@/tests/stubs/metadata-fixtures";
 import { looksUpright, storedAs } from "@/tests/stubs/exif-fixtures";
 import { noisePng } from "@/tests/stubs/noise-png";
-import { forgetStaged, resetStaging, stagingBucketApi, uploadCardArtViaStaging } from "@/tests/stubs/card-art-staging";
+import { claimRpc, forgetStaged, resetStaging, stagingBucketApi, uploadCardArtViaStaging } from "@/tests/stubs/card-art-staging";
 
 // ---------------------------------------------------------------------------
 // TODO 3.14a — every server path that stores a user's file stores it WITHOUT
@@ -45,9 +45,13 @@ function dbClient() {
 
 function storageClient() {
   return {
-    // The upload limit (0127, fail-closed) answers "allowed"; the storage
-    // origin registration (lib/media/storage-origin.ts) is a no-op upsert.
-    rpc: async () => ({ data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null }),
+    // The upload limit (0127, fail-closed) answers "allowed", the card-art
+    // finish's claim (0131) wins once per name; the storage origin
+    // registration (lib/media/storage-origin.ts) is a no-op upsert.
+    rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) =>
+      fn === "claim_card_art_upload"
+        ? claimRpc(args)
+        : { data: [{ allowed: true, retry_after_seconds: 0, limited_by: null }], error: null },
     from: () => ({ upsert: async () => ({ error: null }) }),
     storage: {
       from: (bucket: string) => ({

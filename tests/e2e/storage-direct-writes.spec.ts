@@ -144,21 +144,23 @@ test.describe("direct client writes (migration 0126)", () => {
     created.push({ bucket, key: `${userId}/${run}-other.upload` });
     expect(elsewhere.error, "a token is for its own key only").not.toBeNull();
 
-    // The finish action CLAIMS an upload before reading it (user-storage
-    // claim(): a `{uuid}.claim` marker written without upsert), so finishes
-    // fired in parallel store the file once. Of claims racing on one key,
-    // exactly one lands — Storage's object keys are unique…
-    const claimKey = `${userId}/${run}.claim`;
-    created.push({ bucket, key: claimKey });
+    // Storage can't arbitrate finishes racing on one staged upload: racing
+    // uploads of ONE key without upsert all succeed (seen here in CI, which
+    // is why the finish's claim is in the database). Migration 0131's
+    // claim_card_art_upload() answers true to exactly one caller per
+    // (user, name) — the finish reads nothing without it.
+    const claimName = `${run}.upload`;
     const claims = await Promise.all(
-      Array.from({ length: 5 }, () =>
-        admin.storage.from(bucket).upload(claimKey, new TextEncoder().encode("consumed"), { upsert: false, contentType: "image/png" }),
-      ),
+      Array.from({ length: 5 }, () => admin.rpc("claim_card_art_upload", { p_user_id: userId, p_staged_name: claimName })),
     );
-    expect(claims.filter((c) => !c.error), "exactly one racing claim may land").toHaveLength(1);
-    // …and the user's token can't reach the claim, upsert or not.
-    const overClaim = await user.storage.from(bucket).uploadToSignedUrl(claimKey, token, png(), { contentType: "image/png", upsert: true });
-    expect(overClaim.error, "a token can't write the claim").not.toBeNull();
+    expect(claims.map((c) => c.error)).toEqual([null, null, null, null, null]);
+    expect(claims.filter((c) => c.data === true), "exactly one racing claim may win").toHaveLength(1);
+    expect((await admin.rpc("claim_card_art_upload", { p_user_id: userId, p_staged_name: claimName })).data).toBe(false);
+    // …and it is the service role's alone: the user's session can neither
+    // claim nor read the claims.
+    expect((await user.rpc("claim_card_art_upload", { p_user_id: userId, p_staged_name: `${run}-mine.upload` })).error).not.toBeNull();
+    expect((await user.from("card_art_upload_claims").select("staged_name")).error).not.toBeNull();
+    await admin.from("card_art_upload_claims").delete().eq("user_id", userId).eq("staged_name", claimName);
 
     // Private: no public URL, no read or list with the user's own session.
     expect((await fetch(`${url}/storage/v1/object/public/${bucket}/${key}`)).ok).toBe(false);
