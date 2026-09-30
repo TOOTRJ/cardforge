@@ -206,12 +206,13 @@ on conflict (id) do nothing;
 --     each: Cinderwing Matriarch and Oath of the Hollow Crown (above) are the
 --     cards stored before the pieces shipped (no key: drawn as before, the
 --     editor shows the switch off with a hint); these carry the keys a new
---     card, an import or an owner's switch writes. 4.6b draws the two-colour
---     frame on m15 / m15artifact / m15land (Aurelian Tidewright, Hedgerow
+--     card, an import or an owner's switch writes. m15 / m15artifact /
+--     m15land draw the crown (4.6a: Kesh on, Varro off) and the two-colour
+--     frame (4.6b: Aurelian Tidewright — with the split crown — Hedgerow
 --     Mediator, Stormglass Strand, Brassbound Arbiter; Tidecaller Envoy and
---     Rotbloom Pact are stored with no key — gold until switched on); the
---     crown waits for 4.6a (lib/cards/anatomy.ts). dev_pro's cards, so
---     dev_artist's public count stays 14.
+--     Rotbloom Pact are stored with no key — gold until switched on)
+--     (lib/cards/anatomy.ts). dev_pro's cards, so dev_artist's public count
+--     stays 14.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -240,7 +241,7 @@ from (values
      E'Menace\nVarro can''t be the target of spells your opponents control during your turn.', '3', '2', 6,
      '{"template":"m15","finish":"regular","crown":false}'::jsonb, 2),
   -- A WU gold legendary with both switches on: the gold-split frame and
-  -- the split crown once 4.6a / 4.6b ship.
+  -- the split crown (4.6a + 4.6b).
   ('c0000000-0000-4000-a000-000000000028'::uuid, 'Aurelian Tidewright', 'aurelian-tidewright', '{1}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Wizard'], 'mythic',
      E'Flying\nWhenever you cast your second spell each turn, draw a card.', '2', '3', 9,
      '{"template":"m15","finish":"regular","crown":true,"twoColor":true}'::jsonb, 1),

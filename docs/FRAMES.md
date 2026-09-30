@@ -915,8 +915,9 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   46→58, crown 43→55 (CC's `maskRightHalf.png` tilts +1.35 %W; the prints
   don't). The same run rebuilds the templates' mono masters byte-identical
   to the manifest, and every pair master passes the edge contract, the
-  corner check, the square-corner table and the art-window check (the mono
-  masters' 2.65 px hairline).
+  corner check, the square-corner table and the art-window check with no
+  known-failure entry (v35's `CC_M15_ART_SLOT` covers their window like the
+  mono masters').
 - **Measured like the prints** (`tests/unit/render/two-colour-bake-pixels.test.tsx`
   bakes them at HD): the pinline's 10 / 50 / 90 % points at 10.8 and
   55.9 %H within ±1.5 %W of the 47 prints' 42.2 / 50.3 / 58.8 with no tilt,
@@ -926,8 +927,16 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
   (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
-  devoid, borderless, extended art, tokens — keeps the `two-colour` gaps,
-  now pointing at 4.6f.
+  devoid, borderless, extended art — keeps the `two-colour` gaps, now
+  pointing at 4.6f; an M20 token's gaps point at 4.48 (its own central rim
+  split and pill crown).
+- **With the crown:** a two-colour legend drawn as its pair master wears the
+  split crown band `m15crown/<pair>` (the first colour's crown lerped into
+  the second's across 43→55 %W, the same `pair-ramp.mjs`), on every dress and
+  template; with the two-colour switch off it stays gold under a gold crown.
+  Measured in a real HD bake: 44.2 / 49.0 / 53.7–53.8 %W at 10 / 50 / 90 % on
+  all ten pairs (the prints: 42.7 / 48.5 / 53.0 on FDN's crowned gold pairs,
+  43.8 / 50.1 / 54.3 on TLA's hybrids).
 - **Verification (owner decision 2026-09-29, V-A):** a pair rides its
   template's `m` tick — a deterministic recipe over the verified masters,
   like `a` riding `c` — and the owner signs off a pair sheet in the PR
