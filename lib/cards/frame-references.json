@@ -720,6 +720,35 @@
       "m": null
     }
   },
+  "emblem": {
+    "note": "The emblem (TODO 4.52, CC 'Planeswalker Emblems'): the M20 design every emblem since 2019-07-12 prints (the source's name in the dark bar, the art in the planeswalker spark, \"Emblem\" on the type bar). One colour key, c: an emblem is colourless (CR 114) and every one is on this silver frame. The 2014–19 EMBLEM-bar prints and the 2003 plaque resolve nearest (4.52 later / 4.43). Checked by eye too: TM20 #11 (the first M20 emblem), TBLB #30 (two lines, left), TFRA #16.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Vivien Reid Emblem",
+          "set": "tfdn",
+          "scryfallId": "a804d502-1092-4ff3-93d9-d1b0ac0f07d5",
+          "curated": true
+        },
+        {
+          "name": "Kaito, Cunning Infiltrator Emblem",
+          "set": "tfdn",
+          "scryfallId": "bfe4b1d5-f252-48fe-b4a1-7fbbc2523cf1"
+        },
+        {
+          "name": "Kaito, Bane of Nightmares Emblem",
+          "set": "tdsk",
+          "scryfallId": "435e707c-2b1d-48a7-ba75-c3c67824b50d"
+        }
+      ],
+      "m": null
+    }
+  },
   "m20token": {
     "note": "The full-art token design, M20 (2019-07-12) → today, textless height (CC 'Textless' token pack, its type pill re-cut 5 px onto the prints; TODO 4.48): M20+ prints with no rules text, measured textless (type pill ~81 %H). Mono-colour only: two colours print a gradient and legends a crown (4.6); m = three or more colours.",
     "colors": {

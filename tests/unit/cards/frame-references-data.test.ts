@@ -55,6 +55,9 @@ const DOCUMENTED_NULLS = new Set([
   // either (4.49 (b)).
   "m15tokenartifacttext/w", "m15tokenartifacttext/b", "m15tokenartifacttext/r", "m15tokenartifacttext/g",
   "m15tokenartifacttext/m",
+  // The emblem (TODO 4.52): colourless by rule (CR 114) — every printed one
+  // is on the one silver frame, so only `c` has printings.
+  "emblem/w", "emblem/u", "emblem/b", "emblem/r", "emblem/g", "emblem/m",
   // The full-art tokens (4.48 / 4.50; heights measured on the prints,
   // Scryfall 2026-09-29): no red, colourless or three-colour tall token
   // outside a legend; no black (T40K #14 prints its own layout), green or

@@ -11,6 +11,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { FieldGroup } from "@/components/creator/field-group";
 import { SetSymbol } from "@/components/cards/set-symbol";
+import { cardTypeHasRarity } from "@/lib/cards/emblem";
+import { kindFromCard, kindHidesRarity } from "@/lib/creator/card-kinds";
 import { uploadCoverImage } from "@/lib/media/upload-cover";
 import { cn } from "@/lib/utils";
 import type { Rarity } from "@/types/card";
@@ -41,6 +43,12 @@ export function SetIconPanel({ userId }: { userId: string | null }) {
   const rarity = (useWatch({ control, name: "rarity" }) || null) as
     | Rarity
     | null;
+  const cardType = useWatch({ control, name: "card_type" });
+  const template = useWatch({ control, name: "frame_style.template" });
+  // A token or an emblem has no rarity chips, so the helper doesn't send the
+  // user to them; an emblem has no rarity at all (CR 114, TODO 6.23), so its
+  // symbol's label names none, as on the card preview.
+  const rarityFixed = kindHidesRarity(kindFromCard(cardType, template));
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -75,7 +83,11 @@ export function SetIconPanel({ userId }: { userId: string | null }) {
   return (
     <FieldGroup
       label="Set icon"
-      helper="The small symbol at the right end of the type line. It takes the card's rarity color — try switching rarity on the Text & stats step to see it change."
+      helper={
+        rarityFixed
+          ? "The small symbol at the right end of the type line."
+          : "The small symbol at the right end of the type line. It takes the card's rarity color — try switching rarity on the Text & stats step to see it change."
+      }
     >
       <div className="flex flex-col gap-4">
         {/* Current selection preview at type-line-ish size + larger detail. */}
@@ -83,6 +95,7 @@ export function SetIconPanel({ userId }: { userId: string | null }) {
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-border bg-elevated/50">
             <SetSymbol
               rarity={rarity ?? "rare"}
+              namesRarity={cardTypeHasRarity(cardType)}
               iconUrl={iconUrl || null}
               setCode={iconCode || null}
               size={34}

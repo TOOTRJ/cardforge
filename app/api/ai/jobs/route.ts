@@ -68,6 +68,10 @@ const AI_CARD_TYPE_VALUES = [
   "token",
 ] as const;
 
+// A per-field fill pins the open card's own type (`locked`), which may be an
+// emblem (TODO 6.23) — pinned as "Emblem", never offered as a design type.
+const AI_LOCKED_CARD_TYPE_VALUES = [...AI_CARD_TYPE_VALUES, "emblem"] as const;
+
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("deck"),
@@ -114,7 +118,7 @@ const requestSchema = z.discriminatedUnion("kind", [
       .object({
         title: z.string().trim().max(CARD_TITLE_MAX).optional(),
         cost: z.string().trim().max(64).optional(),
-        card_type: z.enum(AI_CARD_TYPE_VALUES).optional(),
+        card_type: z.enum(AI_LOCKED_CARD_TYPE_VALUES).optional(),
         supertype: z.string().trim().max(64).optional(),
         subtypes: z.array(z.string().trim().max(40)).max(10).optional(),
         rarity: z.enum(RARITY_VALUES).optional(),

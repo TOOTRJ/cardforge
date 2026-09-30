@@ -99,6 +99,9 @@ type AiFillDialogProps = {
   onGenerate: (options: AiFillOptions) => void;
   myDecks?: DeckOption[] | null;
   canDesignForDeck?: boolean;
+  /** Fields the open card can't have, never offered: an emblem's cost,
+   *  colour, rarity and stats (EMBLEM_UNFILLED_FIELDS, TODO 6.23). */
+  hiddenFields?: readonly CardFillField[];
 };
 
 export function AiFillDialog({
@@ -128,6 +131,7 @@ function AiFillDialogBody({
   onGenerate,
   myDecks = null,
   canDesignForDeck = false,
+  hiddenFields = [],
 }: Omit<AiFillDialogProps, "open" | "onOpenChange">) {
   const upgrade = useUpgradeModal();
   const [want, setWant] = useState<Set<CardFillField>>(
@@ -145,6 +149,7 @@ function AiFillDialogBody({
   const offered = CARD_FILL_FIELDS.filter(
     (field) =>
       (!revise || !CREATE_ONLY_FILL_FIELDS.includes(field)) &&
+      !hiddenFields.includes(field) &&
       // Stats only when the type prints them — unless the type itself is
       // being generated (create), in which case the AI decides.
       (field !== "stats" || statsAvailable || (!revise && want.has("card_type"))),

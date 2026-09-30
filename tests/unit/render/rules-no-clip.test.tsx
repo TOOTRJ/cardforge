@@ -283,7 +283,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
     ["1200 chars"],
   ],
   // The shorter boxes: level-up's seven paragraphs too.
-  [["avatar/main", "battle/main", "bloomburrow/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
+  // …and the emblem's box (TODO 4.52: 74.4–91.9 %H, no plate; an emblem's
+  // text is a sentence or two).
+  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
   // Split's halves set their text inside the textbox border their boxes
   // hold (SPLIT_TEXTBOX_BORDER_PX): 400 characters no longer fit either.
   [["split/main", "split/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],

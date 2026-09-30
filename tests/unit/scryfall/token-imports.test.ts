@@ -433,23 +433,24 @@ describe("the toast exception goes for M20+ tokens (TODO 1.23)", () => {
   });
 });
 
-describe("emblems keep today's answer until 6.23, and read the tokens' design rule", () => {
-  // [fixture, M20 design]: "Emblem" from M20 on (TFDN #24/#25, TAFR #16,
-  // plst TSTX-8 — STX 2021); the 2014–19 look (TM15 #13, plst TORI-14) and
-  // the 2003 plaque (TDKA #3) before it. 6.23 / 4.52 will key on the rule.
-  const emblems: Array<[Key, boolean]> = [
-    ["tfdn-24", true],
-    ["tfdn-25", true],
-    ["tafr-16", true],
-    ["plst-tstx-8", true],
-    ["tm15-13", false],
-    ["plst-tori-14", false],
-    ["tdka-3", false],
+describe("emblems import on the emblem kind and read the tokens' design rule (6.23 / 4.52)", () => {
+  // [fixture, M20 design, signature]: "Emblem" from M20 on (TFDN #24/#25,
+  // TAFR #16, plst TSTX-8 — STX 2021) is 4.52's frame; the 2014–19 look
+  // (TM15 #13, plst TORI-14) and the 2003 plaque (TDKA #3) before it are
+  // nearest. Every printed emblem: tests/unit/scryfall/emblem-imports.test.ts.
+  const emblems: Array<[Key, boolean, string]> = [
+    ["tfdn-24", true, "emblem/m20"],
+    ["tfdn-25", true, "emblem/m20"],
+    ["tafr-16", true, "emblem/m20"],
+    ["plst-tstx-8", true, "emblem/m20"],
+    ["tm15-13", false, "emblem/2014-19"],
+    ["plst-tori-14", false, "emblem/2014-19"],
+    ["tdka-3", false, "emblem/old-frame"],
   ];
 
-  it.each(emblems)("%s: no PipGlyph card type — unsupported, nearest M15; M20 design %s", (key, m20) => {
-    expect(kindFromScryfall(printing(key))).toBeUndefined();
-    expect(match(key)).toMatchObject({ status: "unsupported", template: "m15", signature: "no-card-type" });
+  it.each(emblems)("%s: the emblem kind on the emblem frame; M20 design %s (%s)", (key, m20, signature) => {
+    expect(kindFromScryfall(printing(key))).toBe("emblem");
+    expect(match(key)).toMatchObject({ status: m20 ? "exact" : "nearest", template: "emblem", signature });
     expect(isM20DesignPrinting(printing(key))).toBe(m20);
   });
 });

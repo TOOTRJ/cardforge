@@ -33,7 +33,7 @@ const M20_TOKENS: FrameTemplate[] = [
 /** The owner's six (2026-09-27) and the full-art tokens, in
  *  FRAME_TEMPLATE_VALUES order. */
 const OPT_IN: FrameTemplate[] = [...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "m15textless", "m15textlessland", "nyx"];
-/** Every tile that draws the sample — exactly these 16 of the 48 templates,
+/** Every tile that draws the sample — exactly these 16 of the 49 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
 const SAMPLED: FrameTemplate[] = [
@@ -106,7 +106,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 16 of the 48 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 16 of the 49 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -121,7 +121,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       expect(counts.with === 0 || counts.without === 0, template).toBe(true);
       if (counts.with > 0) drawn.add(template);
     }
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(48);
+    // 48 + 4.52's emblem, whose silver master reads as itself on the tile.
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(49);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

@@ -53,6 +53,10 @@ export const CARD_TYPE_VALUES = [
   "planeswalker",
   "battle",
   "token",
+  // CR 114 (TODO 6.23, migration 0130): an emblem has no colour, cost, P/T
+  // or rarity. Reached from the token kind's picker (the emblem kind); it
+  // prints "Emblem" on the emblem frame (4.52).
+  "emblem",
   // Legacy value kept for backward compatibility with existing saved cards.
   // New cards should use 'instant' or 'sorcery' directly.
   "spell",
@@ -70,6 +74,7 @@ export const CARD_TYPE_LABELS: Record<CardType, string> = {
   planeswalker: "Planeswalker",
   battle: "Battle",
   token: "Token",
+  emblem: "Emblem",
   spell: "Spell (legacy)",
 };
 
@@ -331,6 +336,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // m15tokenartifact.
   "m15tokentext",
   "m15tokenartifacttext",
+  // The emblem (TODO 4.52, Card Conjurer 'Planeswalker Emblems'): the M20
+  // design — the source's name in the dark title bar, the art in a
+  // planeswalker-spark cut-out on a silver frame, a type bar reading
+  // "Emblem". The emblem kind's one frame (6.23).
+  "emblem",
   // The full-art token design, M20 (2019) → today (TODO 4.48 / 4.50, Card
   // Conjurer's 'Textless', 'Short' and 'Tall' token packs): the art to the
   // black ring, a name pill, a type pill and a translucent box. Three
@@ -416,6 +426,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15tokenartifact: "Artifact Token (2014–2019)",
   m15tokentext: "Token (2014–2019), text box",
   m15tokenartifacttext: "Artifact Token (2014–2019), text box",
+  emblem: "Emblem",
   m20token: "Full-art Token",
   m20tokentext: "Full-art Token, text box",
   m20tokentall: "Full-art Token, tall text box",
@@ -518,6 +529,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15tokenartifact: "m15",
   m15tokentext: "m15",
   m15tokenartifacttext: "m15",
+  emblem: "m15",
   m20token: "m15",
   m20tokentext: "m15",
   m20tokentall: "m15",
@@ -661,6 +673,9 @@ export const ERA_TYPE_FRAME: Partial<
     spell: "m15",
     land: "m15land",
     token: "m15token",
+    // TODO 6.23 / 4.52: the emblem kind's one frame; no other era prints
+    // today's emblem (the 2003 plaque and the 2014–19 "EMBLEM" bar are P3).
+    emblem: "emblem",
     planeswalker: "m15pw",
     battle: "battle",
   },

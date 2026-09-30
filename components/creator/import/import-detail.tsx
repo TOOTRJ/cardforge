@@ -303,10 +303,11 @@ export function ImportDetail({
 export function importPatchTypeLine(
   patch: Pick<ScryfallImportPatch, "supertype" | "card_type" | "subtypes_text">,
 ): string {
-  if (patch.card_type === "token") {
+  // An emblem reads "Emblem" (TODO 6.23).
+  if (patch.card_type === "token" || patch.card_type === "emblem") {
     return buildTypeLine({
       supertype: patch.supertype,
-      cardType: "token",
+      cardType: patch.card_type,
       subtypes: parseSubtypes(patch.subtypes_text ?? ""),
     });
   }

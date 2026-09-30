@@ -52,9 +52,9 @@ const font: { ascender: number; descender: number; unitsPerEm: number } = openty
 
 describe("one M15-era display size (layout v32)", () => {
   it("prints every family frame's name and type line at TITLE_SIZE_PCT / TYPE_SIZE_PCT — both halves of a flip or aftermath", () => {
-    // v32's 23, plus 4.49 (b)'s two text-box tokens and 4.48 / 4.50's six
-    // full-art tokens.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(31);
+    // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.48 / 4.50's six
+    // full-art tokens and 4.52's emblem.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(32);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -179,6 +179,12 @@ describe("baselines (TextSlot.dy)", () => {
       base.title,
       kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
     ],
+    // The emblem (TODO 4.52): a new template on Card Conjurer's master, set
+    // straight onto its prints' baselines — the name 3 px up from the band
+    // rule (193 → 190 px), "Emblem" 2 px up from the pill-centred band
+    // (1498 → 1496 px), measured on TFDN #24 / #25, TBLB #30, TDSK #17 and
+    // TFRA #16.
+    ["emblem", -3 / 1500, -2 / 1500],
     // The full-art tokens (TODO 4.48 / 4.50): new, set on the M20 prints'
     // baselines from CC's boxes — the name 4 px up, the type line 6 / 5 / 6
     // px up from its pill's centre (textless / regular / tall).
