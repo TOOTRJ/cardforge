@@ -52,9 +52,38 @@ describe("borderless families (TODO 1.17)", () => {
     // line (IKO #275).
     ["dmu-435", "nearest", "m15borderless", "m15"],
     ["iko-275", "nearest", "m15borderless", "m15"],
-    // Planeswalkers (4.33), light (ELD #271) and dark (WOE #297).
-    ["eld-271", "nearest", "m15pw", undefined],
-    ["woe-297", "nearest", "m15pw", undefined],
+    // Planeswalkers (4.33): the light borderless walker, regular (three
+    // printed rows) or tall (four), landing on the bordered m15pw (the art
+    // crop is the window, 1.18). A run of statics shares a printed row: NEO
+    // #303 (Flash + a static + three abilities) is tall, ZNR #281 (two
+    // statics + two abilities) regular. An `inverted` printing (WOE #297),
+    // a black walker with dark bars (FDN #359, and BLC #78, whose dark bars
+    // only look light over its pale art; AFR #284, CMR #512 and MED #GR2
+    // are pinned light ones) and a two-colour split frame (ELD #271 GU,
+    // DMU #375 GW) are nearest.
+    ["m21-280", "exact", "m15borderlesspw", "m15pw"],
+    ["m21-279", "exact", "m15borderlesspw", "m15pw"],
+    ["znr-281", "exact", "m15borderlesspw", "m15pw"],
+    ["m21-281", "exact", "m15borderlesspwtall", "m15pw"],
+    ["neo-303", "exact", "m15borderlesspwtall", "m15pw"],
+    ["afr-284", "exact", "m15borderlesspwtall", "m15pw"],
+    ["cmr-512", "exact", "m15borderlesspwtall", "m15pw"],
+    ["med-GR2", "exact", "m15borderlesspw", "m15pw"],
+    ["blc-78", "nearest", "m15borderlesspw", "m15pw"],
+    ["eld-271", "nearest", "m15borderlesspw", "m15pw"],
+    ["woe-297", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["fdn-359", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["dmu-375", "nearest", "m15borderlesspwtall", "m15pw"],
+    // What only the scans show (4.33 skeptic): the SDCC Bolas (PS19 #207)
+    // prints the dark dress in gold and four rows on the regular box, Gideon
+    // Blackblade (MED #WS2) two statics as two rows on the tall box, Comet
+    // (UNF #275) a die-roll table on the tall box, and two Secret Lair
+    // walkers (SLD #1619 / #1622) their names lettered across the art.
+    ["ps19-207", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["med-WS2", "nearest", "m15borderlesspw", "m15pw"],
+    ["unf-275", "nearest", "m15borderlesspw", "m15pw"],
+    ["sld-1619", "nearest", "m15borderlesspw", "m15pw"],
+    ["sld-1622", "nearest", "m15borderlesspw", "m15pw"],
     // Nonbasic lands (4.34).
     ["mid-281", "nearest", "m15land", undefined],
     ["otj-304", "nearest", "m15land", undefined],
@@ -110,7 +139,55 @@ describe("borderless families (TODO 1.17)", () => {
       blockedBy: "4.6",
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
-    expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
+    expect(frameMatchFromScryfall(printing("eld-271"))).toMatchObject({
+      signature: "borderless/planeswalker+two-colour",
+      blockedBy: "4.6",
+    });
+    // `inverted`: the light frame is its nearest (owner decision
+    // 2026-09-26), under a key of its own for the 1.6 log; so is a black
+    // walker's dark-barred dress, which no Scryfall field names.
+    expect(frameMatchFromScryfall(printing("woe-297"))).toMatchObject({
+      signature: "borderless/planeswalker+inverted",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/inverted/),
+    });
+    expect(frameMatchFromScryfall(printing("fdn-359"))).toMatchObject({
+      signature: "borderless/planeswalker+dark-bars",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/dark name and type bars/),
+    });
+    expect(frameMatchFromScryfall(printing("m21-280")).signature).toBe("borderless/planeswalker");
+    expect(frameMatchFromScryfall(printing("afr-284")).signature).toBe("borderless/planeswalker");
+    expect(frameMatchFromScryfall(printing("med-GR2")).signature).toBe("borderless/planeswalker");
+    // BLC #78's bars look light over its pale art, but its ink is white:
+    // the dark dress, never the pinned light one.
+    expect(frameMatchFromScryfall(printing("blc-78")).signature).toBe("borderless/planeswalker+dark-bars");
+    // No Scryfall field names these; the pins do, each under a key of its own
+    // for the 1.6 log, every gap that holds listed (C1 reads them).
+    expect(frameMatchFromScryfall(printing("ps19-207"))).toMatchObject({
+      signature: "borderless/planeswalker+dark-bars",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/dark name and type bars/),
+      gaps: ["dark-bars", "row-box"],
+    });
+    expect(frameMatchFromScryfall(printing("med-WS2"))).toMatchObject({
+      signature: "borderless/planeswalker+row-box",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/other ability box/),
+      gaps: ["row-box"],
+    });
+    expect(frameMatchFromScryfall(printing("unf-275"))).toMatchObject({
+      signature: "borderless/planeswalker+two-colour",
+      gaps: ["two-colour", "row-box"],
+    });
+    for (const key of ["sld-1619", "sld-1622"] as const) {
+      expect(frameMatchFromScryfall(printing(key))).toMatchObject({
+        signature: "borderless/planeswalker+lettered-name",
+        blockedBy: "4.33",
+        reason: expect.stringMatching(/letters its name across the art/),
+        gaps: ["lettered-name"],
+      });
+    }
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",

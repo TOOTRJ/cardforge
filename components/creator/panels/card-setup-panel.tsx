@@ -46,14 +46,19 @@ import {
   framesForKind,
   isSingleBasicLand,
   kindHasAvailableFrame,
+  hasRowDress,
+  isRowDress,
   isTextBoxDress,
   isTokenHeightDress,
   isTypeWordDress,
+  rowDressBaseFor,
   skinVariantsFor,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
   tokenFrameFor,
+  walkerRowCount,
+  walkerRowsFrameFor,
   tokenPickerWordsOf,
   typeLineHasWord,
   typeWordBaseFor,
@@ -397,17 +402,22 @@ export function CardSetupPanel({
           // is no choice of its own: the Token type section's Artifact
           // toggle picks it (TODO 3b.15), and the Standard chip stands for
           // whichever of the two the type words pick.
+          // Nor is the borderless planeswalker's tall box (4.33): the
+          // ability rows pick it, and the Borderless Planeswalker chip
+          // stands for both.
           const skinChoices = choices.filter(
             (c) =>
               c.group === "skin" &&
               skinVariantsFor(kind, base).includes(c.template) &&
-              !isTypeWordDress(kind, c.template),
+              !isTypeWordDress(kind, c.template) &&
+              !isRowDress(kind, c.template),
           );
           // The variation the card wears with its type-word dress taken
           // off (an Artifact token's text-box frame is the text-box
-          // variation): what the Variations chips compare against, so the
-          // Artifact word never hides the text box.
-          const undressed = typeWordBaseFor(kind, normalized);
+          // variation) and its row dress (the tall borderless walker is
+          // the Borderless Planeswalker variation): what the Variations
+          // chips compare against, so neither hides the variation.
+          const undressed = rowDressBaseFor(kind, typeWordBaseFor(kind, normalized));
           const wearsTypeWordDress = undressed !== normalized;
           const showcaseChoices = choices.filter(
             (c) => c.group === "showcase",
@@ -417,6 +427,8 @@ export function CardSetupPanel({
           // the full-art design, its height too (TODO 4.48): say so beside
           // the chips, and that picking one keeps it.
           const textBoxFollows = variationChoices.some((c) => isTextBoxDress(kind, c.template));
+          // …and the borderless walker's tall box follows the rows (4.33).
+          const rowsFollow = variationChoices.some((c) => hasRowDress(kind, c.template));
           const heightFollows = variationChoices.some((c) => isTokenHeightDress(kind, c.template));
 
           const frameSummary =
@@ -464,7 +476,10 @@ export function CardSetupPanel({
             // the arch lets the text pick its text box too (TODO 4.49 (b),
             // owner decision 5); a Variations chip is the box the user
             // chose, and it sticks.
-            const next = variation
+            // The borderless planeswalker takes the box its ability rows
+            // pick (4.33), from either section; while that one isn't
+            // published, the other one in the same colour.
+            const dressed = variation
               ? typeWordFrameFor(kind, picked, getValues("supertype"))
               : tokenFrameFor(
                   kind,
@@ -479,9 +494,14 @@ export function CardSetupPanel({
                     toughness: getValues("toughness"),
                   }),
                 );
+            const next = walkerRowsFrameFor(
+              kind,
+              dressed,
+              walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }),
+            );
             const resolution = resolvePublishedFrame({
               kind,
-              candidates: [next],
+              candidates: next === dressed ? [next] : [next, dressed],
               colorKey: colorKey as FrameColorKey,
               verifiedKeys,
               prefer: "colour",
@@ -694,6 +714,12 @@ export function CardSetupPanel({
                             {heightFollows
                               ? "The text box comes and goes with the card's rules and flavour text, and on the full-art token grows with it. Pick one here to keep it."
                               : "The text box comes and goes with the card's rules and flavour text. Pick one here to keep it."}
+                          </p>
+                        ) : null}
+                        {rowsFollow ? (
+                          <p className="text-[11px] leading-4 text-subtle">
+                            The borderless planeswalker takes its tall box at four abilities or
+                            more, as the printed ones do.
                           </p>
                         ) : null}
                       </div>

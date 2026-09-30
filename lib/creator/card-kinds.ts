@@ -25,9 +25,11 @@ import {
   FRAME_TEMPLATE_SET,
   FRAME_TEMPLATE_VALUES,
   type CardType,
+  type FaceContent,
   type FrameEra,
   type FrameTemplate,
 } from "@/types/card";
+import { resolveLoyaltyRows } from "@/lib/cards/face-content";
 import {
   TOKEN_TYPE_WORDS,
   hasRulesBoxText,
@@ -457,6 +459,8 @@ const KINDS_WITHOUT_STAT_OVERLAY: readonly CardKind[] = CARD_KIND_VALUES.filter(
 // the server refuses it on any other kind: CC's pack has no planeswalker,
 // land, token or battle frame (those are 4.33 / 4.34 / 4.37). The artifact
 // dress also serves an Artifact Creature, borrowed like m15artifact (1.7).
+// The borderless planeswalkers (4.33) are skins of m15pw, for planeswalkers
+// only (the rows and the shield are the frame's).
 const SHOWCASE_KIND_RESTRICTION: Partial<
   Record<FrameTemplate, readonly CardKind[]>
 > = {
@@ -466,6 +470,8 @@ const SHOWCASE_KIND_RESTRICTION: Partial<
   m15textlessland: ["land"],
   m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
+  m15borderlesspw: ["planeswalker"],
+  m15borderlesspwtall: ["planeswalker"],
   nyx: ["enchantment", "creature"],
   fullart: KINDS_WITHOUT_STAT_OVERLAY,
   m15textless: KINDS_WITHOUT_STAT_OVERLAY,
@@ -988,6 +994,121 @@ export function followTokenTextBox(input: {
   if (textBoxFrameFor(kind, template, !hasText) !== template) return null;
   const next = textBoxFrameFor(kind, template, hasText);
   return next === template ? null : next;
+}
+
+// The borderless planeswalker's tall box follows the ability rows (frames
+// plan 4.33): Card Conjurer's 'Tall Borderless' master moves the type bar
+// and the ability window's top 138 px up for FOUR rows, as the prints do
+// (Teferi, Master of Time M21 #281; Liliana, Dreadhorde General FDN #359;
+// Ajani, Sleeper Agent DMU #375), and three or fewer print on the regular
+// one. The rows are the PRINTED ones (walkerRowCount): every loyalty
+// ability is a row, and a run of static abilities shares one — The
+// Wandering Emperor NEO #303 (Flash + a static + three abilities) prints
+// four rows on the tall frame, Jace, Mirror Mage ZNR #281 and Vivien,
+// Monsters' Advocate IKO #277 (two statics + two abilities) three on the
+// regular one (checked on the scans of all 210 printings the registry's
+// borderless/planeswalker rule matches, 2026-09-29: 206 print the box this
+// count picks; Gideon Blackblade MED #WS2 sets its two statics in two rows
+// and Comet UNF #275 / #526 its die-roll table on the tall box, and Nicol
+// Bolas, Dragon-God PS19 #207 four rows on the regular one — the registry's
+// WALKER_ROW_BOX_PINS, `nearest`). Keyed by kind, then the regular frame →
+// its tall dress.
+//
+// Always automatic, in every path: the tall frame is no choice of its own
+// (the picker's one Borderless Planeswalker chip stands for both, like the
+// Artifact type word's token frame), the creator follows the rows as they
+// change (followWalkerRows), a Frame or Variations pick lands on the one
+// the rows pick, and the import (lib/scryfall/frame-signatures.ts), the
+// import chooser (frameFitsImport) and the AI's frame pick
+// (lib/creator/frame-random.ts) take the same rule. An unverified tall
+// frame never replaces a verified one: the card keeps its frame and the
+// creator says so, as the token text box does.
+export const TALL_WALKER_MIN_ROWS = 4;
+const ROW_DRESSES: Partial<Record<CardKind, Partial<Record<FrameTemplate, FrameTemplate>>>> = {
+  planeswalker: { m15borderlesspw: "m15borderlesspwtall" },
+};
+
+/** The ability rows a planeswalker PRINTS: one per loyalty ability, and one
+ *  for each run of static abilities (the prints set consecutive statics in
+ *  one row). The abilities are the renderers' own (resolveLoyaltyRows: the
+ *  structured rows when there are any, else a line of the rules text each);
+ *  `editorRows` are the creator's row editor (liveFaceContent: the rows with
+ *  text, when there are any). */
+export function walkerRowCount(input: {
+  faceContent?: FaceContent | null;
+  rulesText?: string | null;
+  editorRows?: readonly { cost?: string | null; text: string }[] | null;
+}): number {
+  const edited = (input.editorRows ?? []).filter((row) => row.text.trim());
+  const abilities =
+    edited.length > 0
+      ? edited.map((row) => ({ cost: row.cost?.trim() ? row.cost : null }))
+      : resolveLoyaltyRows(input.faceContent, input.rulesText);
+  let rows = 0;
+  let inStatics = false;
+  for (const ability of abilities) {
+    const isStatic = !ability.cost;
+    if (!isStatic || !inStatics) rows += 1;
+    inStatics = isStatic;
+  }
+  return rows;
+}
+
+/** True when the template is a frame the kind wears by its row count (the
+ *  tall borderless planeswalker): the pickers don't offer it. */
+export function isRowDress(kind: CardKind, template: FrameTemplate): boolean {
+  return Object.values(ROW_DRESSES[kind] ?? {}).includes(template);
+}
+
+/** True when the template has a row dress (the regular borderless
+ *  planeswalker): the Variations section says the box follows the rows. */
+export function hasRowDress(kind: CardKind, template: FrameTemplate): boolean {
+  return ROW_DRESSES[kind]?.[template] !== undefined;
+}
+
+/** The frame a row dress re-dresses (m15borderlesspwtall →
+ *  m15borderlesspw); any other template as it is — what the Variations
+ *  chips compare against. */
+export function rowDressBaseFor(kind: CardKind, template: FrameTemplate): FrameTemplate {
+  for (const [base, tall] of Object.entries(ROW_DRESSES[kind] ?? {}) as [FrameTemplate, FrameTemplate][]) {
+    if (template === tall) return base;
+  }
+  return template;
+}
+
+/**
+ * The frame the ability rows pick for a card on `template`: on the regular
+ * borderless planeswalker or its tall dress, the tall one for
+ * TALL_WALKER_MIN_ROWS rows or more (walkerRowCount) and the regular one
+ * otherwise; any other template (m15pw, a showcase, every other kind) as it
+ * is.
+ */
+export function walkerRowsFrameFor(kind: CardKind, template: FrameTemplate, rows: number): FrameTemplate {
+  for (const [base, tall] of Object.entries(ROW_DRESSES[kind] ?? {}) as [FrameTemplate, FrameTemplate][]) {
+    if (template !== base && template !== tall) continue;
+    return rows >= TALL_WALKER_MIN_ROWS ? tall : base;
+  }
+  return template;
+}
+
+/** True when the template is the one the rows pick (walkerRowsFrameFor). */
+export function walkerRowsFrameFits(kind: CardKind, template: FrameTemplate, rows: number): boolean {
+  return walkerRowsFrameFor(kind, template, rows) === template;
+}
+
+/**
+ * The creator's row follow: when the walker's rows change, the frame they
+ * now pick, or null to leave the frame alone (not a row-dressed frame, or
+ * already the right one). Unlike the token text box there is no manual pick
+ * to respect — the tall box has no chip of its own.
+ */
+export function followWalkerRows(input: {
+  kind: CardKind;
+  template: FrameTemplate;
+  rows: number;
+}): FrameTemplate | null {
+  const next = walkerRowsFrameFor(input.kind, input.template, input.rows);
+  return next === input.template ? null : next;
 }
 
 /** withTypeWord for the artifact frame a creature borrows (TODO 1.7). */

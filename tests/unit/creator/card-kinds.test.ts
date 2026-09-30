@@ -140,10 +140,11 @@ describe("framesForKind", () => {
       "m15tokenartifact", "m15tokentext", "m15tokenartifacttext",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ]);
-    // Standards with their own geometry and no skin set stay bare.
-    for (const kind of ["planeswalker", "battle"] as CardKind[]) {
-      expect(skinsFor(kind)).toEqual([]);
-    }
+    // 4.33's borderless planeswalkers; the tall one is a row dress (the
+    // pickers hide it, isRowDress).
+    expect(skinsFor("planeswalker")).toEqual(["m15borderlesspw", "m15borderlesspwtall"]);
+    // A standard with its own geometry and no skin set stays bare.
+    expect(skinsFor("battle")).toEqual([]);
   });
 
   it("appends showcase treatments for every standard kind", () => {

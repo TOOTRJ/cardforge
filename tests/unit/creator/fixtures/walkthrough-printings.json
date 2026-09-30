@@ -713,5 +713,79 @@
       "foil"
     ],
     "scryfall_uri": "https://scryfall.com/card/tlci/17/map?utm_source=api"
+  },
+  "m21-280": {
+    "id": "ed3906ea-df06-4299-a305-32e6ef476507",
+    "oracle_id": "497d7ab8-07f1-4c8a-a45a-52b9a4d9400f",
+    "name": "Basri Ket",
+    "released_at": "2020-07-03",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "280",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Basri",
+    "mana_cost": "{1}{W}{W}",
+    "oracle_text": "+1: Put a +1/+1 counter on up to one target creature. It gains indestructible until end of turn.\n−2: Whenever one or more nontoken creatures attack this turn, create that many 1/1 white Soldier creature tokens that are tapped and attacking.\n−6: You get an emblem with \"At the beginning of combat on your turn, create a 1/1 white Soldier creature token, then put a +1/+1 counter on each creature you control.\"",
+    "loyalty": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "artist": "Jehan Choo",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/m21/280/basri-ket?utm_source=api"
+  },
+  "m21-281": {
+    "id": "ba95c4fc-f0fc-4bfe-bef7-694c3d82a6c7",
+    "oracle_id": "e802fb53-7cf5-46bc-8a0b-f99cf5c20f74",
+    "name": "Teferi, Master of Time",
+    "released_at": "2020-07-03",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "281",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Teferi",
+    "mana_cost": "{2}{U}{U}",
+    "oracle_text": "You may activate loyalty abilities of Teferi on any player's turn any time you could cast an instant.\n+1: Draw a card, then discard a card.\n−3: Target creature you don't control phases out. (Treat it and anything attached to it as though they don't exist until its controller's next turn.)\n−10: Take two extra turns after this one.",
+    "loyalty": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "mythic",
+    "artist": "Chris Rallis",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/m21/281/teferi-master-of-time?utm_source=api"
   }
 }

@@ -491,3 +491,19 @@ describe("rules text (layout v33, TODO 3.29)", () => {
     expect(preview).toContain("lineHeight: hd(d.linePx)");
   });
 });
+
+describe("rules-box backdrop", () => {
+  it("is drawn by ONE rule in both renderers (drawsRulesBackdrop — 4.33's empty walker window)", () => {
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).toContain('import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";');
+      expect(src.match(/drawsRulesBackdrop\(layout\.rules, \{/g)).toHaveLength(1);
+      // The old inline condition (text only) is gone from both.
+      expect(src).not.toMatch(/layout\.rules\.backdropHex &&\s*hasRulesContent &&/);
+    }
+    // Neither draws it under ability rows; the preview's hint rows count as rows.
+    expect(BAKE).toContain("rowsDrawn: Boolean(layout.loyaltyRows) && loyaltyAbilities.length > 0,");
+    expect(PREVIEW).toContain(
+      "rowsDrawn: Boolean(layout.loyaltyRows) && (loyaltyAbilities.length > 0 || hintRowsLayout !== null),",
+    );
+  });
+});

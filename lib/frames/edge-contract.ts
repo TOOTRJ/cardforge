@@ -91,6 +91,17 @@ const BORDERLESS_M15: EdgeContract = {
   left: { kind: "art", except: [[78, 100]] },
 };
 
+/** CC's borderless planeswalkers (4.33; measured on all fourteen masters,
+ *  regular and tall): top and sides α 0, an opaque bottom bar 178 px
+ *  (8.48 % H) deep, and fins up the side edges from 78.67 % H, as on
+ *  `m15/borderless`. */
+const BORDERLESS_PW: EdgeContract = {
+  top: { kind: "art" },
+  right: { kind: "art", except: [[78, 100]] },
+  bottom: { kind: "bar", depthPct: 8.48 },
+  left: { kind: "art", except: [[78, 100]] },
+};
+
 /**
  * The declared edges of every frame template (FRAME_TEMPLATE_VALUES —
  * tests/unit/frames/edge-contract.test.ts fails for a template missing
@@ -170,6 +181,10 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The artifact dress: CC's A frame (c) and the colour frames — the same
   // pack, the same edges.
   m15borderlessartifact: BORDERLESS_M15,
+  // 4.33's borderless planeswalkers, regular and tall (the same packs'
+  // bottom bar and fins).
+  m15borderlesspw: BORDERLESS_PW,
+  m15borderlesspwtall: BORDERLESS_PW,
   // CC `textless/2022` composites keep their black ring (α 1.00 on all
   // seven masters); the re-sourced `fullartland` drops it (ALL_ART above;
   // its two bars float inside the card, clear of every edge band).

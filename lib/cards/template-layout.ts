@@ -98,6 +98,14 @@ export type TextSlot = {
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
    *  words stay legible regardless of the artwork underneath. */
   backdropHex?: string;
+  /** Draw `backdropHex` even when the box has no text (TODO 4.33, owner
+   *  round 15, 2026-09-29): a borderless walker's ability window is a
+   *  see-through cut-out, so a walker with no ability text shows the first
+   *  stripe's light ground instead of the bare art — in both renderers,
+   *  which ask drawsRulesBackdrop (lib/cards/rules-backdrop.ts). Never under
+   *  ability rows, the editor's hint rows or a saga rail, never on a
+   *  textless frame. Code-owned: not part of the override schema. */
+  backdropWhenEmpty?: boolean;
   /** TYPE LINE ONLY — print it in two boxes split at the em dash (TODO
    *  3.24): "Basic Land" in `leftRect`, "Forest" in `rightRect`, the way
    *  Zendikar-style basics print either side of their medallion. Both parts
@@ -1984,6 +1992,79 @@ const M15BORDERLESSARTIFACT: FrameProfile = {
   pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
 };
 
+// M15 Borderless Planeswalker — the light borderless walker (frames plan
+// 4.33; Card Conjurer 'Borderless' planeswalker pack, packPlaneswalker
+// Borderless.js @2fcddba, frames bucket only; 199 of the 245 non-showcase
+// borderless walker printings, e.g. Oko ELD #271, Basri Ket M21 #280). Card
+// Conjurer's regular planeswalker master with the frame body and border
+// taken away: the same title bar (57–211 px), type bar (1160–1313 px),
+// ability window (x 180–1383, from 1315 px), badge rim and shield, over art
+// that runs to the top and side edges (CC artBounds 0/0/100 × 91.53) down to
+// an opaque black bottom bar from 1922 px, with fins up the side edges from
+// ~80 % H. So m15pw's anatomy carries over whole (4.19 / 3.13 — the rail,
+// the rows sized by their text, the detached cost, M15's type slot, the
+// footer and brand mark in the bottom bar), with the full-bleed art slot and
+// the master's own shield (cut out of each master like m15pw's, loyalty/, and
+// drawn above the stripes). The rows are Card Conjurer's NEUTRAL light
+// stripes (versionPlaneswalker.js: white at 0.608, #a4a4a4 at 0.706), as the
+// light prints show them (Oko ELD #271: a white row, then a grey one) — not
+// m15pw's cream, which 4.19 still owes the bordered frame. Dark ink on the
+// light bars and rows, as on m15pw. Printings with `inverted` rows (dark
+// stripes, white ink: Ashiok WOE #297) resolve to this frame as `nearest`
+// (owner decision 2026-09-26).
+const BORDERLESS_PW_STRIPE_A = "rgba(255,255,255,0.608)";
+const BORDERLESS_PW_STRIPE_B = "rgba(164,164,164,0.706)";
+const M15BORDERLESSPW: FrameProfile = {
+  ...M15PW,
+  label: "M15 Borderless Planeswalker",
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 91.53 },
+  // A walker whose text isn't ability rows, or another card forced onto the
+  // frame, gets the plain box on the first stripe's light ground — and so
+  // does a walker with NO ability text (owner round 15, 2026-09-29): the
+  // window is a see-through cut-out, never left showing the bare art. The
+  // editor still shows its hint rows there (as on m15pw).
+  rules: { ...M15PW.rules, backdropHex: BORDERLESS_PW_STRIPE_A, backdropWhenEmpty: true },
+  loyaltyRows: {
+    ...M15PW.loyaltyRows!,
+    stripeAHex: BORDERLESS_PW_STRIPE_A,
+    stripeBHex: BORDERLESS_PW_STRIPE_B,
+  },
+  loyalty: { ...M15PW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspw/loyalty/{color}.png" },
+};
+/** How far Card Conjurer's TALL planeswalker masters draw the type bar and
+ *  the ability window above the regular ones: the type bar's top edge at
+ *  1022 px vs 1160 px on every colour of both packs (CC type y 0.4967 vs
+ *  0.5625, first ability 0.5581 vs 0.6239, set symbol 0.5234 vs 0.5891), as
+ *  a percent of the card's height. */
+export const TALL_WALKER_SHIFT_PCT = (138 / 2100) * 100;
+// …and its tall twin (Card Conjurer 'Tall Borderless', packPlaneswalker
+// TallBorderless.js): the same master with the type bar and the ability
+// window's top 138 px higher, for four ability rows (Teferi, Master of Time
+// M21 #281; Liliana, Dreadhorde General FDN #359; Ajani, Sleeper Agent DMU
+// #375). The title, rail, shield, bottom bar and footer stay put; the type
+// slot, the set symbol and the rules box's top move up with the bar.
+const M15BORDERLESSPWTALL: FrameProfile = {
+  ...M15BORDERLESSPW,
+  label: "M15 Borderless Planeswalker, tall",
+  type: {
+    ...M15BORDERLESSPW.type,
+    rect: { ...M15BORDERLESSPW.type.rect, topPct: M15BORDERLESSPW.type.rect.topPct - TALL_WALKER_SHIFT_PCT },
+  },
+  symbolRect: {
+    ...M15BORDERLESSPW.symbolRect!,
+    topPct: M15BORDERLESSPW.symbolRect!.topPct - TALL_WALKER_SHIFT_PCT,
+  },
+  rules: {
+    ...M15BORDERLESSPW.rules,
+    rect: {
+      ...M15BORDERLESSPW.rules.rect,
+      topPct: M15BORDERLESSPW.rules.rect.topPct - TALL_WALKER_SHIFT_PCT,
+      heightPct: M15BORDERLESSPW.rules.rect.heightPct + TALL_WALKER_SHIFT_PCT,
+    },
+  },
+  loyalty: { ...M15BORDERLESSPW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspwtall/loyalty/{color}.png" },
+};
+
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
 // magic-agclassic.mse-style, re-cut by the same build-alpha-frames.mjs):
 // agclassic's opening and text layout, a land treatment and no cost. Its
@@ -3320,6 +3401,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
+  m15borderlesspw: M15BORDERLESSPW,
+  m15borderlesspwtall: M15BORDERLESSPWTALL,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,

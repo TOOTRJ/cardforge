@@ -125,7 +125,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 22 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 24 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -147,6 +147,21 @@ into `.frames-build/` — 22 templates today (`CC_TEMPLATES` in
   colourless and artifact type pills darkened to the prints, every type pill
   solid, the artifact name pill slate and solid (PipGlyph composites,
   "Full-art tokens" below);
+- the borderless planeswalkers from 'Borderless' and 'Tall Borderless'
+  (4.33): m15borderlesspw (three ability rows) and m15borderlesspwtall (four;
+  its type bar and ability window 138 px higher), each with the master's own
+  shield cut out to `loyalty/` as on m15pw. The regular pack has no
+  colourless frame: `c` is its see-through 'Artifact Frame' with its alpha
+  lifted ×255/234 (a layer's `gain`), so the rim is opaque like every other
+  colour's and the tall pack's 'Colorless Frame'. The gold `m` is MATCHED TO
+  THE PRINTS (owner round 15, 2026-09-29): CC's 'Multicolored Frame' paints
+  flat tan faces where every mono-gold borderless walker prints a pale cream
+  face veined with gold, so the pack's 'White Frame' recolours the m frame's
+  title and type faces through CC's Title and Type masks (a `recolour`
+  layer: colour only, the alpha below kept, weighted by the white face's own
+  luminance — `PW_GOLD_FACE`, fitted to the 13 exact prints;
+  `tests/unit/frames/gold-walker-faces.test.ts` holds a built master to
+  their range, `tests/unit/frames/fixtures/gold-walker-prints.json`);
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
   in every colour key (an emblem is colourless), its name pill, silver, type
   pill and text box toned onto the prints and its spark's centre ray bridged
@@ -727,6 +742,29 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   emblems" scope or the no-match fallback its Cards scope asks for
   (`fallback=tokens`; `lib/scryfall/search-scope.ts`, Scryfall's
   `include_extras`).
+- **The borderless planeswalker's tall box follows the rows (4.33).**
+  Card Conjurer draws two masters: the regular one for up to three printed
+  ability rows and the tall one for four (a loyalty ability is a row, a run
+  of static abilities shares one — `walkerRowCount` in
+  `lib/creator/card-kinds.ts`; 206 of the 210 printings the
+  `borderless/planeswalker` rule matches print the box it picks — Gideon
+  Blackblade MED #WS2 prints its two statics as two rows, and Comet UNF
+  #275 / #526 its die-roll table on the tall box, Nicol Bolas, Dragon-God
+  PS19 #207 four rows on the regular one; `WALKER_ROW_BOX_PINS` makes those
+  four `nearest`). Every path picks by
+  that count: the registry's borderless family, the creator (its one
+  "Borderless Planeswalker" chip stands for both, and the frame follows the
+  rows as they change), the import chooser and the AI's frame pick. A
+  borderless walker lands on the bordered m15pw (1.18) with Borderless
+  Planeswalker offered once verified; `inverted` printings, the
+  dark-barred ones (every mono-black one but `LIGHT_BLACK_WALKER_PINS`, and
+  `DARK_BAR_WALKER_PINS`' gold PS19 #207) and the two Secret Lair walkers
+  that letter their name across the art (`LETTERED_NAME_WALKER_PINS`, SLD
+  #1619 / #1622) are `nearest` (owner round 15, 2026-09-29: they stay so,
+  and the box stays automatic). A walker with no ability text shows the
+  light first stripe in its see-through window, never the bare art
+  (`rules.backdropWhenEmpty`, `drawsRulesBackdrop` in both renderers; the
+  editor keeps its hint rows).
 - **Emblems (TODO 1.23 / 6.23).** "Emblem" is the emblem card type, so
   every `layout: emblem` printing imports on the emblem kind (the title
   without Scryfall's " Emblem", colourless, common; a subtype only on the
@@ -812,10 +850,11 @@ cards it changes.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 32 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 34 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
-full-art tokens and the emblem, new templates that joined without a bump;
-split and battle join with 4.21) prints its names, type
+full-art tokens, 4.33's two borderless planeswalkers and the emblem, new
+templates that joined without a bump; split and battle join with 4.21)
+prints its names, type
 lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
 the prints. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),

@@ -1,0 +1,695 @@
+{
+ "about": "TODO 4.33, owner round 15 (2026-09-29): the bar FACES of every mono-gold borderless planeswalker print resolved exact to m15borderlesspw / m15borderlesspwtall (13 printings; SLD #1421's foil twin is the same scan). Scryfall PNG scans (745x1040) upsampled to 1500x2100 (Lanczos), registered on the gold rims (2D correlation of (R+G)/2-B on CC's Pinline mask), then sampled in the face rectangles below with the text, pips and set symbol left out (within 7 px of any pixel with luma < 110, and anything that isn't cream or gold). Numbers only: no scan or frame is committed.",
+ "faceRects": {
+  "m15borderlesspw": {
+   "title": {
+    "x": [
+     130,
+     1371
+    ],
+    "y": [
+     81,
+     188
+    ]
+   },
+   "type": {
+    "x": [
+     130,
+     1371
+    ],
+    "y": [
+     1184,
+     1290
+    ]
+   }
+  },
+  "m15borderlesspwtall": {
+   "title": {
+    "x": [
+     130,
+     1371
+    ],
+    "y": [
+     81,
+     188
+    ]
+   },
+   "type": {
+    "x": [
+     130,
+     1371
+    ],
+    "y": [
+     1046,
+     1152
+    ]
+   }
+  }
+ },
+ "range": {
+  "lumaInterquartile": [
+   189.3,
+   211.6
+  ],
+  "redMinusBlueInterquartile": [
+   44.1,
+   77.6
+  ],
+  "lumaP10Range": [
+   155.2,
+   217.8
+  ],
+  "lumaP90Range": [
+   182.1,
+   245.1
+  ]
+ },
+ "ccMulticolored": {
+  "m15borderlesspw/title": {
+   "n": 132787,
+   "mean": [
+    205.0,
+    182.4,
+    125.3
+   ],
+   "luma": 182.6,
+   "lumaP10": 164.2,
+   "lumaP50": 186.6,
+   "lumaP90": 197.7,
+   "redMinusBlue": 79.6
+  },
+  "m15borderlesspw/type": {
+   "n": 131546,
+   "mean": [
+    205.1,
+    182.5,
+    125.2
+   ],
+   "luma": 182.7,
+   "lumaP10": 164.4,
+   "lumaP50": 186.6,
+   "lumaP90": 197.5,
+   "redMinusBlue": 79.9
+  },
+  "m15borderlesspwtall/title": {
+   "n": 132787,
+   "mean": [
+    204.7,
+    182.2,
+    125.3
+   ],
+   "luma": 182.5,
+   "lumaP10": 164.0,
+   "lumaP50": 186.6,
+   "lumaP90": 197.8,
+   "redMinusBlue": 79.4
+  },
+  "m15borderlesspwtall/type": {
+   "n": 131546,
+   "mean": [
+    205.0,
+    182.4,
+    125.2
+   ],
+   "luma": 182.6,
+   "lumaP10": 164.4,
+   "lumaP50": 186.6,
+   "lumaP90": 197.6,
+   "redMinusBlue": 79.7
+  }
+ },
+ "prints": [
+  {
+   "printing": "blc-100",
+   "name": "Tamiyo, Field Researcher",
+   "colors": "GUW",
+   "template": "m15borderlesspw",
+   "bar": "title",
+   "registration": [
+    1,
+    1
+   ],
+   "n": 44620,
+   "mean": [
+    220.9,
+    202.0,
+    157.6
+   ],
+   "luma": 202.6,
+   "lumaP10": 186.2,
+   "lumaP50": 202.7,
+   "lumaP90": 220.5,
+   "redMinusBlue": 63.3
+  },
+  {
+   "printing": "blc-100",
+   "name": "Tamiyo, Field Researcher",
+   "colors": "GUW",
+   "template": "m15borderlesspw",
+   "bar": "type",
+   "registration": [
+    1,
+    1
+   ],
+   "n": 60173,
+   "mean": [
+    212.3,
+    188.6,
+    128.8
+   ],
+   "luma": 188.9,
+   "lumaP10": 173.3,
+   "lumaP50": 185.1,
+   "lumaP90": 206.7,
+   "redMinusBlue": 83.5
+  },
+  {
+   "printing": "iko-278",
+   "name": "Narset of the Ancient Way",
+   "colors": "RUW",
+   "template": "m15borderlesspw",
+   "bar": "title",
+   "registration": [
+    -4,
+    0
+   ],
+   "n": 48478,
+   "mean": [
+    237.7,
+    230.8,
+    220.2
+   ],
+   "luma": 231.6,
+   "lumaP10": 197.9,
+   "lumaP50": 240.5,
+   "lumaP90": 244.2,
+   "redMinusBlue": 17.5
+  },
+  {
+   "printing": "iko-278",
+   "name": "Narset of the Ancient Way",
+   "colors": "RUW",
+   "template": "m15borderlesspw",
+   "bar": "type",
+   "registration": [
+    -4,
+    0
+   ],
+   "n": 68830,
+   "mean": [
+    233.1,
+    217.4,
+    168.1
+   ],
+   "luma": 216.4,
+   "lumaP10": 189.3,
+   "lumaP50": 221.4,
+   "lumaP90": 237.0,
+   "redMinusBlue": 65.0
+  },
+  {
+   "printing": "med-GR4",
+   "name": "Nicol Bolas, Planeswalker",
+   "colors": "BRU",
+   "template": "m15borderlesspw",
+   "bar": "title",
+   "registration": [
+    2,
+    2
+   ],
+   "n": 41256,
+   "mean": [
+    214.7,
+    184.2,
+    124.5
+   ],
+   "luma": 186.5,
+   "lumaP10": 171.6,
+   "lumaP50": 186.8,
+   "lumaP90": 200.6,
+   "redMinusBlue": 90.2
+  },
+  {
+   "printing": "med-GR4",
+   "name": "Nicol Bolas, Planeswalker",
+   "colors": "BRU",
+   "template": "m15borderlesspw",
+   "bar": "type",
+   "registration": [
+    2,
+    2
+   ],
+   "n": 63789,
+   "mean": [
+    225.9,
+    203.3,
+    160.4
+   ],
+   "luma": 205.2,
+   "lumaP10": 187.1,
+   "lumaP50": 207.1,
+   "lumaP90": 219.5,
+   "redMinusBlue": 65.4
+  },
+  {
+   "printing": "med-WS8",
+   "name": "Sarkhan Unbroken",
+   "colors": "GRU",
+   "template": "m15borderlesspw",
+   "bar": "title",
+   "registration": [
+    10,
+    3
+   ],
+   "n": 54802,
+   "mean": [
+    229.0,
+    203.4,
+    164.5
+   ],
+   "luma": 206.6,
+   "lumaP10": 172.4,
+   "lumaP50": 212.2,
+   "lumaP90": 236.3,
+   "redMinusBlue": 64.5
+  },
+  {
+   "printing": "med-WS8",
+   "name": "Sarkhan Unbroken",
+   "colors": "GRU",
+   "template": "m15borderlesspw",
+   "bar": "type",
+   "registration": [
+    10,
+    3
+   ],
+   "n": 50181,
+   "mean": [
+    217.2,
+    182.4,
+    128.2
+   ],
+   "luma": 186.6,
+   "lumaP10": 170.7,
+   "lumaP50": 186.5,
+   "lumaP90": 202.5,
+   "redMinusBlue": 89.0
+  },
+  {
+   "printing": "frc-1",
+   "name": "Jace, Multiverse Architect",
+   "colors": "BRUW",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    -1,
+    -1
+   ],
+   "n": 48001,
+   "mean": [
+    226.3,
+    208.5,
+    168.2
+   ],
+   "luma": 209.2,
+   "lumaP10": 196.0,
+   "lumaP50": 207.1,
+   "lumaP90": 227.1,
+   "redMinusBlue": 58.1
+  },
+  {
+   "printing": "frc-1",
+   "name": "Jace, Multiverse Architect",
+   "colors": "BRUW",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    -1,
+    -1
+   ],
+   "n": 69931,
+   "mean": [
+    230.2,
+    215.2,
+    179.7
+   ],
+   "luma": 215.7,
+   "lumaP10": 194.1,
+   "lumaP50": 216.2,
+   "lumaP90": 233.3,
+   "redMinusBlue": 50.5
+  },
+  {
+   "printing": "med-WS6",
+   "name": "Nicol Bolas, Dragon-God",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    5,
+    -2
+   ],
+   "n": 44694,
+   "mean": [
+    225.9,
+    209.5,
+    180.8
+   ],
+   "luma": 211.1,
+   "lumaP10": 169.2,
+   "lumaP50": 220.3,
+   "lumaP90": 239.9,
+   "redMinusBlue": 45.1
+  },
+  {
+   "printing": "med-WS6",
+   "name": "Nicol Bolas, Dragon-God",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    5,
+    -2
+   ],
+   "n": 59017,
+   "mean": [
+    219.2,
+    198.0,
+    160.2
+   ],
+   "luma": 200.1,
+   "lumaP10": 179.3,
+   "lumaP50": 199.4,
+   "lumaP90": 222.0,
+   "redMinusBlue": 59.0
+  },
+  {
+   "printing": "mh2-304",
+   "name": "Dakkon, Shadow Slayer",
+   "colors": "BUW",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    -2,
+    -16
+   ],
+   "n": 54597,
+   "mean": [
+    222.7,
+    198.7,
+    155.1
+   ],
+   "luma": 200.9,
+   "lumaP10": 179.2,
+   "lumaP50": 195.2,
+   "lumaP90": 234.5,
+   "redMinusBlue": 67.6
+  },
+  {
+   "printing": "mh2-304",
+   "name": "Dakkon, Shadow Slayer",
+   "colors": "BUW",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    -2,
+    -16
+   ],
+   "n": 55935,
+   "mean": [
+    208.5,
+    180.4,
+    116.2
+   ],
+   "luma": 181.5,
+   "lumaP10": 161.0,
+   "lumaP50": 180.3,
+   "lumaP90": 202.9,
+   "redMinusBlue": 92.3
+  },
+  {
+   "printing": "mh2-305",
+   "name": "Geyadrone Dihada",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    -3,
+    -3
+   ],
+   "n": 61924,
+   "mean": [
+    243.2,
+    232.7,
+    225.0
+   ],
+   "luma": 235.0,
+   "lumaP10": 217.8,
+   "lumaP50": 238.1,
+   "lumaP90": 245.1,
+   "redMinusBlue": 18.1
+  },
+  {
+   "printing": "mh2-305",
+   "name": "Geyadrone Dihada",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    -3,
+    -3
+   ],
+   "n": 55089,
+   "mean": [
+    203.4,
+    175.3,
+    104.9
+   ],
+   "luma": 175.7,
+   "lumaP10": 159.2,
+   "lumaP50": 175.2,
+   "lumaP90": 192.6,
+   "redMinusBlue": 98.6
+  },
+  {
+   "printing": "slc-2017",
+   "name": "Nicol Bolas, God-Pharaoh",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    5,
+    9
+   ],
+   "n": 34258,
+   "mean": [
+    193.5,
+    165.6,
+    114.1
+   ],
+   "luma": 168.1,
+   "lumaP10": 155.2,
+   "lumaP50": 166.9,
+   "lumaP90": 182.1,
+   "redMinusBlue": 79.4
+  },
+  {
+   "printing": "slc-2017",
+   "name": "Nicol Bolas, God-Pharaoh",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    5,
+    9
+   ],
+   "n": 54685,
+   "mean": [
+    210.8,
+    191.5,
+    167.0
+   ],
+   "luma": 194.5,
+   "lumaP10": 178.8,
+   "lumaP50": 194.8,
+   "lumaP90": 210.1,
+   "redMinusBlue": 43.8
+  },
+  {
+   "printing": "sld-1184",
+   "name": "Lord Windgrace",
+   "colors": "BGR",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    -3,
+    7
+   ],
+   "n": 50184,
+   "mean": [
+    232.6,
+    223.4,
+    212.4
+   ],
+   "luma": 224.9,
+   "lumaP10": 216.4,
+   "lumaP50": 225.2,
+   "lumaP90": 233.7,
+   "redMinusBlue": 20.2
+  },
+  {
+   "printing": "sld-1184",
+   "name": "Lord Windgrace",
+   "colors": "BGR",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    -3,
+    7
+   ],
+   "n": 48485,
+   "mean": [
+    224.1,
+    211.1,
+    182.2
+   ],
+   "luma": 211.7,
+   "lumaP10": 194.2,
+   "lumaP50": 212.3,
+   "lumaP90": 230.2,
+   "redMinusBlue": 42.0
+  },
+  {
+   "printing": "sld-1246",
+   "name": "Nicol Bolas, Dragon-God",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    21,
+    -7
+   ],
+   "n": 38831,
+   "mean": [
+    217.4,
+    211.1,
+    195.2
+   ],
+   "luma": 211.2,
+   "lumaP10": 194.7,
+   "lumaP50": 211.3,
+   "lumaP90": 227.6,
+   "redMinusBlue": 22.1
+  },
+  {
+   "printing": "sld-1246",
+   "name": "Nicol Bolas, Dragon-God",
+   "colors": "BRU",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    21,
+    -7
+   ],
+   "n": 57383,
+   "mean": [
+    207.2,
+    190.6,
+    135.0
+   ],
+   "luma": 189.2,
+   "lumaP10": 170.8,
+   "lumaP50": 188.8,
+   "lumaP90": 208.6,
+   "redMinusBlue": 72.2
+  },
+  {
+   "printing": "sld-1421",
+   "name": "Aminatou, the Fateshifter",
+   "colors": "BUW",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    -13,
+    -5
+   ],
+   "n": 37155,
+   "mean": [
+    219.4,
+    197.9,
+    149.4
+   ],
+   "luma": 198.8,
+   "lumaP10": 188.4,
+   "lumaP50": 195.7,
+   "lumaP90": 217.7,
+   "redMinusBlue": 70.0
+  },
+  {
+   "printing": "sld-1421",
+   "name": "Aminatou, the Fateshifter",
+   "colors": "BUW",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    -13,
+    -5
+   ],
+   "n": 58015,
+   "mean": [
+    213.1,
+    189.0,
+    130.2
+   ],
+   "luma": 189.5,
+   "lumaP10": 171.0,
+   "lumaP50": 185.3,
+   "lumaP90": 213.0,
+   "redMinusBlue": 83.0
+  },
+  {
+   "printing": "spg-14",
+   "name": "Lord Windgrace",
+   "colors": "BGR",
+   "template": "m15borderlesspwtall",
+   "bar": "title",
+   "registration": [
+    1,
+    -1
+   ],
+   "n": 63991,
+   "mean": [
+    233.9,
+    221.7,
+    192.6
+   ],
+   "luma": 222.0,
+   "lumaP10": 202.3,
+   "lumaP50": 223.4,
+   "lumaP90": 238.4,
+   "redMinusBlue": 41.3
+  },
+  {
+   "printing": "spg-14",
+   "name": "Lord Windgrace",
+   "colors": "BGR",
+   "template": "m15borderlesspwtall",
+   "bar": "type",
+   "registration": [
+    1,
+    -1
+   ],
+   "n": 52839,
+   "mean": [
+    217.8,
+    198.1,
+    146.1
+   ],
+   "luma": 198.1,
+   "lumaP10": 176.7,
+   "lumaP50": 198.8,
+   "lumaP90": 220.9,
+   "redMinusBlue": 71.7
+  }
+ ]
+}

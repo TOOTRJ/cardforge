@@ -360,6 +360,14 @@ export const FRAME_TEMPLATE_VALUES = [
   // has no body for 4.16's artifact interior).
   "m15borderless",
   "m15borderlessartifact",
+  // The borderless planeswalkers (frames plan 4.33, Card Conjurer
+  // 'Borderless' and 'Tall Borderless' planeswalker packs): art to the card
+  // edge under the planeswalker's light title and type bars, light ability
+  // rows with dark ink. Skins of m15pw in the Borderless set; the tall one
+  // (4 ability rows, the type bar 138 px higher) is picked by the card's
+  // row count (lib/creator/card-kinds.ts walkerRowsFrameFor).
+  "m15borderlesspw",
+  "m15borderlesspwtall",
   "agclassic",
   "alphaland",
   "alphatoken",
@@ -435,6 +443,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m20tokenartifacttall: "Full-art Artifact Token, tall text box",
   m15borderless: "Borderless",
   m15borderlessartifact: "Borderless Artifact",
+  m15borderlesspw: "Borderless Planeswalker",
+  m15borderlesspwtall: "Borderless Planeswalker, 4+ abilities",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -538,6 +548,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m20tokenartifacttall: "m15",
   m15borderless: "borderless",
   m15borderlessartifact: "borderless",
+  m15borderlesspw: "borderless",
+  m15borderlesspwtall: "borderless",
   battle: "m15",
   saga: "m15",
   adventure: "m15",
@@ -693,6 +705,9 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   m15: ["m15snow", "m15devoid", "m15borderless"],
   // The artifact kind's own borderless dress (frames plan 4.32).
   m15artifact: ["m15borderlessartifact"],
+  // The planeswalker kind's borderless dresses (frames plan 4.33): the tall
+  // one follows the ability rows (walkerRowsFrameFor).
+  m15pw: ["m15borderlesspw", "m15borderlesspwtall"],
   m15land: ["m15snowland"],
   // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).

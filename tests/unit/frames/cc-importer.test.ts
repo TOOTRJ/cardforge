@@ -13,6 +13,8 @@ import {
   EMBLEM_TEXT_BOX_TONE,
   EMBLEM_TONES,
   EMBLEM_TYPE_PILL_TONE,
+  PW_COLOURLESS_RIM_GAIN,
+  PW_GOLD_FACE,
   SHIELD_BOX,
   M20_ARTIFACT_NAME_SLATE,
   M20_ARTIFACT_SOLID_NAME_PILL,
@@ -57,7 +59,15 @@ import { frameUrl, setFrameStorageForTests, type FrameManifest } from "@/lib/fra
 // pinned commit; the build folder is never committed.
 // ---------------------------------------------------------------------------
 
-type Layer = { src: string; mask?: string; invert?: boolean; opacity?: number };
+type Layer = {
+  src: string;
+  mask?: string;
+  invert?: boolean;
+  opacity?: number;
+  gain?: number;
+  recolour?: boolean;
+  lumaRamp?: readonly number[];
+};
 type Finish =
   | { op: "opaque"; mask: string; colors?: string[] }
   | { op: "tint"; mask: string; rgb: [number, number, number]; opacity: number; alphaFull: number; alphaNone: number; colors?: string[] };
@@ -101,6 +111,8 @@ describe("Card Conjurer recipe", () => {
       "m15artifact",
       "m15borderless",
       "m15borderlessartifact",
+      "m15borderlesspw",
+      "m15borderlesspwtall",
       "m15devoid",
       "m15fullartland",
       "m15land",
@@ -514,6 +526,7 @@ describe("Card Conjurer recipe", () => {
     for (const template of [
       "m15land", "m15snow", "m15pw", "m15token", "m15tokentext", "m15devoid",
       "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland",
+      "m15borderlesspw", "m15borderlesspwtall",
     ]) {
       expect(templates[template].notes.join(" "), template).toMatch(/colourless/);
     }
@@ -528,7 +541,61 @@ describe("Card Conjurer recipe", () => {
     expect(SHIELD_BOX.y).toBeLessThanOrEqual(1844);
     expect(SHIELD_BOX.x + SHIELD_BOX.width).toBeGreaterThan(1430);
     expect(SHIELD_BOX.y + SHIELD_BOX.height).toBeGreaterThan(1991);
-    expect(Object.entries(templates).filter(([, d]) => d.shield).map(([t]) => t)).toEqual(["m15pw"]);
+    expect(Object.entries(templates).filter(([, d]) => d.shield).map(([t]) => t)).toEqual([
+      "m15pw",
+      "m15borderlesspw",
+      "m15borderlesspwtall",
+    ]);
+  });
+
+  it("imports the borderless planeswalkers 1:1 per colour, with the same shield cut (4.33)", () => {
+    const regular = templates.m15borderlesspw;
+    const tall = templates.m15borderlesspwtall;
+    for (const k of ["w", "u", "b", "r", "g"]) {
+      expect(regular.colors[k]).toEqual([{ src: `img/frames/planeswalker/borderless/${k}.png` }]);
+      expect(tall.colors[k]).toEqual([{ src: `img/frames/planeswalker/tallBorderless/${k}.png` }]);
+    }
+    // The regular pack has no colourless frame: its 'Artifact Frame', the
+    // rim lifted to opaque (the tall pack's own Colorless rim is α 1).
+    expect(regular.colors.c).toEqual([{ src: "img/frames/planeswalker/borderless/a.png", gain: PW_COLOURLESS_RIM_GAIN }]);
+    expect(PW_COLOURLESS_RIM_GAIN).toBeCloseTo(255 / 234, 12);
+    expect(tall.colors.c).toEqual([{ src: "img/frames/planeswalker/tallBorderless/c.png" }]);
+    for (const def of [regular, tall]) {
+      expect(def.shield).toEqual({ mask: "img/frames/planeswalker/maskLoyalty.png", box: SHIELD_BOX });
+      expect(def.plates).toBeUndefined();
+      // Neither pack's Land frame, nor the tall pack's white-rimmed Artifact.
+      expect(sourceFilesFor(def as never).some((f) => /\/(l|tallBorderless\/a)\.png$/.test(f))).toBe(false);
+      expect(def.notes.join(" ")).toMatch(/colourless/);
+    }
+    expect(regular.pack).toMatch(/^packPlaneswalkerBorderless[.]js/);
+    expect(tall.pack).toMatch(/^packPlaneswalkerTallBorderless[.]js/);
+    expect(describeLayer(regular.colors.c[0])).toBe(
+      "img/frames/planeswalker/borderless/a.png with its alpha ×1.0897 (clamped at 1)",
+    );
+  });
+
+  it("builds the gold walker's faces from the pack's white frame over its m frame — matched to the prints (4.33 round 15)", () => {
+    const title = "img/frames/planeswalker/regular/planeswalkerMaskTitle.png";
+    const face = { recolour: true, opacity: 0.9, lumaRamp: [235, 250] };
+    expect(PW_GOLD_FACE).toEqual({ opacity: 0.9, lumaRamp: [235, 250] });
+    expect(templates.m15borderlesspw.colors.m).toEqual([
+      { src: "img/frames/planeswalker/borderless/m.png" },
+      { src: "img/frames/planeswalker/borderless/w.png", mask: title, ...face },
+      { src: "img/frames/planeswalker/borderless/w.png", mask: "img/frames/planeswalker/regular/planeswalkerMaskType.png", ...face },
+    ]);
+    // The tall pack's own masters and its own Type mask (packPlaneswalkerTallBorderless.js).
+    expect(templates.m15borderlesspwtall.colors.m).toEqual([
+      { src: "img/frames/planeswalker/tallBorderless/m.png" },
+      { src: "img/frames/planeswalker/tallBorderless/w.png", mask: title, ...face },
+      { src: "img/frames/planeswalker/tallBorderless/w.png", mask: "img/frames/planeswalker/tall/planeswalkerTallMaskType.png", ...face },
+    ]);
+    for (const template of ["m15borderlesspw", "m15borderlesspwtall"]) {
+      expect(templates[template].notes.join(" "), template).toMatch(/gold \(m\) = MATCHED TO THE PRINTS/);
+      expect(sourceFilesFor(templates[template] as never)).toContain(title);
+    }
+    expect(describeLayer(templates.m15borderlesspw.colors.m[1])).toBe(
+      `img/frames/planeswalker/borderless/w.png through ${title} recolouring the layers below (their alpha kept) at 90%, weighted by its own luminance from 235 (0) to 250 (full)`,
+    );
   });
 
   it("imports 'Borderless (Alt)' 1:1 per colour, colourless from C, artifacts from A, the pack's plates (4.32)", () => {
@@ -584,6 +651,9 @@ describe("Card Conjurer recipe", () => {
 
   it("describes layers the way provenance prints them", () => {
     expect(describeLayer({ src: "a.png" })).toBe("a.png");
+    expect(describeLayer({ src: "a.png", mask: "m.png", recolour: true, opacity: 0.9, lumaRamp: [235, 250] })).toBe(
+      "a.png through m.png recolouring the layers below (their alpha kept) at 90%, weighted by its own luminance from 235 (0) to 250 (full)",
+    );
     expect(describeLayer({ src: "a.png", mask: "m.png" })).toBe("a.png through m.png");
     expect(describeLayer({ src: "a.png", mask: "m.png", opacity: 0.35 })).toBe("a.png through m.png at 35%");
     expect(describeLayer({ src: "a.png", mask: "m.png", invert: true })).toBe("a.png outside m.png");
@@ -1197,6 +1267,66 @@ describe("pixel operations", () => {
     expect([...out.subarray(20, 24)]).toEqual([228, 230, 230, 201]);
   });
 
+  it("lifts a see-through layer's alpha by its gain, clamped at 1 (4.33's colourless walker rim)", () => {
+    // 3×1: the rim (α 234), a bar (α 191), clear art (α 0).
+    const frame = {
+      data: new Uint8Array([...px(197, 203, 217, 234), ...px(190, 190, 190, 191), ...px(0, 0, 0, 0)]),
+      gain: 255 / 234,
+    };
+    const out = toRgba8(compositeLayers([frame], 3, 1));
+    expect([...out.subarray(0, 4)]).toEqual([197, 203, 217, 255]);
+    expect(out[7]).toBe(208); // 191 × 255/234
+    expect(out[11]).toBe(0);
+    // Above 234 it clamps (a join with the black bar, α 242).
+    const join = toRgba8(compositeLayers([{ data: new Uint8Array(px(116, 120, 128, 242)), gain: 255 / 234 }], 1, 1));
+    expect(join[3]).toBe(255);
+  });
+
+  it("recolours without touching the alpha, weighted by mask × opacity × the layer's own luminance ramp (4.33's gold walker)", () => {
+    // 6×1 over a tan base (α 255 ×3, then a see-through face α 217, then clear,
+    // then α 217 again): a white ground (luma 251: full weight 0.9), a grey
+    // vein (luma 230: none), a mid pixel (luma 241: 0.4 × 0.9), the
+    // see-through face (as opaque as the base: full weight), clear art
+    // (nothing to recolour), and an OPAQUE white over the see-through face
+    // (full weight, and still the base's α 217 — the layer's alpha never
+    // reaches the result).
+    const tan = [205, 182, 125];
+    const base = {
+      data: new Uint8Array([
+        ...px(tan[0], tan[1], tan[2], 255), ...px(tan[0], tan[1], tan[2], 255), ...px(tan[0], tan[1], tan[2], 255),
+        ...px(tan[0], tan[1], tan[2], 217), ...px(0, 0, 0, 0), ...px(tan[0], tan[1], tan[2], 217),
+      ]),
+    };
+    const white = {
+      data: new Uint8Array([
+        ...px(251, 251, 251, 255), ...px(230, 230, 230, 255), ...px(241, 241, 241, 255),
+        ...px(251, 251, 251, 217), ...px(251, 251, 251, 255), ...px(251, 251, 251, 255),
+      ]),
+      mask: new Uint8Array([
+        ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255),
+        ...px(0, 0, 0, 255),
+      ]),
+      recolour: true,
+      opacity: 0.9,
+      lumaRamp: [235, 250],
+    };
+    const out = toRgba8(compositeLayers([base, white], 6, 1));
+    const at = (x: number) => [...out.subarray(x * 4, x * 4 + 4)];
+    expect(at(0)).toEqual([246, 244, 238, 255]); // tan × 0.1 + 251 × 0.9
+    expect(at(1)).toEqual([...tan, 255]);
+    expect(at(2)).toEqual([218, 203, 167, 255]); // tan × 0.64 + 241 × 0.36
+    // The see-through face keeps α 217 — recoloured, never made more opaque.
+    expect(at(3)).toEqual([246, 244, 238, 217]);
+    expect(at(4)).toEqual([0, 0, 0, 0]);
+    // An opaque layer over it recolours it the same way and leaves its α 217.
+    expect(at(5)).toEqual([246, 244, 238, 217]);
+    // Outside its mask it does nothing.
+    const masked = toRgba8(compositeLayers([base, { ...white, mask: new Uint8Array(24) }], 6, 1));
+    expect([...masked.subarray(0, 4)]).toEqual([...tan, 255]);
+    // It needs something below it.
+    expect(() => compositeLayers([white], 6, 1)).toThrow(/needs a layer below/);
+  });
+
   it("blends a half-visible layer and rounds (not truncates) to 8 bits", () => {
     const base = { data: new Uint8Array(px(0, 0, 0, 255)) };
     const grey = { data: new Uint8Array(px(255, 255, 255, 255)), mask: new Uint8Array(px(0, 255, 0, 128)) };
@@ -1287,7 +1417,9 @@ describe("published to the frames bucket", () => {
   it("resolves the 4.32 / 4.39 frames to content-addressed bucket objects, never /frames (git)", () => {
     const restore = setFrameStorageForTests({ origin: "https://bucket.example/frames" });
     try {
-      for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"]) {
+      for (const template of [
+        "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland", "m15borderlesspw", "m15borderlesspwtall",
+      ]) {
         for (const [key] of outputsOf(template, templates[template])) {
           for (const variant of [key, key.replace(/\.png$/, ".webp")]) {
             const { hash } = manifest.files[variant];
@@ -1321,7 +1453,10 @@ describe("provenance and hygiene", () => {
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");
     // The later runs name their pack and what was done to its pixels.
-    for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland", "m15tokentext", "m15tokenartifacttext"]) {
+    for (const template of [
+      "m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland", "m15tokentext", "m15tokenartifacttext",
+      "m15borderlesspw", "m15borderlesspwtall",
+    ]) {
       expect(provenance[template].pack, template).toBe(templates[template].pack);
       expect(provenance[template].transforms, template).toMatch(/no resample/);
       expect(provenance[template].sourceFiles, template).toEqual(sourceFilesFor(templates[template] as never));

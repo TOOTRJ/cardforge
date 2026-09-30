@@ -33,6 +33,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m15borderless",
   "m15borderlessartifact",
   "m15pw",
+  // The borderless planeswalkers (TODO 4.33): new templates with no stored
+  // card, so they joined without a bump (m15pw's slots and sizes).
+  "m15borderlesspw",
+  "m15borderlesspwtall",
   "m15token",
   "m15tokenartifact",
   // The text-box tokens (TODO 4.49 (b)): new templates with no stored card,

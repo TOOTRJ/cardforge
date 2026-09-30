@@ -24,7 +24,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // 2026-09-28 for the references the import fixtures lack — TKLD #2 on
 // 2026-09-29, after TODO 4.49's token re-pin, and TDOM #2 / TXLN #7 (with
 // their rules text) for 4.49 (b)'s text-box tokens, the six full-art
-// token references of 4.48 / 4.50 (2026-09-29, with their text), TFDN #25
+// token references of 4.48 / 4.50 (2026-09-29, with their text), M21
+// #280 / #281 for 4.33's borderless planeswalkers (2026-09-29) and TFDN #25
 // (2026-09-29) for 4.52's emblem; the rest reuse
 // tests/unit/scryfall/fixtures/import-printings.json), trimmed like those to
 // identity + the frame fields (no rules or flavour text) and parsed through
@@ -166,6 +167,11 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   // the registry names the text-box frame too).
   ["m15tokentext", "w", "Knight", ""],
   ["m15tokenartifacttext", "c", "Treasure", ""],
+  // TODO 4.33's unverified borderless planeswalkers (M21 #280 / #281,
+  // captured with their rules text): the walk lands on the frame under
+  // test, the tall one included — the row follow never moves it.
+  ["m15borderlesspw", "w", "Basri Ket", ""],
+  ["m15borderlesspwtall", "u", "Teferi, Master of Time", ""],
   // TODO 4.52's unverified emblem frame: its reference TFDN #25 lands on the
   // emblem kind with the walker's name (Scryfall's "Vivien Reid Emblem").
   ["emblem", "c", "Vivien Reid", ""],

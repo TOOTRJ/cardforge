@@ -48,11 +48,25 @@ const TOKEN_REG = "img/frames/token/m15/regular";
 /** A layer: a frame image, optionally shown only through a mask (its alpha),
  *  optionally at reduced opacity. */
 const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
+/** A layer whose alpha is LIFTED by `gain` (> 1) and clamped at 1 — a
+ *  see-through master's rim made opaque with its anti-aliased edges kept in
+ *  proportion (4.33's colourless walker: the pack's rim is α 234, so ×255/234
+ *  takes it, and its join with the bottom bar, to 1). */
+const lifted = (src, gain) => ({ src, gain });
 /** A layer shown everywhere EXCEPT through a mask — how a borderless key
  *  drops a pack's Border mask (4.39). The mask is a region the frame image
  *  itself paints (its black ring), so the mask's COVERAGE is subtracted
  *  (alpha − mask alpha), not multiplied out: see compositeLayers. */
 const outside = (src, mask) => ({ src, mask, invert: true });
+/** A layer that RECOLOURS the layers below it and keeps their alpha (4.33's
+ *  gold walker): through `mask`, at `opacity`, and weighted by a ramp of
+ *  the layer's OWN luminance — 0 at or below `lumaRamp[0]`, 1 from
+ *  `lumaRamp[1]` — so the layer's bright ground shows and its darker veins
+ *  let the colour below through. Its alpha counts relative to the alpha
+ *  below (as opaque as what is below = full weight), so a see-through bar
+ *  (the tall walker's α 0.85 faces) is recoloured, never made more opaque.
+ *  See compositeLayers. */
+const recolour = (src, mask, { opacity, lumaRamp }) => ({ src, mask, recolour: true, opacity, lumaRamp });
 
 /** The planeswalker loyalty shield's box on the 1500×2100 master: CC's
  *  maskLoyalty.png covers x 1197–1430, y 1844–1991 after the Lanczos
@@ -351,6 +365,61 @@ const borderlessFrame = (k) => `${BORDERLESS}/m15GenericShowcaseFrame${k.toUpper
 /** The pack's P/T plates: one per colour, "Artifact" (a) and "Colorless" (l).
  *  (pt/c.png sits in the folder too, but the pack never lists it.) */
 const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM), c: `${BORDERLESS}/pt/l.png` };
+
+// --- 4.33 'Borderless' and 'Tall Borderless' planeswalkers — CC
+// packPlaneswalkerBorderless.js / packPlaneswalkerTallBorderless.js
+// (groupPlaneswalker.js:3 and :6). 1500×2100 native (no resample): the
+// regular planeswalker master without its frame body and border — title bar
+// 57–211 px, type bar 1160–1313 (tall: 1022–1175), the ability window x
+// 180–1383 with its badge rim, the shield, an opaque bottom bar from 1922 px
+// and fins up the side edges from ~80 % H; everything else α 0, so the art
+// runs to the top and side edges. The regular pack lists W U B R G M,
+// 'Artifact' (a) and 'Land' (l) and no colourless frame; the tall pack adds
+// 'Colorless' (c). The ability stripes are the renderer's (CC draws them
+// before the frame), so the shield is cut out of each master and drawn again
+// above them, as on m15pw.
+const PW_BORDERLESS = "img/frames/planeswalker/borderless";
+const PW_TALL_BORDERLESS = "img/frames/planeswalker/tallBorderless";
+const PW_LOYALTY_MASK = "img/frames/planeswalker/maskLoyalty.png";
+/** The regular pack's 'Artifact Frame' (our colourless walker) is
+ *  see-through: bars α 191, the ability window's rim α 234 — every other
+ *  colour's rim, and the tall pack's 'Colorless Frame' rim in the same
+ *  colour, are α 255. Its alpha × 255/234 (clamped at 1) makes the rim and
+ *  its join with the bottom bar opaque; the bars go 0.75 → 0.82 (the tall
+ *  pack's colourless bars are 0.85). */
+export const PW_COLOURLESS_RIM_GAIN = 255 / 234;
+/** The gold (m) walker's bar faces, MATCHED TO THE PRINTS (owner round 15,
+ *  2026-09-29). CC's 'Multicolored Frame' paints the title and type faces a
+ *  flat tan; every mono-gold borderless walker print — the 13 exact ones:
+ *  Tamiyo BLC #100, Narset IKO #278, Nicol Bolas MED #GR4, Sarkhan MED #WS8,
+ *  Jace FRC #1, Nicol Bolas MED #WS6, Dakkon MH2 #304, Dihada MH2 #305,
+ *  Nicol Bolas SLC #2017, Lord Windgrace SLD #1184 and SPG #14, Nicol Bolas
+ *  SLD #1246, Aminatou SLD #1421 — prints a pale cream face veined with
+ *  that gold. So the pack's own 'White Frame' is drawn over the m frame
+ *  through CC's Title and Type masks (the pack's own way of mixing frames)
+ *  as a recolour at 90 %, weighted by the white face's luminance from 235
+ *  (its grey marble veins: the gold shows) to 250 (its brightest ground:
+ *  90 % white) — fitted to the 26 bars' pooled face colour and luminance
+ *  quantiles. On the face rectangles of
+ *  tests/unit/frames/fixtures/gold-walker-prints.json: prints luma 202 per
+ *  bar on average (168–235, interquartile 189–212), red − blue 60
+ *  (interquartile 44–78); ours 204 and 56; CC's tan 183 and 80, outside
+ *  both. The gold rims (Pinline), the window, the shield, the bottom bar
+ *  and the alpha stay the m frame's. tests/unit/frames/gold-walker-faces
+ *  .test.ts holds a built master to the prints' range. */
+export const PW_GOLD_FACE = Object.freeze({ opacity: 0.9, lumaRamp: Object.freeze([235, 250]) });
+const PW_TITLE_MASK = `${PW}/planeswalkerMaskTitle.png`;
+const PW_TYPE_MASK = `${PW}/planeswalkerMaskType.png`;
+const PW_TALL_TYPE_MASK = "img/frames/planeswalker/tall/planeswalkerTallMaskType.png";
+/** The gold walker: the m frame, its title and type faces recoloured with
+ *  the pack's white frame through CC's Title and Type masks (PW_GOLD_FACE). */
+const goldWalker = (folder, typeMask) => [
+  layer(`${folder}/m.png`),
+  recolour(`${folder}/w.png`, PW_TITLE_MASK, PW_GOLD_FACE),
+  recolour(`${folder}/w.png`, typeMask, PW_GOLD_FACE),
+];
+const PW_BORDERLESS_PACK = "packPlaneswalkerBorderless.js 'Borderless' (groupPlaneswalker.js:3)";
+const PW_TALL_BORDERLESS_PACK = "packPlaneswalkerTallBorderless.js 'Tall Borderless' (groupPlaneswalker.js:6)";
 
 // --- 4.39 'Fullart Basics (2022)' — CC packTextlessBasics2022.js
 // (groupTextless-4.js:5). 1500×2100 native, opaque black ring; a title bar
@@ -764,6 +833,46 @@ export const CC_TEMPLATES = {
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
     ],
   },
+  // 4.33 — the light borderless planeswalker (3 ability rows).
+  m15borderlesspw: {
+    colors: {
+      ...perColor((k) => [layer(`${PW_BORDERLESS}/${k}.png`)], WUBRGM),
+      // Gold = the prints' pale cream faces (PW_GOLD_FACE; see notes).
+      m: goldWalker(PW_BORDERLESS, PW_TYPE_MASK),
+      // No colourless frame in the pack: `c` is its 'Artifact Frame', a
+      // see-through frame (bars α 0.75, rim α 0.92), its alpha lifted so the
+      // rim is opaque (PW_COLOURLESS_RIM_GAIN; see notes).
+      c: [lifted(`${PW_BORDERLESS}/a.png`, PW_COLOURLESS_RIM_GAIN)],
+    },
+    shield: { mask: PW_LOYALTY_MASK, box: SHIELD_BOX },
+    pack: PW_BORDERLESS_PACK,
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    notes: [
+      "colourless = the pack's 'Artifact Frame' (borderless/a.png): the pack lists no colourless frame. It is the colourless look — the tall pack's 'Colorless Frame' rim is the same colour (197/203/217), and Ugin M21 #279 and Karn DMU #372 print its see-through grey bars (Karn's stained glass shows through them); the tall pack's own 'Artifact Frame' is a different, white-rimmed one",
+      "colourless rim made opaque: the frame's alpha × 255/234 (clamped at 1) takes the rim (α 234) and its join with the bottom bar to 1, as the tall pack's Colorless rim and both prints have it, and the see-through bars from α 0.75 to 0.82 (the tall pack's colourless bars are 0.85). As shipped, the rim's lower edge (1922–1957 px) runs past the art slot, so the card root's #101015 showed through it (7.6), and the bottom bar band was α 0.92–0.96 there (7.7)",
+      "gold (m) = MATCHED TO THE PRINTS (owner round 15, 2026-09-29): the pack's 'Multicolored Frame' with its title and type faces recoloured by the pack's 'White Frame' through CC's Title and Type masks at 90 %, weighted by the white face's luminance from 235 (its grey veins: the gold shows) to 250 (PW_GOLD_FACE), fitted to the prints. The 13 exact mono-gold borderless walker prints (BLC #100, IKO #278, MED #GR4/#WS6/#WS8, FRC #1, MH2 #304/#305, SLC #2017, SLD #1184/#1246/#1421, SPG #14; 26 bars; Scryfall scans registered on the gold rims, text left out) print pale cream faces veined with the gold: mean 221/201/160, luma 202 per bar (168–235, interquartile 189–212), red − blue 60 (interquartile 44–78). Ours: 219/204/163, luma 204, red − blue 56. CC's flat tan was 205/182/125, luma 183, red − blue 80. Rims, window, shield, bottom bar and alpha are the m frame's",
+      "the pack's 'Land Frame' (borderless/l.png) is not imported: no land walker prints on it",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
+    ],
+  },
+  // 4.33 — its tall twin (4 ability rows), auto-picked by the row count.
+  m15borderlesspwtall: {
+    colors: {
+      ...perColor((k) => [layer(`${PW_TALL_BORDERLESS}/${k}.png`)]),
+      // Gold = the prints' pale cream faces (PW_GOLD_FACE; see notes); the
+      // tall pack's see-through faces (α 0.85) keep their alpha.
+      m: goldWalker(PW_TALL_BORDERLESS, PW_TALL_TYPE_MASK),
+    },
+    shield: { mask: PW_LOYALTY_MASK, box: SHIELD_BOX },
+    pack: PW_TALL_BORDERLESS_PACK,
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    notes: [
+      "colourless = the pack's own 'Colorless Frame' (tallBorderless/c.png)",
+      "gold (m) = MATCHED TO THE PRINTS (owner round 15, 2026-09-29): the pack's 'Multicolored Frame' with its title and type faces recoloured by the pack's 'White Frame' through CC's Title and Type masks at 90 %, weighted by the white face's luminance from 235 (its grey veins: the gold shows) to 250 (PW_GOLD_FACE), fitted to the prints. The 13 exact mono-gold borderless walker prints (BLC #100, IKO #278, MED #GR4/#WS6/#WS8, FRC #1, MH2 #304/#305, SLC #2017, SLD #1184/#1246/#1421, SPG #14; 26 bars; Scryfall scans registered on the gold rims, text left out) print pale cream faces veined with the gold: mean 221/201/160, luma 202 per bar (168–235, interquartile 189–212), red − blue 60 (interquartile 44–78). Ours: 219/204/163, luma 204, red − blue 56. CC's flat tan was 205/182/125, luma 183, red − blue 80. Rims, window, shield, bottom bar and alpha are the m frame's (its see-through faces stay α 0.85)",
+      "the pack's 'Artifact Frame' (tallBorderless/a.png) and 'Land Frame' (tallBorderless/l.png) are not imported: no artifact or land walker dress",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
+    ],
+  },
   // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
   m15fullartland: {
     colors: perColor((k) => [layer(basics2022Frame(k))]),
@@ -849,7 +958,7 @@ function m20TextlessRecutTransform(r) {
 export const CC_DEFERRED = {};
 
 /**
- * Composite RGBA layers (each `{ data, mask?, invert?, opacity? }`, raw 8-bit
+ * Composite RGBA layers (each `{ data, mask?, invert?, opacity?, gain?, recolour?, lumaRamp? }`, raw 8-bit
  * RGBA of the same size) in order: a layer's alpha is multiplied by its
  * mask's ALPHA, then drawn source-over onto the accumulator — exactly CC's
  * drawFrames (a black canvas, the masks drawn 'source-in', the image drawn
@@ -864,20 +973,43 @@ export const CC_DEFERRED = {};
  * straight inner edges, up to 64 at its rounded corners — a faint rounded
  * rectangle over the art (owner evidence 2026-09-26). The two agree wherever
  * the mask is 0 or 255 or the frame is opaque (the bars that reach into the
- * ring). Returns a Float32Array RGBA with alpha in 0..1.
+ * ring). `gain` then lifts the layer's alpha and clamps it at 1 (4.33's
+ * colourless walker rim). A `recolour` layer (4.33's gold walker) changes
+ * only the colour below it — weight = its alpha relative to the alpha below
+ * (at most 1) × mask × opacity × its luminance ramp — and keeps the alpha.
+ * Returns a Float32Array RGBA with alpha in 0..1.
  */
 export function compositeLayers(images, width, height) {
   const n = width * height;
   const acc = new Float32Array(n * 4);
   for (const [i, img] of images.entries()) {
+    if (img.recolour && i === 0) throw new Error("compositeLayers: a recolour layer needs a layer below it");
     for (let p = 0; p < n; p += 1) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
+      if (img.recolour) {
+        // Colour only: mix into what is below by the layer's weight, keep
+        // the alpha below (see `recolour`).
+        const below = acc[o + 3];
+        if (below === 0 || a === 0) continue;
+        let w = Math.min(1, a / below);
+        if (img.mask) w *= img.mask[o + 3] / 255;
+        if (img.opacity !== undefined) w *= img.opacity;
+        if (img.lumaRamp) {
+          const [lo, hi] = img.lumaRamp;
+          const lum = 0.299 * img.data[o] + 0.587 * img.data[o + 1] + 0.114 * img.data[o + 2];
+          w *= Math.min(1, Math.max(0, (lum - lo) / (hi - lo)));
+        }
+        if (w === 0) continue;
+        for (let c = 0; c < 3; c += 1) acc[o + c] = acc[o + c] * (1 - w) + img.data[o + c] * w;
+        continue;
+      }
       if (img.mask) {
         const m = img.mask[o + 3] / 255;
         a = img.invert ? Math.max(0, a - m) : a * m;
       }
       if (img.opacity !== undefined) a *= img.opacity;
+      if (img.gain !== undefined) a = Math.min(1, a * img.gain);
       if (i === 0) {
         acc[o] = img.data[o];
         acc[o + 1] = img.data[o + 1];
@@ -1270,10 +1402,15 @@ export function toRgba8(acc) {
 }
 
 /** One layer as provenance prints it: "src", "src through mask",
- *  "src outside mask", "… at 35%". */
+ *  "src outside mask", "… at 35%", "… recolouring the layers below …". */
 export function describeLayer(l) {
   const mask = l.mask ? ` ${l.invert ? "outside" : "through"} ${l.mask}` : "";
-  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
+  const gain = l.gain !== undefined ? ` with its alpha ×${l.gain.toFixed(4)} (clamped at 1)` : "";
+  if (l.recolour) {
+    const ramp = l.lumaRamp ? `, weighted by its own luminance from ${l.lumaRamp[0]} (0) to ${l.lumaRamp[1]} (full)` : "";
+    return `${l.src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}`;
+  }
+  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
 }
 
 /** One `finish` composite as provenance prints it. */
