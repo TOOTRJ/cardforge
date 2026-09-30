@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
@@ -26,7 +26,12 @@ import {
 //   * a CRON_SECRET in the environment is used as before, no prompt;
 //   * any other URL (local dev server, a preview) never prompts.
 // The CLI tests run the real script with fetch stubbed (a preload module),
-// so nothing ever reaches the network.
+// so nothing ever reaches the network — through a pipe, and in a REAL
+// terminal (a pseudo-terminal): the fake streams above can't see the
+// terminal's own echo, so a prompt that left the tty in cooked mode passed
+// every one of them while a real terminal showed the whole secret. The
+// script reads no env file either: CRON_SECRET comes from the environment
+// or the prompt, never from a `.env*` lying in the working directory.
 // ---------------------------------------------------------------------------
 
 const PROD = "https://www.pipglyph.com/api/admin/rebake";
@@ -115,7 +120,7 @@ describe("resolveRebakeSecret", () => {
   });
 });
 
-describe("scripts/rebake-renders.mjs (fetch stubbed — never the network)", () => {
+describe("scripts/rebake-renders.mjs (fetch stubbed — never the network)", { timeout: 30_000 }, () => {
   const SCRIPT = path.join(process.cwd(), "scripts/rebake-renders.mjs");
   let tmp = "";
   let stub = "";
@@ -144,15 +149,24 @@ describe("scripts/rebake-renders.mjs (fetch stubbed — never the network)", () 
     if (tmp) rmSync(tmp, { recursive: true, force: true });
   });
 
-  function run(env: Record<string, string>, input = ""): Promise<{ code: number | null; out: string }> {
+  /** The test process's environment minus everything the script reads. */
+  function baseEnv() {
     const base = { ...process.env };
     delete base.CRON_SECRET;
     delete base.REBAKE_URL;
     delete base.STUB_PLAN;
+    return base;
+  }
+
+  function run(
+    env: Record<string, string>,
+    input = "",
+    cwd = process.cwd(),
+  ): Promise<{ code: number | null; out: string }> {
     return new Promise((resolve) => {
       const child = spawn(process.execPath, ["--no-warnings", "--import", stub, SCRIPT], {
-        cwd: process.cwd(),
-        env: { ...base, SCOPE: "sweep", REBAKE_RETRIES: "0", STUB_EXPECT_SECRET: FAKE_SECRET, ...env },
+        cwd,
+        env: { ...baseEnv(), SCOPE: "sweep", REBAKE_RETRIES: "0", STUB_EXPECT_SECRET: FAKE_SECRET, ...env },
       });
       let out = "";
       child.stdout.on("data", (d) => (out += d));
@@ -192,5 +206,121 @@ describe("scripts/rebake-renders.mjs (fetch stubbed — never the network)", () 
     expect(code).toBe(0);
     expect(out).toMatch(/STUB_FETCH http:\/\/localhost:3999\/api\/admin\/rebake\?limit=8&scope=sweep&dry=1 bearer=none/);
     expect(out).not.toMatch(/CRON_SECRET for|terminal/);
+  });
+
+  it("never takes CRON_SECRET from an env file in the working directory", async () => {
+    const cwd = path.join(tmp, "with-env-files");
+    mkdirSync(cwd, { recursive: true });
+    for (const file of [".env", ".env.local", ".env.prod-peek", ".env.production", ".env.production.local"]) {
+      writeFileSync(path.join(cwd, file), `CRON_SECRET=${FAKE_SECRET}\nREBAKE_URL=${PROD}\n`);
+    }
+    // Production, nothing in the environment, no terminal: refused — the
+    // files' secret is not a fallback.
+    const prod = await run({ REBAKE_URL: PROD, STUB_PLAN: "1" }, "", cwd);
+    expect(prod.code).toBe(1);
+    expect(prod.out).toMatch(/Run this in a terminal/);
+    expect(prod.out).not.toMatch(/STUB_FETCH/);
+    // A local server: no bearer at all.
+    const local = await run({ REBAKE_URL: LOCAL, STUB_PLAN: "1" }, "", cwd);
+    expect(local.code).toBe(0);
+    expect(local.out).toMatch(/STUB_FETCH http:\/\/localhost:3999\/\S+ bearer=none/);
+  });
+
+  // ---- In a real terminal -------------------------------------------------
+  // python3's pty module gives the script a pseudo-terminal: its stdin is a
+  // TTY (so it prompts), and the terminal driver echoes whatever is typed
+  // unless the prompt switched echo off. The driver waits for the question,
+  // types one key at a time like a person (then a stray key and a
+  // backspace, then Enter) and prints everything the terminal showed.
+  // Required in CI (ubuntu has python3); skipped locally only without it.
+  const hasPty = spawnSync("python3", ["-c", "import pty, termios, fcntl, struct"]).status === 0;
+  const PTY_DRIVER = `import os, pty, select, struct, sys, time, fcntl, termios
+cols = int(sys.argv[1]); wait_for = sys.argv[2].encode(); keys = sys.stdin.buffer.read()
+pid, fd = pty.fork()
+if pid == 0:
+    fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", 24, cols, 0, 0))
+    os.execvp(sys.argv[3], sys.argv[3:])
+out = b""
+def pump(timeout):
+    global out
+    if not select.select([fd], [], [], timeout)[0]: return True
+    try: chunk = os.read(fd, 4096)
+    except OSError: return False
+    if not chunk: return False
+    out += chunk
+    return True
+deadline = time.time() + 20
+alive = True
+while alive and wait_for not in out and time.time() < deadline: alive = pump(0.1)
+if alive and wait_for in out:
+    for key in keys:
+        os.write(fd, bytes([key])); time.sleep(0.005); pump(0)
+while time.time() < deadline and pump(1): pass
+try: os.kill(pid, 9)
+except OSError: pass
+_, status = os.waitpid(pid, 0)
+sys.stdout.buffer.write(out)
+sys.exit(os.WEXITSTATUS(status) if os.WIFEXITED(status) else 99)
+`;
+
+  function runInTerminal(
+    env: Record<string, string>,
+    keys: string,
+    columns: number,
+  ): Promise<{ code: number | null; shown: string; log: string }> {
+    const driver = path.join(tmp, "pty-driver.py");
+    writeFileSync(driver, PTY_DRIVER);
+    return new Promise((resolve) => {
+      const child = spawn(
+        "python3",
+        [driver, String(columns), "not echoed): ", process.execPath, "--no-warnings", "--import", stub, SCRIPT],
+        {
+          cwd: process.cwd(),
+          env: { ...baseEnv(), SCOPE: "sweep", REBAKE_RETRIES: "0", STUB_EXPECT_SECRET: PTY_SECRET, ...env },
+        },
+      );
+      let shown = "";
+      let log = "";
+      child.stdout.on("data", (d) => (shown += d));
+      child.stderr.on("data", (d) => (log += d));
+      child.on("close", (code) => resolve({ code, shown, log }));
+      child.stdin.end(keys);
+    });
+  }
+
+  /** A secret no terminal output could contain by chance. */
+  const PTY_SECRET = "cron_TEST_Qz7xKp9Wm2Lv4Rb8Nc6Td1Yh5Fj3Gs0Ue";
+  function expectNoSecretIn(shown: string) {
+    const secretPart = PTY_SECRET.slice("cron_TEST_".length);
+    for (let i = 0; i + 4 <= secretPart.length; i += 1) expect(shown).not.toContain(secretPart.slice(i, i + 4));
+  }
+
+  for (const columns of [40, 120]) {
+    it.skipIf(!hasPty && !process.env.CI)(
+      `production, no CRON_SECRET, a real terminal ${columns} columns wide: asks once, echoes nothing typed, sends what was typed`,
+      async () => {
+        const { code, shown, log } = await runInTerminal(
+          { REBAKE_URL: PROD, STUB_PLAN: "1" },
+          `${PTY_SECRET}X\x7f\r`,
+          columns,
+        );
+        expect(code, `${shown}\n${log}`).toBe(0);
+        expect(shown.split(PRODUCTION_SECRET_QUESTION)).toHaveLength(2);
+        expect(shown).toMatch(
+          /STUB_FETCH https:\/\/www\.pipglyph\.com\/api\/admin\/rebake\?limit=8&scope=sweep&dry=1 bearer=expected/,
+        );
+        expect(shown).toMatch(/Nothing to do\./);
+        // Not one 4-character run of it — escape sequences included.
+        expectNoSecretIn(shown);
+      },
+    );
+  }
+
+  it.skipIf(!hasPty && !process.env.CI)("Ctrl+C at the prompt exits 130 and sends nothing", async () => {
+    const { code, shown } = await runInTerminal({ REBAKE_URL: PROD, STUB_PLAN: "1" }, "Qz7x\x03", 80);
+    expect(shown).toContain(PRODUCTION_SECRET_QUESTION);
+    expect(code).toBe(130);
+    expect(shown).not.toMatch(/STUB_FETCH/);
+    expect(shown).not.toContain("Qz7x");
   });
 });

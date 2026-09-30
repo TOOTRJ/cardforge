@@ -115,6 +115,36 @@ describe("/admin/frame-compare — the reference lookup", () => {
     expect(warn.mock.calls[0][1]).toBe("fetch failed");
   });
 
+  it("the REAL lookup with the network down (Scryfall's fetch throws) takes the same fallback", async () => {
+    // Not a mocked rejection: the real buildFrameComparePayload → getCardById
+    // → scryfallFetch, with only `fetch` itself failing the way undici does
+    // when Scryfall is unreachable. The client lets that throw (it returns
+    // null only for an answered 404), which is what errored the page.
+    const actual = await vi.importActual<typeof import("@/lib/scryfall/reference-preview")>(
+      "@/lib/scryfall/reference-preview",
+    );
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    payloads.build.mockImplementation(actual.buildFrameComparePayload);
+    try {
+      await renderPage({ template: "m15", color: "w" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain(`/cards/${REFERENCE.scryfallId}`);
+    expect(
+      screen.getByText(
+        `Reference lookup failed (${REFERENCE.name}) — showing sample content instead. Reload to retry.`,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId("frame-compare").textContent).toBe(sampleFramePreview("m15", "w").title);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][1]).toBe("fetch failed");
+  });
+
   it("a lookup that answers null (no such card) takes the same fallback", async () => {
     payloads.build.mockResolvedValue(null);
     await renderPage({ template: "m15", color: "w" });
