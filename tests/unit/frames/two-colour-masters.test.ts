@@ -2,9 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { CC_TEMPLATES, describeLayer, pairMasterLayers } from "@/scripts/lib/cc-frames.mjs";
-import { FRAME_MASTER_KEYS, TWO_COLOR_MASTER_KEYS, TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
+import {
+  FRAME_MASTER_KEYS,
+  TWO_COLOR_MASTER_KEYS,
+  TWO_COLOR_PAIRS,
+  sampleFramePreview,
+} from "@/lib/cards/frame-reference-registry";
+import { frameMasterKey } from "@/components/cards/frame-layer";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6b — the two-colour pair masters a profile declares are PUBLISHED:
@@ -68,3 +74,17 @@ describe("the declared pair masters", () => {
     }
   });
 });
+
+describe("verification (owner decision 2026-09-29, V-A: a pair rides its template's m tick)", () => {
+  it.each(["m15", "m15artifact", "m15land"] as const)(
+    "%s: the compare page's m sample stays the GOLD master — an m re-tick never judges a pair by accident",
+    (template) => {
+      const sample = sampleFramePreview(template, "m");
+      const profile = getFrameProfile(template);
+      const style = sample.frameStyle as FrameStyle;
+      expect(style).not.toHaveProperty("twoColor");
+      expect(frameMasterKey(profile, sample.colorIdentity as ColorIdentity[], sample, style)).toBe("m");
+    },
+  );
+});
+
