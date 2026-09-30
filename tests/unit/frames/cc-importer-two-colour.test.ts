@@ -231,7 +231,8 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
       PAIR("g", "w", [40, 60], "pinline"),
     ]);
     // Its mono coloured artifacts use the same masks in the same order.
-    expect(CC_TEMPLATES.m15artifact.colors.g.map((l: { mask?: string }) => l.mask)).toEqual(
+    const artifactColors = CC_TEMPLATES.m15artifact.colors as Record<string, { mask?: string }[]>;
+    expect(artifactColors.g.map((l) => l.mask)).toEqual(
       pairMasterLayers("gw", "split", "artifact").map((l: { mask?: string }) => l.mask),
     );
   });

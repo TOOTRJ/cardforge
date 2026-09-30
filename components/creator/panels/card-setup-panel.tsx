@@ -237,9 +237,9 @@ export function CardSetupPanel({
   // Basic-only frames (the full-art basic land) can't draw a nonbasic's
   // rules, so their chips are disabled unless the card IS one basic land —
   // the same rule the renderers and the server gate read.
-  const [cardType, title, supertype, subtypesText, rulesText] = useWatch({
+  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn] = useWatch({
     control,
-    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text"],
+    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor"],
   });
   const isBasicLand = isSingleBasicLand({
     cardType,
@@ -249,8 +249,11 @@ export function CardSetupPanel({
     rulesText,
   });
   // The card's type, for the tiles of a frame that dresses a colour by type
-  // (Alpha's colourless artifact paints the brown artifact card).
-  const frameType: FrameTypeInfo = { cardType, supertype };
+  // (Alpha's colourless artifact paints the brown artifact card), and its
+  // cost + two-colour switch, so a frame tile in the card's own colours shows
+  // the pair master the card paints there (TODO 4.6b: gold-split or hybrid).
+  const frameType: FrameTypeInfo = { cardType, supertype, cost };
+  const frameAnatomy = { twoColor: twoColorOn };
 
   // A frame a creature borrows dresses it as another type too: the Artifact
   // variation an Artifact Creature (TODO 1.7), the Nyx showcase an
@@ -548,6 +551,7 @@ export function CardSetupPanel({
                   }
                   colorIdentity={colorIdentity}
                   type={frameType}
+                  anatomy={frameAnatomy}
                 />
               ),
               disabled: !available || basicOnlyRefused,
@@ -572,6 +576,7 @@ export function CardSetupPanel({
                 colorKey={colorKey}
                 colorIdentity={colorIdentity}
                 type={frameType}
+                anatomy={frameAnatomy}
               />
             ),
           };
@@ -598,6 +603,7 @@ export function CardSetupPanel({
                             colorKey={colorKey}
                             colorIdentity={colorIdentity}
                             type={frameType}
+                            anatomy={frameAnatomy}
                           />
                         ),
                       },

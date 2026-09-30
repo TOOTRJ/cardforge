@@ -6,8 +6,10 @@
 // kind-first CardSetupPanel (components/creator/panels/card-setup-panel.tsx).
 
 import { type ColorIdentity, type FrameTemplate } from "@/types/card";
+import type { FrameAnatomyStyle } from "@/lib/cards/anatomy";
 import {
   frameBackgroundImage,
+  frameMasterKey,
   frameMasterKeyForColor,
   frameSplitClipPaths,
   frameSplitFor,
@@ -46,6 +48,7 @@ export function FrameThumb({
   colorKey = "u",
   colorIdentity,
   type = null,
+  anatomy = null,
 }: {
   template: FrameTemplate;
   /** Frame color variant to preview — callers pass the card's live color so
@@ -62,15 +65,20 @@ export function FrameThumb({
    *  colourless tile is the brown artifact card for an artifact
    *  (frameMasterKeyForColor, the renderers' rule). */
   type?: FrameTypeInfo | null;
+  /** The card's anatomy switches (FrameStyle.twoColor, TODO 4.6b), with the
+   *  card's own identity and `type.cost`: a stored pair with the two-colour
+   *  frame on shows the pair master the card paints on a frame that has one
+   *  (frameMasterKey, the renderers' rule), not the gold "m". */
+  anatomy?: FrameAnatomyStyle | null;
 }) {
   const profile = getFrameProfile(template);
   const landscape = profile.orientation === "landscape";
-  const split =
-    colorIdentity && pickFrameColorKey(colorIdentity) === colorKey
-      ? frameSplitFor(profile, colorIdentity)
-      : null;
+  const own = Boolean(colorIdentity) && pickFrameColorKey(colorIdentity) === colorKey;
+  const split = own ? frameSplitFor(profile, colorIdentity) : null;
   const clips = split ? frameSplitClipPaths(split) : null;
-  const masterKey = frameMasterKeyForColor(profile, colorKey, type);
+  const masterKey = own
+    ? frameMasterKey(profile, colorIdentity, type, anatomy)
+    : frameMasterKeyForColor(profile, colorKey, type);
   // An art-first master (artFillsCard: borderless, full-art basics) is
   // see-through almost everywhere, so on the tile's dark ground it read as
   // a black tile (4.45): the sample art goes in the profile's art slot and
