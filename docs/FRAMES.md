@@ -123,7 +123,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 15 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 17 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -137,7 +137,14 @@ into `.frames-build/` — 15 templates today (`CC_TEMPLATES` in
   frame with its Border mask erased), each with CC's mana symbols at
   `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot;
 - the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
-  m15tokentext and its artifact dress m15tokenartifacttext.
+  m15tokentext and its artifact dress m15tokenartifacttext;
+- the borderless planeswalkers from 'Borderless' and 'Tall Borderless'
+  (4.33): m15borderlesspw (three ability rows) and m15borderlesspwtall (four;
+  its type bar and ability window 138 px higher), each with the master's own
+  shield cut out to `loyalty/` as on m15pw. The regular pack has no
+  colourless frame: `c` is its see-through 'Artifact Frame' with its alpha
+  lifted ×255/234 (a layer's `gain`), so the rim is opaque like every other
+  colour's and the tall pack's 'Colorless Frame'.
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -675,6 +682,20 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   emblems" scope or the no-match fallback its Cards scope asks for
   (`fallback=tokens`; `lib/scryfall/search-scope.ts`, Scryfall's
   `include_extras`).
+- **The borderless planeswalker's tall box follows the rows (4.33).**
+  Card Conjurer draws two masters: the regular one for up to three printed
+  ability rows and the tall one for four (a loyalty ability is a row, a run
+  of static abilities shares one — `walkerRowCount` in
+  `lib/creator/card-kinds.ts`; 206 of the 209 printings the
+  `borderless/planeswalker` rule matches print the box it picks — Gideon
+  Blackblade MED #WS2 prints its two statics as two rows, and Comet UNF
+  #275 / #526 its die-roll table on the tall box). Every path picks by
+  that count: the registry's borderless family, the creator (its one
+  "Borderless Planeswalker" chip stands for both, and the frame follows the
+  rows as they change), the import chooser and the AI's frame pick. A
+  borderless walker lands on the bordered m15pw (1.18) with Borderless
+  Planeswalker offered once verified; `inverted` printings and the
+  dark-barred black ones (all but `LIGHT_BLACK_WALKER_PINS`) are `nearest`.
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or
@@ -750,9 +771,10 @@ cards it changes.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 25 templates — the 23 of v32's frozen scope in
-`lib/cards/layout-version.ts`, plus the two text-box tokens, which joined
-without a bump; split and battle join with 4.21) prints its names, type
+`lib/cards/m15-family.ts`: 27 templates — the 23 of v32's frozen scope in
+`lib/cards/layout-version.ts`, plus the two text-box tokens and 4.33's two
+borderless planeswalkers, which joined without a bump; split and battle
+join with 4.21) prints its names, type
 lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
 the prints. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),

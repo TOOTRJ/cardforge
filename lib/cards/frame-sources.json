@@ -338,6 +338,121 @@
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)"
     ]
   },
+  "m15borderlesspw": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packPlaneswalkerBorderless.js 'Borderless' (groupPlaneswalker.js:3)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    "colors": {
+      "w": [
+        "img/frames/planeswalker/borderless/w.png"
+      ],
+      "u": [
+        "img/frames/planeswalker/borderless/u.png"
+      ],
+      "b": [
+        "img/frames/planeswalker/borderless/b.png"
+      ],
+      "r": [
+        "img/frames/planeswalker/borderless/r.png"
+      ],
+      "g": [
+        "img/frames/planeswalker/borderless/g.png"
+      ],
+      "c": [
+        "img/frames/planeswalker/borderless/a.png with its alpha ×1.0897 (clamped at 1)"
+      ],
+      "m": [
+        "img/frames/planeswalker/borderless/m.png"
+      ]
+    },
+    "shield": {
+      "mask": "img/frames/planeswalker/maskLoyalty.png",
+      "box": {
+        "x": 1194,
+        "y": 1841,
+        "width": 240,
+        "height": 154
+      },
+      "output": "loyalty/<colour>.png"
+    },
+    "sourceFiles": [
+      "img/frames/planeswalker/borderless/a.png",
+      "img/frames/planeswalker/borderless/b.png",
+      "img/frames/planeswalker/borderless/g.png",
+      "img/frames/planeswalker/borderless/m.png",
+      "img/frames/planeswalker/borderless/r.png",
+      "img/frames/planeswalker/borderless/u.png",
+      "img/frames/planeswalker/borderless/w.png",
+      "img/frames/planeswalker/maskLoyalty.png"
+    ],
+    "notes": [
+      "colourless = the pack's 'Artifact Frame' (borderless/a.png): the pack lists no colourless frame. It is the colourless look — the tall pack's 'Colorless Frame' rim is the same colour (197/203/217), and Ugin M21 #279 and Karn DMU #372 print its see-through grey bars (Karn's stained glass shows through them); the tall pack's own 'Artifact Frame' is a different, white-rimmed one",
+      "colourless rim made opaque: the frame's alpha × 255/234 (clamped at 1) takes the rim (α 234) and its join with the bottom bar to 1, as the tall pack's Colorless rim and both prints have it, and the see-through bars from α 0.75 to 0.82 (the tall pack's colourless bars are 0.85). As shipped, the rim's lower edge (1922–1957 px) runs past the art slot, so the card root's #101015 showed through it (7.6), and the bottom bar band was α 0.92–0.96 there (7.7)",
+      "the pack's 'Land Frame' (borderless/l.png) is not imported: no land walker prints on it",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw"
+    ]
+  },
+  "m15borderlesspwtall": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packPlaneswalkerTallBorderless.js 'Tall Borderless' (groupPlaneswalker.js:6)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    "colors": {
+      "w": [
+        "img/frames/planeswalker/tallBorderless/w.png"
+      ],
+      "u": [
+        "img/frames/planeswalker/tallBorderless/u.png"
+      ],
+      "b": [
+        "img/frames/planeswalker/tallBorderless/b.png"
+      ],
+      "r": [
+        "img/frames/planeswalker/tallBorderless/r.png"
+      ],
+      "g": [
+        "img/frames/planeswalker/tallBorderless/g.png"
+      ],
+      "c": [
+        "img/frames/planeswalker/tallBorderless/c.png"
+      ],
+      "m": [
+        "img/frames/planeswalker/tallBorderless/m.png"
+      ]
+    },
+    "shield": {
+      "mask": "img/frames/planeswalker/maskLoyalty.png",
+      "box": {
+        "x": 1194,
+        "y": 1841,
+        "width": 240,
+        "height": 154
+      },
+      "output": "loyalty/<colour>.png"
+    },
+    "sourceFiles": [
+      "img/frames/planeswalker/maskLoyalty.png",
+      "img/frames/planeswalker/tallBorderless/b.png",
+      "img/frames/planeswalker/tallBorderless/c.png",
+      "img/frames/planeswalker/tallBorderless/g.png",
+      "img/frames/planeswalker/tallBorderless/m.png",
+      "img/frames/planeswalker/tallBorderless/r.png",
+      "img/frames/planeswalker/tallBorderless/u.png",
+      "img/frames/planeswalker/tallBorderless/w.png"
+    ],
+    "notes": [
+      "colourless = the pack's own 'Colorless Frame' (tallBorderless/c.png)",
+      "the pack's 'Artifact Frame' (tallBorderless/a.png) and 'Land Frame' (tallBorderless/l.png) are not imported: no artifact or land walker dress",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw"
+    ]
+  },
   "m15devoid": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

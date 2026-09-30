@@ -20,6 +20,7 @@ import { FieldGroup, inputClass } from "@/components/creator/field-group";
 import { frameChoicesForType } from "@/lib/creator/frame-random";
 import {
   isBorrowedVariation,
+  isRowDress,
   isTextBoxDress,
   isTypeWordDress,
   kindFromCard,
@@ -176,7 +177,8 @@ function AiFillDialogBody({
     // The artifact token frame isn't a choice either: a token's type words
     // pick it (TODO 3b.15) — "M15 Token" lands on it for an Artifact token.
     // Nor is the token's text box: the text the AI writes picks it (TODO
-    // 4.49 (b)) — "M15 Token" lands on it for a token with text.
+    // 4.49 (b)) — "M15 Token" lands on it for a token with text. Nor the
+    // borderless planeswalker's tall box: its rows pick it (4.33).
     const kind = kindFromCard(cardType, undefined);
     return frameChoicesForType(cardType, verified).filter(
       (choice) =>
@@ -184,7 +186,8 @@ function AiFillDialogBody({
         !templateIsBasicOnly(choice.template) &&
         !isBorrowedVariation(kind, choice.template) &&
         !isTypeWordDress(kind, choice.template) &&
-        !isTextBoxDress(kind, choice.template),
+        !isTextBoxDress(kind, choice.template) &&
+        !isRowDress(kind, choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

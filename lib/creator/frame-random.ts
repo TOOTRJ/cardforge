@@ -19,6 +19,9 @@ import {
   tokenFrameFor,
   typeWordFrameFits,
   typeWordFrameFor,
+  walkerRowCount,
+  walkerRowsFrameFits,
+  walkerRowsFrameFor,
   type FrameChoice,
 } from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
@@ -85,23 +88,31 @@ export function resolveGeneratedFrame(input: {
   const kind = kindFromCard(cardType, undefined);
   const type = { cardType, supertype: face?.supertype };
   const hasText = hasRulesBoxText({ rulesText: face?.rulesText, flavorText: face?.flavorText });
+  const rows = walkerRowCount({ rulesText: face?.rulesText });
   const typed = choices.filter(
     (choice) =>
       choice.availableColorKeys.includes(colorKey as never) &&
       (basicLand || !templateIsBasicOnly(choice.template)) &&
       borrowedFrameFits(kind, choice.template, type) &&
-      typeWordFrameFits(kind, choice.template, face?.supertype),
+      typeWordFrameFits(kind, choice.template, face?.supertype) &&
+      // The borderless planeswalker's tall box is for four rows or more,
+      // the regular one for fewer (4.33): a gate, like the type words.
+      walkerRowsFrameFits(kind, choice.template, rows),
   );
   const boxed = typed.filter((choice) => textBoxFrameFits(kind, choice.template, hasText));
   const pool = boxed.length > 0 ? boxed : typed;
 
   if (requested !== "random") {
-    const wanted = tokenFrameFor(kind, requested, {
-      supertype: face?.supertype,
-      rulesText: face?.rulesText,
-      flavorText: face?.flavorText,
-    });
-    const asked = typeWordFrameFor(kind, requested, face?.supertype);
+    const wanted = walkerRowsFrameFor(
+      kind,
+      tokenFrameFor(kind, requested, {
+        supertype: face?.supertype,
+        rulesText: face?.rulesText,
+        flavorText: face?.flavorText,
+      }),
+      rows,
+    );
+    const asked = walkerRowsFrameFor(kind, typeWordFrameFor(kind, requested, face?.supertype), rows);
     const match =
       typed.find((choice) => choice.template === wanted) ??
       typed.find((choice) => choice.template === asked);

@@ -23,7 +23,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // Fixtures are real Scryfall payloads (/cards/:id, captured once on
 // 2026-09-28 for the references the import fixtures lack — TKLD #2 on
 // 2026-09-29, after TODO 4.49's token re-pin, and TDOM #2 / TXLN #7 (with
-// their rules text) for 4.49 (b)'s text-box tokens; the rest reuse
+// their rules text) for 4.49 (b)'s text-box tokens, M21 #280 / #281 for
+// 4.33's borderless planeswalkers (2026-09-29); the rest reuse
 // tests/unit/scryfall/fixtures/import-printings.json), trimmed like those to
 // identity + the frame fields (no rules or flavour text) and parsed through
 // the routes' zod schema. No network. The walk's skins/treatments ride the
@@ -164,6 +165,11 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   // the registry names the text-box frame too).
   ["m15tokentext", "w", "Knight", ""],
   ["m15tokenartifacttext", "c", "Treasure", ""],
+  // TODO 4.33's unverified borderless planeswalkers (M21 #280 / #281,
+  // captured with their rules text): the walk lands on the frame under
+  // test, the tall one included — the row follow never moves it.
+  ["m15borderlesspw", "w", "Basri Ket", ""],
+  ["m15borderlesspwtall", "u", "Teferi, Master of Time", ""],
 ];
 
 describe("walking a layout frame from its real reference printing", () => {

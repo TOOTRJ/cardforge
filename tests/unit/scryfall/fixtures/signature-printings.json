@@ -119,6 +119,7 @@
     ],
     "type_line": "Legendary Planeswalker — Oko",
     "mana_cost": "{1}{G}{U}",
+    "oracle_text": "+2: Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\n+1: Target artifact or creature loses all abilities and becomes a green Elk creature with base power and toughness 3/3.\n−5: Exchange control of target artifact or creature you control and target creature an opponent controls with power 3 or less.",
     "loyalty": "4",
     "colors": [
       "G",
@@ -150,7 +151,229 @@
     "keywords": [],
     "type_line": "Legendary Planeswalker — Ashiok",
     "mana_cost": "{3}{B}{B}",
+    "oracle_text": "If you would pay life while your library has at least that many cards in it, exile that many cards from the top of your library instead.\n+1: Look at the top two cards of your library. Exile one of them and put the other into your hand.\n−2: Create two 1/1 black Nightmare creature tokens with \"At the beginning of combat on your turn, if a card was put into exile this turn, put a +1/+1 counter on this token.\"\n−7: Target player exiles the top X cards of their library, where X is the total mana value of cards you own in exile.",
     "loyalty": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "m21-280": {
+    "id": "ed3906ea-df06-4299-a305-32e6ef476507",
+    "name": "Basri Ket",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "280",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Basri",
+    "mana_cost": "{1}{W}{W}",
+    "oracle_text": "+1: Put a +1/+1 counter on up to one target creature. It gains indestructible until end of turn.\n−2: Whenever one or more nontoken creatures attack this turn, create that many 1/1 white Soldier creature tokens that are tapped and attacking.\n−6: You get an emblem with \"At the beginning of combat on your turn, create a 1/1 white Soldier creature token, then put a +1/+1 counter on each creature you control.\"",
+    "loyalty": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "m21-281": {
+    "id": "ba95c4fc-f0fc-4bfe-bef7-694c3d82a6c7",
+    "name": "Teferi, Master of Time",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "281",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Teferi",
+    "mana_cost": "{2}{U}{U}",
+    "oracle_text": "You may activate loyalty abilities of Teferi on any player's turn any time you could cast an instant.\n+1: Draw a card, then discard a card.\n−3: Target creature you don't control phases out. (Treat it and anything attached to it as though they don't exist until its controller's next turn.)\n−10: Take two extra turns after this one.",
+    "loyalty": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "neo-303": {
+    "id": "71327818-2784-4fde-8e19-ef8677694a5f",
+    "name": "The Wandering Emperor",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "303",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Flash"
+    ],
+    "type_line": "Legendary Planeswalker",
+    "mana_cost": "{2}{W}{W}",
+    "oracle_text": "Flash\nAs long as The Wandering Emperor entered this turn, you may activate her loyalty abilities any time you could cast an instant.\n+1: Put a +1/+1 counter on up to one target creature. It gains first strike until end of turn.\n−1: Create a 2/2 white Samurai creature token with vigilance.\n−2: Exile target tapped creature. You gain 2 life.",
+    "loyalty": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "znr-281": {
+    "id": "961bb827-f13a-417d-8284-5cd2aac3d034",
+    "name": "Jace, Mirror Mage",
+    "layout": "normal",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "collector_number": "281",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Kicker",
+      "Scry"
+    ],
+    "type_line": "Legendary Planeswalker — Jace",
+    "mana_cost": "{1}{U}{U}",
+    "oracle_text": "Kicker {2}\nWhen Jace enters, if Jace was kicked, create a token that's a copy of Jace, except it's not legendary and its starting loyalty is 1.\n+1: Scry 2.\n0: Draw a card and reveal it. Remove a number of loyalty counters equal to that card's mana value from Jace.",
+    "loyalty": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "dmu-375": {
+    "id": "5d14829d-3119-4c65-8e9a-5281771bbaf3",
+    "name": "Ajani, Sleeper Agent",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "set_type": "expansion",
+    "collector_number": "375",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Compleated"
+    ],
+    "type_line": "Legendary Planeswalker — Ajani",
+    "mana_cost": "{1}{G}{G/W/P}{W}",
+    "oracle_text": "Compleated ({G/W/P} can be paid with {G}, {W}, or 2 life. If life was paid, this planeswalker enters with two fewer loyalty counters.)\n+1: Reveal the top card of your library. If it's a creature or planeswalker card, put it into your hand. Otherwise, you may put it on the bottom of your library.\n−3: Distribute three +1/+1 counters among up to three target creatures. They gain vigilance until end of turn.\n−6: You get an emblem with \"Whenever you cast a creature or planeswalker spell, target opponent gets two poison counters.\"",
+    "loyalty": "4",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ]
+  },
+  "m21-279": {
+    "id": "1bacda35-bb91-4537-a14d-846650fa85f6",
+    "name": "Ugin, the Spirit Dragon",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "279",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Ugin",
+    "mana_cost": "{8}",
+    "oracle_text": "+2: Ugin deals 3 damage to any target.\n−X: Exile each permanent with mana value X or less that's one or more colors.\n−10: You gain 7 life, draw seven cards, then put up to seven permanent cards from your hand onto the battlefield.",
+    "loyalty": "7",
+    "colors": [],
+    "color_identity": []
+  },
+  "fdn-359": {
+    "id": "ba461127-2220-4274-81cb-423a1700c9eb",
+    "name": "Liliana, Dreadhorde General",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "359",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Liliana",
+    "mana_cost": "{4}{B}{B}",
+    "oracle_text": "Whenever a creature you control dies, draw a card.\n+1: Create a 2/2 black Zombie creature token.\n−4: Each player sacrifices two creatures of their choice.\n−9: Each opponent chooses a permanent they control of each permanent type and sacrifices the rest.",
+    "loyalty": "6",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "afr-284": {
+    "id": "d00e1624-06f6-4377-96a4-842adfa78778",
+    "name": "Lolth, Spider Queen",
+    "layout": "normal",
+    "set": "afr",
+    "set_name": "Adventures in the Forgotten Realms",
+    "set_type": "expansion",
+    "collector_number": "284",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Lolth",
+    "mana_cost": "{3}{B}{B}",
+    "oracle_text": "Whenever a creature you control dies, put a loyalty counter on Lolth.\n0: You draw a card and you lose 1 life.\n−3: Create two 2/1 black Spider creature tokens with reach and menace.\n−8: You get an emblem with \"Whenever an opponent is dealt combat damage by one or more creatures you control, if that player lost less than 8 life this turn, they lose life equal to the difference.\"",
+    "loyalty": "4",
     "colors": [
       "B"
     ],

@@ -50,9 +50,24 @@ describe("borderless families (TODO 1.17)", () => {
     // line (IKO #275).
     ["dmu-435", "nearest", "m15borderless", "m15"],
     ["iko-275", "nearest", "m15borderless", "m15"],
-    // Planeswalkers (4.33), light (ELD #271) and dark (WOE #297).
-    ["eld-271", "nearest", "m15pw", undefined],
-    ["woe-297", "nearest", "m15pw", undefined],
+    // Planeswalkers (4.33): the light borderless walker, regular (three
+    // printed rows) or tall (four), landing on the bordered m15pw (the art
+    // crop is the window, 1.18). A run of statics shares a printed row: NEO
+    // #303 (Flash + a static + three abilities) is tall, ZNR #281 (two
+    // statics + two abilities) regular. An `inverted` printing (WOE #297),
+    // a black walker with dark bars (FDN #359; AFR #284 is a pinned light
+    // one) and a two-colour split frame (ELD #271 GU, DMU #375 GW) are
+    // nearest.
+    ["m21-280", "exact", "m15borderlesspw", "m15pw"],
+    ["m21-279", "exact", "m15borderlesspw", "m15pw"],
+    ["znr-281", "exact", "m15borderlesspw", "m15pw"],
+    ["m21-281", "exact", "m15borderlesspwtall", "m15pw"],
+    ["neo-303", "exact", "m15borderlesspwtall", "m15pw"],
+    ["afr-284", "exact", "m15borderlesspwtall", "m15pw"],
+    ["eld-271", "nearest", "m15borderlesspw", "m15pw"],
+    ["woe-297", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["fdn-359", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["dmu-375", "nearest", "m15borderlesspwtall", "m15pw"],
     // Nonbasic lands (4.34).
     ["mid-281", "nearest", "m15land", undefined],
     ["otj-304", "nearest", "m15land", undefined],
@@ -108,7 +123,25 @@ describe("borderless families (TODO 1.17)", () => {
       blockedBy: "4.6",
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
-    expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
+    expect(frameMatchFromScryfall(printing("eld-271"))).toMatchObject({
+      signature: "borderless/planeswalker+two-colour",
+      blockedBy: "4.6",
+    });
+    // `inverted`: the light frame is its nearest (owner decision
+    // 2026-09-26), under a key of its own for the 1.6 log; so is a black
+    // walker's dark-barred dress, which no Scryfall field names.
+    expect(frameMatchFromScryfall(printing("woe-297"))).toMatchObject({
+      signature: "borderless/planeswalker+inverted",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/inverted/),
+    });
+    expect(frameMatchFromScryfall(printing("fdn-359"))).toMatchObject({
+      signature: "borderless/planeswalker+dark-bars",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/dark name and type bars/),
+    });
+    expect(frameMatchFromScryfall(printing("m21-280")).signature).toBe("borderless/planeswalker");
+    expect(frameMatchFromScryfall(printing("afr-284")).signature).toBe("borderless/planeswalker");
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",

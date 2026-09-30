@@ -48,6 +48,11 @@ const TOKEN_REG = "img/frames/token/m15/regular";
 /** A layer: a frame image, optionally shown only through a mask (its alpha),
  *  optionally at reduced opacity. */
 const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
+/** A layer whose alpha is LIFTED by `gain` (> 1) and clamped at 1 — a
+ *  see-through master's rim made opaque with its anti-aliased edges kept in
+ *  proportion (4.33's colourless walker: the pack's rim is α 234, so ×255/234
+ *  takes it, and its join with the bottom bar, to 1). */
+const lifted = (src, gain) => ({ src, gain });
 /** A layer shown everywhere EXCEPT through a mask — how a borderless key
  *  drops a pack's Border mask (4.39). The mask is a region the frame image
  *  itself paints (its black ring), so the mask's COVERAGE is subtracted
@@ -158,6 +163,31 @@ const borderlessFrame = (k) => `${BORDERLESS}/m15GenericShowcaseFrame${k.toUpper
 /** The pack's P/T plates: one per colour, "Artifact" (a) and "Colorless" (l).
  *  (pt/c.png sits in the folder too, but the pack never lists it.) */
 const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM), c: `${BORDERLESS}/pt/l.png` };
+
+// --- 4.33 'Borderless' and 'Tall Borderless' planeswalkers — CC
+// packPlaneswalkerBorderless.js / packPlaneswalkerTallBorderless.js
+// (groupPlaneswalker.js:3 and :6). 1500×2100 native (no resample): the
+// regular planeswalker master without its frame body and border — title bar
+// 57–211 px, type bar 1160–1313 (tall: 1022–1175), the ability window x
+// 180–1383 with its badge rim, the shield, an opaque bottom bar from 1922 px
+// and fins up the side edges from ~80 % H; everything else α 0, so the art
+// runs to the top and side edges. The regular pack lists W U B R G M,
+// 'Artifact' (a) and 'Land' (l) and no colourless frame; the tall pack adds
+// 'Colorless' (c). The ability stripes are the renderer's (CC draws them
+// before the frame), so the shield is cut out of each master and drawn again
+// above them, as on m15pw.
+const PW_BORDERLESS = "img/frames/planeswalker/borderless";
+const PW_TALL_BORDERLESS = "img/frames/planeswalker/tallBorderless";
+const PW_LOYALTY_MASK = "img/frames/planeswalker/maskLoyalty.png";
+/** The regular pack's 'Artifact Frame' (our colourless walker) is
+ *  see-through: bars α 191, the ability window's rim α 234 — every other
+ *  colour's rim, and the tall pack's 'Colorless Frame' rim in the same
+ *  colour, are α 255. Its alpha × 255/234 (clamped at 1) makes the rim and
+ *  its join with the bottom bar opaque; the bars go 0.75 → 0.82 (the tall
+ *  pack's colourless bars are 0.85). */
+export const PW_COLOURLESS_RIM_GAIN = 255 / 234;
+const PW_BORDERLESS_PACK = "packPlaneswalkerBorderless.js 'Borderless' (groupPlaneswalker.js:3)";
+const PW_TALL_BORDERLESS_PACK = "packPlaneswalkerTallBorderless.js 'Tall Borderless' (groupPlaneswalker.js:6)";
 
 // --- 4.39 'Fullart Basics (2022)' — CC packTextlessBasics2022.js
 // (groupTextless-4.js:5). 1500×2100 native, opaque black ring; a title bar
@@ -351,6 +381,37 @@ export const CC_TEMPLATES = {
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
     ],
   },
+  // 4.33 — the light borderless planeswalker (3 ability rows).
+  m15borderlesspw: {
+    colors: {
+      ...perColor((k) => [layer(`${PW_BORDERLESS}/${k}.png`)], WUBRGM),
+      // No colourless frame in the pack: `c` is its 'Artifact Frame', a
+      // see-through frame (bars α 0.75, rim α 0.92), its alpha lifted so the
+      // rim is opaque (PW_COLOURLESS_RIM_GAIN; see notes).
+      c: [lifted(`${PW_BORDERLESS}/a.png`, PW_COLOURLESS_RIM_GAIN)],
+    },
+    shield: { mask: PW_LOYALTY_MASK, box: SHIELD_BOX },
+    pack: PW_BORDERLESS_PACK,
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    notes: [
+      "colourless = the pack's 'Artifact Frame' (borderless/a.png): the pack lists no colourless frame. It is the colourless look — the tall pack's 'Colorless Frame' rim is the same colour (197/203/217), and Ugin M21 #279 and Karn DMU #372 print its see-through grey bars (Karn's stained glass shows through them); the tall pack's own 'Artifact Frame' is a different, white-rimmed one",
+      "colourless rim made opaque: the frame's alpha × 255/234 (clamped at 1) takes the rim (α 234) and its join with the bottom bar to 1, as the tall pack's Colorless rim and both prints have it, and the see-through bars from α 0.75 to 0.82 (the tall pack's colourless bars are 0.85). As shipped, the rim's lower edge (1922–1957 px) runs past the art slot, so the card root's #101015 showed through it (7.6), and the bottom bar band was α 0.92–0.96 there (7.7)",
+      "the pack's 'Land Frame' (borderless/l.png) is not imported: no land walker prints on it",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
+    ],
+  },
+  // 4.33 — its tall twin (4 ability rows), auto-picked by the row count.
+  m15borderlesspwtall: {
+    colors: perColor((k) => [layer(`${PW_TALL_BORDERLESS}/${k}.png`)]),
+    shield: { mask: PW_LOYALTY_MASK, box: SHIELD_BOX },
+    pack: PW_TALL_BORDERLESS_PACK,
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    notes: [
+      "colourless = the pack's own 'Colorless Frame' (tallBorderless/c.png)",
+      "the pack's 'Artifact Frame' (tallBorderless/a.png) and 'Land Frame' (tallBorderless/l.png) are not imported: no artifact or land walker dress",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
+    ],
+  },
   // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
   m15fullartland: {
     colors: perColor((k) => [layer(basics2022Frame(k))]),
@@ -394,7 +455,7 @@ function textlessRecutTransform(r) {
 export const CC_DEFERRED = {};
 
 /**
- * Composite RGBA layers (each `{ data, mask?, invert?, opacity? }`, raw 8-bit
+ * Composite RGBA layers (each `{ data, mask?, invert?, opacity?, gain? }`, raw 8-bit
  * RGBA of the same size) in order: a layer's alpha is multiplied by its
  * mask's ALPHA, then drawn source-over onto the accumulator — exactly CC's
  * drawFrames (a black canvas, the masks drawn 'source-in', the image drawn
@@ -409,7 +470,8 @@ export const CC_DEFERRED = {};
  * straight inner edges, up to 64 at its rounded corners — a faint rounded
  * rectangle over the art (owner evidence 2026-09-26). The two agree wherever
  * the mask is 0 or 255 or the frame is opaque (the bars that reach into the
- * ring). Returns a Float32Array RGBA with alpha in 0..1.
+ * ring). `gain` then lifts the layer's alpha and clamps it at 1 (4.33's
+ * colourless walker rim). Returns a Float32Array RGBA with alpha in 0..1.
  */
 export function compositeLayers(images, width, height) {
   const n = width * height;
@@ -423,6 +485,7 @@ export function compositeLayers(images, width, height) {
         a = img.invert ? Math.max(0, a - m) : a * m;
       }
       if (img.opacity !== undefined) a *= img.opacity;
+      if (img.gain !== undefined) a = Math.min(1, a * img.gain);
       if (i === 0) {
         acc[o] = img.data[o];
         acc[o + 1] = img.data[o + 1];
@@ -546,7 +609,8 @@ export function toRgba8(acc) {
  *  "src outside mask", "… at 35%". */
 export function describeLayer(l) {
   const mask = l.mask ? ` ${l.invert ? "outside" : "through"} ${l.mask}` : "";
-  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
+  const gain = l.gain !== undefined ? ` with its alpha ×${l.gain.toFixed(4)} (clamped at 1)` : "";
+  return `${l.src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
 }
 
 /** The colours a template builds (all seven minus `excluded`). */

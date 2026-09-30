@@ -439,8 +439,19 @@ export function slotKindFor(path: string): SlotKind {
  *  the arch — so until then the score leaves this box out. */
 export const HOLO_STAMP_ARCH: Rect = { topPct: 90, leftPct: 42.67, widthPct: 14.67, heightPct: 5.24 };
 
+/** The templates whose prints arch a pinline around the holo stamp: the
+ *  borderless M15 pair and 4.33's borderless planeswalkers, whose ability
+ *  window's bottom rim arches the same way over the stamp (Basri Ket M21
+ *  #280, Liliana FDN #359: ≈ 640–870 px, from ≈ 1915 px). */
+const HOLO_STAMP_ARCH_TEMPLATES: ReadonlySet<string> = new Set([
+  "m15borderless",
+  "m15borderlessartifact",
+  "m15borderlesspw",
+  "m15borderlesspwtall",
+]);
+
 /** The printed details a template's master doesn't draw, left out of its
  *  alignment score (alignAndScore's `exclude`). */
 export function scoreExclusionsFor(template: string): Rect[] {
-  return template === "m15borderless" || template === "m15borderlessartifact" ? [HOLO_STAMP_ARCH] : [];
+  return HOLO_STAMP_ARCH_TEMPLATES.has(template) ? [HOLO_STAMP_ARCH] : [];
 }

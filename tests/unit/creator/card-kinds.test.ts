@@ -136,10 +136,11 @@ describe("framesForKind", () => {
     // The artifact dress and 4.49 (b)'s text-box variations (the artifact
     // ones are type-word dresses: the pickers hide them, isTypeWordDress).
     expect(skinsFor("token")).toEqual(["m15tokenartifact", "m15tokentext", "m15tokenartifacttext"]);
-    // Standards with their own geometry and no skin set stay bare.
-    for (const kind of ["planeswalker", "battle"] as CardKind[]) {
-      expect(skinsFor(kind)).toEqual([]);
-    }
+    // 4.33's borderless planeswalkers; the tall one is a row dress (the
+    // pickers hide it, isRowDress).
+    expect(skinsFor("planeswalker")).toEqual(["m15borderlesspw", "m15borderlesspwtall"]);
+    // A standard with its own geometry and no skin set stays bare.
+    expect(skinsFor("battle")).toEqual([]);
   });
 
   it("appends showcase treatments for every standard kind", () => {

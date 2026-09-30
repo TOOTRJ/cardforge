@@ -179,6 +179,9 @@ import {
   planKindChange,
   followTokenName,
   followTokenTextBox,
+  followWalkerRows,
+  walkerRowCount,
+  TALL_WALKER_MIN_ROWS,
   supertypeEnteringToken,
   supertypeLeavingToken,
   textBoxFrameFor,
@@ -958,9 +961,46 @@ export function CardCreatorForm({
     setValue,
     verifiedFrameKeys,
   ]);
+  // The borderless planeswalker's tall box follows the ability rows (frames
+  // plan 4.33): four rows or more wear the tall frame, fewer the regular one
+  // (walkerRowsFrameFor). Real edits only (isDirty), on the planeswalker
+  // kind, when the row count crosses the line; only between the two
+  // borderless walkers (m15pw and every other frame stay put). Never an
+  // unverified combo (the card keeps its frame and says so), never an
+  // admin's saved frame preview, and never the walk-through's combo under
+  // test (settleTokenTextFollow({ manual: true }) pins it).
+  // The rows the renderers draw: the row editor's (the rows with text),
+  // else a line of the rules text each (walkerRowCount, as liveFaceContent
+  // below).
+  const walkerTall =
+    walkerRowCount({ editorRows: watched.loyalty_abilities, rulesText: watched.rules_text }) >=
+    TALL_WALKER_MIN_ROWS;
+  const lastWalkerTallRef = useRef(walkerTall);
+  const walkerRowsPinnedRef = useRef(false);
+  useEffect(() => {
+    if (lastWalkerTallRef.current === walkerTall) return;
+    lastWalkerTallRef.current = walkerTall;
+    if (!isDirty || kind !== "planeswalker" || tokenFramePinned || walkerRowsPinnedRef.current) return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const next = followWalkerRows({
+      kind,
+      template: current,
+      rows: walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }),
+    });
+    if (!next) return;
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) {
+      toast.info(
+        `${describeFrame(next)} isn't verified in ${colorWord(colorKey)} yet — keeping ${describeFrame(current)}.`,
+      );
+      return;
+    }
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [kind, walkerTall, isDirty, tokenFramePinned, getValues, setValue, verifiedFrameKeys]);
   /** An import or an AI fill that wrote the card's frame AND its text:
    *  that frame stands — the follow starts again from here, automatic (or,
-   *  for the admin walk-through's combo under test, `manual`). */
+   *  for the admin walk-through's combo under test, `manual`). The same for
+   *  the borderless planeswalker's rows (4.33): `manual` pins the combo. */
   const settleTokenTextFollow = ({ manual = false }: { manual?: boolean } = {}) => {
     lastTokenTextRef.current = {
       kind: kindFromCard(getValues("card_type"), getValues("frame_style.template")),
@@ -970,6 +1010,10 @@ export function CardCreatorForm({
       }),
     };
     manualTokenFrameRef.current = manual;
+    lastWalkerTallRef.current =
+      walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }) >=
+      TALL_WALKER_MIN_ROWS;
+    walkerRowsPinnedRef.current = manual;
   };
 
   // Name follows the subtypes: a printed token is named after them

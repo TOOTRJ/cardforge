@@ -277,6 +277,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "lotr/main", "m15/main",
       "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15devoid/main", "m15land/main",
       "m15pw/main", "m15pw/walker", "m15snow/main", "m15snowland/main", "modern/main", "modernland/main",
+      // 4.33's borderless planeswalkers: m15pw's box, and the tall one's
+      // 138 px taller still can't hold them.
+      "m15borderlesspw/main", "m15borderlesspw/walker", "m15borderlesspwtall/main", "m15borderlesspwtall/walker",
       "nyx/main", "retro/main", "retroland/main", "tarkirdraconic/main", "tarkirdragon/main", "tarkirghostfire/main",
     ],
     ["1200 chars"],
