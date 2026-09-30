@@ -10,6 +10,7 @@ import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { overrideHash } from "@/lib/cards/frame-verification-state";
 import { recordFrameReviewEvent } from "@/lib/cards/frame-review-events";
 import { CARD_LAYOUT_VERSION, hasNewerLook } from "@/lib/cards/layout-version";
+import { artSlotOverrideRefusal } from "@/lib/frames/art-window-override";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,12 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // "reset" used to null the layout_version of every baked card on the
 // template, firing "newer look" badges and render_update notifications for
 // a geometry that never changed.
+//
+// An override that moves an ART SLOT must pass the art-window check first
+// (lib/frames/art-window-override.ts — the rule CI holds the code profiles
+// to, TODO 7.6, on the masters the bake draws): a slot that leaves the
+// frame's window showing #101015 is refused with the finding, before any
+// write. Reset needs no check — it returns to the code profile.
 // ---------------------------------------------------------------------------
 
 const saveSchema = z.object({
@@ -92,7 +99,7 @@ async function markTemplateRendersStale(
     let query = admin
       .from("cards")
       .select(
-        "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content",
+        "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url",
       )
       .in("visibility", ["public", "unlisted"])
       .not("rendered_image_url", "is", null);
@@ -162,6 +169,8 @@ export async function saveFrameProfileOverrideAction(
       return { ok: true, staleCount: 0, keptForOwner: 0, changed: false };
     }
   } else {
+    const refusal = await artSlotOverrideRefusal(template, overrides);
+    if (refusal) return { ok: false, error: refusal };
     const { error } = await admin.from("frame_profile_overrides").upsert(
       {
         template,

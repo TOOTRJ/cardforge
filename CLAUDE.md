@@ -235,6 +235,17 @@ Rules and gotchas:
   `corners` is in the ETag. The CC importer cuts masters at the constant;
   the allow-listed MSE masters are normalised by Phase B
   (`scripts/lib/frame-corners.mjs`, run by the builders too) — `docs/FRAMES.md`.
+- PRINT exports (TODO 6.10 / 6.1a / 6.1b): the PDF (card + sheets) and the
+  800 ppi / 1/8″ bleed PNGs (`?ppi=800`, `?bleed=1`) render through
+  `lib/render/card-print.ts` — Satori draws the HD layout WITHOUT the art
+  (`renderCardImage` `printLayer`, CardImage `omitArt`; `outputWidth`
+  re-renders the vectors at 800 ppi) and sharp composites the ORIGINAL art
+  under it with the same fit (the boxes come from Satori's `onNodeDetected`),
+  then squares it; the bleed extends each edge by `EDGE_CONTRACTS`
+  (`lib/frames/edge-contract.ts`). Always live and square (the images PNG
+  only); the bleed follows the clean download, 800 ppi `PRINT_800_PPI_PAID_ONLY`
+  (`lib/cards/print-export.ts`). Never route a stored bake, thumb or OG image
+  through it.
 - ONE M15-era display size (layout v32, TODO 4.20): the family
   (`M15_FAMILY_TEMPLATES`, `lib/cards/m15-family.ts`; v32's scope is the
   frozen literal in `layout-version.ts`) prints names, type lines, pips and
@@ -323,6 +334,21 @@ Rules and gotchas:
   of the AI's design types AND its output enum (`designedCardsSchema`: a
   fill may only PIN one); the lint errors on an emblem's cost or colour.
   An emblem names no rarity on its card page (`cardTypeHasRarity`).
+- Art windows (TODO 7.6, layout v35): every art slot covers its master's
+  see-through window with 0.05 % to spare and every translucent part the art
+  shows through (`lib/frames/art-window.ts`; CI checks every template ×
+  colour master, the bucket ones fetched by sha; a known failure is listed
+  with its TODO item and a `maxMissPx` it may not exceed — fixing one means
+  striking it). See-through masters (`underFrameArt`: m15/c, every devoid,
+  the colourless tokens and planeswalker) draw the art under the frame from
+  the border's inner edge (`UNDER_FRAME_RECT`); their window's slot must
+  cover the window too and meet that separately cropped layer on the frame's
+  OPAQUE outline — or be ONE picture (`underFrameArt.artSlot` = the rect,
+  m15pw/c); both renderers and the foil mask read `artLayersFor()`. The
+  CC-framed M15 profiles use `CC_M15_ART_SLOT`, never M15's MSE slot
+  (adventure keeps that). A frame-compare save that moves an `artSlot`
+  passes the same check on the bake's own masters or is refused
+  (`lib/frames/art-window-override.ts`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
