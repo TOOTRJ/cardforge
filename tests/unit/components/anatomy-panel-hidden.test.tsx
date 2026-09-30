@@ -4,12 +4,13 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 // ---------------------------------------------------------------------------
-// TODO 4.6.0 ships the plumbing only: no profile draws the crown or a pair
-// yet, so nothing of it may show in the creator — no switch, no hint, no
-// "Two colours" row — and a Multicolor pick stays the one gold "multicolor"
-// it always was, whatever the cost. (4.6a / 4.6b turn the pieces on by
-// declaring them on m15 / m15artifact / m15land;
-// tests/unit/components/anatomy-panel.test.tsx runs the same UI with them.)
+// TODO 4.6a declares the legendary crown on m15 / m15artifact / m15land and
+// no pair masters yet (4.6b): the creator shows the crown switch — on for a
+// new card, off with its one-line hint on a stored card that never set it —
+// and nothing of the two-colour frame: no switch, no hint, no "Two colours"
+// row, and a Multicolor pick stays the one gold "multicolor" it always was,
+// whatever the cost. (tests/unit/components/anatomy-panel.test.tsx runs the
+// same UI with the pair masters declared too.)
 // ---------------------------------------------------------------------------
 
 vi.mock("sonner", () => ({ toast: { info: vi.fn(), error: vi.fn(), success: vi.fn() } }));
@@ -55,15 +56,19 @@ function Harness({ stored }: { stored: boolean }) {
   );
 }
 
-describe("the creator in 4.6.0 (no frame draws the pieces)", () => {
-  it.each([false, true])("shows no switch, hint or Two colours row (stored card: %s)", (stored) => {
+describe("the creator in 4.6a (the crown, no two-colour frame yet)", () => {
+  it.each([false, true])("shows the crown switch only — no two-colour switch, hint or row (stored card: %s)", (stored) => {
     render(<Harness stored={stored} />);
     fireEvent.click(screen.getByRole("radio", { name: /multicolor/i }));
-    expect(screen.queryByTestId("anatomy-panel")).toBeNull();
-    expect(screen.queryByRole("switch", { name: "Legendary crown" })).toBeNull();
+    expect(screen.getByTestId("anatomy-panel")).toBeTruthy();
+    const crown = screen.getByRole("switch", { name: "Legendary crown" });
+    // A new card starts with the crown on; a stored card that never set it
+    // shows it off, with the hint.
+    expect(crown.getAttribute("aria-checked")).toBe(stored ? "false" : "true");
+    expect(screen.queryByTestId("anatomy-hint-crown") !== null).toBe(stored);
     expect(screen.queryByRole("switch", { name: "Two-colour frame" })).toBeNull();
     expect(screen.queryByTestId("two-colour-row")).toBeNull();
-    expect(screen.queryByText(/New: the printed/)).toBeNull();
+    expect(screen.queryByTestId("anatomy-hint-twoColor")).toBeNull();
     // A Multicolor pick is the gold "multicolor", as before — never a pair.
     expect(screen.getByTestId("colors").textContent).toBe("multicolor");
   });

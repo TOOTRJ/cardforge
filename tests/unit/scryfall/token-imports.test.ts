@@ -73,9 +73,10 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tdsk-10", "nearest", "m15token", "token/m20+nyx-dress", "4.51"],
     // …and on the 2014–19 arch (TC15 #23, a W/B Nyx-textured Spirit).
     ["tc15-23", "nearest", "m15tokentext", "era/2015+nyx-dress", "4.51"],
-    // The crown and the two-colour blend: 4.6a / 4.6b (the 4.6 split,
-    // design 2026-09-29).
-    ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.6a"],
+    // The crown and the two-colour blend: the M20 token's own pill crown is
+    // 4.48 (design 2026-09-29 hand-off; 4.6a's band is never a token's), the
+    // two-colour blend 4.6b.
+    ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.48"],
     ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.6b"],
     // Double-faced token: its front face's frame.
     ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
@@ -112,7 +113,7 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
       reason: "PipGlyph doesn't have the current full-art token frame yet",
     });
     expect(match("tmkm-13").reason).toBe(
-      "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the legendary crown yet",
+      "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the legendary crown on this frame yet",
     );
     expect(match("tdsk-4").reason).toBe(
       "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the Nyx dress on its token frames yet",

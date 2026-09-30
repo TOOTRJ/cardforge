@@ -105,7 +105,9 @@ describe("borderless families (TODO 1.17)", () => {
   it("names why a borderless printing isn't exact", () => {
     expect(frameMatchFromScryfall(printing("dmu-435"))).toMatchObject({
       signature: "borderless/standard+crown",
-      blockedBy: "4.6a",
+      // The borderless floating crown is wave 2 (4.6f); m15 draws the
+      // standard one (4.6a).
+      blockedBy: "4.6f",
     });
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
     expect(frameMatchFromScryfall(printing("eld-271")).blockedBy).toBe("4.33");
@@ -278,9 +280,10 @@ describe("the general signatures (TODO 1.4)", () => {
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
     ["khm-244", "nearest", "m15snow", "m15artifact"],
-    // Anatomy gaps on the M15 era: the crown, the double-faced marks, a
-    // two-colour land, the silver border + Un-host layout.
-    ["dmu-107", "nearest", "m15", undefined],
+    // Anatomy gaps on the M15 era: the double-faced marks, a two-colour
+    // land, the silver border + Un-host layout. The crown is drawn on m15
+    // since TODO 4.6a: a crowned mono legendary is exact.
+    ["dmu-107", "exact", "m15", undefined],
     ["mid-7", "nearest", "m15", undefined],
     ["ktk-229", "nearest", "m15land", undefined],
     ["ust-1", "nearest", "m15", undefined],
@@ -292,11 +295,15 @@ describe("the general signatures (TODO 1.4)", () => {
   });
 
   it("names the anatomy gap and the blocking item", () => {
-    expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({
+    // The crown on a frame that doesn't draw it (snow: 4.6f); m15 does (4.6a).
+    const snow = scryfallCardSchema.parse({ ...printingsData["dmu-107"], frame_effects: ["legendary", "snow"] });
+    expect(frameMatchFromScryfall(snow)).toMatchObject({
       signature: "era/2015+crown",
-      blockedBy: "4.6a",
-      reason: "PipGlyph doesn't draw the legendary crown yet",
+      template: "m15snow",
+      blockedBy: "4.6f",
+      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     });
+    expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
     expect(frameMatchFromScryfall(printing("ktk-233")).signature).toBe("era/2015+two-colour");
@@ -309,16 +316,27 @@ describe("the general signatures (TODO 1.4)", () => {
   });
 
   it("lists every anatomy gap that holds, the reason's first (FrameMatch.gaps, for the import dialog's C1)", () => {
-    expect(frameMatchFromScryfall(printing("dmu-107")).gaps).toEqual(["crown"]);
-    // The nickname names the reason; the crown and the two-colour frame hold too.
+    // The crown m15 draws is no gap (4.6a).
+    expect(frameMatchFromScryfall(printing("dmu-107")).gaps).toBeUndefined();
+    // The nickname names the reason; the crown (Borderless draws none yet,
+    // 4.6f) and the two-colour frame hold too.
     expect(frameMatchFromScryfall(printing("iko-275")).gaps).toEqual(["nickname", "crown", "two-colour"]);
-    expect(frameMatchFromScryfall(printing("thb-18")).gaps).toEqual(["nyx", "crown"]);
-    // A synthetic colour-indicator dot on a legendary: both details, in order.
+    // A Nyx legendary lands on m15, which draws its crown: the starfield only.
+    expect(frameMatchFromScryfall(printing("thb-18")).gaps).toEqual(["nyx"]);
+    // A synthetic colour-indicator dot on a legendary: the crown is drawn,
+    // the dot isn't.
     const indicator = scryfallCardSchema.parse({ ...printingsData["dmu-107"], color_indicator: ["B"] });
     expect(frameMatchFromScryfall(indicator)).toMatchObject({
-      signature: "era/2015+crown",
-      gaps: ["crown", "colour-indicator"],
+      signature: "era/2015+colour-indicator",
+      gaps: ["colour-indicator"],
     });
+    // …and on the snow frame, both, in order.
+    const snowIndicator = scryfallCardSchema.parse({
+      ...printingsData["dmu-107"],
+      frame_effects: ["legendary", "snow"],
+      color_indicator: ["B"],
+    });
+    expect(frameMatchFromScryfall(snowIndicator).gaps).toEqual(["crown", "colour-indicator"]);
     // No gap rule matched: no list (an exact frame, a nearest showcase).
     expect(frameMatchFromScryfall(printing("m21-315")).gaps).toBeUndefined();
     expect(frameMatchFromScryfall(printing("blb-343")).gaps).toBeUndefined();

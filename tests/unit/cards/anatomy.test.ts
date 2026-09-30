@@ -216,27 +216,42 @@ describe("the crown", () => {
   });
 });
 
-describe("4.6.0 is plumbing: no profile draws a piece yet", () => {
-  it("no PROFILES entry declares an overlay or pair masters (4.6a / 4.6b add them on m15, m15artifact, m15land)", () => {
+describe("4.6a: the crown is declared on m15, m15artifact and m15land; no pair masters yet", () => {
+  const CROWNED = ["m15", "m15land", "m15artifact"];
+
+  it("only those three PROFILES entries draw the crown, and none draws a pair master (4.6b)", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
     const paired = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0);
-    expect(crowned).toEqual([]);
+    expect(crowned).toEqual(CROWNED);
     expect(paired).toEqual([]);
+    // Never a profile that spreads M15 / M15LAND: snow, snow land, devoid,
+    // borderless, extended art, the layout frames and the showcases draw
+    // other crowns (4.6f); planeswalkers and tokens none here.
+    for (const t of ["m15snow", "m15snowland", "m15devoid", "m15borderless", "extendedart", "adventure", "saga", "m15pw", "m15token", "nyx", "fullart"] as const) {
+      expect(frameAnatomyOf(t).crown, t).toBe(false);
+    }
+    // A legacy template draws the m15 frame, so it draws m15's crown.
+    expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
 
-  it("so every save drops the switches and a new card stores exactly what it did before", () => {
+  it("every save keeps the crown switch only where it draws, and a new card stores the crown on", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      expect(anatomyDefaults(template), template).toEqual({});
-      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template)).toEqual({
-        template,
-        finish: "foil",
-      });
-      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY })).toEqual({ template, finish: "regular" });
+      const draws = CROWNED.includes(template);
+      expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true } : {});
+      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template)).toEqual(
+        draws ? { template, finish: "foil", crown: true } : { template, finish: "foil" },
+      );
+      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY })).toEqual(
+        draws ? { template, finish: "regular", crown: true } : { template, finish: "regular" },
+      );
     }
-    expect(newCardFrameStyle({})).toEqual({});
+    // The AI jobs send no frame_style: the default template (m15) draws it.
+    expect(newCardFrameStyle({})).toEqual({ crown: true });
+    // A stored card (no key) is never touched by a save.
     const untouched: FrameStyle = { template: "m15", finish: "regular" };
-    expect(newCardFrameStyle(untouched)).toBe(untouched);
     expect(normalizeAnatomy(untouched, "m15")).toBe(untouched);
+    const off: FrameStyle = { template: "m15", finish: "regular", crown: false };
+    expect(normalizeAnatomy(off, "m15")).toBe(off);
   });
 
   it("an overlay or pair masters can never come from an admin override (code-owned)", () => {
@@ -247,17 +262,20 @@ describe("4.6.0 is plumbing: no profile draws a piece yet", () => {
 
 describe("an edit's switch flip (frame_anatomy)", () => {
   it("merges over the STORED frame_style, keeping every other key as stored", () => {
-    // Today no template draws, so the switch itself is normalised away.
-    const applied = applyFrameAnatomyPatch(
-      { frameStyle: { template: "regular", finish: "foil" }, colorIdentity: ["red"] },
-      { crown: true },
-    );
-    expect(applied).toEqual({ ok: true, frameStyle: { template: "regular", finish: "foil" }, colorIdentity: null });
+    // A legacy template draws m15's crown: the switch is kept, the template
+    // is never rewritten.
+    expect(
+      applyFrameAnatomyPatch({ frameStyle: { template: "regular", finish: "foil" }, colorIdentity: ["red"] }, { crown: true }),
+    ).toEqual({ ok: true, frameStyle: { template: "regular", finish: "foil", crown: true }, colorIdentity: null });
+    // A frame without the crown drops the switch.
+    expect(
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: ["red"] }, { crown: true }),
+    ).toEqual({ ok: true, frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: null });
   });
 
   it("refuses a pair that would re-colour a stored card", () => {
-    // The refinement rules hold whatever the frame draws; with nothing drawn
-    // yet the pair is ignored (the switch was normalised away).
+    // No template draws the two-colour frame before 4.6b: the switch is
+    // normalised away and the pair ignored.
     expect(
       applyFrameAnatomyPatch({ frameStyle: { template: "m15" }, colorIdentity: ["multicolor"] }, { twoColor: true, pair: ["white", "blue"] }),
     ).toEqual({ ok: true, frameStyle: { template: "m15" }, colorIdentity: null });

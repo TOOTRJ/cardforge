@@ -21,7 +21,11 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     stored bake's size) for the long card on every template; square
 //     corners (print) on a few; an "edge" card (100/100, a four-mode
 //     Command, reversed-hybrid and unknown symbols — TODO 3.11) on one frame
-//     of each family.
+//     of each family;
+//   * the per-card anatomy switched ON (TODO 4.6a, "@crown…"): the long
+//     (Legendary) card with FrameStyle.crown on every template that draws the
+//     crown, in each crown key, plus HD, foil and etched on m15. The same
+//     cards without the switch are the plain cases — every stored card.
 //
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
@@ -284,7 +288,15 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour): F
 }
 
 /** A stored row for one case. */
-function rowFor(template: FrameTemplate, kind: CardKind, colour: VisualColour, shape: VisualShape, finish: VisualCase["finish"], id: string): CardRowForBake {
+function rowFor(
+  template: FrameTemplate,
+  kind: CardKind,
+  colour: VisualColour,
+  shape: VisualShape,
+  finish: VisualCase["finish"],
+  id: string,
+  crown = false,
+): CardRowForBake {
   const long = shape === "long";
   return {
     id,
@@ -305,7 +317,9 @@ function rowFor(template: FrameTemplate, kind: CardKind, colour: VisualColour, s
     artist_credit: "Visual Regression",
     art_url: "ART",
     art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-    frame_style: { template, finish },
+    // A switched-on crown (TODO 4.6a) only on its own cases: every other
+    // case is a stored card, which names no switch.
+    frame_style: crown ? { template, finish, crown: true } : { template, finish },
     // A Keyrune preset on the long card (the drawn set symbol); the short
     // card prints the default mark.
     set_icon_url: null,
@@ -342,6 +356,16 @@ export function kindsByTemplate(): Map<FrameTemplate, CardKind[]> {
 const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless"];
 /** The edge card (3.11's content cases) on one frame of each family. */
 const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agclassic", "retro", "lotr", "tarkirdragon"];
+/** The legendary crown switched on (TODO 4.6a): the long card (Legendary) on
+ *  every template that draws the crown, in every colour that picks a
+ *  different band — m15: w u b r g, c (the see-through grey), wu and wub
+ *  (gold: no pair masters yet); m15artifact: c (the silver), u; m15land: g,
+ *  c (the land grey), wub (gold). */
+const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
+  ["m15", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  ["m15artifact", ["c", "u"]],
+  ["m15land", ["g", "c", "wub"]],
+];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15", "w"],
@@ -384,13 +408,19 @@ export function visualCases(): VisualCase[] {
     kind: CardKind,
     colour: VisualColour,
     shape: VisualShape,
-    extra: { preset?: VisualPreset; corners?: "round" | "square"; finish?: VisualCase["finish"]; suffix?: string } = {},
+    extra: {
+      preset?: VisualPreset;
+      corners?: "round" | "square";
+      finish?: VisualCase["finish"];
+      suffix?: string;
+      crown?: boolean;
+    } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = rowFor(template, kind, colour, shape, finish, id);
+    const row = rowFor(template, kind, colour, shape, finish, id, extra.crown ?? false);
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -427,6 +457,15 @@ export function visualCases(): VisualCase[] {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });
   }
+  for (const [template, colours] of CROWN_CASES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    for (const colour of colours) add(template, primary, colour, "long", { crown: true, suffix: "@crown" });
+  }
+  // The crown at the stored bake's size, in the finishes, and squared (print).
+  add("m15", "creature", "g", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  add("m15", "creature", "r", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
+  add("m15", "creature", "u", "long", { crown: true, finish: "etched", suffix: "@crown-etched" });
+  add("m15", "creature", "w", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }

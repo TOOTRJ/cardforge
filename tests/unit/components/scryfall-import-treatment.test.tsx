@@ -99,7 +99,7 @@ describe("borderless Sheoldred (DMU #435) — 1.18: the bordered frame, Borderle
     expect(
       within(chooser).getByText("Scryfall's art for this printing is cropped to the bordered window."),
     ).toBeTruthy();
-    expect(within(chooser).getByText("Why: PipGlyph doesn't draw the legendary crown yet.")).toBeTruthy();
+    expect(within(chooser).getByText("Why: PipGlyph doesn't draw the legendary crown on this frame yet.")).toBeTruthy();
     expect(frameRadio(/^M15 \(2015\) Standard/).getAttribute("aria-checked")).toBe("true");
     expect(frameRadio(/Borderless/).getAttribute("aria-checked")).toBe("false");
 
@@ -182,19 +182,17 @@ describe("the other outcomes", () => {
 });
 
 describe("owner decisions 2026-09-29 (C1, C2)", () => {
-  it("C1: Sheoldred DMU #107, short of only the crown, imports on its own M15 frame without asking", async () => {
+  it("Sheoldred DMU #107, crowned, imports EXACT on its own M15 frame since 4.6a — crown on, no chooser", async () => {
     const onImport = await pickPrinting("dmu-107", { verified: verifiedIn("m15") });
     expect(screen.queryByTestId("import-frame-chooser")).toBeNull();
-    // The detail still says what the printing is and why it isn't exact.
     expect(screen.getByText("M15 (2015) frame")).toBeTruthy();
-    expect(
-      screen.getByText(
-        /the frame \(M15 \(2015\) Standard — PipGlyph doesn't draw the legendary crown yet\) are all replaced/,
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(/the frame \(an exact match: M15 \(2015\) frame\) are all replaced/)).toBeTruthy();
     const payload = await commit(onImport);
     expect(payload.frameChoice).toBeUndefined();
-    expect(payload.patch.frame_match).toMatchObject({ status: "nearest", template: "m15", gaps: ["crown"] });
+    expect(payload.patch.frame_match).toMatchObject({ status: "exact", template: "m15" });
+    expect(payload.patch.frame_match?.gaps).toBeUndefined();
+    // Imports follow the printing: the card's crown switch goes on.
+    expect(payload.patch.printed_crown).toBe(true);
     expect(toast.info).not.toHaveBeenCalled();
   });
 
