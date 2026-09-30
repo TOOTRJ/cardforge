@@ -237,7 +237,8 @@ export function FrameCompare({
   // seeds the draft with the region they currently occupy so the write
   // lands on a complete rect (a bare `{ topPct }` would break the renderer)
   // and both renderers switch to the absolute box. Merely selecting the
-  // slot leaves the draft untouched — nothing to save, nothing to score.
+  // slot leaves the draft untouched — nothing to save, nothing to score —
+  // while the panel already shows that region's numbers to nudge or type.
   const seedDetachedSlot = (
     current: FrameProfileOverride,
     path: SlotPath,
