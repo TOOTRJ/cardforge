@@ -235,16 +235,66 @@ export const M20_TOKEN_SOLID_TYPE_PILL = { op: "opaque" };
  */
 export const M20_ARTIFACT_NAME_SLATE = { op: "tint", rgb: [30, 40, 48], opacity: 0.65, alphaFull: 230, alphaNone: 244 };
 
+/**
+ * The artifact name pill made SOLID (owner decision round 14, 2026-09-29,
+ * TODO 4.50): after the slate its interior was α ≈ 246, so a sliver of the
+ * art still showed through; every print's name pill is opaque. Each pixel
+ * M15's Title mask covers keeps its colour (the slate, the rims, the
+ * outline) and becomes opaque — the mask covers nothing CC draws below
+ * α 230 (no glow, no art window), so nothing new appears around the pill.
+ */
+export const M20_ARTIFACT_SOLID_NAME_PILL = { op: "opaque" };
+
+/**
+ * The type pill DARKENED to the prints (owner decision round 14, 2026-09-29,
+ * TODO 4.48 / 4.50) — the same print-fitted "tint" as the artifact name
+ * pill's slate, drawn source-over CC's translucent interior BEFORE the pill
+ * is made solid. Measured behind the type line (the pill's interior rows
+ * inset 25 px, x 620–1080, the ink left out; Scryfall PNGs at 1500 × 2100):
+ *
+ *   colourless (frameC, the plain templates' `c`): CC's pill is a flat grey
+ *     209 (α 166) where 4 M20+ colourless prints (TEOE #1, TCMM #1, TMH3 #38,
+ *     TFDN #26) print a warm grey — median rgb 176/165/160, luminance 167
+ *     (157–180). A flat rgb 164/149/143 at 65 % puts the interior on
+ *     176/165/160 (luminance 168).
+ *   artifact (tokenFrameA, every colour of the artifact templates: a
+ *     coloured artifact token keeps the silver pill): CC's is a flat
+ *     rgb 181/197/203 (luminance 193, α 204) where 16 M20+ artifact prints
+ *     (the slate's list) print a steel grey — median rgb 160/178/188,
+ *     luminance 174 (160–190). A flat rgb 151/170/181 at 65 % puts the
+ *     interior on 160/178/188 (luminance 174).
+ *
+ * Only CC's flat interior takes it (full weight at its α — 166 +2 / 204 +1 —
+ * none from the first bevel α, 186 / 216): the bevel's light top rows and
+ * dark left and bottom rows (α 211–247), the black outline and the
+ * coloured rim outside the mask keep CC's pixels, as the prints keep a
+ * lighter top bevel (~220) and a darker bottom one (~137) around the flat
+ * interior. The five coloured pills are not touched (4–12 lighter than
+ * the prints = the scans' offset; owner decision round 14).
+ */
+export const M20_COLOURLESS_TYPE_TINT = { op: "tint", rgb: [164, 149, 143], opacity: 0.65, alphaFull: 168, alphaNone: 186, colors: ["c"] };
+export const M20_ARTIFACT_TYPE_TINT = { op: "tint", rgb: [151, 170, 181], opacity: 0.65, alphaFull: 205, alphaNone: 216 };
+
 /** One full-art token template: the height's pack, plain or artifact. */
 function m20TokenTemplate(height, artifact) {
   const { dir, height: H, pack } = M20_TOKEN_PACKS[height];
   const recut = height === "textless" ? M20_TOKEN_TEXTLESS_RECUT : undefined;
-  // Owner decisions 2026-09-29: the type pill solid on every template, the
-  // artifact name pill slate. Composited over CC's flattened pixels BEFORE
-  // the re-cut (the masks are the packs' own geometry).
+  // Owner decisions 2026-09-29: the type pill darkened to the prints (the
+  // colourless one and the artifact one; round 14) and then solid on every
+  // template, the artifact name pill slate and then solid (round 14).
+  // Composited over CC's flattened pixels BEFORE the re-cut (the masks are
+  // the packs' own geometry), in this order: a tint weighs CC's alpha, so it
+  // goes before the op that makes those pixels opaque.
+  const typeMask = M20_TOKEN_TYPE_MASK[dir];
   const finish = [
-    { ...M20_TOKEN_SOLID_TYPE_PILL, mask: M20_TOKEN_TYPE_MASK[dir] },
-    ...(artifact ? [{ ...M20_ARTIFACT_NAME_SLATE, mask: M20_TOKEN_TITLE_MASK }] : []),
+    { ...(artifact ? M20_ARTIFACT_TYPE_TINT : M20_COLOURLESS_TYPE_TINT), mask: typeMask },
+    { ...M20_TOKEN_SOLID_TYPE_PILL, mask: typeMask },
+    ...(artifact
+      ? [
+          { ...M20_ARTIFACT_NAME_SLATE, mask: M20_TOKEN_TITLE_MASK },
+          { ...M20_ARTIFACT_SOLID_NAME_PILL, mask: M20_TOKEN_TITLE_MASK },
+        ]
+      : []),
   ];
   const colors = artifact
     ? {
@@ -267,10 +317,16 @@ function m20TokenTemplate(height, artifact) {
   if (height === "short") notes.push("CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn");
   if (height === "tall") notes.push("measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn");
   if (recut) notes.push("re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels");
+  notes.push(
+    artifact
+      ? "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels"
+      : "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
+  );
   notes.push("the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels");
   if (artifact) {
     notes.push(
       "the name pill darkened to the prints' slate (owner decision 2026-09-29, TODO 4.50): a flat slate rgb 30/40/48 at 65 % source-over CC's translucent silver interior through M15's Title mask (the rims and outline keep CC's pixels) — behind the name luminance 63 and white ink 10.5 : 1, as 16 M20+ artifact prints (luminance 54–71, 9–11 : 1); CC's silver pill was 102–137 (3.5–5.7 : 1) — PipGlyph composite of CC pixels",
+      "the name pill SOLID (owner decision round 14, 2026-09-29): after the slate its interior was α ≈ 246; every pixel M15's Title mask covers made opaque in its own colour (the mask covers nothing CC draws below α 230) — PipGlyph composite of CC pixels",
     );
   }
   return {
@@ -315,8 +371,10 @@ const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].ma
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
  * recut?, excluded?, pack?, transforms?, notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
- * any re-cut (compositeFinish; the full-art tokens' solid type pill and the
- * artifact name pill's slate, owner decisions 2026-09-29).
+ * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
+ * solid, the artifact name pill's slate made solid, owner decisions
+ * 2026-09-29); an entry with `colors` applies to those colour keys only
+ * (finishFor).
  * `plates` are written at native size to <template>/pt/<colour>.png;
  * `symbols` (a basic land's mana-symbol disc, TODO 3.24) the same way to
  * <template>/symbol/<colour>.png, for the colours listed only.
@@ -708,11 +766,19 @@ export function describeLayer(l) {
 
 /** One `finish` composite as provenance prints it. */
 export function describeFinish(f) {
-  if (f.op === "opaque") return `every pixel through ${f.mask} made opaque in its own colour (α' = α + (255 − α) × mask)`;
+  const only = f.colors ? ` (colour${f.colors.length > 1 ? "s" : ""} ${f.colors.join(", ")} only)` : "";
+  if (f.op === "opaque") return `every pixel through ${f.mask} made opaque in its own colour (α' = α + (255 − α) × mask)${only}`;
   if (f.op === "tint") {
-    return `a flat rgb(${f.rgb.join(", ")}) at ${Math.round(f.opacity * 100)}% source-over through ${f.mask}, on the pixels CC draws translucent (full weight at α ≤ ${f.alphaFull}, none at α ≥ ${f.alphaNone})`;
+    return `a flat rgb(${f.rgb.join(", ")}) at ${Math.round(f.opacity * 100)}% source-over through ${f.mask}, on the pixels CC draws translucent (full weight at α ≤ ${f.alphaFull}, none at α ≥ ${f.alphaNone})${only}`;
   }
   throw new Error(`describeFinish: unknown op ${JSON.stringify(f)}`);
+}
+
+/** The `finish` composites one colour of a template takes, in order: a
+ *  composite with `colors` applies to those colour keys only (round 14's
+ *  colourless type pill: the plain templates' `c`). */
+export function finishFor(def, key) {
+  return (def.finish ?? []).filter((f) => !f.colors || f.colors.includes(key));
 }
 
 /**

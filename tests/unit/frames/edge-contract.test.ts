@@ -450,13 +450,15 @@ describe("the text-box tokens' re-cut window and 7.6's art-window coverage", () 
 // 'Short' and 'Tall' token masters — the art runs to the 60 px black ring,
 // the box is translucent (α ≈ 205, the colourless `c` 166), and the textless
 // height's type pill is re-cut 5 px down onto the prints
-// (M20_TOKEN_TEXTLESS_RECUT). Two PipGlyph composites over CC's pixels
-// (owner decisions 2026-09-29; scripts/lib/cc-frames.mjs): the type pill is
-// SOLID, as printed (CC drew it at α 204 / `c` 166), and the artifact
+// (M20_TOKEN_TEXTLESS_RECUT). PipGlyph composites over CC's pixels (owner
+// decisions 2026-09-29; scripts/lib/cc-frames.mjs): the type pill is SOLID,
+// as printed (CC drew it at α 204 / `c` 166), the colourless and artifact
+// type pills darkened to the prints first (round 14), and the artifact
 // templates' name pill is the prints' dark slate (CC's silver let a white
-// name nearly vanish). Here: each height's clear window and pill rows on
-// every colour, the re-cut pill interior the profile's type band centres on
-// (M20_TOKEN_PILL_INTERIOR_PX), the two composites, and 7.6's art-window
+// name nearly vanish), made solid too (round 14). Here: each height's clear
+// window and pill rows on every colour, the re-cut pill interior the
+// profile's type band centres on (M20_TOKEN_PILL_INTERIOR_PX), the
+// composites and their tones, and 7.6's art-window
 // coverage (the art slot covers the window flood-filled from its centre
 // with ≥ 0.05 % overscan). Run where the masters are available (the importer
 // builds them; CI fetches them, scripts/frames-fetch.mjs).
@@ -543,8 +545,41 @@ describe("the full-art tokens' windows, pills and 7.6's art-window coverage", ()
           expect(lum, `${m.key} name pill luminance`).toBeLessThanOrEqual(71);
           expect(whiteInk, `${m.key} white name ink`).toBeGreaterThanOrEqual(9);
           expect(whiteInk, `${m.key} white name ink`).toBeLessThanOrEqual(11.5);
+          // Round 14 (owner decision 2026-09-29): the slate pill is SOLID
+          // end to end — the slate left it at α ≈ 246.
+          for (let y = 110; y <= 210; y += 4) {
+            for (let x = 120; x <= 1380; x += 20) expect(a(x, y), `${m.key} name pill α at ${x}, ${y}`).toBe(255);
+          }
         } else if (m.key === "w") {
           expect(lum, "w name pill").toBeGreaterThan(200);
+        }
+        // Round 14 (owner decision 2026-09-29): the type pill's tone behind
+        // the type line (its interior rows inset 10 px, x 620–1080; the
+        // prints' ink-free median, Scryfall PNGs at 1500 × 2100). The
+        // colourless pill (frameC: CC's 209) and every artifact pill (the
+        // silver tokenFrameA in every colour: CC's 193) are darkened to the
+        // prints — 4 colourless prints 157–180 (median 167), 16 artifact
+        // prints 160–190 (median 174); the five coloured pills and the gold
+        // one keep CC's colour (4–12 lighter than the scans: their offset).
+        const pillZone: number[] = [];
+        for (let y = pill.top + 10; y <= pill.bottom - 10; y += 5) {
+          for (let x = 620; x <= 1080; x += 20) {
+            const i = (y * width + x) * 4;
+            pillZone.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+          }
+        }
+        const pillLum = pillZone.sort((p, q) => p - q)[Math.floor(pillZone.length / 2)];
+        if (template.includes("artifact")) {
+          expect(pillLum, `${m.key} artifact type pill luminance`).toBeGreaterThanOrEqual(160);
+          expect(pillLum, `${m.key} artifact type pill luminance`).toBeLessThanOrEqual(190);
+          expect(Math.abs(pillLum - 174), `${m.key} artifact type pill vs the prints' median`).toBeLessThanOrEqual(2);
+        } else if (m.key === "c") {
+          expect(pillLum, "colourless type pill luminance").toBeGreaterThanOrEqual(157);
+          expect(pillLum, "colourless type pill luminance").toBeLessThanOrEqual(180);
+          expect(Math.abs(pillLum - 167), "colourless type pill vs the prints' median").toBeLessThanOrEqual(2);
+        } else {
+          const CC_PILL: Record<string, number> = { w: 241, u: 206, b: 183, r: 187, g: 200, m: 187 };
+          expect(Math.abs(pillLum - CC_PILL[m.key]), `${m.key} coloured type pill keeps CC's colour`).toBeLessThanOrEqual(1);
         }
         if (height === "textless") {
           // The re-cut: the pill's bottom rim ends at 1849 (CC's 1844 + 5),

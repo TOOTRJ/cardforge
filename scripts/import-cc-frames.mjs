@@ -54,6 +54,7 @@ import {
   cutThroughMask,
   describeFinish,
   describeLayer,
+  finishFor,
   recutBand,
   roundCornersRgba8,
   sourceFilesFor,
@@ -150,8 +151,11 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
+    // This colour's PipGlyph composites (a composite may name its colours:
+    // round 14's colourless type pill is the plain templates' `c` only).
+    const finish = finishFor(def, key);
     if (dryRun) {
-      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}${def.finish ? `, then ${def.finish.map(describeFinish).join("; ")}` : ""}`);
+      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}${finish.length ? `, then ${finish.map(describeFinish).join("; ")}` : ""}`);
       continue;
     }
     // Work at the base layer's native size; downscale once at the end.
@@ -168,16 +172,17 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     }
     const flat = toRgba8(compositeLayers(images, W, H));
     // PipGlyph composites over CC's flattened pixels (the full-art tokens'
-    // solid type pill and artifact slate name pill, owner decisions
-    // 2026-09-29), before any re-cut: the masks are the pack's geometry.
-    const composite = def.finish
+    // type pill darkened and solid, the artifact name pill slate and solid;
+    // owner decisions 2026-09-29), before any re-cut: the masks are the
+    // pack's geometry.
+    const composite = finish.length
       ? compositeFinish(
           flat,
           W,
           H,
-          def.finish,
+          finish,
           Object.fromEntries(
-            await Promise.all(def.finish.map(async (f) => [f.mask, await rgba(await fetchCached(f.mask), W, H)])),
+            await Promise.all(finish.map(async (f) => [f.mask, await rgba(await fetchCached(f.mask), W, H)])),
           ),
         )
       : flat;
