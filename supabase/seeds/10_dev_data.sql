@@ -219,8 +219,12 @@ on conflict (id) do nothing;
 --     Mediator, Stormglass Strand, Brassbound Arbiter; Tidecaller Envoy and
 --     Rotbloom Pact are stored with no key — gold until switched on)
 --     (lib/cards/anatomy.ts). dev_pro's cards, so dev_artist's public count
---     stays 15 (14 + Veyra's emblem, 6.23). Ids …034–…041 (…026 is the
---     emblems seed's: a reused id is a row that silently never lands —
+--     stays 15 (14 + Veyra's emblem, 6.23), and UNLISTED — their owner opens
+--     them from My Cards, anyone by link — so the seeded public gallery stays
+--     on one 24-card page: the e2e gallery specs (seeded-data, browse-filters,
+--     like-toggle) read page 1, and 8 more public rows pushed Cinderwing
+--     Matriarch, Emberlash and Thornback Behemoth off it. Ids …034–…041 (…026
+--     is the emblems seed's: a reused id is a row that silently never lands —
 --     tests/unit/devops/seed-card-ids.test.ts).
 -- ---------------------------------------------------------------------------
 
@@ -236,7 +240,7 @@ select
   c.rarity, c.rules_text, null, c.power, c.toughness,
   'PipGlyph Studio',
   'https://pipglyph.com/defaults/avatars/avatar-' || lpad(c.art::text, 2, '0') || '.webp',
-  c.frame_style, 'public',
+  c.frame_style, 'unlisted',
   now() - (c.age_days || ' days')::interval,
   now() - (c.age_days || ' days')::interval
 from (values
