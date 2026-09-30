@@ -229,6 +229,20 @@ export const BORDERLESS_LAND_DARK_PINS: Readonly<Record<string, readonly string[
   woe: ["303", "304", "305", "306", "307"],
 };
 
+/** Borderless nonbasic lands that print a third look: the colour's title
+ *  bar and TINTED text box of 4.34's m15borderlessland, but a DARK type bar
+ *  between them (a black gradient under the colour's pinline). Found by the
+ *  second skeptic pass (2026-09-29), reading the title, type and box bands
+ *  of every `exact` borderless nonbasic land side by side: Roiling Canopy
+ *  FRA #380, Theorist's Sanctum FRA #381 (both had been references), Path
+ *  of Ancestry SLD #250, Command Tower SLD #1989, Mystic Sanctuary SLD
+ *  #2143 and the bonus Rogue's Passage SLD #7112. Pinned like the others:
+ *  Scryfall carries `inverted` on all three looks. */
+export const BORDERLESS_LAND_DARK_TYPE_BAR_PINS: Readonly<Record<string, readonly string[]>> = {
+  fra: ["380", "381"],
+  sld: ["250", "1989", "2143", "7112"],
+};
+
 /** Borderless nonbasic lands that print the SHORT text box (4.37's short
  *  and mid boxes: the type bar at ~70 %H, not 56 %H) among the ones the
  *  registry resolved `exact` (checked by eye, 2026-09-29): the SNC triomes
@@ -665,6 +679,7 @@ type GapKey =
   | "nyx"
   | "light-box"
   | "dark-bars"
+  | "dark-type-bar"
   | "short-box"
   | "tall-box";
 
@@ -772,11 +787,16 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "this printing has the light text box, and PipGlyph's has the dark one",
     blockedBy: "4.37",
   },
-  // The borderless land's two print variations the registry can't read
-  // from Scryfall's fields (4.34's skeptic pass): pinned.
+  // The borderless land's print variations the registry can't read from
+  // Scryfall's fields (4.34's skeptic passes): pinned.
   "dark-bars": {
     match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_DARK_PINS },
     reason: "this printing's type bar and text box are dark, and PipGlyph's Borderless Land tints them",
+    blockedBy: "4.37",
+  },
+  "dark-type-bar": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_DARK_TYPE_BAR_PINS },
+    reason: "this printing's type bar is dark, and PipGlyph's Borderless Land tints it",
     blockedBy: "4.37",
   },
   "short-box": {
@@ -1103,10 +1123,11 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // Borderless Land offered once verified. The two-colour lands — most of
   // them: MID #281, OTJ #304, the RVR shocks, the MKM surveil lands — print
   // a split pinline and box on grey bars, 4.6's pair masters: nearest on
-  // the gold `m` until then, like the two-colour spells. Two print
-  // variations are pinned `nearest` (Scryfall has no field for either):
-  // the spells' dark type bar and box (TDM, WOE, ACR, EOE, many SLD drops)
-  // and the short box (the SNC triomes) — 4.37's variants.
+  // the gold `m` until then, like the two-colour spells. Three print
+  // variations are pinned `nearest` (Scryfall has no field for any):
+  // the spells' dark type bar and box (TDM, WOE, ACR, EOE, many SLD drops),
+  // a dark type bar alone over the tinted box (FRA #380–381, four SLD
+  // drops) and the short box (the SNC triomes) — 4.37's variants.
   ...withGaps(
     {
       key: "borderless/land",
@@ -1114,7 +1135,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"], kinds: ["land"] },
       outcome: { status: "exact", template: { family: "borderless" } },
     },
-    ["etched", "nickname", "crown", "nyx", "two-colour", "short-box", "dark-bars", "light-box"],
+    ["etched", "nickname", "crown", "nyx", "two-colour", "short-box", "dark-bars", "dark-type-bar", "light-box"],
   ),
   {
     key: "borderless/layout",

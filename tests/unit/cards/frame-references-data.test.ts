@@ -217,10 +217,12 @@ describe("4.32 / 4.34 / 4.39 references", () => {
 
   it("m15borderlessland: non-legendary prints whose type bar wears the title's tint, the best-registered first (TODO 4.34)", () => {
     expect(ids("m15borderlessland", "w")).toEqual(["mh3 Monumental Henge", "sld Ancient Den"]);
-    expect(ids("m15borderlessland", "u")).toEqual(["fra Theorist's Sanctum", "mh3 Archway of Innovation"]);
+    // Not FRA #380 / #381: they print a DARK type bar over the tinted box
+    // (4.34's second skeptic pass; BORDERLESS_LAND_DARK_TYPE_BAR_PINS).
+    expect(ids("m15borderlessland", "u")).toEqual(["mh3 Archway of Innovation", "sld Shelldock Isle"]);
     expect(ids("m15borderlessland", "b")).toEqual(["mh3 Spymaster's Vault", "mh2 Cabal Coffers"]);
     expect(ids("m15borderlessland", "r")).toEqual(["slp Valakut, the Molten Pinnacle", "mh3 Arena of Glory"]);
-    expect(ids("m15borderlessland", "g")).toEqual(["fra Roiling Canopy", "mh3 Shifting Woodland"]);
+    expect(ids("m15borderlessland", "g")).toEqual(["mh3 Shifting Woodland", "sld Tree of Tales"]);
     // c = colourless lands; m = three and more colours (gold bars and box).
     expect(ids("m15borderlessland", "c")).toEqual(["cmm Reliquary Tower", "cmm Myriad Landscape"]);
     expect(ids("m15borderlessland", "m")).toEqual(["cmm Command Tower", "msh Avengers Tower"]);

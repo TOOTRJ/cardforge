@@ -1228,7 +1228,7 @@
     }
   },
   "m15borderlessland": {
-    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — SLD #300 and MH2 #325 are offset or scaled scans (their whole card sits 4–13 px off), kept as the short-text / second printing. The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The TODO's two-colour references (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: 4.6's pair masters, not scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops, pinned nearest in the registry) — and the short box (the SNC triomes) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
+    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — SLD #300, SLD #304 and MH2 #325 are offset or scaled scans (their whole card sits 4–13 px off), kept as the short-text / second printing. The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The TODO's two-colour references (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: 4.6's pair masters, not scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops, pinned nearest in the registry) — a dark type bar alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 / #7112 — the second skeptic pass moved u and g off Theorist's Sanctum and Roiling Canopy for it) and the short box (the SNC triomes) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
     "confirm": true,
     "colors": {
       "w": [
@@ -1245,14 +1245,14 @@
       ],
       "u": [
         {
-          "name": "Theorist's Sanctum",
-          "set": "fra",
-          "scryfallId": "e8f607b3-f37c-49e7-8eb8-a14b2153f30e"
-        },
-        {
           "name": "Archway of Innovation",
           "set": "mh3",
           "scryfallId": "472905ac-1eb9-4951-8180-b8c35fbab3d7"
+        },
+        {
+          "name": "Shelldock Isle",
+          "set": "sld",
+          "scryfallId": "e093eb73-3780-4735-9e6b-fb4f621978e9"
         }
       ],
       "b": [
@@ -1281,14 +1281,14 @@
       ],
       "g": [
         {
-          "name": "Roiling Canopy",
-          "set": "fra",
-          "scryfallId": "0e76872b-d271-4032-aca2-dde428712b3a"
-        },
-        {
           "name": "Shifting Woodland",
           "set": "mh3",
           "scryfallId": "890e97b5-6750-4fae-8481-1244e311da7e"
+        },
+        {
+          "name": "Tree of Tales",
+          "set": "sld",
+          "scryfallId": "1da48f6c-df82-4290-a476-6e4358fac4ff"
         }
       ],
       "c": [

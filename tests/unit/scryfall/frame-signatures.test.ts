@@ -57,12 +57,11 @@ describe("borderless families (TODO 1.17)", () => {
     ["woe-297", "nearest", "m15pw", undefined],
     // Nonbasic lands (4.34): the borderless land frame, exact — and, its art
     // reaching the card edge, the import lands on the bordered land frame
-    // (1.18). A mono-colour (MH3 #351, FRA #381), a colourless (CMM #663)
-    // and a five-colour land (CMM #659, the gold master) are exact; the
+    // (1.18). A mono-colour (MH3 #351), a colourless (CMM #663) and a
+    // five-colour land (CMM #659, the gold master) are exact; the
     // two-colour lands print a split pinline and box (4.6), a crowned one
     // the floating crown (4.6), a nicknamed one its nickname line (6.3).
     ["mh3-351", "exact", "m15borderlessland", "m15land"],
-    ["fra-381", "exact", "m15borderlessland", "m15land"],
     ["cmm-663", "exact", "m15borderlessland", "m15land"],
     ["cmm-659", "exact", "m15borderlessland", "m15land"],
     ["mid-281", "nearest", "m15borderlessland", "m15land"],
@@ -78,6 +77,11 @@ describe("borderless families (TODO 1.17)", () => {
     ["fra-379", "nearest", "m15borderlessland", "m15land"],
     ["woe-303", "nearest", "m15borderlessland", "m15land"],
     ["snc-291", "nearest", "m15borderlessland", "m15land"],
+    // …and the third look the second skeptic pass found: a dark type bar
+    // alone over the tinted box (Theorist's Sanctum FRA #381, Mystic
+    // Sanctuary SLD #2143).
+    ["fra-381", "nearest", "m15borderlessland", "m15land"],
+    ["sld-2143", "nearest", "m15borderlessland", "m15land"],
     ["sld-469", "nearest", "m15borderlessland", "m15land"],
     // MDFC (5.7), saga / adventure / room (4.38).
     ["znr-284", "nearest", "m15borderlessland", "m15land"],
@@ -182,8 +186,16 @@ describe("borderless families (TODO 1.17)", () => {
       signature: "borderless/land+short-box",
       gaps: ["short-box"],
     });
+    for (const key of ["fra-381", "sld-2143"] as const) {
+      expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
+        signature: "borderless/land+dark-type-bar",
+        reason: "this printing's type bar is dark, and PipGlyph's Borderless Land tints it",
+        blockedBy: "4.37",
+        gaps: ["dark-type-bar"],
+      });
+    }
     // The references stay exact: the pins name none of them.
-    for (const key of ["mh3-351", "fra-381", "cmm-663", "cmm-659"] as const) {
+    for (const key of ["mh3-351", "cmm-663", "cmm-659"] as const) {
       expect(frameMatchFromScryfall(printing(key)).gaps, key).toBeUndefined();
     }
     expect(frameMatchFromScryfall(printing("hob-284"))).toMatchObject({

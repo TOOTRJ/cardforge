@@ -125,10 +125,12 @@ const TEMPLATES = {
   // split the pinline and box, 4.6). No crown or nickname line until 4.6 /
   // 6.3. Curate by eye: drop the prints of the spells' look — a DARK type
   // bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC,
-  // many 2024+ SLD drops; the registry pins them, BORDERLESS_LAND_DARK_PINS)
-  // — and the short box (the SNC triomes): the master tints both parts.
+  // many 2024+ SLD drops; the registry pins them, BORDERLESS_LAND_DARK_PINS),
+  // a dark type bar alone over the tinted box (FRA #380–381, a few SLD
+  // drops; BORDERLESS_LAND_DARK_TYPE_BAR_PINS) and the short box (the SNC
+  // triomes): the master tints the type bar and the box.
   m15borderlessland: {
-    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop the dark type bar and box (BORDERLESS_LAND_DARK_PINS) and the short box.",
+    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop a dark type bar, with or without a dark box (BORDERLESS_LAND_DARK_PINS, BORDERLESS_LAND_DARK_TYPE_BAR_PINS), and the short box.",
     q: (k) =>
       `border:borderless frame:2015 t:land -t:basic -is:showcase -frame:legendary -is:dfc -is:textless -is:flavorname -t:creature ${k === "m" ? "produces>=3 -produces:c" : `produces=${k}`}`,
   },

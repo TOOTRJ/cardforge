@@ -75,6 +75,22 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
     expect(match.status).not.toBe("unsupported");
   });
 
+  it("every borderless land reference is exact, with no print variation the master doesn't draw (4.34)", () => {
+    // The master tints the title bar, the type bar AND the box; the registry
+    // pins the prints that don't (the dark bars, a dark type bar alone, the
+    // short box) — a reference that prints one of those would have the
+    // owner verify the frame against a look it doesn't draw.
+    const land = rows.filter((row) => row.template === "m15borderlessland");
+    expect(land.length).toBe(14);
+    for (const row of land) {
+      const match = frameMatchFromScryfall(scryfallCardSchema.parse(printings[row.ref.scryfallId]));
+      expect({ status: match.status, gaps: match.gaps }, `${row.combo} ${row.ref.name}`).toEqual({
+        status: "exact",
+        gaps: undefined,
+      });
+    }
+  });
+
   it("every allowlisted combo is still in the registry", () => {
     const combos = new Set(rows.map((row) => row.combo));
     for (const combo of Object.keys(ALLOWLIST)) expect(combos.has(combo), combo).toBe(true);

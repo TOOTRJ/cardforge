@@ -3407,5 +3407,32 @@
     "colors": [],
     "color_identity": [],
     "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
+  },
+  "sld-2143": {
+    "id": "285b5f42-17e2-4036-a309-8abd393c6263",
+    "name": "Mystic Sanctuary",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "2143",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "oracle_text": "({T}: Add {U}.)\nThis land enters tapped unless you control three or more other Islands.\nWhen this land enters untapped, you may put target instant or sorcery card from your graveyard on top of your library."
   }
 }
