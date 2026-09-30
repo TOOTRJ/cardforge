@@ -75,6 +75,7 @@ import {
   DEFAULT_PRINT_PPI,
   isPrintRequest,
   printFrameUpscaledAt800,
+  printPixelSize,
   PRINT_800_PPI_PAID_ONLY,
   type PrintPpi,
 } from "@/lib/cards/print-export";
@@ -295,9 +296,12 @@ export function DownloadModal({
                       {print ? printTitle(printOptions) : `Low-resolution ${FORMAT_LABEL[format]}`}
                     </h3>
                     <p className="text-xs leading-5 text-muted">
-                      750 × 1050 with the PipGlyph mark — fine for sharing and
-                      playtesting. Plus and Pro download a clean, print-ready
-                      1500 × 2100 image.
+                      {print
+                        ? // Only when PRINT_800_PPI_PAID_ONLY is off: a free
+                          // viewer's 800 ppi file keeps the mark (the bleed
+                          // stays paid, so this is never a bleed file).
+                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed.`
+                        : "750 × 1050 with the PipGlyph mark — fine for sharing and playtesting. Plus and Pro download a clean, print-ready 1500 × 2100 image."}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -401,6 +405,12 @@ const PPI_OPTIONS: ChipOption<"600" | "800">[] = [
 function printTitle(opts: { ppi: PrintPpi; bleed: boolean }): string {
   const res = opts.ppi === DEFAULT_PRINT_PPI ? "" : `${opts.ppi} ppi `;
   return `${res}PNG${opts.bleed ? " with 1/8″ bleed" : ""} for print`;
+}
+
+/** "2000 × 2800 (800 ppi)" — a free viewer's print file (no bleed). */
+function freePrintSize(ppi: PrintPpi): string {
+  const { width, height } = printPixelSize(ppi, { bleed: false });
+  return `${width} × ${height} (${ppi} ppi)`;
 }
 
 function printDescription(opts: { ppi: PrintPpi; bleed: boolean }, frameUpscaled: boolean): string {

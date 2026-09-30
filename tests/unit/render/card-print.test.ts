@@ -344,6 +344,30 @@ describe("TODO 6.10 — full-resolution art", () => {
     expect(diff(foilPrinted, foilBaked, { x0: 0, y0: 0, x1: 1500, y1: 2100 }, 12).within).toBeGreaterThan(0.99);
   }, 60_000);
 
+  it("prints art sharp can't fully decode (a truncated upload) the way the bake draws it, instead of failing", async () => {
+    // sharp reads the header, then stops at the missing scans ("premature end
+    // of JPEG"); the bake's decoder draws what is there. The PDF (every PDF
+    // renders through here) must not turn that card into a 500.
+    const full = Buffer.from((await smoothArt(1200, 900)).split(",")[1], "base64");
+    const jpeg = await sharp(full).jpeg({ quality: 90 }).toBuffer();
+    const truncated = jpeg.subarray(0, Math.floor(jpeg.length * 0.6));
+    await expect(sharp(truncated).raw().toBuffer()).rejects.toThrow();
+    const c = card("m15", { artUrl: `data:image/jpeg;base64,${truncated.toString("base64")}`, rulesText: "Draw a card." });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const [printed, baked] = await Promise.all([print(c, { ppi: 600, bleed: false }), bake(c)]);
+      expect([printed.width, printed.height, printed.density]).toEqual([1500, 2100, 600]);
+      // The layer drew the art itself: the square bake, pixel for pixel.
+      expect(diff(printed, baked, { x0: 0, y0: 0, x1: 1500, y1: 2100 }, 1).within).toBeGreaterThan(0.999);
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^\[print\] full-resolution art failed/));
+      // …and with the bleed, the trim box is still that card.
+      const bled = await print(c, { ppi: 600, bleed: true });
+      expect([bled.width, bled.height]).toEqual([1650, 2250]);
+    } finally {
+      warn.mockRestore();
+    }
+  }, 60_000);
+
   it("turns a phone photo upright the way the creator shows it", async () => {
     // Stored sideways with EXIF 6 ("turn me 90° clockwise"): red on top as
     // stored, so red is on the RIGHT once turned.

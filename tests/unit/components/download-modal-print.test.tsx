@@ -15,11 +15,22 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 // ---------------------------------------------------------------------------
 
 vi.mock("@/components/billing/upgrade-modal-provider", () => ({ useUpgradeModal: () => ({ open: vi.fn() }) }));
+// The ONE 6.1b switch, flipped per test (the [decide]'s other answer).
+const flags = vi.hoisted(() => ({ paidOnly: true }));
+vi.mock("@/lib/cards/print-export", async (orig) => ({
+  ...(await orig<typeof import("@/lib/cards/print-export")>()),
+  get PRINT_800_PPI_PAID_ONLY() {
+    return flags.paidOnly;
+  },
+}));
 vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 
 import { DownloadModal } from "@/components/cards/download-modal";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  flags.paidOnly = true;
+});
 
 async function open(isPaid: boolean, defaultTab: "png" | "single" = "png") {
   render(
@@ -118,5 +129,21 @@ describe("DownloadModal print options (free)", () => {
     expect(screen.queryByTestId("download-bleed")).toBeNull();
     expect(screen.queryByTestId("download-pdf-bleed")).toBeNull();
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=default&corners=round");
+  });
+});
+
+describe("DownloadModal print options — PRINT_800_PPI_PAID_ONLY off (the 6.1b [decide]'s other answer)", () => {
+  it("a free viewer gets the 800 ppi choice with the mark, never the bleed, and the copy says what the file is", async () => {
+    flags.paidOnly = false;
+    await open(false);
+    expect(screen.getByTestId("download-print")).toBeTruthy();
+    expect(screen.queryByTestId("download-bleed")).toBeNull();
+    expect(screen.queryByTestId("download-pdf-bleed")).toBeNull();
+    await click(resolution(/800 ppi/));
+    const a = link("/png?");
+    expect(a.getAttribute("href")).toBe("/api/cards/c1/png?ppi=800&corners=square");
+    expect(a.getAttribute("download")).toBe("grizzly-800ppi.png");
+    expect(screen.getByText(/^2000 × 2800 \(800 ppi\) with the PipGlyph mark/)).toBeTruthy();
+    expect(screen.queryByText(/750 × 1050/)).toBeNull();
   });
 });

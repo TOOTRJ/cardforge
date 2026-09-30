@@ -49,6 +49,8 @@ const state = vi.hoisted(() => ({
   viewer: null as { id: string } | null,
   activity: vi.fn(),
   admin: null as unknown,
+  // The ONE 6.1b switch (lib/cards/print-export.ts), flipped per test.
+  print800PaidOnly: true,
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -75,6 +77,12 @@ vi.mock("@/lib/render/card-image", async (orig) => ({
   renderCardImage: state.render,
 }));
 vi.mock("@/lib/render/card-print", () => ({ renderCardPrint: state.print }));
+vi.mock("@/lib/cards/print-export", async (orig) => ({
+  ...(await orig<typeof import("@/lib/cards/print-export")>()),
+  get PRINT_800_PPI_PAID_ONLY() {
+    return state.print800PaidOnly;
+  },
+}));
 // Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
 // at v31 no older bake has only the v22 opt-in pending (the "owner kept the
 // older look" case). tests/stubs/layout-version-at.ts explains.
@@ -158,6 +166,7 @@ beforeEach(async () => {
     sharp({ create: { width: 2200, height: 3000, channels: 3, background: "#00ff00" } }).png().toBuffer(),
   );
   state.paid = false;
+  state.print800PaidOnly = true;
 });
 
 type Decoded = { at: (x: number, y: number) => number[]; channels: number; opaque: boolean };
@@ -664,5 +673,27 @@ describe("print downloads — 800 ppi and the 1/8 in bleed (TODO 6.1a / 6.1b)", 
       kind: "download",
       props: { format: "png", preset: "800ppi", clean: true, corners: "square", layout: "bleed" },
     });
+  });
+});
+
+describe("print downloads with PRINT_800_PPI_PAID_ONLY off (the 6.1b [decide]'s other answer)", () => {
+  async function printDownload(query: string) {
+    return GET(new NextRequest(`http://localhost/api/cards/${ID}/png?${query}`), { params: Promise.resolve({ id: ID }) });
+  }
+
+  it("a free viewer's 800 ppi file keeps the mark; the bleed stays a clean-download feature", async () => {
+    state.print800PaidOnly = false;
+    state.viewer = { id: "viewer-1" };
+    state.card = card({ layout_version: 30, frame_style: { template: "m15" } });
+    const res = await printDownload("ppi=800");
+    expect(res.status).toBe(200);
+    expect(state.print).toHaveBeenCalledWith(expect.anything(), { ppi: 800, bleed: false, brandMark: true, watermarkText: null });
+    for (const query of ["bleed=1", "ppi=800&bleed=1"]) {
+      state.print.mockClear();
+      const refused = await printDownload(query);
+      expect(refused.status).toBe(403);
+      expect((await refused.json()).code).toBe("UPGRADE_REQUIRED");
+      expect(state.print).not.toHaveBeenCalled();
+    }
   });
 });

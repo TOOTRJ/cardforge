@@ -92,13 +92,37 @@ export type PrintRenderOptions = {
 };
 
 /** The decoded art source: bytes sharp reads (the original file, or raw
- *  RGBA when it had to be turned upright first). */
+ *  RGBA when it had to be turned upright first), and the file itself. */
 type ArtSource = {
   input: Buffer;
   raw?: { width: number; height: number; channels: 4 };
   width: number;
   height: number;
+  /** The original file (a foil card's mask copy is made from it). */
+  bytes: Buffer;
 };
+
+/**
+ * The full-resolution art could not be drawn — sharp read the header but not
+ * the pixels (a truncated upload, a corrupt chunk), which the bake's own
+ * decoder (librsvg's) may still show. renderCardPrint then prints the card
+ * with the art as the bake draws it rather than failing the download.
+ */
+class PrintArtError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "PrintArtError";
+  }
+}
+
+/** Run one step that decodes the art; its failure is a PrintArtError. */
+async function artStep<T>(step: () => Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (err) {
+    throw new PrintArtError(err);
+  }
+}
 
 /** The declared edges of a card's frame (EDGE_CONTRACTS), all `border` for a
  *  template the table doesn't know. */
@@ -123,10 +147,16 @@ async function loadArt(bytes: Buffer | null): Promise<ArtSource | null> {
         .ensureAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true });
-      return { input: data, raw: { width: info.width, height: info.height, channels: 4 }, width: info.width, height: info.height };
+      return {
+        input: data,
+        raw: { width: info.width, height: info.height, channels: 4 },
+        width: info.width,
+        height: info.height,
+        bytes,
+      };
     }
     const height = meta.pageHeight && meta.pages && meta.pages > 1 ? meta.pageHeight : meta.height;
-    return { input: bytes, width: meta.width, height };
+    return { input: bytes, width: meta.width, height, bytes };
   } catch {
     return null;
   }
@@ -257,7 +287,7 @@ async function artOverlays(
   const ordered = [...boxes].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "under" ? -1 : 1));
   const overlays: OverlayOptions[] = [];
   for (const box of ordered) {
-    const overlay = await artOverlay(art, box, frame);
+    const overlay = await artStep(() => artOverlay(art, box, frame));
     if (overlay) overlays.push(overlay);
   }
   return overlays;
@@ -276,8 +306,26 @@ function copyRect(from: Buffer, to: Buffer, width: number, rect: { x0: number; y
  * `ppi` (600 = the HD layout's 1500 × 2100, 800 = 2000 × 2800), with an
  * optional 1/8 in bleed on every side. Returns opaque RGB PNG bytes tagged
  * with the resolution (pHYs = ppi, sRGB).
+ *
+ * Art sharp can't decode in full (a truncated or corrupt file whose header
+ * reads fine) is drawn the way the bake draws it — Satori's inlined copy in
+ * the layer — so the download matches the card on the site instead of
+ * failing (the PDF rendered it that way before the print path existed).
  */
 export async function renderCardPrint(card: CardPreviewData, opts: PrintRenderOptions): Promise<Buffer> {
+  const art = await loadArt(await fetchImageBytes(card.artUrl));
+  if (art) {
+    try {
+      return await renderPrint(card, opts, art);
+    } catch (err) {
+      if (!(err instanceof PrintArtError)) throw err;
+      console.warn(`[print] full-resolution art failed (${err.message}); drawing the bake's copy instead`);
+    }
+  }
+  return renderPrint(card, opts, null);
+}
+
+async function renderPrint(card: CardPreviewData, opts: PrintRenderOptions, art: ArtSource | null): Promise<Buffer> {
   const landscape = isLandscapeRender(card);
   const hd = RENDER_PRESETS.hd;
   const layoutWidth = landscape ? hd.height : hd.width;
@@ -286,18 +334,20 @@ export async function renderCardPrint(card: CardPreviewData, opts: PrintRenderOp
   const trimW = Math.round(layoutWidth * scale);
   const trimH = Math.round(layoutHeight * scale);
 
-  const artBytes = await fetchImageBytes(card.artUrl);
-  const art = await loadArt(artBytes);
   // The layer never draws the art; it only needs to know there is one (the
   // art boxes are laid out) — and a foil card's sheen masks with the art's
-  // lightness, so a foil card keeps a Satori-sized copy for the mask.
-  const layerCard: CardPreviewData =
-    art && artBytes
-      ? {
-          ...card,
-          artUrl: card.frameStyle?.finish === "foil" ? await toSatoriDataUrl(artBytes) : TRANSPARENT_PIXEL_DATA_URL,
-        }
-      : card;
+  // lightness, so a foil card keeps a Satori-sized copy for the mask. With
+  // no decodable art (null) the layer draws the card's art itself, as the
+  // bake does.
+  const layerCard: CardPreviewData = art
+    ? {
+        ...card,
+        artUrl:
+          card.frameStyle?.finish === "foil"
+            ? await artStep(() => toSatoriDataUrl(art.bytes))
+            : TRANSPARENT_PIXEL_DATA_URL,
+      }
+    : card;
 
   const boxes: PrintArtBox[] = [];
   const response = await renderCardImage(layerCard, "hd", {
