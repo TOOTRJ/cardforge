@@ -159,7 +159,8 @@ Rules and gotchas:
   Frames listed in `lib/frames/frame-manifest.json` live in the `frames`
   storage bucket, not git (content-addressed; `frameUrl()` resolves every
   preview + bake path; publish → preview → owner `frames:promote` → merge,
-  `docs/FRAMES.md`) — Card Conjurer-derived frames NEVER enter the repo.
+  `docs/FRAMES.md`, which also holds "Adding a frame" and the verification
+  SOP) — Card Conjurer-derived frames NEVER enter the repo.
   `public/frames` is excluded from function tracing (`next.config.ts`) —
   the bake fetches frames from the deployment's own CDN and memoizes them
   (`lib/render/card-frames.ts`); any new `public/frames` asset the renderer
@@ -197,11 +198,11 @@ Rules and gotchas:
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
-  deploy"): `/api/cron/auto-rebake` (`vercel.json`, every 5 min, production
-  only; `lib/cards/auto-rebake.ts`) re-bakes what a "sweep" bump or a null
-  stamp left behind — `runRebakeBatch` scope `sweep`, ≤240 s per run, never
-  without `NEXT_PUBLIC_BILLING_ENABLED`; idle = one head count below
-  `latestSweepVersion()`. ONE lease (`render_sweep_state`, service-role only —
+  deploy" + "Re-bake runbook"): `/api/cron/auto-rebake` (`vercel.json`,
+  every 5 min, production only; `lib/cards/auto-rebake.ts`) re-bakes what a
+  "sweep" bump or a null stamp left behind — `runRebakeBatch` scope `sweep`,
+  ≤240 s per run, never without `NEXT_PUBLIC_BILLING_ENABLED`; idle = one
+  head count below `latestSweepVersion()`. ONE lease (`render_sweep_state`, service-role only —
   it names unlisted cards; `lib/cards/sweep-lease.ts`) is shared with
   `POST /api/admin/rebake` (the script, which still works) and
   `/api/admin/rebake-marked`: a manual call makes the cron yield after its

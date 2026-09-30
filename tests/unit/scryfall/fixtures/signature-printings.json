@@ -2894,5 +2894,99 @@
       "W"
     ],
     "oracle_text": "{T}, Sacrifice this token: Add one mana of any color."
+  },
+  "tdm-401": {
+    "id": "f421da3b-b88d-4e9f-865b-61120bff917a",
+    "name": "Elspeth, Storm Slayer",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "401",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Elspeth",
+    "mana_cost": "{3}{W}{W}",
+    "loyalty": "5",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "tdm-411": {
+    "id": "89b98fd0-e2e5-4533-af2b-5230af2c88bd",
+    "name": "Elspeth, Storm Slayer",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "411",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "halofoil",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Elspeth",
+    "mana_cost": "{3}{W}{W}",
+    "loyalty": "5",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "blb-353": {
+    "id": "af6c496c-c70e-46f0-b161-661620767de5",
+    "name": "Ral, Crackling Wit",
+    "layout": "normal",
+    "set": "blb",
+    "set_name": "Bloomburrow",
+    "set_type": "expansion",
+    "collector_number": "353",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "raisedfoil",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Ral",
+    "mana_cost": "{2}{U}{R}",
+    "loyalty": "4",
+    "colors": [
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "R",
+      "U"
+    ]
   }
 }

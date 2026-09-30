@@ -25,7 +25,7 @@
 // ---------------------------------------------------------------------------
 import { PRODUCTION_SUPABASE_HOSTS } from "./prod-guard.mjs";
 
-export const PRODUCTION_APP_URL = "https://www.pipglyph.com";
+export { PRODUCTION_APP_URL } from "./prod-guard.mjs";
 export const ENDPOINT_PATH = "/api/admin/storage-sweep";
 
 /** Card ids per purge call (the route's own cap). */

@@ -26,3 +26,23 @@ export function isProductionSupabaseUrl(url) {
     return false;
   }
 }
+
+/** Production's app (Vercel Production) — where an owner-run script sends
+ *  production's CRON_SECRET, and nowhere else. */
+export const PRODUCTION_APP_URL = "https://www.pipglyph.com";
+
+/** Every hostname the production app answers on (the apex redirects to www). */
+export const PRODUCTION_APP_HOSTS = ["www.pipglyph.com", "pipglyph.com"];
+
+/** True when `url` is on the production app's hostnames, whatever the scheme,
+ *  port or path (a trailing root dot and upper case count too). Malformed
+ *  input is NOT production; callers that need a valid URL check that. */
+export function isProductionAppUrl(url) {
+  if (typeof url !== "string" || !url.trim()) return false;
+  try {
+    const host = new URL(url.trim()).hostname.toLowerCase().replace(/\.$/, "");
+    return PRODUCTION_APP_HOSTS.includes(host);
+  } catch {
+    return false;
+  }
+}

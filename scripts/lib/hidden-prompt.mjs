@@ -1,7 +1,9 @@
 // ---------------------------------------------------------------------------
-// hidden-prompt.mjs — read a secret (production's secret key) from the
-// terminal without echoing ANY of it. Shared by the owner-run scripts that
-// ask for it: frames-promote.mjs, strip-upload-metadata.mjs.
+// hidden-prompt.mjs — read a secret (production's secret key, its
+// CRON_SECRET, an API key) from the terminal without echoing ANY of it.
+// Shared by the owner-run scripts that ask for one: frames-promote.mjs,
+// strip-upload-metadata.mjs, sweep-storage-orphans.mjs, rebake-renders.mjs
+// (through lib/rebake-secret.mjs).
 //
 // The usual trick — override readline's _writeToOutput and let through only
 // the strings that contain the question — leaks: on a backspace, or when the

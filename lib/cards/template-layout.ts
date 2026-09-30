@@ -7,10 +7,12 @@
 //
 // THE MODEL
 // ---------
-// Every MSE-derived frame PNG (public/frames/<template>/<color>.png, 1500×2100)
-// paints its own title plate, type bar, text box, and (sometimes) a P/T plate.
-// The art window is a transparent cut-out, so the user's art renders on a layer
-// BELOW the frame and the painted slot border sits on top — exactly like a real
+// Every frame master (1500×2100, 2100×1500 landscape — in git under
+// public/frames/<template>/ or, for the Card Conjurer frames, only in the
+// frames storage bucket; frameUrl() resolves both) paints its own title
+// plate, type bar, text box, and (sometimes) a P/T plate. The art window is
+// a transparent cut-out, so the user's art renders on a layer BELOW the
+// frame and the painted slot border sits on top — exactly like a real
 // printed card.
 //
 // We therefore DON'T draw any plates of our own. We only drop text and stat
@@ -20,25 +22,16 @@
 // the card WIDTH so it scales identically in the responsive preview (via `cqw`
 // container units) and the fixed-size bake (via `px = sizePct × cardWidth`).
 //
-// ---------------------------------------------------------------------------
-// HOW TO ADD A NEW MSE FRAME (the whole point of this file)
-// ---------------------------------------------------------------------------
-//   1. Drop the 7 color PNGs at public/frames/<name>/{w,u,b,r,g,c,m}.png
-//      (1500×2100, art window cut out to alpha=0). Optional painted P/T plate
-//      set at public/frames/<name>/pt/{color}.png.
-//   2. Add "<name>" to FRAME_TEMPLATE_VALUES + a label in FRAME_TEMPLATE_LABELS
-//      (types/card.ts).
-//   3. Add one entry to PROFILES below. Measure the bands by eye or with a
-//      column scan (transparent run = art window; cream/painted runs = the
-//      title / type / text bands). Tune in the live preview.
-//   4. Declare its edges (border / art / bar) in lib/frames/edge-contract.ts
-//      — tests/unit/frames/edge-contract.test.ts checks every master.
-// No renderer code changes — both consume this profile generically. An
-// edge-to-edge or full-art frame opts into the pieces it needs (TODO 3.23 /
-// 3.24): `brandMark: BRAND_MARK_ON_ART` and `footerOnArt` where the bottom
-// corner is art, `basicSymbol` for a basic land's symbol socket,
-// `type.split` for a two-box type line, `textless` for a frame with no text
-// box. Etched is hidden on any frame whose art window reaches the card edge
+// ADDING A FRAME: docs/FRAMES.md "Adding a frame" — the masters, the
+// template registration in types/card.ts, one entry in PROFILES below, the
+// checks every master passes (edge contract, art window, square corners),
+// the import registry, and verification. No renderer code changes — both
+// consume this profile generically. An edge-to-edge or full-art frame opts
+// into the pieces it needs (TODO 3.23 / 3.24): `brandMark:
+// BRAND_MARK_ON_ART` and `footerOnArt` where the bottom corner is art,
+// `basicSymbol` for a basic land's symbol socket, `type.split` for a
+// two-box type line, `textless` for a frame with no text box. Etched is
+// hidden on any frame whose art window reaches the card edge
 // (artReachesCardEdge) until 4.28.
 //
 // TUNING happens in the admin visual editor (/admin/frame-compare → Edit
