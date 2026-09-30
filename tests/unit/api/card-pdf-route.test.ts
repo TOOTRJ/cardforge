@@ -19,7 +19,13 @@ import sharp from "sharp";
 
 const ID = "33333333-3333-4333-8333-333333333333";
 
-const state = vi.hoisted(() => ({ render: vi.fn(), batch: true }));
+const state = vi.hoisted(() => ({
+  render: vi.fn(),
+  batch: true,
+  // A free viewer (signed out, or signed in on the free plan) — PDF is Plus+.
+  paid: true,
+  viewer: null as { id: string } | null,
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     from: () => ({
@@ -32,14 +38,17 @@ vi.mock("@/lib/supabase/server", () => ({
       }),
     }),
   }),
-  getCurrentUser: async () => null,
+  getCurrentUser: async () => state.viewer,
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}), isAdminConfigured: () => false }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/analytics/funnel-server", () => ({ recordActivity: vi.fn() }));
 vi.mock("@/lib/billing/entitlements", () => ({
-  getEntitlements: async () => ({ isPaid: true, allowBatchExport: state.batch, removeWatermark: true }),
-  downloadBrandMark: () => false,
+  getEntitlements: async () =>
+    state.paid
+      ? { isPaid: true, allowBatchExport: state.batch, removeWatermark: true }
+      : { isPaid: false, allowBatchExport: false, removeWatermark: false },
+  downloadBrandMark: (v: { removeWatermark: boolean }) => !v.removeWatermark,
   ownerExportStamp: async () => ({ brandMark: true, footerText: null }),
 }));
 vi.mock("@/lib/cards/bake-core", () => ({ rowToPreviewData: () => ({ frameStyle: {} }) }));
@@ -86,6 +95,8 @@ beforeEach(async () => {
   state.render.mockReset();
   state.render.mockImplementation(async () => png);
   state.batch = true;
+  state.paid = true;
+  state.viewer = null;
 });
 
 describe("card PDF download", () => {
@@ -164,5 +175,29 @@ describe("single-card sheets with the print options (TODO 6.15)", () => {
     expect(state.render).not.toHaveBeenCalled();
     // …while the single card (Plus) still downloads.
     expect((await get("layout=card&bleed=1")).status).toBe(200);
+  });
+
+  // Every print option this route takes stays behind the paid gate: a free
+  // viewer — signed out, or signed in on the free plan — gets 403
+  // UPGRADE_REQUIRED before anything renders, whatever the options say.
+  it.each([
+    ["signed out", null],
+    ["signed in, free plan", { id: "free-viewer" }],
+  ] as const)("%s: every PDF option answers 403 UPGRADE_REQUIRED, and nothing renders", async (_label, viewer) => {
+    state.paid = false;
+    state.viewer = viewer;
+    for (const query of [
+      "layout=card",
+      "layout=card&bleed=1",
+      "layout=sheet&paper=letter",
+      "layout=sheet&paper=a4&bleed=1",
+      "layout=sheet&paper=letter&gap=sixteenth&marks=lines&size=mm&bleed=1",
+      "sheet=true&bleed=1",
+    ]) {
+      const res = await get(query);
+      expect(res.status, query).toBe(403);
+      expect((await res.json()).code, query).toBe("UPGRADE_REQUIRED");
+    }
+    expect(state.render).not.toHaveBeenCalled();
   });
 });

@@ -26,10 +26,13 @@ import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/pr
 //                 render/sheet-layout.ts — and the bleed)
 //
 // Why here and not one server route (TODO 6.15): each card is its own
-// function invocation (one render's memory, ~3 in flight), and buildDeckPdf
-// writes each image into the PDF as it embeds it (embedImageNow), so memory
-// stays bounded at both ends and a 150-card export never sits on one
-// function's time limit.
+// function invocation (one render's memory, ~3 in flight), so no function
+// holds more than one render or sits on its time limit, even for 150 cards.
+// The BROWSER is not bounded: it keeps every card's PNG until the PDF is
+// saved, plus the PDF itself. buildDeckPdf's embedImageNow only stops
+// pdf-lib from also keeping each card DECODED. A 1500 × 2100 print render
+// is ~3–7 MB (RGB, ~10 % smaller than the RGBA HD render this export used
+// before); 150 busy cards measured 728 MB of PNGs and a 722 MB PDF.
 //
 // runCardsExport (TODO 6.15) is the same pipeline for ANY selection of cards
 // (My Cards' "Print / download" bulk action): the manifest comes from
