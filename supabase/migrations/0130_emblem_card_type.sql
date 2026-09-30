@@ -25,10 +25,10 @@
 -- (list_gallery_cards, 0086 / 0091) and the type hub counts (0108) take any
 -- card_type as data, and card_capacity_for() (0104) counts every card.
 --
--- NUMBERING: 0129 is the token text-box release's (round 11, open). If a
--- higher version merges first, this file is renumbered past it before
--- merge — Supabase's branching refuses a migration older than one already
--- applied.
+-- NUMBERING: 0129 is the token text-box release's (round 11, merged in
+-- #420). If a higher version merges first, this file is renumbered past it
+-- before merge — Supabase's branching refuses a migration older than one
+-- already applied.
 --
 -- Grants: none. This migration only replaces a CHECK constraint. It creates
 -- no table or function and changes no grant, so the API roles keep exactly
