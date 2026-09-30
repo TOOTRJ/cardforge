@@ -654,9 +654,30 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            move no slot, and 4.47's walker symbolRect move — a scored
 //            box, lib/frames/align.ts — follows v32, which moved
 //            m15pw's costRect onto the prints and stayed neutral.
+//   37     — nyx's type bar and text box darkened to the THB constellation
+//            prints (TODO 4.17e; owner rounds 13 and 18, 2026-09-29/30 —
+//            split out of v36 so v36 ships on its own): MSE's masters paint
+//            both flat black at 50 %, and since v35 the art runs under both.
+//            On #258 Daxos, #259 Heliod and #268 Klothys (Scryfall PNGs
+//            scaled to 1500 px; median luminance without the text, over the
+//            art window's bottom strip) the box lets 0.28–0.39 of the art
+//            through (mean 0.33) and the type bar 0.36–0.46; ours let 0.50
+//            through both. The seven masters are rebuilt from MSE's sources
+//            (scripts/build-variation-frames.mjs --only nyx, scripts/lib/
+//            nyx-tone.mjs): the box's black α 127.5 → 171 / 255 (0.33
+//            through), the bar's → 150 (0.41, the range's middle), the
+//            frame's anti-aliased edge within 3 px of each keeping its
+//            colour and coverage over the darker black; 907,896 px per
+//            master, rows 1197–1938, nothing else. Template-scoped
+//            (TEMPLATE_SCOPED_VERSIONS[37] = nyx): every nyx card, art or
+//            none (the bar and box draw over the ground too). Public
+//            production (anonymous read, 2026-09-30): 0 cards on nyx. The
+//            visual matrix: only the nyx cases change. "sweep".
+//            VERIFICATION-NEUTRAL: no slot moves (a master's black only),
+//            and nyx has no tick.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 36;
+export const CARD_LAYOUT_VERSION = 37;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -727,6 +748,8 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // (v36, the second correction round: no template list — its inline pips
   // reach every template; VERSION_SCOPES[36] holds the walkers, the
   // printed-size set symbols and the cards with an inline pip.)
+  // v37: nyx's darker type bar and text box (4.17e) — its masters only.
+  37: ["nyx"],
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -841,10 +864,12 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * box — onto the prints, as v32 moved
  * m15pw's costRect and stayed neutral. Production's seven m15pw ticks
  * (legacy) stay fresh; the owner signed the walkers off on the sheet.
+ * v37 is: it darkens the black of nyx's type bar and text box on the
+ * masters (4.17e) and moves no slot — and nyx has no tick.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1332,6 +1357,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   34: "sweep", // token release: P/T plate, type line + symbol on the token frames (4.49), "Token" first (3b.15) — a platform correction
   35: "sweep", // art-area corrections: CC M15 art slot (4.4 (2)), under-frame art from the border (4.17a), nyx / fullart / m15pw-c (4.17b)
   36: "sweep", // correction round 2: inline pips on the capitals (3.31), printed set-symbol sizes (4.46), walker symbol (4.47)
+  37: "sweep", // nyx's type bar + text box darkened to the THB prints (4.17e) — a correction, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

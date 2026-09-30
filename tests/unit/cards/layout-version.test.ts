@@ -35,6 +35,9 @@ const AT_V33 = { current: 33 } as const;
 /** …and at v34, before v35 (the art-area corrections) made every bake on the
  *  CC M15 family, nyx and fullart stale again. */
 const AT_V34 = { current: 34 } as const;
+/** …and at v36, before v37 (nyx's darker type bar and text box) made every
+ *  bake on nyx stale again. */
+const AT_V36 = { current: 36 } as const;
 
 describe("isRenderStale — which stored renders a version bump invalidates", () => {
   it("treats unversioned or override-cleared renders as stale", () => {
@@ -1206,7 +1209,7 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     expect(lv.latestOptInVersion()).toBe(22);
     expect(lv.VERSION_SCOPES[36]).toBeTypeOf("function");
     // Every template that draws ability rows (the walkers) — and nothing
-    // else: v36 changes no frame master (nyx's darker box ships on its own).
+    // else: v36 changes no frame master (nyx's darker bar and box are v37's).
     const rows = ALL.filter((t) => getFrameProfile(t).loyaltyRows);
     expect(lv.V36_EVERY_CARD_TEMPLATES).toEqual(rows);
     expect(lv.V36_EVERY_CARD_TEMPLATES).not.toContain("nyx");
@@ -1240,23 +1243,24 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
   });
 
   it("re-bakes every walker card, and a text-free card nowhere else", async () => {
-    const { V36_EVERY_CARD_TEMPLATES, classifyForSweep, hasNewerLook, hasPendingCorrection } = await import(
+    const { V36_EVERY_CARD_TEMPLATES, hasNewerLook, hasPendingCorrection } = await import(
       "@/lib/cards/layout-version"
     );
+    // (Pinned at v36: v37 re-bakes every nyx card on its own.)
+    const classifyForSweep = await sweepAt(36);
     for (const t of ALL) {
       const whole = V36_EVERY_CARD_TEMPLATES.includes(t);
       const row = at(t);
       expect(classifyForSweep(row), t).toBe(whole ? "rebake" : "stamp");
-      expect(hasPendingCorrection(row), t).toBe(whole);
-      expect(hasNewerLook({ ...row, visibility: "public" }), t).toBe(false);
+      expect(hasPendingCorrection(row, AT_V36), t).toBe(whole);
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V36), t).toBe(false);
     }
     expect(classifyForSweep(at("m15", { layout_version: 36 }))).toBe("current");
   });
 
   it("treats nyx like any other printed-size template: a pip or a listed set's glyph, nothing else", async () => {
     const { classifyForSweep } = await import("@/lib/cards/layout-version");
-    // (Pinned at v36: a later bump may move nyx on its own.)
-    const AT_V36 = { current: 36 } as const;
+    // (Pinned at v36: v37 re-bakes every nyx card on its own.)
     expect(classifyForSweep(at("nyx"), undefined, AT_V36)).toBe("stamp");
     expect(classifyForSweep(at("nyx", { art_url: "https://x/a.png", rules_text: "Flying" }), undefined, AT_V36)).toBe("stamp");
     expect(classifyForSweep(at("nyx", { rules_text: "{T}: Add {G}." }), undefined, AT_V36)).toBe("rebake");
@@ -1265,7 +1269,8 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
   });
 
   it("re-bakes a card whose printed text draws an inline pip (3.31), on any template that prints it", async () => {
-    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    // (Pinned at v36: v37 re-bakes every nyx card on its own.)
+    const classifyForSweep = await sweepAt(36);
     const pip = "{T}: Add {G}.";
     for (const t of ["m15", "lotr", "retro", "adventure", "flip", "m15tokentext", "emblem", "saga", "battle"]) {
       expect(classifyForSweep(at(t, { rules_text: pip })), t).toBe("rebake");
@@ -1294,7 +1299,9 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
   });
 
   it("re-bakes a listed set's Keyrune glyph on a printed-size template (4.46), and nothing else of the symbol", async () => {
-    const { V36_PRINTED_SYMBOL_TEMPLATES, classifyForSweep } = await import("@/lib/cards/layout-version");
+    const { V36_PRINTED_SYMBOL_TEMPLATES } = await import("@/lib/cards/layout-version");
+    // (Pinned at v36: v37 re-bakes every nyx card on its own.)
+    const classifyForSweep = await sweepAt(36);
     for (const t of ALL) {
       const printed = V36_PRINTED_SYMBOL_TEMPLATES.includes(t);
       const whole = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"].includes(t);
@@ -1391,10 +1398,74 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
       expect(isRenderStale(35, t, VERIFICATION_SCOPED_VERSIONS, 36, regular), t).toBe(false);
     }
     // …while every walker card still owes the bake (the sweep).
-    const { classifyForSweep } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(36);
     for (const t of ["m15pw", "m15borderlesspw", "m15borderlesspwtall"]) {
       expect(classifyForSweep(at(t)), t).toBe("rebake");
     }
+  });
+});
+
+describe("v37 — nyx's darker type bar and text box (TODO 4.17e)", () => {
+  const png = "https://x/y.png";
+  /** A v36 bake. Its columns default to UNTOUCHED_SINCE_V22 (a blue one-word
+   *  sorcery with no text, set icon or code), so only v37 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 36,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V37 = { current: 37 } as const;
+
+  it("is a sweep, never a badge, scoped to the nyx template", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(37);
+    expect(lv.rolloutPolicy(37)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 37)).toBe(37);
+    expect(lv.latestOptInVersion()).toBe(22);
+    // A master replacement: template-scoped (as v30's fullartland), no card
+    // predicate — a template-only caller gets the same answer.
+    expect(lv.VERSION_SCOPES[37]).toBeUndefined();
+    expect(ALL).toContain("nyx");
+    for (const t of ALL) expect(isRenderStale(36, t, undefined, 37), t).toBe(t === "nyx");
+  });
+
+  it("re-bakes every nyx card — art or none, any finish, any text — and stamps every other template", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(37);
+    for (const t of ALL) {
+      const nyx = t === "nyx";
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(nyx ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row, AT_V37), t).toBe(nyx);
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V37), t).toBe(false);
+    }
+    // The bar and box draw over the ground too, so a card without art re-bakes.
+    for (const over of [
+      { art_url: null },
+      { art_url: "https://x/a.png", rules_text: "Flying" },
+      { frame_style: { template: "nyx", finish: "foil" } },
+      { set_icon_code: "war" },
+    ]) {
+      expect(classifyForSweep(at("nyx", over)), JSON.stringify(over)).toBe("rebake");
+    }
+    // A {} frame_style draws m15, which v37 leaves alone.
+    expect(classifyForSweep({ ...at("m15"), frame_style: {} })).toBe("stamp");
+    expect(classifyForSweep(at("nyx", { layout_version: 37 }))).toBe("current");
+  });
+
+  it("is verification-neutral: nyx's black moves no slot, and no tick goes stale", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(37);
+    expect(VERIFICATION_SCOPED_VERSIONS[37]).toEqual([]);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(36, t, VERIFICATION_SCOPED_VERSIONS, 37, regular), t).toBe(false);
+    }
+    // The profile is v35's: only the masters changed.
+    expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
   });
 });
 
