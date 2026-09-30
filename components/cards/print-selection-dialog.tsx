@@ -26,8 +26,13 @@ import {
   type SelectionImageSize,
   type SelectionPdfLayout,
 } from "@/lib/cards/print-selection";
-import { planSheet, type SheetCardSize, type SheetGap, type SheetMarks } from "@/lib/render/sheet-layout";
-import { cn } from "@/lib/utils";
+import { planSheet } from "@/lib/render/sheet-layout";
+import {
+  perSheetLabel,
+  PrintBleedCheckbox,
+  PrintField as Field,
+  SheetOptionsFields,
+} from "@/components/cards/print-sheet-options";
 
 // ---------------------------------------------------------------------------
 // PrintSelectionDialog — "Print / download selected" (TODO 6.15): the cards
@@ -69,21 +74,6 @@ const LAYOUT_OPTIONS: ChipOption<SelectionPdfLayout>[] = [
   { value: "sheet-letter", label: "Sheets · Letter" },
   { value: "sheet-a4", label: "Sheets · A4" },
   { value: "pages", label: "One per page" },
-];
-
-const GAP_OPTIONS: ChipOption<SheetGap>[] = [
-  { value: "none", label: "No gap" },
-  { value: "sixteenth", label: "1/16″ gap" },
-];
-
-const MARK_OPTIONS: ChipOption<SheetMarks>[] = [
-  { value: "corners", label: "Corner marks" },
-  { value: "lines", label: "Full-length lines" },
-];
-
-const SIZE_OPTIONS: ChipOption<SheetCardSize>[] = [
-  { value: "in", label: "2.5 × 3.5 in" },
-  { value: "mm", label: "63 × 88 mm" },
 ];
 
 const QUALITY_OPTIONS: ChipOption<SelectionImageSize>[] = [
@@ -204,29 +194,7 @@ function PrintSelectionBody({
                 onChange={(layout) => patch({ layout })}
               />
             </Field>
-            {isSheets ? (
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Spacing">
-                  <ChipGroup ariaLabel="Spacing" options={GAP_OPTIONS} value={settings.gap} onChange={(gap) => patch({ gap })} />
-                </Field>
-                <Field label="Cut guides">
-                  <ChipGroup
-                    ariaLabel="Cut guides"
-                    options={MARK_OPTIONS}
-                    value={settings.marks}
-                    onChange={(marks) => patch({ marks })}
-                  />
-                </Field>
-                <Field label="Card size">
-                  <ChipGroup
-                    ariaLabel="Card size"
-                    options={SIZE_OPTIONS}
-                    value={settings.cardSize}
-                    onChange={(cardSize) => patch({ cardSize })}
-                  />
-                </Field>
-              </div>
-            ) : null}
+            {isSheets ? <SheetOptionsFields value={settings} onChange={patch} /> : null}
           </>
         ) : (
           <Field label="Image size">
@@ -239,33 +207,21 @@ function PrintSelectionBody({
           </Field>
         )}
 
-        <label
-          className={cn(
-            "flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5",
-            !isPdf && settings.quality !== "hd" && "cursor-not-allowed opacity-60",
-          )}
-        >
-          <input
-            type="checkbox"
-            checked={bleed}
-            disabled={!isPdf && settings.quality !== "hd"}
-            onChange={(event) => patch({ bleed: event.target.checked })}
-            className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
-            data-testid="print-selection-bleed"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="font-medium">Add a 1/8″ bleed</span>
-            <span className="text-xs leading-5 text-muted">
-              {!isPdf
-                ? settings.quality === "hd"
-                  ? "1650 × 2250 print files: the card runs 1/8″ past its trim on every side."
-                  : "The bleed comes with the HD images only."
-                : isSheets
-                  ? "Each card runs 1/8″ past its trim; the guides mark the trim. Fewer cards fit on a sheet."
-                  : "Each page is the card with its bleed, crop marks on the trim."}
-            </span>
-          </span>
-        </label>
+        <PrintBleedCheckbox
+          checked={bleed}
+          disabled={!isPdf && settings.quality !== "hd"}
+          onChange={(next) => patch({ bleed: next })}
+          testId="print-selection-bleed"
+          hint={
+            !isPdf
+              ? settings.quality === "hd"
+                ? "1650 × 2250 print files: the card runs 1/8″ past its trim on every side."
+                : "The bleed comes with the HD images only."
+              : isSheets
+                ? "Each card runs 1/8″ past its trim; the guides mark the trim. Fewer cards fit on a sheet."
+                : "Each page is the card with its bleed, crop marks on the trim."
+          }
+        />
 
         {isSheets ? (
           <Field label="Copies">
@@ -291,7 +247,7 @@ function PrintSelectionBody({
 
         <p className="text-xs leading-5 text-muted" data-testid="print-selection-summary">
           {plan
-            ? `${plan.perPage} per sheet${plan.orientation === "landscape" ? " (landscape page)" : ""} · ${physical} card${physical === 1 ? "" : "s"} on ${sheets} sheet${sheets === 1 ? "" : "s"}. Guides print in the margins and gaps, never on a card.`
+            ? `${perSheetLabel(plan)} · ${physical} card${physical === 1 ? "" : "s"} on ${sheets} sheet${sheets === 1 ? "" : "s"}. Guides print in the margins and gaps, never on a card.`
             : isPdf
               ? `${included.length} page${included.length === 1 ? "" : "s"}, one card each${bleed ? " with its bleed" : ""}.`
               : `${included.length} image${included.length === 1 ? "" : "s"} · ≈ ${zipEstimate}.`}
@@ -308,15 +264,6 @@ function PrintSelectionBody({
         </Button>
       </DialogFooter>
     </>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">{label}</span>
-      {children}
-    </div>
   );
 }
 

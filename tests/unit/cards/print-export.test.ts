@@ -8,6 +8,7 @@ import {
   isPrintRequest,
   parseBleedParam,
   parsePpiParam,
+  parsePrintParam,
   PRINT_800_PPI_PAID_ONLY,
   PRINT_NATIVE_800_TEMPLATES,
   printFrameUpscaledAt800,
@@ -60,6 +61,14 @@ describe("query parsing", () => {
     expect(isPrintRequest({ ppi: 800, bleed: false })).toBe(true);
     expect(isPrintRequest({ ppi: 600, bleed: true })).toBe(true);
   });
+
+  it("print=1 asks for the 600 ppi print render without a bleed (TODO 6.15 — the exports)", () => {
+    expect(parsePrintParam("1")).toBe(true);
+    expect(parsePrintParam("true")).toBe(true);
+    for (const value of ["0", "false", null, undefined, "", "yes"]) expect(parsePrintParam(value)).toBe(false);
+    expect(isPrintRequest({ ppi: 600, bleed: false, print: true })).toBe(true);
+    expect(isPrintRequest({ ppi: 600, bleed: false, print: false })).toBe(false);
+  });
 });
 
 describe("links and file names", () => {
@@ -69,6 +78,13 @@ describe("links and file names", () => {
     expect(cardPrintFilename("grizzly", { ppi: 800, bleed: false })).toBe("grizzly-800ppi.png");
     expect(cardPrintFilename("grizzly", { ppi: 600, bleed: true })).toBe("grizzly-bleed.png");
     expect(cardPrintFilename("grizzly", { ppi: 800, bleed: true })).toBe("grizzly-800ppi-bleed.png");
+  });
+
+  it("a print link always names a PRINT render: at 600 ppi without a bleed it says print=1", () => {
+    // `ppi=600&corners=square` alone is the plain HD download (the bake's
+    // 1600 px art), which the exports used to print from.
+    expect(cardPrintPngHref("c1", { ppi: 600, bleed: false })).toBe("/api/cards/c1/png?ppi=600&corners=square&print=1");
+    expect(cardPrintFilename("grizzly", { ppi: 600, bleed: false })).toBe("grizzly-print.png");
   });
 
   it("reads the template off any frame_style shape", () => {

@@ -10,22 +10,33 @@ import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/pr
 // with live progress while they keep using the site:
 //
 //   1. manifest   GET /api/decks/[id]/download?part=manifest
-//   2. cards      GET /api/cards/[id]/png?preset=…&corners=square  (clean for
-//                 a paid viewer; a few in flight at once, each ~1–3 s of live
-//                 rendering). SQUARE (TODO 3.26): the same bytes feed the
-//                 deck PDF's pages and 3×3 sheets AND the ZIP, and both are
-//                 print input — cut along the rectangle, corners in the
-//                 border's colour, never transparent.
+//   2. cards      GET /api/cards/[id]/png — a few in flight at once, each
+//                 ~1–3 s of live rendering, clean for a paid viewer. Every
+//                 PDF card and every HD ZIP image is the 600 ppi PRINT
+//                 render (?ppi=600&corners=square&print=1 — TODO 6.10/6.15:
+//                 1500 × 2100 with the art composited at full resolution,
+//                 not the bake's 1600 px inlined copy; + &bleed=1 with the
+//                 1/8 in bleed, TODO 6.1a); a standard-size ZIP image is the
+//                 750 px square render (?preset=default&corners=square).
+//                 SQUARE (TODO 3.26) either way: both are print input — cut
+//                 along the rectangle, corners in the border's colour.
 //   3. package    ZIP → cover + deck.pdf report + decklist.txt + PNGs
-//                 PDF → pdf-lib pages / 3×3 sheets + checklist page
+//                 PDF → pdf-lib pages / sheets + checklist page; the sheets
+//                 take the print options (gap, cut guides, card size — lib/
+//                 render/sheet-layout.ts — and the bleed)
+//
+// Why here and not one server route (TODO 6.15): each card is its own
+// function invocation (one render's memory, ~3 in flight), so no function
+// holds more than one render or sits on its time limit, even for 150 cards.
+// The BROWSER is not bounded: it keeps every card's PNG until the PDF is
+// saved, plus the PDF itself. buildDeckPdf's embedImageNow only stops
+// pdf-lib from also keeping each card DECODED. A 1500 × 2100 print render
+// is ~3–7 MB (RGB, ~10 % smaller than the RGBA HD render this export used
+// before); 150 busy cards measured 728 MB of PNGs and a 722 MB PDF.
 //
 // runCardsExport (TODO 6.15) is the same pipeline for ANY selection of cards
 // (My Cards' "Print / download" bulk action): the manifest comes from
-// POST /api/cards/export, the sheets take the selection's options (gap, cut
-// guides, card size — lib/render/sheet-layout.ts) and, with a bleed, every
-// card is fetched as its 600 ppi print render with the 1/8 in bleed
-// (/api/cards/[id]/png?ppi=600&corners=square&bleed=1, TODO 6.1a) instead of
-// the HD square render.
+// POST /api/cards/export, with per-card copies.
 //
 /** The card body face, shipped as a static asset. Null on any failure. */
 async function fetchChecklistFont(
@@ -72,6 +83,10 @@ export type DeckExportRequest = {
   quality: DeckExportQuality;
   /** PDF only. */
   layout: DeckPdfLayout;
+  /** PDF sheets only: gap, cut guides, card size (default: the 3×3). */
+  sheet?: DeckPdfSheetOptions;
+  /** PDF only: every card with a 1/8 in bleed (the print render). */
+  bleed?: boolean;
 };
 
 /** Print / download a selection of cards (TODO 6.15). */
@@ -178,8 +193,24 @@ export function carriesPrintBleed(bytes: Uint8Array): boolean {
   return Math.abs(shortOverLong / BLEED_ASPECT - 1) < 0.01;
 }
 
+/**
+ * Which render an export fetches for a card: the 600 ppi PRINT render (full-
+ * resolution art; with the bleed when asked) for a PDF and for HD images,
+ * the 750 px square render for a standard-size ZIP.
+ */
+export function exportCardHref(
+  cardId: string,
+  opts: { kind: DeckExportKind; quality: DeckExportQuality; bleed: boolean },
+): string {
+  if (opts.bleed || opts.kind === "pdf" || opts.quality === "hd") {
+    return cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed });
+  }
+  return cardPngHref(cardId, { preset: "default", corners: "square" });
+}
+
 /** Fetch every card's PNG with a small worker pool, reporting each finish.
- *  `hrefOf` names the render (HD square, or the print render with bleed);
+ *  `hrefOf` names the render (exportCardHref: the print render, or the
+ *  750 px square one);
  *  a response `accept` turns down counts as a failure. */
 async function fetchCardPngs(
   cards: ReadonlyArray<{ id: string; title: string }>,
@@ -247,13 +278,23 @@ export async function runDeckExport(
   progress.phase = "rendering";
   emit();
 
-  const quality: DeckExportQuality = request.kind === "pdf" ? "hd" : request.quality;
-  const hrefOf = (card: { id: string }) => cardPngHref(card.id, { preset: quality, corners: "square" });
-  const pngs = await fetchCardPngs(manifest.cards, hrefOf, fetchImpl, signal, (title, ok) => {
-    progress.done += 1;
-    if (!ok) progress.failed.push(title);
-    emit();
-  });
+  // The bleed is a PDF option (the ZIP's images are the plain print files).
+  const bleed = request.kind === "pdf" && request.bleed === true;
+  const hrefOf = (card: { id: string }) =>
+    exportCardHref(card.id, { kind: request.kind, quality: request.quality, bleed });
+  const pngs = await fetchCardPngs(
+    manifest.cards,
+    hrefOf,
+    fetchImpl,
+    signal,
+    (title, ok) => {
+      progress.done += 1;
+      if (!ok) progress.failed.push(title);
+      emit();
+    },
+    // A bleed PDF takes only renders that carry the bleed.
+    bleed ? carriesPrintBleed : undefined,
+  );
 
   progress.phase = "packaging";
   emit();
@@ -279,11 +320,13 @@ export async function runDeckExport(
       // Helvetica + "?" substitution if this fails, so it is best-effort).
       checklistFont:
         manifest.checklist.length > 0 ? await fetchChecklistFont(fetchImpl, signal) : null,
+      sheet: request.sheet,
+      bleed,
     });
     const suffix = request.layout === "pages" ? "" : request.layout === "sheet-a4" ? "-sheets-a4" : "-sheets";
     return {
       blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
-      filename: `${manifest.deck.slug}${suffix}.pdf`,
+      filename: `${manifest.deck.slug}${suffix}${bleed ? "-bleed" : ""}.pdf`,
       cardsIncluded: entries.length,
       failed: progress.failed,
       deck: manifest.deck,
@@ -399,15 +442,12 @@ export async function runCardsExport(
   progress.phase = "rendering";
   emit();
 
-  // With a bleed every card is its 600 ppi PRINT render (1650 × 2250, the
-  // art at full resolution, always square); without one, the HD square
-  // render the deck export uses (the ZIP may ask for the standard size).
+  // Every PDF card and HD image is its 600 ppi PRINT render (1500 × 2100,
+  // or 1650 × 2250 with the bleed; the art at full resolution, always
+  // square); a standard-size ZIP image the 750 px square render.
   const bleed = request.bleed === true;
-  const quality: DeckExportQuality = request.kind === "pdf" ? "hd" : request.quality;
   const hrefOf = (card: { id: string }) =>
-    bleed
-      ? cardPrintPngHref(card.id, { ppi: 600, bleed: true })
-      : cardPngHref(card.id, { preset: quality, corners: "square" });
+    exportCardHref(card.id, { kind: request.kind, quality: request.quality, bleed });
   const pngs = await fetchCardPngs(
     manifest.cards,
     hrefOf,

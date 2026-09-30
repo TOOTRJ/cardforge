@@ -5,6 +5,7 @@ import { recordActivity } from "@/lib/analytics/funnel-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardPrint } from "@/lib/render/card-print";
 import { parseBleedParam } from "@/lib/cards/print-export";
+import { cardPdfFilename, parseSheetQuery } from "@/lib/cards/card-pdf-link";
 import {
   downloadBrandMark,
   getEntitlements,
@@ -26,8 +27,17 @@ import { isUuid } from "@/lib/ids";
 //   ?layout=card&bleed=1          → single card WITH a 1/8" bleed (TODO 6.1a):
 //                                   a 2.75"×3.75" bleed box on a page with a
 //                                   1/4" slug, crop marks on the trim lines,
-//                                   TrimBox + BleedBox set. Single card only
-//                                   (a sheet with bleed → 400; 6.15).
+//                                   TrimBox + BleedBox set.
+//   sheet options (TODO 6.15, lib/cards/card-pdf-link.ts) on a sheet:
+//     &gap=sixteenth              → 1/16" between cards (default butted)
+//     &marks=lines                → full-length cut lines (default corners)
+//     &size=mm                    → 63 × 88 mm cards (default 2.5 × 3.5 in)
+//     &bleed=1                    → every card with its bleed; the grid
+//                                   makes room (lib/render/sheet-layout.ts:
+//                                   Letter prints landscape 3 × 2, A4
+//                                   landscape 4 × 2), the guides on the trim
+//                                   lines. Unknown values are the defaults.
+//   A sheet is one page, filled with copies of the card.
 //
 // Every PDF renders through the PRINT path (lib/render/card-print.ts, TODO
 // 6.10): square corners, the art composited at full resolution under the
@@ -90,15 +100,10 @@ export async function GET(
     layout = "sheet-letter";
   }
 
-  // The bleed is laid out for the single-card page only (TODO 6.1a); a 3×3
-  // bleed sheet doesn't fit US Letter (8.25" × 11.25") — sheet options are
-  // TODO 6.15.
-  if (bleed && layout !== "card") {
-    return NextResponse.json(
-      { error: "Bleed is available on the single-card PDF only." },
-      { status: 400 },
-    );
-  }
+  // A sheet's options (TODO 6.15). A bleed sheet is laid out by the same
+  // grid as the selection export's — a 3 × 3 bleed sheet doesn't fit US
+  // Letter (8.25" × 11.25"), so Letter turns landscape (3 × 2).
+  const sheet = layout === "card" ? undefined : parseSheetQuery(params2);
 
   // Fetch the card row (RLS applies — anon can read public/unlisted).
   let card: Awaited<ReturnType<typeof fetchCard>>;
@@ -121,7 +126,7 @@ export async function GET(
   }
 
   // PDF export is a paid (Plus+) feature — clean, print-ready output; sheet
-  // layouts (3×3) are Pro. Enforced here as defense-in-depth; the download UI
+  // layouts are Pro. Enforced here as defense-in-depth; the download UI
   // hides these options for free users.
   const entitlements = await getEntitlements();
   if (!entitlements.isPaid) {
@@ -163,7 +168,7 @@ export async function GET(
   const brandMark = downloadBrandMark(entitlements);
   let pngBytes: Uint8Array;
   try {
-    // Print is always SQUARE (TODO 3.26): the card page and the 3×3 sheets
+    // Print is always SQUARE (TODO 3.26): the card page and the sheets
     // are cut along the rectangle and its crop marks, and the corner outside
     // the arc prints in the card's border colour (the border black, #101015
     // on a ring — lib/frames/square-corners.ts), never transparent. The
@@ -187,7 +192,7 @@ export async function GET(
   // Build the PDF.
   let pdfBytes: Uint8Array;
   try {
-    pdfBytes = await buildCardPdf(pngBytes, layout, card.title, { bleed });
+    pdfBytes = await buildCardPdf(pngBytes, layout, card.title, { bleed, sheet });
   } catch (err) {
     const detail = err instanceof Error ? err.message : "PDF error";
     return NextResponse.json(
@@ -196,14 +201,10 @@ export async function GET(
     );
   }
 
-  const filename =
-    layout === "sheet-a4"
-      ? `${card.slug}-sheet-a4.pdf`
-      : layout === "sheet" || layout === "sheet-letter"
-        ? `${card.slug}-sheet.pdf`
-        : bleed
-          ? `${card.slug}-bleed.pdf`
-          : `${card.slug}.pdf`;
+  const filename = cardPdfFilename(card.slug, {
+    layout: layout === "card" ? "card" : layout === "sheet-a4" ? "sheet-a4" : "sheet-letter",
+    bleed,
+  });
 
   // PDFs are entitlement-scoped downloads — never shared-cache them.
   const cacheControl = "private, no-store";

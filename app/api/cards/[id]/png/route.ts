@@ -29,6 +29,7 @@ import {
   isPrintRequest,
   parseBleedParam,
   parsePpiParam,
+  parsePrintParam,
   PRINT_800_PPI_PAID_ONLY,
 } from "@/lib/cards/print-export";
 import { checkAnonLiveRenderLimit } from "@/lib/cards/anon-render-limit";
@@ -84,6 +85,14 @@ import { isUuid } from "@/lib/ids";
 //                      (or for 800 ppi while PRINT_800_PPI_PAID_ONLY) gets
 //                      403 UPGRADE_REQUIRED. `ppi=600` alone is the plain HD
 //                      download, as before (lib/cards/print-export.ts).
+//   ?print=1         → PRINT (TODO 6.15): the print render even at 600 ppi
+//                      without a bleed — 1500×2100, the art at full
+//                      resolution — what the Pro exports print from (deck and
+//                      selection PDFs, their HD ZIP images;
+//                      lib/decks/export-client.ts). Square, live, PNG only,
+//                      named <slug>-print.png; clean-download only (a
+//                      watermarked viewer → 403 UPGRADE_REQUIRED whatever
+//                      PRINT_800_PPI_PAID_ONLY says: a free image is 750 px).
 //
 // Every viewer may pick either corner. A FREE viewer's square PNG is the
 // stored round bake squared with the corner fills a live square render
@@ -123,15 +132,16 @@ export async function GET(
   const requestedPreset: RenderPreset =
     presetParam === "default" ? "default" : "hd";
   const format = parseFormatParam(request.nextUrl.searchParams.get("format"));
-  // A print render (800 ppi and/or the bleed) — TODO 6.1a/6.1b.
+  // A print render (800 ppi, the bleed, or `print`) — TODO 6.1a/6.1b/6.15.
   const print = {
     ppi: parsePpiParam(request.nextUrl.searchParams.get("ppi")),
     bleed: parseBleedParam(request.nextUrl.searchParams.get("bleed")),
+    print: parsePrintParam(request.nextUrl.searchParams.get("print")),
   };
   const printMode = isPrintRequest(print);
   if (printMode && format === "jpeg") {
     return NextResponse.json(
-      { error: "800 ppi and bleed downloads are PNG only." },
+      { error: "Print downloads (800 ppi, bleed) are PNG only." },
       { status: 400 },
     );
   }
@@ -196,13 +206,19 @@ export async function GET(
   const watermark = downloadBrandMark(entitlements);
 
   // A print render follows the clean download's entitlement: the bleed
-  // always, 800 ppi while PRINT_800_PPI_PAID_ONLY (the open 6.1b [decide]).
-  if (printMode && watermark && (print.bleed || PRINT_800_PPI_PAID_ONLY)) {
+  // always, 800 ppi while PRINT_800_PPI_PAID_ONLY (the open 6.1b [decide]),
+  // and the 600 ppi print render (`print`, the exports') always — a free
+  // viewer's image is the 750 px one. So the ONLY print file a watermarked
+  // viewer may have is the plain 800 ppi one, with the switch off.
+  const freePrint = print.ppi === 800 && !print.bleed && !PRINT_800_PPI_PAID_ONLY;
+  if (printMode && watermark && !freePrint) {
     return NextResponse.json(
       {
         error: print.bleed
           ? "Bleed downloads are a Plus feature."
-          : "800 ppi downloads are a Plus feature.",
+          : print.ppi === 800
+            ? "800 ppi downloads are a Plus feature."
+            : "Print downloads are a Plus feature.",
         code: "UPGRADE_REQUIRED",
       },
       { status: 403 },
