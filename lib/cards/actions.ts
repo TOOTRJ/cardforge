@@ -413,7 +413,7 @@ export async function createCardAction(
     // The anatomy switches (TODO 4.6.0, owner rule 2026-09-29): a new card
     // gets every piece its template draws unless the payload says otherwise
     // (the AI jobs name none; an import names only what its printing says —
-    // false for a crownless Legendary or a showcase printing), and never a
+    // false for a crownless Legendary or a Legendary showcase printing), and never a
     // switch its template can't draw for the card — a land's two-colour
     // frame only on a land frame (lib/cards/anatomy.ts).
     frame_style: newCardFrameStyle(data.frame_style ?? {}, data.card_type),
