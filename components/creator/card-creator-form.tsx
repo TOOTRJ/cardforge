@@ -190,6 +190,7 @@ import {
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
 import {
+  defaultTokenFrameIn,
   followTokenHeight,
   isArchTokenFrame,
   newTokenFrame,
@@ -954,6 +955,22 @@ export function CardCreatorForm({
   const tokenFramePinned = isEdit && card?.frame_preview === true;
   const lastTokenTextRef = useRef({ kind, text: tokenText });
   const manualTokenFrameRef = useRef(false);
+  // The default switch's pick (owner decision 1, 2026-09-29): a NEW token
+  // entered on the arch wears newTokenFrame's frame — and keeps wearing the
+  // switch's pick in whatever colour is chosen next, since the Card step
+  // asks the colour last and a new card starts colourless:
+  // handleColorIdentityChange moves it (defaultTokenFrameIn) and the colour
+  // tiles offer every colour that pick is verified in. A frame the user, an
+  // import or an AI fill picks ends it, as does leaving the token kind. The
+  // ref serves the handlers (a frame pick that switches the colour runs
+  // both in one event), the state the tiles.
+  const tokenDefaultFrameRef = useRef(false);
+  const [tokenDefaultFrame, setTokenDefaultFrameState] = useState(false);
+  const setTokenDefaultFrame = (on: boolean) => {
+    tokenDefaultFrameRef.current = on;
+    setTokenDefaultFrameState(on);
+  };
+  const verifiedFrameSet = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   useEffect(() => {
     const prev = lastTokenTextRef.current;
     if (prev.kind === kind && sameTokenFrameText(prev.text, tokenText)) return;
@@ -1025,6 +1042,7 @@ export function CardCreatorForm({
       }),
     };
     manualTokenFrameRef.current = manual;
+    setTokenDefaultFrame(false);
   };
 
   // Name follows the subtypes: a printed token is named after them
@@ -1340,6 +1358,11 @@ export function CardCreatorForm({
       });
       setValue("rarity", "common", { shouldDirty: true });
     }
+    // A NEW token entered on the arch is the default switch's (the text
+    // follow's effect puts it on newTokenFrame's pick); leaving the token
+    // kind ends it.
+    if (nextKind !== "token") setTokenDefaultFrame(false);
+    else if (prevKind !== "token") setTokenDefaultFrame(!isRevise && isArchTokenFrame(template));
   };
   const handleKindSelect = (next: CardKind) => {
     if (next === kind) return;
@@ -1359,6 +1382,22 @@ export function CardCreatorForm({
    *  basic, so the seed clears for the user to name their dual). Inert the
    *  moment the user renames the card. */
   const handleColorIdentityChange = (next: ColorIdentity[]) => {
+    // A new token still on the default switch's pick follows the colour
+    // (owner decision 1): onto the full-art design where it is verified in
+    // that colour, back to the arch where it isn't.
+    if (tokenDefaultFrameRef.current && kind === "token") {
+      const colorKey = pickFrameColorKey(next);
+      const current = normalizeFrameTemplate(getValues("frame_style.template"));
+      const target = defaultTokenFrameIn(tokenText, current, colorKey, verifiedFrameSet);
+      if (target && target !== current) {
+        setValue("frame_style.template", target, { shouldDirty: true });
+        if (m20TokenHeightOf(current) && !m20TokenHeightOf(target)) {
+          toast.info(
+            `${describeFrame(current)} isn't verified in ${colorWord(colorKey)} yet — using ${describeFrame(target)}.`,
+          );
+        }
+      }
+    }
     if (watched.card_type !== "land") return;
     const identity = {
       title: getValues("title") ?? "",
@@ -2941,9 +2980,18 @@ export function CardCreatorForm({
                   // A variation picked by hand sticks (owner decision 5); a
                   // frame picked in the Frame section follows the text again.
                   manualTokenFrameRef.current = variation;
+                  // Either is the user's frame, no longer the default
+                  // switch's: a colour picked after it never moves it.
+                  setTokenDefaultFrame(false);
                 }}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}
+                colorFrameFor={
+                  tokenDefaultFrame && kind === "token"
+                    ? (colorKey) =>
+                        defaultTokenFrameIn(tokenText, normalizeFrameTemplate(currentTemplate), colorKey, verifiedFrameSet)
+                    : undefined
+                }
                 landMode={
                   watched.card_type === "land"
                     ? landBasicKey

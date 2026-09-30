@@ -189,6 +189,14 @@ type CardSetupPanelProps = {
    *  uses it to keep a pristine basic-land name/subtype in step with the
    *  color. */
   onColorIdentityChange?: (next: ColorIdentity[]) => void;
+  /** A NEW token still on the default switch's pick (TODO 4.48, owner
+   *  decision 1): the frame it would wear in each colour
+   *  (lib/creator/token-frame-auto.ts defaultTokenFrameIn; null = none is
+   *  verified there). Its colour tiles show that frame and offer every
+   *  colour it is verified in, and a pick moves it there (the
+   *  orchestrator's onColorIdentityChange). Absent: each tile shows the
+   *  card's own frame, offered where that is verified. */
+  colorFrameFor?: (colorKey: string) => FrameTemplate | null;
   /** Lands only: Basic (big symbol, no text) vs Nonbasic (rules text) —
    *  rendered as the Land kind's first Variation. */
   landMode?: LandMode;
@@ -205,6 +213,7 @@ export function CardSetupPanel({
   onFramePick,
   onKindSelect,
   onColorIdentityChange,
+  colorFrameFor,
   landMode,
   landBasicDisabledReason = null,
   onLandModeChange,
@@ -702,6 +711,7 @@ export function CardSetupPanel({
             }}
             verifiedKeys={verifiedKeys}
             frameType={frameType}
+            frameFor={colorFrameFor}
           />
         )}
       />
@@ -789,6 +799,7 @@ function ColorSection({
   onChange,
   verifiedKeys,
   frameType,
+  frameFor,
 }: {
   summary: string;
   selection: ColorIdentity[];
@@ -798,6 +809,10 @@ function ColorSection({
    *  paint in that colour (Alpha's colourless tile: the artifact card for an
    *  artifact, the grey card otherwise). */
   frameType: FrameTypeInfo;
+  /** The frame a pick of each colour lands the card on (a new token on the
+   *  default switch's pick, CardSetupPanelProps.colorFrameFor); null = no
+   *  frame of it is verified there. Absent: the card's own frame. */
+  frameFor?: (colorKey: string) => FrameTemplate | null;
 }) {
   // Live template so chip availability + thumbnails track frame changes.
   const { watch } = useFormContext<FormValues>();
@@ -822,16 +837,17 @@ function ColorSection({
 
   const options: ChipOption<ColorIdentity>[] = COLOR_IDENTITY_VALUES.map(
     (color) => {
-      const reachable = isFrameComboAvailable(
-        template,
-        IDENTITY_COLOR_KEY[color],
-        verifiedKeys,
-      );
+      const key = IDENTITY_COLOR_KEY[color];
+      // The card's own colour keeps the card's frame (picking it again
+      // changes nothing); another colour, the frame a pick lands on.
+      const there = frameFor && key !== currentKey ? frameFor(key) : template;
+      const reachable =
+        there !== null && isFrameComboAvailable(there, key, verifiedKeys);
       return {
         value: color,
         label: color,
         leading: (
-          <FrameThumb template={template} colorKey={IDENTITY_COLOR_KEY[color]} type={frameType} />
+          <FrameThumb template={there ?? template} colorKey={key} type={frameType} />
         ),
         disabled: !reachable,
         badge: reachable ? undefined : <SoonBadge />,

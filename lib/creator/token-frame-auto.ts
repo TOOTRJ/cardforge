@@ -10,7 +10,14 @@
 //     card's colour (newTokenFrame), else on the arch round 11 picks (the
 //     text box when it has text, the artifact dress for an Artifact). Per
 //     colour and per height, as every creator frame is gated (frame_reviews):
-//     until the owner verifies them nothing changes. The arch stays offered
+//     until the owner verifies them nothing changes. The Card step asks
+//     type, frame, colour in that order and a new card starts colourless,
+//     so while the token wears the switch's pick a colour chosen after the
+//     type moves it the same way (defaultTokenFrameIn): onto the full-art
+//     design where it is verified in that colour, back to the arch where it
+//     isn't — its colour chips offer every colour one of them is verified
+//     in. A frame the user, an import or an AI fill picks ends that; so
+//     does leaving the token kind. The arch stays offered
 //     as "Token (2014–2019)" — the new look's off switch — and stored cards
 //     keep their frame (docs/FRAMES.md "Additions vs corrections"). Imports
 //     follow the printing (the registry's `token/m20` and `borderless/token`
@@ -44,7 +51,7 @@ import {
   type M20TokenHeight,
   type TokenHeightText,
 } from "@/lib/cards/token-height";
-import { tokenFrameFor } from "@/lib/creator/card-kinds";
+import { tokenFrameFor, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import type { CardType, FrameTemplate } from "@/types/card";
 
 /** The 2014–19 arch the M15 era's token standard (m15token) lands on, in
@@ -118,6 +125,31 @@ export function newTokenFrame(
   const full = autoM20TokenFrame(text);
   if (isFrameComboAvailable(full, colorKey, verifiedKeys)) return full;
   return tokenFrameFor("token", "m15token", text);
+}
+
+/**
+ * The frame a NEW token still on the default switch's pick wears in
+ * `colorKey` — what a colour picked AFTER the type moves it to (the Card
+ * step asks type, frame, colour in that order, and a new card starts
+ * colourless): newTokenFrame's pick when it is the full-art template (it is
+ * verified there by construction); else the full-art height the card wears,
+ * when that is verified there (the height the text asks for isn't, so the
+ * follow held this one — a colour change keeps the design); else the arch
+ * round 11 picks, then the plain arch in its type-word dress (where a kind
+ * change lands a token); null when none of them is verified in the colour.
+ */
+export function defaultTokenFrameIn(
+  text: TokenFrameText,
+  current: FrameTemplate,
+  colorKey: string,
+  verifiedKeys: ReadonlySet<string>,
+): FrameTemplate | null {
+  const pick = newTokenFrame(text, colorKey, verifiedKeys);
+  if (m20TokenHeightOf(pick)) return pick;
+  if (m20TokenHeightOf(current) && isFrameComboAvailable(current, colorKey, verifiedKeys)) return current;
+  if (isFrameComboAvailable(pick, colorKey, verifiedKeys)) return pick;
+  const plain = typeWordFrameFor("token", "m15token", text.supertype);
+  return isFrameComboAvailable(plain, colorKey, verifiedKeys) ? plain : null;
 }
 
 /**

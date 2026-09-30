@@ -475,8 +475,9 @@ export function printsTokenTextBox(card: Pick<ScryfallCard, "oracle_text" | "fla
  *  artifact template for an Artifact, at the height its text asks for —
  *  Scryfall has no field for the printed height, so 4.48's rule decides it
  *  from the front face's rules and flavour text and its P/T
- *  (lib/cards/token-height.ts: the regular box when the text fits it at the
- *  rules standard size, the tall box otherwise, no box without text). */
+ *  (lib/cards/token-height.ts: the regular box while it holds the text at
+ *  M20_TOKEN_REGULAR_MIN_PX (72 px) or more, the tall box otherwise, no box
+ *  without text). */
 function m20TokenFrame(ctx: Ctx): FrameTemplate {
   const face = ctx.card.card_faces?.[0];
   const power = face ? face.power : ctx.card.power;

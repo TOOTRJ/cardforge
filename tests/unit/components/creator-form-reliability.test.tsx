@@ -1788,6 +1788,66 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     await typeFlavour("Hold the line.");
     expect(preview().template).toBe("m15tokentext");
   });
+
+  // The Card step asks type, frame, colour in that order and a new card
+  // starts colourless: the switch follows a colour picked after the type,
+  // or a token started before its colour stays on the arch wherever the
+  // full-art design is verified (and one started on it can't reach a colour
+  // it isn't verified in).
+  const colourChip = (label: RegExp) => chipIn("Color identity", label) as HTMLButtonElement;
+  const pickColour = (label: RegExp) => clickChip("Color identity", label);
+
+  it("a colour picked after the type: the new token follows it onto the full-art design, and back to the arch", async () => {
+    // The full-art design verified in white only (the rollout's first step).
+    renderForm({ mode: "create", verifiedFrameKeys: [...VERIFIED, ...combos(ARCH), ...combos(M20, ["w"])] });
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m15token");
+    await pickColour(/^white/i);
+    expect(preview().template).toBe("m20token");
+    await pickColour(/^blue/i);
+    expect(preview().template).toBe("m15token");
+    expect(toast.info.mock.calls.map((call) => String(call[0])).join(" ")).toMatch(
+      /Full-art Token isn't verified in blue yet — using M15 \(2015\) Token \(2014–2019\)\./,
+    );
+    // With text: the arch's text box in blue, the full-art box in white.
+    await clickNext(2);
+    await typeFlavour("A knight.");
+    expect(preview().template).toBe("m15tokentext");
+    await back(2);
+    await pickColour(/^white/i);
+    expect(preview().template).toBe("m20tokentext");
+    // …and its height still follows the text.
+    await clickNext(2);
+    await typeFlavour(LONG);
+    expect(preview().template).toBe("m20tokentall");
+  });
+
+  it("a new token on the full-art design can take a colour it isn't verified in: the arch", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: [...VERIFIED, ...combos(ARCH), ...combos(M20, ["c", "w"])] });
+    await pickKind(/^Token/);
+    expect(preview().template).toBe("m20token");
+    expect(colourChip(/^blue/i).disabled).toBe(false);
+    await pickColour(/^blue/i);
+    expect(preview().template).toBe("m15token");
+    await pickColour(/^white/i);
+    expect(preview().template).toBe("m20token");
+  });
+
+  it("a frame the user picks is theirs: a colour picked after it never moves it", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: [...VERIFIED, ...combos(ARCH), ...combos(M20, ["c", "w"])] });
+    await pickKind(/^Token/);
+    // The arch, picked in the Frame section: the new look's off switch.
+    await clickChip("M15 (2015) frames", /^Token \(2014–2019\)/);
+    expect(preview().template).toBe("m15token");
+    await pickColour(/^white/i);
+    expect(preview().template).toBe("m15token");
+    // A full-art height picked in Variations: its colours are its own.
+    await clickChip("Frame variations", /^Full-art Token, tall text box/);
+    expect(preview().template).toBe("m20tokentall");
+    expect(colourChip(/^blue/i).disabled).toBe(true);
+    await pickColour(/^colorless/i);
+    expect(preview().template).toBe("m20tokentall");
+  });
 });
 
 // ---------------------------------------------------------------------------

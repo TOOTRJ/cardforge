@@ -682,9 +682,9 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
   // The full-art token design (TODO 4.48) and its heights, variations of the
-  // token kind until they are verified and become its standard
-  // (lib/creator/token-frame-auto.ts TOKEN_STANDARD_ONCE_VERIFIED); the
-  // artifact templates are dressed by the Artifact word (4.50).
+  // token kind — a NEW token starts on them where they are verified in its
+  // colour (lib/creator/token-frame-auto.ts newTokenFrame); the artifact
+  // templates are dressed by the Artifact word (4.50).
   m15token: [
     "m15tokenartifact",
     "m15tokentext",

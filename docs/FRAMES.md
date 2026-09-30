@@ -1171,7 +1171,18 @@ frames bucket — never git:
   arch — starts on the full-art template its text and type words ask for
   once that template is verified in the card's colour (`newTokenFrame`),
   else on round 11's arch pick; per colour and per height, so nothing
-  changes until the owner verifies them. The arch stays offered, labelled
+  changes until the owner verifies them. The Card step asks type, frame,
+  colour in that order and a new card starts colourless, so while the token
+  wears the switch's pick a colour picked AFTER the type moves it the same
+  way (`defaultTokenFrameIn`, the form's `handleColorIdentityChange`): onto
+  the full-art design where it is verified in that colour, back to the arch
+  (with a toast) where it isn't, and its colour tiles offer every colour
+  one of them is verified in. Before this, a token started colourless
+  stayed on the arch in a colour the full-art design was verified in, and
+  one started on the full-art design couldn't reach a colour it wasn't
+  verified in. Any frame the user picks (Frame section or Variations), an
+  import or an AI fill that names a frame, and leaving the token kind end
+  it. The arch stays offered, labelled
   "Token (2014–2019)" — the new look's off switch — and stored cards keep
   their frame (an addition, not a correction: "Additions vs corrections").
   The height then follows the text (`followTokenHeight`) with round 11's

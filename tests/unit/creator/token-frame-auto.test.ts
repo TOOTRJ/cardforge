@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   autoM20TokenFrame,
+  defaultTokenFrameIn,
   followTokenHeight,
   isArchTokenFrame,
   newTokenFrame,
@@ -73,6 +74,31 @@ describe("newTokenFrame — the default switch (owner 2026-09-29: new tokens def
   it("knows the arch in every dress — where a token entering the kind on the M15 era lands", () => {
     for (const t of ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"]) expect(isArchTokenFrame(t), t).toBe(true);
     for (const t of ["m20token", "m20tokentall", "alphatoken", "m15", "nyx", null, undefined]) expect(isArchTokenFrame(t), String(t)).toBe(false);
+  });
+});
+
+describe("defaultTokenFrameIn — a new token on the switch's pick follows a colour picked after its type", () => {
+  const ARCH = ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"] as FrameTemplate[];
+  const arch = (colour: string) => ARCH.map((t) => [t, colour] as [FrameTemplate, string]);
+  it("the full-art template where it is verified in the colour, the arch round 11 picks where it isn't", () => {
+    const keys = new Set([...everyM20("w"), ...verified(...arch("u"), ...arch("w"))]);
+    expect(defaultTokenFrameIn(FLYING, "m15tokentext", "w", keys)).toBe("m20tokentext");
+    expect(defaultTokenFrameIn(FLYING, "m20tokentext", "u", keys)).toBe("m15tokentext");
+    expect(defaultTokenFrameIn(TREASURE, "m20tokenartifacttext", "u", keys)).toBe("m15tokenartifacttext");
+    expect(defaultTokenFrameIn(NONE, "m15token", "w", keys)).toBe("m20token");
+  });
+  it("keeps the full-art height the card wears where the one the text asks for isn't verified but it is", () => {
+    // Tall unverified in white: the follow held the regular box; white keeps it.
+    const keys = new Set([...verified(["m20tokentext", "w"], ["m20tokentext", "g"]), ...verified(...arch("w"), ...arch("g"))]);
+    expect(defaultTokenFrameIn(LONG, "m20tokentext", "g", keys)).toBe("m20tokentext");
+    // …but the arch where no full-art height it could wear is verified.
+    expect(defaultTokenFrameIn(LONG, "m20tokentall", "g", keys)).toBe("m15tokentext");
+  });
+  it("falls back to the plain arch in its type-word dress, else null — nothing to wear in that colour", () => {
+    const plainOnly = verified(["m15token", "r"], ["m15tokenartifact", "r"]);
+    expect(defaultTokenFrameIn(FLYING, "m20tokentext", "r", plainOnly)).toBe("m15token");
+    expect(defaultTokenFrameIn(TREASURE, "m20tokenartifacttext", "r", plainOnly)).toBe("m15tokenartifact");
+    expect(defaultTokenFrameIn(FLYING, "m20tokentext", "b", plainOnly)).toBeNull();
   });
 });
 

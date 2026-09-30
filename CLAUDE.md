@@ -312,9 +312,11 @@ Rules and gotchas:
   nearest). The tall box squeezes its paragraph gaps before its size steps
   down (`TextSlot.paragraphGapMinPx`, that box only). A NEW token starts on
   the full-art design only where its template/colour is VERIFIED, else on
-  round 11's arch ("Token (2014–2019)"), and its height follows the text
-  until a Variations pick (`lib/creator/token-frame-auto.ts`, wired into the
-  form's round-11 effect; `docs/FRAMES.md` "Full-art tokens").
+  round 11's arch ("Token (2014–2019)") — re-applied when a colour is
+  picked after the type, until a frame pick (`defaultTokenFrameIn`) — and
+  its height follows the text until a Variations pick
+  (`lib/creator/token-frame-auto.ts`, wired into the form's round-11 effect;
+  `docs/FRAMES.md` "Full-art tokens").
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
