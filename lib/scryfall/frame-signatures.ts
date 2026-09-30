@@ -1130,6 +1130,12 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       // for a token that prints text (4.49 (b), owner decision 5) — never
       // its text on the textless arch's scrim.
       template: { family: "m15" },
+      // …and, once the full-art token design is verified in the card's
+      // colour (1.23, token design 4: every borderless token is an M20+
+      // printing — WONE, WMOM, SLD, 19 of 19 on Scryfall 2026-09-29), that
+      // design at the height its text asks for: still `nearest` (the
+      // borderless dress is 4.37), but the bordered design it prints.
+      onceVerified: { family: "m20" },
       reason: "PipGlyph doesn't have the borderless token frame yet",
       blockedBy: "4.37",
     },
