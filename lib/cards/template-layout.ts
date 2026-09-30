@@ -147,6 +147,15 @@ export type TextSlot = {
    *  the fit checked it. Unset: every line starts at the left (every
    *  profile before 4.49 (b)). Code-owned: not part of the override schema. */
   alignSingleLine?: "center";
+  /** RULES boxes only (TODO 4.48): the paragraph gap, HD px, a text may be
+   *  squeezed to before its size steps down — the full-art token's TALL box,
+   *  where the prints keep 9 pt by closing the gaps between abilities (TBLB
+   *  #5: 10–13 px) instead of shrinking. The shared fit tries each size with
+   *  the gaps from RULES_TEXT.paragraphGapPx down to this and takes the
+   *  widest that fits (lib/cards/rules-layout.ts); the layout carries the
+   *  gap it placed, so both renderers draw it. Unset: the gap never moves
+   *  (every other box). Code-owned: not part of the override schema. */
+  paragraphGapMinPx?: number;
 };
 
 /** TextSlot.fit's policies. */
@@ -532,6 +541,13 @@ export type FrameProfile = {
    *  symbol; the rules fit estimate is skipped. The card keeps its text (the
    *  Text step says so) and prints it on any other frame. Code-owned, opt-in. */
   textless?: boolean;
+  /** A `textless` frame that still prints its TYPE LINE (and the set symbol
+   *  beside it): the full-art token's textless height has no box but a type
+   *  pill (TODO 4.48, TFDN #6 "Token Creature — Soldier"). Both renderers
+   *  draw the type band as on any frame; the rules, flavour, watermark and
+   *  their box stay hidden. Code-owned, opt-in; meaningless without
+   *  `textless`. */
+  textlessTypeLine?: boolean;
   /** The creator's frame tile (FrameThumb) draws its sample art in this
    *  profile's art slot under the master, as it does for every art-first
    *  frame (artFillsCard) — TODO 4.45, owner decision 2026-09-27. For a tall
@@ -1500,6 +1516,239 @@ const M15TOKENTEXT: FrameProfile = {
   // box the plate sat 4.1 px above TDOM #2 / TM19 #1 / TC16 #9 (2.5 on
   // average over nine text-box prints), 1.4 px after the move.
 };
+
+// ---------------------------------------------------------------------------
+// The full-art token design, M20 (2019-07-12) → today — TODO 4.48 / 4.50:
+// Card Conjurer's 'Textless', 'Short' and 'Tall' token packs
+// (packTokenTextless-1.js, packTokenShort-1.js, packTokenTall-1.js; the
+// importer's m20TokenTemplate). The art runs to the 60 px black ring; a name
+// pill in the token's colour (89–232 px), a light type pill, and — on the two
+// text heights — a translucent box down to the colour strip (1937–1948 px);
+// the P/T on M15's plate, the artist line in the bottom border. Three
+// printed heights, one design: the type pill's top at 81.0 %H (textless,
+// re-cut 5 px onto the prints: M20_TOKEN_TEXTLESS_RECUT), 66.9 (the regular
+// box: CC 'Short') and 55.7 (the tall box). New templates, no stored card:
+// no layout bump (4.48 "Rollout").
+// ---------------------------------------------------------------------------
+
+/** The printed heights of the full-art token (TODO 4.48). */
+export type M20TokenHeight = "textless" | "regular" | "tall";
+
+/** The textless master's re-cut (scripts/lib/cc-frames.mjs
+ *  M20_TOKEN_TEXTLESS_RECUT, whose `shift` a unit test holds to this): its
+ *  type pill 5 px below CC's, where 28 M20+ prints put it. HD px. */
+export const M20_TOKEN_TEXTLESS_RECUT_PX = 5;
+
+/** Each height's type pill on its master, HD px (interior rows, inclusive:
+ *  below the rim's dark top line, down to the bottom outline). The type band
+ *  centres on it; a unit test reads the masters. */
+export const M20_TOKEN_PILL_INTERIOR_PX: Readonly<Record<M20TokenHeight, { top: number; bottom: number }>> = {
+  textless: { top: 1719 + M20_TOKEN_TEXTLESS_RECUT_PX, bottom: 1829 + M20_TOKEN_TEXTLESS_RECUT_PX },
+  regular: { top: 1422, bottom: 1532 },
+  tall: { top: 1188, bottom: 1298 },
+};
+
+/** The name's ink on the dark pills: white, as printed (CC's title colour). */
+const M20_TOKEN_TITLE_INK = "#ffffff";
+/** The name's baseline, onto the prints': centred in CC's name box the
+ *  line sets it at 194 px; 63 M20+ prints (Scryfall PNGs at 1500 × 2100,
+ *  every height) set it at 190 (median; the ink's last full row). A fraction
+ *  of card WIDTH (dy's unit): 4 px up at HD, 2 at 750. */
+const M20_TOKEN_TITLE_PRINT_DY = -4 / 1500;
+/** The type line's baseline per height, onto the prints': the band centres
+ *  its line box on the pill (M20_TOKEN_PILL_INTERIOR_PX), which sets the
+ *  baseline at 1803 / 1501 / 1267 px; the prints set it at 1797 (28
+ *  textless), 1496 (19 regular) and 1261 (16 tall) — medians, ~18 px below
+ *  the pill's centre on all three. Whole HD px, as fractions of card WIDTH. */
+const M20_TOKEN_TYPE_PRINT_DY: Readonly<Record<M20TokenHeight, number>> = {
+  textless: -6 / 1500,
+  regular: -5 / 1500,
+  tall: -6 / 1500,
+};
+/** Each height's set-symbol centre, HD px: the prints' (the symbol's ink box
+ *  centre inside the pill, medians of 22 / 16 / 14 prints from 2023 on;
+ *  Keyrune glyphs differ by set, so the box centre, not the ink, is what a
+ *  frame fixes). CC's setSymbolBounds centres are 1772 + the 5 px re-cut
+ *  (1777), 1475 and 1241. */
+export const M20_TOKEN_SYMBOL_CENTRE_PX: Readonly<Record<M20TokenHeight, number>> = {
+  textless: 1775,
+  regular: 1476,
+  tall: 1241.5,
+};
+/** The P/T digits sit 3.5 px higher on the M20 prints than M15's value box
+ *  sets them (the digits' ink box, 14 / 12 / 28 regular / tall / textless
+ *  prints with a P/T: +3.5 px median at HD), on M15's plate, which the
+ *  prints put where CC's box does (its profile within ±1 px). An em of the
+ *  value's 0.05 W (75 px at HD) size, on top of M15's valueDyEm. */
+const M20_TOKEN_PT_PRINT_DY_EM = -3.5 / 75;
+
+/** Card %H of an HD px row (2100 px card). */
+const hdRowPct = (px: number) => (px / 2100) * 100;
+
+/** The name band's box, HD px: CC's name box (109.62 + 114.03 px) on whole
+ *  px at both bake targets — even HD rows, so the 750 px bake's box is whole
+ *  px too (55 + 57). A unit test holds every full-art token to it. */
+export const M20_TOKEN_TITLE_BOX_PX = { top: 110, height: 114 } as const;
+
+/** CC's set-symbol box (0.12 W × 0.041 H — M15's 86 px box, layout v32),
+ *  its right edge at CC's 92.13 %W (setSymbolBounds x 0.9213,
+ *  right-anchored), centred where the prints centre theirs
+ *  (M20_TOKEN_SYMBOL_CENTRE_PX). */
+function m20TokenSymbolRect(height: M20TokenHeight): Rect {
+  return { topPct: hdRowPct(M20_TOKEN_SYMBOL_CENTRE_PX[height]) - 2.05, leftPct: 80.13, widthPct: 12, heightPct: 4.1 };
+}
+
+/** The type band on a pill: its interior, left from CC's 8.54 %W to the
+ *  symbol box's right edge (92.13 %W; the measured fit keeps
+ *  TYPE_SYMBOL_GAP_PCT before the glyph's ink), dark ink. The band centres
+ *  its line box on the pill, and `dy` sets the baseline where the prints
+ *  do (M20_TOKEN_TYPE_PRINT_DY). */
+function m20TokenTypeSlot(height: M20TokenHeight): TextSlot {
+  const { top, bottom } = M20_TOKEN_PILL_INTERIOR_PX[height];
+  return {
+    rect: { topPct: hdRowPct(top), leftPct: 8.54, widthPct: 83.59, heightPct: hdRowPct(bottom + 1 - top) },
+    sizePct: TYPE_SIZE_PCT,
+    dy: M20_TOKEN_TYPE_PRINT_DY[height],
+    fit: "measured",
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  };
+}
+
+/** The name pill's ink (4.48): white on the blue, black, red, green, gold
+ *  and colourless pills and on every artifact template's silver pill; dark
+ *  on the white pill (TFDN #6 / #27). Keyed by frame master. */
+const M20_TOKEN_TITLE_INK_DARK_ON: InkByColorKey = { w: { colorHex: INK_DARK } };
+
+/** The regular box (CC 'Short'): the base the other heights spread. */
+const M20TOKENTEXT: FrameProfile = {
+  label: "Full-art Token, text box",
+  hideCost: true,
+  // CC artBounds 4 / 2.86 / 92 × 89.53 (the black ring's inner edge, 60 px,
+  // to the colour strip), with 7.6's overscan: the clear window runs
+  // 60–1439 × 60–1936 px on every master.
+  artSlot: { topPct: 2.8, leftPct: 3.9, widthPct: 92.2, heightPct: 89.6 },
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
+  symbolRect: m20TokenSymbolRect("regular"),
+  // CC's name box (x 0.0854, y 0.0522, 0.8292 × 0.0543 — the name pill's
+  // interior, 104–217 px), centred, the M15 name size (CC 0.0381 H =
+  // TITLE_SIZE_PCT); Beleren Small Caps waits for 4.8. Its rows snapped to
+  // whole px at BOTH bake targets (M20_TOKEN_TITLE_BOX_PX: 110 + 114 px at
+  // HD, 55 + 57 at 750): CC's 109.62 + 114.03 px put the band's edges
+  // between pixels, and the browser and Satori round a fractional box
+  // differently — the preview's name sat 2 px above the 750 bake's (1 px
+  // on the arch token's whole-px box). The bake's baseline is unchanged.
+  title: {
+    rect: {
+      topPct: hdRowPct(M20_TOKEN_TITLE_BOX_PX.top),
+      leftPct: 8.54,
+      widthPct: 82.92,
+      heightPct: hdRowPct(M20_TOKEN_TITLE_BOX_PX.height),
+    },
+    sizePct: TITLE_SIZE_PCT,
+    dy: M20_TOKEN_TITLE_PRINT_DY,
+    fit: "measured",
+    colorHex: M20_TOKEN_TITLE_INK,
+    inkByColorKey: M20_TOKEN_TITLE_INK_DARK_ON,
+    weight: 600,
+    align: "center",
+    font: "display",
+    letterSpacingEm: 0.01,
+  },
+  type: m20TokenTypeSlot("regular"),
+  // The translucent box (1548–1936 px on every master), 7 px inside its top
+  // and 2 px inside its bottom, CC's 8.6 / 82.8 %W across (CC's rules y
+  // 74.24 %H, 17.67 %H tall, sat 11 px inside the top and 6 px inside the
+  // bottom): dark ink, the block centred in the box, ONE line centred on it
+  // (TFDN #7 "Flying", TFDN #30 "This token can't block."), two or more from
+  // the left (TFDN #27). The prints centre their block 2 px lower than the
+  // box's middle (single lines and the regular prints' multi-line blocks,
+  // 15 prints: our block 2–3 px high in the drawn box's middle), so the rect
+  // sits 2 px below it.
+  rules: {
+    rect: { topPct: hdRowPct(1555), leftPct: 8.6, widthPct: 82.8, heightPct: hdRowPct(1934 - 1555) },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    alignSingleLine: "center",
+    font: "body",
+    padPx: { x: 2, y: 0 },
+  },
+  // The artist line in the bottom border, as on M15.
+  footer: M15.footer,
+  // M15's P/T slot: CC's plate box (the token packs' bounds 0.7573 / 0.8848
+  // / 0.188 × 0.0733 — where the prints put the plate: its profile within
+  // ±1 px on 63 prints), the 4.18 value box, its ink span and dark ink; the
+  // digits 3.5 px higher, as the M20 prints set them.
+  pt: { ...M15.pt!, valueDyEm: (M15.pt!.valueDyEm ?? 0) + M20_TOKEN_PT_PRINT_DY_EM },
+};
+
+/** The textless height (no box): `textless` hides the rules, flavour and
+ *  watermark — the card keeps its text, and the Text step says so — and
+ *  `textlessTypeLine` keeps the type pill's line (TFDN #6). */
+const M20TOKEN: FrameProfile = {
+  ...M20TOKENTEXT,
+  label: "Full-art Token",
+  symbolRect: m20TokenSymbolRect("textless"),
+  type: m20TokenTypeSlot("textless"),
+  textless: true,
+  textlessTypeLine: true,
+};
+
+/** The tall box's rules rect, HD px: 1326–1922, 596 px — the fullest tall
+ *  prints' text block (TLCI #17 / TBIG #7 Map: eight lines at 9 pt, ink
+ *  1335–1920; no tall print sets more), on even rows so the 750 px bake's
+ *  box is whole px too, centred 1 px above the box's middle (1314–1936).
+ *  Calibrated on the tall prints set at 9 pt with our line breaks (TBIG #7,
+ *  TBLB #11 / #21, TLCI #17, TDRC #2, TMKC #5; Scryfall PNGs at 1500 × 2100,
+ *  2026-09-29): centred on the box's middle our first and last baselines sat
+ *  +2 / +2.5 px below theirs (median); here +0.5 / +1. The 1319–1932 rect
+ *  let a text run right up to the box's top edge (TBLB #9, squeezed into
+ *  eight lines), where the prints keep ≥ 20 px. */
+export const M20_TOKEN_TALL_RULES_PX = { top: 1326, bottom: 1922 } as const;
+/** The tall box closes the gaps between abilities before its text shrinks
+ *  (TextSlot.paragraphGapMinPx): TBLB #5 Warren Warleader prints its modes
+ *  and reminder at 9 pt with 10–13 px gaps, where the standard 24 px ran its
+ *  last line into the P/T plate and stepped it down to 70 px. */
+export const M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX = 10;
+
+/** The tall box (TLCI #17 Map, TBLB #5): the pill at 55.7 %H, the box
+ *  1314–1936 px, the rules rect M20_TOKEN_TALL_RULES_PX (CC's rules 63.03
+ *  %H, 28.75 %H tall), its paragraph gaps squeezed before a size step
+ *  (M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX). */
+const M20TOKENTALL: FrameProfile = {
+  ...M20TOKENTEXT,
+  label: "Full-art Token, tall text box",
+  symbolRect: m20TokenSymbolRect("tall"),
+  type: m20TokenTypeSlot("tall"),
+  rules: {
+    ...M20TOKENTEXT.rules,
+    rect: {
+      topPct: hdRowPct(M20_TOKEN_TALL_RULES_PX.top),
+      leftPct: 8.6,
+      widthPct: 82.8,
+      heightPct: hdRowPct(M20_TOKEN_TALL_RULES_PX.bottom - M20_TOKEN_TALL_RULES_PX.top),
+    },
+    paragraphGapMinPx: M20_TOKEN_TALL_PARAGRAPH_GAP_MIN_PX,
+  },
+};
+
+/** An artifact token template (4.50): the silver pills take white name ink
+ *  on every colour, and the plates are M15's artifact set (CC's silver
+ *  m15PTa for colourless — TEOC #14 Golem — the colour's plate on a
+ *  coloured one, TDSK #7 Toy, TMOC #25 Gremlin). */
+function m20ArtifactToken(profile: FrameProfile, label: string): FrameProfile {
+  const title: TextSlot = { ...profile.title };
+  delete title.inkByColorKey;
+  return {
+    ...profile,
+    label,
+    title,
+    pt: { ...profile.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+  };
+}
 
 // M15 Snow (Kaldheim/Coldsnap frosty frame) and M15 Devoid (Eldrazi washed-out
 // colorless frame) share the M15 geometry exactly — same title/art/type/text
@@ -2934,6 +3183,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
+  // TODO 4.48 / 4.50: the full-art tokens. Their masters are clear almost
+  // everywhere, so the creator's tile draws its sample art (4.45).
+  m20token: { ...M20TOKEN, pickerSampleArt: true },
+  m20tokentext: { ...M20TOKENTEXT, pickerSampleArt: true },
+  m20tokentall: { ...M20TOKENTALL, pickerSampleArt: true },
+  m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Full-art Artifact Token"), pickerSampleArt: true },
+  m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Full-art Artifact Token, text box"), pickerSampleArt: true },
+  m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Full-art Artifact Token, tall text box"), pickerSampleArt: true },
   m15artifact: M15ARTIFACT,
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,

@@ -20,6 +20,8 @@ import {
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
 import { EDGE_CONTRACT_KNOWN_FAILURES } from "@/lib/frames/edge-contract";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { withVerification } from "@/lib/creator/frame-resolve";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -222,11 +224,51 @@ describe("full-art and textless families (TODO 1.19)", () => {
     );
     expect(walker).toMatchObject({ signature: "textless/old-frame", template: "m15pw" });
     expect(walker.onceVerified).toBeUndefined();
-    // No other fixture names a frame for later.
+    // No other fixture names a frame for later — but the M20+ tokens, whose
+    // full-art template takes over once verified (TODO 4.48, token/m20; the
+    // borderless ones too, still nearest, 1.23).
     for (const key of Object.keys(printingsData) as PrintingKey[]) {
       const match = frameMatchFromScryfall(printing(key));
-      if (match.onceVerified) expect(match.signature, key).toBe("textless/old-frame");
+      if (!match.onceVerified) continue;
+      if (match.signature.startsWith("token/m20") || match.signature === "borderless/token") {
+        expect(match.onceVerified, key).toMatch(/^m20token/);
+        continue;
+      }
+      expect(match.signature, key).toBe("textless/old-frame");
     }
+  });
+
+  it("names the full-art token design for a borderless token once it is verified — still nearest (1.23: every borderless token is M20+)", () => {
+    // WONE #1 Cat (2023, borderless, vanilla 2/2): the textless arch stands
+    // in, the full-art textless template takes over once verified in white.
+    const cat = frameMatchFromScryfall(printing("wone-1"));
+    expect(cat).toMatchObject({ signature: "borderless/token", status: "nearest", template: "m15token", onceVerified: "m20token", blockedBy: "4.37" });
+    const allM20 = new Set(
+      ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"].flatMap((t) =>
+        ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t as FrameTemplate, k)),
+      ),
+    );
+    const verified = withVerification(cat, "w", allM20);
+    expect(verified).toMatchObject({ status: "nearest", template: "m20token", blockedBy: "4.37", reason: "PipGlyph doesn't have the borderless token frame yet" });
+    expect(verified.onceVerified).toBeUndefined();
+    // Not verified in the card's colour: the arch stands, and no "not yet
+    // verified" rewrite (a borderless token is nearest either way).
+    const waiting = withVerification(cat, "w", new Set([...allM20].filter((k) => !k.endsWith("/w"))));
+    expect(waiting).toMatchObject({ status: "nearest", template: "m15token", reason: "PipGlyph doesn't have the borderless token frame yet" });
+    expect(waiting.unverified).toBeUndefined();
+    // The height follows the text (4.48's rule), the Artifact word the
+    // artifact template.
+    const withText = (extra: Record<string, unknown>) =>
+      frameMatchFromScryfall(scryfallCardSchema.parse({ ...printingsData["wone-1"], ...extra }));
+    expect(withText({ oracle_text: "Vigilance" }).onceVerified).toBe("m20tokentext");
+    expect(
+      withText({
+        type_line: "Token Artifact — Food",
+        oracle_text: "{2}, {T}, Sacrifice this token: You gain 3 life.",
+        power: undefined,
+        toughness: undefined,
+      }).onceVerified,
+    ).toBe("m20tokenartifacttext");
   });
 
   it("keys the full-art basics on set lists, never on the full_art flag alone", () => {

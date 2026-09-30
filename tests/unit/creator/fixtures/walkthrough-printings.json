@@ -475,5 +475,214 @@
       "nonfoil"
     ],
     "scryfall_uri": "https://scryfall.com/card/txln/7/treasure?utm_source=api"
+  },
+  "tfdn-6": {
+    "id": "d093322e-a717-4e2d-8199-fa560792bcf6",
+    "oracle_id": "eac25f12-6459-438c-a09e-93e23d2cf80d",
+    "name": "Soldier",
+    "released_at": "2024-11-15",
+    "layout": "token",
+    "set": "tfdn",
+    "set_name": "Foundations Tokens",
+    "set_type": "token",
+    "collector_number": "6",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "startercollection"
+    ],
+    "keywords": [],
+    "type_line": "Token Creature — Soldier",
+    "mana_cost": "",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Greg Staples",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tfdn/6/soldier?utm_source=api"
+  },
+  "tfdn-27": {
+    "id": "86701490-17ac-4253-810d-6cfd7a46594c",
+    "oracle_id": "65742c00-2809-4085-a950-8f93845c03d2",
+    "name": "Cat",
+    "released_at": "2024-11-15",
+    "layout": "token",
+    "set": "tfdn",
+    "set_name": "Foundations Tokens",
+    "set_type": "token",
+    "collector_number": "27",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "startercollection"
+    ],
+    "keywords": [
+      "Lifelink"
+    ],
+    "type_line": "Token Creature — Cat",
+    "mana_cost": "",
+    "oracle_text": "Lifelink (Damage dealt by this creature also causes you to gain that much life.)",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Filip Burburan",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tfdn/27/cat?utm_source=api"
+  },
+  "tblb-5": {
+    "id": "5cc9b628-0a3a-4d09-ae4a-57c7f6f9ac36",
+    "oracle_id": "0dd6ba35-7387-4172-8b40-dd4039538a4b",
+    "name": "Warren Warleader",
+    "released_at": "2024-08-02",
+    "layout": "token",
+    "set": "tblb",
+    "set_name": "Bloomburrow Tokens",
+    "set_type": "token",
+    "collector_number": "5",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Token Creature — Rabbit Knight",
+    "mana_cost": "{2}{W}{W}",
+    "oracle_text": "Whenever you attack, choose one —\n• Create a 1/1 white Rabbit creature token that's tapped and attacking.\n• Attacking creatures you control get +1/+1 until end of turn.\n(This token's mana cost is {2}{W}{W}.)",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Justin Gerard",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tblb/5/warren-warleader?utm_source=api"
+  },
+  "tdsk-7": {
+    "id": "5e6d479d-c30d-4048-b250-5233358a174c",
+    "oracle_id": "0c597b2e-4e2b-4240-843f-9ed8fc2bda9d",
+    "name": "Toy",
+    "released_at": "2024-09-27",
+    "layout": "token",
+    "set": "tdsk",
+    "set_name": "Duskmourn: House of Horror Tokens",
+    "set_type": "token",
+    "collector_number": "7",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Token Artifact Creature — Toy",
+    "mana_cost": "",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Brian Valeza",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tdsk/7/toy?utm_source=api"
+  },
+  "tfdn-23": {
+    "id": "21210145-8edd-41f5-9a64-9f0b5be79864",
+    "oracle_id": "3c549374-6c37-42e0-8d88-a8555d46732d",
+    "name": "Treasure",
+    "released_at": "2024-11-15",
+    "layout": "token",
+    "set": "tfdn",
+    "set_name": "Foundations Tokens",
+    "set_type": "token",
+    "collector_number": "23",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "beginnerbox"
+    ],
+    "keywords": [],
+    "type_line": "Token Artifact — Treasure",
+    "mana_cost": "",
+    "oracle_text": "{T}, Sacrifice this token: Add one mana of any color.",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Alayna Danner",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tfdn/23/treasure?utm_source=api"
+  },
+  "tlci-17": {
+    "id": "64839118-09d2-4645-9d3c-f80755ac781f",
+    "oracle_id": "c050f054-1ccf-4819-bc30-a928aed60c56",
+    "name": "Map",
+    "released_at": "2023-11-17",
+    "layout": "token",
+    "set": "tlci",
+    "set_name": "The Lost Caverns of Ixalan Tokens",
+    "set_type": "token",
+    "collector_number": "17",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Explore"
+    ],
+    "type_line": "Token Artifact — Map",
+    "mana_cost": "",
+    "oracle_text": "{1}, {T}, Sacrifice this artifact: Target creature you control explores. Activate only as a sorcery. (Reveal the top card of your library. Put that card into your hand if it's a land. Otherwise, put a +1/+1 counter on that creature, then put the card back or put it into your graveyard.)",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Francesca Baerald",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tlci/17/map?utm_source=api"
   }
 }

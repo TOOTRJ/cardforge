@@ -117,11 +117,21 @@ describe("slotInk / footerInk", () => {
     expect(bandTextStyle({ ...band, inkByColorKey: undefined }, "b")).toEqual({});
   });
 
-  it("only the Alpha frame and its land twin carry an ink map", () => {
+  it("only the Alpha frame and its land twin carry an ink map — and the full-art token's white name pill", () => {
     // Every other template resolves to exactly the colour it had before.
     const keys = ["w", "u", "b", "r", "g", "c", "m"];
+    // TODO 4.48: the full-art token prints its name white on every pill but
+    // the white one (dark ink); its artifact templates' pills are silver.
+    const whitePill = ["m20token", "m20tokentext", "m20tokentall"];
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p: FrameProfile = getFrameProfile(t);
+      if (whitePill.includes(t)) {
+        expect(Object.keys(p.title.inkByColorKey ?? {}), t).toEqual(["w"]);
+        expect(bandTextStyle(p.title, "w").color, t).not.toBe(p.title.colorHex);
+        for (const k of keys.filter((k) => k !== "w")) expect(bandTextStyle(p.title, k), `${t} ${k}`).toEqual({});
+        expect(Boolean(p.pt?.inkByColorKey || p.footer?.inkByColorKey || p.type.inkByColorKey), t).toBe(false);
+        continue;
+      }
       const inked = Boolean(
         p.pt?.inkByColorKey || p.footer?.inkByColorKey || p.title.inkByColorKey || p.type.inkByColorKey,
       );

@@ -124,7 +124,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 15 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 21 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -138,7 +138,14 @@ into `.frames-build/` — 15 templates today (`CC_TEMPLATES` in
   frame with its Border mask erased), each with CC's mana symbols at
   `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot;
 - the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
-  m15tokentext and its artifact dress m15tokenartifacttext.
+  m15tokentext and its artifact dress m15tokenartifacttext;
+- the full-art tokens (M20 → today) from the 'Textless', 'Short' and 'Tall'
+  token packs (4.48 / 4.50): m20token, m20tokentext, m20tokentall and their
+  artifact templates m20tokenartifact, m20tokenartifacttext and
+  m20tokenartifacttall — the textless pair re-cut 5 px onto the prints, the
+  colourless and artifact type pills darkened to the prints, every type pill
+  solid, the artifact name pill slate and solid (PipGlyph composites,
+  "Full-art tokens" below).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -701,7 +708,9 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   a `plst` reprint by its collector prefix — `PLST_PRE_M20_PREFIX_SETS`,
   held to Scryfall by `tests/unit/scryfall/fixtures/plst-token-prefixes.json`).
   Those print the full-art design (4.48), so `token/m20` answers `nearest`
-  the 2014–19 arch until 4.48's templates exist (then `onceVerified`); the
+  the 2014–19 arch until 4.48's template is verified in the card's colour,
+  then `exact` on it (`onceVerified` + `exactOnceVerified`, "Full-art
+  tokens" below); the
   earlier 2015-frame tokens ARE the arch (`era/2015`, exact). Either way the
   family pick is the text-box arch (`m15tokentext` / `m15tokenartifacttext`,
   4.49 (b)) for a printing with rules or flavour text — a box, not the
@@ -788,9 +797,10 @@ cards it changes.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 25 templates — the 23 of v32's frozen scope in
-`lib/cards/layout-version.ts`, plus the two text-box tokens, which joined
-without a bump; split and battle join with 4.21) prints its names, type
+`lib/cards/m15-family.ts`: 31 templates — the 23 of v32's frozen scope in
+`lib/cards/layout-version.ts`, plus the two text-box tokens and the six
+full-art tokens, new templates that joined without a bump; split and battle
+join with 4.21) prints its names, type
 lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
 the prints. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),
@@ -1089,6 +1099,170 @@ a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the
 14 legacy ones do too) and are re-verified against the new pins in the
 walk-through. A stale tick stays verified, so the creator keeps offering
 the frames; the wording alone stales no tick anywhere.
+
+### Full-art tokens: M20 → today (TODO 4.48 / 4.50)
+
+Core Set 2020 (2019-07-12) moved tokens to a full-art design, and about three
+quarters of token printings since 2014 wear it. PipGlyph draws it with six
+NEW templates from Card Conjurer's token packs (its groupToken-2.js), built by
+the importer (`m20TokenTemplate` in `scripts/lib/cc-frames.mjs`) into the
+frames bucket — never git:
+
+| height | plain | artifact | CC pack | type pill |
+| --- | --- | --- | --- | --- |
+| no box | `m20token` | `m20tokenartifact` | 'Textless' (re-cut 5 px) | 81.2–88.1 %H |
+| regular box | `m20tokentext` | `m20tokenartifacttext` | 'Short' | 66.9–73.7 %H |
+| tall box | `m20tokentall` | `m20tokenartifacttall` | 'Tall' | 55.7–62.5 %H |
+
+- **Measure first.** CC's 'Regular' pack (type pill at 64 %H) matches no
+  print and is not used; its 'Short' pack is the printed regular box.
+  Measured against the prints (Scryfall PNGs at 1500 × 2100, profile
+  correlation over each piece; 63 prints, 28 / 19 / 16 by height): the
+  regular and tall pills sit +0.9 / +0.7 px from the prints, the name pill
+  +1.3, the colour strip −1.0 — used as drawn. The textless pill prints
+  4.8 px lower than CC's (its top outline +4.4, bottom +5.7): the importer
+  moves rows 1687–1844 down 5 px (`M20_TOKEN_TEXTLESS_RECUT`, hard seams —
+  only clear art and the black ring meet them; provenance records it), and
+  the profile rides it (`M20_TOKEN_TEXTLESS_RECUT_PX`). After: −0.2 px
+  (median) on the textless prints.
+- **Colours.** w/u/b/r/g/m are CC's masters, `c` its charcoal `frameC`.
+  Two colours land on gold (`m`) until 4.6's gradient; legends wait for
+  4.6's crown. The artifact templates are the silver `A` master whole plus
+  the colour's master through the pack's Pinline mask — silver pills and
+  box, the colour on the rims, pinline and strip (TDSK #7, TSOC #8) — not
+  4.16's `m15artifact` recipe; their plates are M15's artifact set.
+- **PipGlyph composites** (owner decisions 2026-09-29; `finish` in the
+  recipe, `compositeFinish` in `scripts/lib/cc-frames.mjs`, applied to CC's
+  flattened pixels before the re-cut, in order, and recorded in provenance;
+  an entry may name the colours it applies to, `finishFor`):
+  - the colourless and artifact TYPE pills are darkened to the prints
+    (round 14): the same print-fitted "tint" as the name pill's slate, on
+    CC's flat pill interior only (full weight at its α, none from the first
+    bevel α — the bevel, outline and rim keep CC's pixels). Measured behind
+    the type line (the pill's interior rows inset 25 px, x 620–1080, the ink
+    left out): the plain templates' `c` (`frameC`, a flat 209) takes a flat
+    rgb 164/149/143 at 65 % (`M20_COLOURLESS_TYPE_TINT`, `c` only) → rgb
+    176/165/160, luminance 168, the median of 4 colourless prints
+    (157–180); every colour of the artifact templates (the silver
+    `tokenFrameA`, 193) takes rgb 151/170/181 at 65 %
+    (`M20_ARTIFACT_TYPE_TINT`) → rgb 160/178/188, luminance 174, the median
+    of 16 artifact prints (160–190). The five coloured pills and the gold one
+    keep CC's colour (4–12 lighter than the scans: their offset);
+  - the TYPE pill is solid, as every print's: CC draws its interior at
+    α 204 (`c` 166), so a fifth of the art showed through; every pixel the
+    pack's Type mask covers keeps its colour and becomes opaque (after the
+    tint: a tint weighs CC's α);
+  - the ARTIFACT templates' name pill is the prints' dark slate: CC's
+    `tokenFrameA` pill is a silver gradient (luminance ~77 in the middle,
+    ~246 at the caps: a white name read 3.5–5.7 : 1 in the bake), where 16
+    M20+ artifact prints are slate (luminance 54–71 behind the name, white
+    ink 9–11 : 1). A flat rgb 30/40/48 at 65 % source-over CC's translucent
+    interior through M15's Title mask (`M20_ARTIFACT_NAME_SLATE`; full weight
+    at CC's α 230, none from α 244, so the rims and outline keep CC's silver
+    or colour): luminance 63.5 behind the name, white ink 10.4 : 1, the caps
+    lighter (~105) as printed. Then that pill is made SOLID (round 14,
+    `M20_ARTIFACT_SOLID_NAME_PILL`: α ≈ 246 → 255 through the same mask,
+    which covers nothing CC draws below α 230): on flat mid-grey art 61.5
+    behind the name, white ink 10.8 : 1.
+    `tests/unit/frames/edge-contract.test.ts` holds every master to all of
+    them (the tones within the prints' range and 2 of their median, the
+    coloured pills at CC's, the artifact name pill at α 255).
+- **Profile** (`M20TOKENTEXT` and the heights spread from it,
+  `lib/cards/template-layout.ts`): the art to the ring (CC's bounds with
+  7.6's overscan), the name in CC's box at `TITLE_SIZE_PCT` — snapped to
+  whole px at both bake targets (`M20_TOKEN_TITLE_BOX_PX`, 110 + 114 px at
+  HD: CC's 109.62 + 114.03 px set the 750 px preview's name 2 px above the
+  bake's; now 1 px, as on the arch token) — white, dark
+  on the plain white pill (`inkByColorKey`) — the type line on the pill
+  from 8.54 %W at `TYPE_SIZE_PCT`, the set symbol in CC's 86 px box
+  (right edge 92.13 %W), the P/T on M15's plate with M15's value box, the
+  rules in the box with `rules.alignSingleLine: "center"`. The textless
+  height sets 3.24's `textless` flag with `textlessTypeLine` (both
+  renderers keep the type band; the rules, flavour and watermark stay
+  hidden, and the Text step says so). Onto the prints (medians, HD px):
+  name baseline 190 (`M20_TOKEN_TITLE_PRINT_DY`), type baseline 1797 / 1496
+  / 1261 (`M20_TOKEN_TYPE_PRINT_DY`), symbol centre 1775 / 1476 / 1241.5
+  (`M20_TOKEN_SYMBOL_CENTRE_PX`), digits 3.5 px above M15's value box
+  (`M20_TOKEN_PT_PRINT_DY_EM`). `tests/unit/render/m20-token-bake.test.tsx`
+  holds real bakes to them, `tests/unit/components/m20-token-preview.test.tsx`
+  the preview.
+- **Height** (`lib/cards/token-height.ts`, owner decisions 2026-09-29): the
+  smallest printed height whose text fits — no text → no box; the regular
+  box while it holds the text at `M20_TOKEN_REGULAR_MIN_PX` (72 px, 8.5 pt)
+  or more → regular; else tall. WotC sets regular-box text below 9 pt rather
+  than grow the box (TTDC #12 Dragon Egg fits at 72). On the 117-print height
+  study it agrees on 110 — every tall print stays tall (they fit the regular
+  box at 70 px at most); the six regular-box prints WotC sets at 62–70 px
+  (TBLB #1, TBLC #23, TINR #13, TMID #7, TSPM #1, TTSR #5) go tall, listed
+  in the fixture.
+- **The tall box** (calibrated 2026-09-29 on the 17 tall prints): its rules
+  rect is 1326–1922 px (`M20_TOKEN_TALL_RULES_PX`): the prints' fullest
+  text block — eight lines at 9 pt, TLCI #17 / TBIG #7, ink 1335–1920 — on
+  even rows, centred 1 px above the box's middle, where the six prints set
+  at 9 pt with our line breaks put their first and last baselines (+0.5 /
+  +1 px median; the box-centred 1319–1932 rect set them +2 / +2.5 low, and
+  let a text run up to the box's top edge, where the prints keep ≥ 20 px).
+  It closes the gaps between abilities before its text shrinks
+  (`TextSlot.paragraphGapMinPx`, 10 px — the tall box only): the fit sets
+  each size with the paragraph gaps squeezed, 2 px at a time, before the
+  next size down, and the layout carries the gap it placed, so both
+  renderers draw it. TBLB #5 Warren Warleader prints at 9 pt with 10–13 px
+  gaps; with 24 px our last line ran into the P/T plate and stepped down to
+  70 px — now 76 px with 12 px gaps, baselines within 2 px of the print's.
+  TBLB #9 prints below 9 pt (cap height 51 vs 53 px, line pitch 71 vs
+  74–75: ~8.5–8.75 pt, tighter leading) in seven lines; ours is 74 px in
+  seven. What the box doesn't reach: the prints' glyphs run ~3 % narrower
+  than MPlantin's advances, so a few print one line fewer (TDRC #1), and
+  the Universes Beyond boxes (TWHO #32 / #64 run their text past the
+  plate's top) stay at 70 px.
+- **Import** (TODO 1.23). `token/m20` names the height's template through
+  `onceVerified` (family `m20`) and is `exactOnceVerified`: until the
+  template is verified in the card's colour the 2014–19 arch stands in —
+  `nearest`, "not yet verified in <colour>", marked `unverified` (the
+  request log's "Not yet verified") when the full-art template would be
+  exact; once it is, `withVerification` makes the match `exact` on it
+  (`FrameMatch.onceVerifiedMatch`) — or `nearest` with the gap's own
+  reason for a crown, two colours or the Nyx dress (logged "missing"
+  either way). A borderless token (`borderless/token`: WONE, WMOM, SLD —
+  every one an M20+ printing) names the full-art design the same way once
+  it is verified, still `nearest` (the borderless dress is 4.37).
+- **Creator** (wired 2026-09-29, `lib/creator/token-frame-auto.ts` inside
+  round 11's follow in `components/creator/card-creator-form.tsx`). The six
+  are variations of the token kind (`TEMPLATE_SKIN_VARIANTS.m15token`), each
+  height's artifact template its Artifact-word dress (`TYPE_WORD_DRESSES`).
+  The default switch: a NEW token — the token kind entered on the M15 era's
+  arch — starts on the full-art template its text and type words ask for
+  once that template is verified in the card's colour (`newTokenFrame`),
+  else on round 11's arch pick; per colour and per height, so nothing
+  changes until the owner verifies them. The Card step asks type, frame,
+  colour in that order and a new card starts colourless, so while the token
+  wears the switch's pick a colour picked AFTER the type moves it the same
+  way (`defaultTokenFrameIn`, the form's `handleColorIdentityChange`): onto
+  the full-art design where it is verified in that colour, back to the arch
+  (with a toast) where it isn't, and its colour tiles offer every colour
+  one of them is verified in. Before this, a token started colourless
+  stayed on the arch in a colour the full-art design was verified in, and
+  one started on the full-art design couldn't reach a colour it wasn't
+  verified in. Any frame the user picks (Frame section or Variations), an
+  import or an AI fill that names a frame, and leaving the token kind end
+  it. The arch stays offered, labelled
+  "Token (2014–2019)" — the new look's off switch — and stored cards keep
+  their frame (an addition, not a correction: "Additions vs corrections").
+  The height then follows the text (`followTokenHeight`) with round 11's
+  rules: any height picked in Variations sticks, the one the text asks for
+  included (`pinsTokenHeight`: the form's one `manual` flag); a
+  Frame-section pick goes back to automatic; a stored card whose height
+  disagrees with its text keeps it; the Artifact word's dress stays the
+  type-word effect's; never an unverified combo (a toast says why).
+  `tokenFrameFor` (`lib/creator/card-kinds.ts`), the rule the pickers, the
+  AI jobs (`resolveGeneratedFrame`) and the deck remix
+  (`autoTokenTextBoxFrame`) share, picks the height too
+  (`tokenHeightFrameFor`, P/T-aware): the AI dialog offers the full-art
+  token once, never its heights, and an AI or remix token never lands on
+  the textless height over text it would hide.
+- **Rollout.** New templates, no stored card: no layout bump, no sweep. The
+  owner runs `frames:promote`, then verifies each colour (0.9 → 2.2 → 2.4)
+  against the references in `lib/cards/frame-references.json`.
 
 ## Art under and around the frame
 
