@@ -145,7 +145,15 @@ into `.frames-build/` — 17 templates today (`CC_TEMPLATES` in
   shield cut out to `loyalty/` as on m15pw. The regular pack has no
   colourless frame: `c` is its see-through 'Artifact Frame' with its alpha
   lifted ×255/234 (a layer's `gain`), so the rim is opaque like every other
-  colour's and the tall pack's 'Colorless Frame'.
+  colour's and the tall pack's 'Colorless Frame'. The gold `m` is MATCHED TO
+  THE PRINTS (owner round 15, 2026-09-29): CC's 'Multicolored Frame' paints
+  flat tan faces where every mono-gold borderless walker prints a pale cream
+  face veined with gold, so the pack's 'White Frame' recolours the m frame's
+  title and type faces through CC's Title and Type masks (a `recolour`
+  layer: colour only, the alpha below kept, weighted by the white face's own
+  luminance — `PW_GOLD_FACE`, fitted to the 13 exact prints;
+  `tests/unit/frames/gold-walker-faces.test.ts` holds a built master to
+  their range, `tests/unit/frames/fixtures/gold-walker-prints.json`).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -738,7 +746,11 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   dark-barred ones (every mono-black one but `LIGHT_BLACK_WALKER_PINS`, and
   `DARK_BAR_WALKER_PINS`' gold PS19 #207) and the two Secret Lair walkers
   that letter their name across the art (`LETTERED_NAME_WALKER_PINS`, SLD
-  #1619 / #1622) are `nearest`.
+  #1619 / #1622) are `nearest` (owner round 15, 2026-09-29: they stay so,
+  and the box stays automatic). A walker with no ability text shows the
+  light first stripe in its see-through window, never the bare art
+  (`rules.backdropWhenEmpty`, `drawsRulesBackdrop` in both renderers; the
+  editor keeps its hint rows).
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or
