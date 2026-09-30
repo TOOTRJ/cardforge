@@ -97,6 +97,23 @@ describe("listSlotPaths / slotRect", () => {
     );
   });
 
+  it("with a kind, lists the walker shield, defense and chapter rail for their own kind only (TODO 4.5.0)", () => {
+    const walker = getFrameProfile("m15pw");
+    expect(listSlotPaths(walker, "planeswalker")).toEqual(listSlotPaths(walker));
+    expect(listSlotPaths(walker, "planeswalker")).toContain("loyalty");
+    expect(listSlotPaths(walker, "creature")).toEqual(listSlotPaths(walker).filter((p) => p !== "loyalty"));
+    const battle = getFrameProfile("battle");
+    expect(listSlotPaths(battle, "battle")).toContain("defense");
+    expect(listSlotPaths(battle, "creature")).not.toContain("defense");
+    const saga = getFrameProfile("saga");
+    expect(listSlotPaths(saga, "saga")).toContain("chapters");
+    expect(listSlotPaths(saga, "enchantment")).not.toContain("chapters");
+    // The P/T and the second faces are not a kind's own: any kind keeps them.
+    expect(listSlotPaths(getFrameProfile("m15"), "artifact")).toContain("pt");
+    expect(listSlotPaths(getFrameProfile("flip"), "flip")).toEqual(listSlotPaths(getFrameProfile("flip")));
+    expect(listSlotPaths(getFrameProfile("flip"), "creature")).toEqual(listSlotPaths(getFrameProfile("flip")));
+  });
+
   it("resolves rects for bare-rect and slotted paths on every template", () => {
     for (const template of ["m15", "saga", "aftermath", "battle", "m15pw"]) {
       const profile = getFrameProfile(template);

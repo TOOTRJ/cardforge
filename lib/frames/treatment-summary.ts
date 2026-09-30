@@ -49,7 +49,12 @@ export type TreatmentView = {
   shared: SharedSlotRow[];
 };
 
-/** The slot rects a template draws today (its layout override applied). */
+/** The slot rects a template draws today (its layout override applied):
+ *  every slot the frame has (listSlotPaths with no kind). The treatment view
+ *  pools them per frame, and needs no kind filter here: each colour's
+ *  scores already hold only the slots its reference printing's kind draws
+ *  (score-combo.ts, TODO 4.5.0), so a slot no reference scored pools
+ *  nothing. */
 export function slotRectsFor(
   template: FrameTemplate,
   overrides: FrameProfileOverridesMap,

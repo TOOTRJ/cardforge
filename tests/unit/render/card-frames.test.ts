@@ -140,15 +140,13 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
       style: "glyph" as const,
       assetPathTemplate: "/frames/fullartland/symbol/{symbol}.png",
     };
-    // Without a slot only the P/T plate the profile always lists (the
-    // pre-4.39 fullartland; m15textlessland today).
-    expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15textlessland" } })).toEqual([
-      "/frames/m15/pt/w.png",
-    ]);
+    // Without a slot, nothing: the profile's P/T plate is never preloaded
+    // for a land, which prints none (TODO 4.5.0 — the pre-4.39 fullartland;
+    // m15textlessland today).
+    expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15textlessland" } })).toEqual([]);
     // The full-art basics (4.39) preload their own symbol image.
-    expect(frameAssetPathsFor(plains)).toEqual(["/frames/m15/pt/w.png", "/frames/fullartland/symbol/w.png"]);
+    expect(frameAssetPathsFor(plains)).toEqual(["/frames/fullartland/symbol/w.png"]);
     expect(frameAssetPathsFor({ ...plains, frameStyle: { template: "m15fullartland" } })).toEqual([
-      "/frames/m15/pt/w.png",
       "/frames/m15fullartland/symbol/w.png",
     ]);
     // …and the borderless M15 frame (4.32) its own P/T plate.
@@ -163,7 +161,6 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
       } as unknown as CardPreviewData),
     ).toEqual(["/frames/m15borderless/pt/g.png"]);
     expect(frameAssetPathsFor({ ...plains, profileOverrides: { fullartland: { basicSymbol: slot } } })).toEqual([
-      "/frames/m15/pt/w.png",
       "/frames/fullartland/symbol/w.png",
     ]);
     // An explicit mana watermark swaps the symbol it preloads.
@@ -173,7 +170,7 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
         watermark: { kind: "mana", key: "g", size: "large" },
         profileOverrides: { fullartland: { basicSymbol: slot } },
       }),
-    ).toEqual(["/frames/m15/pt/w.png", "/frames/fullartland/symbol/g.png"]);
+    ).toEqual(["/frames/fullartland/symbol/g.png"]);
     // A textless planeswalker draws no ability rows: no badges.
     const walker = {
       title: "W",

@@ -191,6 +191,8 @@ export function SlotOverlay({
   showAll: boolean;
   onSelect: (path: SlotPath) => void;
 }) {
+  // Every slot the frame has, whatever kind sits on it (no kind): the
+  // editor moves the walker shield on m15pw as much as its title.
   const paths = useMemo(() => listSlotPaths(profile), [profile]);
 
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
