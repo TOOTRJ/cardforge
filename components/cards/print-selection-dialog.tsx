@@ -48,7 +48,7 @@ import {
 //   ZIP       — one clean image per card (HD or standard; HD may carry the
 //               bleed), square like every print file — or MakePlayingCards'
 //               poker-size file (TODO 6.1: MPC's own bleed, 1644 × 2244,
-//               a Battle or Split turned upright; never the 1/8″ on top).
+//               a Battle or Split turned portrait; never the 1/8″ on top).
 //
 // Pro, like the deck export (the caller opens the upgrade modal instead of
 // this dialog for anyone else; POST /api/cards/export checks it again). The
@@ -212,7 +212,7 @@ function PrintSelectionBody({
             {mpc ? (
               <p className="text-xs leading-5 text-subtle" data-testid="print-selection-mpc">
                 MakePlayingCards&apos; poker-size upload: 822 × 1122 at 300 dpi, here at 600 — the card plus
-                MPC&apos;s bleed, square corners. A Battle or Split comes upright, as MPC prints it.
+                MPC&apos;s bleed, square corners. A Battle or Split is turned onto MPC&apos;s portrait card, its title up the left edge.
               </p>
             ) : null}
           </Field>

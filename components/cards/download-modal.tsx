@@ -19,7 +19,7 @@
 //                  × 2100) or 800 ppi (2000 × 2800), and the Bleed — None,
 //                  1/8″ (2.75″ × 3.75″), or MakePlayingCards (MPC's poker-
 //                  size upload: its own bleed, 1644 × 2244 at 600 ppi, a
-//                  Battle or Split turned upright). Any of them is a PRINT
+//                  Battle or Split turned portrait). Any of them is a PRINT
 //                  render: square, PNG only (the JPEG chip and Rounded are
 //                  disabled while one is on, and the print options while
 //                  JPEG is), ?ppi=…&bleed=1|mpc.
@@ -505,7 +505,7 @@ function printDescription(opts: { ppi: PrintPpi; bleed: PrintBleed }, frameUpsca
   const parts = [
     `Clean ${size} render with square corners, the art at full resolution.`,
     opts.bleed === "mpc"
-      ? `MakePlayingCards' poker-size upload (822 × 1122 at 300 dpi, here at ${opts.ppi}): the card (${trim} at the trim) plus MPC's bleed, ${out.bleedX} px on every side. A Battle or Split comes upright, as MPC prints it.`
+      ? `MakePlayingCards' poker-size upload (822 × 1122 at 300 dpi, here at ${opts.ppi}): the card (${trim} at the trim) plus MPC's bleed, ${out.bleedX} px on every side. A Battle or Split is turned onto MPC's portrait card, its title up the left edge.`
       : opts.bleed
         ? `The card (${trim} at the trim) runs 1/8″ past the trim line on every side (2.75″ × 3.75″) — cut along the card's edge.`
         : null,
@@ -565,7 +565,7 @@ function PrintOptions({
           />
           <p className="text-[11px] leading-4 text-subtle">
             {choice === "mpc"
-              ? "Sized for MakePlayingCards' poker-size cards: MPC's own bleed, always upright."
+              ? "Sized for MakePlayingCards' poker-size cards: MPC's own bleed, always portrait."
               : "1/8″ extends the card past the trim on every side (2.75″ × 3.75″) for print shops."}
           </p>
         </div>

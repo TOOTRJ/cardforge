@@ -119,7 +119,7 @@ describe("DownloadModal print options (paid)", () => {
     expect(screen.getByText("PNG for MakePlayingCards")).toBeTruthy();
     expect(screen.getByText(/^Clean 1644 × 2244 render/)).toBeTruthy();
     expect(screen.getByText(/822 × 1122 at 300 dpi, here at 600\): the card \(1500 × 2100 at the trim\) plus MPC's bleed, 72 px on every side/)).toBeTruthy();
-    expect(screen.getByText(/A Battle or Split comes upright/)).toBeTruthy();
+    expect(screen.getByText(/A Battle or Split is turned onto MPC's portrait card, its title up the left edge\./)).toBeTruthy();
     // Print: square, PNG only.
     expect(radio("download-corners", "Corners", "Square").getAttribute("aria-checked")).toBe("true");
     expect((radio("download-format", "File type", "JPEG") as HTMLButtonElement).disabled).toBe(true);
