@@ -159,7 +159,7 @@ const EXPORTS_FAQ: FaqEntry[] = [
   },
   {
     q: "Why does my card look slightly different than before?",
-    a: "PipGlyph keeps matching its frames to real printed Magic cards. When an update corrects something that was drawn wrong — a text size, a misplaced symbol, the edge of a frame — every published card it affects is re-rendered with the fix automatically, usually within a few hours of the update, and private cards show it the next time you open them. Only the drawing changes: your card's name, text, art and stats stay exactly as you left them. A new style that is a matter of taste is never forced on an existing card — you choose whether to switch it on. Images you downloaded earlier don't change; download the card again for the updated image. Updates are described on the News page.",
+    a: "PipGlyph keeps matching its frames to real printed Magic cards. When an update corrects something that was drawn wrong — a text size, a misplaced symbol, the edge of a frame — every published card it affects is re-rendered with the fix automatically, usually within a few hours of the update, and private cards show it the next time you open them. A correction changes how the card is drawn, not what you made: its name, rules text, art and stats stay as you left them. A new style that is a matter of taste is never forced on an existing card — you choose whether to switch it on. Images you downloaded earlier don't change; download the card again for the updated image. Bigger updates are announced on the What's new page.",
   },
 ];
 

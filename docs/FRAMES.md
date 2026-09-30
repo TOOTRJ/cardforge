@@ -284,8 +284,8 @@ bake's transparent corner mask and the frame masters all read it.
     builders above write the master the gate checked, truecolour, and
     `tests/unit/frames/frame-corners.test.ts` fails one whose write after
     the gate passes `effort`, `palette`, `quality`, `colours` or `dither`.
-    (The showcase and Alpha builders, whose masters the pass never touches,
-    still quantise.)
+    (The showcase, split and Alpha builders, whose masters the pass never
+    touches, still quantise; Alpha only without `ALPHA_FULL_COLOUR=1`.)
 - **Square outputs.** Print (the PDF card and sheets, the Pro deck PDF +
   ZIP) and the Square PNG are the round render squared again
   (`squareCardCorners`): outside the arc each corner is the card's border
@@ -309,9 +309,11 @@ bake's transparent corner mask and the frame masters all read it.
 
 Every master, git or bucket, in every colour, is checked by CI. The Card
 Conjurer importer runs the edge contract, the corner check and the
-art-window coverage on each master before it writes one, and the MSE
-builders run Phase B's gate (the edge contract and the corner check among
-it) on the templates they normalise ([The card corner](#the-card-corner)).
+art-window coverage on every master it builds and exits non-zero on a
+violation (the files are still written, so read its output before
+publishing), and the MSE builders run Phase B's gate (the edge contract and
+the corner check among it) on the templates they normalise, refusing to
+write a master that fails ([The card corner](#the-card-corner)).
 A check's known failures are listed in the check's own table, each with the
 TODO item that fixes it: fixing a master means striking its row.
 
@@ -1159,10 +1161,11 @@ otherwise; the page's reason texts are quoted as they appear.
    covering those cards, **Pause** first (the gotcha above).
 2. **After the deploy.** Wait for Vercel's production deployment to be
    Ready. The **Layout** stat now shows the new version (it is the running
-   deployment's `CARD_LAYOUT_VERSION`). Within 5 minutes the status reads
-   "Running now", the pending estimate starts falling, and the Vercel log
-   shows one `[auto-rebake] v<N> stop=budget …` line per run. If you paused,
-   **Resume** now.
+   deployment's `CARD_LAYOUT_VERSION`). If you paused, **Resume** now.
+   Within 5 minutes a run starts: the status reads "Running now" while it
+   bakes, the pending estimate starts falling, **Last run** counts what it
+   re-baked, and the Vercel log shows one `[auto-rebake] v<N> stop=… …` line
+   per run (`stop=budget` while cards are left, `stop=done` on the last).
 3. **How big is it?** The pending estimate is an upper bound (it counts
    opt-in-only and stamp-only cards). For the exact plan, run the manual
    script's dry run against production (below) — `SCOPE=sweep` without
@@ -1184,7 +1187,7 @@ The **Last run** block says why it stopped (`STOP_LABELS` in
 | "Used its time budget — the next run continues" | Nothing: a sweep in progress |
 | "Handed over to a manual re-bake" | Nothing: a script run or "Re-bake now" has the lease; the cron comes back when it ends |
 | "Paused by an admin mid-run" | Resume when ready |
-| "Lost the sweep lease mid-run" | Nothing once (it should not happen: the lease outlives the run); if it repeats, look for a second sweeper holding the lease |
+| "Lost the sweep lease mid-run" | Nothing once. It should not happen: nobody can take a live lease, and the lease (310 s) outlives the run (300 s). If it repeats, it is a bug: check the Vercel logs for that run |
 | "Breaker tripped — paused" | [When the breaker trips](#when-the-breaker-trips) |
 | "A batch hung — paused" | [When the breaker trips](#when-the-breaker-trips) |
 | "A slow last batch ran into the time limit — the next run continues" | Nothing: the next run carries on |
@@ -1232,21 +1235,21 @@ quotes the reason. Find the reason, fix the cause, then **Resume**:
 |---|---|---|
 | "A whole batch failed (N cards): …" | Systemic: a renderer regression, storage or the frames bucket unreachable, a frame object not promoted | Read the error it quotes; check the latest deploy and `npm run frames:check`; fix, then Resume |
 | "N cards failed to re-bake in one run …" | Same as above, spread over several batches | Same |
-| "A re-bake batch was still running after N s — a render may hang" | A card hangs the renderer, or storage stalled | The last run lists the cards in that batch. A one-off stall: Resume. The same batch again: a renderer bug, keep it paused and fix it |
+| "A re-bake batch was still running after N s — a render may hang" | A card hangs the renderer, or storage stalled | The last run lists the cards in that batch. A hang strikes no card, so Resume retries the same cards: a one-off stall passes; the same batch hanging again is a renderer bug, keep it paused and fix it |
 | "The re-bake batch failed N runs in a row: …" | The batch query fails: a deploy reads a column its migration hasn't applied yet, or the database is down | Check that production's migrations applied after the merge and that the database answers; Resume once the query works |
 | "N automatic runs in a row died before finishing …" | A card crashes the function (time limit, out of memory) | Its batch got a strike each (listed on the last run). Check Vercel's function logs; Resume — a crasher reaches the poison list after 3 strikes |
 | "N cards keep failing (more than 50) …" | Something wrong beyond single cards | Look for the common error on the list; fix; Retry these cards; Resume (it trips once, so Resume carries on past cards you can't fix yet) |
-| "Paused by @…" (or "Paused by an admin.") | An admin paused it | Ask them, or Resume |
+| "Paused by @…" | An admin paused it (not the breaker) | Ask them, or Resume |
 
 ### A sweep that seems stuck
 
 | What the page shows | What it means | What to do |
 |---|---|---|
-| **Last check** older than ~10 minutes | The cron isn't reaching the route | Vercel → Project → Settings → Cron Jobs, and the logs for `/api/cron/auto-rebake`: a 401 is a wrong or missing `CRON_SECRET`; crons run only on the production deployment |
+| **Last check** older than ~10 minutes while the status reads "On — every 5 minutes" | The cron isn't reaching the route, or the route fails before it records anything | Vercel → Project → Settings → Cron Jobs, and the logs for `/api/cron/auto-rebake`: a 401 is a wrong or missing `CRON_SECRET`, a 503 a missing `SUPABASE_SECRET_KEY`, a 500 with `[auto-rebake] error="…"` a failed state read or pending count. Crons run only on the production deployment. (A paused sweep, or one waiting for a manual run's lease, skips without updating **Last check**: that is expected.) |
 | Last run "Refused — the billing flag is off (bakes would be clean)" and the red banner | `NEXT_PUBLIC_BILLING_ENABLED` isn't `true` on this deployment | Set it on Production and redeploy. Never bake around it |
 | "Manual re-bake active" for a long time | A script run is in progress, or a killed one left the lease parked | The page says when the lease lapses (a park lasts ≤ 120 s, a held lease ≤ 310 s); a finished or killed script frees it by itself |
-| "Running now" long past 5 minutes | A batch outlived the run | Nothing: the next run either continues ("overrun") or trips the breaker ("hung"), and the lease lapses by itself |
-| **Pending (estimate)** above 0, but the last run "Finished — nothing left to re-bake" | The leftovers are opt-in-only cards (they keep their owner badge) or more than 150 poisoned ids the count can't exclude | Nothing to do. The script's dry run shows the split |
+| "Running now" on every visit for a long time | A big sweep: each run bakes for about 4 minutes, and the next starts 5 minutes after the last | Nothing, while **Last run** keeps moving and the pending estimate falls. A batch that outlives its run keeps the lease at most 310 s after the run took it; that run then stopped as an overrun (the next run carries on) or a hung batch (paused, see the breaker) |
+| **Pending (estimate)** above 0, but the last run "Finished — nothing left to re-bake" | The leftovers are opt-in-only cards (they keep their owner badge), cards that failed in that run (**Failed** above 0: the next run retries them), or more than 150 poisoned ids the count can't exclude | Nothing to do. The script's dry run shows the split |
 | Last run "Stopped on an error", run after run | The batch query fails | It trips the breaker on the 3rd run; see the table above |
 | Pending not falling, failures growing | Cards failing one by one | See [The poison list](#the-poison-list) |
 
@@ -1256,27 +1259,33 @@ The lease never needs a hand: there is no SQL to run and no row to edit.
 
 `scripts/rebake-renders.mjs` drives the same batch through
 `POST /api/admin/rebake`, one batch per request, taking turns with the cron
-through the lease. Use it when the cron can't run (a billing flag being
-fixed, a Vercel cron outage), for a one-off `version` or `legacy-art` scope,
-or for the exact plan of a sweep. It always plans first and writes nothing
-without `CONFIRM=yes`; it refuses to bake when the server's billing flag is
-off; a network failure is retried (`REBAKE_RETRIES`, default 5) and every
-run is safe to repeat, because the route re-plans from what is still
-pending. It ends by re-planning (nothing may be left in scope) and checking
-that a few re-baked renders are reachable.
+through the lease. Use it when the cron can't run (a Vercel cron outage),
+for a one-off `version` or `legacy-art` scope, or for the exact plan of a
+sweep. It is no way around the billing flag: the route refuses to bake
+(412) and the script stops after its plan when the server's
+`NEXT_PUBLIC_BILLING_ENABLED` is off. It always plans first and writes
+nothing without `CONFIRM=yes`; a network failure is retried
+(`REBAKE_RETRIES`, default 5) and every run is safe to repeat, because the
+route re-plans from what is still pending. It ends by re-planning (nothing
+may be left in scope) and checking that a few re-baked renders are
+reachable.
 
-Against production (owner; it needs production's `CRON_SECRET`, typed
-without echo so it stays out of shell history):
+Against production (owner; it needs production's `CRON_SECRET` from Vercel
+→ Settings → Environment Variables). Read it into an unexported shell
+variable without echo — the prompt waits silently; paste and press Enter —
+so it stays out of shell history and out of every other program's
+environment:
 
 ```bash
-read -rs CRON_SECRET && export CRON_SECRET
+read -rs CRON_SECRET
 ```
 
 ```bash
-SCOPE=sweep REBAKE_URL=https://www.pipglyph.com/api/admin/rebake node scripts/rebake-renders.mjs
+CRON_SECRET="$CRON_SECRET" SCOPE=sweep REBAKE_URL=https://www.pipglyph.com/api/admin/rebake node scripts/rebake-renders.mjs
 ```
 
-That prints the plan. Add `CONFIRM=yes` to write. Other scopes:
+That prints the plan. Add `CONFIRM=yes` to write, and `unset CRON_SECRET`
+when you are done. Other scopes:
 `SCOPE=version VERSION=<n>` (only the cards bump n changed; n must be a
 "sweep" version) and `SCOPE=legacy-art` (art on a legacy storage host,
 renders older than `BEFORE`). `BATCH` sets cards per request (default 8,
@@ -1287,50 +1296,55 @@ frame-layout save marked) is the same batch from an admin session.
 
 An addition is announced with a site update (the rule above), and so is a
 correction sweep that changes cards people will notice. Write it in
-Admin → Updates (`/admin/updates`); it shows on `/news`. The FAQ entry "Why
+Admin → Updates (`/admin/updates`); it shows on `/news` (What's new). The
+FAQ entry "Why
 does my card look slightly different than before?" (`lib/content/faq.ts`,
 Exports & printing, `/faq#exports`) is the standing answer to link. A post
-is plain text: title ≤ 120 characters, summary ≤ 280, body ≤ 4000 (line
-breaks are kept). Post a correction once its sweep has finished; an addition
-when it ships.
+is plain text: title ≤ 120 characters, summary ≤ 280 (a single line), body
+≤ 4000. The page keeps the body's line breaks, so each paragraph or bullet
+is ONE line: paste each block below into its field as it stands. Post a
+correction once its sweep has finished; an addition when it ships.
 
-**Correction (a sweep)** — kind "update", link `/faq#exports`:
+**Correction (a sweep)** — kind "update", link `/faq#exports`. Title,
+summary, body:
 
 ```text
-Title:   Cards on <frames> now match their printed frames more closely
-Summary: We corrected <what> on <frames>. Published cards on those frames
-         have been re-rendered with the fix — there's nothing you need to do.
+Cards on <frames> now match their printed frames more closely
+```
 
-Body:
+```text
+We corrected <what> on <frames>. Published cards on those frames have been re-rendered with the fix — there's nothing you need to do.
+```
+
+```text
 What changed
-- <one line per correction, in plain words: "Names and type lines on the
-  M15 frames are now the size printed cards use.">
+- <one line per correction, in plain words, e.g. "Names and type lines on the M15 frames are now the size printed cards use.">
 
 Which cards
-- Every card on <frames>. Only the drawing changed: your cards' names,
-  text, art and stats are exactly as you left them.
+- Every card on <frames>. Only the drawing changed: your cards' names, text, art and stats are exactly as you left them.
 
 Downloads
-- Images you downloaded before stay as they were. Download the card again
-  for the updated image.
+- Images you downloaded before stay as they were. Download the card again for the updated image.
 ```
 
 **Addition (opt-in per card)** — kind "update" (or "upcoming" before it
-ships), link to where it shows (the creator, a guide):
+ships), link to where it shows (the creator, a guide). Title, summary, body:
 
 ```text
-Title:   New: <feature> for <frames or card kind>
-Summary: New cards get <feature> by default. Your existing cards keep their
-         look — switch it on in the editor if you want it.
+New: <feature> for <frames or card kind>
+```
 
-Body:
+```text
+New cards get <feature> by default. Your existing cards keep their look — switch it on in the editor if you want it.
+```
+
+```text
 What's new
 - <what it looks like, and which printed cards have it>
 
 Your cards
 - New cards: on by default; turn it off in <where the switch is>.
-- Existing cards: unchanged. Open a card and switch it on in
-  <where the switch is>.
+- Existing cards: unchanged. Open a card and switch it on in <where the switch is>.
 - Scryfall imports follow the printing: a card that prints <feature> gets it.
 ```
 
@@ -1348,8 +1362,9 @@ regression with 7.1); kept here for rebuilding an environment.
   regression** (with typecheck/lint/unit, e2e and Supabase Preview).
   Without **Frames published**, only the production build gate stands
   between a merge and missing frames.
-- Production needs `NEXT_PUBLIC_BILLING_ENABLED=true` and `CRON_SECRET` for
-  the automatic re-bake ([Re-bake runbook](#re-bake-runbook)).
+- Production needs `NEXT_PUBLIC_BILLING_ENABLED=true`, `CRON_SECRET` and
+  `SUPABASE_SECRET_KEY` for the automatic re-bake ([Re-bake
+  runbook](#re-bake-runbook)).
 
 ## If the dev branch is reset
 

@@ -202,8 +202,7 @@ Rules and gotchas:
   every 5 min, production only; `lib/cards/auto-rebake.ts`) re-bakes what a
   "sweep" bump or a null stamp left behind — `runRebakeBatch` scope `sweep`,
   ≤240 s per run, never without `NEXT_PUBLIC_BILLING_ENABLED`; idle = one
-  head count below
-  `latestSweepVersion()`. ONE lease (`render_sweep_state`, service-role only —
+  head count below `latestSweepVersion()`. ONE lease (`render_sweep_state`, service-role only —
   it names unlisted cards; `lib/cards/sweep-lease.ts`) is shared with
   `POST /api/admin/rebake` (the script, which still works) and
   `/api/admin/rebake-marked`: a manual call makes the cron yield after its

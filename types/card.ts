@@ -279,10 +279,10 @@ export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
   ["borderless", "regular"],
 ]);
 
-// Frame templates correspond to one 1500×2100 master per colour key
-// (w/u/b/r/g/c/m), with the art window cut out to alpha=0 so the user's art
-// renders behind the frame, plus a layout profile in
-// lib/cards/template-layout.ts. The masters come from two sources
+// Frame templates correspond to one master per colour key (w/u/b/r/g/c/m;
+// 1500×2100, the landscape battle 2100×1500), with the art window cut out to
+// alpha=0 so the user's art renders behind the frame, plus a layout profile
+// in lib/cards/template-layout.ts. The masters come from two sources
 // (docs/FRAMES.md "Provenance and legal"): MSE's Full-Magic-Pack, in git
 // under public/frames/{template}/, and Card Conjurer (the M15 family, the
 // borderless frame, the full-art basics, the text-box tokens), in the frames
