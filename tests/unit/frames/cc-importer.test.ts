@@ -499,28 +499,34 @@ describe("pixel operations", () => {
   });
 
   it("recolours without touching the alpha, weighted by mask × opacity × the layer's own luminance ramp (4.33's gold walker)", () => {
-    // 5×1 over a tan base (α 255 ×3, then a see-through face α 217, then clear):
-    // a white ground (luma 251: full weight 0.9), a grey vein (luma 230: none),
-    // a mid pixel (luma 241: 0.4 × 0.9), the see-through face (as opaque as
-    // the base: full weight), clear art (nothing to recolour).
+    // 6×1 over a tan base (α 255 ×3, then a see-through face α 217, then clear,
+    // then α 217 again): a white ground (luma 251: full weight 0.9), a grey
+    // vein (luma 230: none), a mid pixel (luma 241: 0.4 × 0.9), the
+    // see-through face (as opaque as the base: full weight), clear art
+    // (nothing to recolour), and an OPAQUE white over the see-through face
+    // (full weight, and still the base's α 217 — the layer's alpha never
+    // reaches the result).
     const tan = [205, 182, 125];
     const base = {
       data: new Uint8Array([
         ...px(tan[0], tan[1], tan[2], 255), ...px(tan[0], tan[1], tan[2], 255), ...px(tan[0], tan[1], tan[2], 255),
-        ...px(tan[0], tan[1], tan[2], 217), ...px(0, 0, 0, 0),
+        ...px(tan[0], tan[1], tan[2], 217), ...px(0, 0, 0, 0), ...px(tan[0], tan[1], tan[2], 217),
       ]),
     };
     const white = {
       data: new Uint8Array([
         ...px(251, 251, 251, 255), ...px(230, 230, 230, 255), ...px(241, 241, 241, 255),
-        ...px(251, 251, 251, 217), ...px(251, 251, 251, 255),
+        ...px(251, 251, 251, 217), ...px(251, 251, 251, 255), ...px(251, 251, 251, 255),
       ]),
-      mask: new Uint8Array([...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255)]),
+      mask: new Uint8Array([
+        ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255), ...px(0, 0, 0, 255),
+        ...px(0, 0, 0, 255),
+      ]),
       recolour: true,
       opacity: 0.9,
       lumaRamp: [235, 250],
     };
-    const out = toRgba8(compositeLayers([base, white], 5, 1));
+    const out = toRgba8(compositeLayers([base, white], 6, 1));
     const at = (x: number) => [...out.subarray(x * 4, x * 4 + 4)];
     expect(at(0)).toEqual([246, 244, 238, 255]); // tan × 0.1 + 251 × 0.9
     expect(at(1)).toEqual([...tan, 255]);
@@ -528,11 +534,13 @@ describe("pixel operations", () => {
     // The see-through face keeps α 217 — recoloured, never made more opaque.
     expect(at(3)).toEqual([246, 244, 238, 217]);
     expect(at(4)).toEqual([0, 0, 0, 0]);
+    // An opaque layer over it recolours it the same way and leaves its α 217.
+    expect(at(5)).toEqual([246, 244, 238, 217]);
     // Outside its mask it does nothing.
-    const masked = toRgba8(compositeLayers([base, { ...white, mask: new Uint8Array(20) }], 5, 1));
+    const masked = toRgba8(compositeLayers([base, { ...white, mask: new Uint8Array(24) }], 6, 1));
     expect([...masked.subarray(0, 4)]).toEqual([...tan, 255]);
     // It needs something below it.
-    expect(() => compositeLayers([white], 5, 1)).toThrow(/needs a layer below/);
+    expect(() => compositeLayers([white], 6, 1)).toThrow(/needs a layer below/);
   });
 
   it("blends a half-visible layer and rounds (not truncates) to 8 bits", () => {
