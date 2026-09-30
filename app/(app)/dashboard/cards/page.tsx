@@ -25,6 +25,7 @@ import {
   listRemixParentLinks,
 } from "@/lib/cards/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/billing/entitlements";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
 import { getCardCapacity } from "@/lib/cards/capacity";
 
@@ -83,12 +84,13 @@ async function MyCardsLibrary({
   sort: MyCardsSort;
 }) {
   const viewer = await getCurrentUser();
-  const [profileOverrides, myCards, likedCards] = await Promise.all([
+  const [profileOverrides, myCards, likedCards, entitlements] = await Promise.all([
     getFrameProfileOverrides(),
     listMyCards(),
     viewer
       ? listLikedCardsByUser(viewer.id, { limit: LIKED_LIMIT })
       : Promise.resolve([]),
+    getEntitlements(),
   ]);
   const remixParents = await listRemixParentLinks(myCards);
 
@@ -101,6 +103,9 @@ async function MyCardsLibrary({
       initialView={view}
       initialFilter={filter}
       initialSort={sort}
+      // "Print / download" a selection has the deck export's entitlement
+      // (Pro, TODO 6.15); POST /api/cards/export checks it again.
+      canPrint={entitlements.allowBatchExport}
     />
   );
 }
