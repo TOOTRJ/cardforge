@@ -67,6 +67,7 @@ import {
   fileNameInFolder,
   userFolder,
   userObjectPath,
+  STAGED_TOMBSTONE,
   userUploadStaging,
 } from "@/lib/media/user-storage";
 
@@ -228,6 +229,16 @@ describe("userUploadStaging", () => {
       { op: "download", args: [`${ME}/u.upload`] },
       { op: "remove", args: [[`${ME}/u.upload`]] },
     ]);
+  });
+
+  it("markConsumed overwrites the staged object with the 8-byte non-image tombstone (the signed URL can't put it again)", async () => {
+    expect(await userUploadStaging(ME).markConsumed("u.upload")).toEqual({ error: null });
+    expect(state.calls).toEqual([
+      { op: "upload", args: [`${ME}/u.upload`, STAGED_TOMBSTONE, { upsert: true, contentType: "image/png", cacheControl: "0" }] },
+    ]);
+    expect(new TextDecoder().decode(STAGED_TOMBSTONE)).toBe("consumed");
+    expect((await userUploadStaging(ME).markConsumed("../x.upload")).error).not.toBeNull();
+    expect(state.calls).toHaveLength(1);
   });
 
   it("never registers a storage origin (nothing here becomes a stored URL)", async () => {

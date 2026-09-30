@@ -26,8 +26,11 @@
 --    `{userId}/{uuid}.upload`, in this bucket; finishCardArtUploadAction
 --    reads it back with the service role, runs the byte sniff, the metadata
 --    strip and the moderation scan, writes the real object into card-art and
---    removes the staged one (lib/cards/upload-art-server.ts,
---    lib/media/user-storage.ts userUploadStaging).
+--    overwrites the staged one with an 8-byte non-image tombstone
+--    (lib/cards/upload-art-server.ts, lib/media/user-storage.ts
+--    userUploadStaging): a signed upload URL only refuses to OVERWRITE, so a
+--    deleted key could be put again with the same token and finished twice
+--    on one counted upload.
 --      * public = false and NO policy on storage.objects for it: no API role
 --        can list, read, write or delete here (0126's rule — never add an
 --        owner-folder write policy — holds). A signed upload URL is Storage's
@@ -36,8 +39,9 @@
 --        card-art / set-covers / profile-media / custom-pips objects only.
 --      * Storage enforces this row's file_size_limit and allowed_mime_types
 --        on the signed upload itself.
---      * An upload whose finish never came is removed by the same user's
---        next start (older than 3 hours) and by account deletion
+--      * An upload whose finish never came, and a tombstone, is removed by
+--        the same user's next start (older than 3 hours, past the token's 2)
+--        and by account deletion
 --        (lib/account/actions.ts); nothing else reads the bucket.
 --
 -- Grants: none changed. storage.buckets / storage.objects privileges are

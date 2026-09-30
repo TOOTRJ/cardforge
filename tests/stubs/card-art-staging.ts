@@ -41,6 +41,15 @@ export function stagingBucketApi(bucket: string) {
   };
 }
 
+/** Record a service-role write into the staging bucket (the finish action's
+ *  tombstone, user-storage markConsumed). */
+export function stageWrite(bucket: string, key: string, body: unknown): void {
+  if (bucket === STAGING_BUCKET) staged.set(key, new Uint8Array(body as Uint8Array));
+}
+
+/** The 8 bytes a consumed staged object holds (lib/media/user-storage.ts). */
+export const TOMBSTONE = new TextEncoder().encode("consumed");
+
 /** Drop staged bytes when the staging bucket's remove is called. */
 export function forgetStaged(bucket: string, keys: string[]): void {
   if (bucket === STAGING_BUCKET) for (const key of keys) staged.delete(key);

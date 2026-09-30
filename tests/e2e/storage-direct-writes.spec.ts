@@ -128,6 +128,17 @@ test.describe("direct client writes (migration 0126)", () => {
     // Once: the same token can't overwrite it.
     const again = await user.storage.from(bucket).uploadToSignedUrl(key, token, png(), { contentType: "image/png" });
     expect(again.error, "a second PUT with the same token must be refused").not.toBeNull();
+    // The service role (the finish action) reads what the user put.
+    const staged = await admin.storage.from(bucket).download(key);
+    expect(staged.error).toBeNull();
+    expect(Buffer.from(await staged.data!.arrayBuffer()).equals(PNG)).toBe(true);
+    // …which is why the finish action overwrites a consumed key with its
+    // tombstone (service role, upsert) instead of deleting it: the key stays
+    // occupied, so the token (valid 2 hours) can't put a second file there.
+    const tomb = await admin.storage.from(bucket).upload(key, new TextEncoder().encode("consumed"), { upsert: true, contentType: "image/png" });
+    expect(tomb.error).toBeNull();
+    const replay = await user.storage.from(bucket).uploadToSignedUrl(key, token, png(), { contentType: "image/png" });
+    expect(replay.error, "a PUT over the tombstone must be refused").not.toBeNull();
     // …nor reach another key.
     const elsewhere = await user.storage.from(bucket).uploadToSignedUrl(`${userId}/${run}-other.upload`, token, png(), { contentType: "image/png" });
     created.push({ bucket, key: `${userId}/${run}-other.upload` });
@@ -137,10 +148,10 @@ test.describe("direct client writes (migration 0126)", () => {
     expect((await fetch(`${url}/storage/v1/object/public/${bucket}/${key}`)).ok).toBe(false);
     expect((await user.storage.from(bucket).download(key)).error).not.toBeNull();
     expect((await user.storage.from(bucket).list(userId)).data ?? []).toEqual([]);
-    // The service role (the finish action) reads it.
+    // The replay left the tombstone in place.
     const read = await admin.storage.from(bucket).download(key);
     expect(read.error).toBeNull();
-    expect(Buffer.from(await read.data!.arrayBuffer()).equals(PNG)).toBe(true);
+    expect(Buffer.from(await read.data!.arrayBuffer()).toString()).toBe("consumed");
 
     // The bucket's own limits apply to a signed PUT: 20 MiB, image types only.
     const big = await sign(`${run}-big.upload`);

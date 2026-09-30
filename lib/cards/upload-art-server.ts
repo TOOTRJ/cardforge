@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { scanImageUrl } from "@/lib/moderation/image-scan";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import {
+  STAGED_TOMBSTONE,
   isUserStorageConfigured,
   userFolder,
   userUploadStaging,
@@ -57,7 +58,9 @@ import { isUuid, randomId } from "@/lib/ids";
 //          users hold no storage write policy since 0126);
 //        * the NSFW scan (a downscaled copy above 8 MiB, lib/media/
 //          model-input.ts), and a flagged object removed.
-//      The staged object is removed whatever happens.
+//      Once read, the staged object is replaced by a tombstone (not
+//      deleted: the signed URL could put a deleted key again), so one
+//      counted start stores at most one file.
 //
 // Why the byte sniff matters: a bucket validates the DECLARED Content-Type,
 // not the file bytes. Sharp reads the actual bytes and rejects anything that
@@ -175,7 +178,7 @@ function isStagedName(name: unknown): name is string {
 /**
  * Step 3 of a card-art upload: validate the staged file, store it in
  * `card-art/{userId}/…` without camera metadata, scan it, and return its
- * public URL. The staged object is removed in every case.
+ * public URL. Once read, the staged object is consumed (a tombstone).
  */
 export async function finishCardArtUploadAction(
   stagedName: string,
@@ -188,13 +191,24 @@ export async function finishCardArtUploadAction(
 
   const staging = userUploadStaging(ready.userId);
   const staged = await staging.download(stagedName);
-  // The staged copy has served its purpose once read (or once it failed to
-  // be): it never outlives this call.
-  await staging.remove([stagedName]).catch(() => undefined);
-  if (!staged.bytes) {
+  if (!staged.bytes || isTombstone(staged.bytes)) {
     return { ok: false, error: "That upload wasn't found — try again." };
   }
+  // The staged file has served its purpose once read: its bytes never
+  // outlive this call. It is REPLACED by a tombstone rather than deleted —
+  // the signed URL (valid 2 hours) only refuses to overwrite, so a deleted
+  // key could be put again and finished again on this one counted upload.
+  // The tombstone goes with the user's next start once the URL has expired.
+  const consumed = await staging.markConsumed(stagedName).catch(() => ({ error: { message: "tombstone failed" } }));
+  if (consumed.error) {
+    await staging.remove([stagedName]).catch(() => undefined);
+  }
   return storeCardArt(ready.userId, staged.bytes);
+}
+
+/** A staged object a finish already consumed (user-storage markConsumed). */
+function isTombstone(bytes: Buffer): boolean {
+  return bytes.byteLength === STAGED_TOMBSTONE.byteLength && bytes.equals(Buffer.from(STAGED_TOMBSTONE));
 }
 
 /** The checks every card-art file passes before it is stored — the same

@@ -46,7 +46,8 @@ import { CARD_ART_INCOMING_BUCKET } from "@/lib/cards/art-upload-limits";
 // folder of a PRIVATE bucket. Nothing there is public or referenceable; the
 // finish action (lib/cards/upload-art-server.ts) downloads it here, sniffs,
 // strips and scans it like any upload, writes the real object through
-// userFolder("card-art") and removes the staged one.
+// userFolder("card-art") and replaces the staged one with a tombstone (so
+// the signed URL can't be used again).
 // ---------------------------------------------------------------------------
 
 export type UserStorageBucket =
@@ -160,6 +161,10 @@ export type UserFolder = ReturnType<typeof userFolder>;
 
 export type StagedUploadUrl = { path: string; token: string };
 
+/** What a consumed staged object holds: 8 bytes that are not an image, so no
+ *  finish can store them (see markConsumed). */
+export const STAGED_TOMBSTONE: Uint8Array = new TextEncoder().encode("consumed");
+
 /**
  * The caller's folder in the PRIVATE card-art staging bucket
  * (CARD_ART_INCOMING_BUCKET, migration 0131). Same rules as userFolder():
@@ -212,6 +217,25 @@ export function userUploadStaging(userId: string) {
     },
 
     remove,
+
+    /**
+     * Replace a staged object with STAGED_TOMBSTONE once its bytes are read.
+     * A signed upload URL only refuses to OVERWRITE: had the object been
+     * deleted, the same token (valid 2 hours) could put the key again and a
+     * second finish would store a second file on one counted upload. Kept
+     * occupied, the key takes no more PUTs; the tombstone (not an image) is
+     * cleared by removeOlderThan once the token has long expired.
+     */
+    async markConsumed(name: string): Promise<UserStorageResult> {
+      const key = keyOf(name);
+      if (!key) return refused("Invalid storage path.");
+      const { error } = await objects().upload(key, STAGED_TOMBSTONE, {
+        upsert: true,
+        contentType: "image/png",
+        cacheControl: "0",
+      });
+      return { error: error ? { message: error.message } : null };
+    },
 
     /**
      * Remove the caller's staged objects older than `maxAgeMs` — uploads

@@ -14,7 +14,7 @@ import { noisePng } from "../stubs/noise-png";
 //
 // This runs that whole path in the real creator against the local stack (CI
 // boots one with every migration): an ~11 MiB PNG lands in card-art, pixel
-// for pixel, and the staged copy is gone. With no OPENAI_API_KEY in the e2e
+// for pixel, and the staged copy is consumed. With no OPENAI_API_KEY in the e2e
 // env the moderation scan is a pass-through.
 // ---------------------------------------------------------------------------
 
@@ -58,9 +58,14 @@ test.describe("card art upload (TODO 6.10)", () => {
       expect(bytes.equals(art)).toBe(true);
       expect((await sharp(bytes).metadata()).width).toBe(1600);
 
-      // The staged copy never outlives the finish call.
+      // The staged file's bytes never outlive the finish call: its key holds
+      // the 8-byte tombstone (so the signed URL can't put it again) until
+      // the user's next start clears it.
       const { data: left } = await admin.storage.from("card-art-incoming").list(userId, { limit: 100 });
-      expect((left ?? []).filter((o) => o.name.endsWith(".upload"))).toEqual([]);
+      const withBytes = (left ?? []).filter(
+        (o) => o.name.endsWith(".upload") && Number((o.metadata as { size?: number } | null)?.size ?? 0) > 8,
+      );
+      expect(withBytes).toEqual([]);
     } finally {
       await admin.storage.from("card-art").remove([`${userId}/${name}`]);
     }
