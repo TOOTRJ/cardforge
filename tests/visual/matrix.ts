@@ -384,13 +384,20 @@ export function visualCases(): VisualCase[] {
     kind: CardKind,
     colour: VisualColour,
     shape: VisualShape,
-    extra: { preset?: VisualPreset; corners?: "round" | "square"; finish?: VisualCase["finish"]; suffix?: string } = {},
+    extra: {
+      preset?: VisualPreset;
+      corners?: "round" | "square";
+      finish?: VisualCase["finish"];
+      suffix?: string;
+      /** Fields over the stored row (a switch on frame_style, a cost). */
+      row?: Partial<CardRowForBake>;
+    } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
-    const row = rowFor(template, kind, colour, shape, finish, id);
+    const row = { ...rowFor(template, kind, colour, shape, finish, id), ...extra.row };
     cases.push({
       id,
       input: caseInput({ row, preset, corners }),
@@ -427,9 +434,32 @@ export function visualCases(): VisualCase[] {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });
   }
+  // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
+  // no stored card has the switch, so these are NEW cases, no bump): the
+  // gold-split pair on every template that draws one, the hybrid dress on
+  // m15, a finish of each dress and the stored bake's HD size.
+  const pairStyle = (template: FrameTemplate, finish: VisualCase["finish"] = "regular") => ({
+    frame_style: { template, finish, twoColor: true },
+  });
+  for (const template of PAIR_TEMPLATES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, "wu", "short", { suffix: "@pair", row: pairStyle(template) });
+  }
+  add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
+  add("m15", "creature", "wu", "long", {
+    suffix: "@pair-etched",
+    finish: "etched",
+    row: { ...pairStyle("m15", "etched"), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
+  add("m15", "creature", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15") });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }
+
+/** The templates whose PROFILES entry declares two-colour pair masters
+ *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
+export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land"];
 
 /** A case's rough bake cost, for balancing shards: the HD bake rasterises
  *  four times the pixels and its masters at full size (~10× on the
