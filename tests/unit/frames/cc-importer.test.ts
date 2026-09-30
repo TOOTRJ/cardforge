@@ -7,6 +7,12 @@ import {
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
+  EMBLEM_NAME_PILL_TONE,
+  EMBLEM_RAY_BRIDGE,
+  EMBLEM_SILVER_TONE,
+  EMBLEM_TEXT_BOX_TONE,
+  EMBLEM_TONES,
+  EMBLEM_TYPE_PILL_TONE,
   PW_COLOURLESS_RIM_GAIN,
   PW_GOLD_FACE,
   SHIELD_BOX,
@@ -18,18 +24,24 @@ import {
   M20_TOKEN_TEXTLESS_RECUT,
   TOKEN_REGULAR_RECUT,
   TOKEN_TEXTLESS_RECUT,
+  applyTone,
+  bridgeRayTip,
   builtColors,
   compositeFinish,
   compositeLayers,
   cutThroughMask,
   describeFinish,
   describeLayer,
+  gainAt,
   finishFor,
   recutBand,
   roundCorners,
   roundCornersRgba8,
+  silverGainAt,
   sourceFilesFor,
   toRgba8,
+  toneRegion,
+  toneSilver,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
@@ -66,6 +78,8 @@ type Def = {
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
   recut?: { fromY: number; toY: number; shift: number; blend: number; blendBottom?: number };
+  bridge?: typeof EMBLEM_RAY_BRIDGE;
+  tones?: readonly object[];
   excluded?: Record<string, string>;
   pack?: string;
   transforms?: string;
@@ -91,6 +105,7 @@ const recutOf = (template: string) =>
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
     expect(Object.keys(templates).sort()).toEqual([
+      "emblem",
       "fullartland",
       "m15",
       "m15artifact",
@@ -146,6 +161,153 @@ describe("Card Conjurer recipe", () => {
     ]);
     expect(templates.m15artifact.colors.c).toHaveLength(1);
     expect(templates.m15tokenartifact.colors.c).toHaveLength(1);
+  });
+
+  // TODO 4.52: the emblem is CC's one 'Planeswalker Emblems' master, 1:1 — no
+  // re-cut (its bars, box and spark sit within 3 px of TFDN #24 / #25, TBLB
+  // #30, TDSK #17, TFRA #16) — for every colour key: an emblem is colourless
+  // (CR 114) and each key keeps a master.
+  it("builds the emblem from CC's one emblem master, the same file for every key (TODO 4.52)", () => {
+    const def = templates.emblem;
+    // No re-cut: its touches are the ray's bridge and the tones, below.
+    expect(def.recut).toBeUndefined();
+    expect(def.bridge).toBe(EMBLEM_RAY_BRIDGE);
+    expect(def.plates).toBeUndefined();
+    expect(def.pack).toBe("packEmblem.js 'Planeswalker Emblems'");
+    for (const k of COLORS) {
+      expect(def.colors[k], k).toEqual([{ src: "img/frames/token/emblem/frame.png" }]);
+    }
+    expect(sourceFilesFor(def as never)).toEqual(["img/frames/token/emblem/frame.png"]);
+    expect(def.transforms).toMatch(/1:1 \(no resample\)/);
+  });
+
+  // Owner evidence 2026-09-29: the name pill read luma 94–97 against the
+  // prints' 54–60. CC's pack draws frame.png alone (no darkening layer), and
+  // its pill is a light gradient: the recipe tones the pill's body onto the
+  // prints, and the provenance says how.
+  it("tones the emblem's name pill onto the prints: its body only, inside the outline, opaque (4.52)", () => {
+    const def = templates.emblem;
+    expect(def.tones).toBe(EMBLEM_TONES);
+    expect(EMBLEM_TONES[0]).toBe(EMBLEM_NAME_PILL_TONE);
+    expect("keepAlpha" in EMBLEM_NAME_PILL_TONE).toBe(false);
+    // Under CC's top highlight (105–110), above its lower lip (211–216).
+    expect([EMBLEM_NAME_PILL_TONE.fromY, EMBLEM_NAME_PILL_TONE.toY]).toEqual([111, 211]);
+    expect(EMBLEM_NAME_PILL_TONE.seed).toEqual({ x: 750, y: 160 });
+    // Darker everywhere, least at the centre and the ends, as fitted.
+    for (const [, g] of EMBLEM_NAME_PILL_TONE.gain) {
+      expect(g).toBeGreaterThan(0.5);
+      expect(g).toBeLessThan(0.85);
+    }
+    expect(def.transforms).toMatch(/the name pill's body \(rows 111–210/);
+    expect(def.notes.some((n) => /name pill's body is toned onto the prints/.test(n))).toBe(true);
+    // No other template tones or bridges anything.
+    for (const [template, other] of Object.entries(templates)) {
+      if (template === "emblem") continue;
+      expect(other.tones, template).toBeUndefined();
+      expect(other.bridge, template).toBeUndefined();
+    }
+  });
+
+  // Owner decision 2026-09-29 (round 12): the silver, the type pill and the
+  // text box read 10–45 luma lighter than the six prints; toned with gains
+  // fitted on them — a gain, so CC's highlights and shading stay.
+  it("tones the emblem's silver, type pill and text box onto the prints, keeping the tail's alpha (4.52)", () => {
+    expect(EMBLEM_TONES).toEqual([EMBLEM_NAME_PILL_TONE, EMBLEM_SILVER_TONE, EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE]);
+    const s = EMBLEM_SILVER_TONE;
+    // From the name bar's shadow (233) to the type bar's rim (1407) whole;
+    // beside the bars from the strip above the name bar to the box's foot.
+    expect([s.fromY, s.bodyFromY, s.bodyToY, s.toY, s.stopLuma]).toEqual([60, 233, 1407, 1946, 170]);
+    expect(s.gain).toHaveLength(s.rows.length);
+    for (const row of s.gain) expect(row).toHaveLength(s.dx.length);
+    // The strip above the name bar keeps CC's tone (first row 1); every
+    // other gain within the fit's bounds, 0.45 (the right rail half-way
+    // down, the darkest silver on the prints) to 1.2 (the right half beside
+    // the spark, lit brighter than CC's).
+    expect(s.gain[0]).toEqual(s.dx.map(() => 1));
+    for (const g of s.gain.slice(1).flat()) {
+      expect(g).toBeGreaterThanOrEqual(0.45);
+      expect(g).toBeLessThanOrEqual(1.2);
+    }
+    // The type pill (238 → the prints' 219–228) and the box (237 → 226–232):
+    // one gain each, the tail's alpha kept, CC's rims and highlights outside.
+    expect(EMBLEM_TYPE_PILL_TONE).toMatchObject({ fromY: 1429, toY: 1530, gain: [[0, 0.94]], keepAlpha: true });
+    expect(EMBLEM_TEXT_BOX_TONE).toMatchObject({ fromY: 1556, toY: 1938, minLuma: 215, gain: [[0, 0.96]], keepAlpha: true });
+    const def = templates.emblem;
+    expect(def.transforms).toMatch(/the silver \(rows 233–1406 but for the spark's pure-white tail and glow/);
+    expect(def.transforms).toMatch(/the type pill's body \(rows 1429–1529\) × 0\.94 and the text box \(rows 1556–1937, inside its light rim\) × 0\.96, alpha kept/);
+    expect(def.notes.some((n) => /EMBLEM_SILVER_TONE.*EMBLEM_TYPE_PILL_TONE.*EMBLEM_TEXT_BOX_TONE/.test(n))).toBe(true);
+  });
+
+  // Owner decision 2026-09-29 (round 12b, "fit each side separately"): the
+  // prints' silver is lit unevenly — beside the spark's base 113–122 on the
+  // left and 178–187 on the right, where round 12's gain, by distance from
+  // the centre, darkened both halves alike (137 and 157).
+  it("fits the emblem's silver on each side separately, joined across the centre without a seam (4.52, round 12b)", () => {
+    const s = EMBLEM_SILVER_TONE;
+    // Signed knots: five a side, the innermost at ±100 px.
+    expect(s).not.toHaveProperty("d");
+    expect(s.dx.filter((v) => v < 0)).toHaveLength(5);
+    expect(s.dx.filter((v) => v > 0)).toHaveLength(5);
+    expect([Math.max(...s.dx.filter((v) => v < 0)), Math.min(...s.dx.filter((v) => v > 0))]).toEqual([-100, 100]);
+    // The halves differ where the prints do: beside the spark's base (x 330–
+    // 510 and 990–1170, rows 1230–1370) the right is lit far brighter; the
+    // right rail (x ≈ 1420) is the darkest silver on the card, the left one
+    // is not.
+    const at = (x: number, y: number) => silverGainAt(s, x - s.centreX, y);
+    for (const y of [1250, 1300, 1350]) expect(at(1080, y) - at(420, y), `row ${y}`).toBeGreaterThan(0.2);
+    for (const y of [900, 1000, 1100]) expect(at(80, y) - at(1420, y), `row ${y}`).toBeGreaterThan(0.2);
+    // Smooth: no seam at the centre line, and no step anywhere — the gain
+    // moves < 0.005 between any two neighbouring pixels (bilinear knots).
+    // Exactly, knot by knot: bilinear, the gain's slope along a row is a
+    // blend of its two knot rows' slopes (and down a column, of its two knot
+    // columns'), and it is flat past the outer knots — so every knot-to-knot
+    // slope under 0.005 per px bounds every pixel's step, including a steep
+    // ramp between two close knots that falls between the sampled pixels
+    // below.
+    for (let j = 0; j < s.rows.length; j += 1) {
+      for (let i = 0; i < s.dx.length; i += 1) {
+        if (i > 0) {
+          const across = Math.abs(s.gain[j][i] - s.gain[j][i - 1]) / (s.dx[i] - s.dx[i - 1]);
+          expect(across, `across, row ${s.rows[j]}, dx ${s.dx[i - 1]}…${s.dx[i]}`).toBeLessThan(0.005);
+        }
+        if (j > 0) {
+          const down = Math.abs(s.gain[j][i] - s.gain[j - 1][i]) / (s.rows[j] - s.rows[j - 1]);
+          expect(down, `down, dx ${s.dx[i]}, rows ${s.rows[j - 1]}…${s.rows[j]}`).toBeLessThan(0.005);
+        }
+      }
+    }
+    for (let y = 60; y < 1946; y += 7) {
+      expect(Math.abs(at(749, y) - at(750, y)), `centre, row ${y}`).toBeLessThan(0.005);
+      for (let x = 0; x < 1499; x += 13) {
+        expect(Math.abs(at(x + 1, y) - at(x, y)), `(${x}, ${y}) across`).toBeLessThan(0.005);
+        expect(Math.abs(at(x, y + 1) - at(x, y)), `(${x}, ${y}) down`).toBeLessThan(0.005);
+      }
+    }
+    expect(templates.emblem.transforms).toMatch(/a gain bilinear in the signed offset from x 749\.5 — each half fitted on its own side of the prints, the centre segment joining them — and the row \(12 × 10 knots, 0\.45–1\.2\)/);
+    expect(templates.emblem.notes.some((n) => /fitted on each side separately \(owner decision 2026-09-29, round 12b\)/.test(n))).toBe(true);
+  });
+
+  // Owner decision 2026-09-29 (round 12, "exact slot + frame bridged over the
+  // tip"): the art window stays Scryfall's art_crop box (from 250.4 px), and
+  // the frame closes over the centre ray's top instead of holding CC's black
+  // shadow there — the ray ends at 251, the first row the art covers whole.
+  it("bridges the spark's centre ray over above the art window (4.52)", () => {
+    expect(EMBLEM_RAY_BRIDGE).toEqual({
+      fromY: 233,
+      toY: 251,
+      x0: 723,
+      x1: 780,
+      anchors: [720, 780],
+      fadeRows: 5,
+      radius: 4,
+      fadePow: 2,
+      edgeRows: [255, 301],
+    });
+    // From the name bar's shadow down; the tip on the first row the art
+    // window (250.4 px) covers whole.
+    expect(EMBLEM_RAY_BRIDGE.toY).toBe(Math.ceil(250.4));
+    expect(templates.emblem.transforms).toMatch(/the spark's centre ray bridged over \(rows 233–250, columns 723–779/);
+    expect(templates.emblem.notes.some((n) => /closes over the top of the spark's centre ray \(EMBLEM_RAY_BRIDGE/.test(n))).toBe(true);
   });
 
   it("sources tokens from CC's textless bordered pack (its geometry matches M15TOKEN)", () => {
@@ -715,6 +877,347 @@ describe("pixel operations", () => {
     });
   });
 
+  describe("toneRegion (4.52: the emblem's name pill onto the prints)", () => {
+    /** A W × H image: a grey (luma `fill`) region ringed by a black outline
+     *  at x 1 / W − 2 and y 1 / H − 2, silver (200) outside it, alpha 240
+     *  inside the ring. */
+    const pill = (w: number, h: number, fill = 100) => {
+      const buf = Buffer.alloc(w * h * 4);
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const ring = x === 1 || x === w - 2 || y === 1 || y === h - 2;
+          const inside = x > 1 && x < w - 2 && y > 1 && y < h - 2;
+          const v = ring ? 0 : inside ? fill : 200;
+          buf.set([v, v, v, inside ? 240 : 255], (y * w + x) * 4);
+        }
+      }
+      return buf;
+    };
+    const at = (buf: Buffer, w: number, x: number, y: number) => Array.from(buf.subarray((y * w + x) * 4, (y * w + x) * 4 + 4));
+
+    it("multiplies the outlined region's colour by the gain at |x − centreX|, and makes it opaque", () => {
+      const w = 12;
+      const h = 8;
+      const out = toneRegion(pill(w, h), w, h, {
+        seed: { x: 6, y: 4 },
+        fromY: 0,
+        toY: h,
+        minLuma: 30,
+        centreX: 6,
+        gain: [
+          [0, 0.5],
+          [4, 0.9],
+        ],
+      });
+      // At the centre ×0.5; 2 px out halfway along the knots, ×0.7; 4 px
+      // and past it held at ×0.9.
+      expect(at(out, w, 6, 4)).toEqual([50, 50, 50, 255]);
+      expect(at(out, w, 4, 3)).toEqual([70, 70, 70, 255]);
+      expect(at(out, w, 8, 5)).toEqual([70, 70, 70, 255]);
+      expect(at(out, w, 2, 2)).toEqual([90, 90, 90, 255]);
+      // The outline and the silver outside it: untouched.
+      expect(at(out, w, 1, 4)).toEqual([0, 0, 0, 255]);
+      expect(at(out, w, 0, 4)).toEqual([200, 200, 200, 255]);
+      expect(at(out, w, 6, 0)).toEqual([200, 200, 200, 255]);
+    });
+
+    it("stays inside its rows and never leaks past a closed outline", () => {
+      const w = 12;
+      const h = 8;
+      const src = pill(w, h);
+      const out = toneRegion(src, w, h, {
+        seed: { x: 6, y: 4 },
+        fromY: 3,
+        toY: 5,
+        minLuma: 30,
+        centreX: 6,
+        gain: [[0, 0.5]],
+      });
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const toned = y >= 3 && y < 5 && x > 1 && x < w - 2;
+          expect(at(out, w, x, y), `${x},${y}`).toEqual(toned ? [50, 50, 50, 255] : at(src, w, x, y));
+        }
+      }
+    });
+
+    it("leaks through a gap in the outline — the outline is the region's only bound", () => {
+      const w = 12;
+      const h = 8;
+      const src = pill(w, h);
+      // Open the ring at (1, 4): the silver beside it (x 0, rows 2–5, which
+      // the ring's rows 1 and 6 close off) joins the region.
+      src.set([100, 100, 100, 255], (4 * w + 1) * 4);
+      const out = toneRegion(src, w, h, { seed: { x: 6, y: 4 }, fromY: 0, toY: h, minLuma: 30, centreX: 6, gain: [[0, 0.5]] });
+      expect(at(out, w, 0, 2)).toEqual([100, 100, 100, 255]);
+      expect(at(out, w, 0, 0)).toEqual([200, 200, 200, 255]);
+    });
+
+    it("refuses a seed outside the region or its rows, and bad knots; never touches the source", () => {
+      const w = 12;
+      const h = 8;
+      const src = pill(w, h);
+      const copy = Buffer.from(src);
+      const tone = { seed: { x: 6, y: 4 }, fromY: 0, toY: h, minLuma: 30, centreX: 6, gain: [[0, 0.5]] as [number, number][] };
+      expect(() => toneRegion(src, w, h, { ...tone, seed: { x: 1, y: 4 } })).toThrow(/darker than luma 30/);
+      expect(() => toneRegion(src, w, h, { ...tone, fromY: 5 })).toThrow(/bad tone/);
+      expect(() => toneRegion(src, w, h, { ...tone, toY: h + 1 })).toThrow(/bad tone/);
+      expect(() => toneRegion(src, w, h, { ...tone, gain: [] })).toThrow(/bad tone/);
+      expect(() => toneRegion(src, w, h, { ...tone, gain: [[4, 0.5], [0, 0.6]] })).toThrow(/bad tone/);
+      toneRegion(src, w, h, tone);
+      expect(src.equals(copy)).toBe(true);
+    });
+
+    it("keeps each pixel's own alpha with keepAlpha (the type pill and the box: the spark's tail stays translucent)", () => {
+      const w = 12;
+      const h = 8;
+      const out = toneRegion(pill(w, h), w, h, {
+        seed: { x: 6, y: 4 },
+        fromY: 0,
+        toY: h,
+        minLuma: 30,
+        centreX: 6,
+        gain: [[0, 0.5]],
+        keepAlpha: true,
+      });
+      expect(at(out, w, 6, 4)).toEqual([50, 50, 50, 240]);
+      expect(at(out, w, 2, 2)).toEqual([50, 50, 50, 240]);
+      expect(at(out, w, 0, 4)).toEqual([200, 200, 200, 255]);
+    });
+
+    it("gainAt is piecewise-linear and held past the end knots", () => {
+      const knots: [number, number][] = [
+        [10, 0.4],
+        [20, 0.8],
+        [40, 0.6],
+      ];
+      expect(gainAt(knots, 0)).toBe(0.4);
+      expect(gainAt(knots, 15)).toBeCloseTo(0.6, 12);
+      expect(gainAt(knots, 30)).toBeCloseTo(0.7, 12);
+      expect(gainAt(knots, 99)).toBe(0.6);
+    });
+  });
+
+  describe("toneSilver (4.52: the emblem's silver onto the prints)", () => {
+    // 20 × 12: rows 2–3 and 8–9 carry a "bar" — a light rim (luma 200) at
+    // x 5–14 with a dark pixel inside it at x 8 — and silver (150) beside it;
+    // every other row is silver.
+    const W = 20;
+    const H = 12;
+    const image = () => {
+      const buf = Buffer.alloc(W * H * 4);
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const bar = (y === 2 || y === 3 || y === 8 || y === 9) && x >= 5 && x <= 14;
+          const v = bar ? (x === 8 ? 50 : 200) : 150;
+          buf.set([v, v, v, 255], (y * W + x) * 4);
+        }
+      }
+      return buf;
+    };
+    const at = (buf: Buffer, x: number, y: number) => Array.from(buf.subarray((y * W + x) * 4, (y * W + x) * 4 + 4));
+    const spec = {
+      fromY: 1,
+      bodyFromY: 4,
+      bodyToY: 8,
+      toY: 11,
+      stopLuma: 170,
+      centreX: 9.5,
+      dx: [-10, 10],
+      rows: [0, 12],
+      gain: [
+        [0.5, 0.5],
+        [0.5, 0.5],
+      ],
+    };
+
+    it("tones the body rows whole and, beside the bars, each row from either edge up to the bar's rim", () => {
+      const out = toneSilver(image(), W, H, spec);
+      for (let x = 0; x < W; x += 1) {
+        // Outside [fromY, toY): untouched.
+        expect(at(out, x, 0), `x ${x} row 0`).toEqual([150, 150, 150, 255]);
+        expect(at(out, x, 11), `x ${x} row 11`).toEqual([150, 150, 150, 255]);
+        // A row with no rim (row 1, the strip above a bar) is toned whole.
+        expect(at(out, x, 1), `x ${x} row 1`).toEqual([75, 75, 75, 255]);
+        // The body rows: whole.
+        for (const y of [4, 5, 6, 7]) expect(at(out, x, y), `x ${x} row ${y}`).toEqual([75, 75, 75, 255]);
+        // Beside a bar: the silver up to the rim; the rim and what it holds
+        // (the dark pixel at x 8, past the rim) keep their colour.
+        for (const y of [2, 3, 8, 9]) {
+          const want = x < 5 || x > 14 ? 75 : x === 8 ? 50 : 200;
+          expect(at(out, x, y)[0], `x ${x} row ${y}`).toBe(want);
+        }
+        expect(at(out, x, 10), `x ${x} row 10`).toEqual([75, 75, 75, 255]);
+      }
+    });
+
+    it("leaves the spark's tail and glow (translucent pure white) and clear pixels as drawn; tones a translucent edge", () => {
+      const src = image();
+      src.set([255, 255, 255, 204], (5 * W + 3) * 4); // the tail
+      src.set([254, 255, 255, 204], (5 * W + 4) * 4); // not pure white: an edge
+      src.set([120, 120, 120, 90], (5 * W + 5) * 4); // an anti-aliased edge
+      src.set([7, 7, 7, 0], (5 * W + 6) * 4); // clear
+      const out = toneSilver(src, W, H, spec);
+      expect(at(out, 3, 5)).toEqual([255, 255, 255, 204]);
+      expect(at(out, 4, 5)).toEqual([127, 128, 128, 204]);
+      expect(at(out, 5, 5)).toEqual([60, 60, 60, 90]);
+      expect(at(out, 6, 5)).toEqual([7, 7, 7, 0]);
+    });
+
+    it("multiplies by a gain bilinear in the signed offset from centreX and the row, held past the outer knots", () => {
+      const g = { dx: [10, 20], rows: [100, 200], gain: [[0.2, 0.4], [0.6, 1]] };
+      expect(silverGainAt(g, 0, 0)).toBeCloseTo(0.2, 12);
+      expect(silverGainAt(g, 15, 100)).toBeCloseTo(0.3, 12);
+      expect(silverGainAt(g, 10, 150)).toBeCloseTo(0.4, 12);
+      expect(silverGainAt(g, 15, 150)).toBeCloseTo(0.55, 12);
+      expect(silverGainAt(g, 99, 999)).toBeCloseTo(1, 12);
+      // Signed: the left of the centre is its own side, not a mirror of the
+      // right (round 12b); between the halves' inner knots the gain runs
+      // straight across the centre.
+      const sides = { dx: [-20, -10, 10, 20], rows: [0], gain: [[0.4, 0.5, 0.9, 1]] };
+      expect(silverGainAt(sides, -15, 0)).toBeCloseTo(0.45, 12);
+      expect(silverGainAt(sides, 15, 0)).toBeCloseTo(0.95, 12);
+      expect(silverGainAt(sides, 0, 0)).toBeCloseTo(0.7, 12);
+      expect(silverGainAt(sides, -5, 0)).toBeCloseTo(0.6, 12);
+      expect(silverGainAt(sides, -99, 0)).toBeCloseTo(0.4, 12);
+      expect(silverGainAt(sides, 99, 0)).toBeCloseTo(1, 12);
+      // One knot on an axis: held everywhere.
+      expect(silverGainAt({ dx: [0], rows: [0, 10], gain: [[0.5], [0.7]] }, 50, 5)).toBeCloseTo(0.6, 12);
+      // The recipe's own: 1 above the name bar; half-way down, the right rail
+      // darkest (0.45), the left one not.
+      expect(silverGainAt(EMBLEM_SILVER_TONE, 0, 60)).toBe(1);
+      expect(silverGainAt(EMBLEM_SILVER_TONE, 700, 900)).toBeCloseTo(0.45, 12);
+      expect(silverGainAt(EMBLEM_SILVER_TONE, -700, 900)).toBeCloseTo(0.68, 12);
+    });
+
+    it("tones each half by its own knots, with no step across the centre", () => {
+      // Uniform silver (150), the left half's gain 0.5, the right's 1, the
+      // centre segment [-2, 2] between them.
+      const flat = Buffer.alloc(W * H * 4);
+      for (let i = 0; i < W * H; i += 1) flat.set([150, 150, 150, 255], i * 4);
+      const out = toneSilver(flat, W, H, { ...spec, dx: [-2, 2], rows: [0], gain: [[0.5, 1]] });
+      const row = Array.from({ length: W }, (_, x) => at(out, x, 5)[0]);
+      // x − 9.5: −9.5 … −2.5 → 75; 2.5 … 10.5 → 150; −1.5 … 1.5 between.
+      expect(row.slice(0, 8)).toEqual(Array(8).fill(75));
+      expect(row.slice(12)).toEqual(Array(8).fill(150));
+      expect(row.slice(8, 12)).toEqual([84, 103, 122, 141]);
+      for (let x = 1; x < W; x += 1) expect(row[x] - row[x - 1], `x ${x}`).toBeGreaterThanOrEqual(0);
+    });
+
+    it("refuses bad rows or knots; never touches the source; applyTone picks it for a silver spec", () => {
+      const src = image();
+      const copy = Buffer.from(src);
+      expect(() => toneSilver(src, W, H, { ...spec, bodyFromY: 9 })).toThrow(/bad tone/);
+      expect(() => toneSilver(src, W, H, { ...spec, toY: H + 1 })).toThrow(/bad tone/);
+      expect(() => toneSilver(src, W, H, { ...spec, dx: [10, 0] })).toThrow(/bad tone/);
+      // Round 12's recipe shape (distance knots `d`, mirrored halves) is refused.
+      const unsigned: Record<string, unknown> = { ...spec, d: [0, 10] };
+      delete unsigned.dx;
+      expect(() => toneSilver(src, W, H, unsigned as unknown as typeof spec)).toThrow(/bad tone/);
+      expect(() => toneSilver(src, W, H, { ...spec, gain: [[0.5, 0.5]] })).toThrow(/bad tone/);
+      expect(() => toneSilver(src, W, H, { ...spec, gain: [[0.5], [0.5]] })).toThrow(/bad tone/);
+      const out = toneSilver(src, W, H, spec);
+      expect(src.equals(copy)).toBe(true);
+      expect(applyTone(src, W, H, spec).equals(out)).toBe(true);
+      const region = { seed: { x: 2, y: 5 }, fromY: 4, toY: 8, minLuma: 100, centreX: 9.5, gain: [[0, 0.5]] as [number, number][] };
+      expect(applyTone(src, W, H, region).equals(toneRegion(src, W, H, region))).toBe(true);
+    });
+  });
+
+  describe("bridgeRayTip (4.52: the emblem's spark ray bridged over)", () => {
+    // 60 × 60 of silver (180) with a bar's shadow (50) on rows 10–12; a ray
+    // clear (α 0) from row 4 down at x 25–34, a light bevel (190) and a
+    // highlight line (230, x 21) on its left, and on its right a dark
+    // outline (100) at x 35–38 and a step (140) at x 39 into the silver.
+    const W = 60;
+    const H = 60;
+    const image = () => {
+      const buf = Buffer.alloc(W * H * 4);
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          let v = 180;
+          let a = 255;
+          if (y >= 10 && y <= 12) v = 50;
+          else if (y > 12 && x === 21) v = 230;
+          else if (y > 12 && x >= 22 && x <= 24) v = 190;
+          else if (y > 12 && x >= 35 && x <= 38) v = 100;
+          else if (y > 12 && x === 39) v = 140;
+          if (y >= 4 && x >= 25 && x <= 34) {
+            v = 0;
+            a = 0;
+          }
+          buf.set([v, v, v, a], (y * W + x) * 4);
+        }
+      }
+      return buf;
+    };
+    const at = (buf: Buffer, x: number, y: number) => Array.from(buf.subarray((y * W + x) * 4, (y * W + x) * 4 + 4));
+    const spec = { fromY: 4, toY: 20, x0: 22, x1: 45, anchors: [20, 45], fadeRows: 3, radius: 2, fadePow: 2, edgeRows: [25, 40] };
+
+    it("closes the frame over the ray above toY: opaque, the bar's shadow and the silver joined across", () => {
+      const out = bridgeRayTip(image(), W, H, spec);
+      // Rows 4–9 are out of the tip's reach (10 px): the blend alone closes them.
+      for (let y = 4; y < 20; y += 1) for (let x = 22; x < 45; x += 1) expect(at(out, x, y)[3], `${x},${y}`).toBe(255);
+      // The shadow runs on unbroken; above and under it, clear of the tip,
+      // the silver.
+      for (let x = 22; x < 45; x += 1) {
+        expect(at(out, x, 5), `x ${x}`).toEqual([180, 180, 180, 255]);
+        expect(at(out, x, 11), `x ${x}`).toEqual([50, 50, 50, 255]);
+        expect(at(out, x, 13)[0], `x ${x}`).toBe(180);
+      }
+    });
+
+    it("draws the tip with the ray's own right-edge profile, dark on the right, lightening to the left", () => {
+      const out = bridgeRayTip(image(), W, H, spec);
+      // Right corner: the outline's colour (100), as down the right edge.
+      expect(at(out, 34, 19)[0]).toBe(100);
+      // The profile by distance above the tip (2–4 px outline, the step at 5,
+      // silver from 6), mixed towards the silver by (4.5 / 10)² in the middle.
+      const f = (4.5 / 10) ** 2;
+      const mid = (w: number) => Math.round(100 * (1 - w) + 180 * w);
+      expect([19, 17, 15, 14, 13].map((y) => at(out, 30, y)[0])).toEqual([mid(f), mid(f), mid(0.25 + 0.75 * f), mid(0.75 + 0.25 * f), 180]);
+      // The left corner is lighter than the right one.
+      expect(at(out, 26, 19)[0]).toBeGreaterThan(at(out, 33, 19)[0] + 40);
+      // Left of the ray, the frame's own bevel (190) fades back in over the
+      // last fadeRows rows, over the anchors' silver (180): none of it at
+      // row 16, (19.5 − 17) / 3 of it at row 19.
+      expect(at(out, 23, 16)[0]).toBe(180);
+      expect(at(out, 23, 19)[0]).toBe(Math.round(180 + (190 - 180) * (2.5 / 3)));
+    });
+
+    it("keeps the cut-out below toY, rounds its top corners and never touches the source", () => {
+      const src = image();
+      const copy = Buffer.from(src);
+      const out = bridgeRayTip(src, W, H, spec);
+      expect(src.equals(copy)).toBe(true);
+      // The ray's middle below toY: still clear.
+      for (let x = 27; x <= 32; x += 1) expect(at(out, x, 20)[3], `x ${x}`).toBe(0);
+      // Its top corners: partly covered, anti-aliased; the left one in the
+      // bevel's light, the right one in the outline.
+      expect(at(out, 25, 20)[3]).toBeGreaterThan(0);
+      expect(at(out, 25, 20)[3]).toBeLessThan(255);
+      expect(at(out, 25, 20)[0]).toBeGreaterThan(170);
+      expect(at(out, 34, 20)[0]).toBeLessThan(110);
+      // Rows past the corners: exactly the source.
+      for (let y = 23; y < H; y += 1) for (let x = 0; x < W; x += 1) expect(at(out, x, y), `${x},${y}`).toEqual(at(src, x, y));
+      // Outside the window: exactly the source.
+      for (let y = 0; y < 4; y += 1) for (let x = 0; x < W; x += 1) expect(at(out, x, y), `${x},${y}`).toEqual(at(src, x, y));
+      for (let y = 4; y < 23; y += 1) {
+        for (const x of [0, 19, 20, 21, 45, 59]) expect(at(out, x, y), `${x},${y}`).toEqual(at(src, x, y));
+      }
+    });
+
+    it("refuses a bad bridge or a row with no clear ray", () => {
+      const src = image();
+      expect(() => bridgeRayTip(src, W, H, { ...spec, anchors: [23, 45] })).toThrow(/bad bridge/);
+      expect(() => bridgeRayTip(src, W, H, { ...spec, edgeRows: [15, 40] })).toThrow(/bad bridge/);
+      expect(() => bridgeRayTip(src, W, H, { ...spec, fadeRows: 0 })).toThrow(/bad bridge/);
+      const noRay = image();
+      for (let y = 0; y < H; y += 1) for (let x = 25; x <= 34; x += 1) noRay[(y * W + x) * 4 + 3] = 255;
+      expect(() => bridgeRayTip(noRay, W, H, spec)).toThrow(/no clear ray/);
+    });
+  });
+
   it("shows an upper layer only through its mask's ALPHA — mask colour is irrelevant (CC's source-in)", () => {
     // 2×1: red base; blue overlay through a mask that is opaque RED at x=0
     // (like CC's title mask) and transparent at x=1.
@@ -977,6 +1480,15 @@ describe("provenance and hygiene", () => {
       expect(provenance[template].notes, template).toEqual(templates[template].notes);
     }
     expect(provenance.m15.recut).toBeUndefined();
+    // The emblem records its ray bridge, its tones and what they did to the
+    // pixels (4.52).
+    expect(provenance.emblem.recut).toBeUndefined();
+    expect(provenance.emblem.bridge).toEqual(EMBLEM_RAY_BRIDGE);
+    expect(provenance.emblem.tones).toEqual(EMBLEM_TONES);
+    expect(provenance.emblem.transforms).toBe(templates.emblem.transforms);
+    expect(provenance.emblem.notes).toEqual(templates.emblem.notes);
+    expect(provenance.m15.tones).toBeUndefined();
+    expect(provenance.m15.bridge).toBeUndefined();
   });
 
   it("never commits the build folder", () => {

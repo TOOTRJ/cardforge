@@ -114,6 +114,8 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   planeswalker: "u",
   battle: "r",
   token: "w",
+  // An emblem is colourless (CR 114); its frame hosts no other kind.
+  emblem: "c",
   saga: "r",
   adventure: "g",
   split: "wu",
@@ -161,6 +163,30 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour): F
             flavor_text: "Gold gleams brightest in a thief's eye.",
           }
         : { title: "Beast", card_type: "token", supertype: "Creature", subtypes: ["Beast"], cost: null, power: "3", toughness: "3" };
+    case "emblem":
+      // TODO 4.52 / 6.23: the walker's name on the bar, "Emblem" (+ the
+      // optional subtype on the long card), ONE rules line centred (short)
+      // or several from the left (long); saved common, no cost or stats.
+      return long
+        ? {
+            title: "Kaito, Cunning Infiltrator of the Hidden Blade",
+            card_type: "emblem",
+            supertype: null,
+            subtypes: ["Kaito"],
+            cost: null,
+            rarity: "common",
+            rules_text:
+              "Whenever a player casts a spell, you create a 2/1 blue Ninja creature token.\nAt the beginning of your end step, if you attacked with three or more Ninjas this turn, draw a card, then scry 2.",
+          }
+        : {
+            title: "Chandra",
+            card_type: "emblem",
+            supertype: null,
+            subtypes: [],
+            cost: null,
+            rarity: "common",
+            rules_text: "At the beginning of your upkeep, this emblem deals 1 damage to you.",
+          };
     case "planeswalker":
       return {
         title: long ? "Jace, Architect of Thought and Memory" : "Chandra",

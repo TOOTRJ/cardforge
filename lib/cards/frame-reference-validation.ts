@@ -44,6 +44,9 @@ import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 
 export type ReferenceValidation = { errors: string[]; warnings: string[] };
 
+/** "a creature", "an emblem", "an artifact". */
+const withArticle = (word: string) => `${/^[aeiou]/i.test(word) ? "an" : "a"} ${word}`;
+
 const COLOR_WORD: Record<string, string> = {
   w: "white",
   u: "blue",
@@ -131,11 +134,11 @@ export function validateReferenceForCombo(
   } else if (!templateSupportsKind(template, kind)) {
     if (signature.template === template && !KIND_DEFS[kind].layoutTemplates) {
       warnings.push(
-        `${card.name} is a ${KIND_DEFS[kind].label.toLowerCase()}, which the ${label} frame doesn't dress in the creator yet — accepted because this printing is that frame (${signature.exactLabel}).`,
+        `${card.name} is ${withArticle(KIND_DEFS[kind].label.toLowerCase())}, which the ${label} frame doesn't dress in the creator yet — accepted because this printing is that frame (${signature.exactLabel}).`,
       );
     } else {
       errors.push(
-        `${card.name} is a ${KIND_DEFS[kind].label.toLowerCase()}; the ${label} frame doesn't dress that kind.`,
+        `${card.name} is ${withArticle(KIND_DEFS[kind].label.toLowerCase())}; the ${label} frame doesn't dress that kind.`,
       );
     }
   } else if (templateIsBasicOnly(template) && !referenceIsSingleBasicLand(card)) {

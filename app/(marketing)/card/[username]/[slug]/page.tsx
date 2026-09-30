@@ -3,6 +3,7 @@ import { renderVersionOf } from "@/lib/cards/render-version";
 import { notFound } from "next/navigation";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
+import { cardPageName } from "@/lib/cards/emblem";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cardAccentColor } from "@/lib/og/card-accent";
 import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
@@ -51,6 +52,8 @@ export async function generateMetadata({
 
   const isShareable =
     card.visibility === "public" || card.visibility === "unlisted";
+  // An emblem's page is "<walker> Emblem", like Scryfall's (cardPageName).
+  const name = cardPageName(card.title, card.card_type);
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||
@@ -72,11 +75,11 @@ export async function generateMetadata({
     // Unlisted cards are reachable by link but shouldn't enter the index;
     // private renders only ever reach the owner, but belt-and-braces.
     robots: card.visibility !== "public" ? { index: false, follow: false } : undefined,
-    title: card.title,
+    title: name,
     description,
     openGraph: ogImageUrl
       ? {
-          title: `${card.title} · PipGlyph`,
+          title: `${name} · PipGlyph`,
           description,
           type: "article",
           siteName: "PipGlyph",
@@ -87,7 +90,7 @@ export async function generateMetadata({
               width,
               height,
               type: "image/jpeg",
-              alt: `${card.title} card preview`,
+              alt: `${name} card preview`,
             },
           ],
         }
@@ -95,7 +98,7 @@ export async function generateMetadata({
     twitter: ogImageUrl
       ? {
           card: "summary_large_image",
-          title: `${card.title} · PipGlyph`,
+          title: `${name} · PipGlyph`,
           description,
           images: [ogImageUrl],
         }

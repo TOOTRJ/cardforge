@@ -476,6 +476,35 @@
     ],
     "scryfall_uri": "https://scryfall.com/card/txln/7/treasure?utm_source=api"
   },
+  "tfdn-25": {
+    "id": "a804d502-1092-4ff3-93d9-d1b0ac0f07d5",
+    "oracle_id": "de4fe6a3-0ea4-4745-9028-59e078331633",
+    "name": "Vivien Reid Emblem",
+    "released_at": "2024-11-15",
+    "layout": "emblem",
+    "set": "tfdn",
+    "set_name": "Foundations Tokens",
+    "set_type": "token",
+    "collector_number": "25",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Emblem — Vivien",
+    "mana_cost": "",
+    "oracle_text": "Creatures you control get +2/+2 and have vigilance, trample, and indestructible.",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Anna Steinbauer",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/tfdn/25/vivien-reid-emblem?utm_source=api"
+  },
   "tfdn-6": {
     "id": "d093322e-a717-4e2d-8199-fa560792bcf6",
     "oracle_id": "eac25f12-6459-438c-a09e-93e23d2cf80d",

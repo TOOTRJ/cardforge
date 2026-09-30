@@ -53,6 +53,11 @@ type SetSymbolProps = {
    *  (layout v32): never shrink, and the pull over the band gap
    *  (lib/cards/render-tiers.ts inlineSymbolPullPct), as the bake draws it. */
   style?: React.CSSProperties;
+  /** Whether the symbol's label names the card's rarity ("common rarity").
+   *  False for a card type without one — an emblem (CR 114;
+   *  lib/cards/emblem.ts cardTypeHasRarity): its stored "common" only inks
+   *  the symbol, so the label says "Set symbol". The ink is the same. */
+  namesRarity?: boolean;
 };
 
 // The PipGlyph house mark as a ringed two-tone emblem — the rose star
@@ -134,6 +139,7 @@ export function SetSymbol({
   keyline,
   className,
   style,
+  namesRarity = true,
 }: SetSymbolProps) {
   const color = setSymbolColor(rarity);
 
@@ -162,7 +168,7 @@ export function SetSymbol({
   if (setCode) {
     return (
       <i
-        aria-label={rarity ? `${rarity} rarity` : "Set symbol"}
+        aria-label={rarity && namesRarity ? `${rarity} rarity` : "Set symbol"}
         className={cn("ss", `ss-${setCode.toLowerCase()}`, className)}
         style={{
           fontSize: size,

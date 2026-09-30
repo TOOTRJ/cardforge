@@ -1525,6 +1525,130 @@ const M15TOKENTEXT: FrameProfile = {
   // average over nine text-box prints), 1.4 px after the move.
 };
 
+// The emblem — TODO 4.52: Card Conjurer 'Planeswalker Emblems'
+// (packEmblem.js), the M20 design every emblem since 2019-07-12 prints (TM20
+// #11, TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16). One silver master for
+// every colour (CR 114: an emblem is colourless; the emblem kind forces c).
+// CC's master sits on the prints as it is (feature registration over those
+// six plus TKHM #20 and TAFR #16: the title bar, type bar, box bottom and
+// sides within 3 px), so it is imported 1:1 — no re-cut. CC's box runs to
+// 1946 px (92.67 %H) like the prints' (1947); 4.52's "90.24 %H" was where
+// the spark's tail ends inside it.
+/** The emblem's slots, measured on the master and the prints (HD px):
+ *  the type pill's interior (between its outlines) and the text box's. */
+export const EMBLEM_TYPE_PILL_INTERIOR_PX = { top: 1422, bottom: 1528 };
+export const EMBLEM_BOX_INTERIOR_PX = { top: 1556, bottom: 1937 };
+/** Scryfall's emblem art_crop box on the card (HD px): a 603 × 576 crop at
+ *  72.5 / 124 of the 744 × 1040 scan. */
+export const EMBLEM_SCRYFALL_CROP_PX = { x: 146.2, y: 250.4, width: 1215.7, height: 1163.1 };
+/** The art window: that box exactly, so the art_crop an import brings is
+ *  drawn at the print's own scale and place (owner evidence 2026-09-29: the
+ *  box grown up to 232 px, 1.6 % taller and wider, drew the art 1.6–1.8 %
+ *  larger than the prints; the registration's best fit is now 1.002 — the
+ *  744 × 1040 scan's own 0.16 % stretch). */
+const EMBLEM_ART_SLOT: Rect = {
+  topPct: (EMBLEM_SCRYFALL_CROP_PX.y / 2100) * 100,
+  leftPct: (EMBLEM_SCRYFALL_CROP_PX.x / 1500) * 100,
+  widthPct: (EMBLEM_SCRYFALL_CROP_PX.width / 1500) * 100,
+  heightPct: (EMBLEM_SCRYFALL_CROP_PX.height / 2100) * 100,
+};
+/** The name's print offset: the band rule's baseline (193 px) up to the
+ *  prints' 190, as a fraction of card WIDTH (dy's unit). */
+const EMBLEM_TITLE_PRINT_DY = -3 / 1500;
+/** The type line's print offset: the pill-centred band's baseline (1498 px)
+ *  up to the prints' 1496. */
+const EMBLEM_TYPE_PRINT_DY = -2 / 1500;
+/** CC's rules box (82.8 %W) plus 10 px on the right: 129–1381 px. */
+const EMBLEM_RULES_WIDTH_PCT = ((1381 - 129) / 1500) * 100;
+const EMBLEM: FrameProfile = {
+  label: "Emblem",
+  // No cost, P/T, loyalty or defense slot: an emblem has none (CR 114).
+  hideCost: true,
+  // The art window is Scryfall's emblem art_crop box, which IS a crop of the
+  // printed card around the spark (603 × 576 px at 72.5 / 124 on the 744 px
+  // scans of TFDN #24 / #25 and TDSK #17, matched pixel for pixel at scale
+  // 1: 146 / 250 px, 1216 × 1163 at HD), so an imported emblem's art lands
+  // where it printed, at its printed size. The spark's clear cut-out is
+  // inside it: CC's centre ray (732–767 px across) ran on up to the bar,
+  // above the crop, where an art_crop has no pixels; the master's silver
+  // closes over its top instead and the ray ends at 251 px (owner decision
+  // 2026-09-29; scripts/lib/cc-frames.mjs EMBLEM_RAY_BRIDGE), so no second
+  // picture shows there. CC's artBounds (14.2 / 4.96 / 71.6 × 85.48 — a
+  // tall box, which blew a landscape art up ~2.3× past the prints') is the
+  // under-frame layer: the spark's tail runs on through the type bar and
+  // the box as CC's 80 % white (α 204) to 1896 px, and the art shows
+  // faintly there, as on the prints.
+  artSlot: EMBLEM_ART_SLOT,
+  underFrameArt: { rect: { topPct: 4.96, leftPct: 14.2, widthPct: 71.6, heightPct: 85.48 } },
+  // M15's 86 px symbol box with the ink fit, in CC's setSymbolBounds (right
+  // edge 92.13 %W, centred on 70.43 %H — the pill's centre). The symbol is
+  // black on the prints; ours keeps the card's rarity ink (an emblem saves
+  // as common — 4.9's E and black symbol come later).
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
+  symbolRect: { topPct: 70.43 - 4.1 / 2, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  // The source's name, white and centred on the dark bar (CC: 8.54 / 5.22 /
+  // 82.92 × 5.43, Beleren Small Caps at 0.0381 H = 80 px = TITLE_SIZE_PCT;
+  // small caps are 4.8). The band rule sets the baseline at 193 px; the
+  // prints' is 190 (the name's last ink row 189 on TFDN #24 / #25, TBLB #30,
+  // TDSK #17, TFRA #16 and TKHM #20; 192 on TM20 #11), so the text rises
+  // 3 px (EMBLEM_TITLE_PRINT_DY).
+  title: {
+    rect: { topPct: 5.22, leftPct: 8.54, widthPct: 82.92, heightPct: 5.43 },
+    sizePct: TITLE_SIZE_PCT,
+    dy: EMBLEM_TITLE_PRINT_DY,
+    fit: "measured",
+    colorHex: INK_LIGHT,
+    weight: 600,
+    align: "center",
+    font: "display",
+    letterSpacingEm: 0.01,
+  },
+  // "Emblem", left from CC's 8.54 %W on the light pill, in dark ink, fitted
+  // to the set symbol's box. The band is the pill's interior
+  // (EMBLEM_TYPE_PILL_INTERIOR_PX), whose centre sets the baseline at
+  // 1498 px; the prints' "Emblem" ends at 1495–1496 on all eight, so the
+  // text rises 2 px (EMBLEM_TYPE_PRINT_DY).
+  type: {
+    rect: {
+      topPct: (EMBLEM_TYPE_PILL_INTERIOR_PX.top / 2100) * 100,
+      leftPct: 8.54,
+      widthPct: 83.59,
+      heightPct: ((EMBLEM_TYPE_PILL_INTERIOR_PX.bottom - EMBLEM_TYPE_PILL_INTERIOR_PX.top) / 2100) * 100,
+    },
+    sizePct: TYPE_SIZE_PCT,
+    dy: EMBLEM_TYPE_PRINT_DY,
+    fit: "measured",
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  // CC's rules box (8.6 / 74.43 / 82.8 × 17.48), dark ink on the light box,
+  // centred vertically, ONE line centred on it (TDSK #17 "Ninjas you control
+  // get +1/+1.", TFRA #16) and two or more from the left (TFDN #24, TBLB
+  // #30) — 4.49 (b)'s alignSingleLine. The prints' ink starts at 131–134 px
+  // and a centred line centres on 751–753 px (TDSK #17, TFRA #16), 10 px
+  // right of the drawn box's own centre (its inner lines run 95–1385):
+  // CC's box, 1242 px wide, centred ours on 745–748. The rect keeps CC's
+  // left edge and runs 10 px further right (1381 px, still inside the box's
+  // inner line), which puts a centred line on 751–753 and changes no wrap
+  // of the prints' texts. Vertically the lines land within 2 px of the
+  // prints' (one, two and three lines).
+  rules: {
+    rect: { topPct: 74.43, leftPct: 8.6, widthPct: EMBLEM_RULES_WIDTH_PCT, heightPct: 17.48 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    alignSingleLine: "center",
+    font: "body",
+    padPx: { x: 2, y: 0 },
+  },
+  // The artist line in the black border under the box (the prints' collector
+  // line sits at 1995–2030 px); the brand mark keeps its default place,
+  // bottom right in the same border.
+  footer: M15.footer,
+};
+
 // ---------------------------------------------------------------------------
 // The full-art token design, M20 (2019-07-12) → today — TODO 4.48 / 4.50:
 // Card Conjurer's 'Textless', 'Short' and 'Tall' token packs
@@ -3264,6 +3388,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
+  // TODO 4.52: the emblem (M20 design).
+  emblem: EMBLEM,
   // TODO 4.48 / 4.50: the full-art tokens. Their masters are clear almost
   // everywhere, so the creator's tile draws its sample art (4.45).
   m20token: { ...M20TOKEN, pickerSampleArt: true },

@@ -119,6 +119,8 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The text-box tokens (TODO 4.49 (b), CC 'Regular (Bordered M15)', re-cut).
   m15tokentext: ALL_BORDER,
   m15tokenartifacttext: ALL_BORDER,
+  // The emblem (TODO 4.52, CC 'Planeswalker Emblems').
+  emblem: ALL_BORDER,
   // The full-art tokens (TODO 4.48 / 4.50, CC 'Textless' / 'Short' / 'Tall'
   // token packs): the art runs to the 60 px black ring on every side.
   m20token: ALL_BORDER,

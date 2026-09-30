@@ -15,6 +15,7 @@ import {
   type PipOverrides,
 } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
+import { cardTypeHasRarity } from "@/lib/cards/emblem";
 import { drawableCardMedia } from "@/lib/cards/drawable-media";
 import {
   FrameLayer,
@@ -1134,6 +1135,7 @@ function CardFace({
         {!layout.symbolRect ? (
           <SetSymbol
             rarity={rarity}
+            namesRarity={cardTypeHasRarity(face.cardType)}
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(setSymbol.sizePct)}
@@ -1156,6 +1158,7 @@ function CardFace({
         >
           <SetSymbol
             rarity={rarity}
+            namesRarity={cardTypeHasRarity(face.cardType)}
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(setSymbol.sizePct)}

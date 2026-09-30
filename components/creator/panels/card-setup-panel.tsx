@@ -40,7 +40,6 @@ import {
 } from "@/components/creator/frame-pickers";
 import {
   BASIC_ONLY_FRAME_REASON,
-  CARD_KIND_VALUES,
   KIND_DEFS,
   baseFrameFor,
   borrowedTypeWord,
@@ -72,6 +71,9 @@ import {
   type FrameChoice,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
+// The emblem (TODO 6.23): a choice inside the token kind, not a kind chip.
+import { KIND_PICKER_KINDS, kindPickerChip } from "@/lib/creator/card-kinds";
+import { EmblemChoice } from "@/components/creator/panels/emblem-choice";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
   COLOR_IDENTITY_VALUES,
@@ -288,11 +290,11 @@ export function CardSetupPanel({
     if (next !== before) setValue("supertype", next, { shouldDirty: true });
   }, [kind, watchedTemplate, getValues, setValue]);
 
-  const kindOptions: ChipOption<CardKind>[] = CARD_KIND_VALUES.map((k) => {
+  const kindOptions: ChipOption<CardKind>[] = KIND_PICKER_KINDS.map((k) => {
     // A kind is pickable only when at least one of its frames has a
     // published color — otherwise selecting the type would bypass the
     // verification gate and land on an unreviewed frame.
-    const available = k === kind || kindHasAvailableFrame(k, verifiedKeys);
+    const available = k === kindPickerChip(kind) || kindHasAvailableFrame(k, verifiedKeys);
     return {
       value: k,
       label: KIND_DEFS[k].label,
@@ -345,7 +347,7 @@ export function CardSetupPanel({
           ariaLabel="Card type"
           layout="grid-2"
           size="md"
-          value={kind}
+          value={kindPickerChip(kind)}
           onChange={(next) => {
             clearErrors("frame_style");
             onKindSelect(next);
@@ -357,8 +359,16 @@ export function CardSetupPanel({
       {/* 1b · The token's types (TODO 3b.15) — the words its type line
           prints after "Token". The frame follows them (the orchestrator's
           effect): Artifact → the artifact token frame. */}
-      {kind === "token" ? (
+      {kind === "token" || kind === "emblem" ? (
         <TokenTypeSection
+          emblem={{
+            on: kind === "emblem",
+            available: kindHasAvailableFrame("emblem", verifiedKeys),
+            onChange: (on) => {
+              clearErrors("frame_style");
+              onKindSelect(on ? "emblem" : "token");
+            },
+          }}
           supertype={supertype ?? ""}
           onToggle={(word, on) =>
             setValue("supertype", toggleTokenWord(getValues("supertype"), word, on), {
@@ -722,7 +732,9 @@ export function CardSetupPanel({
         }}
       />
 
-      {/* 3 · Color — last on purpose (pure PNG swap; never moves layout). */}
+      {/* 3 · Color — last on purpose (pure PNG swap; never moves layout).
+          An emblem has none (TODO 6.23): its frame is silver. */}
+      {kind === "emblem" ? null : (
       <Controller
         control={control}
         name="color_identity"
@@ -741,6 +753,7 @@ export function CardSetupPanel({
           />
         )}
       />
+      )}
     </div>
   );
 }
@@ -762,15 +775,30 @@ const TOKEN_WORD_HINTS: Record<TokenPickerWord, string> = {
 
 /** The token kind's type picker (TODO 3b.15): Creature · Artifact ·
  *  Enchantment, and Legendary. Each chip writes or removes only its own
- *  word; none on prints a bare "Token" (a Copy). The Emblem choice joins
- *  here with 6.23 (lib/creator/card-kinds.ts). */
+ *  word; none on prints a bare "Token" (a Copy). The Emblem choice (6.23)
+ *  switches the card to the emblem kind, which has no type words: while it
+ *  is on, only it shows. */
 function TokenTypeSection({
   supertype,
   onToggle,
+  emblem,
 }: {
   supertype: string;
   onToggle: (word: TokenPickerWord, on: boolean) => void;
+  emblem: { on: boolean; available: boolean; onChange: (on: boolean) => void };
 }) {
+  if (emblem.on) {
+    return (
+      <SetupSection title="Token type" value="Emblem" autoClose={false}>
+        <EmblemChoice {...emblem} />
+        <p className="text-[11px] leading-4 text-subtle">
+          An emblem prints &ldquo;Emblem&rdquo; on a silver frame, with its
+          planeswalker&apos;s name on top: no colour, cost, rarity or power /
+          toughness. Turn it off to make a token again.
+        </p>
+      </SetupSection>
+    );
+  }
   const active = tokenPickerWordsOf(supertype);
   const toOption = (word: TokenPickerWord): ChipOption<TokenPickerWord> => ({
     value: word,
@@ -811,6 +839,7 @@ function TokenTypeSection({
         }
         options={[toOption("Legendary")]}
       />
+      <EmblemChoice {...emblem} />
       <p className="text-[11px] leading-4 text-subtle">
         None on prints a bare &ldquo;Token&rdquo;, like a Copy token. The
         power / toughness shows for a Creature token only.

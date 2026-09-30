@@ -46,8 +46,8 @@ export type { FrameMatch };
 
 // Words left of the "—" that the creator keeps as SUPERTYPE words, never as
 // the card type (card-type words other than the chosen card_type ride along
-// with them — parseTypeLine). Unknown words (Emblem, Scheme, Conspiracy, …)
-// are dropped.
+// with them — parseTypeLine). Unknown words (Scheme, Conspiracy, Plane, …)
+// are dropped; "Emblem" is the emblem card type (TODO 6.23).
 //
 // Kindred (Scryfall renamed Tribal → Kindred in 2024; both spellings appear
 // in type lines) is a card type in the Comprehensive Rules, but PipGlyph has
@@ -78,6 +78,8 @@ const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
   token: "token",
   planeswalker: "planeswalker",
   battle: "battle",
+  // CR 114 (TODO 6.23): "Emblem" / "Emblem — Vivien" is the emblem card type.
+  emblem: "emblem",
 };
 
 // Which card-type word becomes `card_type` when a type line carries several
@@ -101,6 +103,8 @@ const TYPE_WORD_TO_CARD_TYPE: Record<string, CardType> = {
 // its line round-trips, and the token picker reads the same words: TODO
 // 3b.15.)
 const CARD_TYPE_PRECEDENCE: readonly CardType[] = [
+  // An emblem's line carries no other card type ("Emblem — Ajani").
+  "emblem",
   "token",
   "land",
   "creature",
@@ -886,6 +890,35 @@ export function scryfallFaceArtist(
 }
 
 /**
+ * An emblem's name as its title bar prints it (TODO 1.23 / 6.23): the
+ * source's name, without Scryfall's trailing " Emblem" ("Kaito, Cunning
+ * Infiltrator Emblem" → "Kaito, Cunning Infiltrator"). A name without the
+ * suffix (The Ring, MB2's Essence of Ajani) is kept.
+ */
+export function emblemTitleFromName(name: string): string {
+  const trimmed = name.trim();
+  const stripped = trimmed.replace(/\s+Emblem$/, "");
+  return stripped || trimmed;
+}
+
+/**
+ * Whether THIS emblem printing prints a subtype (TODO 1.23): the 2014–19
+ * look ("Emblem — Ajani": `frame: 2015` before M20, a List reprint by its
+ * pre-M20 collector prefix — isM20DesignPrinting, the tokens' rule) and AFR
+ * ("Emblem — Ellywick", TAFR #16). Every other M20+ emblem prints "Emblem"
+ * alone, whatever Scryfall's Oracle type line says (TFDN #25 Vivien Reid
+ * prints "Emblem"; Scryfall says "Emblem — Vivien"), and the 2003 plaque
+ * prints no type line at all.
+ */
+export function emblemPrintsSubtype(
+  card: Pick<ScryfallCard, "frame" | "set" | "collector_number" | "released_at">,
+): boolean {
+  if ((card.frame ?? "").trim() !== "2015") return false;
+  if ((card.set ?? "").trim().toLowerCase() === "tafr") return true;
+  return !isM20DesignPrinting(card);
+}
+
+/**
  * Convert a Scryfall card into a patch the form can merge in. Falls back
  * to undefined fields when the Scryfall data is missing — we never invent
  * values just to fill a slot.
@@ -935,29 +968,40 @@ export function mapScryfallToFormPatch(
       ? rarity
       : undefined;
 
+  // An emblem (TODO 1.23 / 6.23): the source's name, no colour (its frame is
+  // silver whatever the walker's colour), cost, supertype or stats, common,
+  // and a subtype only where the printing prints one.
+  const emblem = kind === "emblem";
+
   return {
     // For a multi-face card, the front face's own name ("Fire", not "Fire //
     // Ice") is the right seed for the front we're populating.
-    title: (isMultiFace && front?.name) || card.name,
-    cost: pick(front?.mana_cost, card.mana_cost),
+    title: emblem
+      ? emblemTitleFromName((isMultiFace && front?.name) || card.name)
+      : (isMultiFace && front?.name) || card.name,
+    cost: emblem ? undefined : pick(front?.mana_cost, card.mana_cost),
     kind,
     frame_template: frameTemplateFromScryfall(card, frameMatch),
     frame_match: frameMatch,
     printing_treatment: printingTreatmentFromScryfall(card),
     printing_detail: printingDetailFromScryfall(card),
     card_type: cardType,
-    supertype: typeParts.supertype,
-    subtypes_text: typeParts.subtypes_text,
-    rarity: rarityChecked,
-    color_identity: colorIdentity.length > 0 ? colorIdentity : undefined,
+    supertype: emblem ? undefined : typeParts.supertype,
+    subtypes_text: emblem && !emblemPrintsSubtype(card) ? undefined : typeParts.subtypes_text,
+    rarity: emblem ? "common" : rarityChecked,
+    color_identity: emblem
+      ? ["colorless"]
+      : colorIdentity.length > 0
+        ? colorIdentity
+        : undefined,
     rules_text: pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
-    power: pick(front?.power, card.power),
-    toughness: pick(front?.toughness, card.toughness),
+    power: emblem ? undefined : pick(front?.power, card.power),
+    toughness: emblem ? undefined : pick(front?.toughness, card.toughness),
     // Faces carry these on real cards (battle fronts hold defense; Origins
     // walker backs hold loyalty) — prefer the face on multiface cards.
-    loyalty: pick(front?.loyalty, card.loyalty),
-    defense: pick(front?.defense, card.defense),
+    loyalty: emblem ? undefined : pick(front?.loyalty, card.loyalty),
+    defense: emblem ? undefined : pick(front?.defense, card.defense),
     // The front face's own artist on a multi-face card (TODO 1.8).
     artist_credit: scryfallFaceArtist(card, 0),
     source_scryfall_id: card.id,
