@@ -247,7 +247,8 @@ export const BORDERLESS_LAND_DARK_TYPE_BAR_PINS: Readonly<Record<string, readonl
  *  and mid boxes: the type bar at ~70 %H, not 56 %H) among the ones the
  *  registry resolved `exact` (checked by eye, 2026-09-29): the SNC triomes
  *  and SLD #469–472. The two-colour short-box lands (UNF's shocks, SLD
- *  #456–460, TLE #58–59, FCA #64) are `nearest` on their two-colour gap. */
+ *  #456–460) are `nearest` on their two-colour gap (4.56 pins them before
+ *  it closes). */
 export const BORDERLESS_LAND_SHORT_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
   snc: ["291", "292", "293", "294", "295"],
   sld: ["469", "470", "471", "472"],
