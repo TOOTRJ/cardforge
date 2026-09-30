@@ -305,10 +305,14 @@ Rules and gotchas:
   with its TODO item and a `maxMissPx` it may not exceed — fixing one means
   striking it). See-through masters (`underFrameArt`: m15/c, every devoid,
   the colourless tokens and planeswalker) draw the art under the frame from
-  the border's inner edge (`UNDER_FRAME_RECT`); the CC-framed M15 profiles use
-  `CC_M15_ART_SLOT`, never M15's MSE slot (adventure keeps that). A
-  frame-compare save that moves an `artSlot` passes the same check on the
-  bake's own masters or is refused (`lib/frames/art-window-override.ts`).
+  the border's inner edge (`UNDER_FRAME_RECT`); their window's slot must
+  cover the window too and meet that separately cropped layer on the frame's
+  OPAQUE outline — or be ONE picture (`underFrameArt.artSlot` = the rect,
+  m15pw/c); both renderers and the foil mask read `artLayersFor()`. The
+  CC-framed M15 profiles use `CC_M15_ART_SLOT`, never M15's MSE slot
+  (adventure keeps that). A frame-compare save that moves an `artSlot`
+  passes the same check on the bake's own masters or is refused
+  (`lib/frames/art-window-override.ts`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

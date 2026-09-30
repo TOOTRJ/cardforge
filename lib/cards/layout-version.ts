@@ -1,4 +1,4 @@
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
 import { basicLandManaKey } from "@/lib/cards/watermark";
@@ -539,16 +539,31 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              UNDER_FRAME_RECT 3.7/2.7/92.6 × 93.3, was 4/4/92 × 92): the
 //              see-through body starts 58–59 px in, the art started at 84 —
 //              a 25 px band above the title bar on m15/c, every m15devoid,
-//              m15token/c and m15tokentext/c (42,743 → 0 px on m15/c,
-//              37,530 → 0 on the token c's; the prints' border ends
-//              2.69–2.88 %H / 3.76–4.16 %W in, nine prints).
+//              m15token/c and m15tokentext/c (every pixel α < 250 not fully
+//              under art: 42,743 → 0 px on m15/c — 34,274 in the band above
+//              the title bar, 8,469 down the sides —, 37,514–37,530 → 0 on
+//              the token c's, 3,024 → 0 (sides) on the coloured devoids; the
+//              prints' border ends 2.69–2.88 %H / 3.76–4.16 %W in, nine
+//              prints).
 //            * nyx: the art runs under the whole translucent text box, as on
 //              the THB constellation prints (4.17b, owner decision; artSlot
 //              height 70 → 81.8, to 93 %): 308,720 → 0 px — the box's last
-//              241 px were #101015. fullart: artSlot height 88.3 → 90.1
-//              (the 31 px strip; 46,500 → 7,956 px, the ring's anti-aliased
-//              rim that remains is 7.6's). m15pw/c: underFrameArt for "c"
-//              (CC's colourless walker is see-through; 334,216 → 0 px).
+//              241 px were #101015. fullart: artSlot 4/2.9/92 × 88.3 →
+//              3.8/2.7/92.4 × 90.3 — to 93 % (the 31 px strip) and out to
+//              whole pixels past the hedron ring's anti-aliased rim (α 128–
+//              249 on rows 59–60, columns 59 / 1440–1441): 46,500 → 9 px, all
+//              α 249. m15pw/c: underFrameArt for "c" as ONE picture — its
+//              window drawn in the under-frame rect too (UnderFrameArt
+//              .artSlot): CC's colourless walker is translucent from the
+//              border to the window with no outline down the ability box, so
+//              M15PW's slot over a separately cropped under-frame layer (the
+//              first build) seamed all round; 334,216 → 0 px, the window's
+//              picture ~14 % larger than on the coloured walkers.
+//            The art-window check (7.6) and the frame-compare save gate
+//            gained two see-through rules in the same round: the window's
+//            slot covers the window too, and meets the under-frame art on
+//            the frame's opaque outline (or is one picture) — the colourless
+//            tokens' seam, there since v34, is its known failure (4.17c).
 //            Template-scoped (TEMPLATE_SCOPED_VERSIONS[35]) AND card-scoped
 //            (VERSION_SCOPES[35] = v35Changed): every card on the eight
 //            art-slot templates (V35_ART_SLOT_TEMPLATES — the empty-art box
@@ -558,9 +573,12 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            (anonymous read, 2026-09-29): 738 of 824 public / unlisted cards
 //            — m15 610, m15land 49, m15artifact 37, m15devoid 19, m15snow 13,
 //            m15tokentext 9 of 33, m15pw 1 of 7, none on m15snowland,
-//            m15token, nyx, fullart. The visual matrix (tests/visual): 163 of
-//            849 cases change, every one inside the scope, and the scope
-//            selects no unchanged case. "sweep". VERIFICATION-NEUTRAL (the
+//            m15token, nyx, fullart. The visual matrix (tests/visual), 857
+//            cases against v34: 162 stored cases change + 1 print-only one
+//            (m15/w/creature-short@square, which the gate exempts), every
+//            one inside the scope, and the scope selects no unchanged case;
+//            8 no-art cases are new (the empty-art box on v35's slots, and
+//            no under-frame change without art). "sweep". VERIFICATION-NEUTRAL (the
 //            default for small art-edge fixes, as v31–v33): no text, bar,
 //            pip, symbol or plate moves — see VERIFICATION_NEUTRAL_VERSIONS.
 // ---------------------------------------------------------------------------
@@ -687,10 +705,12 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * line, pip, symbol, rules box or plate moves — only where the ART is
  * painted: the CC M15 family's slot by 0.95–2.45 px outward to cover the
  * master's own window, the art under the see-through masters from the
- * border's inner edge, and nyx / fullart's art on down under their
- * translucent text box. The frame a tick verified against its prints is the
- * same master in the same place; the owner signs the art off on the v35
- * before/after sheet instead of re-ticking.
+ * border's inner edge, nyx / fullart's art on down under their translucent
+ * text box, and m15pw/c's as one picture (its window's crop ~14 % larger —
+ * the one verified combo whose look changes beyond an art edge; the owner
+ * may re-tick it by hand after the sheet). The frame a tick verified
+ * against its prints is the same master in the same place; the owner signs
+ * the art off on the v35 before/after sheet instead of re-ticking.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */

@@ -18,7 +18,10 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 //   * the CC M15 profiles paint the window's art in CC_M15_ART_SLOT —
 //     57.5–693.2 × 118.1–583.6 here (was 58.5–691.5 × 119.7–581.7);
 //   * nyx's art runs on under the whole text box, to 93 % (976.5 here; was
-//     81.2 %, 852.6).
+//     81.2 %, 852.6), fullart's too, and out past its ring's rim;
+//   * m15pw/c is ONE picture: the window drawn in the under-frame rect, no
+//     second, separately cropped layer (a picture split in two bands shows
+//     one edge across the whole card).
 // The preview draws the same rects (tests/unit/components/art-area-preview
 // .test.tsx).
 // ---------------------------------------------------------------------------
@@ -32,11 +35,19 @@ const solid = (w: number, h: number, rgb: readonly number[], alpha = 1) =>
   sharp({ create: { width: w, height: h, channels: 4, background: { r: rgb[0], g: rgb[1], b: rgb[2], alpha } } }).png().toBuffer();
 
 let artUrl = "";
+/** Top half ART, bottom half ART2: where the two meet shows each layer's crop. */
+let bandsUrl = "";
+const ART2 = [220, 60, 40] as const;
 let bucket: { manifest: unknown; byUrl: Map<string, Buffer> };
 let restoreStorage: () => void = () => {};
 
 beforeAll(async () => {
   artUrl = `data:image/png;base64,${(await solid(600, 840, ART)).toString("base64")}`;
+  const bands = await sharp({ create: { width: 600, height: 840, channels: 3, background: { r: ART[0], g: ART[1], b: ART[2] } } })
+    .composite([{ input: await solid(600, 420, ART2), top: 420, left: 0 }])
+    .png()
+    .toBuffer();
+  bandsUrl = `data:image/png;base64,${bands.toString("base64")}`;
   const { frameObjectKey } = await import("@/lib/frames/frame-url");
   const clear = await solid(1500, 2100, [0, 0, 0], 0);
   const files: Record<string, Buffer> = {};
@@ -113,7 +124,7 @@ async function bake(c: CardPreviewData) {
     const i = (y * W + x) * 3;
     const px = [data[i], data[i + 1], data[i + 2]];
     const near = (rgb: readonly number[]) => px.every((v, k) => Math.abs(v - rgb[k]) <= 2);
-    return near(ART) ? "art" : near(GROUND) ? "ground" : `rgb(${px.join(",")})`;
+    return near(ART) ? "art" : near(ART2) ? "art2" : near(GROUND) ? "ground" : `rgb(${px.join(",")})`;
   };
 }
 
@@ -162,6 +173,43 @@ describe("layout v35 — where the art is painted (real bakes, clear stand-in ma
       // Opaque masters: no art under the frame.
       expect(at(28, 520), template).toBe("ground");
     }
+  });
+
+  it("draws m15pw/c as ONE picture — the window's crop continues under the frame (4.17b, no seam)", async () => {
+    // A 600 × 840 picture in two bands meeting at its middle. Cover-fitted
+    // to the under-frame rect (27.75–722.25 × 28.35–1008 here) the edge is
+    // at 518.2; in M15PW's own slot (50.25–698.25 × 103.95–961.8) it would
+    // be at 532.9. One picture: 518 everywhere — in the window and beside it.
+    const at = await bake(card("m15pw", ["colorless"], { cardType: "planeswalker", artUrl: bandsUrl }));
+    for (const x of [30, 375, 700]) {
+      expect(at(x, 516), `x ${x} above the edge`).toBe("art");
+      expect(at(x, 521), `x ${x} below the edge`).toBe("art2");
+      expect(at(x, 530), `x ${x}`).toBe("art2");
+    }
+    // A coloured walker keeps the slot's own crop (edge at 532.9).
+    const blue = await bake(card("m15pw", ["blue"], { cardType: "planeswalker", artUrl: bandsUrl }));
+    expect(blue(375, 530)).toBe("art");
+    expect(blue(375, 536)).toBe("art2");
+  });
+
+  it("paints fullart's art to 93 % and out past its ring's rim (4.17b)", async () => {
+    const { frameObjectKey } = await import("@/lib/frames/frame-url");
+    const clear = await solid(1500, 2100, [0, 0, 0], 0);
+    const sha256 = createHash("sha256").update(clear).digest("hex");
+    const manifest = bucket.manifest as { files: Record<string, unknown> };
+    manifest.files["fullart/g.png"] = { hash: sha256.slice(0, 12), sha256, bytes: clear.length, width: 1500, height: 2100 };
+    bucket.byUrl.set(`${ORIGIN}/${frameObjectKey("fullart/g.png", sha256.slice(0, 12))}`, clear);
+    const at = await bake(card("fullart", ["green"]));
+    // 3.8/2.7/92.4 × 90.3 → 28.5–721.5 × 28.35–976.5 at 750 px (the first
+    // v35 build: 30–720 × 30.45–976.5, the ring's rim half-dark).
+    expect(at(29, 500), "left").toBe("art");
+    expect(at(27, 500), "left").toBe("ground");
+    expect(at(721, 500), "right").toBe("art");
+    expect(at(723, 500), "right").toBe("ground");
+    expect(at(375, 29), "top").toBe("art");
+    expect(at(375, 27), "top").toBe("ground");
+    expect(at(375, 975), "bottom").toBe("art");
+    expect(at(375, 978), "bottom").toBe("ground");
   });
 
   it("runs nyx's art on under its whole text box, to 93 % (4.17b)", async () => {

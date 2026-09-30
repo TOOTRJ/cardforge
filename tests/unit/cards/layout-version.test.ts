@@ -1,10 +1,12 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CARD_LAYOUT_VERSION,
   isRenderStale,
   templateOfFrameStyle,
 } from "@/lib/cards/layout-version";
-import { getFrameProfile, underFrameArtRect } from "@/lib/cards/template-layout";
+import { getFrameProfile, sameRect, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
@@ -1050,7 +1052,8 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     for (const t of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid"]) expect(getFrameProfile(t).artSlot, t).toEqual(cc);
     // … nyx and fullart's slots, now to 93 % under the whole text box (4.17b) …
     expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
-    expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 90.1 });
+    // (fullart's also out to whole pixels past its hedron ring's rim.)
+    expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
     // … and the under-frame art, from the border's inner edge (4.17a), on every
     // see-through master — m15pw's colourless one new (4.17b).
     for (const t of ["m15", "m15token", "m15tokentext", "m15pw"]) {
@@ -1058,11 +1061,20 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
       expect(underFrameArtRect(getFrameProfile(t), "w"), t).toBeNull();
     }
     for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(underFrameArtRect(getFrameProfile("m15devoid"), key), key).toEqual(UNDER);
-    // No other template has under-frame art, and the three see-through-c
-    // templates paint the colour key itself (the scope's pickFrameColorKey).
+    // m15pw/c draws ONE picture — its window in the under-frame rect too
+    // (only under art, like the layer: the scope's "colourless with art");
+    // no other see-through master has its own window slot.
+    expect(underFrameArtSlot(getFrameProfile("m15pw"), "c")).toEqual(UNDER);
+    for (const t of ["m15", "m15devoid", "m15token", "m15tokentext"]) expect(underFrameArtSlot(getFrameProfile(t), "c"), t).toBeNull();
+    // Every template that draws v35's under-frame rect is in the scope (one
+    // with a rect of its own — an emblem's — is not v35's business), and the
+    // three see-through-c templates paint the colour key itself (the
+    // scope's pickFrameColorKey).
     for (const t of ALL) {
-      const profile = getFrameProfile(t);
-      if (!["m15", "m15devoid", ...V35_SEE_THROUGH_C_TEMPLATES].includes(t)) expect(profile.underFrameArt, t).toBeUndefined();
+      const u = getFrameProfile(t).underFrameArt;
+      if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
+        expect(["m15", "m15devoid", ...V35_SEE_THROUGH_C_TEMPLATES], t).toContain(t);
+      }
     }
     for (const t of V35_SEE_THROUGH_C_TEMPLATES) {
       expect(getFrameProfile(t).artifactMasterKeys, t).toBeUndefined();
@@ -1139,6 +1151,12 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
       const regular = { frame_style: { template: t, finish: "regular" } };
       expect(isRenderStale(34, t, VERIFICATION_SCOPED_VERSIONS, 35, regular), t).toBe(false);
     }
+  });
+
+  it("takes the frame colour pick from the leaf module, not the frame layer (API routes import this file)", () => {
+    const src = readFileSync(join(process.cwd(), "lib/cards/layout-version.ts"), "utf8");
+    expect(src).not.toMatch(/from "@\/components\//);
+    expect(src).toContain('import { pickFrameColorKey } from "@/lib/cards/frame-color-key";');
   });
 });
 

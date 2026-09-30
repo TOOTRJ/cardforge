@@ -2,7 +2,7 @@ import "server-only";
 import sharp from "sharp";
 import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 import { mergeProfile, type FrameProfileOverride } from "@/lib/cards/profile-override";
-import { getFrameProfile, underFrameArtRect, type FrameProfile } from "@/lib/cards/template-layout";
+import { getFrameProfile, underFrameArtRect, underFrameArtSlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { artWindowFindings, artWindowSlotsOf, artWindowVerdict } from "@/lib/frames/art-window";
 import { loadFrameMasterBytes } from "@/lib/render/card-frames";
 
@@ -12,9 +12,15 @@ import { loadFrameMasterBytes } from "@/lib/render/card-frames";
 // `secondFace.artSlot`) override is live for every render the moment it is
 // saved, so it is held to the same check CI holds the code profiles to
 // (TODO 7.6, lib/frames/art-window.ts): on every master the template paints,
-// the slot — or, on a see-through master, its under-frame art — must cover
-// the frame's art window with 0.05 % of the card to spare, and every
-// translucent part the art shows through must stay inside it. A master in
+// the slot must cover the frame's art window with 0.05 % of the card to
+// spare, and every translucent part the art shows through must stay inside
+// it; on a see-through master the under-frame art covers the window and the
+// see-through body, the slot still covers the window (it is the window's
+// crop), and the two meet on the frame's opaque outline — an m15devoid slot
+// moved inside the window, or off the outline into the body, is refused
+// (every devoid master is see-through, so judging only the under-frame art
+// let both through). A see-through master's own window slot
+// (`underFrameArt.artSlot`) is code-owned: an override doesn't move it. A master in
 // the known-failure table may keep failing, no worse than its bound
 // (artWindowVerdict: the CI rule). A draft that fails is refused with the
 // finding; nothing is written.
@@ -81,7 +87,7 @@ export async function artSlotOverrideRefusal(
       master.data,
       master.width,
       master.height,
-      artWindowSlotsOf(profile, underFrameArtRect(profile, key)),
+      artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key)),
     );
     const verdict = artWindowVerdict(template, key, findings);
     if (verdict.fails.length > 0) {

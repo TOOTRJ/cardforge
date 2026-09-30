@@ -105,10 +105,21 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   4/4/92 × 92 left a 25 px #101015 band above every see-through title bar.
   The colourless token is a PipGlyph composite of CC's silver token frame at
   reduced opacity, because CC's bordered token pack has no colourless frame.
-  Where a see-through master's art slot ends under a translucent part
-  rather than at the window's opaque outline (m15pw `c`: the slot runs 5 px
-  past the window into the silver), the slot's crop and the under-frame
-  art's meet in a faint seam — the two layers are cropped separately.
+  The window keeps its own crop (cover + focal + the card's zoom) and the
+  under-frame layer is a separate cover fit, so where they meet the picture
+  jumps: the join must lie on an OPAQUE part of the master — the window's
+  outline (m15/c, devoid: cols 98–114, rows 220–236 round the window). The
+  art-window check holds every see-through master to that (the first pixels
+  outside the slot, all round, α ≥ 250) and to the slot covering the window
+  itself. A master with no outline to hide the join draws ONE picture —
+  `underFrameArt.artSlot` = the under-frame rect, the window a part of it
+  (m15pw `c`, v35: translucent from the border to the window, no outline
+  down the ability box; its window's picture is ~14 % larger than the
+  coloured walkers'). The colourless tokens' join lies in their translucent
+  silver (the slot ends 2.5 px short of the outline, and the arch above the
+  window is translucent) — a known failure since v34, TODO 4.17c, one
+  picture there being an owner decision (it would zoom the token window
+  1.34–1.69×).
 - **The CC M15 art slot.** The CC-framed M15 profiles (m15, land, snow land,
   artifact, snow, devoid) draw the art in `CC_M15_ART_SLOT`
   (7.67/11.25/84.76 × 44.33, layout v35, 4.4 (2)): CC's artBounds with the
@@ -584,8 +595,11 @@ or plate — so v35 is verification-neutral (as v31–v33) and a "sweep":
 - **Under-frame art from the border (4.17a).** `UNDER_FRAME_RECT`
   3.7/2.7/92.6 × 93.3 on every see-through master (m15/c, m15devoid, m15token
   /c, m15tokentext/c, m15pw/c): the see-through body runs from 58–59 px; the
-  art started at 84 px (a 25 px band above the title bar, 34,000–34,400 px
-  per master).
+  art started at 84 px. #101015 px left under the frame (α < 250, not fully
+  under art) per master: 42,743 on m15/c and devoid/c — 34,274 of them the
+  band above the title bar (34,142 on the token `c`s), the rest down the
+  sides — 37,514–37,530 on the token `c`s, 3,024 (sides) on the coloured
+  devoids; 0 now.
 - **Nyx (4.17b, owner decision).** The art runs under the whole translucent
   type bar and text box, one picture as on the THB constellation prints
   (#258 Daxos, #259 Heliod, #268 Klothys: art to 91.9 %H, the box's light rim
@@ -593,24 +607,44 @@ or plate — so v35 is verification-neutral (as v31–v33) and a "sweep":
   the box's last 241 px were #101015 — a seam across the rules text). The
   window's crop comes from the taller slot, so a landscape picture sits
   about 17 % larger in the window than before.
-- **fullart (4.17b).** `artSlot` 4/2.9/92 × 90.1, to 93 % (was 88.3: a 31 px
-  dark strip along the translucent box's bottom). The ZNR prints paint that
-  box as an opaque hedron panel; our MSE master's is translucent (α 179) — a
-  re-source question, not this fix.
+- **fullart (4.17b).** `artSlot` 3.8/2.7/92.4 × 90.3: to 93 % (was 88.3: a
+  31 px dark strip along the translucent box's bottom) and out to whole
+  pixels past the hedron ring's anti-aliased rim (57–1443 × 56.7 px; the
+  rim, α 128–249 on rows 59–60 and columns 59 / 1440–1441, was 7,956 px
+  half-dark over #101015 — a thin line along the art's top). The ZNR prints
+  paint that box as an opaque hedron panel; our MSE master's is translucent
+  (α 179) — a re-source question, not this fix.
 - **m15pw `c` (4.17b).** CC's colourless planeswalker is see-through (α ≈ 180
   body, translucent type bar; DOM #1 Karn, M21 #1 Ugin) and had no
-  under-frame art: 334,000 px of it showed #101015. It gets
-  `underFrameArt { colors: ["c"] }` with 4.17a's rect.
+  under-frame art: 334,216 px of it showed #101015. It gets
+  `underFrameArt { colors: ["c"], artSlot: UNDER_FRAME_RECT }` — ONE
+  picture, the window drawn in 4.17a's rect too. (The first build kept
+  M15PW's slot over a separate under-frame layer: its edges, 5 px past the
+  window in the silver, seamed all round.)
+- **The see-through rules (7.6 + the save gate).** On a see-through master
+  the window's slot must cover the window too (an m15devoid artSlot override
+  moved inside the window used to save — every devoid master is see-through
+  and only the under-frame rect was judged) and meet the under-frame art on
+  the opaque outline, or be one picture.
 
 Scope (`VERSION_SCOPES[35]`, frozen `V35_ART_SLOT_TEMPLATES` /
 `V35_SEE_THROUGH_C_TEMPLATES`): every card on the six CC M15 profiles, nyx and
 fullart (the legacy templates drawn as m15 included; with no art the empty
 art box moves too), and on m15token / m15tokentext / m15pw only a colourless
-card with art. Production, anonymous read 2026-09-29: 738 of 824 public /
-unlisted cards (m15 610, m15land 49, m15artifact 37, m15devoid 19, m15snow 13,
-m15tokentext 9 of 33, m15pw 1 of 7; none on m15snowland, m15token, nyx,
-fullart). The visual matrix changed 163 of 849 cases, all inside the scope,
-and the scope holds no unchanged case.
+card with art (m15pw/c's one picture, too, only under art: without art its
+empty box stays in M15PW's slot). Production, anonymous read 2026-09-29: 738
+of 824 public / unlisted cards (m15 610, m15land 49, m15artifact 37,
+m15devoid 19, m15snow 13, m15tokentext 9 of 33, m15pw 1 of 7; none on
+m15snowland, m15token, nyx, fullart). The visual matrix (857
+cases) against v34: 162 stored cases change + 1 print-only one
+(`m15/w/creature-short@square`, which the gate exempts), all inside the scope,
+and the scope holds no unchanged case; 8 no-art cases are new (the empty-art
+box on v35's slots, and no under-frame change without art).
+
+Previews: Vercel previews on the dev DB are never swept (the auto-rebake
+cron runs in production only), so a preview's stored bakes — gallery tiles,
+OG images, free downloads — stay at v34 while its creator draws v35. Judge a
+v35 change in the creator's live preview, or re-save a `dev_*` card.
 
 ## Which printing is which frame (TODO 1.4)
 

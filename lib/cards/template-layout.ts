@@ -286,11 +286,47 @@ export function bandTextStyle(slot: TextSlot, masterKey: string): { color?: stri
  *  seam. `colors` limits it to some frame MASTER keys (M15's "c" only) —
  *  underFrameArtRect is given the master the card paints (frameMasterKey), so
  *  a profile that also dresses a colour by type (artifactMasterKeys) lists
- *  the dressed master too if that one is see-through as well. */
+ *  the dressed master too if that one is see-through as well.
+ *
+ *  The two layers are cropped separately (each its own cover fit), so where
+ *  they meet the picture jumps: the join must lie on an OPAQUE part of the
+ *  master — the window's own outline (m15/c, devoid; the art-window check
+ *  holds every see-through master to it, lib/frames/art-window.ts). A
+ *  see-through master whose window has no outline where the profile's slot
+ *  ends draws its window in `artSlot` instead (layout v35): a slot of its
+ *  own on that outline, or `rect` itself — ONE picture, the window a part of
+ *  it and no second layer (m15pw/c: translucent from the border to the
+ *  window, no outline down the ability box). (The colourless tokens' join
+ *  lies in their silver too, but their arched window has translucent silver
+ *  above it, so no rectangle would do — TODO 4.17c.) Only under art, like
+ *  the under-frame layer: a card without art draws its empty-art box in the
+ *  profile's own `artSlot`. */
 export type UnderFrameArt = {
   rect: Rect;
   colors?: readonly string[];
+  artSlot?: Rect;
 };
+
+/** The art a face paints under its frame on master `colorKey`, as both
+ *  renderers and the foil mask draw it: the window's `slot` (a see-through
+ *  master's own UnderFrameArt.artSlot when it has one and there is art) and
+ *  the see-through master's `under` rect (only under art) — null when there
+ *  is none, or when the slot IS that rect (one picture: no second layer). */
+export function artLayersFor(
+  profile: FrameProfile,
+  colorKey: string,
+  hasArt: boolean,
+): { slot: Rect; under: Rect | null } {
+  const under = hasArt ? underFrameArtRect(profile, colorKey) : null;
+  if (!under) return { slot: profile.artSlot, under: null };
+  const slot = underFrameArtSlot(profile, colorKey) ?? profile.artSlot;
+  return { slot, under: sameRect(slot, under) ? null : under };
+}
+
+/** Two rects with the same four numbers. */
+export function sameRect(a: Rect, b: Rect): boolean {
+  return a.topPct === b.topPct && a.leftPct === b.leftPct && a.widthPct === b.widthPct && a.heightPct === b.heightPct;
+}
 
 /** A frame drawn in two halves for a two-colour card — see
  *  FrameProfile.twoColorSplit. */
@@ -2725,10 +2761,14 @@ const NYX: FrameProfile = {
 // #101015 strip along the box's bottom (TODO 4.17b, layout v35); it ends at
 // 93 % (1953 px) now, under the opaque bottom border. (The ZNR prints paint
 // that box as an opaque hedron panel — a re-source question, not this fix.)
+// Its left, top and right edges moved out to whole pixels past the hedron
+// ring's anti-aliased rim too (v35): 57–1443 × 56.7 px (was 60–1440 × 60.9),
+// where the ring (α 128–249 on rows 59–60 and columns 59 / 1440–1441) left
+// 7,956 px half-dark over #101015 — a thin line along the art's top.
 const FULLART: FrameProfile = {
   ...M15,
   label: "Zendikar Rising Hedron",
-  artSlot: { topPct: 2.9, leftPct: 4, widthPct: 92, heightPct: 90.1 },
+  artSlot: { topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 },
   title: {
     ...M15.title,
     rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 5 },
@@ -2908,8 +2948,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15devoid: M15DEVOID,
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
   // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through
-  // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35).
-  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35)
+  // as ONE picture — the window drawn in the under-frame rect too. Its body
+  // is translucent from the border to the window and has no outline down
+  // the ability box, so M15PW's slot (5 px into the silver) and a second,
+  // separately cropped layer met in a seam the frame showed all round
+  // (x ≈ 100 / 1397, y ≈ 207; the art-window check's seam rule). The window
+  // shows ~14 % more of the picture's zoom than on the coloured walkers
+  // (a 1959 px cover height, not 1716).
+  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT } },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,
@@ -2962,4 +3009,11 @@ export function underFrameArtRect(profile: FrameProfile, colorKey: string): Rect
   if (!u) return null;
   if (u.colors && !u.colors.includes(colorKey)) return null;
   return u.rect;
+}
+
+/** A see-through master's own window slot (UnderFrameArt.artSlot) for a
+ *  profile + frame colour key, or null (the profile's artSlot paints it). */
+export function underFrameArtSlot(profile: FrameProfile, colorKey: string): Rect | null {
+  if (!underFrameArtRect(profile, colorKey)) return null;
+  return profile.underFrameArt?.artSlot ?? null;
 }

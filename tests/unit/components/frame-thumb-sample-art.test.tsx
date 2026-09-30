@@ -153,8 +153,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     const expected: Record<string, [number, number]> = {
       bloomanime: [93, 92],
       tarkirghostfire: [93, 92],
-      // Layout v35 (4.17b): nyx's and fullart's art run under the whole text box.
-      fullart: [92, 90.1],
+      // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
+      // box (fullart's out past its ring's rim too).
+      fullart: [92.4, 90.3],
       m15textless: [84, 80.7],
       m15textlessland: [84, 80.7],
       nyx: [88, 81.8],

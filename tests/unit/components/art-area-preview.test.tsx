@@ -8,10 +8,11 @@ import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 // Layout v35 (TODO 4.4 (2), 4.17a, 4.17b) in the live preview: the same art
 // rects the bake paints (tests/unit/render/art-area-bake.test.ts) — the
 // under-frame art from the black border's inner edge on every see-through
-// master (m15pw's colourless one new), the CC M15 profiles' window art in
+// master (m15pw's colourless one new, as ONE picture: its window drawn in
+// that rect too, no second layer), the CC M15 profiles' window art in
 // CC_M15_ART_SLOT, nyx's and fullart's art on down under their whole text
-// box. Both renderers read one profile (artSlot, underFrameArtRect), so the
-// rects are the parity.
+// box. Both renderers read one resolver (artLayersFor), so the rects are the
+// parity.
 // ---------------------------------------------------------------------------
 
 afterEach(cleanup);
@@ -31,17 +32,32 @@ const under = (root: HTMLElement) => pct(root.querySelector<HTMLElement>('[data-
 const slot = (root: HTMLElement) => pct(root.querySelector<HTMLElement>('img[alt="Artwork for Probe"]')?.closest<HTMLElement>("div.absolute") ?? null);
 
 describe("layout v35 — the preview paints the art where the bake does", () => {
-  it("under-frame art from the border's inner edge on every see-through master, m15pw/c included", () => {
+  it("under-frame art from the border's inner edge on every see-through master; m15pw/c's as ONE picture", () => {
     for (const [template, colours, type] of [
       ["m15", ["colorless"], "artifact"],
       ["m15devoid", ["black"], "creature"],
       ["m15token", ["colorless"], "token"],
       ["m15tokentext", ["colorless"], "token"],
-      ["m15pw", ["colorless"], "planeswalker"],
     ] as const) {
       expect(under(preview(template, [...colours], type)), template).toEqual(["3.7%", "2.7%", "92.6%", "93.3%"]);
       cleanup();
     }
+    // The colourless walker: the window's art IS the under-frame picture —
+    // no second, separately cropped layer to meet it in a seam.
+    const walker = preview("m15pw", ["colorless"], "planeswalker");
+    expect(under(walker)).toBeNull();
+    expect(slot(walker)).toEqual(["3.7%", "2.7%", "92.6%", "93.3%"]);
+    cleanup();
+    // A coloured walker keeps M15PW's slot.
+    expect(slot(preview("m15pw", ["blue"], "planeswalker"))).toEqual(["6.7%", "9.9%", "86.4%", "81.7%"]);
+    cleanup();
+    // Without art the empty-art box stays in the profile's slot.
+    const empty = render(
+      <CardPreview title="Probe" cardType="planeswalker" colorIdentity={["colorless"]} artUrl={null} frameStyle={{ template: "m15pw", finish: "regular" }} />,
+    ).container;
+    expect(under(empty)).toBeNull();
+    expect(pct(empty.querySelector<HTMLElement>("span.font-display")?.closest<HTMLElement>("div.absolute") ?? null)).toEqual(["6.7%", "9.9%", "86.4%", "81.7%"]);
+    cleanup();
     // Opaque masters draw no under-frame art.
     expect(under(preview("m15pw", ["blue"], "planeswalker"))).toBeNull();
     cleanup();
@@ -57,6 +73,7 @@ describe("layout v35 — the preview paints the art where the bake does", () => 
     cleanup();
     expect(slot(preview("nyx", ["white"], "creature"))).toEqual(["6%", "11.2%", "88%", "81.8%"]);
     cleanup();
-    expect(slot(preview("fullart", ["white"], "creature"))).toEqual(["4%", "2.9%", "92%", "90.1%"]);
+    // fullart: to 93 % and out past the hedron ring's anti-aliased rim.
+    expect(slot(preview("fullart", ["white"], "creature"))).toEqual(["3.8%", "2.7%", "92.4%", "90.3%"]);
   });
 });

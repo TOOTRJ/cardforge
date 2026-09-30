@@ -1,5 +1,10 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
+import manifestJson from "@/lib/frames/frame-manifest.json";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
   artSlotOverrideRefusal,
@@ -14,20 +19,24 @@ import {
 // round): an override that moves an art slot is checked on every master the
 // template paints, with CI's verdict, before the editor may save it.
 // Synthetic 1500 × 2100 masters cut to the Card Conjurer M15 window
-// (116–1384 × 238–1165, measured on every colour), and the real git nyx
-// masters through the bake's own loader.
+// (116–1384 × 238–1165, measured on every colour) and its opaque outline,
+// the real git nyx masters through the bake's own loader, and — where the
+// bucket masters are on disk at the manifest's sha (CI's FRAMES_BUILD_DIR) —
+// the real m15devoid ones.
 // ---------------------------------------------------------------------------
 
 const W = 1500;
 const H = 2100;
 type Box = [x0: number, x1: number, y0: number, y1: number];
 
-function master(window: Box, body: Box | null = null): MasterPixels {
+/** Opaque, the card corner cut, a clear window, and (see-through masters) a
+ *  body at α 26 kept off the window by an opaque outline — px, x1/y1 exclusive. */
+function master(window: Box, body: Box | null = null, outline: Box | null = null): MasterPixels {
   const data = new Uint8Array(W * H * 4);
   const inside = (b: Box, x: number, y: number) => x >= b[0] && x < b[1] && y >= b[2] && y < b[3];
   for (let y = 0; y < H; y += 1) {
     for (let x = 0; x < W; x += 1) {
-      data[(y * W + x) * 4 + 3] = inside(window, x, y) ? 0 : body && inside(body, x, y) ? 26 : 255;
+      data[(y * W + x) * 4 + 3] = inside(window, x, y) ? 0 : outline && inside(outline, x, y) ? 255 : body && inside(body, x, y) ? 26 : 255;
     }
   }
   applyCardCornerMask(data, W, H);
@@ -36,8 +45,11 @@ function master(window: Box, body: Box | null = null): MasterPixels {
 
 const M15_WINDOW: Box = [116, 1384, 238, 1165];
 const M15_MASTER = master(M15_WINDOW);
-// m15/c: CC's see-through "Eldrazi" master (its body from the border's inner edge).
-const M15_C_MASTER = master(M15_WINDOW, [58, 1443, 59, 1938]);
+// m15/c: CC's see-through "Eldrazi" master (its body from the border's inner
+// edge, the window's outline 98–1401 × 220–1184 as measured).
+const M15_C_MASTER = master(M15_WINDOW, [58, 1443, 59, 1938], [98, 1402, 220, 1185]);
+// Every m15devoid colour: see-through, the outline 100–1399 × 198–1184.
+const DEVOID_MASTER = master(M15_WINDOW, [59, 1441, 89, 1938], [100, 1400, 198, 1185]);
 
 /** A loader that serves the M15 masters and records what it was asked. */
 function m15Loader(overrides: Partial<Record<string, MasterPixels | null | Error>> = {}) {
@@ -91,16 +103,47 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
     expect(asked).toEqual(["m15/w", "m15/u", "m15/b", "m15/r", "m15/g", "m15/c", "m15/m"]);
   });
 
-  it("judges a see-through master by its under-frame art, not the slot", async () => {
-    // A slot 20 px inside the window's left edge: on a see-through master
-    // (every m15devoid colour) the under-frame art covers the window and the
-    // body, so it passes; on m15's opaque colours the window shows #101015.
-    const bad = { artSlot: { leftPct: 9, widthPct: 83 } };
-    const devoid: MasterLoader = async () => master(M15_WINDOW, [59, 1441, 89, 1938]);
-    expect(await artSlotOverrideRefusal("m15devoid", bad, devoid)).toBeNull();
+  it("holds a see-through master's slot to its window too — every m15devoid colour (the review's hole)", async () => {
+    // Until the review, a see-through master was judged by its under-frame
+    // art alone, so these two saved on m15devoid (every colour see-through)
+    // though the window showed two crops of the art with a seam through it.
+    const devoid: MasterLoader = async () => DEVOID_MASTER;
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { leftPct: 9, widthPct: 83 } }, devoid)).toMatch(
+      /^The art slot leaves the m15devoid\/w frame's art window uncovered .*artSlot: the slot 135–1380 × .* doesn't cover the window 116–1384 × 238–1165 px .*a see-through master's window shows the slot's crop.*: left 135 > 115\.25, right 1380 < 1384\.75$/,
+    );
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { topPct: 20, heightPct: 20 } }, devoid)).toMatch(
+      /^The art slot leaves the m15devoid\/w frame's art window uncovered .*: top 420 > 236\.95, bottom 840 < 1166\.05$/,
+    );
+    // A nudge that keeps the slot over the window and its edges on the
+    // outline saves; one that ends past the outline, in the body, doesn't.
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { topPct: 11.1, heightPct: 44.6 } }, devoid)).toBeNull();
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { leftPct: 6.5, widthPct: 87 } }, devoid)).toMatch(
+      /meets the under-frame art where the frame lets it through .*: left \(column 96\) \d+ of \d+ px, right \(column 1402\)/,
+    );
+    // On m15's opaque colours a hole in the window shows #101015.
     const { load, asked } = m15Loader();
-    expect(await artSlotOverrideRefusal("m15", bad, load)).toMatch(/m15\/w frame's art window uncovered .*: left 135 > 115\.25, right 1380 < 1384\.75$/);
+    expect(await artSlotOverrideRefusal("m15", { artSlot: { leftPct: 9, widthPct: 83 } }, load)).toMatch(/m15\/w frame's art window uncovered .*: left 135 > 115\.25, right 1380 < 1384\.75$/);
     expect(asked).toEqual(["m15/w"]);
+  });
+
+  // The real m15devoid masters (bucket; CI fetches them, FRAMES_BUILD_DIR).
+  const BUILD = process.env.FRAMES_BUILD_DIR ? path.resolve(process.env.FRAMES_BUILD_DIR) : path.join(process.cwd(), ".frames-build");
+  const manifest = manifestJson as { files: Record<string, { sha256: string }> };
+  const onDisk = (rel: string) => {
+    const file = path.join(BUILD, rel);
+    return fs.existsSync(file) && createHash("sha256").update(fs.readFileSync(file)).digest("hex") === manifest.files[rel]?.sha256 ? file : null;
+  };
+  const devoidOnDisk = ["w", "u", "b", "r", "g", "c", "m"].every((k) => onDisk(`m15devoid/${k}.png`));
+  it.runIf(devoidOnDisk)("refuses the review's two m15devoid overrides on the real masters, and saves the code's slot", async () => {
+    const real: MasterLoader = async (template, key) => {
+      const file = onDisk(`${template}/${key}.png`);
+      if (!file) return null;
+      const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      return { data, width: info.width, height: info.height };
+    };
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { topPct: 20, heightPct: 20 } }, real)).toMatch(/doesn't cover the window/);
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { leftPct: 9, widthPct: 83 } }, real)).toMatch(/doesn't cover the window/);
+    expect(await artSlotOverrideRefusal("m15devoid", { artSlot: { ...getFrameProfile("m15devoid").artSlot } }, real)).toBeNull();
   });
 
   it("refuses when a master can't be loaded or is missing — never saves an unchecked slot", async () => {

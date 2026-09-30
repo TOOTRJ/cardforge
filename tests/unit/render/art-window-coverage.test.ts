@@ -17,13 +17,14 @@ import {
   seeThroughBody,
   seeThroughWindow,
   slotPixelBox,
+  slotSeams,
   translucentRegionsUnder,
   type ArtWindowSlot,
 } from "@/lib/frames/art-window";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
-import { getFrameProfile, underFrameArtRect } from "@/lib/cards/template-layout";
+import { getFrameProfile, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // covered by the (rotated) slot that paints the art there, with ≥ 0.05 % of
 // the card to spare, and every translucent frame part (α < 250) the art
 // shows through stays inside it (0.2 % rim); on a see-through master (4.17)
-// the under-frame art covers the window and the see-through body.
+// the under-frame art covers the window and the see-through body, the slot
+// covers the window too, and the two meet on the frame's opaque outline (or
+// are one picture — layout v35).
 // lib/frames/art-window.ts holds the check and today's known failures; the
 // Card Conjurer importer runs the same check on every master it builds
 // (scripts/import-cc-frames.mjs).
@@ -86,7 +89,7 @@ async function rgbaOf(file: string) {
 /** The slots the renderers paint for this master (the check's input). */
 function slotsFor(template: string, key: string): ArtWindowSlot[] {
   const profile = getFrameProfile(template);
-  return artWindowSlotsOf(profile, underFrameArtRect(profile, key));
+  return artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key));
 }
 
 // ---------------------------------------------------------------------------
@@ -296,33 +299,32 @@ describe("see-through masters (4.17): the under-frame art covers the window and 
   const W = 1500;
   const H = 2100;
   const under = { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 }; // 60–1440 × 84–2016
-  const artSlot = { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 }; // 117–1383 × 239.4–1163.4
+  const artSlot = { topPct: 11.25, leftPct: 7.67, widthPct: 84.76, heightPct: 44.33 }; // 115.05–1386.45 × 236.25–1167.18
   /** An opaque black card, the card corner cut, a clear window 116–1384 ×
-   *  238–1165 (the M15 window: 1 px outside the art slot) and a see-through
-   *  body (α 26) 62–1438 × `bodyTop`–1938 inside the border. */
+   *  238–1165 (the CC M15 window) inside m15/c's opaque outline 98–1402 ×
+   *  220–1185, and a see-through body (α 26) 62–1438 × `bodyTop`–1938
+   *  around it. */
   const master = (bodyTop: number) => {
     const buf = new Uint8Array(W * H * 4);
     for (let y = 0; y < H; y += 1) {
       for (let x = 0; x < W; x += 1) {
         const window = x >= 116 && x < 1384 && y >= 238 && y < 1165;
+        const outline = x >= 98 && x < 1402 && y >= 220 && y < 1185;
         const body = x >= 62 && x < 1438 && y >= bodyTop && y < 1938;
-        buf[(y * W + x) * 4 + 3] = window ? 0 : body ? 26 : 255;
+        buf[(y * W + x) * 4 + 3] = window ? 0 : outline ? 255 : body ? 26 : 255;
       }
     }
     applyCardCornerMask(buf, W, H);
     return buf;
   };
-  const slots = (u: typeof under | null) => artWindowSlotsOf({ artSlot }, u);
+  const slots = (u: typeof under | null, slot = artSlot) => artWindowSlotsOf({ artSlot: slot }, u);
 
-  it("passes when the body lies inside the under-frame rect — the art slot's own 1 px hairline is hidden under the art", () => {
+  it("passes when the body lies inside the under-frame rect and the slot covers the window, meeting it on the outline", () => {
     expect(artWindowViolations(master(90), W, H, slots(under))).toEqual([]);
-    // Without the under-frame art the same master fails on the hairline —
-    // and the translucent-region rule finds the see-through body the art
-    // only partly shows through (m15pw/c's case: see-through, not flagged).
-    expect(artWindowViolations(master(90), W, H, slots(null))).toEqual([
-      expect.stringMatching(/^artSlot: the slot /),
-      expect.stringMatching(/^artSlot: a translucent part of the frame 62–1438 × 90–1938 px .*: left 55 px, right 55 px, top 149\.4 px, bottom 774\.6 px$/),
-    ]);
+    // Without the under-frame art the outline keeps the body out of the
+    // slot's translucent regions: it would show #101015 evenly (a ring, 7.7's
+    // business) — which is why a see-through master declares underFrameArt.
+    expect(artWindowViolations(master(90), W, H, slots(null))).toEqual([]);
   });
 
   it("fails the 25 px band CC's see-through body leaves above the under-frame rect (4.17a)", () => {
@@ -331,6 +333,25 @@ describe("see-through masters (4.17): the under-frame art covers the window and 
       expect.stringMatching(
         new RegExp(`^artSlot: the under-frame art 60–1440 × 84–2016 px doesn't cover the see-through frame 62–1438 × 59–1938 px \\(\\d+ px, α < ${SEE_THROUGH_FRAME_ALPHA_MAX}\\) .*: top 84 > 57\\.95$`),
       ),
+    ]);
+  });
+
+  it("holds the slot to the window too: the MSE slot's 1–1.6 px hairline shows the under-frame crop, a seam (layout v35)", () => {
+    // v24–v34 judged a see-through master by its under-frame art alone, so
+    // this slot passed while its hairline showed the other crop of the art.
+    const mse = { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 }; // 117–1383 × 239.4–1163.4
+    expect(artWindowFindings(master(90), W, H, slots(under, mse))).toEqual([
+      {
+        message: expect.stringMatching(
+          /^artSlot: the slot 117–1383 × 239\.4–1163\.4 px doesn't cover the window 116–1384 × 238–1165 px .* — a see-through master's window shows the slot's crop, the under-frame art's only beside it: left 117 > 115\.25, right 1383 < 1384\.75, top 239\.4 > 236\.95, bottom 1163\.4 < 1166\.05$/,
+        ),
+        missPx: expect.closeTo(2.65, 6),
+      },
+      // Its first pixels outside are the window's own clear pixels.
+      {
+        message: expect.stringMatching(/^artSlot: the slot .* meets the under-frame art where the frame lets it through .*: left \(column 116\) 924 of 924 px, right \(column 1383\) 924 of 924 px, top \(row 238\) 1266 of 1266 px, bottom \(row 1163\) 1266 of 1266 px$/),
+        missPx: 1266,
+      },
     ]);
   });
 
@@ -344,6 +365,95 @@ describe("see-through masters (4.17): the under-frame art covers the window and 
   });
 });
 
+// The see-through slot rules (layout v35 — the correction round's review): on
+// a see-through master the window keeps the slot's own crop and the
+// under-frame art is cropped separately, so (1) the slot must cover the
+// window with the overscan — an m15devoid artSlot override moved inside the
+// window passed the gate while the window showed two crops of the art — and
+// (2) the two must meet on the frame's OPAQUE outline, or the picture jumps
+// where the frame shows it (m15pw/c's slot ended in its translucent silver).
+describe("see-through masters: the slot covers the window and meets the under-frame art on the opaque outline", { timeout: 20_000 }, () => {
+  const W = 1500;
+  const H = 2100;
+  const under = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
+  const cc = { topPct: 11.25, leftPct: 7.67, widthPct: 84.76, heightPct: 44.33 };
+  /** m15/c as measured (2026-09-29, every see-through CC M15 master): the
+   *  window 116–1384 × 238–1165 inside an opaque outline 98–1402 × 220–1185
+   *  (cols 98–114 / 1385–1401, rows 220–236 / 1166–1184), the see-through
+   *  body (α 26) 58–1443 × 59–1938 round it. `outline: false` = the
+   *  walker's case, translucent right up to the window. */
+  const master = (outline = true) => {
+    const buf = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y += 1) {
+      for (let x = 0; x < W; x += 1) {
+        const window = x >= 116 && x < 1384 && y >= 238 && y < 1165;
+        const ring = outline && x >= 98 && x < 1402 && y >= 220 && y < 1185;
+        const body = x >= 58 && x < 1443 && y >= 59 && y < 1938;
+        buf[(y * W + x) * 4 + 3] = window ? 0 : ring ? 255 : body ? 26 : 255;
+      }
+    }
+    applyCardCornerMask(buf, W, H);
+    return buf;
+  };
+  const m = master();
+
+  it("passes the CC M15 slot on m15/c's outline, and one picture anywhere", () => {
+    expect(artWindowViolations(m, W, H, artWindowSlotsOf({ artSlot: cc }, under))).toEqual([]);
+    // Its first pixels outside, all round, are the outline's.
+    expect(slotSeams(m, W, H, slotPixelBox(cc, 0, W, H))).toEqual([
+      { side: "left", at: 114, pixels: 931, seam: 0 },
+      { side: "right", at: 1386, pixels: 931, seam: 0 },
+      { side: "top", at: 235, pixels: 1271, seam: 0 },
+      { side: "bottom", at: 1167, pixels: 1271, seam: 0 },
+    ]);
+    // A slot that IS the under-frame rect is one picture: nothing meets.
+    const flat = master(false);
+    expect(artWindowViolations(flat, W, H, artWindowSlotsOf({ artSlot: cc }, under, under))).toEqual([]);
+  });
+
+  it("fails a slot that ends in the translucent body — m15pw/c's seam (and the colourless tokens', 4.17c)", () => {
+    // 3 px wider and taller than the outline on each side: its edges lie
+    // in the α 26 body.
+    const wide = { topPct: (216 / H) * 100, leftPct: (94 / W) * 100, widthPct: (1312 / W) * 100, heightPct: (973 / H) * 100 };
+    const f = artWindowFindings(m, W, H, artWindowSlotsOf({ artSlot: wide }, under));
+    expect(f).toEqual([
+      {
+        message: expect.stringMatching(
+          /^artSlot: the slot 94–1406 × 216–1189 px meets the under-frame art where the frame lets it through \(α < 250\) — a seam .*: left \(column 93\) 973 of 973 px, right \(column 1406\) 973 of 973 px, top \(row 215\) 1312 of 1312 px, bottom \(row 1189\) 1312 of 1312 px$/,
+        ),
+        missPx: 1312,
+      },
+    ]);
+    // With no outline at all (m15pw/c), even the CC slot seams: the walker
+    // draws ONE picture instead.
+    expect(artWindowViolations(master(false), W, H, artWindowSlotsOf({ artSlot: cc }, under))).toEqual([expect.stringMatching(/meets the under-frame art/)]);
+  });
+
+  it("fails a slot moved inside the window — the save gate's m15devoid hole (the window showed two crops)", () => {
+    for (const slot of [
+      { ...cc, topPct: 20, heightPct: 20 },
+      { ...cc, leftPct: 9, widthPct: 83 },
+    ]) {
+      const f = artWindowFindings(m, W, H, artWindowSlotsOf({ artSlot: slot }, under));
+      expect(f.map((x) => x.message), JSON.stringify(slot)).toEqual([
+        expect.stringMatching(/^artSlot: the slot .* doesn't cover the window 116–1384 × 238–1165 px .*a see-through master's window shows the slot's crop/),
+        expect.stringMatching(/^artSlot: the slot .* meets the under-frame art where the frame lets it through/),
+      ]);
+    }
+  });
+
+  it("counts a pixel by its centre, and leaves out a side on the card's edge", () => {
+    // Left edge at 115.05: column 115 (centre 115.5) is inside, 114 the first outside.
+    expect(slotSeams(m, W, H, { x0: 115.05, x1: 1386.45, y0: 236.25, y1: 1167.18 })[0]).toEqual({ side: "left", at: 114, pixels: 931, seam: 0 });
+    // …at 115.6 column 115 is outside: the window's AA rim would show.
+    const buf = master();
+    for (let y = 0; y < H; y += 1) buf[(y * W + 115) * 4 + 3] = 176;
+    expect(slotSeams(buf, W, H, { x0: 115.6, x1: 1386.45, y0: 236.25, y1: 1167.18 })[0]).toEqual({ side: "left", at: 115, pixels: 931, seam: 931 });
+    // A slot from the card's own edge has no left or top side.
+    expect(slotSeams(m, W, H, { x0: 0, x1: 1386.45, y0: 0, y1: 1167.18 }).map((x) => x.side)).toEqual(["right", "bottom"]);
+  });
+});
+
 // Layout v35 (4.4 (2), 4.17a, 4.17b), on synthetic 1500 × 2100 masters cut to
 // the Card Conjurer masters' measured windows and see-through bodies — so the
 // profiles are held to them where the bucket masters aren't fetched too.
@@ -352,13 +462,14 @@ describe("layout v35 covers the Card Conjurer masters' measured art windows", { 
   const H = 2100;
   type Box = [x0: number, x1: number, y0: number, y1: number];
   /** Opaque, the card corner cut, a clear window and (optionally) a
-   *  see-through body (α 26) around it — px boxes, x1/y1 exclusive. */
-  const master = (window: Box, body: Box | null = null) => {
+   *  see-through body (α 26) around it, kept off the window by an opaque
+   *  outline where the master has one — px boxes, x1/y1 exclusive. */
+  const master = (window: Box, body: Box | null = null, outline: Box | null = null) => {
     const buf = new Uint8Array(W * H * 4);
     const inside = (b: Box, x: number, y: number) => x >= b[0] && x < b[1] && y >= b[2] && y < b[3];
     for (let y = 0; y < H; y += 1) {
       for (let x = 0; x < W; x += 1) {
-        buf[(y * W + x) * 4 + 3] = inside(window, x, y) ? 0 : body && inside(body, x, y) ? 26 : 255;
+        buf[(y * W + x) * 4 + 3] = inside(window, x, y) ? 0 : outline && inside(outline, x, y) ? 255 : body && inside(body, x, y) ? 26 : 255;
       }
     }
     applyCardCornerMask(buf, W, H);
@@ -389,27 +500,62 @@ describe("layout v35 covers the Card Conjurer masters' measured art windows", { 
   });
 
   it("runs the art under every see-through master from the border's inner edge (was a 25 px band above the title bar)", () => {
-    const cases: [template: string, key: string, window: Box, body: Box][] = [
-      ["m15", "c", M15_WINDOW, [58, 1443, 59, 1938]],
-      ["m15devoid", "c", M15_WINDOW, [58, 1443, 59, 1938]],
-      ["m15devoid", "w", M15_WINDOW, [59, 1441, 89, 1938]],
-      ["m15token", "c", [111, 1389, 259, 1709], [59, 1441, 59, 1949]],
-      ["m15tokentext", "c", [111, 1389, 259, 1409], [59, 1441, 59, 1949]],
+    // The outlines as measured on the bucket masters (fully opaque columns
+    // and rows round the window): m15/c and devoid/c 98–1401 × 220–1184,
+    // the coloured devoid 100–1399 × 198–1184. CC's walker has none down
+    // its ability box — so it draws one picture (below).
+    const cases: [template: string, key: string, window: Box, body: Box, outline: Box | null][] = [
+      ["m15", "c", M15_WINDOW, [58, 1443, 59, 1938], [98, 1402, 220, 1185]],
+      ["m15devoid", "c", M15_WINDOW, [58, 1443, 59, 1938], [98, 1402, 220, 1185]],
+      ["m15devoid", "w", M15_WINDOW, [59, 1441, 89, 1938], [100, 1400, 198, 1185]],
       // 4.17b: CC's colourless planeswalker had no under-frame art at all.
-      ["m15pw", "c", [106, 1393, 212, 1159], [60, 1440, 60, 1932]],
+      ["m15pw", "c", [106, 1393, 212, 1159], [60, 1440, 60, 1932], null],
     ];
-    for (const [template, key, window, body] of cases) {
-      const m = master(window, body);
+    for (const [template, key, window, body, outline] of cases) {
+      const m = master(window, body, outline);
       expect(underFrameArtRect(getFrameProfile(template), key), `${template}/${key}`).toEqual({ topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 });
       expect(artWindowViolations(m, W, H, slotsFor(template, key)), `${template}/${key}`).toEqual([]);
       // v24's rect 4/4/92 × 92 (60–1440 × 84–2016) left the band (the
       // coloured devoid body starts at 89 px: there, 1–2 px down each side).
       const v34 = artWindowSlotsOf(getFrameProfile(template), { topPct: 4, leftPct: 4, widthPct: 92, heightPct: 92 });
       const band = body[2] < 84 ? /doesn't cover the see-through frame .*top 84 > / : /doesn't cover the see-through frame .*: left 60 > \d/;
-      expect(artWindowViolations(m, W, H, v34), `${template}/${key} at v34`).toEqual([expect.stringMatching(band)]);
+      expect(artWindowViolations(m, W, H, v34)[0], `${template}/${key} at v34`).toMatch(band);
     }
     // Only the see-through master of a coloured planeswalker family.
     for (const key of ["w", "u", "b", "r", "g", "m"]) expect(underFrameArtRect(getFrameProfile("m15pw"), key), key).toBeNull();
+  });
+
+  it("draws m15pw/c as ONE picture: its slot ended in the translucent silver, a seam all round", () => {
+    const m = master([106, 1393, 212, 1159], [60, 1440, 60, 1932]);
+    const profile = getFrameProfile("m15pw");
+    expect(underFrameArtSlot(profile, "c")).toEqual(underFrameArtRect(profile, "c"));
+    for (const key of ["w", "u", "b", "r", "g", "m"]) expect(underFrameArtSlot(profile, key), key).toBeNull();
+    // v35 as first built: M15PW's slot 100.5–1396.5 × 207.9–1923.6 over a
+    // separately cropped under-frame layer.
+    const twoLayers = artWindowSlotsOf(profile, underFrameArtRect(profile, "c"));
+    expect(artWindowFindings(m, W, H, twoLayers)).toEqual([
+      {
+        message: expect.stringMatching(/^artSlot: the slot 100\.5–1396\.5 × 207\.9–1923\.6 px meets the under-frame art where the frame lets it through .*: left \(column 99\) 1716 of 1716 px, right \(column 1397\) 1716 of 1716 px, top \(row 207\) 1297 of 1297 px, bottom \(row 1924\) 1297 of 1297 px$/),
+        missPx: 1716,
+      },
+    ]);
+    expect(artWindowFindings(m, W, H, slotsFor("m15pw", "c"))).toEqual([]);
+  });
+
+  it("finds the colourless tokens' seam in their translucent silver (4.17c, there since v34) — a known failure, no worse", () => {
+    // The token window inside an outline 100–1399 (the silver runs on
+    // outside it, α 89 on the masters); the shared token slot 97.5–1402.5
+    // ends 2.5 px short of it.
+    for (const [template, window] of [
+      ["m15token", [111, 1389, 259, 1709]],
+      ["m15tokentext", [111, 1389, 259, 1409]],
+    ] as const) {
+      const m = master([...window], [59, 1441, 59, 1949], [100, 1400, 248, window[3] + 11]);
+      expect(underFrameArtSlot(getFrameProfile(template), "c"), template).toBeNull();
+      const f = artWindowFindings(m, W, H, slotsFor(template, "c"));
+      expect(f.map((x) => x.message).join(" | "), template).toMatch(/meets the under-frame art where the frame lets it through .*: left \(column 96\) \d+ of \d+ px, right \(column 1402\)/);
+      expect(artWindowVerdict(template, "c", f).fails, template).toEqual([]);
+    }
   });
 });
 
@@ -468,6 +614,10 @@ describe("the art-window known failures", () => {
         "m15textless",
         "m15textlessland",
         "m15tokenartifact",
+        // The see-through slot and seam rules (layout v35) on the
+        // colourless tokens: there since v34 (4.17c).
+        "m15token",
+        "m15tokentext",
         "modern",
         "modernland",
         "tarkirdraconic",
@@ -479,10 +629,12 @@ describe("the art-window known failures", () => {
     expect(ART_WINDOW_KNOWN_FAILURES.alphaland).toBeUndefined();
     for (const key of ["w", "u", "b", "r", "g", "m"]) expect(isKnownArtWindowFailure("m15token", key), key).toBe(false);
     // Layout v35 struck the CC M15 family (4.4 (2)), the see-through
-    // masters (4.17a) and the translucent seams (4.17b).
-    for (const template of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "m15token", "m15tokentext", "m15pw", "nyx", "fullart"]) {
+    // masters (4.17a) and the translucent seams (4.17b) — m15pw/c's by ONE
+    // picture; its seam rule lists only the colourless tokens (4.17c).
+    for (const template of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid", "m15pw", "nyx", "fullart"]) {
       expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
     }
+    for (const template of ["m15token", "m15tokentext"]) expect(ART_WINDOW_KNOWN_FAILURES[template].keys, template).toEqual(["c"]);
     expect(isKnownArtWindowFailure("expeditionland", "w")).toBe(false);
     expect(isKnownArtWindowFailure("expeditionland", "b")).toBe(true);
   });
@@ -500,7 +652,7 @@ describe("the Card Conjurer importer runs the art-window check (TODO 7.6)", () =
     expect(cut).toBeGreaterThan(0);
     expect(check).toBeGreaterThan(cut);
     expect(importer).toContain("artWindowVerdict(template, key, findings)");
-    expect(importer).toContain("artWindowSlotsOf(profile, underFrameArtRect(profile, key))");
+    expect(importer).toContain("artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key))");
     expect(importer).not.toContain("isKnownArtWindowFailure");
   });
 
@@ -508,10 +660,10 @@ describe("the Card Conjurer importer runs the art-window check (TODO 7.6)", () =
     const templates = [...FRAME_TEMPLATE_VALUES];
     const script = [
       'import "./scripts/lib/ts-alias-hooks.mjs";',
-      'const { getFrameProfile, underFrameArtRect } = await import("./lib/cards/template-layout.ts");',
+      'const { getFrameProfile, underFrameArtRect, underFrameArtSlot } = await import("./lib/cards/template-layout.ts");',
       'const { artWindowSlotsOf } = await import("./lib/frames/art-window.ts");',
       "const out = {};",
-      'for (const t of JSON.parse(process.argv[1])) { const p = getFrameProfile(t); out[t] = ["w", "c"].map((k) => artWindowSlotsOf(p, underFrameArtRect(p, k))); }',
+      'for (const t of JSON.parse(process.argv[1])) { const p = getFrameProfile(t); out[t] = ["w", "c"].map((k) => artWindowSlotsOf(p, underFrameArtRect(p, k), underFrameArtSlot(p, k))); }',
       "console.log(JSON.stringify(out));",
     ].join("\n");
     const stdout = execFileSync(process.execPath, ["--no-warnings", "--input-type=module", "-e", script, JSON.stringify(templates)], {
