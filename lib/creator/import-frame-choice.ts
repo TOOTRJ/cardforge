@@ -34,7 +34,7 @@ import { colorWord, pickFrameColorKey } from "@/components/cards/frame-layer";
 // the standard frame and the printing's own family first, the rest behind
 // "Show all frames" (owner decision C2, 2026-09-29); "keep my current frame"
 // is always offered. A printing short of nothing but a detail no PipGlyph
-// frame draws (the legendary crown, a colour indicator) doesn't ask: it
+// frame draws (a colour indicator; the crown until 4.6a) doesn't ask: it
 // lands on its own frame and the Card step's "Nearest frame" chip says why
 // (C1). A substitute card (`reject`) can't be imported at all.
 //
@@ -101,11 +101,13 @@ export const WINDOW_CROPPED_NOTE =
   "Scryfall's art for this printing is cropped to the bordered window.";
 
 /** The anatomy gaps no PipGlyph frame draws — details, not frames: the
- *  legendary crown and the colour indicator (4.6). No other frame would
- *  draw them either, so a printing short of only these has nothing to
- *  choose between (owner decisions C1 / C3, 2026-09-29). */
+ *  colour indicator (4.6c). No other frame would draw it either, so a
+ *  printing short of only this has nothing to choose between (owner
+ *  decisions C1 / C3, 2026-09-29). The legendary crown left the list with
+ *  TODO 4.6a: m15, m15artifact and m15land draw it, so a crowned printing
+ *  on a frame that doesn't (snow, devoid, borderless …) has a real choice —
+ *  its own frame without the crown, or the standard frame with it. */
 export const UNDRAWN_DETAIL_GAPS: ReadonlySet<FrameGap> = new Set<FrameGap>([
-  "crown",
   "colour-indicator",
 ]);
 

@@ -24,9 +24,10 @@ import {
 // (resolveImportFrame's landing — 1.18's bordered M15 for a borderless
 // printing), "keep my current frame", a substitute card's refusal, and the
 // creator's re-check when it applies the pick. Owner decisions 2026-09-29:
-// no chooser (and no deck pre-fill toast) for a printing short of only the
-// crown or a colour indicator on its own frame (C1 / C3); the standard frame
-// and the printing's family first, the rest behind "Show all frames" (C2).
+// no chooser (and no deck pre-fill toast) for a printing short of only a
+// colour indicator on its own frame (C1 / C3 — the crown too, until 4.6a drew
+// it on m15 / m15artifact / m15land); the standard frame and the printing's
+// family first, the rest behind "Show all frames" (C2).
 // ---------------------------------------------------------------------------
 
 const fixtures = { ...signaturePrintings, ...treatmentPrintings, ...tokenPrintings } as Record<
@@ -69,9 +70,14 @@ const indicatorOnly = (keys: ReadonlySet<string>) =>
     { type_line: "Creature — Phyrexian Praetor", frame_effects: [], color_indicator: ["B"] },
     keys,
   );
-/** …legendary with a colour-indicator dot: two details, both undrawn. */
+/** …legendary with a colour-indicator dot: the crown m15 draws (4.6a) and a
+ *  detail no frame draws. */
 const legendWithIndicator = (keys: ReadonlySet<string>) =>
   variantPatch("dmu-107", { color_indicator: ["B"] }, keys);
+/** …on the snow frame (KHM #179 Jorn's look): a crown m15snow doesn't draw
+ *  (4.6f), where m15 does — a real choice. */
+const snowLegend = (keys: ReadonlySet<string>) =>
+  variantPatch("dmu-107", { frame_effects: ["legendary", "snow"] }, keys);
 
 const STANDARD = verified("m15", "m15artifact", "m15land", "m15pw", "m15token", "saga");
 const WITH_BORDERLESS = new Set([...STANDARD, ...verified("m15borderless", "m15fullartland")]);
@@ -133,11 +139,12 @@ describe("importFramePlan — borderless (1.18: lands on the bordered frame, Bor
     expect(plan.options.map((o) => o.template)).toEqual(["m15", "m15borderless"]);
     expect(plan.options[0]).toMatchObject({ nearest: true, edgeToEdge: false });
     expect(plan.options[1]).toMatchObject({ nearest: false, edgeToEdge: true });
-    // The crown is the missing detail (4.6); PipGlyph HAS the Borderless frame.
+    // The crown is the missing detail (Borderless draws the floating crown,
+    // 4.6f); PipGlyph HAS the Borderless frame.
     expect(plan.heading).toBe(
       "PipGlyph can't match this printing's Borderless frame exactly yet — pick one of these",
     );
-    expect(plan.match.reason).toBe("PipGlyph doesn't draw the legendary crown yet");
+    expect(plan.match.reason).toBe("PipGlyph doesn't draw the legendary crown on this frame yet");
     expect(plan.keepCurrent).toEqual({ template: "m15", available: true, reason: null });
   });
 
@@ -276,7 +283,7 @@ describe("the substitution chip and the deck-remix toast", () => {
     expect(frameSubstitutionFor(match, "m15")).toEqual({
       exactLabel: "Borderless frame",
       template: "m15",
-      reason: "PipGlyph doesn't draw the legendary crown yet",
+      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
       nearestOnOwnFrame: false,
     });
     expect(importSubstitutionMessage(match, "m15")).toBe(
@@ -301,37 +308,37 @@ describe("the substitution chip and the deck-remix toast", () => {
     expect(importSubstitutionMessage(match, "m15borderless")).toBeNull();
   });
 
-  it("a crown-only match on its own frame is 'Nearest frame' with no toast (Sheoldred DMU #107, C3)", () => {
+  it("the crown on the standard frame is exact since 4.6a: no chip, no toast (Sheoldred DMU #107)", () => {
     const match = namedPatch("dmu-107", STANDARD).frame_match;
-    expect(match).toMatchObject({ status: "nearest", template: "m15", gaps: ["crown"] });
-    const substitution = frameSubstitutionFor(match, "m15");
-    expect(substitution).toMatchObject({
-      nearestOnOwnFrame: true,
-      reason: "PipGlyph doesn't draw the legendary crown yet",
-    });
-    expect(frameSubstitutionLabel(substitution!)).toBe("Nearest frame (imported M15 (2015) frame)");
-    // No substitution happened: the deck pre-fill stays quiet (C3).
+    expect(match).toMatchObject({ status: "exact", template: "m15" });
+    expect(match?.gaps).toBeUndefined();
+    expect(frameSubstitutionFor(match, "m15")).toBeNull();
     expect(importSubstitutionMessage(match, "m15", undefined, "b")).toBeNull();
-    // Another frame picked instead: that IS a substitution, and it says so.
-    const swapped = frameSubstitutionFor(match, "m15snow");
-    expect(frameSubstitutionLabel(swapped!)).toBe("Frame substituted (imported M15 (2015) frame)");
-    expect(importSubstitutionMessage(match, "m15snow", undefined, "b")).toBe(
-      "PipGlyph doesn't have the M15 (2015) frame yet — using M15 (2015) Snow.",
-    );
   });
 
-  it("a colour indicator alone, or with the crown, is quiet too; a second gap PipGlyph paints differently still toasts (C3)", () => {
+  it("a crown-only match on a frame that doesn't draw it is 'Nearest frame' and toasts (the snow frame, 4.6f)", () => {
+    const match = snowLegend(new Set([...STANDARD, ...verified("m15snow")])).frame_match;
+    expect(match).toMatchObject({ status: "nearest", template: "m15snow", gaps: ["crown"], blockedBy: "4.6f" });
+    const substitution = frameSubstitutionFor(match, "m15snow");
+    expect(substitution).toMatchObject({
+      nearestOnOwnFrame: true,
+      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
+    });
+    expect(frameSubstitutionLabel(substitution!)).toBe("Nearest frame (imported M15 (2015) frame)");
+  });
+
+  it("a colour indicator alone, or with the crown m15 draws, is quiet; a gap PipGlyph paints differently still toasts (C3)", () => {
     const indicator = indicatorOnly(STANDARD).frame_match;
     expect(indicator).toMatchObject({ status: "nearest", template: "m15", gaps: ["colour-indicator"] });
     expect(importSubstitutionMessage(indicator, "m15", undefined, "b")).toBeNull();
     const both = legendWithIndicator(STANDARD).frame_match;
-    expect(both?.gaps).toEqual(["crown", "colour-indicator"]);
+    expect(both?.gaps).toEqual(["colour-indicator"]);
     expect(importSubstitutionMessage(both, "m15", undefined, "b")).toBeNull();
-    // The crown and the gold frame for a black-red split: a real difference.
+    // The gold frame for a black-red split: a real difference (4.6b).
     const twoColour = twoColourLegend(STANDARD).frame_match;
-    expect(twoColour?.gaps).toEqual(["crown", "two-colour"]);
+    expect(twoColour?.gaps).toEqual(["two-colour"]);
     expect(importSubstitutionMessage(twoColour, "m15", undefined, "m")).toBe(
-      "PipGlyph doesn't draw the legendary crown yet — using M15 (2015) Standard.",
+      "Two-colour cards print a split frame, and PipGlyph uses its gold one — using M15 (2015) Standard.",
     );
   });
 
@@ -366,7 +373,7 @@ describe("the substitution chip and the deck-remix toast", () => {
 });
 
 describe("C1 — no chooser when the only gap is a detail no frame draws (owner decision 2026-09-29)", () => {
-  it("Sheoldred DMU #107 (the crown) lands on its own M15 frame without asking", () => {
+  it("Sheoldred DMU #107 (the crown, drawn on M15 since 4.6a) lands on its own M15 frame without asking", () => {
     expect(importFramePlan(namedPatch("dmu-107", STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
   });
 
@@ -378,7 +385,7 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(importFramePlan(legendWithIndicator(STANDARD), STANDARD, "m15")).toEqual({ mode: "none" });
   });
 
-  it("asks when a second gap holds (the crown and the two-colour split frame)", () => {
+  it("asks when a gap PipGlyph paints differently holds (the two-colour split frame)", () => {
     const plan = importFramePlan(twoColourLegend(STANDARD), STANDARD, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
     expect(plan.heading).toBe(
@@ -393,16 +400,27 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(plan.mode).toBe("choose");
   });
 
+  it("asks for a crown its own frame doesn't draw, where M15 does (the snow frame, 4.6a)", () => {
+    const keys = new Set([...STANDARD, ...verified("m15snow")]);
+    const plan = importFramePlan(snowLegend(keys), keys, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.preselected).toEqual({ template: "m15snow" });
+    expect(plan.options.map((o) => o.template)).toContain("m15");
+  });
+
   it("asks when the crown sits on a frame the import can't land on (Borderless → bordered M15, DMU #435)", () => {
     expect(importFramePlan(namedPatch("dmu-435", WITH_BORDERLESS), WITH_BORDERLESS, "m15").mode).toBe(
       "choose",
     );
   });
 
-  it("onlyUndrawnDetailsMissing: only nearest, on its own frame, only crown / colour-indicator, a true border", () => {
-    const base = { status: "nearest" as const, template: "m15" as const, gaps: ["crown" as const] };
+  it("onlyUndrawnDetailsMissing: only nearest, on its own frame, only colour-indicator, a true border", () => {
+    const base = { status: "nearest" as const, template: "m15" as const, gaps: ["colour-indicator" as const] };
     expect(onlyUndrawnDetailsMissing(base, "b")).toBe(true);
-    expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["colour-indicator"] }, "b")).toBe(true);
+    // The crown is drawn (m15 / m15artifact / m15land, 4.6a): a frame short
+    // of it has a real alternative, so it is no undrawn detail any more.
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown"] }, "b")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown", "colour-indicator"] }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, status: "exact" }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, landOn: "m15artifact" }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: [] }, "b")).toBe(false);

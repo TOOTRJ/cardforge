@@ -7,9 +7,9 @@
 // owner has never set it — and nothing changes until the owner turns it on.
 // A switch shows only where it can draw something: the template draws the
 // piece (its PROFILES entry declares it) and the card qualifies (Legendary
-// for the crown; a multicolour card for the two-colour frame). Until 4.6a /
-// 4.6b declare the pieces on m15 / m15artifact / m15land, this renders
-// nothing anywhere.
+// for the crown; a multicolour card for the two-colour frame). The crown
+// shows on m15 / m15artifact / m15land (4.6a); the two-colour frame comes
+// with 4.6b's pair masters.
 //
 // The two-colour frame needs the card's colour PAIR (color_identity): the
 // "Two colours" row (TwoColorPairRow) — under the Multicolor chip on the

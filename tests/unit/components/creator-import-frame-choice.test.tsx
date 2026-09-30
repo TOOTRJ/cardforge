@@ -93,8 +93,12 @@ vi.mock("@/components/creator/scryfall-import-dialog", () => ({
 vi.mock("@/components/creator/ai-fill-dialog", () => ({ AiFillDialog: () => null }));
 vi.mock("@/components/creator/card-ideas-dialog", () => ({ CardIdeasDialog: () => null }));
 vi.mock("@/components/cards/card-preview", () => ({
-  CardPreview: (props: { frameStyle?: { template?: string } }) => (
-    <div data-testid="card-preview" data-template={props.frameStyle?.template ?? ""} />
+  CardPreview: (props: { frameStyle?: { template?: string; crown?: boolean } }) => (
+    <div
+      data-testid="card-preview"
+      data-template={props.frameStyle?.template ?? ""}
+      data-crown={String(props.frameStyle?.crown ?? "")}
+    />
   ),
 }));
 
@@ -195,7 +199,8 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
     await toCardStep();
     // The printing's own frame, short of the crown: nearest, not swapped.
     expect(chip()?.textContent).toBe("Nearest frame (imported Borderless frame)");
-    expect(chip()?.getAttribute("title")).toBe("PipGlyph doesn't draw the legendary crown yet");
+    // Borderless draws no crown yet (its floating crown is 4.6f).
+    expect(chip()?.getAttribute("title")).toBe("PipGlyph doesn't draw the legendary crown on this frame yet");
 
     // Any frame pick clears it, for good: back on Borderless it stays gone.
     await clickChip("Frame variations", /^Standard/);
@@ -248,14 +253,15 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
     expect(chip()).toBeNull();
   });
 
-  it("C1: a crown-only printing the dialog didn't ask about (DMU #107) lands on its own frame with just the Nearest frame chip", async () => {
+  it("a crowned printing on the standard frame (DMU #107) lands exact with the crown switched on (4.6a): no chip", async () => {
     renderForm();
     await importPayload(payload("dmu-107"));
     expect(template()).toBe("m15");
+    // Imports follow the printing: Sheoldred prints the crown.
+    expect(screen.getAllByTestId("card-preview")[0]!.dataset.crown).toBe("true");
     expect(toast.info).not.toHaveBeenCalled();
     await toCardStep();
-    expect(chip()?.textContent).toBe("Nearest frame (imported M15 (2015) frame)");
-    expect(chip()?.getAttribute("title")).toBe("PipGlyph doesn't draw the legendary crown yet");
+    expect(chip()).toBeNull();
   });
 });
 

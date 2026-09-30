@@ -18,8 +18,9 @@
 //
 // A template draws a piece when its PROFILES entry declares it
 // (FrameProfile.overlays for the crown, FrameProfile.twoColorMasters for the
-// pairs). No profile does yet: until 4.6a / 4.6b add them, everything here is
-// a no-op and every card bakes byte-identical.
+// pairs). The crown is declared on m15, m15artifact and m15land (4.6a,
+// template-layout.ts M15_CROWN); the pairs come with 4.6b. A card draws a
+// piece only with its switch on, so a declaration changes no stored card.
 //
 // The colour PAIR is card data too (owner decision 2026-09-29): exactly two
 // WUBRG words in `color_identity`, in any order, the "multicolor" token

@@ -649,10 +649,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // The legendary crown and the two-colour dresses (TODO 4.6a / 4.6b): a gap
   // only where the frame the card lands on doesn't draw it — derived from the
   // profile (gapDrawnBy), never a second hand-kept list.
+  // The STANDARD crown: a showcase printing (LTR ring, TDM draconic, BLB
+  // woodland …) carries Scryfall's `legendary` effect but prints no standard
+  // crown, and imports with the crown off (printsStandardCrown) — no gap.
+  // m15, m15artifact and m15land draw it (TODO 4.6a); every other frame's
+  // crown — snow, devoid, borderless, extended art, adventure, saga — is 4.6f.
   crown: {
-    match: { effectsAny: ["legendary"] },
-    reason: "PipGlyph doesn't draw the legendary crown yet",
-    blockedBy: "4.6a",
+    match: { effectsAny: ["legendary"], effectsNone: ["showcase"] },
+    reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
+    blockedBy: "4.6f",
   },
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
@@ -758,7 +763,13 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
  *  frame, TODO 1.23), the gap rule keeps the base's reason before its own,
  *  and records no FrameMatch.gaps: the frame is a stand-in whatever the
  *  gaps, so the import dialog must still ask (C1 reads the gaps). */
-function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
+function withGaps(
+  base: Rule,
+  gaps: readonly GapKey[],
+  /** A gap this family's frames wait on another item for (the token
+   *  crown: 4.48's pill crown, not 4.6f). */
+  blockedByOverride: Partial<Record<GapKey, string>> = {},
+): Rule[] {
   const exactBase = base.outcome.status === "exact";
   const baseReason = base.outcome.reason;
   return [
@@ -775,7 +786,7 @@ function withGaps(base: Rule, gaps: readonly GapKey[]): Rule[] {
             exactBase || baseReason === undefined
               ? gapReason
               : (ctx: Ctx) => `${textOf(baseReason, ctx)}; ${textOf(gapReason, ctx)}`,
-          blockedBy: GAPS[gap].blockedBy,
+          blockedBy: blockedByOverride[gap] ?? GAPS[gap].blockedBy,
         },
         // The earlier gaps didn't hold (first match wins); the later ones are
         // checked at resolve time (FrameMatch.gaps).
@@ -1192,6 +1203,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       },
     },
     ["nyx-dress", "border", "crown", "two-colour", "two-colour-hybrid"],
+    // The M20 token's crown is its own pill crown (TFDN #13; 4.48), never
+    // the standard band 4.6a draws.
+    { crown: "4.48" },
   ),
   {
     key: "fullart/basic/coloured-border",
@@ -1727,7 +1741,8 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
 /** True when `template` draws the anatomy a gap names — its PROFILES entry
  *  declares the crown overlay or the two-colour dress (lib/cards/anatomy.ts,
- *  TODO 4.6.0). No template does yet; 4.6a / 4.6b declare them, and each gap
+ *  TODO 4.6.0). m15, m15artifact and m15land draw the crown (4.6a); 4.6b
+ *  declares the pair dresses, 4.6f the rest — each gap
  *  then drops where the landing frame draws it, with nothing to keep in
  *  step here. */
 function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {

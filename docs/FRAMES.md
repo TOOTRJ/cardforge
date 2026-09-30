@@ -192,6 +192,15 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   runs the edge contract, the corner check and the art-window coverage on
   every master it builds and exits non-zero on a violation ([Checks every
   master passes](#checks-every-master-passes)).
+- **Overlay bands** (`CC_OVERLAY_BANDS`) are printed pieces drawn OVER a
+  master, not templates. `m15crown` (4.6a) is CC's black 'Legend Crown
+  Border Cover' then the crown (`crowns/new/<k>.png`), composited at
+  2010×2814, downscaled once, corner cut and cropped to rows 0–409: one
+  1500×410 band per key, CC's nine (w u b r g, m, a, l, c) plus the ten
+  pairs (the first colour's crown lerped into the second's across the
+  untilted 43→55 %W ramp). The importer fails a band with alpha below row
+  409, a peak off row 42 ± 2 or more than a shadow (α ≤ 127) over the art.
+  Build it with `node scripts/import-cc-frames.mjs --only m15crown`.
 
 The M15 family shipped in 4.4 (#380): published, git copies deleted,
 profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
@@ -642,10 +651,12 @@ published frames in the card's colour, the import's own landing preselected
 and listed first with the printing's own frame, the kind's M15 standard and
 the printing's family (its frame set — a skin only when it IS the printing's
 frame); every other frame sits behind "Show all frames". A printing short of
-nothing but a detail no frame draws — the legendary crown, a colour
-indicator (`FrameMatch.gaps` ⊆ `UNDRAWN_DETAIL_GAPS`) — doesn't ask: it
+nothing but a detail no frame draws — a colour indicator
+(`FrameMatch.gaps` ⊆ `UNDRAWN_DETAIL_GAPS`) — doesn't ask: it
 lands on its own frame, the Card step shows "Nearest frame" with the reason,
-and the deck pre-fill doesn't toast (owner decisions C1–C3, 2026-09-29).
+and the deck pre-fill doesn't toast (owner decisions C1–C3, 2026-09-29). The
+legendary crown left that list with 4.6a: m15, m15artifact and m15land draw
+it, so a crowned printing whose own frame doesn't (snow, devoid …) asks.
 So a newly verified frame shows up in the chooser and turns its printings'
 badges to Exact the moment its `frame_reviews` row is ticked.
 
@@ -747,8 +758,9 @@ cards it changes.
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
 additions (above): opt-in per card, never a sweep, never a badge. The
-plumbing is `lib/cards/anatomy.ts`; 4.6.0 ships it with no template drawing
-anything, so it changes no card.
+plumbing is `lib/cards/anatomy.ts`; 4.6.0 shipped it with no template drawing
+anything, and a template that starts drawing a piece still changes no stored
+card (only a switch set to `true` draws it).
 
 - **The switches are card data:** `frame_style.crown` and
   `frame_style.twoColor` (booleans, `frameStyleBaseSchema`). Both renderers
@@ -805,6 +817,30 @@ sign it off on a print sheet in the PR, promote, merge, and post the site
 update ([Announcing a change](#announcing-a-change)). No bump, no sweep: a
 card gets the look when its owner switches it on, and new cards get it by
 default.
+
+**The legendary crown (4.6a)** is `M15_CROWN` in
+`lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
+only (never snow, devoid, borderless, extended art, adventure, saga, the
+tokens or a showcase: 4.6f and the token items). It draws when the switch is
+`true`, the supertype has the word Legendary and the card is not a
+planeswalker, token, battle or emblem (`qualifiesForCrown`). Its key is the
+pinline of the master actually drawn (`resolveFrameOverlays`): the colour,
+gold `m` for three or more colours or a pair drawn gold, the pair where the
+two-colour frame is drawn (4.6b), and for a colourless card the frame's own
+grey — `c` on m15, `a` on m15artifact, `l` on m15land (the slot's
+`keyMap`). The band is the top 410 / 2100 of the card at full width; nothing
+else moves, and its only mark on the art is the crown's soft shadow over the
+window's top rows. `lib/cards/crown.ts` answers `showsCrown` / `crownKeyFor`
+for the creator and the admin page, and holds `CROWN_REFERENCES`, the
+crowned prints the band is judged against (FDN #2 / #45 / #72 / #91 / #106 /
+#243, UMA #6 / #241, FDN #677, NEO #74 / #266–278, M20 #131): the
+/admin/frame-compare "Legendary" toggle renders the sample crowned beside
+them (a tick still records the combo's own reference). An import's switch is
+`printed_crown` — off for a printing without the `legendary` effect (M15–RIX,
+List and playtest reprints) and for any showcase, by Scryfall's `showcase`
+effect or the registry's showcase signature (MUL's etched run carries only
+`legendary` + `etched`). No tick changes: the owner signs the crown off once
+on a print sheet in the PR.
 
 ## Text sizes on the M15-era family
 

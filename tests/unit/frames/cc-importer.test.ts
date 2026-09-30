@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   CC_COMMIT,
   CC_DEFERRED,
+  CC_OVERLAY_BANDS,
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
@@ -526,7 +527,9 @@ describe("published to the frames bucket", () => {
 describe("provenance and hygiene", () => {
   it("records the pinned commit and the recipe for every imported template", () => {
     const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
-    expect(Object.keys(provenance).sort()).toEqual(Object.keys(templates).sort());
+    // Every template, and every overlay band (4.6a's crown; its own test:
+    // tests/unit/frames/crown-band.test.ts).
+    expect(Object.keys(provenance).sort()).toEqual([...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS)].sort());
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);

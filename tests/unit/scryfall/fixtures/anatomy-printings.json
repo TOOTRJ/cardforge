@@ -614,5 +614,100 @@
       "W"
     ],
     "rarity": "uncommon"
+  },
+  "fdn-677": {
+    "id": "f340d8a4-196a-4433-807c-b7124e96e44f",
+    "oracle_id": "f76bcbfe-483f-4e63-8425-76feca1abf3e",
+    "name": "Pyromancer's Goggles",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "677",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Artifact",
+    "mana_cost": "{5}",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "rarity": "mythic"
+  },
+  "neo-74": {
+    "id": "d859de3a-0be1-4e66-b438-1c3d4ee756cd",
+    "oracle_id": "751f22bc-bcea-4213-a37b-b5f72448a4c4",
+    "name": "The Reality Chip",
+    "released_at": "2022-02-18",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "74",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Reconfigure"
+    ],
+    "type_line": "Legendary Artifact Creature — Equipment Jellyfish",
+    "mana_cost": "{1}{U}",
+    "power": "0",
+    "toughness": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "rare"
+  },
+  "mul-66": {
+    "id": "cf348206-1dee-417c-a3e1-7430b84371c2",
+    "oracle_id": "f7fa6ac0-70db-4586-b881-5a19db644dfb",
+    "name": "Anafenza, Kin-Tree Spirit",
+    "released_at": "2023-04-21",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "66",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "etched"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Bolster"
+    ],
+    "type_line": "Legendary Creature — Spirit Soldier",
+    "mana_cost": "{W}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare"
   }
 }

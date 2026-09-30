@@ -968,6 +968,272 @@
       "width": 1500,
       "height": 2100
     },
+    "m15crown/a.png": {
+      "hash": "a4062886c598",
+      "sha256": "a4062886c5982c8a3c27c54571622ab2268751b74126fd13240178ba5a9950d1",
+      "bytes": 153793,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/a.webp": {
+      "hash": "6fcdc337a9f1",
+      "sha256": "6fcdc337a9f1032862d278a00f6de085ca5c9b397f5b7bc399cd6b0f264be099",
+      "bytes": 20924,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/b.png": {
+      "hash": "441795575262",
+      "sha256": "4417955752620df84f2e3d57a875319a36426c4d3bd24b5249500073bfaf5c59",
+      "bytes": 173899,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/b.webp": {
+      "hash": "6f0db2941295",
+      "sha256": "6f0db2941295a2ab016b420499b2d194b8f6f96bcb79b419a11cd4fe41fd647e",
+      "bytes": 21888,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/bg.png": {
+      "hash": "d58035f2b199",
+      "sha256": "d58035f2b1996ae85f4b8ac2ea17f15f2aad00a7f79ae6f644bc6c5e550abbbd",
+      "bytes": 194459,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/bg.webp": {
+      "hash": "38a25e9b077c",
+      "sha256": "38a25e9b077c94cb882b0dcdc940889559ced76dd623cb8173752cfe9f29d6d9",
+      "bytes": 23896,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/br.png": {
+      "hash": "f1a7e9598292",
+      "sha256": "f1a7e9598292a0aa06d0ed73f3647f482d49a5b5958dd82bd36c76ea813abb13",
+      "bytes": 199929,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/br.webp": {
+      "hash": "9a739f2e6466",
+      "sha256": "9a739f2e64669c181b74830ce65588704fc6ec00611c472b380aca90fe62f6f2",
+      "bytes": 25334,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/c.png": {
+      "hash": "c6a601a2a7eb",
+      "sha256": "c6a601a2a7eb7424418fb5846e68d61e3b8ada8e3e6123f8ae18b51bbab3c08d",
+      "bytes": 64600,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/c.webp": {
+      "hash": "3bf125eeba9b",
+      "sha256": "3bf125eeba9bd2cb02260fc6e122ffbdb10a7ce1253c1daccb4776a24644b438",
+      "bytes": 16500,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/g.png": {
+      "hash": "992548e92722",
+      "sha256": "992548e92722145e7db68fa9b7d09774bb86b014f589ef572a8a8c26ea498e14",
+      "bytes": 192798,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/g.webp": {
+      "hash": "6db5415bbffb",
+      "sha256": "6db5415bbffba6cfcc1fe3bff1a1029727308694deb350209b65cf001d21016c",
+      "bytes": 25020,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/gu.png": {
+      "hash": "a9896ed83e0a",
+      "sha256": "a9896ed83e0a8472804151948a8a013bc70fabc98d2beba00f3aea4d6271e45c",
+      "bytes": 202992,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/gu.webp": {
+      "hash": "cb49b8042ee2",
+      "sha256": "cb49b8042ee2de98c744bfb8f94c3859fcc1016ac961cf2ca9ab777af6bbd80a",
+      "bytes": 26856,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/gw.png": {
+      "hash": "52bce566e957",
+      "sha256": "52bce566e9572ffa56f9ea514f722792de23f69140d85d8c46ccd745f9c58dce",
+      "bytes": 183468,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/gw.webp": {
+      "hash": "29b897059055",
+      "sha256": "29b8970590555e55c363ca29709e17cbe736c3f1ce77044deeb75bc51f526316",
+      "bytes": 23448,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/l.png": {
+      "hash": "d2e6fb2701c0",
+      "sha256": "d2e6fb2701c08ad1df4e637d779e52fff55206f69c8b7c6b80abb8d2f898abb0",
+      "bytes": 169423,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/l.webp": {
+      "hash": "fde9e610633a",
+      "sha256": "fde9e610633a47f06b2a04451a4c7aeaa29bed40905064819f270189c549538e",
+      "bytes": 21374,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/m.png": {
+      "hash": "c7f61a87305b",
+      "sha256": "c7f61a87305bf6850612e0a0fecaf93edb4b143359e1608962e57d26f86c5c02",
+      "bytes": 188253,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/m.webp": {
+      "hash": "cb0146e88b73",
+      "sha256": "cb0146e88b73f4627166558b2946b954c7c760cb2a0d285185a65236ed316707",
+      "bytes": 24842,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/r.png": {
+      "hash": "d9a3215c1931",
+      "sha256": "d9a3215c1931f8219769dfc679a1028385c7eaf6bc54104c1b09c797680d8a9d",
+      "bytes": 195221,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/r.webp": {
+      "hash": "17de34a4820f",
+      "sha256": "17de34a4820ff005d3f8cba59b81913e85e235bd3a21521dbc59c9ad5cb79f72",
+      "bytes": 27332,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/rg.png": {
+      "hash": "093f91180219",
+      "sha256": "093f91180219cedce9cec3c8d1c46f72195667d8c291cf35cb0d52b78d567c4a",
+      "bytes": 205308,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/rg.webp": {
+      "hash": "2e35e431f6d8",
+      "sha256": "2e35e431f6d8e317f5170f5cd1292365ae9bed262b2b33b3a7f0a052d703c49a",
+      "bytes": 26236,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/rw.png": {
+      "hash": "d039352d9d00",
+      "sha256": "d039352d9d008a056530e660063f75f1de785e9107bd5a6c066929d05a87c0f0",
+      "bytes": 183133,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/rw.webp": {
+      "hash": "685558f0c753",
+      "sha256": "685558f0c75335803b08df232fc376c13197bd86dd1fb636b8222e03ba4824ad",
+      "bytes": 24096,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/u.png": {
+      "hash": "00b5e90d266a",
+      "sha256": "00b5e90d266aa498086a835020c3c77a269b5a7d4d7e3f76dc8206235f86219a",
+      "bytes": 194374,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/u.webp": {
+      "hash": "9661b5eea188",
+      "sha256": "9661b5eea188212e5db5f49131636588fc7628cebacae7b7212718b9bdf0a127",
+      "bytes": 28070,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/ub.png": {
+      "hash": "64f0186bcc9c",
+      "sha256": "64f0186bcc9cfc808f6d53b1fddcb61c52cc40d72f87e7e4f531a506d6ce33df",
+      "bytes": 196617,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/ub.webp": {
+      "hash": "ee8b2a3467c5",
+      "sha256": "ee8b2a3467c50df4e00bb6dac52f4ba0c65d6f7ac68465ebb0be94aa4a197103",
+      "bytes": 25640,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/ur.png": {
+      "hash": "2f36c2199488",
+      "sha256": "2f36c2199488a33a2a0bcd29e1eb439fd182ab32f4a90c74a9ae8634d39f743b",
+      "bytes": 207660,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/ur.webp": {
+      "hash": "4f07e5ea7a7a",
+      "sha256": "4f07e5ea7a7a74d839d1f5e050355a3494867ca4d70692f70ab67ce1069e483e",
+      "bytes": 27764,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/w.png": {
+      "hash": "9310ceac2b5c",
+      "sha256": "9310ceac2b5c2d51ca6adf522b76fe955b15e4a06e1cfbbc1a903ff62b2d8f5f",
+      "bytes": 145909,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/w.webp": {
+      "hash": "1a474e3e2590",
+      "sha256": "1a474e3e2590ffa8db17c25a5a32eeb347e1313129a924bfcca6922881f03439",
+      "bytes": 20302,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/wb.png": {
+      "hash": "377c620e9688",
+      "sha256": "377c620e96881c56dd0d38d364823dada362f52b2c30ac5e75cc8058464635c1",
+      "bytes": 175498,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/wb.webp": {
+      "hash": "918886b36f72",
+      "sha256": "918886b36f72b86664a6d4db481711dcc0393ab34ad6ea36569eb057923c6d1c",
+      "bytes": 22382,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/wu.png": {
+      "hash": "93578039c54e",
+      "sha256": "93578039c54ea00b42ff50cd1cd56ebb3cc7446b415e66b7f1f85a152fd64eae",
+      "bytes": 187107,
+      "width": 1500,
+      "height": 410
+    },
+    "m15crown/wu.webp": {
+      "hash": "9db9d6fc752d",
+      "sha256": "9db9d6fc752df10dba71addb3ed591653070038bc509eedd899ad166e041a626",
+      "bytes": 24530,
+      "width": 1500,
+      "height": 410
+    },
     "m15devoid/b.png": {
       "hash": "d1f3fb345f3f",
       "sha256": "d1f3fb345f3f9ead5393a87ae5b1e45d6fcf68c961bf04b06ceb7d13440fc8f8",

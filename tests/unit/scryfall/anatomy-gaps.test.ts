@@ -13,8 +13,9 @@ import printings from "./fixtures/anatomy-printings.json";
 //   • `two-colour` splits by print's dress: `two-colour-hybrid` when every
 //     coloured pip is a two-colour hybrid (twoColorDressOf), so a hybrid
 //     printing can't import `exact` onto a gold-split dress later;
-//   • crown → 4.6a, the pairs → 4.6b.
-// The same printings with the gaps a frame draws dropped:
+//   • the crown → 4.6f wherever it is still a gap (m15, m15artifact and
+//     m15land draw it since 4.6a, so it drops there), the pairs → 4.6b.
+// The same printings with the pair dresses declared too:
 // anatomy-gaps-declared.test.ts.
 // ---------------------------------------------------------------------------
 
@@ -23,14 +24,25 @@ const P = Object.fromEntries(
 );
 const match = (key: string) => frameMatchFromScryfall(P[key]);
 
+describe("the crown on the frames that draw it (4.6a)", () => {
+  it("a crowned mono, gold, land or colourless-land printing on m15 / m15land is exact", () => {
+    expect(match("fdn-2")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15" });
+    expect(match("fdn-243")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15" });
+    expect(match("neo-268")).toMatchObject({ status: "exact", template: "m15land" });
+    expect(match("uma-241")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15land" });
+    // A pre-DDU legendary (no `legendary` effect) was always exact.
+    expect(match("m15-3")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15" });
+  });
+});
+
 describe("the layout frames' new gaps", () => {
   it("a crowned adventure is nearest, blocked by the crown", () => {
     expect(match("woe-220")).toMatchObject({
       status: "nearest",
       template: "adventure",
       signature: "layout/2015+crown",
-      blockedBy: "4.6a",
-      reason: "PipGlyph doesn't draw the legendary crown yet",
+      blockedBy: "4.6f",
+      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     });
   });
 
@@ -48,8 +60,9 @@ describe("two-colour, by print's dress", () => {
   it("a gold-split printing — a two-colour or mixed cost — is `two-colour`", () => {
     expect(match("stx-175")).toMatchObject({ signature: "era/2015+two-colour", blockedBy: "4.6b", gaps: ["two-colour"] });
     expect(match("dft-219")).toMatchObject({ signature: "era/2015+two-colour", template: "m15artifact" });
-    expect(match("fdn-122").gaps).toEqual(["crown", "two-colour"]);
-    expect(match("mkm-238").gaps).toEqual(["crown", "two-colour"]);
+    // The crown is drawn on m15 (4.6a): only the pair is missing.
+    expect(match("fdn-122")).toMatchObject({ signature: "era/2015+two-colour", gaps: ["two-colour"] });
+    expect(match("mkm-238").gaps).toEqual(["two-colour"]);
   });
 
   it("an all-hybrid printing is `two-colour-hybrid`", () => {

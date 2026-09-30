@@ -98,7 +98,7 @@ describe("getFrameRequestSummary", () => {
       users: 2,
       forGood: false,
       inRegistry: true,
-      blockedBy: "4.6a",
+      blockedBy: "4.6f",
       artFlags: ["window-cropped"],
       sampleUrl: "https://scryfall.com/card/dmu/435",
       templateLabel: "M15 (2015) Standard",

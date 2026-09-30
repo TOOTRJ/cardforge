@@ -714,3 +714,150 @@ export const CROWN_BAND = {
 export function cropRows(buf, width, rows) {
   return Buffer.from(buf.subarray(0, width * rows * 4));
 }
+
+// ---------------------------------------------------------------------------
+// Overlay bands (TODO 4.6a): printed anatomy drawn OVER a frame master
+// (FrameProfile.overlays in lib/cards/template-layout.ts). Built by
+// scripts/import-cc-frames.mjs (`--only m15crown`) into
+// .frames-build/<folder>/<key>.png + .webp, published to the bucket like a
+// master, never committed.
+// ---------------------------------------------------------------------------
+
+/** The crown band's keys, in the order the importer builds them: CC's nine
+ *  crown letters (w u b r g, m gold, a artifact silver, l land grey, c the
+ *  colourless grey), then the ten pairs in printed order — a pair is the
+ *  first colour's crown on the left, lerped into the second's through the
+ *  untilted crown ramp (TWO_COLOR_RAMPS.crown, 43→55 %W: the same ramp
+ *  helpers and the same canonical order as 4.6b's pair masters). The
+ *  profile's slot lists the same keys (lib/cards/template-layout.ts
+ *  M15_CROWN; a unit test holds them together). */
+export const CROWN_BAND_KEYS = [...CROWN_BAND.keys, ...TWO_COLOR_PAIRS];
+
+/** CC's 'Legend Crown Border Cover': img/black.png (1×1 black) stretched
+ *  over the cover rect, drawn under the crown and over the frame. */
+const CROWN_COVER_SRC = "img/black.png";
+
+/** The overlay bands the importer builds, by bucket folder. */
+export const CC_OVERLAY_BANDS = {
+  m15crown: {
+    pack: "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js, groupAccurate.js — the pack the M15 masters come from)",
+    band: CROWN_BAND,
+    keys: CROWN_BAND_KEYS,
+    notes: [
+      "the standard legendary crown, drawn over the m15, m15artifact and m15land masters (TODO 4.6a; design 2026-09-29 §1.1): CC's autoM15NewFrame draws the black 'Legend Crown Border Cover' then the crown after the P/T plate — here composited alone at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
+      "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 43→55 %W (the prints' crown split measures 42.7 / 48.5 / 53.0 %W at 10 / 50 / 90 % on FDN's gold pairs, 43.8 / 50.1 / 54.3 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
+      "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in",
+    ],
+  },
+};
+
+/** A card-% rect as a pixel box on a W × H canvas (CC's bounds, rounded). */
+export function rectPx(rect, width, height) {
+  return {
+    x: Math.round((rect.leftPct / 100) * width),
+    y: Math.round((rect.topPct / 100) * height),
+    width: Math.round((rect.widthPct / 100) * width),
+    height: Math.round((rect.heightPct / 100) * height),
+  };
+}
+
+/** A W × H transparent 8-bit RGBA canvas with `img` (box.width ×
+ *  box.height RGBA) placed at the box — CC drawing an image at its bounds. */
+export function placeOnCanvas(img, box, width, height) {
+  const out = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < box.height; y += 1) {
+    const ty = box.y + y;
+    if (ty < 0 || ty >= height) continue;
+    for (let x = 0; x < box.width; x += 1) {
+      const tx = box.x + x;
+      if (tx < 0 || tx >= width) continue;
+      img.copy(out, (ty * width + tx) * 4, (y * box.width + x) * 4, (y * box.width + x) * 4 + 4);
+    }
+  }
+  return out;
+}
+
+/**
+ * One crown band key's recipe: the black cover, then the crown — a mono key
+ * CC's crown letter as it is, a pair the first colour's crown lerped into
+ * the second's through the crown ramp. Throws for a key the band doesn't
+ * build.
+ */
+export function crownBandRecipe(key) {
+  if (TWO_COLOR_PAIRS.includes(key)) {
+    const [a, b] = key.split("");
+    return {
+      cover: CROWN_COVER_SRC,
+      left: `${CROWN_BAND.source}/${a}.png`,
+      right: `${CROWN_BAND.source}/${b}.png`,
+      ramp: TWO_COLOR_RAMPS.crown,
+    };
+  }
+  if (!CROWN_BAND.keys.includes(key)) throw new Error(`crownBandRecipe: no crown for key ${key}`);
+  return { cover: CROWN_COVER_SRC, left: `${CROWN_BAND.source}/${key}.png`, right: null, ramp: null };
+}
+
+const pctBox = (r) => `${r.leftPct}/${r.topPct}/${r.widthPct}×${r.heightPct} %`;
+
+/** How provenance prints a crown band key's recipe. */
+export function describeCrownBand(recipe) {
+  const crown = recipe.right
+    ? `${recipe.left} ⟷ ${recipe.right} lerped through ${rampName(recipe.ramp)}`
+    : recipe.left;
+  return [`${recipe.cover} over ${pctBox(CROWN_BAND.cover)}`, `${crown} at ${pctBox(CROWN_BAND.crown)}`];
+}
+
+/** Every Card Conjurer file the crown band reads. */
+export function crownBandSourceFiles(keys = CROWN_BAND_KEYS) {
+  const files = new Set();
+  for (const key of keys) {
+    const recipe = crownBandRecipe(key);
+    files.add(recipe.cover);
+    files.add(recipe.left);
+    if (recipe.right) files.add(recipe.right);
+  }
+  return [...files].sort();
+}
+
+/**
+ * What the importer checks on a full 1500 × 2100 crown composite before it
+ * crops the band (pure; the numbers go in its log and the unit test):
+ *   • `lastAlphaRow` — the lowest row with any alpha; the crop keeps rows
+ *     0 … rows − 1, so it must be below `rows`;
+ *   • `peakRow` — the first row at the card's centre column that is not the
+ *     cover's black (the crown's peak; the prints: row 42 ± 2 at HD);
+ *   • `artMaxAlpha` / `artPartial` — inside `artSlot` (card %), the most
+ *     opaque pixel and the share with α > 0.05: the crown only shadows the
+ *     top of the art (α ≤ 99 on the prints' digital renders), never covers it.
+ */
+export function crownBandFindings(buf, width, height, rows, artSlot) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  const cx = Math.floor(width / 2);
+  let peakRow = -1;
+  for (let y = 0; y < rows; y += 1) {
+    const o = (y * width + cx) * 4;
+    if (buf[o + 3] > 0 && buf[o] + buf[o + 1] + buf[o + 2] > 3 * 40) {
+      peakRow = y;
+      break;
+    }
+  }
+  const box = rectPx(artSlot, width, height);
+  let artMaxAlpha = 0;
+  let artPartial = 0;
+  for (let y = box.y; y < box.y + box.height; y += 1) {
+    for (let x = box.x; x < box.x + box.width; x += 1) {
+      const a = buf[(y * width + x) * 4 + 3];
+      if (a > artMaxAlpha) artMaxAlpha = a;
+      if (a > 0.05 * 255) artPartial += 1;
+    }
+  }
+  return { lastAlphaRow, peakRow, artMaxAlpha, artPartialPct: (artPartial / (box.width * box.height)) * 100 };
+}
