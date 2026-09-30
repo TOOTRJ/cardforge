@@ -370,7 +370,10 @@ describe("edge-to-edge and full-art pieces (TODO 3.23 / 3.24)", () => {
       // textless frame skips the rules layout and every rules layer.
       expect(src).toMatch(/effectiveWatermark &&\s*!textless &&\s*!basicSymbolPlan &&/);
       expect(src).toMatch(/const drawsRulesBox =\s*!textless &&/);
-      expect(src).toMatch(/\{textless \? null : layout\.type\.split && typeSplit \?/);
+      // …and its type line too, unless it keeps it (textlessTypeLine: the
+      // full-art token's textless height, TODO 4.48).
+      expect(src).toContain("const hidesTypeLine = textless && !layout.textlessTypeLine;");
+      expect(src).toMatch(/\{hidesTypeLine \? null : layout\.type\.split && typeSplit \?/);
     }
   });
 

@@ -238,6 +238,25 @@ describe("PrintSelectionDialog", () => {
     expect(screen.getByTestId("print-selection-summary").textContent).toContain("2 pages, one card each");
   });
 
+  it("a ZIP for MakePlayingCards (TODO 6.1): MPC's files, never the 1/8″ bleed on top — and remembered", async () => {
+    localStorage.setItem(PRINT_SELECTION_SETTINGS_KEY, JSON.stringify({ kind: "zip", quality: "hd", bleed: true }));
+    dialog();
+    expect((screen.getByTestId("print-selection-bleed") as HTMLInputElement).checked).toBe(true);
+    expect(screen.queryByTestId("print-selection-mpc")).toBeNull();
+    await click(chip("Image size", /makeplayingcards/i));
+    const bleed = screen.getByTestId("print-selection-bleed") as HTMLInputElement;
+    expect(bleed.disabled).toBe(true);
+    expect(bleed.checked).toBe(false);
+    expect(screen.getByText("MakePlayingCards files carry MPC's own bleed.")).toBeTruthy();
+    expect(screen.getByTestId("print-selection-mpc").textContent).toContain("822 × 1122 at 300 dpi");
+    await click(screen.getByRole("button", { name: /build zip/i }));
+    expect(exporter.start).toHaveBeenCalledWith(expect.objectContaining({ kind: "zip", quality: "mpc", bleed: false }));
+    expect(JSON.parse(localStorage.getItem(PRINT_SELECTION_SETTINGS_KEY)!)).toMatchObject({ quality: "mpc" });
+    cleanup();
+    dialog();
+    expect(chip("Image size", /makeplayingcards/i).getAttribute("aria-checked")).toBe("true");
+  });
+
   it("the copies field can be cleared and retyped (it used to snap back to 1, so 1 → ⌫ → 5 read 15)", async () => {
     dialog();
     const field = screen.getByRole("spinbutton", { name: "Copies of Mine 1" }) as HTMLInputElement;

@@ -207,7 +207,7 @@ describe("GET /api/scryfall/printings — each printing's match and facts", () =
     expect(nearest.match).toMatchObject({ status: "nearest", reason: "not yet verified in white" });
   });
 
-  it("an M20-design token is nearest the arch whatever is verified, and badged Full art (TODO 1.23)", async () => {
+  it("an M20-design token is nearest the arch until its full-art template is verified, then exact on it; badged Full art (TODO 1.23 / 4.48)", async () => {
     const card = printing("t2xm-4"); // a white full-art Cat token, 2020
     state.searchPrintingsPage.mockResolvedValue({ cards: [card], hasMore: false, totalCards: 1 });
     state.verifiedKeys.mockResolvedValue([frameComboKey("m15token", "w")]);
@@ -216,10 +216,13 @@ describe("GET /api/scryfall/printings — each printing's match and facts", () =
       status: "nearest",
       template: "m15token",
       exactLabel: "M20 full-art token frame",
-      reason: "PipGlyph doesn't have the current full-art token frame yet",
+      reason: "not yet verified in white",
     });
     expect(tile).toMatchObject({ treatment: "fullart" });
     expect(printingTreatmentBadge(tile)).toBe("Full art");
+    state.verifiedKeys.mockResolvedValue([frameComboKey("m15token", "w"), frameComboKey("m20token", "w")]);
+    const done = (await (await get(`oracle_id=${PLAINS}&view=all`)).json()).printings[0];
+    expect(done.match).toMatchObject({ status: "exact", template: "m20token", reason: null });
   });
 });
 

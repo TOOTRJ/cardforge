@@ -16,6 +16,7 @@ import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
+import { m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, with 1.17's borderless families and
@@ -77,6 +78,21 @@ export type FrameMatch = {
    *  the textless frame isn't verified (owner decision A9, 2026-09-29).
    *  withVerification (lib/creator/frame-resolve.ts) swaps it in. */
   onceVerified?: FrameTemplate;
+  /** What the match says once `onceVerified` takes over, when that differs
+   *  from the answer before it: the M20 token design (TODO 1.23 / 4.48) is
+   *  `nearest` on the 2014–19 arch until its own template is verified in the
+   *  card's colour, then `exact` on it — or `nearest` for a gap the full-art
+   *  template doesn't draw either (the crown, two colours, the Nyx dress),
+   *  its reason, item and gaps (C1 applies: it is the printing's own frame
+   *  by then). withVerification applies it with the swap. Absent: the
+   *  swap keeps the status, reason and item (a 2003-frame textless promo,
+   *  A9: nearest either way). */
+  onceVerifiedMatch?: {
+    status: FrameMatchStatus;
+    reason: string | null;
+    blockedBy?: string;
+    gaps?: readonly FrameGap[];
+  };
   /** Set by withVerification only: the registry answered `exact`, but that
    *  frame isn't verified in the card's colour yet, so the match was
    *  downgraded to `nearest`. The frame request log files it under "Not yet
@@ -318,7 +334,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -333,6 +349,10 @@ type Outcome = {
   blockedBy?: string;
   /** FrameMatch.onceVerified: the frame named instead once verified. */
   onceVerified?: TemplateSpec;
+  /** Once `onceVerified` takes over the match is `exact` on it — `nearest`
+   *  only for a gap that frame doesn't draw either (FrameMatch
+   *  .onceVerifiedMatch; the M20 token design, TODO 4.48). */
+  exactOnceVerified?: true;
 };
 
 type Rule = {
@@ -345,6 +365,14 @@ type Rule = {
   /** A gap rule's gaps (withGaps): its own first — it holds when the rule
    *  matches — then the base's later ones, which may hold too. */
   gaps?: readonly GapKey[];
+  /** The same list on a gap rule whose `nearest` base becomes exact once its
+   *  `onceVerified` frame is verified (Outcome.exactOnceVerified): the gaps
+   *  the match records after the swap. */
+  gapsOnceVerified?: readonly GapKey[];
+  /** The item a gap waits on for this family's frames, where it isn't the
+   *  gap's own (withGaps' `blockedByOverride`: the token crown is 4.48's pill
+   *  crown, not 4.6f) — named after the swap too. */
+  gapBlockedBy?: Partial<Record<GapKey, string>>;
 };
 
 type Ctx = {
@@ -461,6 +489,27 @@ export function printsTokenTextBox(card: Pick<ScryfallCard, "oracle_text" | "fla
   return text.trim() !== "" || flavor.trim() !== "";
 }
 
+/** The full-art token template a printing wears (TODO 4.48 / 4.50): the
+ *  artifact template for an Artifact, at the height its text asks for —
+ *  Scryfall has no field for the printed height, so 4.48's rule decides it
+ *  from the front face's rules and flavour text and its P/T
+ *  (lib/cards/token-height.ts: the regular box while it holds the text at
+ *  M20_TOKEN_REGULAR_MIN_PX (72 px) or more, the tall box otherwise, no box
+ *  without text). */
+function m20TokenFrame(ctx: Ctx): FrameTemplate {
+  const face = ctx.card.card_faces?.[0];
+  const power = face ? face.power : ctx.card.power;
+  const toughness = face ? face.toughness : ctx.card.toughness;
+  const artifact = ctx.facts.cardTypes.has("artifact");
+  const height = tokenHeightForText({
+    rulesText: face ? face.oracle_text : ctx.card.oracle_text,
+    flavorText: face ? face.flavor_text : ctx.card.flavor_text,
+    printsPowerToughness: Boolean(power || toughness),
+    artifact,
+  });
+  return m20TokenTemplate(height, artifact);
+}
+
 /** The 2014–19 arch token a token printing wears: its artifact dress for an
  *  Artifact (1.3), and the text-box variation when it prints text (4.49
  *  (b)). */
@@ -555,6 +604,14 @@ const FAMILIES: Record<
   textless: {
     produces: ["m15textlessland", "m15textless"],
     pick: ({ facts }) => (facts.kind === "land" ? "m15textlessland" : "m15textless"),
+  },
+  // The full-art token design, M20 → today (TODO 4.48 / 4.50).
+  m20: {
+    produces: [
+      "m20token", "m20tokentext", "m20tokentall",
+      "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+    ],
+    pick: (ctx) => m20TokenFrame(ctx),
   },
 };
 
@@ -796,6 +853,9 @@ function withGaps(
         // The earlier gaps didn't hold (first match wins); the later ones are
         // checked at resolve time (FrameMatch.gaps).
         ...(exactBase ? { gaps: gaps.slice(index) } : {}),
+        // …and after the swap on a base that is exact once verified.
+        ...(!exactBase && base.outcome.exactOnceVerified ? { gapsOnceVerified: gaps.slice(index) } : {}),
+        ...(Object.keys(blockedByOverride).length > 0 ? { gapBlockedBy: blockedByOverride } : {}),
       };
     }),
     base,
@@ -1117,6 +1177,12 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       // for a token that prints text (4.49 (b), owner decision 5) — never
       // its text on the textless arch's scrim.
       template: { family: "m15" },
+      // …and, once the full-art token design is verified in the card's
+      // colour (1.23, token design 4: every borderless token is an M20+
+      // printing — WONE, WMOM, SLD, 19 of 19 on Scryfall 2026-09-29), that
+      // design at the height its text asks for: still `nearest` (the
+      // borderless dress is 4.37), but the bordered design it prints.
+      onceVerified: { family: "m20" },
       reason: "PipGlyph doesn't have the borderless token frame yet",
       blockedBy: "4.37",
     },
@@ -1189,12 +1255,14 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
           : "PipGlyph's token frames don't print a land token yet",
     },
   },
-  // Every token from Core Set 2020 on wears the full-art token design, which
-  // PipGlyph doesn't draw yet (4.48): the 2014–19 arch (m15token, or the
-  // artifact arch for an Artifact) is the nearest. Once 4.48's templates are
-  // verified this rule names them instead (`onceVerified`) and becomes exact
-  // with these gaps; until then a gap only names the item that finishes the
-  // match. The earlier 2015-frame tokens ARE the arch: era/2015, exact.
+  // Every token from Core Set 2020 on wears the full-art token design (4.48 /
+  // 4.50): its template at the height the text asks for, the artifact one
+  // for an Artifact (the "m20" family). Until that template is verified in
+  // the card's colour the 2014–19 arch (m15token, or its text box or
+  // artifact dress) is the nearest; once it is, this rule names it instead
+  // (`onceVerified`) and is exact (`exactOnceVerified`), a gap still naming
+  // the item that finishes the match. The earlier 2015-frame tokens ARE the
+  // arch: era/2015, exact.
   ...withGaps(
     {
       key: "token/m20",
@@ -1203,7 +1271,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       outcome: {
         status: "nearest",
         template: { family: "m15" },
-        reason: "PipGlyph doesn't have the current full-art token frame yet",
+        onceVerified: { family: "m20" },
+        exactOnceVerified: true,
+        reason: "PipGlyph's full-art token frame isn't verified yet",
         blockedBy: "4.48",
       },
     },
@@ -1633,8 +1703,9 @@ export function isKnownFrameSignature(key: string | null | undefined): boolean {
 
 /** The templates a rule can produce (for the completeness check). */
 export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
-  const spec = rule.outcome.template;
-  return typeof spec === "string" ? [spec] : FAMILIES[spec.family].produces;
+  const of = (spec: TemplateSpec) => (typeof spec === "string" ? [spec] : FAMILIES[spec.family].produces);
+  const later = rule.outcome.onceVerified;
+  return later ? [...of(rule.outcome.template), ...of(later)] : of(rule.outcome.template);
 }
 
 /** Templates no printed signature resolves to exact or nearest. Empty today:
@@ -1725,11 +1796,38 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
   // Every anatomy gap that holds: the matched gap rule's own, then the
   // base's later ones (FrameMatch.gaps).
-  const gaps = rule.gaps
-    ? rule.gaps.filter(
-        (gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, template),
-      )
-    : [];
+  // A gap the frame it lands on draws (the crown, a two-colour dress —
+  // gapDrawnBy) is no gap there.
+  const holding = (list: readonly GapKey[] | undefined, on: FrameTemplate) =>
+    list
+      ? list.filter((gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, on))
+      : [];
+  const gaps = holding(rule.gaps, template);
+
+  // What the match says after the swap, on a rule exact once verified: the
+  // first gap that still holds (or the later frame's border) keeps it
+  // nearest, with its own reason and item; nothing → exact.
+  let onceVerifiedMatch: FrameMatch["onceVerifiedMatch"];
+  if (onceVerified && rule.outcome.exactOnceVerified) {
+    const laterGaps = holding(rule.gapsOnceVerified, onceVerified);
+    if (laterGaps.length > 0) {
+      const first = GAPS[laterGaps[0]!];
+      onceVerifiedMatch = {
+        status: "nearest",
+        reason: textOf(first.reason, ctx),
+        blockedBy: rule.gapBlockedBy?.[laterGaps[0]!] ?? first.blockedBy,
+        gaps: laterGaps,
+      };
+    } else if (isBorderPending(onceVerified, colorKeyOf(facts))) {
+      onceVerifiedMatch = {
+        status: "nearest",
+        reason: `PipGlyph's ${describeFrame(onceVerified)} frame doesn't have the printed border yet`,
+        blockedBy: "4.35",
+      };
+    } else {
+      onceVerifiedMatch = { status: "exact", reason: null };
+    }
+  }
 
   return {
     status,
@@ -1742,6 +1840,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(rule.outcome.forGood ? { forGood: true as const } : {}),
     ...(status !== "exact" && blockedBy ? { blockedBy } : {}),
     ...(onceVerified ? { onceVerified } : {}),
+    ...(onceVerifiedMatch ? { onceVerifiedMatch } : {}),
     ...(gaps.length > 0 ? { gaps } : {}),
   };
 }

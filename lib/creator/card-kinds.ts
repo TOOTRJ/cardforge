@@ -39,6 +39,12 @@ import {
   type TokenTypeWord,
 } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import {
+  isM20ArtifactTokenTemplate,
+  m20TokenHeightOf,
+  m20TokenTemplate,
+  tokenHeightForText,
+} from "@/lib/cards/token-height";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
@@ -681,15 +687,19 @@ export function followTokenName(input: {
 // toggle writes the word and the frame follows — so the "Artifact Token"
 // chip is no longer a choice of its own (stored cards keep their template).
 // Keyed by kind, then by the base frame the word re-dresses. Enchantment's
-// Nyx dress joins here with 4.51; the full-art family's artifact templates
-// with 4.48 / 4.50. The text-box token (4.49 (b)) has its own artifact
-// dress, as the textless one does.
+// Nyx dress joins here with 4.51. The text-box token (4.49 (b)) has its own
+// artifact dress, as the textless one does, and so does each height of the
+// full-art token (4.48 / 4.50).
 const TYPE_WORD_DRESSES: Partial<
   Record<CardKind, Partial<Record<FrameTemplate, { word: TokenTypeWord; template: FrameTemplate }>>>
 > = {
   token: {
     m15token: { word: "Artifact", template: "m15tokenartifact" },
     m15tokentext: { word: "Artifact", template: "m15tokenartifacttext" },
+    // The full-art tokens' artifact templates (TODO 4.50), one per height.
+    m20token: { word: "Artifact", template: "m20tokenartifact" },
+    m20tokentext: { word: "Artifact", template: "m20tokenartifacttext" },
+    m20tokentall: { word: "Artifact", template: "m20tokenartifacttall" },
   },
 };
 
@@ -793,14 +803,62 @@ export function textBoxFrameFits(kind: CardKind, template: FrameTemplate, hasTex
   return textBoxFrameFor(kind, template, hasText) === template;
 }
 
-/** Both of the token's automatic frame rules at once: the type words'
- *  dress (typeWordFrameFor) and the text's box (textBoxFrameFor). */
-export function tokenFrameFor(
-  kind: CardKind,
-  template: FrameTemplate,
-  face: { supertype?: string | null; rulesText?: string | null; flavorText?: string | null },
-): FrameTemplate {
-  return textBoxFrameFor(kind, typeWordFrameFor(kind, template, face.supertype), hasRulesBoxText(face));
+/** A token face as far as its automatic frame goes: the type words, the
+ *  text, and whether it prints a P/T (the plate keeps the rules out, so it
+ *  can take a full-art token to the tall box). Unknown P/T: a Creature
+ *  token prints one. */
+export type TokenFrameFace = {
+  supertype?: string | null;
+  rulesText?: string | null;
+  flavorText?: string | null;
+  printsPowerToughness?: boolean;
+};
+
+/**
+ * The full-art token's height (TODO 4.48, owner decisions 2026-09-29): on
+ * the token kind, a full-art template at the height its text asks for
+ * (tokenHeightForText — no text → no box, the regular box while it holds
+ * the text at 72 px or more, else the tall box); any other template, and
+ * every other kind's, as it is. It never changes the Artifact dress.
+ */
+export function tokenHeightFrameFor(kind: CardKind, template: FrameTemplate, face: TokenFrameFace): FrameTemplate {
+  if (kind !== "token" || m20TokenHeightOf(template) === null) return template;
+  const artifact = isM20ArtifactTokenTemplate(template);
+  const height = tokenHeightForText({
+    rulesText: face.rulesText,
+    flavorText: face.flavorText,
+    printsPowerToughness: face.printsPowerToughness ?? supertypeHasWord(face.supertype, "Creature"),
+    artifact,
+  });
+  return m20TokenTemplate(height, artifact);
+}
+
+/** Every one of the token's automatic frame rules at once: the type words'
+ *  dress (typeWordFrameFor), the text's box on the 2014–19 arch
+ *  (textBoxFrameFor) and the text's height on the full-art design
+ *  (tokenHeightFrameFor). */
+export function tokenFrameFor(kind: CardKind, template: FrameTemplate, face: TokenFrameFace): FrameTemplate {
+  return tokenHeightFrameFor(
+    kind,
+    textBoxFrameFor(kind, typeWordFrameFor(kind, template, face.supertype), hasRulesBoxText(face)),
+    face,
+  );
+}
+
+/** True when the template is the one the token's rules pick (tokenFrameFor)
+ *  — a random or requested frame never puts a token on another dress, box
+ *  or height than its words and text ask for. Every other kind: true. */
+export function tokenFrameFits(kind: CardKind, template: FrameTemplate, face: TokenFrameFace): boolean {
+  return tokenFrameFor(kind, template, face) === template;
+}
+
+/** True when the template is one of the full-art token's text heights (the
+ *  regular or the tall box, plain or artifact): the text picks it, as it
+ *  picks the arch's text box (isTextBoxDress) — a frame list that lets the
+ *  text decide leaves them out. */
+export function isTokenHeightDress(kind: CardKind, template: FrameTemplate): boolean {
+  const height = kind === "token" ? m20TokenHeightOf(template) : null;
+  return height === "regular" || height === "tall";
 }
 
 /**

@@ -90,11 +90,10 @@ describe("the printings grid (TODO 1.5)", () => {
     // SET · year · #number, and the treatment badge.
     expect(tiles[1]!.textContent).toContain("DMU · 2023 · #435");
     expect(tiles[1]!.textContent).toContain("Borderless");
-    // A full-art token of the M20 design: nearest the arch (TODO 1.23).
+    // A full-art token of the M20 design: nearest the arch until its
+    // full-art template is verified (TODO 1.23 / 4.48).
     expect(badge(tiles[3]!).textContent).toBe("≈ Nearest");
-    expect(badge(tiles[3]!).title).toBe(
-      "M20 full-art token frame — PipGlyph doesn't have the current full-art token frame yet",
-    );
+    expect(badge(tiles[3]!).title).toMatch(/^M20 full-art token frame — not yet verified in /);
     expect(tiles[3]!.textContent).toContain("Full art");
   });
 

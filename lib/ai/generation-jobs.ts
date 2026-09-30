@@ -682,6 +682,8 @@ export async function createCardGenerationJob(
       title: card.title,
       rulesText: card.rules_text,
       flavorText: card.flavor_text,
+      power: card.power,
+      toughness: card.toughness,
     },
   });
 
@@ -813,6 +815,8 @@ export async function createCardFillJob(
             title: designed.fields.title ?? input.locked.title,
             rulesText: designed.fields.rules_text ?? input.locked.rules_text,
             flavorText: designed.fields.flavor_text ?? input.locked.flavor_text,
+            power: designed.fields.power !== undefined ? designed.fields.power : input.locked.power,
+            toughness: designed.fields.toughness !== undefined ? designed.fields.toughness : input.locked.toughness,
           },
         })
       : null;
@@ -1546,8 +1550,11 @@ async function executeDeckRemixStep(
         template: mechanics.frame_template as FrameTemplate,
         cardType: mechanics.card_type as CardType | undefined,
         supertype: mechanics.supertype,
+        subtypes: mechanics.subtypes,
         rulesText: named.rules_text,
         flavorText: identity.flavor_text,
+        power: mechanics.power,
+        toughness: mechanics.toughness,
         colorIdentity: (mechanics.color_identity ?? ["colorless"]) as ColorIdentity[],
         verifiedKeys: new Set(await getVerifiedFrameKeys()),
       })

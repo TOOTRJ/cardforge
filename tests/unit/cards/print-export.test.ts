@@ -1,18 +1,27 @@
 import { describe, expect, it } from "vitest";
 import manifest from "@/lib/frames/frame-manifest.json";
 import {
+  BLEED_IN,
   bleedPx,
+  bleedPxPerAxis,
+  CARD_TRIM_IN,
   cardPrintFilename,
   cardPrintPngHref,
   frameTemplateOf,
   isPrintRequest,
+  MPC_BLEED_IN,
+  MPC_SAFE_IN,
   parseBleedParam,
   parsePpiParam,
+  parsePrintBleedParam,
+  parsePrintParam,
   PRINT_800_PPI_PAID_ONLY,
   PRINT_NATIVE_800_TEMPLATES,
   printFrameUpscaledAt800,
+  printBleedInches,
   printPixelSize,
   printScale,
+  printTurnsPortrait,
 } from "@/lib/cards/print-export";
 
 // ---------------------------------------------------------------------------
@@ -20,6 +29,11 @@ import {
 // 1/8 in of bleed a side — 600 ppi 1500 × 2100 (+75 → 1650 × 2250), 800 ppi
 // 2000 × 2800 (+100 → 2200 × 3000); the query parsers the png route reads;
 // the file names; and the 800 ppi "upscaled" gate, held to the manifest.
+//
+// MakePlayingCards (TODO 6.1): MPC's own upload page asks a poker-size card
+// (2.5 × 3.5 in) for 822 × 1122 px at 300 dpi — 36 px of bleed a side on
+// both axes, scaling with the dpi — so 1644 × 2244 at 600 ppi and 2192 ×
+// 2992 at 800, always portrait (makeplayingcards.com/pops/faq-photo.html).
 // ---------------------------------------------------------------------------
 
 describe("print sizes", () => {
@@ -32,7 +46,41 @@ describe("print sizes", () => {
   ] as const)("%s ppi, bleed %s, landscape %s → %s × %s", (ppi, bleed, landscape, w, h) => {
     const size = printPixelSize(ppi, { bleed, landscape });
     expect([size.width, size.height]).toEqual([w, h]);
-    expect(size.bleed).toBe(bleed ? bleedPx(ppi) : 0);
+    expect([size.bleedX, size.bleedY]).toEqual(bleed ? [bleedPx(ppi), bleedPx(ppi)] : [0, 0]);
+  });
+
+  it("MakePlayingCards: 822 × 1122 at MPC's 300 dpi — 36 px a side on both axes — so 1644 × 2244 at 600 ppi, 2192 × 2992 at 800", () => {
+    expect(MPC_BLEED_IN).toEqual({ x: 0.12, y: 0.12 });
+    expect(MPC_SAFE_IN).toBe(0.12);
+    // MPC's own numbers, at its 300 dpi (and its 900 dpi example: 108 px).
+    expect(bleedPxPerAxis(300, "mpc")).toEqual({ x: 36, y: 36 });
+    expect(bleedPxPerAxis(900, "mpc")).toEqual({ x: 108, y: 108 });
+    expect(printPixelSize(300, { bleed: "mpc" })).toMatchObject({ width: 822, height: 1122 });
+    expect(printPixelSize(600, { bleed: "mpc" })).toEqual({ width: 1644, height: 2244, bleedX: 72, bleedY: 72 });
+    expect(printPixelSize(800, { bleed: "mpc" })).toEqual({ width: 2192, height: 2992, bleedX: 96, bleedY: 96 });
+    // Not the 1/8 in bleed (75 px at 600 ppi).
+    expect(printPixelSize(600, { bleed: true })).toMatchObject({ width: 1650, height: 2250 });
+  });
+
+  it("MakePlayingCards' file is always PORTRAIT: a landscape card (Battle, Split) is turned into it", () => {
+    expect(printTurnsPortrait("mpc")).toBe(true);
+    for (const bleed of [false, true, { x: 0.11, y: 0.1 }] as const) expect(printTurnsPortrait(bleed)).toBe(false);
+    expect(printPixelSize(600, { bleed: "mpc", landscape: true })).toEqual({ width: 1644, height: 2244, bleedX: 72, bleedY: 72 });
+    // The 1/8 in bleed keeps the landscape render landscape (the PDF turns it).
+    expect(printPixelSize(600, { bleed: true, landscape: true })).toMatchObject({ width: 2250, height: 1650 });
+  });
+
+  it("a bleed per axis: x on the portrait card's left and right, y on its top and bottom — swapped on a landscape render", () => {
+    // Card Conjurer's margin geometry (816 × 1110 at 300 dpi: 33 × 30 px).
+    const cc = { x: 0.11, y: 0.1 };
+    expect(printBleedInches(cc)).toBe(cc);
+    expect(printBleedInches(true)).toEqual({ x: BLEED_IN, y: BLEED_IN });
+    expect(printBleedInches(false)).toEqual({ x: 0, y: 0 });
+    expect(printPixelSize(300, { bleed: cc })).toEqual({ width: 816, height: 1110, bleedX: 33, bleedY: 30 });
+    expect(printPixelSize(600, { bleed: cc })).toEqual({ width: 1632, height: 2220, bleedX: 66, bleedY: 60 });
+    // Landscape: the card turned — its long side across, its y bleed there.
+    expect(printPixelSize(600, { bleed: cc, landscape: true })).toEqual({ width: 2220, height: 1632, bleedX: 60, bleedY: 66 });
+    expect(CARD_TRIM_IN).toEqual({ width: 2.5, height: 3.5 });
   });
 
   it("the bleed is 1/8 in at the resolution, and 800 ppi is the HD layout at 4/3", () => {
@@ -53,12 +101,30 @@ describe("query parsing", () => {
     expect(parseBleedParam("1")).toBe(true);
     expect(parseBleedParam("true")).toBe(true);
     for (const value of ["0", "false", null, "", "yes"]) expect(parseBleedParam(value)).toBe(false);
+    // The PDF route's parser knows no MPC (MPC takes images).
+    expect(parseBleedParam("mpc")).toBe(false);
+  });
+
+  it("the png route's bleed: mpc, 1 / true, or none", () => {
+    expect(parsePrintBleedParam("mpc")).toBe("mpc");
+    expect(parsePrintBleedParam("1")).toBe(true);
+    expect(parsePrintBleedParam("true")).toBe(true);
+    for (const value of ["0", "false", null, undefined, "", "MPC", "yes"]) expect(parsePrintBleedParam(value)).toBe(false);
+    expect(isPrintRequest({ ppi: 600, bleed: "mpc" })).toBe(true);
   });
 
   it("a print request is 800 ppi or the bleed — never the plain 600 ppi download", () => {
     expect(isPrintRequest({ ppi: 600, bleed: false })).toBe(false);
     expect(isPrintRequest({ ppi: 800, bleed: false })).toBe(true);
     expect(isPrintRequest({ ppi: 600, bleed: true })).toBe(true);
+  });
+
+  it("print=1 asks for the 600 ppi print render without a bleed (TODO 6.15 — the exports)", () => {
+    expect(parsePrintParam("1")).toBe(true);
+    expect(parsePrintParam("true")).toBe(true);
+    for (const value of ["0", "false", null, undefined, "", "yes"]) expect(parsePrintParam(value)).toBe(false);
+    expect(isPrintRequest({ ppi: 600, bleed: false, print: true })).toBe(true);
+    expect(isPrintRequest({ ppi: 600, bleed: false, print: false })).toBe(false);
   });
 });
 
@@ -69,6 +135,20 @@ describe("links and file names", () => {
     expect(cardPrintFilename("grizzly", { ppi: 800, bleed: false })).toBe("grizzly-800ppi.png");
     expect(cardPrintFilename("grizzly", { ppi: 600, bleed: true })).toBe("grizzly-bleed.png");
     expect(cardPrintFilename("grizzly", { ppi: 800, bleed: true })).toBe("grizzly-800ppi-bleed.png");
+  });
+
+  it("names MakePlayingCards' file (TODO 6.1)", () => {
+    expect(cardPrintPngHref("c1", { ppi: 600, bleed: "mpc" })).toBe("/api/cards/c1/png?ppi=600&corners=square&bleed=mpc");
+    expect(cardPrintPngHref("c1", { ppi: 800, bleed: "mpc" })).toBe("/api/cards/c1/png?ppi=800&corners=square&bleed=mpc");
+    expect(cardPrintFilename("grizzly", { ppi: 600, bleed: "mpc" })).toBe("grizzly-mpc.png");
+    expect(cardPrintFilename("grizzly", { ppi: 800, bleed: "mpc" })).toBe("grizzly-800ppi-mpc.png");
+  });
+
+  it("a print link always names a PRINT render: at 600 ppi without a bleed it says print=1", () => {
+    // `ppi=600&corners=square` alone is the plain HD download (the bake's
+    // 1600 px art), which the exports used to print from.
+    expect(cardPrintPngHref("c1", { ppi: 600, bleed: false })).toBe("/api/cards/c1/png?ppi=600&corners=square&print=1");
+    expect(cardPrintFilename("grizzly", { ppi: 600, bleed: false })).toBe("grizzly-print.png");
   });
 
   it("reads the template off any frame_style shape", () => {

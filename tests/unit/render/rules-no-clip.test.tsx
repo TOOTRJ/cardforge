@@ -229,8 +229,9 @@ function consumersOf(template: FrameTemplate, text: RulesCase): Consumer[] {
     secondFacePt: Boolean(layout.secondFace?.pt),
   };
   const out: Consumer[] = [];
-  // The saga's rail replaces its box; a walker with abilities draws rows.
-  if (!layout.chapters) {
+  // The saga's rail replaces its box; a walker with abilities draws rows; a
+  // textless frame (the full-art token's textless height) draws no box.
+  if (!layout.chapters && !layout.textless) {
     out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show }) });
   }
   if (layout.loyalty) {
@@ -290,6 +291,12 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The text-box tokens' box (TODO 4.49 (b): 74.5–92.5 %H, the P/T plate in
   // its corner) holds 400 characters but not a planeswalker's worth.
   [["m15tokentext/main", "m15tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
+  // The full-art tokens (TODO 4.48): the regular box (73.9–92.1 %H, the
+  // plate in its corner) holds what the arch's does; the tall box (62.8 %H
+  // down) everything but 1,200 characters. The textless height draws no box
+  // (no consumer: the renderers skip a textless frame's rules).
+  [["m20tokentext/main", "m20tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
+  [["m20tokentall/main", "m20tokenartifacttall/main"], ["1200 chars"]],
   [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112"]],
   [["adventure/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
@@ -322,7 +329,8 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
     const keys = new Set(cases.flatMap((c) => c.keys.map((k) => k.split(" · ")[0])));
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);
-      if (!p.chapters) expect(keys.has(`${t}/main`), t).toBe(true);
+      if (!p.chapters && !p.textless) expect(keys.has(`${t}/main`), t).toBe(true);
+      if (p.textless) expect(keys.has(`${t}/main`), t).toBe(false);
     }
     expect(keys.has("adventure/adventure")).toBe(true);
     for (const t of ["flip", "split", "aftermath"]) expect(keys.has(`${t}/second face`), t).toBe(true);

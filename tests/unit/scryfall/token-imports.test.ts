@@ -17,6 +17,8 @@ import {
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
 import { onlyUndrawnDetailsMissing } from "@/lib/creator/import-frame-choice";
+import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { FrameTemplate } from "@/types/card";
 
@@ -110,13 +112,13 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
   it("says why an M20 token isn't exact, and keeps saying it beside a gap", () => {
     expect(match("t2xm-4")).toMatchObject({
       exactLabel: "M20 full-art token frame",
-      reason: "PipGlyph doesn't have the current full-art token frame yet",
+      reason: "PipGlyph's full-art token frame isn't verified yet",
     });
     expect(match("tmkm-13").reason).toBe(
-      "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the legendary crown on this frame yet",
+      "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the legendary crown on this frame yet",
     );
     expect(match("tdsk-4").reason).toBe(
-      "PipGlyph doesn't have the current full-art token frame yet; PipGlyph doesn't draw the Nyx dress on its token frames yet",
+      "PipGlyph's full-art token frame isn't verified yet; PipGlyph doesn't draw the Nyx dress on its token frames yet",
     );
     expect(match("tfra-5")).toMatchObject({
       exactLabel: "Planeswalker token",
@@ -149,6 +151,105 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     });
   });
 });
+
+// TODO 4.48 / 4.50: the full-art templates exist, and 1.23's token/m20 rule
+// names them through `onceVerified` — the height from the printing's text
+// (lib/cards/token-height.ts: Scryfall has no field for it), the artifact
+// template for an Artifact — and is EXACT on them once they are verified in
+// the card's colour (`onceVerifiedMatch`); a gap they don't draw either (the
+// crown, two colours, the Nyx dress) stays nearest with its own reason and
+// item, and its gaps (C1: it is the printing's own frame by then).
+describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
+  const once: [Key, FrameTemplate][] = [
+    // The first year and today's textless prints.
+    ["tm20-2", "m20token"],
+    ["t2xm-4", "m20token"],
+    ["tfdn-6", "m20token"],
+    // The regular box (a Copy, a plain enchantment Shard, a Treasure)…
+    ["tfdn-27", "m20tokentext"],
+    ["tfdn-26", "m20tokentext"],
+    ["t2xm-31", "m20tokentext"],
+    ["tkhm-1", "m20tokentext"],
+    ["tfdn-23", "m20tokenartifacttext"],
+    ["tfra-15", "m20tokenartifacttext"],
+    ["plst-tkhm-19", "m20tokenartifacttext"],
+    ["tmom-16", "m20tokenartifacttext"],
+    // …the tall box (Warren Warleader's 207 characters, the Map's 287)…
+    ["tblb-5", "m20tokentall"],
+    ["tlci-17", "m20tokenartifacttall"],
+    // …and a coloured artifact on the artifact template (TDSK #7 Toy).
+    ["tdsk-7", "m20tokenartifact"],
+  ];
+
+  it.each(once)("%s names %s, and is exact on it once it is verified in its colour", (key, template) => {
+    const m = match(key);
+    expect(m.onceVerified).toBe(template);
+    expect(m.onceVerifiedMatch).toEqual({ status: "exact", reason: null });
+    // Unverified: the arch stands in, as before, and the answer says what's
+    // left — "not yet verified", the request log's "Not yet verified" (D1).
+    const colour = pickColour(key);
+    const waiting = withVerification(m, colour, new Set());
+    expect(waiting).toMatchObject({ status: "nearest", unverified: true, reason: expect.stringMatching(/^not yet verified in /) });
+    expect(waiting.template).toBe(m.template);
+    expect(waiting.template).toMatch(/^m15token/);
+    expect(waiting.blockedBy).toBeUndefined();
+    // Verified: exact on the full-art template, no reason, no item.
+    const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));
+    expect(done).toMatchObject({ status: "exact", template, reason: null });
+    expect(done.blockedBy).toBeUndefined();
+    expect(done.gaps).toBeUndefined();
+    expect(done.onceVerified).toBeUndefined();
+  });
+
+  it("keeps a gap the full-art template doesn't draw either: nearest, its own reason, item and gaps", () => {
+    const cases: [Key, FrameTemplate, string, string, string[]][] = [
+      // The M20 token's crown and pair are 4.48's (its pill crown, the rims'
+      // central split), not 4.6's M15 pieces.
+      ["tmkm-13", "m20tokentext", "PipGlyph doesn't draw the legendary crown on this frame yet", "4.48", ["crown", "two-colour"]],
+      ["tmkm-10", "m20token", "two-colour cards print a split frame, and PipGlyph uses its gold one", "4.48", ["two-colour"]],
+      ["tdsk-4", "m20token", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
+      ["teoc-13", "m20tokenartifact", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
+    ];
+    for (const [key, template, reason, blockedBy, gaps] of cases) {
+      const m = match(key);
+      expect(m.onceVerified, key).toBe(template);
+      // Before its tick: still the registry's own nearest (a gap is missing
+      // whatever is verified), never "not yet verified".
+      expect(withVerification(m, pickColour(key), new Set()).unverified, key).toBeUndefined();
+      // Two colours land on gold ("m") until 4.6's gradient.
+      const colour = pickColour(key);
+      const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));
+      expect(done, key).toMatchObject({ status: "nearest", template, reason, blockedBy, gaps });
+    }
+    expect(pickColour("tmkm-10")).toBe("m");
+  });
+
+  it("finalizes an import patch onto the full-art template once verified (the form's frame follows)", () => {
+    const patch = mapScryfallToFormPatch(printing("tfdn-27"));
+    expect(patch.frame_template).toBe("m15tokentext");
+    const done = finalizeImportMatch(patch, new Set([frameComboKey("m20tokentext", "w")]));
+    expect(done.frame_template).toBe("m20tokentext");
+    expect(done.frame_match).toMatchObject({ status: "exact", template: "m20tokentext" });
+    // Verified in another colour only: nothing moves.
+    const other = finalizeImportMatch(patch, new Set([frameComboKey("m20tokentext", "u")]));
+    expect(other.frame_template).toBe("m15tokentext");
+  });
+
+  it("never names a full-art template for a 2014–19 token, an old-frame token, a Role or another token type", () => {
+    for (const key of ["tdom-3", "tdom-2", "txln-7", "takh-1", "tc15-23", "plst-txln-10", "tlrw-3", "twoe-15", "tfra-5", "tbro-3"] as Key[]) {
+      expect(match(key).onceVerified, key).toBeUndefined();
+      expect(match(key).onceVerifiedMatch, key).toBeUndefined();
+    }
+  });
+});
+
+/** The frame colour key a fixture verifies in (pickFrameColorKey's rule). */
+function pickColour(key: Key): string {
+  const colors = (printing(key).card_faces?.[0]?.colors ?? printing(key).colors ?? []) as string[];
+  if (colors.length === 0) return "c";
+  if (colors.length > 1) return "m";
+  return colors[0]!.toLowerCase();
+}
 
 describe("the 2014–19 arch's tall text box (TODO 4.49 (b), P3)", () => {
   it("pins the 21 tall-box printings — never a regular-box one, never an M20 print", () => {

@@ -445,3 +445,162 @@ describe("the text-box tokens' re-cut window and 7.6's art-window coverage", () 
     });
   }
 });
+
+// TODO 4.48 / 4.50: the full-art tokens are Card Conjurer's 'Textless',
+// 'Short' and 'Tall' token masters — the art runs to the 60 px black ring,
+// the box is translucent (α ≈ 205, the colourless `c` 166), and the textless
+// height's type pill is re-cut 5 px down onto the prints
+// (M20_TOKEN_TEXTLESS_RECUT). PipGlyph composites over CC's pixels (owner
+// decisions 2026-09-29; scripts/lib/cc-frames.mjs): the type pill is SOLID,
+// as printed (CC drew it at α 204 / `c` 166), the colourless and artifact
+// type pills darkened to the prints first (round 14), and the artifact
+// templates' name pill is the prints' dark slate (CC's silver let a white
+// name nearly vanish), made solid too (round 14). Here: each height's clear
+// window and pill rows on every colour, the re-cut pill interior the
+// profile's type band centres on (M20_TOKEN_PILL_INTERIOR_PX), the
+// composites and their tones, and 7.6's art-window
+// coverage (the art slot covers the window flood-filled from its centre
+// with ≥ 0.05 % overscan). Run where the masters are available (the importer
+// builds them; CI fetches them, scripts/frames-fetch.mjs).
+describe("the full-art tokens' windows, pills and 7.6's art-window coverage", () => {
+  /** The α < 16 region 4-connected to (cx, cy): its bounding box. */
+  function windowBox(data: Buffer, width: number, height: number, cx: number, cy: number) {
+    const seen = new Uint8Array(width * height);
+    const stack = [cy * width + cx];
+    let x0 = cx;
+    let x1 = cx;
+    let y0 = cy;
+    let y1 = cy;
+    while (stack.length) {
+      const i = stack.pop()!;
+      if (seen[i] || data[i * 4 + 3] >= 16) continue;
+      seen[i] = 1;
+      const x = i % width;
+      const y = (i - x) / width;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+      if (x > 0) stack.push(i - 1);
+      if (x < width - 1) stack.push(i + 1);
+      if (y > 0) stack.push(i - width);
+      if (y < height - 1) stack.push(i + width);
+    }
+    return { x0, x1: x1 + 1, y0, y1: y1 + 1 };
+  }
+  // [template, the pill's first opaque row (its rim), the type band's pill]
+  const HEIGHTS: [string, number, "textless" | "regular" | "tall"][] = [
+    ["m20token", 1701 + 5, "textless"],
+    ["m20tokenartifact", 1701 + 5, "textless"],
+    ["m20tokentext", 1404, "regular"],
+    ["m20tokenartifacttext", 1404, "regular"],
+    ["m20tokentall", 1170, "tall"],
+    ["m20tokenartifacttall", 1170, "tall"],
+  ];
+  for (const [template, rim, height] of HEIGHTS) {
+    const masters = mastersOf(template);
+    if (masters.length === 0) {
+      it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
+      continue;
+    }
+    // Seven 3 Mpx masters decoded: a generous timeout for CI's V8 coverage.
+    it(`${template}: every colour's window runs from the ring to its pill (rim at ${rim} px), inside the art slot`, { timeout: 60_000 }, async () => {
+      expect(masters).toHaveLength(7);
+      const { M20_TOKEN_PILL_INTERIOR_PX } = await import("@/lib/cards/template-layout");
+      const pill = M20_TOKEN_PILL_INTERIOR_PX[height];
+      const slot = getFrameProfile(template).artSlot;
+      for (const m of masters) {
+        const { data, width, height: h } = await rgbaOf(m.file);
+        const a = (x: number, y: number) => data[(y * width + x) * 4 + 3];
+        // The black ring and the clear window beside it, on the art's rows.
+        expect(a(30, 1000), `${m.key} ring`).toBe(255);
+        expect(a(750, 1000), `${m.key} art`).toBe(0);
+        // The pill: clear just above its glow, an opaque rim, and a SOLID
+        // interior from end to end (owner decision 2026-09-29: CC's α 204,
+        // the colourless one's 166, let the art through).
+        expect(a(750, rim - 20), `${m.key} above the pill`).toBe(0);
+        expect(a(750, rim + 2), `${m.key} rim`).toBe(255);
+        for (let y = pill.top + 4; y <= pill.bottom - 4; y += 1) {
+          for (const x of [110, 300, 750, 1200, 1390]) expect(a(x, y), `${m.key} pill α at ${x}, ${y}`).toBe(255);
+        }
+        // The name pill (CC's, α 230): the artifact templates' is the prints'
+        // slate behind the name — luminance 54–71, white ink 9–11.5 : 1 on
+        // mid-grey art (16 M20+ artifact prints; CC's silver was 102–137,
+        // 3.5–5.7 : 1) — and every other template's keeps CC's pixels (its
+        // colour: the white pill stays white).
+        const zone: number[][] = [];
+        for (let y = 135; y < 190; y += 5) {
+          for (let x = 420; x < 1080; x += 20) {
+            const i = (y * width + x) * 4;
+            const al = data[i + 3] / 255;
+            zone.push([0, 1, 2].map((c) => data[i + c] * al + 118 * (1 - al)));
+          }
+        }
+        const med = [0, 1, 2].map((c) => zone.map((p) => p[c]).sort((p, q) => p - q)[Math.floor(zone.length / 2)]);
+        const lum = 0.299 * med[0] + 0.587 * med[1] + 0.114 * med[2];
+        const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+        const whiteInk = 1.05 / (0.2126 * lin(med[0]) + 0.7152 * lin(med[1]) + 0.0722 * lin(med[2]) + 0.05);
+        if (template.includes("artifact")) {
+          expect(lum, `${m.key} name pill luminance`).toBeGreaterThanOrEqual(54);
+          expect(lum, `${m.key} name pill luminance`).toBeLessThanOrEqual(71);
+          expect(whiteInk, `${m.key} white name ink`).toBeGreaterThanOrEqual(9);
+          expect(whiteInk, `${m.key} white name ink`).toBeLessThanOrEqual(11.5);
+          // Round 14 (owner decision 2026-09-29): the slate pill is SOLID
+          // end to end — the slate left it at α ≈ 246.
+          for (let y = 110; y <= 210; y += 4) {
+            for (let x = 120; x <= 1380; x += 20) expect(a(x, y), `${m.key} name pill α at ${x}, ${y}`).toBe(255);
+          }
+        } else if (m.key === "w") {
+          expect(lum, "w name pill").toBeGreaterThan(200);
+        }
+        // Round 14 (owner decision 2026-09-29): the type pill's tone behind
+        // the type line (its interior rows inset 10 px, x 620–1080; the
+        // prints' ink-free median, Scryfall PNGs at 1500 × 2100). The
+        // colourless pill (frameC: CC's 209) and every artifact pill (the
+        // silver tokenFrameA in every colour: CC's 193) are darkened to the
+        // prints — 4 colourless prints 157–180 (median 167), 16 artifact
+        // prints 160–190 (median 174); the five coloured pills and the gold
+        // one keep CC's colour (4–12 lighter than the scans: their offset).
+        const pillZone: number[] = [];
+        for (let y = pill.top + 10; y <= pill.bottom - 10; y += 5) {
+          for (let x = 620; x <= 1080; x += 20) {
+            const i = (y * width + x) * 4;
+            pillZone.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+          }
+        }
+        const pillLum = pillZone.sort((p, q) => p - q)[Math.floor(pillZone.length / 2)];
+        if (template.includes("artifact")) {
+          expect(pillLum, `${m.key} artifact type pill luminance`).toBeGreaterThanOrEqual(160);
+          expect(pillLum, `${m.key} artifact type pill luminance`).toBeLessThanOrEqual(190);
+          expect(Math.abs(pillLum - 174), `${m.key} artifact type pill vs the prints' median`).toBeLessThanOrEqual(2);
+        } else if (m.key === "c") {
+          expect(pillLum, "colourless type pill luminance").toBeGreaterThanOrEqual(157);
+          expect(pillLum, "colourless type pill luminance").toBeLessThanOrEqual(180);
+          expect(Math.abs(pillLum - 167), "colourless type pill vs the prints' median").toBeLessThanOrEqual(2);
+        } else {
+          const CC_PILL: Record<string, number> = { w: 241, u: 206, b: 183, r: 187, g: 200, m: 187 };
+          expect(Math.abs(pillLum - CC_PILL[m.key]), `${m.key} coloured type pill keeps CC's colour`).toBeLessThanOrEqual(1);
+        }
+        if (height === "textless") {
+          // The re-cut: the pill's bottom rim ends at 1849 (CC's 1844 + 5),
+          // the clear lower window below it — CC's master was clear from 1845.
+          expect(a(750, 1847), `${m.key} re-cut rim`).toBe(255);
+          expect(a(750, 1852), `${m.key} lower window`).toBe(0);
+        }
+        const cx = Math.round(((slot.leftPct + slot.widthPct / 2) / 100) * width);
+        const cy = Math.round(((slot.topPct + slot.heightPct / 2) / 100) * h);
+        const win = windowBox(data, width, h, cx, cy);
+        expect(win.y0, `${m.key} window top`).toBe(60);
+        expect([win.x0, win.x1], `${m.key} window sides`).toEqual([60, 1440]);
+        // 7.6: the art slot covers the window with ≥ 0.05 % overscan.
+        const over = { x: 0.0005 * width, y: 0.0005 * h };
+        expect((slot.leftPct / 100) * width, `${m.key} left`).toBeLessThanOrEqual(win.x0 - over.x);
+        expect(((slot.leftPct + slot.widthPct) / 100) * width, `${m.key} right`).toBeGreaterThanOrEqual(win.x1 + over.x);
+        expect((slot.topPct / 100) * h, `${m.key} top`).toBeLessThanOrEqual(win.y0 - over.y);
+        expect(((slot.topPct + slot.heightPct) / 100) * h, `${m.key} bottom`).toBeGreaterThanOrEqual(win.y1 + over.y);
+        // …and the whole card down to the colour strip (1937 px).
+        expect(((slot.topPct + slot.heightPct) / 100) * h, `${m.key} strip`).toBeGreaterThanOrEqual(1937 + over.y);
+      }
+    });
+  }
+});
