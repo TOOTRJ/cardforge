@@ -28,19 +28,20 @@ Workflows
 11. [Additions vs corrections](#additions-vs-corrections)
 
 How a profile sets text and art
-12. [Text sizes on the M15-era family](#text-sizes-on-the-m15-era-family)
-13. [Rules text and the stat plates](#rules-text-and-the-stat-plates)
-14. [Tokens](#tokens)
-15. [Art under and around the frame](#art-under-and-around-the-frame)
-16. [Emblems](#emblems)
+12. [Kind anatomy and bodies](#kind-anatomy-and-bodies)
+13. [Text sizes on the M15-era family](#text-sizes-on-the-m15-era-family)
+14. [Rules text and the stat plates](#rules-text-and-the-stat-plates)
+15. [Tokens](#tokens)
+16. [Art under and around the frame](#art-under-and-around-the-frame)
+17. [Emblems](#emblems)
 
 Operations
-17. [Re-bakes after a deploy](#re-bakes-after-a-deploy)
-18. [Re-bake runbook](#re-bake-runbook)
-19. [Announcing a change](#announcing-a-change)
-20. [Environment setup](#environment-setup)
-21. [If the dev branch is reset](#if-the-dev-branch-is-reset)
-22. [Non-goals](#non-goals)
+18. [Re-bakes after a deploy](#re-bakes-after-a-deploy)
+19. [Re-bake runbook](#re-bake-runbook)
+20. [Announcing a change](#announcing-a-change)
+21. [Environment setup](#environment-setup)
+22. [If the dev branch is reset](#if-the-dev-branch-is-reset)
+23. [Non-goals](#non-goals)
 
 ## Where frame files live
 
@@ -510,10 +511,13 @@ frame change](#shipping-a-frame-change)).
    `FRAME_TEMPLATE_LABELS` and `FRAME_TEMPLATE_SET` (exhaustive: the
    compiler names what is missing), and where the picker offers it:
    `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, a showcase set, or a kind's
-   `layoutTemplates` and restrictions in `lib/creator/card-kinds.ts`. A
-   showcase whose profile has no `loyalty` + `loyaltyRows` or no `defense`
-   refuses planeswalkers or battles in `SHOWCASE_KIND_RESTRICTION` (a unit
-   test derives it from the profiles; TODO 4.5a). A walker body for a
+   `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds a showcase
+   or Borderless frame dresses follows from the anatomy its profile draws
+   (a showcase with no `loyalty` + `loyaltyRows` refuses planeswalkers, one
+   with no `defense` battles), plus a trade-dress row in `TREATMENT_KINDS`
+   when the print is one kind's dress ([Kind anatomy and
+   bodies](#kind-anatomy-and-bodies)). Give the template its row in
+   `tests/unit/cards/fixtures/kind-capabilities.json`. A walker body for a
    treatment is a new template, never anatomy added to one that exists.
 4. **Write the profile**: one entry in `PROFILES`
    (`lib/cards/template-layout.ts`). Spread the closest verified profile,
@@ -1120,6 +1124,170 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   (2026-09-30), with FDN's UNCROWNED gold prints as the references for the
   W|B, B|G and R|G split crowns (FDN #120 / #125 / #117: FDN printed no
   crowned card in those pairs).
+
+## Kind anatomy and bodies
+
+TODO 4.5 (design 2026-09-29) and 4.5.0. A **body** is a template: its
+masters plus its profile. What a card KIND needs the frame to draw — its
+anatomy — is declared on the body, as fields of its `PROFILES` entry in
+`lib/cards/template-layout.ts`, never overlaid onto another template at
+render time:
+
+| Kind | Needs (`KIND_REQUIRES`) | Profile fields |
+|---|---|---|
+| creature | the P/T | `pt` (a plate or ink) |
+| planeswalker | the starting-loyalty shield and the ability rows | `loyalty` + `loyaltyRows` |
+| battle | the defense shield, on the landscape card | `defense` + `orientation: "landscape"` |
+| saga | the chapter rail | `chapters` |
+| adventure | the storybook page | `adventure` |
+| split, aftermath, flip | the second face | `secondFace` |
+| instant, sorcery, artifact, enchantment, land, token, emblem | nothing a body can lack | — |
+
+A basic land's symbol socket (`basicSymbol`) is optional anatomy: a body
+without one draws the watermark in the rules box. The P/T of a Vehicle, a
+Spacecraft or a Creature token is the same `pt` slot, gated by the card's
+type (`printsPowerToughness`).
+
+`lib/cards/kind-anatomy.ts` reads a profile's anatomy from its fields
+(`capabilitiesOf` — a spread profile and a builder-made one count alike)
+and says whether a body draws a kind (`profileDrawsKind`). Bodies that share
+anatomy share a **builder call**, with every value the body's own:
+`walkerAnatomy({ shield, stripes, badgeTextHex, maxSizePct,
+rulesBackdropHex, … })` builds the walker anatomy of m15pw and both
+borderless walkers — the shield (the three differ only by the plate cut
+from their own masters), the ability stripes, the badge ink, the walker
+text's ceiling and the see-through window's backdrop. Every walker draws
+MSE's M15 cost badges today, so the builder takes no badge set yet: 4.5b b3
+adds `badges` together with the `LoyaltyRowsSlot.badgeSet` field that
+carries it. The output is deep-frozen. There is no registry of shared
+overlays: the P/T is per body (22 distinct `pt` slots over 44 templates at
+4.5.0), and so is every shield.
+
+### The kind gate
+
+`templateRefusesKind` (`lib/creator/card-kinds.ts`) is two rules; either
+refuses:
+
+1. **Capability** — on a showcase treatment or a Borderless skin, the body
+   must draw what the kind needs. So the ZNR hedron, the textless and
+   extended-art frames and the IP showcases (the Ring and Scroll, Avatar,
+   Bloomburrow woodland and Anime, the three Tarkir frames) — P/T only —
+   refuse planeswalkers, battles and every layout kind. Border-era
+   standards and layout templates are not judged: an off-kind legacy card
+   (an artifact stored on plain `m15`) stays savable.
+2. **Trade dress** — `TREATMENT_KINDS`, for what a capability can't say:
+   the full-art basics, the textless land and the expeditions are land
+   dress; Nyx is enchantment dress an Enchantment Creature borrows; the
+   borderless skins dress their base's kinds (`m15borderless` no land or
+   token, `m15borderlessartifact` artifacts and Artifact Creatures,
+   `m15borderlessland` lands, the borderless walkers planeswalkers); the
+   emblem frame dresses the emblem alone, and the emblem is an EXCLUSIVE
+   kind that wears nothing else.
+
+`templateIsBasicOnly` stays its own per-card check: the Land kind covers
+basics and nonbasics alike. The creator's gallery (`framesForKind`), the
+server's kind gate (`lib/cards/frame-kind-gate.ts`), reference pinning, the
+AI's frame pick and the visual matrix (`kindsByTemplate`) all follow the
+one function.
+
+### A template never gains a kind
+
+Owner rule, 2026-09-29. Adding a kind's anatomy to a template that exists —
+a shield on the Anime frame, a P/T on the saga — re-dresses every stored
+card of that kind on it at its next bake (an edit, an admin re-bake, a
+sweep), and the visual gate can't see it: a matrix case that comes back is
+a NEW case, which needs no layout bump. So a new (treatment, kind) pair is
+a **new template key** (4.5b's `extendedartpw` and `tarkirghostfirepw`,
+4.5c's `m15vehicle`), or a stored per-card switch through
+`normalizeAnatomy` ([Printed pieces a card switches
+on](#printed-pieces-a-card-switches-on)). A correction that must add
+anatomy to its own body (4.5c's saga-creature P/T) ships with its layout
+bump and a scoped sweep after the owner's sign-off.
+
+`tests/unit/cards/kind-capability-baseline.test.ts` pins every template's
+capabilities in `tests/unit/cards/fixtures/kind-capabilities.json`: a gain
+(or a loss) fails it, and so does a template with no row. The file holds
+the 4.5.0 base map (`baseCapabilities`, never edited — the test pins its
+sha256), a `changes` log, and today's map (`capabilities`), which must
+equal the base with every change applied. So a row can't change without a
+`changes` entry saying why (`gain` / `loss` of one capability,
+`new-template`, `removed-template`), for the owner to review. Edited by
+hand, never regenerated.
+
+### Type-gated slots
+
+The bake draws a stat plate only for a card that prints the stat: the P/T
+under `printsPowerToughness`, the loyalty shield on a planeswalker with a
+starting loyalty, the defense shield on a battle with one
+(`drawnStatSlots` in `lib/render/card-image.tsx`). It preloads exactly
+those plates (`frameAssetPathsFor` calls the same function): a bucket plate
+that can't load fails the whole bake, so before 4.5.0 one missing plate
+failed every card on its body; now it fails only the cards that draw it.
+The preview keeps its own copies of the same gates, except that the editor
+shows an empty loyalty shield before a value is typed.
+`tests/unit/render/kind-anatomy-preload.test.tsx` bakes every type-gated
+case (creature, Creature and word-less tokens, Vehicle, Spacecraft, the
+walkers, a battle, a saga creature, an instant with a stray P/T) with an
+empty frame cache over a stubbed bucket that publishes every plate, and
+fails on any "was not preloaded" warning; the visual bake
+(`tests/visual/bake.visual.ts`) empties the cache before every case and
+fails a case on the same warning, so a plate one case forgot can't be
+served from an earlier case's preload.
+
+The compare page's scoring follows the same split: `listSlotPaths(profile,
+kind)` (`lib/cards/profile-override.ts`) lists the loyalty shield, the
+defense and the chapter rail for their own kind only, and a score passes
+its reference printing's kind (`lib/frames/score-combo.ts`), so a creature
+printing is never scored against a walker's shield. The layout editor lists
+every slot.
+
+### Adding a body
+
+A new body is a new template: every step of [Adding a
+frame](#adding-a-frame), plus —
+
+- its anatomy on its own `PROFILES` entry, through the shared builder where
+  one exists (`walkerAnatomy()` for a walker, with the shield cut from its
+  own masters);
+- its row in `kind-capabilities.json` and a `changes` line;
+- a trade-dress row in `TREATMENT_KINDS` when it dresses one kind only (a
+  treatment's walker body);
+- its square-corner fills (`lib/frames/square-corners.ts`), manifest and
+  preload coverage, `lib/cards/frame-sources.json` provenance, and a parity
+  case between the preview and the bake;
+- the matrix picks it up by itself (its kind, short and long, in every
+  colour): new cases, a regenerated baseline, no bump.
+
+The picker's route from a treatment to its body for another kind (4.5b's
+`bodyFor`) lands with its first consumer.
+
+### Proving a refactor of the profiles
+
+A change that must not move a pixel (4.5.0's builders) proves it four ways:
+
+- `node scripts/dump-frame-profiles.mjs --check`: every template's profile,
+  and its merge with sample admin overrides, deep-equal
+  `tests/unit/cards/fixtures/profiles-base.json` (the base commit is in the
+  file; `tests/unit/cards/profile-refactor-baseline.test.ts` runs the same
+  comparison; `pickerSampleArt`, which no renderer reads, is left out).
+  Both renderers read a card's layout only through its profile and its
+  master path, so this covers every stored card, private ones too. The
+  snapshot stays after 4.5.0: a PR that MEANS to change a profile (a new
+  template, a moved rect under its layout bump) regenerates it on its own
+  tree (`node scripts/dump-frame-profiles.mjs`) and says why — the fixture
+  diff is the profile change, for review. A refactor that has to be proven
+  again after main moved a profile regenerates it on the new base (a
+  detached worktree at the merge base), never on the branch.
+- `tests/unit/creator/kind-gate-baseline.test.ts`: every
+  `templateRefusesKind` / `templateSupportsKind` pair, every
+  `framesForKind` list and the matrix's kinds per template equal
+  `tests/unit/creator/fixtures/kind-gate-base.json`
+  (`UPDATE_KIND_GATE_FIXTURE=1` regenerates it, for a change the PR means).
+- `npm run test:visual`: every existing case keeps its hash, no bump.
+  Each case bakes with an empty frame cache and fails on a "was not
+  preloaded" warning.
+- A corpus replay: every visible production card baked at 750 px and HD
+  on the base and on the branch, over sha-checked frames, byte-identical.
 
 ## Text sizes on the M15-era family
 

@@ -62,10 +62,21 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
+  });
+
+  it("pins the P/T a card TYPE prints on a body: a saga creature, a Vehicle, a Spacecraft (TODO 4.5.0)", () => {
+    const byId = new Map(cases.map((c) => [c.id, c]));
+    const saga = byId.get("saga/w/saga-short@creature");
+    expect(saga?.row).toMatchObject({ card_type: "enchantment", supertype: "Creature", power: "3", toughness: "3" });
+    expect(saga?.row.subtypes).toContain("Saga");
+    for (const id of ["m15/c/artifact-short@vehicle", "m15artifact/c/artifact-short@vehicle"]) {
+      expect(byId.get(id)?.row, id).toMatchObject({ card_type: "artifact", subtypes: ["Vehicle"], power: "3", toughness: "3" });
+    }
+    expect(byId.get("m15artifact/c/artifact-short@spacecraft")?.row).toMatchObject({ card_type: "artifact", subtypes: ["Spacecraft"] });
   });
 
   it("bakes a card without art on the see-through masters and v35's art slots (the empty-art box; no under-frame layer)", () => {

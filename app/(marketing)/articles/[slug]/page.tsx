@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GlyphDivider } from "@/components/ui/glyph-divider";
 import { ArticleToc } from "@/components/content/article-toc";
-import { mdxComponents } from "@/components/content/mdx-components";
+import {
+  articleMdxOptions,
+  mdxComponents,
+} from "@/components/content/mdx-components";
 import { breadcrumbJsonLd, faqJsonLd, JsonLd } from "@/components/seo/json-ld";
 import {
   extractToc,
@@ -144,7 +147,11 @@ export default async function ArticlePage({
       {/* Body — prose styling via arbitrary variants, same approach as
           LegalPageShell but tuned for long-form reading. */}
       <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">
-        <MDXRemote source={content} components={mdxComponents} />
+        <MDXRemote
+          source={content}
+          components={mdxComponents}
+          options={articleMdxOptions}
+        />
       </article>
 
       {/* CTA */}

@@ -141,6 +141,8 @@ export async function FrameTemplateSignOffPage({
     };
   });
   const verifiedCount = colours.filter((c) => c.verified).length;
+  // Every slot the frame has (no kind): the results table orders the slots
+  // each colour's reference scored — its kind's (score-combo.ts).
   const slotOrder = listSlotPaths(resolveFrameProfile(template, overrides));
   const treatment = buildTreatmentView({
     template,

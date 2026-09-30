@@ -510,16 +510,9 @@ function CardImage({
       (layout.symbolRect ? 0 : fpx(0.02, width) + setSymbolDrawnPx(setSymbol, width));
 
   // Same gating as the preview (shared helpers) — and only when the frame
-  // actually defines a slot for that stat.
-  const showPT = Boolean(layout.pt) && printsPowerToughness(card);
-  const showLoyalty =
-    Boolean(layout.loyalty) &&
-    showsLoyalty(card.cardType) &&
-    Boolean(card.loyalty);
-  const showDefense =
-    Boolean(layout.defense) &&
-    showsDefense(card.cardType) &&
-    Boolean(card.defense);
+  // actually defines a slot for that stat. The preload reads the same
+  // (drawnStatSlots → frameAssetPathsFor).
+  const { pt: showPT, loyalty: showLoyalty, defense: showDefense } = drawnStatSlots(layout, card);
 
   const focalX = clamp(card.artPosition?.focalX ?? 0.5, 0, 1) * 100;
   const focalY = clamp(card.artPosition?.focalY ?? 0.5, 0, 1) * 100;
@@ -3141,12 +3134,35 @@ export function naturalRenderSize(landscape: boolean): { width: number; height: 
 }
 
 /**
+ * The stat slots a card DRAWS on its frame in the BAKE: the P/T where the
+ * card prints one (printsPowerToughness), the loyalty shield on a
+ * planeswalker with a starting loyalty, the defense shield on a battle with
+ * a defense — each only where the profile has the slot. CardImage draws a
+ * stat plate only under these, and frameAssetPathsFor preloads exactly these
+ * plates. The preview (components/cards/card-preview.tsx) keeps its own
+ * copies of the same gates, with one difference: in the editor it shows the
+ * loyalty shield before a value is typed (staticInEditor); the bake never
+ * draws an empty shield.
+ */
+export function drawnStatSlots(
+  layout: FrameProfile,
+  card: Pick<CardPreviewData, "cardType" | "subtypes" | "supertype" | "power" | "toughness" | "loyalty" | "defense">,
+): { pt: boolean; loyalty: boolean; defense: boolean } {
+  return {
+    pt: Boolean(layout.pt) && printsPowerToughness(card),
+    loyalty: Boolean(layout.loyalty) && showsLoyalty(card.cardType) && Boolean(card.loyalty),
+    defense: Boolean(layout.defense) && showsDefense(card.cardType) && Boolean(card.defense),
+  };
+}
+
+/**
  * Every public/frames asset (frame masters aside — preloadFrame handles them,
  * both halves of a two-colour split and a type-dressed master (Alpha's
  * colourless artifact, "a") included, via frameColorKeysFor, and
  * their template fallback) a render of `card` asks for synchronously:
- * the color-keyed stat plates the frame profile defines and the loyalty
- * badges of a planeswalker's ability rows. On Vercel these are fetched, not
+ * the color-keyed stat plates the card draws (drawnStatSlots — never a plate
+ * its type doesn't print) and the loyalty badges of a planeswalker's
+ * ability rows. On Vercel these are fetched, not
  * bundled (lib/render/card-frames.ts), so they must be warmed before the JSX
  * is built. Exported for tests — keep it in step with the
  * getPlateDataUrlForPath call sites in CardImage.
@@ -3161,7 +3177,12 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
   // and its anatomy overlays (the crown band), as CardImage resolves them.
   const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)));
   const paths: string[] = [];
-  for (const slot of [layout.pt, layout.loyalty, layout.defense]) {
+  // Only the plates the card DRAWS (TODO 4.5.0): a body's P/T, loyalty or
+  // defense plate is a type-gated slot, and a bucket plate that fails to
+  // load fails the whole bake (FrameAssetUnavailableError) — so a creature
+  // on a body whose loyalty plate is missing still bakes.
+  const drawn = drawnStatSlots(layout, card);
+  for (const slot of [drawn.pt ? layout.pt : null, drawn.loyalty ? layout.loyalty : null, drawn.defense ? layout.defense : null]) {
     if (slot?.plateAssetPathTemplate) {
       paths.push(plateAssetPath(slot.plateAssetPathTemplate, plateKey));
     }

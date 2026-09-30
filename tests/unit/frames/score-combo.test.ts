@@ -272,6 +272,26 @@ describe("scoreFrameCombo — what is scored", () => {
     });
   });
 
+  it("scores only the slots the reference printing's kind draws (TODO 4.5.0)", async () => {
+    const onWalker = async (cardType: string | undefined) => {
+      state.payload.mockImplementation(async (id: string) => {
+        const payload = payloadFor(id);
+        return { ...payload, preview: { ...payload.preview, cardType, frameStyle: { template: "m15pw" } } };
+      });
+      alignSpy.mockClear();
+      await scoreFrameCombo({ template: "m15pw", color: "u", referenceId: PINNED });
+      return alignInput().slots.map((slot) => slot.path);
+    };
+    // A planeswalker printing is scored against the loyalty shield…
+    expect(await onWalker("planeswalker")).toContain("loyalty");
+    // …a creature printing pinned on the walker frame never is.
+    const creature = await onWalker("creature");
+    expect(creature).not.toContain("loyalty");
+    expect(creature).toEqual(expect.arrayContaining(["artSlot", "title", "type", "rules"]));
+    // A printing with no card type keeps every slot, as before.
+    expect(await onWalker(undefined)).toContain("loyalty");
+  });
+
   it("lays the slots out from the override map it renders with", async () => {
     const overrides = { lotr: { title: { rect: { topPct: 12.5 } } } };
     await scoreFrameCombo({ template: "lotr", color: "u", overrides: overrides as never });

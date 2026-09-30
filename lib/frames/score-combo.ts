@@ -26,6 +26,7 @@ import {
   type AlignSlot,
   type SlotScore,
 } from "@/lib/frames/align";
+import { kindFromCard } from "@/lib/creator/card-kinds";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -130,8 +131,13 @@ export async function scoreFrameCombo(input: {
     toGrey(await scanFetched.blob.arrayBuffer(), grid.rotateDeg),
   ]);
 
+  // Only the slots the reference printing's kind draws (TODO 4.5.0): a
+  // creature printing is never scored against a walker's loyalty shield, a
+  // battle's defense or a saga's chapter rail it doesn't print. A printing
+  // whose type the import couldn't read keeps every slot.
+  const referenceKind = payload.preview.cardType ? kindFromCard(payload.preview.cardType, template) : undefined;
   const slots: AlignSlot[] = [];
-  for (const path of listSlotPaths(resolved)) {
+  for (const path of listSlotPaths(resolved, referenceKind)) {
     const rect = slotRect(resolved, path);
     if (rect) slots.push({ path, rect, kind: slotKindFor(path) });
   }
