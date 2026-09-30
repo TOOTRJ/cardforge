@@ -636,6 +636,9 @@ describe("the art-window known failures", () => {
         // colourless tokens: there since v34 (4.17c).
         "m15token",
         "m15tokentext",
+        // The emblem's slot (Scryfall's art_crop box) against its bridged
+        // ray's tip: 0.6 px of overscan (4.52; merged with v35's rule).
+        "emblem",
         "modern",
         "modernland",
         "tarkirdraconic",

@@ -119,7 +119,7 @@ session are using it) and never production. `scripts/seed-e2e.mjs` refuses any
 non-local URL.
 
 The stack comes up already seeded (`supabase/seed.sql` +
-`supabase/seeds/10_dev_data.sql`): five `dev_*` accounts, 22 cards, decks,
+`supabase/seeds/10_dev_data.sql`): five `dev_*` accounts, 26 cards, decks,
 challenges. Specs may read that content, but must not depend on its exact
 counts — assert on what the spec itself created. The e2e user is separate
 (`e2e_forger`, an admin) and is wiped on every `seed-e2e` run; a second,

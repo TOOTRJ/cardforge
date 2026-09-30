@@ -26,9 +26,13 @@ type IdentityPanelProps = {
    *  Legendary, Enchantment, Artifact and Creature, so the Supertype field
    *  shows and edits only the other words (TODO 3b.15). */
   token?: boolean;
+  /** The emblem kind (TODO 6.23): the name is the source planeswalker's, and
+   *  an emblem has no supertype — only the optional subtype ("Emblem —
+   *  Kaito", the 2014–19 and AFR style) is offered. */
+  emblem?: boolean;
 };
 
-export function IdentityPanel({ revise = false, token = false }: IdentityPanelProps) {
+export function IdentityPanel({ revise = false, token = false, emblem = false }: IdentityPanelProps) {
   const {
     register,
     formState: { errors },
@@ -38,7 +42,11 @@ export function IdentityPanel({ revise = false, token = false }: IdentityPanelPr
     <>
       <FieldGroup
         label="Title"
-        helper="The card's name. It also becomes the card's web address."
+        helper={
+          emblem
+            ? "The planeswalker the emblem comes from — its name prints in the title bar."
+            : "The card's name. It also becomes the card's web address."
+        }
         error={errors.title?.message}
       >
         {/* Required-ness is enforced by the form resolver
@@ -46,7 +54,7 @@ export function IdentityPanel({ revise = false, token = false }: IdentityPanelPr
             ignored once a resolver is set. */}
         <input
           {...register("title")}
-          placeholder="Emberbound Wyrm"
+          placeholder={emblem ? "Kaito, Cunning Infiltrator" : "Emberbound Wyrm"}
           className={inputClass(Boolean(errors.title))}
           autoComplete="off"
         />
@@ -58,7 +66,25 @@ export function IdentityPanel({ revise = false, token = false }: IdentityPanelPr
 
       {/* Quick path stops here: a title makes a real card. Everything below
           is detail control. */}
-      {revise ? null : (
+      {revise ? null : emblem ? (
+        <MoreOptions
+          summary="More options — subtype"
+          openWhen={Boolean(errors.subtypes_text)}
+        >
+          <FieldGroup
+            label="Subtype"
+            helper="Optional — prints “Emblem — Kaito”, the 2014–19 style. Leave it empty for today’s “Emblem”."
+            error={errors.subtypes_text?.message}
+          >
+            <input
+              {...register("subtypes_text")}
+              placeholder="Kaito"
+              className={inputClass(Boolean(errors.subtypes_text))}
+              autoComplete="off"
+            />
+          </FieldGroup>
+        </MoreOptions>
+      ) : (
       <MoreOptions
         summary="More options — supertype, subtypes"
         openWhen={Boolean(errors.supertype || errors.subtypes_text)}

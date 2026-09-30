@@ -15,6 +15,7 @@ import {
   type PipOverrides,
 } from "@/lib/pips/override";
 import { SetSymbol } from "@/components/cards/set-symbol";
+import { cardTypeHasRarity } from "@/lib/cards/emblem";
 import { drawableCardMedia } from "@/lib/cards/drawable-media";
 import {
   FrameLayer,
@@ -76,6 +77,7 @@ import {
   type DrawnStats,
   type RulesDraw,
 } from "@/lib/cards/rules-box";
+import { drawsRulesBackdrop } from "@/lib/cards/rules-backdrop";
 import type { RulesItem } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
@@ -1166,6 +1168,7 @@ function CardFace({
         {!layout.symbolRect ? (
           <SetSymbol
             rarity={rarity}
+            namesRarity={cardTypeHasRarity(face.cardType)}
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(setSymbol.sizePct)}
@@ -1188,6 +1191,7 @@ function CardFace({
         >
           <SetSymbol
             rarity={rarity}
+            namesRarity={cardTypeHasRarity(face.cardType)}
             iconUrl={setIconUrl}
             setCode={setIconCode}
             size={cqw(setSymbol.sizePct)}
@@ -1203,11 +1207,15 @@ function CardFace({
           sit between it and the text (backdrop z9 < watermark z10 < text
           z20). Previously the backdrop was the text container's background,
           which painted over the watermark — basic lands' big mana symbol
-          vanished behind the tinted land text box. */}
+          vanished behind the tinted land text box. WHEN it is drawn is the
+          bake's rule too (drawsRulesBackdrop). */}
       {layout.rules.backdropHex &&
-      hasRulesContent &&
-      !layout.chapters &&
-      !(layout.loyaltyRows && loyaltyAbilities.length > 0) ? (
+      drawsRulesBackdrop(layout.rules, {
+        hasRulesContent,
+        textless,
+        chapters: Boolean(layout.chapters),
+        rowsDrawn: Boolean(layout.loyaltyRows) && (loyaltyAbilities.length > 0 || hintRowsLayout !== null),
+      }) ? (
         <div
           aria-hidden
           style={{

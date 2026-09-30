@@ -4,12 +4,14 @@
 // frame packs into .frames-build/ (frames plan 4.3; owner decision
 // 2026-09-25: Card Conjurer art for the M15 era, MSE for showcase families
 // and the old borders). Later runs of the same importer: 4.32's borderless
-// frame (m15borderless, m15borderlessartifact) and 4.39's full-art basics
-// (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
+// frame (m15borderless, m15borderlessartifact), 4.34's borderless land
+// (m15borderlessland, a composite of the same pack's pixels) and 4.39's
+// full-art basics (m15fullartland, fullartland), 4.49 (b)'s text-box tokens
 // (m15tokentext, m15tokenartifacttext), re-cut onto the prints, 4.49's
 // textless-token re-cut (m15token, m15tokenartifact moved onto the prints),
 // 4.48 / 4.50's full-art tokens (m20token, m20tokentext, m20tokentall and
 // their artifact templates; the textless pair re-cut 5 px onto the prints),
+// 4.33's borderless planeswalkers (m15borderlesspw, m15borderlesspwtall),
 // and 4.6a's legendary crown band (m15crown, an overlay the m15 / m15artifact
 // / m15land profiles draw over their masters).
 //
@@ -30,6 +32,8 @@
 // masters, <pair>.png / <pair>-h.png, TODO 4.6b), plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
 // (re-cut templates) a band moved down before the downscale (recut),
+// (the emblem) its spark's ray bridged over and its regions toned onto the
+// prints,
 // and a planeswalker's loyalty shield cut out of each master under loyalty/.
 // An overlay band (CC_OVERLAY_BANDS: the crown) is composited the same way
 // on the full card, then cropped to the rows it covers: <out>/<folder>/<key>.png
@@ -55,6 +59,7 @@ import {
   CORNER_RADIUS,
   OUT_H,
   OUT_W,
+  TINTED_BOX_STRUCTURE,
   WEBP,
   builtColors,
   compositeFinish,
@@ -67,11 +72,16 @@ import {
   describeCrownBand,
   describeFinish,
   describeLayer,
+  applyTone,
+  bridgeRayTip,
   finishFor,
+  flatPixelAt,
   placeOnCanvas,
   recutBand,
   rectPx,
+  retintStructure,
   roundCornersRgba8,
+  shiftRows,
   sourceFilesFor,
   toRgba8,
 } from "./lib/cc-frames.mjs";
@@ -185,14 +195,31 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     for (const l of def.colors[key]) {
       // A pair layer (TODO 4.6b, pairLayer): its two files blended across
       // the region's untilted ramp (scripts/lib/pair-ramp.mjs) first.
-      const data = l.right
+      let data = l.right
         ? blendPair(await rgba(await fetchCached(l.src), W, H), await rgba(await fetchCached(l.right), W, H), W, H, l.ramp)
         : await rgba(await fetchCached(l.src), W, H);
+      if (l.retint) {
+        // 4.34's tinted box: a neutral structure re-tinted to the flat tint
+        // read from another frame (both asserted flat where they are read).
+        const { from, tintOf } = l.retint;
+        const flat = flatPixelAt(data, W, H, TINTED_BOX_STRUCTURE.flatAt);
+        if (from.some((v, c) => v !== flat[c])) {
+          throw new Error(`${l.src}: its flat box is ${flat.slice(0, 3)}, the recipe says ${from} (the source moved?)`);
+        }
+        const tint = flatPixelAt(await rgba(await fetchCached(tintOf.src), W, H), W, H, tintOf);
+        data = retintStructure(data, from, tint.slice(0, 3));
+      }
+      // 4.34's type bar: the title bar moved down onto it.
+      if (l.dy) data = shiftRows(data, W, H, l.dy);
       images.push({
         data,
         mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
         invert: l.invert,
         opacity: l.opacity,
+        replace: l.replace,
+        gain: l.gain,
+        recolour: l.recolour,
+        lumaRamp: l.lumaRamp,
       });
     }
     const flat = toRgba8(compositeLayers(images, W, H));
@@ -212,7 +239,12 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         )
       : flat;
     // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b)).
-    const native = def.recut ? recutBand(composite, W, H, def.recut) : composite;
+    const recut = def.recut ? recutBand(composite, W, H, def.recut) : composite;
+    // A ray's top closed over by the frame (the emblem's spark, 4.52).
+    const bridged = def.bridge ? bridgeRayTip(recut, W, H, def.bridge) : recut;
+    // Toned regions, onto the prints' tone (the emblem's silver, name pill,
+    // type pill and text box, 4.52), in order.
+    const native = (def.tones ?? []).reduce((img, tone) => applyTone(img, W, H, tone), bridged);
     const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
       .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
       .raw()
@@ -277,6 +309,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
+    ...(def.bridge ? { bridge: def.bridge } : {}),
+    ...(def.tones ? { tones: def.tones } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
   };

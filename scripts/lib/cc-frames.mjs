@@ -49,11 +49,30 @@ const TOKEN_REG = "img/frames/token/m15/regular";
 /** A layer: a frame image, optionally shown only through a mask (its alpha),
  *  optionally at reduced opacity. */
 const layer = (src, mask, opacity) => ({ src, ...(mask ? { mask } : {}), ...(opacity !== undefined ? { opacity } : {}) });
+/** A layer whose alpha is LIFTED by `gain` (> 1) and clamped at 1 — a
+ *  see-through master's rim made opaque with its anti-aliased edges kept in
+ *  proportion (4.33's colourless walker: the pack's rim is α 234, so ×255/234
+ *  takes it, and its join with the bottom bar, to 1). */
+const lifted = (src, gain) => ({ src, gain });
 /** A layer shown everywhere EXCEPT through a mask — how a borderless key
  *  drops a pack's Border mask (4.39). The mask is a region the frame image
  *  itself paints (its black ring), so the mask's COVERAGE is subtracted
  *  (alpha − mask alpha), not multiplied out: see compositeLayers. */
 const outside = (src, mask) => ({ src, mask, invert: true });
+/** A layer that REPLACES what is under it through a mask (4.34): where the
+ *  mask covers, the layer's pixels stand instead of the ones below, not on
+ *  top of them — a tinted box over a dark one would otherwise read darker
+ *  than either. See compositeLayers. */
+const replacing = (src, mask, extra = {}) => ({ src, mask, replace: true, ...extra });
+/** A layer that RECOLOURS the layers below it and keeps their alpha (4.33's
+ *  gold walker): through `mask`, at `opacity`, and weighted by a ramp of
+ *  the layer's OWN luminance — 0 at or below `lumaRamp[0]`, 1 from
+ *  `lumaRamp[1]` — so the layer's bright ground shows and its darker veins
+ *  let the colour below through. Its alpha counts relative to the alpha
+ *  below (as opaque as what is below = full weight), so a see-through bar
+ *  (the tall walker's α 0.85 faces) is recoloured, never made more opaque.
+ *  See compositeLayers. */
+const recolour = (src, mask, { opacity, lumaRamp }) => ({ src, mask, recolour: true, opacity, lumaRamp });
 
 /** The planeswalker loyalty shield's box on the 1500×2100 master: CC's
  *  maskLoyalty.png covers x 1197–1430, y 1844–1991 after the Lanczos
@@ -432,6 +451,136 @@ const borderlessFrame = (k) => `${BORDERLESS}/m15GenericShowcaseFrame${k.toUpper
  *  (pt/c.png sits in the folder too, but the pack never lists it.) */
 const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM), c: `${BORDERLESS}/pt/l.png` };
 
+// --- 4.34 the borderless nonbasic land, from the same pack. Measured on the
+// prints (2026-09-29, 50+ borderless land printings): a borderless land
+// wears its colour on ALL THREE of its translucent parts — the title bar,
+// the type bar and the text box — where a borderless spell tints only the
+// title bar (its type bar and box are the dark α128 of the masters above).
+// CC's pack draws the land look from no single file: its 'Land Frame' (L)
+// is the spell look in grey, and CC's autoframe (creator-23.js
+// autoBorderlessFrame) keeps the dark type bar and box too. So the land
+// master is a PipGlyph composite of the pack's pixels, in four layers:
+//   1. the colour's frame, whole (its title bar, pinline, bottom bar and
+//      fins — the m15borderless master of that colour; L for colourless);
+//   2. the TYPE BAR = the same frame's title bar, moved down onto it
+//      (BORDERLESS_TITLE_TO_TYPE_DY): the print's type bar is its title bar
+//      (same tint, bevels and caps), and CC's Title and Type masks match at
+//      that shift (mean |Δα| 1.7 levels over the bar);
+//   3. the TEXT BOX = the tinted box of CC's genericShowcase pack (its
+//      neutral 'Land Frame', flat #9a9a9a α191 with its bevels and the
+//      shadow under the type bar), re-tinted to the colour's title-bar tint
+//      (retintStructure: every genericShowcase colour's box is that one
+//      structure lerped from its tint to white or black, ≤ 0.06 levels
+//      mean error) — the print's box tint is the title's (best fit over 52
+//      box edges: the title colour, rms 22.8, against genericShowcase's own
+//      tints 28.4 and the dark α128 box 68.6), at genericShowcase's α191;
+//   4. the pinline, through the pack's Pinline mask, on top (it repairs the
+//      pixels layers 2 and 3 replaced along its anti-aliased edge).
+// Two-colour lands (the most printed kind: MID #281, OTJ #304, the RVR
+// shocks, the MKM surveil lands) print the grey L bars with a SPLIT pinline
+// and a split box; their pair masters are 4.6's (borderlessLandLayers takes
+// the letters, so a pair adds the right-hand pinline and box through 4.6's
+// procedural ramp). Until then `m` is the three-and-more-colour land
+// (Command Tower CMM #659, SNC #291–295): gold bars, box and pinline.
+const GENERIC_SHOWCASE = "img/frames/m15/genericShowcase";
+/** The pack's own Pinline mask (packBorderless.js lists it first). */
+const BORDERLESS_PINLINE_MASK = `${GENERIC_SHOWCASE}/m15GenericShowcaseMaskPinline.png`;
+/** The regular M15 masks the pack lists for its Type and Rules layers. */
+const REG_TYPE_MASK = `${REG}/m15MaskType.png`;
+const REG_RULES_MASK = `${REG}/m15MaskRules.png`;
+/** From the title bar to the type bar on the pack's 1500×2100 frames, in
+ *  native px: CC's Title mask spans rows 100–221 and its Type mask
+ *  1181–1302 (both 122 rows; the row ends agree within 1 px at every row). */
+export const BORDERLESS_TITLE_TO_TYPE_DY = 1081;
+/** Where a colour's title-bar tint is read, in native px: the middle of the
+ *  bar's flat interior (96–97.6 % of its pixels are that one RGBA). */
+export const BORDERLESS_TINT_POINT = { x: 750, y: 160 };
+/** The tinted box's structure: genericShowcase's neutral 'Land Frame', whose
+ *  flat box is #9a9a9a — `from` is asserted against it when imported. */
+export const TINTED_BOX_STRUCTURE = {
+  src: `${GENERIC_SHOWCASE}/m15GenericShowcaseFrameL.png`,
+  from: [154, 154, 154],
+  /** A flat pixel of the box, where `from` is checked. */
+  flatAt: { x: 750, y: 1600 },
+};
+/** The pack letter of a colour key's land dress: colourless is CC's 'Land
+ *  Frame' (grey bars, the land's brown-grey pinline), never the see-through
+ *  'Colorless Frame' of the spells. */
+const borderlessLandLetter = (k) => (k === "c" ? "l" : k);
+
+/**
+ * The borderless land master's layers, bottom → top (see above): `frame`
+ * dresses the title bar, the type bar and the bottom bar, `box` tints the
+ * text box, `pinline` colours the pinline — each a pack letter (w u b r g m
+ * l). A mono-colour land passes one letter three times; 4.6's pair masters
+ * pass the grey `l` bars and a letter pair for the box and pinline.
+ */
+export function borderlessLandLayers({ frame, box, pinline }) {
+  return [
+    layer(borderlessFrame(frame)),
+    replacing(borderlessFrame(frame), REG_TYPE_MASK, { dy: BORDERLESS_TITLE_TO_TYPE_DY }),
+    replacing(TINTED_BOX_STRUCTURE.src, REG_RULES_MASK, {
+      retint: { from: TINTED_BOX_STRUCTURE.from, tintOf: { src: borderlessFrame(box), ...BORDERLESS_TINT_POINT } },
+    }),
+    layer(borderlessFrame(pinline), BORDERLESS_PINLINE_MASK),
+  ];
+}
+
+// --- 4.33 'Borderless' and 'Tall Borderless' planeswalkers — CC
+// packPlaneswalkerBorderless.js / packPlaneswalkerTallBorderless.js
+// (groupPlaneswalker.js:3 and :6). 1500×2100 native (no resample): the
+// regular planeswalker master without its frame body and border — title bar
+// 57–211 px, type bar 1160–1313 (tall: 1022–1175), the ability window x
+// 180–1383 with its badge rim, the shield, an opaque bottom bar from 1922 px
+// and fins up the side edges from ~80 % H; everything else α 0, so the art
+// runs to the top and side edges. The regular pack lists W U B R G M,
+// 'Artifact' (a) and 'Land' (l) and no colourless frame; the tall pack adds
+// 'Colorless' (c). The ability stripes are the renderer's (CC draws them
+// before the frame), so the shield is cut out of each master and drawn again
+// above them, as on m15pw.
+const PW_BORDERLESS = "img/frames/planeswalker/borderless";
+const PW_TALL_BORDERLESS = "img/frames/planeswalker/tallBorderless";
+const PW_LOYALTY_MASK = "img/frames/planeswalker/maskLoyalty.png";
+/** The regular pack's 'Artifact Frame' (our colourless walker) is
+ *  see-through: bars α 191, the ability window's rim α 234 — every other
+ *  colour's rim, and the tall pack's 'Colorless Frame' rim in the same
+ *  colour, are α 255. Its alpha × 255/234 (clamped at 1) makes the rim and
+ *  its join with the bottom bar opaque; the bars go 0.75 → 0.82 (the tall
+ *  pack's colourless bars are 0.85). */
+export const PW_COLOURLESS_RIM_GAIN = 255 / 234;
+/** The gold (m) walker's bar faces, MATCHED TO THE PRINTS (owner round 15,
+ *  2026-09-29). CC's 'Multicolored Frame' paints the title and type faces a
+ *  flat tan; every mono-gold borderless walker print — the 13 exact ones:
+ *  Tamiyo BLC #100, Narset IKO #278, Nicol Bolas MED #GR4, Sarkhan MED #WS8,
+ *  Jace FRC #1, Nicol Bolas MED #WS6, Dakkon MH2 #304, Dihada MH2 #305,
+ *  Nicol Bolas SLC #2017, Lord Windgrace SLD #1184 and SPG #14, Nicol Bolas
+ *  SLD #1246, Aminatou SLD #1421 — prints a pale cream face veined with
+ *  that gold. So the pack's own 'White Frame' is drawn over the m frame
+ *  through CC's Title and Type masks (the pack's own way of mixing frames)
+ *  as a recolour at 90 %, weighted by the white face's luminance from 235
+ *  (its grey marble veins: the gold shows) to 250 (its brightest ground:
+ *  90 % white) — fitted to the 26 bars' pooled face colour and luminance
+ *  quantiles. On the face rectangles of
+ *  tests/unit/frames/fixtures/gold-walker-prints.json: prints luma 202 per
+ *  bar on average (168–235, interquartile 189–212), red − blue 60
+ *  (interquartile 44–78); ours 204 and 56; CC's tan 183 and 80, outside
+ *  both. The gold rims (Pinline), the window, the shield, the bottom bar
+ *  and the alpha stay the m frame's. tests/unit/frames/gold-walker-faces
+ *  .test.ts holds a built master to the prints' range. */
+export const PW_GOLD_FACE = Object.freeze({ opacity: 0.9, lumaRamp: Object.freeze([235, 250]) });
+const PW_TITLE_MASK = `${PW}/planeswalkerMaskTitle.png`;
+const PW_TYPE_MASK = `${PW}/planeswalkerMaskType.png`;
+const PW_TALL_TYPE_MASK = "img/frames/planeswalker/tall/planeswalkerTallMaskType.png";
+/** The gold walker: the m frame, its title and type faces recoloured with
+ *  the pack's white frame through CC's Title and Type masks (PW_GOLD_FACE). */
+const goldWalker = (folder, typeMask) => [
+  layer(`${folder}/m.png`),
+  recolour(`${folder}/w.png`, PW_TITLE_MASK, PW_GOLD_FACE),
+  recolour(`${folder}/w.png`, typeMask, PW_GOLD_FACE),
+];
+const PW_BORDERLESS_PACK = "packPlaneswalkerBorderless.js 'Borderless' (groupPlaneswalker.js:3)";
+const PW_TALL_BORDERLESS_PACK = "packPlaneswalkerTallBorderless.js 'Tall Borderless' (groupPlaneswalker.js:6)";
+
 // --- 4.39 'Fullart Basics (2022)' — CC packTextlessBasics2022.js
 // (groupTextless-4.js:5). 1500×2100 native, opaque black ring; a title bar
 // and a type bar with the mana-symbol socket at its left end. The pack's
@@ -447,9 +596,206 @@ const basics2022Frame = (k) => `${BASICS_2022}/${k === "c" ? "l" : k}.png`;
  *  is no multicolour basic land. */
 const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${BASICS_2022}/s${k}.png`]));
 
+// --- 4.52 'Planeswalker Emblems' — CC packEmblem.js: ONE master, the M20
+// design (2019-07-12 on: TM20 #11, TFDN #24 / #25, TBLB #30, TDSK #17,
+// TFRA #16). 1500×2100 native, opaque black border; the planeswalker spark
+// is clear (α 0) from 11.67 to 66.38 %H and its tail runs on down through
+// the type bar and the text box as 80 % white (α 204), so the art shows
+// faintly under it as the prints show it (CC's artBounds run to 90.44 %H).
+const EMBLEM = "img/frames/token/emblem/frame.png";
+
+/**
+ * The emblem's spark ray, bridged over at the art window's top (owner
+ * decision 2026-09-29, "exact slot + frame bridged over the tip"). The art
+ * window is Scryfall's art_crop box at the prints' scale, from 250.4 px, and
+ * the one part of the spark above it is the top of the centre ray: CC's ray
+ * runs up to the silver bar under the name (its clear rows start under the
+ * bar's black shadow, 233–246), where an art_crop has no pixels. So the
+ * frame's silver closes over the ray's top instead and the ray ends 18 px
+ * short of the bar, at 251 — the first row the art covers whole:
+ *
+ * - rows [fromY, toY) × columns [x0, x1) — the bar's shadow and the silver
+ *   under it, across the ray and its two edges — take the frame on either
+ *   side (each row's pixel at `anchors[0]` and `anchors[1]`, the plain silver
+ *   beyond the ray's highlight line and its outline), blended across, so the
+ *   bar's shadow runs on unbroken and the silver below it joins up; left of
+ *   the ray, the frame's own pixels (its bevel and highlight line) fade back
+ *   in over the last `fadeRows` rows above the new tip;
+ * - the tip is the spark's own edge turned across the top: the colour
+ *   profile of the ray's right edge (its dark outline into the silver, by
+ *   distance from the edge's α-½ line, sampled on rows [edgeRows) of the
+ *   composite itself) is drawn by distance from the new tip — its top edge at
+ *   `toY`, its corners rounded to `radius` — and it lightens towards the
+ *   left edge (× the fraction across, to the power `fadePow`), which has no
+ *   outline: the side rays' tips are drawn that way, dark over the top right
+ *   and light down the left.
+ *
+ * Everything above `toY` is opaque, so nothing but the art window's own
+ * picture shows in the ray. Native px of the pack (1500 × 2100).
+ */
+export const EMBLEM_RAY_BRIDGE = {
+  fromY: 233,
+  toY: 251,
+  x0: 723,
+  x1: 780,
+  anchors: [720, 780],
+  fadeRows: 5,
+  radius: 4,
+  fadePow: 2,
+  edgeRows: [255, 301],
+};
+
+/**
+ * The emblem's name pill, toned onto the prints (owner evidence
+ * 2026-09-29: our pill read luma 94–97 against the prints' 54–60, the name's
+ * ink included). Why: CC's pack draws frame.png ALONE — packEmblem.js has no
+ * darkening layer and creator-23.js does nothing for version 'emblem' — and
+ * that file paints the pill as a light gradient, luma ~140 at the ends to
+ * ~50 at the centre (median 90 over the name band, rows 128–199 ×
+ * 150–1349), where the six M20-design prints (TFDN #24 / #25, TM20 #11,
+ * TDSK #17, TBLB #30, TFRA #16; Scryfall PNGs at 1500 × 2100) print a dark
+ * pill, luma ~97 at the ends and 45–60 across its length. (The silver, the
+ * type pill and the text box are toned too: EMBLEM_SILVER_TONE,
+ * EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE.)
+ *
+ * The pill's body — rows [fromY, toY): under CC's top highlight (105–110,
+ * kept), above its lower lip (211–216, kept); the pixels 4-connected to
+ * `seed` whose luma is ≥ `minLuma`, which the pill's dark outline bounds —
+ * has its colour multiplied by `gain`, piecewise-linear in the distance from
+ * the pill's centre (`centreX`), fitted by least squares on the prints'
+ * per-pixel median with their name ink masked out: mean |Δluma| 40.3 → 5.2,
+ * the band's median 90 → 52 (the prints' 52). CC leaves a 30 px band down
+ * the pill's middle at α 242 (the spark's ray drawn on through the bar,
+ * showing the art under it); the prints' pill is opaque, so the toned body
+ * is. Native px of the pack (1500 × 2100).
+ */
+export const EMBLEM_NAME_PILL_TONE = {
+  seed: { x: 750, y: 160 },
+  fromY: 111,
+  toY: 211,
+  minLuma: 30,
+  centreX: 749.5,
+  /** [distance from centreX in px, gain] — held at the last knot past it. */
+  gain: [
+    [0, 0.8],
+    [100, 0.6],
+    [200, 0.64],
+    [300, 0.54],
+    [400, 0.52],
+    [500, 0.58],
+    [600, 0.66],
+    [700, 0.83],
+  ],
+};
+
+/**
+ * The emblem's silver, toned onto the prints (owner decisions 2026-09-29:
+ * round 12 "the silver ~30–45 luma lighter" than the six M20-design prints;
+ * round 12b "fit each side separately"). CC's silver — the ring down both
+ * sides and the body round the spark — is lit evenly, left and right alike;
+ * the prints' is not: beside the spark's base it reads 113–122 on the left
+ * and 178–187 on the right (CC 160 and 179), beside the text box 117–122 and
+ * 162–168 (CC 149 both), and the right rail is the darkest silver on the
+ * card (78–92, the left 117–124; CC 137–142).
+ *
+ * The silver is every pixel of rows [bodyFromY, bodyToY) — from the name
+ * bar's shadow down to the type bar's rim: the silver, the spark's outline,
+ * the bar's shadow — but the spark's tail and the glow above the type bar
+ * (CC paints both pure white, translucent: they stay as drawn), and in the
+ * rows [fromY, bodyFromY) and [bodyToY, toY) beside the bars, each row from
+ * either edge inwards up to the first pixel of luma ≥ `stopLuma` (a bar's
+ * light rim: the rims, the bars and the box keep CC's tone, which the prints
+ * match or print lighter). Its colour is multiplied by a gain bilinear in the
+ * SIGNED offset x − `centreX` (knots `dx`, the left half negative) and the
+ * row (knots `rows`), held past the outer knots; `gain[row][dx]`. Each half
+ * has its own five knots, fitted on its own side of the prints, and the
+ * centre segment (±100 px) runs straight from one side's inner knot to the
+ * other's, so the field is continuous everywhere: no seam at the centre line
+ * and, bilinear, no step anywhere (no banding). The gains are a
+ * least-squares fit of the prints' per-pixel median in the 50 px squares of
+ * pure silver (the round-12 square map) and in 20-row slices of the rails and
+ * the strips beside the bars, smoothed (second differences) and held to
+ * 0.45–1.2, with each region's median — per side — pinned to the prints'
+ * median (within 1.4 luma); the first row is 1 (the flat strip above the name
+ * bar, which the prints print as a brushed pattern CC doesn't draw, keeps
+ * CC's tone). A gain, not a fill: CC's highlights and shading stay.
+ * Native px of the pack (1500 × 2100).
+ */
+export const EMBLEM_SILVER_TONE = {
+  fromY: 60,
+  bodyFromY: 233,
+  bodyToY: 1407,
+  toY: 1946,
+  stopLuma: 170,
+  centreX: 749.5,
+  dx: [-680, -590, -450, -300, -100, 100, 300, 450, 590, 680],
+  rows: [60, 150, 300, 500, 700, 900, 1100, 1300, 1407, 1550, 1750, 1946],
+  gain: [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0.79, 0.87, 0.92, 0.9, 0.96, 0.99, 0.99, 1.08, 0.99, 0.85],
+    [0.95, 0.85, 0.82, 0.74, 0.91, 0.96, 0.9, 1.2, 1.07, 0.8],
+    [0.92, 0.86, 0.88, 0.84, 0.81, 0.81, 0.82, 1.14, 1, 0.7],
+    [0.74, 0.82, 1.11, 0.78, 0.6, 1.08, 1.2, 1.19, 0.84, 0.55],
+    [0.68, 0.8, 1.1, 0.9, 0.76, 1.11, 1.2, 1.2, 0.78, 0.45],
+    [0.77, 0.94, 0.85, 1.2, 1.14, 1.12, 1.17, 1.08, 0.77, 0.45],
+    [0.91, 1, 0.69, 0.72, 1.2, 1.2, 0.99, 0.97, 0.8, 0.85],
+    [0.82, 0.89, 0.67, 0.5, 1.15, 1.2, 0.98, 0.96, 0.87, 0.98],
+    [0.84, 0.82, 0.72, 0.65, 0.97, 1.05, 0.95, 0.93, 0.99, 1.07],
+    [0.8, 0.79, 0.79, 0.8, 0.84, 0.87, 0.86, 0.91, 1.03, 1.14],
+    [0.62, 0.7, 0.81, 0.86, 0.83, 0.8, 0.82, 0.88, 0.96, 1.03],
+  ],
+};
+
+/**
+ * The emblem's type pill, toned onto the prints (owner decision 2026-09-29:
+ * it read 238 against the prints' 219–228). Its body — rows [fromY, toY),
+ * under CC's top highlight (1422–1428, kept, as the prints print one); the
+ * pixels 4-connected to `seed` with luma ≥ `minLuma`, which the pill's dark
+ * outline bounds — has its colour multiplied by `gain`, a least-squares fit
+ * on the prints' per-pixel median with "Emblem" and the set symbol masked
+ * out (one gain: the fit by distance from the centre varied 0.93–0.98). The
+ * spark's tail crosses the pill as CC's translucent white: it is toned with
+ * the pill and keeps its alpha (`keepAlpha`), so the art still shows through
+ * it. Native px of the pack.
+ */
+export const EMBLEM_TYPE_PILL_TONE = {
+  seed: { x: 400, y: 1470 },
+  fromY: 1429,
+  toY: 1530,
+  minLuma: 150,
+  centreX: 749.5,
+  gain: [[0, 0.94]],
+  keepAlpha: true,
+};
+
+/**
+ * The emblem's text box, toned onto the prints (owner decision 2026-09-29:
+ * only if the prints measurably differ — they do: CC's box reads 237 where
+ * all six prints read 226–232, a light blue-grey). Its interior — rows
+ * [fromY, toY), the pixels 4-connected to `seed` with luma ≥ `minLuma`,
+ * inside the box's light rim (202, kept: the prints print it lighter) — has
+ * its colour multiplied by `gain`, a least-squares fit on the prints'
+ * per-pixel median with the rules text masked out (one gain: by distance it
+ * varied 0.94–0.98). The spark's tail keeps its alpha, as in the type pill.
+ * Native px of the pack.
+ */
+export const EMBLEM_TEXT_BOX_TONE = {
+  seed: { x: 400, y: 1700 },
+  fromY: 1556,
+  toY: 1938,
+  minLuma: 215,
+  centreX: 749.5,
+  gain: [[0, 0.96]],
+  keepAlpha: true,
+};
+
+/** The emblem's tones, in the order the importer applies them (their
+ *  regions don't overlap). */
+export const EMBLEM_TONES = [EMBLEM_NAME_PILL_TONE, EMBLEM_SILVER_TONE, EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE];
+
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * recut?, excluded?, pack?, transforms?, notes }.
+ * recut?, bridge?, tones?, excluded?, pack?, transforms?, notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
  * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
  * solid, the artifact name pill's slate made solid, owner decisions
@@ -463,6 +809,13 @@ const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].ma
  * `recut` moves a band of each composite down before the downscale
  * (recutBand; the textless tokens, TOKEN_TEXTLESS_RECUT; the text-box
  * tokens, TOKEN_REGULAR_RECUT).
+ * `bridge` closes the frame over the top of a clear ray (bridgeRayTip; the
+ * emblem's spark, EMBLEM_RAY_BRIDGE), after any re-cut.
+ * `tones` multiply regions of each composite by print-fitted gains, in
+ * order, before the downscale (applyTone: toneSilver for the emblem's
+ * silver, EMBLEM_SILVER_TONE; toneRegion for an outlined region — its name
+ * pill, type pill and text box, EMBLEM_NAME_PILL_TONE, EMBLEM_TYPE_PILL_TONE,
+ * EMBLEM_TEXT_BOX_TONE).
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
@@ -654,6 +1007,62 @@ export const CC_TEMPLATES = {
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
     ],
   },
+  // 4.34 — the borderless nonbasic land: the colour on the title bar, the
+  // type bar AND the text box (borderlessLandLayers).
+  m15borderlessland: {
+    colors: perColor((k) => {
+      const letter = borderlessLandLetter(k);
+      return borderlessLandLayers({ frame: letter, box: letter, pinline: letter });
+    }),
+    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the text-box structure of packGenericShowcase.js 'Borderless' (groupShowcase-5.js:48)",
+    transforms: `native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down ${BORDERLESS_TITLE_TO_TYPE_DY} px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (${BORDERLESS_TINT_POINT.x}, ${BORDERLESS_TINT_POINT.y})) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; corners rounded to the importer radius`,
+    notes: [
+      "the print's land look (2026-09-29, 50+ borderless land printings): title bar, type bar and text box all wear the colour's title-bar tint; a borderless spell tints only its title bar (m15borderless)",
+      "colourless = CC's 'Land Frame' (m15GenericShowcaseFrameL.png): grey bars and box, the land's brown-grey pinline (the prints' #a5988a on CMM #663 / FRA #379), never the see-through 'Colorless Frame'",
+      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — 4.6's pair masters (borderlessLandLayers with a letter pair)",
+      "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)",
+    ],
+  },
+  // 4.33 — the light borderless planeswalker (3 ability rows).
+  m15borderlesspw: {
+    colors: {
+      ...perColor((k) => [layer(`${PW_BORDERLESS}/${k}.png`)], WUBRGM),
+      // Gold = the prints' pale cream faces (PW_GOLD_FACE; see notes).
+      m: goldWalker(PW_BORDERLESS, PW_TYPE_MASK),
+      // No colourless frame in the pack: `c` is its 'Artifact Frame', a
+      // see-through frame (bars α 0.75, rim α 0.92), its alpha lifted so the
+      // rim is opaque (PW_COLOURLESS_RIM_GAIN; see notes).
+      c: [lifted(`${PW_BORDERLESS}/a.png`, PW_COLOURLESS_RIM_GAIN)],
+    },
+    shield: { mask: PW_LOYALTY_MASK, box: SHIELD_BOX },
+    pack: PW_BORDERLESS_PACK,
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    notes: [
+      "colourless = the pack's 'Artifact Frame' (borderless/a.png): the pack lists no colourless frame. It is the colourless look — the tall pack's 'Colorless Frame' rim is the same colour (197/203/217), and Ugin M21 #279 and Karn DMU #372 print its see-through grey bars (Karn's stained glass shows through them); the tall pack's own 'Artifact Frame' is a different, white-rimmed one",
+      "colourless rim made opaque: the frame's alpha × 255/234 (clamped at 1) takes the rim (α 234) and its join with the bottom bar to 1, as the tall pack's Colorless rim and both prints have it, and the see-through bars from α 0.75 to 0.82 (the tall pack's colourless bars are 0.85). As shipped, the rim's lower edge (1922–1957 px) runs past the art slot, so the card root's #101015 showed through it (7.6), and the bottom bar band was α 0.92–0.96 there (7.7)",
+      "gold (m) = MATCHED TO THE PRINTS (owner round 15, 2026-09-29): the pack's 'Multicolored Frame' with its title and type faces recoloured by the pack's 'White Frame' through CC's Title and Type masks at 90 %, weighted by the white face's luminance from 235 (its grey veins: the gold shows) to 250 (PW_GOLD_FACE), fitted to the prints. The 13 exact mono-gold borderless walker prints (BLC #100, IKO #278, MED #GR4/#WS6/#WS8, FRC #1, MH2 #304/#305, SLC #2017, SLD #1184/#1246/#1421, SPG #14; 26 bars; Scryfall scans registered on the gold rims, text left out) print pale cream faces veined with the gold: mean 221/201/160, luma 202 per bar (168–235, interquartile 189–212), red − blue 60 (interquartile 44–78). Ours: 219/204/163, luma 204, red − blue 56. CC's flat tan was 205/182/125, luma 183, red − blue 80. Rims, window, shield, bottom bar and alpha are the m frame's",
+      "the pack's 'Land Frame' (borderless/l.png) is not imported: no land walker prints on it",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
+    ],
+  },
+  // 4.33 — its tall twin (4 ability rows), auto-picked by the row count.
+  m15borderlesspwtall: {
+    colors: {
+      ...perColor((k) => [layer(`${PW_TALL_BORDERLESS}/${k}.png`)]),
+      // Gold = the prints' pale cream faces (PW_GOLD_FACE; see notes); the
+      // tall pack's see-through faces (α 0.85) keep their alpha.
+      m: goldWalker(PW_TALL_BORDERLESS, PW_TALL_TYPE_MASK),
+    },
+    shield: { mask: PW_LOYALTY_MASK, box: SHIELD_BOX },
+    pack: PW_TALL_BORDERLESS_PACK,
+    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the loyalty shield cut out through maskLoyalty.png",
+    notes: [
+      "colourless = the pack's own 'Colorless Frame' (tallBorderless/c.png)",
+      "gold (m) = MATCHED TO THE PRINTS (owner round 15, 2026-09-29): the pack's 'Multicolored Frame' with its title and type faces recoloured by the pack's 'White Frame' through CC's Title and Type masks at 90 %, weighted by the white face's luminance from 235 (its grey veins: the gold shows) to 250 (PW_GOLD_FACE), fitted to the prints. The 13 exact mono-gold borderless walker prints (BLC #100, IKO #278, MED #GR4/#WS6/#WS8, FRC #1, MH2 #304/#305, SLC #2017, SLD #1184/#1246/#1421, SPG #14; 26 bars; Scryfall scans registered on the gold rims, text left out) print pale cream faces veined with the gold: mean 221/201/160, luma 202 per bar (168–235, interquartile 189–212), red − blue 60 (interquartile 44–78). Ours: 219/204/163, luma 204, red − blue 56. CC's flat tan was 205/182/125, luma 183, red − blue 80. Rims, window, shield, bottom bar and alpha are the m frame's (its see-through faces stay α 0.85)",
+      "the pack's 'Artifact Frame' (tallBorderless/a.png) and 'Land Frame' (tallBorderless/l.png) are not imported: no artifact or land walker dress",
+      "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
+    ],
+  },
   // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
   m15fullartland: {
     colors: perColor((k) => [layer(basics2022Frame(k))]),
@@ -681,6 +1090,28 @@ export const CC_TEMPLATES = {
       "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered",
     ],
   },
+  // 4.52 — the emblem (M20 design, today's look). CR 114: an emblem has no
+  // colour, and every printed one is on this silver frame whatever the
+  // planeswalker's colour; the emblem kind forces colourless, so `c` is
+  // the one key with a reference. The other six keys are the same master,
+  // built so each key has one (the 7-master contract every template ships:
+  // a stray coloured card on the frame still draws it); never offered.
+  emblem: {
+    colors: perColor(() => [layer(EMBLEM)]),
+    bridge: EMBLEM_RAY_BRIDGE,
+    tones: EMBLEM_TONES,
+    pack: "packEmblem.js 'Planeswalker Emblems'",
+    transforms: emblemTransform(EMBLEM_RAY_BRIDGE, EMBLEM_TONES),
+    notes: [
+      "source: CC 'Planeswalker Emblems' (packEmblem.js), the M20 design: the source's name in the dark title bar, a silver frame with the art in a planeswalker-spark cut-out, a type bar reading \"Emblem\", a light text box (TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16)",
+      "every colour key = the same silver master (CR 114: an emblem is colourless; the emblem kind forces c). w/u/b/r/g/m are built so each key has a master and are never offered",
+      "the spark's tail through the type bar and the text box is CC's own 80 % white (alpha 204) over the art, as the prints show the art faintly there",
+      "the name pill's body is toned onto the prints (EMBLEM_NAME_PILL_TONE): CC's pack draws frame.png alone, and its pill is a light gradient (median luma 90 over the name band) where the six M20-design prints print a dark one (52); the gain by distance from the pill's centre is a least-squares fit on the prints, and the body is made opaque as printed",
+      "the frame's silver closes over the top of the spark's centre ray (EMBLEM_RAY_BRIDGE, owner decision 2026-09-29): the art window is Scryfall's art_crop box at the prints' scale (from 250.4 px), where the prints' ray runs on up to the bar with art in it; the ray ends at 251 px, its tip drawn with the profile of its own right edge, and the bar's shadow and the silver run across",
+      "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints; the spark's tail keeps its alpha; the light rims keep CC's tone",
+      "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'",
+    ],
+  },
 };
 
 /** How provenance describes the text-box tokens' re-cut (TOKEN_REGULAR_RECUT). */
@@ -693,6 +1124,20 @@ function textlessRecutTransform(r) {
   return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the type pill's shadow) moved down ${r.shift} px as one piece over the top ${r.shift} rows of the frame texture below them, the rows opened above them filled from the window's sides and cross-faded over ${r.blend} rows, the shadow's last ${r.blendBottom} rows faded into the texture (premultiplied); corners rounded to the importer radius`;
 }
 
+/** How provenance describes the emblem's touches (EMBLEM_RAY_BRIDGE, then
+ *  EMBLEM_TONES). */
+function emblemTransform(b, [pill, silver, type, box]) {
+  const gains = pill.gain.map(([d, g]) => `${g} at ${d}`).join(", ");
+  return [
+    "native 1500x2100, pixels copied 1:1 (no resample) but for these touches:",
+    `the spark's centre ray bridged over (rows ${b.fromY}–${b.toY - 1}, columns ${b.x0}–${b.x1 - 1} blended across from columns ${b.anchors[0]} and ${b.anchors[1]}, opaque; the ray's tip at row ${b.toY}, corners rounded to ${b.radius} px, drawn with its own right edge's profile, sampled on rows ${b.edgeRows[0]}–${b.edgeRows[1] - 1});`,
+    `the name pill's body (rows ${pill.fromY}–${pill.toY - 1}, the pixels 4-connected to (${pill.seed.x}, ${pill.seed.y}) with luma ≥ ${pill.minLuma}, inside the pill's dark outline) has its colour multiplied by a gain piecewise-linear in the distance from x ${pill.centreX} (${gains} px) and is made opaque;`,
+    `the silver (rows ${silver.bodyFromY}–${silver.bodyToY - 1} but for the spark's pure-white tail and glow; rows ${silver.fromY}–${silver.bodyFromY - 1} and ${silver.bodyToY}–${silver.toY - 1} from either edge to the first pixel of luma ≥ ${silver.stopLuma}) has its colour multiplied by a gain bilinear in the signed offset from x ${silver.centreX} — each half fitted on its own side of the prints, the centre segment joining them — and the row (${silver.gain.length} × ${silver.dx.length} knots, ${Math.min(...silver.gain.flat())}–${Math.max(...silver.gain.flat())});`,
+    `the type pill's body (rows ${type.fromY}–${type.toY - 1}) × ${type.gain[0][1]} and the text box (rows ${box.fromY}–${box.toY - 1}, inside its light rim) × ${box.gain[0][1]}, alpha kept;`,
+    "corners rounded to the importer radius",
+  ].join(" ");
+}
+
 /** How provenance describes the full-art textless tokens' re-cut
  *  (M20_TOKEN_TEXTLESS_RECUT). */
 function m20TextlessRecutTransform(r) {
@@ -703,7 +1148,7 @@ function m20TextlessRecutTransform(r) {
 export const CC_DEFERRED = {};
 
 /**
- * Composite RGBA layers (each `{ data, mask?, invert?, opacity? }`, raw 8-bit
+ * Composite RGBA layers (each `{ data, mask?, invert?, opacity?, gain?, recolour?, lumaRamp? }`, raw 8-bit
  * RGBA of the same size; `mask` may be a LIST, whose alphas multiply — CC's
  * intersection) in order: a layer's alpha is multiplied by its
  * mask's ALPHA, then drawn source-over onto the accumulator — exactly CC's
@@ -719,15 +1164,53 @@ export const CC_DEFERRED = {};
  * straight inner edges, up to 64 at its rounded corners — a faint rounded
  * rectangle over the art (owner evidence 2026-09-26). The two agree wherever
  * the mask is 0 or 255 or the frame is opaque (the bars that reach into the
- * ring). Returns a Float32Array RGBA with alpha in 0..1.
+ * ring). `gain` then lifts the layer's alpha and clamps it at 1 (4.33's
+ * colourless walker rim). `replace` (4.34) puts the layer IN PLACE of what
+ * is under it where the mask covers: a premultiplied lerp from the
+ * accumulator to the layer by the mask's alpha (the layer's own alpha kept),
+ * so a tinted box stands instead of the dark one below, and the mask's
+ * anti-aliased edge blends the two. A `recolour` layer (4.33's gold walker)
+ * changes only the colour below it — weight = its alpha relative to the
+ * alpha below (at most 1) × mask × opacity × its luminance ramp — and keeps
+ * the alpha. Returns a Float32Array RGBA with alpha in 0..1.
  */
 export function compositeLayers(images, width, height) {
   const n = width * height;
   const acc = new Float32Array(n * 4);
   for (const [i, img] of images.entries()) {
+    if (img.recolour && i === 0) throw new Error("compositeLayers: a recolour layer needs a layer below it");
     for (let p = 0; p < n; p += 1) {
       const o = p * 4;
       let a = img.data[o + 3] / 255;
+      if (img.replace && i > 0) {
+        const m = img.mask ? img.mask[o + 3] / 255 : 1;
+        if (m === 0) continue;
+        if (img.opacity !== undefined) a *= img.opacity;
+        const ab = acc[o + 3];
+        const outA = ab * (1 - m) + a * m;
+        for (let c = 0; c < 3; c += 1) {
+          acc[o + c] = outA === 0 ? 0 : (acc[o + c] * ab * (1 - m) + img.data[o + c] * a * m) / outA;
+        }
+        acc[o + 3] = outA;
+        continue;
+      }
+      if (img.recolour) {
+        // Colour only: mix into what is below by the layer's weight, keep
+        // the alpha below (see `recolour`).
+        const below = acc[o + 3];
+        if (below === 0 || a === 0) continue;
+        let w = Math.min(1, a / below);
+        if (img.mask) w *= img.mask[o + 3] / 255;
+        if (img.opacity !== undefined) w *= img.opacity;
+        if (img.lumaRamp) {
+          const [lo, hi] = img.lumaRamp;
+          const lum = 0.299 * img.data[o] + 0.587 * img.data[o + 1] + 0.114 * img.data[o + 2];
+          w *= Math.min(1, Math.max(0, (lum - lo) / (hi - lo)));
+        }
+        if (w === 0) continue;
+        for (let c = 0; c < 3; c += 1) acc[o + c] = acc[o + c] * (1 - w) + img.data[o + c] * w;
+        continue;
+      }
       if (img.mask) {
         // A list of masks is CC's intersection (each drawn 'source-in'):
         // their alphas multiply (TODO 4.6.0 — a region through a ramp).
@@ -737,6 +1220,7 @@ export function compositeLayers(images, width, height) {
         a = img.invert ? Math.max(0, a - m) : a * m;
       }
       if (img.opacity !== undefined) a *= img.opacity;
+      if (img.gain !== undefined) a = Math.min(1, a * img.gain);
       if (i === 0) {
         acc[o] = img.data[o];
         acc[o + 1] = img.data[o + 1];
@@ -804,6 +1288,340 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
   return out;
 }
 
+/**
+ * Move every row of an 8-bit RGBA image down `dy` px (4.34: the borderless
+ * land's title bar onto its type bar). The rows it opens at the top are
+ * transparent; rows pushed past the bottom are dropped. Returns a new
+ * buffer.
+ */
+export function shiftRows(buf, width, height, dy) {
+  if (!Number.isInteger(dy) || dy < 0 || dy >= height) {
+    throw new Error(`shiftRows: bad shift ${dy} for ${height} rows`);
+  }
+  const out = Buffer.alloc(buf.length);
+  const row = width * 4;
+  buf.copy(out, dy * row, 0, (height - dy) * row);
+  return out;
+}
+
+/**
+ * The RGBA at (x, y) of an 8-bit RGBA image, asserted FLAT: its 5×5
+ * neighbourhood is that one value (4.34: a title bar's tint is read from
+ * the middle of its flat interior, so a source that moved fails the import
+ * instead of tinting a box with a bevel's colour).
+ */
+export function flatPixelAt(buf, width, height, { x, y }) {
+  const at = (px, py) => {
+    const o = (py * width + px) * 4;
+    return [buf[o], buf[o + 1], buf[o + 2], buf[o + 3]];
+  };
+  const value = at(x, y);
+  for (let py = y - 2; py <= y + 2; py += 1) {
+    for (let px = x - 2; px <= x + 2; px += 1) {
+      if (px < 0 || py < 0 || px >= width || py >= height || at(px, py).some((v, c) => v !== value[c])) {
+        throw new Error(`flatPixelAt: (${x}, ${y}) is not in a flat region (${at(px, py)} at (${px}, ${py}) vs ${value})`);
+      }
+    }
+  }
+  return value;
+}
+
+/**
+ * Re-tint a NEUTRAL structure (4.34: genericShowcase's grey 'Land Frame'
+ * text box, flat `from`, its bevels lighter and its shadow darker) to the
+ * colour `to`: each pixel is `from` lerped toward white or black by some t,
+ * and becomes `to` lerped the same way by the same t — the relation every
+ * genericShowcase colour frame's box has to its own tint. t is read from
+ * the pixel's channel mean (a neutral structure's channels agree); alpha is
+ * kept. Returns a new buffer.
+ */
+export function retintStructure(buf, from, to) {
+  const out = Buffer.from(buf);
+  const f = (from[0] + from[1] + from[2]) / 3;
+  if (!(f > 0 && f < 255)) throw new Error(`retintStructure: \`from\` must be a mid tone, got ${from}`);
+  for (let o = 0; o < buf.length; o += 4) {
+    const v = (buf[o] + buf[o + 1] + buf[o + 2]) / 3;
+    const lighter = v >= f;
+    const t = lighter ? (v - f) / (255 - f) : 1 - v / f;
+    for (let c = 0; c < 3; c += 1) {
+      out[o + c] = Math.round(lighter ? to[c] + t * (255 - to[c]) : to[c] * (1 - t));
+    }
+  }
+  return out;
+}
+
+/** Rec. 601 luma of the 8-bit RGBA pixel at byte offset `o`. */
+function lumaAt(buf, o) {
+  return 0.299 * buf[o] + 0.587 * buf[o + 1] + 0.114 * buf[o + 2];
+}
+
+/** A piecewise-linear gain ([[d, g], …], d ascending) at distance `d`,
+ *  held at the first / last knot outside them. */
+export function gainAt(knots, d) {
+  if (d <= knots[0][0]) return knots[0][1];
+  for (let i = 1; i < knots.length; i += 1) {
+    const [d1, g1] = knots[i];
+    if (d <= d1) {
+      const [d0, g0] = knots[i - 1];
+      return g0 + ((g1 - g0) * (d - d0)) / (d1 - d0);
+    }
+  }
+  return knots[knots.length - 1][1];
+}
+
+/**
+ * Tone one region of an 8-bit RGBA image (EMBLEM_NAME_PILL_TONE,
+ * EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE): the pixels 4-connected to
+ * `seed` within rows [fromY, toY) whose luma is ≥ `minLuma` — a darker
+ * outline bounds the region — get their colour multiplied by
+ * gainAt(gain, |x − centreX|) (rounded, clamped to 255) and alpha 255, or
+ * their own alpha with `keepAlpha`. Everything else is copied as it is.
+ * Returns a new buffer.
+ */
+export function toneRegion(buf, width, height, { seed, fromY, toY, minLuma, centreX, gain, keepAlpha = false }) {
+  const knotsOk =
+    Array.isArray(gain) &&
+    gain.length > 0 &&
+    gain.every(([d, g], i) => Number.isFinite(d) && Number.isFinite(g) && g >= 0 && (i === 0 || d > gain[i - 1][0]));
+  if (
+    !(fromY >= 0) ||
+    !(toY > fromY) ||
+    toY > height ||
+    !knotsOk ||
+    !(seed.x >= 0 && seed.x < width && seed.y >= fromY && seed.y < toY)
+  ) {
+    throw new Error(`toneRegion: bad tone ${JSON.stringify({ seed, fromY, toY, minLuma, gain, width, height })}`);
+  }
+  const out = Buffer.from(buf);
+  const start = seed.y * width + seed.x;
+  if (lumaAt(buf, start * 4) < minLuma) {
+    throw new Error(`toneRegion: the seed (${seed.x}, ${seed.y}) is darker than luma ${minLuma} — not inside the region`);
+  }
+  const taken = new Uint8Array(width * height);
+  const stack = [start];
+  taken[start] = 1;
+  while (stack.length) {
+    const p = stack.pop();
+    const x = p % width;
+    const y = (p - x) / width;
+    const o = p * 4;
+    const g = gainAt(gain, Math.abs(x - centreX));
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
+    if (!keepAlpha) out[o + 3] = 255;
+    for (const [nx, ny] of [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ]) {
+      if (nx < 0 || nx >= width || ny < fromY || ny >= toY) continue;
+      const q = ny * width + nx;
+      if (taken[q] || lumaAt(buf, q * 4) < minLuma) continue;
+      taken[q] = 1;
+      stack.push(q);
+    }
+  }
+  return out;
+}
+
+/** Knots at `v`: the segment [i, i + 1] and the fraction along it, held
+ *  at the ends. */
+function knotAt(knots, v) {
+  if (v <= knots[0]) return [0, 0];
+  const last = knots.length - 1;
+  if (v >= knots[last]) return [Math.max(0, last - 1), last === 0 ? 0 : 1];
+  let i = 0;
+  while (v > knots[i + 1]) i += 1;
+  return [i, (v - knots[i]) / (knots[i + 1] - knots[i])];
+}
+
+/** EMBLEM_SILVER_TONE's gain at (dx, y), dx = x − centreX (negative on the
+ *  left): bilinear in the knots `dx` × `rows`, held past the outer ones — so
+ *  each half follows its own knots and the segment between the halves'
+ *  innermost knots joins them without a seam. */
+export function silverGainAt({ dx: dxKnots, rows, gain }, dx, y) {
+  const [i, t] = knotAt(dxKnots, dx);
+  const [j, u] = knotAt(rows, y);
+  const i1 = Math.min(i + 1, dxKnots.length - 1);
+  const j1 = Math.min(j + 1, rows.length - 1);
+  return (
+    gain[j][i] * (1 - t) * (1 - u) + gain[j][i1] * t * (1 - u) + gain[j1][i] * (1 - t) * u + gain[j1][i1] * t * u
+  );
+}
+
+/**
+ * Tone the emblem's silver (EMBLEM_SILVER_TONE): in rows [bodyFromY,
+ * bodyToY) every pixel with alpha > 0 but the translucent pure-white ones
+ * (the spark's tail and glow); in rows [fromY, bodyFromY) and [bodyToY,
+ * toY), each row from either edge inwards up to (not including) its first
+ * pixel of luma ≥ `stopLuma` — the silver beside the bars, not the bars'
+ * rims. Colour × silverGainAt(spec, x − centreX, y), rounded, clamped to
+ * 255; alpha kept. Returns a new buffer.
+ */
+export function toneSilver(buf, width, height, spec) {
+  const { fromY, bodyFromY, bodyToY, toY, stopLuma, centreX, dx, rows, gain } = spec;
+  const ascending = (k) => Array.isArray(k) && k.length > 0 && k.every((v, i) => Number.isFinite(v) && (i === 0 || v > k[i - 1]));
+  if (
+    !(fromY >= 0 && fromY <= bodyFromY && bodyFromY < bodyToY && bodyToY <= toY && toY <= height) ||
+    !ascending(dx) ||
+    !ascending(rows) ||
+    !Array.isArray(gain) ||
+    gain.length !== rows.length ||
+    !gain.every((r) => Array.isArray(r) && r.length === dx.length && r.every((g) => Number.isFinite(g) && g >= 0))
+  ) {
+    throw new Error(`toneSilver: bad tone ${JSON.stringify({ fromY, bodyFromY, bodyToY, toY, dx, rows, width, height })}`);
+  }
+  const out = Buffer.from(buf);
+  const tone = (x, y) => {
+    const o = (y * width + x) * 4;
+    if (buf[o + 3] === 0) return;
+    const g = silverGainAt(spec, x - centreX, y);
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
+  };
+  for (let y = fromY; y < toY; y += 1) {
+    if (y >= bodyFromY && y < bodyToY) {
+      for (let x = 0; x < width; x += 1) {
+        const o = (y * width + x) * 4;
+        const pureWhite = buf[o] === 255 && buf[o + 1] === 255 && buf[o + 2] === 255;
+        if (pureWhite && buf[o + 3] < 255) continue;
+        tone(x, y);
+      }
+      continue;
+    }
+    let x = 0;
+    for (; x < width && lumaAt(buf, (y * width + x) * 4) < stopLuma; x += 1) tone(x, y);
+    // A row with no rim (the strip above the name bar) was toned whole.
+    for (let r = width - 1; r > x && lumaAt(buf, (y * width + r) * 4) < stopLuma; r -= 1) tone(r, y);
+  }
+  return out;
+}
+
+/** One entry of a recipe's `tones`: the silver (it has `bodyFromY`) or an
+ *  outlined region (toneRegion). */
+export function applyTone(buf, width, height, tone) {
+  return "bodyFromY" in tone ? toneSilver(buf, width, height, tone) : toneRegion(buf, width, height, tone);
+}
+
+/**
+ * Close the frame over the top of a clear ray (EMBLEM_RAY_BRIDGE; see it for
+ * the why). On an 8-bit RGBA composite:
+ *  1. the ray's right edge profile — on rows [edgeRows), the edge's α-½ line
+ *     (scanning right from x0 + 10 for the first α ≥ ½ past the clear run)
+ *     and the mean colour 0–10 px outside it, by whole px of distance; the
+ *     outline's colour is the mean at 2–4 px, the silver's at 10;
+ *  2. the ray's two edges at row `toY` (the α-½ lines of the clear run
+ *     scanning right from x0), xl and xr;
+ *  3. rows [fromY, toY) × columns [x0, x1): each row's pixels at the two
+ *     anchors blended across (alpha 255); left of xl, the frame's own pixels
+ *     fade back in over the last `fadeRows` rows;
+ *  4. the tip: every pixel within the profile's reach of the rounded-top
+ *     cut-out (top edge at toY, from xl to xr, corners of `radius`) — above
+ *     it, or in its rounded corners — takes the outline's colour mixed
+ *     towards the silver under it by the profile at that distance, and
+ *     towards it again by ((xr − x) / (xr − xl)) ^ fadePow (light at the
+ *     left edge); a rounded corner's pixels take its alpha from the distance
+ *     (½ px anti-aliasing), never less than their own.
+ * Returns a new buffer.
+ */
+export function bridgeRayTip(buf, width, height, { fromY, toY, x0, x1, anchors, fadeRows, radius, fadePow, edgeRows }) {
+  if (
+    !(fromY >= 0 && toY > fromY && toY + radius + 1 < height) ||
+    !(anchors[0] >= 0 && anchors[0] < x0 && x0 < x1 && x1 <= anchors[1] && anchors[1] < width) ||
+    !(fadeRows > 0 && fadeRows <= toY - fromY) ||
+    !(radius >= 0 && fadePow > 0) ||
+    !(edgeRows[0] > toY && edgeRows[1] > edgeRows[0] && edgeRows[1] <= height)
+  ) {
+    throw new Error(`bridgeRayTip: bad bridge ${JSON.stringify({ fromY, toY, x0, x1, anchors, fadeRows, radius, fadePow, edgeRows })}`);
+  }
+  const at = (x, y) => (y * width + x) * 4;
+  const alpha = (x, y) => buf[at(x, y) + 3] / 255;
+  const rgb = (x, y) => [buf[at(x, y)], buf[at(x, y) + 1], buf[at(x, y) + 2]];
+  const luma3 = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  /** The α-½ lines of the first clear run right of `from` on row y. */
+  const edges = (y, from) => {
+    let x = from;
+    while (x < x1 && alpha(x, y) >= 0.5) x += 1;
+    if (x >= x1 || x === 0) return null;
+    const left = x - 0.5 + (alpha(x - 1, y) - 0.5) / (alpha(x - 1, y) - alpha(x, y));
+    while (x < x1 && alpha(x, y) < 0.5) x += 1;
+    if (x >= x1) return null;
+    const right = x - 0.5 + (0.5 - alpha(x - 1, y)) / (alpha(x, y) - alpha(x - 1, y));
+    return { left, right, firstOpaque: x };
+  };
+  // 1. The right edge's profile.
+  const sums = Array.from({ length: 11 }, () => [0, 0, 0, 0]);
+  for (let y = edgeRows[0]; y < edgeRows[1]; y += 1) {
+    const e = edges(y, x0);
+    if (!e) throw new Error(`bridgeRayTip: no clear ray on row ${y}`);
+    for (let x = e.firstOpaque; x <= e.firstOpaque + 10 && x < width; x += 1) {
+      const d = Math.round(x + 0.5 - e.right);
+      if (d < 0 || d > 10) continue;
+      const c = rgb(x, y);
+      for (let k = 0; k < 3; k += 1) sums[d][k] += c[k];
+      sums[d][3] += 1;
+    }
+  }
+  const mean = (d) => {
+    if (!sums[d][3]) throw new Error(`bridgeRayTip: no edge sample ${d} px out`);
+    return sums[d].slice(0, 3).map((v) => v / sums[d][3]);
+  };
+  const outline = [0, 1, 2].map((k) => (mean(2)[k] + mean(3)[k] + mean(4)[k]) / 3);
+  const lo = luma3(outline);
+  const hi = luma3(mean(10));
+  /** 0 = the outline, 1 = the silver, at `d` px out (0 inside 2 px). */
+  const profile = [0, 0, ...[2, 3, 4, 5, 6, 7, 8, 9, 10].map((d) => Math.min(1, Math.max(0, (luma3(mean(d)) - lo) / (hi - lo))))];
+  const profileAt = (d) => {
+    if (d >= 10) return 1;
+    const i = Math.floor(d);
+    return profile[i] + (profile[i + 1] - profile[i]) * (d - i);
+  };
+  // 2. The ray's edges where its new tip sits.
+  const tip = edges(toY, x0);
+  if (!tip) throw new Error(`bridgeRayTip: no clear ray on row ${toY}`);
+  const { left: xl, right: xr } = tip;
+  const out = Buffer.from(buf);
+  // 3. The silver closed over.
+  const base = new Float64Array((toY - fromY) * (x1 - x0) * 3);
+  for (let y = fromY; y < toY; y += 1) {
+    const a = rgb(anchors[0], y);
+    const b = rgb(anchors[1], y);
+    for (let x = x0; x < x1; x += 1) {
+      const t = (x - anchors[0]) / (anchors[1] - anchors[0]);
+      const keep = x + 0.5 < xl ? Math.min(1, Math.max(0, (y + 0.5 - (toY - fadeRows)) / fadeRows)) : 0;
+      const own = rgb(x, y);
+      const o = at(x, y);
+      const bi = ((y - fromY) * (x1 - x0) + (x - x0)) * 3;
+      for (let k = 0; k < 3; k += 1) {
+        const v = (a[k] * (1 - t) + b[k] * t) * (1 - keep) + own[k] * keep;
+        base[bi + k] = v;
+        out[o + k] = Math.round(v);
+      }
+      out[o + 3] = 255;
+    }
+  }
+  // 4. The tip.
+  const leftSilver = rgb(Math.floor(xl) - 1, toY);
+  for (let y = fromY; y <= toY + Math.ceil(radius); y += 1) {
+    for (let x = x0; x < x1; x += 1) {
+      const cx = x + 0.5;
+      const cy = y + 0.5;
+      const qx = Math.max(xl + radius - cx, cx - (xr - radius), 0);
+      const qy = Math.max(toY + radius - cy, 0);
+      const d = Math.hypot(qx, qy) - radius;
+      const o = at(x, y);
+      if (y >= toY && (d <= -0.5 || buf[o + 3] === 255)) continue;
+      if (d >= 10) continue;
+      const f = Math.min(1, Math.max(0, (xr - cx) / (xr - xl))) ** fadePow;
+      const p = profileAt(Math.max(d, 0));
+      const w = p + (1 - p) * f;
+      const under = y < toY ? [0, 1, 2].map((k) => base[((y - fromY) * (x1 - x0) + (x - x0)) * 3 + k]) : cx < (xl + xr) / 2 ? leftSilver : outline;
+      for (let k = 0; k < 3; k += 1) out[o + k] = Math.min(255, Math.max(0, Math.round(outline[k] * (1 - w) + under[k] * w)));
+      out[o + 3] = y < toY ? 255 : Math.max(buf[o + 3], Math.round(Math.min(1, Math.max(0, d + 0.5)) * 255));
+    }
+  }
+  return out;
+}
+
 /** Alpha out everything outside a rounded rectangle (1 px anti-aliased). */
 export function roundCorners(acc, width, height, radius) {
   const r = radius;
@@ -857,13 +1675,25 @@ export function toRgba8(acc) {
 }
 
 /** One layer as provenance prints it: "src", "src through mask",
- *  "src through maskA ∩ maskB", "src outside mask", "… at 35%". */
+ *  "src through maskA ∩ maskB", "src outside mask", "… at 35%", "… recolouring
+ *  the layers below …", and 4.34's "src moved down N px replacing through
+ *  mask", "src re-tinted from r,g,b to the tint of other at (x, y) replacing
+ *  through mask". */
 export function describeLayer(l) {
+  const moved = l.dy ? ` moved down ${l.dy} px` : "";
+  const tint = l.retint
+    ? ` re-tinted from ${l.retint.from.join(",")} to the tint of ${l.retint.tintOf.src} at (${l.retint.tintOf.x}, ${l.retint.tintOf.y})`
+    : "";
   const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
-  const mask = masks ? ` ${l.invert ? "outside" : "through"} ${masks}` : "";
+  const mask = masks ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${masks}` : "";
+  const gain = l.gain !== undefined ? ` with its alpha ×${l.gain.toFixed(4)} (clamped at 1)` : "";
   // A pair layer (pairLayer, TODO 4.6b): two files blended across a ramp.
   const src = l.right ? `(${l.src} | ${l.right} across ${rampName(l.ramp)})` : l.src;
-  return `${src}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}`;
+  if (l.recolour) {
+    const ramp = l.lumaRamp ? `, weighted by its own luminance from ${l.lumaRamp[0]} (0) to ${l.lumaRamp[1]} (full)` : "";
+    return `${src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}`;
+  }
+  return `${src}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
 }
 
 /** One `finish` composite as provenance prints it. */
@@ -950,6 +1780,7 @@ export function sourceFilesFor(def) {
       for (const mask of Array.isArray(l.mask) ? l.mask : l.mask ? [l.mask] : []) {
         if (!mask.startsWith("procedural:")) files.add(mask);
       }
+      if (l.retint) files.add(l.retint.tintOf.src);
     }
   }
   for (const f of def.finish ?? []) files.add(f.mask);

@@ -119,6 +119,7 @@
     ],
     "type_line": "Legendary Planeswalker — Oko",
     "mana_cost": "{1}{G}{U}",
+    "oracle_text": "+2: Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\n+1: Target artifact or creature loses all abilities and becomes a green Elk creature with base power and toughness 3/3.\n−5: Exchange control of target artifact or creature you control and target creature an opponent controls with power 3 or less.",
     "loyalty": "4",
     "colors": [
       "G",
@@ -150,7 +151,229 @@
     "keywords": [],
     "type_line": "Legendary Planeswalker — Ashiok",
     "mana_cost": "{3}{B}{B}",
+    "oracle_text": "If you would pay life while your library has at least that many cards in it, exile that many cards from the top of your library instead.\n+1: Look at the top two cards of your library. Exile one of them and put the other into your hand.\n−2: Create two 1/1 black Nightmare creature tokens with \"At the beginning of combat on your turn, if a card was put into exile this turn, put a +1/+1 counter on this token.\"\n−7: Target player exiles the top X cards of their library, where X is the total mana value of cards you own in exile.",
     "loyalty": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "m21-280": {
+    "id": "ed3906ea-df06-4299-a305-32e6ef476507",
+    "name": "Basri Ket",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "280",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Basri",
+    "mana_cost": "{1}{W}{W}",
+    "oracle_text": "+1: Put a +1/+1 counter on up to one target creature. It gains indestructible until end of turn.\n−2: Whenever one or more nontoken creatures attack this turn, create that many 1/1 white Soldier creature tokens that are tapped and attacking.\n−6: You get an emblem with \"At the beginning of combat on your turn, create a 1/1 white Soldier creature token, then put a +1/+1 counter on each creature you control.\"",
+    "loyalty": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "m21-281": {
+    "id": "ba95c4fc-f0fc-4bfe-bef7-694c3d82a6c7",
+    "name": "Teferi, Master of Time",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "281",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Teferi",
+    "mana_cost": "{2}{U}{U}",
+    "oracle_text": "You may activate loyalty abilities of Teferi on any player's turn any time you could cast an instant.\n+1: Draw a card, then discard a card.\n−3: Target creature you don't control phases out. (Treat it and anything attached to it as though they don't exist until its controller's next turn.)\n−10: Take two extra turns after this one.",
+    "loyalty": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "neo-303": {
+    "id": "71327818-2784-4fde-8e19-ef8677694a5f",
+    "name": "The Wandering Emperor",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "303",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Flash"
+    ],
+    "type_line": "Legendary Planeswalker",
+    "mana_cost": "{2}{W}{W}",
+    "oracle_text": "Flash\nAs long as The Wandering Emperor entered this turn, you may activate her loyalty abilities any time you could cast an instant.\n+1: Put a +1/+1 counter on up to one target creature. It gains first strike until end of turn.\n−1: Create a 2/2 white Samurai creature token with vigilance.\n−2: Exile target tapped creature. You gain 2 life.",
+    "loyalty": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "znr-281": {
+    "id": "961bb827-f13a-417d-8284-5cd2aac3d034",
+    "name": "Jace, Mirror Mage",
+    "layout": "normal",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "collector_number": "281",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Kicker",
+      "Scry"
+    ],
+    "type_line": "Legendary Planeswalker — Jace",
+    "mana_cost": "{1}{U}{U}",
+    "oracle_text": "Kicker {2}\nWhen Jace enters, if Jace was kicked, create a token that's a copy of Jace, except it's not legendary and its starting loyalty is 1.\n+1: Scry 2.\n0: Draw a card and reveal it. Remove a number of loyalty counters equal to that card's mana value from Jace.",
+    "loyalty": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "dmu-375": {
+    "id": "5d14829d-3119-4c65-8e9a-5281771bbaf3",
+    "name": "Ajani, Sleeper Agent",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "set_type": "expansion",
+    "collector_number": "375",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Compleated"
+    ],
+    "type_line": "Legendary Planeswalker — Ajani",
+    "mana_cost": "{1}{G}{G/W/P}{W}",
+    "oracle_text": "Compleated ({G/W/P} can be paid with {G}, {W}, or 2 life. If life was paid, this planeswalker enters with two fewer loyalty counters.)\n+1: Reveal the top card of your library. If it's a creature or planeswalker card, put it into your hand. Otherwise, you may put it on the bottom of your library.\n−3: Distribute three +1/+1 counters among up to three target creatures. They gain vigilance until end of turn.\n−6: You get an emblem with \"Whenever you cast a creature or planeswalker spell, target opponent gets two poison counters.\"",
+    "loyalty": "4",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ]
+  },
+  "m21-279": {
+    "id": "1bacda35-bb91-4537-a14d-846650fa85f6",
+    "name": "Ugin, the Spirit Dragon",
+    "layout": "normal",
+    "set": "m21",
+    "set_name": "Core Set 2021",
+    "set_type": "core",
+    "collector_number": "279",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Ugin",
+    "mana_cost": "{8}",
+    "oracle_text": "+2: Ugin deals 3 damage to any target.\n−X: Exile each permanent with mana value X or less that's one or more colors.\n−10: You gain 7 life, draw seven cards, then put up to seven permanent cards from your hand onto the battlefield.",
+    "loyalty": "7",
+    "colors": [],
+    "color_identity": []
+  },
+  "fdn-359": {
+    "id": "ba461127-2220-4274-81cb-423a1700c9eb",
+    "name": "Liliana, Dreadhorde General",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "359",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Liliana",
+    "mana_cost": "{4}{B}{B}",
+    "oracle_text": "Whenever a creature you control dies, draw a card.\n+1: Create a 2/2 black Zombie creature token.\n−4: Each player sacrifices two creatures of their choice.\n−9: Each opponent chooses a permanent they control of each permanent type and sacrifices the rest.",
+    "loyalty": "6",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "afr-284": {
+    "id": "d00e1624-06f6-4377-96a4-842adfa78778",
+    "name": "Lolth, Spider Queen",
+    "layout": "normal",
+    "set": "afr",
+    "set_name": "Adventures in the Forgotten Realms",
+    "set_type": "expansion",
+    "collector_number": "284",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Lolth",
+    "mana_cost": "{3}{B}{B}",
+    "oracle_text": "Whenever a creature you control dies, put a loyalty counter on Lolth.\n0: You draw a card and you lose 1 life.\n−3: Create two 2/1 black Spider creature tokens with reach and menace.\n−8: You get an emblem with \"Whenever an opponent is dealt combat damage by one or more creatures you control, if that player lost less than 8 life this turn, they lose life equal to the difference.\"",
+    "loyalty": "4",
     "colors": [
       "B"
     ],
@@ -2895,6 +3118,376 @@
     ],
     "oracle_text": "{T}, Sacrifice this token: Add one mana of any color."
   },
+  "mh3-351": {
+    "id": "3d7d07bb-b875-4a6d-8b87-4187e823af75",
+    "name": "Arena of Glory",
+    "layout": "normal",
+    "set": "mh3",
+    "set_name": "Modern Horizons 3",
+    "set_type": "draft_innovation",
+    "collector_number": "351",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Exert"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Mountain.\n{T}: Add {R}.\n{R}, {T}, Exert this land: Add {R}{R}. If any of that mana is spent on a creature spell, it gains haste until end of turn. (An exerted permanent won't untap during your next untap step.)"
+  },
+  "fra-381": {
+    "id": "e8f607b3-f37c-49e7-8eb8-a14b2153f30e",
+    "name": "Theorist's Sanctum",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "381",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Behold"
+    ],
+    "type_line": "Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "oracle_text": "({T}: Add {U}.)\nAs this land enters, you may behold a Jace. If you don't, this land enters tapped. (To behold a Jace, choose a Jace you control or reveal a Jace card from your hand.)\n{2}{U}, {T}: Empower Jace 2."
+  },
+  "cmm-663": {
+    "id": "df2370ea-9bb8-496f-aaf5-f0bb3bb55f9b",
+    "name": "Reliquary Tower",
+    "layout": "normal",
+    "set": "cmm",
+    "set_name": "Commander Masters",
+    "set_type": "masters",
+    "collector_number": "663",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "You have no maximum hand size.\n{T}: Add {C}."
+  },
+  "cmm-659": {
+    "id": "24179418-d92c-43eb-a8f6-b8ea83f8c80f",
+    "name": "Command Tower",
+    "layout": "normal",
+    "set": "cmm",
+    "set_name": "Commander Masters",
+    "set_type": "masters",
+    "collector_number": "659",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}: Add one mana of any color in your commander's color identity."
+  },
+  "neo-413": {
+    "id": "7c31c48f-6275-4430-8dc9-05d70c332b7a",
+    "name": "Eiganjo, Seat of the Empire",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "413",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Channel"
+    ],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "{T}: Add {W}.\nChannel — {2}{W}, Discard this card: It deals 4 damage to target attacking or blocking creature. This ability costs {1} less to activate for each legendary creature you control."
+  },
+  "ltc-361": {
+    "id": "b65d2bc3-7f36-4c81-95da-a22c3a47b2e4",
+    "name": "Castle Ardenvale",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "361",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "flavor_name": "Meduseld, Golden Hall of Edoras",
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains.\n{T}: Add {W}.\n{2}{W}{W}, {T}: Create a 1/1 white Human creature token."
+  },
+  "tdm-393": {
+    "id": "85b84c4c-465d-4d8d-8d38-2ed08a9213b3",
+    "name": "Cori Mountain Monastery",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "393",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains or an Island.\n{T}: Add {R}.\n{3}{R}, {T}: Exile the top card of your library. Until the end of your next turn, you may play that card."
+  },
+  "snc-291": {
+    "id": "e4bb5f59-2a63-421b-94a1-4cbef00f0c7e",
+    "name": "Jetmir's Garden",
+    "layout": "normal",
+    "set": "snc",
+    "set_name": "Streets of New Capenna",
+    "set_type": "expansion",
+    "collector_number": "291",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Cycling"
+    ],
+    "type_line": "Land — Mountain Forest Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "R",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {R}, {G}, or {W}.)\nThis land enters tapped.\nCycling {3} ({3}, Discard this card: Draw a card.)"
+  },
+  "sld-469": {
+    "id": "7a28aa07-8b36-4048-9b71-dcb34b96068a",
+    "name": "Ash Barrens",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "469",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "galaxyfoil"
+    ],
+    "keywords": [
+      "Landcycling",
+      "Basic landcycling",
+      "Typecycling",
+      "Cycling"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\nBasic landcycling {1} ({1}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"
+  },
+  "woe-303": {
+    "id": "901796b2-c567-41e2-a87b-6147a966c9a8",
+    "name": "Restless Bivouac",
+    "layout": "normal",
+    "set": "woe",
+    "set_name": "Wilds of Eldraine",
+    "set_type": "expansion",
+    "collector_number": "303",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {R} or {W}.\n{1}{R}{W}: This land becomes a 2/2 red and white Ox creature until end of turn. It's still a land.\nWhenever this land attacks, put a +1/+1 counter on target creature you control."
+  },
+  "fra-379": {
+    "id": "fa63b3eb-292d-4d9d-9179-085566e82d37",
+    "name": "Hall of Echoes",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "379",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{5}: This land becomes a copy of target creature you control until end of turn. The \"legend rule\" doesn't apply to permanents you control this turn."
+  },
+  "hob-284": {
+    "id": "edff761b-2c2a-414f-b0a3-25c3fdbcb0bc",
+    "name": "The Lonely Mountain",
+    "layout": "normal",
+    "set": "hob",
+    "set_name": "The Hobbit",
+    "set_type": "expansion",
+    "collector_number": "284",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "surgefoil",
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land — Mountain",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "oracle_text": "({T}: Add {R}.)\nThis land enters tapped unless you control an Equipment.\n{4}{R}, {T}: Create a 2/2 red Dwarf creature token. This ability costs {1} less to activate for each Equipment you control. Activate only as a sorcery."
+  },
   "tdm-401": {
     "id": "f421da3b-b88d-4e9f-865b-61120bff917a",
     "name": "Elspeth, Storm Slayer",
@@ -2987,6 +3580,308 @@
     "color_identity": [
       "R",
       "U"
+    ]
+  },
+  "spm-180": {
+    "id": "f5fb426a-5618-4dd4-9c51-0cc847be8c1d",
+    "name": "Multiversal Passage",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "set_type": "expansion",
+    "collector_number": "180",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
+  },
+  "spm-206": {
+    "id": "db88b6b6-7907-4c40-b712-4fa1456d8ad0",
+    "name": "Multiversal Passage",
+    "layout": "normal",
+    "set": "spm",
+    "set_name": "Marvel's Spider-Man",
+    "set_type": "expansion",
+    "collector_number": "206",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "fullart"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\nThis land is the chosen type."
+  },
+  "sld-2143": {
+    "id": "285b5f42-17e2-4036-a309-8abd393c6263",
+    "name": "Mystic Sanctuary",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "2143",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U"
+    ],
+    "produced_mana": [
+      "U"
+    ],
+    "oracle_text": "({T}: Add {U}.)\nThis land enters tapped unless you control three or more other Islands.\nWhen this land enters untapped, you may put target instant or sorcery card from your graveyard on top of your library."
+  },
+  "blc-78": {
+    "id": "00e73c6f-bdbb-474b-9b24-44cb3fd5f751",
+    "name": "Liliana of the Dark Realms",
+    "layout": "normal",
+    "set": "blc",
+    "set_name": "Bloomburrow Commander",
+    "set_type": "commander",
+    "collector_number": "78",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun",
+      "imagine"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Liliana",
+    "mana_cost": "{2}{B}{B}",
+    "oracle_text": "+1: Search your library for a Swamp card, reveal it, put it into your hand, then shuffle.\n−3: Target creature gets +X/+X or -X/-X until end of turn, where X is the number of Swamps you control.\n−6: You get an emblem with \"Swamps you control have '{T}: Add {B}{B}{B}{B}.'\"",
+    "loyalty": "3",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "med-GR2": {
+    "id": "7ffc77bf-21e7-4e1e-a635-d6b61213b3e1",
+    "name": "Liliana, the Last Hope",
+    "layout": "normal",
+    "set": "med",
+    "set_name": "Mythic Edition",
+    "set_type": "masterpiece",
+    "collector_number": "GR2",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Mill"
+    ],
+    "type_line": "Legendary Planeswalker — Liliana",
+    "mana_cost": "{1}{B}{B}",
+    "oracle_text": "+1: Up to one target creature gets -2/-1 until your next turn.\n−2: Mill two cards, then you may return a creature card from your graveyard to your hand.\n−7: You get an emblem with \"At the beginning of your end step, create X 2/2 black Zombie creature tokens, where X is two plus the number of Zombies you control.\"",
+    "loyalty": "3",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "cmr-512": {
+    "id": "2f68b4de-271b-415f-ad8f-104981bb12ab",
+    "name": "Tevesh Szat, Doom of Fools",
+    "layout": "normal",
+    "set": "cmr",
+    "set_name": "Commander Legends",
+    "set_type": "draft_innovation",
+    "collector_number": "512",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Partner"
+    ],
+    "type_line": "Legendary Planeswalker — Szat",
+    "mana_cost": "{4}{B}",
+    "oracle_text": "+2: Create two 0/1 black Thrull creature tokens.\n+1: You may sacrifice another creature or planeswalker. If you do, draw two cards, then draw another card if the sacrificed permanent was a commander.\n−10: Gain control of all commanders. Put all commanders from the command zone onto the battlefield under your control.\nTevesh Szat, Doom of Fools can be your commander.\nPartner",
+    "loyalty": "4",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "ps19-207": {
+    "id": "2c23b39b-a4d6-4f10-8ced-fa4b1ed2cf74",
+    "name": "Nicol Bolas, Dragon-God",
+    "layout": "normal",
+    "set": "ps19",
+    "set_name": "San Diego Comic-Con 2019",
+    "set_type": "promo",
+    "collector_number": "207",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "convention",
+      "glossy"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Bolas",
+    "mana_cost": "{U}{B}{B}{B}{R}",
+    "oracle_text": "Nicol Bolas has all loyalty abilities of all other planeswalkers on the battlefield.\n+1: You draw a card. Each opponent exiles a card from their hand or a permanent they control.\n−3: Destroy target creature or planeswalker.\n−8: Each opponent who doesn't control a legendary creature or planeswalker loses the game.",
+    "loyalty": "4",
+    "colors": [
+      "B",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "R",
+      "U"
+    ]
+  },
+  "sld-1619": {
+    "id": "b4b3d65d-3485-4d82-ba2e-9e2071f284b5",
+    "name": "Tezzeret the Seeker",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1619",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "rainbowfoil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Tezzeret",
+    "mana_cost": "{3}{U}{U}",
+    "oracle_text": "+1: Untap up to two target artifacts.\n−X: Search your library for an artifact card with mana value X or less, put it onto the battlefield, then shuffle.\n−5: Artifacts you control become artifact creatures with base power and toughness 5/5 until end of turn.",
+    "loyalty": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "sld-1622": {
+    "id": "74ab6843-6bdd-439a-b81c-0be83b8d4c52",
+    "name": "Nicol Bolas, Planeswalker",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1622",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "rainbowfoil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Bolas",
+    "mana_cost": "{4}{U}{B}{B}{R}",
+    "oracle_text": "+3: Destroy target noncreature permanent.\n−2: Gain control of target creature.\n−9: Nicol Bolas deals 7 damage to target player or planeswalker. That player or that planeswalker's controller discards seven cards, then sacrifices seven permanents of their choice.",
+    "loyalty": "5",
+    "colors": [
+      "B",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "R",
+      "U"
+    ]
+  },
+  "med-WS2": {
+    "id": "071421ba-b54a-4510-9065-ace62368d3cb",
+    "name": "Gideon Blackblade",
+    "layout": "normal",
+    "set": "med",
+    "set_name": "Mythic Edition",
+    "set_type": "masterpiece",
+    "collector_number": "WS2",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Gideon",
+    "mana_cost": "{1}{W}{W}",
+    "oracle_text": "During your turn, Gideon Blackblade is a 4/4 Human Soldier creature with indestructible that's still a planeswalker.\nPrevent all damage that would be dealt to Gideon Blackblade during your turn.\n+1: Up to one other target creature you control gains your choice of vigilance, lifelink, or indestructible until end of turn.\n−6: Exile target nonland permanent.",
+    "loyalty": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "unf-275": {
+    "id": "9cac4ebc-fdc3-4dd4-b988-9a924ee3c781",
+    "name": "Comet, Stellar Pup",
+    "layout": "normal",
+    "set": "unf",
+    "set_name": "Unfinity",
+    "set_type": "funny",
+    "collector_number": "275",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Comet",
+    "mana_cost": "{2}{R}{W}",
+    "oracle_text": "0: Roll a six-sided die.\n1 or 2 — [+2], then create two 1/1 green Squirrel creature tokens. They gain haste until end of turn.\n3 — [−1], then return a card with mana value 2 or less from your graveyard to your hand.\n4 or 5 — Comet deals damage equal to the number of loyalty counters on him to a creature or player, then [−2].\n6 — [+1], and you may activate Comet's loyalty ability two more times this turn.",
+    "loyalty": "5",
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
     ]
   }
 }

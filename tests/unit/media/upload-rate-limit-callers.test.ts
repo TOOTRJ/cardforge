@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cameraPhoto } from "@/tests/stubs/metadata-fixtures";
+import { claimRpc, forgetStaged, resetStaging, stagingBucketApi, uploadCardArtViaStaging } from "@/tests/stubs/card-art-staging";
 
 // ---------------------------------------------------------------------------
 // Every upload is rate-limited per user (owner decision 2026-09-29, TODO
@@ -56,14 +57,23 @@ vi.mock("@/lib/supabase/server", async () => {
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
+    // The card-art finish's claim (0132) — reached only under the limit.
+    rpc: async (fn: string, args: { p_user_id: string; p_staged_name: string }) =>
+      fn === "claim_card_art_upload" ? claimRpc(args) : { data: null, error: { message: `unexpected rpc ${fn}` } },
     storage: {
-      from: () => ({
+      from: (bucket: string) => ({
+        ...stagingBucketApi(bucket),
+        createSignedUploadUrl: async (key: string) => {
+          state.storageOps += 1;
+          return stagingBucketApi(bucket).createSignedUploadUrl(key);
+        },
         upload: async () => {
           state.storageOps += 1;
           return { data: null, error: null };
         },
-        remove: async () => {
+        remove: async (keys: string[]) => {
           state.storageOps += 1;
+          forgetStaged(bucket, keys);
           return { data: [], error: null };
         },
         copy: async () => {
@@ -110,7 +120,6 @@ vi.mock("next/server", async (importOriginal) => ({
 vi.mock("@/lib/profile/username", () => ({ revalidateProfilePage: vi.fn() }));
 vi.mock("@/lib/cards/bake-render", () => ({ bakeAndPersistCardRender: vi.fn() }));
 
-import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
 import { uploadCoverServerAction } from "@/lib/media/upload-cover-server";
 import { uploadProfileMediaServerAction } from "@/lib/profile/upload-server";
@@ -126,7 +135,8 @@ async function form(type = "image/png", extra: Record<string, string> = {}): Pro
 }
 
 const ACTIONS: { label: string; run: () => Promise<unknown> }[] = [
-  { label: "card art", run: async () => uploadCardArtServerAction(await form()) },
+  // start (counted, refused here when over the limit) → PUT → finish
+  { label: "card art", run: async () => uploadCardArtViaStaging(await cameraPhoto("png", { alpha: true }), "image/png") },
   { label: "design watermark / land icon", run: async () => uploadWatermarkServerAction(await form()) },
   { label: "deck cover / set icon", run: async () => uploadCoverServerAction(await form()) },
   { label: "avatar", run: async () => uploadProfileMediaServerAction("avatar", await form()) },
@@ -135,6 +145,7 @@ const ACTIONS: { label: string; run: () => Promise<unknown> }[] = [
 ];
 
 beforeEach(() => {
+  resetStaging();
   state.limited = true;
   state.checks.length = 0;
   state.storageOps = 0;

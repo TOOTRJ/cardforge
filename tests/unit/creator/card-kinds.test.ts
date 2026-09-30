@@ -31,6 +31,7 @@ import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-reg
 import {
   FRAME_SET_ERA,
   FRAME_SET_LABELS,
+  FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
   FRAME_TEMPLATE_VALUES,
   isPremiumFrameTemplate,
@@ -132,7 +133,8 @@ describe("framesForKind", () => {
       expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless"]);
     }
     expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
-    expect(skinsFor("land")).toEqual(["m15snowland"]);
+    // The land's borderless dress (4.34).
+    expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland"]);
     // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's
     // full-art heights (the artifact ones are type-word dresses: the pickers
     // hide them, isTypeWordDress).
@@ -140,10 +142,11 @@ describe("framesForKind", () => {
       "m15tokenartifact", "m15tokentext", "m15tokenartifacttext",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ]);
-    // Standards with their own geometry and no skin set stay bare.
-    for (const kind of ["planeswalker", "battle"] as CardKind[]) {
-      expect(skinsFor(kind)).toEqual([]);
-    }
+    // 4.33's borderless planeswalkers; the tall one is a row dress (the
+    // pickers hide it, isRowDress).
+    expect(skinsFor("planeswalker")).toEqual(["m15borderlesspw", "m15borderlesspwtall"]);
+    // A standard with its own geometry and no skin set stays bare.
+    expect(skinsFor("battle")).toEqual([]);
   });
 
   it("appends showcase treatments for every standard kind", () => {
@@ -532,18 +535,22 @@ describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
     expect(leaks).toEqual([]);
   });
 
-  it("refuses exactly planeswalker, battle and the layout kinds on the eight — 56 pairs — and keeps every standard kind", () => {
+  it("refuses exactly planeswalker, battle, the layout kinds and the emblem on the eight — 64 pairs — and keeps every standard kind", () => {
     const refused: string[] = [];
     for (const template of STAT_LESS_SHOWCASES) {
       for (const kind of CARD_KIND_VALUES) {
+        // The emblem wears its own frame and nothing else (TODO 6.23).
         const standard =
-          KIND_DEFS[kind].layoutTemplates === null && kind !== "planeswalker" && kind !== "battle";
+          KIND_DEFS[kind].layoutTemplates === null &&
+          kind !== "planeswalker" &&
+          kind !== "battle" &&
+          kind !== "emblem";
         expect(templateRefusesKind(template, kind), `${template}/${kind}`).toBe(!standard);
         expect(templateSupportsKind(template, kind), `${template}/${kind}`).toBe(standard);
         if (!standard) refused.push(`${template}/${kind}`);
       }
     }
-    expect(refused).toHaveLength(56);
+    expect(refused).toHaveLength(64);
   });
 
   it("drops them from the planeswalker and battle galleries only", () => {
@@ -732,6 +739,37 @@ describe("the borderless M15 frame (4.32)", () => {
     for (const template of ["m15borderless", "m15borderlessartifact", "m15fullartland", "fullartland"] as const) {
       expect(isPremiumFrameTemplate(template), template).toBe(false);
     }
+  });
+});
+
+describe("the borderless land (4.34)", () => {
+  const all = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))));
+
+  it("is a skin of the M15 land frame in the Borderless set, for the Land kind only — basics and nonbasics", () => {
+    expect(FRAME_TEMPLATE_SET.m15borderlessland).toBe("borderless");
+    expect(FRAME_TEMPLATE_LABELS.m15borderlessland).toBe("Borderless Land");
+    expect(baseFrameFor("land", "m15borderlessland")).toBe("m15land");
+    for (const kind of CARD_KIND_VALUES) {
+      expect(templateSupportsKind("m15borderlessland", kind), kind).toBe(kind === "land");
+      expect(templateRefusesKind("m15borderlessland", kind), kind).toBe(kind !== "land");
+    }
+    // Not basic-only: a nonbasic's rules print on its tinted box (unlike
+    // fullartland's bare art, 0.26).
+    expect(templateIsBasicOnly("m15borderlessland")).toBe(false);
+    const land = framesForKind("land", all).filter((f) => f.group === "skin").map((f) => f.template);
+    expect(land).toEqual(["m15snowland", "m15borderlessland"]);
+    // Offered to no other kind.
+    for (const kind of CARD_KIND_VALUES.filter((k) => k !== "land")) {
+      expect(framesForKind(kind, all).map((f) => f.template), kind).not.toContain("m15borderlessland");
+    }
+    expect(isPremiumFrameTemplate("m15borderlessland")).toBe(false);
+  });
+
+  it("a kind change leaves it for the new kind's M15 standard", () => {
+    expect(planKindChange("creature", { cardType: "land", template: "m15borderlessland" })).toEqual({
+      action: "apply",
+      patch: { card_type: "creature", template: "m15" },
+    });
   });
 });
 

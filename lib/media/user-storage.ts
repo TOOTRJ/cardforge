@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isUuid } from "@/lib/ids";
 import { ensureStorageOriginRegistered } from "@/lib/media/storage-origin";
+import { CARD_ART_INCOMING_BUCKET } from "@/lib/cards/art-upload-limits";
 
 // ---------------------------------------------------------------------------
 // Writes into a user's storage folder — the ONLY way app code writes the
@@ -36,7 +37,17 @@ import { ensureStorageOriginRegistered } from "@/lib/media/storage-origin";
 //     with its database (lib/media/storage-origin.ts), so migration 0127's
 //     media URL guards accept the URLs minted here — and no other project's.
 //
-// Reads stay public URLs; nothing here lists or downloads.
+// Reads stay public URLs; userFolder() never lists or downloads.
+//
+// The one exception to "the server writes every byte" is the card-art
+// STAGING bucket (migration 0131, userUploadStaging() below): card art is too
+// big for a Vercel Function's 4.5 MB request body, so the browser PUTs it to
+// a signed URL this module mints for ONE server-made name in the caller's
+// folder of a PRIVATE bucket. Nothing there is public or referenceable; the
+// finish action (lib/cards/upload-art-server.ts) downloads it here, sniffs,
+// strips and scans it like any upload, writes the real object through
+// userFolder("card-art") and replaces the staged one with a tombstone (so
+// the signed URL can't be used again).
 // ---------------------------------------------------------------------------
 
 export type UserStorageBucket =
@@ -147,3 +158,105 @@ export function userFolder(bucket: UserStorageBucket, userId: string) {
 }
 
 export type UserFolder = ReturnType<typeof userFolder>;
+
+export type StagedUploadUrl = { path: string; token: string };
+
+/** What a consumed staged object holds: 8 bytes that are not an image, so no
+ *  finish can store them (see markConsumed). */
+export const STAGED_TOMBSTONE: Uint8Array = new TextEncoder().encode("consumed");
+
+/**
+ * The caller's folder in the PRIVATE card-art staging bucket
+ * (CARD_ART_INCOMING_BUCKET, migration 0131). Same rules as userFolder():
+ * the service role, bare server-made names, keys forced into `{userId}/`.
+ * It holds a card-art file only between the browser's upload and the finish
+ * action; nothing here is public, and no picture column accepts it.
+ */
+export function userUploadStaging(userId: string) {
+  let api: BucketApi | null = null;
+  const objects = () => (api ??= createAdminClient().storage.from(CARD_ART_INCOMING_BUCKET));
+  const keyOf = (name: string): string | null => {
+    try {
+      return userObjectPath(userId, name);
+    } catch {
+      return null;
+    }
+  };
+  const remove = async (names: string[]): Promise<UserStorageResult> => {
+    const keys = names.map(keyOf);
+    if (keys.some((key) => key === null)) return refused("Invalid storage path.");
+    if (keys.length === 0) return { error: null };
+    const { error } = await objects().remove(keys as string[]);
+    return { error: error ? { message: error.message } : null };
+  };
+
+  return {
+    /** The full object key, `{userId}/{name}` (throws on an invalid name). */
+    path: (name: string): string => userObjectPath(userId, name),
+
+    /**
+     * A signed upload URL for `{userId}/{name}` (valid 2 hours, one object,
+     * no overwrite). The bucket's size and MIME limits apply to the upload;
+     * the browser gets the key and token, never a write policy.
+     */
+    async createUploadUrl(name: string): Promise<{ data: StagedUploadUrl; error: null } | { data: null; error: { message: string } }> {
+      const key = keyOf(name);
+      if (!key) return { data: null, error: { message: "Invalid storage path." } };
+      const { data, error } = await objects().createSignedUploadUrl(key);
+      if (error || !data?.token) return { data: null, error: { message: error?.message ?? "No upload token." } };
+      return { data: { path: key, token: data.token }, error: null };
+    },
+
+    /** The staged object's bytes (read with the service role). */
+    async download(name: string): Promise<{ bytes: Buffer; error: null } | { bytes: null; error: { message: string } }> {
+      const key = keyOf(name);
+      if (!key) return { bytes: null, error: { message: "Invalid storage path." } };
+      const { data, error } = await objects().download(key);
+      if (error || !data) return { bytes: null, error: { message: error?.message ?? "Not found." } };
+      return { bytes: Buffer.from(await data.arrayBuffer()), error: null };
+    },
+
+    remove,
+
+    /**
+     * Replace a staged object with STAGED_TOMBSTONE once its bytes are read.
+     * A signed upload URL only refuses to OVERWRITE: had the object been
+     * deleted, the same token (valid 2 hours) could put the key again and a
+     * second finish would store a second file on one counted upload. Kept
+     * occupied, the key takes no more PUTs; the tombstone (not an image) is
+     * cleared by removeOlderThan once the token has long expired.
+     */
+    async markConsumed(name: string): Promise<UserStorageResult> {
+      const key = keyOf(name);
+      if (!key) return refused("Invalid storage path.");
+      const { error } = await objects().upload(key, STAGED_TOMBSTONE, {
+        upsert: true,
+        contentType: "image/png",
+        cacheControl: "0",
+      });
+      return { error: error ? { message: error.message } : null };
+    },
+
+    /**
+     * Remove the caller's staged objects older than `maxAgeMs` — uploads
+     * whose finish call never came (a closed tab, a lost connection). Returns
+     * how many went. Best-effort: a failed list or remove removes nothing.
+     */
+    async removeOlderThan(maxAgeMs: number, now: number = Date.now()): Promise<number> {
+      if (!isUuid(userId)) return 0;
+      const { data, error } = await objects().list(userId, { limit: 100 });
+      if (error || !data) return 0;
+      const stale = data
+        .filter((file) => {
+          const created = Date.parse(file.created_at ?? "");
+          return isValidFileName(file.name) && Number.isFinite(created) && now - created > maxAgeMs;
+        })
+        .map((file) => file.name);
+      if (stale.length === 0) return 0;
+      const { error: removeError } = await remove(stale);
+      return removeError ? 0 : stale.length;
+    },
+  };
+}
+
+export type UserUploadStaging = ReturnType<typeof userUploadStaging>;

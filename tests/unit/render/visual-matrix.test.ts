@@ -62,7 +62,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -81,6 +81,19 @@ describe("visual-regression matrix", () => {
       "nyx/w",
     ]);
     for (const c of noArt) expect(c.row.art_url, c.id).toBeNull();
+  });
+
+  it("bakes a borderless walker with no ability text on both boxes (4.33: the light first stripe, never the bare art)", () => {
+    const noText = cases.filter((c) => c.id.endsWith("@notext"));
+    expect(noText.map((c) => `${c.template}/${c.colour}/${c.kind}`)).toEqual([
+      "m15borderlesspw/w/planeswalker",
+      "m15borderlesspwtall/wub/planeswalker",
+    ]);
+    for (const c of noText) {
+      expect(c.row.rules_text, c.id).toBeNull();
+      expect(c.row.face_content, c.id).toBeNull();
+      expect(c.row.art_url, c.id).toBe("ART");
+    }
   });
 
   it("names no picture outside the harness (hermetic: the generated art placeholders only)", () => {

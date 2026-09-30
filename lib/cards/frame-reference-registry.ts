@@ -255,6 +255,29 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
       frameStyle: { template },
     };
   }
+  // An emblem sample is an emblem (TODO 6.23 / 4.52): the walker's name, no
+  // cost, types or stats, and one centred rules line — what the frame is
+  // verified for. Its master is the same silver frame in every key.
+  if (template === "emblem") {
+    return {
+      title: "Sample Walker",
+      cost: null,
+      cardType: "emblem",
+      supertype: null,
+      subtypes: [],
+      rarity: "common",
+      colorIdentity: SAMPLE_COLOR_IDENTITY[colorKey],
+      rulesText: "Creatures you control get +1/+1.",
+      flavorText: null,
+      power: null,
+      toughness: null,
+      loyalty: null,
+      defense: null,
+      artistCredit: "Sample Artist",
+      artUrl: null,
+      frameStyle: { template },
+    };
+  }
   return {
     title: "Sample Card",
     cost: isLand ? null : SAMPLE_COST[colorKey],

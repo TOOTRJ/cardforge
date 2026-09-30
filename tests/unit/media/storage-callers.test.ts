@@ -11,7 +11,11 @@ import { describe, expect, it } from "vitest";
 //
 //   * no browser module ("use client", or anything using the browser client
 //     in lib/supabase/client.ts) touches `.storage` — no direct upload,
-//     remove, signed upload URL…;
+//     remove, signed upload URL… — except ONE (TODO 6.10): card art is too
+//     big for a Vercel Function's 4.5 MB request body, so
+//     lib/cards/art-upload-client.ts PUTs the file to a signed URL the start
+//     action minted for one object in the PRIVATE staging bucket, and does
+//     nothing else with storage (held below, with the bucket's privacy);
 //   * Storage is called from a short list of server-only modules, each on
 //     the service-role client — a new caller has to be added here on purpose
 //     (a user-folder write belongs in lib/media/user-storage.ts).
@@ -27,6 +31,13 @@ const ROOT = path.resolve(__dirname, "../../..");
 const STORAGE_CALLERS: Record<string, string> = {
   "lib/media/user-storage.ts": "the user-folder door: service role, `{userId}/{name}` keys only",
   "lib/account/actions.ts": "account deletion lists and empties the user's folders (service role, after its own auth check)",
+};
+
+/** Browser modules allowed to call `.storage` — only `uploadToSignedUrl` on
+ *  the private staging bucket (checked below). */
+const BROWSER_STORAGE_CALLERS: Record<string, string> = {
+  "lib/cards/art-upload-client.ts":
+    "card art (≤ 20 MiB, TODO 6.10): the browser PUTs the file to a signed URL startCardArtUploadAction minted for ONE `{userId}/{uuid}.upload` object in the PRIVATE card-art-incoming bucket (0131); finishCardArtUploadAction sniffs, strips, scans and writes card-art with the service role",
 };
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -94,16 +105,53 @@ describe("Supabase Storage callers", () => {
     expect(files.length).toBeGreaterThan(200);
   });
 
-  it("no browser module touches storage", () => {
+  it("no browser module touches storage — but the listed one", () => {
     const offenders = files
       .filter(({ src }) => isClientModule(src) || /from\s+["']@\/lib\/supabase\/client["']/.test(src))
       .filter(({ src }) => USES_STORAGE.test(src))
       .map(({ rel }) => rel);
-    expect(offenders).toEqual([]);
+    expect(offenders).toEqual(Object.keys(BROWSER_STORAGE_CALLERS));
+  });
+
+  it("the one browser caller only PUTs to a signed URL in the private staging bucket", () => {
+    const { src } = files.find((f) => f.rel === "lib/cards/art-upload-client.ts")!;
+    // Every reach for storage is exactly `.storage.from(CARD_ART_INCOMING_BUCKET).uploadToSignedUrl(`.
+    const reaches = src.match(/\.storage\b[\s\S]{0,120}?\(/g) ?? [];
+    expect(reaches.length).toBe(1);
+    expect(src).toMatch(/\.storage\.from\(CARD_ART_INCOMING_BUCKET\)\s*\.uploadToSignedUrl\(/);
+    expect(src.match(/\.from\(/g)).toHaveLength(1);
+    for (const op of ["createSignedUploadUrl", "createSignedUrl", ".upload(", ".update(", ".remove(", ".download(", ".list(", ".move(", ".copy(", "getPublicUrl"]) {
+      expect(src.includes(op), op).toBe(false);
+    }
+    expect(src).toMatch(/import\s*\{[^}]*\bCARD_ART_INCOMING_BUCKET\b[^}]*\}\s*from\s*["']@\/lib\/cards\/art-upload-limits["']/);
+  });
+
+  it("…and that bucket is private, with no policy, and no picture column accepts it", () => {
+    const limits = readFileSync(path.join(ROOT, "lib/cards/art-upload-limits.ts"), "utf8");
+    expect(limits).toMatch(/export const CARD_ART_INCOMING_BUCKET = "card-art-incoming";/);
+    const migrations = path.join(ROOT, "supabase/migrations");
+    const sql = readdirSync(migrations)
+      .filter((f) => f.endsWith(".sql"))
+      .sort()
+      .map((f) => readFileSync(path.join(migrations, f), "utf8").replace(/--.*$/gm, ""))
+      .join("\n");
+    const row = /values\s*\(\s*'card-art-incoming',\s*'card-art-incoming',\s*(\w+)/i.exec(sql);
+    expect(row?.[1]).toBe("false");
+    // No storage policy names it (0126 dropped every write policy; none may
+    // come back for it, nor a read one).
+    expect(sql).not.toMatch(/on\s+storage\.objects[\s\S]{0,400}?card-art-incoming/i);
+    // 0127: the media URL guard's bucket lists never include it.
+    expect(sql).not.toMatch(/array\[[^\]]*'card-art-incoming'/i);
+    const mediaUrls = readFileSync(path.join(ROOT, "lib/media/media-urls.ts"), "utf8");
+    expect(mediaUrls).not.toContain("card-art-incoming");
   });
 
   it("only the listed server-only modules call storage", () => {
-    const callers = files.filter(({ src }) => USES_STORAGE.test(src)).map(({ rel }) => rel).sort();
+    const callers = files
+      .filter(({ src }) => USES_STORAGE.test(src))
+      .map(({ rel }) => rel)
+      .filter((rel) => !(rel in BROWSER_STORAGE_CALLERS))
+      .sort();
     expect(callers).toEqual(Object.keys(STORAGE_CALLERS).sort());
     for (const { rel, src } of files.filter((f) => f.rel in STORAGE_CALLERS)) {
       expect(isServerOnly(rel, src), `${rel} must be server-only`).toBe(true);

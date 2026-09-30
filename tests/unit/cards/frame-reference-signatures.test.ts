@@ -77,9 +77,53 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
     expect(match.status).not.toBe("unsupported");
   });
 
+  it("every borderless land reference is exact, with no print variation the master doesn't draw (4.34)", () => {
+    // The master tints the title bar, the type bar AND the box; the registry
+    // pins the prints that don't (the dark bars, a dark type bar alone, the
+    // short box) — a reference that prints one of those would have the
+    // owner verify the frame against a look it doesn't draw.
+    const land = rows.filter((row) => row.template === "m15borderlessland");
+    // w, u and g one each (owner rounds 15 and 16), b, r, c and m two.
+    expect(land.length).toBe(11);
+    for (const row of land) {
+      const match = frameMatchFromScryfall(scryfallCardSchema.parse(printings[row.ref.scryfallId]));
+      expect({ status: match.status, gaps: match.gaps }, `${row.combo} ${row.ref.name}`).toEqual({
+        status: "exact",
+        gaps: undefined,
+      });
+    }
+  });
+
+  it("Ancient Den SLD #300 still imports as the exact borderless land, though no longer a reference (owner round 16)", () => {
+    // It left white's references (Monumental Henge MH3 #354 alone); the
+    // registry's answer for it is unchanged: `exact` on m15borderlessland,
+    // no gap, landing on the bordered land frame (1.18) — Secret Lair's
+    // centred one-line print, which the master sets at the left.
+    const id = "d1f4c301-6015-456a-8989-e0055402809e";
+    expect(rows.some((row) => row.ref.scryfallId === id)).toBe(false);
+    const card = scryfallCardSchema.parse(printings[id]);
+    expect({ name: card.name, set: card.set, number: card.collector_number }).toEqual({ name: "Ancient Den", set: "sld", number: "300" });
+    const match = frameMatchFromScryfall(card);
+    expect(match).toMatchObject({ status: "exact", template: "m15borderlessland", signature: "borderless/land", landOn: "m15land" });
+    expect(match.gaps).toBeUndefined();
+  });
+
   it("every allowlisted combo is still in the registry", () => {
     const combos = new Set(rows.map((row) => row.combo));
     for (const combo of Object.keys(ALLOWLIST)) expect(combos.has(combo), combo).toBe(true);
+  });
+
+  // The borderless planeswalkers (TODO 4.33) are verified against these
+  // printings, so each must print the dress the master draws: the light
+  // bars with dark ink, in one colour, no nickname or indicator — `exact`,
+  // no gap. A dark-barred black walker (BLC #78's white ink only looks
+  // light over its pale art) or an `inverted` one would verify the frame
+  // against a look it doesn't draw.
+  const walkerRows = rows.filter((row) => row.template === "m15borderlesspw" || row.template === "m15borderlesspwtall");
+  it.each(walkerRows)("$combo $ref.name prints the light borderless walker itself (4.33)", (row) => {
+    const match = frameMatchFromScryfall(scryfallCardSchema.parse(printings[row.ref.scryfallId]));
+    expect(match, `${row.combo} ${match.signature}`).toMatchObject({ status: "exact", signature: "borderless/planeswalker" });
+    expect(match.gaps ?? []).toEqual([]);
   });
 });
 

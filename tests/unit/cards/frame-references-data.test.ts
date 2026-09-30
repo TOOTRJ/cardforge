@@ -55,6 +55,9 @@ const DOCUMENTED_NULLS = new Set([
   // either (4.49 (b)).
   "m15tokenartifacttext/w", "m15tokenartifacttext/b", "m15tokenartifacttext/r", "m15tokenartifacttext/g",
   "m15tokenartifacttext/m",
+  // The emblem (TODO 4.52): colourless by rule (CR 114) — every printed one
+  // is on the one silver frame, so only `c` has printings.
+  "emblem/w", "emblem/u", "emblem/b", "emblem/r", "emblem/g", "emblem/m",
   // The full-art tokens (4.48 / 4.50; heights measured on the prints,
   // Scryfall 2026-09-29): no red, colourless or three-colour tall token
   // outside a legend; no black (T40K #14 prints its own layout), green or
@@ -195,7 +198,7 @@ describe("registry helpers", () => {
 
 // Frames plan 4.32 / 4.39: the references the items list, two per colour
 // (short text first), looked up on Scryfall by set + collector number.
-describe("4.32 / 4.39 references", () => {
+describe("4.32 / 4.34 / 4.39 references", () => {
   const ids = (template: string, key: string) =>
     frameReferenceOptions(template, key).map((r) => `${r.set} ${r.name}`);
 
@@ -232,6 +235,36 @@ describe("4.32 / 4.39 references", () => {
     expect(frameReferenceNote("m15borderlessartifact").confirm).toBe(true);
     // Its m references print a two-colour pinline: m waits for 4.6.
     expect(frameReferenceNote("m15borderlessartifact").note).toMatch(/leave m unverified/);
+  });
+
+  it("m15borderlessland: non-legendary prints whose type bar wears the title's tint, the best-registered first (TODO 4.34)", () => {
+    // White verifies against Monumental Henge MH3 #354 alone (owner round
+    // 16), like u and g: Ancient Den SLD #300 is no longer a reference.
+    expect(ids("m15borderlessland", "w")).toEqual(["mh3 Monumental Henge"]);
+    // Not FRA #380 / #381: they print a DARK type bar over the tinted box
+    // (4.34's second skeptic pass; BORDERLESS_LAND_DARK_TYPE_BAR_PINS). One
+    // reference each for u and g (owner round 15): the only other exact
+    // mono-u / mono-g prints (SLD #230 / #301 / #304) show the art through
+    // their bars, and SLD #304 is a scaled scan.
+    expect(ids("m15borderlessland", "u")).toEqual(["mh3 Archway of Innovation"]);
+    expect(ids("m15borderlessland", "b")).toEqual(["mh3 Spymaster's Vault", "mh2 Cabal Coffers"]);
+    expect(ids("m15borderlessland", "r")).toEqual(["slp Valakut, the Molten Pinnacle", "mh3 Arena of Glory"]);
+    expect(ids("m15borderlessland", "g")).toEqual(["mh3 Shifting Woodland"]);
+    // c = colourless lands; m = three and more colours (gold bars and box).
+    expect(ids("m15borderlessland", "c")).toEqual(["cmm Reliquary Tower", "cmm Myriad Landscape"]);
+    expect(ids("m15borderlessland", "m")).toEqual(["cmm Command Tower", "msh Avengers Tower"]);
+    for (const key of FRAME_COLOR_KEYS) {
+      for (const ref of frameReferenceOptions("m15borderlessland", key)) {
+        // Never a set that prints the DARK type bar, never a two-colour print.
+        expect(["woe", "acr", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
+        expect(["Deserted Beach", "Spirebluff Canal"], ref.name).not.toContain(ref.name);
+        // Never the see-through SLD prints the owner turned down (round 15),
+        // nor Ancient Den SLD #300 (round 16).
+        expect(["Shelldock Isle", "Seat of the Synod", "Tree of Tales", "Ancient Den"], ref.name).not.toContain(ref.name);
+      }
+    }
+    expect(frameReferenceNote("m15borderlessland").confirm).toBe(true);
+    expect(frameReferenceNote("m15borderlessland").note).toMatch(/SPLIT pinline/);
   });
 
   it("m15fullartland: the 2024–25 printings (ONE / MOM are an older bar geometry); fullartland: FRA #382–396 only", () => {

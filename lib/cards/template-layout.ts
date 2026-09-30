@@ -98,6 +98,14 @@ export type TextSlot = {
    *  is a transparent cut-out over the art (M15 planeswalker abilities) so the
    *  words stay legible regardless of the artwork underneath. */
   backdropHex?: string;
+  /** Draw `backdropHex` even when the box has no text (TODO 4.33, owner
+   *  round 15, 2026-09-29): a borderless walker's ability window is a
+   *  see-through cut-out, so a walker with no ability text shows the first
+   *  stripe's light ground instead of the bare art — in both renderers,
+   *  which ask drawsRulesBackdrop (lib/cards/rules-backdrop.ts). Never under
+   *  ability rows, the editor's hint rows or a saga rail, never on a
+   *  textless frame. Code-owned: not part of the override schema. */
+  backdropWhenEmpty?: boolean;
   /** TYPE LINE ONLY — print it in two boxes split at the em dash (TODO
    *  3.24): "Basic Land" in `leftRect`, "Forest" in `rightRect`, the way
    *  Zendikar-style basics print either side of their medallion. Both parts
@@ -1573,6 +1581,130 @@ const M15TOKENTEXT: FrameProfile = {
   // average over nine text-box prints), 1.4 px after the move.
 };
 
+// The emblem — TODO 4.52: Card Conjurer 'Planeswalker Emblems'
+// (packEmblem.js), the M20 design every emblem since 2019-07-12 prints (TM20
+// #11, TFDN #24 / #25, TBLB #30, TDSK #17, TFRA #16). One silver master for
+// every colour (CR 114: an emblem is colourless; the emblem kind forces c).
+// CC's master sits on the prints as it is (feature registration over those
+// six plus TKHM #20 and TAFR #16: the title bar, type bar, box bottom and
+// sides within 3 px), so it is imported 1:1 — no re-cut. CC's box runs to
+// 1946 px (92.67 %H) like the prints' (1947); 4.52's "90.24 %H" was where
+// the spark's tail ends inside it.
+/** The emblem's slots, measured on the master and the prints (HD px):
+ *  the type pill's interior (between its outlines) and the text box's. */
+export const EMBLEM_TYPE_PILL_INTERIOR_PX = { top: 1422, bottom: 1528 };
+export const EMBLEM_BOX_INTERIOR_PX = { top: 1556, bottom: 1937 };
+/** Scryfall's emblem art_crop box on the card (HD px): a 603 × 576 crop at
+ *  72.5 / 124 of the 744 × 1040 scan. */
+export const EMBLEM_SCRYFALL_CROP_PX = { x: 146.2, y: 250.4, width: 1215.7, height: 1163.1 };
+/** The art window: that box exactly, so the art_crop an import brings is
+ *  drawn at the print's own scale and place (owner evidence 2026-09-29: the
+ *  box grown up to 232 px, 1.6 % taller and wider, drew the art 1.6–1.8 %
+ *  larger than the prints; the registration's best fit is now 1.002 — the
+ *  744 × 1040 scan's own 0.16 % stretch). */
+const EMBLEM_ART_SLOT: Rect = {
+  topPct: (EMBLEM_SCRYFALL_CROP_PX.y / 2100) * 100,
+  leftPct: (EMBLEM_SCRYFALL_CROP_PX.x / 1500) * 100,
+  widthPct: (EMBLEM_SCRYFALL_CROP_PX.width / 1500) * 100,
+  heightPct: (EMBLEM_SCRYFALL_CROP_PX.height / 2100) * 100,
+};
+/** The name's print offset: the band rule's baseline (193 px) up to the
+ *  prints' 190, as a fraction of card WIDTH (dy's unit). */
+const EMBLEM_TITLE_PRINT_DY = -3 / 1500;
+/** The type line's print offset: the pill-centred band's baseline (1498 px)
+ *  up to the prints' 1496. */
+const EMBLEM_TYPE_PRINT_DY = -2 / 1500;
+/** CC's rules box (82.8 %W) plus 10 px on the right: 129–1381 px. */
+const EMBLEM_RULES_WIDTH_PCT = ((1381 - 129) / 1500) * 100;
+const EMBLEM: FrameProfile = {
+  label: "Emblem",
+  // No cost, P/T, loyalty or defense slot: an emblem has none (CR 114).
+  hideCost: true,
+  // The art window is Scryfall's emblem art_crop box, which IS a crop of the
+  // printed card around the spark (603 × 576 px at 72.5 / 124 on the 744 px
+  // scans of TFDN #24 / #25 and TDSK #17, matched pixel for pixel at scale
+  // 1: 146 / 250 px, 1216 × 1163 at HD), so an imported emblem's art lands
+  // where it printed, at its printed size. The spark's clear cut-out is
+  // inside it: CC's centre ray (732–767 px across) ran on up to the bar,
+  // above the crop, where an art_crop has no pixels; the master's silver
+  // closes over its top instead and the ray ends at 251 px (owner decision
+  // 2026-09-29; scripts/lib/cc-frames.mjs EMBLEM_RAY_BRIDGE), so no second
+  // picture shows there. CC's artBounds (14.2 / 4.96 / 71.6 × 85.48 — a
+  // tall box, which blew a landscape art up ~2.3× past the prints') is the
+  // under-frame layer: the spark's tail runs on through the type bar and
+  // the box as CC's 80 % white (α 204) to 1896 px, and the art shows
+  // faintly there, as on the prints.
+  artSlot: EMBLEM_ART_SLOT,
+  underFrameArt: { rect: { topPct: 4.96, leftPct: 14.2, widthPct: 71.6, heightPct: 85.48 } },
+  // M15's 86 px symbol box with the ink fit, in CC's setSymbolBounds (right
+  // edge 92.13 %W, centred on 70.43 %H — the pill's centre). The symbol is
+  // black on the prints; ours keeps the card's rarity ink (an emblem saves
+  // as common — 4.9's E and black symbol come later).
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
+  symbolRect: { topPct: 70.43 - 4.1 / 2, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  // The source's name, white and centred on the dark bar (CC: 8.54 / 5.22 /
+  // 82.92 × 5.43, Beleren Small Caps at 0.0381 H = 80 px = TITLE_SIZE_PCT;
+  // small caps are 4.8). The band rule sets the baseline at 193 px; the
+  // prints' is 190 (the name's last ink row 189 on TFDN #24 / #25, TBLB #30,
+  // TDSK #17, TFRA #16 and TKHM #20; 192 on TM20 #11), so the text rises
+  // 3 px (EMBLEM_TITLE_PRINT_DY).
+  title: {
+    rect: { topPct: 5.22, leftPct: 8.54, widthPct: 82.92, heightPct: 5.43 },
+    sizePct: TITLE_SIZE_PCT,
+    dy: EMBLEM_TITLE_PRINT_DY,
+    fit: "measured",
+    colorHex: INK_LIGHT,
+    weight: 600,
+    align: "center",
+    font: "display",
+    letterSpacingEm: 0.01,
+  },
+  // "Emblem", left from CC's 8.54 %W on the light pill, in dark ink, fitted
+  // to the set symbol's box. The band is the pill's interior
+  // (EMBLEM_TYPE_PILL_INTERIOR_PX), whose centre sets the baseline at
+  // 1498 px; the prints' "Emblem" ends at 1495–1496 on all eight, so the
+  // text rises 2 px (EMBLEM_TYPE_PRINT_DY).
+  type: {
+    rect: {
+      topPct: (EMBLEM_TYPE_PILL_INTERIOR_PX.top / 2100) * 100,
+      leftPct: 8.54,
+      widthPct: 83.59,
+      heightPct: ((EMBLEM_TYPE_PILL_INTERIOR_PX.bottom - EMBLEM_TYPE_PILL_INTERIOR_PX.top) / 2100) * 100,
+    },
+    sizePct: TYPE_SIZE_PCT,
+    dy: EMBLEM_TYPE_PRINT_DY,
+    fit: "measured",
+    colorHex: INK_DARK,
+    weight: 600,
+    font: "display",
+  },
+  // CC's rules box (8.6 / 74.43 / 82.8 × 17.48), dark ink on the light box,
+  // centred vertically, ONE line centred on it (TDSK #17 "Ninjas you control
+  // get +1/+1.", TFRA #16) and two or more from the left (TFDN #24, TBLB
+  // #30) — 4.49 (b)'s alignSingleLine. The prints' ink starts at 131–134 px
+  // and a centred line centres on 751–753 px (TDSK #17, TFRA #16), 10 px
+  // right of the drawn box's own centre (its inner lines run 95–1385):
+  // CC's box, 1242 px wide, centred ours on 745–748. The rect keeps CC's
+  // left edge and runs 10 px further right (1381 px, still inside the box's
+  // inner line), which puts a centred line on 751–753 and changes no wrap
+  // of the prints' texts. Vertically the lines land within 2 px of the
+  // prints' (one, two and three lines).
+  rules: {
+    rect: { topPct: 74.43, leftPct: 8.6, widthPct: EMBLEM_RULES_WIDTH_PCT, heightPct: 17.48 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    alignSingleLine: "center",
+    font: "body",
+    padPx: { x: 2, y: 0 },
+  },
+  // The artist line in the black border under the box (the prints' collector
+  // line sits at 1995–2030 px); the brand mark keeps its default place,
+  // bottom right in the same border.
+  footer: M15.footer,
+};
+
 // ---------------------------------------------------------------------------
 // The full-art token design, M20 (2019-07-12) → today — TODO 4.48 / 4.50:
 // Card Conjurer's 'Textless', 'Short' and 'Tall' token packs
@@ -1914,6 +2046,100 @@ const M15BORDERLESSARTIFACT: FrameProfile = {
   ...M15BORDERLESS,
   label: "M15 Borderless Artifact",
   pt: { ...M15BORDERLESS.pt!, plateAssetPathTemplate: "/frames/m15borderlessartifact/pt/{color}.png" },
+};
+// …and its nonbasic land (frames plan 4.34): the same pack and geometry —
+// the land prints' title bar, type bar and text box sit where the spells'
+// do (outline rows 88–89 / 222, 1167 / 1300 and 1950 px at HD on 14
+// borderless land prints and 5 spells, 2026-09-29) — with the land's
+// tinted type bar and box in the master (scripts/lib/cc-frames.mjs
+// borderlessLandLayers) and M15 Land's anatomy: no cost, and the rules
+// centred in the box (M15's vAlign, kept). The name keeps the borderless
+// band (8.5–92.2 %W): with no pips the prints set a long name across it
+// (Meduseld, Golden Hall of Edoras LTC #361). A land creature prints on
+// the borderless plates (m15borderless's, in the land's colour key).
+// ONE rules line starts at the box's left, like M15's (no alignSingleLine;
+// owner round 15, 2026-09-29): the only non-SLD borderless nonbasic lands
+// that print a single line, the ZNR / KHM pathways (#284, #286, #290,
+// #293: "{T}: Add {X}."), start it 35 px inside the box, 142–147 px at HD,
+// with ~900 px of room on its right. Only Secret Lair centres one — the
+// artifact lands SLD #300–304, ink centred on 748–756 px.
+const M15BORDERLESSLAND: FrameProfile = {
+  ...M15BORDERLESS,
+  label: "M15 Borderless Land",
+  hideCost: true,
+};
+
+// M15 Borderless Planeswalker — the light borderless walker (frames plan
+// 4.33; Card Conjurer 'Borderless' planeswalker pack, packPlaneswalker
+// Borderless.js @2fcddba, frames bucket only; 199 of the 245 non-showcase
+// borderless walker printings, e.g. Oko ELD #271, Basri Ket M21 #280). Card
+// Conjurer's regular planeswalker master with the frame body and border
+// taken away: the same title bar (57–211 px), type bar (1160–1313 px),
+// ability window (x 180–1383, from 1315 px), badge rim and shield, over art
+// that runs to the top and side edges (CC artBounds 0/0/100 × 91.53) down to
+// an opaque black bottom bar from 1922 px, with fins up the side edges from
+// ~80 % H. So m15pw's anatomy carries over whole (4.19 / 3.13 — the rail,
+// the rows sized by their text, the detached cost, M15's type slot, the
+// footer and brand mark in the bottom bar), with the full-bleed art slot and
+// the master's own shield (cut out of each master like m15pw's, loyalty/, and
+// drawn above the stripes). The rows are Card Conjurer's NEUTRAL light
+// stripes (versionPlaneswalker.js: white at 0.608, #a4a4a4 at 0.706), as the
+// light prints show them (Oko ELD #271: a white row, then a grey one) — not
+// m15pw's cream, which 4.19 still owes the bordered frame. Dark ink on the
+// light bars and rows, as on m15pw. Printings with `inverted` rows (dark
+// stripes, white ink: Ashiok WOE #297) resolve to this frame as `nearest`
+// (owner decision 2026-09-26).
+const BORDERLESS_PW_STRIPE_A = "rgba(255,255,255,0.608)";
+const BORDERLESS_PW_STRIPE_B = "rgba(164,164,164,0.706)";
+const M15BORDERLESSPW: FrameProfile = {
+  ...M15PW,
+  label: "M15 Borderless Planeswalker",
+  artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 91.53 },
+  // A walker whose text isn't ability rows, or another card forced onto the
+  // frame, gets the plain box on the first stripe's light ground — and so
+  // does a walker with NO ability text (owner round 15, 2026-09-29): the
+  // window is a see-through cut-out, never left showing the bare art. The
+  // editor still shows its hint rows there (as on m15pw).
+  rules: { ...M15PW.rules, backdropHex: BORDERLESS_PW_STRIPE_A, backdropWhenEmpty: true },
+  loyaltyRows: {
+    ...M15PW.loyaltyRows!,
+    stripeAHex: BORDERLESS_PW_STRIPE_A,
+    stripeBHex: BORDERLESS_PW_STRIPE_B,
+  },
+  loyalty: { ...M15PW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspw/loyalty/{color}.png" },
+};
+/** How far Card Conjurer's TALL planeswalker masters draw the type bar and
+ *  the ability window above the regular ones: the type bar's top edge at
+ *  1022 px vs 1160 px on every colour of both packs (CC type y 0.4967 vs
+ *  0.5625, first ability 0.5581 vs 0.6239, set symbol 0.5234 vs 0.5891), as
+ *  a percent of the card's height. */
+export const TALL_WALKER_SHIFT_PCT = (138 / 2100) * 100;
+// …and its tall twin (Card Conjurer 'Tall Borderless', packPlaneswalker
+// TallBorderless.js): the same master with the type bar and the ability
+// window's top 138 px higher, for four ability rows (Teferi, Master of Time
+// M21 #281; Liliana, Dreadhorde General FDN #359; Ajani, Sleeper Agent DMU
+// #375). The title, rail, shield, bottom bar and footer stay put; the type
+// slot, the set symbol and the rules box's top move up with the bar.
+const M15BORDERLESSPWTALL: FrameProfile = {
+  ...M15BORDERLESSPW,
+  label: "M15 Borderless Planeswalker, tall",
+  type: {
+    ...M15BORDERLESSPW.type,
+    rect: { ...M15BORDERLESSPW.type.rect, topPct: M15BORDERLESSPW.type.rect.topPct - TALL_WALKER_SHIFT_PCT },
+  },
+  symbolRect: {
+    ...M15BORDERLESSPW.symbolRect!,
+    topPct: M15BORDERLESSPW.symbolRect!.topPct - TALL_WALKER_SHIFT_PCT,
+  },
+  rules: {
+    ...M15BORDERLESSPW.rules,
+    rect: {
+      ...M15BORDERLESSPW.rules.rect,
+      topPct: M15BORDERLESSPW.rules.rect.topPct - TALL_WALKER_SHIFT_PCT,
+      heightPct: M15BORDERLESSPW.rules.rect.heightPct + TALL_WALKER_SHIFT_PCT,
+    },
+  },
+  loyalty: { ...M15BORDERLESSPW.loyalty!, plateAssetPathTemplate: "/frames/m15borderlesspwtall/loyalty/{color}.png" },
 };
 
 // Alpha Land — the 1993 frame's land variant ({color}lcard from
@@ -3303,6 +3529,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
   },
+  // TODO 4.52: the emblem (M20 design).
+  emblem: EMBLEM,
   // TODO 4.48 / 4.50: the full-art tokens. Their masters are clear almost
   // everywhere, so the creator's tile draws its sample art (4.45).
   m20token: { ...M20TOKEN, pickerSampleArt: true },
@@ -3320,6 +3548,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   },
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
+  m15borderlessland: M15BORDERLESSLAND,
+  m15borderlesspw: M15BORDERLESSPW,
+  m15borderlesspwtall: M15BORDERLESSPWTALL,
   m15snow: M15SNOW,
   m15devoid: M15DEVOID,
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,

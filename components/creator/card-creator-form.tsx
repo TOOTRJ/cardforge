@@ -65,6 +65,7 @@ import {
   type AiFillOptions,
 } from "@/components/creator/ai-fill-dialog";
 import {
+  EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
   type CardFillField,
   type CardFillLocked,
@@ -180,6 +181,9 @@ import {
   planKindChange,
   followTokenName,
   followTokenTextBox,
+  followWalkerRows,
+  walkerRowCount,
+  TALL_WALKER_MIN_ROWS,
   supertypeEnteringToken,
   supertypeLeavingToken,
   textBoxFrameFor,
@@ -189,6 +193,13 @@ import {
   type FrameColorKey,
   type KindChangePatch,
   type KindChangePlan,
+} from "@/lib/creator/card-kinds";
+// The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
+import {
+  EMBLEM_ENTRY_VALUES,
+  frameColorKeyForKind,
+  kindHidesRarity,
+  titleEnteringEmblem,
 } from "@/lib/creator/card-kinds";
 import {
   defaultTokenFrameIn,
@@ -1041,9 +1052,46 @@ export function CardCreatorForm({
     setValue,
     verifiedFrameKeys,
   ]);
+  // The borderless planeswalker's tall box follows the ability rows (frames
+  // plan 4.33): four rows or more wear the tall frame, fewer the regular one
+  // (walkerRowsFrameFor). Real edits only (isDirty), on the planeswalker
+  // kind, when the row count crosses the line; only between the two
+  // borderless walkers (m15pw and every other frame stay put). Never an
+  // unverified combo (the card keeps its frame and says so), never an
+  // admin's saved frame preview, and never the walk-through's combo under
+  // test (settleTokenTextFollow({ manual: true }) pins it).
+  // The rows the renderers draw: the row editor's (the rows with text),
+  // else a line of the rules text each (walkerRowCount, as liveFaceContent
+  // below).
+  const walkerTall =
+    walkerRowCount({ editorRows: watched.loyalty_abilities, rulesText: watched.rules_text }) >=
+    TALL_WALKER_MIN_ROWS;
+  const lastWalkerTallRef = useRef(walkerTall);
+  const walkerRowsPinnedRef = useRef(false);
+  useEffect(() => {
+    if (lastWalkerTallRef.current === walkerTall) return;
+    lastWalkerTallRef.current = walkerTall;
+    if (!isDirty || kind !== "planeswalker" || tokenFramePinned || walkerRowsPinnedRef.current) return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const next = followWalkerRows({
+      kind,
+      template: current,
+      rows: walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }),
+    });
+    if (!next) return;
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) {
+      toast.info(
+        `${describeFrame(next)} isn't verified in ${colorWord(colorKey)} yet — keeping ${describeFrame(current)}.`,
+      );
+      return;
+    }
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [kind, walkerTall, isDirty, tokenFramePinned, getValues, setValue, verifiedFrameKeys]);
   /** An import or an AI fill that wrote the card's frame AND its text:
    *  that frame stands — the follow starts again from here, automatic (or,
-   *  for the admin walk-through's combo under test, `manual`). */
+   *  for the admin walk-through's combo under test, `manual`). The same for
+   *  the borderless planeswalker's rows (4.33): `manual` pins the combo. */
   const settleTokenTextFollow = ({ manual = false }: { manual?: boolean } = {}) => {
     lastTokenTextRef.current = {
       kind: kindFromCard(getValues("card_type"), getValues("frame_style.template")),
@@ -1058,6 +1106,10 @@ export function CardCreatorForm({
       }),
     };
     manualTokenFrameRef.current = manual;
+    lastWalkerTallRef.current =
+      walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }) >=
+      TALL_WALKER_MIN_ROWS;
+    walkerRowsPinnedRef.current = manual;
     setTokenDefaultFrame(false);
   };
 
@@ -1248,9 +1300,11 @@ export function CardCreatorForm({
     // planned template in this colour, else another published frame of the
     // kind in this colour, else the planned template in a colour it has —
     // and say which of those happened. Never an unpublished pair.
-    const currentColorKey = pickFrameColorKey(
-      getValues("color_identity"),
-    ) as FrameColorKey;
+    // An emblem's frame is silver in every colour: it resolves in `c`.
+    const currentColorKey = frameColorKeyForKind(
+      kindFromCard(patch.card_type, patch.template),
+      pickFrameColorKey(getValues("color_identity")) as FrameColorKey,
+    );
     const resolution = resolvePublishedFrame({
       kind: kindFromCard(patch.card_type, patch.template),
       candidates: [patch.template],
@@ -1373,6 +1427,27 @@ export function CardCreatorForm({
         shouldDirty: true,
       });
       setValue("rarity", "common", { shouldDirty: true });
+    }
+    // An emblem has no colour, cost, supertype, stats or rarity (TODO 6.23):
+    // they clear on the way in, and so does its optional subtype (a token's
+    // "Soldier" would print "Emblem — Soldier"); the rules and art stay. So
+    // does the name — unless it only restated the token's subtypes (the
+    // name-follow's "Soldier"): an emblem is named after its walker, and a
+    // stale "Soldier" over the emblem went unnoticed (titleEnteringEmblem).
+    if (nextKind === "emblem" && prevKind !== "emblem") {
+      const title = getValues("title") ?? "";
+      const kept = titleEnteringEmblem({
+        title,
+        subtypes: parseSubtypes(getValues("subtypes_text") ?? ""),
+        lastAuto: autoTokenTitleRef.current,
+      });
+      if (kept !== title) setValue("title", kept, { shouldDirty: true });
+      autoTokenTitleRef.current = null;
+      for (const [field, value] of Object.entries(EMBLEM_ENTRY_VALUES)) {
+        setValue(field as keyof FormValues, (Array.isArray(value) ? [...value] : value) as never, {
+          shouldDirty: true,
+        });
+      }
     }
     // A NEW token entered on the arch is the default switch's (the text
     // follow's effect puts it on newTokenFrame's pick); leaving the token
@@ -2455,7 +2530,7 @@ export function CardCreatorForm({
     // REMIX of a token (owner 2026-09-29): it saves a new card, and its
     // parent's rarity can't be seen or changed there. A stored token keeps
     // its rarity (edits never send a hidden change).
-    const tokenRarity = submitKind === "token" && !isEdit;
+    const tokenRarity = kindHidesRarity(submitKind) && !isEdit;
 
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
@@ -2793,7 +2868,7 @@ export function CardCreatorForm({
   // A new token (or a token's remix) previews as it saves: common (TODO
   // 3b.15; see onSubmit).
   const rarityForPreview =
-    kind === "token" && !isEdit
+    kindHidesRarity(kind) && !isEdit
       ? "common"
       : watched.rarity === ""
         ? null
@@ -3067,7 +3142,7 @@ export function CardCreatorForm({
             {stepKey === "identity" ? (
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
-                <IdentityPanel revise={isRevise} token={kind === "token"} />
+                <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
                 {/* The printed-details switches (TODO 4.6.0): the crown
                     beside the Legendary supertype; on an edit or a remix —
                     whose Card step is locked — the two-colour frame too.
@@ -3129,7 +3204,7 @@ export function CardCreatorForm({
                     the token kind hides the chips (owner 2026-09-29) — a
                     new token (and a token's remix) is common, a stored one
                     keeps its rarity. */}
-                {kind !== "token" ? <RarityPanel /> : null}
+                {!kindHidesRarity(kind) ? <RarityPanel /> : null}
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land
@@ -3255,6 +3330,7 @@ export function CardCreatorForm({
             onGenerate={(options) => void handleAiFill(options)}
             myDecks={aiDecks ?? myDecks}
             canDesignForDeck={canDesignForDeck}
+            hiddenFields={kind === "emblem" ? EMBLEM_UNFILLED_FIELDS : undefined}
           />
           <CardIdeasDialog
             open={ideasOpen}

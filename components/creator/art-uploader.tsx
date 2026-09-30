@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { uploadCardArtServerAction } from "@/lib/cards/upload-art-server";
+import { uploadCardArtFile } from "@/lib/cards/art-upload-client";
+import { CARD_ART_MAX_LABEL, CARD_ART_MIME_TYPES, cardArtFileProblem } from "@/lib/cards/art-upload-limits";
 import { cn, clamp } from "@/lib/utils";
 import type { ArtPosition } from "@/types/card";
 
@@ -38,15 +39,11 @@ import type { ArtPosition } from "@/types/card";
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;
-const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,image/gif";
+const ACCEPTED_TYPES = CARD_ART_MIME_TYPES.join(",");
 const ASPECT_RATIO_CLASS = "aspect-[5/4]";
 // Pointer must travel this far before a press becomes a pan — so a plain
 // click (or a tap) never nudges the framing.
 const DRAG_THRESHOLD_PX = 3;
-// Mirror the server's byte cap so we fail fast on an oversized drop/paste
-// before spending the upload round-trip. The server (upload-art-server.ts) is
-// still the source of truth.
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 type ArtUploaderProps = {
   userId: string | null;
@@ -136,27 +133,23 @@ export function ArtUploader({
         toast.info("Hang on — an upload is already in progress.");
         return;
       }
-      // Cheap client-side gates to short-circuit obviously-wrong files
-      // before the network round-trip. The real validation lives in the
-      // server action — Sharp decodes the bytes and rejects anything
-      // that isn't a real PNG / JPEG / WebP / GIF within the size cap.
-      if (!file.type.startsWith("image/")) {
-        toast.error("That doesn't look like an image.");
-        return;
-      }
-      if (file.size > MAX_FILE_BYTES) {
-        toast.error("That image is over 8 MB. Pick a smaller file.");
+      // Cheap client-side gates (lib/cards/art-upload-limits.ts: an image,
+      // PNG / JPEG / WebP / GIF, up to 20 MB) to short-circuit obviously-
+      // wrong files before the network round-trip. The real validation
+      // lives on the server — the finish action decodes the bytes with Sharp
+      // and rejects anything that isn't a real image within the size cap.
+      const problem = cardArtFileProblem(file);
+      if (problem) {
+        toast.error(problem);
         return;
       }
       uploadingRef.current = true;
       setUploading(true);
       try {
-        // Pass the File via FormData. Server actions accept FormData
-        // arguments natively in Next.js — the file streams over the
-        // wire without us having to base64 it ourselves.
-        const formData = new FormData();
-        formData.append("file", file);
-        const result = await uploadCardArtServerAction(formData);
+        // start → PUT to the private staging bucket → finish
+        // (lib/cards/art-upload-client.ts): a print-size file is too big for
+        // a server action's body on Vercel (4.5 MB). Never throws.
+        const result = await uploadCardArtFile(file);
         // Bail if the panel unmounted mid-upload — writing to the (now dead)
         // form would warn and land nowhere useful.
         if (!mountedRef.current) return;
@@ -436,7 +429,7 @@ export function ArtUploader({
           Artwork
         </span>
         <span className="text-[11px] text-subtle">
-          PNG · JPEG · WebP · GIF · up to 8 MB
+          PNG · JPEG · WebP · GIF · up to {CARD_ART_MAX_LABEL}
         </span>
       </div>
 

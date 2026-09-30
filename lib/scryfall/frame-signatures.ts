@@ -10,6 +10,8 @@ import {
   borrowedTypeWord,
   templateIsBasicOnly,
   templateSupportsKind,
+  walkerRowCount,
+  walkerRowsFrameFor,
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
@@ -222,6 +224,115 @@ export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = 
   tust: ["18"],
 };
 
+/** Borderless nonbasic lands that print the SPELLS' look — the colour's
+ *  title bar over a DARK type bar and text box, m15borderless's master —
+ *  not the tinted type bar and box of 4.34's m15borderlessland. Scryfall
+ *  can't tell the two apart (both carry `inverted`), so they are pinned:
+ *  every borderless nonbasic land the registry resolved `exact` (117
+ *  printings, Scryfall 2026-09-29) was read against its print by eye (31
+ *  are dark), plus the two-colour runs of the sets that print the dark look
+ *  throughout (ACR, FRA #397–401, WOE). Not pinned: the crowned and
+ *  nicknamed LTC / LTR / HOC lands, most of them dark too — their crown and
+ *  nickname gaps already make them `nearest` (4.6 / 6.3 re-check them). */
+export const BORDERLESS_LAND_DARK_PINS: Readonly<Record<string, readonly string[]>> = {
+  acr: ["111", "112", "114", "115", "116"],
+  eoe: ["316"],
+  fic: ["462"],
+  fra: ["379", "397", "398", "399", "400", "401"],
+  hob: ["207"],
+  hoc: ["8", "97"],
+  lci: ["410a", "410b", "410c", "410d", "410e", "410f"],
+  pmei: ["2026-13"],
+  sld: ["914", "917", "1994", "2310", "2626", "2652", "2699", "2818", "7063", "7064", "7067", "7097", "7104"],
+  tdm: ["393", "394", "395", "396", "397"],
+  woe: ["303", "304", "305", "306", "307"],
+};
+
+/** Borderless nonbasic lands that print a third look: the colour's title
+ *  bar and TINTED text box of 4.34's m15borderlessland, but a DARK type bar
+ *  between them (a black gradient under the colour's pinline). Found by the
+ *  second skeptic pass (2026-09-29), reading the title, type and box bands
+ *  of every `exact` borderless nonbasic land side by side: Roiling Canopy
+ *  FRA #380, Theorist's Sanctum FRA #381 (both had been references), Path
+ *  of Ancestry SLD #250, Command Tower SLD #1989, Mystic Sanctuary SLD
+ *  #2143 and the bonus Rogue's Passage SLD #7112. Pinned like the others:
+ *  Scryfall carries `inverted` on all three looks. */
+export const BORDERLESS_LAND_DARK_TYPE_BAR_PINS: Readonly<Record<string, readonly string[]>> = {
+  fra: ["380", "381"],
+  sld: ["250", "1989", "2143", "7112"],
+};
+
+/** Borderless nonbasic lands that print the SHORT text box (4.37's short
+ *  and mid boxes: the type bar at ~70 %H, not 56 %H) among the ones the
+ *  registry resolved `exact` (checked by eye, 2026-09-29): the SNC triomes
+ *  and SLD #469–472. The two-colour short-box lands (UNF's shocks, SLD
+ *  #456–460) are `nearest` on their two-colour gap (4.56 pins them before
+ *  it closes). */
+export const BORDERLESS_LAND_SHORT_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
+  snc: ["291", "292", "293", "294", "295"],
+  sld: ["469", "470", "471", "472"],
+};
+
+/** Posters Scryfall doesn't flag `poster`: The Lonely Mountain HOB #284 is
+ *  the surge-foil twin of HOB #248's artist-lettered book cover (checked by
+ *  eye 2026-09-29), which carries the promo type. */
+const UNFLAGGED_POSTER_PINS: Readonly<Record<string, readonly string[]>> = {
+  hob: ["284"],
+};
+
+/** The mono-black borderless planeswalkers that print Card Conjurer's
+ *  light black dress — light grey name and type bars with dark ink, the
+ *  m15borderlesspw / m15borderlesspwtall `b` masters (4.33). Most black
+ *  borderless walkers print dark bars with white ink instead (M21 #282, DMU
+ *  #373, VOW #278, INR #322, FDN #359, FRA #303, 2X2 #333, WOE #297, SOS
+ *  #282; checked by eye on the Scryfall scans 2026-09-29), and no Scryfall
+ *  field tells them apart (`inverted` doesn't: FDN #359 and M21 #282 carry
+ *  none), so the light ones are pinned and every other mono-black walker is
+ *  the `dark-bars` gap. Every mono-black borderless walker's title ink was
+ *  checked on the scans (2026-09-29): these six print dark ink on light
+ *  bars. BLC #78 is NOT one — its dark bars print white ink over pale art,
+ *  so they only look light. SLD #1593 is the nickname gap's either way. */
+export const LIGHT_BLACK_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  afr: ["284"],
+  stx: ["276"],
+  cmr: ["512"],
+  med: ["RA3", "GR2"],
+  sld: ["1593"],
+};
+
+/** Borderless planeswalkers outside mono-black that print the dark dress —
+ *  dark name and type bars with white ink — with no `inverted` flag: the
+ *  SDCC 2019 Nicol Bolas, Dragon-God (PS19 #207, gold rims). Found by a
+ *  title- and type-bar luminance sweep of every borderless walker scan,
+ *  checked by eye (4.33 skeptic, 2026-09-29). */
+export const DARK_BAR_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  ps19: ["207"],
+};
+
+/** Borderless planeswalkers whose PRINTED ability box is not the one their
+ *  rows pick (walkerRowCount, TALL_WALKER_MIN_ROWS): Gideon Blackblade MED
+ *  #WS2 sets its two statics in two rows on the tall box, Comet, Stellar
+ *  Pup UNF #275 / #526 its die-roll table on the tall box, and Nicol Bolas,
+ *  Dragon-God PS19 #207 four rows (a static + three abilities) on the
+ *  regular one. The type-bar height of every borderless walker scan was
+ *  checked against the pick (4.33 skeptic, 2026-09-29): 206 of the 210 the
+ *  borderless/planeswalker rule matches print the box it picks; these four
+ *  don't. The creator follows the rows (no pick to pin), so they are
+ *  `nearest`, never a pinned box. */
+export const WALKER_ROW_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
+  med: ["WS2"],
+  unf: ["275", "526"],
+  ps19: ["207"],
+};
+
+/** Borderless planeswalkers that letter the card's name across the art in
+ *  place of a name bar (Secret Lair: Tezzeret the Seeker SLD #1619, Nicol
+ *  Bolas, Planeswalker SLD #1622) — no Scryfall field says so (no `poster`
+ *  promo, no frame effect). */
+export const LETTERED_NAME_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  sld: ["1619", "1622"],
+};
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -306,6 +417,10 @@ type Match = {
   collectors?: Readonly<Record<string, readonly Range[]>>;
   /** Per-set exact collector numbers ("UGL-84" on The List). */
   collectorIds?: Readonly<Record<string, readonly string[]>>;
+  /** …and the printings NOT among these. */
+  notCollectorIds?: Readonly<Record<string, readonly string[]>>;
+  /** The front face's frame colours are exactly these WUBRG letters. */
+  colorsExactly?: readonly string[];
   kinds?: readonly CardKind[];
   notKinds?: readonly CardKind[];
   /** The kind is undefined (no card type PipGlyph makes). */
@@ -444,6 +559,11 @@ function matches(match: Match, ctx: Ctx): boolean {
     const ids = match.collectorIds[ctx.set];
     if (!ids || !ids.includes(ctx.collector)) return false;
   }
+  if (match.notCollectorIds?.[ctx.set]?.includes(ctx.collector)) return false;
+  if (match.colorsExactly) {
+    const want = [...match.colorsExactly].sort().join("");
+    if ([...facts.colors].sort().join("") !== want) return false;
+  }
   if (match.noKind && facts.kind !== undefined) return false;
   if (match.kinds && (!facts.kind || !match.kinds.includes(facts.kind))) return false;
   if (match.notKinds && facts.kind && match.notKinds.includes(facts.kind)) return false;
@@ -487,6 +607,12 @@ export function printsTokenTextBox(card: Pick<ScryfallCard, "oracle_text" | "fla
   const text = (face ? face.oracle_text : card.oracle_text) ?? "";
   const flavor = (face ? face.flavor_text : card.flavor_text) ?? "";
   return text.trim() !== "" || flavor.trim() !== "";
+}
+
+/** The front face's rules text (a planeswalker's ability rows, 4.33). */
+function frontOracleText(card: Pick<ScryfallCard, "oracle_text" | "card_faces">): string {
+  const face = card.card_faces?.[0];
+  return (face ? face.oracle_text : card.oracle_text) ?? "";
 }
 
 /** The full-art token template a printing wears (TODO 4.48 / 4.50): the
@@ -561,23 +687,30 @@ const FAMILIES: Record<
       return "m15";
     },
   },
-  // The 2019+ borderless dress (4.32) where it exists; the bordered M15
-  // standard for the kinds it can't dress yet (4.33–4.38).
+  // The 2019+ borderless dress (4.32, the planeswalkers 4.33, and 4.34's
+  // land) where it exists; the bordered M15 standard for the kinds it can't
+  // dress yet (4.35–4.38). A planeswalker takes the tall box for four
+  // ability rows or more (walkerRowsFrameFor), as the prints do.
   borderless: {
     produces: [
-      "saga", "adventure", "split", "aftermath", "flip", "m15token", "m15land",
-      "m15pw", "battle", "m15borderlessartifact", "m15borderless",
+      "saga", "adventure", "split", "aftermath", "flip", "m15token",
+      "m15borderlessland", "m15borderlesspwtall", "m15borderlesspw", "battle",
+      "m15borderlessartifact", "m15borderless",
     ],
-    pick: ({ facts }) => {
+    pick: ({ card, facts }) => {
       const layout = layoutTemplateOf(facts.kind);
       if (layout) return layout;
       switch (facts.kind) {
         case "token":
           return "m15token";
         case "land":
-          return "m15land";
+          return "m15borderlessland";
         case "planeswalker":
-          return "m15pw";
+          return walkerRowsFrameFor(
+            "planeswalker",
+            "m15borderlesspw",
+            walkerRowCount({ rulesText: frontOracleText(card) }),
+          );
         case "battle":
           return "battle";
         default:
@@ -666,6 +799,11 @@ function kindFallback(ctx: Ctx): FrameTemplate {
 const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15borderless: "m15",
   m15borderlessartifact: "m15artifact",
+  m15borderlessland: "m15land",
+  // The bordered walker has the regular rows' window; with four rows or
+  // more its rows are just shorter (3.13).
+  m15borderlesspw: "m15pw",
+  m15borderlesspwtall: "m15pw",
 };
 
 // ---------------------------------------------------------------------------
@@ -693,6 +831,13 @@ type GapKey =
   | "nyx-dress"
   | "nyx"
   | "light-box"
+  | "dark-type-and-box"
+  | "dark-type-bar"
+  | "short-box"
+  | "inverted"
+  | "dark-bars"
+  | "lettered-name"
+  | "row-box"
   | "tall-box";
 
 const BORDER_WORD: Record<string, string> = {
@@ -820,6 +965,60 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "this printing has the light text box, and PipGlyph's has the dark one",
     blockedBy: "4.37",
   },
+  // The borderless land's print variations the registry can't read from
+  // Scryfall's fields (4.34's skeptic passes): pinned.
+  "dark-type-and-box": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_DARK_PINS },
+    reason: "this printing's type bar and text box are dark, and PipGlyph's Borderless Land tints them",
+    blockedBy: "4.37",
+  },
+  "dark-type-bar": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_DARK_TYPE_BAR_PINS },
+    reason: "this printing's type bar is dark, and PipGlyph's Borderless Land tints it",
+    blockedBy: "4.37",
+  },
+  "short-box": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_SHORT_BOX_PINS },
+    reason: "this printing has the short text box, and PipGlyph's has the regular one",
+    blockedBy: "4.37",
+  },
+  // The borderless planeswalker's two (4.33). `inverted` (46 of the 245
+  // non-showcase printings) stays the light frame's nearest, as the owner
+  // decided on 2026-09-26 — although the scans checked (WOE #297, ECL
+  // #284, FRA #291 / #300 / #303, SOS #282, 2X2 #333, MKM #335, DSK #328,
+  // TDM #398, EOE #287) print the same light rows as the rest; BLC's
+  // raised-foil inverted walkers (#93 blue, #94 black, #96 green) print dark
+  // name and type bars with white ink in any colour. And a mono-black
+  // walker off the pinned light ones prints dark name and type bars with
+  // white ink (LIGHT_BLACK_WALKER_PINS).
+  inverted: {
+    match: { effectsAny: ["inverted"] },
+    reason: "Scryfall marks this printing's frame inverted, which PipGlyph's borderless planeswalker doesn't claim to match yet",
+    blockedBy: "4.33",
+  },
+  "dark-bars": {
+    match: {
+      anyOf: [
+        { colorsExactly: ["B"], notCollectorIds: LIGHT_BLACK_WALKER_PINS },
+        { collectorIds: DARK_BAR_WALKER_PINS },
+      ],
+    },
+    reason: "this printing has dark name and type bars with white ink, and PipGlyph's borderless planeswalker has light ones",
+    blockedBy: "4.33",
+  },
+  // Two more the scans found that no Scryfall field names: a name lettered
+  // across the art (LETTERED_NAME_WALKER_PINS), and an ability box that
+  // isn't the one the rows pick (WALKER_ROW_BOX_PINS).
+  "lettered-name": {
+    match: { collectorIds: LETTERED_NAME_WALKER_PINS },
+    reason: "this printing letters its name across the art, and PipGlyph's borderless planeswalker has a name bar",
+    blockedBy: "4.33",
+  },
+  "row-box": {
+    match: { collectorIds: WALKER_ROW_BOX_PINS },
+    reason: "this printing sets its abilities on the other ability box (regular or tall) than the one PipGlyph picks for its rows",
+    blockedBy: "4.33",
+  },
 };
 
 /** The base rule, preceded by one `nearest` rule per gap ('era/2015+crown').
@@ -936,7 +1135,78 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "unsupported",
       template: "m15",
-      reason: "PipGlyph doesn't make this kind of card (emblems, planes, schemes)",
+      reason: "PipGlyph doesn't make this kind of card (planes, schemes, vanguards)",
+    },
+  },
+
+  // --- 6.23 / 4.52: emblems (layout `emblem`, the emblem kind) -------------
+  // 141 printed (Scryfall `t:emblem`, 2026-09-29). The one-offs PipGlyph
+  // won't build (4.52's "not planned", logged for 1.6): the Universes
+  // Beyond full-bleed emblems (TACR #7, TFIN #24, WFIN #1), The Ring's two
+  // faces (TLTR #H13, `double_faced_token`) and the Mystery Booster playtest
+  // card (MB2 #513). They import on the emblem kind, nearest its frame.
+  {
+    key: "emblem/one-off",
+    exactLabel: ({ card }) =>
+      (card.layout ?? "").toLowerCase() === "double_faced_token"
+        ? "Double-faced emblem"
+        : (card.promo_types ?? []).includes("playtest")
+          ? "Playtest emblem"
+          : "Universes Beyond full-bleed emblem",
+    match: {
+      kinds: ["emblem"],
+      anyOf: [{ layouts: ["double_faced_token"] }, { promosAny: ["universesbeyond", "playtest"] }],
+    },
+    outcome: {
+      status: "unsupported",
+      template: "emblem",
+      reason: "PipGlyph doesn't make this one-off emblem design; the import uses its emblem frame",
+    },
+  },
+  // The first emblems (DKA 2012 → BNG / MD1 2014; 13 printings) print a
+  // gold-rimmed "EMBLEM" plaque on the 2003 frame: 4.43 with the old
+  // borders (4.52, P3).
+  {
+    key: "emblem/old-frame",
+    exactLabel: ({ frame }) => `${frame} frame emblem`,
+    match: { kinds: ["emblem"], frames: ["1993", "1997", "2003"] },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "PipGlyph has no emblem frame for this border era yet",
+      blockedBy: "4.43",
+    },
+  },
+  // M15 → MH1 (2014-07-18 → 2019-05-30, and The List's pre-M20 prefixes:
+  // isM20DesignPrinting, the tokens' rule) print a black "EMBLEM" bar and
+  // "Emblem — Ajani": 4.52's later variant (P3, only if people ask).
+  {
+    key: "emblem/2014-19",
+    exactLabel: "2014–19 emblem frame",
+    match: { kinds: ["emblem"], frames: ["2015"], m20Design: false },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "PipGlyph draws today's emblem frame, not the 2014–19 one with the EMBLEM bar",
+      blockedBy: "4.52",
+    },
+  },
+  // M20 on (2019-07-12): today's emblem — the source's name in the dark
+  // bar, the spark cut-out, "Emblem" on the type bar. This is 4.52's frame.
+  {
+    key: "emblem/m20",
+    exactLabel: "Emblem frame",
+    match: { kinds: ["emblem"], frames: ["2015"], m20Design: true },
+    outcome: { status: "exact", template: "emblem" },
+  },
+  {
+    key: "emblem/other",
+    exactLabel: ({ frame }) => (frame ? `${frame} frame emblem` : "Emblem"),
+    match: { kinds: ["emblem"] },
+    outcome: {
+      status: "nearest",
+      template: "emblem",
+      reason: "Scryfall reports a frame PipGlyph doesn't know",
     },
   },
   {
@@ -966,7 +1236,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   {
     key: "borderless/poster",
     exactLabel: "Artist-lettered borderless poster",
-    match: { borders: ["borderless"], promosAny: ["poster"] },
+    match: {
+      borders: ["borderless"],
+      anyOf: [{ promosAny: ["poster"] }, { collectorIds: UNFLAGGED_POSTER_PINS }],
+    },
     outcome: {
       status: "unsupported",
       template: { family: "borderless" },
@@ -1129,28 +1402,47 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "5.7",
     },
   },
-  {
-    key: "borderless/planeswalker",
-    exactLabel: "Borderless planeswalker",
-    match: { borders: ["borderless"], kinds: ["planeswalker"] },
-    outcome: {
-      status: "nearest",
-      template: "m15pw",
-      reason: "PipGlyph doesn't have the borderless planeswalker frame yet",
-      blockedBy: "4.33",
+  // The light borderless planeswalker (4.33; 199 of the 245 non-showcase
+  // printings: Oko ELD #271, Basri Ket M21 #280), regular or tall by its
+  // ability rows. Like every edge-to-edge frame it lands on its bordered
+  // twin, m15pw (1.18), and is exact only once verified in the card's colour
+  // (withVerification). `inverted` printings (Ashiok WOE #297, Ajani ECL
+  // #284) are the light frame's nearest (owner decision 2026-09-26), the
+  // dark-barred black walkers too (LIGHT_BLACK_WALKER_PINS; PS19 #207 in
+  // gold), a two-colour walker's split frame (Oko, Saheeli BRO #294) is
+  // 4.6's, and — last, so no earlier key moves — a lettered name (SLD #1619
+  // / #1622) and a printed box the rows don't pick (MED #WS2, UNF #275 /
+  // #526, PS19 #207).
+  ...withGaps(
+    {
+      key: "borderless/planeswalker",
+      exactLabel: "Borderless planeswalker",
+      match: { borders: ["borderless"], kinds: ["planeswalker"] },
+      outcome: { status: "exact", template: { family: "borderless" } },
     },
-  },
-  {
-    key: "borderless/land",
-    exactLabel: "Borderless land",
-    match: { borders: ["borderless"], kinds: ["land"] },
-    outcome: {
-      status: "nearest",
-      template: "m15land",
-      reason: "PipGlyph doesn't have the borderless land frame yet",
-      blockedBy: "4.34",
+    ["inverted", "dark-bars", "etched", "nickname", "colour-indicator", "two-colour", "two-colour-hybrid", "lettered-name", "row-box"],
+  ),
+  // A nonbasic land (4.34): the borderless land frame — exact once it is
+  // verified in the card's colour (withVerification: `nearest`, "not yet
+  // verified", until then), and like the spells' frame its art reaches the
+  // card edge, so the import lands on the bordered land frame (1.18) with
+  // Borderless Land offered once verified. The two-colour lands — most of
+  // them: MID #281, OTJ #304, the RVR shocks, the MKM surveil lands — print
+  // a split pinline and box on grey bars, 4.6's pair masters: nearest on
+  // the gold `m` until then, like the two-colour spells. Three print
+  // variations are pinned `nearest` (Scryfall has no field for any):
+  // the spells' dark type bar and box (TDM, WOE, ACR, EOE, many SLD drops),
+  // a dark type bar alone over the tinted box (FRA #380–381, four SLD
+  // drops) and the short box (the SNC triomes) — 4.37's variants.
+  ...withGaps(
+    {
+      key: "borderless/land",
+      exactLabel: "Borderless land",
+      match: { borders: ["borderless"], kinds: ["land"] },
+      outcome: { status: "exact", template: { family: "borderless" } },
     },
-  },
+    ["etched", "nickname", "crown", "nyx", "two-colour", "two-colour-hybrid", "short-box", "dark-type-and-box", "dark-type-bar", "light-box"],
+  ),
   {
     key: "borderless/layout",
     exactLabel: "Borderless layout card",
@@ -1959,7 +2251,11 @@ const WUBRG = ["W", "U", "B", "R", "G"] as const;
 //   • "gold" — fetch lands for "a basic land card" that print the gold land
 //     frame although Scryfall lists no mana and no identity (Fabled Passage
 //     ELD #244, Prismatic Vista MH1 #244; checked 2026-09-28). Evolving Wilds
-//     (MSC #240) prints the grey colourless frame and needs no entry.
+//     (MSC #240) prints the grey colourless frame and needs no entry. So
+//     does Multiversal Passage — "choose a basic land type", no mana listed
+//     — on every printing (SPM #180, OM1 #181, the borderless SPM #206;
+//     checked 2026-09-29, 4.34's survey: it was the one borderless land the
+//     registry called exact in the wrong colour).
 const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless" | "gold"> = new Map([
   ["Vivid Crag", "identity"],
   ["Vivid Creek", "identity"],
@@ -1973,6 +2269,7 @@ const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless" | "gold
   ["Urborg, Tomb of Yawgmoth", "colorless"],
   ["Fabled Passage", "gold"],
   ["Prismatic Vista", "gold"],
+  ["Multiversal Passage", "gold"],
 ]);
 
 const BASIC_TYPE_LETTER: Record<string, string> = {

@@ -196,6 +196,75 @@ describe("importFramePlan — borderless (1.18: lands on the bordered frame, Bor
   });
 });
 
+describe("importFramePlan — the borderless land (4.34)", () => {
+  const LAND = new Set([...STANDARD, ...verified("m15borderlessland")]);
+
+  it("an exact borderless land (Arena of Glory MH3 #351) asks: the land frame preselected, Borderless Land listed once verified", () => {
+    const plan = importFramePlan(namedPatch("mh3-351", LAND), LAND, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land" });
+    expect(plan.heading).toBe("PipGlyph has the Borderless land frame, but Scryfall's art won't fill it — pick one of these");
+    expect(plan.preselected).toEqual({ template: "m15land" });
+    expect(plan.windowCroppedNote).toBe(WINDOW_CROPPED_NOTE);
+    expect(plan.options.map((o) => o.template)).toEqual(["m15land", "m15borderlessland"]);
+    expect(plan.options[1]).toMatchObject({ nearest: false, edgeToEdge: true });
+  });
+
+  it("…and only the land frame while Borderless Land is unverified in red", () => {
+    const plan = importFramePlan(namedPatch("mh3-351", STANDARD), STANDARD, "m15");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "nearest", reason: "not yet verified in red" });
+    expect(plan.options.map((o) => o.template)).toEqual(["m15land"]);
+    expect(plan.preselected).toEqual({ template: "m15land" });
+  });
+
+  it("a two-colour land (Deserted Beach MID #281): the gold Borderless Land offered as the nearest look (4.6's split pinline)", () => {
+    const plan = importFramePlan(namedPatch("mid-281", LAND), LAND, "m15land");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "nearest", template: "m15borderlessland" });
+    expect(plan.heading).toBe("PipGlyph can't match this printing's Borderless land exactly yet — pick one of these");
+    expect(plan.options.map((o) => o.template)).toEqual(["m15land", "m15borderlessland"]);
+    expect(plan.keepCurrent).toEqual({ template: "m15land", available: true, reason: null });
+  });
+});
+
+describe("importFramePlan — the borderless planeswalkers (4.33)", () => {
+  const WALKERS = new Set([...STANDARD, ...verified("m15borderlesspw", "m15borderlesspwtall")]);
+
+  it("Teferi M21 #281 (four rows): m15pw preselected, the TALL borderless walker offered — never the regular one", () => {
+    const plan = importFramePlan(namedPatch("m21-281", WALKERS), WALKERS, "m15pw");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    expect(plan.match).toMatchObject({ status: "exact", template: "m15borderlesspwtall", landOn: "m15pw" });
+    expect(plan.preselected).toEqual({ template: "m15pw" });
+    expect(plan.windowCroppedNote).toBe(WINDOW_CROPPED_NOTE);
+    const all = [...plan.options, ...plan.moreOptions].map((o) => o.template);
+    expect(all).toContain("m15borderlesspwtall");
+    expect(all).not.toContain("m15borderlesspw");
+    expect(plan.heading).toBe(
+      "PipGlyph has the Borderless planeswalker frame, but Scryfall's art won't fill it — pick one of these",
+    );
+  });
+
+  it("Basri Ket M21 #280 (three rows): the regular one, never the tall one", () => {
+    const plan = importFramePlan(namedPatch("m21-280", WALKERS), WALKERS, "m15pw");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    const all = [...plan.options, ...plan.moreOptions].map((o) => o.template);
+    expect(all).toContain("m15borderlesspw");
+    expect(all).not.toContain("m15borderlesspwtall");
+  });
+
+  it("…and neither is offered while unverified: the import is nearest m15pw, not yet verified", () => {
+    const patch = namedPatch("m21-280", STANDARD);
+    expect(patch.frame_match).toMatchObject({ status: "nearest", unverified: true, template: "m15borderlesspw", landOn: "m15pw" });
+    expect(patch.frame_template).toBe("m15pw");
+    const plan = importFramePlan(patch, STANDARD, "m15pw");
+    if (plan.mode !== "choose") throw new Error(plan.mode);
+    const all = [...plan.options, ...plan.moreOptions].map((o) => o.template);
+    expect(all.some((t) => t.startsWith("m15borderlesspw"))).toBe(false);
+    expect(plan.preselected).toEqual({ template: "m15pw" });
+  });
+});
+
 describe("importFramePlan — nearest", () => {
   it("Bident of Thassa THS #42 (2003 Nyx): the frame PipGlyph doesn't have, M15 preselected", () => {
     const plan = importFramePlan(namedPatch("ths-42", STANDARD), STANDARD, "m15");

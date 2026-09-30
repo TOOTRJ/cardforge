@@ -50,6 +50,7 @@ import {
   normalizeAnatomy,
   type FrameAnatomyStyle,
 } from "@/lib/cards/anatomy";
+import { cardPageName, withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -236,7 +237,8 @@ export async function createCardAction(
 
   const supabase = await createClient();
 
-  const data = parsed.data;
+  // An emblem stores no colour, cost, supertype or stats (TODO 6.23).
+  const data = withEmblemShape(parsed.data);
 
   // An admin's frame preview (TODO 2.3): the creator's admin preview mode
   // asks for it, the server decides — only an admin (from the profile,
@@ -326,7 +328,9 @@ export async function createCardAction(
     }
   }
 
-  const desiredSlug = data.slug ? slugify(data.slug) : slugify(data.title);
+  // An emblem lives at its page name, "…-emblem" (cardPageName, owner
+  // decision 2026-09-29), like Scryfall's; every other card at its title.
+  const desiredSlug = data.slug ? slugify(data.slug) : slugify(cardPageName(data.title, data.card_type));
   const { slug } = await ensureUniqueSlugForUser(desiredSlug);
 
   // If the caller passed a parent_card_id, sanity-check it before insert so
@@ -541,7 +545,7 @@ export async function updateCardAction(
     };
   }
 
-  const data = parsed.data;
+  let data = parsed.data;
   if (Object.keys(data).length === 0) {
     return { ok: false, formError: "No changes provided." };
   }
@@ -559,6 +563,9 @@ export async function updateCardAction(
   if (!existing || existing.owner_id !== user.id) {
     return { ok: false, formError: "Card not found or not yours to edit." };
   }
+  // An emblem stores no colour, cost, supertype or stats (TODO 6.23), judged
+  // on the card as it will be stored.
+  data = withEmblemUpdateShape(data, existing.card_type);
 
   // Back-face reference (when setting it): must be another of the user's own
   // cards and never the card itself.
