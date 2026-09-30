@@ -174,7 +174,7 @@ describe("verificationState", () => {
   });
 
   it("v34 (the token release) stales the 14 token-frame ticks — still verified — and no other template's (owner decision 7)", () => {
-    expect(CARD_LAYOUT_VERSION).toBe(34);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(34);
     // Production's 14 token ticks: every colour of both token frames, all
     // legacy rows (no verified_layout_version, ticked 2026-07-08).
     const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
@@ -188,7 +188,7 @@ describe("verificationState", () => {
       expect(state.verified, `${template}/${color}`).toBe(true);
       // …and the admin pages say "needs re-verification".
       expect(state.stale, `${template}/${color}`).toBe(true);
-      expect(state.reasons).toEqual(["the renderer changed since this tick (made before layout v33; now v34)"]);
+      expect(state.reasons).toEqual([`the renderer changed since this tick (made before layout v33; now v${CARD_LAYOUT_VERSION})`]);
     }
     // A stamped tick from v33 / v32 / v30 on them goes stale too; a v34 re-tick is fresh.
     const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
@@ -201,6 +201,21 @@ describe("verificationState", () => {
     for (const template of FRAME_TEMPLATE_VALUES.filter((t) => t !== "m15token" && t !== "m15tokenartifact")) {
       expect(verificationState(legacy, template, "none").stale, `${template} legacy`).toBe(false);
       expect(verificationState(tick(33), template, "h").stale, `${template}@33`).toBe(false);
+    }
+  });
+
+  it("v35 (the art-area corrections) is verification-neutral: no tick goes stale on any template", () => {
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(35);
+    const tick = (v: number) => ({ verified: true, verifiedLayoutVersion: v, verifiedOverrideHash: "h" });
+    const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null };
+    // The templates whose art moved — the CC M15 family, the see-through
+    // masters, nyx, fullart — keep a v34 tick fresh, and a legacy one too
+    // (the token frames' legacy ticks stay stale from v34, not from v35).
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      expect(verificationState(tick(34), template, "h").stale, `${template}@34`).toBe(false);
+      if (template !== "m15token" && template !== "m15tokenartifact") {
+        expect(verificationState(legacy, template, "none").stale, `${template} legacy`).toBe(false);
+      }
     }
   });
 });

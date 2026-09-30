@@ -23,6 +23,14 @@ import {
   parseFormatParam,
 } from "@/lib/cards/output-format";
 import { encodeCardJpeg } from "@/lib/render/card-jpeg";
+import { renderCardPrint } from "@/lib/render/card-print";
+import {
+  cardPrintFilename,
+  isPrintRequest,
+  parseBleedParam,
+  parsePpiParam,
+  PRINT_800_PPI_PAID_ONLY,
+} from "@/lib/cards/print-export";
 import { checkAnonLiveRenderLimit } from "@/lib/cards/anon-render-limit";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import {
@@ -62,6 +70,20 @@ import { isUuid } from "@/lib/ids";
 //                      sRGB, no metadata), named <slug>.jpg. Any other or no
 //                      `format` is the PNG, exactly as before
 //                      (lib/cards/output-format.ts).
+//   ?ppi=800         → PRINT (TODO 6.1b): 2000×2800, the HD layout drawn at
+//                      800 ppi with the art at full resolution (lib/render/
+//                      card-print.ts, TODO 6.10). `preset` is ignored.
+//   ?bleed=1         → PRINT (TODO 6.1a): + 1/8" on every side (1650×2250 at
+//                      600 ppi, 2200×3000 at 800), the frame's edges extended
+//                      by their declared recipe (lib/frames/edge-contract.ts).
+//                      A print render is ALWAYS square (`corners` is
+//                      ignored), always live, PNG only (`format=jpeg` → 400),
+//                      named <slug>-800ppi.png / -bleed.png /
+//                      -800ppi-bleed.png, and follows the clean-download
+//                      entitlement: a watermarked viewer asking for the bleed
+//                      (or for 800 ppi while PRINT_800_PPI_PAID_ONLY) gets
+//                      403 UPGRADE_REQUIRED. `ppi=600` alone is the plain HD
+//                      download, as before (lib/cards/print-export.ts).
 //
 // Every viewer may pick either corner. A FREE viewer's square PNG is the
 // stored round bake squared with the corner fills a live square render
@@ -101,11 +123,26 @@ export async function GET(
   const requestedPreset: RenderPreset =
     presetParam === "default" ? "default" : "hd";
   const format = parseFormatParam(request.nextUrl.searchParams.get("format"));
-  // A JPEG is always square; a PNG has the corner the request names.
-  const corners = effectiveCorners(
-    format,
-    parseCornersParam(request.nextUrl.searchParams.get("corners")),
-  );
+  // A print render (800 ppi and/or the bleed) — TODO 6.1a/6.1b.
+  const print = {
+    ppi: parsePpiParam(request.nextUrl.searchParams.get("ppi")),
+    bleed: parseBleedParam(request.nextUrl.searchParams.get("bleed")),
+  };
+  const printMode = isPrintRequest(print);
+  if (printMode && format === "jpeg") {
+    return NextResponse.json(
+      { error: "800 ppi and bleed downloads are PNG only." },
+      { status: 400 },
+    );
+  }
+  // A JPEG is always square; a PNG has the corner the request names — and
+  // a print render is always square.
+  const corners = printMode
+    ? "square"
+    : effectiveCorners(
+        format,
+        parseCornersParam(request.nextUrl.searchParams.get("corners")),
+      );
 
   // The signed-in viewer, asked at most once: a private card's owner check,
   // a live render's anonymous limiter, and the funnel.
@@ -158,6 +195,20 @@ export async function GET(
     : ((card as { footer_text?: string | null }).footer_text ?? stamp.footerText) || null;
   const watermark = downloadBrandMark(entitlements);
 
+  // A print render follows the clean download's entitlement: the bleed
+  // always, 800 ppi while PRINT_800_PPI_PAID_ONLY (the open 6.1b [decide]).
+  if (printMode && watermark && (print.bleed || PRINT_800_PPI_PAID_ONLY)) {
+    return NextResponse.json(
+      {
+        error: print.bleed
+          ? "Bleed downloads are a Plus feature."
+          : "800 ppi downloads are a Plus feature.",
+        code: "UPGRADE_REQUIRED",
+      },
+      { status: 403 },
+    );
+  }
+
   // Output varies by the authenticated viewer's entitlement (watermark +
   // resolution), so it must NOT be shared-cached at the CDN — that would leak a
   // clean render to a free viewer (or a watermarked one to a paid viewer).
@@ -186,6 +237,8 @@ export async function GET(
         // …and so are a PNG and a JPEG. Folded in only for the JPEG, so every
         // PNG keeps the ETag it had (a repeat download still answers 304).
         ...(format === "jpeg" ? ["jpeg"] : []),
+        // …and a print render (its own bytes; folded in only for one).
+        ...(printMode ? [`print:${print.ppi}:${print.bleed ? "bleed" : "trim"}`] : []),
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
@@ -228,8 +281,11 @@ export async function GET(
     // keeps what was drawn there (art or frame design: a null fill), which
     // the downscaled bake no longer carries: that renders live. A JPEG is
     // the same square bytes, re-encoded below.
-    const squareFills = corners === "square" ? squareCornerFillsOf(previewData) : null;
-    const storedServes = watermark && !squareFills?.includes(null);
+    //
+    // A PRINT render (800 ppi, bleed) never serves the bake: it is always
+    // live (TODO 6.1b "bake on demand, not stored").
+    const squareFills = !printMode && corners === "square" ? squareCornerFillsOf(previewData) : null;
+    const storedServes = !printMode && watermark && !squareFills?.includes(null);
     const stored = storedServes ? await fetchStoredRender(card) : null;
     if (stored) {
       const fitted = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
@@ -241,12 +297,24 @@ export async function GET(
         const limit = await checkAnonLiveRenderLimit(request);
         if (!limit.ok) return rateLimitedResponse(limit);
       }
-      const imgResponse = await renderCardImage(previewData, preset, {
-        brandMark: watermark,
-        watermarkText: footerText,
-        corners,
-      });
-      pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+      if (printMode) {
+        // Square, the art at full resolution (lib/render/card-print.ts).
+        pngBytes = new Uint8Array(
+          await renderCardPrint(previewData, {
+            ppi: print.ppi,
+            bleed: print.bleed,
+            brandMark: watermark,
+            watermarkText: footerText,
+          }),
+        );
+      } else {
+        const imgResponse = await renderCardImage(previewData, preset, {
+          brandMark: watermark,
+          watermarkText: footerText,
+          corners,
+        });
+        pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
+      }
     }
     bytes = format === "jpeg" ? new Uint8Array(await encodeCardJpeg(pngBytes)) : pngBytes;
   } catch (err) {
@@ -264,7 +332,15 @@ export async function GET(
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",
-      props: { format, preset, clean: !watermark, corners },
+      props: {
+        format,
+        // A print render names its resolution (and the bleed) in the
+        // allow-listed props (lib/analytics/funnel-events.ts).
+        preset: printMode ? `${print.ppi}ppi` : preset,
+        clean: !watermark,
+        corners,
+        ...(print.bleed ? { layout: "bleed" } : {}),
+      },
     });
   }
 
@@ -275,7 +351,9 @@ export async function GET(
       // The header wins over the modal's download="" attribute, so the file
       // is named here: <slug>.png, <slug>-square.png (both corners can sit
       // side by side) or <slug>.jpg.
-      "Content-Disposition": `attachment; filename="${cardImageFilename(card.slug, { format, corners })}"`,
+      "Content-Disposition": `attachment; filename="${
+        printMode ? cardPrintFilename(card.slug, print) : cardImageFilename(card.slug, { format, corners })
+      }"`,
       "Content-Length": String(bytes.byteLength),
       "Cache-Control": cacheControl,
       ETag: etag,

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
-import { underFrameArtRect } from "@/lib/cards/template-layout";
+import { artLayersFor } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
 // Foil finish — ONE inline SVG shared by the live preview
@@ -72,8 +72,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 /**
  * The art layers a face draws UNDER its frame, in paint order, exactly as
- * both renderers place them: see-through frames' under-frame art (cover at
- * the focal point, scale 1), the art window (cover + focal + scale), and a
+ * both renderers place them (artLayersFor): see-through frames' under-frame
+ * art (cover at the focal point, scale 1 — none when the window's slot is
+ * that rect, one picture), the art window (cover + focal + scale), and a
  * second face's own window (split's, or aftermath's rotated with its face).
  * A missing source (art not loaded yet in the preview, an unresolvable URL
  * in the bake) just drops its layer — the foil then follows the frame alone
@@ -89,7 +90,7 @@ export function foilArtLayers({
 }: {
   layout: FrameProfile;
   /** The frame master painted (frameMasterKey) — see-through frames are
-   *  keyed by it (underFrameArtRect). */
+   *  keyed by it (artLayersFor). */
   colorKey: string;
   art: FoilArtSource | null;
   artPosition: ArtPosition;
@@ -100,11 +101,11 @@ export function foilArtLayers({
   const focalX = clamp(artPosition?.focalX ?? 0.5, 0, 1);
   const focalY = clamp(artPosition?.focalY ?? 0.5, 0, 1);
   if (art) {
-    const under = underFrameArtRect(layout, colorKey);
+    const { slot, under } = artLayersFor(layout, colorKey, true);
     if (under) layers.push({ ...art, rect: under, focalX, focalY, scale: 1, rotation: 0 });
     layers.push({
       ...art,
-      rect: layout.artSlot,
+      rect: slot,
       focalX,
       focalY,
       scale: clamp(artPosition?.scale ?? 1, 0.5, 4),
