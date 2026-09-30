@@ -157,6 +157,10 @@ const EXPORTS_FAQ: FaqEntry[] = [
     q: "Do exported cards look exactly like the editor preview?",
     a: "They're built to. The live preview is drawn in your browser and the export by a separate server renderer that reads the same frames, fonts, pips and text geometry, and parity tests check the two agree. If a character can't be drawn on the card image (an emoji, for example), the creator says so before you save. Custom mana pips are included in exports too.",
   },
+  {
+    q: "Why does my card look slightly different than before?",
+    a: "PipGlyph keeps matching its frames to real printed Magic cards. When an update corrects something that was drawn wrong — a text size, a misplaced symbol, the edge of a frame — every published card it affects is re-rendered with the fix automatically, usually within a few hours of the update, and private cards show it the next time you open them. A correction changes how the card is drawn, not what you made: its name, rules text, art and stats stay as you left them. A new style that is a matter of taste is never forced on an existing card — you choose whether to switch it on. Images you downloaded earlier don't change; download the card again for the updated image. Bigger updates are announced on the What's new page.",
+  },
 ];
 
 // --- Scryfall import & remixing (new — /faq only) ---------------------------

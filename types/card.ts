@@ -284,12 +284,14 @@ export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
   ["borderless", "regular"],
 ]);
 
-// Frame templates correspond to PNG assets in public/frames/{template}/{color}.png
-// plus a layout profile in lib/cards/template-layout.ts. Every template is an
-// MSE-derived MTG frame converted from the open-source Full-Magic-Pack; the
-// 375×523 MSE base is upscaled to 1500×2100 with the art window cut out to
-// alpha=0 so the user's art renders behind the frame. All templates share the
-// 7-color contract (w/u/b/r/g/c/m).
+// Frame templates correspond to one master per colour key (w/u/b/r/g/c/m;
+// 1500×2100, the landscape battle 2100×1500), with the art window cut out to
+// alpha=0 so the user's art renders behind the frame, plus a layout profile
+// in lib/cards/template-layout.ts. The masters come from two sources
+// (docs/FRAMES.md "Provenance and legal"): MSE's Full-Magic-Pack, in git
+// under public/frames/{template}/, and Card Conjurer (the M15 family, the
+// borderless frame, the full-art basics, the text-box tokens), in the frames
+// storage bucket only — lib/frames/frame-manifest.json lists those.
 //
 // "m15"       — Magic 2015-era modern frame (the default).
 // "m15land"   — M15 land frame (stone border, color-tinted text box, no cost).
@@ -310,8 +312,8 @@ export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
 //               name/type/cost/rules come from the card's back-face content) on
 //               the LEFT page, the creature's own rules on the RIGHT page.
 //
-// Adding a frame: drop the PNGs (+ .webp siblings via `npm run assets:frame-webp`),
-// add a value here, a label in FRAME_TEMPLATE_LABELS, a set in FRAME_TEMPLATE_SET
+// Adding a frame (the full checklist: docs/FRAMES.md "Adding a frame"): add
+// a value here, a label in FRAME_TEMPLATE_LABELS, a set in FRAME_TEMPLATE_SET
 // (both exhaustive — the compiler will tell you), a picker mapping
 // (ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / a showcase set / a kind's
 // layoutTemplates in lib/creator/card-kinds.ts), and one profile entry in
