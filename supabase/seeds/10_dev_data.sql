@@ -212,7 +212,8 @@ on conflict (id) do nothing;
 --     Mediator, Stormglass Strand, Brassbound Arbiter; Tidecaller Envoy and
 --     Rotbloom Pact are stored with no key — gold until switched on)
 --     (lib/cards/anatomy.ts). dev_pro's cards, so dev_artist's public count
---     stays 14.
+--     stays 14. Ids …034–…041 (…026 is the emblems seed's: a reused id is a
+--     row that silently never lands — tests/unit/devops/seed-card-ids.test.ts).
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -232,40 +233,40 @@ select
   now() - (c.age_days || ' days')::interval
 from (values
   -- A legendary mono card with the crown on (a new card's default).
-  ('c0000000-0000-4000-a000-000000000026'::uuid, 'Kesh, Emberforge Warden', 'kesh-emberforge-warden', '{2}{R}{R}', array['red'], 'Legendary', 'creature', array['Dwarf','Artificer'], 'rare',
+  ('c0000000-0000-4000-a000-000000000034'::uuid, 'Kesh, Emberforge Warden', 'kesh-emberforge-warden', '{2}{R}{R}', array['red'], 'Legendary', 'creature', array['Dwarf','Artificer'], 'rare',
      E'Whenever an artifact you control enters, Kesh deals 1 damage to each opponent.', '3', '4', 3,
      '{"template":"m15","finish":"regular","crown":true}'::jsonb, 2),
   -- A legendary mono card with the crown explicitly off (an import of a
   -- crownless pre-2018 printing, or its owner's choice).
-  ('c0000000-0000-4000-a000-000000000027'::uuid, 'Varro, the Unadorned', 'varro-the-unadorned', '{1}{B}{B}', array['black'], 'Legendary', 'creature', array['Human','Rogue'], 'rare',
+  ('c0000000-0000-4000-a000-000000000035'::uuid, 'Varro, the Unadorned', 'varro-the-unadorned', '{1}{B}{B}', array['black'], 'Legendary', 'creature', array['Human','Rogue'], 'rare',
      E'Menace\nVarro can''t be the target of spells your opponents control during your turn.', '3', '2', 6,
      '{"template":"m15","finish":"regular","crown":false}'::jsonb, 2),
   -- A WU gold legendary with both switches on: the gold-split frame and
   -- the split crown (4.6a + 4.6b).
-  ('c0000000-0000-4000-a000-000000000028'::uuid, 'Aurelian Tidewright', 'aurelian-tidewright', '{1}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Wizard'], 'mythic',
+  ('c0000000-0000-4000-a000-000000000036'::uuid, 'Aurelian Tidewright', 'aurelian-tidewright', '{1}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Wizard'], 'mythic',
      E'Flying\nWhenever you cast your second spell each turn, draw a card.', '2', '3', 9,
      '{"template":"m15","finish":"regular","crown":true,"twoColor":true}'::jsonb, 1),
   -- A hybrid cost with the two-colour frame on: the hybrid dress.
-  ('c0000000-0000-4000-a000-000000000029'::uuid, 'Hedgerow Mediator', 'hedgerow-mediator', '{G/W}{G/W}', array['green','white'], null, 'creature', array['Elf','Cleric'], 'uncommon',
+  ('c0000000-0000-4000-a000-000000000037'::uuid, 'Hedgerow Mediator', 'hedgerow-mediator', '{G/W}{G/W}', array['green','white'], null, 'creature', array['Elf','Cleric'], 'uncommon',
      E'Vigilance\nWhen Hedgerow Mediator enters, you gain 2 life.', '2', '2', 12,
      '{"template":"m15","finish":"regular","twoColor":true}'::jsonb, 1),
   -- A WU land with the two-colour frame on: the land split.
-  ('c0000000-0000-4000-a000-000000000030'::uuid, 'Stormglass Strand', 'stormglass-strand', null, array['white','blue'], null, 'land', array[]::text[], 'rare',
+  ('c0000000-0000-4000-a000-000000000038'::uuid, 'Stormglass Strand', 'stormglass-strand', null, array['white','blue'], null, 'land', array[]::text[], 'rare',
      E'Stormglass Strand enters tapped.\n{T}: Add {W} or {U}.', null, null, 15,
      '{"template":"m15land","finish":"regular","twoColor":true}'::jsonb, 1),
   -- TODO 4.6b: a WU pair stored BEFORE the two-colour frame shipped (no
   -- key): gold as always; the editor shows the switch off with the hint.
-  ('c0000000-0000-4000-a000-000000000031'::uuid, 'Tidecaller Envoy', 'tidecaller-envoy', '{1}{W}{U}', array['white','blue'], null, 'creature', array['Merfolk','Advisor'], 'uncommon',
+  ('c0000000-0000-4000-a000-000000000039'::uuid, 'Tidecaller Envoy', 'tidecaller-envoy', '{1}{W}{U}', array['white','blue'], null, 'creature', array['Merfolk','Advisor'], 'uncommon',
      E'Flying\nWhen Tidecaller Envoy enters, scry 2.', '2', '2', 18,
      '{"template":"m15","finish":"regular"}'::jsonb, 3),
   -- A plain "multicolor" card with a two-colour cost and no key: switching
   -- the frame on pre-fills Black + Green from the cost for its owner.
-  ('c0000000-0000-4000-a000-000000000032'::uuid, 'Rotbloom Pact', 'rotbloom-pact', '{2}{B}{G}', array['multicolor'], null, 'creature', array['Fungus','Shaman'], 'rare',
+  ('c0000000-0000-4000-a000-000000000040'::uuid, 'Rotbloom Pact', 'rotbloom-pact', '{2}{B}{G}', array['multicolor'], null, 'creature', array['Fungus','Shaman'], 'rare',
      E'Deathtouch\nWhen Rotbloom Pact dies, create two 1/1 green Saproling creature tokens.', '3', '3', 21,
      '{"template":"m15","finish":"regular"}'::jsonb, 3),
   -- A WU artifact with the two-colour frame on: the artifact frame, gold
   -- bars, the split pinline and text box.
-  ('c0000000-0000-4000-a000-000000000033'::uuid, 'Brassbound Arbiter', 'brassbound-arbiter', '{2}{W}{U}', array['white','blue'], 'Artifact', 'creature', array['Construct'], 'rare',
+  ('c0000000-0000-4000-a000-000000000041'::uuid, 'Brassbound Arbiter', 'brassbound-arbiter', '{2}{W}{U}', array['white','blue'], 'Artifact', 'creature', array['Construct'], 'rare',
      E'Vigilance\nArtifact spells you cast cost {1} less to cast.', '3', '4', 24,
      '{"template":"m15artifact","finish":"regular","twoColor":true}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
