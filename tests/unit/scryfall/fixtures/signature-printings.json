@@ -3294,5 +3294,148 @@
     "color_identity": [
       "B"
     ]
+  },
+  "ps19-207": {
+    "id": "2c23b39b-a4d6-4f10-8ced-fa4b1ed2cf74",
+    "name": "Nicol Bolas, Dragon-God",
+    "layout": "normal",
+    "set": "ps19",
+    "set_name": "San Diego Comic-Con 2019",
+    "set_type": "promo",
+    "collector_number": "207",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "convention",
+      "glossy"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Bolas",
+    "mana_cost": "{U}{B}{B}{B}{R}",
+    "oracle_text": "Nicol Bolas has all loyalty abilities of all other planeswalkers on the battlefield.\n+1: You draw a card. Each opponent exiles a card from their hand or a permanent they control.\n−3: Destroy target creature or planeswalker.\n−8: Each opponent who doesn't control a legendary creature or planeswalker loses the game.",
+    "loyalty": "4",
+    "colors": [
+      "B",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "R",
+      "U"
+    ]
+  },
+  "sld-1619": {
+    "id": "b4b3d65d-3485-4d82-ba2e-9e2071f284b5",
+    "name": "Tezzeret the Seeker",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1619",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "rainbowfoil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Tezzeret",
+    "mana_cost": "{3}{U}{U}",
+    "oracle_text": "+1: Untap up to two target artifacts.\n−X: Search your library for an artifact card with mana value X or less, put it onto the battlefield, then shuffle.\n−5: Artifacts you control become artifact creatures with base power and toughness 5/5 until end of turn.",
+    "loyalty": "4",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "sld-1622": {
+    "id": "74ab6843-6bdd-439a-b81c-0be83b8d4c52",
+    "name": "Nicol Bolas, Planeswalker",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1622",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "rainbowfoil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Bolas",
+    "mana_cost": "{4}{U}{B}{B}{R}",
+    "oracle_text": "+3: Destroy target noncreature permanent.\n−2: Gain control of target creature.\n−9: Nicol Bolas deals 7 damage to target player or planeswalker. That player or that planeswalker's controller discards seven cards, then sacrifices seven permanents of their choice.",
+    "loyalty": "5",
+    "colors": [
+      "B",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "R",
+      "U"
+    ]
+  },
+  "med-WS2": {
+    "id": "071421ba-b54a-4510-9065-ace62368d3cb",
+    "name": "Gideon Blackblade",
+    "layout": "normal",
+    "set": "med",
+    "set_name": "Mythic Edition",
+    "set_type": "masterpiece",
+    "collector_number": "WS2",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Gideon",
+    "mana_cost": "{1}{W}{W}",
+    "oracle_text": "During your turn, Gideon Blackblade is a 4/4 Human Soldier creature with indestructible that's still a planeswalker.\nPrevent all damage that would be dealt to Gideon Blackblade during your turn.\n+1: Up to one other target creature you control gains your choice of vigilance, lifelink, or indestructible until end of turn.\n−6: Exile target nonland permanent.",
+    "loyalty": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "unf-275": {
+    "id": "9cac4ebc-fdc3-4dd4-b988-9a924ee3c781",
+    "name": "Comet, Stellar Pup",
+    "layout": "normal",
+    "set": "unf",
+    "set_name": "Unfinity",
+    "set_type": "funny",
+    "collector_number": "275",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Comet",
+    "mana_cost": "{2}{R}{W}",
+    "oracle_text": "0: Roll a six-sided die.\n1 or 2 — [+2], then create two 1/1 green Squirrel creature tokens. They gain haste until end of turn.\n3 — [−1], then return a card with mana value 2 or less from your graveyard to your hand.\n4 or 5 — Comet deals damage equal to the number of loyalty counters on him to a creature or player, then [−2].\n6 — [+1], and you may activate Comet's loyalty ability two more times this turn.",
+    "loyalty": "5",
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
+    ]
   }
 }

@@ -686,16 +686,21 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   Card Conjurer draws two masters: the regular one for up to three printed
   ability rows and the tall one for four (a loyalty ability is a row, a run
   of static abilities shares one — `walkerRowCount` in
-  `lib/creator/card-kinds.ts`; 206 of the 209 printings the
+  `lib/creator/card-kinds.ts`; 206 of the 210 printings the
   `borderless/planeswalker` rule matches print the box it picks — Gideon
   Blackblade MED #WS2 prints its two statics as two rows, and Comet UNF
-  #275 / #526 its die-roll table on the tall box). Every path picks by
+  #275 / #526 its die-roll table on the tall box, Nicol Bolas, Dragon-God
+  PS19 #207 four rows on the regular one; `WALKER_ROW_BOX_PINS` makes those
+  four `nearest`). Every path picks by
   that count: the registry's borderless family, the creator (its one
   "Borderless Planeswalker" chip stands for both, and the frame follows the
   rows as they change), the import chooser and the AI's frame pick. A
   borderless walker lands on the bordered m15pw (1.18) with Borderless
-  Planeswalker offered once verified; `inverted` printings and the
-  dark-barred black ones (all but `LIGHT_BLACK_WALKER_PINS`) are `nearest`.
+  Planeswalker offered once verified; `inverted` printings, the
+  dark-barred ones (every mono-black one but `LIGHT_BLACK_WALKER_PINS`, and
+  `DARK_BAR_WALKER_PINS`' gold PS19 #207) and the two Secret Lair walkers
+  that letter their name across the art (`LETTERED_NAME_WALKER_PINS`, SLD
+  #1619 / #1622) are `nearest`.
 - **Signature ids are stored.** Every import that isn't exact writes a
   `frame_requests` row keyed by its signature (TODO 1.6, migration 0123,
   `lib/frames/frame-requests.ts`; never from an admin's frame preview or

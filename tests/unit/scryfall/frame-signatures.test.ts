@@ -72,6 +72,16 @@ describe("borderless families (TODO 1.17)", () => {
     ["woe-297", "nearest", "m15borderlesspwtall", "m15pw"],
     ["fdn-359", "nearest", "m15borderlesspwtall", "m15pw"],
     ["dmu-375", "nearest", "m15borderlesspwtall", "m15pw"],
+    // What only the scans show (4.33 skeptic): the SDCC Bolas (PS19 #207)
+    // prints the dark dress in gold and four rows on the regular box, Gideon
+    // Blackblade (MED #WS2) two statics as two rows on the tall box, Comet
+    // (UNF #275) a die-roll table on the tall box, and two Secret Lair
+    // walkers (SLD #1619 / #1622) their names lettered across the art.
+    ["ps19-207", "nearest", "m15borderlesspwtall", "m15pw"],
+    ["med-WS2", "nearest", "m15borderlesspw", "m15pw"],
+    ["unf-275", "nearest", "m15borderlesspw", "m15pw"],
+    ["sld-1619", "nearest", "m15borderlesspw", "m15pw"],
+    ["sld-1622", "nearest", "m15borderlesspw", "m15pw"],
     // Nonbasic lands (4.34).
     ["mid-281", "nearest", "m15land", undefined],
     ["otj-304", "nearest", "m15land", undefined],
@@ -150,6 +160,32 @@ describe("borderless families (TODO 1.17)", () => {
     // BLC #78's bars look light over its pale art, but its ink is white:
     // the dark dress, never the pinned light one.
     expect(frameMatchFromScryfall(printing("blc-78")).signature).toBe("borderless/planeswalker+dark-bars");
+    // No Scryfall field names these; the pins do, each under a key of its own
+    // for the 1.6 log, every gap that holds listed (C1 reads them).
+    expect(frameMatchFromScryfall(printing("ps19-207"))).toMatchObject({
+      signature: "borderless/planeswalker+dark-bars",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/dark name and type bars/),
+      gaps: ["dark-bars", "row-box"],
+    });
+    expect(frameMatchFromScryfall(printing("med-WS2"))).toMatchObject({
+      signature: "borderless/planeswalker+row-box",
+      blockedBy: "4.33",
+      reason: expect.stringMatching(/other ability box/),
+      gaps: ["row-box"],
+    });
+    expect(frameMatchFromScryfall(printing("unf-275"))).toMatchObject({
+      signature: "borderless/planeswalker+two-colour",
+      gaps: ["two-colour", "row-box"],
+    });
+    for (const key of ["sld-1619", "sld-1622"] as const) {
+      expect(frameMatchFromScryfall(printing(key))).toMatchObject({
+        signature: "borderless/planeswalker+lettered-name",
+        blockedBy: "4.33",
+        reason: expect.stringMatching(/letters its name across the art/),
+        gaps: ["lettered-name"],
+      });
+    }
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
       blockedBy: "4.35",

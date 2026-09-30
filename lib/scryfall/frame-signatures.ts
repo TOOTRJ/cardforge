@@ -227,6 +227,39 @@ export const LIGHT_BLACK_WALKER_PINS: Readonly<Record<string, readonly string[]>
   sld: ["1593"],
 };
 
+/** Borderless planeswalkers outside mono-black that print the dark dress —
+ *  dark name and type bars with white ink — with no `inverted` flag: the
+ *  SDCC 2019 Nicol Bolas, Dragon-God (PS19 #207, gold rims). Found by a
+ *  title- and type-bar luminance sweep of every borderless walker scan,
+ *  checked by eye (4.33 skeptic, 2026-09-29). */
+export const DARK_BAR_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  ps19: ["207"],
+};
+
+/** Borderless planeswalkers whose PRINTED ability box is not the one their
+ *  rows pick (walkerRowCount, TALL_WALKER_MIN_ROWS): Gideon Blackblade MED
+ *  #WS2 sets its two statics in two rows on the tall box, Comet, Stellar
+ *  Pup UNF #275 / #526 its die-roll table on the tall box, and Nicol Bolas,
+ *  Dragon-God PS19 #207 four rows (a static + three abilities) on the
+ *  regular one. The type-bar height of every borderless walker scan was
+ *  checked against the pick (4.33 skeptic, 2026-09-29): 206 of the 210 the
+ *  borderless/planeswalker rule matches print the box it picks; these four
+ *  don't. The creator follows the rows (no pick to pin), so they are
+ *  `nearest`, never a pinned box. */
+export const WALKER_ROW_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
+  med: ["WS2"],
+  unf: ["275", "526"],
+  ps19: ["207"],
+};
+
+/** Borderless planeswalkers that letter the card's name across the art in
+ *  place of a name bar (Secret Lair: Tezzeret the Seeker SLD #1619, Nicol
+ *  Bolas, Planeswalker SLD #1622) — no Scryfall field says so (no `poster`
+ *  promo, no frame effect). */
+export const LETTERED_NAME_WALKER_PINS: Readonly<Record<string, readonly string[]>> = {
+  sld: ["1619", "1622"],
+};
+
 /** The double-faced frame marks (Phase 5). */
 const DFC_EFFECTS = [
   "sunmoondfc",
@@ -671,6 +704,8 @@ type GapKey =
   | "light-box"
   | "inverted"
   | "dark-bars"
+  | "lettered-name"
+  | "row-box"
   | "tall-box";
 
 const BORDER_WORD: Record<string, string> = {
@@ -792,8 +827,26 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     blockedBy: "4.33",
   },
   "dark-bars": {
-    match: { colorsExactly: ["B"], notCollectorIds: LIGHT_BLACK_WALKER_PINS },
-    reason: "this printing has dark name and type bars with white ink, and PipGlyph's black borderless planeswalker has light ones",
+    match: {
+      anyOf: [
+        { colorsExactly: ["B"], notCollectorIds: LIGHT_BLACK_WALKER_PINS },
+        { collectorIds: DARK_BAR_WALKER_PINS },
+      ],
+    },
+    reason: "this printing has dark name and type bars with white ink, and PipGlyph's borderless planeswalker has light ones",
+    blockedBy: "4.33",
+  },
+  // Two more the scans found that no Scryfall field names: a name lettered
+  // across the art (LETTERED_NAME_WALKER_PINS), and an ability box that
+  // isn't the one the rows pick (WALKER_ROW_BOX_PINS).
+  "lettered-name": {
+    match: { collectorIds: LETTERED_NAME_WALKER_PINS },
+    reason: "this printing letters its name across the art, and PipGlyph's borderless planeswalker has a name bar",
+    blockedBy: "4.33",
+  },
+  "row-box": {
+    match: { collectorIds: WALKER_ROW_BOX_PINS },
+    reason: "this printing sets its abilities on the other ability box (regular or tall) than the one PipGlyph picks for its rows",
     blockedBy: "4.33",
   },
 };
@@ -1100,8 +1153,11 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // twin, m15pw (1.18), and is exact only once verified in the card's colour
   // (withVerification). `inverted` printings (Ashiok WOE #297, Ajani ECL
   // #284) are the light frame's nearest (owner decision 2026-09-26), the
-  // dark-barred black walkers too (LIGHT_BLACK_WALKER_PINS), and a
-  // two-colour walker's split frame (Oko, Saheeli BRO #294) is 4.6's.
+  // dark-barred black walkers too (LIGHT_BLACK_WALKER_PINS; PS19 #207 in
+  // gold), a two-colour walker's split frame (Oko, Saheeli BRO #294) is
+  // 4.6's, and — last, so no earlier key moves — a lettered name (SLD #1619
+  // / #1622) and a printed box the rows don't pick (MED #WS2, UNF #275 /
+  // #526, PS19 #207).
   ...withGaps(
     {
       key: "borderless/planeswalker",
@@ -1109,7 +1165,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"], kinds: ["planeswalker"] },
       outcome: { status: "exact", template: { family: "borderless" } },
     },
-    ["inverted", "dark-bars", "etched", "nickname", "colour-indicator", "two-colour"],
+    ["inverted", "dark-bars", "etched", "nickname", "colour-indicator", "two-colour", "lettered-name", "row-box"],
   ),
   {
     key: "borderless/land",
