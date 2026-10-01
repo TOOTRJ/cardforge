@@ -53,6 +53,9 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     source_scryfall_id: "",
     set_icon_url: "",
     set_icon_code: "",
+    set_code: "",
+    collector_number: "",
+    lang: "en",
     deck_id: "",
     watermark: EMPTY_WATERMARK,
     footer_text: "",
@@ -155,6 +158,20 @@ describe("cardFormSchema", () => {
       "tags_text",
     );
     expect(issue?.message).toBe("Each tag must be 30 characters or fewer.");
+  });
+
+  it("checks the collector fields as runSubmit sends them (TODO 4.9a)", () => {
+    // Empty = null on the wire, which the server accepts; a lower-case
+    // code upper-cases before the pattern, as the server schema does.
+    expect(cardFormSchema.safeParse(baseValues({ set_code: "", collector_number: "", lang: "en" })).success).toBe(true);
+    expect(cardFormSchema.safeParse(baseValues({ set_code: " dmu ", collector_number: "107/281", lang: "es" })).success).toBe(true);
+    expect(firstIssueFor(baseValues({ set_code: "toolongcode" }), "set_code")?.message).toBe(
+      "Set code must be 2–6 letters or digits.",
+    );
+    expect(firstIssueFor(baseValues({ collector_number: "1 2" }), "collector_number")?.message).toBe(
+      "Collector number can use digits, letters, ★, †, / and - only.",
+    );
+    expect(firstIssueFor(baseValues({ lang: "xx" }), "lang")).not.toBeNull();
   });
 
   it("accepts an empty art_url and an https one; rejects unsafe schemes", () => {

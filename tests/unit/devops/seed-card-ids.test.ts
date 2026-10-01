@@ -32,8 +32,9 @@ describe("seed card ids", () => {
 
   it("finds the card rows", () => {
     // 25 in the main block, 9 in 2b (the 4.6 anatomy switches, and the
-    // round-17 land fix's no-template land) at least.
-    expect(defined.length).toBeGreaterThanOrEqual(34);
+    // round-17 land fix's no-template land) and 5 in 2c (the 4.9a
+    // collector fields) at least.
+    expect(defined.length).toBeGreaterThanOrEqual(39);
   });
 
   it("gives every card row its own id (a reused id is a row that silently never lands)", () => {

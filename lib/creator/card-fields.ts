@@ -37,6 +37,7 @@ import {
 import { KIND_DEFS, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
+import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
 import {
   NEW_CARD_ANATOMY,
   pairColorIdentity,
@@ -223,6 +224,11 @@ export function defaultValuesFor(
       source_scryfall_id: "",
       set_icon_url: "",
       set_icon_code: "",
+      // A new card prints only what its maker fills (4.9 decision D2): no
+      // set code or number, English.
+      set_code: "",
+      collector_number: "",
+      lang: DEFAULT_CARD_LANG,
       deck_id: "",
       watermark: watermarkFormValuesFromValue(defaultWatermarkFor("creature", paid)),
       footer_text: paid ? (options.footerText ?? "") : "",
@@ -285,6 +291,11 @@ export function defaultValuesFor(
     // Denormalized icon columns — the Set icon step edits them directly.
     set_icon_url: card.set_icon_url ?? "",
     set_icon_code: card.set_icon_code ?? "",
+    // The collector fields as stored (TODO 4.9a); a row from before 0133
+    // hydrates empty and English.
+    set_code: card.set_code ?? "",
+    collector_number: card.collector_number ?? "",
+    lang: card.lang ?? DEFAULT_CARD_LANG,
     // Deck membership isn't stored on the card row — the picker is a
     // create-flow convenience, so edits always start empty.
     deck_id: "",
@@ -319,6 +330,11 @@ export function remixValuesFrom(
     footer_text: options.paid ? (options.footerText ?? "") : "",
     set_icon_url: "",
     set_icon_code: "",
+    // The parent's set code and number name the parent's printing (its
+    // set, like the set icon above): a remix starts with none and keeps
+    // only the language its text is written in (TODO 4.9a).
+    set_code: "",
+    collector_number: "",
     back_card_id: "",
     deck_id: "",
   };

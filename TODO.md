@@ -1685,7 +1685,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - Tokens and emblems print their PARENT set code (TDOM #1 `DOM • EN`); PW23 prints `PRM`.
       - **From 4.21 (design 2026-09-29):** 4.9d's saga placement waits for 4.21c's CC saga master. On split and battle the band up the left border gets 4.21's ARTIST credit (3.8's slice, a correction); 4.9 adds the collector number, set and language beside it, opt-in, reusing 4.21b's rotated-text helper. Flip and aftermath take the M15 footer position on their CC borders.
       - **Order** (owner 2026-09-29): 4.9 after the crowns (4.6.0 + 4.6a): 4.9b and 4.9c build on 4.6.0's switch plumbing and the edit-lock relaxation that ships with the crowns. 4.9a's data work can be built before.
-- [ ] **4.9a [P1] Collector fields + import (data only, 0 pixels)** (4.9 design 2026-09-29; folds in 6.6) — can be built **now**, in parallel with round 11, 4.6.0 and #421; it merges in the 4.9 order, after the crowns (owner 2026-09-29).
+- [ ] **4.9a [P1] Collector fields + import (data only, 0 pixels)** (4.9 design 2026-09-29; folds in 6.6) — can be built **now**, in parallel with round 11, 4.6.0 and #421; it merges in the 4.9 order, after the crowns (owner 2026-09-29). **Status 2026-09-30:** BUILT on `feat/collector-fields` (migration 0133 `card_collector_fields`; the Set & collector info step; the import rules below with fixtures DMU #107 en/es, KLD #265, TDOM #1, TFDN #24, ONC #114, PW23 #3, FDN #1, PJUD #11 he, SLD #134 (2020), C17 #1; seeds …043–…047; `COLLECTOR_2023_FROM` = 2023-03-26 for 4.9b to pin) — PR open, pending the owner's merge OK; 0 pixels, no `frame_style` key.
       - **Migration** (the next free number at PR time: 0131 after #421's 0130, unless a 4.6 migration lands first):
         - `cards.set_code` (the PRINTED code, `^[A-Z0-9]{2,6}$`; comment: not `deck_cards.set_code`, which is Scryfall's);
         - `cards.collector_number` (1–12 of `[0-9A-Za-z★†/-]`);
@@ -2913,7 +2913,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       **Borderless research 2026-09-25:** after 0.25 the finish list is
       regular/foil/etched (+ showcase); borderless is no longer a finish but a
       frame treatment (4.32–4.38).
-- [ ] (folded into 4.9a, 2026-09-29; closes with it) **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
+- [x] (folded into 4.9a, 2026-09-29; built with it 2026-09-30 on `feat/collector-fields` — `cards.set_code` / `collector_number` / `lang`, migration 0133) **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
 - [ ] **6.7 [P2] Accessibility** — text alternatives for rules-text pips, chip
       keyboard navigation (3b.10), announced substitution notices.
 - [ ] **6.8 [P3] Batch/CSV/MSE-set import**; community frame packs stay out of

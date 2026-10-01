@@ -1,0 +1,79 @@
+{
+  "dmu": {
+    "code": "dmu",
+    "name": "Dominaria United",
+    "set_type": "expansion",
+    "released_at": "2022-09-09",
+    "card_count": 436,
+    "printed_size": 281
+  },
+  "kld": {
+    "code": "kld",
+    "name": "Kaladesh",
+    "set_type": "expansion",
+    "released_at": "2016-09-30",
+    "card_count": 274,
+    "printed_size": 264
+  },
+  "tdom": {
+    "code": "tdom",
+    "name": "Dominaria Tokens",
+    "set_type": "token",
+    "released_at": "2018-04-27",
+    "card_count": 16,
+    "parent_set_code": "dom"
+  },
+  "tfdn": {
+    "code": "tfdn",
+    "name": "Foundations Tokens",
+    "set_type": "token",
+    "released_at": "2024-11-15",
+    "card_count": 33,
+    "parent_set_code": "fdn"
+  },
+  "onc": {
+    "code": "onc",
+    "name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "released_at": "2023-02-10",
+    "card_count": 174,
+    "printed_size": 28,
+    "parent_set_code": "one"
+  },
+  "pw23": {
+    "code": "pw23",
+    "name": "Wizards Play Network 2023",
+    "set_type": "promo",
+    "released_at": "2023-01-01",
+    "card_count": 11
+  },
+  "fdn": {
+    "code": "fdn",
+    "name": "Foundations",
+    "set_type": "core",
+    "released_at": "2024-11-15",
+    "card_count": 771
+  },
+  "pjud": {
+    "code": "pjud",
+    "name": "Judgment Promos",
+    "set_type": "promo",
+    "released_at": "2002-05-27",
+    "card_count": 1,
+    "parent_set_code": "jud"
+  },
+  "sld": {
+    "code": "sld",
+    "name": "Secret Lair Drop",
+    "set_type": "box",
+    "released_at": "2019-12-02",
+    "card_count": 2820
+  },
+  "c17": {
+    "code": "c17",
+    "name": "Commander 2017",
+    "set_type": "commander",
+    "released_at": "2017-08-25",
+    "card_count": 309
+  }
+}

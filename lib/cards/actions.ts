@@ -442,6 +442,12 @@ export async function createCardAction(
     // The Set icon step's symbol; empty = the default PipGlyph mark.
     set_icon_url: data.set_icon_url ?? null,
     set_icon_code: data.set_icon_code ?? null,
+    // The collector fields (migration 0133, TODO 4.9a): what the printing
+    // says, from the import or the Set & collector info step; an unnamed
+    // language is the column's default (English).
+    set_code: data.set_code ?? null,
+    collector_number: data.collector_number ?? null,
+    ...(data.lang !== undefined ? { lang: data.lang } : {}),
   };
 
   const { data: row, error } = await supabase
@@ -799,6 +805,13 @@ export async function updateCardAction(
     update.set_icon_url = data.set_icon_url ?? null;
   if (data.set_icon_code !== undefined)
     update.set_icon_code = data.set_icon_code ?? null;
+  // The collector fields (TODO 4.9a): content, so an edit may change them
+  // (lib/creator/revise.ts); null clears a code or number, omitted leaves
+  // the columns alone. The language has no null — it is NOT NULL.
+  if (data.set_code !== undefined) update.set_code = data.set_code ?? null;
+  if (data.collector_number !== undefined)
+    update.collector_number = data.collector_number ?? null;
+  if (data.lang !== undefined) update.lang = data.lang;
 
   const { data: row, error } = await supabase
     .from("cards")

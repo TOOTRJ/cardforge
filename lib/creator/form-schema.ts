@@ -20,9 +20,12 @@ import { z } from "zod";
 import {
   cardArtistCreditSchema,
   cardArtUrlSchema,
+  cardCollectorNumberSchema,
   cardCostSchema,
   cardFlavorTextSchema,
+  cardLangSchema,
   cardRulesTextSchema,
+  cardSetCodeSchema,
   cardStatStringSchema,
   cardSupertypeSchema,
   cardTitleSchema,
@@ -253,6 +256,19 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
     for (const stat of ["power", "toughness", "loyalty", "defense"] as const) {
       check(ctx, [stat], cardStatStringSchema, values[stat].trim());
     }
+
+    // ----- Set & collector info step (TODO 4.9a) -----
+    // Exactly what runSubmit sends: an empty field is null (the server
+    // accepts null), a filled one is trimmed — and upper-cased for the set
+    // code, as the server schema does before its pattern.
+    check(ctx, ["set_code"], cardSetCodeSchema, values.set_code.trim() || null);
+    check(
+      ctx,
+      ["collector_number"],
+      cardCollectorNumberSchema,
+      values.collector_number.trim() || null,
+    );
+    check(ctx, ["lang"], cardLangSchema, values.lang || undefined);
 
     // ----- Publish step -----
     // The server (cardTagsSchema) silently drops over-limit tags; the client

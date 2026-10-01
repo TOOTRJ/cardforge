@@ -105,6 +105,10 @@ export async function notifyOwnersOfRenderUpdates(
   if (version == null) return { owners: 0, notified: 0, scanned: 0 };
   const rows: StaleCardRow[] = [];
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
+    // Only the columns the scope rules read. The collector fields
+    // (set_code / collector_number / lang, TODO 4.9a) are not among them: a
+    // future correction scoped by set or language adds them here and to the
+    // scope row type.
     const { data, error } = await admin
       .from("cards")
       .select(

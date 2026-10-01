@@ -79,7 +79,13 @@ const MAX_RETRY_WAIT_MS = 4_000;
 
 async function scryfallFetch(
   path: string,
-  init?: { method?: "POST"; body?: string },
+  init?: {
+    method?: "POST";
+    body?: string;
+    /** Seconds Next's data cache may serve this answer for. Only the set
+     *  lookup (getScryfallSet) passes one; every card call stays uncached. */
+    revalidate?: number;
+  },
 ): Promise<Response> {
   for (let attempt = 0; ; attempt += 1) {
     await throttle(minGapFor(path));
@@ -93,7 +99,9 @@ async function scryfallFetch(
       },
       // Don't cache server-side — this is dynamic search content, and the
       // freshness signal we want comes from the user typing, not the CDN.
-      cache: "no-store",
+      // A set object (static: its size and parent never change) is the one
+      // answer worth a day in the data cache.
+      ...(init?.revalidate ? { next: { revalidate: init.revalidate } } : { cache: "no-store" }),
     });
     const retriable = response.status === 429 || response.status >= 500;
     if (!retriable || attempt >= MAX_RETRIES) return response;
@@ -267,6 +275,30 @@ export const scryfallSearchResponseSchema = z.object({
 });
 
 export type ScryfallSearchResponse = z.infer<typeof scryfallSearchResponseSchema>;
+
+/** A Scryfall SET object (/sets/:code) — what the collector-field import
+ *  reads of it (TODO 4.9a): the parent a token / promo set prints the code
+ *  of, and the size a 2015-era printing shows after its number. Plain
+ *  strings and optional numbers so a new Scryfall value never fails the
+ *  parse. */
+export const scryfallSetSchema = z
+  .object({
+    code: z.string(),
+    name: z.string().optional().nullable(),
+    set_type: z.string().optional().nullable(),
+    released_at: z.string().optional().nullable(),
+    /** Every card Scryfall lists in the set (a token set's count). */
+    card_count: z.number().optional().nullable(),
+    /** The size the set PRINTS after a collector number ("107/281"); absent
+     *  on sets that print none. */
+    printed_size: z.number().optional().nullable(),
+    /** The set a token / promo / memorabilia set belongs to ("dom" for
+     *  tdom) — the code those printings print. */
+    parent_set_code: z.string().optional().nullable(),
+  })
+  .passthrough();
+
+export type ScryfallSet = z.infer<typeof scryfallSetSchema>;
 
 // ---------------------------------------------------------------------------
 // Public helpers — these are what API routes call.
@@ -593,6 +625,73 @@ export async function getCardById(id: string): Promise<ScryfallCard | null> {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Sets (TODO 4.9a). The collector-field import needs a printing's SET object
+// only sometimes — the parent code of a token / promo / memorabilia set, the
+// printed size of a 2015-era printing (lib/scryfall/import-mapper.ts
+// needsScryfallSet) — and a set never changes, so one answer serves every
+// import of that set: Next's data cache keeps it for a day
+// (`next: { revalidate: 86400 }`) and an in-process map answers repeats
+// within the same instance without a request at all. Budget: at most ONE
+// extra Scryfall call per import, none on a hit.
+// ---------------------------------------------------------------------------
+
+export const SCRYFALL_SET_CACHE_SECONDS = 86_400;
+
+type ScryfallSetLookup =
+  | { kind: "ok"; set: ScryfallSet }
+  // Scryfall's 404: no such set. Definitive, cached like a hit.
+  | { kind: "not_found"; set: null }
+  // Network, 429 past the retry budget, 5xx, a bad body: not cached, so
+  // the next import retries.
+  | { kind: "upstream"; set: null };
+
+const setCache = new Map<string, { at: number; value: Promise<ScryfallSet | null> }>();
+
+async function fetchScryfallSet(code: string): Promise<ScryfallSetLookup> {
+  let response: Response;
+  try {
+    response = await scryfallFetch(`/sets/${encodeURIComponent(code)}`, {
+      revalidate: SCRYFALL_SET_CACHE_SECONDS,
+    });
+  } catch {
+    return { kind: "upstream", set: null };
+  }
+  if (response.status === 404) return { kind: "not_found", set: null };
+  if (!response.ok) return { kind: "upstream", set: null };
+  try {
+    const body: unknown = await response.json();
+    return { kind: "ok", set: scryfallSetSchema.parse(body) };
+  } catch {
+    return { kind: "upstream", set: null };
+  }
+}
+
+/**
+ * A Scryfall set by its (lower-case) code, through the throttled client:
+ * cached for a day, one request per set per instance. Null when Scryfall
+ * has no such set or didn't answer — the import then fills no collector
+ * fields rather than guessing a parent or a size.
+ */
+export async function getScryfallSet(code: string): Promise<ScryfallSet | null> {
+  const key = code.trim().toLowerCase();
+  // Scryfall set codes are short alphanumerics; refuse anything else before
+  // it reaches the request path.
+  if (!/^[a-z0-9]{2,10}$/.test(key)) return null;
+  const now = Date.now();
+  const hit = setCache.get(key);
+  if (hit && now - hit.at < SCRYFALL_SET_CACHE_SECONDS * 1000) return hit.value;
+  const value = fetchScryfallSet(key).then((result) => {
+    if (result.kind === "upstream") {
+      const current = setCache.get(key);
+      if (current?.value === value) setCache.delete(key);
+    }
+    return result.set;
+  });
+  setCache.set(key, { at: now, value });
+  return value;
 }
 
 /**

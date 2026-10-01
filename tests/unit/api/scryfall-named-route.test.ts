@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   log: vi.fn(),
   byId: vi.fn(),
   byName: vi.fn(),
+  set: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
@@ -34,13 +35,18 @@ vi.mock("@/lib/scryfall/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/scryfall/client")>()),
   getCardById: state.byId,
   getCardByNameResult: state.byName,
+  getScryfallSet: state.set,
 }));
 
 import { GET } from "@/app/api/scryfall/named/route";
-import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { scryfallCardSchema, scryfallSetSchema } from "@/lib/scryfall/client";
+import collectorPrintings from "../scryfall/fixtures/collector-printings.json";
+import collectorSets from "../scryfall/fixtures/collector-sets.json";
 
 type PrintingKey = keyof typeof printings;
 const card = (key: PrintingKey) => scryfallCardSchema.parse(printings[key]);
+type CollectorKey = keyof typeof collectorPrintings;
+const collectorCard = (key: CollectorKey) => scryfallCardSchema.parse(collectorPrintings[key]);
 
 function get(query: string) {
   return GET(new NextRequest(`https://www.pipglyph.com/api/scryfall/named?${query}`));
@@ -52,6 +58,46 @@ beforeEach(() => {
   state.log.mockReset().mockResolvedValue(undefined);
   state.byId.mockReset().mockResolvedValue(null);
   state.byName.mockReset().mockResolvedValue({ ok: true, card: card("dom-168") });
+  state.set.mockReset().mockImplementation(async (code: string) => {
+    const raw = (collectorSets as Record<string, unknown>)[code];
+    return raw ? scryfallSetSchema.parse(raw) : null;
+  });
+});
+
+describe("GET /api/scryfall/named — the collector fields follow the printing (TODO 4.9a)", () => {
+  it.each([
+    // [fixture, set calls, set code, number, lang]
+    ["dmu-107", 1, "DMU", "107/281", "en"],
+    ["dmu-107-es", 1, "DMU", "107/281", "es"],
+    ["tdom-1", 1, "DOM", "1/16", "en"],
+    ["tfdn-24", 1, "FDN", "24", "en"],
+    ["fdn-1", 0, "FDN", "1", "en"],
+    ["onc-114", 0, "ONC", "114", "en"],
+    ["pw23-3", 0, "PRM", "3", "ph"],
+  ] as const)("%s → %i set call(s): %s · %s · %s", async (key, calls, setCode, number, lang) => {
+    const printing = collectorCard(key);
+    state.byId.mockResolvedValue(printing);
+    const body = await (await get(`id=${printing.id}`)).json();
+    expect(body.ok).toBe(true);
+    expect(body.patch.collector).toEqual({ set_code: setCode, collector_number: number, lang });
+    expect(state.set).toHaveBeenCalledTimes(calls);
+    if (calls) expect(state.set).toHaveBeenCalledWith(printing.set);
+    // The set lookup is cached upstream and counts against no user quota:
+    // the card lookup is logged once, as before.
+    expect(state.log).toHaveBeenCalledTimes(1);
+  });
+
+  it("fills no collector fields when Scryfall has no answer for the set — never a guessed size", async () => {
+    state.set.mockResolvedValue(null);
+    const printing = collectorCard("dmu-107");
+    state.byId.mockResolvedValue(printing);
+    const body = await (await get(`id=${printing.id}`)).json();
+    expect(body.ok).toBe(true);
+    expect(body.patch.collector).toBeUndefined();
+    // The rest of the import is untouched.
+    expect(body.patch.title).toBe("Sheoldred, the Apocalypse");
+    expect(body.patch.source_scryfall_id).toBe(printing.id);
+  });
 });
 
 describe("GET /api/scryfall/named — which parameter is read", () => {
