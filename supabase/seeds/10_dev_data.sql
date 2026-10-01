@@ -228,8 +228,11 @@ on conflict (id) do nothing;
 --     stays on one 24-card page: the e2e gallery specs (seeded-data,
 --     browse-filters, like-toggle) read page 1, and 8 more public rows pushed
 --     Cinderwing Matriarch, Emberlash and Thornback Behemoth off it. Ids
---     …034–…042 (…026 is the emblems seed's: a reused id is a row that
+--     …034–…044 (…026 is the emblems seed's: a reused id is a row that
 --     silently never lands — tests/unit/devops/seed-card-ids.test.ts).
+--     Seraphine and The Glass Reliquary (…043 / …044) are 4.6f's: stored on
+--     the borderless frames with no key, before those drew the floating
+--     crown and the pinline split.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -294,7 +297,20 @@ from (values
   -- rule reads it as B|G, the same as Shadowwood Hollow's ['black','green'].
   ('c0000000-0000-4000-a000-000000000042'::uuid, 'Duskmire Thicket', 'duskmire-thicket', null, array['black','green','multicolor'], null, 'land', array[]::text[], 'uncommon',
      E'Duskmire Thicket enters tapped.\nWhen Duskmire Thicket enters, surveil 1.\n{T}: Add {B} or {G}.', null, null, 20,
-     '{}'::jsonb, 1)
+     '{}'::jsonb, 1),
+  -- TODO 4.6f (wave 2a): the borderless frames draw the floating crown and
+  -- the pinline-split pair. Two cards stored BEFORE they did (no key): a WU
+  -- legendary on m15borderless — gold pinline, no crown; its editor shows
+  -- both switches off with their hints, and switching them on draws the
+  -- split pinline and the split floating crown — and a legendary colourless
+  -- artifact on the artifact dress (the crown hint only; its crown is CC's
+  -- artifact crown).
+  ('c0000000-0000-4000-a000-000000000043'::uuid, 'Seraphine, Tidewarden', 'seraphine-tidewarden', '{2}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Angel','Wizard'], 'mythic',
+     E'Flying, vigilance\nWhenever Seraphine attacks, tap target creature an opponent controls.', '3', '4', 7,
+     '{"template":"m15borderless","finish":"regular"}'::jsonb, 3),
+  ('c0000000-0000-4000-a000-000000000044'::uuid, 'The Glass Reliquary', 'the-glass-reliquary', '{3}', array['colorless'], 'Legendary', 'artifact', array[]::text[], 'rare',
+     E'{T}: Add one mana of any colour.\n{3}, {T}: Draw a card.', null, null, 11,
+     '{"template":"m15borderlessartifact","finish":"regular"}'::jsonb, 3)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

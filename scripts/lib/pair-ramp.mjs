@@ -40,12 +40,23 @@ export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", 
  *     TLA ×9) → 45→55 (46 / 50 / 54).
  *  The design's first figures (text box 47.2 / 51.3 / 56.8, crown 42.7 /
  *  48.5 / 53.0) came from a column profile the text and the crown's own
- *  shading skew; the frame band had been folded into the pinline's ramp. */
+ *  shading skew; the frame band had been folded into the pinline's ramp.
+ *   • the borderless FLOATING crown (TODO 4.6f, wave 2a) splits wider than
+ *     the standard band: FDN's seven crowned borderless pairs (#343 B|R,
+ *     #346 W|B, #347 G|U, #348 W|U, #349 B|G, #350 U|R, #351 G|U), each
+ *     pixel de-shaded against the set's crowned monos (#294 / #309 / #324 /
+ *     #330 / #336) inside the crown's own alpha, fit an untilted ramp of
+ *     41.6 / 50.0 / 58.4 on the crown's top band (1.9–4.2 %H) and 41.6 /
+ *     50.2 / 58.8 on its wrap under the title bar (9.6–11.9 %H) → 40→60
+ *     (42 / 50 / 58), the pinline's ramp; the same borderless pairs' pinline
+ *     (title and type rings) measures 42.0–43.4 / 50.2–51.2 / 58.4–59.0 on
+ *     the uncrowned FDN #344 / #345 — 40→60 holds there too. */
 export const PAIR_RAMPS = Object.freeze({
   pinline: Object.freeze([40, 60]),
   frame: Object.freeze([44, 57]),
   rules: Object.freeze([45, 57]),
   crown: Object.freeze([45, 55]),
+  crownFloating: Object.freeze([40, 60]),
 });
 
 /** How provenance names a ramp (never a Card Conjurer file). */

@@ -1,4 +1,5 @@
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { LEGENDARY_MASTER_SUFFIX, baseMasterKey, isLegendaryMasterKey, legendaryMasterKey } from "@/lib/cards/master-key";
 import { basicLandNameForColorKey } from "@/lib/cards/watermark";
 import referencesData from "@/lib/cards/frame-references.json";
 
@@ -54,15 +55,33 @@ export const TWO_COLOR_MASTER_KEYS = [
   ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h` as const),
 ] as const;
 
+/** The crowned twins of the masters (TODO 4.6f, wave 2a; lib/cards/
+ *  master-key.ts): a template whose legendary crown is baked into its
+ *  masters (FrameProfile.crownMasters — the borderless floating crown, which
+ *  erases part of the frame under it, so no overlay can draw it) has
+ *  `<key>-legendary.png` beside each `<key>.png`: the seven colour keys and
+ *  the pair masters of each dress it declares (`wu-legendary`,
+ *  `wu-h-legendary`). */
+export const LEGENDARY_MASTER_KEYS = [
+  ...FRAME_COLOR_KEYS.map((key) => `${key}${LEGENDARY_MASTER_SUFFIX}` as const),
+  ...TWO_COLOR_MASTER_KEYS.map((key) => `${key}${LEGENDARY_MASTER_SUFFIX}` as const),
+] as const;
+
+export type LegendaryMasterKey = (typeof LEGENDARY_MASTER_KEYS)[number];
+
+export { LEGENDARY_MASTER_SUFFIX, baseMasterKey, isLegendaryMasterKey, legendaryMasterKey };
+
 /** Every frame MASTER key (the file a render paints): the colour keys plus
  *  "a", the Alpha frame's colourless ARTIFACT card, which a profile paints
- *  instead of "c" for an artifact (FrameProfile.artifactMasterKeys), and the
+ *  instead of "c" for an artifact (FrameProfile.artifactMasterKeys), the
  *  two-colour pair masters (TWO_COLOR_MASTER_KEYS, painted only where a
- *  profile declares twoColorMasters and the card switched the look on). Not
- *  a colour: combos, references and the frame_reviews gate stay on
+ *  profile declares twoColorMasters and the card switched the look on), and
+ *  the crowned twins (LEGENDARY_MASTER_KEYS, painted only where a profile
+ *  declares crownMasters, for a Legendary card with the crown switched on).
+ *  Not a colour: combos, references and the frame_reviews gate stay on
  *  FRAME_COLOR_KEYS (a pair rides its template's "m" tick, owner decision
- *  2026-09-29). */
-export const FRAME_MASTER_KEYS = [...FRAME_COLOR_KEYS, "a", ...TWO_COLOR_MASTER_KEYS] as const;
+ *  2026-09-29; a crowned twin its colour's). */
+export const FRAME_MASTER_KEYS = [...FRAME_COLOR_KEYS, "a", ...TWO_COLOR_MASTER_KEYS, ...LEGENDARY_MASTER_KEYS] as const;
 
 export type FrameMasterKey = (typeof FRAME_MASTER_KEYS)[number];
 

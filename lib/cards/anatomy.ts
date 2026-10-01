@@ -23,10 +23,13 @@
 //     the two-colour switch only on a land frame (twoColorFits).
 //
 // A template draws a piece when its PROFILES entry declares it
-// (FrameProfile.overlays for the crown, FrameProfile.twoColorMasters for the
-// pairs). The crown is declared on m15, m15artifact and m15land (4.6a,
-// template-layout.ts M15_CROWN); the pairs come with 4.6b. A card draws a
-// piece only with its switch on, so a declaration changes no stored card.
+// (FrameProfile.overlays for the crown band, FrameProfile.crownMasters for a
+// crown baked into `-legendary` masters, FrameProfile.twoColorMasters for
+// the pairs). The crown band is declared on m15, m15artifact and m15land
+// (4.6a, template-layout.ts M15_CROWN); the pairs came with 4.6b; the
+// borderless frames draw the floating crown from their crowned twins and
+// the pinline-only pair (4.6f, wave 2a). A card draws a piece only with its
+// switch on, so a declaration changes no stored card.
 //
 // The colour PAIR is card data too (owner decision 2026-09-29): exactly two
 // WUBRG words in `color_identity`, in any order, the "multicolor" token
@@ -43,6 +46,7 @@
 import { supertypeHasWord } from "@/lib/cards/card-display";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { TWO_COLOR_PAIRS, type TwoColorPair } from "@/lib/cards/frame-reference-registry";
+import { legendaryMasterKey } from "@/lib/cards/master-key";
 import {
   getFrameProfile,
   type FrameOverlaySlot,
@@ -63,7 +67,7 @@ export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
  *  pair masters for. */
 export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[] };
 
-type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
+type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "crownMasters">;
 
 /** The switches a NEW card starts with (the creator's create and remix
  *  forms): every piece on. The renderers draw only what the template can,
@@ -76,7 +80,9 @@ export const NEW_CARD_ANATOMY: Readonly<Required<FrameAnatomyStyle>> = Object.fr
 
 export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
   return {
-    crown: (profile.overlays ?? []).some((slot) => slot.anatomy === "crown"),
+    // The crown is drawn either as an overlay band (4.6a) or baked into the
+    // template's `-legendary` masters (4.6f, FrameProfile.crownMasters).
+    crown: (profile.overlays ?? []).some((slot) => slot.anatomy === "crown") || profile.crownMasters === true,
     twoColor: profile.twoColorMasters ?? [],
   };
 }
@@ -429,6 +435,52 @@ export function resolveFrameOverlays(
     out.push({ anatomy: slot.anatomy, rect: slot.rect, key, path: slot.assetPathTemplate.replace("{key}", key) });
   }
   return out;
+}
+
+/** The crown's switch is on and the card prints one (the ONE test the
+ *  overlay band and a crowned master share). */
+function crownOn(style: FrameAnatomyStyle | null | undefined, facts: Pick<AnatomyFacts, "cardType" | "supertype">): boolean {
+  return anatomyOn(style, "crown") && qualifiesForCrown(facts);
+}
+
+/**
+ * The master a card paints on a profile whose crown is baked into its
+ * masters (FrameProfile.crownMasters, TODO 4.6f): `masterKey`'s crowned
+ * twin (`w` → `w-legendary`, a pair → `wu-legendary`) when the crown's
+ * switch is on and the card qualifies, else `masterKey` as given — the ONE
+ * rule frameMasterKey applies for both renderers, the finish masks and the
+ * bake's preload. A profile that draws its crown as an overlay band (or
+ * none) paints `masterKey` unchanged.
+ */
+export function crownedMasterKey(
+  profile: AnatomyProfile,
+  style: FrameAnatomyStyle | null | undefined,
+  facts: Pick<AnatomyFacts, "cardType" | "supertype">,
+  masterKey: string,
+): string {
+  return profile.crownMasters === true && crownOn(style, facts) ? legendaryMasterKey(masterKey) : masterKey;
+}
+
+/**
+ * The crown key one card face draws on `profile`, or null when it draws no
+ * crown: the overlay band's key (resolveFrameOverlays — the pinline of the
+ * master drawn, remapped by the slot), or, on a profile with crown masters,
+ * the master's own key — the pair where the two-colour look is drawn, else
+ * the colour key (`c` on either borderless dress: the artifact dress's `c`
+ * twin wears CC's artifact crown, keyed by the master, not the crown
+ * letter). The creator, the admin compare page and the tests read it
+ * (lib/cards/crown.ts crownKeyFor).
+ */
+export function crownKeyOf(
+  profile: AnatomyProfile,
+  style: FrameAnatomyStyle | null | undefined,
+  facts: AnatomyFacts & { colorKey: string },
+): string | null {
+  const overlay = resolveFrameOverlays(profile, style, facts).find((o) => o.anatomy === "crown");
+  if (overlay) return overlay.key;
+  if (profile.crownMasters !== true || !crownOn(style, facts)) return null;
+  const look = resolveTwoColor(profile, style, facts);
+  return look ? look.pair : facts.colorKey;
 }
 
 // ---------------------------------------------------------------------------

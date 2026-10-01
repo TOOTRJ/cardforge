@@ -90,8 +90,8 @@ import { blendPair } from "./lib/pair-ramp.mjs";
 // checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
 // here after the downscale and the corner cut.
 import {
-  EDGE_CONTRACTS,
   cornerViolations,
+  edgeContractFor,
   edgeContractViolations,
   isKnownEdgeFailure,
 } from "../lib/frames/edge-contract.ts";
@@ -193,11 +193,17 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const { width: W, height: H } = await sharp(baseFile).metadata();
     const images = [];
     for (const l of def.colors[key]) {
-      // A pair layer (TODO 4.6b, pairLayer): its two files blended across
-      // the region's untilted ramp (scripts/lib/pair-ramp.mjs) first.
-      let data = l.right
-        ? blendPair(await rgba(await fetchCached(l.src), W, H), await rgba(await fetchCached(l.right), W, H), W, H, l.ramp)
-        : await rgba(await fetchCached(l.src), W, H);
+      // A layer at CC's bounds (TODO 4.6f: the floating crown, its outline
+      // and the erased strip) is resized to its box and placed on a clear
+      // canvas, as CC draws an image at its bounds; a whole-canvas layer is
+      // resized to the canvas. A pair layer (TODO 4.6b, pairLayer): its two
+      // files blended across the region's untilted ramp
+      // (scripts/lib/pair-ramp.mjs) first — a placed pair on the canvas, so
+      // the ramp's % of the card's width is the card's.
+      const box = l.at ? rectPx(l.at, W, H) : null;
+      const load = async (src) =>
+        box ? placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H) : await rgba(await fetchCached(src), W, H);
+      let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
       if (l.retint) {
         // 4.34's tinted box: a neutral structure re-tinted to the flat tint
         // read from another frame (both asserted flat where they are read).
@@ -217,6 +223,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         invert: l.invert,
         opacity: l.opacity,
         replace: l.replace,
+        erase: l.erase,
         gain: l.gain,
         recolour: l.recolour,
         lumaRamp: l.lumaRamp,
@@ -250,7 +257,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       .raw()
       .toBuffer();
     roundCornersRgba8(master, OUT_W, OUT_H, CORNER_RADIUS);
-    const contract = EDGE_CONTRACTS[template];
+    // A crowned twin (4.6f) is held to its own edges where they differ.
+    const contract = edgeContractFor(template, key);
     if (!contract) {
       edgeFailures.push(`${template}/${key}: no edge contract declared (lib/frames/edge-contract.ts)`);
     } else if (!isKnownEdgeFailure(template, key)) {

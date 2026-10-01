@@ -49,9 +49,9 @@ describe("borderless families (TODO 1.17)", () => {
     ["blb-286", "exact", "m15borderless", "m15"],
     // WOT #64: anime art with no showcase flag — the standard frame (by eye).
     ["wot-64", "exact", "m15borderless", "m15"],
-    // Anatomy the frame doesn't draw: the crown (DMU #435), the nickname
-    // line (IKO #275).
-    ["dmu-435", "nearest", "m15borderless", "m15"],
+    // The crown is drawn since 4.6f (DMU #435, the floating crown: exact);
+    // anatomy the frame doesn't draw: the nickname line (IKO #275).
+    ["dmu-435", "exact", "m15borderless", "m15"],
     ["iko-275", "nearest", "m15borderless", "m15"],
     // Planeswalkers (4.33): the light borderless walker, regular (three
     // printed rows) or tall (four), landing on the bordered m15pw (the art
@@ -163,12 +163,14 @@ describe("borderless families (TODO 1.17)", () => {
   });
 
   it("names why a borderless printing isn't exact", () => {
+    // The crown gap dropped with 4.6f (gapDrawnBy: m15borderless draws the
+    // floating crown); a crowned borderless printing is exact on its frame.
     expect(frameMatchFromScryfall(printing("dmu-435"))).toMatchObject({
-      signature: "borderless/standard+crown",
-      // The borderless floating crown is wave 2 (4.6f); m15 draws the
-      // standard one (4.6a).
-      blockedBy: "4.6f",
+      signature: "borderless/standard",
+      status: "exact",
+      template: "m15borderless",
     });
+    expect(frameMatchFromScryfall(printing("dmu-435")).gaps).toBeUndefined();
     expect(frameMatchFromScryfall(printing("iko-275")).signature).toBe("borderless/standard+nickname");
     expect(frameMatchFromScryfall(printing("eld-271"))).toMatchObject({
       signature: "borderless/planeswalker+two-colour",
@@ -579,9 +581,9 @@ describe("the general signatures (TODO 1.4)", () => {
   it("lists every anatomy gap that holds, the reason's first (FrameMatch.gaps, for the import dialog's C1)", () => {
     // The crown m15 draws is no gap (4.6a).
     expect(frameMatchFromScryfall(printing("dmu-107")).gaps).toBeUndefined();
-    // The nickname names the reason; the crown (Borderless draws none yet,
-    // 4.6f) and the two-colour frame hold too.
-    expect(frameMatchFromScryfall(printing("iko-275")).gaps).toEqual(["nickname", "crown", "two-colour"]);
+    // The nickname names the reason; the crown and the two-colour frame are
+    // drawn on Borderless since 4.6f (wave 2a), so they are no gaps there.
+    expect(frameMatchFromScryfall(printing("iko-275")).gaps).toEqual(["nickname"]);
     // A Nyx legendary lands on m15, which draws its crown: the starfield only.
     expect(frameMatchFromScryfall(printing("thb-18")).gaps).toEqual(["nyx"]);
     // A synthetic colour-indicator dot on a legendary: the crown is drawn,

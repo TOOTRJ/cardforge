@@ -67,7 +67,9 @@ describe("the untilted ramp", () => {
     // Re-measured 2026-09-29 (the 4.6 review): a hybrid's frame band is
     // steeper than its pinline; the text box and the crown sit where the
     // prints put them once each pixel is de-shaded (pair-ramp.mjs).
-    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55] });
+    // …and the borderless FLOATING crown's own split, 40→60 (4.6f, wave 2a:
+    // FDN's crowned borderless pairs, de-shaded — wider than the band's).
+    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55], crownFloating: [40, 60] });
     expect(rampName([45, 57])).toBe("procedural:ramp(45→57 %W)");
     expect(() => rampMask(10, 1, [50, 50])).toThrow();
   });
@@ -244,9 +246,17 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
     expect(CC_TEMPLATES.m15.colors["gw-h"]).toEqual(pairMasterLayers("gw", "hybrid", "m15"));
     // The mono masters are untouched by the pair recipe.
     expect(CC_TEMPLATES.m15.colors.w).toEqual([WHOLE("w")]);
-    // No other template builds a pair (wave 2 is 4.6f).
+    // The borderless frames build theirs too (4.6f, wave 2a: the pinline
+    // split, m15borderless's hybrid dress, and every master's crowned twin —
+    // tests/unit/frames/legendary-masters.test.ts); no other template builds
+    // a pair (the rest of wave 2 is 4.6f's).
+    const twins = (keys: string[]) => keys.map((k) => `${k}-legendary`);
+    const borderless = ["w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((p) => `${p}-h`)];
+    expect(builtColors(CC_TEMPLATES.m15borderless)).toEqual([...borderless, ...twins(borderless)]);
+    const artifact = ["w", "u", "b", "r", "g", "c", "m", ...pairs];
+    expect(builtColors(CC_TEMPLATES.m15borderlessartifact)).toEqual([...artifact, ...twins(artifact)]);
     for (const [template, def] of Object.entries(CC_TEMPLATES)) {
-      if (["m15", "m15artifact", "m15land"].includes(template)) continue;
+      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }
   });

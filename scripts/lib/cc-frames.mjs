@@ -526,6 +526,138 @@ export function borderlessLandLayers({ frame, box, pinline }) {
   ];
 }
 
+// --- 4.6f (wave 2a): the borderless legendary crown and the two-colour
+// pinline on m15borderless / m15borderlessartifact — CC's autoBorderlessFrame
+// (creator-23.js:1227–1266) with makeBorderlessFrameByLetter (:2034–2170)
+// and cardFrameProperties's 'Borderless' style (:577–755).
+//
+// THE CROWN is CC's FLOATING crown (packM15LegendCrownsFloating.js), the one
+// every crowned borderless print wears (FDN #294 / #309 / #324 / #330 /
+// #336, DMU #435): 1500-native (1408×215), drawn 1:1 at 3.07/1.91/93.87×
+// 10.24 %, its outline (1416×223) UNDER it at 2.8/1.72/94.4×10.62 — after
+// CC ERASES the strip 3.94/2.77/92.14×1.77 % (rows 58–94 at HD), where the
+// master's title-bar ring (the black outer line at rows 85–89 and the white
+// ring at 90–96, α 255 over x 94–1405) would show above the crown's inner
+// edge and in its two end notches; the print's crown floats on the art and
+// meets the bar on its own outline. An overlay can only add pixels, so the
+// crown is baked into a second master per key, `<key>-legendary.png`
+// (FrameProfile.crownMasters), beside the plain one; nothing else in the
+// master changes (the plain masters rebuild byte-identical). The crown
+// letter is the master's: the colour, M on the gold frame, C on
+// m15borderless's see-through colourless frame, A on the artifact dress
+// (its colourless master IS CC's artifact frame; CC's crown letter for an
+// Artifact type line is A). CC's unlisted 'Artifact Legend Crown (Alt)' is
+// not used (autoBorderlessFrame never picks it).
+//
+// THE PAIR: a two-colour borderless print splits only its PINLINE — the
+// first colour left, the second right, around the title and type bars (FRA
+// #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461; FDN
+// #343–351); the bars, box and bottom bar keep the gold M frame's. So the
+// pair master is the M frame with the two colours' frames lerped across the
+// pinline ramp (40→60 %W, m15's: the uncrowned FDN pairs #344 / #345
+// measure 42.0–43.4 / 50.2–51.2 / 58.4–59.0 at 10 / 50 / 90 % on both
+// rings) through the pack's own Pinline mask — CC's Pinline / pinlineRight
+// layers, untilted (its maskRightHalf.png tilts +1.35 %W). CC also splits
+// the Rules layer through the regular M15 Rules mask: on this pack every
+// colour's box is the same dark α128 pixels, so that layer draws nothing
+// the M frame doesn't, and is left out. A HYBRID cost prints the same split
+// pinline over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 /
+// #144, ECL #292–296: cardFrameProperties's typeTitle 'L' for a hybrid
+// pair), so m15borderless builds a "hybrid" dress too, `<pair>-h`, on the L
+// frame; the artifact dress keeps the split only, like m15artifact (a
+// hybrid artifact falls back to it). The pair's crown is its two floating crowns
+// lerped across PAIR_RAMPS.crownFloating (40→60: FDN's seven crowned pairs,
+// de-shaded against the set's crowned monos inside the crown's alpha,
+// measure 41.6 / 50.0 / 58.4 on the crown's top band and 41.6 / 50.2 / 58.8
+// on its wrap — wider than the standard band's 45→55).
+const CROWNS = "img/frames/m15/crowns";
+/** CC's floating crown of a letter (w u b r g m a l c). */
+const floatingCrown = (k) => `${CROWNS}/m15Crown${k.toUpperCase()}Floating.png`;
+/** The floating crown's pieces at CC's bounds (card %), and the ramp its
+ *  pairs split across. */
+export const BORDERLESS_CROWN = Object.freeze({
+  crown: Object.freeze({ leftPct: 3.07, topPct: 1.91, widthPct: 93.87, heightPct: 10.24 }),
+  outline: Object.freeze({ leftPct: 2.8, topPct: 1.72, widthPct: 94.4, heightPct: 10.62 }),
+  erase: Object.freeze({ leftPct: 3.94, topPct: 2.77, widthPct: 92.14, heightPct: 1.77 }),
+  outlineSrc: `${CROWNS}/m15CrownFloatingOutline.png`,
+  /** CC's 'Legend Crown Border Cover' on this frame: img/black.png, ERASED. */
+  eraseSrc: "img/black.png",
+  ramp: PAIR_RAMPS.crownFloating,
+});
+/** The crowned twin of a master key: `w` → `w-legendary`, `wu` →
+ *  `wu-legendary` (lib/cards/frame-reference-registry.ts
+ *  LEGENDARY_MASTER_SUFFIX). */
+export const LEGENDARY_MASTER_SUFFIX = "-legendary";
+export const legendaryKey = (k) => `${k}${LEGENDARY_MASTER_SUFFIX}`;
+/** A layer drawn at CC's bounds (`at`, a card-% rect) instead of over the
+ *  whole canvas: the image is resized to the box and placed there. */
+const placed = (src, at, extra = {}) => ({ src, at: { ...at }, ...extra });
+/** CC's erase (a pack's `erase: true`; makeBorderlessFrameByLetter's Crown
+ *  Border Cover): the layer's alpha is CUT from the layers below
+ *  (destination-out), nothing is drawn. */
+const erasing = (src, at) => ({ src, at: { ...at }, erase: true });
+
+/**
+ * The floating crown's layers, drawn over a borderless master in CC's
+ * order: the erased strip, the outline, the crown — one letter's crown, or a
+ * pair's two crowns (`[a, b]`) lerped across the floating-crown ramp.
+ */
+export function borderlessCrownLayers(crown) {
+  const [a, b] = Array.isArray(crown) ? crown : [crown, null];
+  return [
+    erasing(BORDERLESS_CROWN.eraseSrc, BORDERLESS_CROWN.erase),
+    placed(BORDERLESS_CROWN.outlineSrc, BORDERLESS_CROWN.outline),
+    b
+      ? placed(floatingCrown(a), BORDERLESS_CROWN.crown, { right: floatingCrown(b), ramp: [...BORDERLESS_CROWN.ramp] })
+      : placed(floatingCrown(a), BORDERLESS_CROWN.crown),
+  ];
+}
+
+/** A borderless pair master's layers: the gold M frame (the "split" dress:
+ *  gold bars, FDN #343–351) or CC's grey 'Land Frame' L (the "hybrid" dress:
+ *  the grey bars every hybrid borderless print wears — 2X2 #374 / #385, SPG
+ *  #142 / #144, ECL #292–296 — CC's typeTitle 'L' for a hybrid pair), then
+ *  the pair's two frames lerped across the pinline ramp through the pack's
+ *  Pinline mask. Keys: `<pair>` and `<pair>-h`. */
+export function borderlessPairLayers(pair, dress = "split") {
+  const [a, b] = pair.split("");
+  return [
+    layer(borderlessFrame(dress === "hybrid" ? "l" : "m")),
+    { src: borderlessFrame(a), right: borderlessFrame(b), ramp: [...PAIR_RAMPS.pinline], mask: BORDERLESS_PINLINE_MASK },
+  ];
+}
+
+/**
+ * A borderless template's colour map (4.32's seven masters, unchanged, plus
+ * 4.6f's): `frameOf` names the pack frame of a colour key (the see-through C,
+ * or the artifact dress's A for its colourless), `crownOf` the crown letter
+ * (the same letters), `dresses` the pair dresses the profile declares
+ * (FrameProfile.twoColorMasters: "split", and m15borderless's "hybrid").
+ * Every master gets its crowned twin: the seven colours, and the pairs of
+ * each dress.
+ */
+function borderlessMasters(frameOf, crownOf, dresses) {
+  /** @type {Record<string, Array<{ src: string }>>} */
+  const out = {};
+  for (const k of COLORS) {
+    out[k] = [layer(borderlessFrame(frameOf(k)))];
+    out[legendaryKey(k)] = [layer(borderlessFrame(frameOf(k))), ...borderlessCrownLayers(crownOf(k))];
+  }
+  for (const dress of dresses) {
+    for (const pair of TWO_COLOR_PAIRS) {
+      const key = dress === "hybrid" ? `${pair}-h` : pair;
+      out[key] = borderlessPairLayers(pair, dress);
+      out[legendaryKey(key)] = [...borderlessPairLayers(pair, dress), ...borderlessCrownLayers(pair.split(""))];
+    }
+  }
+  return out;
+}
+const BORDERLESS_ANATOMY_NOTES = [
+  "legendary crown (TODO 4.6f, wave 2a): CC's FLOATING crown (packM15LegendCrownsFloating.js) baked into a second master per key, <key>-legendary.png, as autoBorderlessFrame draws it — the strip 3.94/2.77/92.14×1.77 % ERASED from the frame (CC's Crown Border Cover with erase: the master's title-bar ring there), the outline at 2.8/1.72/94.4×10.62 % under the crown at 3.07/1.91/93.87×10.24 %, all 1500-native (no resample); the crown letter is the master's (C for the see-through colourless frame, A for the artifact dress, M for gold); the plain masters are untouched",
+  "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
+  "hybrid pair masters <pair>-h.png (m15borderless only, TODO 4.6f): CC's grey 'Land Frame' L (the grey bars every hybrid borderless print wears — 2X2 #374 / #385, SPG #142 / #144, ECL #292–296; cardFrameProperties's typeTitle 'L' for a hybrid pair) with the same split pinline; their crowned twins <pair>-h-legendary.png; the P/T plate is the pack's 'Colorless Power/Toughness' (plateKeyFor's grey 'c' = pt/l.png), as CC's pt 'C' for an L typeTitle",
+];
+
 // --- 4.33 'Borderless' and 'Tall Borderless' planeswalkers — CC
 // packPlaneswalkerBorderless.js / packPlaneswalkerTallBorderless.js
 // (groupPlaneswalker.js:3 and :6). 1500×2100 native (no resample): the
@@ -981,30 +1113,43 @@ export const CC_TEMPLATES = {
   m20tokenartifacttext: m20TokenTemplate("short", true),
   m20tokenartifacttall: m20TokenTemplate("tall", true),
   // 4.32 — the standard borderless frame (2019+): art to the card edge.
+  // 4.6f (wave 2a) adds the floating legendary crown as `<key>-legendary`
+  // masters and the ten pinline-split pair masters (borderlessMasters).
   m15borderless: {
-    colors: perColor((k) => [layer(borderlessFrame(k))]),
+    colors: borderlessMasters(
+      (k) => k,
+      (k) => k,
+      ["split", "hybrid"],
+    ),
     plates: BORDERLESS_PT,
-    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
-    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the floating crown of packM15LegendCrownsFloating.js (4.6f)",
+    transforms:
+      "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; a -legendary master erases CC's strip and draws the outline and the floating crown at CC's bounds, 1:1; a pair master draws the pinline region as the two frames lerped across the untilted pinline ramp (4.6f)",
     notes: [
       "colourless = CC's see-through colourless frame (m15GenericShowcaseFrameC.png): the art runs under the frame, as on m15 'c' (4.17)",
       "colourless P/T plate = the pack's 'Colorless Power/Toughness' pt/l.png (the unlisted pt/c.png is not used)",
       "CC's 'Land Frame' (m15GenericShowcaseFrameL.png) is not imported here: it is 4.34's m15borderlessland",
+      ...BORDERLESS_ANATOMY_NOTES,
     ],
   },
-  // 4.32 — its artifact skin, mirroring m15artifact.
+  // 4.32 — its artifact skin, mirroring m15artifact. 4.6f: the same crowned
+  // twins and pairs; its colourless crown is CC's artifact crown (A).
   m15borderlessartifact: {
-    colors: {
-      c: [layer(borderlessFrame("a"))],
+    colors: borderlessMasters(
       // A coloured artifact wears the colour frame (see notes).
-      ...perColor((k) => [layer(borderlessFrame(k))], WUBRGM),
-    },
+      (k) => (k === "c" ? "a" : k),
+      (k) => (k === "c" ? "a" : k),
+      ["split"],
+    ),
     plates: { ...BORDERLESS_PT, c: `${BORDERLESS}/pt/a.png` },
-    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49)",
-    transforms: "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the floating crown of packM15LegendCrownsFloating.js (4.6f)",
+    transforms:
+      "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; a -legendary master erases CC's strip and draws the outline and the floating crown at CC's bounds, 1:1; a pair master draws the pinline region as the two frames lerped across the untilted pinline ramp (4.6f)",
     notes: [
       "colourless artifact = CC's 'Artifact Frame' (m15GenericShowcaseFrameA.png) with the 'Artifact Power/Toughness' plate pt/a.png",
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
+      ...BORDERLESS_ANATOMY_NOTES,
+      "colourless artifact crown = CC's 'Artifact Legend Crown' (m15CrownAFloating.png) on the artifact frame; the coloured and pair masters are the same bytes as m15borderless's",
     ],
   },
   // 4.34 — the borderless nonbasic land: the colour on the title bar, the
@@ -1192,6 +1337,14 @@ export function compositeLayers(images, width, height) {
           acc[o + c] = outA === 0 ? 0 : (acc[o + c] * ab * (1 - m) + img.data[o + c] * a * m) / outA;
         }
         acc[o + 3] = outA;
+        continue;
+      }
+      if (img.erase) {
+        // CC's erase (destination-out, TODO 4.6f): the layer's alpha cuts
+        // what is below; its colour is never drawn.
+        if (i === 0) throw new Error("compositeLayers: an erase layer needs a layer below it");
+        if (img.opacity !== undefined) a *= img.opacity;
+        acc[o + 3] *= 1 - a;
         continue;
       }
       if (img.recolour) {
@@ -1689,11 +1842,14 @@ export function describeLayer(l) {
   const gain = l.gain !== undefined ? ` with its alpha ×${l.gain.toFixed(4)} (clamped at 1)` : "";
   // A pair layer (pairLayer, TODO 4.6b): two files blended across a ramp.
   const src = l.right ? `(${l.src} | ${l.right} across ${rampName(l.ramp)})` : l.src;
+  // A layer at CC's bounds (4.6f's floating crown pieces), and CC's erase.
+  const at = l.at ? ` at ${l.at.leftPct}/${l.at.topPct}/${l.at.widthPct}×${l.at.heightPct} %` : "";
+  if (l.erase) return `${src}${at} erased from the layers below (CC's erase: destination-out)`;
   if (l.recolour) {
     const ramp = l.lumaRamp ? `, weighted by its own luminance from ${l.lumaRamp[0]} (0) to ${l.lumaRamp[1]} (full)` : "";
     return `${src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}`;
   }
-  return `${src}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
+  return `${src}${at}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
 }
 
 /** One `finish` composite as provenance prints it. */
@@ -1757,10 +1913,17 @@ export function compositeFinish(buf, width, height, finish, masks) {
 }
 
 
+/** The crowned twins a template with its crown baked into the masters may
+ *  build (TODO 4.6f: the borderless floating crown): the seven colours, the
+ *  ten pairs and the ten hybrid pairs, each `-legendary`
+ *  (lib/cards/frame-reference-registry.ts LEGENDARY_MASTER_KEYS). */
+export const LEGENDARY_MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`)].map(legendaryKey);
+
 /** Every master key a recipe may name, in build order: the seven colours,
  *  then the two-colour pair masters (TODO 4.6b: gold-split `<pair>`, hybrid
- *  `<pair>-h`; lib/cards/frame-reference-registry.ts TWO_COLOR_MASTER_KEYS). */
-export const MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`)];
+ *  `<pair>-h`; lib/cards/frame-reference-registry.ts TWO_COLOR_MASTER_KEYS),
+ *  then the crowned twins (4.6f). */
+export const MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`), ...LEGENDARY_MASTER_KEYS];
 
 /** The masters a template builds (every key its recipe names, minus
  *  `excluded`), in MASTER_KEYS order. */

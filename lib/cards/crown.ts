@@ -16,11 +16,17 @@
 // the colourless grey "c" on m15, the artifact silver "a" on m15artifact,
 // the land grey "l" on m15land.
 //
+// On the borderless frames (4.6f, wave 2a) the crown is not a band but baked
+// into the masters' crowned twins (`<key>-legendary`, FrameProfile.
+// crownMasters): crownKeyFor names the twin's key there (the colour, or the
+// pair where the two-colour frame is drawn), and crownOverlayFor is null.
+//
 // Pure and client-safe.
 // ---------------------------------------------------------------------------
 
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
+  crownKeyOf,
   resolveFrameOverlays,
   type AnatomyFacts,
   type FrameAnatomyStyle,
@@ -39,7 +45,7 @@ export type CrownCard = {
   frameStyle?: FrameAnatomyStyle | null;
 };
 
-type CrownProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
+type CrownProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "crownMasters">;
 
 function factsOf(card: CrownCard): AnatomyFacts & { colorKey: string } {
   return {
@@ -51,20 +57,24 @@ function factsOf(card: CrownCard): AnatomyFacts & { colorKey: string } {
   };
 }
 
-/** The crown overlay `card` draws on `profile`, or null (no crown). */
+/** The crown OVERLAY band `card` draws on `profile` (M15_CROWN's), or null —
+ *  none on a profile whose crown is baked into its masters (4.6f:
+ *  crownKeyFor still names it). */
 export function crownOverlayFor(card: CrownCard, profile: CrownProfile): ResolvedFrameOverlay | null {
   return resolveFrameOverlays(profile, card.frameStyle, factsOf(card)).find((o) => o.anatomy === "crown") ?? null;
 }
 
-/** True when `card` draws the legendary crown on `profile`. */
+/** True when `card` draws the legendary crown on `profile` — as the overlay
+ *  band or baked into its crowned master. */
 export function showsCrown(card: CrownCard, profile: CrownProfile): boolean {
-  return crownOverlayFor(card, profile) !== null;
+  return crownKeyFor(card, profile) !== null;
 }
 
-/** The crown band key `card` draws on `profile` ("w", "m", "a", "l", "wu" …),
- *  or null when it draws none. */
+/** The crown key `card` draws on `profile` ("w", "m", "a", "l", "wu" … — the
+ *  band's key, or the crowned master's colour or pair), or null when it
+ *  draws none (lib/cards/anatomy.ts crownKeyOf). */
 export function crownKeyFor(card: CrownCard, profile: CrownProfile): string | null {
-  return crownOverlayFor(card, profile)?.key ?? null;
+  return crownKeyOf(profile, card.frameStyle, factsOf(card));
 }
 
 /** A crowned print the crown is judged against (the admin compare page's
@@ -112,6 +122,29 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     r: ref("Sokenzan, Crucible of Defiance", "neo", "276", "aa548dcd-c1dd-492d-a69f-c65dfeef0633"),
     g: ref("Boseiju, Who Endures", "neo", "266", "2135ac5a-187b-4dc9-8f82-34e8d1603416"),
     c: ref("Dark Depths", "uma", "241", "e00d16f9-ea27-4aa3-a134-4e04f934d020"),
+  },
+  // The borderless floating crown (TODO 4.6f, wave 2a): FDN's digital
+  // renders for the five colours; a three-colour gold crown (2XM #354); the
+  // colourless Eldrazi crown on the see-through frame (2X2 #336).
+  m15borderless: {
+    w: ref("Arahbo, the First Fang", "fdn", "294", "813a39af-bafe-4a38-a270-39a0ce0f4aa5"),
+    u: ref("Kiora, the Rising Tide", "fdn", "309", "5a123794-096f-4d01-bfd4-1d23f22608f7"),
+    b: ref("Tinybones, Bauble Burglar", "fdn", "324", "daf8d5d4-b52d-42c7-aa56-c104a539133c"),
+    r: ref("Kellan, Planar Trailblazer", "fdn", "330", "0e413f37-b59a-4302-86d3-2abce81edc78"),
+    g: ref("Loot, Exuberant Explorer", "fdn", "336", "73ce9555-a687-4a37-864c-eb59b1e80a8f"),
+    m: ref("Kaalia of the Vast", "2xm", "354", "86f670f9-c5b7-4eb0-a7d0-d16513fadf74"),
+    c: ref("Kozilek, Butcher of Truth", "2x2", "336", "64b4b6cd-6d0f-4060-b51f-61f481000d51"),
+  },
+  // The artifact dress: a crowned borderless artifact per colour where one
+  // was printed; its colourless crown is CC's artifact crown (2XM #362).
+  m15borderlessartifact: {
+    w: ref("Rammas Echor, Ancient Shield", "ltc", "505", "558c1fcc-cb01-4031-ada5-4e39d65aee27"),
+    u: ref("The Water Crystal", "fin", "333", "7572888a-c394-4d9f-b66f-30d91364d265"),
+    b: ref("The Last Ride", "dft", "308", "f2d563b1-f03b-4ce3-9de0-05dab257b67c"),
+    r: ref("The Fire Crystal", "fin", "337", "58306c68-5de8-48f4-9ce5-ea69792af58c"),
+    g: ref("The Skullspore Nexus", "lci", "340", "85c4b837-1557-4dda-a324-9646ce702dfd"),
+    m: ref("Breya, Etherium Shaper", "mh3", "372", "468e5d5a-01cc-4d01-88fb-ab556e2383cb"),
+    c: ref("Mox Opal", "2xm", "362", "547e3aa5-d88a-4418-ab9d-dd65385f031b"),
   },
 };
 

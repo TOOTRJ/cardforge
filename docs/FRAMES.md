@@ -134,7 +134,9 @@ into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
   m15tokenartifact;
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
-  plates;
+  plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
+  the crowned twin of every master (CC's floating crown, `<key>-legendary`;
+  [The borderless crown and pair pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a));
 - the borderless nonbasic land (4.34): m15borderlessland, a composite of
   the same pack's pixels (below), on m15borderless's plates;
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
@@ -1051,7 +1053,9 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
 
 Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
 into `.frames-build`, publish to the dev bucket, declare it on the
-`PROFILES` entry, update the pinned sets in `tests/unit/cards/anatomy.test.ts`,
+`PROFILES` entry (`overlays` for a crown band, `crownMasters` for a crown
+baked into `-legendary` twins, `twoColorMasters` for the pairs), update the
+pinned sets in `tests/unit/cards/anatomy.test.ts`,
 add its cases to the visual matrix (`tests/visual/matrix.ts`: new cases, no
 bump), sign it off on a print sheet in the PR, promote, merge, and post the
 site update ([Announcing a change](#announcing-a-change)). No bump, no sweep:
@@ -1060,8 +1064,10 @@ default.
 
 **The legendary crown (4.6a)** is `M15_CROWN` in
 `lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
-only (never snow, devoid, borderless, extended art, adventure, saga, the
-tokens or a showcase: 4.6f and the token items). It draws when the switch is
+only (never snow, devoid, extended art, adventure, saga, the tokens or a
+showcase: 4.6f and the token items; the borderless frames draw CC's
+FLOATING crown from crowned twin masters instead — [The borderless crown
+and pair pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a)). It draws when the switch is
 `true`, the supertype has the word Legendary and the card is not a
 planeswalker, token, battle or emblem (`qualifiesForCrown`). Its key is the
 pinline of the master actually drawn (`resolveFrameOverlays`): the colour,
@@ -1131,9 +1137,10 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
   (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
-  devoid, borderless, extended art — keeps the `two-colour` gaps, now
-  pointing at 4.6f; an M20 token's gaps point at 4.48 (its own central rim
-  split and pill crown).
+  devoid, extended art, the borderless land — keeps the `two-colour` gaps,
+  now pointing at 4.6f (the borderless frames draw theirs since wave 2a,
+  below); an M20 token's gaps point at 4.48 (its own central rim split and
+  pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
   the second's across 45→55 %W, the same `pair-ramp.mjs`), on every dress and
@@ -1152,6 +1159,78 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   (2026-09-30), with FDN's UNCROWNED gold prints as the references for the
   W|B, B|G and R|G split crowns (FDN #120 / #125 / #117: FDN printed no
   crowned card in those pairs).
+
+#### The borderless crown and pair pinline (4.6f, wave 2a)
+
+m15borderless and m15borderlessartifact draw both pieces from their own
+masters, through the same switches, hints, import rule and registry gaps
+as the band frames (`frameAnatomyOf` reads `crownMasters` as "draws the
+crown"). Opt-in per card: no stored card changes (every visible production
+card on the two frames bakes byte-identical with the switches absent).
+
+- **The crown is a crowned twin, not a band** (`FrameProfile.crownMasters`,
+  `lib/cards/master-key.ts`): beside every master the frame paints —
+  `w u b r g c m`, the pairs, m15borderless's hybrid pairs — the bucket
+  holds `<key>-legendary.png` (`LEGENDARY_MASTER_KEYS`), and a Legendary
+  card with `crown: true` paints that twin (`frameMasterKey` →
+  `crownedMasterKey`; `crownKeyFor` names its key). Why: the print's crown
+  is Card Conjurer's FLOATING crown (`packM15LegendCrownsFloating.js`,
+  `autoBorderlessFrame`), drawn after CC ERASES the strip 3.94/2.77/92.14×
+  1.77 % of the frame — rows 58–94 at HD, where the master's title-bar ring
+  (the black outer line and the α 255 white ring) would show above the
+  crown's inner edge and in its end notches — then the outline (1416×223 at
+  2.8/1.72/94.4×10.62 %) UNDER the crown (1408×215 at 3.07/1.91/93.87×
+  10.24 %), all 1500-native, 1:1. An overlay can only add pixels, so the
+  importer (`borderlessMasters` / `borderlessCrownLayers`, a layer `at` CC's
+  bounds and an `erase` layer) bakes the twins; the plain masters rebuild
+  byte-identical. The crown letter is the master's: the colour, M on gold,
+  C on m15borderless's see-through frame, A on the artifact dress (its
+  colourless master IS CC's artifact frame; CC's crown letter for an
+  Artifact type line). Everything keyed by the master a card paints — ink
+  maps, a see-through master's under-frame art, the square-corner table —
+  reads the plain key (`baseMasterKey`): the crown changes nothing below
+  the title bar. The twins' edges are the plain masters' but for the
+  crown's peak, which reaches into the top band's 2 % between 46 and 54 %W
+  as the prints' does (`CROWNED_EDGE_CONTRACTS`, `edgeContractFor`).
+- **The pairs split only the pinline** (`twoColorMasters`: both dresses on
+  m15borderless, the split on the artifact dress): the gold M frame with
+  the two colours' frames lerped across the pinline ramp (40→60 %W, m15's)
+  through the pack's own Pinline mask — the prints' look on the title and
+  type rings (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA
+  #461, FDN #343–351; the uncrowned FDN #344 / #345 measure 42.0–43.4 /
+  50.2–51.2 / 58.4–59.0 at 10 / 50 / 90 %). A HYBRID cost prints the same
+  split over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 / #144,
+  ECL #292–296: `cardFrameProperties`'s `typeTitle` L), so m15borderless
+  builds `<pair>-h` on the L frame with the grey plate (`plateKeyFor`'s `c`
+  = the pack's colourless plate, CC's `pt` C); a hybrid artifact falls back
+  to the split, like m15artifact. m15borderlessartifact's `m` tick (verified
+  2026-09-28) has two-colour references: the switch now gives them their
+  split.
+- **The pair's crown** is the two floating crowns lerped across
+  `PAIR_RAMPS.crownFloating` = 40→60 %W — wider than the standard band's
+  45→55: FDN's seven crowned borderless pairs (#343 B|R, #346 W|B, #347 G|U,
+  #348 W|U, #349 B|G, #350 U|R, #351 G|U), each pixel de-shaded against the
+  set's crowned monos (#294 / #309 / #324 / #330 / #336) inside the crown's
+  own alpha, fit an untilted ramp at 41.6 / 50.0 / 58.4 %W on the crown's
+  top band (1.9–4.2 %H) and 41.6 / 50.2 / 58.8 on its wrap under the bar
+  (9.6–11.9 %H). The same fit on the standard crown (FDN #122 against #2 /
+  #45) gives 45.0 / 49.0 / 53.0, the 4.6b figure — the two crowns really
+  split differently.
+- **References and verification:** the crown rides the colour's tick (both
+  frames are verified in all seven colours), the pairs the `m` tick (V-A);
+  `CROWN_REFERENCES` names a crowned print per colour for the compare
+  page's Legendary toggle (FDN #294 / #309 / #324 / #330 / #336, 2XM #354,
+  2X2 #336; the artifact dress LTC #505, FIN #333 / #337, DFT #308, LCI
+  #340, MH3 #372, 2XM #362). The registry's `crown`, `two-colour` and
+  `two-colour-hybrid` gaps drop on the two frames by themselves
+  (`gapDrawnBy`): DMU #435 Sheoldred and the 925 crowned standard-borderless
+  printings behind the crown gap import `exact` on their own frame (the
+  art still lands them on the bordered twin, 1.18).
+- **Tests:** `tests/unit/frames/legendary-masters.test.ts` (the keys, the
+  recipe, the manifest, the twins' pixels against their masters),
+  `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin
+  and the pair in the bake, the switches off byte-identical), the matrix's
+  `m15borderless*` `@crown` / `@pair` cases.
 
 ## Kind anatomy and bodies
 

@@ -147,7 +147,7 @@ describe("importFramePlan — when the chooser shows", () => {
 });
 
 describe("importFramePlan — borderless (1.18: lands on the bordered frame, Borderless offered)", () => {
-  it("Sheoldred DMU #435: M15 preselected with the window-cropped note; Borderless listed once verified in black", () => {
+  it("Sheoldred DMU #435 (crowned): exact since 4.6f — M15 preselected with the window-cropped note; Borderless listed once verified in black", () => {
     const plan = importFramePlan(namedPatch("dmu-435", WITH_BORDERLESS), WITH_BORDERLESS, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
     expect(plan.preselected).toEqual({ template: "m15" });
@@ -155,12 +155,13 @@ describe("importFramePlan — borderless (1.18: lands on the bordered frame, Bor
     expect(plan.options.map((o) => o.template)).toEqual(["m15", "m15borderless"]);
     expect(plan.options[0]).toMatchObject({ nearest: true, edgeToEdge: false });
     expect(plan.options[1]).toMatchObject({ nearest: false, edgeToEdge: true });
-    // The crown is the missing detail (Borderless draws the floating crown,
-    // 4.6f); PipGlyph HAS the Borderless frame.
+    // Borderless draws the floating crown (4.6f, wave 2a): the printing is
+    // exact on its own frame, and only Scryfall's cropped art keeps the
+    // chooser open (1.18), as for FDN #311.
+    expect(plan.match).toMatchObject({ status: "exact", template: "m15borderless", landOn: "m15", reason: null });
     expect(plan.heading).toBe(
-      "PipGlyph can't match this printing's Borderless frame exactly yet — pick one of these",
+      "PipGlyph has the Borderless frame, but Scryfall's art won't fill it — pick one of these",
     );
-    expect(plan.match.reason).toBe("PipGlyph doesn't draw the legendary crown on this frame yet");
     expect(plan.keepCurrent).toEqual({ template: "m15", available: true, reason: null });
   });
 
@@ -364,11 +365,13 @@ describe("appliedImportFrameChoice — the creator's re-check", () => {
 
 describe("the substitution chip and the deck-remix toast", () => {
   it("names what the printing is while the card sits on another frame", () => {
+    // Borderless draws Sheoldred's crown since 4.6f: with the frame
+    // unverified in black, the verification downgrade is what is left.
     const match = namedPatch("dmu-435", STANDARD).frame_match;
     expect(frameSubstitutionFor(match, "m15")).toEqual({
       exactLabel: "Borderless frame",
       template: "m15",
-      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
+      reason: "not yet verified in black",
       nearestOnOwnFrame: false,
     });
     expect(importSubstitutionMessage(match, "m15")).toBe(
@@ -434,17 +437,20 @@ describe("the substitution chip and the deck-remix toast", () => {
     );
   });
 
-  it("names the cropped art, not a missing frame, when a nearest edge-to-edge frame is published (DMU #435)", () => {
+  it("names the cropped art, not a missing frame, when the edge-to-edge frame is published (DMU #435, exact since 4.6f)", () => {
     const match = namedPatch("dmu-435", WITH_BORDERLESS).frame_match;
-    expect(match).toMatchObject({ status: "nearest", template: "m15borderless", landOn: "m15" });
+    expect(match).toMatchObject({ status: "exact", template: "m15borderless", landOn: "m15" });
     expect(
       importSubstitutionMessage(match, "m15", (t) => WITH_BORDERLESS.has(frameComboKey(t, "b"))),
     ).toBe(
       "Scryfall's art for this printing is cropped to the bordered window — using M15 (2015) Standard instead of the Borderless frame.",
     );
-    // …and as missing while Borderless isn't published in black.
+    // …and as missing while Borderless isn't published in black (the match
+    // the verification downgraded).
+    const unverified = namedPatch("dmu-435", STANDARD).frame_match;
+    expect(unverified).toMatchObject({ status: "nearest", template: "m15borderless", landOn: "m15" });
     expect(
-      importSubstitutionMessage(match, "m15", (t) => STANDARD.has(frameComboKey(t, "b"))),
+      importSubstitutionMessage(unverified, "m15", (t) => STANDARD.has(frameComboKey(t, "b"))),
     ).toBe("PipGlyph doesn't have the Borderless frame yet — using M15 (2015) Standard.");
   });
 
@@ -503,7 +509,7 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(plan.options.map((o) => o.template)).toContain("m15");
   });
 
-  it("asks when the crown sits on a frame the import can't land on (Borderless → bordered M15, DMU #435)", () => {
+  it("asks when an exact edge-to-edge printing can't land on its frame (Borderless → bordered M15, DMU #435; its crown is drawn since 4.6f)", () => {
     expect(importFramePlan(namedPatch("dmu-435", WITH_BORDERLESS), WITH_BORDERLESS, "m15").mode).toBe(
       "choose",
     );

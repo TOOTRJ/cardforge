@@ -19,6 +19,8 @@ import {
   offersTwoColor,
   importedFormAnatomy,
   twoColorFits,
+  crownKeyOf,
+  crownedMasterKey,
 } from "@/lib/cards/anatomy";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
 import { getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
@@ -46,10 +48,12 @@ const CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS],
 };
 
-type Anatomical = Pick<FrameProfile, "overlays" | "twoColorMasters">;
+type Anatomical = Pick<FrameProfile, "overlays" | "twoColorMasters" | "crownMasters">;
 const m15Like: Anatomical = { overlays: [CROWN], twoColorMasters: ["split", "hybrid"] };
 const artifactLike: Anatomical = { overlays: [{ ...CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split"] };
 const landLike: Anatomical = { overlays: [{ ...CROWN, keyMap: { c: "l" } }], twoColorMasters: ["split"] };
+/** A 4.6f-shaped profile: the crown baked into `-legendary` masters. */
+const borderlessLike: Anatomical = { crownMasters: true, twoColorMasters: ["split", "hybrid"] };
 
 describe("the colour pair — card data, never the cost", () => {
   it("reads exactly two WUBRG words, in printed order, whatever order they were stored in", () => {
@@ -267,21 +271,34 @@ describe("the crown", () => {
   });
 });
 
-describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters)", () => {
-  const DRAWN = ["m15", "m15land", "m15artifact"];
+describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f: the borderless twins)", () => {
+  const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
 
-  it("the crown and the pair masters on exactly the m15, m15artifact and m15land PROFILES entries — never a profile that spreads them", () => {
+  it("the crown and the pair masters on exactly the m15, m15artifact, m15land and borderless PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
     expect(crowned).toEqual(DRAWN);
     const paired = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );
-    expect(paired).toEqual({ m15: ["split", "hybrid"], m15land: ["split"], m15artifact: ["split"] });
-    // Every profile that spreads M15 / M15LAND draws neither: m15snowland
-    // spreads M15LAND, m15snow / m15devoid / m15borderless / the layouts /
-    // the showcases spread M15 (their crowns and pairs are 4.6f);
-    // planeswalkers and tokens none here.
-    for (const t of ["m15snow", "m15snowland", "m15devoid", "m15borderless", "extendedart", "adventure", "saga", "nyx", "fullart"]) {
+    expect(paired).toEqual({
+      m15: ["split", "hybrid"],
+      m15land: ["split"],
+      m15artifact: ["split"],
+      m15borderless: ["split", "hybrid"],
+      m15borderlessartifact: ["split"],
+    });
+    // The borderless frames draw their crown from the crowned twins, not a
+    // band (4.6f): no overlay slot, crownMasters set.
+    for (const t of ["m15borderless", "m15borderlessartifact"]) {
+      expect(getFrameProfile(t).overlays, t).toBeUndefined();
+      expect(getFrameProfile(t).crownMasters, t).toBe(true);
+    }
+    // Every profile that spreads M15 / M15LAND / M15BORDERLESS draws
+    // neither: m15snowland spreads M15LAND, m15borderlessland M15BORDERLESS
+    // (its pairs are 4.56's), m15snow / m15devoid / the layouts / the
+    // showcases spread M15 (their crowns and pairs are 4.6f); planeswalkers
+    // and tokens none here.
+    for (const t of ["m15snow", "m15snowland", "m15devoid", "m15borderlessland", "extendedart", "adventure", "saga", "nyx", "fullart"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [] });
     }
     for (const t of ["m15pw", "m15token"] as const) {
@@ -327,9 +344,62 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters)", ()
     expect(resolveTwoColor(land, on, { colors: ["white", "blue"], cost: null, cardType: "land" })?.masterKey).toBe("wu");
   });
 
-  it("an overlay or pair masters can never come from an admin override (code-owned)", () => {
+  it("an overlay, pair masters or crowned twins can never come from an admin override (code-owned)", () => {
     expect(parseFrameProfileOverride({ overlays: [CROWN] })).toBeNull();
     expect(parseFrameProfileOverride({ twoColorMasters: ["split"] })).toBeNull();
+    expect(parseFrameProfileOverride({ crownMasters: true })).toBeNull();
+  });
+});
+
+describe("a crown baked into the masters (4.6f: FrameProfile.crownMasters)", () => {
+  const legend = { cardType: "creature", supertype: "Legendary Creature" };
+  const on = { crown: true };
+
+  it("counts as the crown the template draws — the switch, the hint, the default and the registry gap read it", () => {
+    expect(frameAnatomyOf("m15borderless").crown).toBe(true);
+    expect(anatomyDefaults("m15borderless")).toEqual({ crown: true, twoColor: true });
+    expect(normalizeAnatomy({ template: "m15borderless", crown: true, twoColor: true }, "m15borderless", "creature")).toEqual({
+      template: "m15borderless",
+      crown: true,
+      twoColor: true,
+    });
+  });
+
+  it("paints the crowned twin only with the switch exactly on and a qualifying card; else the master as given", () => {
+    expect(crownedMasterKey(borderlessLike, on, legend, "w")).toBe("w-legendary");
+    expect(crownedMasterKey(borderlessLike, on, legend, "wu")).toBe("wu-legendary");
+    expect(crownedMasterKey(borderlessLike, on, legend, "wu-h")).toBe("wu-h-legendary");
+    expect(crownedMasterKey(borderlessLike, { crown: false }, legend, "w")).toBe("w");
+    expect(crownedMasterKey(borderlessLike, {}, legend, "w")).toBe("w");
+    expect(crownedMasterKey(borderlessLike, null, legend, "w")).toBe("w");
+    expect(crownedMasterKey(borderlessLike, on, { cardType: "creature", supertype: null }, "w")).toBe("w");
+    expect(crownedMasterKey(borderlessLike, on, { cardType: "planeswalker", supertype: "Legendary" }, "w")).toBe("w");
+    expect(crownedMasterKey(borderlessLike, on, { cardType: "token", supertype: "Legendary Creature" }, "w")).toBe("w");
+    // A profile whose crown is a band (or none) paints the master as given.
+    expect(crownedMasterKey(m15Like, on, legend, "w")).toBe("w");
+    expect(crownedMasterKey({}, on, legend, "w")).toBe("w");
+  });
+
+  it("crownKeyOf names the twin's key: the colour, the pair where the two-colour frame is drawn, 'c' on either borderless dress", () => {
+    const facts = (colors: ColorIdentity[], cost: string | null, colorKey: string) => ({ ...legend, colors, cost, colorKey });
+    expect(crownKeyOf(borderlessLike, on, facts(["white"], "{2}{W}", "w"))).toBe("w");
+    expect(crownKeyOf(borderlessLike, on, facts(["white", "blue", "black"], "{W}{U}{B}", "m"))).toBe("m");
+    expect(crownKeyOf(borderlessLike, on, facts(["colorless"], "{10}", "c"))).toBe("c");
+    // A pair drawn gold (two-colour off) keeps the gold crown; drawn as a
+    // pair, the pair's — in either dress.
+    expect(crownKeyOf(borderlessLike, on, facts(["white", "blue"], "{1}{W}{U}", "m"))).toBe("m");
+    expect(crownKeyOf(borderlessLike, { crown: true, twoColor: true }, facts(["white", "blue"], "{1}{W}{U}", "m"))).toBe("wu");
+    expect(crownKeyOf(borderlessLike, { crown: true, twoColor: true }, facts(["white", "blue"], "{W/U}{W/U}", "m"))).toBe("wu");
+    expect(crownKeyOf(borderlessLike, { crown: false }, facts(["white"], "{2}{W}", "w"))).toBeNull();
+    expect(crownKeyOf(borderlessLike, on, { ...facts(["white"], "{2}{W}", "w"), supertype: null })).toBeNull();
+    // The band's key on a band profile (resolveFrameOverlays), as before.
+    expect(crownKeyOf(m15Like, on, facts(["white"], "{2}{W}", "w"))).toBe("w");
+    expect(crownKeyOf(artifactLike, on, facts(["colorless"], "{3}", "c"))).toBe("a");
+    expect(crownKeyOf({}, on, facts(["white"], "{2}{W}", "w"))).toBeNull();
+    // On the real profiles: no overlay band on the borderless frames.
+    expect(resolveFrameOverlays(getFrameProfile("m15borderless"), on, facts(["white"], "{2}{W}", "w"))).toEqual([]);
+    expect(crownKeyOf(getFrameProfile("m15borderless"), on, facts(["white"], "{2}{W}", "w"))).toBe("w");
+    expect(crownKeyOf(getFrameProfile("m15borderlessartifact"), on, { ...facts(["colorless"], "{3}", "c"), cardType: "artifact" })).toBe("c");
   });
 });
 
