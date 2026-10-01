@@ -641,16 +641,39 @@ export const COLLECTOR_2023_FROM = "2023-03-26";
 const PARENT_CODE_SET_TYPES: ReadonlySet<string> = new Set(["token", "memorabilia", "promo"]);
 
 /** Set types whose 2015-era printings print `N/printed_size` after the
- *  number (DMU #107 "107/281"; KLD #265 "265/264" — the number may exceed
- *  the size, so there is NO `N ≤ size` guard; Card Conjurer's is wrong).
- *  Tokens print `N/card_count` (TDOM #1 "001/016"); commander (ONC #114
- *  "114"), promo, box and every other type print the number alone. */
+ *  number (DMU #107 "107/281"). Tokens print `N/card_count` (TDOM #1
+ *  "001/016", TELD #1 "001/020"); commander deck sets print the size
+ *  `deckSetPrintedSize` reads; promo, box and every other type print the
+ *  number alone (SLD #134 "134", 2020). Scryfall's `printed_size` is
+ *  missing on some sets that print one (ELD, THB, M20, CMR): those store
+ *  the number alone — never an invented size. Scans 2026-09-30. */
 const PRINTED_SIZE_SET_TYPES: ReadonlySet<string> = new Set([
   "expansion",
   "core",
   "masters",
   "draft_innovation",
 ]);
+
+/** The first release date from which a number PAST the printed size prints
+ *  alone: ELD (2019-10-04), the first set whose collector-booster variants
+ *  are numbered past the main set (scans: ELD #270 "270", THB #255, ZNR
+ *  #281 "281", DMU #282 "282", DMU #330, ONE #272; the same on commander
+ *  sets: ONC #29 "029", C21 #82, AFC #63, DMC #49). Before it the size
+ *  stays on an over-size number: KLD #265 "265/264", WAR #265, M19 #281,
+ *  MH1 #255 "255/254", M20 #281 "281/280" (2019-07-12, the last). So Card
+ *  Conjurer's `N ≤ size` guard is right from ELD on and wrong before. */
+export const OVERSIZE_NUMBER_ALONE_FROM = "2019-10-04";
+
+/** Commander deck sets released before ZNC (2020-09-25) print the WHOLE
+ *  deck set's count after the number — C15 "001/342", CMA "001/320", C17
+ *  "001/309", C18 "001/307", C19 "001/302", C20 "001/322" (2020-04-17, the
+ *  last): Scryfall's `card_count`, its `printed_size` being absent on them.
+ *  ZNC and KHC print the number alone ("001"); from C21 (2021-04-23) the
+ *  NEW-card count, which Scryfall holds as `printed_size` (C21 "001/081",
+ *  AFC "001/062", MIC / VOC / NEC "001/038", NCC "001/093", ONC "001/028").
+ *  DMC prints "001/048" but Scryfall lacks the count: it stores the number
+ *  alone. */
+export const DECK_SET_COUNT_PRINTED_BEFORE = "2020-09-25";
 
 export type ImportedCollectorFields = {
   /** The PRINTED set code, upper-case, or null when none fits the column. */
@@ -671,16 +694,16 @@ export function isCollector2023Style(releasedAt: string | null | undefined): boo
 
 /** Whether the collector fields of this printing need its SET object: the
  *  parent code of a token / memorabilia / promo set (unless an exception
- *  names the printed code), or the size of a 2015-era expansion-type or
- *  token printing. A 2023-era expansion, a commander or a box set needs
- *  no call at all. */
+ *  names the printed code), or the size of a 2015-era expansion-type,
+ *  token or commander printing. A 2023-era expansion, a promo or a box set
+ *  needs no call at all. */
 export function needsScryfallSet(card: ScryfallCard): boolean {
   const set = (card.set ?? "").trim().toLowerCase();
   const setType = (card.set_type ?? "").trim().toLowerCase();
   const needsParent = PARENT_CODE_SET_TYPES.has(setType) && !PRINTED_SET_CODE_EXCEPTIONS[set];
   const needsSize =
     !isCollector2023Style(card.released_at) &&
-    (PRINTED_SIZE_SET_TYPES.has(setType) || setType === "token");
+    (PRINTED_SIZE_SET_TYPES.has(setType) || setType === "token" || setType === "commander");
   return needsParent || needsSize;
 }
 
@@ -704,19 +727,45 @@ function storedCollectorNumber(card: ScryfallCard, set: ScryfallSet | null): str
   return isValidCollectorNumber(stored) ? stored : null;
 }
 
+function positiveCount(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/** The size a commander deck set prints after its numbers: the new-card
+ *  count Scryfall holds as `printed_size` (C21 on); before ZNC the whole
+ *  deck set's `card_count`; otherwise none (ZNC, KHC — and DMC, whose
+ *  count Scryfall lacks). */
+function deckSetPrintedSize(card: ScryfallCard, set: ScryfallSet | null): number | null {
+  const printed = positiveCount(set?.printed_size);
+  if (printed) return printed;
+  const released = (card.released_at ?? "").trim();
+  return released && released < DECK_SET_COUNT_PRINTED_BEFORE
+    ? positiveCount(set?.card_count)
+    : null;
+}
+
+/** The size a 2015-era printing's set type prints after the number, or
+ *  null where the type prints none or Scryfall doesn't hold it. */
+function printedSizeFor(card: ScryfallCard, set: ScryfallSet | null): number | null {
+  const setType = (card.set_type ?? "").trim().toLowerCase();
+  if (PRINTED_SIZE_SET_TYPES.has(setType)) return positiveCount(set?.printed_size);
+  if (setType === "token") return positiveCount(set?.card_count);
+  if (setType === "commander") return deckSetPrintedSize(card, set);
+  return null;
+}
+
 /** A 2015-era number with the size its set type prints after it. A
- *  non-numeric number ("237a", "H13", "XLN-117") is stored as printed. */
+ *  non-numeric number ("237a", "H13", "XLN-117") is stored as printed; a
+ *  number past the size is stored alone from ELD on
+ *  (OVERSIZE_NUMBER_ALONE_FROM) and with the size before. */
 function withPrintedSize(number: string, card: ScryfallCard, set: ScryfallSet | null): string {
   if (!/^[0-9]+$/.test(number)) return number;
-  const setType = (card.set_type ?? "").trim().toLowerCase();
-  const size = PRINTED_SIZE_SET_TYPES.has(setType)
-    ? set?.printed_size
-    : setType === "token"
-      ? set?.card_count
-      : undefined;
-  return typeof size === "number" && Number.isInteger(size) && size > 0
-    ? `${number}/${size}`
-    : number;
+  const size = printedSizeFor(card, set);
+  if (!size) return number;
+  const oversize = Number(number) > size;
+  const released = (card.released_at ?? "").trim();
+  if (oversize && released >= OVERSIZE_NUMBER_ALONE_FROM) return number;
+  return `${number}/${size}`;
 }
 
 /**

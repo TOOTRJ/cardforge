@@ -72,7 +72,10 @@ describe("GET /api/scryfall/named — the collector fields follow the printing (
     ["tdom-1", 1, "DOM", "1/16", "en"],
     ["tfdn-24", 1, "FDN", "24", "en"],
     ["fdn-1", 0, "FDN", "1", "en"],
-    ["onc-114", 0, "ONC", "114", "en"],
+    ["onc-114", 1, "ONC", "114", "en"],
+    ["onc-1", 1, "ONC", "1/28", "en"],
+    ["c17-1", 1, "C17", "1/309", "en"],
+    ["dmu-282", 1, "DMU", "282", "en"],
     ["pw23-3", 0, "PRM", "3", "ph"],
   ] as const)("%s → %i set call(s): %s · %s · %s", async (key, calls, setCode, number, lang) => {
     const printing = collectorCard(key);

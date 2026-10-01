@@ -75,5 +75,44 @@
     "set_type": "commander",
     "released_at": "2017-08-25",
     "card_count": 309
+  },
+  "mh1": {
+    "card_count": 255,
+    "code": "mh1",
+    "name": "Modern Horizons",
+    "printed_size": 254,
+    "released_at": "2019-06-14",
+    "set_type": "draft_innovation"
+  },
+  "znr": {
+    "card_count": 391,
+    "code": "znr",
+    "name": "Zendikar Rising",
+    "printed_size": 280,
+    "released_at": "2020-09-25",
+    "set_type": "expansion"
+  },
+  "c20": {
+    "card_count": 322,
+    "code": "c20",
+    "name": "Commander 2020",
+    "released_at": "2020-04-17",
+    "set_type": "commander"
+  },
+  "znc": {
+    "card_count": 142,
+    "code": "znc",
+    "name": "Zendikar Rising Commander",
+    "parent_set_code": "znr",
+    "released_at": "2020-09-25",
+    "set_type": "commander"
+  },
+  "c21": {
+    "card_count": 409,
+    "code": "c21",
+    "name": "Commander 2021",
+    "printed_size": 81,
+    "released_at": "2021-04-23",
+    "set_type": "commander"
   }
 }

@@ -401,5 +401,323 @@
     "finishes": [
       "nonfoil"
     ]
+  },
+  "mh1-255": {
+    "artist": "Chris Rallis",
+    "border_color": "black",
+    "collector_number": "255",
+    "color_identity": [
+      "U"
+    ],
+    "colors": [
+      "U"
+    ],
+    "finishes": [
+      "nonfoil"
+    ],
+    "frame": "2015",
+    "full_art": false,
+    "id": "46a00405-13ad-4531-9bfb-fea0ca57f196",
+    "keywords": [
+      "Storm"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{U}",
+    "name": "Flusterstorm",
+    "oracle_id": "86bf58f2-7f25-4e10-b797-25e0e8e67769",
+    "rarity": "rare",
+    "released_at": "2019-06-14",
+    "security_stamp": "oval",
+    "set": "mh1",
+    "set_name": "Modern Horizons",
+    "set_type": "draft_innovation",
+    "textless": false,
+    "type_line": "Instant"
+  },
+  "znr-281": {
+    "artist": "David Rapoza",
+    "border_color": "borderless",
+    "collector_number": "281",
+    "color_identity": [
+      "U"
+    ],
+    "colors": [
+      "U"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "full_art": false,
+    "id": "961bb827-f13a-417d-8284-5cd2aac3d034",
+    "keywords": [
+      "Kicker",
+      "Scry"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "loyalty": "4",
+    "mana_cost": "{1}{U}{U}",
+    "name": "Jace, Mirror Mage",
+    "oracle_id": "7ca99e2f-faf2-4301-a0ae-7cb880ba965b",
+    "rarity": "mythic",
+    "released_at": "2020-09-25",
+    "security_stamp": "oval",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "textless": false,
+    "type_line": "Legendary Planeswalker — Jace"
+  },
+  "dmu-282": {
+    "artist": "Joshua Raphael",
+    "border_color": "black",
+    "collector_number": "282",
+    "color_identity": [
+      "W"
+    ],
+    "colors": [
+      "W"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "full_art": false,
+    "id": "a8b9cb5c-29f2-46ed-803e-c2170955217c",
+    "keywords": [
+      "Flying"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{3}{W}{W}",
+    "name": "Serra Redeemer",
+    "oracle_id": "39bb051f-1ca7-4d9b-b33b-7f559f816e3e",
+    "power": "2",
+    "rarity": "rare",
+    "released_at": "2022-09-09",
+    "security_stamp": "oval",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "set_type": "expansion",
+    "textless": false,
+    "toughness": "4",
+    "type_line": "Creature — Angel Soldier"
+  },
+  "c20-1": {
+    "artist": "Jesper Ejsing",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "W"
+    ],
+    "colors": [
+      "W"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "168d7532-c925-4a96-a756-2ce4dd0fec33",
+    "keywords": [
+      "Partner with",
+      "Partner"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{3}{W}",
+    "name": "Trynn, Champion of Freedom",
+    "oracle_id": "76771556-3eb7-4f87-aaeb-32ea81105aa2",
+    "power": "3",
+    "rarity": "mythic",
+    "released_at": "2020-04-17",
+    "security_stamp": "oval",
+    "set": "c20",
+    "set_name": "Commander 2020",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "3",
+    "type_line": "Legendary Creature — Human Soldier"
+  },
+  "znc-1": {
+    "artist": "Magali Villeneuve",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "colors": [
+      "B",
+      "U"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "bca84fc4-4710-44c8-b90a-73ef888714d8",
+    "keywords": [
+      "Mill"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{2}{U}{B}",
+    "name": "Anowon, the Ruin Thief",
+    "oracle_id": "e7e69583-8326-417e-8a9a-6b917c8ba4b6",
+    "power": "2",
+    "rarity": "mythic",
+    "released_at": "2020-09-25",
+    "security_stamp": "oval",
+    "set": "znc",
+    "set_name": "Zendikar Rising Commander",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "4",
+    "type_line": "Legendary Creature — Vampire Rogue"
+  },
+  "c21-1": {
+    "artist": "Simon Dominic",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "B",
+      "W"
+    ],
+    "colors": [
+      "B",
+      "W"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "6cb82b10-d785-4e20-84ac-0660d49be8ad",
+    "keywords": [
+      "Flying"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{1}{W}{B}",
+    "name": "Breena, the Demagogue",
+    "oracle_id": "d11e627b-8a48-411d-a261-2c9a02a758ba",
+    "power": "1",
+    "rarity": "mythic",
+    "released_at": "2021-04-23",
+    "security_stamp": "oval",
+    "set": "c21",
+    "set_name": "Commander 2021",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "3",
+    "type_line": "Legendary Creature — Bird Warlock"
+  },
+  "onc-1": {
+    "artist": "Campbell White",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "B",
+      "G",
+      "W"
+    ],
+    "colors": [
+      "B",
+      "G",
+      "W"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "ab866ec4-dcb4-47ef-8de1-a369986609c0",
+    "keywords": [
+      "Flying",
+      "Toxic",
+      "Vigilance",
+      "Corrupted"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{1}{W}{B}{G}",
+    "name": "Ixhel, Scion of Atraxa",
+    "oracle_id": "9fb7982f-fe35-4dea-a515-a0039ddbbaec",
+    "power": "2",
+    "rarity": "mythic",
+    "released_at": "2023-02-10",
+    "security_stamp": "oval",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "5",
+    "type_line": "Legendary Creature — Phyrexian Angel"
+  },
+  "onc-29": {
+    "artist": "Campbell White",
+    "border_color": "black",
+    "collector_number": "29",
+    "color_identity": [
+      "B",
+      "G",
+      "W"
+    ],
+    "colors": [
+      "B",
+      "G",
+      "W"
+    ],
+    "finishes": [
+      "etched"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "etched"
+    ],
+    "full_art": false,
+    "id": "66d32d60-4e08-49aa-857f-da92dc7c01d0",
+    "keywords": [
+      "Flying",
+      "Toxic",
+      "Vigilance",
+      "Corrupted"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{1}{W}{B}{G}",
+    "name": "Ixhel, Scion of Atraxa",
+    "oracle_id": "9fb7982f-fe35-4dea-a515-a0039ddbbaec",
+    "power": "2",
+    "rarity": "mythic",
+    "released_at": "2023-02-10",
+    "security_stamp": "oval",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "5",
+    "type_line": "Legendary Creature — Phyrexian Angel"
   }
 }
