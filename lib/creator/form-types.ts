@@ -91,6 +91,15 @@ export type FormValues = {
    *  both empty = the default PipGlyph mark. */
   set_icon_url: string;
   set_icon_code: string;
+  /** The collector fields (migration 0133, TODO 4.9a; the "Set & collector
+   *  info" step): the PRINTED set code ("DMU", upper-cased at submit; a
+   *  "Use DMU" suggestion reads the Keyrune code above but never writes
+   *  it), the collector number ("107/281", "1") and the printing's
+   *  language (one of the 18 codes; "en" by default). Content, so
+   *  editable on an existing card; the Scryfall import fills them. */
+  set_code: string;
+  collector_number: string;
+  lang: string;
   /** A deck this card is added to on create (empty = none) — becomes a
    *  custom-only mainboard entry. Create mode only; hidden on edit. */
   deck_id: string;

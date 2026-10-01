@@ -190,6 +190,15 @@ export type CardPreviewData = {
    *  absent the default rarity-tinted PipGlyph mark renders. */
   setIconUrl?: string | null;
   setIconCode?: string | null;
+  /** The collector fields (cards.set_code / collector_number / lang,
+   *  migration 0133, TODO 4.9a): the PRINTED set code ("DMU" — a token set
+   *  prints its parent), the collector number ("107/281", "1") and the
+   *  printing's language ("en", "es" …). Carried by both mappers so the
+   *  preview and the bake receive the same data; NOTHING draws them yet —
+   *  4.9b draws the collector line, opt-in per card. */
+  setCode?: string | null;
+  collectorNumber?: string | null;
+  lang?: string | null;
   /** Structured loyalty/saga rows (cards.face_content). When present, the
    *  chapter rail / loyalty rows render from it; absent/null falls back to
    *  parsing rulesText — the two are round-trip equivalent

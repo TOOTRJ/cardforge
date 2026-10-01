@@ -34,5 +34,12 @@ export function cardToPreviewData(
     setIconCode: card.set_icon_code,
     faceContent: card.face_content ?? null,
     watermark: card.watermark ?? null,
+    // The collector fields (migration 0133, TODO 4.9a) — carried, not drawn
+    // (4.9b). `Card` requires the three columns, so a caller whose select
+    // lacks them fails typecheck rather than silently handing over nothing;
+    // rowToPreviewData (lib/cards/bake-core.ts) maps the same three.
+    setCode: card.set_code,
+    collectorNumber: card.collector_number,
+    lang: card.lang,
   });
 }

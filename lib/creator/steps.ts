@@ -185,15 +185,19 @@ const STEP_DEFS: StepDef[] = [
     isVisible: always,
   },
   {
-    // The set symbol printed on the type line. With the sets feature hidden,
-    // the icon is a direct card field: a preset Keyrune glyph, an uploaded
-    // image, or the default PipGlyph mark — rarity-tinted either way. Cards
-    // that belong to a set (legacy/AI flows) hydrate these fields from the
-    // set's icon, and edits here override it.
+    // The set symbol printed on the type line — a direct card field: a
+    // preset Keyrune glyph, an uploaded image, or the default PipGlyph mark,
+    // rarity-tinted either way — and, since TODO 4.9a, the collector
+    // fields beside it: the PRINTED set code, the collector number and the
+    // printing's language (cards.set_code / collector_number / lang).
+    // Nothing draws those yet (4.9b's collector line is opt-in per card);
+    // the Scryfall import fills them, and the step offers "Fill from the
+    // printing" on an imported card that still has none. The key stays
+    // "seticon" so bookmarked `?step=` URLs keep resolving.
     key: "seticon",
-    label: "Set icon",
-    description: "The symbol on the type line",
-    fields: ["set_icon_url", "set_icon_code"],
+    label: "Set & collector info",
+    description: "Set symbol, set code, number & language",
+    fields: ["set_icon_url", "set_icon_code", "set_code", "collector_number", "lang"],
     isVisible: always,
   },
   {

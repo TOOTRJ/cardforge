@@ -1685,7 +1685,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - Tokens and emblems print their PARENT set code (TDOM #1 `DOM • EN`); PW23 prints `PRM`.
       - **From 4.21 (design 2026-09-29):** 4.9d's saga placement waits for 4.21c's CC saga master. On split and battle the band up the left border gets 4.21's ARTIST credit (3.8's slice, a correction); 4.9 adds the collector number, set and language beside it, opt-in, reusing 4.21b's rotated-text helper. Flip and aftermath take the M15 footer position on their CC borders.
       - **Order** (owner 2026-09-29): 4.9 after the crowns (4.6.0 + 4.6a): 4.9b and 4.9c build on 4.6.0's switch plumbing and the edit-lock relaxation that ships with the crowns. 4.9a's data work can be built before.
-- [ ] **4.9a [P1] Collector fields + import (data only, 0 pixels)** (4.9 design 2026-09-29; folds in 6.6) — can be built **now**, in parallel with round 11, 4.6.0 and #421; it merges in the 4.9 order, after the crowns (owner 2026-09-29).
+- [ ] **4.9a [P1] Collector fields + import (data only, 0 pixels)** (4.9 design 2026-09-29; folds in 6.6) — can be built **now**, in parallel with round 11, 4.6.0 and #421; it merges in the 4.9 order, after the crowns (owner 2026-09-29). **Status 2026-09-30:** BUILT on `feat/collector-fields` (migration 0133 `card_collector_fields`; the Set & collector info step; the import rules below with fixtures DMU #107 en/es, KLD #265, TDOM #1, TFDN #24, ONC #114, PW23 #3, FDN #1, PJUD #11 he, SLD #134 (2020), C17 #1, and — after the skeptic's scans corrected the over-size and commander rules — MH1 #255, ZNR #281, DMU #282, C20 #1, ZNC #1, C21 #1, ONC #1 / #29; seeds …043–…047; `COLLECTOR_2023_FROM` = 2023-03-26 for 4.9b to pin) — PR #448 open, pending the owner's merge OK; 0 pixels, no `frame_style` key, Visual gate 1046 unchanged / 0 redefined.
       - **Migration** (the next free number at PR time: 0131 after #421's 0130, unless a 4.6 migration lands first):
         - `cards.set_code` (the PRINTED code, `^[A-Z0-9]{2,6}$`; comment: not `deck_cards.set_code`, which is Scryfall's);
         - `cards.collector_number` (1–12 of `[0-9A-Za-z★†/-]`);
@@ -1704,13 +1704,13 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **Scryfall import** (owner 2026-09-29: follow the printing):
         - **Set code:** `PRINTED_SET_CODE_EXCEPTIONS` (pw23 → PRM) → for token / memorabilia / promo with a `parent_set_code`, the parent (TDOM → DOM, TFDN → FDN) → `card.set` upper-cased → clamped.
         - **Number, 2023-era printings** (vs `COLLECTOR_2023_FROM`): the number as-is.
-        - **Number, 2015 era, by `set_type`:** expansion / core / masters / draft_innovation → `N/printed_size` (NO `N ≤ size` guard: KLD #265 → `265/264`); token → `N/card_count` (TDOM #1 → `1/16`); commander → the number alone (ONC #114 → `114`); promo, box or a missing size → the number alone.
+        - **Number, 2015 era, by `set_type`** (corrected by the skeptic's scans 2026-09-30 — the design's "no `N ≤ size` guard" and "commander → the number alone" held only for KLD and ONC): expansion / core / masters / draft_innovation → `N/printed_size` (DMU #107 → `107/281`); token → `N/card_count` (TDOM #1 → `1/16`); commander → `N/printed_size` where Scryfall has one (the NEW-card count, C21 on: C21 #1 → `1/81`, ONC #1 → `1/28`), else before ZNC (2020-09-25, `DECK_SET_COUNT_PRINTED_BEFORE`) `N/card_count` (C17 #1 → `1/309`, C20 #1 → `1/322`), else alone (ZNC #1 → `1`; DMC prints `001/048` but Scryfall lacks the count → `1`); promo, box, other, or a size Scryfall lacks (ELD, THB, M20, CMR) → the number alone. A number PAST the size prints alone from ELD (2019-10-04, `OVERSIZE_NUMBER_ALONE_FROM`: ZNR #281 → `281`, DMU #282 → `282`, ONC #29 → `29`) and keeps it before (KLD #265 → `265/264`, MH1 #255 → `255/254`, M20 #281 prints `281/280`).
         - **Language:** `card.lang`.
         - A new `getScryfallSet(code)` through the throttled client, only when needed, cached for a day (`next: { revalidate: 86400 }` plus an in-process map); ≤ 1 extra call per import.
         - No `frame_style` key is written here (4.9b / 4.9c write theirs).
       - **"Fill from the printing"** on an imported card with empty fields: one call, into the form, saved as an edit. NO bulk backfill: 0108's trigger would bump `updated_at` on 374 visible cards and churn sitemap `lastmod` and the OG cache-buster.
       - **Seeds** (dev_pro): a 2015 rare (`DMU`, `107/281`), `FDN` #1, an `es` card, a token and an empty-fields card.
-      - **Fixtures:** DMU #107 (en, es), KLD #265, TDOM #1, TFDN #24, ONC #114, PW23 #3 (`PRM`, `ph`), FDN #1, a `he` printing, one 2020 SLD and one C1x scan.
+      - **Fixtures:** DMU #107 (en, es), KLD #265, TDOM #1, TFDN #24, ONC #114, PW23 #3 (`PRM`, `ph`), FDN #1, a `he` printing, one 2020 SLD and one C1x scan — plus, from the 2026-09-30 scans, MH1 #255, ZNR #281, DMU #282, C20 #1, ZNC #1, C21 #1, ONC #1 and #29 (every expectation read off the printed card, `tests/unit/scryfall/fixtures/`).
       - Close 6.6.
 - [ ] **4.9b [P1] Collector line (both renderers, opt-in per card)** (4.9 design 2026-09-29) — after 4.9a and the switch plumbing (4.6.0, with the crowns). The pure parts can start now on a branch.
       - **Switches (4.9b writes only these):**
@@ -2913,7 +2913,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       **Borderless research 2026-09-25:** after 0.25 the finish list is
       regular/foil/etched (+ showcase); borderless is no longer a finish but a
       frame treatment (4.32–4.38).
-- [ ] (folded into 4.9a, 2026-09-29; closes with it) **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
+- [x] (folded into 4.9a, 2026-09-29; built with it 2026-09-30 on `feat/collector-fields`, PR #448 — `cards.set_code` / `collector_number` / `lang`, migration 0133) **6.6 [P2] Language + set-code fields** feed the collector line (with 4.9).
 - [ ] **6.7 [P2] Accessibility** — text alternatives for rules-text pips, chip
       keyboard navigation (3b.10), announced substitution notices.
 - [ ] **6.8 [P3] Batch/CSV/MSE-set import**; community frame packs stay out of

@@ -21,6 +21,10 @@ describe("new-card defaults", () => {
     // Empty icon fields = the PipGlyph mark (SetSymbol's default source).
     expect(v.set_icon_url).toBe("");
     expect(v.set_icon_code).toBe("");
+    // The collector fields (TODO 4.9a, decision D2): nothing filled, English.
+    expect(v.set_code).toBe("");
+    expect(v.collector_number).toBe("");
+    expect(v.lang).toBe("en");
   });
   it("uses the plain placeholder in the editor preview", () => {
     expect(PLACEHOLDER_RULES_TEXT).toBe("Add text and rules here.");
@@ -64,6 +68,37 @@ function savedCard(frameStyle: unknown): Card {
     footer_text: null,
   } as unknown as Card;
 }
+
+describe("the collector fields in the creator (TODO 4.9a)", () => {
+  const stored = {
+    ...savedCard({ finish: "regular", template: "m15" }),
+    set_code: "DMU",
+    collector_number: "107/281",
+    lang: "es",
+  } as Card;
+
+  it("an edit hydrates them exactly as stored", () => {
+    const v = defaultValuesFor(stored, []);
+    expect(v.set_code).toBe("DMU");
+    expect(v.collector_number).toBe("107/281");
+    expect(v.lang).toBe("es");
+  });
+
+  it("a row from before migration 0133 hydrates empty and English", () => {
+    const legacy = { ...stored, set_code: null, collector_number: null, lang: undefined } as unknown as Card;
+    const v = defaultValuesFor(legacy, []);
+    expect(v.set_code).toBe("");
+    expect(v.collector_number).toBe("");
+    expect(v.lang).toBe("en");
+  });
+
+  it("a remix leaves the parent's set code and number behind (its printing's) and keeps the language", () => {
+    const v = remixValuesFrom(stored, []);
+    expect(v.set_code).toBe("");
+    expect(v.collector_number).toBe("");
+    expect(v.lang).toBe("es");
+  });
+});
 
 describe("a saved card's finish in the creator", () => {
   it("reads a legacy 'borderless' card as Regular for an edit and a remix", () => {

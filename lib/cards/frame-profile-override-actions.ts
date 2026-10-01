@@ -96,6 +96,9 @@ async function markTemplateRendersStale(
   let alreadyMarked = 0;
   let keptForOwner = 0;
   for (let from = 0; from < 50 * MARK_PAGE; from += MARK_PAGE) {
+    // Only the columns the scope rules read; the collector fields (TODO
+    // 4.9a) join them only if a correction is ever scoped by set or
+    // language.
     let query = admin
       .from("cards")
       .select(

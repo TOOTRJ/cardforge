@@ -1,4 +1,12 @@
-import type { ScryfallCard } from "@/lib/scryfall/client";
+import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
+import {
+  DEFAULT_CARD_LANG,
+  isCardLang,
+  isValidCollectorNumber,
+  isValidSetCode,
+  normalizeSetCode,
+  type CardLang,
+} from "@/lib/cards/collector-fields";
 import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
@@ -226,6 +234,15 @@ export type ScryfallImportPatch = {
    *  art_crop, for the frame request row an inexact import writes (TODO
    *  1.6 / 1.18, lib/frames/frame-requests.ts). Never written to the form. */
   printing?: ImportedPrinting;
+  /** The printing's collector fields (TODO 4.9a; owner 2026-09-29: imports
+   *  follow the printing) — the PRINTED set code, the number in the style
+   *  the printing shows (a 2015-era expansion's "107/281", a 2023-era
+   *  "1") and the language, for cards.set_code / collector_number / lang
+   *  (collectorFieldsFromPrinting). Absent when the printing's SET data
+   *  was needed (a token set's parent, a 2015-era size) and the caller had
+   *  none: the form keeps its fields and the editor offers "Fill from the
+   *  printing". No frame_style key travels here (4.9b / 4.9c write theirs). */
+  collector?: ImportedCollectorFields;
   /** Display-only preview URL. NOT written to the form's `art_url` — the
    *  user has to explicitly opt in to importing the art. */
   preview_art_url?: string | null;
@@ -593,6 +610,180 @@ export function importedPrintingFromScryfall(card: ScryfallCard): ImportedPrinti
     border_color: border || null,
     full_art: card.full_art === true || effects.includes("fullart"),
     textless: card.textless === true,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The collector fields (TODO 4.9a, 4.9 design §4.3): what a printing's
+// collector line SAYS, read from the Scryfall card and — only when needed —
+// its set object (getScryfallSet, ≤ 1 extra call per import). Every value
+// is the printed one or nothing: never invented.
+// ---------------------------------------------------------------------------
+
+/** Scryfall set codes whose printings print another code — scan-verified:
+ *  PW23 #3 prints "PRM★PH". Fixtures add rows. */
+export const PRINTED_SET_CODE_EXCEPTIONS: Readonly<Record<string, string>> = {
+  pw23: "PRM",
+};
+
+/** The first release date of the "2023" collector style (the letter first,
+ *  the number padded to four, no set size: "R 1242"), judged on
+ *  `released_at`. SLD #1242 (2023-03-26) is the earliest scan-verified
+ *  2023-style printing; ONE / ONC (2023-02-03) are the last verified
+ *  2015-style ones ("114/281 M"). No expansion, core, masters,
+ *  draft-innovation, token or commander set was released in between, so
+ *  the exact day only matters to 4.9b's drawn style, which pins it with
+ *  the Feb–Mar 2023 scans (SLD drops, ONE promos). */
+export const COLLECTOR_2023_FROM = "2023-03-26";
+
+/** Set types whose printings print their PARENT set's code (TDOM #1 prints
+ *  "DOM • EN", TFDN #24 "FDN • EN"). */
+const PARENT_CODE_SET_TYPES: ReadonlySet<string> = new Set(["token", "memorabilia", "promo"]);
+
+/** Set types whose 2015-era printings print `N/printed_size` after the
+ *  number (DMU #107 "107/281"). Tokens print `N/card_count` (TDOM #1
+ *  "001/016", TELD #1 "001/020"); commander deck sets print the size
+ *  `deckSetPrintedSize` reads; promo, box and every other type print the
+ *  number alone (SLD #134 "134", 2020). Scryfall's `printed_size` is
+ *  missing on some sets that print one (ELD, THB, M20, CMR): those store
+ *  the number alone — never an invented size. Scans 2026-09-30. */
+const PRINTED_SIZE_SET_TYPES: ReadonlySet<string> = new Set([
+  "expansion",
+  "core",
+  "masters",
+  "draft_innovation",
+]);
+
+/** The first release date from which a number PAST the printed size prints
+ *  alone: ELD (2019-10-04), the first set whose collector-booster variants
+ *  are numbered past the main set (scans: ELD #270 "270", THB #255, ZNR
+ *  #281 "281", DMU #282 "282", DMU #330, ONE #272; the same on commander
+ *  sets: ONC #29 "029", C21 #82, AFC #63, DMC #49). Before it the size
+ *  stays on an over-size number: KLD #265 "265/264", WAR #265, M19 #281,
+ *  MH1 #255 "255/254", M20 #281 "281/280" (2019-07-12, the last). So Card
+ *  Conjurer's `N ≤ size` guard is right from ELD on and wrong before. */
+export const OVERSIZE_NUMBER_ALONE_FROM = "2019-10-04";
+
+/** Commander deck sets released before ZNC (2020-09-25) print the WHOLE
+ *  deck set's count after the number — C15 "001/342", CMA "001/320", C17
+ *  "001/309", C18 "001/307", C19 "001/302", C20 "001/322" (2020-04-17, the
+ *  last): Scryfall's `card_count`, its `printed_size` being absent on them.
+ *  ZNC and KHC print the number alone ("001"); from C21 (2021-04-23) the
+ *  NEW-card count, which Scryfall holds as `printed_size` (C21 "001/081",
+ *  AFC "001/062", MIC / VOC / NEC "001/038", NCC "001/093", ONC "001/028").
+ *  DMC prints "001/048" but Scryfall lacks the count: it stores the number
+ *  alone. */
+export const DECK_SET_COUNT_PRINTED_BEFORE = "2020-09-25";
+
+export type ImportedCollectorFields = {
+  /** The PRINTED set code, upper-case, or null when none fits the column. */
+  set_code: string | null;
+  /** The number as stored ("107/281", "1", "237a"), or null. */
+  collector_number: string | null;
+  /** The printing's language (one of the 18 the column takes). */
+  lang: CardLang;
+};
+
+/** True for a printing released on or after COLLECTOR_2023_FROM — and for
+ *  one with no release date, whose set size is unknowable: it stores the
+ *  number alone rather than an invented size. */
+export function isCollector2023Style(releasedAt: string | null | undefined): boolean {
+  const date = (releasedAt ?? "").trim();
+  return !date || date >= COLLECTOR_2023_FROM;
+}
+
+/** Whether the collector fields of this printing need its SET object: the
+ *  parent code of a token / memorabilia / promo set (unless an exception
+ *  names the printed code), or the size of a 2015-era expansion-type,
+ *  token or commander printing. A 2023-era expansion, a promo or a box set
+ *  needs no call at all. */
+export function needsScryfallSet(card: ScryfallCard): boolean {
+  const set = (card.set ?? "").trim().toLowerCase();
+  const setType = (card.set_type ?? "").trim().toLowerCase();
+  const needsParent = PARENT_CODE_SET_TYPES.has(setType) && !PRINTED_SET_CODE_EXCEPTIONS[set];
+  const needsSize =
+    !isCollector2023Style(card.released_at) &&
+    (PRINTED_SIZE_SET_TYPES.has(setType) || setType === "token" || setType === "commander");
+  return needsParent || needsSize;
+}
+
+function printedSetCode(card: ScryfallCard, set: ScryfallSet | null): string | null {
+  const scryfallCode = (card.set ?? "").trim().toLowerCase();
+  if (!scryfallCode) return null;
+  const setType = (card.set_type ?? "").trim().toLowerCase();
+  const parent = PARENT_CODE_SET_TYPES.has(setType) ? set?.parent_set_code?.trim() : undefined;
+  const printed = PRINTED_SET_CODE_EXCEPTIONS[scryfallCode] ?? (parent || scryfallCode);
+  const normalized = normalizeSetCode(printed);
+  // Clamped to the column's CHECK, else nothing.
+  return isValidSetCode(normalized) ? normalized : null;
+}
+
+function storedCollectorNumber(card: ScryfallCard, set: ScryfallSet | null): string | null {
+  const number = (card.collector_number ?? "").trim();
+  if (!number) return null;
+  const stored = isCollector2023Style(card.released_at)
+    ? number
+    : withPrintedSize(number, card, set);
+  return isValidCollectorNumber(stored) ? stored : null;
+}
+
+function positiveCount(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/** The size a commander deck set prints after its numbers: the new-card
+ *  count Scryfall holds as `printed_size` (C21 on); before ZNC the whole
+ *  deck set's `card_count`; otherwise none (ZNC, KHC — and DMC, whose
+ *  count Scryfall lacks). */
+function deckSetPrintedSize(card: ScryfallCard, set: ScryfallSet | null): number | null {
+  const printed = positiveCount(set?.printed_size);
+  if (printed) return printed;
+  const released = (card.released_at ?? "").trim();
+  return released && released < DECK_SET_COUNT_PRINTED_BEFORE
+    ? positiveCount(set?.card_count)
+    : null;
+}
+
+/** The size a 2015-era printing's set type prints after the number, or
+ *  null where the type prints none or Scryfall doesn't hold it. */
+function printedSizeFor(card: ScryfallCard, set: ScryfallSet | null): number | null {
+  const setType = (card.set_type ?? "").trim().toLowerCase();
+  if (PRINTED_SIZE_SET_TYPES.has(setType)) return positiveCount(set?.printed_size);
+  if (setType === "token") return positiveCount(set?.card_count);
+  if (setType === "commander") return deckSetPrintedSize(card, set);
+  return null;
+}
+
+/** A 2015-era number with the size its set type prints after it. A
+ *  non-numeric number ("237a", "H13", "XLN-117") is stored as printed; a
+ *  number past the size is stored alone from ELD on
+ *  (OVERSIZE_NUMBER_ALONE_FROM) and with the size before. */
+function withPrintedSize(number: string, card: ScryfallCard, set: ScryfallSet | null): string {
+  if (!/^[0-9]+$/.test(number)) return number;
+  const size = printedSizeFor(card, set);
+  if (!size) return number;
+  const oversize = Number(number) > size;
+  const released = (card.released_at ?? "").trim();
+  if (oversize && released >= OVERSIZE_NUMBER_ALONE_FROM) return number;
+  return `${number}/${size}`;
+}
+
+/**
+ * The collector fields a Scryfall printing fills (cards.set_code /
+ * collector_number / lang). `set` is the printing's set object when the
+ * caller fetched one (the /named route does when needsScryfallSet says
+ * so); undefined when the fields NEED it and it is missing — the caller
+ * then writes nothing, never a guessed parent or size.
+ */
+export function collectorFieldsFromPrinting(
+  card: ScryfallCard,
+  set: ScryfallSet | null | undefined,
+): ImportedCollectorFields | undefined {
+  if (needsScryfallSet(card) && !set) return undefined;
+  return {
+    set_code: printedSetCode(card, set ?? null),
+    collector_number: storedCollectorNumber(card, set ?? null),
+    lang: isCardLang(card.lang) ? card.lang : DEFAULT_CARD_LANG,
   };
 }
 
@@ -1024,7 +1215,12 @@ export function emblemPrintsSubtype(
  */
 export function mapScryfallToFormPatch(
   card: ScryfallCard,
-  options: { artPreviewUrl?: string | null } = {},
+  options: {
+    artPreviewUrl?: string | null;
+    /** The printing's set object (getScryfallSet), when the caller fetched
+     *  one for the collector fields (needsScryfallSet). */
+    set?: ScryfallSet | null;
+  } = {},
 ): ScryfallImportPatch {
   const front = card.card_faces?.[0];
   // Split / adventure / room / transform cards carry combined-or-absent data at
@@ -1115,6 +1311,9 @@ export function mapScryfallToFormPatch(
     artist_credit: scryfallFaceArtist(card, 0),
     source_scryfall_id: card.id,
     printing: importedPrintingFromScryfall(card),
+    // The printing's collector line, as data (TODO 4.9a): the printed set
+    // code, the number in its era's style and the language.
+    collector: collectorFieldsFromPrinting(card, options.set),
     preview_art_url: options.artPreviewUrl ?? null,
     // DFC detection: any card with two faces (Delver, Werewolves, etc.)
     // emits a back_face patch the form will seed when the user imports —

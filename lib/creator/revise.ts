@@ -37,6 +37,12 @@ export const REVISABLE_FIELDS = [
   "defense",
   "set_icon_url",
   "set_icon_code",
+  // The collector fields (TODO 4.9a) are card CONTENT like the set icon
+  // (owner 2026-09-29: editable on an existing card) — what the printing
+  // says, not what the card structurally is.
+  "set_code",
+  "collector_number",
+  "lang",
   "tags_text",
   "watermark",
   "footer_text",
@@ -76,6 +82,9 @@ export const REVISABLE_PAYLOAD_KEYS = [
   "defense",
   "set_icon_url",
   "set_icon_code",
+  "set_code",
+  "collector_number",
+  "lang",
   "tags",
   "watermark",
   "footer_text",

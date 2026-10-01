@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   getCardById,
   getCardByNameResult,
+  getScryfallSet,
   hasBackFaceImage,
   pickArtCropUrl,
   pickPrintImageUrl,
@@ -14,7 +15,7 @@ import {
   checkScryfallRateLimit,
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
-import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { mapScryfallToFormPatch, needsScryfallSet } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
@@ -128,10 +129,16 @@ export async function GET(request: NextRequest) {
   await logScryfallCall(user.id, "named");
 
   const artPreviewUrl = pickArtCropUrl(card);
+  // The collector fields follow the printing (TODO 4.9a): a token set's
+  // parent code and a 2015-era set size live on the SET object, fetched
+  // only when the mapper needs it — cached for a day, so at most one extra
+  // Scryfall call per import and none on a hit. Nothing fetched → the
+  // mapper fills no collector fields (never a guess).
+  const set = needsScryfallSet(card) && card.set ? await getScryfallSet(card.set) : undefined;
   // The registry's match is static; an `exact` frame that isn't verified in
   // the card's colour is only `nearest` to the user (TODO 1.4), and a match
   // that names another frame once verified takes it when it is (A9).
-  const mapped = mapScryfallToFormPatch(card, { artPreviewUrl });
+  const mapped = mapScryfallToFormPatch(card, { artPreviewUrl, set });
   const patch = mapped.frame_match
     ? finalizeImportMatch(mapped, new Set(await getVerifiedFrameKeys()))
     : mapped;

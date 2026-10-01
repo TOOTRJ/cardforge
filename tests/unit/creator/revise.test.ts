@@ -45,6 +45,22 @@ describe("revise contract", () => {
     }
   });
 
+  it("the collector fields are content, editable on an existing card (TODO 4.9a, owner 2026-09-29)", () => {
+    for (const field of ["set_code", "collector_number", "lang"] as const) {
+      expect(isRevisableField(field)).toBe(true);
+      expect(REVISABLE_PAYLOAD_KEYS).toContain(field);
+    }
+    // An edit's payload keeps them, exactly as the form sends them.
+    const picked = pickRevisablePayload({
+      title: "Sheoldred",
+      set_code: "DMU",
+      collector_number: "107/281",
+      lang: "es",
+      frame_style: { template: "m15" },
+    });
+    expect(picked).toEqual({ title: "Sheoldred", set_code: "DMU", collector_number: "107/281", lang: "es" });
+  });
+
   it("strips locked columns from an edit payload", () => {
     const payload = {
       title: "New name",
