@@ -4,7 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { frameMasterKey, frameOverlayImageUrl, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { resolveFrameOverlays } from "@/lib/cards/anatomy";
-import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
+import { EXTENDED_CROWN, M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
 import type { ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -81,6 +81,29 @@ describe("the preview draws the bake's crown", () => {
     const layer = crown.parentElement!;
     expect(container.querySelector("[data-frame-key]")!.nextElementSibling).toBe(layer);
     expect(layer.style.zIndex).toBe("5");
+  });
+
+  // TODO 4.6f (wave 2b): the extended-art frame's band — CC's floating
+  // crown, 1500 × 260, over rows 10–269 of the card (its slot sits 10 px
+  // below CC's bounds, on our MSE master's title bar).
+  it.each([
+    ["white", { frameStyle: { template: "extendedart", crown: true } }, "w"],
+    ["three colours: gold", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}", frameStyle: { template: "extendedart", crown: true } }, "m"],
+    ["a pair: gold (no pair masters on this frame)", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "extendedart", crown: true, twoColor: true } }, "m"],
+    ["colourless: the grey crown", { colorIdentity: ["colorless"], cost: "{10}", frameStyle: { template: "extendedart", crown: true } }, "c"],
+  ] as Array<[string, Partial<CardPreviewData>, string]>)("extended art, %s → the %s band at the extended-art slot", (_label, over, key) => {
+    const data = card(over);
+    const [bake] = bakeOverlays(data);
+    expect(bake).toMatchObject({ anatomy: "crown", key, path: `/frames/extendedcrown/${key}.png`, rect: EXTENDED_CROWN.rect });
+    const { container } = render(<CardPreview {...data} />);
+    const [crown, ...rest] = overlaysOf(container);
+    expect(rest).toHaveLength(0);
+    expect(crown.dataset.overlayKey).toBe(key);
+    expect(crown.style.backgroundImage).toContain(frameOverlayImageUrl(bake.path));
+    expect(parseFloat(crown.style.top)).toBeCloseTo((10 / 2100) * 100, 6);
+    expect(parseFloat(crown.style.height)).toBeCloseTo((260 / 2100) * 100, 6);
+    expect(container.querySelector("[data-frame-key]")!.nextElementSibling).toBe(crown.parentElement);
+    cleanup();
   });
 
   it("draws nothing where the bake draws nothing: absent, off, not Legendary, a planeswalker, a token, a frame without the crown", () => {

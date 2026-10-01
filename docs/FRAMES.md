@@ -299,6 +299,12 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   untilted 45→55 %W ramp). The importer fails a band with alpha below row
   409, a peak off row 42 ± 2 or more than a shadow (α ≤ 127) over the art.
   Build it with `node scripts/import-cc-frames.mjs --only m15crown`.
+  `extendedcrown` (4.6f, wave 2b) is the extended-art frame's FLOATING
+  crown — CC's black cover strip, the crown, the outline on top — composited
+  1:1 at 1500×2100 and cropped to rows 0–259, one band per colour key: a
+  generic band (`layers` / `findings`; [The extended-art
+  crown](#the-extended-art-crown-46f-wave-2b)), built with
+  `--only extendedcrown`.
 
 The M15 family shipped in 4.4 (#380): published, git copies deleted,
 profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
@@ -1064,10 +1070,12 @@ default.
 
 **The legendary crown (4.6a)** is `M15_CROWN` in
 `lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
-only (never snow, devoid, extended art, adventure, saga, the tokens or a
-showcase: 4.6f and the token items; the borderless frames draw CC's
-FLOATING crown from crowned twin masters instead — [The borderless crown
-and pair pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a)). It draws when the switch is
+only (never snow, devoid, adventure, saga, the tokens or a showcase: 4.6f
+and the token items; the borderless frames draw CC's FLOATING crown from
+crowned twin masters and the extended-art frame the same crown as its own
+band, `EXTENDED_CROWN` — [The borderless crown and pair
+pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a), [The
+extended-art crown](#the-extended-art-crown-46f-wave-2b)). It draws when the switch is
 `true`, the supertype has the word Legendary and the card is not a
 planeswalker, token, battle or emblem (`qualifiesForCrown`). Its key is the
 pinline of the master actually drawn (`resolveFrameOverlays`): the colour,
@@ -1137,7 +1145,8 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
   (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
-  devoid, extended art, the borderless land — keeps the `two-colour` gaps,
+  devoid, extended art (its crown band draws no pairs: wave 2b), the
+  borderless land — keeps the `two-colour` gaps,
   now pointing at 4.6f (the borderless frames draw theirs since wave 2a,
   below); an M20 token's gaps point at 4.48 (its own central rim split and
   pill crown).
@@ -1231,6 +1240,49 @@ card on the two frames bakes byte-identical with the switches absent).
   `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin
   and the pair in the bake, the switches off byte-identical), the matrix's
   `m15borderless*` `@crown` / `@pair` cases.
+
+#### The extended-art crown (4.6f, wave 2b)
+
+`extendedart` draws the same floating crown as the borderless frames, as an
+OVERLAY band rather than crowned twins (`EXTENDED_CROWN` on its `PROFILES`
+entry: `extendedcrown/<key>.png`, 1500 × 260, keys `w u b r g m c`),
+through the same switch, hints, import rule and registry gap. Opt-in per
+card: production holds no visible card on the frame, and the bake with the
+switch absent or off is byte-identical.
+
+- **Why a band:** CC's `autoExtendedArtFrame` (its creator-23.js, lines
+  1311–1362; `makeExtendedArtFrameByLetter` 2296–2365) draws, for a Legendary card,
+  a BLACK 'Crown Border Cover' strip (`img/black.png` at 3.94/2.77/92.14×
+  1.77 %) — drawn, not erased, where the borderless frame erases its strip
+  — then the floating crown (3.07/1.91/93.87×10.24 %) with the outline ON
+  TOP (2.8/1.72/94.4×10.62 %: pushed first, and `drawFrames` draws the
+  list reversed). Nothing is removed from the master, so an overlay can add
+  it — and the extendedart masters are MSE-built, in git: CC's pixels stay
+  in the bucket. The importer composites the three pieces 1:1 at
+  1500 × 2100 (every piece 1500-native) and crops rows 0–259
+  (`CC_OVERLAY_BANDS.extendedcrown`, the importer's generic `layers` /
+  `findings` band: the outline's peak at row 36 ± 1 on the centre column,
+  the cover strip opaque black in a crown dip, no alpha below the band).
+- **The slot sits 10 px lower than CC's bounds** (`topPct` = 10/2100): the
+  print's title bar (FDN #442 / #455) and CC's `m15/new/extended` top out
+  at 4.98 %H, our MSE master's at 5.43, so the band is registered on OUR
+  bar — the crown's peak lands at row 50 against the print's 42 at
+  1500 × 2100, the bar's top at 110 against 99. 4.7's CC-built extendedart
+  master takes the offset back to 0 (and brings the print's floating title
+  plate and the non-legendary 'Title Cutout', neither of which ours draws).
+- **Keys:** the masters' seven colour keys. No pair masters: a pair wears
+  the gold crown and the two-colour switch is not offered
+  (`frameAnatomyOf("extendedart")` is the crown alone); a colourless card
+  wears CC's grey C crown over our grey master (PUMA U1), not the artifact
+  crown.
+- **References:** `CROWN_REFERENCES.extendedart` — w FDN #442, u #455,
+  b #463, r #466, g #470, m M21 #278, c PUMA U1; the crown rides the
+  colour's tick.
+- **Tests:** `tests/unit/frames/extended-crown-band.test.ts` (the recipe,
+  the slot, the manifest and provenance, the built bands' pixels),
+  `tests/unit/render/extended-crown-bake.test.tsx` (real bakes: the band
+  inside the slot's rows only, 1:1 at HD, absent / off byte-identical), the
+  matrix's `extendedart` `@crown` cases.
 
 ## Kind anatomy and bodies
 

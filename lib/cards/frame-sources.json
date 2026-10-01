@@ -320,6 +320,68 @@
       "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'"
     ]
   },
+  "extendedcrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "M15 'Legend Crowns (Floating)' (packM15LegendCrownsFloating.js), drawn as CC's autoExtendedArtFrame does (creator-23.js:1311–1362, makeExtendedArtFrameByLetter :2296–2365)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x260 overlay band: rows 0–259 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownWFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "u": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownUFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "b": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownBFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "r": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownRFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "g": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownGFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "m": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownMFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "c": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/crowns/m15CrownCFloating.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/black.png",
+      "img/frames/m15/crowns/m15CrownBFloating.png",
+      "img/frames/m15/crowns/m15CrownCFloating.png",
+      "img/frames/m15/crowns/m15CrownFloatingOutline.png",
+      "img/frames/m15/crowns/m15CrownGFloating.png",
+      "img/frames/m15/crowns/m15CrownMFloating.png",
+      "img/frames/m15/crowns/m15CrownRFloating.png",
+      "img/frames/m15/crowns/m15CrownUFloating.png",
+      "img/frames/m15/crowns/m15CrownWFloating.png"
+    ],
+    "notes": [
+      "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters, which are MSE-built and in git — Card Conjurer pixels never join them",
+      "keys = the seven colour keys of the extendedart masters: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown over our MSE colourless master; CC's own rule would pick the artifact crown for a colourless card, which is the m15artifact dress's call); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
+      "the band's slot sits 10 px (0.476 %H) lower than CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN): the MSE master's title bar tops out at 5.43 %H where FDN #442 / #455 and CC's m15/new/extended put it at 4.98, so the crown's hole hugs OUR bar; 4.7's CC-built extendedart master takes the offset back to 0"
+    ]
+  },
   "fullartland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

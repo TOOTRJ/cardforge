@@ -32,8 +32,11 @@ describe("where the pieces are declared", () => {
   it("only the m15, m15artifact, m15land and borderless entries draw them — never a profile that spreads them", () => {
     // 4.6f (wave 2a): the two borderless frames draw the crown from crowned
     // twin masters and the pairs from pinline-split masters.
-    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
+    // …and extendedart the crown alone, as an overlay band (wave 2b).
+    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact", "extendedart"];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [] });
+    expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
     expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [] });
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: false, twoColor: [] });
     expect(frameAnatomyOf("m15snowland")).toEqual({ crown: false, twoColor: [] });
