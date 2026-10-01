@@ -63,7 +63,7 @@ Nyx text-box darken; Phase 5 after 4.5. Walker follow-ups (4.33a, 4.19's
 rail, statics): ask the owner first. Owner steps the repo can't show: the
 per-colour verification of #421's emblem, #428's `m20token*`, #436's
 `m15borderlessland` and #438's walkers (none is in `supabase/seed.sql`'s
-production mirror yet) and the /news post for #440.
+production mirror yet) and the /news post for #440. The LAST task in the plan is 6.29, the create-card stepper redesign: it starts only after 4.9, 4.21 and 4.6f, and only after the owner has been asked what it should cover (owner 2026-09-30).
 
 Status sync 2026-09-25 (main `267f46c`, PRs #370–#382 merged): Phase 0 done
 except 0.17, 0.18 (partly), 0.22 and 0.24; the Card Conjurer M15 swap shipped
@@ -3052,6 +3052,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **6.26 [P2] Pricing and upgrade copy for the print features** (owner pick 2026-09-29, from #435's review) — `lib/billing/plans.ts` still sells "3×3 print sheets" for Pro and lists only the 1500×2100 PNG for Plus, and the upgrade modal's hi-res export text matches the old set. List what is built: Plus = clean PNG/PDF, 800 ppi, the 1/8″ bleed and the MakePlayingCards preset; Pro = print sheets from any selection (Letter/A4, gaps, cut lines, 63×88 mm, bleed) and the deck export's options. Keep `/pricing`, the upgrade modal and the FAQ saying the same thing.
 - [ ] **6.27 [P3] Card backs for print (the last part of 6.1)** (owner pick 2026-09-29: later, as its own item) — a card-back template for MPC uploads and double-sided sheets. No back template exists yet; design it before building.
 - [ ] **6.28 [P2] Profile picture and deck cover upload caps** (owner pick 2026-09-29, from #433's review) — Vercel refuses any request body over 4.5 MB, so profile avatars/banners (stated 8 MB) and deck covers (stated 5 MB) are effectively capped at 4.5 MB today. Lower the stated caps to 4 MB in the checks and the copy (client + server + bucket `file_size_limit`), with a test that holds the cap under Vercel's limit. (Card art moves to #433's staged upload path instead.)
+
+- [ ] **6.29 [P1] Create-card stepper redesign** (owner request 2026-09-30) — **ASK THE OWNER BEFORE STARTING: stop and ask what the redesign should cover before doing anything at all (owner 2026-09-30: "add a note to stop and ask me before doing anything"). The LAST task in the plan: it starts only after 4.9, 4.21 and 4.6f are done.** Scope to be set with the owner, not assumed: the `/create` wizard's steps (Card → Identity → Text & stats → Set icon → Subscriber → Publish), their order and grouping, the frame picker (4.13) and presets (4.14), where the live preview sits, mobile, and how the per-card switches (crown, two-colour frame, collector line, stamp) and the Token / Emblem choices are presented. Build nothing, sketch nothing and open no PR until the owner has answered.
 
 ### Phase 7 — Ops and QA (continuous)
 
