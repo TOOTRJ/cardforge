@@ -60,6 +60,13 @@ import {
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
+import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
+import {
+  COLLECTOR_BRUSH_PATH,
+  COLLECTOR_BRUSH_VIEWBOX,
+  COLLECTOR_STAR_PATH,
+  COLLECTOR_STAR_VIEWBOX,
+} from "@/lib/cards/collector-line";
 import {
   PLACEHOLDER_FLAVOR_TEXT,
   PLACEHOLDER_RULES_TEXT,
@@ -261,8 +268,22 @@ const CARD_FONT = '"MPlantin", Georgia, "Times New Roman", serif';
 // preview and PNG stay identical.
 const DISPLAY_FONT = '"CardDisplay", "MPlantin", Georgia, "Times New Roman", serif';
 
+// The collector line's face (TODO 4.9b; the "CollectorLine" @font-face in
+// globals.css — the same subset TTF the bake registers).
+const COLLECTOR_FONT = '"CollectorLine", "MPlantin", Georgia, "Times New Roman", serif';
+
 function fontFor(font: TextSlot["font"]): string {
   return font === "display" ? DISPLAY_FONT : CARD_FONT;
+}
+
+/** A collector run's face as the preview sets it — the bake's
+ *  collectorFaceBake twin (lib/render/card-image.tsx). */
+function collectorFaceStyle(face: "collector" | "display" | "body"): { fontFamily: string; fontWeight: number } {
+  return face === "collector"
+    ? { fontFamily: COLLECTOR_FONT, fontWeight: 500 }
+    : face === "display"
+      ? { fontFamily: DISPLAY_FONT, fontWeight: 600 }
+      : { fontFamily: CARD_FONT, fontWeight: 400 };
 }
 
 type FaceData = {
@@ -286,6 +307,11 @@ type FaceData = {
   faceContent: FaceContent | null;
   /** Design watermark — front face (and v2 back card) only. */
   watermark: CardWatermark | null;
+  /** The collector fields (TODO 4.9b) — the front face's, or a v2 back
+   *  card's own; a legacy jsonb back face carries none. */
+  setCode?: string | null;
+  collectorNumber?: string | null;
+  lang?: string | null;
 };
 
 // The adventure spell shown inline on an Adventure frame's left page. Sourced
@@ -327,6 +353,9 @@ export function CardPreview(rawProps: CardPreviewProps) {
     frameStyle,
     setIconUrl,
     setIconCode,
+    setCode,
+    collectorNumber,
+    lang,
     faceContent,
     watermark,
     backFace,
@@ -362,6 +391,9 @@ export function CardPreview(rawProps: CardPreviewProps) {
     artPosition: artPosition ?? {},
     faceContent: faceContent ?? null,
     watermark: watermark ?? null,
+    setCode: setCode ?? null,
+    collectorNumber: collectorNumber ?? null,
+    lang: lang ?? null,
   };
 
   const backFaceData: FaceData | null = backFace
@@ -427,6 +459,9 @@ export function CardPreview(rawProps: CardPreviewProps) {
         artPosition: backCard.artPosition ?? {},
         faceContent: backCard.faceContent ?? null,
         watermark: backCard.watermark ?? null,
+        setCode: backCard.setCode ?? null,
+        collectorNumber: backCard.collectorNumber ?? null,
+        lang: backCard.lang ?? null,
       }
     : null;
   const backCardTemplate = normalizeFrameTemplate(backCard?.frameStyle?.template);
@@ -721,6 +756,34 @@ function CardFace({
     Boolean(face.loyalty || staticInEditor);
   const showDefense =
     Boolean(layout.defense) && showsDefense(face.cardType) && Boolean(face.defense);
+  // The collector line (TODO 4.9b): drawn in place of the footer when the
+  // card's switch names a style and the frame has the slot (lib/cards/
+  // collector-layout.ts, the bake's twin). With the brand mark it is a
+  // display surface (the mark in the © slot); without it the subscriber's
+  // download preview (the footer mark in the slot). The © slot's line
+  // follows the stat plate THIS preview draws — the editor's empty loyalty
+  // shield included.
+  const collector = useMemo(
+    () =>
+      collectorLayout(
+        layout,
+        {
+          cardType: face.cardType,
+          supertype: face.supertype,
+          rarity,
+          setCode: face.setCode,
+          collectorNumber: face.collectorNumber,
+          lang: face.lang,
+          artistCredit: face.artistCredit,
+          finish,
+          star: anatomy?.star,
+          collector: anatomy?.collector,
+          plates: { pt: showPT, loyalty: showLoyalty, defense: showDefense },
+        },
+        brandMark ? { kind: "display" } : { kind: "download", footerText: footerWatermark },
+      ),
+    [layout, face, rarity, finish, anatomy?.star, anatomy?.collector, showPT, showLoyalty, showDefense, brandMark, footerWatermark],
+  );
 
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -1385,8 +1448,12 @@ function CardFace({
         />
       ) : null}
 
-      {/* Footer — artist credit + brand. */}
-      {layout.footer && footerInkResolved ? (
+      {/* Footer — artist credit + brand. The collector line (TODO 4.9b)
+          replaces it when the card's switch is on: CollectorBlock. */}
+      {collector ? (
+        <CollectorBlock layout={collector} ink={footerInkResolved?.colorHex ?? layout.footer?.colorHex ?? "#f4eee2"} />
+      ) : null}
+      {!collector && layout.footer && footerInkResolved ? (
         <div
           style={{
             ...rectStyle(layout.footer.rect),
@@ -1425,8 +1492,12 @@ function CardFace({
           overlay (lib/render/card-image.tsx): placement + short-side scale
           from brandMarkLayout(layout), 2.6% of a portrait card's width,
           display font. Display surfaces always show it (layout v20); only a
-          paid download renders without it. */}
-      {brandMark ? (
+          paid download renders without it. On a collector card (TODO 4.9b)
+          the same mark sits in the line's © slot — the bake's twin. */}
+      {brandMark && collector?.mark.kind === "brand" ? (
+        <BrandMarkInCollectorSlot anchor={collector.mark.anchor} />
+      ) : null}
+      {brandMark && collector?.mark.kind !== "brand" ? (
         <div
           aria-hidden
           className="pointer-events-none absolute z-40 flex items-center"
@@ -1508,6 +1579,95 @@ function BandSlot({
       }}
     >
       {children}
+    </div>
+  );
+}
+
+/**
+ * The collector line (TODO 4.9b): every run of lib/cards/collector-layout.ts
+ * at its x (% of the width) and its line-box top (% of the height), its
+ * size in cqw and the face's own line height, so the ink sits on the
+ * layout's baseline — the bake's CollectorBake twin. The ★ and the brush
+ * are the layout's path runs, scaled to their boxes.
+ */
+function CollectorBlock({ layout, ink }: { layout: CollectorLayout; ink: string }) {
+  return (
+    <div aria-hidden data-collector-line={layout.style} className="pointer-events-none absolute inset-0 z-20">
+      {layout.runs.map((run, i) =>
+        run.kind === "path" ? (
+          <svg
+            key={i}
+            data-collector-run={run.role}
+            viewBox={run.path === "star" ? COLLECTOR_STAR_VIEWBOX : COLLECTOR_BRUSH_VIEWBOX}
+            preserveAspectRatio="none"
+            style={{
+              position: "absolute",
+              left: `${run.xPct}%`,
+              top: `${run.topPct}%`,
+              width: `${run.widthPct}%`,
+              height: `${run.heightPct}%`,
+            }}
+          >
+            <path d={run.path === "star" ? COLLECTOR_STAR_PATH : COLLECTOR_BRUSH_PATH} fill={ink} fillRule="evenodd" />
+          </svg>
+        ) : (
+          <span
+            key={i}
+            data-collector-run={run.role}
+            style={{
+              position: "absolute",
+              left: `${run.xPct}%`,
+              top: `${run.topPct}%`,
+              ...collectorFaceStyle(run.face),
+              fontSize: cqw(run.sizePct),
+              lineHeight: run.lineHeight,
+              letterSpacing: `${run.letterSpacingEm}em`,
+              color: ink,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {run.text}
+          </span>
+        ),
+      )}
+    </div>
+  );
+}
+
+/** The brand mark in a collector card's © slot (TODO 4.9b): the mark
+ *  block below, unchanged in face, size, ink and shadow, with its line box's
+ *  top on the slot's baseline less the display face's ascent and its right
+ *  edge on the slot's — the bake's BrandMarkInCollectorSlotBake twin. */
+function BrandMarkInCollectorSlot({ anchor }: { anchor: CollectorMarkAnchor }) {
+  const scale = anchor.sizePct / 0.026;
+  return (
+    <div
+      aria-hidden
+      data-brand-mark="collector"
+      className="pointer-events-none absolute z-40 flex items-center"
+      style={{
+        right: `${100 - anchor.rightPct}%`,
+        top: `${anchor.topPct}%`,
+        lineHeight: anchor.lineHeight,
+        fontFamily: DISPLAY_FONT,
+        fontSize: cqw(anchor.sizePct),
+        fontWeight: 600,
+        letterSpacing: "0.02em",
+        color: "rgba(255,255,255,0.82)",
+        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+      }}
+    >
+      <svg
+        viewBox="0 0 32 32"
+        style={{
+          width: cqw(0.03 * scale),
+          height: cqw(0.03 * scale),
+          marginRight: cqw(0.008 * scale),
+        }}
+      >
+        <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
+      </svg>
+      pipglyph.com
     </div>
   );
 }

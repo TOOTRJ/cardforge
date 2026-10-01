@@ -762,6 +762,21 @@ export type FrameStyle = {
    *  masters — for a land, only a land frame's (twoColorFits; the save drops
    *  it elsewhere). Absent = off = the gold frame, as before. */
   twoColor?: boolean;
+  /** The printed collector line (TODO 4.9b): an ADDITION, opt-in per card.
+   *  "2015" draws the M15 → ONE style ("107/281   M" over "DMU • EN"),
+   *  "2023" the style printed from 2023-03-26 ("R 0009"); "off" is the
+   *  owner's explicit off (no editor hint); absent = a card stored before
+   *  the line shipped, which keeps its look (the editor hints at the
+   *  switch). Drawn only on a template whose PROFILES entry has a collector
+   *  slot (lib/cards/collector-line.ts COLLECTOR_TEMPLATES); the save drops
+   *  it elsewhere (normalizeAnatomy). A new card starts "2023"; an import
+   *  takes its printing's style, or "off" for a pre-2015-frame printing. */
+  collector?: "2015" | "2023" | "off";
+  /** The foil-printing ★ (TODO 4.9b, owner 2026-09-29): the collector
+   *  line's separator is the ★ instead of the • — a flag, no sheen, free
+   *  for every plan (a Foil FINISH prints the ★ too). `true` or absent:
+   *  an import sets it for a foil-only printing (`finishes` = ["foil"]). */
+  star?: true;
 };
 
 // ---------------------------------------------------------------------------

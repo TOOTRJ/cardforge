@@ -98,6 +98,7 @@ import {
   type BasicSymbolPlan,
 } from "@/lib/cards/basic-symbol";
 import {
+  COLLECTOR_FONT_BYTES,
   DISPLAY_FONT_BYTES,
   KEYRUNE_DEFAULT_GLYPH,
   KEYRUNE_FONT_BYTES,
@@ -108,6 +109,14 @@ import {
   getManaCodepoint,
 } from "@/lib/render/card-fonts";
 import { displayRunPx } from "@/lib/render/satori-text";
+import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
+import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
+import {
+  COLLECTOR_BRUSH_PATH,
+  COLLECTOR_BRUSH_VIEWBOX,
+  COLLECTOR_STAR_PATH,
+  COLLECTOR_STAR_VIEWBOX,
+} from "@/lib/cards/collector-line";
 import {
   setSymbolDrawnPx,
   setSymbolSize,
@@ -226,9 +235,23 @@ const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = RARITY_INK;
 // falling back to MPlantin. A TextSlot's `font` field selects which.
 const BODY_FONT = '"MPlantin"';
 const DISPLAY_FONT = '"CardDisplay", "MPlantin"';
+// The collector line's face (TODO 4.9b; registered LAST in renderCardImage —
+// lib/render/card-fonts.ts says why).
+const COLLECTOR_FONT = '"CollectorLine"';
 
 function fontFamilyFor(font: TextSlot["font"]): string {
   return font === "display" ? DISPLAY_FONT : BODY_FONT;
+}
+
+/** A collector run's face as the bake sets it: the family, its registered
+ *  weight and the hhea ascent its baseline is placed by (the preview's
+ *  collectorFaceStyle twin). */
+function collectorFaceBake(face: "collector" | "display" | "body"): { fontFamily: string; fontWeight: number; ascent: number } {
+  return face === "collector"
+    ? { fontFamily: COLLECTOR_FONT, fontWeight: 500, ascent: COLLECTOR_FACES.collector.ascent }
+    : face === "display"
+      ? { fontFamily: DISPLAY_FONT, fontWeight: 600, ascent: COLLECTOR_FACES.display.ascent }
+      : { fontFamily: BODY_FONT, fontWeight: 400, ascent: COLLECTOR_FACES.body.ascent };
 }
 
 // ---------------------------------------------------------------------------
@@ -513,6 +536,28 @@ function CardImage({
   // actually defines a slot for that stat. The preload reads the same
   // (drawnStatSlots → frameAssetPathsFor).
   const { pt: showPT, loyalty: showLoyalty, defense: showDefense } = drawnStatSlots(layout, card);
+  // The collector line (TODO 4.9b): drawn in place of the footer when the
+  // card's switch names a style and the frame has the slot (lib/cards/
+  // collector-layout.ts, the preview's twin). A display render puts the
+  // brand mark in its © slot; a clean download the card's footer text. The
+  // © slot's line follows the stat plate THIS render draws.
+  const collector = collectorLayout(
+    layout,
+    {
+      cardType: card.cardType,
+      supertype: card.supertype,
+      rarity: card.rarity,
+      setCode: card.setCode,
+      collectorNumber: card.collectorNumber,
+      lang: card.lang,
+      artistCredit: card.artistCredit,
+      finish: card.frameStyle?.finish,
+      star: card.frameStyle?.star,
+      collector: card.frameStyle?.collector,
+      plates: { pt: showPT, loyalty: showLoyalty, defense: showDefense },
+    },
+    brandMark ? { kind: "display" } : { kind: "download", footerText: watermarkText },
+  );
 
   const focalX = clamp(card.artPosition?.focalX ?? 0.5, 0, 1) * 100;
   const focalY = clamp(card.artPosition?.focalY ?? 0.5, 0, 1) * 100;
@@ -1188,24 +1233,38 @@ function CardImage({
 
       {/* Footer — artist + brand. A multi-layer outline (ON_ART_OUTLINE on
           a footer printed on the art) is drawn as offset copies under it:
-          see FooterBake. */}
-      {layout.footer && footerInkResolved
-        ? FooterBake({
-            slot: layout.footer,
-            ink: footerInkResolved,
-            artist: card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
-            watermarkText,
+          see FooterBake. The collector line (TODO 4.9b) replaces it when the
+          card's switch is on: CollectorBake. */}
+      {collector
+        ? CollectorBake({
+            layout: collector,
+            ink: footerInkResolved?.colorHex ?? layout.footer?.colorHex ?? "#f4eee2",
             cardWidth: width,
+            cardHeight: height,
           })
-        : null}
+        : layout.footer && footerInkResolved
+          ? FooterBake({
+              slot: layout.footer,
+              ink: footerInkResolved,
+              artist: card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
+              watermarkText,
+              cardWidth: width,
+            })
+          : null}
 
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
       {isShowcase ? null : null}
 
       {/* Free-tier BRAND mark — pipglyph.com, baked into the pixels so it
           can't be stripped client-side. Paid exports pass brandMark=false.
-          Never a WotC mark; the MTG-style frame itself is always free. */}
-      {brandMark ? (
+          Never a WotC mark; the MTG-style frame itself is always free. On a
+          collector card (TODO 4.9b) the same mark sits in the line's © slot
+          (collectorLayout's anchor: right edge 93.54 %W, line 2 with a stat
+          plate, else line 1) — the preview's twin. */}
+      {brandMark && collector?.mark.kind === "brand"
+        ? BrandMarkInCollectorSlotBake({ anchor: collector.mark.anchor, cardWidth: width, cardHeight: height })
+        : null}
+      {brandMark && collector?.mark.kind !== "brand" ? (
         <div
           style={{
             position: "absolute",
@@ -1401,6 +1460,127 @@ function FooterBake({
         </div>
       ))}
       {footer}
+    </div>
+  );
+}
+
+/**
+ * The collector line (TODO 4.9b): every run of lib/cards/collector-layout.ts
+ * set at its x and its line-box top — the baseline less the face's ascent
+ * at the run's whole-px size, so the ink sits on the layout's baseline row
+ * — with the face's own line height (ascent + descent, see the layout's
+ * header). The ★ and the brush are the layout's path runs. One wrapper div
+ * the size of the card (never a Fragment: Satori lays one out as a
+ * zero-width flex item); the preview's CollectorBlock is its twin.
+ */
+function CollectorBake({
+  layout,
+  ink,
+  cardWidth,
+  cardHeight,
+}: {
+  layout: CollectorLayout;
+  ink: string;
+  cardWidth: number;
+  cardHeight: number;
+}) {
+  return (
+    <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
+      {layout.runs.map((run, i) => {
+        if (run.kind === "path") {
+          const w = (run.widthPct / 100) * cardWidth;
+          const h = (run.heightPct / 100) * cardHeight;
+          return (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                left: (run.xPct / 100) * cardWidth,
+                top: (run.topPct / 100) * cardHeight,
+                width: w,
+                height: h,
+                display: "flex",
+              }}
+            >
+              <svg
+                width={w}
+                height={h}
+                viewBox={run.path === "star" ? COLLECTOR_STAR_VIEWBOX : COLLECTOR_BRUSH_VIEWBOX}
+                preserveAspectRatio="none"
+              >
+                <path d={run.path === "star" ? COLLECTOR_STAR_PATH : COLLECTOR_BRUSH_PATH} fill={ink} fillRule="evenodd" />
+              </svg>
+            </div>
+          );
+        }
+        const face = collectorFaceBake(run.face);
+        const fontPx = fpx(run.sizePct, cardWidth);
+        return (
+          <span
+            key={i}
+            style={{
+              position: "absolute",
+              left: (run.xPct / 100) * cardWidth,
+              top: (run.baselinePct / 100) * cardHeight - face.ascent * fontPx,
+              fontFamily: face.fontFamily,
+              fontWeight: face.fontWeight,
+              fontSize: fontPx,
+              lineHeight: run.lineHeight,
+              letterSpacing: run.letterSpacingEm ? `${run.letterSpacingEm}em` : 0,
+              color: ink,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {run.text}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The brand mark in a collector card's © slot (TODO 4.9b): the mark block
+ *  below, unchanged in face, size, ink and shadow, with its line box's top
+ *  on the slot's baseline less the display face's ascent at its whole-px
+ *  size and its right edge on the slot's — the preview's twin. */
+function BrandMarkInCollectorSlotBake({
+  anchor,
+  cardWidth,
+  cardHeight,
+}: {
+  anchor: CollectorMarkAnchor;
+  cardWidth: number;
+  cardHeight: number;
+}) {
+  const fontPx = fpx(anchor.sizePct, cardWidth);
+  const scale = anchor.sizePct / 0.026;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right: `${100 - anchor.rightPct}%`,
+        top: (anchor.baselinePct / 100) * cardHeight - COLLECTOR_FACES.display.ascent * fontPx,
+        zIndex: 40,
+        display: "flex",
+        alignItems: "center",
+        fontFamily: DISPLAY_FONT,
+        fontSize: fontPx,
+        lineHeight: anchor.lineHeight,
+        fontWeight: 600,
+        letterSpacing: "0.02em",
+        color: "rgba(255,255,255,0.82)",
+        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+      }}
+    >
+      <svg
+        width={Math.round(fpx(0.03 * scale, cardWidth))}
+        height={Math.round(fpx(0.03 * scale, cardWidth))}
+        viewBox="0 0 32 32"
+        style={{ marginRight: Math.round(fpx(0.008 * scale, cardWidth)) }}
+      >
+        <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
+      </svg>
+      pipglyph.com
     </div>
   );
 }
@@ -3321,6 +3501,10 @@ export async function renderCardImage(
         { name: "CardDisplay", data: DISPLAY_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
+        // The collector line's face (TODO 4.9b) — LAST: its glyphs are all in
+        // MPlantin's cmap, so no other run ever resolves to it
+        // (tests/unit/render/collector-font.test.ts).
+        { name: "CollectorLine", data: COLLECTOR_FONT_BYTES, weight: 500, style: "normal" },
       ],
     },
   );

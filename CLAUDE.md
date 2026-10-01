@@ -384,10 +384,19 @@ Rules and gotchas:
   (adventure keeps that). A frame-compare save that moves an `artSlot`
   passes the same check on the bake's own masters or is refused
   (`lib/frames/art-window-override.ts`).
-- Printed pieces a card SWITCHES ON (crown, two-colour; 4.6): `frame_style.crown`
-  / `twoColor`, drawn only `=== true` (`lib/cards/anatomy.ts`); new cards start
-  on, every save runs `normalizeAnatomy`, an edit sends only `frame_anatomy`,
-  and a piece is declared on a `PROFILES` entry only — `docs/FRAMES.md` "Printed pieces".
+- Printed pieces a card SWITCHES ON (crown, two-colour; 4.6 — the collector
+  line and its ★, 4.9b): `frame_style.crown` / `twoColor`, drawn only
+  `=== true`, `frame_style.collector` (`"2015"` / `"2023"` / `"off"`; drawn
+  for a style) and `star` (`true` or absent) (`lib/cards/anatomy.ts`); new
+  cards start on, every save runs `normalizeAnatomy`, an edit sends only
+  `frame_anatomy`, and a piece is declared on a `PROFILES` entry only
+  (`FrameProfile.collector` = `M15_COLLECTOR` on the wave-1 entries,
+  `COLLECTOR_TEMPLATES`) — `docs/FRAMES.md` "Printed pieces". On a card
+  with the line the pipglyph.com mark sits in its © slot (line 2 with a
+  drawn stat plate, else line 1; `lib/cards/collector-layout.ts`) and a
+  clean download prints `footer_text` there; the collector face
+  (`public/fonts/Montserrat-Medium.ttf`, OFL, subset ⊆ MPlantin's cmap) is
+  registered LAST in the bake's fonts — never add a glyph MPlantin lacks.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

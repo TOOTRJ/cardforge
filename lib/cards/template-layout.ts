@@ -456,6 +456,13 @@ export type FrameProfile = {
   flavorDivider?: boolean;
   /** Bottom info line (artist credit + brand). */
   footer?: TextSlot;
+  /** The printed collector line's slot (TODO 4.9b) — the two lines in the
+   *  bottom border a card switches on (FrameStyle.collector, opt-in per
+   *  card: declaring it changes no stored card). When the line is drawn it
+   *  REPLACES the footer, and the brand mark moves into its © slot. Set only
+   *  on PROFILES entries (COLLECTOR_TEMPLATES), never on a base another
+   *  profile spreads; code-owned (the override schema refuses it). */
+  collector?: CollectorSlot;
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -701,6 +708,32 @@ export const TYPE_SPLIT_ZEN: TypeLineSplit = {
  *  (BRAND_MARK_PILL) for a mark that sits on the art; the offsets then place
  *  the pill's box. */
 export type BrandMarkPlacement = { rightPct: number; bottomPct: number; pill?: boolean };
+
+/**
+ * The collector line's geometry (TODO 4.9b): where lib/cards/collector-
+ * layout.ts sets its runs. Horizontal values are % of the card's width,
+ * baselines % of its height, sizes fractions of the width (as every font
+ * size is). The one slot is M15's (M15_COLLECTOR), measured on the prints.
+ */
+export type CollectorSlot = {
+  /** The pen x of both lines. */
+  leftPct: number;
+  /** The © slot's right edge (the brand mark's, a clean download's footer
+   *  text's). */
+  rightPct: number;
+  /** Line 1's baseline (the number line). */
+  line1BaselinePct: number;
+  /** Line 2's baseline (set • language, the brush, the artist). */
+  line2BaselinePct: number;
+  /** The brush's pen x — and the 2015 style's rarity-letter column. */
+  brushLeftPct: number;
+  /** The collector face's size (the number, the set and language codes). */
+  sizePct: number;
+  /** The artist's size (the display face's synthesized small caps). */
+  artistSizePct: number;
+  /** The © slot's text size (a clean download's footer text, body face). */
+  markTextSizePct: number;
+};
 
 /** Default placement: inside the M15 black border (≈73 px of black above the
  *  ink on a 1500×2100 card, 34 px below). */
@@ -3527,6 +3560,43 @@ export const M15_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 
+/**
+ * The collector line on the black-bordered M15 family (TODO 4.9b): one slot
+ * for every wave-1 template — the tokens, the planeswalker and the emblem
+ * print their lines at M15's positions (TDOM #1, DOM #1, TFDN #24), so they
+ * take this slot, not M15TOKEN.footer's. Measured at 1500 × 2100 on the
+ * thirteen print scans of 2026-09-30 (DMU #107, DOM #1, FDN #1 / #280, KLD
+ * #265, MOC #1, ONC #114 / #29, ONE #19, SLD #1207 / #1242, TDOM #1, TFDN
+ * #24; scratchpad collector-line/measure2.json):
+ *   • both lines start at 96–101 px — Card Conjurer's pen x 0.0647 W
+ *     (creator-23.js:147–148) = 97 px;
+ *   • line 1's baseline (the flat-bottomed digits and capitals) at
+ *     1989–1999 px, mean 1993.5; line 2's at 2027–2038, mean 2032 — 38.5 px
+ *     apart on the prints where CC's two bands (y 0.9377 / 0.9548 H, the
+ *     baseline 0.7 of the 0.0171 H size below each) sit 35.9 apart;
+ *   • capitals 24–26 px tall: the 0.0171 H = 36 px size (0.024 W; the
+ *     collector face's 0.700 em cap height prints 25.2 px);
+ *   • the brush's ink at 287–290 px, 40 px wide, from 27 px above the
+ *     baseline to 3 above it; the artist's first capital 46–48 px after the
+ *     brush's left edge, its capitals 27 px tall (CC: the size + 0.001 H =
+ *     38 px, Beleren small caps);
+ *   • the © line (MPlantin, CC 0.0162 H = 34 px) ends at 1395–1405 px,
+ *     mean 1403 = CC's 0.0647 + 0.8707 = 0.9354 W.
+ * Set only on the PROFILES entries below — never on M15 / M15LAND /
+ * M15TOKEN, which other profiles spread (lib/cards/collector-line.ts
+ * COLLECTOR_TEMPLATES; tests/unit/cards/collector-profiles.test.ts).
+ */
+export const M15_COLLECTOR: CollectorSlot = {
+  leftPct: 6.47,
+  rightPct: 93.54,
+  line1BaselinePct: (1993.5 / 2100) * 100,
+  line2BaselinePct: (2032 / 2100) * 100,
+  brushLeftPct: (287 / 1500) * 100,
+  sizePct: 36 / 1500,
+  artistSizePct: 38 / 1500,
+  markTextSizePct: 34 / 1500,
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -3554,6 +3624,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
     overlays: [M15_CROWN],
     twoColorMasters: ["split", "hybrid"],
+    collector: M15_COLLECTOR,
   },
   // A land's crown is its colour (NEO #266–278); a colourless land's the
   // land grey "l" (UMA #241 Dark Depths).
@@ -3564,10 +3635,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     // Its pairs are a land's (the only frame a two-colour LAND draws them
     // on — owner round 17, 2026-09-30).
     twoColorForLands: true,
+    collector: M15_COLLECTOR,
   },
-  m15snowland: M15SNOWLAND,
+  // The collector line (TODO 4.9b, M15_COLLECTOR) is set on each wave-1
+  // entry here, like the crown — never on the M15 / M15LAND / M15TOKEN /
+  // M15TOKENTEXT bases, which other profiles spread.
+  m15snowland: { ...M15SNOWLAND, collector: M15_COLLECTOR },
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
-  m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
   // The artifact token's plate is M15's artifact set (TODO 4.49 (a)): CC's
   // silver m15PTa for colourless (TKLD #2, TMH1 #18), the colour's plate on
   // a coloured one (TC18 #7), as on m15artifact.
@@ -3575,18 +3650,21 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15TOKEN,
     label: "M15 Artifact Token",
     pt: { ...M15TOKEN.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+    collector: M15_COLLECTOR,
   },
   // TODO 4.49 (b): the text-box token; its colourless master is see-through
   // like m15token's (BFZ #2 / OGW #1 Eldrazi Scion), the artifact dress's
   // silver (TXLN #7 Treasure) and its plates M15's artifact set.
-  m15tokentext: { ...M15TOKENTEXT, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  m15tokentext: { ...M15TOKENTEXT, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
   m15tokenartifacttext: {
     ...M15TOKENTEXT,
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+    collector: M15_COLLECTOR,
   },
-  // TODO 4.52: the emblem (M20 design).
-  emblem: EMBLEM,
+  // TODO 4.52: the emblem (M20 design); its collector line (E, the © slot
+  // on line 1: no stat plate) through M15's slot (4.9b).
+  emblem: { ...EMBLEM, collector: M15_COLLECTOR },
   // TODO 4.48 / 4.50: the full-art tokens, labelled plain "Token" now that
   // they are verified (4.48a). Their masters are clear almost everywhere,
   // so the creator's tile draws its sample art (4.45).
@@ -3602,14 +3680,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15ARTIFACT,
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
+    collector: M15_COLLECTOR,
   },
   m15borderless: M15BORDERLESS,
   m15borderlessartifact: M15BORDERLESSARTIFACT,
   m15borderlessland: M15BORDERLESSLAND,
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
-  m15snow: M15SNOW,
-  m15devoid: M15DEVOID,
+  m15snow: { ...M15SNOW, collector: M15_COLLECTOR },
+  m15devoid: { ...M15DEVOID, collector: M15_COLLECTOR },
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
   // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through
   // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35)
@@ -3620,7 +3699,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // (x ≈ 100 / 1397, y ≈ 207; the art-window check's seam rule). The window
   // shows ~14 % more of the picture's zoom than on the coloured walkers
   // (a 1959 px cover height, not 1716).
-  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT } },
+  // …and its collector line through M15's slot (4.9b: DOM #1 prints the
+  // lines at M15's positions; the loyalty shield counts as a stat plate).
+  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT }, collector: M15_COLLECTOR },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,

@@ -1,4 +1,6 @@
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
+import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import {
   CARD_DISPLAY_COVERAGE,
   CARD_ITALIC_COVERAGE,
@@ -31,9 +33,10 @@ import {
 /** Which bake face a field is drawn with: "display" (titles, type lines,
  *  footer, stats), "rules" (rules text — read through the shared tokenizer,
  *  so its reminder text and ability words are checked as italic and its
- *  {mana} tokens, which become pips, are skipped) or "italic" (flavor text,
- *  a saga's intro). */
-export type GlyphFace = "display" | "rules" | "italic";
+ *  {mana} tokens, which become pips, are skipped), "italic" (flavor text,
+ *  a saga's intro) or "body" (plain MPlantin: a collector card's footer
+ *  mark in the © slot — TODO 4.9b — read as it is, no tokenizer). */
+export type GlyphFace = "display" | "rules" | "italic" | "body";
 
 export type GlyphCheckField = {
   label: string;
@@ -50,6 +53,7 @@ const COVERAGE: Record<GlyphFace, CodepointRanges> = {
   display: CARD_DISPLAY_COVERAGE,
   rules: CARD_RULES_COVERAGE,
   italic: CARD_ITALIC_COVERAGE,
+  body: CARD_RULES_COVERAGE,
 };
 
 function covered(ranges: CodepointRanges, cp: number): boolean {
@@ -154,6 +158,9 @@ export type GlyphCheckValues = {
   loyalty_abilities?: ReadonlyArray<{ text: string }>;
   saga_intro: string;
   saga_chapters?: ReadonlyArray<{ text: string }>;
+  /** The frame style's template and collector switch (TODO 4.9b): on a
+   *  collector card the footer mark prints in the body face, as typed. */
+  frame_style?: { template?: string | null; collector?: unknown } | null;
   has_back_face: boolean;
   back_face: {
     title: string;
@@ -168,12 +175,24 @@ export type GlyphCheckValues = {
   };
 };
 
-/** Every text field the card image draws, labelled as the creator labels it. */
+/** True when the card draws the collector line (TODO 4.9b): its switch
+ *  names a style and its template has the slot (COLLECTOR_TEMPLATES — the
+ *  same templates lib/cards/template-layout.ts declares it on). */
+export function drawsCollectorLine(frameStyle: GlyphCheckValues["frame_style"]): boolean {
+  if (!frameStyle || !collectorStyleOf(frameStyle.collector)) return false;
+  return (COLLECTOR_TEMPLATES as readonly string[]).includes(normalizeFrameTemplate(frameStyle.template ?? undefined));
+}
+
+/** Every text field the card image draws, labelled as the creator labels it.
+ *  On a collector card (4.9b) the artist is drawn in the display face as
+ *  capitals still (its synthesized small caps), and the footer mark in the
+ *  body face as typed — MPlantin in the © slot of a clean download. */
 export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
   // The row arrays are always filled by the form's defaults, but the notice
   // renders on every step — a partial reset must not take the form down.
   const abilities = v.loyalty_abilities ?? [];
   const chapters = v.saga_chapters ?? [];
+  const collector = drawsCollectorLine(v.frame_style);
   const fields: GlyphCheckField[] = [
     { label: "Name", face: "display", value: v.title },
     { label: "Type line", face: "display", value: `${v.supertype} ${v.subtypes_text}` },
@@ -184,7 +203,9 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
     { label: "Flavor text", face: "italic", value: v.flavor_text },
     { label: "Stats", face: "display", value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
     { label: "Artist", face: "display", value: v.artist_credit, uppercase: true },
-    { label: "Footer mark", face: "display", value: v.footer_text, uppercase: true },
+    collector
+      ? { label: "Footer mark", face: "body", value: v.footer_text }
+      : { label: "Footer mark", face: "display", value: v.footer_text, uppercase: true },
   ];
   if (v.has_back_face) {
     const b = v.back_face;

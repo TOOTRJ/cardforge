@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // Frame anatomy — the printed pieces a card switches on one by one (TODO
-// 4.6.0): the legendary crown (4.6a) and the two-colour frame (4.6b).
+// 4.6.0): the legendary crown (4.6a), the two-colour frame (4.6b) and, since
+// TODO 4.9b, the collector line (`collector`: a printed style or "off") with
+// its foil-printing ★ (`star`).
 //
 // THE OWNER RULE (2026-09-29, docs/FRAMES.md "Additions vs corrections"):
 // these are ADDITIONS, so each is OPT-IN PER CARD, stored as card data in
@@ -41,6 +43,7 @@
 // ---------------------------------------------------------------------------
 
 import { supertypeHasWord } from "@/lib/cards/card-display";
+import { isCollectorStyle, isCollectorSwitch, type CollectorSwitch } from "@/lib/cards/collector-line";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { TWO_COLOR_PAIRS, type TwoColorPair } from "@/lib/cards/frame-reference-registry";
 import {
@@ -54,30 +57,38 @@ import type { ColorIdentity, FrameStyle, FrameTemplate } from "@/types/card";
 
 export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
 
-/** The per-card anatomy switches, in FrameStyle. */
-export const FRAME_ANATOMY_KEYS = ["crown", "twoColor"] as const;
+/** The per-card anatomy switches, in FrameStyle: the booleans of 4.6.0 and
+ *  the collector line's two keys (4.9b) — `collector` holds a printed style
+ *  or "off", `star` is `true` or absent (lib/cards/collector-line.ts). */
+export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
 export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
 
-/** What a template can draw: the crown, and the two-colour dresses it has
- *  pair masters for. */
-export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[] };
+/** What a template can draw: the crown, the two-colour dresses it has
+ *  pair masters for, and the collector line (FrameProfile.collector — the
+ *  ★ rides on it). */
+export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[]; collector: boolean };
 
-type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
+type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "collector">;
 
 /** The switches a NEW card starts with (the creator's create and remix
- *  forms): every piece on. The renderers draw only what the template can,
- *  and the save drops the rest (normalizeAnatomy), so the new-card preview
- *  is exactly what the saved bake draws on any template. */
-export const NEW_CARD_ANATOMY: Readonly<Required<FrameAnatomyStyle>> = Object.freeze({
-  crown: true,
-  twoColor: true,
-});
+ *  forms): every piece on — the collector line in the style printed today
+ *  ("2023"); the ★ is never a default (it follows a foil finish or an
+ *  import's foil-only printing). The renderers draw only what the template
+ *  can, and the save drops the rest (normalizeAnatomy), so the new-card
+ *  preview is exactly what the saved bake draws on any template. */
+export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector">>> =
+  Object.freeze({
+    crown: true,
+    twoColor: true,
+    collector: "2023",
+  });
 
 export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
   return {
     crown: (profile.overlays ?? []).some((slot) => slot.anatomy === "crown"),
     twoColor: profile.twoColorMasters ?? [],
+    collector: profile.collector !== undefined,
   };
 }
 
@@ -88,9 +99,17 @@ export function frameAnatomyOf(template: FrameTemplate | string | null | undefin
   return frameAnatomyOfProfile(getFrameProfile(template ?? undefined));
 }
 
-/** True when a template with `anatomy` draws the piece `key` at all. */
+/** True when a template with `anatomy` draws the piece `key` at all — the
+ *  ★ only where the collector line is. */
 export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boolean {
-  return key === "crown" ? anatomy.crown : anatomy.twoColor.length > 0;
+  switch (key) {
+    case "crown":
+      return anatomy.crown;
+    case "twoColor":
+      return anatomy.twoColor.length > 0;
+    default:
+      return anatomy.collector;
+  }
 }
 
 /**
@@ -118,25 +137,30 @@ export function twoColorFitsTemplate(
   return twoColorFits(getFrameProfile(template ?? undefined), cardType);
 }
 
-/** The ONE render rule for a switch: on only when it is exactly `true`. */
+/** The ONE render rule for a switch: on only when it is exactly `true` —
+ *  the collector line when its value is a printed style ("off" and absent
+ *  are both off). */
 export function anatomyOn(
   style: FrameAnatomyStyle | null | undefined,
   key: FrameAnatomyKey,
 ): boolean {
+  if (key === "collector") return isCollectorStyle(style?.collector);
   return style?.[key] === true;
 }
 
 /** The switches a new card saved on `template` defaults to: `true` for each
  *  piece the template draws (whatever the card's type or colours, so the
- *  crown appears if the card becomes Legendary later), nothing else. */
+ *  crown appears if the card becomes Legendary later), the collector line
+ *  in today's printed style where the template has its slot, never the ★
+ *  (NEW_CARD_ANATOMY), nothing else. */
 export function anatomyDefaults(
   template: FrameTemplate | string | null | undefined,
 ): FrameAnatomyStyle {
   const anatomy = frameAnatomyOf(template);
   const out: FrameAnatomyStyle = {};
-  for (const key of FRAME_ANATOMY_KEYS) {
-    if (anatomyDrawn(anatomy, key)) out[key] = true;
-  }
+  if (anatomyDrawn(anatomy, "crown")) out.crown = true;
+  if (anatomyDrawn(anatomy, "twoColor")) out.twoColor = true;
+  if (anatomyDrawn(anatomy, "collector")) out.collector = NEW_CARD_ANATOMY.collector;
   return out;
 }
 
@@ -185,23 +209,24 @@ export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType:
   for (const key of FRAME_ANATOMY_KEYS) {
     if (stamped[key] === undefined && defaults[key] !== undefined) {
       if (stamped === frameStyle) stamped = { ...frameStyle };
-      stamped[key] = defaults[key];
+      Object.assign(stamped, { [key]: defaults[key] });
     }
   }
   return normalizeAnatomy(stamped, frameStyle.template, cardType);
 }
 
-/** The anatomy switches a stored frame_style names (booleans only) — what a
- *  remix keeps of its parent's (the creator's remixValuesFrom, and the AI
- *  deck remix of an own card): an explicit off stays off, and a switch the
- *  parent never set gets the new-card default. */
+/** The anatomy switches a stored frame_style names (the booleans, a
+ *  collector style or "off", a ★ that is `true`) — what a remix keeps of its
+ *  parent's (the creator's remixValuesFrom, and the AI deck remix of an own
+ *  card): an explicit off stays off, and a switch the parent never set gets
+ *  the new-card default. Anything else is not a switch. */
 export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   const stored = (frameStyle ?? {}) as Record<string, unknown>;
   const out: FrameAnatomyStyle = {};
-  for (const key of FRAME_ANATOMY_KEYS) {
-    const value = stored[key];
-    if (typeof value === "boolean") out[key] = value;
-  }
+  if (typeof stored.crown === "boolean") out.crown = stored.crown;
+  if (typeof stored.twoColor === "boolean") out.twoColor = stored.twoColor;
+  if (isCollectorSwitch(stored.collector)) out.collector = stored.collector;
+  if (stored.star === true) out.star = true;
   return out;
 }
 
@@ -440,6 +465,11 @@ export function resolveFrameOverlays(
 export type FrameAnatomyPatch = {
   crown?: boolean;
   twoColor?: boolean;
+  /** The collector line's style or the owner's "off" (TODO 4.9b). */
+  collector?: CollectorSwitch;
+  /** The foil-printing ★: `true` sets it, `false` takes a stored one off
+   *  (the stored key is `true` or absent). */
+  star?: boolean;
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -481,9 +511,11 @@ export function applyFrameAnatomyPatch(
 ): AppliedFrameAnatomyPatch {
   const template = typeof stored.frameStyle.template === "string" ? stored.frameStyle.template : undefined;
   const merged: Record<string, unknown> = { ...stored.frameStyle };
-  for (const key of FRAME_ANATOMY_KEYS) {
+  for (const key of ["crown", "twoColor", "collector"] as const) {
     if (patch[key] !== undefined) merged[key] = patch[key];
   }
+  if (patch.star === true) merged.star = true;
+  else if (patch.star === false) delete merged.star;
   const frameStyle = normalizeAnatomy(merged as FrameAnatomyStyle, template, stored.cardType) as Record<
     string,
     unknown
@@ -521,6 +553,14 @@ export type ImportedAnatomyFacts = {
   printed_crown?: boolean;
   /** `true` for a two-colour printing, else absent — never `false`. */
   printed_two_color?: true;
+  /** The collector line as THIS printing prints it (TODO 4.9b): its style
+   *  for a 2015-frame printing (by release date, lib/scryfall/import-mapper
+   *  .ts collectorStyleOfPrinting), "off" for an older frame — the line
+   *  is never drawn on a card imported from a 1993–2003 printing. */
+  printed_collector?: CollectorSwitch;
+  /** `true` for a foil-only printing (`finishes` = ["foil"], the KLD #265
+   *  "KLD★EN"), else absent. */
+  printed_star?: true;
 };
 
 /**
@@ -550,6 +590,10 @@ export function importedAnatomy(
   if (patch.printed_crown !== undefined) style.crown = patch.printed_crown;
   const twoColourPrinting = patch.printed_two_color === true;
   if (twoColourPrinting) style.twoColor = true;
+  // The collector line follows the printing too (owner 2026-09-29): its
+  // style, or "off" for a pre-2015 frame; the ★ of a foil-only printing.
+  if (patch.printed_collector !== undefined) style.collector = patch.printed_collector;
+  if (patch.printed_star === true) style.star = true;
   const drawsPairs = frameAnatomyOf(landedTemplate).twoColor.length > 0;
   const colorIdentity =
     drawsPairs && twoColourPrinting && patch.color_pair
@@ -568,9 +612,13 @@ export function importedAnatomy(
  * the same printing stores, which sends the printing's switches alone and
  * gets the default stamped (tests/unit/cards/anatomy-import-default.test.ts).
  */
-export function importedFormAnatomy(style: FrameAnatomyStyle): Required<FrameAnatomyStyle> {
+export function importedFormAnatomy(
+  style: FrameAnatomyStyle,
+): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector">> & Pick<FrameAnatomyStyle, "star"> {
   return {
     crown: style.crown ?? NEW_CARD_ANATOMY.crown,
     twoColor: style.twoColor ?? NEW_CARD_ANATOMY.twoColor,
+    collector: style.collector ?? NEW_CARD_ANATOMY.collector,
+    ...(style.star === true ? { star: true as const } : {}),
   };
 }

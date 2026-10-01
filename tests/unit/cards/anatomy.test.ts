@@ -21,6 +21,7 @@ import {
   twoColorFits,
 } from "@/lib/cards/anatomy";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
+import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
@@ -281,8 +282,13 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters)", ()
     // spreads M15LAND, m15snow / m15devoid / m15borderless / the layouts /
     // the showcases spread M15 (their crowns and pairs are 4.6f);
     // planeswalkers and tokens none here.
-    for (const t of ["m15snow", "m15snowland", "m15devoid", "m15borderless", "extendedart", "adventure", "saga", "nyx", "fullart"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [] });
+    // (The collector line's slot — 4.9b — is on the snow, snow-land and
+    // devoid entries; the rest draw none of the three.)
+    for (const t of ["m15snow", "m15snowland", "m15devoid"]) {
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: true });
+    }
+    for (const t of ["m15borderless", "extendedart", "adventure", "saga", "nyx", "fullart"]) {
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
       expect(frameAnatomyOf(t).crown, t).toBe(false);
@@ -294,16 +300,18 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters)", ()
   it("a save keeps each switch only where the template draws it; a new card starts with both on there", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const draws = DRAWN.includes(template);
-      expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true, twoColor: true } : {});
+      // The collector line's keys (4.9b) ride the same rule on the slotted templates.
+      const line = (COLLECTOR_TEMPLATES as readonly string[]).includes(template) ? { collector: "2023" as const } : {};
+      expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true, twoColor: true, ...line } : { ...line });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template, "creature"), template).toEqual(
         draws ? { template, finish: "foil", crown: true, twoColor: false } : { template, finish: "foil" },
       );
       expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY }, "creature"), template).toEqual(
-        draws ? { template, finish: "regular", crown: true, twoColor: true } : { template, finish: "regular" },
+        draws ? { template, finish: "regular", crown: true, twoColor: true, ...line } : { template, finish: "regular", ...line },
       );
     }
     // The AI jobs send no frame_style: the default template (m15) draws both.
-    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true });
+    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "2023" });
     // A stored card names no switch: nothing to drop, the same object back.
     const untouched: FrameStyle = { template: "m15", finish: "regular" };
     expect(normalizeAnatomy(untouched, "m15", "creature")).toBe(untouched);
@@ -398,11 +406,11 @@ describe("imports follow the printing — printing-only (owner round 17, 2026-09
 
   it("a switch the printing names none for takes the new-card default at the save", () => {
     const style = importedAnatomy({ color_identity: ["black"] }, "m15").style;
-    expect(newCardFrameStyle({ template: "m15", ...style }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true });
+    expect(newCardFrameStyle({ template: "m15", ...style }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023" });
     // The creator's form holds the same: the printing's switch, else on.
     expect(importedFormAnatomy(style)).toEqual(NEW_CARD_ANATOMY);
-    expect(importedFormAnatomy({ crown: false })).toEqual({ crown: false, twoColor: true });
-    expect(importedFormAnatomy({ crown: true, twoColor: true })).toEqual({ crown: true, twoColor: true });
+    expect(importedFormAnatomy({ crown: false })).toEqual({ crown: false, twoColor: true, collector: "2023" });
+    expect(importedFormAnatomy({ crown: true, twoColor: true })).toEqual({ crown: true, twoColor: true, collector: "2023" });
   });
 });
 
@@ -430,7 +438,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
         crown: true,
       });
       expect(normalizeAnatomy({ template, twoColor: false }, template, "land"), String(template)).toEqual({ template });
-      expect(newCardFrameStyle({ template, ...NEW_CARD_ANATOMY }, "land"), String(template)).toEqual({ template, crown: true });
+      expect(newCardFrameStyle({ template, ...NEW_CARD_ANATOMY }, "land"), String(template)).toEqual({ template, crown: true, collector: "2023" });
     }
     expect(normalizeAnatomy({ template: "m15land", twoColor: true }, "m15land", "land")).toEqual({
       template: "m15land",
