@@ -1,0 +1,723 @@
+{
+  "dmu-107": {
+    "id": "d67be074-cdd4-41d9-ac89-0a0456c4e4b2",
+    "oracle_id": "34f34409-326d-4994-a0ea-1a69aa278f03",
+    "name": "Sheoldred, the Apocalypse",
+    "released_at": "2022-09-09",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "set_type": "expansion",
+    "collector_number": "107",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Deathtouch"
+    ],
+    "type_line": "Legendary Creature — Phyrexian Praetor",
+    "mana_cost": "{2}{B}{B}",
+    "power": "4",
+    "toughness": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "mythic",
+    "artist": "Chris Rahn",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "dmu-107-es": {
+    "id": "cb55f01d-5d53-4c56-9dfc-f9ff19bd3ffe",
+    "oracle_id": "34f34409-326d-4994-a0ea-1a69aa278f03",
+    "name": "Sheoldred, the Apocalypse",
+    "released_at": "2022-09-09",
+    "layout": "normal",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "set_type": "expansion",
+    "collector_number": "107",
+    "lang": "es",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Deathtouch"
+    ],
+    "type_line": "Legendary Creature — Phyrexian Praetor",
+    "mana_cost": "{2}{B}{B}",
+    "power": "4",
+    "toughness": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "mythic",
+    "artist": "Chris Rahn",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "printed_name": "Sheoldred, el Apocalipsis"
+  },
+  "kld-265": {
+    "id": "5ab8435b-5fe8-4074-8809-46aa6e5504c8",
+    "oracle_id": "ae2c89c2-66d6-484a-a176-9ea19e00f445",
+    "name": "Chandra, Pyrogenius",
+    "released_at": "2016-09-30",
+    "layout": "normal",
+    "set": "kld",
+    "set_name": "Kaladesh",
+    "set_type": "expansion",
+    "collector_number": "265",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "planeswalkerdeck"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Chandra",
+    "mana_cost": "{4}{R}{R}",
+    "loyalty": "5",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "mythic",
+    "artist": "Jason Rainville",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "tdom-1": {
+    "id": "e0bce908-fc95-40c6-a04a-752d56aca836",
+    "oracle_id": "340aaeb6-cd18-4908-9729-8c53ab02c6f8",
+    "name": "Knight",
+    "released_at": "2018-04-27",
+    "layout": "token",
+    "set": "tdom",
+    "set_name": "Dominaria Tokens",
+    "set_type": "token",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Vigilance"
+    ],
+    "type_line": "Token Creature — Knight",
+    "mana_cost": "",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Dan Murayama Scott",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "tfdn-24": {
+    "id": "bfe4b1d5-f252-48fe-b4a1-7fbbc2523cf1",
+    "oracle_id": "49d4e201-8ef2-4fde-b478-ea5c46521535",
+    "name": "Kaito, Cunning Infiltrator Emblem",
+    "released_at": "2024-11-15",
+    "layout": "emblem",
+    "set": "tfdn",
+    "set_name": "Foundations Tokens",
+    "set_type": "token",
+    "collector_number": "24",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Emblem",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Evyn Fong",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "onc-114": {
+    "id": "1aa1e7ff-d0b9-441f-bcbb-4f0f89cab038",
+    "oracle_id": "de23275e-e9c1-4151-aed8-f79ead03d5d4",
+    "name": "Adriana, Captain of the Guard",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "collector_number": "114",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Melee"
+    ],
+    "type_line": "Legendary Creature — Human Knight",
+    "mana_cost": "{3}{R}{W}",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Chris Rallis",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "pw23-3": {
+    "id": "44e63c67-f7ae-4481-a27d-648fd4e98560",
+    "oracle_id": "7735eeba-693b-47e2-bd51-414379cf1016",
+    "name": "Beast Within",
+    "released_at": "2023-05-25",
+    "layout": "normal",
+    "set": "pw23",
+    "set_name": "Wizards Play Network 2023",
+    "set_type": "promo",
+    "collector_number": "3",
+    "lang": "ph",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "wizardsplaynetwork"
+    ],
+    "keywords": [],
+    "type_line": "Instant",
+    "mana_cost": "{2}{G}",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "rare",
+    "artist": "Dave Allsop",
+    "finishes": [
+      "foil"
+    ],
+    "printed_name": "|pnpuDh,dcAheCuC."
+  },
+  "fdn-1": {
+    "id": "8d8432a7-1c8a-4cfb-947c-ecf9791063eb",
+    "oracle_id": "a15547d0-bbcb-41ee-a9ae-8325a9e7fe1f",
+    "name": "Sire of Seven Deaths",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Lifelink",
+      "Reach",
+      "Vigilance",
+      "First strike",
+      "Trample",
+      "Menace",
+      "Ward"
+    ],
+    "type_line": "Creature — Eldrazi",
+    "mana_cost": "{7}",
+    "power": "7",
+    "toughness": "7",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "mythic",
+    "artist": "Lius Lasahido",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "pjud-11-he": {
+    "id": "319724d5-8937-4470-a880-a65e674f7b3b",
+    "oracle_id": "3853ef6a-6771-4708-8ed5-d667f646de5a",
+    "name": "Glory",
+    "released_at": "2002-05-18",
+    "layout": "normal",
+    "set": "pjud",
+    "set_name": "Judgment Promos",
+    "set_type": "promo",
+    "collector_number": "11",
+    "lang": "he",
+    "frame": "1997",
+    "frame_effects": [
+      "tombstone"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "datestamped",
+      "prerelease"
+    ],
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Creature — Incarnation",
+    "mana_cost": "{3}{W}{W}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Donato Giancola",
+    "finishes": [
+      "foil"
+    ],
+    "printed_name": "תהילה"
+  },
+  "sld-134": {
+    "id": "1e6bd3fa-0d07-4519-b67f-67867ad13c89",
+    "oracle_id": "21f45043-5419-4019-8b6c-e5294bd5f549",
+    "name": "Acidic Slime",
+    "released_at": "2020-08-19",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "134",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Deathtouch"
+    ],
+    "type_line": "Creature — Ooze",
+    "mana_cost": "{3}{G}{G}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "rare",
+    "artist": "Wizard of Barge",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "c17-1": {
+    "id": "9fe88f96-fd3a-44e5-aa05-3bc63581e33d",
+    "oracle_id": "278e51fe-3cd9-4c82-bd81-2164771f8611",
+    "name": "Alms Collector",
+    "released_at": "2017-08-25",
+    "layout": "normal",
+    "set": "c17",
+    "set_name": "Commander 2017",
+    "set_type": "commander",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Flash"
+    ],
+    "type_line": "Creature — Cat Cleric",
+    "mana_cost": "{3}{W}",
+    "power": "3",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Bram Sels",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "mh1-255": {
+    "artist": "Chris Rallis",
+    "border_color": "black",
+    "collector_number": "255",
+    "color_identity": [
+      "U"
+    ],
+    "colors": [
+      "U"
+    ],
+    "finishes": [
+      "nonfoil"
+    ],
+    "frame": "2015",
+    "full_art": false,
+    "id": "46a00405-13ad-4531-9bfb-fea0ca57f196",
+    "keywords": [
+      "Storm"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{U}",
+    "name": "Flusterstorm",
+    "oracle_id": "86bf58f2-7f25-4e10-b797-25e0e8e67769",
+    "rarity": "rare",
+    "released_at": "2019-06-14",
+    "security_stamp": "oval",
+    "set": "mh1",
+    "set_name": "Modern Horizons",
+    "set_type": "draft_innovation",
+    "textless": false,
+    "type_line": "Instant"
+  },
+  "znr-281": {
+    "artist": "David Rapoza",
+    "border_color": "borderless",
+    "collector_number": "281",
+    "color_identity": [
+      "U"
+    ],
+    "colors": [
+      "U"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "full_art": false,
+    "id": "961bb827-f13a-417d-8284-5cd2aac3d034",
+    "keywords": [
+      "Kicker",
+      "Scry"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "loyalty": "4",
+    "mana_cost": "{1}{U}{U}",
+    "name": "Jace, Mirror Mage",
+    "oracle_id": "7ca99e2f-faf2-4301-a0ae-7cb880ba965b",
+    "rarity": "mythic",
+    "released_at": "2020-09-25",
+    "security_stamp": "oval",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "textless": false,
+    "type_line": "Legendary Planeswalker — Jace"
+  },
+  "dmu-282": {
+    "artist": "Joshua Raphael",
+    "border_color": "black",
+    "collector_number": "282",
+    "color_identity": [
+      "W"
+    ],
+    "colors": [
+      "W"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "full_art": false,
+    "id": "a8b9cb5c-29f2-46ed-803e-c2170955217c",
+    "keywords": [
+      "Flying"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{3}{W}{W}",
+    "name": "Serra Redeemer",
+    "oracle_id": "39bb051f-1ca7-4d9b-b33b-7f559f816e3e",
+    "power": "2",
+    "rarity": "rare",
+    "released_at": "2022-09-09",
+    "security_stamp": "oval",
+    "set": "dmu",
+    "set_name": "Dominaria United",
+    "set_type": "expansion",
+    "textless": false,
+    "toughness": "4",
+    "type_line": "Creature — Angel Soldier"
+  },
+  "c20-1": {
+    "artist": "Jesper Ejsing",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "W"
+    ],
+    "colors": [
+      "W"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "168d7532-c925-4a96-a756-2ce4dd0fec33",
+    "keywords": [
+      "Partner with",
+      "Partner"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{3}{W}",
+    "name": "Trynn, Champion of Freedom",
+    "oracle_id": "76771556-3eb7-4f87-aaeb-32ea81105aa2",
+    "power": "3",
+    "rarity": "mythic",
+    "released_at": "2020-04-17",
+    "security_stamp": "oval",
+    "set": "c20",
+    "set_name": "Commander 2020",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "3",
+    "type_line": "Legendary Creature — Human Soldier"
+  },
+  "znc-1": {
+    "artist": "Magali Villeneuve",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "colors": [
+      "B",
+      "U"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "bca84fc4-4710-44c8-b90a-73ef888714d8",
+    "keywords": [
+      "Mill"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{2}{U}{B}",
+    "name": "Anowon, the Ruin Thief",
+    "oracle_id": "e7e69583-8326-417e-8a9a-6b917c8ba4b6",
+    "power": "2",
+    "rarity": "mythic",
+    "released_at": "2020-09-25",
+    "security_stamp": "oval",
+    "set": "znc",
+    "set_name": "Zendikar Rising Commander",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "4",
+    "type_line": "Legendary Creature — Vampire Rogue"
+  },
+  "c21-1": {
+    "artist": "Simon Dominic",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "B",
+      "W"
+    ],
+    "colors": [
+      "B",
+      "W"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "6cb82b10-d785-4e20-84ac-0660d49be8ad",
+    "keywords": [
+      "Flying"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{1}{W}{B}",
+    "name": "Breena, the Demagogue",
+    "oracle_id": "d11e627b-8a48-411d-a261-2c9a02a758ba",
+    "power": "1",
+    "rarity": "mythic",
+    "released_at": "2021-04-23",
+    "security_stamp": "oval",
+    "set": "c21",
+    "set_name": "Commander 2021",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "3",
+    "type_line": "Legendary Creature — Bird Warlock"
+  },
+  "onc-1": {
+    "artist": "Campbell White",
+    "border_color": "black",
+    "collector_number": "1",
+    "color_identity": [
+      "B",
+      "G",
+      "W"
+    ],
+    "colors": [
+      "B",
+      "G",
+      "W"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "id": "ab866ec4-dcb4-47ef-8de1-a369986609c0",
+    "keywords": [
+      "Flying",
+      "Toxic",
+      "Vigilance",
+      "Corrupted"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{1}{W}{B}{G}",
+    "name": "Ixhel, Scion of Atraxa",
+    "oracle_id": "9fb7982f-fe35-4dea-a515-a0039ddbbaec",
+    "power": "2",
+    "rarity": "mythic",
+    "released_at": "2023-02-10",
+    "security_stamp": "oval",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "5",
+    "type_line": "Legendary Creature — Phyrexian Angel"
+  },
+  "onc-29": {
+    "artist": "Campbell White",
+    "border_color": "black",
+    "collector_number": "29",
+    "color_identity": [
+      "B",
+      "G",
+      "W"
+    ],
+    "colors": [
+      "B",
+      "G",
+      "W"
+    ],
+    "finishes": [
+      "etched"
+    ],
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "etched"
+    ],
+    "full_art": false,
+    "id": "66d32d60-4e08-49aa-857f-da92dc7c01d0",
+    "keywords": [
+      "Flying",
+      "Toxic",
+      "Vigilance",
+      "Corrupted"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "mana_cost": "{1}{W}{B}{G}",
+    "name": "Ixhel, Scion of Atraxa",
+    "oracle_id": "9fb7982f-fe35-4dea-a515-a0039ddbbaec",
+    "power": "2",
+    "rarity": "mythic",
+    "released_at": "2023-02-10",
+    "security_stamp": "oval",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "textless": false,
+    "toughness": "5",
+    "type_line": "Legendary Creature — Phyrexian Angel"
+  }
+}

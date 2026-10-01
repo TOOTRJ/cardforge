@@ -228,9 +228,9 @@ on conflict (id) do nothing;
 --     stays on one 24-card page: the e2e gallery specs (seeded-data,
 --     browse-filters, like-toggle) read page 1, and 8 more public rows pushed
 --     Cinderwing Matriarch, Emberlash and Thornback Behemoth off it. Ids
---     …034–…044 (…026 is the emblems seed's: a reused id is a row that
+--     …034–…049 (…026 is the emblems seed's: a reused id is a row that
 --     silently never lands — tests/unit/devops/seed-card-ids.test.ts).
---     Seraphine and The Glass Reliquary (…043 / …044) are 4.6f's: stored on
+--     Seraphine and The Glass Reliquary (…048 / …049) are 4.6f's: stored on
 --     the borderless frames with no key, before those drew the floating
 --     crown and the pinline split.
 -- ---------------------------------------------------------------------------
@@ -305,14 +305,75 @@ from (values
   -- split pinline and the split floating crown — and a legendary colourless
   -- artifact on the artifact dress (the crown hint only; its crown is CC's
   -- artifact crown).
-  ('c0000000-0000-4000-a000-000000000043'::uuid, 'Seraphine, Tidewarden', 'seraphine-tidewarden', '{2}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Angel','Wizard'], 'mythic',
+  ('c0000000-0000-4000-a000-000000000048'::uuid, 'Seraphine, Tidewarden', 'seraphine-tidewarden', '{2}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Angel','Wizard'], 'mythic',
      E'Flying, vigilance\nWhenever Seraphine attacks, tap target creature an opponent controls.', '3', '4', 7,
      '{"template":"m15borderless","finish":"regular"}'::jsonb, 3),
-  ('c0000000-0000-4000-a000-000000000044'::uuid, 'The Glass Reliquary', 'the-glass-reliquary', '{3}', array['colorless'], 'Legendary', 'artifact', array[]::text[], 'rare',
+  ('c0000000-0000-4000-a000-000000000049'::uuid, 'The Glass Reliquary', 'the-glass-reliquary', '{3}', array['colorless'], 'Legendary', 'artifact', array[]::text[], 'rare',
      E'{T}: Add one mana of any colour.\n{3}, {T}: Draw a card.', null, null, 11,
      '{"template":"m15borderlessartifact","finish":"regular"}'::jsonb, 3)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 2c. The collector fields (TODO 4.9a, migration 0133): what a printing's
+--     collector line says, as card data — the PRINTED set code, the number
+--     in its era's style and the language. Nothing draws them yet (4.9b);
+--     the Set & collector info step shows them. One of each case the import
+--     produces: a 2015-era rare ("DMU", "107/281" — number/printed size), a
+--     2023-era card ("FDN", "1" — the number alone), a Spanish card (lang
+--     'es', prints SP), a token (its PARENT set's code, "1/16" from the
+--     token set's count) and an EMPTY-fields card imported from a real
+--     printing (source_scryfall_id = Scryfall's DMU #107, a public id — the
+--     step offers "Fill from the printing" on it). dev_pro's, UNLISTED like
+--     2b's, so the seeded public gallery stays on one 24-card page for the
+--     e2e gallery specs. Ids …043–…047 (tests/unit/devops/seed-card-ids.
+--     test.ts). Seeds run after the migrations, so the columns exist.
+-- ---------------------------------------------------------------------------
+
+insert into public.cards (
+  id, owner_id, game_system_id, title, slug, cost, color_identity, supertype,
+  card_type, subtypes, rarity, rules_text, flavor_text, power, toughness,
+  artist_credit, art_url, frame_style, visibility, set_code, collector_number,
+  lang, source_scryfall_id, tags, layout, created_at, updated_at
+)
+select
+  c.id, 'd0000000-0000-4000-a000-000000000002'::uuid,
+  (select id from public.game_systems order by created_at limit 1),
+  c.title, c.slug, c.cost, c.colors, c.supertype, c.card_type, c.subtypes,
+  c.rarity, c.rules_text, null, c.power, c.toughness,
+  'PipGlyph Studio',
+  'https://pipglyph.com/defaults/avatars/avatar-' || lpad(c.art::text, 2, '0') || '.webp',
+  jsonb_build_object('template', c.template, 'finish', 'regular'),
+  'unlisted', c.set_code, c.collector_number, c.lang, c.source_scryfall_id, c.tags,
+  c.layout,
+  now() - (c.age_days || ' days')::interval,
+  now() - (c.age_days || ' days')::interval
+from (values
+  -- A 2015-era mythic as the import stores one: number / printed size.
+  ('c0000000-0000-4000-a000-000000000043'::uuid, 'Ashveil Praetor', 'ashveil-praetor', '{2}{B}{B}', array['black'], 'Legendary', 'creature', array['Phyrexian','Praetor'], 'mythic',
+     E'Deathtouch\nWhenever you draw a card, you gain 2 life.\nWhenever an opponent draws a card, they lose 2 life.', '4', '5', 4, 'm15',
+     'DMU', '107/281', 'en', null::text, array['collector'], 'normal', 2),
+  -- A 2023-era rare: the number alone.
+  ('c0000000-0000-4000-a000-000000000044'::uuid, 'Dawnbreak Herald', 'dawnbreak-herald', '{1}{W}{W}', array['white'], null, 'creature', array['Angel'], 'rare',
+     E'Flying, vigilance\nWhen Dawnbreak Herald enters, you gain 3 life.', '3', '3', 7, 'm15',
+     'FDN', '1', 'en', null, array['collector'], 'normal', 2),
+  -- A Spanish printing (lang es prints "SP" once the line is drawn).
+  ('c0000000-0000-4000-a000-000000000045'::uuid, 'Centinela del Alba', 'centinela-del-alba', '{1}{W}', array['white'], null, 'creature', array['Human','Soldier'], 'common',
+     E'Vigilancia\nCuando el Centinela del Alba entre al campo de batalla, ganas 1 vida.', '2', '2', 10, 'm15',
+     'DMU', '42/281', 'es', null, array['collector'], 'normal', 2),
+  -- A token: its PARENT set's code and the token set's count.
+  ('c0000000-0000-4000-a000-000000000046'::uuid, 'Knight', 'knight-token-collector', null, array['white'], 'Creature', 'token', array['Knight'], 'common',
+     E'Vigilance', '2', '2', 13, 'm15tokentext',
+     'DOM', '1/16', 'en', null, array['tokens','collector'], 'token', 2),
+  -- Imported from a real printing (DMU #107) with the fields still empty:
+  -- the step offers "Fill from the printing".
+  ('c0000000-0000-4000-a000-000000000047'::uuid, 'Apocalypse Praetor (proxy)', 'apocalypse-praetor-proxy', '{2}{B}{B}', array['black'], 'Legendary', 'creature', array['Phyrexian','Praetor'], 'mythic',
+     E'Deathtouch\nWhenever you draw a card, you gain 2 life.', '4', '5', 16, 'm15',
+     null, null, 'en', 'd67be074-cdd4-41d9-ac89-0a0456c4e4b2', array['proxy','collector'], 'normal', 1)
+) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
+        rules_text, power, toughness, art, template,
+        set_code, collector_number, lang, source_scryfall_id, tags, layout, age_days)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------

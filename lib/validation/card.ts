@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
+import {
+  CARD_LANG_VALUES,
+  COLLECTOR_NUMBER_MAX,
+  COLLECTOR_NUMBER_PATTERN,
+  SET_CODE_MAX,
+  SET_CODE_MIN,
+  SET_CODE_PATTERN,
+} from "@/lib/cards/collector-fields";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/media/storage-hosts";
 import {
   CARD_FINISH_VALUES,
@@ -186,6 +194,35 @@ function normalizeTags(tags: string[]): string[] {
 }
 
 const cardTagsBaseSchema = z.array(z.string()).transform(normalizeTags);
+
+// The collector fields (migration 0133, TODO 4.9a) — each mirrors its CHECK
+// through lib/cards/collector-fields.ts (tests/unit/db/card-collector-
+// fields-migration.test.ts holds the two together). `null` clears; `undefined`
+// leaves the column alone on update.
+/** cards_set_code_format: the PRINTED set code, upper-cased before the
+ *  check so "dmu" stores as "DMU". */
+export const cardSetCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(
+    SET_CODE_PATTERN,
+    `Set code must be ${SET_CODE_MIN}–${SET_CODE_MAX} letters or digits.`,
+  )
+  .nullable()
+  .optional();
+/** cards_collector_number_format: 1–12 of digits, letters, ★, †, / and -. */
+export const cardCollectorNumberSchema = z
+  .string()
+  .trim()
+  .min(1, "Collector number can't be blank.")
+  .max(COLLECTOR_NUMBER_MAX, `Collector number must be ${COLLECTOR_NUMBER_MAX} characters or fewer.`)
+  .regex(COLLECTOR_NUMBER_PATTERN, "Collector number can use digits, letters, ★, †, / and - only.")
+  .nullable()
+  .optional();
+/** cards_lang_valid: one of Scryfall's 18 language codes. The column is NOT
+ *  NULL (default 'en'), so there is no `null`: omitted leaves it alone. */
+export const cardLangSchema = z.enum(CARD_LANG_VALUES).optional();
 
 export const cardTagsSchema = z
   .array(z.string())
@@ -475,6 +512,13 @@ const baseCardSchema = z.object({
     .regex(/^[a-z0-9]+$/, "Set code must be lowercase letters and numbers only.")
     .nullable()
     .optional(),
+  // The collector fields (migration 0133, TODO 4.9a): the PRINTED set code
+  // (beside the Keyrune code above, never derived from it), the collector
+  // number and the printing's language. Card content: editable on an
+  // existing card (lib/creator/revise.ts) and filled by the Scryfall import.
+  set_code: cardSetCodeSchema,
+  collector_number: cardCollectorNumberSchema,
+  lang: cardLangSchema,
   // A deck to drop this card into on create (a custom-only deck_cards entry,
   // mainboard ×1). Create-flow convenience only — the action ignores it on
   // update (deck membership is managed from the deck dashboard).
