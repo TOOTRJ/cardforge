@@ -2653,12 +2653,13 @@ const ADVENTURE: FrameProfile = {
 //     when its half has a P/T. The bottom plate is upside-down in the
 //     source, so both renderers draw it at its box UNTURNED and turn only
 //     the value, as the printed card shows it. The value boxes are CC's pt
-//     / pt2 widths centred where the prints centre their digits (1326 px on
-//     the top plate — 13 px right of CC's box; 191 px on the bottom one —
-//     the bottom box widened to 6.2–19.27 %W so its ink span lies inside
-//     it, as every second face's must); the ink spans are each plate's light
-//     face on the digits' rows (1215–1395 and 93–272 px, measured on every
-//     colour).
+//     / pt2 widths centred where the prints centre their digits' ink (1311
+//     px on the top plate, both prints — 13.5 px right of CC's box centre;
+//     the box centres at 1313.5, Beleren's "1" sitting 2.5 px inside its
+//     advance; 191 px on the bottom one — the bottom box widened to
+//     6.2–19.27 %W so its ink span lies inside it, as every second face's
+//     must); the ink spans are each plate's light face on the digits' rows
+//     (1215–1395 and 93–272 px, measured on every colour).
 // Text onto the prints (C18 #134 and CM2 #71, Scryfall PNGs at 1500 × 2100;
 // the two scans agree within 3–5 px, the mean taken): the top name's
 // baseline 155.5 px where CC's box centres ours at 164.7 (dy −9.2 px), the
@@ -2711,7 +2712,7 @@ const FLIP: FrameProfile = {
     font: "body",
   },
   pt: {
-    rect: { topPct: 24.48, leftPct: 83.57, widthPct: 9.67, heightPct: 3.72 },
+    rect: { topPct: 24.48, leftPct: 82.73, widthPct: 9.67, heightPct: 3.72 },
     plateRect: { topPct: 475 / 21, leftPct: 1176 / 15, widthPct: 243 / 15, heightPct: 160 / 21 },
     inkSpanPct: { leftPct: 81.0, rightPct: 93.0 },
     sizePct: FLIP_PT_SIZE_PCT,
@@ -2759,7 +2760,12 @@ const FLIP: FrameProfile = {
       colorHex: INK_DARK,
       weight: 700,
       plateAssetPathTemplate: "/frames/flip/pt/{color}-bottom.png",
-      valueDyEm: -0.04,
+      // No nudge: the prints centre the bottom digits' ink on this box
+      // (1386.5–1387 px against its 1387), where the top plate's sit 4 px
+      // above theirs (549.5 against 553: the front's −0.04 em). A nudge
+      // here moves the ink the other way in card space (the value is
+      // drawn in the turned frame).
+      valueDyEm: 0,
     },
   },
 };

@@ -3220,7 +3220,7 @@
     },
     "rect": {
      "heightPct": 3.72,
-     "leftPct": 83.57,
+     "leftPct": 82.73,
      "topPct": 24.48,
      "widthPct": 9.67
     },
@@ -3262,7 +3262,7 @@
       "widthPct": 13.07
      },
      "sizePct": 0.05,
-     "valueDyEm": -0.04,
+     "valueDyEm": 0,
      "weight": 700
     },
     "rotation": 180,
@@ -5752,7 +5752,7 @@
     },
     "rect": {
      "heightPct": 3.72,
-     "leftPct": 83.57,
+     "leftPct": 82.73,
      "topPct": 24.48,
      "widthPct": 9.67
     },
@@ -5794,7 +5794,7 @@
       "widthPct": 13.07
      },
      "sizePct": 0.05,
-     "valueDyEm": -0.04,
+     "valueDyEm": 0,
      "weight": 700
     },
     "rotation": 180,
