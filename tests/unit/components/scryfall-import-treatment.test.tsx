@@ -88,24 +88,24 @@ async function commit(onImport: OnImport) {
 describe("borderless Sheoldred (DMU #435) — 1.18: the bordered frame, Borderless offered", () => {
   const BORDERLESS_VERIFIED = [...verifiedIn("m15"), "m15borderless/b"];
 
-  it("preselects M15 with the window-cropped note and hands the pick to the form", async () => {
+  it("preselects M15 with the window-cropped note and hands the pick to the form (exact since 4.6f: the crown is drawn)", async () => {
     const onImport = await pickPrinting("dmu-435", { verified: BORDERLESS_VERIFIED });
     const chooser = screen.getByTestId("import-frame-chooser");
     expect(
       within(chooser).getByText(
-        "PipGlyph can't match this printing's Borderless frame exactly yet — pick one of these",
+        "PipGlyph has the Borderless frame, but Scryfall's art won't fill it — pick one of these",
       ),
     ).toBeTruthy();
     expect(
       within(chooser).getByText("Scryfall's art for this printing is cropped to the bordered window."),
     ).toBeTruthy();
-    expect(within(chooser).getByText("Why: PipGlyph doesn't draw the legendary crown on this frame yet.")).toBeTruthy();
+    expect(within(chooser).queryByText(/^Why:/)).toBeNull();
     expect(frameRadio(/^M15 \(2015\) Standard/).getAttribute("aria-checked")).toBe("true");
     expect(frameRadio(/Borderless/).getAttribute("aria-checked")).toBe("false");
 
     const payload = await commit(onImport);
     expect(payload.frameChoice).toEqual({ template: "m15" });
-    expect(payload.patch.frame_match).toMatchObject({ status: "nearest", landOn: "m15" });
+    expect(payload.patch.frame_match).toMatchObject({ status: "exact", landOn: "m15" });
   });
 
   it("picking Borderless sends it", async () => {

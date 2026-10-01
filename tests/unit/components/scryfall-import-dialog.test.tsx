@@ -84,7 +84,7 @@ describe("the printings grid (TODO 1.5)", () => {
     expect(badge(tiles[0]!).textContent).toBe("✓ Exact");
     expect(badge(tiles[1]!).textContent).toBe("≈ Nearest");
     expect(badge(tiles[1]!).title).toBe(
-      "Borderless frame — PipGlyph doesn't draw the legendary crown on this frame yet",
+      "Borderless frame — not yet verified in black",
     );
     expect(badge(tiles[2]!).textContent).toBe("✕ Not available");
     // SET · year · #number, and the treatment badge.

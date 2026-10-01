@@ -195,19 +195,18 @@ describe("the dialog's frame choice (TODO 1.5)", () => {
     expect(importer.currentFrameTemplate).toBe("m15");
   });
 
-  it("lands the picked frame — Borderless for Sheoldred DMU #435 — and chips the Card step", async () => {
+  it("lands the picked frame — Borderless for Sheoldred DMU #435 — with no chip: its own frame, exact since 4.6f", async () => {
     renderForm();
     await importPayload(payload("dmu-435", { frameChoice: { template: "m15borderless" } }));
     expect(template()).toBe("m15borderless");
     expect(toast.info).not.toHaveBeenCalled();
 
     await toCardStep();
-    // The printing's own frame, short of the crown: nearest, not swapped.
-    expect(chip()?.textContent).toBe("Nearest frame (imported Borderless frame)");
-    // Borderless draws no crown yet (its floating crown is 4.6f).
-    expect(chip()?.getAttribute("title")).toBe("PipGlyph doesn't draw the legendary crown on this frame yet");
+    // The printing's own frame, which draws its floating crown (4.6f, wave
+    // 2a): an exact reproduction, nothing to chip.
+    expect(chip()).toBeNull();
 
-    // Any frame pick clears it, for good: back on Borderless it stays gone.
+    // A frame pick away and back changes nothing about that.
     await clickChip("Frame variations", /^Standard/);
     expect(template()).toBe("m15");
     expect(chip()).toBeNull();

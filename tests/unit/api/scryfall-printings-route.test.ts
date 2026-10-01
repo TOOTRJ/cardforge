@@ -171,7 +171,9 @@ describe("GET /api/scryfall/printings — each printing's match and facts", () =
     expect(state.verifiedKeys).toHaveBeenCalledTimes(1);
     const byNumber = Object.fromEntries(body.printings.map((p) => [p.collector_number, p]));
 
-    // Sheoldred DMU #435: borderless, the crown missing → nearest, lands on M15.
+    // Sheoldred DMU #435: borderless, its crown drawn since 4.6f — exact on
+    // Borderless, which this route's verified set lacks in black: nearest
+    // for that reason alone, landing on M15.
     expect(byNumber["435"]).toMatchObject({
       set: "dmu",
       border_color: "borderless",
@@ -184,7 +186,7 @@ describe("GET /api/scryfall/printings — each printing's match and facts", () =
         exactLabel: "Borderless frame",
         template: "m15borderless",
         landOn: "m15",
-        reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
+        reason: "not yet verified in black",
       },
     });
     // A full-art Plains (ONE #262) — its badge says so.

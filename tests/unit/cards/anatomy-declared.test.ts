@@ -29,8 +29,12 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 describe("where the pieces are declared", () => {
-  it("only the m15, m15artifact and m15land entries draw them — never a profile that spreads them", () => {
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(["m15", "m15land", "m15artifact"]);
+  it("only the m15, m15artifact, m15land and borderless entries draw them — never a profile that spreads them", () => {
+    // 4.6f (wave 2a): the two borderless frames draw the crown from crowned
+    // twin masters and the pairs from pinline-split masters.
+    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [] });
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: false, twoColor: [] });
     expect(frameAnatomyOf("m15snowland")).toEqual({ crown: false, twoColor: [] });
     // A legacy template draws the m15 frame, so it has m15's anatomy.

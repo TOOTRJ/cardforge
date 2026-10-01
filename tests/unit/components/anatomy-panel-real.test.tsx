@@ -123,7 +123,7 @@ describe("a stored card (no switch key)", () => {
     expect(colors()).toBe("multicolor");
   });
 
-  it.each(["m15snow", "m15devoid", "m15borderless", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
+  it.each(["m15snow", "m15devoid", "m15borderlessland", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
     render(<Harness stored template={template} colors={["multicolor"]} />);
     expect(screen.queryByTestId("anatomy-panel")).toBeNull();
     expect(twoColorSwitch()).toBeNull();

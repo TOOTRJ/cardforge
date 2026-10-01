@@ -1174,7 +1174,7 @@ card on the two frames bakes byte-identical with the switches absent).
   holds `<key>-legendary.png` (`LEGENDARY_MASTER_KEYS`), and a Legendary
   card with `crown: true` paints that twin (`frameMasterKey` →
   `crownedMasterKey`; `crownKeyFor` names its key). Why: the print's crown
-  is Card Conjurer's FLOATING crown (`packM15LegendCrownsFloating.js`,
+  is Card Conjurer's FLOATING crown (its packM15LegendCrownsFloating.js pack,
   `autoBorderlessFrame`), drawn after CC ERASES the strip 3.94/2.77/92.14×
   1.77 % of the frame — rows 58–94 at HD, where the master's title-bar ring
   (the black outer line and the α 255 white ring) would show above the

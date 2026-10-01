@@ -29,23 +29,36 @@ const IMPORTS = importPrintings as unknown as Record<string, ScryfallCard>;
 const patchOf = (key: string) => mapScryfallToFormPatch(SIGNATURE[key] ?? IMPORTS[key]);
 
 describe("frameRequestFromImport", () => {
-  it("logs Sheoldred DMU #435 (borderless + crown) with its art window-cropped", () => {
-    const row = frameRequestFromImport(patchOf("dmu-435"), {
+  it("logs Zilortha IKO #275 (borderless + nickname) with its art window-cropped", () => {
+    // Sheoldred DMU #435 was the example until Borderless drew its crown
+    // (4.6f, wave 2a): it imports exact now (below).
+    const row = frameRequestFromImport(patchOf("iko-275"), {
       artImported: true,
       source: "import",
     });
     expect(row).toEqual({
-      signature: "borderless/standard+crown",
+      signature: "borderless/standard+nickname",
       label: "Borderless frame",
-      setCode: "dmu",
-      collectorNumber: "435",
-      scryfallId: SIGNATURE["dmu-435"].id,
+      setCode: "iko",
+      collectorNumber: "275",
+      scryfallId: SIGNATURE["iko-275"].id,
       status: "nearest",
       cause: "missing",
       template: "m15",
       artFlag: "window-cropped",
       source: "import",
     });
+  });
+
+  it("writes nothing for Sheoldred DMU #435 on Borderless verified in black — exact since 4.6f; 'unverified' where it isn't", () => {
+    const patch = patchOf("dmu-435");
+    expect(patch.frame_match).toMatchObject({ status: "exact", template: "m15borderless", landOn: "m15" });
+    expect(
+      frameRequestFromImport(patch, { artImported: true, source: "import", verifiedKeys: new Set([frameComboKey("m15borderless", "b")]) }),
+    ).toBeNull();
+    expect(
+      frameRequestFromImport(patch, { artImported: true, source: "import", verifiedKeys: new Set([frameComboKey("m15", "b")]) }),
+    ).toMatchObject({ signature: "borderless/standard", status: "nearest", cause: "unverified", template: "m15", artFlag: "window-cropped" });
   });
 
   it("writes nothing for an exact printing (Llanowar Elves DOM #168 on the verified M15 frame)", () => {
@@ -94,7 +107,7 @@ describe("frameRequestFromImport", () => {
     const everything = new Set([frameComboKey("m15", "b"), frameComboKey("m15borderless", "b")]);
     for (const verifiedKeys of [undefined, new Set<string>(), everything]) {
       expect(
-        frameRequestFromImport(patchOf("dmu-435"), { artImported: false, source: "import", verifiedKeys })
+        frameRequestFromImport(patchOf("iko-275"), { artImported: false, source: "import", verifiedKeys })
           ?.cause,
       ).toBe("missing");
     }
@@ -224,7 +237,7 @@ describe("artFlagForImport (TODO 1.18)", () => {
 });
 
 describe("frameRequestSchema", () => {
-  const valid = frameRequestFromImport(patchOf("dmu-435"), { artImported: true, source: "import" })!;
+  const valid = frameRequestFromImport(patchOf("iko-275"), { artImported: true, source: "import" })!;
 
   it("accepts a real row", () => {
     expect(frameRequestSchema.safeParse(valid).success).toBe(true);
