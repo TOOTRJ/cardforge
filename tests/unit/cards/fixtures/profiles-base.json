@@ -3062,7 +3062,7 @@
       "widthPct": 39.47
      },
      "sizePct": 0.042666666666666665,
-     "vAlign": "start"
+     "vAlign": "center"
     },
     "title": {
      "colorHex": "#f4eee2",
@@ -3148,7 +3148,7 @@
      "widthPct": 38.67
     },
     "sizePct": 0.04533333333333334,
-    "vAlign": "start"
+    "vAlign": "center"
    },
    "setSymbolFit": "ink",
    "symbolSizePct": 0.0574,
@@ -3220,7 +3220,7 @@
     },
     "rect": {
      "heightPct": 3.72,
-     "leftPct": 82.67,
+     "leftPct": 83.57,
      "topPct": 24.48,
      "widthPct": 9.67
     },
@@ -3257,9 +3257,9 @@
      },
      "rect": {
       "heightPct": 3.72,
-      "leftPct": 7.67,
+      "leftPct": 6.2,
       "topPct": 64.19,
-      "widthPct": 9.67
+      "widthPct": 13.07
      },
      "sizePct": 0.05,
      "valueDyEm": -0.04,
@@ -5752,7 +5752,7 @@
     },
     "rect": {
      "heightPct": 3.72,
-     "leftPct": 82.67,
+     "leftPct": 83.57,
      "topPct": 24.48,
      "widthPct": 9.67
     },
@@ -5791,7 +5791,7 @@
       "heightPct": 3.72,
       "leftPct": 10,
       "topPct": 64.19,
-      "widthPct": 9.67
+      "widthPct": 13.07
      },
      "sizePct": 0.05,
      "valueDyEm": -0.04,

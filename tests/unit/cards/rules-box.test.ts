@@ -29,6 +29,7 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile, type FrameProfile, type Rect } from "@/lib/cards/template-layout";
+import { plateInkRect } from "@/lib/cards/plate-ink";
 import { RULES_BOX_PAD_PX, RULES_SIZE_PX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { EOE_30, TLA_112, plainText } from "@/tests/unit/cards/fixtures/rules-texts";
@@ -251,7 +252,8 @@ describe("the adventure page and the second faces", () => {
     const layout = adventureRulesLayout({ layout: adv, rulesText: "Draw a card.", aspect: PORTRAIT, show: { pt: true } })!;
     expect(layout.input.rect).toBe(adv.adventure!.rules.rect);
     expect(layout.input.padPx).toEqual(ADVENTURE_PAGE_PAD_PX);
-    expect(layout.input.vAlign).toBe("start");
+    // Centred on its page, as the prints set it (layout v38, TODO 4.21a).
+    expect(layout.input.vAlign).toBe("center");
     expect(layout.sizePx).toBe(RULES_SIZE_PX.compact);
     expect(adventureRulesLayout({ layout: getFrameProfile("m15"), rulesText: "x", aspect: PORTRAIT, show: {} })).toBeNull();
     // The creature's own page (the main box) reaches the P/T plate.
@@ -353,11 +355,18 @@ describe("the adventure page and the second faces", () => {
   it("turns the flip face's P/T into its own frame", () => {
     const flip = getFrameProfile("flip");
     const face = flip.secondFace!;
-    // Drawn, the upside-down P/T sits where its rect is (turned about its
-    // own centre by 180°).
+    // Drawn, the upside-down P/T's keep-out is its PLATE's measured ink
+    // (layout v38, TODO 4.21a: the bottom plate drawn unturned at its box —
+    // the value turns about its own centre by 180° inside it).
     const [pt] = drawnStatInk(flip, { secondFacePt: true }, PORTRAIT);
-    expect(pt.leftPct).toBeCloseTo(face.pt!.rect.leftPct, 9);
-    expect(pt.topPct).toBeCloseTo(face.pt!.rect.topPct, 9);
+    const plateInk = plateInkRect(face.pt!.plateAssetPathTemplate!, face.pt!.plateRect!)!;
+    expect(pt.leftPct).toBeCloseTo(plateInk.leftPct, 9);
+    expect(pt.topPct).toBeCloseTo(plateInk.topPct, 9);
+    expect(pt.widthPct).toBeCloseTo(plateInk.widthPct, 9);
+    expect(pt.heightPct).toBeCloseTo(plateInk.heightPct, 9);
+    // The ink lies on the plate's box, under the value's rect.
+    expect(plateInk.leftPct).toBeGreaterThanOrEqual(face.pt!.plateRect!.leftPct);
+    expect(plateInk.topPct + plateInk.heightPct).toBeLessThanOrEqual(face.pt!.plateRect!.topPct + face.pt!.plateRect!.heightPct);
     expect(drawnStatInk(flip, { secondFacePt: false }, PORTRAIT)).toEqual([]);
     // In the face's unturned frame it is mirrored through the box's centre.
     const layout = secondFaceRulesLayout({ layout: flip, rulesText: "x", aspect: PORTRAIT, show: { secondFacePt: true } })!;

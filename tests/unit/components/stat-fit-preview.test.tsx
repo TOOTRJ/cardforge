@@ -35,6 +35,29 @@ function styleOf(html: string, text: string): Record<string, string> {
   );
 }
 
+/** The inline style of the element whose whole text is `text`, or — when
+ *  that element sets no font size (a second face's value sits in its own
+ *  span inside the turned box, layout v38) — of the nearest enclosing
+ *  element that does. */
+function sizedStyleOf(html: string, text: string): Record<string, string> {
+  const own = styleOf(html, text);
+  if (own["font-size"]) return own;
+  const at = html.indexOf(`>${text}</`);
+  const open = html.lastIndexOf("<", at);
+  const outer = html.lastIndexOf("<div", open - 1);
+  const style = html.slice(outer, open).match(/style="([^"]*)"/);
+  expect(style, text).not.toBeNull();
+  return Object.fromEntries(
+    style![1]
+      .split(";")
+      .filter(Boolean)
+      .map((decl) => {
+        const i = decl.indexOf(":");
+        return [decl.slice(0, i).trim(), decl.slice(i + 1).trim()];
+      }),
+  );
+}
+
 function statStyles(template: FrameTemplate, power: string, toughness: string, back?: { power: string; toughness: string }) {
   const html = renderToStaticMarkup(
     <CardPreview
@@ -49,7 +72,7 @@ function statStyles(template: FrameTemplate, power: string, toughness: string, b
   );
   return {
     front: styleOf(html, `${power}/${toughness}`),
-    back: back ? styleOf(html, `${back.power}/${back.toughness}`) : null,
+    back: back ? sizedStyleOf(html, `${back.power}/${back.toughness}`) : null,
   };
 }
 

@@ -1,16 +1,26 @@
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { renderCardImage } from "@/lib/render/card-image";
+import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
 // Stat shrink-to-fit (TODO 3.18) and the Draconic P/T plate (TODO 4.31) on
 // REAL HD bakes. Every template here draws a git frame from public/frames
-// (read from disk), so the renders are deterministic and offline. The M15
-// plate lives in the frames bucket; its fit is pinned in stat-fit.test.ts.
+// (read from disk), so the renders are deterministic and offline — but
+// flip, whose Card Conjurer master lives in the frames bucket (layout v38):
+// it is served a flat stand-in master and plates
+// (tests/stubs/stand-in-frames.ts). The M15 plate lives in the frames bucket
+// too; its fit is pinned in stat-fit.test.ts.
 // ---------------------------------------------------------------------------
+
+let frames: StandInFrames;
+beforeAll(async () => {
+  frames = await serveStandInFrames([{ template: "flip", keys: ["r"] }]);
+}, 60_000);
+afterAll(() => frames.restore());
 
 function card(template: FrameTemplate, over: Partial<CardPreviewData> = {}): CardPreviewData {
   return {
@@ -113,17 +123,19 @@ describe("long stats shrink to fit", () => {
     expect(long.x1).toBeLessThanOrEqual(1410);
   }, 60_000);
 
-  it("Flip: the upside-down second face shrinks 100/100 into the band (104–258 px)", async () => {
+  it("Flip: the upside-down second face shrinks 100/100 into its plate's face (93–272 px)", async () => {
     const flip = (power: string, toughness: string) =>
       card("flip", {
         power: "2",
         toughness: "2",
         backFace: { title: "Probe Reborn", card_type: "creature", subtypes: ["Spirit"], rules_text: "Flying", power, toughness },
       } as Partial<CardPreviewData>);
+    // Both bakes draw the bottom plate (layout v38): the diff is the digits.
     const box = diffBox(await bake(flip("1", "1")), await bake(flip("100", "100")))!;
-    // At full size it ran 82–279 px, over the band's rounded end.
-    expect(box.x0).toBeGreaterThanOrEqual(104);
-    expect(box.x1).toBeLessThanOrEqual(258);
+    // The plate's light face on the digits' rows (FLIP's secondFace.pt
+    // inkSpanPct): 93–272 px; before v38's plates, the band ran 104–258.
+    expect(box.x0).toBeGreaterThanOrEqual(92);
+    expect(box.x1).toBeLessThanOrEqual(273);
   }, 60_000);
 
   it("Battle: a four-digit defense fits the drawn badge", async () => {

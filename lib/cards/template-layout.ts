@@ -2577,12 +2577,15 @@ const ADVENTURE: FrameProfile = {
   costDy: CC_M15_COST_DY,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   artSlot: { topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 },
-  // Creature rules → the RIGHT page (CC rules2).
+  // Creature rules → the RIGHT page (CC rules2). Both pages centre their
+  // text, as the prints do (ELD #115: the creature's two abilities and
+  // flavour run 1391–1815 px in the 1365–1860 page, the adventure's three
+  // lines 1611–1803 in the 1545–1860 page — centred, not from the top).
   rules: {
     rect: { topPct: 65.0, leftPct: 52.67, widthPct: 38.67, heightPct: 23.58 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     colorHex: INK_DARK,
-    vAlign: "start",
+    vAlign: "center",
     font: "body",
   },
   // Layout v32: the panel's name and type line at Card Conjurer's name2 /
@@ -2611,12 +2614,12 @@ const ADVENTURE: FrameProfile = {
       font: "display",
       shadowCss: ADV_SHADOW,
     },
-    // Adventure rules — the LEFT page (CC rules).
+    // Adventure rules — the LEFT page (CC rules), centred like the print's.
     rules: {
       rect: { topPct: 73.58, leftPct: 8.54, widthPct: 39.47, heightPct: 15.0 },
       sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
       colorHex: INK_DARK,
-      vAlign: "start",
+      vAlign: "center",
       font: "body",
     },
     costSizePct: ADVENTURE_PANEL_COST_PCT,
@@ -2650,8 +2653,12 @@ const ADVENTURE: FrameProfile = {
 //     when its half has a P/T. The bottom plate is upside-down in the
 //     source, so both renderers draw it at its box UNTURNED and turn only
 //     the value, as the printed card shows it. The value boxes are CC's pt
-//     / pt2; the ink spans are each plate's light face on the digits' rows
-//     (1215–1395 and 93–272 px, measured on every colour).
+//     / pt2 widths centred where the prints centre their digits (1326 px on
+//     the top plate — 13 px right of CC's box; 191 px on the bottom one —
+//     the bottom box widened to 6.2–19.27 %W so its ink span lies inside
+//     it, as every second face's must); the ink spans are each plate's light
+//     face on the digits' rows (1215–1395 and 93–272 px, measured on every
+//     colour).
 // Text onto the prints (C18 #134 and CM2 #71, Scryfall PNGs at 1500 × 2100;
 // the two scans agree within 3–5 px, the mean taken): the top name's
 // baseline 155.5 px where CC's box centres ours at 164.7 (dy −9.2 px), the
@@ -2704,7 +2711,7 @@ const FLIP: FrameProfile = {
     font: "body",
   },
   pt: {
-    rect: { topPct: 24.48, leftPct: 82.67, widthPct: 9.67, heightPct: 3.72 },
+    rect: { topPct: 24.48, leftPct: 83.57, widthPct: 9.67, heightPct: 3.72 },
     plateRect: { topPct: 475 / 21, leftPct: 1176 / 15, widthPct: 243 / 15, heightPct: 160 / 21 },
     inkSpanPct: { leftPct: 81.0, rightPct: 93.0 },
     sizePct: FLIP_PT_SIZE_PCT,
@@ -2745,7 +2752,7 @@ const FLIP: FrameProfile = {
       font: "body",
     },
     pt: {
-      rect: { topPct: 64.19, leftPct: 7.67, widthPct: 9.67, heightPct: 3.72 },
+      rect: { topPct: 64.19, leftPct: 6.2, widthPct: 13.07, heightPct: 3.72 },
       plateRect: { topPct: 1321 / 21, leftPct: 53 / 15, widthPct: 243 / 15, heightPct: 160 / 21 },
       inkSpanPct: { leftPct: 6.2, rightPct: 18.13 },
       sizePct: FLIP_PT_SIZE_PCT,

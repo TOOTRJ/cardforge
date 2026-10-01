@@ -14,10 +14,20 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 const ccTemplates = new Set(Object.keys(manifest.files).map((key) => key.split("/")[0]));
 
 describe("Card Conjurer frame profiles", () => {
+  // The portrait layouts (TODO 4.21a, layout v38) set their pips on their
+  // OWN prints: flip's on C18 #134's (the pips centred on the name's
+  // capitals, −9.6 px from packFlip.js's box), aftermath's as v32 print-
+  // matched them (no lift: its slots stay).
+  const OWN_PRINT_COST_DY: Record<string, number | undefined> = { flip: -0.0064, aftermath: undefined };
+
   it("lifts the inline mana cost ~0.55 % of the card height on every CC frame that shows one", () => {
     for (const template of ccTemplates) {
       const profile = getFrameProfile(template);
       if (profile.hideCost || profile.costRect) continue;
+      if (template in OWN_PRINT_COST_DY) {
+        expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
+        continue;
+      }
       expect(profile.costDy, template).toBeCloseTo(-0.0077, 6);
       // costDy is a fraction of the WIDTH; the card is 5:7.
       expect((-(profile.costDy ?? 0) / 1.4) * 100, template).toBeCloseTo(0.55, 2);

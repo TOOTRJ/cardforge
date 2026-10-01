@@ -127,7 +127,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 28 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -176,7 +176,9 @@ into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
   `<k>-bottom.png`; colourless = the pack's see-through frame), `adventure`
   from 'Adventure' and `aftermath` from 'Aftermath' (colourless = each
   pack's artifact frame, a render stand-in that is never offered) — see
-  [The portrait layouts](#the-portrait-layouts-layout-v38).
+  [The portrait layouts](#the-portrait-layouts-layout-v38). Their slots are
+  the packs' own (packFlip.js, packAdventure.js, packAftermath.js) and the
+  masters are copied 1:1 at their native 1500×2100.
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -984,7 +986,7 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
   flips, C18 #134 Budoka Gardener and CM2 #71 Nezumi Graverobber: title bar
   71–177 px against ours at 105–215, the window 623–1317 against 648–1393,
   the upside-down type bar 1338–1444 against 1417–1518). Every rect is
-  `packFlip.js`'s; the art slot the masters' window + 0.1 %
+  packFlip.js's; the art slot the masters' window + 0.1 %
   (7.57/29.57/84.87 × 33.25 — 115–1385 × 623–1317 px on every colour); the
   top name and type line on the prints' baselines (dy −9.2 / −4.9 px, the
   pips on the name's capitals, costDy −9.6 px); the upside-down bars placed
@@ -1014,8 +1016,13 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
   `CC_M15_ART_SLOT` again — re-inheriting either would itself be a bake
   change); the panel's name and type line 8.14–48.14 %W at 62 px, centred on
   ELD #115's (baselines 1388 / 1481 px), the pips right-aligned to 48.14;
-  the pages 8.54–48.01 × 73.58–88.58 and 52.67–91.34 × 65.0–88.58; the type
-  line and pips take the CC-framed M15 profiles' print offsets
+  the pages 8.54–48.01 × 73.58–88.58 and 52.67–91.34 × 65.0–88.58, both
+  CENTRING their text as the print does (ELD #115's adventure lines run
+  1611–1803 px in the 1545–1860 page, the creature's 1391–1815 in the
+  1365–1860 one — the MSE profile set both from the top; the smaller CC
+  pages clip a few of the no-clip matrix's longest texts at the floor, as
+  the prints' pages would); the type line and pips take the CC-framed M15
+  profiles' print offsets
   (`CC_M15_TYPE_DY`, `CC_M15_COST_DY`). The P/T plate stays M15's (the pack
   draws CC's `m15PT<K>.png` at M15's bounds). Colourless = CC's artifact
   frame as a render stand-in, never offered (no printing; owner
