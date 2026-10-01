@@ -371,6 +371,15 @@ function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
   if (patch.artist_credit) {
     rows.push({ label: "Artist", value: patch.artist_credit });
   }
+  // The printing's collector fields (TODO 4.9a): "DMU · 107/281 · EN".
+  if (patch.collector) {
+    const parts = [
+      patch.collector.set_code,
+      patch.collector.collector_number,
+      patch.collector.lang.toUpperCase(),
+    ].filter((part): part is string => Boolean(part));
+    if (parts.length > 0) rows.push({ label: "Collector", value: parts.join(" · ") });
+  }
 
   return (
     <div className="flex flex-col gap-1.5">

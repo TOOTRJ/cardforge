@@ -86,7 +86,8 @@ describe("stepLabel", () => {
     expect(byKey("card")).toBe("Card");
     expect(byKey("identity")).toBe("Identity");
     expect(byKey("text")).toBe("Text & stats");
-    expect(byKey("seticon")).toBe("Set icon");
+    // TODO 4.9a: the step holds the collector fields beside the symbol.
+    expect(byKey("seticon")).toBe("Set & collector info");
     expect(byKey("subscriber")).toBe("Subscriber");
     expect(byKey("publish")).toBe("Publish");
   });
@@ -235,9 +236,13 @@ describe("field → step routing", () => {
     expect(map.get("rules_text")).toBe("text");
     // Stats fold into the Text step.
     expect(map.get("power")).toBe("text");
-    // The direct set-symbol fields live on the Set icon step.
+    // The direct set-symbol fields live on the Set & collector info step,
+    // with the collector fields (TODO 4.9a).
     expect(map.get("set_icon_url")).toBe("seticon");
     expect(map.get("set_icon_code")).toBe("seticon");
+    expect(map.get("set_code")).toBe("seticon");
+    expect(map.get("collector_number")).toBe("seticon");
+    expect(map.get("lang")).toBe("seticon");
     expect(map.get("visibility")).toBe("publish");
     expect(map.get("tags_text")).toBe("publish");
   });

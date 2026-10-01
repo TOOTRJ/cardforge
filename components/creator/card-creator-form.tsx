@@ -238,6 +238,7 @@ import {
   useTwoColorPairFollow,
 } from "@/components/creator/panels/anatomy-panel";
 import { cardFormSchema } from "@/lib/creator/form-schema";
+import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
 import {
@@ -1909,6 +1910,20 @@ export function CardCreatorForm({
       seedStructuredRows(importedKind, patch.rules_text);
     }
 
+    // The printing's collector fields (TODO 4.9a; owner 2026-09-29: imports
+    // follow the printing): the printed set code, the number in its era's
+    // style and the language, written together — a printing with no code
+    // that fits the column clears the field rather than keeping an earlier
+    // import's. Absent when the route couldn't read the printing's set
+    // (the Set & collector info step then offers "Fill from the printing").
+    if (patch.collector) {
+      setValue("set_code", patch.collector.set_code ?? "", { shouldDirty: true });
+      setValue("collector_number", patch.collector.collector_number ?? "", {
+        shouldDirty: true,
+      });
+      setValue("lang", patch.collector.lang, { shouldDirty: true });
+    }
+
     // Stamp the Scryfall provenance so the saved card joins the
     // "Also remixed by N" group on the public detail page (chunk 13).
     if (patch.source_scryfall_id) {
@@ -2578,6 +2593,12 @@ export function CardCreatorForm({
       // default PipGlyph mark.
       set_icon_url: values.set_icon_url.trim() || null,
       set_icon_code: values.set_icon_code.trim() || null,
+      // The collector fields (TODO 4.9a): empty → null clears; the set
+      // code stores upper-case; the language always travels (the column is
+      // NOT NULL, English by default).
+      set_code: values.set_code.trim().toUpperCase() || null,
+      collector_number: values.collector_number.trim() || null,
+      lang: values.lang || DEFAULT_CARD_LANG,
       // Create-flow convenience: a UUID drops the saved card into that deck
       // (custom-only mainboard entry). Ignored by updates.
       deck_id: values.deck_id || null,
@@ -2953,6 +2974,11 @@ export function CardCreatorForm({
     frameStyle: watched.frame_style,
     // Live set-symbol preview (the Set icon step edits these directly).
     setIconUrl: watched.set_icon_url || null,
+    // The collector fields (TODO 4.9a) travel to the preview as the bake's
+    // row does (rowToPreviewData); nothing draws them until 4.9b.
+    setCode: watched.set_code || null,
+    collectorNumber: watched.collector_number || null,
+    lang: watched.lang || null,
     // Subscribers preview their DOWNLOADS (owner decision 2026-09-17): no
     // pipglyph.com mark, their own footer mark if set. Free accounts see
     // the public look. The bake/gallery always keep the mark either way.

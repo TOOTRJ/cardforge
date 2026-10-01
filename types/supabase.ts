@@ -770,6 +770,11 @@ export type Database = {
           rules_text: string | null;
           set_icon_code: string | null;
           set_icon_url: string | null;
+          /** The collector fields (migration 0133, TODO 4.9a): the PRINTED
+           *  set code, the collector number and the printing's language. */
+          set_code: string | null;
+          collector_number: string | null;
+          lang: string;
           slug: string;
           source_scryfall_id: string | null;
           subtypes: string[];
@@ -822,6 +827,9 @@ export type Database = {
           rules_text?: string | null;
           set_icon_code?: string | null;
           set_icon_url?: string | null;
+          set_code?: string | null;
+          collector_number?: string | null;
+          lang?: string;
           slug: string;
           source_scryfall_id?: string | null;
           subtypes?: string[];
@@ -872,6 +880,9 @@ export type Database = {
           rules_text?: string | null;
           set_icon_code?: string | null;
           set_icon_url?: string | null;
+          set_code?: string | null;
+          collector_number?: string | null;
+          lang?: string;
           slug?: string;
           source_scryfall_id?: string | null;
           subtypes?: string[];

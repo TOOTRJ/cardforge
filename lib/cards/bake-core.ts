@@ -53,11 +53,20 @@ export type CardRowForBake = {
   back_face: unknown;
   face_content: unknown;
   watermark: unknown;
+  /** The collector fields (migration 0133, TODO 4.9a). OPTIONAL on the bake
+   *  row: the visual-regression matrix fingerprints every stored row
+   *  (tests/visual/matrix.ts canonical), and an explicit `undefined` key
+   *  would redefine every existing case — which the gate never
+   *  pixel-compares. A row without them renders exactly as before; nothing
+   *  draws them until 4.9b. */
+  set_code?: string | null;
+  collector_number?: string | null;
+  lang?: string | null;
 };
 
 /** Every column the renderer needs (plus owner/visibility for gating). */
 export const BAKE_SELECT_COLUMNS =
-  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark";
+  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang";
 
 export function rowToPreviewData(
   card: CardRowForBake,
@@ -96,6 +105,12 @@ export function rowToPreviewData(
     // a rules_text parsing fallback (lib/cards/face-content.ts).
     faceContent: (card.face_content as FaceContent | null) ?? null,
     watermark: (card.watermark as CardWatermark | null) ?? null,
+    // The collector fields (TODO 4.9a) — carried, not drawn (4.9b). The
+    // same three cardToPreviewData hands over (lib/cards/preview-data.ts);
+    // a row read without them (an older select) carries null.
+    setCode: card.set_code ?? null,
+    collectorNumber: card.collector_number ?? null,
+    lang: card.lang ?? null,
   });
 }
 
