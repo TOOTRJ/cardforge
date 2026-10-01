@@ -124,7 +124,10 @@ const recutOf = (template: string) =>
 describe("Card Conjurer recipe", () => {
   it("covers the M15-era, borderless and full-art-basic templates — every colour built or excluded with a reason — with pack paths", () => {
     expect(Object.keys(templates).sort()).toEqual([
+      "adventure",
+      "aftermath",
       "emblem",
+      "flip",
       "fullartland",
       "m15",
       "m15artifact",

@@ -495,8 +495,11 @@ describe("layout v35 covers the Card Conjurer masters' measured art windows", { 
     // The inherited MSE slot 7.8/11.4/84.4 × 44.0 (v34) misses it on every side.
     const v34 = [{ name: "artSlot", rect: { topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 } }];
     expect(artWindowViolations(m, W, H, v34)).toEqual([expect.stringMatching(/left 117 > 115\.25, right 1383 < 1384\.75, top 239\.4 > 236\.95, bottom 1163\.4 < 1166\.05$/)]);
-    // The MSE-framed adventure keeps M15's own slot (its master is 4.21's).
-    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 });
+    // Adventure's slot is its own, pinned at ITS Card Conjurer masters'
+    // window + 0.1 % (layout v38, TODO 4.21a, design D4): neither M15's MSE
+    // slot nor CC_M15_ART_SLOT — a later move of either is not an adventure
+    // bake change.
+    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 });
   });
 
   it("runs the art under every see-through master from the border's inner edge (was a 25 px band above the title bar)", () => {
@@ -610,18 +613,16 @@ describe("the art-window known failures", () => {
   it("lists today's failures — the TODO's list, and what checking every colour of every master found", () => {
     expect(Object.keys(ART_WINDOW_KNOWN_FAILURES).sort()).toEqual(
       [
-        // 7.6's list (2026-09-25): split, lotr, flip, battle, lotrscroll and
-        // the saga hairline. (The M15 family's windows — then MSE, now CC —
-        // were covered by layout v35, 4.4 (2).)
+        // 7.6's list (2026-09-25): split, lotr, battle, lotrscroll and the
+        // saga hairline. (The M15 family's windows — then MSE, now CC —
+        // were covered by layout v35, 4.4 (2); flip, adventure and
+        // aftermath by their Card Conjurer masters, layout v38, 4.21a.)
         "split",
         "lotr",
-        "flip",
         "battle",
         "lotrscroll",
         "saga",
         // Found on 2026-09-29.
-        "adventure",
-        "aftermath",
         "alphatoken",
         "avatar",
         "bloomanime",

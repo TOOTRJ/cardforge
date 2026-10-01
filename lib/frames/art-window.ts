@@ -592,7 +592,9 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "window 118–1379 × 239–1935 vs slot 115.5–1375.5 × 237.3–1932: 3.5 px right and 3 px bottom (4.35 (2): re-source)",
     maxMissPx: 4.5,
   },
-  // The MSE layout templates — 4.21 re-sources all six from Card Conjurer.
+  // The MSE layout templates — 4.21 re-sources all six from Card Conjurer
+  // (4.21a struck flip, adventure and aftermath: their CC masters' windows
+  // are covered with 1.45–2.25 px to spare; 4.21b / 4.21c take the rest).
   split: {
     keys: "all",
     todo: ["4.21"],
@@ -604,19 +606,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     todo: ["4.21"],
     why: "window ≈ 725–1382 × 234–1760 vs slot 751.5–1380 × 237.3–1759.8: 1.5 px at the divider, a hairline along the top to x 715, 1–4 px elsewhere",
     maxMissPx: { w: 28.5, u: 26.5, b: 37.5, r: 26.5, g: 27.5, c: 27.5, m: 27.5 },
-  },
-  flip: { keys: "all", todo: ["4.21"], why: "window ≈ 113–1384 × 647–1394 vs slot 115.5–1380 × 651–1390.2: 2–5 px on every side", maxMissPx: 6 },
-  adventure: {
-    keys: "all",
-    todo: ["4.21"],
-    why: "window 125–1379 × 240–1163 vs slot 117–1383 × 239.4–1163.4: 0.6 / 0.4 px of overscan top and bottom, 1.05 needed",
-    maxMissPx: 1,
-  },
-  aftermath: {
-    keys: "all",
-    todo: ["4.21"],
-    why: "top window ends at 1383 px (1384 on one colour), the slot at 1383; the sideways window ends 0.4 px inside its rotated slot",
-    maxMissPx: 2,
   },
   battle: { keys: "all", todo: ["4.21"], why: "borderless PNG: the window runs into the transparent ring, the whole card (7.7; 4.21's interim: full-bleed artSlot)", maxMissPx: 642.5 },
   // Transparent rings and bands (7.7's known failures) the window leaks into,

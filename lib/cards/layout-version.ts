@@ -675,9 +675,60 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            visual matrix: only the nyx cases change. "sweep".
 //            VERIFICATION-NEUTRAL: no slot moves (a master's black only),
 //            and nyx has no tick.
+//   38     — the portrait layouts re-sourced from Card Conjurer (TODO
+//            4.21a; design 2026-09-29, owner decisions 2026-09-29): flip,
+//            adventure and aftermath leave their 241–375 px MSE composites
+//            (git) for CC's native 1500×2100 masters (the frames bucket,
+//            scripts/lib/cc-frames.mjs). Measured against the M15 prints
+//            (Scryfall PNGs at 1500 × 2100):
+//            * flip sat 30–80 px low from the title bar down against C18
+//              #134 Budoka Gardener and CM2 #71 Nezumi Graverobber (the
+//              only M15-frame flips): the title bar 105–215 px against the
+//              prints' 71–177, the window 648–1393 against 623–1317, the
+//              upside-down type bar 1417–1518 against 1338–1444. Every rect
+//              is packFlip.js's; the art slot the masters' window + 0.1 %
+//              (7.57/29.57/84.87 × 33.25); the top name's and type line's
+//              dy and the pips onto the prints (−9.2 / −4.9 / −9.6 px), the
+//              upside-down bars where the prints' text centres; the set
+//              symbol in CC's box (right 78.4 %W, centred 26.0 %H). The P/T
+//              plates (a CORRECTION — every printed M15 flip creature has one
+//              per half; the vehicle plate's opt-in is the nearest rule, so
+//              it was flagged and the owner called it): CC's two-plate image
+//              cut per half (pt/<k>-top.png, pt/<k>-bottom.png), drawn only
+//              when the half has a P/T; the bottom one upside-down as the
+//              source draws it, unturned. Colourless = CC's see-through
+//              frame with the art under it from the border (4.17a's
+//              UNDER_FRAME_RECT). No crown. The artist credit (3.8's slice)
+//              on M15's footer line.
+//            * adventure: the CC master (M15's bars with the storybook) for
+//              the MSE composite whose window ran 10 / 6 px narrow; the art
+//              slot PINNED at the masters' window + 0.1 % (7.57/11.19/84.87
+//              × 44.44, design D4: never M15's or CC_M15_ART_SLOT's again);
+//              the panel's name and type line 8.14–48.14 %W centred on ELD
+//              #115's (1367.3 / 1460.3 px), its cost to 48.14; the pages
+//              8.54–48.01 × 73.58–88.58 and 52.67–91.34 × 65.0–88.58; the
+//              type line and pips take the CC-framed M15 profiles' print
+//              offsets (CC_M15_TYPE_DY, CC_M15_COST_DY).
+//            * aftermath: the CC master (textured cream boxes) for the MSE
+//              stack with flat white boxes; the art slots the windows +
+//              0.1 % (7.57/11.19/84.87 × 22.44; the sideways one 44.63/
+//              63.62/49.41 × 20.33); the set symbol in CC's box (right
+//              92.13 %W, centred 37.1 %H); the artist credit on M15's
+//              footer line. The text slots stay (print-matched in 0.22 /
+//              v32).
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[38] = adventure, flip,
+//            aftermath): every card on the three, art or none. Public
+//            production (anonymous read, 2026-09-30): 0 cards on any of
+//            them (private cards and previews: owner SQL). The visual
+//            matrix: only their cases change. "sweep" (a correction, FRAMES.md
+//            "Additions vs corrections"). NOT verification-neutral: their
+//            slots move — but no tick exists to stale (adventure's 7 rows
+//            and aftermath/w are unverified, flip has none), so the first
+//            ticks are the owner's after the deploy (C18 #134 flip/g, CM2
+//            #71 flip/b, the adventure and aftermath prints).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 37;
+export const CARD_LAYOUT_VERSION = 38;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -702,6 +753,12 @@ export const V32_M15_FAMILY_TEMPLATES: readonly string[] = [
   "m15pw", "m15token", "m15tokenartifact", "saga", "adventure", "flip", "aftermath", "extendedart",
   "expeditionland", "nyx", "fullart", "m15textless", "m15textlessland", "m15fullartland", "fullartland",
 ];
+
+// v38 — the portrait layouts 4.21a re-sourced from Card Conjurer (their
+// masters, art slots and text slots). Frozen like the lists below: v38 is
+// history once it ships (4.21b's split and battle and 4.21c's saga bring
+// their own bumps).
+export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "aftermath", "flip"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -750,6 +807,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // printed-size set symbols and the cards with an inline pip.)
   // v37: nyx's darker type bar and text box (4.17e) — its masters only.
   37: ["nyx"],
+  // v38: the portrait layouts re-sourced from Card Conjurer (4.21a) — their
+  // masters, art slots and text slots; every card on them.
+  38: V38_PORTRAIT_LAYOUT_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the

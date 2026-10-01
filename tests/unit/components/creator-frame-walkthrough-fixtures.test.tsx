@@ -152,7 +152,10 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   ["split", "m", "Expansion", "Explosion"],
   ["aftermath", "r", "Insult", "Injury"],
   ["aftermath", "m", "Driven", "Despair"],
+  // The two M15-frame flip prints (TODO 4.21a's references): C18 #134 and
+  // CM2 #71.
   ["flip", "g", "Budoka Gardener", "Dokai, Weaver of Life"],
+  ["flip", "b", "Nezumi Graverobber", "Nighteyes the Desecrator"],
   ["saga", "m", "The Kami War", "O-Kagachi Made Manifest"],
   ["saga", "c", "Urza's Saga", ""],
   // Skins and treatments whose registry default is in the import fixtures.

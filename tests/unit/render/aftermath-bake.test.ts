@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace } from "@/types/card";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
@@ -7,11 +7,14 @@ import { displayTextEm } from "@/lib/cards/display-metrics";
 import { NAME_COST_GAP_PCT, costRowWidthPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { RULES_TEXT, ptToPct } from "@/lib/cards/typography";
 import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
+import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
 // Aftermath's sideways bottom half (TODO 0.22 + the 4.31 rotated-art note),
-// pinned on REAL bakes: the aftermath frame is a git file under
-// public/frames (read from disk), so these are offline and deterministic.
+// pinned on REAL bakes. The aftermath master is Card Conjurer's in the
+// frames bucket (layout v38, TODO 4.21a), so the bake is served a flat cream
+// stand-in with both art windows clear (tests/stubs/stand-in-frames.ts):
+// offline and deterministic, the text and the art the only marks on it.
 // Rendered at the "default" preset (750 × 1050).
 //
 // The printed Cut // Ribbons and Commit // Memory turn the bottom half 90°
@@ -20,6 +23,12 @@ import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 // half used to turn the other way (270°), and Satori drew the sideways art
 // with an art-free strip across the window.
 // ---------------------------------------------------------------------------
+
+let frames: StandInFrames;
+beforeAll(async () => {
+  frames = await serveStandInFrames([{ template: "aftermath", keys: ["w", "u", "b", "r", "g", "c", "m"], tone: 236 }]);
+}, 60_000);
+afterAll(() => frames.restore());
 
 const W = RENDER_PRESETS.default.width;
 const H = RENDER_PRESETS.default.height;

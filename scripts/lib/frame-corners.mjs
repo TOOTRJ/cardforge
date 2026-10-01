@@ -64,8 +64,9 @@ import {
  * ones. expeditionland: the keys the corner check flags (its grey paper
  * reaches 1–2 px inside the cut on w, u, r, c and m); b and g are 7.7 known
  * failures with a transparent edge band — no border to paint with.
- * adventure: its 1–2 px grey paper rim just inside the arc (luma ≤ 97, all
- * seven keys) — added by the owner on 2026-09-28 (3.26 round 7).
+ * (adventure, with its 1–2 px grey paper rim, flip and aftermath left the
+ * list with TODO 4.21a: their masters are Card Conjurer's in the frames
+ * bucket, cut at the one corner by the importer.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
   retro: "all",
@@ -73,14 +74,11 @@ export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
   modern: "all",
   modernland: "all",
   saga: "all",
-  aftermath: "all",
   extendedart: "all",
   fullart: "all",
   m15textless: "all",
   m15textlessland: "all",
-  flip: "all",
   alphatoken: "all",
-  adventure: "all",
   expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 
