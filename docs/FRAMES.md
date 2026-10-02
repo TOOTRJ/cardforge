@@ -1385,8 +1385,10 @@ sweep, no badge: production's 886 visible cards baked byte-identical at
   The glyph warnings read the footer mark in the body face on a collector
   card. `sampleFramePreview` switches the line on for the walk-through.
 - **Verification-neutral:** no frame pixel moves and nothing is bumped, so
-  the ticks stay; the visual gate gained 32 new cases (`@collector…`) and
-  changed none. The stamp (4.9c) and wave 2 (4.9d) follow.
+  the ticks stay; the visual gate gained 33 new cases (`@collector…`,
+  `@collector-etched` since round 22) and changed none — re-proved at
+  layout v38 after folding in #451 (0 changed / 0 redefined against main's
+  1,051). The stamp (4.9c) and wave 2 (4.9d) follow.
 
 ## Kind anatomy and bodies
 
