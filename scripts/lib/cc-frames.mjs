@@ -536,8 +536,9 @@ export function borderlessLandLayers({ frame, box, pinline }) {
 // #336, DMU #435): 1500-native (1408×215), drawn 1:1 at 3.07/1.91/93.87×
 // 10.24 %, its outline (1416×223) UNDER it at 2.8/1.72/94.4×10.62 — after
 // CC ERASES the strip 3.94/2.77/92.14×1.77 % (rows 58–94 at HD), where the
-// master's title-bar ring (the black outer line at rows 85–89 and the white
-// ring at 90–96, α 255 over x 94–1405) would show above the crown's inner
+// master's title-bar ring (the black outer line at rows 85–88 and, from row
+// 89, the pinline ring in the frame's colour — white on W; one row higher on
+// the gold frame — α 255 over x 94–1405) would show above the crown's inner
 // edge and in its two end notches; the print's crown floats on the art and
 // meets the bar on its own outline. An overlay can only add pixels, so the
 // crown is baked into a second master per key, `<key>-legendary.png`
