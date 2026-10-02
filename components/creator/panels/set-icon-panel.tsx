@@ -20,6 +20,11 @@
 //      the printing" — one Scryfall lookup through /api/scryfall/named,
 //      into the form, saved like any edit (no bulk backfill: 0108's
 //      updated_at guard would churn the sitemap and OG cache-buster).
+//
+//   3. The collector LINE's switches (TODO 4.9b, collector-panel.tsx): the
+//      line on or off, its printed style and the foil-printing ★ — an
+//      addition, opt-in per card; a stored card shows the switch off with a
+//      hint until its owner turns it on.
 
 import { useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -37,8 +42,9 @@ import { kindFromCard, kindHidesRarity } from "@/lib/creator/card-kinds";
 import { uploadCoverImage } from "@/lib/media/upload-cover";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { cn } from "@/lib/utils";
-import type { Rarity } from "@/types/card";
+import type { FrameStyle, Rarity } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
+import { CollectorSwitches } from "@/components/creator/panels/collector-panel";
 
 // A curated set of recognizable Keyrune set-symbol codes (same list as the
 // picker). The full Keyrune library has hundreds; these cover popular
@@ -58,7 +64,7 @@ const PRESET_SET_CODES = [
   "dmu",
 ];
 
-export function SetIconPanel({ userId }: { userId: string | null }) {
+export function SetIconPanel({ userId, stored = null }: { userId: string | null; stored?: FrameStyle | null }) {
   const { control, setValue } = useFormContext<FormValues>();
   const iconUrl = useWatch({ control, name: "set_icon_url" }) ?? "";
   const iconCode = useWatch({ control, name: "set_icon_code" }) ?? "";
@@ -205,6 +211,11 @@ export function SetIconPanel({ userId }: { userId: string | null }) {
       </FieldGroup>
 
       <CollectorInfoFields />
+
+      {/* The collector line's switches (TODO 4.9b): on / off, the printed
+          style, the foil-printing ★ — opt-in per card, with the one-line
+          hint on a stored card from before the line. */}
+      <CollectorSwitches stored={stored} />
     </div>
   );
 }

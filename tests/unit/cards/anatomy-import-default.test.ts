@@ -182,10 +182,10 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
   });
 
   it("a two-colour printing and a crowned one name their switches ON", () => {
-    expect(stored("fdn-122").style).toEqual({ crown: true, twoColor: true }); // Kykar
+    expect(stored("fdn-122").style).toEqual({ crown: true, twoColor: true, collector: "2023" }); // Kykar (FDN, 2024: the 2023 line)
     expect(stored("fdn-122").colors).toEqual(["white", "blue"]);
-    expect(stored("mkm-264").style).toEqual({ twoColor: true }); // Meticulous Archive (a land)
-    expect(stored("fdn-2").style).toEqual({ crown: true });
-    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true });
+    expect(stored("mkm-264").style).toEqual({ twoColor: true, collector: "2023" }); // Meticulous Archive (a land)
+    expect(stored("fdn-2").style).toEqual({ crown: true, collector: "2023" });
+    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023" });
   });
 });

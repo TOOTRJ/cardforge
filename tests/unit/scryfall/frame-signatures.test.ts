@@ -699,7 +699,7 @@ describe("the acceptance's named cases (TODO 1.4 (e))", () => {
     expect(patch).toMatchObject({ color_pair: "wu", printed_two_color: true });
     // Not Legendary: the import names no crown switch (printing-only, owner
     // round 17), so the new-card default applies.
-    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { twoColor: true }, colorIdentity: ["white", "blue"] });
+    expect(importedAnatomy(patch, "m15land")).toEqual({ style: { twoColor: true, collector: "2015" }, colorIdentity: ["white", "blue"] });
   });
 
   it("Bident of Thassa THS #42 → nyx, nearest", () => {

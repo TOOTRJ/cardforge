@@ -82,6 +82,7 @@ async function environment(): Promise<Record<string, unknown>> {
     "node_modules/keyrune/fonts/keyrune.ttf",
     "public/fonts/Beleren-Bold.ttf",
     "public/fonts/mplantin-italic.ttf",
+    "public/fonts/Montserrat-Medium.ttf",
   ]) {
     fonts[rel] = sha(fs.readFileSync(path.join(ROOT, rel))).slice(0, 16);
   }

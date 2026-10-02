@@ -3284,7 +3284,9 @@ export function CardCreatorForm({
             ) : null}
 
             {/* ----- Set icon panel (the type-line symbol, a direct card field) ----- */}
-            {stepKey === "seticon" ? <SetIconPanel userId={userId} /> : null}
+            {stepKey === "seticon" ? (
+              <SetIconPanel userId={userId} stored={isEdit && card ? ((card.frame_style as FrameStyle | null) ?? {}) : null} />
+            ) : null}
 
             {/* ----- Subscriber step (paid perks for this card; upsell for free) ----- */}
             {stepKey === "subscriber" ? (

@@ -5,6 +5,7 @@ import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-reg
 import { BASIC_LAND_NAME_BY_KEY } from "@/lib/cards/watermark";
 import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, type CardKind } from "@/lib/creator/card-kinds";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 
 // ---------------------------------------------------------------------------
 // The visual-regression matrix (TODO 7.1 / 3.11): a FIXED list of cards baked
@@ -35,7 +36,15 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 //     etched on m15; the two-colour pair (FrameStyle.twoColor) on every
 //     template that draws pairs, in each dress, and with both switches on
 //     (the split crown). The same cards without the switches are the plain
-//     cases — every stored card.
+//     cases — every stored card;
+//   * the collector line switched ON (TODO 4.9b "@collector…"): on every
+//     template with the slot (COLLECTOR_TEMPLATES) the long card in the
+//     2023 style ("M 0107" over "DMU • EN", the © slot's mark on line 2)
+//     and the short card in the 2015 style ("107/281   C"); on m15 the
+//     no-plate card (an instant: the mark on line 1), the ★ by the flag and
+//     by a foil finish, a Spanish line ("DMU • SP"), empty fields (the bare
+//     letter), a long artist (cut with one "…"), the HD bake and the
+//     square print. The cards WITHOUT the switch are the plain cases.
 //
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
@@ -716,6 +725,34 @@ export function visualCases(): VisualCase[] {
     row: { ...pairStyle("m15", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
   add("m15", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15", "regular", true) });
+  // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
+  // no stored card has the key, so these are NEW cases, no bump): both
+  // styles on every slotted template (the primary kind: a token on the
+  // token frames, a walker on m15pw, an emblem on emblem), and on m15 the
+  // line's other shapes.
+  for (const template of COLLECTOR_TEMPLATES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, "g", "long", { suffix: "@collector", row: collectorRow(template, "2023") });
+    add(template, primary, "u", "short", { suffix: "@collector-2015", row: collectorRow(template, "2015") });
+  }
+  // No stat plate (an instant): the mark on line 1.
+  add("m15", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15", "2023") });
+  // The ★: by the flag, and by a foil or etched finish (owner 2026-10-02).
+  add("m15", "creature", "r", "short", { suffix: "@collector-star", row: collectorRow("m15", "2015", { frame_style: { star: true } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "r", "short", { suffix: "@collector-foil", finish: "foil", row: collectorRow("m15", "2015", { frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "r", "short", { suffix: "@collector-etched", finish: "etched", row: collectorRow("m15", "2015", { frame_style: { finish: "etched" } as CardRowForBake["frame_style"] }) });
+  // A printed language code: es prints SP.
+  add("m15", "creature", "b", "short", { suffix: "@collector-lang", row: collectorRow("m15", "2015", { lang: "es" }) });
+  // Empty fields: the bare letter and "EN" (new cards print what's filled).
+  add("m15", "creature", "w", "short", { suffix: "@collector-empty", row: collectorRow("m15", "2023", { set_code: null, collector_number: null }) });
+  // A long artist: cut with one "…" before the © slot's mark.
+  add("m15", "creature", "g", "long", {
+    suffix: "@collector-artist",
+    row: collectorRow("m15", "2023", { artist_credit: "Someone With An Extraordinarily Long Illustrator Name Indeed" }),
+  });
+  // The stored bake's size, and the squared print.
+  add("m15", "creature", "g", "long", { suffix: "@collector-hd", preset: "hd", row: collectorRow("m15", "2023") });
+  add("m15", "creature", "u", "short", { suffix: "@collector-2015-square", corners: "square", row: collectorRow("m15", "2015") });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }
@@ -723,6 +760,24 @@ export function visualCases(): VisualCase[] {
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land"];
+
+/** The collector line's fields on its cases (TODO 4.9b): a real printing's
+ *  (DMU #107's), on top of a stored row — `frame_style.collector` names the
+ *  style, nothing else on the row changes. */
+function collectorRow(
+  template: FrameTemplate,
+  style: "2015" | "2023",
+  over: Partial<CardRowForBake> = {},
+): Partial<CardRowForBake> {
+  const finish = (over.frame_style as { finish?: VisualCase["finish"] } | undefined)?.finish ?? "regular";
+  return {
+    set_code: "DMU",
+    collector_number: "107/281",
+    lang: "en",
+    ...over,
+    frame_style: { template, finish, collector: style, ...((over.frame_style as object | undefined) ?? {}) },
+  };
+}
 
 /** A case's rough bake cost, for balancing shards: the HD bake rasterises
  *  four times the pixels and its masters at full size (~10× on the

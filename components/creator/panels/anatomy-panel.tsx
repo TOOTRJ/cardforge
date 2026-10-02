@@ -39,10 +39,12 @@ import type { ColorIdentity, FrameStyle } from "@/types/card";
 
 /** The one-line hint a stored card shows beside a switch its owner has never
  *  set (owner decision 2026-09-29: the switch and a /news post, never a
- *  badge or a notification). */
-export const ANATOMY_HINTS: Record<FrameAnatomyKey, string> = {
+ *  badge or a notification). The collector line's (TODO 4.9b) is shown by
+ *  the Set & collector info step (collector-panel.tsx); the ★ has none. */
+export const ANATOMY_HINTS: Partial<Record<FrameAnatomyKey, string>> = {
   crown: "New: the printed legendary crown. Switch it on to add it.",
   twoColor: "New: the printed two-colour frame. Switch it on to add it.",
+  collector: "New: add a collector line and holofoil stamp",
 };
 
 const ANATOMY_COPY: Record<FrameAnatomyKey, { label: string; help: string }> = {
@@ -53,6 +55,14 @@ const ANATOMY_COPY: Record<FrameAnatomyKey, { label: string; help: string }> = {
   twoColor: {
     label: "Two-colour frame",
     help: "The frame printed in the card's two colours. A cost made only of hybrid pips gets the hybrid frame.",
+  },
+  collector: {
+    label: "Collector line",
+    help: "The two lines in the bottom border: the collector number and rarity letter, the set code, language and artist.",
+  },
+  star: {
+    label: "Foil printing (★)",
+    help: "Prints the ★ between the set code and the language, as a foil-only printing does. Free for every plan, no sheen.",
   },
 };
 
@@ -174,7 +184,9 @@ export function TwoColorPairRow({
   );
 }
 
-function SwitchRow({
+/** One switch with its label, help and optional hint — the collector
+ *  panel's rows too (collector-panel.tsx). */
+export function SwitchRow({
   anatomy,
   on,
   hint,
@@ -284,8 +296,8 @@ export function AnatomyPanel({
   if (!showCrown && !showTwoColor) return null;
 
   const editing = stored !== null;
-  const hintFor = (key: FrameAnatomyKey, on: boolean) =>
-    editing && !on && typeof stored?.frameStyle?.[key] !== "boolean" ? ANATOMY_HINTS[key] : null;
+  const hintFor = (key: "crown" | "twoColor", on: boolean) =>
+    editing && !on && typeof stored?.frameStyle?.[key] !== "boolean" ? (ANATOMY_HINTS[key] ?? null) : null;
   const setSwitch = (key: FrameAnatomyKey, next: boolean) =>
     setValue(`frame_style.${key}`, next, { shouldDirty: true });
   const setPair = (next: TwoColorPair | null) =>

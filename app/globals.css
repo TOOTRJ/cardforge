@@ -89,6 +89,26 @@
   font-display: swap;
 }
 
+/* CollectorLine — the collector line's face (TODO 4.9b): Montserrat Medium
+   (SIL OFL 1.1, public/fonts/Montserrat-OFL.txt), subset to the 67 code
+   points the line prints (scripts/build-collector-font.mjs). The Satori bake
+   registers the same TTF; the metric overrides are the face's hhea (968 /
+   251 / 0 per 1000, lib/cards/collector-metrics.ts), so Windows draws the
+   line box Satori does (the v33 lesson above) — every collector run sets its
+   own line height anyway (lib/cards/collector-layout.ts). */
+@font-face {
+  font-family: "CollectorLine";
+  src:
+    url("/fonts/Montserrat-Medium.woff2") format("woff2"),
+    url("/fonts/Montserrat-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 96.8%;
+  descent-override: 25.1%;
+  line-gap-override: 0%;
+}
+
 @theme {
   /* ── Core surfaces — PipGlyph slate-navy (hue ~262) ───────────── */
   /* Mockup anchors: #0D1320 background, #1A2030 surface, #2A3346 border */

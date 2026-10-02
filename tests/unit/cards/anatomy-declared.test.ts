@@ -31,8 +31,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 describe("where the pieces are declared", () => {
   it("only the m15, m15artifact and m15land entries draw them — never a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(["m15", "m15land", "m15artifact"]);
-    expect(frameAnatomyOf("m15snow")).toEqual({ crown: false, twoColor: [] });
-    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: false, twoColor: [] });
+    // (Both carry the collector line's slot since 4.9b.)
+    expect(frameAnatomyOf("m15snow")).toEqual({ crown: false, twoColor: [], collector: true });
+    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: false, twoColor: [], collector: true });
     // A legacy template draws the m15 frame, so it has m15's anatomy.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
@@ -40,32 +41,52 @@ describe("where the pieces are declared", () => {
 
 describe("a new card (createCardAction, the creator's initial state)", () => {
   it("defaults every piece its template draws to on, whatever the card's type or colours", () => {
-    expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true });
-    expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true });
-    expect(anatomyDefaults("m15pw")).toEqual({});
-    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true });
+    // …and the collector line in today's printed style where the template
+    // has its slot (TODO 4.9b; the walker has one, not the crown).
+    expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true, collector: "2023" });
+    expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true, collector: "2023" });
+    expect(anatomyDefaults("m15pw")).toEqual({ collector: "2023" });
+    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023" });
     // The AI jobs send no frame_style at all: the default template's pieces.
-    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true });
+    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "2023" });
   });
 
   it("keeps an explicit off (an import of a crownless printing, the creator's switch)", () => {
-    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true });
+    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2023" });
     expect(newCardFrameStyle({ template: "m15", crown: false, twoColor: false }, "creature")).toEqual({
       template: "m15",
       crown: false,
       twoColor: false,
+      collector: "2023",
+    });
+    // The collector line's explicit off and an import's printed style stay too.
+    expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "off" });
+    expect(newCardFrameStyle({ template: "m15", collector: "2015", star: true }, "creature")).toEqual({
+      template: "m15",
+      crown: true,
+      twoColor: true,
+      collector: "2015",
+      star: true,
     });
   });
 
   it("the creator's all-on switches store only what the template draws", () => {
+    // m15snow draws no crown or pair but has the collector slot (4.9b).
     expect(newCardFrameStyle({ template: "m15snow", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15snow",
+      finish: "regular",
+      collector: "2023",
+    });
+    // A frame with no collector slot drops the line's keys too.
+    expect(newCardFrameStyle({ template: "m15borderless", finish: "regular", ...NEW_CARD_ANATOMY, star: true }, "creature")).toEqual({
+      template: "m15borderless",
       finish: "regular",
     });
     expect(newCardFrameStyle({ template: "m15artifact", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15artifact",
       crown: true,
       twoColor: true,
+      collector: "2023",
     });
   });
 });
@@ -180,6 +201,7 @@ describe("an import (importedAnatomy)", () => {
       template: "m15",
       crown: false,
       twoColor: true,
+      collector: "2023",
     });
   });
 });
