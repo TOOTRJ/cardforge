@@ -775,42 +775,62 @@
       ],
       "wu": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "wb": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "ub": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "ur": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "br": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "bg": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "rg": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "rw": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "gw": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "gu": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "wu-h": [
@@ -897,6 +917,8 @@
       ],
       "wu-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -904,6 +926,8 @@
       ],
       "wb-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -911,6 +935,8 @@
       ],
       "ub-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -918,6 +944,8 @@
       ],
       "ur-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -925,6 +953,8 @@
       ],
       "br-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -932,6 +962,8 @@
       ],
       "bg-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -939,6 +971,8 @@
       ],
       "rg-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -946,6 +980,8 @@
       ],
       "rw-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -953,6 +989,8 @@
       ],
       "gw-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -960,6 +998,8 @@
       ],
       "gu-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1070,14 +1110,16 @@
       "img/frames/m15/crowns/m15CrownRFloating.png",
       "img/frames/m15/crowns/m15CrownUFloating.png",
       "img/frames/m15/crowns/m15CrownWFloating.png",
-      "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskType.png"
     ],
     "notes": [
       "colourless = CC's see-through colourless frame (m15GenericShowcaseFrameC.png): the art runs under the frame, as on m15 'c' (4.17)",
       "colourless P/T plate = the pack's 'Colorless Power/Toughness' pt/l.png (the unlisted pt/c.png is not used)",
       "CC's 'Land Frame' (m15GenericShowcaseFrameL.png) is not imported here: it is 4.34's m15borderlessland",
       "legendary crown (TODO 4.6f, wave 2a): CC's FLOATING crown (packM15LegendCrownsFloating.js) baked into a second master per key, <key>-legendary.png, as autoBorderlessFrame draws it — the strip 3.94/2.77/92.14×1.77 % ERASED from the frame (CC's Crown Border Cover with erase: the master's title-bar ring there), the outline at 2.8/1.72/94.4×10.62 % under the crown at 3.07/1.91/93.87×10.24 %, all 1500-native (no resample); the crown letter is the master's (C for the see-through colourless frame, A for the artifact dress, M for gold); the plain masters are untouched",
-      "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
+      "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; under it the same lerp replaces CC's Rules and Type regions (the regular M15 masks), because the gold frame draws its type-bar and box rings one row higher than the colour frames and would leave a 1 px gold line above the box's top and bottom pinline (rows 1302 / 1936 at HD) that no print has; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
       "hybrid pair masters <pair>-h.png (m15borderless only, TODO 4.6f): CC's grey 'Land Frame' L (the grey bars every hybrid borderless print wears — 2X2 #374 / #385, SPG #142 / #144, ECL #292–296; cardFrameProperties's typeTitle 'L' for a hybrid pair) with the same split pinline; their crowned twins <pair>-h-legendary.png; the P/T plate is the pack's 'Colorless Power/Toughness' (plateKeyFor's grey 'c' = pt/l.png), as CC's pt 'C' for an L typeTitle"
     ]
   },
@@ -1113,42 +1155,62 @@
       ],
       "wu": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "wb": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "ub": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "ur": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "br": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "bg": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "rg": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "rw": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "gw": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "gu": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ],
       "w-legendary": [
@@ -1195,6 +1257,8 @@
       ],
       "wu-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1202,6 +1266,8 @@
       ],
       "wb-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1209,6 +1275,8 @@
       ],
       "ub-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1216,6 +1284,8 @@
       ],
       "ur-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1223,6 +1293,8 @@
       ],
       "br-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1230,6 +1302,8 @@
       ],
       "bg-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1237,6 +1311,8 @@
       ],
       "rg-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1244,6 +1320,8 @@
       ],
       "rw-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1251,6 +1329,8 @@
       ],
       "gw-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1258,6 +1338,8 @@
       ],
       "gu-legendary": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskType.png",
         "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
         "img/black.png at 3.94/2.77/92.14×1.77 % erased from the layers below (CC's erase: destination-out)",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
@@ -1297,13 +1379,15 @@
       "img/frames/m15/crowns/m15CrownRFloating.png",
       "img/frames/m15/crowns/m15CrownUFloating.png",
       "img/frames/m15/crowns/m15CrownWFloating.png",
-      "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png",
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskType.png"
     ],
     "notes": [
       "colourless artifact = CC's 'Artifact Frame' (m15GenericShowcaseFrameA.png) with the 'Artifact Power/Toughness' plate pt/a.png",
       "coloured artifacts = the colour frame, whole (same bytes as m15borderless). 4.16's recipe (artifact frame + border, colour interior) keeps the ARTIFACT frame only where the colour doesn't draw: the frame body and the border. A full-bleed frame has no frame body, and the Border region (bottom bar + fins) of the Artifact frame matches every colour's (premultiplied; measured 2026-09-26). Drawn through the pack's masks it would only add damage: a partial-alpha seam row at 92.76-92.81 % H between the Pinline and Border masks, and the bars' outer bevel (0.13 % of the frame's alpha lies outside the five masks)",
       "legendary crown (TODO 4.6f, wave 2a): CC's FLOATING crown (packM15LegendCrownsFloating.js) baked into a second master per key, <key>-legendary.png, as autoBorderlessFrame draws it — the strip 3.94/2.77/92.14×1.77 % ERASED from the frame (CC's Crown Border Cover with erase: the master's title-bar ring there), the outline at 2.8/1.72/94.4×10.62 % under the crown at 3.07/1.91/93.87×10.24 %, all 1500-native (no resample); the crown letter is the master's (C for the see-through colourless frame, A for the artifact dress, M for gold); the plain masters are untouched",
-      "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
+      "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; under it the same lerp replaces CC's Rules and Type regions (the regular M15 masks), because the gold frame draws its type-bar and box rings one row higher than the colour frames and would leave a 1 px gold line above the box's top and bottom pinline (rows 1302 / 1936 at HD) that no print has; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
       "hybrid pair masters <pair>-h.png (m15borderless only, TODO 4.6f): CC's grey 'Land Frame' L (the grey bars every hybrid borderless print wears — 2X2 #374 / #385, SPG #142 / #144, ECL #292–296; cardFrameProperties's typeTitle 'L' for a hybrid pair) with the same split pinline; their crowned twins <pair>-h-legendary.png; the P/T plate is the pack's 'Colorless Power/Toughness' (plateKeyFor's grey 'c' = pt/l.png), as CC's pt 'C' for an L typeTitle",
       "colourless artifact crown = CC's 'Artifact Legend Crown' (m15CrownAFloating.png) on the artifact frame; the coloured and pair masters are the same bytes as m15borderless's"
     ]

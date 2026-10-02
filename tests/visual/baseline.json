@@ -19,7 +19,7 @@
       "public/fonts/Beleren-Bold.ttf": "00d9238fe4816e91",
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5"
     },
-    "manifest": "79726e107a581420"
+    "manifest": "31dcec5288524e77"
   },
   "cases": {
     "adventure/b/adventure-long": "503740e267c796e7:42614af9",
@@ -467,10 +467,10 @@
     "m15borderless/w/enchantment-short": "6e3551e2252b80b8:12ab62ac",
     "m15borderless/wu/creature-long": "9708b34fa680d016:b1bca466",
     "m15borderless/wu/creature-long@crown": "f78680dc50f5df51:547f7df6",
-    "m15borderless/wu/creature-long@pair-crown": "4a22c0183254c350:43e49737",
+    "m15borderless/wu/creature-long@pair-crown": "51d657235a29a379:43e49737",
     "m15borderless/wu/creature-long@pair-hybrid-crown": "b33ae34ec3b4fdfc:19d03feb",
     "m15borderless/wu/creature-short": "3f910242236cfb73:4d2e3768",
-    "m15borderless/wu/creature-short@pair": "a1ede37cea0ae260:28a4a5dc",
+    "m15borderless/wu/creature-short@pair": "eb03463fcaf4a6cf:28a4a5dc",
     "m15borderless/wu/creature-short@pair-hybrid": "fbd2cc05d69b3ed3:b9f98616",
     "m15borderless/wub/creature-long": "9da2e4a13137e8da:beebbcef",
     "m15borderless/wub/creature-long@crown": "dc42de6344152b13:eaf23d1c",
@@ -492,9 +492,9 @@
     "m15borderlessartifact/w/creature-long": "a8f6e9c5fc9bcd0e:a226a541",
     "m15borderlessartifact/w/creature-short": "bc1d0bf7b13168c4:775e5518",
     "m15borderlessartifact/wu/creature-long": "9708b34fa680d016:6a234ef6",
-    "m15borderlessartifact/wu/creature-long@pair-crown": "4a22c0183254c350:4ec2dede",
+    "m15borderlessartifact/wu/creature-long@pair-crown": "51d657235a29a379:4ec2dede",
     "m15borderlessartifact/wu/creature-short": "3f910242236cfb73:550fcb0d",
-    "m15borderlessartifact/wu/creature-short@pair": "a1ede37cea0ae260:dcd3dd7b",
+    "m15borderlessartifact/wu/creature-short@pair": "eb03463fcaf4a6cf:dcd3dd7b",
     "m15borderlessartifact/wub/creature-long": "9da2e4a13137e8da:f6bc0e85",
     "m15borderlessartifact/wub/creature-long@crown": "dc42de6344152b13:890f15b6",
     "m15borderlessartifact/wub/creature-short": "b39420af7caa1fad:a31500a3",

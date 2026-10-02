@@ -1212,14 +1212,19 @@ card on the two frames bakes byte-identical with the switches absent).
   unlisted pt/c.png for its `pt` C — the same grey tone, medians within 3
   levels); a hybrid artifact falls back to the split, like m15artifact.
   m15borderlessartifact's `m` tick (verified 2026-09-28) has two-colour
-  references: the switch now gives them their split. Known artefact (skeptic
-  2026-10-02): CC's gold M frame draws its type-bar and box rings one row
-  higher than the colour frames, so the SPLIT masters (and their twins) keep
-  a 1 px gold line above the text box's top and bottom pinline (rows 1302
-  and 1936 at HD; the hybrid masters, on the L frame, don't). No print has
-  it; CC's own stack shows the top one. The fix — the Rules and Type regions
-  replaced by the two colour frames — is a re-cut of 20 masters with its own
-  before/after sheet (TODO 4.6f).
+  references: the switch now gives them their split. Under the pinline the
+  split dress first takes CC's Rules and Type regions (the regular M15
+  masks CC's own stack lists for those layers) from the two colour frames,
+  in place of the gold frame's (`replace`): CC's gold M frame draws its
+  type-bar and box rings one row higher than the colour frames, so with the
+  M frame kept whole the split masters (and their twins) kept a 1 px gold
+  line above the text box's top and bottom pinline (rows 1302 and 1936 at
+  HD) that no print has (FDN #344 / #345 go black straight into the
+  pinline; the hybrid masters, on the L frame, never had it — found by the
+  skeptic on 2026-10-02 and re-cut in #449's review follow-up: the 20 split
+  masters per dress differ from the first build in rows 1181–1936 only, the
+  other 124 objects byte-identical). `legendary-masters.test.ts` holds the
+  two rows to the colour frames' pixels.
 - **The pair's crown** is the two floating crowns lerped across
   `PAIR_RAMPS.crownFloating` = 40→60 %W — wider than the standard band's
   45→55: FDN's seven crowned borderless pairs (#343 B|R, #346 W|B, #347 G|U,

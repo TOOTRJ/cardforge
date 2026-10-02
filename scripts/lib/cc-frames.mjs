@@ -558,19 +558,19 @@ export function borderlessLandLayers({ frame, box, pinline }) {
 // pinline ramp (40→60 %W, m15's: the uncrowned FDN pairs #344 / #345
 // measure 42.0–43.4 / 50.2–51.2 / 58.4–59.0 at 10 / 50 / 90 % on both
 // rings) through the pack's own Pinline mask — CC's Pinline / pinlineRight
-// layers, untilted (its maskRightHalf.png tilts +1.35 %W). CC also splits
-// the Rules layer through the regular M15 Rules mask; it is left out, the
-// box being the same dark α128 pixels on every colour. KNOWN ARTEFACT
-// (skeptic 2026-10-02, TODO 4.6f): CC's gold M frame draws its type-bar and
-// box rings ONE ROW HIGHER than the colour frames (and the L frame), so the
-// split masters keep a 1 px line of the M ring's gold (246,210,98) above
-// the masked pinline at the text box's top and bottom edges — rows 1302
-// (1,276 px) and 1936 (1,278 px) at HD; no print has it (FDN #345). CC's
-// own stack shows the first too (its Type layer is the M frame) and covers
-// the second with the Rules layer left out here. Replacing the Rules and
-// Type regions with the two colour frames (`replace`, under the Pinline
-// layer) removes both — a re-cut of the 20 split masters and twins, so the
-// owner's call. The hybrid masters don't have it. A HYBRID cost prints the same split
+// layers, untilted (its maskRightHalf.png tilts +1.35 %W). Under that
+// pinline the split dress first takes CC's Rules and Type regions (the
+// regular M15 masks CC's own stack lists for those layers) from the two
+// colour frames, IN PLACE of the M frame's (`replace`): the box is the same
+// dark α128 pixels on every colour, but CC's gold M frame draws its type-bar
+// and box rings ONE ROW HIGHER than the colour frames (which agree with each
+// other, and with L, pixel for pixel there), so with the M frame kept whole
+// a 1 px line of the M ring's gold (246,210,98) stayed above the masked
+// pinline at the text box's top and bottom edges — rows 1302 (1,276 px) and
+// 1936 (1,278 px) at HD — which no print has (FDN #344 / #345 go black
+// straight into the pinline; skeptic 2026-10-02, fixed in #449's review
+// follow-up: the 20 split masters and twins re-cut, rows 1181–1936 only).
+// The hybrid dress, on the L frame, needs no such layer. A HYBRID cost prints the same split
 // pinline over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 /
 // #144, ECL #292–296: cardFrameProperties's typeTitle 'L' for a hybrid
 // pair), so m15borderless builds a "hybrid" dress too, `<pair>-h`, on the L
@@ -631,9 +631,25 @@ export function borderlessCrownLayers(crown) {
  *  Pinline mask. Keys: `<pair>` and `<pair>-h`. */
 export function borderlessPairLayers(pair, dress = "split") {
   const [a, b] = pair.split("");
+  /** The pair's two frames lerped across the pinline ramp, through `mask`. */
+  const colours = (mask, extra = {}) => ({
+    src: borderlessFrame(a),
+    right: borderlessFrame(b),
+    ramp: [...PAIR_RAMPS.pinline],
+    mask,
+    ...extra,
+  });
   return [
     layer(borderlessFrame(dress === "hybrid" ? "l" : "m")),
-    { src: borderlessFrame(a), right: borderlessFrame(b), ramp: [...PAIR_RAMPS.pinline], mask: BORDERLESS_PINLINE_MASK },
+    // CC's gold M frame draws its type bar and text box ONE ROW HIGHER than
+    // the colour frames (which agree with each other, and with L, pixel for
+    // pixel there): under the masked pinline the M frame's own ring row
+    // would stay — a 1 px gold line above the box's top and bottom pinline
+    // (rows 1302 and 1936). So the gold dress takes CC's Rules and Type
+    // regions from the colour frames, IN PLACE of the M frame's (`replace`:
+    // source-over would double the translucent box). The L frame needs none.
+    ...(dress === "hybrid" ? [] : [colours(REG_RULES_MASK, { replace: true }), colours(REG_TYPE_MASK, { replace: true })]),
+    colours(BORDERLESS_PINLINE_MASK),
   ];
 }
 
@@ -664,7 +680,7 @@ function borderlessMasters(frameOf, crownOf, dresses) {
 }
 const BORDERLESS_ANATOMY_NOTES = [
   "legendary crown (TODO 4.6f, wave 2a): CC's FLOATING crown (packM15LegendCrownsFloating.js) baked into a second master per key, <key>-legendary.png, as autoBorderlessFrame draws it — the strip 3.94/2.77/92.14×1.77 % ERASED from the frame (CC's Crown Border Cover with erase: the master's title-bar ring there), the outline at 2.8/1.72/94.4×10.62 % under the crown at 3.07/1.91/93.87×10.24 %, all 1500-native (no resample); the crown letter is the master's (C for the see-through colourless frame, A for the artifact dress, M for gold); the plain masters are untouched",
-  "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
+  "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; under it the same lerp replaces CC's Rules and Type regions (the regular M15 masks), because the gold frame draws its type-bar and box rings one row higher than the colour frames and would leave a 1 px gold line above the box's top and bottom pinline (rows 1302 / 1936 at HD) that no print has; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
   "hybrid pair masters <pair>-h.png (m15borderless only, TODO 4.6f): CC's grey 'Land Frame' L (the grey bars every hybrid borderless print wears — 2X2 #374 / #385, SPG #142 / #144, ECL #292–296; cardFrameProperties's typeTitle 'L' for a hybrid pair) with the same split pinline; their crowned twins <pair>-h-legendary.png; the P/T plate is the pack's 'Colorless Power/Toughness' (plateKeyFor's grey 'c' = pt/l.png), as CC's pt 'C' for an L typeTitle",
 ];
 
