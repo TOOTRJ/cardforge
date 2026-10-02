@@ -264,6 +264,19 @@ describe("registry facts for the admin page", () => {
     expect(signatureBlockedBy("borderless/standard+crown")).toBe("4.6f");
     expect(signatureBlockedBy("era/2015")).toBeNull();
     expect(signatureBlockedBy("made/up")).toBeNull();
+    // The layout frames' two-colour gap follows the frame the row landed on:
+    // split and aftermath print each part in its own colour (4.26), the
+    // other layout frames wait on the two-colour dress (4.6f); no template,
+    // the dress (TODO 4.21a follow-up, 2026-10-02: the registry's
+    // aftermath/m note and the signature now name the same item).
+    expect(signatureBlockedBy("layout/2015+two-colour", "aftermath")).toBe("4.26");
+    expect(signatureBlockedBy("layout/2015+two-colour", "split")).toBe("4.26");
+    expect(signatureBlockedBy("layout/2015+two-colour-hybrid", "aftermath")).toBe("4.26");
+    expect(signatureBlockedBy("layout/2015+two-colour", "saga")).toBe("4.6f");
+    expect(signatureBlockedBy("layout/2015+two-colour", "adventure")).toBe("4.6f");
+    expect(signatureBlockedBy("layout/2015+two-colour", null)).toBe("4.6f");
+    expect(signatureBlockedBy("layout/2015+two-colour", "not-a-template")).toBe("4.6f");
+    expect(signatureBlockedBy("layout/2015+crown", "aftermath")).toBe("4.6f");
   });
 
   it("links a printing on Scryfall", () => {

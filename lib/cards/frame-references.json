@@ -2301,21 +2301,9 @@
         }
       ],
       "c": null,
-      "m": [
-        {
-          "name": "Driven // Despair",
-          "set": "hou",
-          "scryfallId": "7713ba59-dd4c-4b49-93a7-292728df86b8",
-          "curated": true
-        },
-        {
-          "name": "Reason // Believe",
-          "set": "hou",
-          "scryfallId": "1ca644e3-4fb3-4d38-b714-e3d7459bd8b9"
-        }
-      ]
+      "m": null
     },
-    "note": "aftermath/m needs TODO 4.26 (per-half colour): no gold // gold aftermath was ever printed — every two-colour one is mono // mono (Driven // Despair g|b, Reason // Believe u|g), so its references are stand-ins and the combo stays unverified until 4.26 or a print (owner decision 2026-09-29). aftermath/c has no printing: CC’s artifact frame is a render stand-in, never offered."
+    "note": "aftermath/m needs TODO 4.26 (per-part colour): no gold // gold aftermath was ever printed — every two-colour one is mono // mono (HOU #157 Driven // Despair g|b, HOU #154 Reason // Believe u|g), which import as the nearest frame blocked by 4.26 (the signature registry says the same). It has NO reference: the two HOU prints stood in here until 2026-10-02, and a template’s Publish ticks every colour with a reference, so they were dropped (TODO 4.21a follow-up); the combo stays unverified until 4.26 or a print (owner decision 2026-09-29). aftermath/c has no printing: CC’s artifact frame is a render stand-in, never offered."
   },
   "flip": {
     "note": "Two M15-frame flip printings exist, both 2015-frame reprints of Champions of Kamigawa cards: C18 #134 Budoka Gardener (green) and CM2 #71 Nezumi Graverobber (black) — the references for flip/g and flip/b (TODO 4.21a; every other printed flip is a 2003-frame Kamigawa card, listed as sample content with the era warning). flip/c (CC’s see-through colourless frame) and flip/m have no printing and stay unverified until one appears (owner decision 2026-09-29).",

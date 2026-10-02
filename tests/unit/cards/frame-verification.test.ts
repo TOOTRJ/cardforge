@@ -53,6 +53,9 @@ describe("frame reference registry", () => {
       "flip/c",
       "flip/m",
       "aftermath/c",
+      // No gold // gold aftermath exists (TODO 4.26's per-part colour): its
+      // HOU stand-ins left the registry with layout v39 (4.21a follow-up).
+      "aftermath/m",
       "m15tokenartifact/g",
       // 4.49 (b)'s text-box arch artifact token: blue (TC16 #9, TC18 #8)
       // and colourless only.
