@@ -984,12 +984,15 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
 
 - **Flip** sat 30–80 px low from the title bar down (the only M15-frame
   flips, C18 #134 Budoka Gardener and CM2 #71 Nezumi Graverobber: title bar
-  71–177 px against ours at 105–215, the window 623–1317 against 648–1393,
+  71–177 px against ours at 105–215, the window 626–1308 against 648–1393,
   the upside-down type bar 1338–1444 against 1417–1518). Every rect is
   packFlip.js's; the art slot the masters' window + 0.1 %
   (7.57/29.57/84.87 × 33.25 — 115–1385 × 623–1317 px on every colour); the
   top name and type line on the prints' baselines (dy −9.2 / −4.9 px, the
-  pips on the name's capitals, costDy −9.6 px); the upside-down bars placed
+  pips on the name's capitals, costDy −9.6 px, and ending where the prints'
+  do: the title rect runs to 92.5 %W — the last disc's edge is 1387 px on
+  C18 #134 and 1388.5 on CM2 #71; the pack right-aligns its mana box at
+  92.92 %W, its title box ends at 91.46); the upside-down bars placed
   where the prints centre their text (a second face takes no dy); the set
   symbol in CC's box (right edge 78.4 %W, centred 26.0 %H), left of the
   plate. **The P/T plates** (owner 2026-09-29: a CORRECTION — every printed
@@ -1008,7 +1011,17 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
   the art under it from the border's inner edge (`UNDER_FRAME_RECT`, 4.17a),
   the window's crop meeting it on the pinline. No crown. The artist credit
   on M15's footer line (3.8's slice; the prints' second border line centres
-  at 2019–2020 px).
+  at 2019–2020 px). **Where the master itself leaves the prints:** CC drew
+  the bottom half as the top half turned, and the cards are not that
+  symmetric — on both prints the window ends 9 px higher (the art's edge
+  626.5–1308 px against the masters' 623–1317; the frame's inner line
+  centred 621 / 1312.5 against 620.5 / 1318.5) and the upside-down type bar
+  sits 5 px higher (1339–1444 against 1344–1449), while the upside-down
+  name bar agrees (1761–1865 / 1758–1864); the top name bar's interior is
+  3.5 px low (75–181 against 72–177). The upside-down type line is set on
+  the prints' baseline, so it rides 5 px nearer its bar's art-side edge
+  than printed. No profile number moves a master: closing these is a re-cut
+  in the importer (as the tokens' `recut`), the owner's call.
 - **Adventure** was within 3–10 px on a softer, re-drawn master whose
   window ran 10 / 6 px narrow. The CC master is M15's bars with the
   storybook; the art slot is PINNED at its masters' window + 0.1 %
@@ -1032,7 +1045,11 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
   (7.57/11.19/84.87 × 22.44; the sideways one's pre-rotation box
   44.63/63.62/49.41 × 20.33); the set symbol in CC's box (right 92.13 %W,
   centred 37.1 %H); the artist credit on M15's footer line. The text slots
-  stay as print-matched in 0.22 / v32. Colourless = CC's artifact frame as
+  stay as print-matched in 0.22 / v32 — the name and type line, that is:
+  the top half's cost was never set on the prints and still ends 27 px left
+  of theirs and 8 px low (its last disc's edge 1357.5 px against AKH's 1384,
+  the discs centred 167 px against 159; the same on the MSE master, so no
+  part of this bump — a follow-up correction). Colourless = CC's artifact frame as
   a render stand-in, never offered; `aftermath/m` is flagged in the
   registry: no gold // gold aftermath was printed (every two-colour one is
   mono // mono, TODO 4.26's per-half colour), so it stays unverified.

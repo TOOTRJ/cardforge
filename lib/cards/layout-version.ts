@@ -684,11 +684,17 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            * flip sat 30–80 px low from the title bar down against C18
 //              #134 Budoka Gardener and CM2 #71 Nezumi Graverobber (the
 //              only M15-frame flips): the title bar 105–215 px against the
-//              prints' 71–177, the window 648–1393 against 623–1317, the
+//              prints' 71–177, the window 648–1393 against 626–1308, the
 //              upside-down type bar 1417–1518 against 1338–1444. Every rect
 //              is packFlip.js's; the art slot the masters' window + 0.1 %
-//              (7.57/29.57/84.87 × 33.25); the top name's and type line's
-//              dy and the pips onto the prints (−9.2 / −4.9 / −9.6 px), the
+//              (7.57/29.57/84.87 × 33.25 — CC's window, 623–1317: it drew
+//              the bottom half as the top half turned, so its window ends
+//              9 px below the prints' and its upside-down type bar sits
+//              5 px below theirs, the master's own geometry); the top
+//              name's and type line's dy and the pips onto the prints
+//              (−9.2 / −4.9 / −9.6 px; the cost ending at 92.5 %W, the
+//              prints' last disc at 1387 / 1388.5 px — the pack's mana box,
+//              not its title box's 91.46), the
 //              upside-down bars where the prints' text centres; the set
 //              symbol in CC's box (right 78.4 %W, centred 26.0 %H). The P/T
 //              plates (a CORRECTION — every printed M15 flip creature has one

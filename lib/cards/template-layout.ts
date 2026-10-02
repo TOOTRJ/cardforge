@@ -2635,11 +2635,16 @@ const ADVENTURE: FrameProfile = {
 // Layout v38 (TODO 4.21a): Card Conjurer's 'Flip' master (the frames
 // bucket, scripts/lib/cc-frames.mjs), replacing the 375 px MSE composite
 // that sat 30–80 px low from the title bar down (its window 648–1393 px
-// against the prints' 623–1317). Every rect is packFlip.js's, in percent of
+// against the prints' 626–1308). Every rect is packFlip.js's, in percent of
 // the 1500×2100 card (a rotation-180 box spans x − w … x, y − h … y):
 //   • art 7.57/29.57/84.87 × 33.25 — the masters' window 115–1385 ×
 //     623–1317 px on every colour with 1.45 / 1.6 / 2.0 / 2.25 px to spare
-//     (7.6's 0.05 %);
+//     (7.6's 0.05 %). CC drew the bottom half as the top half turned: the
+//     prints' window ends 9 px higher (C18 #134 and CM2 #71: the art's edge
+//     626.5–1308 px, the frame's inner line centred 621 / 1312.5 against the
+//     masters' 620.5 / 1318.5) and their upside-down type bar 5 px higher
+//     (1339–1444 against 1344–1449) — the master's own geometry, which a
+//     profile cannot move (a re-cut of the master would; TODO 4.21a note);
 //   • the top name bar 3.86–9.29 %H and type bar 23.53–28.96, the text box
 //     10.2–22.2; the bottom name bar 83.05–88.48, type bar 63.43–68.86, text
 //     box 70.1–82.1; the set symbol's box ends at 78.4 %W, centred on
@@ -2664,8 +2669,13 @@ const ADVENTURE: FrameProfile = {
 // the two scans agree within 3–5 px, the mean taken): the top name's
 // baseline 155.5 px where CC's box centres ours at 164.7 (dy −9.2 px), the
 // top type line's 569 against 573.9 (−4.9 px); the pips centred on the
-// name's capitals (128.5 px: costDy −9.6 px from CC's box centre). The
-// upside-down half ignores dy (a second face centres its text), so its bars
+// name's capitals (128.5 px: costDy −9.6 px from CC's box centre) and ending
+// where the prints' do: the last disc's right edge is 1387 px on C18 #134
+// and 1388.5 on CM2 #71 — packFlip.js right-aligns its MANA box at 92.92 %W,
+// not at its title box's 91.46 (1372 px) — so the title rect, which carries
+// the cost at its right end, runs to 92.5 %W (1387.5 px; M15's to 92.2, its
+// ELD prints' discs ending 3–5 px further right). The upside-down
+// half ignores dy (a second face centres its text), so its bars
 // are placed where the prints' text centres: the type line's baseline
 // 1370.5 px and the name's 1783.5 (in card space, the text reading up from
 // them), 4 px and 9 px below CC's box centres. Sizes are the family's on
@@ -2687,7 +2697,9 @@ const FLIP: FrameProfile = {
   setSymbolFit: "ink",
   symbolRect: { topPct: 23.95, leftPct: 66.4, widthPct: 12, heightPct: 4.1 },
   title: {
-    rect: { topPct: 3.86, leftPct: 8.54, widthPct: 82.92, heightPct: 5.43 },
+    // CC's title box from its left edge (8.54) to where the prints' cost
+    // ends (92.5 %W — the pack's mana box, not its 91.46 title box).
+    rect: { topPct: 3.86, leftPct: 8.54, widthPct: 83.96, heightPct: 5.43 },
     sizePct: TITLE_SIZE_PCT,
     dy: -9.2 / 1500,
     fit: "measured",
@@ -2865,8 +2877,8 @@ const SPLIT: FrameProfile = {
 // clockwise, so copying it as rotate(270°) turned the half the wrong way,
 // TODO 0.22.) The bottom slots are WIDE boxes centered on the rotated bars —
 // rotate(90°) around each center lands it on the vertical bar (the box may
-// extend off-card before rotation, which is fine). Frame stacked by
-// scripts/build-aftermath-frame.mjs.
+// extend off-card before rotation, which is fine). The master is Card
+// Conjurer's (layout v38, below); the MSE stack's builder is retired.
 //
 // Both halves print their text at ONE set of sizes (AFTERMATH_TEXT), like the
 // printed cards and Card Conjurer (title/title2, type/type2, rules/rules2 and

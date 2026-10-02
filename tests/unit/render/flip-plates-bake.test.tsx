@@ -170,6 +170,77 @@ describe("flip's P/T plates — real bakes", () => {
     expect(share(r2, boxOf(BOTTOM.plateRect!, r2), isCyan, 2)).toBeGreaterThan(0.6);
   }, 120_000);
 
+  // Where the prints put their digits (C18 #134 and CM2 #71, Scryfall PNGs at
+  // 1500 × 2100 — the test card carries C18's values, 2/1 and 3/3): the top
+  // digits' ink centres on (1311, 549.5) px, the upside-down ones on
+  // (188.5 / 194, 1386.5). The plate tests above only ask that SOME ink lies
+  // in the value's rect — a value 15 px off its print passed them — so the
+  // centre is pinned here: the top value carries the front's lift
+  // (valueDyEm), the bottom one none (a nudge moves a turned value the other
+  // way in card space).
+  it.each(["hd", "default"] as const)("prints each half's digits on the prints' digits, at %s", async (preset) => {
+    const r = await bake(card(), preset);
+    const k = r.w / 1500;
+    const inkCentre = (slot: typeof TOP) => {
+      const rect = boxOf(slot.rect, r);
+      // The value's rect, clear of the stand-in plate's corner mark.
+      const mark = fifth(boxOf(slot.plateRect!, r), "tl");
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      let y0 = Infinity;
+      let y1 = -Infinity;
+      for (let y = Math.ceil(rect.y0); y < Math.floor(rect.y1); y += 1) {
+        for (let x = Math.ceil(Math.max(rect.x0, mark.x1 + 2)); x < Math.floor(rect.x1); x += 1) {
+          if (!isDark(px(r, x, y))) continue;
+          x0 = Math.min(x0, x);
+          x1 = Math.max(x1, x);
+          y0 = Math.min(y0, y);
+          y1 = Math.max(y1, y);
+        }
+      }
+      expect(Number.isFinite(x0), "digits found").toBe(true);
+      // In HD px, whatever the bake's size.
+      return { x: (x0 + x1 + 1) / 2 / k, y: (y0 + y1 + 1) / 2 / k };
+    };
+    const top = inkCentre(TOP);
+    expect(Math.abs(top.x - 1311), `top digits' centre x ${top.x}`).toBeLessThanOrEqual(2);
+    expect(Math.abs(top.y - 549.5), `top digits' centre y ${top.y}`).toBeLessThanOrEqual(2);
+    const bottom = inkCentre(BOTTOM);
+    expect(Math.abs(bottom.x - 191), `bottom digits' centre x ${bottom.x}`).toBeLessThanOrEqual(3.5);
+    expect(Math.abs(bottom.y - 1386.5), `bottom digits' centre y ${bottom.y}`).toBeLessThanOrEqual(2.5);
+    // The profile says so: the front's lift on the top plate only.
+    expect(TOP.valueDyEm).toBe(-0.04);
+    expect(BOTTOM.valueDyEm).toBe(0);
+  }, 120_000);
+
+  // The prints' cost: the last disc's right edge is 1387 px on C18 #134 and
+  // 1388.5 on CM2 #71 (Scryfall PNGs at 1500 × 2100, the disc's colour
+  // against the bar's at half level). packFlip.js right-aligns its MANA box
+  // at 92.92 %W — its title box ends at 91.46 — so the title rect, which
+  // carries the cost at its right end, runs to 92.5 %W. On the flat grey
+  // master the name and the pips are the only marks in the title's rows.
+  it.each(["hd", "default"] as const)("ends the cost where the prints' pips end, at %s", async (preset) => {
+    const r = await bake(card(), preset);
+    const k = r.w / 1500;
+    const title = boxOf(flip.title.rect, r);
+    let last = -1;
+    for (let y = Math.ceil(title.y0 + 8 * k); y < Math.floor(title.y1 - 8 * k); y += 1) {
+      for (let x = r.w - 1; x > last; x -= 1) {
+        const c = px(r, x, y);
+        if (Math.abs(c[0] - 128) + Math.abs(c[1] - 128) + Math.abs(c[2] - 128) > 60) {
+          last = x;
+          break;
+        }
+      }
+    }
+    const edge = (last + 1) / k;
+    expect(flip.title.rect.leftPct).toBe(8.54);
+    expect(flip.title.rect.leftPct + flip.title.rect.widthPct).toBeCloseTo(92.5, 6);
+    expect(Math.abs(edge - 1387.5), `the cost's right edge ${edge}`).toBeLessThanOrEqual(preset === "hd" ? 2 : 3);
+    // …where the title box alone (91.46 %W, 1372 px) left it 16 px short.
+    expect(edge).toBeGreaterThan(1380);
+  }, 120_000);
+
   it("preloads exactly the plates it draws (frameAssetPathsFor), and the bake fetched them", () => {
     expect(frameAssetPathsFor(card())).toEqual(["/frames/flip/pt/g-top.png", "/frames/flip/pt/g-bottom.png"]);
     expect(frameAssetPathsFor(card({ power: null, toughness: null }))).toEqual(["/frames/flip/pt/g-bottom.png"]);

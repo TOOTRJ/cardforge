@@ -81,6 +81,20 @@ describe("the preview draws the bake's flip plates", () => {
     expect(platesOf(noTop.container).some((img) => (img.getAttribute("src") ?? "").includes("flip/pt/g-top."))).toBe(false);
   });
 
+  it("carries the cost to the prints' pip edge: the title band is the bake's rect (8.54 → 92.5 %W)", () => {
+    // The bake's twin (flip-plates-bake.test.tsx measures the last disc's
+    // edge on a real bake): the band that lays out the name and its cost.
+    const { getByText } = render(<CardPreview {...card()} />);
+    const band = getByText("Budoka Gardener").closest<HTMLElement>(`[style*='width: ${flip.title.rect.widthPct}%']`);
+    expect(band).not.toBeNull();
+    expect(parseFloat(band!.style.left)).toBeCloseTo(flip.title.rect.leftPct, 6);
+    expect(parseFloat(band!.style.left) + parseFloat(band!.style.width)).toBeCloseTo(92.5, 6);
+    // The cost is that band's LAST child, pushed to its right end (the band
+    // spaces the name and the cost apart): its pips end where the rect does.
+    expect(band!.style.justifyContent).toBe("space-between");
+    expect(band!.lastElementChild?.getAttribute("aria-label")).toBe("Cost {1}{G}");
+  });
+
   it("follows the card's plate key: a colourless flip draws the pack's colourless plates", () => {
     const { container } = render(<CardPreview {...card({ colorIdentity: ["colorless"], cost: "{3}" })} />);
     const plate = container.querySelector<HTMLImageElement>("[data-testid='second-face-plate']");
