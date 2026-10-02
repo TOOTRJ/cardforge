@@ -1,19 +1,28 @@
 import sharp from "sharp";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
 import { measuredLinePx, secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 import { displayRunPx } from "@/lib/render/satori-text";
+import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
 // A `fitLines` second face's shrunk name on a REAL bake (layout v32): set at
 // measuredLinePx — the whole pixel BELOW its fit, as the front's name — not
 // rounded up (a fit of 26.6 px drew at 27 and ran the line past its fit).
-// Flip's upside-down creature; its MSE master is read from public/frames. The
-// second face's name is recoloured pure magenta (colour only), so its ink is
-// the only magenta on the card.
+// Flip's upside-down creature; its Card Conjurer master lives in the frames
+// bucket (layout v38), so the bake is served a flat stand-in master and
+// plates (tests/stubs/stand-in-frames.ts). The second face's name is
+// recoloured pure magenta (colour only), so its ink is the only magenta on
+// the card.
 // ---------------------------------------------------------------------------
+
+let frames: StandInFrames;
+beforeAll(async () => {
+  frames = await serveStandInFrames([{ template: "flip", keys: ["r"] }]);
+}, 60_000);
+afterAll(() => frames.restore());
 
 vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/cards/template-layout")>();

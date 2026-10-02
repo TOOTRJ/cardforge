@@ -426,6 +426,91 @@ const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["m15pw", "c"],
   ["nyx", "w"],
   ["fullart", "g"],
+  // The see-through flip/c (layout v38, TODO 4.21a): no under-frame layer
+  // without art, the empty-art box in the window.
+  ["flip", "c"],
+];
+/** The portrait layouts (TODO 4.21a, layout v38), pinned as they draw now
+ *  — new cases, a regenerated baseline: a flip whose bottom half has NO P/T
+ *  (its plate stays off — the top's is drawn), dense flip halves (both
+ *  boxes down the ladder), an adventure with a LONG page (and a long right
+ *  page), a long aftermath on both halves. */
+const DENSE_RULES =
+  "Flying, first strike, vigilance, trample, haste\nWhenever this creature attacks, each opponent sacrifices a creature. If they can't, they lose 3 life and you draw a card.\n{2}{R}, {T}: It deals 2 damage to any target. Activate only during your turn.";
+const LAYOUT_CASES: readonly [FrameTemplate, CardKind, VisualColour, VisualShape, string, Partial<CardRowForBake>][] = [
+  [
+    "flip",
+    "flip",
+    "r",
+    "short",
+    "@nopt",
+    {
+      back_face: {
+        title: "Tok-Tok's Essence",
+        cost: "",
+        card_type: "enchantment",
+        subtypes: [],
+        rules_text: "Red creatures you control get +1/+1 and have haste.",
+      },
+    },
+  ],
+  [
+    "flip",
+    "flip",
+    "b",
+    "long",
+    "@dense",
+    {
+      rules_text: DENSE_RULES,
+      back_face: {
+        title: "Nighteyes the Desecrator of the Unending Night",
+        cost: "",
+        card_type: "creature",
+        supertype: "Legendary",
+        subtypes: ["Rat", "Wizard", "Horror"],
+        power: "4",
+        toughness: "2",
+        rules_text: DENSE_RULES,
+      },
+    },
+  ],
+  [
+    "adventure",
+    "adventure",
+    "g",
+    "long",
+    "@longpage",
+    {
+      rules_text: DENSE_RULES,
+      back_face: {
+        title: "Heart's Desire of the Wandering Court",
+        cost: "{1}{G}{G}",
+        card_type: "sorcery",
+        subtypes: ["Adventure"],
+        rules_text:
+          "Create a 1/1 green Human creature token. Then you may search your library for a creature card, reveal it, put it into your hand, then shuffle. (Then exile this card. You may cast the creature later from exile.)",
+      },
+    },
+  ],
+  [
+    "aftermath",
+    "aftermath",
+    "b",
+    "long",
+    "@dense",
+    {
+      rules_text: DENSE_RULES,
+      back_face: {
+        title: "Return of the Unending Night",
+        cost: "{3}{B}",
+        card_type: "sorcery",
+        subtypes: [],
+        rules_text:
+          "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nReturn target creature card from your graveyard to the battlefield. It gains haste until end of turn. Sacrifice it at the beginning of the next end step.",
+        art_url: "ART2",
+      },
+    },
+  ],
 ];
 /** No ability text on a borderless walker (TODO 4.33, owner round 15): its
  *  see-through window shows the light first stripe, never the bare art. */
@@ -598,6 +683,7 @@ export function visualCases(): VisualCase[] {
     add(template, primary, colour, "short", { suffix: "@notext", noText: true });
   }
   for (const [template, kind, colour, suffix, row] of KIND_ANATOMY_CASES) add(template, kind, colour, "short", { suffix, row });
+  for (const [template, kind, colour, shape, suffix, row] of LAYOUT_CASES) add(template, kind, colour, shape, { suffix, row });
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });

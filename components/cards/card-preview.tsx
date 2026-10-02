@@ -1444,6 +1444,8 @@ function CardFace({
           data={secondFace}
           aspect={aspect}
           rules={secondFaceRules}
+          plateKey={plateKey}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-pt2` }}
           pipOverrides={pipOverrides}
         />
       ) : null}
@@ -2182,6 +2184,8 @@ function SecondFacePanel({
   data,
   aspect,
   rules,
+  plateKey,
+  foil = null,
   pipOverrides = null,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
@@ -2190,6 +2194,10 @@ function SecondFacePanel({
   /** The face's rules layout, in its own unturned frame
    *  (lib/cards/rules-box.ts secondFaceRulesLayout). */
   rules: RulesLayout | null;
+  /** The card's plate key (plateKeyFor) — picks the face's P/T plate. */
+  plateKey: string;
+  /** Foil finish: the plate gets the card's sheen too (StatOverlay's twin). */
+  foil?: { id: string; landscape: boolean } | null;
   pipOverrides?: PipOverrides | null;
 }) {
   const rot = `rotate(${slot.rotation}deg)`;
@@ -2271,6 +2279,37 @@ function SecondFacePanel({
           rotation={slot.rotation}
         />
       ) : null}
+      {/* The face's P/T plate (flip, layout v38): drawn at its own box
+          UNTURNED — the bottom plate is upside-down in the source, as the
+          printed card shows it — under the value, which turns with the face.
+          Only when the half has a P/T (showPT), as on M15. The bake's
+          SecondFaceBake twin. */}
+      {showPT && slot.pt?.plateAssetPathTemplate && slot.pt.plateRect ? (
+        <>
+          <picture>
+            <source srcSet={frameUrl(webpVariant(resolveColorAsset(slot.pt.plateAssetPathTemplate, plateKey)))} type="image/webp" />
+            <img
+              src={frameUrl(resolveColorAsset(slot.pt.plateAssetPathTemplate, plateKey))}
+              alt=""
+              aria-hidden
+              data-testid="second-face-plate"
+              className="pointer-events-none absolute object-fill"
+              style={{ ...rectStyle(slot.pt.plateRect), zIndex: 21 }}
+            />
+          </picture>
+          {foil ? (
+            <FoilSheen
+              id={foil.id}
+              frameHref={frameUrl(webpVariant(resolveColorAsset(slot.pt.plateAssetPathTemplate, plateKey)))}
+              region={slot.pt.plateRect}
+              landscape={foil.landscape}
+              width="100%"
+              height="100%"
+              style={{ ...rectStyle(slot.pt.plateRect), zIndex: 21, pointerEvents: "none" }}
+            />
+          ) : null}
+        </>
+      ) : null}
       {showPT && slot.pt ? (
         <div
           style={{
@@ -2297,7 +2336,19 @@ function SecondFacePanel({
             ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
           }}
         >
-          {ptValue(data.power, data.toughness)}
+          {/* The same nudge as the front's StatOverlay (valueDxEm /
+              valueDyEm), on the value's own span inside the turned box, so
+              it moves in the value's frame — the bake's twin. */}
+          <span
+            className="relative"
+            style={
+              slot.pt.valueDxEm || slot.pt.valueDyEm
+                ? { transform: `translate(${slot.pt.valueDxEm ?? 0}em, ${slot.pt.valueDyEm ?? 0}em)` }
+                : undefined
+            }
+          >
+            {ptValue(data.power, data.toughness)}
+          </span>
         </div>
       ) : null}
     </>

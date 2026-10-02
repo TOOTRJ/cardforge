@@ -2,6 +2,202 @@
   "version": 1,
   "bucket": "frames",
   "files": {
+    "adventure/b.png": {
+      "hash": "316327a82421",
+      "sha256": "316327a8242125f2ba672f48f5c4269f52659ff752634e6f020f2d752c1c7f2c",
+      "bytes": 2106353,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/b.webp": {
+      "hash": "8aa122c4981b",
+      "sha256": "8aa122c4981bd38f6c7f9366ec8e2a56ab15bf4133d81b879a9645854c2f743a",
+      "bytes": 75282,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/c.png": {
+      "hash": "8a92af9381eb",
+      "sha256": "8a92af9381eb8b50a3658d061b16b6d9d182cdca026033f67fa8e11ce5af67e9",
+      "bytes": 1877645,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/c.webp": {
+      "hash": "7c342b5e233c",
+      "sha256": "7c342b5e233cd8c9c5c6650f91752d576ab25f41f3b5dc987ced9b8a1e8150e2",
+      "bytes": 61156,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/g.png": {
+      "hash": "57ddcb2bf82f",
+      "sha256": "57ddcb2bf82f14070b3370bbfc65a3fa742f8c82b2bb10b6de775b2b1cf66398",
+      "bytes": 2247008,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/g.webp": {
+      "hash": "aceb1efa6ee5",
+      "sha256": "aceb1efa6ee59584fc25e13a1e15e9be16a85c3bd1fda9f49242232c83aaf223",
+      "bytes": 88166,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/m.png": {
+      "hash": "fca06e0cbbfb",
+      "sha256": "fca06e0cbbfb214a9a3fcca193dfce6bcda1216275e1092ff446dd8ab963f75a",
+      "bytes": 2245525,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/m.webp": {
+      "hash": "da26643c32b2",
+      "sha256": "da26643c32b2d0094055fe0f9fd798d698bc22ede5efe3d512134764065c51b5",
+      "bytes": 89008,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/r.png": {
+      "hash": "928b2581eb2e",
+      "sha256": "928b2581eb2e3a82788c83aa665a69aa4a0c722d21c895ac62272452e6a3bdea",
+      "bytes": 2231107,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/r.webp": {
+      "hash": "1bdeb7d7325c",
+      "sha256": "1bdeb7d7325cf21af2afda19fd6c69e3a625a9d0c21b5dd8524574468075918b",
+      "bytes": 109996,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/u.png": {
+      "hash": "be5edb0537d4",
+      "sha256": "be5edb0537d4b3fc5a10d3533dca2e61f8279071826c5b60e0cd2e58cba0d8c4",
+      "bytes": 1727937,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/u.webp": {
+      "hash": "c107bed9be13",
+      "sha256": "c107bed9be1301af0d029c24286328d78423d7999495912a00c75e3925dc3b11",
+      "bytes": 50708,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/w.png": {
+      "hash": "ac04d30174d9",
+      "sha256": "ac04d30174d97126e1d3c99d51b081eb6c1762393271711dd6f69c4a71f243da",
+      "bytes": 1889484,
+      "width": 1500,
+      "height": 2100
+    },
+    "adventure/w.webp": {
+      "hash": "2db9cd81c5ce",
+      "sha256": "2db9cd81c5ce456b07be9cc0b49c2e8d0c48f0a95696c4f1cce78b931a75a4ef",
+      "bytes": 51880,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/b.png": {
+      "hash": "63a05504d7d0",
+      "sha256": "63a05504d7d0cb53e66956239f2546403a491513661961d54de4c207ae0cccff",
+      "bytes": 2475479,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/b.webp": {
+      "hash": "9a7405a00b5b",
+      "sha256": "9a7405a00b5bc1a3630c0854fb933bd7f40e3febb6c5d7deb95d7efb6b97357a",
+      "bytes": 86980,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/c.png": {
+      "hash": "cd99c5452f39",
+      "sha256": "cd99c5452f39fadadffc73c58df40b9c4c819a3ccefb26a62feb1f9aad957fa6",
+      "bytes": 2441179,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/c.webp": {
+      "hash": "890a2c2ee381",
+      "sha256": "890a2c2ee38186cf82a3d111d96db4df7b74a481024fb9b1a1e95cd0516a1dd2",
+      "bytes": 95864,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/g.png": {
+      "hash": "a22b20db9624",
+      "sha256": "a22b20db9624c9eee45e033d13ac8991620c96f7cc6542f915473dbe75ee8b0c",
+      "bytes": 2503216,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/g.webp": {
+      "hash": "a2abbc0c5174",
+      "sha256": "a2abbc0c517434e4de92917a98b492d178cd8ded49961a6ffe74752c48ac3c84",
+      "bytes": 92242,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/m.png": {
+      "hash": "da1709087e3d",
+      "sha256": "da1709087e3ded4744e022e4b2949e2c9af254a9e44ffb16a22e9aca8df83b5a",
+      "bytes": 2268491,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/m.webp": {
+      "hash": "77f0bb85c869",
+      "sha256": "77f0bb85c869ba72e1780530ca55b60ced17b648e0f6b7f667b95233d622eb55",
+      "bytes": 83424,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/r.png": {
+      "hash": "57a52b8e3185",
+      "sha256": "57a52b8e318546e6752918660669db6e7798e05238d79f9de4a95ba67c3fbc56",
+      "bytes": 2563232,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/r.webp": {
+      "hash": "fae594b33c2e",
+      "sha256": "fae594b33c2efc1c490fd7f94c17898eaf5b5e573e71919862087d526b0a09fe",
+      "bytes": 129922,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/u.png": {
+      "hash": "3bc44bbb0ce7",
+      "sha256": "3bc44bbb0ce72aad80612f76c59fb2629d400769d3cbc712c469e89e11488681",
+      "bytes": 1744277,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/u.webp": {
+      "hash": "0e5522c37996",
+      "sha256": "0e5522c37996fe6dafdba1b8eb7ae3fe3058e216c5ed77e141d8512e15fec272",
+      "bytes": 58908,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/w.png": {
+      "hash": "3ae7388a66c6",
+      "sha256": "3ae7388a66c64bdb145ff278ff37abcf2ce2e1b1a1c2c2daca2bc6fdc59888ee",
+      "bytes": 1846178,
+      "width": 1500,
+      "height": 2100
+    },
+    "aftermath/w.webp": {
+      "hash": "08e5f2343f72",
+      "sha256": "08e5f2343f72af510766496c5c1b5f978cf81acafa5cb5649fe2d0f56c4cc1ab",
+      "bytes": 58608,
+      "width": 1500,
+      "height": 2100
+    },
     "emblem/b.png": {
       "hash": "2adb45cd9c81",
       "sha256": "2adb45cd9c81e8e31e90639301fb988c029c34faf7d3a491237411d6438c2937",
@@ -97,6 +293,300 @@
       "hash": "c321bca7bab4",
       "sha256": "c321bca7bab44f9f830c404370a9b3f0b89a03c5e3ce141426facd25f96e32fa",
       "bytes": 71060,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/b.png": {
+      "hash": "99903ad6e7e3",
+      "sha256": "99903ad6e7e3bfd9f86681893efe6ba640c67f158f6215de0f37163121e80d8a",
+      "bytes": 2427616,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/b.webp": {
+      "hash": "ad1a9a40562b",
+      "sha256": "ad1a9a40562b3049a1e5543479ecc6677263dfde078ebd897957674ae6198f7c",
+      "bytes": 101712,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/c.png": {
+      "hash": "60b17f015d9a",
+      "sha256": "60b17f015d9a59a08a21541b7315197e9ed41a9c3e18d1e1e7db09d81f96987d",
+      "bytes": 1214645,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/c.webp": {
+      "hash": "b844c14e38d6",
+      "sha256": "b844c14e38d62640c72d233c017eeb0e18e6fe251158b2fbe15b854f967cdab7",
+      "bytes": 65656,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/g.png": {
+      "hash": "ddedabd6c92a",
+      "sha256": "ddedabd6c92a59bb378b687d940ca2daef43328442a281bcc4e78a2501c6a065",
+      "bytes": 2396512,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/g.webp": {
+      "hash": "fc0410d2e9db",
+      "sha256": "fc0410d2e9db2a2af9a9051efb54fc034afb05ab9e3530187a2cfd29378f7748",
+      "bytes": 96182,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/m.png": {
+      "hash": "3d50fab68fd0",
+      "sha256": "3d50fab68fd0f9e9c0d1bbd462c0735a6c7f86928a56cb8fcc3f19607128fd7c",
+      "bytes": 2254357,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/m.webp": {
+      "hash": "74f2b0d8c279",
+      "sha256": "74f2b0d8c2793383d4c7047d8a28c56cc96fe12851e9b9791351727345af7ba8",
+      "bytes": 87562,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/pt/b-bottom.png": {
+      "hash": "463d9961e020",
+      "sha256": "463d9961e02091786e21644d7f95fa106010c6f7c29780d6b4ca19220a8c7b26",
+      "bytes": 51272,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/b-bottom.webp": {
+      "hash": "4624f3124ef0",
+      "sha256": "4624f3124ef0796e07b2136ac9f8aff28ff0a1f7c1f880004482c85c2433ac9e",
+      "bytes": 5022,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/b-top.png": {
+      "hash": "b5e9f2081d99",
+      "sha256": "b5e9f2081d990505edba6107da3f54425f7b4afccb250fbb106606eed5d4a9a2",
+      "bytes": 50901,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/b-top.webp": {
+      "hash": "cb344c39b203",
+      "sha256": "cb344c39b203b12be1e2b4d8860034ee5cd66638e332a6bd0ec3e7b2076ecca1",
+      "bytes": 4780,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/c-bottom.png": {
+      "hash": "253677e53a9b",
+      "sha256": "253677e53a9b1ddf5fc839baba7eb0815d187f0c0ccd3d5e2da5b8a33eada2cd",
+      "bytes": 53643,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/c-bottom.webp": {
+      "hash": "409eb6f99dce",
+      "sha256": "409eb6f99dced44eeaa58166ab1ddc848d086950d6165784f3875fc8783f2dc7",
+      "bytes": 5440,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/c-top.png": {
+      "hash": "74c0d4223b14",
+      "sha256": "74c0d4223b14a5892134ca9e620e1958897d145c5e0774dfcd150201d00b0196",
+      "bytes": 53309,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/c-top.webp": {
+      "hash": "78dc9147b55f",
+      "sha256": "78dc9147b55fcf94c3c837e83d4deb5f7fa6ecdb3fa6b4a624d2a30e037bca18",
+      "bytes": 4900,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/g-bottom.png": {
+      "hash": "7b56a8950185",
+      "sha256": "7b56a89501851902295a1cfa66c908a878fdf3923953ec9af92f12dcb7b42fa3",
+      "bytes": 57156,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/g-bottom.webp": {
+      "hash": "7e800918b876",
+      "sha256": "7e800918b87654a01af675886813a52c94e58d26bc6069fcb20c31bef4731b92",
+      "bytes": 5268,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/g-top.png": {
+      "hash": "fd89b29e7229",
+      "sha256": "fd89b29e72298c48c89eceb2e2284009d3389145602a78096891b194fe23afac",
+      "bytes": 56317,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/g-top.webp": {
+      "hash": "206ae1250c70",
+      "sha256": "206ae1250c705bdec546b31c78092a1b1cd3157885171e27ae776b8a2569b847",
+      "bytes": 5034,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/m-bottom.png": {
+      "hash": "cae2827446a0",
+      "sha256": "cae2827446a02bed85594b4d23122bc46af1bdff72a7c3edc2b39890c6886cca",
+      "bytes": 48010,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/m-bottom.webp": {
+      "hash": "5d96026852f5",
+      "sha256": "5d96026852f54cbb96654aa1892a699ed204e8de68ed3ad3985997ef667ceda7",
+      "bytes": 5164,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/m-top.png": {
+      "hash": "9ecd8cae94aa",
+      "sha256": "9ecd8cae94aa7dbac8de2539b59249b0d655e9b0148de9bc5b1bccdc3cd1a032",
+      "bytes": 47836,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/m-top.webp": {
+      "hash": "0f10d851966e",
+      "sha256": "0f10d851966e7e6d497de310283f0cebde7c30af16d5a9e38b21d72320305811",
+      "bytes": 5002,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/r-bottom.png": {
+      "hash": "d050c1c55882",
+      "sha256": "d050c1c55882be5600dbf63cb453ffe42bdfb9b75c35dec3108f02b3669dac30",
+      "bytes": 50410,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/r-bottom.webp": {
+      "hash": "42231c6afaf2",
+      "sha256": "42231c6afaf2a874c5042754eb28bd485a9dd929cf68214644cab5952a79112e",
+      "bytes": 5670,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/r-top.png": {
+      "hash": "eb90c5a3bb5f",
+      "sha256": "eb90c5a3bb5f6765e54e583a7d31d4a6a6743768faa5a5b6d81385391465366c",
+      "bytes": 49711,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/r-top.webp": {
+      "hash": "6cb5d85687fe",
+      "sha256": "6cb5d85687fe01c04d562639bc17afddaa9aac21fa7f7f7ba41099fd61fe18e9",
+      "bytes": 5440,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/u-bottom.png": {
+      "hash": "9ae9a1185ad1",
+      "sha256": "9ae9a1185ad197c58628b8af82406358ee8e3726859fe2650134115b5e63462f",
+      "bytes": 49492,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/u-bottom.webp": {
+      "hash": "53056eae7fb0",
+      "sha256": "53056eae7fb0c5a1d67b18d615ce06ee249163875d705bbcd7b6aa267c0ab6fe",
+      "bytes": 5158,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/u-top.png": {
+      "hash": "4f99d8cbb7a2",
+      "sha256": "4f99d8cbb7a215c3c63b057fcd4d2fb0337bd23d07605f5cd57de9b7083f688f",
+      "bytes": 48470,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/u-top.webp": {
+      "hash": "bbdcccdbee5c",
+      "sha256": "bbdcccdbee5ce13260961a54fb6046af8d2abd60debc15ef609a7273016bdec1",
+      "bytes": 4928,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/w-bottom.png": {
+      "hash": "1774f78970a8",
+      "sha256": "1774f78970a898fa29547588d6f3fdb400dcd5f42a195dd884e08dcca4a1ca1f",
+      "bytes": 41273,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/w-bottom.webp": {
+      "hash": "00c58d4bc495",
+      "sha256": "00c58d4bc49517cd15e45c019fb1fcfe042686e0105fb531a88064600d5539ba",
+      "bytes": 4650,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/w-top.png": {
+      "hash": "76ac787ef466",
+      "sha256": "76ac787ef46633326abf7fcedb8ab6059315adfd880e2d9a4a10efb8f5cc5409",
+      "bytes": 40975,
+      "width": 243,
+      "height": 160
+    },
+    "flip/pt/w-top.webp": {
+      "hash": "45a4d791f98b",
+      "sha256": "45a4d791f98be76490df1f3927a16644aa50eea460af3865eea4e07d0fee66d7",
+      "bytes": 4428,
+      "width": 243,
+      "height": 160
+    },
+    "flip/r.png": {
+      "hash": "36cb8ffe2bab",
+      "sha256": "36cb8ffe2bab9ca57048adfa037c53fc48b90fac3fcc256115a9f9bae7ff7013",
+      "bytes": 2448674,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/r.webp": {
+      "hash": "28d2e581f7b4",
+      "sha256": "28d2e581f7b4624beadad94c7c3916c04abc1cd1a575d264b69d71855983f30b",
+      "bytes": 138778,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/u.png": {
+      "hash": "4fc65ab271bc",
+      "sha256": "4fc65ab271bc21a6d1d7cddb07b56eb8fa52982f799416828af1c9d599ccc3b0",
+      "bytes": 1631724,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/u.webp": {
+      "hash": "4086b128ae10",
+      "sha256": "4086b128ae100cd89169a1d4a25df76e6de7392c865c4a76cdce04920c3ae0aa",
+      "bytes": 59236,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/w.png": {
+      "hash": "96d03038f163",
+      "sha256": "96d03038f1639b7db49cd48d89b6df5f441f80adab0409ae85efd27c1fd6153f",
+      "bytes": 1720599,
+      "width": 1500,
+      "height": 2100
+    },
+    "flip/w.webp": {
+      "hash": "ba9867d5a614",
+      "sha256": "ba9867d5a614ea358f80a5243cfd0f917dc1310c47a013f65ecd423d832522c3",
+      "bytes": 58952,
       "width": 1500,
       "height": 2100
     },

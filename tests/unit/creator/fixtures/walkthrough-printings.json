@@ -787,5 +787,106 @@
       "foil"
     ],
     "scryfall_uri": "https://scryfall.com/card/m21/281/teferi-master-of-time?utm_source=api"
+  },
+  "c18-134": {
+    "id": "58164521-aeec-43fc-9db9-d595432dea6f",
+    "oracle_id": "cb952c81-c7bb-4670-938d-296d35551986",
+    "name": "Budoka Gardener // Dokai, Weaver of Life",
+    "released_at": "2018-08-10",
+    "layout": "flip",
+    "set": "c18",
+    "set_name": "Commander 2018",
+    "set_type": "commander",
+    "collector_number": "134",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Creature — Human Monk // Legendary Creature — Human Monk",
+    "mana_cost": "{1}{G}",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "rare",
+    "artist": "Kev Walker",
+    "finishes": [
+      "nonfoil"
+    ],
+    "card_faces": [
+      {
+        "name": "Budoka Gardener",
+        "mana_cost": "{1}{G}",
+        "type_line": "Creature — Human Monk",
+        "power": "2",
+        "toughness": "1",
+        "artist": "Kev Walker"
+      },
+      {
+        "name": "Dokai, Weaver of Life",
+        "mana_cost": "",
+        "type_line": "Legendary Creature — Human Monk",
+        "power": "3",
+        "toughness": "3",
+        "artist": "Kev Walker"
+      }
+    ]
+  },
+  "cm2-71": {
+    "id": "a00a7180-49bd-4ead-852a-67b6b5e4b933",
+    "oracle_id": "1373fa8d-0a39-4451-a482-ce2071438dc8",
+    "name": "Nezumi Graverobber // Nighteyes the Desecrator",
+    "released_at": "2018-06-08",
+    "layout": "flip",
+    "set": "cm2",
+    "set_name": "Commander Anthology Volume II",
+    "set_type": "commander",
+    "collector_number": "71",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Rat Rogue // Legendary Creature — Rat Wizard",
+    "mana_cost": "{1}{B}",
+    "power": "2",
+    "toughness": "1",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "uncommon",
+    "artist": "Jim Nelson",
+    "finishes": [
+      "nonfoil"
+    ],
+    "card_faces": [
+      {
+        "name": "Nezumi Graverobber",
+        "mana_cost": "{1}{B}",
+        "type_line": "Creature — Rat Rogue",
+        "power": "2",
+        "toughness": "1",
+        "artist": "Jim Nelson"
+      },
+      {
+        "name": "Nighteyes the Desecrator",
+        "mana_cost": "",
+        "type_line": "Legendary Creature — Rat Wizard",
+        "power": "4",
+        "toughness": "2",
+        "artist": "Jim Nelson"
+      }
+    ]
   }
 }

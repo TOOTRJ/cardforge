@@ -1191,6 +1191,8 @@ function CardImage({
             pipOverrides: card.pipOverrides,
             rules: secondFaceRules,
             target: rulesTarget,
+            colorKey: plateKey,
+            foil: plateFoil,
           })
         : null}
 
@@ -3021,6 +3023,8 @@ function SecondFaceBake({
   pipOverrides,
   rules,
   target,
+  colorKey,
+  foil = null,
 }: {
   slot: NonNullable<FrameProfile["secondFace"]>;
   back: CardBackFace;
@@ -3031,6 +3035,10 @@ function SecondFaceBake({
    *  (lib/cards/rules-box.ts secondFaceRulesLayout). */
   rules: RulesLayout | null;
   target: RulesTarget;
+  /** The card's plate key (plateKeyFor) — picks the face's P/T plate. */
+  colorKey: string;
+  /** Foil finish: the plate gets the card's sheen too (StatBake's twin). */
+  foil?: { cardHeight: number; landscape: boolean } | null;
 }) {
   const name = back.title?.trim() || "Untitled";
   const typeLine = buildTypeLine({
@@ -3130,36 +3138,88 @@ function SecondFaceBake({
             overrides: pipOverrides,
           })
         : null}
-      {showPT && slot.pt ? (
-        <div
-          style={{
-            ...slotBox(slot.pt.rect),
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transform: rot,
-            transformOrigin: "50% 50%",
-            fontFamily: DISPLAY_FONT,
+      {/* The face's P/T plate (flip, layout v38): drawn at its own box
+          UNTURNED — the bottom plate is upside-down in the source, as the
+          printed card shows it — before (so under) the value, which turns
+          with the face. Only when the half has a P/T, as on M15; preloaded
+          by frameAssetPathsFor. The preview's SecondFacePanel twin. */}
+      {showPT && slot.pt?.plateAssetPathTemplate && slot.pt.plateRect
+        ? (() => {
+            const plateUrl = getPlateDataUrlForPath(slot.pt.plateAssetPathTemplate, colorKey);
+            const box = slot.pt.plateRect;
+            return plateUrl ? (
+              <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={plateUrl} alt="" style={{ ...slotBox(box), objectFit: "fill" }} />
+                {foil ? (
+                  <FoilSheen
+                    id="foil-plate-2"
+                    frameHref={plateUrl}
+                    region={box}
+                    landscape={foil.landscape}
+                    width={Math.round((box.widthPct / 100) * cardWidth)}
+                    height={Math.round((box.heightPct / 100) * foil.cardHeight)}
+                    style={slotBox(box)}
+                  />
+                ) : null}
+              </div>
+            ) : null;
+          })()
+        : null}
+      {showPT && slot.pt
+        ? (() => {
             // Shrinks to fit, on one line, like the front's StatBake (TODO 3.18).
             // Its ink span lies inside the rect, so a fitted value never
             // overflows the rect (the case StatBake's flexShrink: 0 centres).
-            fontSize: statPx(
+            const size = statPx(
               slot.pt,
               ptValue(back.power, back.toughness),
               orientationFromAspect(aspect),
               cardWidth,
               slot.rotation === 180,
-            ),
-            whiteSpace: "nowrap",
-            fontWeight: slot.pt.weight ?? 700,
-            color: slot.pt.colorHex,
-            ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
-            zIndex: 20,
-          }}
-        >
-          {ptValue(back.power, back.toughness)}
-        </div>
-      ) : null}
+            );
+            return (
+              <div
+                style={{
+                  ...slotBox(slot.pt.rect),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: rot,
+                  transformOrigin: "50% 50%",
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: size,
+                  whiteSpace: "nowrap",
+                  fontWeight: slot.pt.weight ?? 700,
+                  color: slot.pt.colorHex,
+                  ...(slot.pt.shadowCss ? { textShadow: slot.pt.shadowCss } : {}),
+                  zIndex: 20,
+                }}
+              >
+                {/* The same nudge as the front's StatBake (valueDxEm /
+                    valueDyEm, in px: Satori resolves no em in transforms),
+                    on the value's own span inside the turned box, so it
+                    moves in the value's frame — the preview's twin. */}
+                <span
+                  style={{
+                    position: "relative",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    ...(slot.pt.valueDxEm || slot.pt.valueDyEm
+                      ? {
+                          transform: `translate(${Math.round((slot.pt.valueDxEm ?? 0) * size)}px, ${Math.round(
+                            (slot.pt.valueDyEm ?? 0) * size,
+                          )}px)`,
+                        }
+                      : {}),
+                  }}
+                >
+                  {ptValue(back.power, back.toughness)}
+                </span>
+              </div>
+            );
+          })()
+        : null}
     </div>
   );
 }
@@ -3375,6 +3435,12 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
     if (slot?.plateAssetPathTemplate) {
       paths.push(plateAssetPath(slot.plateAssetPathTemplate, plateKey));
     }
+  }
+  // A second face's P/T plate (flip's bottom creature, layout v38) — the
+  // same gate SecondFaceBake draws it under (the half has a P/T).
+  const facePt = layout.secondFace?.pt;
+  if (facePt?.plateAssetPathTemplate && card.backFace && (card.backFace.power || card.backFace.toughness)) {
+    paths.push(plateAssetPath(facePt.plateAssetPathTemplate, plateKey));
   }
   for (const overlay of resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey })) {
     paths.push(overlay.path);

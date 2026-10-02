@@ -66,8 +66,15 @@ export function drawnStatInk(layout: FrameProfile, show: DrawnStats, aspect: num
   const out = statKeepOuts(layout, show);
   const face = layout.secondFace;
   if (show.secondFacePt && face?.pt) {
-    // The value's box turned about its own centre: its footprint on the card.
-    out.push(keepOutInBoxFrame(statInkRect(face.pt), face.pt.rect, -face.rotation, aspect));
+    // A plate (flip's bottom creature, layout v38) is drawn UNTURNED at its
+    // own box in both renderers — its ink sits where the plate is; a value
+    // with no plate turns with its face about its own centre, so its
+    // footprint on the card is its box turned.
+    out.push(
+      face.pt.plateAssetPathTemplate
+        ? statInkRect(face.pt)
+        : keepOutInBoxFrame(statInkRect(face.pt), face.pt.rect, -face.rotation, aspect),
+    );
   }
   return out;
 }

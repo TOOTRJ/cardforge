@@ -40,19 +40,28 @@ const COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"];
 /** A pixel at least this opaque is the plate's ink. */
 const ALPHA_INK = 128;
 
-/** Every plate directory: `<template>/<kind>` for kind pt | loyalty. */
-function plateDirs() {
-  const dirs = new Set();
+/** Every plate set: `<template>/<kind>/{color}<suffix>.png` for kind pt |
+ *  loyalty — one set per colour-keyed file name (a plain `<colour>.png`, or
+ *  4.21a's flip plates `<colour>-top.png` / `<colour>-bottom.png`, two sets
+ *  in one folder). */
+function plateSets() {
+  const sets = new Set();
+  const add = (template, kind, suffix) => sets.add(`${template}/${kind}/{color}${suffix}.png`);
   for (const key of Object.keys(MANIFEST.files)) {
-    const m = /^([^/]+)\/(pt|loyalty)\/[a-z]\.png$/.exec(key);
-    if (m) dirs.add(`${m[1]}/${m[2]}`);
+    const m = /^([^/]+)\/(pt|loyalty)\/[a-z](-[a-z]+)?\.png$/.exec(key);
+    if (m) add(m[1], m[2], m[3] ?? "");
   }
   for (const template of fs.readdirSync(PUBLIC)) {
     for (const kind of ["pt", "loyalty"]) {
-      if (fs.existsSync(path.join(PUBLIC, template, kind))) dirs.add(`${template}/${kind}`);
+      const dir = path.join(PUBLIC, template, kind);
+      if (!fs.existsSync(dir)) continue;
+      for (const file of fs.readdirSync(dir)) {
+        const m = /^[a-z](-[a-z]+)?\.png$/.exec(file);
+        if (m) add(template, kind, m[1] ?? "");
+      }
     }
   }
-  return [...dirs].sort();
+  return [...sets].sort();
 }
 
 /** The readable file for one plate colour, or a reason it isn't. */
@@ -89,12 +98,12 @@ const up = (v) => Math.ceil(v * 1e4) / 1e4;
 
 const rows = [];
 const skipped = [];
-for (const dir of plateDirs()) {
+for (const set of plateSets()) {
   let ink = null;
   const sources = new Set();
   const hashes = {};
   for (const key of COLOR_KEYS) {
-    const rel = `${dir}/${key}.png`;
+    const rel = set.replace("{color}", key);
     if (!MANIFEST.files[rel] && !fs.existsSync(path.join(PUBLIC, rel))) continue;
     const got = plateFile(rel);
     if (got.missing) {
@@ -117,7 +126,7 @@ for (const dir of plateDirs()) {
   }
   if (!ink) continue;
   rows.push({
-    asset: `/frames/${dir}/{color}.png`,
+    asset: `/frames/${set}`,
     source: [...sources].join("+"),
     // Rounded outward: the table never draws the ink smaller than it is.
     ink: { left: down(ink.left), top: down(ink.top), right: up(ink.right), bottom: up(ink.bottom) },
