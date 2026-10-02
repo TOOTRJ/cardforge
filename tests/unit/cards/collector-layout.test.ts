@@ -4,6 +4,7 @@ import {
   BRAND_MARK_GEOMETRY,
   COLLECTOR_METRICS,
   COLLECTOR_NUMBER_TRACKING_EM,
+  MARK_TEXT_MAX_WIDTH_PCT,
   brandMarkWidthPct,
   collectorDrawn,
   collectorLayout,
@@ -85,12 +86,15 @@ describe("when the line is drawn", () => {
     expect(collectorLayout(m15, dmu({ collector: undefined }), display)).toBeNull();
   });
 
-  it("every slotted template lays the same line out — M15's slot", () => {
+  it("every slotted template lays the same line out — M15's slot (the walker's pins the © slot to line 2)", () => {
     const reference = collectorLayout(m15, dmu(), display)!;
     for (const template of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(template);
       if (!profile.collector) continue;
-      expect(profile.collector, template).toBe(M15_COLLECTOR);
+      const { markLine, ...geometry } = profile.collector;
+      expect(geometry, template).toEqual(M15_COLLECTOR);
+      expect(markLine, template).toBe(template === "m15pw" ? 2 : undefined);
+      // The card draws a stat plate here, so every template agrees.
       expect(collectorLayout(profile, dmu(), display), template).toEqual(reference);
     }
   });
@@ -228,6 +232,33 @@ describe("the © slot", () => {
     expect(stray.mark.kind === "brand" && stray.mark.anchor.line).toBe(1);
   });
 
+  it("a planeswalker: ALWAYS line 2 — the master draws the loyalty shield's outline even when the card draws no plate", () => {
+    const m15pw = getFrameProfile("m15pw");
+    expect(m15pw.collector?.markLine).toBe(2);
+    expect(collectorMarkLine({ pt: false, loyalty: false, defense: false }, m15pw.collector)).toBe(2);
+    expect(collectorMarkLine({ pt: false, loyalty: false, defense: false }, m15.collector)).toBe(1);
+    // A walker saved without a loyalty value (the bake draws no plate; the
+    // editor shows the empty shield): the mark — and a clean download's
+    // footer text — stay on line 2, below the shield's outline (it ends at
+    // y 1984 px; a line-1 mark's ink would cross it at y ≈ 1967–2003).
+    const walker = dmu({ cardType: "planeswalker", plates: { pt: false, loyalty: false, defense: false } });
+    for (const style of ["2015", "2023"] as const) {
+      const shown = collectorLayout(m15pw, { ...walker, collector: style }, display)!;
+      expect(shown.markLine, style).toBe(2);
+      expect(shown.mark.kind === "brand" && px(shown.mark.anchor.baselinePct, H), style).toBeCloseTo(2032, 3);
+      const clean = collectorLayout(m15pw, { ...walker, collector: style }, { kind: "download", footerText: "Forged by Kesh" })!;
+      expect(px(run(clean, "mark-text").baselinePct, H), style).toBeCloseTo(2032, 3);
+    }
+    // With its loyalty the answer is the same, and every other slotted
+    // template still follows the plate it draws.
+    expect(collectorLayout(m15pw, { ...walker, plates: { pt: false, loyalty: true, defense: false } }, display)!.markLine).toBe(2);
+    for (const template of ["m15", "m15land", "m15artifact", "m15snow", "m15devoid", "m15token", "m15tokentext", "emblem"] as const) {
+      const profile = getFrameProfile(template);
+      expect(profile.collector?.markLine, template).toBeUndefined();
+      expect(collectorLayout(profile, dmu({ plates: { pt: false, loyalty: false, defense: false } }), display)!.markLine, template).toBe(1);
+    }
+  });
+
   it("display: the brand mark at its own size, right-aligned on the slot, on the line's baseline", () => {
     const layout = collectorLayout(m15, dmu(), display)!;
     expect(layout.mark.kind).toBe("brand");
@@ -263,6 +294,39 @@ describe("the © slot", () => {
       const none = collectorLayout(m15, dmu(), { kind: "download", footerText })!;
       expect(none.mark.kind, String(footerText)).toBe("none");
       expect(texts(none).some((r) => r.role === "mark-text"), String(footerText)).toBe(false);
+    }
+  });
+
+  it("a clean download's footer text never runs back over the line: past 45 % of the width it is cut with ONE '…'", () => {
+    expect(MARK_TEXT_MAX_WIDTH_PCT).toBe(0.45);
+    const maxPx = MARK_TEXT_MAX_WIDTH_PCT * W;
+    // Forty characters of ordinary text (the field's limit) fit whole.
+    const ordinary = "© 2026 Red Jester Studios, all rights ok";
+    expect(ordinary).toHaveLength(40);
+    expect(run(collectorLayout(m15, dmu(), { kind: "download", footerText: ordinary })!, "mark-text").text).toBe(ordinary);
+    // Forty W's would be 1,300 px wide — over the artist, the set code and
+    // the pen x itself. Cut, the text still ends on the slot's edge.
+    const wide = "W".repeat(40);
+    expect(rulesTextWidthEm(wide) * 34).toBeGreaterThan(px(93.54, W) - px(6.47, W));
+    for (const plates of [{ pt: true, loyalty: false, defense: false }, { pt: false, loyalty: false, defense: false }]) {
+      // The longest line 1 the fields allow, in both styles.
+      for (const style of ["2015", "2023"] as const) {
+        const layout = collectorLayout(
+          m15,
+          dmu({ plates, collector: style, setCode: "WWWWWW", collectorNumber: "W".repeat(12), artistCredit: "Someone With An Extraordinarily Long Illustrator Name" }),
+          { kind: "download", footerText: wide },
+        )!;
+        const mark = run(layout, "mark-text");
+        expect(mark.text.endsWith("…")).toBe(true);
+        expect((mark.text.match(/…/g) ?? []).length).toBe(1);
+        expect(px(mark.widthPct, W)).toBeLessThanOrEqual(maxPx + 1e-6);
+        expect(px(mark.widthPct, W)).toBeCloseTo(rulesTextWidthEm(mark.text) * 34, 3);
+        expect(px(mark.xPct + mark.widthPct, W)).toBeCloseTo(px(93.54, W), 3);
+        // Nothing else on the mark's line reaches it; the artist keeps room.
+        const sameLine = layout.runs.filter((r) => r !== mark && (r.kind === "text" ? Math.abs(r.baselinePct - mark.baselinePct) < 1e-6 : false));
+        for (const other of sameLine) expect(other.xPct + other.widthPct, `${style} ${other.kind === "text" ? other.text : ""}`).toBeLessThan(mark.xPct - 1);
+        expect(layout.artist?.text.length).toBeGreaterThan(8);
+      }
     }
   });
 });

@@ -733,6 +733,11 @@ export type CollectorSlot = {
   artistSizePct: number;
   /** The © slot's text size (a clean download's footer text, body face). */
   markTextSizePct: number;
+  /** The © slot's line where the FRAME's own art carries a stat shield in
+   *  line 1's corner, whatever the card draws there: always 2. Unset, the
+   *  slot is on line 2 only when the renderer draws a stat plate (a P/T, the
+   *  loyalty shield, the defense badge) and on line 1 without one. */
+  markLine?: 2;
 };
 
 /** Default placement: inside the M15 black border (≈73 px of black above the
@@ -3597,6 +3602,15 @@ export const M15_COLLECTOR: CollectorSlot = {
   markTextSizePct: 34 / 1500,
 };
 
+/** The planeswalker's collector slot: M15's, with the © slot ALWAYS on line
+ *  2. Every walker master draws the loyalty shield's outline itself (x
+ *  1202–1427, y 1847–1984 px on all seven colour keys), so a walker saved
+ *  without a loyalty value — which draws no plate — would put the brand mark
+ *  (or a clean download's footer text) across that outline on line 1 (its
+ *  ink spans y ≈ 1967–2003); the editor's preview, which shows the empty
+ *  shield, already puts it on line 2 (DOM #1 prints its © line there). */
+export const M15PW_COLLECTOR: CollectorSlot = { ...M15_COLLECTOR, markLine: 2 };
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -3700,8 +3714,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // shows ~14 % more of the picture's zoom than on the coloured walkers
   // (a 1959 px cover height, not 1716).
   // …and its collector line through M15's slot (4.9b: DOM #1 prints the
-  // lines at M15's positions; the loyalty shield counts as a stat plate).
-  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT }, collector: M15_COLLECTOR },
+  // lines at M15's positions; the loyalty shield counts as a stat plate —
+  // and is part of the master, so the © slot is always on line 2:
+  // M15PW_COLLECTOR).
+  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT }, collector: M15PW_COLLECTOR },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,

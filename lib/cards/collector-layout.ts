@@ -24,8 +24,11 @@
 // right edge on the slot's (93.54 %W), on line 2 when the card DRAWS a stat
 // plate (a P/T, the loyalty shield, the defense badge — the plate the
 // renderer draws, never the data's presence), else on line 1 — so the
-// watermark policy (layout v20) is unchanged. On a paid viewer's clean
-// download the slot carries the card's footer text in MPlantin, or nothing.
+// watermark policy (layout v20) is unchanged. A frame whose own art carries
+// the shield (the planeswalker: CollectorSlot.markLine) keeps the slot on
+// line 2 whatever the card draws. On a paid viewer's clean download the slot
+// carries the card's footer text in MPlantin (cut with one "…" past
+// MARK_TEXT_MAX_WIDTH_PCT), or nothing.
 // Client-safe: the preview, the bake and the tests read this one module.
 // ---------------------------------------------------------------------------
 
@@ -40,7 +43,7 @@ import { COLLECTOR_ADVANCES, COLLECTOR_FACES, COLLECTOR_UNITS_PER_EM } from "@/l
 import { displayTextWidthEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
 import { measuredLineFloorPct } from "@/lib/cards/render-tiers";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
-import type { FrameProfile } from "@/lib/cards/template-layout";
+import type { CollectorSlot, FrameProfile } from "@/lib/cards/template-layout";
 import type { CardOrientation } from "@/lib/cards/typography";
 import type { FrameStyle } from "@/types/card";
 
@@ -205,6 +208,16 @@ export const ARTIST_SMALL_CAP_EM = 0.8;
  *  fraction of the card's width (≈ 30 px at HD). */
 const ARTIST_MARK_GAP_PCT = 0.02;
 
+/** The widest a clean download's footer text is drawn, as a fraction of the
+ *  card's width (675 px at HD — the prints' © line is ≈ 525): a longer one
+ *  is cut with ONE "…". Forty characters of ordinary text (the field's
+ *  limit) measure ≈ 620 px at 34 px and fit; forty capitals or W's would run
+ *  back over the artist, the set code and — on line 1 — the number. At this
+ *  width the text starts at 728 px: past the longest line 1 (a 12-character
+ *  number and its letter end by ≈ 620 px), with ≥ 365 px left for the artist
+ *  on line 2. */
+export const MARK_TEXT_MAX_WIDTH_PCT = 0.45;
+
 /** The display face's space (Beleren Bold, 491 / 2048 em). */
 const DISPLAY_SPACE_EM = displayTextWidthEm(" ");
 
@@ -270,9 +283,11 @@ export function collectorDrawn(
   return collectorStyleOf(frameStyle?.collector);
 }
 
-/** The © slot's line: 2 when the renderer draws a stat plate. */
-export function collectorMarkLine(plates: CollectorLayoutCard["plates"]): 1 | 2 {
-  return plates.pt || plates.loyalty || plates.defense ? 2 : 1;
+/** The © slot's line: 2 when the renderer draws a stat plate — or always,
+ *  on a frame whose own art carries the shield (CollectorSlot.markLine: the
+ *  planeswalker). */
+export function collectorMarkLine(plates: CollectorLayoutCard["plates"], slot?: Pick<CollectorSlot, "markLine"> | null): 1 | 2 {
+  return slot?.markLine ?? (plates.pt || plates.loyalty || plates.defense ? 2 : 1);
 }
 
 /** The brand mark's width on a collector card, % of the card's width (its
@@ -429,7 +444,7 @@ export function collectorLayout(
   }
 
   // ---- the © slot -----------------------------------------------------------
-  const markLine = collectorMarkLine(card.plates);
+  const markLine = collectorMarkLine(card.plates, slot);
   const markBaseline = markLine === 2 ? line2 : line1;
   const scale = frame.orientation === "landscape" ? 5 / 7 : 1;
   let mark: CollectorMark;
@@ -452,9 +467,12 @@ export function collectorLayout(
     };
     markLeftPx = right - (markWidthPct / 100) * frame.w;
   } else {
-    const footer = (surface.footerText ?? "").trim();
-    if (footer) {
+    const typed = (surface.footerText ?? "").trim();
+    if (typed) {
       const px = slot.markTextSizePct * frame.w;
+      // Never wider than the slot (MARK_TEXT_MAX_WIDTH_PCT): cut at ONE
+      // place for both renderers, like the artist.
+      const footer = truncateDisplayLine(typed, (MARK_TEXT_MAX_WIDTH_PCT * frame.w) / px, rulesTextWidthEm);
       const w = rulesTextWidthEm(footer) * px;
       runs.push(text("mark-text", "body", footer, right - w, markBaseline, px, 0, w));
       markLeftPx = right - w;
