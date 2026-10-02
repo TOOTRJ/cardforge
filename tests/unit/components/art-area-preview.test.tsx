@@ -69,7 +69,9 @@ describe("layout v35 — the preview paints the art where the bake does", () => 
       expect(slot(preview(template, ["green"])), template).toEqual(["7.67%", "11.25%", "84.76%", "44.33%"]);
       cleanup();
     }
-    expect(slot(preview("adventure", ["green"], "creature"))).toEqual(["7.8%", "11.4%", "84.4%", "44%"]);
+    // Adventure's own slot since layout v38 (TODO 4.21a): its Card Conjurer
+    // masters' window + 0.1 %, pinned (design D4).
+    expect(slot(preview("adventure", ["green"], "creature"))).toEqual(["7.57%", "11.19%", "84.87%", "44.44%"]);
     cleanup();
     expect(slot(preview("nyx", ["white"], "creature"))).toEqual(["6%", "11.2%", "88%", "81.8%"]);
     cleanup();

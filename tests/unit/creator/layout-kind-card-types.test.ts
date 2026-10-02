@@ -54,13 +54,18 @@ describe("LAYOUT_KIND_CARD_TYPES — what each layout template can draw", () => 
     }
   });
 
-  it("draws the P/T only for a P/T type: the adventure and flip frames print no box of their own", () => {
-    // The plate / band ink is drawn from `pt` when showsPowerToughness says
-    // so; an enchantment on these frames simply has none (checked on the
-    // masters: public/frames/adventure/*.png and flip/*.png paint no P/T
-    // box). A split / aftermath / saga frame has no P/T slot at all.
+  it("draws the P/T only for a P/T type: the adventure and flip masters paint no box of their own", () => {
+    // The plate is drawn from `pt` when showsPowerToughness says so — M15's
+    // on adventure, flip's own per-half plates (layout v38, TODO 4.21a: its
+    // second face's with the back face's P/T) — so an enchantment on these
+    // frames simply has none: their Card Conjurer masters (the frames
+    // bucket) paint no P/T box. A split / aftermath / saga frame has no P/T
+    // slot at all.
     expect(getFrameProfile("adventure").pt).toBeDefined();
     expect(getFrameProfile("flip").pt).toBeDefined();
+    expect(getFrameProfile("adventure").pt?.plateAssetPathTemplate).toBe("/frames/m15/pt/{color}.png");
+    expect(getFrameProfile("flip").pt?.plateAssetPathTemplate).toBe("/frames/flip/pt/{color}-top.png");
+    expect(getFrameProfile("flip").secondFace?.pt?.plateAssetPathTemplate).toBe("/frames/flip/pt/{color}-bottom.png");
     expect(getFrameProfile("saga").pt).toBeUndefined();
     expect(showsPowerToughness("enchantment")).toBe(false);
   });

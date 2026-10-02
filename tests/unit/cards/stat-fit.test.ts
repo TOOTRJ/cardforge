@@ -171,7 +171,13 @@ describe("fitStatSizePct", () => {
   });
 
   it("a flip card's upside-down second face mirrors where the ink sits", () => {
-    expect(keeps(flipBack, "20/20", true)).toBe(true);
+    // Card Conjurer's flip plate (layout v38) is three quarters of M15's
+    // width — its face holds a one-digit P/T at the family size (every
+    // printed flip's), a two-digit one shrinks a little.
+    expect(keeps(flipBack, "9/9", true)).toBe(true);
+    expect(keeps(flipBack, "4/4", true)).toBe(true);
+    expect(fitStatSizePct(flipBack, "20/20", "portrait", true)).toBeLessThan(flipBack.sizePct);
+    expect(fitStatSizePct(flipBack, "20/20", "portrait", true)).toBeGreaterThan(flipBack.sizePct * 0.8);
     expect(fitStatSizePct(flipBack, "100/100", "portrait", true)).toBeLessThan(flipBack.sizePct);
     // A lopsided span: `40/40` reaches further left upright (Satori's
     // unkerned box), so it fits a span with room on the left only upright.
@@ -218,8 +224,10 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     ["m15pw", "loyalty", 1239, 1389],
     ["retro", "pt", 1125, 1410],
     ["modern", "pt", 1143, 1373],
-    ["flip", "pt", 1235.4, 1403],
-    ["flip", "secondFace", 104, 257.5],
+    // Flip (layout v38, TODO 4.21a): each Card Conjurer plate's light face on
+    // the digits' rows, measured on every colour's cut plate.
+    ["flip", "pt", 1215, 1395],
+    ["flip", "secondFace", 93, 272],
     ["tarkirdragon", "pt", 1193, 1388],
     ["tarkirdraconic", "pt", 1187, 1398],
     ["tarkirghostfire", "pt", 1153, 1404],

@@ -17,15 +17,9 @@ import type { FrameTemplate } from "@/types/card";
 /** The preview's cqw() — `${pct × 100}cqw` to three decimals. */
 const cqw = (pct: number) => `${(pct * 100).toFixed(3)}cqw`;
 
-/** The inline style of the element whose whole text is `text`. */
-function styleOf(html: string, text: string): Record<string, string> {
-  const at = html.indexOf(`>${text}</`);
-  expect(at, text).toBeGreaterThan(0);
-  const open = html.lastIndexOf("<", at);
-  const style = html.slice(open, at).match(/style="([^"]*)"/);
-  expect(style, text).not.toBeNull();
+function parseStyle(style: string): Record<string, string> {
   return Object.fromEntries(
-    style![1]
+    style
       .split(";")
       .filter(Boolean)
       .map((decl) => {
@@ -33,6 +27,33 @@ function styleOf(html: string, text: string): Record<string, string> {
         return [decl.slice(0, i).trim(), decl.slice(i + 1).trim()];
       }),
   );
+}
+
+/** The inline style of the element whose whole text is `text`. */
+function styleOf(html: string, text: string): Record<string, string> {
+  const at = html.indexOf(`>${text}</`);
+  expect(at, text).toBeGreaterThan(0);
+  const open = html.lastIndexOf("<", at);
+  const style = html.slice(open, at).match(/style="([^"]*)"/);
+  expect(style, text).not.toBeNull();
+  return parseStyle(style![1]);
+}
+
+/** The inline style of the element whose whole text is `text`, or — when
+ *  that element sets no font size (a second face's value sits in its own
+ *  span inside the turned box, layout v38; the span carries only the nudge,
+ *  or no style at all when the profile has none) — of the nearest enclosing
+ *  element that does. */
+function sizedStyleOf(html: string, text: string): Record<string, string> {
+  const at = html.indexOf(`>${text}</`);
+  expect(at, text).toBeGreaterThan(0);
+  const open = html.lastIndexOf("<", at);
+  const own = html.slice(open, at).match(/style="([^"]*)"/);
+  if (own && parseStyle(own[1])["font-size"]) return parseStyle(own[1]);
+  const outer = html.lastIndexOf("<div", open - 1);
+  const style = html.slice(outer, open).match(/style="([^"]*)"/);
+  expect(style, text).not.toBeNull();
+  return parseStyle(style![1]);
 }
 
 function statStyles(template: FrameTemplate, power: string, toughness: string, back?: { power: string; toughness: string }) {
@@ -49,7 +70,7 @@ function statStyles(template: FrameTemplate, power: string, toughness: string, b
   );
   return {
     front: styleOf(html, `${power}/${toughness}`),
-    back: back ? styleOf(html, `${back.power}/${back.toughness}`) : null,
+    back: back ? sizedStyleOf(html, `${back.power}/${back.toughness}`) : null,
   };
 }
 
