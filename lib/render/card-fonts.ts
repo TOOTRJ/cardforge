@@ -83,9 +83,14 @@ const MPLANTIN_ITALIC_FONT_PATH = path.join(
 
 // The collector line's face (TODO 4.9b): Montserrat Medium, subset to the
 // 67 code points the line prints — every one of them in MPlantin's cmap, so
-// registering it (LAST, in lib/render/card-image.tsx) can never lend a glyph
-// to existing cards' text: Satori walks the requested families and then
-// every registered font in registration order, and MPlantin comes first.
+// registering it (in lib/render/card-image.tsx) can never lend a glyph to
+// existing cards' text: Satori walks the requested families and then every
+// registered font in registration order, and MPlantin comes first. It is
+// registered BEFORE Keyrune, never last: a character NO font has (★, CJK,
+// Thai — lib/render/fallback-assets.ts answers those with nothing) is drawn
+// with the LAST registered font — its .notdef and advance, and the whole
+// word in that face when the word starts with one — so the last font must
+// stay the one it was before this face (Keyrune: an empty 1 em .notdef).
 // Built by scripts/build-collector-font.mjs (OFL: public/fonts/
 // Montserrat-OFL.txt); its metrics table is lib/cards/collector-metrics.ts.
 const COLLECTOR_FONT_PATH = path.join(

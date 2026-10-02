@@ -235,8 +235,9 @@ const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = RARITY_INK;
 // falling back to MPlantin. A TextSlot's `font` field selects which.
 const BODY_FONT = '"MPlantin"';
 const DISPLAY_FONT = '"CardDisplay", "MPlantin"';
-// The collector line's face (TODO 4.9b; registered LAST in renderCardImage —
-// lib/render/card-fonts.ts says why).
+// The collector line's face (TODO 4.9b; registered after MPlantin and before
+// Keyrune in renderCardImage, never last — lib/render/card-fonts.ts says
+// why).
 const COLLECTOR_FONT = '"CollectorLine"';
 
 function fontFamilyFor(font: TextSlot["font"]): string {
@@ -3500,11 +3501,15 @@ export async function renderCardImage(
         { name: "MPlantin", data: MPLANTIN_ITALIC_FONT_BYTES, weight: 400, style: "italic" },
         { name: "CardDisplay", data: DISPLAY_FONT_BYTES, weight: 400, style: "normal" },
         { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
-        { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
-        // The collector line's face (TODO 4.9b) — LAST: its glyphs are all in
-        // MPlantin's cmap, so no other run ever resolves to it
-        // (tests/unit/render/collector-font.test.ts).
+        // The collector line's face (TODO 4.9b) — after MPlantin and NEVER
+        // last. Its glyphs are all in MPlantin's cmap, so no other run
+        // resolves a character to it; and Satori draws a character NO font
+        // has (★, CJK, Thai…) with the LAST registered font — its .notdef
+        // box and advance, and the rest of a word that starts with one in
+        // that face — so the last font must stay Keyrune, as it was before
+        // this face (tests/unit/render/collector-font.test.ts).
         { name: "CollectorLine", data: COLLECTOR_FONT_BYTES, weight: 500, style: "normal" },
+        { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
       ],
     },
   );
