@@ -1171,6 +1171,7 @@ sweep, no badge: production's 886 visible cards baked byte-identical at
 750 and HD before and after (2026-09-30, a 282-card stratified sample).
 
 - **The slot.** `FrameProfile.collector` (`CollectorSlot`) is `M15_COLLECTOR`
+  (the walker's `M15PW_COLLECTOR`: the same geometry, the © slot on line 2)
   on exactly the wave-1 `PROFILES` entries — m15, m15land, m15snowland,
   m15artifact, m15snow, m15devoid, m15pw, the four 2014–19 token frames and
   emblem (`COLLECTOR_TEMPLATES`, `lib/cards/collector-line.ts`; the tokens,
@@ -1218,19 +1219,34 @@ sweep, no badge: production's 886 visible cards baked byte-identical at
   93.54 %W, on line 2 when the renderer draws a stat plate (a P/T, the
   loyalty shield, the defense badge — the plate it draws, never the data's
   presence) and on line 1 without one — so the watermark policy is
-  unchanged. A paid viewer's clean download prints the card's `footer_text`
-  there in MPlantin at 34 px, or nothing. Cards without the line keep
+  unchanged. The planeswalker is the one frame whose MASTER draws its
+  shield (the loyalty outline, on all seven colour keys), so its slot is
+  always on line 2 (`M15PW_COLLECTOR`, `CollectorSlot.markLine`): a walker
+  saved without a loyalty value draws no plate, and a line-1 mark crossed
+  the outline (review 2026-10-02). A paid viewer's clean download prints
+  the card's `footer_text` there in MPlantin at 34 px, or nothing — cut
+  with ONE "…" past 45 % of the card's width (`MARK_TEXT_MAX_WIDTH_PCT`:
+  forty characters of ordinary text fit; forty capitals ran back over the
+  artist, the set code and line 1's number). Cards without the line keep
   today's mark position.
 - **The face.** Montserrat Medium (SIL OFL, `public/fonts/Montserrat-OFL
   .txt`), instanced and subset by `scripts/build-collector-font.mjs` to the
   67 code points the line prints (A–Z a–z 0–9 / - • † space), every one in
-  MPlantin's cmap, with no GSUB / GPOS; registered LAST in the bake's fonts
-  array as "CollectorLine" and loaded by the preview's `@font-face` with
-  its hhea as metric overrides. Satori resolves a glyph through the
-  requested families and then every registered font in order, so a glyph
-  only this face had would change existing cards' text — the subset and
-  the order (`tests/unit/render/collector-font.test.ts`) make that
-  impossible. The ★ and the brush are our own SVG paths
+  MPlantin's cmap, with no GSUB / GPOS; registered in the bake's fonts
+  array as "CollectorLine" — after MPlantin, BEFORE Keyrune, never last —
+  and loaded by the preview's `@font-face` with its hhea as metric
+  overrides. Satori resolves a glyph through the requested families and
+  then every registered font in order, so a glyph only this face had would
+  change existing cards' text; and a character NO font has (★, CJK, Thai,
+  an arrow — `lib/render/fallback-assets.ts` answers those with nothing)
+  is drawn with the LAST registered font: its `.notdef` and advance, and
+  the whole word in that face when the word starts with one. Registered
+  last, the collector face turned a stored "日本 Dragon" title into two
+  boxes and a sans-serif "Dragon" and a "★" in rules text into a 0.59 em
+  box (it is a 1 em gap), on cards with no collector key at all (review
+  2026-10-02). The subset, the order and a real Satori run with and
+  without the face (`tests/unit/render/collector-font.test.ts`) hold all
+  three. The ★ and the brush are our own SVG paths
   (`COLLECTOR_STAR_PATH`, `COLLECTOR_BRUSH_PATH`; the brush's slit is an
   evenodd hole).
 - **Imports follow the printing** (`lib/scryfall/import-mapper.ts`):
@@ -1246,7 +1262,10 @@ sweep, no badge: production's 886 visible cards baked byte-identical at
   #716, #681), PRCQ #1, SCH #7, PW23 #1 and P30H #1 (2023-03-21, the last)
   still print the 2015 style; from SLD #728 / #1237–1242 (03-26) every
   scan is 2023-style. `COLLECTOR_2023_STYLE_EARLY` names the early
-  products (pl23, slp, sld from #1243).
+  products (pl23, slp, sld from #1243), and only from the first one's day
+  on (`COLLECTOR_2023_STYLE_EARLY_FROM`, 2023-02-10): Secret Lair has
+  numbers past 1243 a year older — SLD #9995–9999 (2022-04-12, the
+  mirrored drop) print the 2015 style.
 - **Editor, page, warnings.** The Set & collector info step holds the
   switch (`collector-panel.tsx`: on → `"2015"` when the stored number
   carries a set size, else `"2023"`; off → `"off"`), the style chips and
