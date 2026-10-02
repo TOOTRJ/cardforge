@@ -393,10 +393,16 @@ Rules and gotchas:
   (`FrameProfile.collector` = `M15_COLLECTOR` on the wave-1 entries,
   `COLLECTOR_TEMPLATES`) — `docs/FRAMES.md` "Printed pieces". On a card
   with the line the pipglyph.com mark sits in its © slot (line 2 with a
-  drawn stat plate, else line 1; `lib/cards/collector-layout.ts`) and a
-  clean download prints `footer_text` there; the collector face
+  drawn stat plate, else line 1 — m15pw's `markLine: 2` keeps it off the
+  empty loyalty shield; `lib/cards/collector-layout.ts`) and a clean
+  download prints `footer_text` there (cut with one "…" past
+  `MARK_TEXT_MAX_WIDTH_PCT`); the collector face
   (`public/fonts/Montserrat-Medium.ttf`, OFL, subset ⊆ MPlantin's cmap) is
-  registered LAST in the bake's fonts — never add a glyph MPlantin lacks.
+  registered after MPlantin and BEFORE Keyrune, never last: Satori draws a
+  character no font has with the LAST registered font (its `.notdef` and
+  advance), so a new face at the end changes stored bakes
+  (`collector-font.test.ts` pins the order) — and never add a glyph
+  MPlantin lacks.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
