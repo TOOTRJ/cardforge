@@ -1208,10 +1208,18 @@ card on the two frames bakes byte-identical with the switches absent).
   split over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 / #144,
   ECL #292–296: `cardFrameProperties`'s `typeTitle` L), so m15borderless
   builds `<pair>-h` on the L frame with the grey plate (`plateKeyFor`'s `c`
-  = the pack's colourless plate, CC's `pt` C); a hybrid artifact falls back
-  to the split, like m15artifact. m15borderlessartifact's `m` tick (verified
-  2026-09-28) has two-colour references: the switch now gives them their
-  split.
+  = the pack's listed colourless plate, pt/l.png; CC's auto frame names the
+  unlisted pt/c.png for its `pt` C — the same grey tone, medians within 3
+  levels); a hybrid artifact falls back to the split, like m15artifact.
+  m15borderlessartifact's `m` tick (verified 2026-09-28) has two-colour
+  references: the switch now gives them their split. Known artefact (skeptic
+  2026-10-02): CC's gold M frame draws its type-bar and box rings one row
+  higher than the colour frames, so the SPLIT masters (and their twins) keep
+  a 1 px gold line above the text box's top and bottom pinline (rows 1302
+  and 1936 at HD; the hybrid masters, on the L frame, don't). No print has
+  it; CC's own stack shows the top one. The fix — the Rules and Type regions
+  replaced by the two colour frames — is a re-cut of 20 masters with its own
+  before/after sheet (TODO 4.6f).
 - **The pair's crown** is the two floating crowns lerped across
   `PAIR_RAMPS.crownFloating` = 40→60 %W — wider than the standard band's
   45→55: FDN's seven crowned borderless pairs (#343 B|R, #346 W|B, #347 G|U,

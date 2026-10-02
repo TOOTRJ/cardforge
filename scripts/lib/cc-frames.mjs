@@ -559,9 +559,18 @@ export function borderlessLandLayers({ frame, box, pinline }) {
 // measure 42.0–43.4 / 50.2–51.2 / 58.4–59.0 at 10 / 50 / 90 % on both
 // rings) through the pack's own Pinline mask — CC's Pinline / pinlineRight
 // layers, untilted (its maskRightHalf.png tilts +1.35 %W). CC also splits
-// the Rules layer through the regular M15 Rules mask: on this pack every
-// colour's box is the same dark α128 pixels, so that layer draws nothing
-// the M frame doesn't, and is left out. A HYBRID cost prints the same split
+// the Rules layer through the regular M15 Rules mask; it is left out, the
+// box being the same dark α128 pixels on every colour. KNOWN ARTEFACT
+// (skeptic 2026-10-02, TODO 4.6f): CC's gold M frame draws its type-bar and
+// box rings ONE ROW HIGHER than the colour frames (and the L frame), so the
+// split masters keep a 1 px line of the M ring's gold (246,210,98) above
+// the masked pinline at the text box's top and bottom edges — rows 1302
+// (1,276 px) and 1936 (1,278 px) at HD; no print has it (FDN #345). CC's
+// own stack shows the first too (its Type layer is the M frame) and covers
+// the second with the Rules layer left out here. Replacing the Rules and
+// Type regions with the two colour frames (`replace`, under the Pinline
+// layer) removes both — a re-cut of the 20 split masters and twins, so the
+// owner's call. The hybrid masters don't have it. A HYBRID cost prints the same split
 // pinline over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 /
 // #144, ECL #292–296: cardFrameProperties's typeTitle 'L' for a hybrid
 // pair), so m15borderless builds a "hybrid" dress too, `<pair>-h`, on the L
