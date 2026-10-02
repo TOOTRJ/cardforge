@@ -421,7 +421,7 @@
     "pack": "packFlip.js 'Flip'",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; P/T plates: the pack's two-plate image drawn at its bounds (56/478 px, 1:1) and cut through the Top PT / Bottom PT masks into each plate's box, native size",
+    "transforms": "native 1500x2100, no resample; the lower half re-cut onto the prints: rows 1290–1339 (the window's lower rows, its inner line, the pinline, the upside-down type bar's outline and the first rows of its bevel) moved up 7 px and rows 1340–1499 (the rest of the bevel, the bar's face, its bottom outline, the pinline below and the text box's top edge into its paper) moved up 5 px, the 2 rows opened between them the bevel plateau repeated and the 5 rows opened below the block the paper under it; the seams cross-faded over 24 rows inside the window, 3 at the split and 24 inside the paper (premultiplied); every row above 1283 and from 1500 on copied 1:1; corners rounded to the importer radius; P/T plates: the pack's two-plate image drawn at its bounds (56/478 px, 1:1) and cut through the Top PT / Bottom PT masks into each plate's box, native size",
     "colors": {
       "w": [
         "img/frames/m15/flip/w.png"
@@ -482,6 +482,16 @@
       },
       "output": "pt/<colour>-<top|bottom>.png, native size"
     },
+    "recutUp": {
+      "fromY": 1290,
+      "splitY": 1340,
+      "toY": 1500,
+      "shiftTop": -7,
+      "shiftBottom": -5,
+      "blendTop": 24,
+      "blendSplit": 3,
+      "blendBottom": 24
+    },
     "sourceFiles": [
       "img/frames/bottomHalfSharp.svg",
       "img/frames/m15/flip/b.png",
@@ -502,6 +512,7 @@
     ],
     "notes": [
       "source: CC 'Flip' (packFlip.js): the top creature's name bar, text box and type bar, the shared art window, the upside-down bottom creature's type bar, text box and name bar — replaces the MSE magic-m15-flip composite (build-flip-frame.mjs), which sat 30–80 px low from the title bar down against C18 #134 and CM2 #71",
+      "the lower half re-cut onto the prints (TODO 4.21a follow-up, layout v39; owner decision 2026-10-02): CC drew the bottom half as the top half turned, and C18 #134 / CM2 #71 are not that symmetric — the window's inner line and the upside-down type bar's dark top band print 7 px higher than CC's, the bar's bottom outline and the text box's top edge 5 px higher, the upside-down name bar where CC has it; two pieces move up (FLIP_LOWER_RECUT), split inside the bar's flat bevel plateau, every row above 1283 and from 1500 on CC's byte for byte; the top half, the cost and the P/T plates are untouched",
       "colourless = CC's see-through 'Colorless Frame' (flip/c.png): the FLIP profile draws the art under the frame for 'c' (underFrameArt on UNDER_FRAME_RECT, layout v35's rect; owner decision 2026-09-29), as m15/c does; never offered until a print exists",
       "P/T plates (owner decision 2026-09-29, a correction): CC's <k>pt.png holds both plates — the top creature's upright, the bottom creature's upside-down — drawn at packFlip.js's bounds and cut through the pack's Top PT / Bottom PT masks (the card's halves) into pt/<k>-top.png and pt/<k>-bottom.png; a plate draws only when its half has a P/T, as on M15; cpt.png is the 'Colorless Power/Toughness' plate",
       "no crown: the legendary bottom halves of C18 #134 and CM2 #71 print none"

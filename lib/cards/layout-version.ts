@@ -732,9 +732,48 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            and aftermath/w are unverified, flip has none), so the first
 //            ticks are the owner's after the deploy (C18 #134 flip/g, CM2
 //            #71 flip/b, the adventure and aftermath prints).
+//   39     — flip's lower half and aftermath's cost onto the prints (TODO
+//            4.21a follow-up; the independent check of #451, owner decision
+//            round 22, 2026-10-02 — fixed before flip is verified):
+//            * flip: CC drew the bottom half as the top half turned, and the
+//              two printed M15 flips are not that symmetric. On C18 #134 and
+//              CM2 #71 (Scryfall PNGs at 1500 × 2100, the master's profile
+//              blurred to the scan, per-band correlation + half-level
+//              crossings, both prints within 0.5 px) the window's inner line
+//              and the upside-down type bar's dark top band sit 7 px higher
+//              than the master's (the line centred 1311 against 1318.5),
+//              the bar's bottom outline and the text box's top edge 5 px
+//              higher (1444.7 / 1466.5 against 1449.7 / 1470.8), the
+//              upside-down name bar where CC has it. The importer re-cuts
+//              the masters' lower half in two pieces (scripts/lib/
+//              cc-frames.mjs FLIP_LOWER_RECUT: rows 1290–1339 up 7, rows
+//              1340–1499 up 5, split inside the bar's flat bevel plateau;
+//              every row above 1283 and from 1500 on CC's byte for byte) —
+//              seven new masters, the plates unchanged — and the profile
+//              follows: the art slot's bottom (33.25 → 32.91 %H: the window
+//              ends at 1310 px, was 1317) and the upside-down rules rect
+//              (its box's paper from 1467 px, was 1472). The upside-down
+//              type line keeps its print-matched baseline (the bar moves
+//              under it), the name bar, the top half, the cost and the
+//              plates do not move.
+//            * aftermath: the top half's cost was never print-matched (the
+//              same on the MSE master). AKH #210–214 and HOU #157 end the
+//              last disc at 1383–1385 px (mean 1384.0) with the discs
+//              centred 158–161 (mean 159.4); ours ended at 1357 and centred
+//              168. The title rect runs to 92.3 %W (was 90.5) and costDy
+//              lifts the discs 8.6 px; the name's baseline and left edge,
+//              the type line and the set symbol do not move.
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[39] = aftermath,
+//            flip): every card on the two, art or none. Public production
+//            (anonymous read, 2026-10-02): 0 public or unlisted cards on
+//            either. The visual matrix: only the 20 flip + 17 aftermath
+//            cases change. "sweep" (a correction). NOT verification-neutral
+//            (a master and slots move) — no tick exists on either to stale:
+//            the owner walks flip/g (C18 #134) and flip/b (CM2 #71) and the
+//            five AKH aftermath colours after the deploy.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 38;
+export const CARD_LAYOUT_VERSION = 39;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -765,6 +804,10 @@ export const V32_M15_FAMILY_TEMPLATES: readonly string[] = [
 // history once it ships (4.21b's split and battle and 4.21c's saga bring
 // their own bumps).
 export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "aftermath", "flip"];
+
+// v39 — flip's lower half and aftermath's cost onto the prints (the 4.21a
+// follow-up). Frozen like the lists above: v39 is history once it ships.
+export const V39_FLIP_AFTERMATH_TEMPLATES: readonly string[] = ["aftermath", "flip"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -816,6 +859,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v38: the portrait layouts re-sourced from Card Conjurer (4.21a) — their
   // masters, art slots and text slots; every card on them.
   38: V38_PORTRAIT_LAYOUT_TEMPLATES,
+  // v39: flip's re-cut masters + art slot and rules rect, aftermath's cost
+  // (the 4.21a follow-up); every card on the two.
+  39: V39_FLIP_AFTERMATH_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1424,6 +1470,8 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   35: "sweep", // art-area corrections: CC M15 art slot (4.4 (2)), under-frame art from the border (4.17a), nyx / fullart / m15pw-c (4.17b)
   36: "sweep", // correction round 2: inline pips on the capitals (3.31), printed set-symbol sizes (4.46), walker symbol (4.47)
   37: "sweep", // nyx's type bar + text box darkened to the THB prints (4.17e) — a correction, never a badge
+  38: "sweep", // the portrait layouts re-sourced from Card Conjurer (4.21a) — a frame swap, never a badge
+  39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

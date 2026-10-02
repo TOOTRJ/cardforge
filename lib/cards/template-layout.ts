@@ -2675,17 +2675,25 @@ const ADVENTURE: FrameProfile = {
 // that sat 30–80 px low from the title bar down (its window 648–1393 px
 // against the prints' 626–1308). Every rect is packFlip.js's, in percent of
 // the 1500×2100 card (a rotation-180 box spans x − w … x, y − h … y):
-//   • art 7.57/29.57/84.87 × 33.25 — the masters' window 115–1385 ×
-//     623–1317 px on every colour with 1.45 / 1.6 / 2.0 / 2.25 px to spare
-//     (7.6's 0.05 %). CC drew the bottom half as the top half turned: the
-//     prints' window ends 9 px higher (C18 #134 and CM2 #71: the art's edge
-//     626.5–1308 px, the frame's inner line centred 621 / 1312.5 against the
-//     masters' 620.5 / 1318.5) and their upside-down type bar 5 px higher
-//     (1339–1444 against 1344–1449) — the master's own geometry, which a
-//     profile cannot move (a re-cut of the master would; TODO 4.21a note);
+//   • art 7.57/29.57/84.87 × 32.91 — the masters' window 115–1385 ×
+//     623–1310 px on every colour with 1.45 / 1.6 / 2.0 / 2.1 px to spare
+//     (7.6's 0.05 %). Layout v39 (TODO 4.21a follow-up, owner decision
+//     2026-10-02): CC drew the bottom half as the top half turned, and the
+//     prints are not that symmetric — on C18 #134 and CM2 #71 the window's
+//     inner line and the upside-down type bar's dark top band sit 7 px
+//     higher than CC's (the line centred 1311 against 1318.5), the bar's
+//     bottom outline and the text box's top edge 5 px higher (1444.7 against
+//     1449.7; 1466.5 against 1470.8), the upside-down name bar where CC has
+//     it — so the importer re-cuts the masters' lower half in two pieces
+//     (scripts/lib/cc-frames.mjs FLIP_LOWER_RECUT): the window now ends at
+//     1310 px (was 1317; the slot's bottom follows, 33.25 → 32.91 %H), the
+//     bar's face spans 1339–1444 (was 1344–1449) and the box's paper starts
+//     at 1467 (was 1472; the rules rect follows). The top half, the cost and
+//     the plates are v38's;
 //   • the top name bar 3.86–9.29 %H and type bar 23.53–28.96, the text box
-//     10.2–22.2; the bottom name bar 83.05–88.48, type bar 63.43–68.86, text
-//     box 70.1–82.1; the set symbol's box ends at 78.4 %W, centred on
+//     10.2–22.2; the bottom name bar 83.05–88.48, type bar 63.43–68.86 (its
+//     face 1339–1444 px since v39), text box 70.1–82.1 (its paper from
+//     69.86 %H since v39); the set symbol's box ends at 78.4 %W, centred on
 //     26.0 %H (setSymbolBounds);
 //   • the P/T plates — every printed M15 flip creature carries one per half
 //     (C18 #134 Budoka Gardener, CM2 #71 Nezumi Graverobber; owner decision
@@ -2716,9 +2724,12 @@ const ADVENTURE: FrameProfile = {
 // half ignores dy (a second face centres its text), so its bars
 // are placed where the prints' text centres: the type line's baseline
 // 1370.5 px and the name's 1783.5 (in card space, the text reading up from
-// them), 4 px and 9 px below CC's box centres. Sizes are the family's on
-// both halves (layout v32); the upside-down name bar and type line fit
-// their bars (fitLines); the type line starts after the bottom plate.
+// them), 4 px and 9 px below CC's box centres — and stay there through
+// v39: the re-cut moves the bar under the line, not the line (the prints
+// set their type line's body 30–34 px below the bar's face top; ours
+// 32–33). Sizes are the family's on both halves (layout v32); the
+// upside-down name bar and type line fit their bars (fitLines); the type
+// line starts after the bottom plate.
 // Colourless = CC's see-through 'Colorless Frame' (the PROFILES entry draws
 // the art under it, underFrameArt); no crown (the C18 / CM2 legendary
 // halves print none). The artist credit sits on M15's footer line (3.8's
@@ -2728,7 +2739,9 @@ const FLIP: FrameProfile = {
   label: "Flip",
   costSizePct: COST_DISC_PCT,
   costDy: -0.0064,
-  artSlot: { topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 33.25 },
+  // The window's bottom moved up 7 px with the v39 re-cut: 1310 px on
+  // every colour, the slot's bottom at 1312.1 (2.1 px to spare).
+  artSlot: { topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 32.91 },
   // CC's flip symbol box, M15's (packFlip 0.12 W × 0.041 H = 86 px; layout
   // v32) — see M15's symbolSizePct — in its own box left of the plate.
   symbolSizePct: SET_SYMBOL_BOX_PCT,
@@ -2795,8 +2808,11 @@ const FLIP: FrameProfile = {
       weight: 600,
       font: "display",
     },
+    // CC's rules2 box started on its paper's first row (1472 px); the v39
+    // re-cut moved the box's top edge up 5 px (the paper from 1467), so the
+    // rect follows it — the text, centred, with it.
     rules: {
-      rect: { topPct: 70.1, leftPct: 8.6, widthPct: 82.8, heightPct: 12.0 },
+      rect: { topPct: 69.86, leftPct: 8.6, widthPct: 82.8, heightPct: 12.24 },
       sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
       colorHex: INK_DARK,
       vAlign: "center",
@@ -2964,8 +2980,17 @@ const AFTERMATH: FrameProfile = {
   artSlot: { topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 22.44 },
   footer: M15.footer,
   costSizePct: AFTERMATH_TEXT.costSizePct,
+  // Layout v39 (TODO 4.21a follow-up, owner decision 2026-10-02): the top
+  // half's cost onto the prints. AKH #210–214 and HOU #157 (Scryfall PNGs
+  // at 1500 × 2100) end their last disc at 1383–1385 px (mean 1384.0) and
+  // centre the discs on row 158–161 (mean 159.4); v38's rect ended at
+  // 90.5 %W (1357.5 px — the last disc's edge at 1357, 27 px short) with the
+  // discs centred 168 px (8.6 px low). The rect runs to 92.3 %W (1384.5
+  // px: the cost right-aligns at its end) and costDy lifts the discs 8.6
+  // px; the name's baseline (dy) and left edge do not move.
+  costDy: -8.6 / 1500,
   title: {
-    rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
+    rect: { topPct: 5.7, leftPct: 8.5, widthPct: 83.8, heightPct: 4.4 },
     sizePct: AFTERMATH_TEXT.titleSizePct,
     dy: keepBaseline(0.05, AFTERMATH_TEXT.titleSizePct),
     fit: "measured",

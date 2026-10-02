@@ -828,11 +828,62 @@ export const FLIP_PT_BOXES = {
 /** CC's flip P/T image per colour key (the 'Colorless Power/Toughness'
  *  cpt.png for c). */
 const FLIP_PT_IMAGES = perColor((k) => `${FLIP}/${k}pt.png`);
+/**
+ * The re-cut of CC's flip masters' LOWER HALF onto the prints (TODO 4.21a
+ * follow-up, layout v39; owner decision round 22, 2026-10-02). CC drew the
+ * bottom half as the top half turned about the window's centre (the type
+ * bars mirror about row 969.5, the name bars too); the two printed M15 flips
+ * are not that symmetric. Measured on C18 #134 Budoka Gardener and CM2 #71
+ * Nezumi Graverobber (Scryfall PNGs at 1500 × 2100, the master's profile
+ * blurred to the scan's softness, per-band correlation and half-level
+ * crossings, both prints within 0.5 px of each other): the window's inner
+ * line and the type bar's dark top band (its outline and bevel) print 7 px
+ * HIGHER than CC's (the line centred on rows 1311–1313 against CC's 1318.5,
+ * the band's top edge 1324 against 1331.5; a per-band correlation 8.2 / 6.3
+ * and 8.3 / 5.4), the bar's bottom outline and the text box's top edge 5 px
+ * higher (the bar's bottom edge 1444.7 against 1449.7, the box's edge
+ * 1466.5 against 1470.8; correlation 4.8–5.1 / 5.4–6.2), while the
+ * upside-down name bar sits where CC draws it (−2 px, the other way, inside
+ * the scans' tolerance). The print's own art edge reads 1308.5 by the
+ * half-contrast detector, but that reading carries the scan's blur (the
+ * same detector puts the window's TOP edge 3.5 px off on a line that agrees
+ * within 0.5 px): the line is the mark. The top name bar, type bar, window
+ * top and cost stay where v38 put them. So two pieces move up, split inside
+ * the bevel's flat grey plateau (CC rows 1337–1342, luma ≈ 122 across the
+ * bar): rows [fromY, splitY) — the window's lower rows, the inner line, the
+ * pinline, the bar's outline and the first rows of its bevel — 7 px, and
+ * rows [splitY, toY) — the rest of the bevel, the bar's face, its bottom
+ * outline, the pinline below and the text box's top edge into its paper —
+ * 5 px. The two rows that opens are the plateau repeated (the print's dark
+ * top band is itself 3–5 px taller than CC's), cross-faded over
+ * `blendSplit` rows (only the bar's 45° end-cap chamfers cross them; the
+ * left one lies under the bottom plate). The top seam is inside the
+ * window, where only the frame's side texture meets it (cross-faded over
+ * `blendTop` rows, as the tokens' re-cuts); the bottom seam inside the
+ * paper (`blendBottom`). Every row above fromY − 7 and from toY on is
+ * CC's, byte for byte; the result: the window ends on row 1309 (CC's
+ * 1316), the line on 1310–1313, the bar's face 1339–1444 on every colour
+ * (both prints' 1339–1444; CC's 1344–1449), its bottom outline centred on
+ * 1447 (the prints'), the paper from 1467 (CC's 1472) — held by
+ * tests/unit/frames/flip-lower-block.test.ts. Native px of the pack
+ * (1500 × 2100).
+ */
+export const FLIP_LOWER_RECUT = {
+  fromY: 1290,
+  splitY: 1340,
+  toY: 1500,
+  shiftTop: -7,
+  shiftBottom: -5,
+  blendTop: 24,
+  blendSplit: 3,
+  blendBottom: 24,
+};
 const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius";
 
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * ptCut?, recut?, bridge?, tones?, excluded?, pack?, transforms?, notes }.
+ * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, pack?, transforms?,
+ * notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
  * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
  * solid, the artifact name pill's slate made solid, owner decisions
@@ -848,7 +899,8 @@ const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners 
  * <template>/pt/<colour>-<name>.png, one plate per creature half.
  * `recut` moves a band of each composite down before the downscale
  * (recutBand; the textless tokens, TOKEN_TEXTLESS_RECUT; the text-box
- * tokens, TOKEN_REGULAR_RECUT).
+ * tokens, TOKEN_REGULAR_RECUT); `recutUp` moves a block UP in two pieces
+ * (recutBlockUp; the flip masters' lower half, FLIP_LOWER_RECUT).
  * `bridge` closes the frame over the top of a clear ray (bridgeRayTip; the
  * emblem's spark, EMBLEM_RAY_BRIDGE), after any re-cut.
  * `tones` multiply regions of each composite by print-fitted gains, in
@@ -1157,10 +1209,12 @@ export const CC_TEMPLATES = {
   flip: {
     colors: perColor((k) => [layer(`${FLIP}/${k}.png`)]),
     ptCut: { image: FLIP_PT_IMAGES, bounds: FLIP_PT_BOUNDS, masks: FLIP_PT_MASKS, boxes: FLIP_PT_BOXES },
+    recutUp: FLIP_LOWER_RECUT,
     pack: "packFlip.js 'Flip'",
-    transforms: `${NATIVE_1500}; P/T plates: the pack's two-plate image drawn at its bounds (56/478 px, 1:1) and cut through the Top PT / Bottom PT masks into each plate's box, native size`,
+    transforms: `${flipLowerRecutTransform(FLIP_LOWER_RECUT)}; P/T plates: the pack's two-plate image drawn at its bounds (56/478 px, 1:1) and cut through the Top PT / Bottom PT masks into each plate's box, native size`,
     notes: [
       "source: CC 'Flip' (packFlip.js): the top creature's name bar, text box and type bar, the shared art window, the upside-down bottom creature's type bar, text box and name bar — replaces the MSE magic-m15-flip composite (build-flip-frame.mjs), which sat 30–80 px low from the title bar down against C18 #134 and CM2 #71",
+      "the lower half re-cut onto the prints (TODO 4.21a follow-up, layout v39; owner decision 2026-10-02): CC drew the bottom half as the top half turned, and C18 #134 / CM2 #71 are not that symmetric — the window's inner line and the upside-down type bar's dark top band print 7 px higher than CC's, the bar's bottom outline and the text box's top edge 5 px higher, the upside-down name bar where CC has it; two pieces move up (FLIP_LOWER_RECUT), split inside the bar's flat bevel plateau, every row above 1283 and from 1500 on CC's byte for byte; the top half, the cost and the P/T plates are untouched",
       "colourless = CC's see-through 'Colorless Frame' (flip/c.png): the FLIP profile draws the art under the frame for 'c' (underFrameArt on UNDER_FRAME_RECT, layout v35's rect; owner decision 2026-09-29), as m15/c does; never offered until a print exists",
       "P/T plates (owner decision 2026-09-29, a correction): CC's <k>pt.png holds both plates — the top creature's upright, the bottom creature's upside-down — drawn at packFlip.js's bounds and cut through the pack's Top PT / Bottom PT masks (the card's halves) into pt/<k>-top.png and pt/<k>-bottom.png; a plate draws only when its half has a P/T, as on M15; cpt.png is the 'Colorless Power/Toughness' plate",
       "no crown: the legendary bottom halves of C18 #134 and CM2 #71 print none",
@@ -1204,6 +1258,12 @@ export const CC_TEMPLATES = {
 /** How provenance describes the text-box tokens' re-cut (TOKEN_REGULAR_RECUT). */
 function recutTransform(r) {
   return `native 1500x2100, no resample; composited in CC's order, then re-cut: rows ${r.fromY}–${r.toY - 1} (the window's straight sides through the top of the text box) moved down ${r.shift} px as one piece, the rows opened above them filled from the window's sides, each seam cross-faded over ${r.blend} rows (premultiplied); corners rounded to the importer radius`;
+}
+
+/** How provenance describes the flip masters' lower-half re-cut
+ *  (FLIP_LOWER_RECUT, layout v39). */
+function flipLowerRecutTransform(r) {
+  return `native 1500x2100, no resample; the lower half re-cut onto the prints: rows ${r.fromY}–${r.splitY - 1} (the window's lower rows, its inner line, the pinline, the upside-down type bar's outline and the first rows of its bevel) moved up ${-r.shiftTop} px and rows ${r.splitY}–${r.toY - 1} (the rest of the bevel, the bar's face, its bottom outline, the pinline below and the text box's top edge into its paper) moved up ${-r.shiftBottom} px, the ${r.shiftBottom - r.shiftTop} rows opened between them the bevel plateau repeated and the ${-r.shiftBottom} rows opened below the block the paper under it; the seams cross-faded over ${r.blendTop} rows inside the window, ${r.blendSplit} at the split and ${r.blendBottom} inside the paper (premultiplied); every row above ${r.fromY + r.shiftTop} and from ${r.toY} on copied 1:1; corners rounded to the importer radius`;
 }
 
 /** How provenance describes the textless tokens' re-cut (TOKEN_TEXTLESS_RECUT). */
@@ -1370,6 +1430,81 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
     const src = y - shift;
     if (y < fromY + blend) mix(y, y, src, (y - fromY + 1) / (blend + 1));
     else if (y >= toY + shift - blendBottom) mix(y, src, y, (y - (toY + shift - blendBottom) + 1) / (blendBottom + 1));
+    else buf.copy(out, y * row, src * row, (src + 1) * row);
+  }
+  return out;
+}
+
+/**
+ * Move a block of an 8-bit RGBA image UP in two pieces (FLIP_LOWER_RECUT):
+ * rows [fromY, splitY) land `shiftTop` px higher and rows [splitY, toY)
+ * `shiftBottom` px higher (both negative, the top piece moving at least as
+ * far), so the rows between the two pieces' new places — splitY + shiftTop
+ * up to splitY + shiftBottom — repeat the bottom piece's first rows, and
+ * the rows the bottom piece leaves at [toY + shiftBottom, toY) repeat the
+ * rows just below it; everything above fromY + shiftTop and from toY on
+ * keeps its place. Three seams, each cross-faded in premultiplied space (0
+ * = a hard cut): the top one over `blendTop` rows from the original rows
+ * into the moved ones, the split over `blendSplit` rows from the top piece's
+ * continuation into the bottom piece, the bottom over `blendBottom` rows
+ * from the moved rows into the original ones. Returns a new buffer.
+ */
+export function recutBlockUp(buf, width, height, { fromY, splitY, toY, shiftTop, shiftBottom, blendTop, blendSplit, blendBottom }) {
+  const ok =
+    Number.isInteger(shiftTop) &&
+    Number.isInteger(shiftBottom) &&
+    shiftTop < 0 &&
+    shiftBottom < 0 &&
+    shiftTop <= shiftBottom &&
+    Number.isInteger(fromY) &&
+    Number.isInteger(splitY) &&
+    Number.isInteger(toY) &&
+    fromY + shiftTop >= 0 &&
+    fromY < splitY &&
+    splitY < toY &&
+    toY - shiftBottom <= height &&
+    [blendTop, blendSplit, blendBottom].every((b) => Number.isInteger(b) && b >= 0) &&
+    fromY + shiftTop + blendTop <= splitY + shiftTop &&
+    splitY + shiftTop + blendSplit <= toY - blendBottom;
+  if (!ok) {
+    throw new Error(
+      `recutBlockUp: bad block ${JSON.stringify({ fromY, splitY, toY, shiftTop, shiftBottom, blendTop, blendSplit, blendBottom, height })}`,
+    );
+  }
+  const out = Buffer.from(buf);
+  const row = width * 4;
+  const mix = (y, a, b, t) => {
+    // premultiplied lerp of row a (weight 1 − t) and row b (weight t) into y
+    for (let x = 0; x < width; x += 1) {
+      const ia = a * row + x * 4;
+      const ib = b * row + x * 4;
+      const o = y * row + x * 4;
+      const aa = (buf[ia + 3] / 255) * (1 - t);
+      const ab = (buf[ib + 3] / 255) * t;
+      const alpha = aa + ab;
+      for (let c = 0; c < 3; c += 1) {
+        out[o + c] = alpha === 0 ? 0 : Math.round((buf[ia + c] * aa + buf[ib + c] * ab) / alpha);
+      }
+      out[o + 3] = Math.round(alpha * 255);
+    }
+  };
+  const topStart = fromY + shiftTop;
+  const split = splitY + shiftTop;
+  // The top piece: its rows, `shiftTop` higher; the first `blendTop` rows
+  // fade from the original rows into it.
+  for (let y = topStart; y < split; y += 1) {
+    const src = y - shiftTop;
+    if (y < topStart + blendTop) mix(y, y, src, (y - topStart + 1) / (blendTop + 1));
+    else buf.copy(out, y * row, src * row, (src + 1) * row);
+  }
+  // The bottom piece, `shiftBottom` higher, extended over the rows the two
+  // moves open between them (its own first rows again) and below it (the
+  // rows under the block); the split fades from the top piece's
+  // continuation into it, the bottom seam from it into the original rows.
+  for (let y = split; y < toY; y += 1) {
+    const src = y - shiftBottom;
+    if (y < split + blendSplit) mix(y, y - shiftTop, src, (y - split + 1) / (blendSplit + 1));
+    else if (y >= toY - blendBottom) mix(y, src, y, (y - (toY - blendBottom) + 1) / (blendBottom + 1));
     else buf.copy(out, y * row, src * row, (src + 1) * row);
   }
   return out;
