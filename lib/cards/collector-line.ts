@@ -148,7 +148,9 @@ export type CollectorContentFacts = CollectorLetterFacts & {
   collectorNumber?: string | null;
   lang?: string | null;
   artistCredit?: string | null;
-  /** The card's finish: a foil card prints the ★ separator. */
+  /** The card's finish: a foil or etched card prints the ★ separator
+   *  (owner 2026-10-02: etched is a foil treatment, every etched print
+   *  carries the ★). */
   finish?: string | null;
   /** FrameStyle.star — the foil-printing flag (owner 2026-09-29: a separate
    *  ★ with no sheen, free for every plan). */
@@ -167,8 +169,9 @@ export type CollectorLine2 = {
   /** The printed language code (EN, SP, KR …), or null for a language no
    *  scan has verified a printed code for — never invented. */
   language: string | null;
-  /** The separator between set code and language: the ★ for a foil card or
-   *  the ★ flag, else the •. Drawn only between two present pieces. */
+  /** The separator between set code and language: the ★ for a foil or
+   *  etched card or the ★ flag, else the •. Drawn only between two present
+   *  pieces. */
   separator: "star" | "dot";
   /** The artist, as stored (the brush precedes it); null prints no brush. */
   artist: string | null;
@@ -185,7 +188,7 @@ export function collectorContent(card: CollectorContentFacts, style: CollectorSt
     line2: {
       setCode,
       language: printedLangCode(card.lang),
-      separator: card.star === true || card.finish === "foil" ? "star" : "dot",
+      separator: card.star === true || card.finish === "foil" || card.finish === "etched" ? "star" : "dot",
       artist,
     },
   };

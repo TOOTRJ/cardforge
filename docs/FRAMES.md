@@ -1162,7 +1162,9 @@ holds a printed style (`"2015"` or `"2023"`), the owner's explicit `"off"`,
 or nothing (a card from before the line, which keeps its look and gets the
 editor's hint "New: add a collector line and holofoil stamp"); the
 foil-printing ★ is `frame_style.star` (`true` or absent — a flag, no sheen,
-free for every plan). Both join `FRAME_ANATOMY_KEYS`, so they travel in an
+free for every plan; a Foil or Etched finish prints the ★ without it —
+owner 2026-10-02: etched is a foil treatment and every etched print
+carries the ★). Both join `FRAME_ANATOMY_KEYS`, so they travel in an
 edit's `frame_anatomy` patch like the crown. A new card starts `"2023"`;
 a remix starts on unless the parent turned it off; an import follows the
 printing (`printed_collector` / `printed_star`, below); every save drops

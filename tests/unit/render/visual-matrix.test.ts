@@ -63,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|lang|empty|artist|hd|square))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());

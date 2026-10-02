@@ -162,11 +162,11 @@ describe("the two lines (collectorContent)", () => {
     }
   });
 
-  it("the ★ for the star flag and for a foil finish, the • otherwise; an etched finish keeps the •", () => {
+  it("the ★ for the star flag and for a foil or etched finish (owner 2026-10-02), the • otherwise", () => {
     expect(collectorContent(dmu, "2015").line2.separator).toBe("dot");
     expect(collectorContent({ ...dmu, star: true }, "2015").line2.separator).toBe("star");
     expect(collectorContent({ ...dmu, finish: "foil" }, "2015").line2.separator).toBe("star");
-    expect(collectorContent({ ...dmu, finish: "etched" }, "2015").line2.separator).toBe("dot");
+    expect(collectorContent({ ...dmu, finish: "etched" }, "2015").line2.separator).toBe("star");
     expect(collectorContent({ ...dmu, finish: "showcase" }, "2015").line2.separator).toBe("dot");
     expect(collectorContent({ ...dmu, star: false }, "2015").line2.separator).toBe("dot");
   });

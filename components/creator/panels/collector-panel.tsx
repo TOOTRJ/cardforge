@@ -31,7 +31,7 @@ import type { FrameStyle } from "@/types/card";
 export const NO_COLLECTOR_SLOT_NOTE = "This frame prints its own footer. The collector line comes to it in a later release.";
 
 /** Shown under the ★ switch while the card's finish is Foil. */
-export const FOIL_FINISH_STAR_NOTE = "A Foil finish prints the ★ already.";
+export const FOIL_FINISH_STAR_NOTE = "A Foil or Etched finish prints the ★ already.";
 
 /** Each style's example line 1 for the chips, from the card's own letter
  *  and number ("R 0040" / "040/281 R"), a sample number when it has none. */
@@ -119,7 +119,7 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
           hint={null}
           onToggle={(next) => setValue("frame_style.star", next ? true : undefined, { shouldDirty: true })}
         >
-          {finish === "foil" ? (
+          {finish === "foil" || finish === "etched" ? (
             <p className="text-xs leading-5 text-muted" data-testid="collector-foil-note">
               {FOIL_FINISH_STAR_NOTE}
             </p>

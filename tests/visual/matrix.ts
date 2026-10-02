@@ -651,9 +651,10 @@ export function visualCases(): VisualCase[] {
   }
   // No stat plate (an instant): the mark on line 1.
   add("m15", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15", "2023") });
-  // The ★: by the flag, and by a foil finish.
+  // The ★: by the flag, and by a foil or etched finish (owner 2026-10-02).
   add("m15", "creature", "r", "short", { suffix: "@collector-star", row: collectorRow("m15", "2015", { frame_style: { star: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "r", "short", { suffix: "@collector-foil", finish: "foil", row: collectorRow("m15", "2015", { frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "r", "short", { suffix: "@collector-etched", finish: "etched", row: collectorRow("m15", "2015", { frame_style: { finish: "etched" } as CardRowForBake["frame_style"] }) });
   // A printed language code: es prints SP.
   add("m15", "creature", "b", "short", { suffix: "@collector-lang", row: collectorRow("m15", "2015", { lang: "es" }) });
   // Empty fields: the bare letter and "EN" (new cards print what's filled).
