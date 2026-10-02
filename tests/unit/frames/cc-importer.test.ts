@@ -16,6 +16,9 @@ import {
   EMBLEM_TEXT_BOX_TONE,
   EMBLEM_TONES,
   EMBLEM_TYPE_PILL_TONE,
+  FLIP_PT_BOUNDS,
+  FLIP_PT_BOXES,
+  FLIP_PT_MASKS,
   PW_COLOURLESS_RIM_GAIN,
   PW_GOLD_FACE,
   SHIELD_BOX,
@@ -30,6 +33,7 @@ import {
   TOKEN_TEXTLESS_RECUT,
   applyTone,
   borderlessLandLayers,
+  boundsPx,
   bridgeRayTip,
   builtColors,
   compositeFinish,
@@ -37,6 +41,7 @@ import {
   cutThroughMask,
   describeFinish,
   describeLayer,
+  describePtCut,
   gainAt,
   finishFor,
   flatPixelAt,
@@ -89,6 +94,12 @@ type Def = {
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
+  ptCut?: {
+    image: Record<string, string>;
+    bounds: typeof FLIP_PT_BOUNDS;
+    masks: Record<string, string>;
+    boxes: Record<string, { x: number; y: number; width: number; height: number }>;
+  };
   recut?: { fromY: number; toY: number; shift: number; blend: number; blendBottom?: number };
   bridge?: typeof EMBLEM_RAY_BRIDGE;
   tones?: readonly object[];
@@ -727,6 +738,94 @@ describe("Card Conjurer recipe", () => {
     expect(files).toContain("img/frames/m15/new/pinline.png");
     expect(files).toContain("img/frames/m15/regular/m15PTA.png");
     expect(new Set(files).size).toBe(files.length);
+  });
+});
+
+// TODO 4.21a (layout v38): flip, adventure and aftermath from Card Conjurer's
+// own packs, and flip's two P/T plates cut per creature half.
+describe("the portrait layouts (4.21a)", () => {
+  const TRIO = ["adventure", "aftermath", "flip"];
+
+  it("copies each colour 1:1 from its own pack; the packs' missing colourless keys are named stand-ins", () => {
+    for (const template of TRIO) {
+      const def = templates[template];
+      expect(Object.keys(def.colors).sort(), template).toEqual([...COLORS].sort());
+      for (const key of COLORS) {
+        // One layer, the pack's own file: no mask, no blend, no re-cut.
+        expect(def.colors[key], `${template}/${key}`).toHaveLength(1);
+        expect(def.colors[key][0].mask, `${template}/${key}`).toBeUndefined();
+      }
+      expect(def.recut, template).toBeUndefined();
+      expect(def.finish, template).toBeUndefined();
+      expect(def.transforms, template).toMatch(/^native 1500x2100, pixels copied 1:1 \(no resample\)/);
+    }
+    // Flip has a colourless frame of its own (the see-through one); the
+    // adventure and aftermath packs have none — CC's artifact frame stands in.
+    expect(templates.flip.colors.c[0].src).toBe("img/frames/m15/flip/c.png");
+    expect(templates.adventure.colors.c[0].src).toBe("img/frames/adventure/regular/a.png");
+    expect(templates.aftermath.colors.c[0].src).toBe("img/frames/m15/aftermath/a.png");
+    for (const template of ["adventure", "aftermath"]) {
+      expect(templates[template].notes.join(" "), template).toMatch(/RENDER STAND-IN only/);
+      expect(templates[template].notes.join(" "), template).toMatch(/never offered/);
+    }
+    expect(templates.aftermath.notes.join(" ")).toMatch(/needs TODO 4\.26/);
+  });
+
+  it("cuts flip's two plates out of the pack's one image, each into the box the FLIP profile draws it in", () => {
+    const cut = templates.flip.ptCut!;
+    // packFlip.js: `bounds` of the '<Colour> Power/Toughness' frames, and
+    // its masks2 ('Top PT' / 'Bottom PT').
+    expect(FLIP_PT_BOUNDS).toEqual({ x: 0.0374, y: 0.2277, width: 0.9067, height: 0.4762 });
+    expect(FLIP_PT_MASKS).toEqual({ top: "img/frames/topHalfSharp.svg", bottom: "img/frames/bottomHalfSharp.svg" });
+    expect(cut.bounds).toBe(FLIP_PT_BOUNDS);
+    expect(cut.masks).toBe(FLIP_PT_MASKS);
+    expect(cut.boxes).toBe(FLIP_PT_BOXES);
+    // The image is 1360x1000: drawn at its bounds it is 1:1 on the card.
+    expect(boundsPx(FLIP_PT_BOUNDS, 1500, 2100)).toEqual({ x: 56, y: 478, width: 1360, height: 1000 });
+    expect(Object.keys(cut.image).sort()).toEqual([...COLORS].sort());
+    for (const key of COLORS) expect(cut.image[key], key).toBe(`img/frames/m15/flip/${key}pt.png`);
+    // Each box lies in its own half (the masks cut the card at its middle
+    // row), so a plate never carries a sliver of the other.
+    expect(Object.keys(FLIP_PT_BOXES)).toEqual(["top", "bottom"]);
+    expect(FLIP_PT_BOXES.top.y + FLIP_PT_BOXES.top.height).toBeLessThanOrEqual(1050);
+    expect(FLIP_PT_BOXES.bottom.y).toBeGreaterThanOrEqual(1050);
+    // The FLIP profile's plateRects ARE these boxes, in percent — the plate
+    // is drawn where it was cut from (move one without the other and the
+    // plate lands off the master's bar).
+    const pct = (b: { x: number; y: number; width: number; height: number }) => ({
+      topPct: b.y / 21,
+      leftPct: b.x / 15,
+      widthPct: b.width / 15,
+      heightPct: b.height / 21,
+    });
+    const flip = getFrameProfile("flip");
+    expect(flip.pt!.plateRect).toEqual(pct(FLIP_PT_BOXES.top));
+    expect(flip.secondFace!.pt!.plateRect).toEqual(pct(FLIP_PT_BOXES.bottom));
+    expect(flip.pt!.plateAssetPathTemplate).toBe("/frames/flip/pt/{color}-top.png");
+    expect(flip.secondFace!.pt!.plateAssetPathTemplate).toBe("/frames/flip/pt/{color}-bottom.png");
+    // The published plates are the boxes' native size, every colour, PNG
+    // and WebP.
+    const files = (manifestJson as FrameManifest).files as Record<string, { width: number; height: number }>;
+    for (const key of COLORS) {
+      for (const half of ["top", "bottom"] as const) {
+        for (const ext of ["png", "webp"]) {
+          const entry = files[`flip/pt/${key}-${half}.${ext}`];
+          expect(entry, `flip/pt/${key}-${half}.${ext}`).toBeDefined();
+          expect([entry.width, entry.height], `flip/pt/${key}-${half}.${ext}`).toEqual([FLIP_PT_BOXES[half].width, FLIP_PT_BOXES[half].height]);
+        }
+      }
+    }
+    // Sources and provenance name the plate images and both masks.
+    for (const src of [...Object.values(cut.image), ...Object.values(cut.masks)]) {
+      expect(sourceFilesFor(templates.flip as never), src).toContain(src);
+    }
+    const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
+    expect(provenance.flip.ptCut).toEqual(describePtCut(cut as never, 1500, 2100));
+    expect(provenance.flip.ptCut.drawnAt).toBe("1360x1000 at (56, 478) of the 1500x2100 card");
+    // No other template cuts plates this way.
+    expect(Object.entries(templates).filter(([, d]) => d.ptCut).map(([t]) => t)).toEqual(["flip"]);
+    expect(provenance.adventure.ptCut).toBeUndefined();
+    expect(provenance.aftermath.ptCut).toBeUndefined();
   });
 });
 
