@@ -1,4 +1,98 @@
 {
+  "adventure": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packAdventure.js 'Adventure'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/adventure/regular/w.png"
+      ],
+      "u": [
+        "img/frames/adventure/regular/u.png"
+      ],
+      "b": [
+        "img/frames/adventure/regular/b.png"
+      ],
+      "r": [
+        "img/frames/adventure/regular/r.png"
+      ],
+      "g": [
+        "img/frames/adventure/regular/g.png"
+      ],
+      "c": [
+        "img/frames/adventure/regular/a.png"
+      ],
+      "m": [
+        "img/frames/adventure/regular/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/adventure/regular/a.png",
+      "img/frames/adventure/regular/b.png",
+      "img/frames/adventure/regular/g.png",
+      "img/frames/adventure/regular/m.png",
+      "img/frames/adventure/regular/r.png",
+      "img/frames/adventure/regular/u.png",
+      "img/frames/adventure/regular/w.png"
+    ],
+    "notes": [
+      "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
+      "colourless = CC's 'Artifact Frame' (adventure/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless adventure was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
+      "the book masks (bookLeft, bookLeftMulticolor, bookRight) are 4.26's per-page colour inputs, not published"
+    ]
+  },
+  "aftermath": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packAftermath.js 'Aftermath'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/m15/aftermath/w.png"
+      ],
+      "u": [
+        "img/frames/m15/aftermath/u.png"
+      ],
+      "b": [
+        "img/frames/m15/aftermath/b.png"
+      ],
+      "r": [
+        "img/frames/m15/aftermath/r.png"
+      ],
+      "g": [
+        "img/frames/m15/aftermath/g.png"
+      ],
+      "c": [
+        "img/frames/m15/aftermath/a.png"
+      ],
+      "m": [
+        "img/frames/m15/aftermath/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/aftermath/a.png",
+      "img/frames/m15/aftermath/b.png",
+      "img/frames/m15/aftermath/g.png",
+      "img/frames/m15/aftermath/m.png",
+      "img/frames/m15/aftermath/r.png",
+      "img/frames/m15/aftermath/u.png",
+      "img/frames/m15/aftermath/w.png"
+    ],
+    "notes": [
+      "source: CC 'Aftermath' (packAftermath.js): the upright top half and the sideways bottom half with textured cream text boxes — replaces the MSE stack (build-aftermath-frame.mjs: two per-colour pieces with flat white boxes)",
+      "colourless = CC's 'Artifact Frame' (aftermath/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless aftermath was ever printed and the pack has no colourless frame; never offered (no reference, never ticked)",
+      "gold (m) is built for the key but needs TODO 4.26: every printed two-colour aftermath is mono // mono (21 mixed, 6 same-colour), none gold // gold — flagged in the registry, never ticked until a print or 4.26",
+      "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)"
+    ]
+  },
   "emblem": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -318,6 +412,99 @@
       "the frame's silver closes over the top of the spark's centre ray (EMBLEM_RAY_BRIDGE, owner decision 2026-09-29): the art window is Scryfall's art_crop box at the prints' scale (from 250.4 px), where the prints' ray runs on up to the bar with art in it; the ray ends at 251 px, its tip drawn with the profile of its own right edge, and the bar's shadow and the silver run across",
       "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints; the spark's tail keeps its alpha; the light rims keep CC's tone",
       "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'"
+    ]
+  },
+  "flip": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packFlip.js 'Flip'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; P/T plates: the pack's two-plate image drawn at its bounds (56/478 px, 1:1) and cut through the Top PT / Bottom PT masks into each plate's box, native size",
+    "colors": {
+      "w": [
+        "img/frames/m15/flip/w.png"
+      ],
+      "u": [
+        "img/frames/m15/flip/u.png"
+      ],
+      "b": [
+        "img/frames/m15/flip/b.png"
+      ],
+      "r": [
+        "img/frames/m15/flip/r.png"
+      ],
+      "g": [
+        "img/frames/m15/flip/g.png"
+      ],
+      "c": [
+        "img/frames/m15/flip/c.png"
+      ],
+      "m": [
+        "img/frames/m15/flip/m.png"
+      ]
+    },
+    "ptCut": {
+      "image": {
+        "w": "img/frames/m15/flip/wpt.png",
+        "u": "img/frames/m15/flip/upt.png",
+        "b": "img/frames/m15/flip/bpt.png",
+        "r": "img/frames/m15/flip/rpt.png",
+        "g": "img/frames/m15/flip/gpt.png",
+        "c": "img/frames/m15/flip/cpt.png",
+        "m": "img/frames/m15/flip/mpt.png"
+      },
+      "bounds": {
+        "x": 0.0374,
+        "y": 0.2277,
+        "width": 0.9067,
+        "height": 0.4762
+      },
+      "drawnAt": "1360x1000 at (56, 478) of the 1500x2100 card",
+      "masks": {
+        "top": "img/frames/topHalfSharp.svg",
+        "bottom": "img/frames/bottomHalfSharp.svg"
+      },
+      "boxes": {
+        "top": {
+          "x": 1176,
+          "y": 475,
+          "width": 243,
+          "height": 160
+        },
+        "bottom": {
+          "x": 53,
+          "y": 1321,
+          "width": 243,
+          "height": 160
+        }
+      },
+      "output": "pt/<colour>-<top|bottom>.png, native size"
+    },
+    "sourceFiles": [
+      "img/frames/bottomHalfSharp.svg",
+      "img/frames/m15/flip/b.png",
+      "img/frames/m15/flip/bpt.png",
+      "img/frames/m15/flip/c.png",
+      "img/frames/m15/flip/cpt.png",
+      "img/frames/m15/flip/g.png",
+      "img/frames/m15/flip/gpt.png",
+      "img/frames/m15/flip/m.png",
+      "img/frames/m15/flip/mpt.png",
+      "img/frames/m15/flip/r.png",
+      "img/frames/m15/flip/rpt.png",
+      "img/frames/m15/flip/u.png",
+      "img/frames/m15/flip/upt.png",
+      "img/frames/m15/flip/w.png",
+      "img/frames/m15/flip/wpt.png",
+      "img/frames/topHalfSharp.svg"
+    ],
+    "notes": [
+      "source: CC 'Flip' (packFlip.js): the top creature's name bar, text box and type bar, the shared art window, the upside-down bottom creature's type bar, text box and name bar — replaces the MSE magic-m15-flip composite (build-flip-frame.mjs), which sat 30–80 px low from the title bar down against C18 #134 and CM2 #71",
+      "colourless = CC's see-through 'Colorless Frame' (flip/c.png): the FLIP profile draws the art under the frame for 'c' (underFrameArt on UNDER_FRAME_RECT, layout v35's rect; owner decision 2026-09-29), as m15/c does; never offered until a print exists",
+      "P/T plates (owner decision 2026-09-29, a correction): CC's <k>pt.png holds both plates — the top creature's upright, the bottom creature's upside-down — drawn at packFlip.js's bounds and cut through the pack's Top PT / Bottom PT masks (the card's halves) into pt/<k>-top.png and pt/<k>-bottom.png; a plate draws only when its half has a P/T, as on M15; cpt.png is the 'Colorless Power/Toughness' plate",
+      "no crown: the legendary bottom halves of C18 #134 and CM2 #71 print none"
     ]
   },
   "fullartland": {

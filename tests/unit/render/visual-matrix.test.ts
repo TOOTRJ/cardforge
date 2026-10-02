@@ -6,6 +6,7 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { PAIR_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 
 // ---------------------------------------------------------------------------
 // The visual-regression matrix (tests/visual/matrix.ts, TODO 7.1) and its
@@ -62,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -82,6 +83,7 @@ describe("visual-regression matrix", () => {
   it("bakes a card without art on the see-through masters and v35's art slots (the empty-art box; no under-frame layer)", () => {
     const noArt = cases.filter((c) => c.id.endsWith("@noart"));
     expect(noArt.map((c) => `${c.template}/${c.colour}`)).toEqual([
+      "flip/c",
       "fullart/g",
       "m15/c",
       "m15/w",
@@ -117,6 +119,35 @@ describe("visual-regression matrix", () => {
     }
   });
 
+  it("switches the collector line on only in its collector cases: both styles on every slotted template, the line's shapes on m15 (TODO 4.9b)", () => {
+    const lined = cases.filter((c) => c.id.includes("@collector"));
+    const keyed = cases.filter((c) => "collector" in (c.row.frame_style as object));
+    expect(keyed.map((c) => c.id)).toEqual(lined.map((c) => c.id));
+    expect([...new Set(lined.map((c) => c.template))].sort()).toEqual([...COLLECTOR_TEMPLATES].sort());
+    for (const template of COLLECTOR_TEMPLATES) {
+      const styles = lined.filter((c) => c.template === template).map((c) => (c.row.frame_style as { collector: string }).collector);
+      expect(styles, template).toContain("2023");
+      expect(styles, template).toContain("2015");
+    }
+    for (const c of lined) {
+      const style = c.row.frame_style as { collector?: string; star?: true; crown?: boolean; twoColor?: boolean };
+      expect(["2015", "2023"], c.id).toContain(style.collector);
+      expect(style.crown, c.id).toBeUndefined();
+      expect(style.twoColor, c.id).toBeUndefined();
+      expect(c.row.set_code, c.id).toBe(c.id.includes("@collector-empty") ? null : "DMU");
+      expect(c.row.lang, c.id).toBe(c.id.includes("@collector-lang") ? "es" : "en");
+    }
+    const byId = new Map(cases.map((c) => [c.id, c]));
+    expect((byId.get("m15/r/creature-short@collector-star")?.row.frame_style as { star?: true }).star).toBe(true);
+    expect(byId.get("m15/r/creature-short@collector-foil")?.finish).toBe("foil");
+    expect(byId.get("m15/u/instant-short@collector-noplate")?.row.power).toBeNull();
+    expect(byId.get("m15/g/creature-long@collector-artist")?.row.artist_credit).toMatch(/Extraordinarily/);
+    expect(byId.get("m15/g/creature-long@collector-hd")?.preset).toBe("hd");
+    expect(byId.get("m15/u/creature-short@collector-2015-square")?.corners).toBe("square");
+    // Every stored card's case names no collector key.
+    for (const c of cases.filter((x) => !lined.includes(x))) expect(c.row.frame_style, c.id).not.toHaveProperty("collector");
+  });
+
   it("marks exactly the square-corner (print) cases print-only — each has a stored round sibling", () => {
     for (const c of cases) expect(c.printOnly, c.id).toBe(c.corners === "square");
     for (const c of cases.filter((x) => x.printOnly)) {
@@ -138,7 +169,8 @@ describe("visual-regression matrix", () => {
       new Set(["default/regular/round", "hd/regular/round", "default/foil/round", "default/etched/round", "default/regular/square"]),
     );
     const paired = cases.filter((c) => (c.row.frame_style as { twoColor?: boolean }).twoColor === true);
-    for (const c of cases.filter((x) => !crowned.includes(x) && !paired.includes(x))) {
+    const lined = cases.filter((c) => c.id.includes("@collector"));
+    for (const c of cases.filter((x) => !crowned.includes(x) && !paired.includes(x) && !lined.includes(x))) {
       expect(Object.keys(c.row.frame_style as object).sort(), c.id).toEqual(["finish", "template"]);
     }
     // The split crown: both switches on, on every template that draws both.

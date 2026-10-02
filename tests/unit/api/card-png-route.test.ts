@@ -49,6 +49,9 @@ const STORAGE = `https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/publ
 const state = vi.hoisted(() => ({
   card: null as Record<string, unknown> | null,
   paid: false,
+  // The card OWNER's plan (ownerExportStamp): a paid owner's footer text
+  // prints on a clean download (a collector card's © slot, TODO 4.9b).
+  ownerPaid: false,
   render: vi.fn(),
   print: vi.fn(),
   viewer: null as { id: string } | null,
@@ -70,7 +73,7 @@ vi.mock("@/lib/billing/entitlements", () => ({
   getEntitlements: async () =>
     state.paid ? { maxExportPreset: "hd", removeWatermark: true } : { maxExportPreset: "default", removeWatermark: false },
   downloadBrandMark: (v: { removeWatermark: boolean }) => !v.removeWatermark,
-  ownerExportStamp: async () => ({ brandMark: true, footerText: null }),
+  ownerExportStamp: async () => ({ brandMark: !state.ownerPaid, footerText: null }),
 }));
 vi.mock("@/lib/cards/bake-core", () => ({
   rowToPreviewData: (row: { frame_style: unknown }) => ({ frameStyle: row.frame_style }),
@@ -171,6 +174,7 @@ beforeEach(async () => {
     sharp({ create: { width: 2200, height: 3000, channels: 3, background: "#00ff00" } }).png().toBuffer(),
   );
   state.paid = false;
+  state.ownerPaid = false;
   state.print800PaidOnly = true;
 });
 
@@ -231,6 +235,24 @@ describe("card PNG download", () => {
       brandMark: false,
       watermarkText: null,
       corners: "square",
+    });
+  });
+
+  it("a collector card (TODO 4.9b): a free viewer gets the stored, marked bake; a paid viewer's live clean render carries the card's footer text for its © slot", async () => {
+    // The route hands the renderer the surface; lib/cards/collector-layout.ts
+    // puts the brand mark (display) or this text (a clean download) in the
+    // line's © slot. Nothing about the switch reaches the route itself.
+    state.card = card({ layout_version: CARD_LAYOUT_VERSION, frame_style: { template: "m15", collector: "2015", star: true }, footer_text: "Forged by Kesh" });
+    state.ownerPaid = true;
+    const free = await download("default", {}, "round");
+    expect(free.status).toBe(200);
+    expect(state.render).not.toHaveBeenCalled();
+    state.paid = true;
+    await download("hd", {}, "round");
+    expect(state.render).toHaveBeenCalledWith(expect.anything(), "hd", {
+      brandMark: false,
+      watermarkText: "Forged by Kesh",
+      corners: "round",
     });
   });
 

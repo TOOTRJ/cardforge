@@ -91,9 +91,10 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 Where every frame came from, and the rules that follow from it:
 
 - **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha,
-  1997 and 2003 eras, saga, adventure, flip, split, aftermath, battle, the
-  showcase families, the variation treatments, the textless and expedition
-  frames, and the planeswalker loyalty badges) are converted from Magic Set
+  1997 and 2003 eras, saga, split, battle, the showcase families, the
+  variation treatments, the textless and expedition frames, and the
+  planeswalker loyalty badges; adventure, flip and aftermath left for Card
+  Conjurer's masters with TODO 4.21a) are converted from Magic Set
   Editor's Full-Magic-Pack styles by the builders under `scripts/`
   (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
   `build-showcase-frames.mjs`, `build-variation-frames.mjs`, …). The pack
@@ -126,7 +127,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 28 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -170,7 +171,16 @@ into `.frames-build/` — 25 templates today (`CC_TEMPLATES` in
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
   in every colour key (an emblem is colourless), its name pill, silver, type
   pill and text box toned onto the prints and its spark's centre ray bridged
-  over above the art window (see [Emblems](#emblems)).
+  over above the art window (see [Emblems](#emblems));
+- the portrait layouts (4.21a, layout v38): `flip` from 'Flip' (with its
+  two P/T plates, cut per creature half from the pack's two-plate image
+  through its Top PT / Bottom PT masks into `flip/pt/<k>-top.png` and
+  `<k>-bottom.png`; colourless = the pack's see-through frame), `adventure`
+  from 'Adventure' and `aftermath` from 'Aftermath' (colourless = each
+  pack's artifact frame, a render stand-in that is never offered) — see
+  [The portrait layouts](#the-portrait-layouts-layout-v38). Their slots are
+  the packs' own (packFlip.js, packAdventure.js, packAftermath.js) and the
+  masters are copied 1:1 at their native 1500×2100.
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -280,7 +290,8 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   (7.67/11.25/84.76 × 44.33, layout v35, 4.4 (2)): CC's artBounds with the
   top 0.04 % higher for 7.6's overscan. Their window is 116–1384 ×
   238–1165 px on every colour; the inherited MSE slot left a 1–1.6 px
-  hairline on every side. The MSE-framed adventure keeps M15's own slot.
+  hairline on every side. Adventure's slot is its own, pinned at its
+  masters' window + 0.1 % (layout v38, 4.21a).
 - **Output.** 1500×2100 PNGs with transparent corners cut at the one card
   corner (64.5 px, see [The card corner](#the-card-corner)), WebP siblings,
   P/T plates at native size, and (full-art basics) the 168 px mana symbols.
@@ -347,10 +358,12 @@ bake's transparent corner mask and the frame masters all read it.
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
   `scripts/lib/frame-corners.mjs`: retro, retroland, modern, modernland,
-  saga, aftermath, extendedart, fullart, m15textless, m15textlessland, flip,
-  alphatoken, adventure — its 1–2 px grey paper rim just inside the arc,
-  added 2026-09-28 — and expeditionland w/u/r/c/m, whose paper reached
-  1–2 px inside the cut), never on a showcase family (`NEVER_NORMALISE`):
+  saga, extendedart, fullart, m15textless, m15textlessland, alphatoken, and
+  expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
+  adventure — its 1–2 px grey paper rim just inside the arc, added
+  2026-09-28 — flip and aftermath left the list with 4.21a, their Card
+  Conjurer masters cut by the importer), never on a showcase family
+  (`NEVER_NORMALISE`):
   Bloomburrow, LOTR and Tarkir draconic keep their drawn top corners in
   square outputs and print (owner, 2026-09-28). The paint is the border AS
   IT RUNS BESIDE THE CORNER: the edge band's colour at the same depth inside
@@ -376,20 +389,17 @@ bake's transparent corner mask and the frame masters all read it.
     edge. A bake-level scope proof compares against 96 px boxes for these
     templates.
   - The MSE builders (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
-    `build-variation-frames.mjs`, `build-aftermath-frame.mjs`,
-    `build-flip-frame.mjs`, `build-adventure-frame.mjs`) run the same pass
-    AND gate before they write (`normaliseMasterCorners` throws and
-    restores the master on any failure), so a rebuild can't bring the
-    white back. Then `npm run assets:frame-webp`.
-    (`build-adventure-frame.mjs` composites on the MSE m15 master, which
-    left git with 4.4's Card Conjurer swap: restore it from `cd2ffcc^`
-    outside `public/frames` first, never the Card Conjurer m15.)
+    `build-variation-frames.mjs`) run the same pass AND gate before they
+    write (`normaliseMasterCorners` throws and restores the master on any
+    failure), so a rebuild can't bring the white back. Then `npm run
+    assets:frame-webp`. (The adventure, flip and aftermath builders were
+    retired with 4.21a: those masters are Card Conjurer's, in the bucket.)
   - **Truecolour only.** The normalised masters are truecolour PNGs: a
     lossless palette is impossible (the base palettes were already full at
     255–256 colours and the cut's alpha ramp adds 35–58), and a quantised
     one moves the mask's alpha. sharp's `effort` turns palette quantisation
-    on: on a rebuilt adventure master it moved every pixel of the cut's
-    ramp (by up to 52), and the corner check still passed. So the six
+    on: on a rebuilt adventure master (then MSE's) it moved every pixel of
+    the cut's ramp (by up to 52), and the corner check still passed. So the
     builders above write the master the gate checked, truecolour, and
     `tests/unit/frames/frame-corners.test.ts` fails one whose write after
     the gate passes `effort`, `palette`, `quality`, `colours` or `dither`.
@@ -965,6 +975,104 @@ production, anonymous read 2026-09-30: 0 cards on nyx. The visual matrix
 against v36: the 19 nyx cases change and no other. Verification-neutral (no
 slot moves, and nyx has no tick).
 
+### The portrait layouts (layout v38)
+
+TODO 4.21a (the first of 4.21's three PRs; design 2026-09-29, owner
+decisions 2026-09-29): flip, adventure and aftermath leave their 241–375 px
+MSE composites in git for Card Conjurer's native 1500×2100 masters in the
+bucket (`CC_TEMPLATES.flip` / `.adventure` / `.aftermath`), each copied 1:1
+and cut at the one corner. Against the M15 prints (Scryfall PNGs at
+1500 × 2100):
+
+- **Flip** sat 30–80 px low from the title bar down (the only M15-frame
+  flips, C18 #134 Budoka Gardener and CM2 #71 Nezumi Graverobber: title bar
+  71–177 px against ours at 105–215, the window 626–1308 against 648–1393,
+  the upside-down type bar 1338–1444 against 1417–1518). Every rect is
+  packFlip.js's; the art slot the masters' window + 0.1 %
+  (7.57/29.57/84.87 × 33.25 — 115–1385 × 623–1317 px on every colour); the
+  top name and type line on the prints' baselines (dy −9.2 / −4.9 px, the
+  pips on the name's capitals, costDy −9.6 px, and ending where the prints'
+  do: the title rect runs to 92.5 %W — the last disc's edge is 1387 px on
+  C18 #134 and 1388.5 on CM2 #71; the pack right-aligns its mana box at
+  92.92 %W, its title box ends at 91.46); the upside-down bars placed
+  where the prints centre their text (a second face takes no dy); the set
+  symbol in CC's box (right edge 78.4 %W, centred 26.0 %H), left of the
+  plate. **The P/T plates** (owner 2026-09-29: a CORRECTION — every printed
+  M15 flip creature carries one per half; the vehicle plate's opt-in was the
+  nearest rule, so it was flagged): the pack draws both plates from one
+  image at its bounds through its Top PT / Bottom PT masks; the importer
+  cuts them into `flip/pt/<k>-top.png` and `<k>-bottom.png`
+  (`FLIP_PT_BOXES`, 243 × 160 px each, the bodies 215 × 126), and a plate
+  draws only when its half has a P/T. The bottom plate is upside-down in
+  the source, as the card prints it, so both renderers draw it at its box
+  UNTURNED and turn only the value (`SecondFacePanel` /
+  `SecondFaceBake`; `frameAssetPathsFor` preloads it; its ink row in
+  `lib/cards/plate-ink.ts`). **Colourless** = CC's see-through 'Colorless
+  Frame' (bars α 191–248, the body between the border and the pinline
+  clear, a 15 px opaque pinline round the window): the PROFILES entry draws
+  the art under it from the border's inner edge (`UNDER_FRAME_RECT`, 4.17a),
+  the window's crop meeting it on the pinline. No crown. The artist credit
+  on M15's footer line (3.8's slice; the prints' second border line centres
+  at 2019–2020 px). **Where the master itself leaves the prints:** CC drew
+  the bottom half as the top half turned, and the cards are not that
+  symmetric — on both prints the window ends 9 px higher (the art's edge
+  626.5–1308 px against the masters' 623–1317; the frame's inner line
+  centred 621 / 1312.5 against 620.5 / 1318.5) and the upside-down type bar
+  sits 5 px higher (1339–1444 against 1344–1449), while the upside-down
+  name bar agrees (1761–1865 / 1758–1864); the top name bar's interior is
+  3.5 px low (75–181 against 72–177). The upside-down type line is set on
+  the prints' baseline, so it rides 5 px nearer its bar's art-side edge
+  than printed. No profile number moves a master: closing these is a re-cut
+  in the importer (as the tokens' `recut`), the owner's call.
+- **Adventure** was within 3–10 px on a softer, re-drawn master whose
+  window ran 10 / 6 px narrow. The CC master is M15's bars with the
+  storybook; the art slot is PINNED at its masters' window + 0.1 %
+  (7.57/11.19/84.87 × 44.44; design D4: never M15's MSE slot or
+  `CC_M15_ART_SLOT` again — re-inheriting either would itself be a bake
+  change); the panel's name and type line 8.14–48.14 %W at 62 px, centred on
+  ELD #115's (baselines 1388 / 1481 px), the pips right-aligned to 48.14;
+  the pages 8.54–48.01 × 73.58–88.58 and 52.67–91.34 × 65.0–88.58, both
+  CENTRING their text as the print does (ELD #115's adventure lines run
+  1611–1803 px in the 1545–1860 page, the creature's 1391–1815 in the
+  1365–1860 one — the MSE profile set both from the top; the smaller CC
+  pages clip a few of the no-clip matrix's longest texts at the floor, as
+  the prints' pages would); the type line and pips take the CC-framed M15
+  profiles' print offsets
+  (`CC_M15_TYPE_DY`, `CC_M15_COST_DY`). The P/T plate stays M15's (the pack
+  draws CC's `m15PT<K>.png` at M15's bounds). Colourless = CC's artifact
+  frame as a render stand-in, never offered (no printing; owner
+  2026-09-29).
+- **Aftermath** was within 3–5 px on an MSE stack with flat white text
+  boxes; CC's are textured cream. The art slots are the windows + 0.1 %
+  (7.57/11.19/84.87 × 22.44; the sideways one's pre-rotation box
+  44.63/63.62/49.41 × 20.33); the set symbol in CC's box (right 92.13 %W,
+  centred 37.1 %H); the artist credit on M15's footer line. The text slots
+  stay as print-matched in 0.22 / v32 — the name and type line, that is:
+  the top half's cost was never set on the prints and still ends 27 px left
+  of theirs and 8 px low (its last disc's edge 1357.5 px against AKH's 1384,
+  the discs centred 167 px against 159; the same on the MSE master, so no
+  part of this bump — a follow-up correction). Colourless = CC's artifact frame as
+  a render stand-in, never offered; `aftermath/m` is flagged in the
+  registry: no gold // gold aftermath was printed (every two-colour one is
+  mono // mono, TODO 4.26's per-half colour), so it stays unverified.
+
+The three left Phase B's allow-list and `ART_WINDOW_KNOWN_FAILURES` (their
+masters pass the edge contract, the corner check and the art-window check
+in the importer and in CI); their MSE builders and `import-mse-profiles.mjs`
+rows are gone. Template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[38]`:
+every card on the three, art or none); production, anonymous read
+2026-09-30: 0 public or unlisted cards on any of them (private cards and
+previews re-bake on their next save). NOT verification-neutral — the slots
+move — but no tick exists to go stale: adventure's seven `frame_reviews`
+rows and `aftermath/w` are unverified on production and flip has none, so
+the owner's first ticks come after the deploy (flip/g against C18 #134,
+flip/b against CM2 #71, adventure and aftermath against their ELD / WOE /
+AKH prints; flip w/u/r/m/c, adventure/c, aftermath/c and aftermath/m stay
+unticked — owner 2026-09-29, print-referenced combos only). Masks stay
+importer inputs, never published: adventure's shaped book masks and
+aftermath's rectangles (cut at y 1139, 54.24 %H) are 4.26's; the flip
+plates' half masks are the card's halves.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -1252,6 +1360,135 @@ card on the two frames bakes byte-identical with the switches absent).
   `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin
   and the pair in the bake, the switches off byte-identical), the matrix's
   `m15borderless*` `@crown` / `@pair` cases.
+
+#### The collector line (4.9b)
+
+TODO 4.9b, owner decisions 2026-09-29/30. The two lines a 2015-frame card
+prints in its bottom border — the collector number and rarity letter, the
+set code, language and artist — as an ADDITION: `frame_style.collector`
+holds a printed style (`"2015"` or `"2023"`), the owner's explicit `"off"`,
+or nothing (a card from before the line, which keeps its look and gets the
+editor's hint "New: add a collector line and holofoil stamp"); the
+foil-printing ★ is `frame_style.star` (`true` or absent — a flag, no sheen,
+free for every plan; a Foil or Etched finish prints the ★ without it —
+owner 2026-10-02: etched is a foil treatment and every etched print
+carries the ★). Both join `FRAME_ANATOMY_KEYS`, so they travel in an
+edit's `frame_anatomy` patch like the crown. A new card starts `"2023"`;
+a remix starts on unless the parent turned it off; an import follows the
+printing (`printed_collector` / `printed_star`, below); every save drops
+both keys on a template without the slot. No `CARD_LAYOUT_VERSION` bump, no
+sweep, no badge: production's 886 visible cards baked byte-identical at
+750 and HD before and after (2026-09-30, a 282-card stratified sample).
+
+- **The slot.** `FrameProfile.collector` (`CollectorSlot`) is `M15_COLLECTOR`
+  (the walker's `M15PW_COLLECTOR`: the same geometry, the © slot on line 2)
+  on exactly the wave-1 `PROFILES` entries — m15, m15land, m15snowland,
+  m15artifact, m15snow, m15devoid, m15pw, the four 2014–19 token frames and
+  emblem (`COLLECTOR_TEMPLATES`, `lib/cards/collector-line.ts`; the tokens,
+  the walker and the emblem print their lines at M15's positions, TDOM #1 /
+  DOM #1 / TFDN #24) — never on the `M15` / `M15LAND` / `M15TOKEN` bases
+  other profiles spread, never through an admin override. Wave 2
+  (borderless, saga, adventure, extended art, the showcases, the full-art
+  tokens) is 4.9d, each template with its own entry.
+- **Measured on the prints** (thirteen scans at 1500 × 2100, `M15_COLLECTOR`'s
+  notes): both lines from Card Conjurer's pen x 6.47 %W (97 px; the ink
+  starts at 96–101); line 1's baseline 1993.5 px and line 2's 2032 (the
+  scans' means — CC's bands sit 35.9 px apart, the prints 38.5); capitals
+  24–26 px tall, so the 36 px size (0.024 W); the brush's ink at 287 px,
+  40 wide, 27 above line 2's baseline to 3 above it, the artist's pen
+  46 px after its left edge; the © line's right edge 1403 px (93.54 %W).
+- **Content** (`lib/cards/collector-line.ts`, pure): the letter T on a token
+  (whatever rarity is stored), E on an emblem, L on a basic land, else
+  C / U / R / M. The `"2015"` style pads the number and any stored set size
+  to three ("001/016") and stands the letter in a column at the brush's x
+  (or one space after a number that reaches it); the `"2023"` style prints
+  the letter, a space and the number padded to four ("R 0009"), with any
+  "/size" dropped. Line 2: the printed set code, `•` — or the ★ for the
+  flag or a Foil or Etched finish — and the printed language code (es prints SP, ko
+  KR; the six codes no scan has verified print nothing), then the brush and
+  the artist. Empty fields are left out, never invented; never a Wizards,
+  ™ or licensor line.
+- **Layout** (`lib/cards/collector-layout.ts`): ONE function feeds both
+  renderers absolute runs — a pen x, a baseline, a size, the face's own
+  line height (ascent + descent, so the browser and Satori put the baseline
+  at the same row; Satori's "normal" box drops MPlantin's lineGap, the
+  browser's keeps it) — measured from the committed fonts' advances
+  (`lib/cards/collector-metrics.ts`, generated by
+  `scripts/generate-collector-metrics.mjs`; `display-metrics.ts`;
+  `rules-metrics.ts`). The number carries 0.1 em of tracking (the prints'
+  pitch). The artist is Beleren Bold in synthesized small caps (capitals at
+  38 px, lower-case as capitals at 0.8 of it, word by word), cut with ONE
+  "…" before the © slot's content; real Beleren small caps later is a
+  correction for collector-on cards (TODO 4.8). `CollectorBake` replaces
+  `FooterBake` when the line is drawn (one wrapper div, never a Fragment),
+  `CollectorBlock` the preview's footer; `tests/unit/render/collector-bake
+  .test.tsx` holds real bakes at HD and 750 to the layout's baselines,
+  `tests/unit/components/collector-preview.test.tsx` the preview's boxes.
+- **The © slot** (owner Q2): on every DISPLAY surface the pipglyph.com brand
+  mark sits there — the same mark at the same size, its right edge on
+  93.54 %W, on line 2 when the renderer draws a stat plate (a P/T, the
+  loyalty shield, the defense badge — the plate it draws, never the data's
+  presence) and on line 1 without one — so the watermark policy is
+  unchanged. The planeswalker is the one frame whose MASTER draws its
+  shield (the loyalty outline, on all seven colour keys), so its slot is
+  always on line 2 (`M15PW_COLLECTOR`, `CollectorSlot.markLine`): a walker
+  saved without a loyalty value draws no plate, and a line-1 mark crossed
+  the outline (review 2026-10-02). A paid viewer's clean download prints
+  the card's `footer_text` there in MPlantin at 34 px, or nothing — cut
+  with ONE "…" past 45 % of the card's width (`MARK_TEXT_MAX_WIDTH_PCT`:
+  forty characters of ordinary text fit; forty capitals ran back over the
+  artist, the set code and line 1's number). Cards without the line keep
+  today's mark position.
+- **The face.** Montserrat Medium (SIL OFL, `public/fonts/Montserrat-OFL
+  .txt`), instanced and subset by `scripts/build-collector-font.mjs` to the
+  67 code points the line prints (A–Z a–z 0–9 / - • † space), every one in
+  MPlantin's cmap, with no GSUB / GPOS; registered in the bake's fonts
+  array as "CollectorLine" — after MPlantin, BEFORE Keyrune, never last —
+  and loaded by the preview's `@font-face` with its hhea as metric
+  overrides. Satori resolves a glyph through the requested families and
+  then every registered font in order, so a glyph only this face had would
+  change existing cards' text; and a character NO font has (★, CJK, Thai,
+  an arrow — `lib/render/fallback-assets.ts` answers those with nothing)
+  is drawn with the LAST registered font: its `.notdef` and advance, and
+  the whole word in that face when the word starts with one. Registered
+  last, the collector face turned a stored "日本 Dragon" title into two
+  boxes and a sans-serif "Dragon" and a "★" in rules text into a 0.59 em
+  box (it is a 1 em gap), on cards with no collector key at all (review
+  2026-10-02). The subset, the order and a real Satori run with and
+  without the face (`tests/unit/render/collector-font.test.ts`) hold all
+  three. The ★ and the brush are our own SVG paths
+  (`COLLECTOR_STAR_PATH`, `COLLECTOR_BRUSH_PATH`; the brush's slit is an
+  evenodd hole).
+- **Imports follow the printing** (`lib/scryfall/import-mapper.ts`):
+  `printed_collector` is the printing's style by `released_at` against
+  `COLLECTOR_2023_FROM` (2023-03-26), or `"off"` for a pre-2015 frame
+  (which prints "Illus." in its box); `printed_star` is `true` for a
+  foil-only printing (`finishes` all foil / etched: KLD #265 "KLD★EN", ONC
+  #29 etched "ONC★EN"). The boundary was pinned on the scans of every
+  2015-frame paper printing of February–March 2023
+  (`tests/unit/scryfall/collector-style.test.ts`): the two styles overlap
+  by PRODUCT for six weeks — PL23 #1, SLD #8001, SLP #1 and SLD #1243–1246
+  already print the 2023 style while the Secret Lair bonus cards (#685,
+  #716, #681), PRCQ #1, SCH #7, PW23 #1 and P30H #1 (2023-03-21, the last)
+  still print the 2015 style; from SLD #728 / #1237–1242 (03-26) every
+  scan is 2023-style. `COLLECTOR_2023_STYLE_EARLY` names the early
+  products (pl23, slp, sld from #1243), and only from the first one's day
+  on (`COLLECTOR_2023_STYLE_EARLY_FROM`, 2023-02-10): Secret Lair has
+  numbers past 1243 a year older — SLD #9995–9999 (2022-04-12, the
+  mirrored drop) print the 2015 style.
+- **Editor, page, warnings.** The Set & collector info step holds the
+  switch (`collector-panel.tsx`: on → `"2015"` when the stored number
+  carries a set size, else `"2023"`; off → `"off"`), the style chips and
+  the ★ switch; a frame without the slot says it prints its own footer. The
+  public card page's details block and CreativeWork caption carry "Set ·
+  Number · Language" only while the line is drawn (`collectorLineText`).
+  The glyph warnings read the footer mark in the body face on a collector
+  card. `sampleFramePreview` switches the line on for the walk-through.
+- **Verification-neutral:** no frame pixel moves and nothing is bumped, so
+  the ticks stay; the visual gate gained 33 new cases (`@collector…`,
+  `@collector-etched` since round 22) and changed none — re-proved at
+  layout v38 after folding in #451 (0 changed / 0 redefined against main's
+  1,051). The stamp (4.9c) and wave 2 (4.9d) follow.
 
 ## Kind anatomy and bodies
 

@@ -1,6 +1,7 @@
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import { LEGENDARY_MASTER_SUFFIX, baseMasterKey, isLegendaryMasterKey, legendaryMasterKey } from "@/lib/cards/master-key";
 import { basicLandNameForColorKey } from "@/lib/cards/watermark";
+import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import referencesData from "@/lib/cards/frame-references.json";
 
 // ---------------------------------------------------------------------------
@@ -245,6 +246,15 @@ function sampleBackFace(template: FrameTemplate, colorKey: FrameColorKey) {
 // as broken. Multicolor land references are nonbasic (Command Tower), so
 // "m" keeps sample rules text.
 
+/** The sample's frame style: the template, with the collector line switched
+ *  on where the template has its slot (TODO 4.9b: the walk-through and the
+ *  compare tool show the line a new card prints). */
+function sampleFrameStyle(template: FrameTemplate): { template: FrameTemplate; collector?: "2023" } {
+  return (COLLECTOR_TEMPLATES as readonly string[]).includes(template)
+    ? { template, collector: "2023" }
+    : { template };
+}
+
 export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColorKey) {
   const isLand = template.endsWith("land");
   const isToken = template.includes("token");
@@ -271,7 +281,7 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
       defense: null,
       artistCredit: "Sample Artist",
       artUrl: null,
-      frameStyle: { template },
+      frameStyle: sampleFrameStyle(template),
     };
   }
   // An emblem sample is an emblem (TODO 6.23 / 4.52): the walker's name, no
@@ -294,7 +304,7 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
       defense: null,
       artistCredit: "Sample Artist",
       artUrl: null,
-      frameStyle: { template },
+      frameStyle: sampleFrameStyle(template),
     };
   }
   return {
@@ -333,7 +343,7 @@ export function sampleFramePreview(template: FrameTemplate, colorKey: FrameColor
     defense: isBattle ? "5" : null,
     artistCredit: "Sample Artist",
     artUrl: null,
-    frameStyle: { template },
+    frameStyle: sampleFrameStyle(template),
     backFace: sampleBackFace(template, colorKey),
   };
 }

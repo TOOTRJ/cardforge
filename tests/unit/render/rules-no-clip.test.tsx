@@ -302,8 +302,12 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // (no consumer: the renderers skip a textless frame's rules).
   [["m20tokentext/main", "m20tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
   [["m20tokentall/main", "m20tokenartifacttall/main"], ["1200 chars"]],
-  [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112"]],
-  [["adventure/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
+  // Adventure's pages are Card Conjurer's (layout v38, TODO 4.21a): the
+  // creature's right page 65.0–88.58 %H (was 63.5–92.0) and the adventure's
+  // 73.58–88.58 (was 71.6–91.9), the prints' boxes — a few more of the long
+  // texts clip at the floor there, as they would on a printed page.
+  [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
+  [["adventure/adventure"], ["1200 chars", "400 chars", "200 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron and textless panels): a full card's text never fits them.
   [

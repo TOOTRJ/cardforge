@@ -73,6 +73,23 @@ describe("frameAssetPathsFor lists a stat plate only for a card that draws it", 
     expect(frameAssetPathsFor(card({ ...token, supertype: null }))).toEqual(["/frames/m15/pt/g.png"]);
   });
 
+  it("a second face's P/T plate (flip, layout v38): only when the bottom creature has a P/T, beside the front's", () => {
+    const flip = card({
+      power: "2",
+      toughness: "1",
+      frameStyle: { template: "flip" },
+      backFace: { title: "Dokai, Weaver of Life", card_type: "creature", supertype: "Legendary", subtypes: ["Human", "Monk"], power: "3", toughness: "3" },
+    });
+    expect(frameAssetPathsFor(flip)).toEqual(["/frames/flip/pt/g-top.png", "/frames/flip/pt/g-bottom.png"]);
+    // No P/T on the bottom half: no bottom plate (the top keeps its own).
+    expect(frameAssetPathsFor({ ...flip, backFace: { ...flip.backFace!, power: undefined, toughness: undefined } })).toEqual(["/frames/flip/pt/g-top.png"]);
+    // …and none on the top: only the bottom plate.
+    expect(frameAssetPathsFor({ ...flip, power: null, toughness: null })).toEqual(["/frames/flip/pt/g-bottom.png"]);
+    // The plate follows the card's plate key (a colourless flip: the
+    // pack's colourless plate).
+    expect(frameAssetPathsFor({ ...flip, colorIdentity: ["colorless"] })).toEqual(["/frames/flip/pt/c-top.png", "/frames/flip/pt/c-bottom.png"]);
+  });
+
   it("the loyalty shield: a planeswalker with a starting loyalty — never a creature on the walker body", () => {
     const walker = card({
       cardType: "planeswalker",

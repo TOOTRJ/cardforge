@@ -1,0 +1,937 @@
+{
+  "one-19": {
+    "id": "945d283d-4592-485f-808a-6e5a721f3cf7",
+    "oracle_id": "93c97e1a-bd7e-4307-8ada-58f53a887cf8",
+    "name": "Kemba, Kha Enduring",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "one",
+    "set_name": "Phyrexia: All Will Be One",
+    "set_type": "expansion",
+    "collector_number": "19",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Creature — Cat Cleric",
+    "mana_cost": "{1}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Zoltan Boros",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "onc-114": {
+    "id": "1aa1e7ff-d0b9-441f-bcbb-4f0f89cab038",
+    "oracle_id": "de23275e-e9c1-4151-aed8-f79ead03d5d4",
+    "name": "Adriana, Captain of the Guard",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "collector_number": "114",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Melee"
+    ],
+    "type_line": "Legendary Creature — Human Knight",
+    "mana_cost": "{3}{R}{W}",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Chris Rallis",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "sld-1242": {
+    "id": "c80c7702-3226-4ec6-bb75-26621a146a7e",
+    "oracle_id": "ab31b652-ddf2-480f-a955-e8b5c87728f9",
+    "name": "Bohn, Beguiling Balladeer",
+    "released_at": "2023-03-26",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1242",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "triangle",
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Goad"
+    ],
+    "type_line": "Legendary Creature — Human Bard",
+    "mana_cost": "{1}{U}{R}",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "R",
+      "U"
+    ],
+    "rarity": "rare",
+    "artist": "Wenfei Ye",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "kld-265": {
+    "id": "5ab8435b-5fe8-4074-8809-46aa6e5504c8",
+    "oracle_id": "ae2c89c2-66d6-484a-a176-9ea19e00f445",
+    "name": "Chandra, Pyrogenius",
+    "released_at": "2016-09-30",
+    "layout": "normal",
+    "set": "kld",
+    "set_name": "Kaladesh",
+    "set_type": "expansion",
+    "collector_number": "265",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "planeswalkerdeck"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Chandra",
+    "mana_cost": "{4}{R}{R}",
+    "loyalty": "5",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "mythic",
+    "artist": "Jason Rainville",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "onc-29": {
+    "id": "66d32d60-4e08-49aa-857f-da92dc7c01d0",
+    "oracle_id": "9fb7982f-fe35-4dea-a515-a0039ddbbaec",
+    "name": "Ixhel, Scion of Atraxa",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "onc",
+    "set_name": "Phyrexia: All Will Be One Commander",
+    "set_type": "commander",
+    "collector_number": "29",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "etched"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "thick"
+    ],
+    "keywords": [
+      "Flying",
+      "Toxic",
+      "Vigilance",
+      "Corrupted"
+    ],
+    "type_line": "Legendary Creature — Phyrexian Angel",
+    "mana_cost": "{1}{W}{B}{G}",
+    "power": "2",
+    "toughness": "5",
+    "colors": [
+      "B",
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "W"
+    ],
+    "rarity": "mythic",
+    "artist": "Campbell White",
+    "finishes": [
+      "etched"
+    ]
+  },
+  "moc-1": {
+    "id": "a485c2c3-c90b-43b4-bb00-c1b811b4b392",
+    "oracle_id": "f74888ee-5086-49a6-ae74-fd9894f46332",
+    "name": "Bright-Palm, Soul Awakener",
+    "released_at": "2023-04-21",
+    "layout": "normal",
+    "set": "moc",
+    "set_name": "March of the Machine Commander",
+    "set_type": "commander",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Backup",
+      "Double"
+    ],
+    "type_line": "Legendary Creature — Fox Shaman",
+    "mana_cost": "{1}{R}{G}{W}",
+    "power": "4",
+    "toughness": "3",
+    "colors": [
+      "G",
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "R",
+      "W"
+    ],
+    "rarity": "mythic",
+    "artist": "Mila Pesic",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "fdn-280": {
+    "id": "d232fcc2-12f6-401a-b1aa-ddff11cb9378",
+    "oracle_id": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+    "name": "Forest",
+    "released_at": "2024-11-15",
+    "layout": "normal",
+    "set": "fdn",
+    "set_name": "Foundations",
+    "set_type": "core",
+    "collector_number": "280",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "beginnerbox",
+      "startercollection"
+    ],
+    "keywords": [],
+    "type_line": "Basic Land — Forest",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "common",
+    "artist": "Rebecca Guay",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "tfdn-24": {
+    "id": "bfe4b1d5-f252-48fe-b4a1-7fbbc2523cf1",
+    "oracle_id": "49d4e201-8ef2-4fde-b478-ea5c46521535",
+    "name": "Kaito, Cunning Infiltrator Emblem",
+    "released_at": "2024-11-15",
+    "layout": "emblem",
+    "set": "tfdn",
+    "set_name": "Foundations Tokens",
+    "set_type": "token",
+    "collector_number": "24",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Emblem",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Evyn Fong",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "dom-1": {
+    "id": "07a3d9e8-8597-498b-869c-cff79e0df516",
+    "oracle_id": "060209fa-4b7d-4e08-bf8b-8759bba5641b",
+    "name": "Karn, Scion of Urza",
+    "released_at": "2018-04-27",
+    "layout": "normal",
+    "set": "dom",
+    "set_name": "Dominaria",
+    "set_type": "expansion",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Karn",
+    "mana_cost": "{4}",
+    "loyalty": "5",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "mythic",
+    "artist": "Chase Stone",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "tdom-1": {
+    "id": "e0bce908-fc95-40c6-a04a-752d56aca836",
+    "oracle_id": "340aaeb6-cd18-4908-9729-8c53ab02c6f8",
+    "name": "Knight",
+    "released_at": "2018-04-27",
+    "layout": "token",
+    "set": "tdom",
+    "set_name": "Dominaria Tokens",
+    "set_type": "token",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Vigilance"
+    ],
+    "type_line": "Token Creature — Knight",
+    "mana_cost": "",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "common",
+    "artist": "Dan Murayama Scott",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "pl23-1": {
+    "id": "077ab42e-2112-4ed6-8883-0039a34a3cec",
+    "oracle_id": "c739e180-2f14-41ed-8e7e-50b7df985f35",
+    "name": "Rabbit Battery",
+    "released_at": "2023-02-10",
+    "layout": "normal",
+    "set": "pl23",
+    "set_name": "Year of the Rabbit 2023",
+    "set_type": "promo",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Haste",
+      "Reconfigure"
+    ],
+    "type_line": "Artifact Creature — Equipment Rabbit",
+    "mana_cost": "{R}",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "rare",
+    "artist": "TSWCK",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "slp-1": {
+    "id": "8c09e891-247f-43f2-8d9d-2187631fb083",
+    "oracle_id": "36cd2364-d113-47d1-b2c4-b088d9eb88dd",
+    "name": "Brainstorm",
+    "released_at": "2023-02-19",
+    "layout": "normal",
+    "set": "slp",
+    "set_name": "Secret Lair Promo",
+    "set_type": "promo",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Instant",
+    "mana_cost": "{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "rare",
+    "artist": "Justin Hernandez & Alexis Hernandez",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "sld-8001": {
+    "id": "9d20e671-9b41-4591-b1ef-2a297411beb7",
+    "oracle_id": "7f77a84e-5a4b-4834-aefa-3cecc175ae8e",
+    "name": "Jace, the Mind Sculptor",
+    "released_at": "2023-02-17",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "8001",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Jace",
+    "mana_cost": "{2}{U}{U}",
+    "loyalty": "3",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "mythic",
+    "artist": "Wizard of Barge",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sld-685": {
+    "id": "c3544806-daf9-438f-aec5-087abb40d2e6",
+    "oracle_id": "595a15f0-77f3-4544-8acc-10630e12cc14",
+    "name": "Shadowborn Apostle",
+    "released_at": "2023-02-20",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "685",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "sldbonus"
+    ],
+    "keywords": [],
+    "type_line": "Creature — Human Cleric",
+    "mana_cost": "{B}",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "rare",
+    "artist": "Meyoco",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "sld-1243": {
+    "id": "99285945-0d97-4e29-9be2-2d2cfd9bac4e",
+    "oracle_id": "18bdc181-9592-4147-81fb-7f83ce137f70",
+    "name": "Ugin, the Ineffable",
+    "released_at": "2023-02-20",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1243",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Ugin",
+    "mana_cost": "{6}",
+    "loyalty": "4",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "rare",
+    "artist": "Sansyu",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "sld-716": {
+    "id": "b0a04baf-5301-4e47-ac8f-243d2a73f18e",
+    "oracle_id": "711eea87-0fa3-46e0-a42b-fa5a86455f04",
+    "name": "Shivan Dragon",
+    "released_at": "2023-02-21",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "716",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "serialized",
+      "sldbonus"
+    ],
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Creature — Dragon",
+    "mana_cost": "{4}{R}{R}",
+    "power": "5",
+    "toughness": "5",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "rare",
+    "artist": "Martin Ontiveros",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "sld-681": {
+    "id": "df5ed779-b400-489f-a419-4208de15efad",
+    "oracle_id": "595a15f0-77f3-4544-8acc-10630e12cc14",
+    "name": "Shadowborn Apostle",
+    "released_at": "2023-03-16",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "681",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "sldbonus"
+    ],
+    "keywords": [],
+    "type_line": "Creature — Human Cleric",
+    "mana_cost": "{B}",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "rare",
+    "artist": "Boneface",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "sld-728": {
+    "id": "ce332e85-a842-4afc-a5c5-b5064c5c4569",
+    "oracle_id": "a422a5b0-1aff-4d07-bcc5-edfbda09dc44",
+    "name": "Themberchaud",
+    "released_at": "2023-03-26",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "728",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "triangle",
+    "promo_types": [
+      "sldbonus",
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Trample",
+      "Exert"
+    ],
+    "type_line": "Legendary Creature — Dragon",
+    "mana_cost": "{4}{R}{R}{R}",
+    "power": "5",
+    "toughness": "5",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "rare",
+    "artist": "Yang Luo",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sld-1237": {
+    "id": "c150240c-10c7-439c-a076-740bd0f2cc0a",
+    "oracle_id": "c0c39f80-cf12-482e-a7c4-757db85125b0",
+    "name": "Rashel, Fist of Torm",
+    "released_at": "2023-03-26",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "1237",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "triangle",
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Double strike"
+    ],
+    "type_line": "Legendary Creature — Human Knight",
+    "mana_cost": "{2}{W}{W}",
+    "power": "2",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Tatiana Vetrova & Jason Li",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "prcq-1": {
+    "id": "683868c2-caaa-4084-8dbf-4903792b9c0f",
+    "oracle_id": "51eae7ff-fed9-4afe-8053-7690379449dd",
+    "name": "Gideon, Ally of Zendikar",
+    "released_at": "2023-02-25",
+    "layout": "normal",
+    "set": "prcq",
+    "set_name": "Regional Championship Qualifiers 2022",
+    "set_type": "promo",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Gideon",
+    "mana_cost": "{2}{W}{W}",
+    "loyalty": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "artist": "Alexis Ziritt",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sch-7": {
+    "id": "29261589-ce89-435d-9497-bb8f8b911c7f",
+    "oracle_id": "be31fa46-d5ac-4c85-9c19-3f0e2b1f223b",
+    "name": "Annex Sentry",
+    "released_at": "2023-02-25",
+    "layout": "normal",
+    "set": "sch",
+    "set_name": "Store Championships",
+    "set_type": "promo",
+    "collector_number": "7",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "storechampionship"
+    ],
+    "keywords": [
+      "Toxic"
+    ],
+    "type_line": "Artifact Creature — Phyrexian Cleric",
+    "mana_cost": "{2}{W}",
+    "power": "1",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Sam Guay",
+    "finishes": [
+      "nonfoil"
+    ]
+  },
+  "pw23-1": {
+    "id": "c3ff46e8-ed45-41f1-a200-8fa0cf0eda0b",
+    "oracle_id": "9a1fbe72-4a17-42be-8e23-d7d30a5e59c1",
+    "name": "Norn's Annex",
+    "released_at": "2023-03-10",
+    "layout": "normal",
+    "set": "pw23",
+    "set_name": "Wizards Play Network 2023",
+    "set_type": "promo",
+    "collector_number": "1",
+    "lang": "ph",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "promo_types": [
+      "commanderparty",
+      "wizardsplaynetwork"
+    ],
+    "keywords": [],
+    "type_line": "Artifact",
+    "mana_cost": "{3}{W/P}{W/P}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "James Paick",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "p30h-1": {
+    "id": "fc22536c-09b4-4dc3-9371-842d91c5251e",
+    "oracle_id": "4b7ac066-e5c7-43e6-9e7e-2739b24a905d",
+    "name": "Serra Angel",
+    "released_at": "2023-03-21",
+    "layout": "normal",
+    "set": "p30h",
+    "set_name": "30th Anniversary History Promos",
+    "set_type": "promo",
+    "collector_number": "1",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [
+      "Flying",
+      "Vigilance"
+    ],
+    "type_line": "Creature — Angel",
+    "mana_cost": "{3}{W}{W}",
+    "power": "4",
+    "toughness": "4",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Hisashi Momose",
+    "finishes": [
+      "foil"
+    ]
+  },
+  "sld-9995": {
+    "id": "aab08460-3043-4de7-b8ae-92f238318844",
+    "oracle_id": "8e2fbc26-5373-4fd7-8e9e-41af5bb9ff18",
+    "name": "Garruk, Caller of Beasts",
+    "released_at": "2022-04-12",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "9995",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Garruk",
+    "mana_cost": "{4}{G}{G}",
+    "loyalty": "4",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "mythic",
+    "artist": "Jesper Ejsing",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sld-9999": {
+    "id": "f7bdcb20-219c-4175-8600-a946d83210e0",
+    "oracle_id": "fb777610-7562-4d9d-8497-62c562e6d7cb",
+    "name": "Sisay, Weatherlight Captain",
+    "released_at": "2022-04-12",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "9999",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Creature — Human Soldier",
+    "mana_cost": "{2}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Volkan Baǵa",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  }
+}

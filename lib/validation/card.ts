@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
+import { COLLECTOR_SWITCH_VALUES } from "@/lib/cards/collector-line";
 import {
   CARD_LANG_VALUES,
   COLLECTOR_NUMBER_MAX,
@@ -273,6 +274,11 @@ const frameStyleBaseSchema = z
     template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
     crown: z.boolean().optional(),
     twoColor: z.boolean().optional(),
+    // The collector line's switches (TODO 4.9b, lib/cards/collector-line.ts):
+    // a printed style, the owner's explicit "off", or absent (a stored card
+    // from before the line); the foil-printing ★ is `true` or absent.
+    collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
+    star: z.literal(true).optional(),
   })
   .strict();
 
@@ -294,6 +300,11 @@ export const frameAnatomyPatchSchema = z
   .object({
     crown: z.boolean().optional(),
     twoColor: z.boolean().optional(),
+    // The collector line (TODO 4.9b): a style or the owner's "off"; the ★
+    // flag — `false` takes a stored `true` off (the stored key is `true` or
+    // absent).
+    collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
+    star: z.boolean().optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")
