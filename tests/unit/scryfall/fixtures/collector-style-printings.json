@@ -859,5 +859,79 @@
     "finishes": [
       "foil"
     ]
+  },
+  "sld-9995": {
+    "id": "aab08460-3043-4de7-b8ae-92f238318844",
+    "oracle_id": "8e2fbc26-5373-4fd7-8e9e-41af5bb9ff18",
+    "name": "Garruk, Caller of Beasts",
+    "released_at": "2022-04-12",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "9995",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Garruk",
+    "mana_cost": "{4}{G}{G}",
+    "loyalty": "4",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "mythic",
+    "artist": "Jesper Ejsing",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
+  },
+  "sld-9999": {
+    "id": "f7bdcb20-219c-4175-8600-a946d83210e0",
+    "oracle_id": "fb777610-7562-4d9d-8497-62c562e6d7cb",
+    "name": "Sisay, Weatherlight Captain",
+    "released_at": "2022-04-12",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "9999",
+    "lang": "en",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Creature — Human Soldier",
+    "mana_cost": "{2}{W}",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "rarity": "rare",
+    "artist": "Volkan Baǵa",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ]
   }
 }

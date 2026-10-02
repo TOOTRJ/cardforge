@@ -669,20 +669,32 @@ export const COLLECTOR_2023_STYLE_EARLY: Readonly<Record<string, { fromNumber?: 
   sld: { fromNumber: 1243 },
 };
 
+/** The first release day of an early 2023-style product (PL23 #1,
+ *  2023-02-10): COLLECTOR_2023_STYLE_EARLY never reaches back before it.
+ *  Secret Lair has numbers past 1243 that are a year older — SLD #9995–9999
+ *  (2022-04-12, the mirrored "left-handed" drop) print the 2015 style, the
+ *  number alone at the edge and the letter in its column ("M      9995",
+ *  mirrored; scans 2026-10-02). */
+export const COLLECTOR_2023_STYLE_EARLY_FROM = "2023-02-10";
+
 /**
  * The collector line a printing draws (TODO 4.9b, ScryfallImportPatch
  * .printed_collector): "off" for any frame but 2015 (the 1993 / 1997 / 2003
  * / future frames print "Illus." inside the box — the line is never drawn on
  * a card imported from one, whatever frame it lands on); else the style by
  * release date (COLLECTOR_2023_FROM), or "2023" early for the products in
- * COLLECTOR_2023_STYLE_EARLY. A printing with no release date takes the
- * current style, as storedCollectorNumber does.
+ * COLLECTOR_2023_STYLE_EARLY released from COLLECTOR_2023_STYLE_EARLY_FROM
+ * on. A printing with no release date takes the current style, as
+ * storedCollectorNumber does.
  */
 export function collectorStyleOfPrinting(
   card: Pick<ScryfallCard, "frame" | "released_at" | "set" | "collector_number">,
 ): CollectorSwitch {
   if ((card.frame ?? "").trim() !== "2015") return "off";
   if (isCollector2023Style(card.released_at)) return "2023";
+  // Before the first early product nothing prints the 2023 style, whatever
+  // its set and number (SLD #9995–9999, 2022).
+  if ((card.released_at ?? "").trim() < COLLECTOR_2023_STYLE_EARLY_FROM) return "2015";
   const early = COLLECTOR_2023_STYLE_EARLY[(card.set ?? "").trim().toLowerCase()];
   if (!early) return "2015";
   if (early.fromNumber === undefined) return "2023";

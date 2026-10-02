@@ -4,6 +4,7 @@ import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import {
   COLLECTOR_2023_FROM,
   COLLECTOR_2023_STYLE_EARLY,
+  COLLECTOR_2023_STYLE_EARLY_FROM,
   collectorStyleOfPrinting,
   mapScryfallToFormPatch,
   starOfPrinting,
@@ -28,6 +29,12 @@ import { importedAnatomy } from "@/lib/cards/anatomy";
 // still print the 2015 style. From 2023-03-26 (SLD #728 "R 0728", #1237
 // "R 1237", #1242 "R 1242") every scan is 2023-style. So the date is the
 // first day with ONLY the new style, and the early products are listed.
+//
+// The early list never reaches back before its first product (PL23 #1,
+// 2023-02-10 — the skeptic's scans, 2026-10-02): Secret Lair has numbers
+// past 1243 that are a year older. SLD #9995–9999 (2022-04-12, the mirrored
+// "left-handed" drop) print the 2015 style, mirrored — the number alone at
+// the edge, the letter in its column ("M      9995").
 // ---------------------------------------------------------------------------
 
 type Key = keyof typeof printings;
@@ -48,6 +55,8 @@ describe("the style boundary (COLLECTOR_2023_FROM)", () => {
     ["sld-685", "2015", "SLD #685 (2023-02-20, a bonus card): 685 R"],
     ["sld-716", "2015", "SLD #716 (2023-02-21, a bonus card): 716 P"],
     ["sld-681", "2015", "SLD #681 (2023-03-16, a bonus card): 681 R"],
+    ["sld-9995", "2015", "SLD #9995 (2022-04-12, the mirrored drop): 9995 M — past #1243, a year before the early products"],
+    ["sld-9999", "2015", "SLD #9999 (2022-04-12, the mirrored drop): 9999 R"],
     ["prcq-1", "2015", "PRCQ #1 (2023-02-25): 001/003 P"],
     ["sch-7", "2015", "SCH #7 (2023-02-25): 007 P"],
     ["pw23-1", "2015", "PW23 #1 (2023-03-10): 001/001 P"],
@@ -73,6 +82,18 @@ describe("the style boundary (COLLECTOR_2023_FROM)", () => {
     expect(collectorStyleOfPrinting({ ...early, collector_number: "1242" })).toBe("2015"); // before the pin, below 1243
     expect(collectorStyleOfPrinting({ ...early, collector_number: "8001" })).toBe("2023");
     expect(collectorStyleOfPrinting({ ...early, collector_number: "1242", released_at: "2023-03-26" })).toBe("2023");
+    // A number with a suffix reads by its digits; one with none is never early.
+    expect(collectorStyleOfPrinting({ ...early, collector_number: "1243★" })).toBe("2023");
+    expect(collectorStyleOfPrinting({ ...early, collector_number: "1242a" })).toBe("2015");
+    expect(collectorStyleOfPrinting({ ...early, collector_number: "SLD-1" })).toBe("2015");
+    expect(collectorStyleOfPrinting({ ...early, collector_number: null })).toBe("2015");
+    // …and only from the first early product's day on: nothing before
+    // 2023-02-10 prints the 2023 style, whatever its set and number.
+    expect(COLLECTOR_2023_STYLE_EARLY_FROM).toBe("2023-02-10");
+    expect(collectorStyleOfPrinting({ ...early, released_at: "2023-02-10" })).toBe("2023");
+    expect(collectorStyleOfPrinting({ ...early, released_at: "2023-02-09" })).toBe("2015");
+    expect(collectorStyleOfPrinting({ ...early, collector_number: "9995", released_at: "2022-04-12" })).toBe("2015");
+    expect(collectorStyleOfPrinting({ ...printing("pl23-1"), released_at: "2022-12-31" })).toBe("2015");
     // A promo with no release date takes the current style, as the stored
     // number does (storedCollectorNumber).
     expect(collectorStyleOfPrinting({ ...printing("one-19"), released_at: null })).toBe("2023");
