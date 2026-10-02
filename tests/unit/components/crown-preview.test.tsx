@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
-import { frameOverlayImageUrl, pickFrameColorKey } from "@/components/cards/frame-layer";
+import { frameMasterKey, frameOverlayImageUrl, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { resolveFrameOverlays } from "@/lib/cards/anatomy";
 import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
 import type { ColorIdentity } from "@/types/card";
@@ -92,13 +92,47 @@ describe("the preview draws the bake's crown", () => {
       card({ cardType: "token", frameStyle: { template: "m15token", crown: true } }),
       card({ frameStyle: { template: "m15snow", crown: true } }),
       card({ frameStyle: { template: "m15devoid", crown: true } }),
-      card({ frameStyle: { template: "m15borderless", crown: true } }),
+      card({ frameStyle: { template: "m15borderlessland", crown: true } }),
     ]) {
       expect(bakeOverlays(data), JSON.stringify(data.frameStyle)).toEqual([]);
       const { container } = render(<CardPreview {...data} />);
       expect(container.querySelector("[data-frame-overlays]"), JSON.stringify(data.frameStyle)).toBeNull();
       cleanup();
     }
+  });
+
+  // TODO 4.6f (wave 2a): on the borderless frames the crown is no band but
+  // the master's crowned twin (`<key>-legendary`, FrameProfile.crownMasters)
+  // — the preview paints that master, the bake's frameMasterKey, with no
+  // overlay element at all; off, absent or not Legendary paints the plain one.
+  it.each([
+    ["mono black", { colorIdentity: ["black"], cost: "{1}{B}{B}", frameStyle: { template: "m15borderless", crown: true } }, "b-legendary"],
+    ["colourless: the see-through frame's twin", { colorIdentity: ["colorless"], cost: "{10}", frameStyle: { template: "m15borderless", crown: true } }, "c-legendary"],
+    ["three colours: gold", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}", frameStyle: { template: "m15borderless", crown: true } }, "m-legendary"],
+    ["a pair drawn gold", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15borderless", crown: true } }, "m-legendary"],
+    ["a pair drawn as its pair: the split pinline and crown", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15borderless", crown: true, twoColor: true } }, "wu-legendary"],
+    ["a hybrid pair: the grey-barred dress and its crown", { colorIdentity: ["white", "blue"], cost: "{W/U}{W/U}", frameStyle: { template: "m15borderless", crown: true, twoColor: true } }, "wu-h-legendary"],
+    ["a colourless artifact on the artifact dress", { cardType: "artifact", colorIdentity: ["colorless"], cost: "{3}", frameStyle: { template: "m15borderlessartifact", crown: true } }, "c-legendary"],
+  ] as Array<[string, Partial<CardPreviewData>, string]>)("borderless, %s → the %s master, no overlay", (_label, over, key) => {
+    const data = card(over);
+    const profile = getFrameProfile(data.frameStyle?.template);
+    const colors = data.colorIdentity as ColorIdentity[] | undefined;
+    expect(frameMasterKey(profile, colors, data, data.frameStyle)).toBe(key);
+    expect(bakeOverlays(data)).toEqual([]);
+    const { container } = render(<CardPreview {...data} />);
+    const frame = container.querySelector<HTMLElement>("[data-frame-key]")!;
+    expect(frame.dataset.frameKey).toBe(key);
+    expect(frame.style.backgroundImage).toContain(`${data.frameStyle?.template}/${key}.`);
+    expect(container.querySelector("[data-frame-overlays]")).toBeNull();
+    // Off, absent, or not Legendary: the plain master.
+    for (const plain of [
+      { ...data, frameStyle: { ...data.frameStyle, crown: false } },
+      { ...data, frameStyle: { ...data.frameStyle, crown: undefined } },
+      { ...data, supertype: null },
+    ]) {
+      expect(frameMasterKey(profile, colors, plain, plain.frameStyle)).toBe(key.replace(/-legendary$/, ""));
+    }
+    cleanup();
   });
 
   it.each(["foil", "etched"] as const)("%s: the finish's mask holds the crown band over the bake's rect", (finish) => {

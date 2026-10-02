@@ -31,9 +31,10 @@ import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 //     creature ("@creature"), a Vehicle and a Spacecraft ("@vehicle",
 //     "@spacecraft") — their P/T as it draws today;
 //   * the per-card anatomy switched ON (TODO 4.6a "@crown…", 4.6b
-//     "@pair…"): the long (Legendary) card with FrameStyle.crown on every
-//     template that draws the crown, in each crown key, plus HD, foil and
-//     etched on m15; the two-colour pair (FrameStyle.twoColor) on every
+//     "@pair…", 4.6f's borderless twins): the long (Legendary) card with
+//     FrameStyle.crown on every template that draws the crown, in each crown
+//     key, plus HD, foil and etched on m15 (HD, foil and square on
+//     m15borderless); the two-colour pair (FrameStyle.twoColor) on every
 //     template that draws pairs, in each dress, and with both switches on
 //     (the split crown). The same cards without the switches are the plain
 //     cases — every stored card;
@@ -411,6 +412,12 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   ["m15", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15artifact", ["c", "u"]],
   ["m15land", ["g", "c", "wub"]],
+  // TODO 4.6f (wave 2a): the borderless FLOATING crown, baked into the
+  // crowned twins (`<key>-legendary`, FrameProfile.crownMasters) — every
+  // colour, the see-through colourless frame and gold; the artifact dress's
+  // colourless twin wears CC's artifact crown.
+  ["m15borderless", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  ["m15borderlessartifact", ["c", "u", "wub"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -697,6 +704,11 @@ export function visualCases(): VisualCase[] {
   add("m15", "creature", "r", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   add("m15", "creature", "u", "long", { crown: true, finish: "etched", suffix: "@crown-etched" });
   add("m15", "creature", "w", "long", { crown: true, corners: "square", suffix: "@crown-square" });
+  // The borderless crowned twin at HD, on foil (no etched: art to the edge)
+  // and squared (print keeps the crown's peak on the art, 4.6f).
+  add("m15borderless", "creature", "b", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  add("m15borderless", "creature", "b", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
+  add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on
@@ -712,6 +724,13 @@ export function visualCases(): VisualCase[] {
     add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // The borderless hybrid dress (grey bars, the split pinline) and its
+  // crowned twin (4.6f).
+  add("m15borderless", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15borderless"), cost: "{W/U}{W/U}" } });
+  add("m15borderless", "creature", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("m15borderless", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
   add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
   add("m15", "creature", "wu", "long", {
     suffix: "@pair-etched",
@@ -759,7 +778,7 @@ export function visualCases(): VisualCase[] {
 
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
-export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land"];
+export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
  *  (DMU #107's), on top of a stored row — `frame_style.collector` names the

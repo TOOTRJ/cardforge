@@ -233,8 +233,9 @@ describe("4.32 / 4.34 / 4.39 references", () => {
   it("m15borderlessartifact: CC's artifact frame for colourless (TODO 4.32's A pair)", () => {
     expect(ids("m15borderlessartifact", "c")).toEqual(["cmm Jeweled Lotus", "mh2 Sword of Hearth and Home"]);
     expect(frameReferenceNote("m15borderlessartifact").confirm).toBe(true);
-    // Its m references print a two-colour pinline: m waits for 4.6.
-    expect(frameReferenceNote("m15borderlessartifact").note).toMatch(/leave m unverified/);
+    // Its m references print a two-colour pinline, which the two-colour
+    // switch draws since 4.6f (wave 2a).
+    expect(frameReferenceNote("m15borderlessartifact").note).toMatch(/since 4\.6f/);
   });
 
   it("m15borderlessland: non-legendary prints whose type bar wears the title's tint, the best-registered first (TODO 4.34)", () => {

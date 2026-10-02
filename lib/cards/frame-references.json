@@ -1442,7 +1442,7 @@
     }
   },
   "m15borderless": {
-    "note": "The 2019+ borderless frame (Card Conjurer 'Borderless (Alt)', frames plan 4.32): art to the edges, dark translucent bars and box, white ink, a black bottom bar. Short then long text per colour (TODO 4.32's list, revised by the 2026-09-26 print review: IKO #377 (Godzilla-series layout), CMM #697 (a different treatment), SOS #294 (a Lesson emblem moves the name), MH3 #328 (a blue devoid card, not c), FRA #461 and TLA #306 (two-colour pinlines) were replaced). m = three-colour prints, the uniform gold pinline our master draws: two-colour prints split the pinline between their colours (4.6). No crowned (legendary) printing until 4.6's floating crown. Rares and mythics print the holo stamp in an ARCH of the rules-box pinline (4.9); our master's pinline is straight, so the score masks the arch (lib/frames/score-combo.ts). The card edge has no pinlines: score on the bars and the bottom bar.",
+    "note": "The 2019+ borderless frame (Card Conjurer 'Borderless (Alt)', frames plan 4.32): art to the edges, dark translucent bars and box, white ink, a black bottom bar. Short then long text per colour (TODO 4.32's list, revised by the 2026-09-26 print review: IKO #377 (Godzilla-series layout), CMM #697 (a different treatment), SOS #294 (a Lesson emblem moves the name), MH3 #328 (a blue devoid card, not c), FRA #461 and TLA #306 (two-colour pinlines) were replaced). m = three-colour prints, the uniform gold pinline our master draws: two-colour prints split the pinline between their colours, which the two-colour switch draws from the pair masters since 4.6f (wave 2a). Crowned (legendary) printings draw CC's floating crown since 4.6f (wave 2a: the `-legendary` twins); the crown rides the colour's tick and a crowned reference per colour is CROWN_REFERENCES (lib/cards/crown.ts). Rares and mythics print the holo stamp in an ARCH of the rules-box pinline (4.9); our master's pinline is straight, so the score masks the arch (lib/frames/score-combo.ts). The card edge has no pinlines: score on the bars and the bottom bar.",
     "colors": {
       "w": [
         {
@@ -1532,7 +1532,7 @@
     }
   },
   "m15borderlessartifact": {
-    "note": "c = Card Conjurer's artifact (A) frame; w/u/b/r/g/m = the colour frames, as FDN #295/#296, FRA #327 and 2XM #341 print them. Some coloured borderless artifacts print silver artifact bars instead (SNC #285/#288, SLC #2011): confirm the thumbnail. DFT #318 is a Vehicle (its P/T plate is 4.6's). The m references are TWO-colour prints with a split pinline (no three-colour borderless artifact was found): leave m unverified until 4.6 builds the two-colour pinline. The holo-stamp arch is masked from the score, as on m15borderless.",
+    "note": "c = Card Conjurer's artifact (A) frame; w/u/b/r/g/m = the colour frames, as FDN #295/#296, FRA #327 and 2XM #341 print them. Some coloured borderless artifacts print silver artifact bars instead (SNC #285/#288, SLC #2011): confirm the thumbnail. DFT #318 is a Vehicle (its P/T plate is 4.6's). The m references are TWO-colour prints with a split pinline (no three-colour borderless artifact was found): since 4.6f (wave 2a) the two-colour switch draws that split pinline from the pair masters, so they match a two-colour card; the gold m master itself is a three-and-more-colour frame (verified 2026-09-28, v32). The holo-stamp arch is masked from the score, as on m15borderless.",
     "confirm": true,
     "colors": {
       "w": [

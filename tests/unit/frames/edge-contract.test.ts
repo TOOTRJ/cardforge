@@ -7,6 +7,7 @@ import {
   CORNER_CHECK_FROM_PX,
   CORNER_CHECK_TO_PX,
   EDGE_CONTRACTS,
+  edgeContractFor,
   EDGE_CONTRACT_KNOWN_FAILURES,
   cornerViolations,
   edgeContractViolations,
@@ -284,7 +285,6 @@ describe("every frame master honours its template's edge contract and corner che
   const bucketTemplates = new Set(Object.keys(manifest.files).map((k) => k.split("/")[0]));
   for (const template of FRAME_TEMPLATE_VALUES) {
     const masters = mastersOf(template);
-    const contract = EDGE_CONTRACTS[template];
     if (masters.length === 0) {
       // A bucket template without a local build (CI): the importer checks it.
       it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
@@ -300,6 +300,8 @@ describe("every frame master honours its template's edge contract and corner che
       const known = isKnownEdgeFailure(template, m.key);
       const run = known ? it.fails : it;
       run(`${template}/${m.key}${m.bucket ? " (bucket)" : ""}${known ? " — known failure" : ""}`, async () => {
+        // A crowned twin (4.6f) is held to its own edges where they differ.
+        const contract = edgeContractFor(template, m.key)!;
         const { data, width, height } = await rgbaOf(m.file);
         expect([width, height]).toEqual(
           getFrameProfile(template).orientation === "landscape" ? [2100, 1500] : [1500, 2100],

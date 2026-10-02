@@ -2034,16 +2034,19 @@ describe("frame request log", () => {
   }
 
   it("logs a nearest printing from the deck pre-fill, with its art flag", async () => {
-    const sheoldred = (signaturePrintings as unknown as Record<string, ScryfallCard>)["dmu-435"];
+    // Zilortha IKO #275: borderless with the nickname line, which no frame
+    // draws (4.11) — nearest by the registry's own answer. (Sheoldred DMU
+    // #435 was the example until Borderless drew its crown, 4.6f.)
+    const zilortha = (signaturePrintings as unknown as Record<string, ScryfallCard>)["iko-275"];
     actions.recordFrameRequestAction.mockResolvedValue({ ok: true });
-    prefill(sheoldred);
+    prefill(zilortha);
     await waitFor(() => expect(actions.recordFrameRequestAction).toHaveBeenCalledTimes(1));
     expect(actions.recordFrameRequestAction).toHaveBeenCalledWith({
-      signature: "borderless/standard+crown",
+      signature: "borderless/standard+nickname",
       label: "Borderless frame",
-      setCode: "dmu",
-      collectorNumber: "435",
-      scryfallId: sheoldred.id,
+      setCode: "iko",
+      collectorNumber: "275",
+      scryfallId: zilortha.id,
       status: "nearest",
       cause: "missing",
       template: "m15",

@@ -35,7 +35,7 @@ function solid(width: number, height: number, [r, g, b, a]: [number, number, num
 
 describe("the ramps", () => {
   it("are the design's, measured on the prints, and live in this ONE module (cc-frames re-exports none)", () => {
-    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55] });
+    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55], crownFloating: [40, 60] });
     // The pair masters (4.6b) and the pair crown bands (4.6a) read the same
     // helpers: no second name for them anywhere in the importer's library.
     for (const name of ["TWO_COLOR_RAMPS", "PAIR_RAMPS", "TWO_COLOR_PAIRS", "rampMask", "lerpLayers", "rampName", "blendPair"]) {

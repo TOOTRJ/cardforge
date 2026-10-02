@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
-import { CC_TEMPLATES, describeLayer, pairMasterLayers } from "@/scripts/lib/cc-frames.mjs";
+import { CC_TEMPLATES, borderlessPairLayers, describeLayer, pairMasterLayers } from "@/scripts/lib/cc-frames.mjs";
 import {
   FRAME_MASTER_KEYS,
   TWO_COLOR_MASTER_KEYS,
@@ -30,6 +30,15 @@ const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8
 >;
 
 const KIND: Record<string, "m15" | "artifact" | "land"> = { m15: "m15", m15artifact: "artifact", m15land: "land" };
+/** The templates whose pairs the Card Conjurer importer builds, and the
+ *  recipe each reads: m15 / m15artifact / m15land through pairMasterLayers
+ *  (4.6b), the borderless dresses through borderlessPairLayers (4.6f). */
+const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"] as const;
+function recipeOf(template: string, key: string) {
+  const [pair, hybrid] = key.split("-");
+  const dress = hybrid ? "hybrid" : "split";
+  return KIND[template] ? pairMasterLayers(pair, dress, KIND[template]) : borderlessPairLayers(pair, dress);
+}
 
 function declaredKeys(template: string): string[] {
   return (getFrameProfile(template).twoColorMasters ?? []).flatMap((dress) =>
@@ -38,16 +47,16 @@ function declaredKeys(template: string): string[] {
 }
 
 describe("the declared pair masters", () => {
-  it("are 40 in wave 1: m15 gold-split + hybrid, m15artifact and m15land gold-split", () => {
+  it("are 40 in wave 1 (m15 gold-split + hybrid, m15artifact and m15land gold-split) and 30 more in wave 2a (the borderless pinline split, and m15borderless's hybrid)", () => {
     const declared = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.map((t) => [t, declaredKeys(t).length] as const).filter(([, n]) => n > 0),
     );
-    expect(declared).toEqual({ m15: 20, m15land: 10, m15artifact: 10 });
+    expect(declared).toEqual({ m15: 20, m15land: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10 });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);
   });
 
-  it.each(["m15", "m15artifact", "m15land"])("%s: each is in the frames bucket, PNG + WebP, full size", (template) => {
+  it.each(PAIR_TEMPLATES)("%s: each is in the frames bucket, PNG + WebP, full size", (template) => {
     for (const key of declaredKeys(template)) {
       const png = files[`${template}/${key}.png`];
       expect(png, `${template}/${key}.png`).toBeDefined();
@@ -68,10 +77,9 @@ describe("the declared pair masters", () => {
     }
   });
 
-  it.each(["m15", "m15artifact", "m15land"])("%s: provenance records the importer's recipe for each", (template) => {
+  it.each(PAIR_TEMPLATES)("%s: provenance records the importer's recipe for each", (template) => {
     for (const key of declaredKeys(template)) {
-      const [pair, hybrid] = key.split("-");
-      const layers = pairMasterLayers(pair, hybrid ? "hybrid" : "split", KIND[template]);
+      const layers = recipeOf(template, key);
       expect(provenance[template].colors[key], `${template}/${key}`).toEqual(layers.map(describeLayer));
       expect((CC_TEMPLATES as Record<string, { colors: Record<string, unknown> }>)[template].colors[key]).toEqual(layers);
     }
@@ -79,7 +87,7 @@ describe("the declared pair masters", () => {
 });
 
 describe("verification (owner decision 2026-09-29, V-A: a pair rides its template's m tick)", () => {
-  it.each(["m15", "m15artifact", "m15land"] as const)(
+  it.each(PAIR_TEMPLATES)(
     "%s: the compare page's m sample stays the GOLD master — an m re-tick never judges a pair by accident",
     (template) => {
       const sample = sampleFramePreview(template, "m");

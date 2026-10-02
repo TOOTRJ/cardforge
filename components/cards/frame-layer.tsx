@@ -3,11 +3,7 @@ import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { COLOR_KEY_LETTER, pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { FrameMasterKey, Rect, TwoColorDress, TwoColorSplit } from "@/lib/cards/template-layout";
-import {
-  resolveTwoColor,
-  type FrameAnatomyStyle,
-  type ResolvedFrameOverlay,
-} from "@/lib/cards/anatomy";
+import { type FrameAnatomyStyle, type ResolvedFrameOverlay, crownedMasterKey, resolveTwoColor } from "@/lib/cards/anatomy";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -150,6 +146,8 @@ type MasterDress = {
   artifactMasterKeys?: Partial<Record<string, FrameMasterKey>>;
   twoColorMasters?: readonly TwoColorDress[];
   twoColorForLands?: boolean;
+  /** The crown baked into `-legendary` masters (TODO 4.6f; crownedMasterKey). */
+  crownMasters?: true;
 };
 
 /** The frame master (public/frames/{template}/{key}.png) a card of frame
@@ -174,10 +172,12 @@ export function frameMasterKeyForColor(
  *  A stored pair with the two-colour frame on (`style.twoColor === true`) on
  *  a profile with pair masters paints its pair master (resolveTwoColor);
  *  otherwise pickFrameColorKey's key, dressed by the card's type
- *  (frameMasterKeyForColor). The colour key itself still decides everything
- *  that is about the card's COLOUR rather than the file painted: the
- *  frame_reviews gate, the watermark tint and the stat plates (plateKeyFor:
- *  the colour key, but a hybrid pair's grey "c"). */
+ *  (frameMasterKeyForColor); and on a profile whose crown is baked into its
+ *  masters, a Legendary card with the crown on paints that master's crowned
+ *  twin (`w-legendary`, crownedMasterKey — TODO 4.6f). The colour key itself
+ *  still decides everything that is about the card's COLOUR rather than the
+ *  file painted: the frame_reviews gate, the watermark tint and the stat
+ *  plates (plateKeyFor: the colour key, but a hybrid pair's grey "c"). */
 export function frameMasterKey(
   profile: MasterDress,
   colors: readonly ColorIdentity[] | null | undefined,
@@ -189,8 +189,11 @@ export function frameMasterKey(
     cost: type?.cost,
     cardType: type?.cardType,
   });
-  if (look) return look.masterKey;
-  return frameMasterKeyForColor(profile, pickFrameColorKey(colors), type);
+  const master = look ? look.masterKey : frameMasterKeyForColor(profile, pickFrameColorKey(colors), type);
+  // A profile whose crown is baked into its masters (FrameProfile.
+  // crownMasters, TODO 4.6f: the borderless floating crown) paints the
+  // crowned twin for a Legendary card with the crown switched on.
+  return crownedMasterKey(profile, style, { cardType: type?.cardType, supertype: type?.supertype }, master);
 }
 
 /** Every frame master a render of this card paints: both halves of a split,

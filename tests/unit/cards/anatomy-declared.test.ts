@@ -29,9 +29,14 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 describe("where the pieces are declared", () => {
-  it("only the m15, m15artifact and m15land entries draw them — never a profile that spreads them", () => {
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(["m15", "m15land", "m15artifact"]);
-    // (Both carry the collector line's slot since 4.9b.)
+  it("only the m15, m15artifact, m15land and borderless entries draw them — never a profile that spreads them", () => {
+    // 4.6f (wave 2a): the two borderless frames draw the crown from crowned
+    // twin masters and the pairs from pinline-split masters. (The snow pair
+    // carry the collector line's slot since 4.9b; the borderless land has
+    // none.)
+    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false });
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: false, twoColor: [], collector: true });
     expect(frameAnatomyOf("m15snowland")).toEqual({ crown: false, twoColor: [], collector: true });
     // A legacy template draws the m15 frame, so it has m15's anatomy.
@@ -77,10 +82,13 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       finish: "regular",
       collector: "2023",
     });
-    // A frame with no collector slot drops the line's keys too.
+    // A frame with no collector slot drops the line's keys too (m15borderless
+    // keeps the crown and pair switches it draws since 4.6f wave 2a).
     expect(newCardFrameStyle({ template: "m15borderless", finish: "regular", ...NEW_CARD_ANATOMY, star: true }, "creature")).toEqual({
       template: "m15borderless",
       finish: "regular",
+      crown: true,
+      twoColor: true,
     });
     expect(newCardFrameStyle({ template: "m15artifact", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15artifact",

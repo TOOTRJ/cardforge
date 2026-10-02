@@ -167,9 +167,14 @@ describe("Card Conjurer recipe", () => {
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
       const covered = [...builtColors(def as never), ...Object.keys(def.excluded ?? {})].sort();
-      expect(covered, template).toEqual([...COLORS, ...pairKeysOf(template)].sort());
+      // A template whose crown is baked into its masters (4.6f) builds the
+      // crowned twin of every master it paints.
+      const plain = [...COLORS, ...pairKeysOf(template)];
+      const crowned = getFrameProfile(template).crownMasters ? plain.map((k) => `${k}-legendary`) : [];
+      expect(covered, template).toEqual([...plain, ...crowned].sort());
       for (const file of sourceFilesFor(def as never)) {
-        expect(file, `${template}: ${file}`).toMatch(/^img\/frames\/[\w/]+\.(png|svg)$/);
+        // CC's img/black.png is the erased strip under the floating crown (4.6f).
+        expect(file, `${template}: ${file}`).toMatch(/^img\/(frames\/[\w/]+|black)\.(png|svg)$/);
       }
     }
   });
@@ -637,8 +642,13 @@ describe("Card Conjurer recipe", () => {
     const plain = templates.m15borderless;
     for (const k of ["w", "u", "b", "r", "g", "m"]) expect(plain.colors[k]).toEqual([{ src: frame(k.toUpperCase()) }]);
     expect(plain.colors.c).toEqual([{ src: frame("C") }]);
-    // CC's L is 4.34's land frame, never a colour of this template.
-    expect(sourceFilesFor(plain as never).some((f) => f.endsWith("FrameL.png"))).toBe(false);
+    // CC's L is 4.34's land frame, never a COLOUR of this template — only
+    // the hybrid pairs' grey bars (4.6f) read it.
+    for (const [key, layers] of Object.entries(plain.colors)) {
+      if (key.includes("-h")) continue;
+      expect(layers.some((l) => l.src.endsWith("FrameL.png")), key).toBe(false);
+    }
+    expect(plain.colors["wu-h"][0].src).toMatch(/FrameL\.png$/);
     // The pack's own "Colorless Power/Toughness" plate is pt/l.png.
     expect(plain.plates?.c).toBe("img/frames/m15/borderless/pt/l.png");
     expect(plain.plates?.w).toBe("img/frames/m15/borderless/pt/w.png");
@@ -1690,7 +1700,11 @@ describe("provenance and hygiene", () => {
       // Every master was cut at the one card corner (TODO 3.26's re-import).
       expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
-      expect(Object.keys(provenance[template].colors).sort()).toEqual([...COLORS, ...pairKeysOf(template)].sort());
+      const plainKeys = [...COLORS, ...pairKeysOf(template)];
+      // A template whose crown is baked into its masters (4.6f) records a
+      // crowned twin for every master it paints.
+      const twins = getFrameProfile(template).crownMasters ? plainKeys.map((k) => `${k}-legendary`) : [];
+      expect(Object.keys(provenance[template].colors).sort()).toEqual([...plainKeys, ...twins].sort());
     }
     expect(provenance.m15devoid.source).toBe("cardconjurer");
     // The later runs name their pack and what was done to its pixels.

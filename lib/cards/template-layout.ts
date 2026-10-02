@@ -52,6 +52,7 @@
 // ---------------------------------------------------------------------------
 
 import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
+import { baseMasterKey } from "@/lib/cards/master-key";
 import type { FrameTemplate } from "@/types/card";
 import {
   ADVENTURE_PANEL_COST_PCT,
@@ -258,7 +259,8 @@ export function slotInk(
   slot: { colorHex: string; shadowCss?: string; inkByColorKey?: InkByColorKey },
   masterKey: string,
 ): SlotInk {
-  const entry = slot.inkByColorKey?.[masterKey as FrameMasterKey];
+  // A crowned twin (`w-legendary`, 4.6f) prints the plain master's ink.
+  const entry = slot.inkByColorKey?.[baseMasterKey(masterKey) as FrameMasterKey];
   return entry
     ? { colorHex: entry.colorHex, shadowCss: entry.shadowCss }
     : { colorHex: slot.colorHex, shadowCss: slot.shadowCss };
@@ -290,7 +292,7 @@ export function footerInk(
  *  band-level text-shadow would emboss the pip glyphs too (the browser and
  *  Satori both inherit it). */
 export function bandTextStyle(slot: TextSlot, masterKey: string): { color?: string; textShadow?: string } {
-  const entry = slot.inkByColorKey?.[masterKey as FrameMasterKey];
+  const entry = slot.inkByColorKey?.[baseMasterKey(masterKey) as FrameMasterKey];
   if (!entry) return {};
   return entry.shadowCss ? { color: entry.colorHex, textShadow: entry.shadowCss } : { color: entry.colorHex };
 }
@@ -412,6 +414,21 @@ export type FrameProfile = {
    *  don't draw it (owner round 17, 2026-09-30; lib/cards/anatomy.ts
    *  twoColorFits). Code-owned; set only on PROFILES entries. */
   twoColorForLands?: boolean;
+  /** The legendary crown is baked INTO this template's masters (TODO 4.6f,
+   *  wave 2a): beside each `<template>/<key>.png` a `<key>-legendary.png`
+   *  draws the same frame with the crown — the borderless FLOATING crown,
+   *  where Card Conjurer ERASES a strip of the frame under it (the master's
+   *  title-bar ring), which no overlay can do. A Legendary card with
+   *  FrameStyle.crown === true paints that twin instead (frameMasterKey →
+   *  lib/cards/anatomy.ts crownedMasterKey), for its colour key or its pair
+   *  (LEGENDARY_MASTER_KEYS); what is keyed by the master — ink, the
+   *  under-frame art — reads the plain key (baseMasterKey; the
+   *  square-corner table names no key of these templates). The crown's
+   *  switch, hint, import rule and registry gap are the overlay crown's
+   *  (frameAnatomyOf: `crown` is true either way). Opt-in per card:
+   *  declaring it changes no stored card. Code-owned; set only on PROFILES
+   *  entries (M15BORDERLESS is spread by the artifact and land dresses). */
+  crownMasters?: true;
   /** Two-colour cards draw the frame SPLIT down a hard vertical seam — the
    *  first colour's PNG left of `atPct`, the second's right of it, in printed
    *  pair order (twoColorFrameKeys: WU WB UB UR BR BG RG RW GW GU) — instead
@@ -3803,8 +3820,24 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
   },
-  m15borderless: M15BORDERLESS,
-  m15borderlessartifact: M15BORDERLESSARTIFACT,
+  // The borderless frame's crown (TODO 4.6f, wave 2a) is CC's FLOATING crown
+  // baked into `<key>-legendary` masters (crownMasters — an overlay can't
+  // erase the title-bar ring CC erases under it), and its two-colour dress
+  // the pinline-only split (`<pair>.png`: the gold M frame, the pinline
+  // lerped between the pair's frames — FRA #376 / #377, HOB #213, TLA #306,
+  // BLC #86, MH2 #321, FRA #461). Declared on the two entries only, never on
+  // M15BORDERLESS, which the land dress spreads (its pairs are 4.56's) —
+  // opt-in per card, so no stored card changes. A hybrid cost prints the
+  // same split pinline over GREY bars (2X2 #374 / #385, SPG #142 / #144,
+  // ECL #292–296: Card Conjurer's 'Land Frame' bars for a hybrid pair), so
+  // m15borderless draws print's hybrid dress too (`<pair>-h.png`, the grey
+  // plate `pt/c` = the pack's colourless plate).
+  m15borderless: { ...M15BORDERLESS, crownMasters: true, twoColorMasters: ["split", "hybrid"] },
+  // The artifact dress: the same crowned twins and split pairs (its
+  // colourless twin wears CC's artifact crown on the artifact frame); a
+  // hybrid artifact falls back to the split, like m15artifact. Its `m`
+  // tick's references print this pinline split (frame-references.json).
+  m15borderlessartifact: { ...M15BORDERLESSARTIFACT, crownMasters: true, twoColorMasters: ["split"] },
   m15borderlessland: M15BORDERLESSLAND,
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
@@ -3880,7 +3913,8 @@ export function getFrameProfile(
 export function underFrameArtRect(profile: FrameProfile, colorKey: string): Rect | null {
   const u = profile.underFrameArt;
   if (!u) return null;
-  if (u.colors && !u.colors.includes(colorKey)) return null;
+  // A crowned twin (`c-legendary`, 4.6f) is as see-through as its master.
+  if (u.colors && !u.colors.includes(baseMasterKey(colorKey))) return null;
   return u.rect;
 }
 

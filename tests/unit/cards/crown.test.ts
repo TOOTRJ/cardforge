@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CROWN_REFERENCES, crownKeyFor, crownOverlayFor, crownReferenceFor, showsCrown, type CrownCard } from "@/lib/cards/crown";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity } from "@/types/card";
 
@@ -43,9 +44,10 @@ describe("which card draws the crown", () => {
     }
   });
 
-  it("only on m15, m15artifact and m15land — and a legacy template, which draws the m15 frame", () => {
+  it("only on m15, m15artifact, m15land and the borderless frames (4.6f) — and a legacy template, which draws the m15 frame", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => showsCrown(legendary(["white"]), getFrameProfile(t)));
-    expect(crowned).toEqual(["m15", "m15land", "m15artifact"]);
+    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
+    expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);
   });
 });
@@ -121,9 +123,9 @@ describe("the crowned prints the crown is judged against", () => {
     }
   });
 
-  it("only on templates that draw the crown", () => {
+  it("only on templates that draw the crown — as a band or as crowned twin masters (4.6f)", () => {
     for (const template of Object.keys(CROWN_REFERENCES)) {
-      expect(getFrameProfile(template).overlays?.some((o) => o.anatomy === "crown"), template).toBe(true);
+      expect(frameAnatomyOf(template).crown, template).toBe(true);
     }
   });
 });
