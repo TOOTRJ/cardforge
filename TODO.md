@@ -65,6 +65,18 @@ per-colour verification of #421's emblem, #428's `m20token*`, #436's
 `m15borderlessland` and #438's walkers (none is in `supabase/seed.sql`'s
 production mirror yet) and the /news post for #440. The LAST task in the plan is 6.29, the create-card stepper redesign: it starts only after 4.9, 4.21 and 4.6f, and only after the owner has been asked what it should cover (owner 2026-09-30).
 
+**Owner priority 2026-10-02: double-faced frames are the TOP PRIORITY** (owner:
+"adding double faced frames for cards with 2 sides"). Phase 5 moves to the
+front of the queue, ahead of everything still open in Phases 4 and 6. Once
+the four open PRs (#449–#452) are merged, the next build is 5.0 (the design
+pass) → 5.1 (transform and modal double-faced frames, front and back) → 5.2
+(the second-face editor) → 5.3 (both faces baked) → 5.4 (import). Its
+prerequisites are in place: 4.3's Card Conjurer importer builds every M15-era
+family and 4.5.0's kind anatomy merged as #442. The other open lines (4.9c /
+4.9d, 4.21b / 4.21c, 4.6f's devoid, snow, adventure and saga, 4.56) continue
+beside it only where they don't touch the same files, and never ahead of it.
+6.29 (the stepper redesign) stays the LAST task, now after Phase 5 too.
+
 Status sync 2026-09-25 (main `267f46c`, PRs #370–#382 merged): Phase 0 done
 except 0.17, 0.18 (partly), 0.22 and 0.24; the Card Conjurer M15 swap shipped
 (4.2 storage, 4.3 importer for the M15 family, 4.4 with 4.16–4.18 inside it,
@@ -2799,7 +2811,15 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **Rollout (FRAMES.md "Additions vs corrections"):** the two-colour frame is an ADDITION — opt-in per card (4.6.0's two-colour switch): a new two-colour borderless land gets it by default with an off switch, a stored `m15borderlessland` card on `m` keeps the gold look until its owner switches it on, an import follows the printing; no bump, no sweep, no badge; only its Visual cases join the baseline.
       - **Depends on:** 4.34, 4.6.0, 4.6b.
 
-### Phase 5 — Two-sided cards end to end (3–4 weeks; needs 4.3 and 4.5)
+### Phase 5 — Two-sided cards end to end (TOP PRIORITY, owner 2026-10-02; 3–4 weeks; needs 4.3 and 4.5, both in place)
+
+- [ ] **5.0 [P0] Design pass: double-faced frames** (owner 2026-10-02, top priority: "adding double faced frames for cards with 2 sides") — nothing is built before this is written and the owner has answered its questions, as with 4.5, 4.6, 4.9 and 4.21. It settles:
+      (1) **the data model** — one card holding both faces (`back_face` with its own frame, colour, rarity, body and art) against today's `back_card_id` link, and what happens to the visible two-faced cards (5.1's **[decide]**; they keep today's flip path unless their owner opts in);
+      (2) **wave 1's frames** — Card Conjurer's Transform Front / Back (New) and MDFC front / back for the M15 era in every colour key plus the land (L) variants, measured against prints per face (transform: ISD, MID, VOW, NEO; modal: ZNR, KHM, STX), with the dark back and its white ink, the DFC icon families and which Scryfall `*dfc` frame effect picks each, the front's grey reverse P/T, the MDFC flipside strip and the colour indicator (4.6c);
+      (3) **the rollout class** — new kinds and new templates are additions: 0 stored cards change, no layout bump, and each face is verified per colour before it is offered;
+      (4) **what waits** — planeswalker transform / MDFC (walkers: ask the owner first), DFC sagas, battle backs and double-sided tokens (5.5), meld (5.6), borderless and extended DFC faces (5.7), DFC crowns (4.6f);
+      (5) **the PR split** — a review sheet, a frames promote and seed rows per PR, and how 5.2–5.4 (editor, both faces baked, import) follow so a double-faced card can be made, saved, shared, downloaded and imported end to end.
+      Output: the design in the scratchpad (`design-next/5/final.md`), the owner's questions as a review round, then 5.1–5.4 re-cut here into buildable items.
 
 - [ ] **5.1 [P1] Transform + MDFC kinds with real back-face frames from CC**
       (front/back, icon families by set era, dark back treatment, colour
@@ -3053,7 +3073,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 - [ ] **6.27 [P3] Card backs for print (the last part of 6.1)** (owner pick 2026-09-29: later, as its own item) — a card-back template for MPC uploads and double-sided sheets. No back template exists yet; design it before building.
 - [ ] **6.28 [P2] Profile picture and deck cover upload caps** (owner pick 2026-09-29, from #433's review) — Vercel refuses any request body over 4.5 MB, so profile avatars/banners (stated 8 MB) and deck covers (stated 5 MB) are effectively capped at 4.5 MB today. Lower the stated caps to 4 MB in the checks and the copy (client + server + bucket `file_size_limit`), with a test that holds the cap under Vercel's limit. (Card art moves to #433's staged upload path instead.)
 
-- [ ] **6.29 [P1] Create-card stepper redesign** (owner request 2026-09-30) — **ASK THE OWNER BEFORE STARTING: stop and ask what the redesign should cover before doing anything at all (owner 2026-09-30: "add a note to stop and ask me before doing anything"). The LAST task in the plan: it starts only after 4.9, 4.21 and 4.6f are done.** Scope to be set with the owner, not assumed: the `/create` wizard's steps (Card → Identity → Text & stats → Set icon → Subscriber → Publish), their order and grouping, the frame picker (4.13) and presets (4.14), where the live preview sits, mobile, and how the per-card switches (crown, two-colour frame, collector line, stamp) and the Token / Emblem choices are presented. Build nothing, sketch nothing and open no PR until the owner has answered.
+- [ ] **6.29 [P1] Create-card stepper redesign** (owner request 2026-09-30) — **ASK THE OWNER BEFORE STARTING: stop and ask what the redesign should cover before doing anything at all (owner 2026-09-30: "add a note to stop and ask me before doing anything"). The LAST task in the plan: it starts only after 4.9, 4.21, 4.6f and Phase 5 (the double-faced frames, top priority since 2026-10-02) are done.** Scope to be set with the owner, not assumed: the `/create` wizard's steps (Card → Identity → Text & stats → Set icon → Subscriber → Publish), their order and grouping, the frame picker (4.13) and presets (4.14), where the live preview sits, mobile, and how the per-card switches (crown, two-colour frame, collector line, stamp) and the Token / Emblem choices are presented. Build nothing, sketch nothing and open no PR until the owner has answered.
 
 ### Phase 7 — Ops and QA (continuous)
 
