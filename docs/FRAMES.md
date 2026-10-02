@@ -1286,6 +1286,12 @@ switch absent or off is byte-identical.
 - **References:** `CROWN_REFERENCES.extendedart` — w FDN #442, u #455,
   b #463, r #466, g #470, m M21 #278, c PUMA U1; the crown rides the
   colour's tick.
+- **Registry:** the `crown` gap drops on extendedart by itself
+  (`gapDrawnBy`). Of the 1,159 crowned extended-art printings behind it,
+  740 import `exact`; the 402 two-colour ones fall to the `two-colour`
+  gaps (383, and 19 hybrid) and stay `nearest` — this frame draws them
+  gold, with the gold crown — 13 fall to the Vehicle plate, and 4 two-part
+  prints stay `nearest` for their layout.
 - **Tests:** `tests/unit/frames/extended-crown-band.test.ts` (the recipe,
   the slot, the manifest and provenance, the built bands' pixels),
   `tests/unit/render/extended-crown-bake.test.tsx` (real bakes: the band
