@@ -93,10 +93,12 @@ describe("bake path = preview path", () => {
   });
 
   it("every overlay key a slot publishes resolves to its own path, and the bake's loader never swaps in another", () => {
+    // The crown bands: m15crown (4.6a) and the extended-art band (4.6f).
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const slot of getFrameProfile(template).overlays ?? []) {
+        const folder = template === "extendedart" ? "extendedcrown" : "m15crown";
         for (const key of slot.keys) {
-          expect(slot.assetPathTemplate.replace("{key}", key)).toBe(`/frames/m15crown/${key}.png`);
+          expect(slot.assetPathTemplate.replace("{key}", key)).toBe(`/frames/${folder}/${key}.png`);
         }
       }
     }

@@ -46,7 +46,7 @@ describe("which card draws the crown", () => {
 
   it("only on m15, m15artifact, m15land and the borderless frames (4.6f) — and a legacy template, which draws the m15 frame", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => showsCrown(legendary(["white"]), getFrameProfile(t)));
-    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
+    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact", "extendedart"];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);
   });

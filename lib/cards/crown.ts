@@ -135,6 +135,19 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     m: ref("Kaalia of the Vast", "2xm", "354", "86f670f9-c5b7-4eb0-a7d0-d16513fadf74"),
     c: ref("Kozilek, Butcher of Truth", "2x2", "336", "64b4b6cd-6d0f-4060-b51f-61f481000d51"),
   },
+  // The extended-art floating crown (TODO 4.6f, wave 2b): FDN's digital
+  // renders for the five colours, a three-colour gold crown (M21 #278) and
+  // the colourless Eldrazi crown of the Ultimate Masters box toppers
+  // (PUMA U1).
+  extendedart: {
+    w: ref("Arahbo, the First Fang", "fdn", "442", "52605015-ba08-4427-8c06-b47ecd603b27"),
+    u: ref("Kiora, the Rising Tide", "fdn", "455", "6b137e8d-3537-454d-8d6b-24d2a6d81993"),
+    b: ref("Tinybones, Bauble Burglar", "fdn", "463", "f01d5f4b-a780-4a89-82b1-84d4f3b62a7b"),
+    r: ref("Kellan, Planar Trailblazer", "fdn", "466", "64e35fbe-55b7-40c8-b24b-2d9d933bcdaa"),
+    g: ref("Loot, Exuberant Explorer", "fdn", "470", "b6671b19-28d3-4d67-a8fa-83e4f6596c68"),
+    m: ref("Rin and Seri, Inseparable", "m21", "278", "d605c780-a42a-4816-8fb9-63e3114a8246"),
+    c: ref("Emrakul, the Aeons Torn", "puma", "U1", "38cd438d-be12-40aa-bd6c-be55e88b63ce"),
+  },
   // The artifact dress: a crowned borderless artifact per colour where one
   // was printed; its colourless crown is CC's artifact crown (2XM #362).
   m15borderlessartifact: {

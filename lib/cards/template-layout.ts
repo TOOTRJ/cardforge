@@ -3690,6 +3690,35 @@ export const M15_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The extended-art frame's legendary crown (TODO 4.6f, wave 2b): Card
+ * Conjurer's FLOATING crown as an overlay band, `extendedcrown/<key>.png`
+ * (1500 × 260): CC's black 'Crown Border Cover' strip (3.94/2.77/92.14×1.77 %,
+ * drawn — not erased, as on the borderless frame), the crown
+ * (3.07/1.91/93.87×10.24 %) and its outline ON TOP (2.8/1.72/94.4×10.62 %;
+ * autoExtendedArtFrame pushes it first and drawFrames draws the list
+ * reversed), all 1500-native, 1:1. The prints (FDN #442 / #455 / #463 /
+ * #466 / #470) stop the crown under the title bar with art beside and below
+ * it. Keys: the seven colour keys — a pair wears the gold crown (this frame
+ * draws no pair masters), the colourless card CC's grey C crown over our MSE
+ * colourless master.
+ *
+ * The slot sits 10 px (0.476 %H) LOWER than CC's bounds: our extendedart
+ * master is MSE-built, and its title bar's top edge sits 0.45 %H below the
+ * print's (FDN #442 / #455 and CC's m15/new/extended put the bar's outline at
+ * 4.98 %H, ours at 5.43), so the crown's hole hugs OUR bar — the peak lands
+ * at 2.2 %H against the print's 2.0. 4.7's CC-built master takes the offset
+ * back to 0. Set on the extendedart entry only.
+ */
+export const EXTENDED_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: (10 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (260 / 2100) * 100 },
+  assetPathTemplate: "/frames/extendedcrown/{key}.png",
+  // EXTENDED_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
+  // them together).
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+};
+
+/**
  * The collector line on the black-bordered M15 family (TODO 4.9b): one slot
  * for every wave-1 template — the tokens, the planeswalker and the emblem
  * print their lines at M15's positions (TDOM #1, DOM #1, TFDN #24), so they
@@ -3884,7 +3913,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirdragon: TARKIRDRAGON,
   tarkirdraconic: TARKIRDRACONIC,
   tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true },
-  extendedart: EXTENDEDART,
+  // The extended-art frame draws the floating crown as an overlay band
+  // (TODO 4.6f, wave 2b; EXTENDED_CROWN) — opt-in per card, so no stored
+  // card changes (and production holds none on this frame). No pairs: a
+  // two-colour legend wears the gold crown.
+  extendedart: { ...EXTENDEDART, overlays: [EXTENDED_CROWN] },
   fullart: { ...FULLART, pickerSampleArt: true },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,

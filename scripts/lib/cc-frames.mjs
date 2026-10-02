@@ -2196,8 +2196,91 @@ export const CROWN_BAND_KEYS = [...CROWN_BAND.keys, ...TWO_COLOR_PAIRS];
  *  over the cover rect, drawn under the crown and over the frame. */
 const CROWN_COVER_SRC = "img/black.png";
 
+// --- 4.6f (wave 2b): the extended-art legendary crown, an OVERLAY band.
+// CC's autoExtendedArtFrame (creator-23.js:1311–1362) draws, for a
+// Legendary card, the same FLOATING crown as the borderless frame — but with
+// its 'Crown Border Cover' as a BLACK strip (makeExtendedArtFrameByLetter
+// :2296–2365: img/black.png at 3.94/2.77/92.14×1.77 %, NOT erased) under the
+// crown (3.07/1.91/93.87×10.24 %), and the outline ON TOP (2.8/1.72/94.4×
+// 10.62 %: pushed first, and drawFrames draws the list reversed, :388). The
+// prints: FDN #442 / #455 / #463 / #466 / #470 stop the crown under the title
+// bar with art beside and below it. Nothing is erased, so the crown is an
+// overlay band over the extendedart masters (MSE-built, in git — the CC
+// pieces never join them): composited 1:1 at 1500×2100 (every piece is
+// 1500-native), cropped to the outline's rows 0–259. One key per master:
+// the colours, gold, and the colourless grey (CC's C crown over our MSE
+// colourless master; no pair keys — the frame draws no pair masters, so a
+// two-colour legend wears the gold crown). The band's slot sits 10 px lower
+// than CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN): our MSE
+// master's title bar tops out 0.45 %H below the print's.
+export const EXTENDED_CROWN_BAND = Object.freeze({
+  source: CROWNS,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
+  cover: BORDERLESS_CROWN.erase,
+  crown: BORDERLESS_CROWN.crown,
+  outline: BORDERLESS_CROWN.outline,
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  rows: 260,
+});
+
+/** The extended-art crown band's layers for a key, in CC's draw order: the
+ *  black cover strip (drawn, not erased), the floating crown, the outline
+ *  on top. */
+export function extendedCrownLayers(key) {
+  if (!EXTENDED_CROWN_BAND.keys.includes(key)) throw new Error(`extendedCrownLayers: no crown for key ${key}`);
+  return [
+    placed(BORDERLESS_CROWN.eraseSrc, EXTENDED_CROWN_BAND.cover),
+    placed(floatingCrown(key), EXTENDED_CROWN_BAND.crown),
+    placed(BORDERLESS_CROWN.outlineSrc, EXTENDED_CROWN_BAND.outline),
+  ];
+}
+
+/**
+ * What the importer checks on the full 1500 × 2100 extended-crown composite
+ * before it crops the band (pure): `lastAlphaRow` must be below the band's
+ * rows; `peakRow`, the first opaque row at the centre column, is the
+ * outline's peak at 36 ± 1 (CC's 0.0172 × 2100); the cover strip is opaque
+ * black in a crown dip (x 446, row 70: rows 58–94 of the strip, above the
+ * crown's edge at row 90 there).
+ */
+export function extendedCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  const cx = Math.floor(width / 2);
+  let peakRow = -1;
+  for (let y = 0; y < rows && peakRow < 0; y += 1) if (buf[(y * width + cx) * 4 + 3] >= 250) peakRow = y;
+  const dip = (70 * width + Math.round(width * 0.2973)) * 4;
+  const cover = [buf[dip], buf[dip + 1], buf[dip + 2], buf[dip + 3]];
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (Math.abs(peakRow - 36) > 1) failures.push(`the outline's peak at row ${peakRow}, CC's is 36 ± 1`);
+  if (cover[3] !== 255 || cover[0] + cover[1] + cover[2] > 30) failures.push(`the cover strip at (446, 70) is ${cover}, not opaque black`);
+  return { lastAlphaRow, peakRow, cover, failures };
+}
+
 /** The overlay bands the importer builds, by bucket folder. */
 export const CC_OVERLAY_BANDS = {
+  // 4.6f (wave 2b): the extended-art crown — a generic band (`layers` /
+  // `findings`), composited 1:1 at the card's size.
+  extendedcrown: {
+    pack: "M15 'Legend Crowns (Floating)' (packM15LegendCrownsFloating.js), drawn as CC's autoExtendedArtFrame does (creator-23.js:1311–1362, makeExtendedArtFrameByLetter :2296–2365)",
+    band: EXTENDED_CROWN_BAND,
+    keys: EXTENDED_CROWN_BAND.keys,
+    layers: extendedCrownLayers,
+    findings: extendedCrownFindings,
+    notes: [
+      "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters, which are MSE-built and in git — Card Conjurer pixels never join them",
+      "keys = the seven colour keys of the extendedart masters: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown over our MSE colourless master; CC's own rule would pick the artifact crown for a colourless card, which is the m15artifact dress's call); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
+      "the band's slot sits 10 px (0.476 %H) lower than CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN): the MSE master's title bar tops out at 5.43 %H where FDN #442 / #455 and CC's m15/new/extended put it at 4.98, so the crown's hole hugs OUR bar; 4.7's CC-built extendedart master takes the offset back to 0",
+    ],
+  },
   m15crown: {
     pack: "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js, groupAccurate.js — the pack the M15 masters come from)",
     band: CROWN_BAND,

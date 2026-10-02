@@ -418,6 +418,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // colourless twin wears CC's artifact crown.
   ["m15borderless", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15borderlessartifact", ["c", "u", "wub"]],
+  // TODO 4.6f (wave 2b): the extended-art frame's floating crown, an
+  // overlay band (extendedcrown/<key>) on the MSE masters — every colour,
+  // the grey colourless crown, gold (a pair wears gold: no pair masters).
+  ["extendedart", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -709,6 +713,8 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "b", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   add("m15borderless", "creature", "b", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
+  // The extended-art band at the stored bake's size (4.6f, wave 2b).
+  add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on

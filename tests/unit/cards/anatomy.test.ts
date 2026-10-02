@@ -272,12 +272,18 @@ describe("the crown", () => {
   });
 });
 
-describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f: the borderless twins)", () => {
-  const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact"];
+describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f: the borderless twins and the extended-art band)", () => {
+  /** The entries that draw the crown, in FRAME_TEMPLATE_VALUES order. */
+  const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact", "extendedart"].includes(t));
+  /** …and the pair masters (extendedart draws none: a pair wears gold there). */
+  const PAIRED = CROWNED.filter((t): boolean => t !== "extendedart");
 
-  it("the crown and the pair masters on exactly the m15, m15artifact, m15land and borderless PROFILES entries — never a profile that spreads them", () => {
+  it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless and extended-art PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
-    expect(crowned).toEqual(DRAWN);
+    expect(crowned).toEqual(CROWNED);
+    // The extended-art frame draws its floating crown as a band (wave 2b)
+    // and no pair masters.
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false });
     const paired = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );
@@ -300,11 +306,12 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // showcases spread M15 (their crowns and pairs are 4.6f); planeswalkers
     // and tokens none here.
     // (The collector line's slot — 4.9b — is on the snow, snow-land and
-    // devoid entries; the rest draw none of the three.)
+    // devoid entries; the rest draw none of the three. extendedart draws the
+    // crown alone, wave 2b: checked above.)
     for (const t of ["m15snow", "m15snowland", "m15devoid"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: true });
     }
-    for (const t of ["m15borderlessland", "extendedart", "adventure", "saga", "nyx", "fullart"]) {
+    for (const t of ["m15borderlessland", "adventure", "saga", "nyx", "fullart", "expeditionland"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
@@ -314,18 +321,26 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
 
-  it("a save keeps each switch only where the template draws it; a new card starts with both on there", () => {
+  it("a save keeps each switch only where the template draws it; a new card starts with each drawn switch on", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      const draws = DRAWN.includes(template);
+      const crown = CROWNED.includes(template);
+      const pair = PAIRED.includes(template);
       // The collector line's keys (4.9b) ride the same rule on the slotted templates.
       const line = (COLLECTOR_TEMPLATES as readonly string[]).includes(template) ? { collector: "2023" as const } : {};
-      expect(anatomyDefaults(template), template).toEqual(draws ? { crown: true, twoColor: true, ...line } : { ...line });
-      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template, "creature"), template).toEqual(
-        draws ? { template, finish: "foil", crown: true, twoColor: false } : { template, finish: "foil" },
-      );
-      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY }, "creature"), template).toEqual(
-        draws ? { template, finish: "regular", crown: true, twoColor: true, ...line } : { template, finish: "regular", ...line },
-      );
+      expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line });
+      expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template, "creature"), template).toEqual({
+        template,
+        finish: "foil",
+        ...(crown ? { crown: true } : {}),
+        ...(pair ? { twoColor: false } : {}),
+      });
+      expect(newCardFrameStyle({ template, finish: "regular", ...NEW_CARD_ANATOMY }, "creature"), template).toEqual({
+        template,
+        finish: "regular",
+        ...(crown ? { crown: true } : {}),
+        ...(pair ? { twoColor: true } : {}),
+        ...line,
+      });
     }
     // The AI jobs send no frame_style: the default template (m15) draws both.
     expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "2023" });
