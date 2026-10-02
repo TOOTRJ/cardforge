@@ -129,7 +129,8 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     ["m15", 189, null],
     ["extendedart", 189, 1264],
     ["saga", 185, 1845],
-    ["flip", 188, 587],
+    // (flip: its name and type line moved onto the prints' in layout v38,
+    // TODO 4.21a — below.)
     // Its type line moved onto the prints' in TODO 4.49 (d) (below).
     ["m15token", 189, null],
     ["fullart", null, 1608],
@@ -149,6 +150,25 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
       // …at the grown size: Beleren's caps are 1434/2048 em (±1.5 px of ink).
       expect(Math.abs(m.baseline - m.capTop - (1434 / 2048) * size * b.w), `${template} caps`).toBeLessThanOrEqual(1.5);
     }
+  });
+
+  it("puts flip's name and type line on the prints' baselines (layout v38, TODO 4.21a; v31–v37: 188 / 587)", async () => {
+    // C18 #134 and CM2 #71 (Scryfall PNGs at 1500 × 2100, ±3 px): the top
+    // name's baseline 155.5 px, the top type line's 569 — packFlip.js's
+    // bars with the text moved onto the prints (dy −9.2 / −4.9 px at HD).
+    const p = getFrameProfile("flip");
+    const b = await bake("flip", "hd");
+    const name = measure(b, p.title);
+    expect(Math.abs(name.baseline - 155.5), `name ${name.baseline}`).toBeLessThanOrEqual(1.5);
+    expect(name.baseline).toBeLessThan(188 - 20);
+    expect(Math.abs(name.baseline - name.capTop - (1434 / 2048) * p.title.sizePct * b.w)).toBeLessThanOrEqual(1.5);
+    const type = measure(b, p.type);
+    expect(Math.abs(type.baseline - 569), `type ${type.baseline}`).toBeLessThanOrEqual(1.5);
+    expect(type.baseline).toBeLessThan(587 - 10);
+    // …and at the default size (750 px): half of each.
+    const half = await bake("flip", "default");
+    expect(Math.abs(measure(half, p.title).baseline - 155.5 / 2)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(measure(half, p.type).baseline - 569 / 2)).toBeLessThanOrEqual(1.5);
   });
 
   it("puts the Card Conjurer masters' type line on the prints' baseline (was 4 px low)", async () => {

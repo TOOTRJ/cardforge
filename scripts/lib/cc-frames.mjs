@@ -558,19 +558,19 @@ export function borderlessLandLayers({ frame, box, pinline }) {
 // pinline ramp (40→60 %W, m15's: the uncrowned FDN pairs #344 / #345
 // measure 42.0–43.4 / 50.2–51.2 / 58.4–59.0 at 10 / 50 / 90 % on both
 // rings) through the pack's own Pinline mask — CC's Pinline / pinlineRight
-// layers, untilted (its maskRightHalf.png tilts +1.35 %W). CC also splits
-// the Rules layer through the regular M15 Rules mask; it is left out, the
-// box being the same dark α128 pixels on every colour. KNOWN ARTEFACT
-// (skeptic 2026-10-02, TODO 4.6f): CC's gold M frame draws its type-bar and
-// box rings ONE ROW HIGHER than the colour frames (and the L frame), so the
-// split masters keep a 1 px line of the M ring's gold (246,210,98) above
-// the masked pinline at the text box's top and bottom edges — rows 1302
-// (1,276 px) and 1936 (1,278 px) at HD; no print has it (FDN #345). CC's
-// own stack shows the first too (its Type layer is the M frame) and covers
-// the second with the Rules layer left out here. Replacing the Rules and
-// Type regions with the two colour frames (`replace`, under the Pinline
-// layer) removes both — a re-cut of the 20 split masters and twins, so the
-// owner's call. The hybrid masters don't have it. A HYBRID cost prints the same split
+// layers, untilted (its maskRightHalf.png tilts +1.35 %W). Under that
+// pinline the split dress first takes CC's Rules and Type regions (the
+// regular M15 masks CC's own stack lists for those layers) from the two
+// colour frames, IN PLACE of the M frame's (`replace`): the box is the same
+// dark α128 pixels on every colour, but CC's gold M frame draws its type-bar
+// and box rings ONE ROW HIGHER than the colour frames (which agree with each
+// other, and with L, pixel for pixel there), so with the M frame kept whole
+// a 1 px line of the M ring's gold (246,210,98) stayed above the masked
+// pinline at the text box's top and bottom edges — rows 1302 (1,276 px) and
+// 1936 (1,278 px) at HD — which no print has (FDN #344 / #345 go black
+// straight into the pinline; skeptic 2026-10-02, fixed in #449's review
+// follow-up: the 20 split masters and twins re-cut, rows 1181–1936 only).
+// The hybrid dress, on the L frame, needs no such layer. A HYBRID cost prints the same split
 // pinline over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 /
 // #144, ECL #292–296: cardFrameProperties's typeTitle 'L' for a hybrid
 // pair), so m15borderless builds a "hybrid" dress too, `<pair>-h`, on the L
@@ -631,9 +631,25 @@ export function borderlessCrownLayers(crown) {
  *  Pinline mask. Keys: `<pair>` and `<pair>-h`. */
 export function borderlessPairLayers(pair, dress = "split") {
   const [a, b] = pair.split("");
+  /** The pair's two frames lerped across the pinline ramp, through `mask`. */
+  const colours = (mask, extra = {}) => ({
+    src: borderlessFrame(a),
+    right: borderlessFrame(b),
+    ramp: [...PAIR_RAMPS.pinline],
+    mask,
+    ...extra,
+  });
   return [
     layer(borderlessFrame(dress === "hybrid" ? "l" : "m")),
-    { src: borderlessFrame(a), right: borderlessFrame(b), ramp: [...PAIR_RAMPS.pinline], mask: BORDERLESS_PINLINE_MASK },
+    // CC's gold M frame draws its type bar and text box ONE ROW HIGHER than
+    // the colour frames (which agree with each other, and with L, pixel for
+    // pixel there): under the masked pinline the M frame's own ring row
+    // would stay — a 1 px gold line above the box's top and bottom pinline
+    // (rows 1302 and 1936). So the gold dress takes CC's Rules and Type
+    // regions from the colour frames, IN PLACE of the M frame's (`replace`:
+    // source-over would double the translucent box). The L frame needs none.
+    ...(dress === "hybrid" ? [] : [colours(REG_RULES_MASK, { replace: true }), colours(REG_TYPE_MASK, { replace: true })]),
+    colours(BORDERLESS_PINLINE_MASK),
   ];
 }
 
@@ -664,7 +680,7 @@ function borderlessMasters(frameOf, crownOf, dresses) {
 }
 const BORDERLESS_ANATOMY_NOTES = [
   "legendary crown (TODO 4.6f, wave 2a): CC's FLOATING crown (packM15LegendCrownsFloating.js) baked into a second master per key, <key>-legendary.png, as autoBorderlessFrame draws it — the strip 3.94/2.77/92.14×1.77 % ERASED from the frame (CC's Crown Border Cover with erase: the master's title-bar ring there), the outline at 2.8/1.72/94.4×10.62 % under the crown at 3.07/1.91/93.87×10.24 %, all 1500-native (no resample); the crown letter is the master's (C for the see-through colourless frame, A for the artifact dress, M for gold); the plain masters are untouched",
-  "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
+  "two-colour pair masters (TODO 4.6f, wave 2a): the gold M frame with the pair's two frames lerped across the UNTILTED pinline ramp 40→60 %W (scripts/lib/pair-ramp.mjs) through the pack's Pinline mask — the prints split only the pinline (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA #461, FDN #343–351), first canonical colour on the left; under it the same lerp replaces CC's Rules and Type regions (the regular M15 masks), because the gold frame draws its type-bar and box rings one row higher than the colour frames and would leave a 1 px gold line above the box's top and bottom pinline (rows 1302 / 1936 at HD) that no print has; a pair's crown is its two floating crowns lerped across 40→60 (PAIR_RAMPS.crownFloating, measured on FDN's crowned pairs), <pair>-legendary.png",
   "hybrid pair masters <pair>-h.png (m15borderless only, TODO 4.6f): CC's grey 'Land Frame' L (the grey bars every hybrid borderless print wears — 2X2 #374 / #385, SPG #142 / #144, ECL #292–296; cardFrameProperties's typeTitle 'L' for a hybrid pair) with the same split pinline; their crowned twins <pair>-h-legendary.png; the P/T plate is the pack's 'Colorless Power/Toughness' (plateKeyFor's grey 'c' = pt/l.png), as CC's pt 'C' for an L typeTitle",
 ];
 
@@ -935,9 +951,46 @@ export const EMBLEM_TEXT_BOX_TONE = {
  *  regions don't overlap). */
 export const EMBLEM_TONES = [EMBLEM_NAME_PILL_TONE, EMBLEM_SILVER_TONE, EMBLEM_TYPE_PILL_TONE, EMBLEM_TEXT_BOX_TONE];
 
+// ---------------------------------------------------------------------------
+// The portrait layouts (TODO 4.21a, design 2026-09-29 §3.1 / §3.5 / §3.6):
+// flip, adventure and aftermath from CC's own packs, each a native 1500×2100
+// master copied 1:1. They replace the 241–375 px MSE composites
+// (build-flip-frame.mjs, build-adventure-frame.mjs, build-aftermath-frame.mjs)
+// that sat 30–80 px low (flip) or on softer, re-drawn paper (adventure,
+// aftermath). Every colour is the pack's own file but for the colourless
+// keys the packs lack (notes). Flip's P/T plates — one per creature half,
+// as every printed M15 flip creature carries (C18 #134, CM2 #71; owner
+// decision 2026-09-29: a correction) — are cut from CC's `<k>pt.png` (both
+// plates in one image, drawn at FLIP_PT_BOUNDS through the pack's Top PT /
+// Bottom PT masks) into pt/<k>-top.png and pt/<k>-bottom.png.
+// ---------------------------------------------------------------------------
+const FLIP = "img/frames/m15/flip";
+const ADVENTURE = "img/frames/adventure/regular";
+const AFTERMATH = "img/frames/m15/aftermath";
+/** Where packFlip.js draws the P/T image (`bounds`): a 1360×1000 image at
+ *  this box of the card, fractions of the card — 56/478 px, so 1:1. */
+export const FLIP_PT_BOUNDS = { x: 0.0374, y: 0.2277, width: 0.9067, height: 0.4762 };
+/** The pack's 'Top PT' / 'Bottom PT' masks: the card's top and bottom
+ *  halves (rows 0–1049, 1050–2099), so each plate is cut on its own. */
+export const FLIP_PT_MASKS = { top: "img/frames/topHalfSharp.svg", bottom: "img/frames/bottomHalfSharp.svg" };
+/** Each plate's box on the 1500×2100 card, padded past its soft shadow (the
+ *  image's alpha reaches 1179–1416 × 478–632 and 56–293 × 1324–1478 px; the
+ *  bodies, α ≥ 128, 1200–1415 × 485–611 and 77–292 × 1331–1457). The FLIP
+ *  profile's plateRects are these boxes in percent (a unit test keeps them
+ *  in step). The bottom plate is drawn upside-down in the source, as the
+ *  print shows it: the renderers draw it at its box unturned. */
+export const FLIP_PT_BOXES = {
+  top: { x: 1176, y: 475, width: 243, height: 160 },
+  bottom: { x: 53, y: 1321, width: 243, height: 160 },
+};
+/** CC's flip P/T image per colour key (the 'Colorless Power/Toughness'
+ *  cpt.png for c). */
+const FLIP_PT_IMAGES = perColor((k) => `${FLIP}/${k}pt.png`);
+const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius";
+
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * recut?, bridge?, tones?, excluded?, pack?, transforms?, notes }.
+ * ptCut?, recut?, bridge?, tones?, excluded?, pack?, transforms?, notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
  * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
  * solid, the artifact name pill's slate made solid, owner decisions
@@ -948,6 +1001,9 @@ export const EMBLEM_TONES = [EMBLEM_NAME_PILL_TONE, EMBLEM_SILVER_TONE, EMBLEM_T
  * <template>/symbol/<colour>.png, for the colours listed only.
  * `shield` cuts part of each built master out through a mask (its alpha)
  * into <template>/loyalty/<colour>.png, cropped to `box`.
+ * `ptCut` (4.21a's flip) draws a pack's two-plate P/T image at `bounds` on
+ * the card and cuts it through each named mask into its `boxes` entry:
+ * <template>/pt/<colour>-<name>.png, one plate per creature half.
  * `recut` moves a band of each composite down before the downscale
  * (recutBand; the textless tokens, TOKEN_TEXTLESS_RECUT; the text-box
  * tokens, TOKEN_REGULAR_RECUT).
@@ -1265,6 +1321,53 @@ export const CC_TEMPLATES = {
       "the frame's silver closes over the top of the spark's centre ray (EMBLEM_RAY_BRIDGE, owner decision 2026-09-29): the art window is Scryfall's art_crop box at the prints' scale (from 250.4 px), where the prints' ray runs on up to the bar with art in it; the ray ends at 251 px, its tip drawn with the profile of its own right edge, and the bar's shadow and the silver run across",
       "the silver (EMBLEM_SILVER_TONE), the type pill (EMBLEM_TYPE_PILL_TONE) and the text box (EMBLEM_TEXT_BOX_TONE) are toned onto the six prints (owner decision 2026-09-29): CC's read 10–32 luma over the prints' median by region; gains fitted on the prints; the spark's tail keeps its alpha; the light rims keep CC's tone",
       "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'",
+    ],
+  },
+  // 4.21a — the Kamigawa flip layout on the M15 frame (C18 #134 Budoka
+  // Gardener, CM2 #71 Nezumi Graverobber: the only M15-frame flip prints).
+  flip: {
+    colors: perColor((k) => [layer(`${FLIP}/${k}.png`)]),
+    ptCut: { image: FLIP_PT_IMAGES, bounds: FLIP_PT_BOUNDS, masks: FLIP_PT_MASKS, boxes: FLIP_PT_BOXES },
+    pack: "packFlip.js 'Flip'",
+    transforms: `${NATIVE_1500}; P/T plates: the pack's two-plate image drawn at its bounds (56/478 px, 1:1) and cut through the Top PT / Bottom PT masks into each plate's box, native size`,
+    notes: [
+      "source: CC 'Flip' (packFlip.js): the top creature's name bar, text box and type bar, the shared art window, the upside-down bottom creature's type bar, text box and name bar — replaces the MSE magic-m15-flip composite (build-flip-frame.mjs), which sat 30–80 px low from the title bar down against C18 #134 and CM2 #71",
+      "colourless = CC's see-through 'Colorless Frame' (flip/c.png): the FLIP profile draws the art under the frame for 'c' (underFrameArt on UNDER_FRAME_RECT, layout v35's rect; owner decision 2026-09-29), as m15/c does; never offered until a print exists",
+      "P/T plates (owner decision 2026-09-29, a correction): CC's <k>pt.png holds both plates — the top creature's upright, the bottom creature's upside-down — drawn at packFlip.js's bounds and cut through the pack's Top PT / Bottom PT masks (the card's halves) into pt/<k>-top.png and pt/<k>-bottom.png; a plate draws only when its half has a P/T, as on M15; cpt.png is the 'Colorless Power/Toughness' plate",
+      "no crown: the legendary bottom halves of C18 #134 and CM2 #71 print none",
+    ],
+  },
+  // 4.21a — the Eldraine adventure frame: M15's bars and window over the
+  // open storybook (ELD #115 Bonecrusher Giant and every ELD / WOE / MKM
+  // adventure print).
+  adventure: {
+    colors: {
+      ...perColor((k) => [layer(`${ADVENTURE}/${k}.png`)], WUBRGM),
+      c: [layer(`${ADVENTURE}/a.png`)],
+    },
+    pack: "packAdventure.js 'Adventure'",
+    transforms: NATIVE_1500,
+    notes: [
+      "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
+      "colourless = CC's 'Artifact Frame' (adventure/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless adventure was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
+      "the book masks (bookLeft, bookLeftMulticolor, bookRight) are 4.26's per-page colour inputs, not published",
+    ],
+  },
+  // 4.21a — the Amonkhet aftermath frame (AKH Insult // Injury and the 27
+  // AKH / HOU prints).
+  aftermath: {
+    colors: {
+      ...perColor((k) => [layer(`${AFTERMATH}/${k}.png`)], WUBRGM),
+      c: [layer(`${AFTERMATH}/a.png`)],
+    },
+    pack: "packAftermath.js 'Aftermath'",
+    transforms: NATIVE_1500,
+    notes: [
+      "source: CC 'Aftermath' (packAftermath.js): the upright top half and the sideways bottom half with textured cream text boxes — replaces the MSE stack (build-aftermath-frame.mjs: two per-colour pieces with flat white boxes)",
+      "colourless = CC's 'Artifact Frame' (aftermath/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless aftermath was ever printed and the pack has no colourless frame; never offered (no reference, never ticked)",
+      "gold (m) is built for the key but needs TODO 4.26: every printed two-colour aftermath is mono // mono (21 mixed, 6 same-colour), none gold // gold — flagged in the registry, never ticked until a print or 4.26",
+      "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)",
     ],
   },
 };
@@ -1960,7 +2063,34 @@ export function sourceFilesFor(def) {
   for (const plate of Object.values(def.plates ?? {})) files.add(plate);
   for (const symbol of Object.values(def.symbols ?? {})) files.add(symbol);
   if (def.shield) files.add(def.shield.mask);
+  for (const src of Object.values(def.ptCut?.image ?? {})) files.add(src);
+  for (const mask of Object.values(def.ptCut?.masks ?? {})) files.add(mask);
   return [...files].sort();
+}
+
+/** The pixel box a pack draws an image at (`bounds`, fractions of the card)
+ *  on a `width × height` card — CC's drawImage at its bounds, to the
+ *  nearest pixel. */
+export function boundsPx(bounds, width, height) {
+  return {
+    x: Math.round(bounds.x * width),
+    y: Math.round(bounds.y * height),
+    width: Math.round(bounds.width * width),
+    height: Math.round(bounds.height * height),
+  };
+}
+
+/** How provenance records a `ptCut` (4.21a's flip plates). */
+export function describePtCut(cut, width, height) {
+  const at = boundsPx(cut.bounds, width, height);
+  return {
+    image: { ...cut.image },
+    bounds: cut.bounds,
+    drawnAt: `${at.width}x${at.height} at (${at.x}, ${at.y}) of the ${width}x${height} card`,
+    masks: { ...cut.masks },
+    boxes: Object.fromEntries(Object.entries(cut.boxes).map(([name, box]) => [name, { ...box }])),
+    output: `pt/<colour>-<${Object.keys(cut.boxes).join("|")}>.png, native size`,
+  };
 }
 
 // ---------------------------------------------------------------------------

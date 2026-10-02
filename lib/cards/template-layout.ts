@@ -473,6 +473,13 @@ export type FrameProfile = {
   flavorDivider?: boolean;
   /** Bottom info line (artist credit + brand). */
   footer?: TextSlot;
+  /** The printed collector line's slot (TODO 4.9b) — the two lines in the
+   *  bottom border a card switches on (FrameStyle.collector, opt-in per
+   *  card: declaring it changes no stored card). When the line is drawn it
+   *  REPLACES the footer, and the brand mark moves into its © slot. Set only
+   *  on PROFILES entries (COLLECTOR_TEMPLATES), never on a base another
+   *  profile spreads; code-owned (the override schema refuses it). */
+  collector?: CollectorSlot;
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -718,6 +725,37 @@ export const TYPE_SPLIT_ZEN: TypeLineSplit = {
  *  (BRAND_MARK_PILL) for a mark that sits on the art; the offsets then place
  *  the pill's box. */
 export type BrandMarkPlacement = { rightPct: number; bottomPct: number; pill?: boolean };
+
+/**
+ * The collector line's geometry (TODO 4.9b): where lib/cards/collector-
+ * layout.ts sets its runs. Horizontal values are % of the card's width,
+ * baselines % of its height, sizes fractions of the width (as every font
+ * size is). The one slot is M15's (M15_COLLECTOR), measured on the prints.
+ */
+export type CollectorSlot = {
+  /** The pen x of both lines. */
+  leftPct: number;
+  /** The © slot's right edge (the brand mark's, a clean download's footer
+   *  text's). */
+  rightPct: number;
+  /** Line 1's baseline (the number line). */
+  line1BaselinePct: number;
+  /** Line 2's baseline (set • language, the brush, the artist). */
+  line2BaselinePct: number;
+  /** The brush's pen x — and the 2015 style's rarity-letter column. */
+  brushLeftPct: number;
+  /** The collector face's size (the number, the set and language codes). */
+  sizePct: number;
+  /** The artist's size (the display face's synthesized small caps). */
+  artistSizePct: number;
+  /** The © slot's text size (a clean download's footer text, body face). */
+  markTextSizePct: number;
+  /** The © slot's line where the FRAME's own art carries a stat shield in
+   *  line 1's corner, whatever the card draws there: always 2. Unset, the
+   *  slot is on line 2 only when the renderer draws a stat plate (a P/T, the
+   *  loyalty shield, the defense badge) and on line 1 without one. */
+  markLine?: 2;
+};
 
 /** Default placement: inside the M15 black border (≈73 px of black above the
  *  ink on a 1500×2100 card, 34 px below). */
@@ -2555,24 +2593,54 @@ const SAGA: FrameProfile = {
 };
 
 // Adventure — the M15 Eldraine frame. The creature uses the M15 title + type
-// bars and art window unchanged, but the lower text area is an open storybook:
-// the adventure spell (name/type/cost/rules from the card's back-face) fills the
+// bars and art window, but the lower text area is an open storybook: the
+// adventure spell (name/type/cost/rules from the card's back-face) fills the
 // LEFT page, and the creature's own rules move to the narrow RIGHT page. The
 // adventure name + type sit on the page's colored bars (light ink + a soft
 // shadow so they read on any color); the rules sit on the cream page (dark ink).
-// Frame composited by scripts/build-adventure-frame.mjs (m15 base + double_page
-// + null_page). Geometry is the MSE 375×523 spec (magic-m15-adventure.mse-style)
-// in percent. P/T plate reuses M15's (it sits over the right creature page).
+//
+// Layout v38 (TODO 4.21a): Card Conjurer's 'Adventure' master (the frames
+// bucket, scripts/lib/cc-frames.mjs) — the M15 frame with the storybook as
+// the ELD / WOE / MKM prints draw it — replacing the MSE composite (the MSE
+// m15 master + double_page + null_page) whose window ran 10 / 6 px narrow.
+// Geometry is packAdventure.js's, in percent:
+//   • art 7.57/11.19/84.87 × 44.44 — PINNED (design 2026-09-29 D4): the
+//     masters' window is 115–1385 × 237–1166 px on every colour, covered
+//     with 1.45 / 1.6 / 2.0 / 2.2 px to spare; neither M15's MSE slot nor
+//     CC_M15_ART_SLOT is inherited, so a later move of either is not an
+//     adventure bake change;
+//   • the panel's name and type line from 8.14 to 48.14 %W at 62 px, its
+//     pips right-aligned to 48.14 (60 px); the pages: the adventure's rules
+//     8.54–48.01 × 73.58–88.58, the creature's 52.67–91.34 × 65.0–88.58
+//     (both clear of the P/T plate);
+//   • the title, type line, pips and set symbol are M15's (the master's bars
+//     ARE CC's M15 bars: symbol right 92.13 %W, centred 59.10 %H — M15's
+//     inline band), with the Card Conjurer type-line baseline and cost lift
+//     the CC-framed M15 profiles print (CC_M15_TYPE_DY, CC_M15_COST_DY).
+// The panel's bars onto ELD #115 Bonecrusher Giant (Scryfall PNG at
+// 1500 × 2100): the panel ignores dy (it centres its text), so its name
+// band is centred where the print's name sits (baseline 1388 px: band
+// centre 1367.3) and its type band on the print's type line (baseline
+// 1481: centre 1460.3) — 6 and 7 px above CC's box centres, which CC fills
+// from the top. P/T plate: M15's, as the pack draws it (m15PT<K>.png at
+// M15's bounds).
 const ADV_SHADOW = "0 1px 2px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.5)";
+const ADVENTURE_PANEL_BAND_PCT = 4.0;
 const ADVENTURE: FrameProfile = {
   ...M15,
   label: "Adventure",
-  // Creature rules → RIGHT page (MSE text left 190, top 332, width 143 → 481).
+  costDy: CC_M15_COST_DY,
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
+  artSlot: { topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 },
+  // Creature rules → the RIGHT page (CC rules2). Both pages centre their
+  // text, as the prints do (ELD #115: the creature's two abilities and
+  // flavour run 1391–1815 px in the 1365–1860 page, the adventure's three
+  // lines 1611–1803 in the 1545–1860 page — centred, not from the top).
   rules: {
-    rect: { topPct: 63.5, leftPct: 50.7, widthPct: 38.2, heightPct: 28.5 },
+    rect: { topPct: 65.0, leftPct: 52.67, widthPct: 38.67, heightPct: 23.58 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
     colorHex: INK_DARK,
-    vAlign: "start",
+    vAlign: "center",
     font: "body",
   },
   // Layout v32: the panel's name and type line at Card Conjurer's name2 /
@@ -2580,9 +2648,10 @@ const ADVENTURE: FrameProfile = {
   // mana2 (ADVENTURE_PANEL_COST_PCT, 60 px; were 45). The panel keeps
   // centring its text on its bars (TextSlot.dy is front-face only).
   adventure: {
-    // Adventure name (+ its cost) — MSE name 2 (left 32, top ~330, → cost 180).
+    // Adventure name (+ its cost) — CC title2 / mana2: 8.14–48.14 %W,
+    // centred on the print's name (1367.3 px).
     title: {
-      rect: { topPct: 62.7, leftPct: 8.5, widthPct: 39.5, heightPct: 4.0 },
+      rect: { topPct: 1367.3 / 21 - ADVENTURE_PANEL_BAND_PCT / 2, leftPct: 8.14, widthPct: 40.0, heightPct: ADVENTURE_PANEL_BAND_PCT },
       sizePct: ADVENTURE_PANEL_PCT,
       fit: "measured",
       colorHex: INK_LIGHT,
@@ -2590,9 +2659,9 @@ const ADVENTURE: FrameProfile = {
       font: "display",
       shadowCss: ADV_SHADOW,
     },
-    // Adventure type line — MSE type 2 (left 32, top ~353, width 155).
+    // Adventure type line — CC type2, centred on the print's (1460.3 px).
     type: {
-      rect: { topPct: 67.0, leftPct: 8.5, widthPct: 41.3, heightPct: 3.7 },
+      rect: { topPct: 1460.3 / 21 - ADVENTURE_PANEL_BAND_PCT / 2, leftPct: 8.14, widthPct: 40.0, heightPct: ADVENTURE_PANEL_BAND_PCT },
       sizePct: ADVENTURE_PANEL_PCT,
       fit: "measured",
       colorHex: INK_LIGHT,
@@ -2600,12 +2669,12 @@ const ADVENTURE: FrameProfile = {
       font: "display",
       shadowCss: ADV_SHADOW,
     },
-    // Adventure rules — MSE text 2 (left 27, top 375, width 143 → 481).
+    // Adventure rules — the LEFT page (CC rules), centred like the print's.
     rules: {
-      rect: { topPct: 71.6, leftPct: 7.2, widthPct: 38.1, heightPct: 20.3 },
+      rect: { topPct: 73.58, leftPct: 8.54, widthPct: 39.47, heightPct: 15.0 },
       sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
       colorHex: INK_DARK,
-      vAlign: "start",
+      vAlign: "center",
       font: "body",
     },
     costSizePct: ADVENTURE_PANEL_COST_PCT,
@@ -2616,58 +2685,110 @@ const ADVENTURE: FrameProfile = {
 // normally (name → small text box → type bar) and the bottom is printed
 // UPSIDE-DOWN — its name / type / rules / P-T come from the back-face content
 // and render rotated 180° in place (matching MSE's per-element `angle: 180`).
-// They share the single middle art window. No painted P/T plate (the value sits
-// on the cream type bar → dark ink). Convert via scripts/build-flip-frame.mjs.
-// Geometry is the MSE 375×523 spec / measured plates, in percent.
-// Layout v32: both creatures print M15's name and type sizes (Card
-// Conjurer's flip pack: 0.0381 / 0.0324 H on both halves; were 64 / 52 px)
-// and M15's pips (owner decision 2026-09-28). The top half keeps its
-// baselines (TextSlot.dy); the upside-down half keeps centring its text in
-// its bars, and its name bar and type line fit their bars (fitLines).
+// They share the single middle art window.
+//
+// Layout v38 (TODO 4.21a): Card Conjurer's 'Flip' master (the frames
+// bucket, scripts/lib/cc-frames.mjs), replacing the 375 px MSE composite
+// that sat 30–80 px low from the title bar down (its window 648–1393 px
+// against the prints' 626–1308). Every rect is packFlip.js's, in percent of
+// the 1500×2100 card (a rotation-180 box spans x − w … x, y − h … y):
+//   • art 7.57/29.57/84.87 × 33.25 — the masters' window 115–1385 ×
+//     623–1317 px on every colour with 1.45 / 1.6 / 2.0 / 2.25 px to spare
+//     (7.6's 0.05 %). CC drew the bottom half as the top half turned: the
+//     prints' window ends 9 px higher (C18 #134 and CM2 #71: the art's edge
+//     626.5–1308 px, the frame's inner line centred 621 / 1312.5 against the
+//     masters' 620.5 / 1318.5) and their upside-down type bar 5 px higher
+//     (1339–1444 against 1344–1449) — the master's own geometry, which a
+//     profile cannot move (a re-cut of the master would; TODO 4.21a note);
+//   • the top name bar 3.86–9.29 %H and type bar 23.53–28.96, the text box
+//     10.2–22.2; the bottom name bar 83.05–88.48, type bar 63.43–68.86, text
+//     box 70.1–82.1; the set symbol's box ends at 78.4 %W, centred on
+//     26.0 %H (setSymbolBounds);
+//   • the P/T plates — every printed M15 flip creature carries one per half
+//     (C18 #134 Budoka Gardener, CM2 #71 Nezumi Graverobber; owner decision
+//     2026-09-29: a correction, not the vehicle plate's opt-in): CC's pack
+//     draws both plates from one image, cut by the importer into
+//     pt/<k>-top.png and pt/<k>-bottom.png (FLIP_PT_BOXES, 1176–1419 ×
+//     475–635 and 53–296 × 1321–1481 px: the boxes here); a plate draws only
+//     when its half has a P/T. The bottom plate is upside-down in the
+//     source, so both renderers draw it at its box UNTURNED and turn only
+//     the value, as the printed card shows it. The value boxes are CC's pt
+//     / pt2 widths centred where the prints centre their digits' ink (1311
+//     px on the top plate, both prints — 13.5 px right of CC's box centre;
+//     the box centres at 1313.5, Beleren's "1" sitting 2.5 px inside its
+//     advance; 191 px on the bottom one — the bottom box widened to
+//     6.2–19.27 %W so its ink span lies inside it, as every second face's
+//     must); the ink spans are each plate's light face on the digits' rows
+//     (1215–1395 and 93–272 px, measured on every colour).
+// Text onto the prints (C18 #134 and CM2 #71, Scryfall PNGs at 1500 × 2100;
+// the two scans agree within 3–5 px, the mean taken): the top name's
+// baseline 155.5 px where CC's box centres ours at 164.7 (dy −9.2 px), the
+// top type line's 569 against 573.9 (−4.9 px); the pips centred on the
+// name's capitals (128.5 px: costDy −9.6 px from CC's box centre) and ending
+// where the prints' do: the last disc's right edge is 1387 px on C18 #134
+// and 1388.5 on CM2 #71 — packFlip.js right-aligns its MANA box at 92.92 %W,
+// not at its title box's 91.46 (1372 px) — so the title rect, which carries
+// the cost at its right end, runs to 92.5 %W (1387.5 px; M15's to 92.2, its
+// ELD prints' discs ending 3–5 px further right). The upside-down
+// half ignores dy (a second face centres its text), so its bars
+// are placed where the prints' text centres: the type line's baseline
+// 1370.5 px and the name's 1783.5 (in card space, the text reading up from
+// them), 4 px and 9 px below CC's box centres. Sizes are the family's on
+// both halves (layout v32); the upside-down name bar and type line fit
+// their bars (fitLines); the type line starts after the bottom plate.
+// Colourless = CC's see-through 'Colorless Frame' (the PROFILES entry draws
+// the art under it, underFrameArt); no crown (the C18 / CM2 legendary
+// halves print none). The artist credit sits on M15's footer line (3.8's
+// slice; the prints' second border line centres at 2019–2020 px).
+const FLIP_PT_SIZE_PCT = 0.05;
 const FLIP: FrameProfile = {
   label: "Flip",
   costSizePct: COST_DISC_PCT,
-  artSlot: { topPct: 31.0, leftPct: 7.7, widthPct: 84.3, heightPct: 35.2 },
+  costDy: -0.0064,
+  artSlot: { topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 33.25 },
   // CC's flip symbol box, M15's (packFlip 0.12 W × 0.041 H = 86 px; layout
-  // v32) — see M15's symbolSizePct.
+  // v32) — see M15's symbolSizePct — in its own box left of the plate.
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
+  symbolRect: { topPct: 23.95, leftPct: 66.4, widthPct: 12, heightPct: 4.1 },
   title: {
-    rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
+    // CC's title box from its left edge (8.54) to where the prints' cost
+    // ends (92.5 %W — the pack's mana box, not its 91.46 title box).
+    rect: { topPct: 3.86, leftPct: 8.54, widthPct: 83.96, heightPct: 5.43 },
     sizePct: TITLE_SIZE_PCT,
-    dy: keepBaseline(0.0427, TITLE_SIZE_PCT),
+    dy: -9.2 / 1500,
     fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
   },
   type: {
-    rect: { topPct: 25.0, leftPct: 8.5, widthPct: 68, heightPct: 4.2 },
+    rect: { topPct: 23.53, leftPct: 8.54, widthPct: 82.92, heightPct: 5.43 },
     sizePct: TYPE_SIZE_PCT,
-    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
+    dy: -4.9 / 1500,
     fit: "measured",
     colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
-    rect: { topPct: 11.3, leftPct: 7.7, widthPct: 84, heightPct: 12.5 },
+    rect: { topPct: 10.2, leftPct: 8.6, widthPct: 82.8, heightPct: 12.0 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
   },
-  // The cream band ends in a rounded cap at ~1403 px on the value's rows
-  // (the type line owns its left part): the ink keeps to 1235–1403 px.
   pt: {
-    rect: { topPct: 24.5, leftPct: 82.1, widthPct: 11.7, heightPct: 5.4 },
-    inkSpanPct: { leftPct: 82.36, rightPct: 93.5333 },
-    sizePct: 0.0347,
+    rect: { topPct: 24.48, leftPct: 82.73, widthPct: 9.67, heightPct: 3.72 },
+    plateRect: { topPct: 475 / 21, leftPct: 1176 / 15, widthPct: 243 / 15, heightPct: 160 / 21 },
+    inkSpanPct: { leftPct: 81.0, rightPct: 93.0 },
+    sizePct: FLIP_PT_SIZE_PCT,
     colorHex: INK_DARK,
     weight: 700,
+    plateAssetPathTemplate: "/frames/flip/pt/{color}-top.png",
+    valueDyEm: -0.04,
   },
-  // Bottom half measured from the frame PNG: type bar 67.6–72.4, text box
-  // 72.6–86.0, title plate 87.2–92.4.
+  footer: M15.footer,
   secondFace: {
     rotation: 180,
     // Layout v32 (TODO 4.20): the upside-down name and type line fit their
@@ -2676,33 +2797,42 @@ const FLIP: FrameProfile = {
     // ("Rune-Tail, Kitsune Ascendant") reaches its bar's end.
     fitLines: true,
     title: {
-      rect: { topPct: 87.8, leftPct: 9.5, widthPct: 82, heightPct: 4.4 },
+      rect: { topPct: 83.49, leftPct: 8.53, widthPct: 82.94, heightPct: 5.43 },
       sizePct: TITLE_SIZE_PCT,
       colorHex: INK_DARK,
       weight: 600,
       font: "display",
     },
+    // From the bottom plate's box (19.73 %W) to CC's bar end: turned, the
+    // line runs from the card's right edge and ends before the plate.
     type: {
-      rect: { topPct: 68.0, leftPct: 23.5, widthPct: 68, heightPct: 4.2 },
+      rect: { topPct: 63.63, leftPct: 20.6, widthPct: 70.87, heightPct: 5.43 },
       sizePct: TYPE_SIZE_PCT,
       colorHex: INK_DARK_SOFT,
       weight: 600,
       font: "display",
     },
     rules: {
-      rect: { topPct: 73.4, leftPct: 8.3, widthPct: 84, heightPct: 11.8 },
+      rect: { topPct: 70.1, leftPct: 8.6, widthPct: 82.8, heightPct: 12.0 },
       sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
       colorHex: INK_DARK,
       vAlign: "center",
       font: "body",
     },
-    // Upside down, the band's cap is on the left at ~104 px: 104–257 px.
     pt: {
-      rect: { topPct: 68.2, leftPct: 6.2, widthPct: 11.7, heightPct: 5.4 },
-      inkSpanPct: { leftPct: 6.9333, rightPct: 17.1667 },
-      sizePct: 0.0347,
+      rect: { topPct: 64.19, leftPct: 6.2, widthPct: 13.07, heightPct: 3.72 },
+      plateRect: { topPct: 1321 / 21, leftPct: 53 / 15, widthPct: 243 / 15, heightPct: 160 / 21 },
+      inkSpanPct: { leftPct: 6.2, rightPct: 18.13 },
+      sizePct: FLIP_PT_SIZE_PCT,
       colorHex: INK_DARK,
       weight: 700,
+      plateAssetPathTemplate: "/frames/flip/pt/{color}-bottom.png",
+      // No nudge: the prints centre the bottom digits' ink on this box
+      // (1386.5–1387 px against its 1387), where the top plate's sit 4 px
+      // above theirs (549.5 against 553: the front's −0.04 em). A nudge
+      // here moves the ink the other way in card space (the value is
+      // drawn in the turned frame).
+      valueDyEm: 0,
     },
   },
 };
@@ -2802,8 +2932,8 @@ const SPLIT: FrameProfile = {
 // clockwise, so copying it as rotate(270°) turned the half the wrong way,
 // TODO 0.22.) The bottom slots are WIDE boxes centered on the rotated bars —
 // rotate(90°) around each center lands it on the vertical bar (the box may
-// extend off-card before rotation, which is fine). Frame stacked by
-// scripts/build-aftermath-frame.mjs.
+// extend off-card before rotation, which is fine). The master is Card
+// Conjurer's (layout v38, below); the MSE stack's builder is retired.
 //
 // Both halves print their text at ONE set of sizes (AFTERMATH_TEXT), like the
 // printed cards and Card Conjurer (title/title2, type/type2, rules/rules2 and
@@ -2821,6 +2951,19 @@ const SPLIT: FrameProfile = {
 // Layout v32: M15's sizes are now the shared display sizes (80 / 68 px,
 // 72.75 px discs; were 75 / 65 px); the top half keeps its baselines
 // (TextSlot.dy), the sideways half keeps centring its text in its bars.
+// Layout v38 (TODO 4.21a): Card Conjurer's 'Aftermath' master (the frames
+// bucket, scripts/lib/cc-frames.mjs) with its textured cream text boxes,
+// replacing the MSE stack of two per-colour pieces with flat white boxes.
+// The art slots are the masters' windows + 0.1 %: the top window 115–1385 ×
+// 237–704 px on every colour (7.57/11.19/84.87 × 22.44, 1.45 / 1.6 / 2.0 /
+// 2.2 px to spare), the sideways window 828–1252 × 1181–1918 (the
+// pre-rotation box 44.63/63.62/49.41 × 20.33 centred on it: turned, 826.5–
+// 1253.5 × 1178.9–1920.1, 1.5 / 2.1 px to spare). The set symbol draws in
+// CC's box (setSymbolBounds: right edge 92.13 %W, centred 37.1 %H) — the
+// text slots stay as today (print-matched in 0.22 and v32). The artist
+// credit sits on M15's footer line (3.8's slice; AKH Insult // Injury
+// centres its second border line at 2015 px, M15's 2020). Colourless = CC's
+// artifact frame as a render stand-in, never offered (owner 2026-09-29).
 const AFTERMATH_TEXT = {
   titleSizePct: TITLE_SIZE_PCT,
   typeSizePct: TYPE_SIZE_PCT,
@@ -2831,10 +2974,12 @@ const AFTERMATH_TEXT = {
 const AFTERMATH: FrameProfile = {
   label: "Aftermath",
   // CC's aftermath symbol box, M15's (packAftermath 0.12 W × 0.041 H = 86 px;
-  // layout v32) — see M15's symbolSizePct.
+  // layout v32) — see M15's symbolSizePct — in CC's own box (v38).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
-  artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.5, heightPct: 22.4 },
+  symbolRect: { topPct: 37.1 - 4.1 / 2, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+  artSlot: { topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 22.44 },
+  footer: M15.footer,
   costSizePct: AFTERMATH_TEXT.costSizePct,
   title: {
     rect: { topPct: 5.7, leftPct: 8.5, widthPct: 82, heightPct: 4.4 },
@@ -2865,11 +3010,11 @@ const AFTERMATH: FrameProfile = {
     rotation: 90,
     costSizePct: AFTERMATH_TEXT.costSizePct,
     fitLines: true,
-    // The bottom half's art window (MSE image 2): x 54.9–83.7%, y 56.4–91.4%
-    // in card space. Like the text slots this is the PRE-rotation wide box
+    // The bottom half's art window (CC's master: 828–1252 × 1181–1918 px in
+    // card space). Like the text slots this is the PRE-rotation wide box
     // centered on the window — rotate(90°) in place lands exactly on it and
-    // the art reads upright when the card is turned.
-    artSlot: { topPct: 63.6, leftPct: 44.8, widthPct: 49.0, heightPct: 20.6 },
+    // the art reads upright when the card is turned (layout v38).
+    artSlot: { topPct: 63.62, leftPct: 44.63, widthPct: 49.41, heightPct: 20.33 },
     // Wide boxes centered on each rotated bar (rotate 90° → vertical bar).
     // Turned, the name and the type line both start at y 56.5% and the cost
     // ends at 90.8% (Card Conjurer's title2, and the print); the type box is
@@ -3573,6 +3718,52 @@ export const EXTENDED_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "c"],
 };
 
+/**
+ * The collector line on the black-bordered M15 family (TODO 4.9b): one slot
+ * for every wave-1 template — the tokens, the planeswalker and the emblem
+ * print their lines at M15's positions (TDOM #1, DOM #1, TFDN #24), so they
+ * take this slot, not M15TOKEN.footer's. Measured at 1500 × 2100 on the
+ * thirteen print scans of 2026-09-30 (DMU #107, DOM #1, FDN #1 / #280, KLD
+ * #265, MOC #1, ONC #114 / #29, ONE #19, SLD #1207 / #1242, TDOM #1, TFDN
+ * #24; scratchpad collector-line/measure2.json):
+ *   • both lines start at 96–101 px — Card Conjurer's pen x 0.0647 W
+ *     (creator-23.js:147–148) = 97 px;
+ *   • line 1's baseline (the flat-bottomed digits and capitals) at
+ *     1989–1999 px, mean 1993.5; line 2's at 2027–2038, mean 2032 — 38.5 px
+ *     apart on the prints where CC's two bands (y 0.9377 / 0.9548 H, the
+ *     baseline 0.7 of the 0.0171 H size below each) sit 35.9 apart;
+ *   • capitals 24–26 px tall: the 0.0171 H = 36 px size (0.024 W; the
+ *     collector face's 0.700 em cap height prints 25.2 px);
+ *   • the brush's ink at 287–290 px, 40 px wide, from 27 px above the
+ *     baseline to 3 above it; the artist's first capital 46–48 px after the
+ *     brush's left edge, its capitals 27 px tall (CC: the size + 0.001 H =
+ *     38 px, Beleren small caps);
+ *   • the © line (MPlantin, CC 0.0162 H = 34 px) ends at 1395–1405 px,
+ *     mean 1403 = CC's 0.0647 + 0.8707 = 0.9354 W.
+ * Set only on the PROFILES entries below — never on M15 / M15LAND /
+ * M15TOKEN, which other profiles spread (lib/cards/collector-line.ts
+ * COLLECTOR_TEMPLATES; tests/unit/cards/collector-profiles.test.ts).
+ */
+export const M15_COLLECTOR: CollectorSlot = {
+  leftPct: 6.47,
+  rightPct: 93.54,
+  line1BaselinePct: (1993.5 / 2100) * 100,
+  line2BaselinePct: (2032 / 2100) * 100,
+  brushLeftPct: (287 / 1500) * 100,
+  sizePct: 36 / 1500,
+  artistSizePct: 38 / 1500,
+  markTextSizePct: 34 / 1500,
+};
+
+/** The planeswalker's collector slot: M15's, with the © slot ALWAYS on line
+ *  2. Every walker master draws the loyalty shield's outline itself (x
+ *  1202–1427, y 1847–1984 px on all seven colour keys), so a walker saved
+ *  without a loyalty value — which draws no plate — would put the brand mark
+ *  (or a clean download's footer text) across that outline on line 1 (its
+ *  ink spans y ≈ 1967–2003); the editor's preview, which shows the empty
+ *  shield, already puts it on line 2 (DOM #1 prints its © line there). */
+export const M15PW_COLLECTOR: CollectorSlot = { ...M15_COLLECTOR, markLine: 2 };
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -3600,6 +3791,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
     overlays: [M15_CROWN],
     twoColorMasters: ["split", "hybrid"],
+    collector: M15_COLLECTOR,
   },
   // A land's crown is its colour (NEO #266–278); a colourless land's the
   // land grey "l" (UMA #241 Dark Depths).
@@ -3610,10 +3802,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     // Its pairs are a land's (the only frame a two-colour LAND draws them
     // on — owner round 17, 2026-09-30).
     twoColorForLands: true,
+    collector: M15_COLLECTOR,
   },
-  m15snowland: M15SNOWLAND,
+  // The collector line (TODO 4.9b, M15_COLLECTOR) is set on each wave-1
+  // entry here, like the crown — never on the M15 / M15LAND / M15TOKEN /
+  // M15TOKENTEXT bases, which other profiles spread.
+  m15snowland: { ...M15SNOWLAND, collector: M15_COLLECTOR },
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
-  m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
   // The artifact token's plate is M15's artifact set (TODO 4.49 (a)): CC's
   // silver m15PTa for colourless (TKLD #2, TMH1 #18), the colour's plate on
   // a coloured one (TC18 #7), as on m15artifact.
@@ -3621,18 +3817,21 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15TOKEN,
     label: "M15 Artifact Token",
     pt: { ...M15TOKEN.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+    collector: M15_COLLECTOR,
   },
   // TODO 4.49 (b): the text-box token; its colourless master is see-through
   // like m15token's (BFZ #2 / OGW #1 Eldrazi Scion), the artifact dress's
   // silver (TXLN #7 Treasure) and its plates M15's artifact set.
-  m15tokentext: { ...M15TOKENTEXT, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
+  m15tokentext: { ...M15TOKENTEXT, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
   m15tokenartifacttext: {
     ...M15TOKENTEXT,
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+    collector: M15_COLLECTOR,
   },
-  // TODO 4.52: the emblem (M20 design).
-  emblem: EMBLEM,
+  // TODO 4.52: the emblem (M20 design); its collector line (E, the © slot
+  // on line 1: no stat plate) through M15's slot (4.9b).
+  emblem: { ...EMBLEM, collector: M15_COLLECTOR },
   // TODO 4.48 / 4.50: the full-art tokens, labelled plain "Token" now that
   // they are verified (4.48a). Their masters are clear almost everywhere,
   // so the creator's tile draws its sample art (4.45).
@@ -3648,6 +3847,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15ARTIFACT,
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
+    collector: M15_COLLECTOR,
   },
   // The borderless frame's crown (TODO 4.6f, wave 2a) is CC's FLOATING crown
   // baked into `<key>-legendary` masters (crownMasters — an overlay can't
@@ -3670,8 +3870,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15borderlessland: M15BORDERLESSLAND,
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
-  m15snow: M15SNOW,
-  m15devoid: M15DEVOID,
+  m15snow: { ...M15SNOW, collector: M15_COLLECTOR },
+  m15devoid: { ...M15DEVOID, collector: M15_COLLECTOR },
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
   // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through
   // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35)
@@ -3682,14 +3882,23 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // (x ≈ 100 / 1397, y ≈ 207; the art-window check's seam rule). The window
   // shows ~14 % more of the picture's zoom than on the coloured walkers
   // (a 1959 px cover height, not 1716).
-  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT } },
+  // …and its collector line through M15's slot (4.9b: DOM #1 prints the
+  // lines at M15's positions; the loyalty shield counts as a stat plate —
+  // and is part of the master, so the © slot is always on line 2:
+  // M15PW_COLLECTOR).
+  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT }, collector: M15PW_COLLECTOR },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,
   battle: BATTLE,
   saga: SAGA,
   adventure: ADVENTURE,
-  flip: FLIP,
+  // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
+  // decision 2026-09-29): bars at α 191–248, the body between the border and
+  // the pinline clear, a 15 px opaque pinline round the window — the art
+  // runs under the frame for "c" from the border's inner edge (4.17a's
+  // rect), the window's own crop meeting it on that pinline.
+  flip: { ...FLIP, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
   split: SPLIT,
   aftermath: AFTERMATH,
   avatar: AVATAR,

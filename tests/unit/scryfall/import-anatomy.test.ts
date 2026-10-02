@@ -172,7 +172,7 @@ describe("what the import stores on the frame it lands on (4.6b: m15, m15artifac
   it("a two-colour printing stores its PAIR and the two-colour switch on a frame with pair masters", () => {
     // Kykar FDN #122 (gold WU, crowned): the pair on m15.
     expect(importedAnatomy(patchOf("fdn-122"), "m15")).toEqual({
-      style: { crown: true, twoColor: true },
+      style: { crown: true, twoColor: true, collector: "2023" },
       colorIdentity: ["white", "blue"],
     });
     // Cat-Owl TLA #212 (hybrid), Daemogoth Woe-Eater STX #175 (mixed cost).
@@ -185,18 +185,20 @@ describe("what the import stores on the frame it lands on (4.6b: m15, m15artifac
   });
 
   it("mono, three colours and the gold fetch lands keep their colour and name no two-colour switch", () => {
+    // (Every 2015-frame printing names its collector line's style too — 4.9b.)
     expect(importedAnatomy(patchOf("m15-3"), "m15")).toEqual({
-      style: { crown: false },
+      style: { crown: false, collector: "2015" },
       colorIdentity: ["white"],
     });
-    expect(importedAnatomy(patchOf("fdn-243"), "m15")).toEqual({ style: { crown: true }, colorIdentity: ["multicolor"] });
+    expect(importedAnatomy(patchOf("fdn-243"), "m15")).toEqual({ style: { crown: true, collector: "2023" }, colorIdentity: ["multicolor"] });
     // Fabled Passage ELD #244 prints the gold land frame (landFrameColorRule).
-    expect(importedAnatomy(patchOf("eld-244"), "m15land")).toEqual({ style: {}, colorIdentity: ["multicolor"] });
+    expect(importedAnatomy(patchOf("eld-244"), "m15land")).toEqual({ style: { collector: "2015" }, colorIdentity: ["multicolor"] });
     // Azorius Charm RTR #145: the 2003 frame prints gold, and modern draws no pair.
-    expect(importedAnatomy(patchOf("rtr-145"), "modern")).toEqual({ style: {}, colorIdentity: ["multicolor"] });
+    // (A 2003-frame printing prints no collector line: "off", 4.9b.)
+    expect(importedAnatomy(patchOf("rtr-145"), "modern")).toEqual({ style: { collector: "off" }, colorIdentity: ["multicolor"] });
     // Landed on m15 (a frame that draws pairs), a printing that ISN'T
     // two-coloured stores no pair either: it keeps its gold "multicolor".
-    expect(importedAnatomy(patchOf("rtr-145"), "m15")).toEqual({ style: {}, colorIdentity: ["multicolor"] });
+    expect(importedAnatomy(patchOf("rtr-145"), "m15")).toEqual({ style: { collector: "off" }, colorIdentity: ["multicolor"] });
   });
 
   it("the AI deck remix carries the printing's switches and pair onto its frame", () => {
@@ -204,7 +206,7 @@ describe("what the import stores on the frame it lands on (4.6b: m15, m15artifac
     expect(remix.ok).toBe(true);
     if (remix.ok) {
       expect(remix.mechanics.frame_template).toBe("m15");
-      expect(remix.mechanics.anatomy).toEqual({ crown: true, twoColor: true });
+      expect(remix.mechanics.anatomy).toEqual({ crown: true, twoColor: true, collector: "2023" });
       expect(remix.mechanics.color_identity).toEqual(["white", "blue"]);
     }
   });

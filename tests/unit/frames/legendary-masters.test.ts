@@ -167,12 +167,25 @@ describe("the recipe — CC's autoBorderlessFrame, in its draw order", () => {
     );
   });
 
-  it("the pair masters: the gold M frame (split) or CC's grey Land frame (hybrid), the pinline lerped through the pack's Pinline mask", () => {
+  it("the pair masters: the gold M frame (split) or CC's grey Land frame (hybrid), the pinline lerped through the pack's Pinline mask — the split dress first REPLACING CC's Rules and Type regions, where the gold ring sits one row higher", () => {
     const frame = (k: string) => `img/frames/m15/borderless/m15GenericShowcaseFrame${k}.png`;
-    const pinline = { ramp: [40, 60], mask: "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png" };
-    expect(borderlessPairLayers("wu")).toEqual([{ src: frame("M") }, { src: frame("W"), right: frame("U"), ...pinline }]);
-    expect(borderlessPairLayers("wu", "hybrid")).toEqual([{ src: frame("L") }, { src: frame("W"), right: frame("U"), ...pinline }]);
+    const lerp = { src: frame("W"), right: frame("U"), ramp: [40, 60] };
+    const pinline = { ...lerp, mask: "img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png" };
+    // The regular M15 masks CC's own stack lists for its Rules and Type
+    // layers, `replace`d (a premultiplied lerp INTO the layer where the mask
+    // covers): source-over would double the translucent box.
+    const rules = { ...lerp, mask: "img/frames/m15/regular/m15MaskRules.png", replace: true };
+    const type = { ...lerp, mask: "img/frames/m15/regular/m15MaskType.png", replace: true };
+    expect(borderlessPairLayers("wu")).toEqual([{ src: frame("M") }, rules, type, pinline]);
+    // The L frame's rings sit on the colour frames' rows: nothing to replace.
+    expect(borderlessPairLayers("wu", "hybrid")).toEqual([{ src: frame("L") }, pinline]);
     expect(PAIR_RAMPS.pinline).toEqual([40, 60]);
+    expect(describeLayer(rules)).toBe(
+      `(${frame("W")} | ${frame("U")} across procedural:ramp(40→60 %W)) replacing through img/frames/m15/regular/m15MaskRules.png`,
+    );
+    expect(describeLayer(pinline)).toBe(
+      `(${frame("W")} | ${frame("U")} across procedural:ramp(40→60 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png`,
+    );
   });
 
   it("every borderless template builds the twin of every master it paints — the artifact dress's colourless on CC's A frame with the A crown", () => {
@@ -351,12 +364,13 @@ describe.skipIf(!available)("the built twins (set FRAMES_BUILD_DIR if skipped)",
     expect(rows.at(-1)).toBeLessThanOrEqual(OUTLINE_ROWS[1]);
   });
 
-  it("a pair master is the gold frame with the pinline split: it differs from m only in the Pinline mask's rows; the hybrid from the L-barred one", async () => {
+  it("a pair master is the gold frame with the pinline split: it differs from m only at the title ring and from the type bar to the box's foot; the hybrid from the L-barred one", async () => {
     const m = (await raw("m15borderless/m.png"))!;
     const wu = (await raw("m15borderless/wu.png"))!;
     const rows = differingRows(m, wu);
     // CC's Pinline mask covers rows 85–236 (the title ring) and 1166–1947
-    // (the type ring and the text box's) at 1500 × 2100.
+    // (the type ring and the text box's) at 1500 × 2100; the replaced Type
+    // and Rules regions (rows 1181–1936) sit inside the second span.
     expect(rows.length).toBeGreaterThan(100);
     for (const y of rows) expect((y >= 85 && y <= 236) || (y >= 1166 && y <= 1947), `row ${y}`).toBe(true);
     // The hybrid dress: grey bars (CC's L frame), the same split pinline —
@@ -364,5 +378,42 @@ describe.skipIf(!available)("the built twins (set FRAMES_BUILD_DIR if skipped)",
     const wuh = (await raw("m15borderless/wu-h.png"))!;
     expect(px(wuh, 750, 160).slice(0, 3)).not.toEqual(px(wu, 750, 160).slice(0, 3));
     expect(px(wuh, 300, 100)).toEqual(px(wu, 300, 100)); // the white left pinline on both
+  });
+
+  it.each(PAIRS_CHECKED)("%s: no gold hairline above the text box's top and bottom pinline — the rows the gold ring draws one higher are the colour frames' (skeptic 2026-10-02)", async (pair) => {
+    const [a, b] = pair.split("");
+    const m = (await raw("m15borderless/m.png"))!;
+    const gold = px(m, 750, 1302).slice(0, 3); // CC's M ring, 246,210,98
+    expect(gold).toEqual([246, 210, 98]);
+    for (const key of [pair, `${pair}-legendary`]) {
+      const master = (await raw(`m15borderless/${key}.png`))!;
+      const left = (await raw(`m15borderless/${a}.png`))!;
+      const right = (await raw(`m15borderless/${b}.png`))!;
+      for (const x of [300, 750, 1200]) {
+        // Row 1302: the type region's last row — black on every colour frame
+        // (the Type mask's anti-aliased edge keeps ≤ 5 % of the gold).
+        const top = px(master, x, 1302);
+        expect(top[3], `${key} x ${x} row 1302 α`).toBe(255);
+        expect(Math.max(top[0], top[1], top[2]), `${key} x ${x} row 1302 ${top}`).toBeLessThanOrEqual(16);
+        // Row 1936: the box's bottom rim — the colour frames' own pixel.
+        expect(px(master, x, 1936), `${key} x ${x} row 1936`).toEqual(px(x < 750 ? left : right, x, 1936));
+        expect(px(master, x, 1936).slice(0, 3)).not.toEqual(gold);
+        // Row 1935 above it was the gold frame's rim row: now the colours'.
+        expect(px(master, x, 1935), `${key} x ${x} row 1935`).toEqual(px(x < 750 ? left : right, x, 1935));
+      }
+      // The split pinline under both rows stays: the first colour left of
+      // the ramp, the second right of it.
+      for (const y of [1303, 1937]) {
+        expect(px(master, 300, y), `${key} row ${y} left`).toEqual(px(left, 300, y));
+        expect(px(master, 1200, y), `${key} row ${y} right`).toEqual(px(right, 1200, y));
+      }
+    }
+    // The hybrid dress never had the line: its L frame's rings sit on the
+    // colour frames' rows, so its row 1302 is plain black.
+    const hybrid = (await raw(`m15borderless/${pair}-h.png`))!;
+    expect(px(hybrid, 750, 1302)).toEqual([0, 0, 0, 255]);
+    // Both dresses share the split masters' bytes.
+    const art = await raw(`m15borderlessartifact/${pair}.png`);
+    expect(art?.data.equals((await raw(`m15borderless/${pair}.png`))!.data)).toBe(true);
   });
 });

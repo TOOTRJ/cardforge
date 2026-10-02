@@ -7,6 +7,7 @@ import {
   normalizeSetCode,
   type CardLang,
 } from "@/lib/cards/collector-fields";
+import type { CollectorSwitch } from "@/lib/cards/collector-line";
 import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
@@ -209,6 +210,15 @@ export type ScryfallImportPatch = {
    *  2026-09-30: printing-only), so a card given a pair later starts with
    *  the switch on like any new card. */
   printed_two_color?: true;
+  /** The collector line THIS printing prints (TODO 4.9b, owner 2026-09-29:
+   *  imports follow the printing): "2015" or "2023" for a 2015-frame
+   *  printing (collectorStyleOfPrinting), "off" for an older frame, which
+   *  prints "Illus." in its box and no collector line. */
+  printed_collector?: CollectorSwitch;
+  /** `true` for a foil-only printing (`finishes` = ["foil"]: the ★
+   *  separator, KLD #265 "KLD★EN" — also an etched-only one, ONC #29
+   *  "ONC★EN"), else absent. */
+  printed_star?: true;
   rules_text?: string;
   flavor_text?: string;
   power?: string;
@@ -626,15 +636,82 @@ export const PRINTED_SET_CODE_EXCEPTIONS: Readonly<Record<string, string>> = {
   pw23: "PRM",
 };
 
-/** The first release date of the "2023" collector style (the letter first,
- *  the number padded to four, no set size: "R 1242"), judged on
- *  `released_at`. SLD #1242 (2023-03-26) is the earliest scan-verified
- *  2023-style printing; ONE / ONC (2023-02-03) are the last verified
- *  2015-style ones ("114/281 M"). No expansion, core, masters,
- *  draft-innovation, token or commander set was released in between, so
- *  the exact day only matters to 4.9b's drawn style, which pins it with
- *  the Feb–Mar 2023 scans (SLD drops, ONE promos). */
+/** The first release date from which EVERY printing prints the "2023"
+ *  collector style (the letter first, the number padded to four, no set
+ *  size: "R 1242"), judged on `released_at`. Pinned by the scans of every
+ *  2015-frame paper printing released between ONE / ONC (2023-02-10, the
+ *  last expansion and commander sets in the 2015 style: "019/271 R",
+ *  "114 R") and 2023-03-26 (TODO 4.9b, 2026-09-30, scratchpad
+ *  collector-line/boundary): the two styles overlap by PRODUCT for six
+ *  weeks — the 2023 style is already on PL23 #1 (2023-02-10, "P 0001"),
+ *  SLD #8001 (02-17, "M 8001"), SLP #1 (02-19, "P 0001") and SLD #1243–1246
+ *  (02-20, "R 1243"), while the Secret Lair bonus cards SLD #685 (02-20,
+ *  "685 R"), #716 (02-21, "716 P") and #681 (03-16, "681 R"), PRCQ #1
+ *  (02-25, "001/003 P"), SCH #7 (02-25, "007 P"), PW23 #1 (03-10,
+ *  "001/001 P") and P30H #1 (03-21, "001/005 P") still print the 2015
+ *  style. P30H #1 is the last 2015-style printing; from SLD #728 / #1237–
+ *  1242 (03-26) on every scan is 2023-style (SLD #1207 04-14, PMOM / MOM /
+ *  MOC 04-21, PW23 #3 05-25). The early 2023-style products before the
+ *  date are COLLECTOR_2023_STYLE_EARLY. The date also decides the STORED
+ *  number's form (storedCollectorNumber: "N/size" before it, the number
+ *  alone from it), which the early products never contest — a promo's or
+ *  box set's number is alone in either style. */
 export const COLLECTOR_2023_FROM = "2023-03-26";
+
+/** Printings that print the "2023" collector style before
+ *  COLLECTOR_2023_FROM (scan-verified, above): the 2023 Lunar New Year
+ *  promo, the Secret Lair Showdown prizes, and the Secret Lair drops
+ *  numbered from 1243 (the February 2023 drops) and 8001 (the Secret Lair
+ *  Prize) on — never the bonus-card reprints numbered below them. */
+export const COLLECTOR_2023_STYLE_EARLY: Readonly<Record<string, { fromNumber?: number }>> = {
+  pl23: {},
+  slp: {},
+  sld: { fromNumber: 1243 },
+};
+
+/** The first release day of an early 2023-style product (PL23 #1,
+ *  2023-02-10): COLLECTOR_2023_STYLE_EARLY never reaches back before it.
+ *  Secret Lair has numbers past 1243 that are a year older — SLD #9995–9999
+ *  (2022-04-12, the mirrored "left-handed" drop) print the 2015 style, the
+ *  number alone at the edge and the letter in its column ("M      9995",
+ *  mirrored; scans 2026-10-02). */
+export const COLLECTOR_2023_STYLE_EARLY_FROM = "2023-02-10";
+
+/**
+ * The collector line a printing draws (TODO 4.9b, ScryfallImportPatch
+ * .printed_collector): "off" for any frame but 2015 (the 1993 / 1997 / 2003
+ * / future frames print "Illus." inside the box — the line is never drawn on
+ * a card imported from one, whatever frame it lands on); else the style by
+ * release date (COLLECTOR_2023_FROM), or "2023" early for the products in
+ * COLLECTOR_2023_STYLE_EARLY released from COLLECTOR_2023_STYLE_EARLY_FROM
+ * on. A printing with no release date takes the current style, as
+ * storedCollectorNumber does.
+ */
+export function collectorStyleOfPrinting(
+  card: Pick<ScryfallCard, "frame" | "released_at" | "set" | "collector_number">,
+): CollectorSwitch {
+  if ((card.frame ?? "").trim() !== "2015") return "off";
+  if (isCollector2023Style(card.released_at)) return "2023";
+  // Before the first early product nothing prints the 2023 style, whatever
+  // its set and number (SLD #9995–9999, 2022).
+  if ((card.released_at ?? "").trim() < COLLECTOR_2023_STYLE_EARLY_FROM) return "2015";
+  const early = COLLECTOR_2023_STYLE_EARLY[(card.set ?? "").trim().toLowerCase()];
+  if (!early) return "2015";
+  if (early.fromNumber === undefined) return "2023";
+  const number = Number.parseInt((card.collector_number ?? "").trim(), 10);
+  return Number.isFinite(number) && number >= early.fromNumber ? "2023" : "2015";
+}
+
+/** The ★ of a foil-only printing (ScryfallImportPatch.printed_star): every
+ *  finish Scryfall lists is a foil one (KLD #265 ["foil"]; ONC #29
+ *  ["etched"] prints "ONC★EN" too), else undefined — a nonfoil printing, or
+ *  one that comes in both. */
+export function starOfPrinting(card: Pick<ScryfallCard, "finishes">): true | undefined {
+  const finishes = (card.finishes ?? []).map((finish) => finish.toLowerCase());
+  return finishes.length > 0 && finishes.every((finish) => finish === "foil" || finish === "etched")
+    ? true
+    : undefined;
+}
 
 /** Set types whose printings print their PARENT set's code (TDOM #1 prints
  *  "DOM • EN", TFDN #24 "FDN • EN"). */
@@ -1299,6 +1376,10 @@ export function mapScryfallToFormPatch(
       supertype: typeParts.supertype,
     }),
     printed_two_color: printsTwoColorFrame(card) ? true : undefined,
+    // The collector line as the printing prints it (TODO 4.9b): its style
+    // (or "off" for a pre-2015 frame) and the ★ of a foil-only printing.
+    printed_collector: collectorStyleOfPrinting(card),
+    printed_star: starOfPrinting(card),
     rules_text: pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),

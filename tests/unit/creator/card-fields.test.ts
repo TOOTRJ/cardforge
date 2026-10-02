@@ -115,6 +115,7 @@ describe("a saved card's finish in the creator", () => {
       template: "tarkirdragon",
       crown: true,
       twoColor: true,
+      collector: "2023",
     });
   });
 

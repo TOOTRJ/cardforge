@@ -205,14 +205,22 @@ describe("baselines (TextSlot.dy)", () => {
     ["m20tokenartifact", -4 / 1500, -6 / 1500],
     ["m20tokenartifacttext", -4 / 1500, -5 / 1500],
     ["m20tokenartifacttall", -4 / 1500, -6 / 1500],
+    // Adventure (layout v38, TODO 4.21a): a Card Conjurer master whose bars
+    // are CC's M15 bars — the name kept, the type line on the prints' like
+    // the other CC-framed M15 profiles.
+    ["adventure", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
-    ["adventure", base.title, base.type],
     ["extendedart", base.title, base.type],
     ["expeditionland", base.title, base.type],
     ["nyx", base.title, base.type],
+    // Aftermath (v38): a CC master; its text slots stay as print-matched in
+    // 0.22 / v32 (baselines kept).
     ["aftermath", base.title, base.type],
     ["saga", mse.title, mse.type],
-    ["flip", mse.title, mse.type],
+    // Flip (layout v38, TODO 4.21a): packFlip.js's bars, the name and type
+    // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
+    // (−9.2 px and −4.9 px at HD).
+    ["flip", -9.2 / 1500, -4.9 / 1500],
     ["fullart", base.title, mse.type],
     ["m15textless", base.title, mse.type],
     ["m15textlessland", base.title, mse.type],
@@ -253,7 +261,10 @@ describe("baselines (TextSlot.dy)", () => {
     expect(at("m15pw")).toEqual([0, -5, 0, -3]);
     expect(at("extendedart")).toEqual([-2, -1, -1, 0]);
     expect(at("saga")).toEqual([-5, -5, -3, -3]);
-    expect(at("flip")).toEqual([-5, -5, -3, -3]);
+    // Flip (v38): onto the prints — −9.2 / −4.9 px at HD, half at 750.
+    expect(at("flip")).toEqual([-9, -5, -5, -2]);
+    // Adventure (v38): CC's type-line print offset, as m15.
+    expect(at("adventure")).toEqual([-2, -5, -1, -3]);
     // The token's type text: −6 / −3 px for its size, +10 / +5 for its
     // band's lift — where v31 drew it — +4 / +2 onto the prints' baseline
     // (TODO 4.49 (d)) and −8 / −4 back up from the band, which rides the

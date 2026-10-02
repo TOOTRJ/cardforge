@@ -30,6 +30,12 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   "/frames/m15devoid/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15borderless/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
   "/frames/m15borderlessartifact/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
+  // The flip creatures' plates (TODO 4.21a, layout v38): CC's two-plate image
+  // cut into one per half (scripts/lib/cc-frames.mjs FLIP_PT_BOXES); the
+  // bottom one is upside-down in the source and drawn unturned, so both
+  // read the same box — the body with its bevels, none of the soft shadow.
+  "/frames/flip/pt/{color}-top.png": { left: 0.0987, top: 0.0625, right: 0.9836, bottom: 0.85 },
+  "/frames/flip/pt/{color}-bottom.png": { left: 0.0987, top: 0.0625, right: 0.9836, bottom: 0.85 },
   // The planeswalker's starting-loyalty shield (cut out of each master).
   "/frames/m15pw/loyalty/{color}.png": { left: 0.025, top: 0.0389, right: 0.975, bottom: 0.9611 },
   // …and the borderless planeswalkers' (4.33): CC's same shield, through

@@ -10,11 +10,11 @@
 import type { FormValues } from "@/lib/creator/form-types";
 import { CARD_TITLE_MAX } from "@/lib/validation/card";
 import {
-  FRAME_ANATOMY_KEYS,
   pairColorIdentity,
   twoColorPairOf,
   type FrameAnatomyPatch,
 } from "@/lib/cards/anatomy";
+import { isCollectorSwitch } from "@/lib/cards/collector-line";
 import type { ColorIdentity } from "@/types/card";
 
 /** Form fields a user may change while editing or remixing. Everything else
@@ -147,10 +147,16 @@ export function frameAnatomyPatchFor(
 ): FrameAnatomyPatch | undefined {
   const storedStyle = (stored.frame_style ?? {}) as Record<string, unknown>;
   const patch: FrameAnatomyPatch = {};
-  for (const key of FRAME_ANATOMY_KEYS) {
+  for (const key of ["crown", "twoColor"] as const) {
     const next = values.frame_style[key];
     if (typeof next === "boolean" && next !== storedStyle[key]) patch[key] = next;
   }
+  // The collector line (TODO 4.9b): a style or the owner's "off" the form
+  // holds and the card doesn't; the ★ on or — a stored ★ taken off — false.
+  const collector = values.frame_style.collector;
+  if (isCollectorSwitch(collector) && collector !== storedStyle.collector) patch.collector = collector;
+  const star = values.frame_style.star === true;
+  if (star !== (storedStyle.star === true)) patch.star = star;
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;

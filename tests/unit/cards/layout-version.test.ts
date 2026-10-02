@@ -440,10 +440,15 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
     expect(isRenderStale(28, "flip", undefined, 29, at("flip"))).toBe(false);
   });
 
+  // Templates that gained a display footer AFTER v29 (flip and aftermath:
+  // the artist credit, layout v38 / TODO 4.21a): v29's frozen list never
+  // held them, so its word-spacing track judges them as "other" templates.
+  const FOOTER_SINCE_V29 = ["flip", "aftermath"];
+
   it("word spacing: every card on the 25 display-footer templates", async () => {
     const classifyForSweep = await sweepAt(29);
     const displayFooter = FRAME_TEMPLATE_VALUES.filter(
-      (t) => getFrameProfile(t).footer?.font === "display" && !POST_V29_TEMPLATES.includes(t),
+      (t) => getFrameProfile(t).footer?.font === "display" && !POST_V29_TEMPLATES.includes(t) && !FOOTER_SINCE_V29.includes(t),
     );
     // The frozen v29 list is these 25 (their footer prints "ART: …").
     expect(displayFooter).toHaveLength(25);
@@ -466,7 +471,7 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   it("word spacing on the other 12 templates: only a name or type line with a space in it", async () => {
     const classifyForSweep = await sweepAt(29);
     const others = FRAME_TEMPLATE_VALUES.filter(
-      (t) => getFrameProfile(t).footer?.font !== "display" && !POST_V29_TEMPLATES.includes(t),
+      (t) => (getFrameProfile(t).footer?.font !== "display" || FOOTER_SINCE_V29.includes(t)) && !POST_V29_TEMPLATES.includes(t),
     );
     expect([...others].sort()).toEqual(
       ["aftermath", "avatar", "battle", "bloomanime", "bloomburrow", "flip", "lotr", "lotrscroll", "split",
@@ -1096,18 +1101,22 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // with a rect of its own — an emblem's — is not v35's business), and the
     // three see-through-c templates paint the colour key itself (the
     // scope's pickFrameColorKey).
+    // (flip/c took the rect with its own bump, layout v38 — TODO 4.21a's
+    // see-through Card Conjurer master: not v35's business either.)
+    const SEE_THROUGH_SINCE_V35 = ["flip"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
-        expect(["m15", "m15devoid", ...V35_SEE_THROUGH_C_TEMPLATES], t).toContain(t);
+        expect(["m15", "m15devoid", ...V35_SEE_THROUGH_C_TEMPLATES, ...SEE_THROUGH_SINCE_V35], t).toContain(t);
       }
     }
     for (const t of V35_SEE_THROUGH_C_TEMPLATES) {
       expect(getFrameProfile(t).artifactMasterKeys, t).toBeUndefined();
       expect(getFrameProfile(t).twoColorSplit, t).toBeUndefined();
     }
-    // The MSE-framed adventure keeps M15's slot (not in the bump).
-    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.4, leftPct: 7.8, widthPct: 84.4, heightPct: 44.0 });
+    // Adventure was not in the bump (then MSE-framed, on M15's slot); its
+    // own slot came with layout v38 (4.21a, pinned — the v38 block).
+    expect(V35_ART_SLOT_TEMPLATES).not.toContain("adventure");
   });
 
   it("re-bakes EVERY card on the art-slot templates, with or without art, and nothing on the templates it didn't touch", async () => {
@@ -1466,6 +1475,83 @@ describe("v37 — nyx's darker type bar and text box (TODO 4.17e)", () => {
     }
     // The profile is v35's: only the masters changed.
     expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
+  });
+});
+
+describe("v38 — the portrait layouts re-sourced from Card Conjurer (TODO 4.21a)", () => {
+  const png = "https://x/y.png";
+  /** A v37 bake. Its columns default to UNTOUCHED_SINCE_V22 (a blue one-word
+   *  sorcery with no text, set icon or code), so only v38 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 37,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V38 = { current: 38 } as const;
+  const TRIO = ["adventure", "aftermath", "flip"];
+
+  it("is a sweep, never a badge, scoped to adventure, aftermath and flip — frozen as a literal", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(38);
+    expect(lv.rolloutPolicy(38)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 38)).toBe(38);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.V38_PORTRAIT_LAYOUT_TEMPLATES].sort()).toEqual(TRIO);
+    // A master and slot replacement: template-scoped (as v30's fullartland
+    // and v37's nyx), no card predicate — a template-only caller gets the
+    // same answer.
+    expect(lv.VERSION_SCOPES[38]).toBeUndefined();
+    for (const t of TRIO) expect(ALL).toContain(t);
+    for (const t of ALL) expect(isRenderStale(37, t, undefined, 38), t).toBe(TRIO.includes(t));
+  });
+
+  it("re-bakes every card on the three — art or none, any finish, a half with or without a P/T — and stamps every other template", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(38);
+    for (const t of ALL) {
+      const trio = TRIO.includes(t);
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(trio ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row, AT_V38), t).toBe(trio);
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V38), t).toBe(false);
+    }
+    // The masters and every slot move, so a card without art re-bakes, and
+    // so does one whose halves print no P/T.
+    for (const [t, over] of [
+      ["flip", { art_url: null }],
+      ["flip", { back_face: { title: "Dokai", card_type: "creature", power: "3", toughness: "3" } }],
+      ["flip", { back_face: { title: "Essence", card_type: "enchantment" } }],
+      ["adventure", { art_url: "https://x/a.png", back_face: { title: "Stomp", card_type: "instant", rules_text: "Stomp deals 2 damage to any target." } }],
+      ["aftermath", { frame_style: { template: "aftermath", finish: "foil" } }],
+      ["adventure", { set_icon_code: "eld" }],
+    ] as const) {
+      expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe("rebake");
+    }
+    // A {} frame_style draws m15, which v38 leaves alone; 4.21b / 4.21c's
+    // templates (split, battle, saga) wait for their own bumps.
+    expect(classifyForSweep({ ...at("m15"), frame_style: {} })).toBe("stamp");
+    for (const t of ["split", "battle", "saga"]) expect(classifyForSweep(at(t)), t).toBe("stamp");
+    expect(classifyForSweep(at("flip", { layout_version: 38 }))).toBe("current");
+  });
+
+  it("is NOT verification-neutral: the three templates' slots move (no tick exists to stale today), every other template's ticks stay fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(38);
+    expect([...VERIFICATION_SCOPED_VERSIONS[38]].sort()).toEqual(TRIO);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(37, t, VERIFICATION_SCOPED_VERSIONS, 38, regular), t).toBe(TRIO.includes(t));
+    }
+    // The profiles moved onto Card Conjurer's packs: flip's art slot is
+    // packFlip.js's window + 0.1 %, adventure's pinned (design D4),
+    // aftermath's windows + 0.1 %.
+    expect(getFrameProfile("flip").artSlot).toEqual({ topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 33.25 });
+    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 });
+    expect(getFrameProfile("aftermath").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 22.44 });
+    expect(getFrameProfile("aftermath").secondFace?.artSlot).toEqual({ topPct: 63.62, leftPct: 44.63, widthPct: 49.41, heightPct: 20.33 });
   });
 });
 

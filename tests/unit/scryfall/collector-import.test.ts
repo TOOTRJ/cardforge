@@ -188,12 +188,17 @@ describe("mapScryfallToFormPatch — the collector fields ride the patch (data o
     const card = printing("tdom-1");
     const patch = mapScryfallToFormPatch(card, { set: setOf(card) });
     expect(patch.collector).toEqual({ set_code: "DOM", collector_number: "1/16", lang: "en" });
-    // 4.9a writes no switch: no `collector` / `star` / `stamp` and no
-    // anatomy key beyond the ones the printing's crown / two-colour read.
+    // The patch names no switch itself — no `collector` / `star` / `stamp`,
+    // no frame_style — only the printing's facts for the switches
+    // (printed_crown / printed_two_color, and since 4.9b printed_collector /
+    // printed_star), which the save turns into the card's keys.
     const keys = Object.keys(patch);
     expect(keys).not.toContain("frame_style");
-    for (const key of ["star", "stamp", "printed_collector"]) expect(keys).not.toContain(key);
-    for (const key of FRAME_ANATOMY_KEYS) expect(keys).not.toContain(key);
+    for (const key of ["stamp", "star"]) expect(keys).not.toContain(key);
+    // (`collector` on the patch is the three FIELDS, not the switch.)
+    for (const key of FRAME_ANATOMY_KEYS.filter((k) => k !== "collector")) expect(keys).not.toContain(key);
+    expect(patch.printed_collector).toBe("2015"); // TDOM, 2018: the 2015 line
+    expect(patch.printed_star).toBeUndefined(); // a nonfoil token
   });
 
   it("leaves `collector` absent when the printing needs set data the caller had none of", () => {

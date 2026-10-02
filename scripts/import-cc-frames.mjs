@@ -12,8 +12,9 @@
 // 4.48 / 4.50's full-art tokens (m20token, m20tokentext, m20tokentall and
 // their artifact templates; the textless pair re-cut 5 px onto the prints),
 // 4.33's borderless planeswalkers (m15borderlesspw, m15borderlesspwtall),
-// and 4.6a's legendary crown band (m15crown, an overlay the m15 / m15artifact
-// / m15land profiles draw over their masters).
+// 4.6a's legendary crown band (m15crown, an overlay the m15 / m15artifact
+// / m15land profiles draw over their masters), and 4.21a's portrait layouts
+// (flip with its two P/T plates cut per half, adventure, aftermath).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
@@ -73,7 +74,9 @@ import {
   describeFinish,
   describeLayer,
   applyTone,
+  boundsPx,
   bridgeRayTip,
+  describePtCut,
   finishFor,
   flatPixelAt,
   placeOnCanvas,
@@ -302,6 +305,26 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     }
     console.log(`wrote ${template} symbol discs (${Object.keys(symbols).join(", ")})`);
   }
+  // A pack's two-plate P/T image (4.21a's flip): drawn at its bounds on the
+  // card, as CC draws it, and cut through each half mask into that plate's
+  // box — pt/<colour>-top.png, pt/<colour>-bottom.png, native size.
+  if (def.ptCut && !dryRun) {
+    const { image, bounds, masks, boxes } = def.ptCut;
+    const at = boundsPx(bounds, OUT_W, OUT_H);
+    const maskData = Object.fromEntries(
+      await Promise.all(Object.entries(masks).map(async ([name, src]) => [name, await rgba(await fetchCached(src), OUT_W, OUT_H)])),
+    );
+    for (const key of COLORS) {
+      const file = await fetchCached(image[key]);
+      const { width: iw, height: ih } = await sharp(file).metadata();
+      const canvas = placeOnCanvas(await rgba(file, iw, ih), { ...at, width: iw, height: ih }, OUT_W, OUT_H);
+      for (const [name, box] of Object.entries(boxes)) {
+        const plate = cutThroughMask(canvas, maskData[name], OUT_W, box);
+        await writeCutout(plate, box, path.join(outDir, template, "pt", `${key}-${name}.png`));
+      }
+    }
+    console.log(`wrote ${template} plates (${Object.keys(boxes).map((n) => `pt/<colour>-${n}.png`).join(", ")})`);
+  }
   provenance[template] = {
     source: "cardconjurer",
     repo: CC_REPO,
@@ -316,6 +339,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(plates ? { plates } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
+    ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),
     ...(def.tones ? { tones: def.tones } : {}),

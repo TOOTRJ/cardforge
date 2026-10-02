@@ -67,7 +67,11 @@ import { countDecksForCard } from "@/lib/decks/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
-import { buildTypeLine, describeManaCost, printsPowerToughness } from "@/lib/cards/card-display";
+import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
+import { collectorDrawn } from "@/lib/cards/collector-layout";
+import { collectorNumberRuns } from "@/lib/cards/collector-line";
+import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
 import { renderVersionOf } from "@/lib/cards/render-version";
 import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
@@ -80,7 +84,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { downloadDiffersFromGallery } from "@/lib/cards/layout-version";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
-import type { CardBackFace } from "@/types/card";
+import type { CardBackFace, FrameStyle } from "@/types/card";
 import { formatShortDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
@@ -895,6 +899,9 @@ export function buildCardJsonLd({
     cost: string | null;
     tags: string[];
     frame_style: unknown;
+    set_code?: string | null;
+    collector_number?: string | null;
+    lang?: string | null;
   };
   username: string;
   ownerDisplay: string;
@@ -921,11 +928,14 @@ export function buildCardJsonLd({
   // An emblem names no rarity (CR 114; its stored "common" only inks the
   // set symbol).
   const rarity = cardTypeHasRarity(card.card_type) ? card.rarity : null;
+  // The collector line's words, only when the render draws it (4.9b).
+  const collector = collectorLineText(card);
   const keywords = Array.from(
     new Set(
       [
         ...card.tags,
         rarity ?? "",
+        collector && card.set_code ? card.set_code.trim() : "",
         ...typeLine.split(/[\s—–-]+/),
         ...(card.color_identity ?? []),
         "custom MTG card",
@@ -955,7 +965,7 @@ export function buildCardJsonLd({
       // emblem) and its type line.
       caption: `${card.title} — custom MTG-style ${typeLine}${rarity ? `, ${rarity}` : ""}${
         card.cost ? `, mana cost ${describeManaCost(card.cost)}` : ""
-      }`,
+      }${collector ? `, collector line ${collector}` : ""}`,
     },
     keywords: keywords.join(", "),
     author: {
@@ -999,6 +1009,38 @@ export function buildCardJsonLd({
 // The details block — every fact the rendered card shows, as text.
 // ---------------------------------------------------------------------------
 
+/**
+ * The collector line's words (TODO 4.9b): "DMU · 107/281 · English" — the
+ * printed set code, the number as the card's style prints it and the
+ * language's name — only when the card DRAWS the line (its switch names a
+ * style and its template has the slot: collectorDrawn), else null. The
+ * details block and the CreativeWork's caption carry it; a card whose line
+ * is off or absent says nothing about its printing.
+ */
+export function collectorLineText(card: {
+  card_type?: string | null;
+  supertype?: string | null;
+  rarity?: string | null;
+  set_code?: string | null;
+  collector_number?: string | null;
+  lang?: string | null;
+  frame_style?: unknown;
+}): string | null {
+  const frameStyle = (card.frame_style ?? {}) as FrameStyle;
+  const style = collectorDrawn(getFrameProfile(normalizeFrameTemplate(frameStyle.template)), frameStyle);
+  if (!style) return null;
+  const parts: string[] = [];
+  const setCode = (card.set_code ?? "").trim().toUpperCase();
+  if (setCode) parts.push(setCode);
+  const number = collectorNumberRuns(card.collector_number, style)
+    .map((run) => (run.kind === "text" ? run.text : "★"))
+    .join("");
+  if (number) parts.push(number);
+  const lang = PRINTED_LANGS.find((entry) => entry.code === card.lang);
+  if (lang) parts.push(lang.label);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 /** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
 export function CardDetails({
   card,
@@ -1020,6 +1062,12 @@ export function CardDetails({
     artist_credit: string | null;
     created_at: string;
     updated_at: string;
+    /** The collector line (TODO 4.9b): its fields and the switch, shown
+     *  only when the render draws the line. */
+    set_code?: string | null;
+    collector_number?: string | null;
+    lang?: string | null;
+    frame_style?: unknown;
   };
   inDecks: Array<{ slug: string; title: string }>;
 }) {
@@ -1062,6 +1110,10 @@ export function CardDetails({
   if (stats) rows.push(["Stats", stats]);
   if (card.layout && card.layout !== "normal") rows.push(["Layout", card.layout]);
   if (card.set_icon_code) rows.push(["Set symbol", card.set_icon_code.toUpperCase()]);
+  // The collector line as printed (TODO 4.9b): "Set · Number · Language",
+  // only when the render draws the line — in step with the image.
+  const collector = collectorLineText(card);
+  if (collector) rows.push(["Collector line", collector]);
   if (card.artist_credit?.trim()) rows.push(["Art", card.artist_credit.trim()]);
   rows.push(["Created", formatShortDate(card.created_at)]);
   if (Date.parse(card.updated_at) - Date.parse(card.created_at) > 60_000) {
