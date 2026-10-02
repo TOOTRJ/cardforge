@@ -26,7 +26,7 @@ import {
   isLegendaryMasterKey,
   legendaryMasterKey,
 } from "@/lib/cards/frame-reference-registry";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { artLayersFor, bandTextStyle, footerInk, getFrameProfile, slotInk, underFrameArtRect } from "@/lib/cards/template-layout";
 import { CROWNED_EDGE_CONTRACTS, EDGE_CONTRACTS, edgeContractFor } from "@/lib/frames/edge-contract";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -92,6 +92,45 @@ describe("the crowned twin's key", () => {
     // The land dress spreads M15BORDERLESS and must not inherit it (its
     // pairs and crown are 4.56's).
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
+  });
+});
+
+describe("what is keyed by the master a card paints reads the plain key", () => {
+  // Neither crowned profile declares an ink map or underFrameArt today (their
+  // art slot is the whole card), so the rule (lib/cards/master-key.ts
+  // baseMasterKey) is held on slots and a profile that have them: a crowned
+  // twin must never fall back to the slot's default ink, or lose the art
+  // under a see-through frame.
+  const ink = { c: { colorHex: "#0a0a0a", shadowCss: "0 1px 0 #ffffff" } };
+
+  it("a crowned twin prints its master's ink: a stat slot, the footer, the title and type bands", () => {
+    const stat = { colorHex: "#ffffff", shadowCss: "0 0 2px #000000", inkByColorKey: ink };
+    expect(slotInk(stat, "c")).toEqual({ colorHex: "#0a0a0a", shadowCss: "0 1px 0 #ffffff" });
+    expect(slotInk(stat, "c-legendary")).toEqual(slotInk(stat, "c"));
+    // A master the map doesn't name keeps the slot's own ink, crowned or not.
+    expect(slotInk(stat, "w-legendary")).toEqual({ colorHex: "#ffffff", shadowCss: "0 0 2px #000000" });
+    expect(slotInk(stat, "wu-h-legendary")).toEqual(slotInk(stat, "wu-h"));
+
+    const band = { ...getFrameProfile("m15").title, inkByColorKey: ink };
+    expect(bandTextStyle(band, "c")).toEqual({ color: "#0a0a0a", textShadow: "0 1px 0 #ffffff" });
+    expect(bandTextStyle(band, "c-legendary")).toEqual(bandTextStyle(band, "c"));
+    expect(bandTextStyle(band, "w-legendary")).toEqual({});
+
+    const footer = { ...getFrameProfile("m15").footer!, inkByColorKey: ink };
+    expect(footerInk(footer, "c").colorHex).toBe("#0a0a0a");
+    expect(footerInk(footer, "c-legendary")).toEqual(footerInk(footer, "c"));
+    expect(footerInk(footer, "w-legendary")).toEqual(footerInk(footer, "w"));
+  });
+
+  it("a crowned twin of a see-through master keeps the art under the frame", () => {
+    // m15's colourless master is the see-through one (underFrameArt.colors).
+    const m15 = getFrameProfile("m15");
+    expect(m15.underFrameArt?.colors).toEqual(["c"]);
+    expect(underFrameArtRect(m15, "c")).not.toBeNull();
+    expect(underFrameArtRect(m15, "c-legendary")).toEqual(underFrameArtRect(m15, "c"));
+    expect(underFrameArtRect(m15, "w-legendary")).toBeNull();
+    expect(artLayersFor(m15, "c-legendary", true)).toEqual(artLayersFor(m15, "c", true));
+    expect(artLayersFor(m15, "c-legendary", true).under).not.toBeNull();
   });
 });
 
@@ -269,8 +308,9 @@ describe.skipIf(!available)("the built twins (set FRAMES_BUILD_DIR if skipped)",
       const crown = px(twin, 750, 44);
       expect(crown[3]).toBe(255);
       expect(crown[0] + crown[1] + crown[2]).toBeGreaterThan(outline[0] + outline[1] + outline[2] + 60);
-      // Where the plain master's white title-bar ring sat in the erased
-      // strip (row 92, α 255, white), the twin shows the crown instead.
+      // Where the plain master's title-bar ring sat in the erased strip
+      // (row 92, α 255, the frame's own pinline colour: white on `w`, gold
+      // on `m`), the twin shows the crown instead.
       expect(px(plain, 750, 92)[3]).toBe(255);
       expect(px(twin, 750, 92)[3]).toBe(255);
       expect(px(twin, 750, 92).slice(0, 3)).not.toEqual(px(plain, 750, 92).slice(0, 3));

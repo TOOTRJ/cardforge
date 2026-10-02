@@ -421,13 +421,13 @@ export type FrameProfile = {
    *  title-bar ring), which no overlay can do. A Legendary card with
    *  FrameStyle.crown === true paints that twin instead (frameMasterKey →
    *  lib/cards/anatomy.ts crownedMasterKey), for its colour key or its pair
-   *  (LEGENDARY_MASTER_KEYS); everything keyed by the master — ink, the
-   *  under-frame art, the square-corner table — reads the plain key
-   *  (baseMasterKey). The crown's switch, hint, import rule and registry
-   *  gap are the overlay crown's (frameAnatomyOf: `crown` is true either
-   *  way). Opt-in per card: declaring it changes no stored card. Code-owned;
-   *  set only on PROFILES entries (M15BORDERLESS is spread by the artifact
-   *  and land dresses). */
+   *  (LEGENDARY_MASTER_KEYS); what is keyed by the master — ink, the
+   *  under-frame art — reads the plain key (baseMasterKey; the
+   *  square-corner table names no key of these templates). The crown's
+   *  switch, hint, import rule and registry gap are the overlay crown's
+   *  (frameAnatomyOf: `crown` is true either way). Opt-in per card:
+   *  declaring it changes no stored card. Code-owned; set only on PROFILES
+   *  entries (M15BORDERLESS is spread by the artifact and land dresses). */
   crownMasters?: true;
   /** Two-colour cards draw the frame SPLIT down a hard vertical seam — the
    *  first colour's PNG left of `atPct`, the second's right of it, in printed

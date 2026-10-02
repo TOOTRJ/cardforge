@@ -1177,8 +1177,10 @@ card on the two frames bakes byte-identical with the switches absent).
   is Card Conjurer's FLOATING crown (its packM15LegendCrownsFloating.js pack,
   `autoBorderlessFrame`), drawn after CC ERASES the strip 3.94/2.77/92.14×
   1.77 % of the frame — rows 58–94 at HD, where the master's title-bar ring
-  (the black outer line and the α 255 white ring) would show above the
-  crown's inner edge and in its end notches — then the outline (1416×223 at
+  (its black outer line, rows 85–88, and the α 255 pinline ring under it, in
+  the frame's own colour: white on the white master) would show above the
+  crown's inner edge and in its end notches — 843 px of it, drawn without
+  the erase — then the outline (1416×223 at
   2.8/1.72/94.4×10.62 %) UNDER the crown (1408×215 at 3.07/1.91/93.87×
   10.24 %), all 1500-native, 1:1. An overlay can only add pixels, so the
   importer (`borderlessMasters` / `borderlessCrownLayers`, a layer `at` CC's
@@ -1186,10 +1188,14 @@ card on the two frames bakes byte-identical with the switches absent).
   byte-identical. The crown letter is the master's: the colour, M on gold,
   C on m15borderless's see-through frame, A on the artifact dress (its
   colourless master IS CC's artifact frame; CC's crown letter for an
-  Artifact type line). Everything keyed by the master a card paints — ink
-  maps, a see-through master's under-frame art, the square-corner table —
-  reads the plain key (`baseMasterKey`): the crown changes nothing below
-  the title bar. The twins' edges are the plain masters' but for the
+  Artifact type line). What is keyed by the master a card paints — ink
+  maps, a see-through master's under-frame art — reads the plain key
+  (`baseMasterKey`): the crown changes nothing below the title bar. (Neither
+  profile declares an ink map or `underFrameArt` today — the art slot is the
+  whole card — so a unit test holds the rule on slots that have them. The
+  square-corner table is asked with the key as painted and names no key of
+  these frames: a crowned frame that gets a keyed entry there must read the
+  plain key too.) The twins' edges are the plain masters' but for the
   crown's peak, which reaches into the top band's 2 % between 46 and 54 %W
   as the prints' does (`CROWNED_EDGE_CONTRACTS`, `edgeContractFor`).
 - **The pairs split only the pinline** (`twoColorMasters`: both dresses on
@@ -1223,9 +1229,11 @@ card on the two frames bakes byte-identical with the switches absent).
   2X2 #336; the artifact dress LTC #505, FIN #333 / #337, DFT #308, LCI
   #340, MH3 #372, 2XM #362). The registry's `crown`, `two-colour` and
   `two-colour-hybrid` gaps drop on the two frames by themselves
-  (`gapDrawnBy`): DMU #435 Sheoldred and the 925 crowned standard-borderless
-  printings behind the crown gap import `exact` on their own frame (the
-  art still lands them on the bordered twin, 1.18).
+  (`gapDrawnBy`): DMU #435 Sheoldred and 907 of the 925 crowned
+  standard-borderless printings behind the crown gap (81 of the artifact
+  dress's 92) import `exact` on their own frame (the art still lands them on
+  the bordered twin, 1.18); the other 29 fall to their next gap and stay
+  `nearest` — a light text box (12), the Vehicle plate (9), Nyx (8).
 - **Tests:** `tests/unit/frames/legendary-masters.test.ts` (the keys, the
   recipe, the manifest, the twins' pixels against their masters),
   `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin

@@ -12,10 +12,12 @@
 // part of the frame under it, so no overlay can draw it) has
 // `<template>/<key>-legendary.png` beside each `<key>.png`. A Legendary card
 // with FrameStyle.crown === true paints the twin (lib/cards/anatomy.ts
-// crownedMasterKey); everything keyed by the master a card paints — its ink
-// maps, a see-through master's under-frame art, the square-corner table —
-// reads the plain key (baseMasterKey): the crown changes nothing below the
-// title bar.
+// crownedMasterKey); what is keyed by the master a card paints — its ink
+// maps, a see-through master's under-frame art — reads the plain key
+// (baseMasterKey): the crown changes nothing below the title bar. (The
+// square-corner table, lib/frames/square-corners.ts, is asked with the key
+// as painted: it names no key of a crowned template today, and one that
+// gets a keyed entry there must read the plain key too.)
 // ---------------------------------------------------------------------------
 
 export const LEGENDARY_MASTER_SUFFIX = "-legendary";
