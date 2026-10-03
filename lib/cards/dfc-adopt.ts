@@ -12,7 +12,8 @@
 // gives the back its body (bodyFor's back body for the back's type and the
 // default family — `arrows`, owner Q5) and a colour (the front's — the
 // import never carried the back's; editable afterwards in the back-face
-// panel), stamps the family, drops the switches the bodies can't draw
+// panel — or colourless on the land back, the one key its body is verified
+// in: adoptedBackColorIdentity), stamps the family, drops the switches the bodies can't draw
 // (normalizeAnatomy, design D17), strips a transform back's cost, and
 // re-bakes.
 //
@@ -37,6 +38,7 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import {
   DEFAULT_DFC_ICON,
   bodyFor,
+  dfcBodyOf,
   isDfcFaceType,
   withTransformBackShape,
   type DfcLayout,
@@ -85,6 +87,21 @@ export const DFC_LAYOUT_LABELS: Record<DfcLayout, string> = {
 export function parseDfcAdoptionLayout(value: unknown): DfcLayout | null {
   if (value === "transform" || value === "modal") return value;
   return value === "mdfc" ? "modal" : null;
+}
+
+/** The colour the move gives the back: the front's (the import never
+ *  carried the back's; editable afterwards in the back-face panel) — except
+ *  on a LAND back body, which is colourless: the land pair has one master
+ *  under every key and is verified on `c` alone (design §7, the registry's
+ *  note), so a land back in the front's white or green could never pass the
+ *  gate, and a land has no colour of its own in any case. The hint judges
+ *  the back's verification with the same colour. */
+export function adoptedBackColorIdentity(
+  backBody: FrameTemplate | null,
+  frontColorIdentity: readonly ColorIdentity[] | null | undefined,
+): ColorIdentity[] {
+  if (backBody && dfcBodyOf(backBody)?.land) return ["colorless"];
+  return [...(frontColorIdentity ?? [])];
 }
 
 function legacyBackOf(card: DfcAdoptionCard): CardBackFace | null {
@@ -142,7 +159,8 @@ export type DfcAdoptionPlan = {
    *  the default family stamped, the switches the body can't draw dropped. */
   frame_style: Record<string, unknown>;
   /** The back face to store: the legacy content with its body and colour
-   *  (the front's), a transform back's cost stripped. */
+   *  (adoptedBackColorIdentity: the front's, colourless on the land back), a
+   *  transform back's cost stripped. */
   back_face: CardBackFace;
 };
 
@@ -167,7 +185,7 @@ export function adoptDfcBodiesPlan(card: DfcAdoptionCard, layout: DfcLayout): Df
     {
       ...back,
       frame_style: { template: choice.backBody },
-      color_identity: [...(card.color_identity ?? [])],
+      color_identity: adoptedBackColorIdentity(choice.backBody, card.color_identity),
     },
     layout,
   );

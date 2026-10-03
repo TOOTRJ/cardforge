@@ -112,9 +112,12 @@ describe("adoptDfcBodiesPlan — what the move writes", () => {
     expect(plan.frame_style).toEqual({ finish: "foil", template: "m15dfcfront", collector: "2023", dfcIcon: "arrows" });
     expect(plan.back_face).toEqual({ ...rows[2].back_face, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
     expect(plan.back_face).not.toHaveProperty("cost");
-    // The land back (Tobirama) lands on the land back; the colourless Aang
+    // The land back (Tobirama) lands on the land back, COLOURLESS — the land
+    // pair is verified on `c` alone (one master under every key), so the
+    // front's white could never pass the gate; the colourless Aang
     // back takes the front's five colours (the hint says: editable after).
     expect(adoptDfcBodiesPlan(cardOf(rows[5]), "transform")?.backBody).toBe("m15dfclandback");
+    expect(adoptDfcBodiesPlan(cardOf(rows[5]), "transform")?.back_face.color_identity).toEqual(["colorless"]);
     expect(adoptDfcBodiesPlan(cardOf(rows[7]), "transform")?.back_face.color_identity).toEqual(rows[7].front.color_identity);
     // Vader onto transform (the owner's pick over the dark modal default)
     // drops the Lantern's cost.
@@ -157,6 +160,30 @@ describe("adoptDfcBodiesAction", () => {
     expect(row.back_face).toEqual({ ...rows[2].back_face, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
     expect(Object.keys(row).sort()).toEqual(["back_face", "frame_style"]);
     expect(state.baked).toEqual([CARD]);
+  });
+
+  it("moves Tobirama's land back onto the land back body in `c` with the front in the card's colour", async () => {
+    state.verified = [frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfclandback", "c")];
+    state.existing = { id: CARD, owner_id: USER, slug: "tobirama", visibility: "public", ...cardOf(rows[5]) };
+    const stub = db();
+    const result = await adoptDfcBodiesAction(CARD, "transform");
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    const row = written(stub)!;
+    expect((row.back_face as { frame_style: unknown; color_identity: unknown }).frame_style).toEqual({ template: "m15dfclandback" });
+    expect((row.back_face as { color_identity: unknown }).color_identity).toEqual(["colorless"]);
+    // The land back in the front's white is never asked for.
+    state.verified = [frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfclandback", "w")];
+    expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);
+  });
+
+  it("the front's own rules hold on the new body: a colourless non-artifact front is refused (D2)", async () => {
+    state.verified = [frameComboKey("m15dfcfront", "c"), frameComboKey("m15dfcback", "c")];
+    state.existing = { ...erza(), color_identity: ["colorless"] };
+    const stub = db();
+    const result = await adoptDfcBodiesAction(CARD, "transform");
+    expect(result.ok).toBe(false);
+    expect(result.ok ? "" : result.formError).toMatch(/Artifact/);
+    expect(written(stub)).toBeUndefined();
   });
 
   it("refuses until the front body AND the back body are verified in the card's colour", async () => {

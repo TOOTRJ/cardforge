@@ -297,6 +297,18 @@ describe("a new transform card", () => {
     expect(chipIn("Back face color", /^colorless/i).disabled).toBe(false);
   });
 
+  it("a land back goes colourless (the land back is verified on `c` alone) and follows the front again when the type leaves land", async () => {
+    renderForm();
+    await clickChip("Card type", /^Transform/);
+    await clickChip("Color identity", /^green/i);
+    await goTo(/^identity$/i);
+    await clickChip("Back face type", /^Land/);
+    expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfclandback" }, color_identity: ["colorless"] });
+    expect(chipIn("Back face color", /^colorless/i).disabled).toBe(false);
+    await clickChip("Back face type", /^Creature/);
+    expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfcback" }, color_identity: ["green"] });
+  });
+
   it("saves the derived body, the explicit colour and no cost; the back's art is needed to publish", async () => {
     actions.createCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "delver-of-secrets" });
     renderForm();
@@ -395,6 +407,31 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     await waitFor(() => expect(actions.adoptDfcBodiesAction).toHaveBeenCalledWith(CARD_ID, "transform"));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/Moved onto the transform frames/));
+  });
+
+  it("judges a LAND back in colourless, the colour the move gives it — Tobirama lights with the front in white and the land back in `c`", () => {
+    const tobirama = () =>
+      savedCard({
+        color_identity: ["white"],
+        frame_style: { finish: "regular", template: "m15" },
+        back_face: { title: "Temple of Civilization", card_type: "land", rules_text: "{T}: Add {W}." },
+      });
+    renderForm({
+      mode: "edit",
+      card: tobirama(),
+      verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfclandback", "c")],
+    });
+    const button = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/colourless — a land has none/);
+    cleanup();
+    // The land back in the front's white is never what the move writes.
+    renderForm({
+      mode: "edit",
+      card: tobirama(),
+      verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfclandback", "w")],
+    });
+    expect((screen.getByTestId("dfc-adopt-move") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("never shows for a card on a DFC body, nor for one with a walker back", () => {

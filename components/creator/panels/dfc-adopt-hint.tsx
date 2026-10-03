@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { adoptDfcBodiesAction } from "@/lib/cards/dfc-adopt-actions";
-import { dfcAdoptionOffer, type DfcAdoptionCard } from "@/lib/cards/dfc-adopt";
+import { adoptedBackColorIdentity, dfcAdoptionOffer, type DfcAdoptionCard } from "@/lib/cards/dfc-adopt";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { DfcLayout } from "@/lib/cards/dfc";
@@ -42,12 +42,17 @@ export function DfcAdoptHint({ cardId, card, verifiedFrameKeys, onMoved }: DfcAd
 
   const colorKey = pickFrameColorKey(card.color_identity);
   const choice = offer.layouts.find((entry) => entry.layout === layout) ?? offer.layouts[0];
+  // The back is judged in the colour the move gives it (the front's, or
+  // colourless on the land back — lib/cards/dfc-adopt.ts).
+  const backColour = adoptedBackColorIdentity(choice.backBody, card.color_identity);
+  const backColorKey = pickFrameColorKey(backColour);
+  const landBack = backColorKey === "c" && colorKey !== "c";
   const verified =
     choice.available &&
     choice.frontBody !== null &&
     choice.backBody !== null &&
     isFrameComboAvailable(choice.frontBody, colorKey, verifiedFrameKeys) &&
-    isFrameComboAvailable(choice.backBody, colorKey, verifiedFrameKeys);
+    isFrameComboAvailable(choice.backBody, backColorKey, verifiedFrameKeys);
   const options: ChipOption<DfcLayout>[] = offer.layouts.map((entry) => ({
     value: entry.layout,
     label: entry.label,
@@ -87,8 +92,9 @@ export function DfcAdoptHint({ cardId, card, verifiedFrameKeys, onMoved }: DfcAd
         <strong className="font-semibold">New: the real double-faced frames.</strong>{" "}
         This card&apos;s back face still sits on the front&apos;s frame. Move it onto the
         double-faced frames: the front gets the {choice.label.toLowerCase()}{" "}
-        front, the back its own frame and colour (the front&apos;s — change it
-        afterwards), and both faces re-bake. Nothing changes until you click.
+        front, the back its own frame and colour (
+        {landBack ? "colourless — a land has none" : "the front's — change it afterwards"}
+        ), and both faces re-bake. Nothing changes until you click.
         {layout === "transform" && card.back_face && typeof card.back_face === "object" && (card.back_face as { cost?: string }).cost
           ? " A transform back prints no mana cost — the back's cost is dropped."
           : ""}

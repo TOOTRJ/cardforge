@@ -178,6 +178,16 @@ export function DfcFacePanel({
                 value={field.value}
                 onChange={(next) => {
                   clearErrors("back_face");
+                  // A land back is colourless: the land back body has one
+                  // master under every key and is verified on `c` alone
+                  // (the Q3 move gives a land back the same), so a back
+                  // following a green front could never save. Leaving the
+                  // land type goes back to following the front.
+                  if (next === "land" && field.value !== "land") {
+                    setValue("back_face.color_identity", ["colorless"], { shouldDirty: true });
+                  } else if (next !== "land" && field.value === "land") {
+                    setValue("back_face.color_identity", [], { shouldDirty: true });
+                  }
                   field.onChange(next);
                 }}
                 options={BACK_TYPE_OPTIONS}
