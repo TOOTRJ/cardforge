@@ -2101,10 +2101,15 @@ whatever the family (the 2016–22 parchment land back is TODO 5.8).
   both renderers for any identity with a colour word — Ø 3.5 %W at 9.3 /
   59.0 % with a dark ring outside, the standard mana colours, two colours
   split on the top-right → bottom-left diagonal with the first colour
-  top-left, three or more in wedges from the top — the colours in the order
-  the mana cost would print them (`canonicalColorSequence`: MOM #43's
-  green-white back prints GREEN top-left, {G}{W}; WUBRG order would put
-  white there, which the scan refutes); the type line
+  top-left, three or more in wedges clockwise from the BOTTOM (BOT #13
+  Optimus Prime, Autobot Leader, {U}{R}{W}: blue bottom-left, red centred
+  at the top, white bottom-right — a wedge on 12 o'clock, never a boundary;
+  the first bake started them at the top, the print's figure turned 180°,
+  caught by the skeptic) — the colours in the order the mana cost would
+  print them (`canonicalColorSequence`: MOM #43's green-white back prints
+  GREEN top-left, {G}{W}; WUBRG order would put white there, which the scan
+  refutes; MOM #36's white-black back prints white top-left, as ours); the
+  type line
   starts at 13.4 %W while it draws (the prints' ink at 200–204 px). None on
   an artifact / colourless back or a land back. 4.6c adds the per-card
   switch for ordinary cards and reuses the module.
