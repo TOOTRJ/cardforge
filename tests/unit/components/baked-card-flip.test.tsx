@@ -101,6 +101,46 @@ describe("BakedCardThumbnail with a back thumb (TODO 5.3)", () => {
     expect(link.contains(events[0].target as Node)).toBe(true);
   });
 
+  it("the keyboard flips too: Enter / Space on the button never reach a tile body that opens the card on them (the dashboard tile)", async () => {
+    const previewData = { title: "Village Elder", frameStyle: { template: "m15dfcfront" } } as CardPreviewData;
+    const navigate = vi.fn();
+    // The dashboard tile's wrapper (components/creator/dashboard-card-tile.tsx):
+    // a role="button" body whose onKeyDown opens the card on Enter / Space.
+    render(
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={navigate}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            navigate();
+          }
+        }}
+      >
+        <BakedCardThumbnail
+          renderedImageUrl={`${RENDERS}/probe.png?v=1`}
+          renderedThumbUrl={`${RENDERS}/probe.thumb.webp?v=1`}
+          renderedBackThumbUrl={`${RENDERS}/probe.back.thumb.webp?v=1`}
+          title="Village Elder"
+          previewData={previewData}
+        />
+      </div>,
+    );
+    const button = screen.getByRole("button", { name: "Flip to back face" });
+    for (const key of ["Enter", " "]) {
+      await act(async () => {
+        fireEvent.keyDown(button, { key });
+      });
+      // …and the click a browser synthesises for the key.
+      await click(button);
+    }
+    expect(navigate).not.toHaveBeenCalled();
+    // Two flips: back, then front again.
+    expect(screen.getByTestId("baked-card-flip").getAttribute("data-face")).toBe("front");
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+  });
+
   it("without a back thumb — or with one that isn't a bake of ours — the tile is exactly what it was", () => {
     for (const back of [null, "https://evil.example/x.webp", `${HOST}/storage/v1/object/public/card-art/owner-1/raw.png`]) {
       const container = tile(back);

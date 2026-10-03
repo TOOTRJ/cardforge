@@ -83,6 +83,14 @@ export function BakedCardFlip({
           event.preventDefault();
           flip();
         }}
+        onKeyDown={(event) => {
+          // Enter / Space activate the button (the browser follows with a
+          // click, handled above). A tile whose body handles keys itself —
+          // the dashboard tile's role="button" wrapper opens the card on
+          // Enter — must not see them, or the keyboard would navigate where
+          // the pointer flips.
+          if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+        }}
         aria-label={face === "front" ? "Flip to back face" : "Flip to front face"}
         aria-pressed={face === "back"}
         className="absolute bottom-3 right-3 z-40 flex h-8 w-8 items-center justify-center rounded-full border border-border/80 bg-background/85 text-muted shadow-lg transition-colors hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
