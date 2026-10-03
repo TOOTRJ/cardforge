@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  TWO_COLOR_PAIRS,
   anatomyDefaults,
   anatomyOn,
   applyFrameAnatomyPatch,
@@ -8,6 +9,7 @@ import {
   importedFormAnatomy,
   newCardFrameStyle,
   normalizeAnatomy,
+  pairColorIdentity,
   resolveFrameOverlays,
   resolveHoloStamp,
   storedAnatomyOf,
@@ -36,7 +38,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameStyle } from "@/types/card";
 // place in the anatomy plumbing (lib/cards/anatomy.ts): the switch's values,
 // "auto" on a rare or mythic and nothing on a token or an emblem, the
 // frame's own shape for every "on" value, the notch keyed like the crown
-// (never a stand-in: a pair master draws none in wave 1), the geometry
+// (never a stand-in; a pair master draws the pair's notch in either dress
+// since the 4.9c follow-up), the geometry
 // (CC's oval, the walker's 7 px higher, the keep-out over the arch, the art
 // rect's black margin past the importer's cut), and the save / default /
 // edit / remix / import rules the owner set for every addition.
@@ -162,7 +165,7 @@ describe("the notch and the resolved stamp", () => {
     expect(keyOf("adventure", "w")).toBeNull();
   });
 
-  it("resolves the frame's own oval and keep-out, and the art rect; a pair master draws none in wave 1", () => {
+  it("resolves the frame's own oval and keep-out, and the art rect; a pair master draws the pair's notch in either dress", () => {
     const stamp = resolveHoloStamp(m15, { stamp: "auto" }, facts({ rarity: "mythic" }))!;
     expect(stamp).toMatchObject({ shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT, artRect: holoStampArtRect(M15_HOLO_STAMP_OVAL) });
     expect(stamp.notch).toEqual(resolveFrameOverlays(m15, { stamp: "auto" }, facts({ rarity: "mythic" })).find((o) => o.anatomy === "holoStamp"));
@@ -172,10 +175,37 @@ describe("the notch and the resolved stamp", () => {
     expect(resolveHoloStamp(m15, { stamp: "oval" }, facts({ rarity: "common" }))?.shape).toBe("oval");
     // An imported "triangle" on an oval frame draws the frame's oval.
     expect(resolveHoloStamp(m15, { stamp: "triangle" }, facts())?.shape).toBe("oval");
-    // The two-colour look asks for the pair's notch, which no slot publishes.
+    // The two-colour look asks for the pair's notch (the 4.9c follow-up,
+    // owner round 26): the pair key in printed order whatever the identity's
+    // order, on BOTH dresses — one piece per pair, since the split and the
+    // hybrid master hold the same bar under the notch — and on every
+    // template with pair masters; drawn gold (the switch off) it keeps "m".
     const pair = facts({ colors: ["white", "blue"], cost: "{W}{U}", colorKey: "m" });
-    expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, pair)).toBeNull();
+    expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, pair)?.notch).toEqual({
+      anatomy: "holoStamp",
+      rect: M15_HOLO_STAMP.rect,
+      key: "wu",
+      path: "/frames/m15holostamp/wu.png",
+    });
+    expect(resolveHoloStamp(m15, { stamp: "auto", twoColor: true }, facts({ colors: ["blue", "white"], cost: "{W/U}{W/U}", colorKey: "m" }))?.notch.key).toBe("wu");
     expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: false }, pair)?.notch.key).toBe("m");
+    expect(resolveHoloStamp(m15, { stamp: "auto", twoColor: true }, facts({ ...pair, rarity: "common" }))).toBeNull();
+    expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, facts({ ...pair, rarity: "common" }))?.notch.key).toBe("wu");
+    for (const p of TWO_COLOR_PAIRS) {
+      const colors = pairColorIdentity(p);
+      const cost = `{${p[0].toUpperCase()}}{${p[1].toUpperCase()}}`;
+      expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, facts({ colors, cost, colorKey: "m" }))?.notch.key, p).toBe(p);
+      expect(resolveHoloStamp(getFrameProfile("m15artifact"), { stamp: "oval", twoColor: true }, facts({ colors, cost, colorKey: "m", cardType: "artifact" }))?.notch.key, `artifact ${p}`).toBe(p);
+      expect(resolveHoloStamp(getFrameProfile("m15land"), { stamp: "oval", twoColor: true }, facts({ colors, cost: null, colorKey: "m", cardType: "land" }))?.notch.key, `land ${p}`).toBe(p);
+      // The snow pairs (4.6f wave 2c): the same pieces — m15snow's and
+      // m15snowland's bar under the notch is m15's pair bar.
+      expect(resolveHoloStamp(getFrameProfile("m15snow"), { stamp: "oval", twoColor: true }, facts({ colors, cost, colorKey: "m", supertype: "Snow" }))?.notch.path, `snow ${p}`).toBe(`/frames/m15holostamp/${p}.png`);
+      expect(resolveHoloStamp(getFrameProfile("m15snowland"), { stamp: "oval", twoColor: true }, facts({ colors, cost: null, colorKey: "m", cardType: "land", supertype: "Snow" }))?.notch.path, `snow land ${p}`).toBe(`/frames/m15holostamp/${p}.png`);
+    }
+    // A two-colour LAND on m15 wears no pair (twoColorFits): the gold notch.
+    expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, facts({ ...pair, cost: null, cardType: "land" }))?.notch.key).toBe("m");
+    // The slot publishes exactly the nine bars and the ten pairs.
+    expect([...M15_HOLO_STAMP.keys]).toEqual(["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS]);
     expect(resolveHoloStamp(m15, { stamp: "oval" }, facts({ colors: ["white", "blue", "black"], cost: "{W}{U}{B}", colorKey: "m" }))?.notch.key).toBe("m");
     // The walker: its own oval, 7 px higher, and keep-out.
     const walker = resolveHoloStamp(getFrameProfile("m15pw"), { stamp: "auto" }, facts({ cardType: "planeswalker", rarity: "mythic", colorKey: "w", colors: ["white"] }))!;

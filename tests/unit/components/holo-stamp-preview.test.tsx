@@ -14,9 +14,10 @@ import type { ColorIdentity } from "@/types/card";
 // the notch as a frame overlay (the WebP twin of the bake's PNG, keyed the
 // same, over the slot's rect, inside both finish masks like the crown) and
 // the oval as our bitmap over the stamp's art rect at z 7 — above the
-// sheens (z 6), under the text; nothing at all where the bake draws
-// nothing (absent, Never, Auto on a common, a token, an emblem, a pair
-// master, a frame without the notch).
+// sheens (z 6), under the text — a card drawn as its pair master (either
+// dress, every template with pairs) with the pair's notch since the 4.9c
+// follow-up; nothing at all where the bake draws nothing (absent, Never,
+// Auto on a common, a token, an emblem, a frame without the notch).
 // ---------------------------------------------------------------------------
 
 afterEach(() => cleanup());
@@ -61,6 +62,15 @@ const cases: Array<[string, Partial<CardPreviewData>, string]> = [
   ["snow: its colour", { colorIdentity: ["green"], frameStyle: { template: "m15snow", stamp: "auto" } }, "m15holostamp/g"],
   ["Always on a common", { rarity: "common", frameStyle: { template: "m15", stamp: "oval" } }, "m15holostamp/b"],
   ["the walker's own piece", { cardType: "planeswalker", loyalty: "4", power: null, toughness: null, colorIdentity: ["colorless"], cost: "{4}", frameStyle: { template: "m15pw", stamp: "auto" } }, "m15pwholostamp/c"],
+  // The pair frames (the 4.9c follow-up): the pair's notch on the gold-split
+  // and the hybrid dress, and on the artifact and land pair masters.
+  ["a W|U rare drawn as its pair master", { rarity: "rare", colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15", stamp: "auto", twoColor: true } }, "m15holostamp/wu"],
+  ["a G|W hybrid rare (the hybrid dress)", { rarity: "rare", colorIdentity: ["green", "white"], cost: "{G/W}{G/W}", frameStyle: { template: "m15", stamp: "auto", twoColor: true } }, "m15holostamp/gw"],
+  ["a U|R artifact pair", { rarity: "mythic", cardType: "artifact", colorIdentity: ["blue", "red"], cost: "{U}{R}", power: null, toughness: null, frameStyle: { template: "m15artifact", stamp: "auto", twoColor: true } }, "m15holostamp/ur"],
+  ["a B|G land pair", { rarity: "rare", cardType: "land", colorIdentity: ["black", "green"], cost: null, power: null, toughness: null, frameStyle: { template: "m15land", stamp: "auto", twoColor: true } }, "m15holostamp/bg"],
+  // The snow pairs (4.6f wave 2c): the same pieces over the snow pair masters.
+  ["a U|B snow pair", { rarity: "rare", supertype: "Snow", colorIdentity: ["blue", "black"], cost: "{1}{U}{B}", frameStyle: { template: "m15snow", stamp: "auto", twoColor: true } }, "m15holostamp/ub"],
+  ["a R|W snow land pair", { rarity: "rare", cardType: "land", supertype: "Snow", colorIdentity: ["red", "white"], cost: null, power: null, toughness: null, frameStyle: { template: "m15snowland", stamp: "auto", twoColor: true } }, "m15holostamp/rw"],
 ];
 
 describe("the preview draws the bake's stamp", () => {
@@ -106,7 +116,8 @@ describe("the preview draws the bake's stamp", () => {
       card({ cardType: "emblem", frameStyle: { template: "emblem", stamp: "oval" } }),
       card({ cardType: "token", frameStyle: { template: "m15", stamp: "oval" } }),
       card({ frameStyle: { template: "m15borderless", stamp: "oval" } }),
-      card({ colorIdentity: ["white", "blue"], cost: "{W}{U}", frameStyle: { template: "m15", stamp: "oval", twoColor: true } }),
+      // A pair on the borderless frame: its pair master has no notch (4.9d).
+      card({ colorIdentity: ["white", "blue"], cost: "{W}{U}", frameStyle: { template: "m15borderless", stamp: "oval", twoColor: true } }),
     ]) {
       expect(bakeStamp(data), JSON.stringify(data.frameStyle)).toBeNull();
       const { container } = render(<CardPreview {...data} />);

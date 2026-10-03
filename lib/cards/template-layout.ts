@@ -3871,9 +3871,17 @@ export const M15_COLLECTOR: CollectorSlot = {
  * (scripts/lib/cc-frames.mjs HOLO_STAMP_NOTCHES). Keys: the colour's bar
  * (w u b r g, m gold, c the colourless grey — the snow and devoid frames'
  * bars are the same pixels, so they map onto these), a the artifact silver
- * and l the land taupe (the entries' keyMap). No pair key: a card drawn as
- * its pair master draws no stamp in wave 1 (the split notch is its own
- * sheet). Opt-in per card (FrameStyle.stamp): declaring it changes no
+ * and l the land taupe (the entries' keyMap), and since the 4.9c follow-up
+ * (owner round 26, 2026-10-03) the ten PAIRS in printed order: a card
+ * drawn as its pair master (either dress) asks for the pair's notch
+ * (resolveFrameOverlays keys an overlay by the master drawn, as the crown
+ * is), whose rim is tinted PER COLUMN to the pair master's own bar — the
+ * pinline lerped 40→60 %W, which the notch's 654–846 px sit inside — so
+ * the arch is that bar lifted and both feet meet it pixel for pixel. One
+ * piece per pair serves the m15 split and hybrid, m15artifact and m15land
+ * pair masters: their bar under the notch is the same pixels (the hybrid
+ * dress's grey L bars are its title and type bars), which the importer
+ * checks. Opt-in per card (FrameStyle.stamp): declaring it changes no
  * stored card.
  *
  * Set only on the PROFILES entries m15, m15land, m15artifact, m15snow,
@@ -3893,8 +3901,9 @@ export const M15_HOLO_STAMP: FrameOverlaySlot = {
   rect: { leftPct: 43.6, topPct: 90.34 + (2 / 2100) * 100, widthPct: 12.8, heightPct: 4.58 },
   assetPathTemplate: "/frames/m15holostamp/{key}.png",
   // HOLO_STAMP_NOTCHES.m15holostamp.keys in scripts/lib/cc-frames.mjs (a
-  // unit test holds them together).
-  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+  // unit test holds them together); the pairs in printed order
+  // (TWO_COLOR_PAIRS), as M15_CROWN lists them.
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
 };
 

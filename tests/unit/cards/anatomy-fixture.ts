@@ -18,12 +18,14 @@ export const TEST_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS],
 };
 
-/** …and the holofoil stamp's notch (TODO 4.9c) on the same three. */
+/** …and the holofoil stamp's notch (TODO 4.9c) on the same three — with
+ *  the pair keys since the 4.9c follow-up (a card drawn as its pair master
+ *  takes the pair's notch, as it takes the pair's crown band). */
 export const TEST_STAMP: FrameOverlaySlot = {
   anatomy: "holoStamp",
   rect: { leftPct: 43.6, topPct: 90.34, widthPct: 12.8, heightPct: 4.58 },
   assetPathTemplate: "/frames/m15holostamp/{key}.png",
-  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS],
   stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
 };
 

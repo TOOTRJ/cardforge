@@ -6,7 +6,6 @@ import {
   CollectorSwitches,
   FOIL_FINISH_STAR_NOTE,
   NO_COLLECTOR_SLOT_NOTE,
-  TWO_COLOUR_STAMP_NOTE,
   collectorStyleExamples,
   holoStampAnswer,
 } from "@/components/creator/panels/collector-panel";
@@ -220,12 +219,11 @@ describe("the holofoil stamp (TODO 4.9c)", () => {
     expect(stampSwitch()).toBeNull();
   });
 
-  it("a two-colour card drawn as its pair master says the pair has no notch yet", () => {
+  it("a two-colour card drawn as its pair master gets the stamp like any rare: no pair note (the 4.9c follow-up)", () => {
     render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} rarity="rare" colorIdentity={["white", "blue"]} cost="{W}{U}" />);
-    expect(screen.getByTestId("stamp-pair-note").textContent).toBe(TWO_COLOUR_STAMP_NOTE);
-    cleanup();
-    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY, twoColor: false }} rarity="rare" colorIdentity={["white", "blue"]} cost="{W}{U}" />);
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Rare → stamp");
     expect(screen.queryByTestId("stamp-pair-note")).toBeNull();
+    expect(screen.getByTestId("collector-switches").textContent).not.toMatch(/no stamp notch/);
   });
 
   it("the live answer reads the rarity and the type", () => {

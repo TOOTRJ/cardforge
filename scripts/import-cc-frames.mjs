@@ -20,7 +20,9 @@
 //   node scripts/import-cc-frames.mjs --only m15,m15land
 //   node scripts/import-cc-frames.mjs --only m15crown   # the crown band only
 //   node scripts/import-cc-frames.mjs --only m15holostamp,m15pwholostamp
-//                                                     # the stamp notches (4.9c)
+//                                                     # the stamp notches (4.9c:
+//                                                     # the colour keys and the
+//                                                     # ten pair keys)
 //   node scripts/import-cc-frames.mjs --dry-run       # print the recipe only
 //   CC_CACHE=/path  (source cache; default ~/.cache/pipglyph-cc/<commit>)
 //   --out <dir>     (default .frames-build — gitignored)
@@ -61,10 +63,14 @@ import {
   HOLO_STAMP_NOTCHES,
   NOTCH_FOOT,
   buildNotch,
+  columnTintGap,
+  describeColumnTint,
   describeNotch,
+  footRunsSolid,
   notchFindings,
   notchSourceFiles,
   sampleBar,
+  sampleBarColumns,
   CC_RAW,
   CC_RIDERS,
   CC_REPO,
@@ -517,13 +523,18 @@ for (const [folder, def] of Object.entries(CC_RIDERS)) {
 // scripts/lib/cc-frames.mjs HOLO_STAMP_NOTCHES. Written 1:1 at the piece's
 // native size (the slot stretches it over CC's bounds).
 const masterDirs = [outDir, path.resolve(process.env.FRAMES_BUILD_DIR ?? ".frames-cache")];
-function notchBarMasterPath(def, key) {
-  const rel = `${def.barOf[key]}.png`;
+function notchMasterPath(rel, what) {
   for (const dir of masterDirs) {
-    const file = path.join(dir, rel);
+    const file = path.join(dir, `${rel}.png`);
     if (fs.existsSync(file)) return file;
   }
-  throw new Error(`notch ${key}: no master ${rel} under ${masterDirs.join(" or ")} — build it, or fetch the bucket's with scripts/frames-fetch.mjs`);
+  throw new Error(`notch ${what}: no master ${rel}.png under ${masterDirs.join(" or ")} — build it, or fetch the bucket's with scripts/frames-fetch.mjs`);
+}
+async function notchMasterPixels(rel, what) {
+  const file = notchMasterPath(rel, what);
+  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (info.width !== OUT_W || info.height !== OUT_H) throw new Error(`${file} is ${info.width}×${info.height}, not ${OUT_W}×${OUT_H}`);
+  return { file, data, width: info.width };
 }
 for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
   if (only && !only.includes(folder)) continue;
@@ -533,8 +544,10 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
   const notchFailures = [];
   for (const key of def.keys) {
     const out = path.join(outDir, folder, `${key}.png`);
+    const perColumn = def.rampKeys?.includes(key) === true;
     if (dryRun) {
-      console.log(`${path.relative(process.cwd(), out)} ← ${describeNotch(def, key, ["?", "?", "?"]).join(" + ")}`);
+      const unknown = perColumn ? Array.from({ length: PW }, () => ["?", "?", "?"]) : ["?", "?", "?"];
+      console.log(`${path.relative(process.cwd(), out)} ← ${describeNotch(def, key, unknown).join(" + ")}`);
       continue;
     }
     if (!piece) {
@@ -542,11 +555,25 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const meta = await sharp(file).metadata();
       if (meta.width !== PW || meta.height !== PH) throw new Error(`${def.shape.src} is ${meta.width}×${meta.height}, the recipe says ${PW}×${PH} (the source moved?)`);
       piece = await sharp(file).ensureAlpha().raw().toBuffer();
+      // The foot columns every key is checked at must be solid rim in CC's
+      // piece: the published-object test reads them without the piece.
+      const off = footRunsSolid(def.shape, piece, NOTCH_FOOT[folder]);
+      if (off.length) throw new Error(`${folder}: NOTCH_FOOT row ${NOTCH_FOOT[folder].y} is not solid rim in ${def.shape.src} at x ${off.join(", ")}`);
     }
-    const masterFile = notchBarMasterPath(def, key);
-    const { data: master, info } = await sharp(masterFile).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    if (info.width !== OUT_W || info.height !== OUT_H) throw new Error(`${masterFile} is ${info.width}×${info.height}, not ${OUT_W}×${OUT_H}`);
-    const tint = sampleBar(master, info.width, def.barSample);
+    const { file: masterFile, data: master, width } = await notchMasterPixels(def.barOf[key], key);
+    // A flat key samples one column; a pair key reads the bar at every
+    // column of the piece's bounds (its bar is the pinline ramp), and the
+    // other masters the pair key is drawn over must hold the same bar.
+    const tint = perColumn ? sampleBarColumns(master, width, def.barSample, def.shape) : sampleBar(master, width, def.barSample);
+    if (perColumn) {
+      for (const rel of def.barSharedBy?.[key] ?? []) {
+        const shared = await notchMasterPixels(rel, `${key} (shared by ${rel})`);
+        const gap = columnTintGap(tint, sampleBarColumns(shared.data, shared.width, def.barSample, def.shape));
+        if (gap.max > def.barSample.tolerance) {
+          notchFailures.push(`${folder}/${key}: ${rel}.png's bar under the notch differs from ${def.barOf[key]}.png's by ${gap.max} levels at piece column ${gap.at} — it needs its own key`);
+        }
+      }
+    }
     const built = buildNotch(def.shape, piece, tint, def.oval, def.cutMarginPx);
     const findings = notchFindings(built, def.shape, piece, tint, def.oval, def.cutMarginPx, NOTCH_FOOT[folder]);
     for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
@@ -555,8 +582,9 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     const image = sharp(built, { raw: { width: PW, height: PH, channels: 4 } });
     await image.clone().png({ compressionLevel: 9 }).toFile(out);
     await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
+    const rim = perColumn ? `per column (${describeColumnTint(def, tint)})` : tint.join(",");
     console.log(
-      `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${PW}×${PH}: rim ${tint.join(",")} from ${path.relative(process.cwd(), masterFile)}, cut clear ${findings.cutClear}, ring black ${findings.ringBlack}, foot ${findings.footPx.slice(0, 3).join(",")}`,
+      `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${PW}×${PH}: rim ${rim} from ${path.relative(process.cwd(), masterFile)}, cut clear ${findings.cutClear}, ring black ${findings.ringBlack}, foot ${findings.footPx.slice(0, 3).join(",")}`,
     );
   }
   for (const f of notchFailures) edgeFailures.push(f);
