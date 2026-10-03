@@ -12,10 +12,14 @@ import { FACE_PARAM, parseCardFace, type CardFace } from "@/lib/cards/card-face"
 // link can open the back ("Front // Back" pages, share links to the other
 // side). The query string is read HERE, with useSearchParams inside this
 // component's own Suspense boundary — never by the server component that
-// renders the page: a server read of searchParams would make the card
-// route dynamic on the query, and the page's static/ISR rendering is the
-// SEO contract (CLAUDE.md). The fallback is the same preview on the front,
-// so nothing moves when the island hydrates.
+// renders the page: the server HTML (the canonical, the OG image, the
+// JSON-LD, the hero's markup) is the same for every `?face`, the query
+// never varies a cache entry, and should the route ever go static again
+// it would stay so. (The card route is server-rendered on demand today —
+// the page reads the viewer's cookies for entitlements — on main before
+// this island as after it: `next build` lists it ƒ either way.) The
+// fallback is the same preview on the front, so nothing moves when the
+// island hydrates.
 //
 // The flip itself is CardPreview's (the small corner button); a card with
 // no back to flip to ignores the parameter. The URL is read once, on

@@ -301,7 +301,7 @@ export async function CardDetailContent({
               used to drop both and diverge from the stored render. The
               hero is the live preview with its corner flip; `?face=back`
               opens it flipped (TODO 5.3) — read by the client island, never
-              here, so the route stays static on the query. */}
+              here, so the server render never varies on the query. */}
           <CardHeroPreview
             {...cardToPreviewData(card, profileOverrides)}
             pipOverrides={pipOverrides}
