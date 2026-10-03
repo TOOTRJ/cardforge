@@ -187,4 +187,13 @@ describe("Card details of a double-faced card", () => {
     expect(backBlock).not.toContain("Stats");
     expect(html(LEGACY)).not.toContain("card-back-details");
   });
+
+  it("a back without a colour of its own lists the front's — the colour its body is drawn in (backPreviewData)", () => {
+    const { color_identity: _own, ...noColour } = BACK;
+    void _own;
+    const markup = html({ ...DFC, color_identity: ["blue", "red"], back_face: noColour });
+    const backBlock = markup.slice(markup.indexOf("card-back-details"));
+    expect(backBlock).toContain("Blue, Red");
+    expect(backBlock).not.toContain("Colorless");
+  });
 });

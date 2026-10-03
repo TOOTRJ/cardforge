@@ -253,7 +253,9 @@ export function pageSheetSlots<T>(slots: ReadonlyArray<T | readonly [T, T]>, per
   let page: T[] = [];
   for (const slot of slots) {
     const images = Array.isArray(slot) ? (slot as readonly T[]) : [slot as T];
-    if (page.length + images.length > perPage) {
+    // (A page is never pushed empty: a slot wider than the page — no sheet
+    // plan has fewer than two cells — still goes on a page of its own.)
+    if (page.length && page.length + images.length > perPage) {
       pages.push(page);
       page = [];
     }
