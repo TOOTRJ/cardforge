@@ -93,7 +93,16 @@ export const stateKey = (obj) => `${obj.bucket}/${obj.path}`;
  */
 export const ROW_ACTIONS = {
   cards: {
-    columns: ["art_url", "back_face", "set_icon_url", "watermark", "rendered_image_url", "rendered_thumb_url"],
+    columns: [
+      "art_url",
+      "back_face",
+      "set_icon_url",
+      "watermark",
+      "rendered_image_url",
+      "rendered_thumb_url",
+      "rendered_back_image_url",
+      "rendered_back_thumb_url",
+    ],
     does: "hide the card (the moderation hide)",
     action: (row) => ({ kind: "hide-card", cardId: row.id }),
   },

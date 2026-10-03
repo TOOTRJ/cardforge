@@ -2,9 +2,11 @@
 // Frame anatomy — the printed pieces a card switches on one by one (TODO
 // 4.6.0): the legendary crown (4.6a), the two-colour frame (4.6b), since
 // TODO 4.9b the collector line (`collector`: a printed style or "off") with
-// its foil-printing ★ (`star`), and since TODO 4.9c the holofoil stamp
+// its foil-printing ★ (`star`), since TODO 4.9c the holofoil stamp
 // (`stamp`: "auto" — the oval on a rare or mythic — "oval" / "triangle",
-// "none"; lib/cards/holo-stamp.ts).
+// "none"; lib/cards/holo-stamp.ts) and, since TODO 5.0a, a transform card's
+// icon FAMILY (`dfcIcon`: which glyph pair it wears and, with it, which back
+// body — lib/cards/dfc.ts; drawn by nothing until 5.1a's bodies exist).
 //
 // THE OWNER RULE (2026-09-29, docs/FRAMES.md "Additions vs corrections"):
 // these are ADDITIONS, so each is OPT-IN PER CARD, stored as card data in
@@ -67,25 +69,34 @@ import {
   type Rect,
   type TwoColorDress,
 } from "@/lib/cards/template-layout";
-import type { ColorIdentity, FrameStyle, FrameTemplate } from "@/types/card";
+import { DFC_ICON_FAMILY_VALUES, type ColorIdentity, type DfcIconFamily, type FrameStyle, type FrameTemplate } from "@/types/card";
 
 export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
 
 /** The per-card anatomy switches, in FrameStyle: the booleans of 4.6.0, the
  *  collector line's two keys (4.9b) — `collector` holds a printed style or
- *  "off", `star` is `true` or absent (lib/cards/collector-line.ts) — and
- *  the holofoil stamp's (4.9c: "auto" / "oval" / "triangle" / "none",
- *  lib/cards/holo-stamp.ts). */
-export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp"] as const;
+ *  "off", `star` is `true` or absent (lib/cards/collector-line.ts) — the
+ *  holofoil stamp's (4.9c: "auto" / "oval" / "triangle" / "none",
+ *  lib/cards/holo-stamp.ts) and the transform icon family (5.0a) —
+ *  `dfcIcon` holds one of DFC_ICON_FAMILY_VALUES or is absent. */
+export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
 export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
 
 /** What a template can draw: the crown, the two-colour dresses it has
  *  pair masters for, the collector line (FrameProfile.collector — the ★
- *  rides on it) and the holofoil stamp (a `holoStamp` overlay: the notch). */
-export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[]; collector: boolean; stamp: boolean };
+ *  rides on it), the holofoil stamp (a `holoStamp` overlay: the notch) and
+ *  the transform icon family (a transform FRONT body, FrameProfile.dfc —
+ *  the back body follows the family). */
+export type FrameAnatomy = {
+  crown: boolean;
+  twoColor: readonly TwoColorDress[];
+  collector: boolean;
+  stamp: boolean;
+  dfcIcon: boolean;
+};
 
-type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "crownMasters" | "collector">
+type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "crownMasters" | "collector" | "dfc">
 
 /** The switches a NEW card starts with (the creator's create and remix
  *  forms): every piece on — the collector line in the style printed today
@@ -93,7 +104,11 @@ type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoCo
  *  4.9c); the ★ is never a default (it follows a foil finish or an
  *  import's foil-only printing). The renderers draw only what the template
  *  can, and the save drops the rest (normalizeAnatomy), so the new-card
- *  preview is exactly what the saved bake draws on any template. */
+ *  preview is exactly what the saved bake draws on any template. No
+ *  `dfcIcon` here (TODO 5.0a): the transform family's default (`arrows`,
+ *  owner decision Q5) is the Transform KIND's, set by the Card step's chips
+ *  and the save when the transform bodies exist (5.1a / 5.2) — until then no
+ *  template draws it, and this constant stays as it was. */
 export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">>> =
   Object.freeze({
     crown: true,
@@ -101,6 +116,10 @@ export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown"
     collector: "2023",
     stamp: "auto",
   });
+
+function isDfcIconFamily(value: unknown): value is DfcIconFamily {
+  return typeof value === "string" && (DFC_ICON_FAMILY_VALUES as readonly string[]).includes(value);
+}
 
 export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
   return {
@@ -110,6 +129,10 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
     twoColor: profile.twoColorMasters ?? [],
     collector: profile.collector !== undefined,
     stamp: (profile.overlays ?? []).some((slot) => slot.anatomy === "holoStamp"),
+    // The icon family is a TRANSFORM FRONT body's (the family picks the
+    // back body too, lib/cards/dfc.ts bodyFor); a modal card's housing has
+    // no family, and a back body reads the card's key through the front.
+    dfcIcon: profile.dfc?.role === "front" && profile.dfc.layout === "transform",
   };
 }
 
@@ -121,7 +144,8 @@ export function frameAnatomyOf(template: FrameTemplate | string | null | undefin
 }
 
 /** True when a template with `anatomy` draws the piece `key` at all — the
- *  ★ only where the collector line is, the stamp where the notch is. */
+ *  ★ only where the collector line is, the stamp where the notch is, the
+ *  icon family only on a transform front body. */
 export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boolean {
   switch (key) {
     case "crown":
@@ -130,6 +154,8 @@ export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boole
       return anatomy.twoColor.length > 0;
     case "stamp":
       return anatomy.stamp;
+    case "dfcIcon":
+      return anatomy.dfcIcon;
     default:
       return anatomy.collector;
   }
@@ -164,13 +190,15 @@ export function twoColorFitsTemplate(
  *  the collector line when its value is a printed style ("off" and absent
  *  are both off); the stamp when its value asks for one ("auto", "oval" or
  *  "triangle" — whether the CARD then draws it is holoStampWanted's call:
- *  "auto" needs a rare or mythic, and a token or emblem never draws one). */
+ *  "auto" needs a rare or mythic, and a token or emblem never draws one);
+ *  the icon family when it names one of the families. */
 export function anatomyOn(
   style: FrameAnatomyStyle | null | undefined,
   key: FrameAnatomyKey,
 ): boolean {
   if (key === "collector") return isCollectorStyle(style?.collector);
   if (key === "stamp") return isHoloStampSwitch(style?.stamp) && style?.stamp !== "none";
+  if (key === "dfcIcon") return isDfcIconFamily(style?.dfcIcon);
   return style?.[key] === true;
 }
 
@@ -179,7 +207,11 @@ export function anatomyOn(
  *  crown appears if the card becomes Legendary later), the collector line
  *  in today's printed style where the template has its slot, the stamp on
  *  "auto" where it has the notch (so the oval appears if the card is made
- *  rare later), never the ★ (NEW_CARD_ANATOMY), nothing else. */
+ *  rare later), never the ★ (NEW_CARD_ANATOMY), nothing else — no icon
+ *  family either: a transform card's default family is the Transform
+ *  kind's (`arrows`, set by the creator and the save once the bodies exist,
+ *  5.1a / 5.2), and a template that draws none drops the key at the save
+ *  (normalizeAnatomy). */
 export function anatomyDefaults(
   template: FrameTemplate | string | null | undefined,
 ): FrameAnatomyStyle {
@@ -244,10 +276,11 @@ export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType:
 }
 
 /** The anatomy switches a stored frame_style names (the booleans, a
- *  collector style or "off", a ★ that is `true`, a stamp value) — what a
- *  remix keeps of its parent's (the creator's remixValuesFrom, and the AI deck remix of an own
- *  card): an explicit off stays off, and a switch the parent never set gets
- *  the new-card default. Anything else is not a switch. */
+ *  collector style or "off", a ★ that is `true`, a stamp value, an icon
+ *  family) — what a remix keeps of its parent's (the creator's
+ *  remixValuesFrom, and the AI deck remix of an own card): an explicit off
+ *  stays off, and a switch the parent never set gets the new-card default.
+ *  Anything else is not a switch. */
 export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   const stored = (frameStyle ?? {}) as Record<string, unknown>;
   const out: FrameAnatomyStyle = {};
@@ -256,6 +289,7 @@ export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   if (isCollectorSwitch(stored.collector)) out.collector = stored.collector;
   if (stored.star === true) out.star = true;
   if (isHoloStampSwitch(stored.stamp)) out.stamp = stored.stamp;
+  if (isDfcIconFamily(stored.dfcIcon)) out.dfcIcon = stored.dfcIcon;
   return out;
 }
 
@@ -611,6 +645,9 @@ export type FrameAnatomyPatch = {
   star?: boolean;
   /** The holofoil stamp's switch (TODO 4.9c). */
   stamp?: HoloStampSwitch;
+  /** The transform icon family (TODO 5.0a): one of the families; the save
+   *  drops it on any template that is not a transform front body. */
+  dfcIcon?: DfcIconFamily;
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -652,7 +689,7 @@ export function applyFrameAnatomyPatch(
 ): AppliedFrameAnatomyPatch {
   const template = typeof stored.frameStyle.template === "string" ? stored.frameStyle.template : undefined;
   const merged: Record<string, unknown> = { ...stored.frameStyle };
-  for (const key of ["crown", "twoColor", "collector", "stamp"] as const) {
+  for (const key of ["crown", "twoColor", "collector", "stamp", "dfcIcon"] as const) {
     if (patch[key] !== undefined) merged[key] = patch[key];
   }
   if (patch.star === true) merged.star = true;

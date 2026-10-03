@@ -62,6 +62,8 @@ describe("GET /render-cdn", () => {
   it.each([
     ["the HD PNG", `${CARD}.png`],
     ["the WebP thumb", `${CARD}.thumb.webp`],
+    ["the back face's PNG (TODO 5.0a)", `${CARD}.back.png`],
+    ["the back face's thumb (TODO 5.0a)", `${CARD}.back.thumb.webp`],
   ])("serves %s with the card's cache tag and the unchanged immutable header", async (_label, file) => {
     const res = await get([OWNER, file]);
     expect(res.status).toBe(200);
@@ -83,6 +85,8 @@ describe("GET /render-cdn", () => {
   it.each([
     ["a non-bake name", [OWNER, "poster.png"]],
     ["a bake name in the wrong shape", [OWNER, `${CARD}.jpg`]],
+    ["a face name that isn't the back's", [OWNER, `${CARD}.front.png`]],
+    ["a doubled back name", [OWNER, `${CARD}.back.back.png`]],
     ["a nested path", [OWNER, "x", `${CARD}.png`]],
     ["a root file", [`${CARD}.png`]],
     ["an owner that isn't a uuid", ["someone", `${CARD}.png`]],
@@ -152,9 +156,12 @@ describe("GET /render-cdn — a card that isn't shown any more", () => {
 });
 
 describe("bakeObjectCardId", () => {
-  it("is the card id of a bake's two names only", () => {
+  it("is the card id of a bake's four names only (both faces, TODO 5.0a)", () => {
     expect(bakeObjectCardId(`${OWNER}/${CARD}.png`)).toBe(CARD);
     expect(bakeObjectCardId(`${OWNER}/${CARD}.thumb.webp`)).toBe(CARD);
+    expect(bakeObjectCardId(`${OWNER}/${CARD}.back.png`)).toBe(CARD);
+    expect(bakeObjectCardId(`${OWNER}/${CARD}.back.thumb.webp`)).toBe(CARD);
+    expect(bakeObjectCardId(`${OWNER}/${CARD}.back.jpg`)).toBeNull();
     expect(bakeObjectCardId(`${OWNER}/${CARD}.webp`)).toBeNull();
     expect(bakeObjectCardId(`${OWNER}/${CARD}.png.bak`)).toBeNull();
     expect(bakeObjectCardId(`${CARD}.png`)).toBeNull();

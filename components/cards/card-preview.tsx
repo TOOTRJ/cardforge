@@ -126,6 +126,7 @@ import {
   resolveFrameProfile,
   type FrameProfileOverridesMap,
 } from "@/lib/cards/profile-override";
+import type { DfcFace } from "@/lib/cards/faces";
 import {
   plateKeyFor,
   resolveFrameOverlays,
@@ -225,6 +226,14 @@ export type CardPreviewData = {
    *  frame / colour / rarity / art (complete customisation). Takes precedence
    *  over the legacy `backFace` jsonb, which shares the front's frame. */
   backCard?: CardPreviewData | null;
+  /** The cross-face block of a double-faced card's face (TODO 5.0a,
+   *  lib/cards/faces.ts): which layout and role this face is, the icon
+   *  family, and what the OTHER face puts on it (the back's P/T for the
+   *  front's tab, the other face's type word and cost for the modal strip).
+   *  Derived at render by frontPreviewData / backPreviewData, never stored;
+   *  NOTHING reads it yet — 5.1a / 5.1b's bodies draw from it in both
+   *  renderers. Absent / null on every card today. */
+  dfc?: DfcFace | null;
   /** The card OWNER's custom pip icons — cost pips render these instead of
    *  the standard mana-font glyphs (preview AND bake read this field). */
   pipOverrides?: PipOverrides | null;

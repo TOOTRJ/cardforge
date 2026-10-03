@@ -110,6 +110,20 @@ function trackedStorage(objects: Obj[], events: string[], opts: Parameters<typeo
 }
 
 describe("which objects are a card's render, and what happens to them", () => {
+  it("groups a card's back-face render with its front (TODO 5.0a: .back.png / .back.thumb.webp)", () => {
+    const groups = rendersByCard([
+      ...both(U1, PRIVATE),
+      { ...render(U1, PRIVATE), path: `${U1}/${PRIVATE}.back.png` },
+      { ...render(U1, PRIVATE), path: `${U1}/${PRIVATE}.back.thumb.webp` },
+    ]);
+    expect(groups.get(PRIVATE)!.map((o: Obj) => o.path)).toEqual([
+      `${U1}/${PRIVATE}.png`,
+      `${U1}/${PRIVATE}.thumb.webp`,
+      `${U1}/${PRIVATE}.back.png`,
+      `${U1}/${PRIVATE}.back.thumb.webp`,
+    ]);
+  });
+
   it("groups only {uuid}/{cardId}.png and .thumb.webp in card-renders", () => {
     const groups = rendersByCard([
       ...both(U1, PRIVATE),
@@ -210,7 +224,7 @@ describe("applyPrivateRenders", () => {
     expect(s.db.rows.get(PRIVATE)).toMatchObject({ rendered_image_url: null, rendered_thumb_url: null, rendered_at: null });
     expect(s.db.rows.get(PUBLIC)).toEqual(pub);
     const manifest = readManifest(s.manifestPath);
-    expect(manifest[0]).toMatchObject({ table: "cards", cleared: ["rendered_image_url", "rendered_thumb_url", "rendered_at"], ids: [PRIVATE] });
+    expect(manifest[0]).toMatchObject({ table: "cards", cleared: [...RENDER_POINTER_COLUMNS], ids: [PRIVATE] });
     expect(manifest.slice(1, 3).map((e: { path: string; reason: string; card: string }) => [e.path, e.reason, e.card])).toEqual([
       [`${U1}/${PRIVATE}.png`, "render of a private card", PRIVATE],
       [`${U1}/${PRIVATE}.thumb.webp`, "render of a private card", PRIVATE],

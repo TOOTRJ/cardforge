@@ -33,7 +33,9 @@ import { FRAME_TEMPLATE_VALUES, type Card, type FrameStyle } from "@/types/card"
 
 describe("the keys and the defaults", () => {
   it("collector and star are anatomy keys; a new card starts with the line on in the 2023 style and no ★", () => {
-    expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star", "stamp"]);
+    // (`stamp` joined with TODO 4.9c, `dfcIcon` after it with TODO 5.0a —
+    // tests/unit/cards/holo-stamp.test.ts, dfc-anatomy.test.ts.)
+    expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star", "stamp", "dfcIcon"]);
     expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     expect("star" in NEW_CARD_ANATOMY).toBe(false);
     for (const template of FRAME_TEMPLATE_VALUES) {

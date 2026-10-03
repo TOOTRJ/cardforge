@@ -767,6 +767,11 @@ export type Database = {
           rendered_at: string | null;
           rendered_image_url: string | null;
           rendered_thumb_url: string | null;
+          /** The back face's stored bake and its thumb (migration 0134,
+           *  TODO 5.0a): `{owner}/{id}.back.png` / `.back.thumb.webp` in
+           *  card-renders; null until a back body exists (written by 5.3). */
+          rendered_back_image_url: string | null;
+          rendered_back_thumb_url: string | null;
           rules_text: string | null;
           set_icon_code: string | null;
           set_icon_url: string | null;
@@ -824,6 +829,8 @@ export type Database = {
           rendered_at?: string | null;
           rendered_image_url?: string | null;
           rendered_thumb_url?: string | null;
+          rendered_back_image_url?: string | null;
+          rendered_back_thumb_url?: string | null;
           rules_text?: string | null;
           set_icon_code?: string | null;
           set_icon_url?: string | null;
@@ -877,6 +884,8 @@ export type Database = {
           rendered_at?: string | null;
           rendered_image_url?: string | null;
           rendered_thumb_url?: string | null;
+          rendered_back_image_url?: string | null;
+          rendered_back_thumb_url?: string | null;
           rules_text?: string | null;
           set_icon_code?: string | null;
           set_icon_url?: string | null;

@@ -197,9 +197,11 @@ export type ArtPosition = {
 };
 
 // Back-face content for double-faced cards (DFCs). Persisted as jsonb on
-// the same `cards` row (no join table). Shared fields like rarity,
-// color_identity, and frame_style live on the front-card row and apply
-// to both faces — the back face only carries per-face content.
+// the same `cards` row (no join table). Shared fields like rarity, finish,
+// set symbol, the collector fields and the anatomy switches live on the
+// front-card row and apply to both faces — the back face carries its
+// per-face content and, since Phase 5 (TODO 5.0a, design 2026-10-02,
+// owner decision Q1: ONE card holds both faces), its own BODY and colour.
 export type CardBackFace = {
   title: string;
   cost?: string;
@@ -215,7 +217,30 @@ export type CardBackFace = {
   artist_credit?: string;
   art_url?: string;
   art_position?: ArtPosition;
+  /** The back's own BODY (Phase 5): a back-face template only — one whose
+   *  profile declares `dfc.role === "back"` (lib/cards/dfc.ts; none exists
+   *  until 5.1a). Absent on a LEGACY back (the 8 imported DFCs): the back
+   *  draws on the FRONT's template and colour, as it always has
+   *  (lib/cards/faces.ts). Written by the editor (5.2), the Q3 move and the
+   *  import (5.4); re-derived at every save from the layout, the back's
+   *  type and the card's icon family (`bodyFor`). */
+  frame_style?: { template: FrameTemplate };
+  /** The back's own frame colour, FrameStyle vocabulary. Absent = the
+   *  front's (a legacy back). */
+  color_identity?: ColorIdentity[];
 };
+
+/** The transform icon FAMILIES (TODO 5.0a, design 2026-10-02 §2.1 / §3.1):
+ *  the printed pair of glyphs a transform card wears — `arrows` (today's
+ *  ▲ / ▼, every transform printed since 2022-11; the default, owner
+ *  decision Q5), `sunmoon` (SOI–VOW's sun / moon), `moon` (EMN's full moon /
+ *  Emrakul), `compass` (XLN / RIX / LCI's compass / land) and `fan` (NEO's
+ *  closed / open fan). `spark` (ORI's walker backs) arrives with the walker
+ *  bodies (5.13). The family is ONE card-level key (FrameStyle.dfcIcon)
+ *  from which the back body is derived (`bodyFor`); the MDFC housing has no
+ *  family. */
+export const DFC_ICON_FAMILY_VALUES = ["arrows", "sunmoon", "moon", "compass", "fan"] as const;
+export type DfcIconFamily = (typeof DFC_ICON_FAMILY_VALUES)[number];
 
 // ---------------------------------------------------------------------------
 // Structured FRONT-face content (cards.face_content, migration 0050).
@@ -787,6 +812,16 @@ export type FrameStyle = {
    *  declares a `holoStamp` overlay (lib/cards/holo-stamp.ts), never on a
    *  token or an emblem; the save drops it elsewhere (normalizeAnatomy). */
   stamp?: "auto" | "oval" | "triangle" | "none";
+  /** The transform icon family (TODO 5.0a, DFC_ICON_FAMILY_VALUES): the
+   *  glyph pair a transform card wears and, with it, which BACK body the
+   *  card's back face draws on (`arrows` → the ▼-right back; the four
+   *  left-icon families → the 2016–22 back; a land back its own, whatever
+   *  the family — lib/cards/dfc.ts bodyFor). ONE card-level key, written
+   *  only by a transform save (5.1a+): the save drops it on any template
+   *  whose profile is not a transform FRONT body (normalizeAnatomy), so no
+   *  stored card can carry it until those bodies exist. Absent on a
+   *  transform card = `arrows` (owner decision Q5, 2026-10-02). */
+  dfcIcon?: DfcIconFamily;
 };
 
 // ---------------------------------------------------------------------------

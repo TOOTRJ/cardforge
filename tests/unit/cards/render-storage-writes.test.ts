@@ -16,7 +16,24 @@ import { called, chainClient, type ChainAnswer } from "@/tests/stubs/supabase-ch
 // picture), so a new URL is persisted with the service role, pinned to the
 // verified owner — while a clear still works on the owner's own client, even
 // without the service-role key.
+//
+// Since migration 0134 (TODO 5.0a) a card has FOUR render names — the back
+// face's `.back.png` / `.back.thumb.webp` beside the front's — and two more
+// pointers (rendered_back_image_url / rendered_back_thumb_url): every
+// remove takes all four names (a missing object is not an error), and every
+// clear takes every pointer, so a back bake (5.3) can never outlive its
+// card's front. The front bake still writes its own pair only.
 // ---------------------------------------------------------------------------
+
+const RENDER_NAMES = (id: string) => [`${USER}/${id}.png`, `${USER}/${id}.thumb.webp`, `${USER}/${id}.back.png`, `${USER}/${id}.back.thumb.webp`];
+const CLEARED = {
+  rendered_image_url: null,
+  rendered_thumb_url: null,
+  rendered_back_image_url: null,
+  rendered_back_thumb_url: null,
+  rendered_at: null,
+  layout_version: null,
+};
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const OTHER = "99999999-9999-4999-8999-999999999999";
@@ -210,18 +227,18 @@ describe("the save-time bake writes card-renders with the service role", () => {
     expect(state.updates).toEqual([]);
   });
 
-  it("a private card: its public render objects are removed, and the row is cleared on the owner's client", async () => {
+  it("a private card: its public render objects (both faces' names) are removed, and every pointer is cleared on the owner's client", async () => {
     state.card = cardRow({ visibility: "private" });
     expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
-    expect(state.ops).toEqual([
-      { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`] },
-    ]);
-    expect(state.writes).toEqual([
-      expect.objectContaining({
-        via: "user",
-        payload: { rendered_image_url: null, rendered_thumb_url: null, rendered_at: null, layout_version: null },
-      }),
-    ]);
+    expect(state.ops).toEqual([{ bucket: "card-renders", op: "remove", keys: RENDER_NAMES(CARD) }]);
+    expect(state.writes).toEqual([expect.objectContaining({ via: "user", payload: CLEARED })]);
+  });
+
+  it("a successful front bake writes the front's pair and never touches the back's pointers (the back bake is 5.3's)", async () => {
+    await bakeAndPersistCardRender(CARD, USER);
+    expect(state.ops.map((op) => op.keys).flat()).toEqual([`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`]);
+    const payload = state.writes[0].payload as Record<string, unknown>;
+    expect(Object.keys(payload).sort()).toEqual(["layout_version", "rendered_at", "rendered_image_url", "rendered_thumb_url"]);
   });
 
   it("a private card without the service-role key: the missing delete is logged loudly, never skipped silently", async () => {
@@ -232,10 +249,8 @@ describe("the save-time bake writes card-renders with the service role", () => {
       expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
       expect(state.ops).toEqual([]);
       expect(error).toHaveBeenCalledWith(expect.stringMatching(/SUPABASE_SECRET_KEY is not set.*publicly fetchable/));
-      // The row still loses its render pointer (the clear needs no key).
-      expect(state.updates).toEqual([
-        { rendered_image_url: null, rendered_thumb_url: null, rendered_at: null, layout_version: null },
-      ]);
+      // The row still loses its render pointers (the clear needs no key).
+      expect(state.updates).toEqual([CLEARED]);
     } finally {
       error.mockRestore();
     }
@@ -252,18 +267,14 @@ describe("the save-time bake writes card-renders with the service role", () => {
     state.adminConfigured = false;
     expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
     expect(state.ops).toEqual([]);
-    expect(state.updates).toEqual([
-      { rendered_image_url: null, rendered_thumb_url: null, rendered_at: null, layout_version: null },
-    ]);
+    expect(state.updates).toEqual([CLEARED]);
   });
 });
 
-describe("deleting cards removes their renders with the service role, in the caller's folder", () => {
+describe("deleting cards removes their renders (both faces' names) with the service role, in the caller's folder", () => {
   it("one card", async () => {
     expect(await deleteCardAction(CARD)).toMatchObject({ ok: true });
-    expect(state.ops).toEqual([
-      { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`] },
-    ]);
+    expect(state.ops).toEqual([{ bucket: "card-renders", op: "remove", keys: RENDER_NAMES(CARD) }]);
   });
 
   it("without the service-role key the delete still succeeds, and the render left behind is logged loudly", async () => {
@@ -290,12 +301,6 @@ describe("deleting cards removes their renders with the service role, in the cal
       { id: CARD_2, owner_id: USER },
     ];
     expect(await deleteCardsAction([CARD, CARD_2])).toMatchObject({ ok: true, count: 2 });
-    expect(state.ops).toEqual([
-      {
-        bucket: "card-renders",
-        op: "remove",
-        keys: [CARD, CARD_2].flatMap((id) => [`${USER}/${id}.png`, `${USER}/${id}.thumb.webp`]),
-      },
-    ]);
+    expect(state.ops).toEqual([{ bucket: "card-renders", op: "remove", keys: [CARD, CARD_2].flatMap(RENDER_NAMES) }]);
   });
 });

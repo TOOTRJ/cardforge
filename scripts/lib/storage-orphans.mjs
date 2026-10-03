@@ -67,9 +67,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const URL_SOURCES = [
   {
     table: "cards",
-    columns: ["art_url", "back_face", "set_icon_url", "watermark", "rendered_image_url", "rendered_thumb_url"],
+    columns: [
+      "art_url",
+      "back_face",
+      "set_icon_url",
+      "watermark",
+      "rendered_image_url",
+      "rendered_thumb_url",
+      "rendered_back_image_url",
+      "rendered_back_thumb_url",
+    ],
     note:
-      "art (card-art: upload, AI art, Scryfall import), the second face's art (back_face.art_url), the set icon (set-covers), the land/design watermark icon (watermark.url, card-art), the bake + thumb (card-renders)",
+      "art (card-art: upload, AI art, Scryfall import), the second face's art (back_face.art_url), the set icon (set-covers), the land/design watermark icon (watermark.url, card-art), the bake + thumb of each face (card-renders)",
   },
   { table: "profiles", columns: ["avatar_url", "banner_url"], note: "profile-media uploads (or a /defaults/ site path)" },
   { table: "decks", columns: ["cover_url"], note: "set-covers upload, or AI cover art in card-art" },
@@ -137,13 +146,22 @@ export function userFolderKey(objectPath) {
   return { folder: folder.toLowerCase(), name: name.toLowerCase() };
 }
 
-/** The card a card-renders object belongs to: `{cardId}.png` or
- *  `{cardId}.thumb.webp` (lib/cards/bake-core.ts renderObjectNames — the
- *  only names a bake has ever written). null for any other name. */
+/** The suffixes a bake's object names end in, after `{cardId}` — the four
+ *  names of lib/cards/bake-core.ts renderObjectNames (TODO 5.0a): the
+ *  front's `.png` + `.thumb.webp`, the back face's `.back.png` +
+ *  `.back.thumb.webp` (migration 0134). This script can't import that
+ *  module; tests/unit/cards/render-object-names.test.ts holds the two to
+ *  the same list. */
+export const RENDER_NAME_SUFFIXES = [".png", ".thumb.webp", ".back.png", ".back.thumb.webp"];
+
+/** The card a card-renders object belongs to: `{cardId}` + one of
+ *  RENDER_NAME_SUFFIXES (lib/cards/bake-core.ts renderObjectNames — the only
+ *  names a bake has ever written; a `.back.*` name is a back face's bake,
+ *  never an orphan while its card exists). null for any other name. */
 export function renderCardId(objectPath) {
   const key = userFolderKey(objectPath);
   if (!key) return null;
-  const m = key.name.match(/^([0-9a-f-]{36})\.(?:png|thumb\.webp)$/);
+  const m = key.name.match(/^([0-9a-f-]{36})(?:\.back)?\.(?:png|thumb\.webp)$/);
   return m && isUuid(m[1]) ? m[1] : null;
 }
 
@@ -404,7 +422,7 @@ export const VERDICTS = {
   orphan: "orphan",
   referenced: "referenced by a row",
   liveCard: "bake of a card that exists",
-  unknownRender: "not a {cardId}.png / .thumb.webp name",
+  unknownRender: "not a {cardId}.png / .thumb.webp / .back.png / .back.thumb.webp name",
   tooNew: "too new",
   outside: "not a {uuid}/{file} user-folder object",
   notSwept: "bucket not swept",
@@ -456,9 +474,11 @@ const UUID_TEXT = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 /** The names the server writes today (lower-cased, as userFolderKey gives
  *  them): `{uuid}.ext` (art upload, Scryfall import, deck cover / set icon),
  *  `{word}-{uuid}.ext` (`ai-`, `wm-`, `remix-`, `avatar-`, `banner-`, and the
- *  dev seed's `icon-` / `back-`), `{cardId}.png` / `{cardId}.thumb.webp`
- *  (bakes), and a custom pip's `{symbol}.png` / `{symbol}.pending.png`. */
-const SERVER_NAME = new RegExp(`^(?:[a-z]+-)?${UUID_TEXT}(?:\\.thumb)?\\.[a-z0-9]{2,5}$`);
+ *  dev seed's `icon-` / `back-`), `{cardId}.png` / `{cardId}.thumb.webp` and
+ *  the back face's `{cardId}.back.png` / `{cardId}.back.thumb.webp` (bakes,
+ *  RENDER_NAME_SUFFIXES), and a custom pip's `{symbol}.png` /
+ *  `{symbol}.pending.png`. */
+const SERVER_NAME = new RegExp(`^(?:[a-z]+-)?${UUID_TEXT}(?:\\.back)?(?:\\.thumb)?\\.[a-z0-9]{2,5}$`);
 const PIP_NAME = /^[wubrgc](?:\.pending)?\.png$/;
 
 /**
