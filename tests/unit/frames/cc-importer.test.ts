@@ -16,6 +16,7 @@ import {
   EMBLEM_TEXT_BOX_TONE,
   EMBLEM_TONES,
   EMBLEM_TYPE_PILL_TONE,
+  FLIP_LOWER_RECUT,
   FLIP_PT_BOUNDS,
   FLIP_PT_BOXES,
   FLIP_PT_MASKS,
@@ -46,6 +47,7 @@ import {
   finishFor,
   flatPixelAt,
   recutBand,
+  recutBlockUp,
   retintStructure,
   roundCorners,
   roundCornersRgba8,
@@ -101,6 +103,7 @@ type Def = {
     boxes: Record<string, { x: number; y: number; width: number; height: number }>;
   };
   recut?: { fromY: number; toY: number; shift: number; blend: number; blendBottom?: number };
+  recutUp?: typeof FLIP_LOWER_RECUT;
   bridge?: typeof EMBLEM_RAY_BRIDGE;
   tones?: readonly object[];
   excluded?: Record<string, string>;
@@ -756,18 +759,24 @@ describe("Card Conjurer recipe", () => {
 describe("the portrait layouts (4.21a)", () => {
   const TRIO = ["adventure", "aftermath", "flip"];
 
-  it("copies each colour 1:1 from its own pack; the packs' missing colourless keys are named stand-ins", () => {
+  it("copies each colour 1:1 from its own pack (flip's lower half re-cut since v39); the packs' missing colourless keys are named stand-ins", () => {
     for (const template of TRIO) {
       const def = templates[template];
       expect(Object.keys(def.colors).sort(), template).toEqual([...COLORS].sort());
       for (const key of COLORS) {
-        // One layer, the pack's own file: no mask, no blend, no re-cut.
+        // One layer, the pack's own file: no mask, no blend, no band re-cut.
         expect(def.colors[key], `${template}/${key}`).toHaveLength(1);
         expect(def.colors[key][0].mask, `${template}/${key}`).toBeUndefined();
       }
       expect(def.recut, template).toBeUndefined();
       expect(def.finish, template).toBeUndefined();
-      expect(def.transforms, template).toMatch(/^native 1500x2100, pixels copied 1:1 \(no resample\)/);
+      if (template === "flip") {
+        expect(def.recutUp, template).toBe(FLIP_LOWER_RECUT);
+        expect(def.transforms, template).toMatch(/^native 1500x2100, no resample; the lower half re-cut onto the prints/);
+      } else {
+        expect(def.recutUp, template).toBeUndefined();
+        expect(def.transforms, template).toMatch(/^native 1500x2100, pixels copied 1:1 \(no resample\)/);
+      }
     }
     // Flip has a colourless frame of its own (the see-through one); the
     // adventure and aftermath packs have none — CC's artifact frame stands in.
@@ -836,6 +845,54 @@ describe("the portrait layouts (4.21a)", () => {
     expect(Object.entries(templates).filter(([, d]) => d.ptCut).map(([t]) => t)).toEqual(["flip"]);
     expect(provenance.adventure.ptCut).toBeUndefined();
     expect(provenance.aftermath.ptCut).toBeUndefined();
+  });
+
+  // Layout v39 (owner decision round 22, 2026-10-02): the lower half moved
+  // onto C18 #134 and CM2 #71 in two pieces (the window's inner line and the
+  // bar's dark top band 7 px, the bar's bottom and the text box's top edge
+  // 5 px), split inside the bar's bevel plateau. Against the pack's bounds:
+  // packFlip.js draws the upside-down type bar (type2) at 63.43–68.86 %H
+  // (1332–1446 px), its text box (rules2) at 70.1–82.1 (1472–1724) and the
+  // bottom plate's box at 1321–1481; the re-cut reaches rows 1283–1499.
+  it("re-cuts flip's lower half onto the prints in two pieces, split inside the bar's bevel, inside the pack's own bands (layout v39)", () => {
+    expect(FLIP_LOWER_RECUT).toEqual({ fromY: 1290, splitY: 1340, toY: 1500, shiftTop: -7, shiftBottom: -5, blendTop: 24, blendSplit: 3, blendBottom: 24 });
+    const r = FLIP_LOWER_RECUT;
+    const type2 = { top: 0.6343 * 2100, bottom: 0.6886 * 2100 };
+    const rules2 = { top: 0.701 * 2100, bottom: 0.821 * 2100 };
+    // The top piece starts inside the window (above the pack's type bar by
+    // more than the blend) and the split lies in the bar's dark top band
+    // (its outline from 1332, its face from 1344 on CC's master), so each
+    // piece carries a whole edge: the top one the window's line and the
+    // band's top, the bottom one the face, the bottom outline and the box's
+    // edge — the split's two duplicated rows are the bevel's flat plateau
+    // (CC rows 1337–1342).
+    expect(r.fromY + r.shiftTop + r.blendTop).toBeLessThan(1310);
+    expect(r.splitY).toBeGreaterThan(type2.top);
+    expect(r.splitY - 2).toBeGreaterThanOrEqual(1337);
+    expect(r.splitY - 1).toBeLessThanOrEqual(1342);
+    expect(r.splitY + r.shiftTop + r.blendSplit).toBeLessThanOrEqual(1337);
+    // The bottom piece ends inside the text box's paper (past its top edge
+    // by more than the blend) and before the pack's rules box ends.
+    expect(r.toY - r.blendBottom).toBeGreaterThan(rules2.top);
+    expect(r.toY).toBeLessThan(rules2.bottom);
+    // The bar lands on the prints: CC's face 1344–1449 → 1339–1444, its line
+    // 1317–1320 → 1310–1313 (the prints' 1339–1444 and 1311–1313).
+    expect([1344 + r.shiftBottom, 1449 + r.shiftBottom]).toEqual([1339, 1444]);
+    expect([1317 + r.shiftTop, 1320 + r.shiftTop]).toEqual([1310, 1313]);
+    // The art slot follows the window's new bottom (1310) with 7.6's spare,
+    // the rules rect the paper's new first row (1472 + shiftBottom).
+    const flip = getFrameProfile("flip");
+    expect((flip.artSlot.topPct + flip.artSlot.heightPct) * 21 - (1317 + r.shiftTop)).toBeCloseTo(2.08, 1);
+    expect(flip.secondFace!.rules.rect.topPct * 21).toBeCloseTo(1472 + r.shiftBottom, 0);
+    // The plates are not touched: the same boxes, cut from the same image.
+    expect(templates.flip.ptCut!.boxes).toBe(FLIP_PT_BOXES);
+    // Provenance records it.
+    const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
+    expect(provenance.flip.recutUp).toEqual(FLIP_LOWER_RECUT);
+    expect(provenance.flip.transforms).toMatch(/rows 1290–1339 .* moved up 7 px and rows 1340–1499 .* moved up 5 px/);
+    expect(provenance.flip.notes.join(" ")).toMatch(/lower half re-cut onto the prints/);
+    expect(provenance.adventure.recutUp).toBeUndefined();
+    expect(provenance.aftermath.recutUp).toBeUndefined();
   });
 });
 
@@ -1046,6 +1103,74 @@ describe("pixel operations", () => {
       const copy = Buffer.from(src);
       recutBand(src, 1, 40, { fromY: 10, toY: 20, shift: 5, blend: 2 });
       expect(src.equals(copy)).toBe(true);
+    });
+  });
+
+  describe("recutBlockUp (layout v39: the flip masters' lower half, two pieces up)", () => {
+    const column = (h: number, alphaAt?: (y: number) => number) => {
+      const buf = Buffer.alloc(h * 4);
+      for (let y = 0; y < h; y += 1) buf.set([y, 0, 0, alphaAt ? alphaAt(y) : 255], y * 4);
+      return buf;
+    };
+    const red = (buf: Buffer, y: number) => buf[y * 4];
+    const rows = (buf: Buffer, from: number, to: number) => Array.from({ length: to - from }, (_, i) => red(buf, from + i));
+
+    it("moves the top piece further up than the bottom one, repeats the bottom piece's first rows between them and the rows under the block below it", () => {
+      // Rows 20–39 up 4 (→ 16–35), rows 40–79 up 2 (→ 38–77); hard cuts.
+      const out = recutBlockUp(column(100), 1, 100, { fromY: 20, splitY: 40, toY: 80, shiftTop: -4, shiftBottom: -2, blendTop: 0, blendSplit: 0, blendBottom: 0 });
+      for (let y = 0; y < 16; y += 1) expect(red(out, y), `row ${y}`).toBe(y);
+      expect(rows(out, 16, 36)).toEqual(Array.from({ length: 20 }, (_, i) => 20 + i));
+      // The two rows the moves open (36, 37) repeat the bottom piece's first
+      // rows before it (38, 39 → the rows just above splitY), then the
+      // bottom piece runs 2 rows higher…
+      expect(rows(out, 36, 40)).toEqual([38, 39, 40, 41]);
+      expect(rows(out, 40, 78)).toEqual(Array.from({ length: 38 }, (_, i) => 42 + i));
+      // …and the rows it leaves (78, 79) repeat the rows under the block.
+      expect(rows(out, 78, 80)).toEqual([80, 81]);
+      for (let y = 80; y < 100; y += 1) expect(red(out, y), `row ${y}`).toBe(y);
+    });
+
+    it("cross-fades the three seams, premultiplied: the top from the original rows, the split from the top piece's continuation, the bottom into the original rows", () => {
+      const out = recutBlockUp(column(100), 1, 100, { fromY: 20, splitY: 40, toY: 80, shiftTop: -4, shiftBottom: -2, blendTop: 3, blendSplit: 2, blendBottom: 3 });
+      // Top seam (rows 16–18): original (1 − t) into moved (row + 4), t = (i + 1) / 4.
+      expect(rows(out, 16, 19)).toEqual([Math.round(16 * 0.75 + 20 * 0.25), Math.round(17 * 0.5 + 21 * 0.5), Math.round(18 * 0.25 + 22 * 0.75)]);
+      expect(red(out, 19)).toBe(23);
+      // Split seam (rows 36–37): the top piece's continuation (row + 4) into
+      // the bottom piece (row + 2), t = (i + 1) / 3.
+      expect(rows(out, 36, 38)).toEqual([Math.round(40 * (2 / 3) + 38 * (1 / 3)), Math.round(41 * (1 / 3) + 39 * (2 / 3))]);
+      expect(red(out, 38)).toBe(40);
+      // Bottom seam (rows 77–79): moved (row + 2) into the original.
+      expect(rows(out, 77, 80)).toEqual([Math.round(79 * 0.75 + 77 * 0.25), Math.round(80 * 0.5 + 78 * 0.5), Math.round(81 * 0.25 + 79 * 0.75)]);
+      expect(red(out, 80)).toBe(80);
+    });
+
+    it("blends colour by alpha, so a clear window row adds no colour at the top seam", () => {
+      const src = column(100, (y) => (y < 30 ? 0 : 255));
+      for (let y = 0; y < 30; y += 1) src[y * 4] = 0;
+      const out = recutBlockUp(src, 1, 100, { fromY: 20, splitY: 40, toY: 80, shiftTop: -4, shiftBottom: -2, blendTop: 1, blendSplit: 0, blendBottom: 0 });
+      // Row 16 mixes clear row 16 with clear row 20: still clear.
+      expect(out[16 * 4 + 3]).toBe(0);
+      // Row 26 (hard, inside the piece) = row 30: the first opaque row.
+      expect([out[26 * 4], out[26 * 4 + 3]]).toEqual([30, 255]);
+    });
+
+    it("refuses a block that doesn't fit, pieces the wrong way round, or seams that overlap", () => {
+      const ok = { fromY: 20, splitY: 40, toY: 80, shiftTop: -4, shiftBottom: -2, blendTop: 3, blendSplit: 2, blendBottom: 3 };
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, fromY: 2 })).toThrow(/bad block/);
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, toY: 99 })).toThrow(/bad block/);
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, shiftTop: -2, shiftBottom: -4 })).toThrow(/bad block/);
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, shiftTop: 4 })).toThrow(/bad block/);
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, splitY: 20 })).toThrow(/bad block/);
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, blendTop: 30 })).toThrow(/bad block/);
+      expect(() => recutBlockUp(column(100), 1, 100, { ...ok, blendBottom: -1 })).toThrow(/bad block/);
+    });
+
+    it("never touches the source buffer, and the recipe fits a 1500×2100 master", () => {
+      const src = column(100);
+      const copy = Buffer.from(src);
+      recutBlockUp(src, 1, 100, { fromY: 20, splitY: 40, toY: 80, shiftTop: -4, shiftBottom: -2, blendTop: 3, blendSplit: 2, blendBottom: 3 });
+      expect(src.equals(copy)).toBe(true);
+      expect(() => recutBlockUp(Buffer.alloc(2100 * 4), 1, 2100, FLIP_LOWER_RECUT)).not.toThrow();
     });
   });
 

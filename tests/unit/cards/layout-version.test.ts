@@ -1546,9 +1546,10 @@ describe("v38 — the portrait layouts re-sourced from Card Conjurer (TODO 4.21a
       expect(isRenderStale(37, t, VERIFICATION_SCOPED_VERSIONS, 38, regular), t).toBe(TRIO.includes(t));
     }
     // The profiles moved onto Card Conjurer's packs: flip's art slot is
-    // packFlip.js's window + 0.1 %, adventure's pinned (design D4),
+    // packFlip.js's window + 0.1 % (its bottom 7 px higher since v39's
+    // re-cut: 33.25 → 32.91 %H), adventure's pinned (design D4),
     // aftermath's windows + 0.1 %.
-    expect(getFrameProfile("flip").artSlot).toEqual({ topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 33.25 });
+    expect(getFrameProfile("flip").artSlot).toEqual({ topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 32.91 });
     expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 });
     expect(getFrameProfile("aftermath").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 22.44 });
     expect(getFrameProfile("aftermath").secondFace?.artSlot).toEqual({ topPct: 63.62, leftPct: 44.63, widthPct: 49.41, heightPct: 20.33 });
@@ -1566,5 +1567,78 @@ describe("isRoundBake", () => {
     expect(isRoundBake(30)).toBe(false);
     expect(isRoundBake(null)).toBe(false);
     expect(isRoundBake(undefined)).toBe(false);
+  });
+});
+
+describe("v39 — flip's lower half and aftermath's cost onto the prints (TODO 4.21a follow-up)", () => {
+  const png = "https://x/y.png";
+  /** A v38 bake. Its columns default to UNTOUCHED_SINCE_V22, so only v39 can
+   *  be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 38,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V39 = { current: 39 } as const;
+  const PAIR = ["aftermath", "flip"];
+
+  it("is a sweep, never a badge, scoped to aftermath and flip — frozen as a literal", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(39);
+    expect(lv.VERSION_ROLLOUT[39]).toBe("sweep");
+    expect(lv.rolloutPolicy(39)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 39)).toBe(39);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.V39_FLIP_AFTERMATH_TEMPLATES].sort()).toEqual(PAIR);
+    // A master re-cut and a slot move: template-scoped, no card predicate.
+    expect(lv.VERSION_SCOPES[39]).toBeUndefined();
+    for (const t of ALL) expect(isRenderStale(38, t, undefined, 39), t).toBe(PAIR.includes(t));
+    // Adventure (v38's third) is untouched: its cards stamp, never re-bake.
+    expect(isRenderStale(38, "adventure", undefined, 39)).toBe(false);
+  });
+
+  it("re-bakes every card on the two — art or none, any finish, a half with or without a P/T — and stamps every other template", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(39);
+    for (const t of ALL) {
+      const pair = PAIR.includes(t);
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(pair ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row, AT_V39), t).toBe(pair);
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V39), t).toBe(false);
+    }
+    for (const [t, over] of [
+      ["flip", { art_url: null }],
+      ["flip", { back_face: { title: "Dokai", card_type: "creature", power: "3", toughness: "3" } }],
+      ["flip", { back_face: { title: "Essence", card_type: "enchantment" } }],
+      ["flip", { frame_style: { template: "flip", finish: "foil" } }],
+      ["aftermath", { cost: "" }],
+      ["aftermath", { frame_style: { template: "aftermath", finish: "etched" } }],
+    ] as const) {
+      expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe("rebake");
+    }
+    expect(classifyForSweep(at("adventure"))).toBe("stamp");
+    expect(classifyForSweep(at("flip", { layout_version: 39 }))).toBe("current");
+  });
+
+  it("is NOT verification-neutral (a master and slots move); no tick exists on either to stale, every other template's ticks stay fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(39);
+    expect([...VERIFICATION_SCOPED_VERSIONS[39]].sort()).toEqual(PAIR);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(38, t, VERIFICATION_SCOPED_VERSIONS, 39, regular), t).toBe(PAIR.includes(t));
+    }
+    // What moved: flip's art slot ends at the re-cut window (1312.1 px) and
+    // its upside-down rules rect follows the text box's top edge; aftermath's
+    // cost runs to 92.3 %W, 8.6 px higher. Adventure's profile is v38's.
+    expect(getFrameProfile("flip").artSlot).toEqual({ topPct: 29.57, leftPct: 7.57, widthPct: 84.87, heightPct: 32.91 });
+    expect(getFrameProfile("flip").secondFace?.rules.rect).toEqual({ topPct: 69.86, leftPct: 8.6, widthPct: 82.8, heightPct: 12.24 });
+    expect(getFrameProfile("aftermath").title.rect).toEqual({ topPct: 5.7, leftPct: 8.5, widthPct: 83.8, heightPct: 4.4 });
+    expect(getFrameProfile("aftermath").costDy).toBeCloseTo(-8.6 / 1500, 9);
+    expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 });
   });
 });

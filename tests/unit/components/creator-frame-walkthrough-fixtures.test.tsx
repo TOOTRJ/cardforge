@@ -151,7 +151,8 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   ["battle", "c", "Invasion of Ravnica", "Guildpact Paragon"],
   ["split", "m", "Expansion", "Explosion"],
   ["aftermath", "r", "Insult", "Injury"],
-  ["aftermath", "m", "Driven", "Despair"],
+  // aftermath/m has no reference since the 4.21a follow-up (its HOU
+  // stand-ins were dropped: no gold // gold print exists, TODO 4.26).
   // The two M15-frame flip prints (TODO 4.21a's references): C18 #134 and
   // CM2 #71.
   ["flip", "g", "Budoka Gardener", "Dokai, Weaver of Life"],

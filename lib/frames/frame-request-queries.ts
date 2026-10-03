@@ -122,7 +122,7 @@ export function mapFrameRequestRows(rows: readonly RpcRow[]): FrameRequestRow[] 
       sampleCollector: row.sample_collector,
       sampleScryfallId: row.sample_scryfall_id,
       sampleUrl: scryfallPrintingUrl(row.set_code, row.sample_collector),
-      blockedBy: drawnNow ? null : signatureBlockedBy(row.signature),
+      blockedBy: drawnNow ? null : signatureBlockedBy(row.signature, row.template),
       drawnNow,
       forGood: isForGoodSignature(row.signature),
       inRegistry: isKnownFrameSignature(row.signature),

@@ -16,9 +16,10 @@ const ccTemplates = new Set(Object.keys(manifest.files).map((key) => key.split("
 describe("Card Conjurer frame profiles", () => {
   // The portrait layouts (TODO 4.21a, layout v38) set their pips on their
   // OWN prints: flip's on C18 #134's (the pips centred on the name's
-  // capitals, −9.6 px from packFlip.js's box), aftermath's as v32 print-
-  // matched them (no lift: its slots stay).
-  const OWN_PRINT_COST_DY: Record<string, number | undefined> = { flip: -0.0064, aftermath: undefined };
+  // capitals, −9.6 px from packFlip.js's box), aftermath's on AKH #210–214
+  // / HOU #157's (the discs centred on row 159.4 where v38's bake sat on
+  // 168: −8.6 px, layout v39).
+  const OWN_PRINT_COST_DY: Record<string, number | undefined> = { flip: -0.0064, aftermath: -8.6 / 1500 };
 
   it("lifts the inline mana cost ~0.55 % of the card height on every CC frame that shows one", () => {
     for (const template of ccTemplates) {
