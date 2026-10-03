@@ -80,6 +80,10 @@ const DOCUMENTED_NULLS = new Set([
   "adventure/c",
   "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
   "aftermath/c",
+  // No gold // gold aftermath exists (every two-colour one is mono // mono,
+  // TODO 4.26's per-part colour): the HOU stand-ins were dropped so a
+  // template Publish can't tick the combo (4.21a follow-up, 2026-10-02).
+  "aftermath/m",
   "flip/c", "flip/m",
   "alphatoken/w", "alphatoken/u", "alphatoken/b", "alphatoken/r", "alphatoken/g", "alphatoken/c", "alphatoken/m",
   "fullart/c",

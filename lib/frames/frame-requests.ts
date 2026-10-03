@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_SET, FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import { isUuid } from "@/lib/ids";
 import {
   FRAME_SIGNATURE_RULES,
+  blockedByOn,
   isKnownFrameSignature,
   type FrameMatch,
 } from "@/lib/scryfall/frame-signatures";
@@ -200,9 +201,14 @@ export function isForGoodSignature(signature: string): boolean {
 
 /** The TODO item the registry says would make this signature exact
  *  ("4.6"), or null. The rule's own answer — the kind and border checks can
- *  add a reason for one printing, never a different item. */
-export function signatureBlockedBy(signature: string): string | null {
-  return RULE_BY_KEY.get(signature)?.outcome.blockedBy ?? null;
+ *  add a reason for one printing, never a different item; where the item
+ *  depends on the frame the printing landed on (the layout frames'
+ *  two-colour gap: 4.26 on split and aftermath, 4.6f elsewhere) the logged
+ *  row's template decides. */
+export function signatureBlockedBy(signature: string, template: string | null = null): string | null {
+  const item = RULE_BY_KEY.get(signature)?.outcome.blockedBy;
+  const on = template != null && Object.prototype.hasOwnProperty.call(FRAME_TEMPLATE_SET, template) ? (template as FrameTemplate) : null;
+  return blockedByOn(item, on) ?? null;
 }
 
 /** The Scryfall page of a printing, or null without a set + number. */

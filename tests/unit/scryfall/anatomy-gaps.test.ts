@@ -3,6 +3,7 @@ import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
 import { FRAME_SIGNATURE_KEYS } from "@/lib/scryfall/frame-signatures";
 import printings from "./fixtures/anatomy-printings.json";
+import referencePrintings from "../cards/fixtures/reference-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6.0 / 4.6a / 4.6b — the registry's anatomy gaps
@@ -54,6 +55,23 @@ describe("the layout frames' new gaps", () => {
       signature: "layout/2015+two-colour",
       blockedBy: "4.6f",
     });
+  });
+
+  it("a two-colour aftermath is nearest too — blocked by 4.26's per-part colour, as the registry's aftermath/m note says (4.21a follow-up)", () => {
+    // HOU #157 Driven // Despair (g // b): each half prints its own colour,
+    // which no two-colour dress draws; the gap's item follows the frame.
+    const card = scryfallCardSchema.parse((referencePrintings as Record<string, unknown>)["7713ba59-dd4c-4b49-93a7-292728df86b8"]);
+    expect(card.set).toBe("hou");
+    expect(card.collector_number).toBe("157");
+    expect(frameMatchFromScryfall(card)).toMatchObject({
+      status: "nearest",
+      template: "aftermath",
+      signature: "layout/2015+two-colour",
+      blockedBy: "4.26",
+      reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
+    });
+    // The gap stays 4.6f's on the layout frames whose dress IS the pair.
+    expect(match("khm-201").blockedBy).toBe("4.6f");
   });
 });
 

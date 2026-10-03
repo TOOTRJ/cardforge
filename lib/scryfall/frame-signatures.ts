@@ -455,13 +455,25 @@ type TemplateSpec = FrameTemplate | { family: Family };
 
 type Text = string | ((ctx: Ctx) => string);
 
+/** The TODO item that would make a match exact — a string, or a function of
+ *  the frame the printing lands on where the item depends on it (the layout
+ *  frames' two-colour gap: 4.26's per-part colour on split and aftermath,
+ *  4.6f's dress on the rest). The request log resolves it by the logged
+ *  row's template (lib/frames/frame-requests.ts signatureBlockedBy). */
+export type BlockedBy = string | ((template: FrameTemplate | null) => string);
+
+/** `blockedBy` for the frame a match landed on. */
+export function blockedByOn(item: BlockedBy | undefined, template: FrameTemplate | null): string | undefined {
+  return typeof item === "function" ? item(template) : item;
+}
+
 type Outcome = {
   status: FrameMatchStatus;
   template: TemplateSpec;
   reason?: Text;
   reject?: true;
   forGood?: true;
-  blockedBy?: string;
+  blockedBy?: BlockedBy;
   /** FrameMatch.onceVerified: the frame named instead once verified. */
   onceVerified?: TemplateSpec;
   /** Once `onceVerified` takes over the match is `exact` on it — `nearest`
@@ -486,8 +498,9 @@ type Rule = {
   gapsOnceVerified?: readonly GapKey[];
   /** The item a gap waits on for this family's frames, where it isn't the
    *  gap's own (withGaps' `blockedByOverride`: the token crown is 4.48's pill
-   *  crown, not 4.6f) — named after the swap too. */
-  gapBlockedBy?: Partial<Record<GapKey, string>>;
+   *  crown, not 4.6f; the layout frames' two-colour gap follows the frame
+   *  the printing lands on) — named after the swap too. */
+  gapBlockedBy?: Partial<Record<GapKey, BlockedBy>>;
 };
 
 type Ctx = {
@@ -1034,8 +1047,9 @@ function withGaps(
   base: Rule,
   gaps: readonly GapKey[],
   /** A gap this family's frames wait on another item for (the token
-   *  crown: 4.48's pill crown, not 4.6f). */
-  blockedByOverride: Partial<Record<GapKey, string>> = {},
+   *  crown: 4.48's pill crown, not 4.6f; the layout frames' two-colour gap:
+   *  4.26 on split and aftermath, 4.6f on the rest). */
+  blockedByOverride: Partial<Record<GapKey, BlockedBy>> = {},
 ): Rule[] {
   const exactBase = base.outcome.status === "exact";
   const baseReason = base.outcome.reason;
@@ -1100,6 +1114,12 @@ const showcaseLabel = ({ card, set }: Ctx) =>
   `${card.set_name ?? set.toUpperCase()} showcase`;
 
 const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "aftermath", "flip"];
+
+/** The layout frames whose two parts each print their own colour (TODO
+ *  4.26's per-part colour): a two-colour printing on them is not the
+ *  two-colour dress (4.6f) the other layout frames wait on. */
+const PER_PART_COLOUR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["split", "aftermath"]);
+const LAYOUT_TWO_COLOUR_ITEM: BlockedBy = (template) => (template && PER_PART_COLOUR_TEMPLATES.has(template) ? "4.26" : "4.6f");
 
 // ---------------------------------------------------------------------------
 // The rules, in order. First match wins.
@@ -1902,8 +1922,13 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     // A crowned adventure (WOE #220 Beluna, 56 printings) and a two-colour
     // saga (KHM #201, 84) print pieces the layout frames don't draw yet
-    // (TODO 4.6.0; 4.6f adds them).
+    // (TODO 4.6.0; 4.6f adds them) — and a two-colour split or aftermath
+    // (HOU #157 Driven // Despair g|b) prints each part in its own colour:
+    // that is 4.26's per-part colour, not the two-colour dress, so the gap's
+    // item follows the frame the printing lands on (as the registry's
+    // aftermath/m note says).
     ["omen", "dfc", "etched", "border", "crown", "two-colour", "two-colour-hybrid"],
+    { "two-colour": LAYOUT_TWO_COLOUR_ITEM, "two-colour-hybrid": LAYOUT_TWO_COLOUR_ITEM },
   ),
   {
     key: "layout/older",
@@ -2084,7 +2109,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
   let status = rule.outcome.status;
   let reason = status === "exact" ? null : textOf(rule.outcome.reason, ctx);
-  let blockedBy = rule.outcome.blockedBy;
+  let blockedBy = blockedByOn(rule.outcome.blockedBy, template);
   let landOn: FrameTemplate | undefined;
 
   const kind = facts.kind;
@@ -2143,7 +2168,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
       onceVerifiedMatch = {
         status: "nearest",
         reason: textOf(first.reason, ctx),
-        blockedBy: rule.gapBlockedBy?.[laterGaps[0]!] ?? first.blockedBy,
+        blockedBy: blockedByOn(rule.gapBlockedBy?.[laterGaps[0]!] ?? first.blockedBy, onceVerified),
         gaps: laterGaps,
       };
     } else if (isBorderPending(onceVerified, colorKeyOf(facts))) {

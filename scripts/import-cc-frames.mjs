@@ -32,7 +32,8 @@
 // <out>/<template>/<colour>.png + .webp (and a template's two-colour pair
 // masters, <pair>.png / <pair>-h.png, TODO 4.6b), plus P/T plates at native size
 // under pt/, a basic land's mana-symbol discs at native size under symbol/,
-// (re-cut templates) a band moved down before the downscale (recut),
+// (re-cut templates) a band moved down before the downscale (recut), or
+// a block moved up in two pieces (recutUp: the flip masters' lower half),
 // (the emblem) its spark's ray bridged over and its regions toned onto the
 // prints,
 // and a planeswalker's loyalty shield cut out of each master under loyalty/.
@@ -81,6 +82,7 @@ import {
   flatPixelAt,
   placeOnCanvas,
   recutBand,
+  recutBlockUp,
   rectPx,
   retintStructure,
   roundCornersRgba8,
@@ -248,8 +250,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
           ),
         )
       : flat;
-    // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b)).
-    const recut = def.recut ? recutBand(composite, W, H, def.recut) : composite;
+    // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b));
+    // the flip masters' lower half, moved up in two pieces (4.21a, v39).
+    const recut = def.recut
+      ? recutBand(composite, W, H, def.recut)
+      : def.recutUp
+        ? recutBlockUp(composite, W, H, def.recutUp)
+        : composite;
     // A ray's top closed over by the frame (the emblem's spark, 4.52).
     const bridged = def.bridge ? bridgeRayTip(recut, W, H, def.bridge) : recut;
     // Toned regions, onto the prints' tone (the emblem's silver, name pill,
@@ -341,6 +348,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
+    ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),
     ...(def.tones ? { tones: def.tones } : {}),
     sourceFiles: sourceFilesFor(def),

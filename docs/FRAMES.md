@@ -222,7 +222,10 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   published masters 95.0 % (62 px 94.9, CC as-is 93.1; re-scored
   independently in the skeptic pass, which also measured CC's band 60–65 px
   above the prints and the re-cut within ±2 px). Provenance records the
-  re-cut (`recut`, `transforms`).
+  re-cut (`recut`, `transforms`). A third re-cut moves a block UP in two
+  pieces (`recutBlockUp`, `recutUp`): the flip masters' lower half
+  (`FLIP_LOWER_RECUT`, layout v39 — [The portrait
+  layouts](#the-portrait-layouts-layout-v38)).
 - **The borderless land (4.34).** A borderless land prints its colour on
   the title bar, the type bar AND the text box, where a borderless spell
   tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
@@ -1029,7 +1032,43 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
   3.5 px low (75–181 against 72–177). The upside-down type line is set on
   the prints' baseline, so it rides 5 px nearer its bar's art-side edge
   than printed. No profile number moves a master: closing these is a re-cut
-  in the importer (as the tokens' `recut`), the owner's call.
+  in the importer (as the tokens' `recut`) — **done in layout v39** (the
+  4.21a follow-up, owner decision round 22, 2026-10-02, before flip is
+  verified): the importer re-cuts the lower half onto the prints
+  (`FLIP_LOWER_RECUT`, `recutBlockUp` in `scripts/lib/cc-frames.mjs`).
+  Measured on both prints with the master's profile blurred to the scan
+  (per-band correlation and half-level crossings; the two prints within
+  0.5 px of each other), the window's inner line and the type bar's dark
+  top band sit 7 px low on CC's master (the line centred 1311 against
+  1318.5; the band's top 1324 against 1331.5), the bar's bottom outline and
+  the text box's top edge 5 px low (1444.7 against 1449.7; the box's edge
+  ≈ 1465 against 1470.8), and the upside-down name bar is CC's (2 px the
+  other way, inside the scans' tolerance). The print's own art edge reads
+  1308.5 by the half-contrast detector the table above used, but that
+  reading carries the scan's blur: the same detector puts the window's TOP
+  edge 3.5 px off on a line that agrees within 0.5 px, so the line is the
+  mark. Two pieces move up — rows 1290–1339 (the window's lower rows, its
+  line, the pinline, the bar's outline and the first rows of its bevel) by
+  7 and rows 1340–1499 (the rest of the bevel, the bar's face, its bottom
+  outline, the pinline below and the box's top edge into its paper) by 5,
+  split inside the bevel's flat plateau (CC rows 1337–1342; the two rows
+  that opens repeat it, and the print's dark band is itself 3–5 px taller
+  than CC's) — the seams cross-faded over 24 rows inside the window (the
+  frame's side texture, as the tokens' re-cuts), 3 at the split (only the
+  bar's 45° end-cap chamfers cross it; the left one lies under the bottom
+  plate) and 24 inside the paper. Every row above 1283 and from 1500 on is
+  CC's byte for byte; the plates are untouched (the same 28 objects); seven
+  new masters (14 bucket objects). The result: the window ends at 1310 px
+  (the slot's bottom follows, 33.25 → 32.91 %H), the bar's face 1339–1444
+  on every colour (both prints' 1339–1444), its bottom outline centred
+  1447 (the prints'), the paper from 1467 (the rules rect follows, 70.1 →
+  69.86 %H; the prints' edge ≈ 1464–1466.5 by two readings); the
+  upside-down type line keeps its print-matched baseline (its body now
+  32–33 px below the bar's face top; the prints' 30–34), the name bar, the
+  top half, the cost and the plates do not move. Held by
+  `tests/unit/frames/flip-lower-block.test.ts` (the masters, row by row)
+  and `tests/unit/render/portrait-v39-bake.test.tsx` (the profile on real
+  bakes at HD and 750). Sheets: scratchpad `flip-fu/sheets/`.
 - **Adventure** was within 3–10 px on a softer, re-drawn master whose
   window ran 10 / 6 px narrow. The CC master is M15's bars with the
   storybook; the art slot is PINNED at its masters' window + 0.1 %
@@ -1054,13 +1093,24 @@ and cut at the one corner. Against the M15 prints (Scryfall PNGs at
   44.63/63.62/49.41 × 20.33); the set symbol in CC's box (right 92.13 %W,
   centred 37.1 %H); the artist credit on M15's footer line. The text slots
   stay as print-matched in 0.22 / v32 — the name and type line, that is:
-  the top half's cost was never set on the prints and still ends 27 px left
-  of theirs and 8 px low (its last disc's edge 1357.5 px against AKH's 1384,
-  the discs centred 167 px against 159; the same on the MSE master, so no
-  part of this bump — a follow-up correction). Colourless = CC's artifact frame as
-  a render stand-in, never offered; `aftermath/m` is flagged in the
-  registry: no gold // gold aftermath was printed (every two-colour one is
-  mono // mono, TODO 4.26's per-half colour), so it stays unverified.
+  the top half's cost was never set on the prints and still ended 27 px
+  left of theirs and 8 px low (its last disc's edge 1357.5 px against AKH's
+  1384, the discs centred 167 px against 159; the same on the MSE master,
+  so no part of the v38 bump). **Layout v39** (the 4.21a follow-up,
+  2026-10-02) puts it on the prints: AKH #210–214 and HOU #157 end their
+  last disc at 1383–1385 px (mean 1384.0) with the discs centred on row
+  158–161 (mean 159.4), so `AFTERMATH.title`'s rect runs to 92.3 %W (was
+  90.5) and `costDy` lifts the discs 8.6 px — the bake's last disc ends at
+  1384, its discs centre on 159.5; the name's baseline (190 px) and left
+  edge, the type line and the set symbol do not move. Colourless = CC's
+  artifact frame as a render stand-in, never offered; `aftermath/m` has NO
+  reference since v39: no gold // gold aftermath was printed (every
+  two-colour one is mono // mono, TODO 4.26's per-part colour), its two HOU
+  stand-ins would have been ticked by the template's Publish, so they left
+  the registry and the combo stays unverified until 4.26 or a print. The
+  signature registry names the same item: a two-colour split or aftermath
+  imports `layout/2015+two-colour` blocked by 4.26 (4.6f's dress on the
+  other layout frames; `signatureBlockedBy(signature, template)`).
 
 The three left Phase B's allow-list and `ART_WINDOW_KNOWN_FAILURES` (their
 masters pass the edge contract, the corner check and the art-window check
@@ -1074,8 +1124,14 @@ rows and `aftermath/w` are unverified on production and flip has none, so
 the owner's first ticks come after the deploy (flip/g against C18 #134,
 flip/b against CM2 #71, adventure and aftermath against their ELD / WOE /
 AKH prints; flip w/u/r/m/c, adventure/c, aftermath/c and aftermath/m stay
-unticked — owner 2026-09-29, print-referenced combos only). Masks stay
-importer inputs, never published: adventure's shaped book masks and
+unticked — owner 2026-09-29, print-referenced combos only). Tick flip PER
+COLOUR (its g against C18 #134, its b against CM2 #71): flip w/u/r carry
+only 2003-frame references (sample content with the era warning), and a
+template's **Publish** ticks every colour that has a reference. Layout v39
+(the lower-half re-cut + aftermath's cost) ships before the first flip
+tick, so no tick goes stale; its sweep has nothing to re-bake on
+production (0 cards on either template, anonymous read 2026-10-02). Masks
+stay importer inputs, never published: adventure's shaped book masks and
 aftermath's rectangles (cut at y 1139, 54.24 %H) are 4.26's; the flip
 plates' half masks are the card's halves.
 
