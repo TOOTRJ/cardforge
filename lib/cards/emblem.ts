@@ -1,3 +1,4 @@
+import { templateHasBackFace } from "@/lib/cards/dfc";
 import type { CardType, ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -74,6 +75,13 @@ export function cardTypeHasRarity(cardType: string | null | undefined): boolean 
   return cardType !== "emblem";
 }
 
+/** The faces a card's page name may join (TODO 5.3): the card's FRONT
+ *  template and its back face's title, as the row stores them. */
+export type CardPageFaces = {
+  frameTemplate: string | null | undefined;
+  backTitle: string | null | undefined;
+};
+
 /**
  * The name a card goes by on its web page (owner decision 2026-09-29): an
  * emblem is "<its planeswalker's name> Emblem", as Scryfall names it ("Kaito,
@@ -83,10 +91,38 @@ export function cardTypeHasRarity(cardType: string | null | undefined): boolean 
  * on the type line: the render is unchanged. A title that already ends in
  * "Emblem" isn't doubled; an empty one is "Emblem". Any other card type:
  * the title as it is.
+ *
+ * A DOUBLE-FACED card (TODO 5.3, design 2026-10-02 §3.4) is "Front // Back",
+ * Scryfall's spelling — ONLY when its front template is a DFC body
+ * (templateHasBackFace) and the back has a name: the 8 legacy two-faced
+ * pages keep their front's name until their owner moves them onto the
+ * bodies. The slug stays the front's (createCardAction passes no faces).
  */
-export function cardPageName(title: string | null | undefined, cardType: string | null | undefined): string {
+export function cardPageName(
+  title: string | null | undefined,
+  cardType: string | null | undefined,
+  faces?: CardPageFaces | null,
+): string {
+  const front = emblemPageName(title, cardType);
+  const back = (faces?.backTitle ?? "").trim().replace(/\s+/g, " ");
+  if (!faces || !back || !templateHasBackFace(faces.frameTemplate)) return front;
+  return `${front} // ${back}`;
+}
+
+function emblemPageName(title: string | null | undefined, cardType: string | null | undefined): string {
   if (cardType !== "emblem") return title ?? "";
   const name = (title ?? "").trim().replace(/\s+/g, " ");
   if (!name) return "Emblem";
   return /(^|\s)emblem$/i.test(name) ? name : `${name} Emblem`;
+}
+
+/** The faces of a stored row for cardPageName: its front template and its
+ *  back face's title (the jsonb columns as the queries return them). */
+export function cardPageFacesOf(row: { frame_style: unknown; back_face: unknown }): CardPageFaces {
+  const frameStyle = row.frame_style as { template?: unknown } | null | undefined;
+  const back = row.back_face as { title?: unknown } | null | undefined;
+  return {
+    frameTemplate: typeof frameStyle?.template === "string" ? frameStyle.template : null,
+    backTitle: typeof back?.title === "string" ? back.title : null,
+  };
 }
