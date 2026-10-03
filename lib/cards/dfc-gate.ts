@@ -117,6 +117,34 @@ export const DFC_COLORLESS_NEEDS_ARTIFACT =
   "A colourless back face needs “Artifact” on its type line — pick a colour.";
 export const DFC_COLORLESS_FRONT_NEEDS_ARTIFACT =
   "A colourless double-faced card needs “Artifact” on its type line — pick a colour.";
+export const DFC_FRONT_TYPE_REFUSED =
+  "A double-faced card's front can be a creature, artifact, enchantment, land, instant or sorcery.";
+export const DFC_FRONT_BODY_MISMATCH =
+  "This double-faced frame doesn't dress that card type — the land frame is for lands, the other for everything else.";
+
+/**
+ * The FRONT face's type rule (TODO 5.2; owner Q2: walker faces wait): a card
+ * on a DFC front body is one of the wave-1 face types (DFC_FACE_TYPES — the
+ * Card step's face-type chips offer nothing else), and on the body its type
+ * derives (the land front dresses lands only, the spell front everything
+ * else: dfcFrontDressesKind's rule). The kind gate can't judge this: a card
+ * on a front body IS the double-faced kind whatever its card_type says
+ * (kindFromCard — the template wins), so a crafted planeswalker, saga, token
+ * or battle front, or a creature on the land front, would pass it. Null when
+ * the card may wear the body, else the `frame_style` field error. Any other
+ * template: null.
+ */
+export function dfcFrontTypeError(
+  frontTemplate: FrameTemplate | string | null | undefined,
+  cardType: string | null | undefined,
+): string | null {
+  const front = normalizeFrameTemplate(frontTemplate);
+  const body = dfcBodyOf(front);
+  if (body?.role !== "front") return null;
+  if (!isDfcFaceType(cardType)) return DFC_FRONT_TYPE_REFUSED;
+  if (Boolean(body.land) !== (cardType === "land")) return DFC_FRONT_BODY_MISMATCH;
+  return null;
+}
 
 /**
  * The FRONT face's colourless rule (design D2, the same as the back's): a

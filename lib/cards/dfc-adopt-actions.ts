@@ -21,7 +21,7 @@
 
 import { after } from "next/server";
 import { adoptDfcBodiesPlan, dfcAdoptionOffer, parseDfcAdoptionLayout } from "@/lib/cards/dfc-adopt";
-import { resolveDfcBackFace } from "@/lib/cards/dfc-gate";
+import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
@@ -69,6 +69,17 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
   if (frontGate) return { ok: false, formError: frontGate };
   const kindGate = frameKindGateError(plan.frontBody, cardFieldsFace(existing));
   if (kindGate) return { ok: false, formError: kindGate };
+  // The front's own rules on the new body (the create / update gates'):
+  // a wave-1 face type on the body its type derives, and colourless only
+  // with an Artifact word (D2 — the body's `c` is the artifact stand-in).
+  const frontTypeGate = dfcFrontTypeError(plan.frontBody, existing.card_type);
+  if (frontTypeGate) return { ok: false, formError: frontTypeGate };
+  const frontColourGate = dfcFrontColorError(
+    plan.frontBody,
+    { cardType: existing.card_type, supertype: existing.supertype },
+    existing.color_identity,
+  );
+  if (frontColourGate) return { ok: false, formError: frontColourGate };
   const backGate = resolveDfcBackFace({
     frontTemplate: plan.frontBody,
     back: plan.back_face,

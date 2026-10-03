@@ -56,6 +56,7 @@ import {
   dfcBackArtMissing,
   dfcFamilyOf,
   dfcFrontColorError,
+  dfcFrontTypeError,
   resolveDfcBackFace,
   stripBackBody,
   type DfcBackFacePayload,
@@ -324,6 +325,13 @@ export async function createCardAction(
   // switch (newCardFrameStyle, below), so it is read the same way here.
   const storedFrameStyle = newCardFrameStyle(data.frame_style ?? {}, data.card_type);
   {
+    // The FRONT face's type rule (owner Q2: a wave-1 face type, on the body
+    // its type derives) — the kind gate above can't see it: a card on a
+    // front body is the double-faced kind whatever card_type says.
+    const frontTypeError = dfcFrontTypeError(storedFrameStyle.template, data.card_type);
+    if (frontTypeError) {
+      return { ok: false, fieldErrors: { frame_style: frontTypeError } };
+    }
     // The FRONT face's colourless rule (D2): on a DFC front body, `c` only
     // with an Artifact word — the body's `c` is the artifact stand-in.
     const frontColourError = dfcFrontColorError(
@@ -794,6 +802,22 @@ export async function updateCardAction(
       : backLeavesBody
         ? stripBackBody(storedBackFace!)
         : storedBackFace;
+  // The FRONT face's type rule (owner Q2) on the card as it will be stored,
+  // when the patch moves the frame or the type (card_type is locked in the
+  // editor, so a crafted payload): refused when the frame changes, or when
+  // the patch turns a card the body could draw into one it can't — a card
+  // that already broke it and keeps its frame stays editable, the kind
+  // gate's legacy pin (no stored card can: the bodies are additions).
+  if (data.frame_style !== undefined || data.card_type !== undefined) {
+    const existingTemplate = (existing.frame_style as { template?: string } | null)?.template;
+    const frontTypeError = dfcFrontTypeError(nextFrontTemplate, savedCardType);
+    if (
+      frontTypeError &&
+      (nextFrontTemplate !== existingTemplate || dfcFrontTypeError(existingTemplate, existing.card_type) === null)
+    ) {
+      return { ok: false, fieldErrors: { frame_style: frontTypeError } };
+    }
+  }
   // The FRONT face's colourless rule (D2) on the card as it will be stored,
   // when the patch moves the frame, the colour or the type line.
   if (
