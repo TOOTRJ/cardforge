@@ -7,11 +7,14 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
+  faceUnderTest,
+  frontBodyFor,
   isDfcBackBody,
   isDfcIconFamily,
   templateHasBackFace,
   transformBackBodyFor,
 } from "@/lib/cards/dfc";
+import { CARD_FACE_VALUES, isCardFace, parseCardFace, scryfallFaceIndex } from "@/lib/cards/card-face";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { DFC_ICON_RIDER, getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -168,6 +171,54 @@ describe("the transform bodies (5.1a) and every other template", () => {
     expect(backBodyError(undefined, { frame_style: { template: "m15dfcback" } })).toBe("This frame has no back face of its own.");
     // An empty frame_style is no body.
     expect(backBodyError("m15dfcfront", { frame_style: {} })).toBeNull();
+  });
+});
+
+describe("the face under test (TODO 5.0b) on the real profiles: a back body is always its back, every other template the face asked for", () => {
+  it("every non-back template is compared on the front unless the view asks for the back; a back body always on the back", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      if ((TRANSFORM_BACKS as readonly string[]).includes(template)) {
+        expect(faceUnderTest(template), template).toBe("back");
+        expect(faceUnderTest(template, "front"), template).toBe("back");
+        continue;
+      }
+      expect(faceUnderTest(template), template).toBe("front");
+      expect(faceUnderTest(template, null), template).toBe("front");
+      expect(faceUnderTest(template, "front"), template).toBe("front");
+      expect(faceUnderTest(template, "back"), template).toBe("back");
+    }
+    expect(faceUnderTest(undefined, "back")).toBe("back");
+    expect(faceUnderTest("no-such-frame")).toBe("front");
+  });
+
+  it("frontBodyFor pairs the three transform backs with the front bodies bodyFor names, and is null for every other template", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      if ((TRANSFORM_BACKS as readonly string[]).includes(template)) continue;
+      expect(frontBodyFor(template), template).toBeNull();
+      expect(frontBodyFor(template, "land"), template).toBeNull();
+    }
+    expect(frontBodyFor(undefined)).toBeNull();
+    // A spell front wears the transform front, a land front the land front
+    // — for every back body (the compare view and the walk-through build
+    // the card this way, from the printing's front type).
+    for (const back of TRANSFORM_BACKS) {
+      expect(frontBodyFor(back), back).toBe("m15dfcfront");
+      expect(frontBodyFor(back, "creature"), back).toBe("m15dfcfront");
+      expect(frontBodyFor(back, "land"), back).toBe("m15dfclandfront");
+    }
+  });
+
+  it("the face vocabulary: two faces, Scryfall's indexes, a URL value parsed strictly", () => {
+    expect([...CARD_FACE_VALUES]).toEqual(["front", "back"]);
+    expect(scryfallFaceIndex("front")).toBe(0);
+    expect(scryfallFaceIndex("back")).toBe(1);
+    expect(parseCardFace("back")).toBe("back");
+    expect(parseCardFace("front")).toBe("front");
+    expect(parseCardFace(["back", "front"])).toBe("back");
+    for (const bad of ["Back", "BACK", "1", "", null, undefined, []]) {
+      expect(parseCardFace(bad as never), String(bad)).toBeNull();
+      expect(isCardFace(bad), String(bad)).toBe(false);
+    }
   });
 });
 

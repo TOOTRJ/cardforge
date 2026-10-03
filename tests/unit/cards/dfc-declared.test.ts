@@ -19,7 +19,15 @@ import {
   normalizeAnatomy,
   NEW_CARD_ANATOMY,
 } from "@/lib/cards/anatomy";
-import { backBodyError, colorlessFaceAllowed, dfcBodyOf, isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
+import {
+  backBodyError,
+  colorlessFaceAllowed,
+  dfcBodyOf,
+  faceUnderTest,
+  frontBodyFor,
+  isDfcBackBody,
+  templateHasBackFace,
+} from "@/lib/cards/dfc";
 import { backBodyOf, backPreviewData, dfcIconOf, facesOf, frontPreviewData } from "@/lib/cards/faces";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
@@ -266,5 +274,37 @@ describe("faces.ts with a body (the twins)", () => {
       icon: null,
       otherFace: { typeWord: "Sorcery", line: "{4}{W}{W}{W}", printsPt: false, power: null, toughness: null },
     });
+  });
+});
+
+
+describe("the face under test and the paired front (TODO 5.0b) once a body exists", () => {
+  it("a back body is always its printing's back face — the admin tools never show its front", () => {
+    expect(faceUnderTest("m15artifact")).toBe("back");
+    expect(faceUnderTest("m15artifact", "front")).toBe("back");
+    expect(faceUnderTest("m15devoid", null)).toBe("back");
+    // A front body, like any other template, is the face asked for.
+    expect(faceUnderTest("m15")).toBe("front");
+    expect(faceUnderTest("m15", "back")).toBe("back");
+    expect(faceUnderTest("m15snow")).toBe("front");
+  });
+
+  it("frontBodyFor pairs a back body with a front of its layout; bodyFor first, else the declared front keyed like the front face", () => {
+    // bodyFor's transform rows are filled (5.1a): a transform back pairs
+    // with the REAL front bodies, whatever the fixture declares — the land
+    // front under a land front (Westvale Abbey's Ormendahl), the spell
+    // front otherwise.
+    expect(frontBodyFor("m15artifact")).toBe("m15dfcfront");
+    expect(frontBodyFor("m15artifact", "creature", "sunmoon")).toBe("m15dfcfront");
+    expect(frontBodyFor("m15artifact", "land")).toBe("m15dfclandfront");
+    // The modal rows come with 5.1b: the fallback scans the declared fronts
+    // of the same layout — the modal layout declares no land front here, so
+    // any front of the layout.
+    expect(frontBodyFor("m15devoid")).toBe("m15snow");
+    expect(frontBodyFor("m15devoid", "land")).toBe("m15snow");
+    // Not a back body: null.
+    expect(frontBodyFor("m15")).toBeNull();
+    expect(frontBodyFor("m15land")).toBeNull();
+    expect(frontBodyFor("m15borderless")).toBeNull();
   });
 });

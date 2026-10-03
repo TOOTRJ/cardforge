@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentProfile } from "@/lib/supabase/server";
+import { CARD_FACE_VALUES } from "@/lib/cards/card-face";
 import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 import { scoreFrameCombo } from "@/lib/frames/score-combo";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -25,6 +26,9 @@ const bodySchema = z.object({
   /** A registry printing picked on the compare page (?ref=); validated
    *  against the registry, so only listed printings are ever rendered. */
   ref: z.string().regex(/^[0-9a-f-]{8,}$/i).optional(),
+  /** The face the compare page shows (?face=back, TODO 5.0b); a back body
+   *  is scored on its back whatever this says. */
+  face: z.enum(CARD_FACE_VALUES).optional(),
 });
 
 export type { FrameAlignScore } from "@/lib/frames/score-combo";

@@ -3,7 +3,9 @@ import "server-only";
 import sharp from "sharp";
 import { renderCardImage } from "@/lib/render/card-image";
 import { fetchScryfallImage } from "@/lib/scryfall/client";
-import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
+import { FrameCompareFaceError, buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
+import type { CardFace } from "@/lib/cards/card-face";
+import { faceUnderTest } from "@/lib/cards/dfc";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { getFrameReviews } from "@/lib/cards/frame-reviews";
 import {
@@ -43,6 +45,14 @@ import type { FrameTemplate } from "@/types/card";
 //
 // Callers are admin-gated; the Scryfall lookup is admin tooling and isn't
 // logged to the per-user scryfall_calls quotas.
+//
+// Per FACE (TODO 5.0b): a BACK body is scored on its printing's back face —
+// the same alignment against Scryfall's `/back/` scan — whatever the caller
+// says (faceUnderTest), so a tick, the sign-off job and the Score button all
+// measure the same picture; any other template scores the face the compare
+// view shows (`face: "back"` = a legacy back on that frame, as the preview
+// draws it today), the front by default. A printing with no such face is a
+// 404, named, never the front's scan.
 // ---------------------------------------------------------------------------
 
 export type FrameAlignScore = {
@@ -53,6 +63,8 @@ export type FrameAlignScore = {
   slots: Partial<Record<SlotPath, SlotScore>>;
   /** The printing that was scored. */
   referenceId: string;
+  /** The face that was scored (TODO 5.0b). */
+  face: CardFace;
 };
 
 export type ScoreComboResult =
@@ -85,14 +97,27 @@ export async function scoreFrameCombo(input: {
   /** The layout overrides to render with — a caller that records the
    *  override hash passes the same map it hashes. */
   overrides?: FrameProfileOverridesMap;
+  /** The face the compare view shows (`?face=back`); a back body is scored
+   *  on its back whatever this says (faceUnderTest). Omitted = the
+   *  template's own face. */
+  face?: CardFace | null;
 }): Promise<ScoreComboResult> {
   const { template, color } = input;
+  const face = faceUnderTest(template, input.face);
   const scryfallId = input.referenceId ?? (await resolveReferenceId(template, color, input.ref));
   if (!scryfallId) {
     return { ok: false, error: "No reference printing for this combination.", status: 404 };
   }
 
-  const payload = await buildFrameComparePayload(scryfallId, template);
+  let payload: Awaited<ReturnType<typeof buildFrameComparePayload>>;
+  try {
+    payload = await buildFrameComparePayload(scryfallId, template, face);
+  } catch (error) {
+    if (error instanceof FrameCompareFaceError) {
+      return { ok: false, error: error.message, status: 404 };
+    }
+    throw error;
+  }
   if (!payload?.scanUrl) {
     return { ok: false, error: "Could not resolve the reference scan.", status: 502 };
   }
@@ -164,5 +189,6 @@ export async function scoreFrameCombo(input: {
     },
     slots: slotScores,
     referenceId: scryfallId,
+    face,
   };
 }

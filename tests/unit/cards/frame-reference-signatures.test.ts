@@ -65,10 +65,11 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
   it.each(rows)("$combo $ref.name resolves to its own template and passes the pin check", (row) => {
     const card = scryfallCardSchema.parse(printings[row.ref.scryfallId]);
     const match = frameMatchFromScryfall(card);
-    const { errors } = validateReferenceForCombo(card, row.template, row.colour, row.ref.face ?? 0);
+    const { errors } = validateReferenceForCombo(card, row.template, row.colour);
     expect(errors, row.combo).toEqual([]);
     if (row.ref.face === 1) {
-      // A back body's reference (TODO 5.1a): the printing's FRONT resolves
+      // A back body's reference (TODO 5.1a; the pin check holds the same,
+      // folded into 5.0b's back-body rules): the printing's FRONT resolves
       // to a transform front body (once verified), and its BACK wears this
       // body — by its family (frame_effects) and the back's type.
       const front = match.onceVerified ?? match.template;

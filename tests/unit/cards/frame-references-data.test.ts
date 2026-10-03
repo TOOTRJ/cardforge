@@ -7,8 +7,11 @@ import {
   findFrameReference,
   frameReferenceNote,
   frameReferenceOptions,
+  referenceFace,
+  referenceThumbUrl,
   referenceTierLabel,
 } from "@/lib/cards/frame-reference-registry";
+import { isDfcBackBody } from "@/lib/cards/dfc";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -28,7 +31,8 @@ const referenceSchema = z
     tier: z.union([z.literal(1), z.literal(2)]).optional(),
     /** Hand-researched against a highres scan (2026-07-01) rather than found by the script. */
     curated: z.literal(true).optional(),
-    /** The BACK face of a double-faced printing (TODO 5.1a): a back body's reference. */
+    /** The printing's SECOND face is the reference (TODO 5.0b): the entries
+     *  of a back-face body, compared with Scryfall's `/back/` scan. */
     face: z.literal(1).optional(),
   })
   .strict();
@@ -135,6 +139,12 @@ describe("frame-references.json", () => {
         expect(DOCUMENTED_NULLS.has(combo), `${combo} is documented null but has references`).toBe(false);
         const ids = list.map((ref) => ref.scryfallId);
         expect(new Set(ids).size).toBe(ids.length);
+        // A back-face body's entries are its printings' BACK faces, and only
+        // a back body's are (TODO 5.0b; 5.1a adds the first such entries —
+        // today no template is a back body and no entry carries `face`).
+        for (const ref of list) {
+          expect(ref.face === 1, `${combo} ${ref.name}: face 1 ⇔ a back-face body`).toBe(isDfcBackBody(template));
+        }
       }
     });
   }
@@ -188,6 +198,21 @@ describe("frame-references.json", () => {
 });
 
 describe("registry helpers", () => {
+  it("referenceThumbUrl: Scryfall's sharded CDN path for the entry's face, or the face asked for (TODO 5.0b)", () => {
+    const ref = { name: "x", set: "y", scryfallId: "ab12cd34-0000-4000-8000-000000000000" };
+    expect(referenceFace(ref)).toBe("front");
+    expect(referenceThumbUrl(ref)).toBe(
+      "https://cards.scryfall.io/normal/front/a/b/ab12cd34-0000-4000-8000-000000000000.jpg",
+    );
+    expect(referenceThumbUrl(ref, "back")).toBe(
+      "https://cards.scryfall.io/normal/back/a/b/ab12cd34-0000-4000-8000-000000000000.jpg",
+    );
+    const back = { ...ref, face: 1 as const };
+    expect(referenceFace(back)).toBe("back");
+    expect(referenceThumbUrl(back)).toContain("/normal/back/");
+    expect(referenceThumbUrl(back, "front")).toContain("/normal/front/");
+  });
+
   it("findFrameReference only accepts ids the combo lists", () => {
     const [first] = frameReferenceOptions("m15", "w");
     expect(findFrameReference("m15", "w", first.scryfallId)).toEqual(first);
