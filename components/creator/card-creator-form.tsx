@@ -2074,7 +2074,9 @@ export function CardCreatorForm({
           shouldDirty: true,
         });
       }
-      setValue("frame_style.template", walkthrough.template, { shouldDirty: true });
+      // The CARD's template: the combo under test, or — for a back body,
+      // which never dresses a front — its paired front (TODO 5.0b).
+      setValue("frame_style.template", walkthrough.cardTemplate, { shouldDirty: true });
       // The combo under test is the frame: the text box never follows the
       // seed's text, or an edit of it, away from it (TODO 4.49 (b)).
       settleTokenTextFollow({ manual: true });
@@ -2089,6 +2091,9 @@ export function CardCreatorForm({
         );
       }
       goToStepKey("card");
+      // After the step change (which shows the front): the face the walk
+      // asked for — the back of a back body, or `?face=back` (TODO 5.0b).
+      setPreviewFace(walkthrough.previewFace);
     }, 0);
     return () => window.clearTimeout(timer);
     // Apply-once (the ref); the handlers are recreated per render.

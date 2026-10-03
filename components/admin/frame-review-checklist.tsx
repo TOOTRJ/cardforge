@@ -55,6 +55,10 @@ type ChecklistTemplate = {
    *  family needs a human eye on the thumbnail before trusting it. */
   note?: string | null;
   confirm?: boolean;
+  /** The face this template's rows verify (TODO 5.0b): "back" for a
+   *  back-face frame, whose rows show, compare, walk and tick the
+   *  printing's back. Absent = the front. */
+  face?: "front" | "back";
   combos: ChecklistCombo[];
   /** Walk the stepper on the first colour still to verify (TODO 2.2). */
   walkHref?: string;
@@ -136,6 +140,15 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         {tpl.template}
                       </span>
                     </span>
+                    {tpl.face === "back" ? (
+                      <span
+                        className="mr-2 rounded-full border border-border-strong/60 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-foreground"
+                        title="A back-face frame: every row is compared, scored, walked and ticked against the printing's BACK face."
+                        data-testid="checklist-face-back"
+                      >
+                        back face
+                      </span>
+                    ) : null}
                     {tpl.hasOverride ? (
                       <span
                         className="mr-2 rounded-full border border-sky-400/50 bg-sky-400/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-sky-300"
@@ -231,8 +244,12 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                         {combo.walkHref ? (
                           <Link
                             href={combo.walkHref}
-                            title="Walk the stepper: open the creator on this frame and colour as an admin preview, prefilled from the reference printing."
-                            aria-label={`Walk the stepper on ${tpl.template}/${combo.colorKey}`}
+                            title={`Walk the stepper: open the creator on this frame and colour as an admin preview, prefilled from the reference printing${
+                              tpl.face === "back" ? ", with the preview on the back face" : ""
+                            }.`}
+                            aria-label={`Walk the stepper on ${tpl.template}/${combo.colorKey}${
+                              tpl.face === "back" ? " (back face)" : ""
+                            }`}
                             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
                           >
                             <Footprints className="h-3 w-3" aria-hidden /> Walk

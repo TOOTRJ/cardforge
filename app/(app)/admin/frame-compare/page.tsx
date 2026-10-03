@@ -39,6 +39,8 @@ import {
 } from "@/lib/cards/frame-reference-registry";
 import { getFrameReviews, type FrameReview } from "@/lib/cards/frame-reviews";
 import { listFrameReviewEvents } from "@/lib/cards/frame-review-events";
+import { FACE_PARAM, parseCardFace, type CardFace } from "@/lib/cards/card-face";
+import { faceUnderTest, isDfcBackBody } from "@/lib/cards/dfc";
 import {
   overrideHash,
   verificationState,
@@ -46,7 +48,11 @@ import {
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
-import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
+import {
+  FrameCompareFaceError,
+  buildFrameComparePayload,
+  type FrameComparePayload,
+} from "@/lib/scryfall/reference-preview";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { crownReferenceFor } from "@/lib/cards/crown";
 import { getCurrentProfile } from "@/lib/supabase/server";
@@ -77,7 +83,100 @@ import {
 // admin-pinned printing wins when no `ref` is given. Admin-only; the
 // Scryfall lookup isn't logged to scryfall_calls (that table backs per-user
 // quotas for end-user features).
+//
+// Per FACE (TODO 5.0b): a BACK body (FrameProfile.dfc.role "back") is
+// compared, scored, walked and ticked on its printing's BACK face — its
+// `card_faces[1]`, Scryfall's `/back/` scan — and its rows say so; on any
+// other template `&face=back` shows the printing's back as the preview
+// draws a legacy back today (the back's content on the front's frame and
+// colour) against the back scan, with a Front / Back switch when the
+// printing has one. The tick records the combo's own face (a back body's
+// back; otherwise the front).
 // ---------------------------------------------------------------------------
+
+/** The compare view's own URL for a combo, with the switches it keeps. */
+function compareHref(
+  template: FrameTemplate,
+  color: FrameColorKey,
+  options: { ref?: string | null; legendary?: boolean; face?: CardFace | null } = {},
+): string {
+  const params = new URLSearchParams({ template, color });
+  if (options.ref) params.set("ref", options.ref);
+  if (options.legendary) params.set("legendary", "1");
+  // A back body's face is its own: the parameter names only a front
+  // template's back view.
+  if (options.face === "back" && !isDfcBackBody(template)) params.set(FACE_PARAM, "back");
+  return `/admin/frame-compare?${params.toString()}`;
+}
+
+/** The Front / Back switch (TODO 5.0b): on a back body a fixed badge (the
+ *  body never dresses a front); elsewhere the two faces of a printing that
+ *  has a back scan, and nothing for a single-faced printing. */
+function FaceSwitcher({
+  template,
+  color,
+  face,
+  hasBackScan,
+  refId,
+  faceName,
+}: {
+  template: FrameTemplate;
+  color: FrameColorKey;
+  face: CardFace;
+  hasBackScan: boolean;
+  /** The registry alternate on screen (?ref=), kept across the switch. */
+  refId: string | null;
+  faceName: string | null;
+}) {
+  const label = (
+    <span className="text-[11px] uppercase tracking-wider text-subtle">Face</span>
+  );
+  if (isDfcBackBody(template)) {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5" data-testid="face-switcher" data-face="back">
+        {label}
+        <span className="rounded-md border border-primary/60 bg-primary/15 px-2 py-1 text-[11px] font-medium text-foreground">
+          Back{faceName ? ` · ${faceName}` : ""}
+        </span>
+        <span className="text-[11px] text-muted">
+          A back-face frame: compared, scored and ticked against the printing&apos;s back.
+        </span>
+      </div>
+    );
+  }
+  if (!hasBackScan && face === "front") return null;
+  const chips = [
+    { key: "front" as const, label: "Front", href: compareHref(template, color, { ref: refId }) },
+    { key: "back" as const, label: "Back", href: compareHref(template, color, { ref: refId, face: "back" }) },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" data-testid="face-switcher" data-face={face}>
+      {label}
+      {chips.map((chip) => (
+        <Link
+          key={chip.key}
+          href={chip.href}
+          aria-current={chip.key === face ? "page" : undefined}
+          className={cn(
+            "rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+            chip.key === face
+              ? "border-primary/60 bg-primary/15 text-foreground"
+              : "border-border/50 text-muted hover:text-foreground",
+          )}
+        >
+          {chip.label}
+          {chip.key === face && faceName ? ` · ${faceName}` : ""}
+        </Link>
+      ))}
+      {face === "back" ? (
+        <span className="text-[11px] text-muted">
+          The back as a legacy back draws today: its content on this frame and the front&apos;s colour. The tick and
+          its recorded score stay the front&apos;s.
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Frame compare",
@@ -102,12 +201,15 @@ function ReferenceSwitcher({
   options,
   activeId,
   pinned,
+  face,
 }: {
   template: FrameTemplate;
   color: FrameColorKey;
   options: FrameReference[];
   activeId: string | null;
   pinned: FrameReference | null;
+  /** Kept across the switch (a front template's back view). */
+  face: CardFace;
 }) {
   if (options.length + (pinned ? 1 : 0) < 2) return null;
   const chip = (label: string, href: string, active: boolean, title?: string) => (
@@ -125,18 +227,21 @@ function ReferenceSwitcher({
       {label}
     </Link>
   );
-  const base = `/admin/frame-compare?template=${template}&color=${color}`;
   return (
     <div className="flex flex-wrap items-center gap-1.5" data-testid="reference-switcher">
       <span className="text-[11px] uppercase tracking-wider text-subtle">Reference</span>
       {pinned
-        ? chip(`Pinned · ${pinned.name} (${pinned.set.toUpperCase()})`, base, activeId === null)
+        ? chip(
+            `Pinned · ${pinned.name} (${pinned.set.toUpperCase()})`,
+            compareHref(template, color, { face }),
+            activeId === null,
+          )
         : null}
       {options.map((option, index) => {
         const tier = referenceTierLabel(option);
         return chip(
           `${option.name} (${option.set.toUpperCase()})${index === 0 ? " · default" : ""}${tier ? " · ⚠" : ""}`,
-          `${base}&ref=${option.scryfallId}`,
+          compareHref(template, color, { ref: option.scryfallId, face }),
           activeId === option.scryfallId,
           tier ?? undefined,
         );
@@ -152,19 +257,20 @@ function LegendaryToggle({
   color,
   on,
   available,
+  face,
 }: {
   template: FrameTemplate;
   color: FrameColorKey;
   on: boolean;
   available: boolean;
+  face: CardFace;
 }) {
-  const base = `/admin/frame-compare?template=${template}&color=${color}`;
   return (
     <div className="flex flex-wrap items-center gap-1.5" data-testid="legendary-toggle">
       <span className="text-[11px] uppercase tracking-wider text-subtle">Legendary crown</span>
       {[
-        { label: "Off", href: base, active: !on },
-        { label: "On", href: `${base}&legendary=1`, active: on },
+        { label: "Off", href: compareHref(template, color, { face }), active: !on },
+        { label: "On", href: compareHref(template, color, { face, legendary: true }), active: on },
       ].map((chip) => (
         <Link
           key={chip.label}
@@ -200,13 +306,19 @@ async function markedRenderCount(): Promise<number> {
 export default async function AdminFrameComparePage({
   searchParams,
 }: {
-  searchParams: Promise<{ template?: string; color?: string; ref?: string; legendary?: string }>;
+  searchParams: Promise<{
+    template?: string;
+    color?: string;
+    ref?: string;
+    legendary?: string;
+    face?: string | string[];
+  }>;
 }) {
   const profile = await getCurrentProfile();
   // Non-admins get a 404 (don't reveal the route exists).
   if (!profile?.is_admin) notFound();
 
-  const { template, color, ref, legendary } = await searchParams;
+  const { template, color, ref, legendary, face: faceParam } = await searchParams;
   const [reviews, markedCount] = await Promise.all([getFrameReviews(), markedRenderCount()]);
 
   // ----- Sign-off mode (TODO 2.4): a template, no colour -----
@@ -246,19 +358,29 @@ export default async function AdminFrameComparePage({
     const options = frameReferenceOptions(template, color);
     const { note, confirm } = frameReferenceNote(template);
     const tier = referenceTierLabel(reference);
+    // The face compared (TODO 5.0b): a back body's back; else `?face=back`
+    // or the front.
+    const face = faceUnderTest(template, parseCardFace(faceParam));
     // A lookup that THROWS (Scryfall unreachable, a reset connection — not a
     // 404, which answers null) falls back to the sample content below with
     // "Reference lookup failed", like the sign-off's side-by-side, instead
-    // of erroring the page.
-    const payload = reference
-      ? await buildFrameComparePayload(reference.scryfallId, template).catch((error: unknown) => {
+    // of erroring the page. A printing that has no such face is named.
+    let payload: FrameComparePayload | null = null;
+    let faceMissing: string | null = null;
+    if (reference) {
+      try {
+        payload = await buildFrameComparePayload(reference.scryfallId, template, face);
+      } catch (error: unknown) {
+        if (error instanceof FrameCompareFaceError) {
+          faceMissing = error.message;
+        } else {
           console.warn(
             `[frame-compare] reference lookup failed for ${template}/${color} (${reference.scryfallId}):`,
             error instanceof Error ? error.message : error,
           );
-          return null;
-        })
-      : null;
+        }
+      }
+    }
 
     const verified = review?.verified ?? false;
     const overrides = await getFrameProfileOverrides();
@@ -299,10 +421,18 @@ export default async function AdminFrameComparePage({
       reference && payload
         ? `Reference: ${reference.name} (${reference.set.toUpperCase()})${
             crownRef ? " — crowned print" : chosen ? "" : pinned ? " — admin-pinned" : ""
+          }${
+            payload.face === "back"
+              ? ` — back face${payload.faceName ? ` (${payload.faceName})` : ""}`
+              : payload.faceName
+                ? ` — front face (${payload.faceName})`
+                : ""
           }.${tier && !crownRef ? ` ⚠ ${tier[0].toUpperCase()}${tier.slice(1)}.` : ""}`
-        : reference
-          ? `Reference lookup failed (${reference.name}) — showing sample content instead. Reload to retry.`
-          : "No real printing exists for this combination — eyeball the sample render.";
+        : reference && faceMissing
+          ? `${faceMissing} Showing sample content instead.`
+          : reference
+            ? `Reference lookup failed (${reference.name}) — showing sample content instead. Reload to retry.`
+            : "No real printing exists for this combination — eyeball the sample render.";
 
     return (
       <DashboardShell>
@@ -324,6 +454,7 @@ export default async function AdminFrameComparePage({
                 template={template}
                 colorKey={color}
                 isCustom={Boolean(pinned)}
+                face={faceUnderTest(template)}
               />
               <FrameVerifyCheckbox
                 template={template}
@@ -386,11 +517,14 @@ export default async function AdminFrameComparePage({
         <div className="mt-4 flex flex-col gap-3">
           <p className="flex flex-wrap items-center gap-3 text-xs font-semibold">
             <Link
-              href={walkthroughHref({ template, colorKey: color })}
+              href={walkthroughHref({ template, colorKey: color, ref: chosen?.scryfallId ?? null, face })}
               className="text-muted underline-offset-2 hover:text-foreground hover:underline"
-              title="Open the creator on this frame and colour as an admin preview, prefilled from the reference printing (TODO 2.2)."
+              title={`Open the creator on this frame and colour as an admin preview, prefilled from the reference printing on screen (TODO 2.2)${
+                face === "back" ? ", with the preview on the back face" : ""
+              }.`}
             >
               Walk the stepper on {template}/{color}
+              {face === "back" ? " (back face)" : ""}
             </Link>
             <Link
               href={`/admin/frame-compare?template=${template}`}
@@ -400,8 +534,22 @@ export default async function AdminFrameComparePage({
               Sign off {template}
             </Link>
           </p>
+          <FaceSwitcher
+            template={template}
+            color={color}
+            face={face}
+            hasBackScan={payload?.hasBackScan ?? false}
+            refId={chosen?.scryfallId ?? null}
+            faceName={payload?.faceName ?? null}
+          />
           {drawsCrown ? (
-            <LegendaryToggle template={template} color={color} on={crowned} available={crownRef !== null} />
+            <LegendaryToggle
+              template={template}
+              color={color}
+              on={crowned}
+              available={crownRef !== null}
+              face={face}
+            />
           ) : null}
           {crowned ? null : (
             <ReferenceSwitcher
@@ -410,6 +558,7 @@ export default async function AdminFrameComparePage({
               options={options}
               activeId={chosen?.scryfallId ?? (pinned ? null : (reference?.scryfallId ?? null))}
               pinned={pinned}
+              face={face}
             />
           )}
           {confirm || note ? (
@@ -432,13 +581,18 @@ export default async function AdminFrameComparePage({
         <div className="mt-6 flex flex-col gap-4">
           <FrameGuide />
           <FrameCompare
-            key={`${template}/${color}/${reference?.scryfallId ?? "sample"}${crowned ? "/crowned" : ""}`}
+            key={`${template}/${color}/${reference?.scryfallId ?? "sample"}${crowned ? "/crowned" : ""}${
+              face === "back" ? "/back" : ""
+            }`}
             preview={preview}
             scanUrl={payload?.scanUrl ?? null}
-            scanAlt={`Official scan of ${reference?.name ?? "reference card"}`}
+            scanAlt={`Official scan of ${reference?.name ?? "reference card"}${
+              payload?.face === "back" ? " (back face)" : ""
+            }`}
             template={template}
             colorKey={color}
             referenceId={chosen?.scryfallId ?? null}
+            face={face}
             savedOverride={overrides[template] ?? null}
           />
         </div>
@@ -476,6 +630,9 @@ export default async function AdminFrameComparePage({
     label: FRAME_ERA_LABELS[era],
     templates: (templatesByEra.get(era) ?? []).map((t) => {
       const { note, confirm } = frameReferenceNote(t);
+      // A back body's rows show, compare and walk the printing's BACK face
+      // (TODO 5.0b).
+      const face = faceUnderTest(t);
       const combos = FRAME_COLOR_KEYS.map((colorKey) => {
           const review = reviews.get(frameComboKey(t, colorKey));
           const custom =
@@ -504,10 +661,10 @@ export default async function AdminFrameComparePage({
               ? {
                   name: reference.name,
                   set: reference.set,
-                  thumbUrl: referenceThumbUrl(reference),
+                  thumbUrl: referenceThumbUrl(reference, face),
                 }
               : null,
-            walkHref: walkthroughHref({ template: t, colorKey }),
+            walkHref: walkthroughHref({ template: t, colorKey, face }),
           };
         });
       return {
@@ -516,8 +673,9 @@ export default async function AdminFrameComparePage({
         hasOverride: Boolean(checklistOverrides[t]),
         note,
         confirm,
+        face,
         combos,
-        walkHref: walkthroughHref({ template: t, colorKey: firstColourToWalk(combos) }),
+        walkHref: walkthroughHref({ template: t, colorKey: firstColourToWalk(combos), face }),
         signOffHref: `/admin/frame-compare?template=${t}`,
         previews: (previewsByTemplate.get(t) ?? []).map((card) => ({
           id: card.id,

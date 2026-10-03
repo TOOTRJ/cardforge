@@ -62,6 +62,8 @@ export default async function CreatePage({
     kind?: string;
     seed?: string;
     ref?: string;
+    /** The face the walk opens the preview on (TODO 5.0b). */
+    face?: string | string[];
   }>;
 }) {
   const search = await searchParams;
@@ -185,6 +187,7 @@ export default async function CreatePage({
           kind: search.kind,
           seed: search.seed,
           ref: search.ref,
+          face: search.face,
         })
       : null;
 

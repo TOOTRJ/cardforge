@@ -2128,6 +2128,8 @@ describe("frame request log", () => {
           colorKey: "b",
           kind: "creature",
           note: "Walking m15/b",
+          previewFace: "front",
+          cardTemplate: "m15",
           seed: {
             patch: { ...mapScryfallToFormPatch(sheoldred), frame_template: "m15" },
             source: { name: sheoldred.name, scryfallUri: null },

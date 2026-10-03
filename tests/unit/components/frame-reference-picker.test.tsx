@@ -174,4 +174,43 @@ describe("FrameReferencePicker", () => {
     expect(router.refresh).toHaveBeenCalledTimes(1);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("on a back-face frame's row the results show each printing's BACK face, and say when there is none (TODO 5.0b)", async () => {
+    const avacyn = {
+      id: "a1a1a1a1-0001-4001-8001-000000000001",
+      name: "Archangel Avacyn // Avacyn, the Purifier",
+      set: "soi",
+      thumb_url: "https://cards.scryfall.io/art_crop/front/a/1/front.jpg",
+      back_thumb_url: "https://cards.scryfall.io/art_crop/back/a/1/back.jpg",
+      image_status: "highres_scan",
+    };
+    searchAnswers([avacyn, { ...GANDALF, thumb_url: "https://cards.scryfall.io/art_crop/front/e/a/gandalf.jpg", back_thumb_url: null }]);
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} face="back" />);
+    fireEvent.click(screen.getByRole("button", { name: /change reference card \(back face\)/i }));
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "avacyn" } });
+
+    await screen.findByText(avacyn.name);
+    const thumbs = Array.from(document.querySelectorAll("img")).map((img) => img.getAttribute("src"));
+    // The back's art for the two-faced printing; nothing (no front art
+    // standing in) for the single-faced one.
+    expect(thumbs).toEqual(["https://cards.scryfall.io/art_crop/back/a/1/back.jpg"]);
+    expect(screen.getByText(/soi · back face/)).toBeTruthy();
+    expect(screen.getByText(/ltr · low-res scan · no second face/)).toBeTruthy();
+    // The pin itself carries no face: the row's template decides it.
+    actions.setFrameReferenceAction.mockResolvedValueOnce({ ok: true, warning: null, name: avacyn.name });
+    fireEvent.click(screen.getByRole("button", { name: /Archangel Avacyn/ }));
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+    expect(actions.setFrameReferenceAction).toHaveBeenCalledWith({ template: "lotr", colorKey: "u", scryfallId: avacyn.id });
+  });
+
+  it("a front row shows the front art as before", async () => {
+    searchAnswers([{ ...GANDALF, thumb_url: "https://cards.scryfall.io/art_crop/front/e/a/gandalf.jpg", back_thumb_url: null }]);
+    render(<FrameReferencePicker template="lotr" colorKey="u" isCustom={false} />);
+    await openAndSearch("gandalf");
+    await screen.findByText(GANDALF.name);
+    expect(Array.from(document.querySelectorAll("img")).map((img) => img.getAttribute("src"))).toEqual([
+      "https://cards.scryfall.io/art_crop/front/e/a/gandalf.jpg",
+    ]);
+    expect(screen.queryByText(/no second face/)).toBeNull();
+  });
 });

@@ -17,6 +17,7 @@ import {
   type FrameColorKey,
 } from "@/lib/cards/frame-reference-registry";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { FACE_PARAM, type CardFace } from "@/lib/cards/card-face";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import type { ColorIdentity } from "@/types/card";
 import type { FrameWalkthrough } from "@/lib/creator/frame-walkthrough-seed";
@@ -203,12 +204,21 @@ export function parseWalkthroughSeed(raw: string | null | undefined): Walkthroug
 }
 
 /** The "Walk the stepper" link for a checklist row: the creator in admin
- *  preview mode on this frame and colour, prefilled from the reference. */
+ *  preview mode on this frame and colour, prefilled from the reference.
+ *  `ref` names the registry alternate the compare view has on screen
+ *  (its `?ref=`), so the walk seeds from the SAME printing — the compare
+ *  view's back view is only reached through a double-faced alternate, and
+ *  a walk that fell back to the row's default printing would open on
+ *  another card's front. `face: "back"` (TODO 5.0b) opens the stepper on
+ *  the back face — a back body's rows carry it; omitted (or the front)
+ *  adds nothing. */
 export function walkthroughHref(input: {
   template: FrameTemplate;
   colorKey: FrameColorKey | string;
   kind?: CardKind;
   seed?: WalkthroughSeedMode;
+  ref?: string | null;
+  face?: CardFace | null;
 }): string {
   const params = new URLSearchParams({
     [PREVIEW_FRAMES_PARAM]: "all",
@@ -218,6 +228,8 @@ export function walkthroughHref(input: {
   });
   const seed = input.seed ?? "reference";
   if (seed !== "none") params.set("seed", seed);
+  if (input.ref) params.set("ref", input.ref);
+  if (input.face === "back") params.set(FACE_PARAM, "back");
   return `/create?${params.toString()}`;
 }
 
@@ -249,7 +261,7 @@ export function withoutPreviewParams(path: string, search: Record<string, string
   for (const [key, value] of Object.entries(search)) {
     if (
       value === undefined ||
-      [PREVIEW_FRAMES_PARAM, "seed", "template", "color", "kind", "ref"].includes(key)
+      [PREVIEW_FRAMES_PARAM, "seed", "template", "color", "kind", "ref", FACE_PARAM].includes(key)
     ) {
       continue;
     }

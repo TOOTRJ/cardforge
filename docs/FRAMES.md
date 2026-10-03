@@ -680,6 +680,39 @@ The standard operating procedure for one template:
    production does. A registry rule that names the frame `onceVerified`,
    and the import dialog's Exact badges, follow the tick by themselves.
 
+**Per face (TODO 5.0b).** Every step above is run on ONE face of the
+reference printing. A template that is a BACK body of a double-faced card
+(`FrameProfile.dfc.role === "back"`; none exists before 5.1a) is compared,
+scored, walked and ticked against its printing's **back** face — Scryfall's
+`card_faces[1]` and its back scan (the CDN's "back" path) — everywhere,
+with no switch to set:
+`faceUnderTest(template)` (`lib/cards/dfc.ts`) decides it for the checklist
+row (the back thumbnail, a "back face" tag, the Walk link with
+`&face=back`), the compare view (a fixed "Back" badge), the Score button,
+the tick's recorded score, the sign-off's side-by-side and job, and the
+walk-through, whose card is pinned to the body's paired FRONT
+(`frontBodyFor`, for the printing's front type) with the live preview
+opened on the back. The registry
+entries of a back body carry `face: 1`; "Change reference card" on such a
+row shows each printing's back art and refuses one with no second face,
+one whose back the import drops (a double-faced token, a Role card) or
+whose BACK is another colour (`validateReferenceForCombo`). The render is
+the back exactly as the card page and the bake will draw it —
+`backPreviewData` (`lib/cards/faces.ts`) on the card the import would
+store, in the back's own printed colour (`referenceBackColorIdentity`),
+with the front's facts in its `dfc.otherFace`. On any OTHER template the
+compare view takes `?face=back` — a Front / Back switch appears when the
+printing has a back scan — and shows the back as a **legacy back** draws
+today (its content on that frame in the front's colour, the way the
+imported double-faced cards flip) against the back scan, scores it on the
+Score button, and walks it with the preview flipped; the tick and its
+recorded score stay the front's. A printing with no such face (one face;
+a split, flip or adventure, which is one picture; a double-faced token or
+Role card, whose back the import drops) is named instead of silently
+measured against the front's scan (`FrameCompareFaceError`), and
+`buildFrameComparePayload(id, template)` with no face is byte for byte
+what it was (`tests/unit/scryfall/reference-preview-front-snapshot.test.ts`).
+
 **When a tick goes stale.** A tick records the layout version and a hash of
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
@@ -716,7 +749,17 @@ publishing it:
   handler as a user's Scryfall import, pins the frame and colour and starts
   on the Card step. A combo with no real printing (or a failed lookup) is
   seeded with the compare view's sample content (`seed=sample` asks for it
-  directly), and the banner says which. Art isn't imported.
+  directly), and the banner says which. Art isn't imported. `&face=back`
+  (TODO 5.0b) opens the live preview on the back face once the seed is
+  applied — a back body's links always carry it, and its card is pinned to
+  the body's paired front for the printing's front type
+  (`FrameWalkthrough.cardTemplate`, `frontBodyFor`: the land pair under a
+  land front); a printing with no second face opens on the front and the
+  banner says so. The compare view's walk link also carries the registry
+  alternate on screen (`&ref=`), so the walk seeds from the printing the
+  view shows — a front template's back view is reached only through a
+  double-faced alternate, and the row's default printing may have no
+  second face.
 - **Preview saves (2.3).** A save on an unverified combo in preview mode, and
   every save during a walk, asks the server for `frame_preview`;
   `createCardAction` / `updateCardAction` honour it only for an admin (the
@@ -1680,8 +1723,11 @@ templates, new columns; 0 stored cards change, no bump, no sweep, no badge.
   and the orphan sweep's `renderCardId` (a `.back.png` of a live card is
   never an orphan — before 5.0a it would have been swept). One
   `layout_version` and one `rendered_at` per card.
-- **What follows:** 5.0b (the compare / score / walkthrough tools per
-  face), 5.1a (the transform bodies: masters, riders, the colour indicator,
+- **The tools per face (5.0b):** [Verifying a frame](#verifying-a-frame)
+  "Per face" — a back body is compared, scored, walked and ticked on its
+  printing's back face by the template alone; any other template's compare
+  view takes `?face=back` for a legacy back.
+- **What follows:** 5.1a (the transform bodies: masters, riders, the colour indicator,
   the tone pass, a review sheet beside the prints, `frames:promote`), 5.2
   (the Transform and Modal kinds, the back-face panel, the one-click move
   of the 8 imported cards — Q3), 5.3 (both faces baked, the tile flip — Q6,

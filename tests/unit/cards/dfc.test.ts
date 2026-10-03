@@ -6,10 +6,13 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
+  faceUnderTest,
+  frontBodyFor,
   isDfcBackBody,
   isDfcIconFamily,
   templateHasBackFace,
 } from "@/lib/cards/dfc";
+import { CARD_FACE_VALUES, isCardFace, parseCardFace, scryfallFaceIndex } from "@/lib/cards/card-face";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -80,6 +83,40 @@ describe("on today's profiles: no template is a DFC body", () => {
     expect(backBodyError(undefined, { frame_style: { template: "m15" } })).toBe("This frame has no back face of its own.");
     // An empty frame_style is no body.
     expect(backBodyError("m15", { frame_style: {} })).toBeNull();
+  });
+});
+
+describe("the face under test (TODO 5.0b) on today's profiles: no back body, so the face is the one asked for", () => {
+  it("every template is compared on the front unless the view asks for the back", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      expect(faceUnderTest(template), template).toBe("front");
+      expect(faceUnderTest(template, null), template).toBe("front");
+      expect(faceUnderTest(template, "front"), template).toBe("front");
+      expect(faceUnderTest(template, "back"), template).toBe("back");
+    }
+    expect(faceUnderTest(undefined, "back")).toBe("back");
+    expect(faceUnderTest("no-such-frame")).toBe("front");
+  });
+
+  it("frontBodyFor is null everywhere: no template is a back body", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      expect(frontBodyFor(template), template).toBeNull();
+      expect(frontBodyFor(template, "land"), template).toBeNull();
+    }
+    expect(frontBodyFor(undefined)).toBeNull();
+  });
+
+  it("the face vocabulary: two faces, Scryfall's indexes, a URL value parsed strictly", () => {
+    expect([...CARD_FACE_VALUES]).toEqual(["front", "back"]);
+    expect(scryfallFaceIndex("front")).toBe(0);
+    expect(scryfallFaceIndex("back")).toBe(1);
+    expect(parseCardFace("back")).toBe("back");
+    expect(parseCardFace("front")).toBe("front");
+    expect(parseCardFace(["back", "front"])).toBe("back");
+    for (const bad of ["Back", "BACK", "1", "", null, undefined, []]) {
+      expect(parseCardFace(bad as never), String(bad)).toBeNull();
+      expect(isCardFace(bad), String(bad)).toBe(false);
+    }
   });
 });
 

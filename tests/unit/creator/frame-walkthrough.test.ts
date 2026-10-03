@@ -218,3 +218,58 @@ describe("buildFrameWalkthrough", () => {
     expect(walk?.seed?.patch).toMatchObject({ frame_template: "saga", kind: "saga" });
   });
 });
+
+describe("the face the walk opens on (TODO 5.0b) — no template is a back body today", () => {
+  it("the front by default: the card is pinned to the template itself", async () => {
+    for (const params of [{}, { face: "front" }, { face: "nonsense" }]) {
+      const walk = await buildFrameWalkthrough({ template: "m15", color: "w", ...params });
+      expect(walk).toMatchObject({ previewFace: "front", cardTemplate: "m15", template: "m15" });
+      expect(walk?.note).not.toMatch(/back face/);
+    }
+  });
+
+  it("?face=back opens the preview on the back when the reference has a second face, and says so", async () => {
+    const reference = FRAME_REFERENCES.m15.w!;
+    state.payload = {
+      cardName: "Archangel Avacyn // Avacyn, the Purifier",
+      scryfallUri: null,
+      patch: {
+        title: "Archangel Avacyn",
+        kind: "creature",
+        frame_template: "m15",
+        color_identity: ["white"],
+        back_face: { title: "Avacyn, the Purifier", card_type: "creature" },
+      },
+    };
+    const walk = await buildFrameWalkthrough({ template: "m15", color: "w", seed: "reference", face: "back" });
+    // The front payload is the seed either way (the patch carries both faces).
+    expect(state.lookups).toEqual([{ id: reference.scryfallId, template: "m15" }]);
+    expect(walk).toMatchObject({ previewFace: "back", cardTemplate: "m15" });
+    expect(walk?.seed?.patch.back_face).toEqual({ title: "Avacyn, the Purifier", card_type: "creature" });
+    expect(walk?.note).toMatch(/The preview opens on the back face\.$/);
+    // The array form Next hands over for a repeated parameter.
+    const repeated = await buildFrameWalkthrough({ template: "m15", color: "w", seed: "reference", face: ["back"] });
+    expect(repeated?.previewFace).toBe("back");
+  });
+
+  it("?face=back on a printing with no second face opens on the front and says why", async () => {
+    state.payload = {
+      cardName: "Serra Angel",
+      scryfallUri: null,
+      patch: { title: "Serra Angel", kind: "creature", frame_template: "m15", color_identity: ["white"] },
+    };
+    const walk = await buildFrameWalkthrough({ template: "m15", color: "w", seed: "reference", face: "back" });
+    expect(walk?.previewFace).toBe("front");
+    expect(walk?.seed?.fromReference).toBe(true);
+    expect(walk?.note).toMatch(/has no second face, so the preview opens on the front\.$/);
+  });
+
+  it("a blank or sample walk keeps the face asked for (the preview has nothing to flip to, and draws the front)", async () => {
+    const blank = await buildFrameWalkthrough({ template: "m15", color: "w", face: "back" });
+    expect(blank).toMatchObject({ seed: null, previewFace: "back" });
+    expect(blank?.note).toMatch(/blank card\. The preview opens on the back face\.$/);
+    const sample = await buildFrameWalkthrough({ template: "m15", color: "w", seed: "sample", face: "back" });
+    expect(sample).toMatchObject({ previewFace: "back", cardTemplate: "m15" });
+    expect(sample?.seed?.fromReference).toBe(false);
+  });
+});
