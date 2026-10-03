@@ -694,7 +694,8 @@ walk-through, whose card is pinned to the body's paired FRONT
 (`frontBodyFor`, for the printing's front type) with the live preview
 opened on the back. The registry
 entries of a back body carry `face: 1`; "Change reference card" on such a
-row shows each printing's back art and refuses one with no second face or
+row shows each printing's back art and refuses one with no second face,
+one whose back the import drops (a double-faced token, a Role card) or
 whose BACK is another colour (`validateReferenceForCombo`). The render is
 the back exactly as the card page and the bake will draw it —
 `backPreviewData` (`lib/cards/faces.ts`) on the card the import would
