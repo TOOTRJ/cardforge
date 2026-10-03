@@ -1,11 +1,14 @@
-import type { ScryfallCard } from "@/lib/scryfall/client";
+import { hasBackFaceImage, type ScryfallCard } from "@/lib/scryfall/client";
 import {
+  droppedFaceOf,
   frameColorsFromScryfall,
   frameMatchFromScryfall,
   kindFromScryfall,
   parseTypeLine,
+  referenceBackColorIdentity,
 } from "@/lib/scryfall/import-mapper";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { isDfcBackBody } from "@/lib/cards/dfc";
 import {
   KIND_DEFS,
   borrowedTypeWord,
@@ -38,6 +41,15 @@ import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 // (a saga on the scroll frame) stays refused, since the frame can't draw
 // its layout. A printing
 // whose signature resolves to ANOTHER template gets a warning.
+//
+// A BACK body (TODO 5.0b; FrameProfile.dfc.role "back") is compared with
+// the printing's BACK face, so its pin is checked on that face: the printing
+// must have a second face with its own scan that the import keeps (not a
+// double-faced token's or a Role card's), and that face's colour must be
+// the row's (referenceBackColorIdentity). No kind check: a back body
+// dresses no kind of its own (the save's rule is the back's type against
+// bodyFor, 5.2), and no signature warning: the registry names the FRONT
+// body a printing lands on, the back body is implied by it.
 //
 // Pure (no Supabase, no fetch) so the rules are unit-tested directly.
 // ---------------------------------------------------------------------------
@@ -108,6 +120,36 @@ export function validateReferenceForCombo(
   // Showcase frames name their set ("Zendikar Rising — Hedron"), as the
   // admin checklist and the compare page title do.
   const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
+
+  if (isDfcBackBody(template)) {
+    const dropped = droppedFaceOf(card);
+    if (!hasBackFaceImage(card)) {
+      errors.push(
+        `${card.name} has no second face with its own scan; the ${label} frame is a back face, compared with the printing's back.`,
+      );
+    } else if (dropped) {
+      // The import keeps only the front of a double-faced token or a Role
+      // card (TODO 1.23): there is no stored back for the row to compare.
+      errors.push(
+        `${card.name} is ${dropped === "role" ? "a Role card" : "a double-faced token"}, whose second face PipGlyph doesn't import; the ${label} frame needs a transform or modal printing.`,
+      );
+    } else {
+      const backColor = pickFrameColorKey(referenceBackColorIdentity(card));
+      if (backColor !== colorKey) {
+        errors.push(
+          `${card.name}'s back face is ${COLOR_WORD[backColor] ?? backColor}; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
+        );
+      }
+    }
+    const expectedEra = ERA_FRAME[eraForTemplate(template)];
+    const printedFrame = card.frame ?? null;
+    if (printedFrame && expectedEra && printedFrame !== expectedEra) {
+      warnings.push(
+        `This printing uses the ${printedFrame} frame; the ${template} template emulates the ${expectedEra} era.`,
+      );
+    }
+    return { errors, warnings };
+  }
 
   const signature = frameMatchFromScryfall(card);
   if (signature.template !== template) {

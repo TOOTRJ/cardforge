@@ -433,6 +433,13 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // overlay band (extendedcrown/<key>) on the MSE masters — every colour,
   // the grey colourless crown, gold (a pair wears gold: no pair masters).
   ["extendedart", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  // TODO 4.6f (wave 2c): the STANDARD band over the snow frames — the
+  // crowned snow prints' keys (u: J22 #12, g: PH19 #5, the gold pair wears
+  // gold with its two-colour switch off: KHM #224) and the keys no print
+  // has (c: the artifact silver over the snow artifact frame, wub); the
+  // snow land's green and its colourless land grey (DMR #244).
+  ["m15snow", ["u", "g", "c", "wu", "wub"]],
+  ["m15snowland", ["g", "c"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -726,6 +733,8 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   // The extended-art band at the stored bake's size (4.6f, wave 2b).
   add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // The snow band at the stored bake's size (4.6f, wave 2c).
+  add("m15snow", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on
@@ -761,6 +770,10 @@ export function visualCases(): VisualCase[] {
     row: { ...pairStyle("m15", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
   add("m15", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15", "regular", true) });
+  // The snow pair at the stored bake's size, with the split crown (4.6f,
+  // wave 2c: KHM #224's look), and the snow dual land.
+  add("m15snow", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15snow", "regular", true) });
+  add("m15snowland", "land", "wu", "short", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15snowland") });
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
@@ -866,7 +879,7 @@ function stampRow(
 
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
-export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"];
+export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
  *  (DMU #107's), on top of a stored row — `frame_style.collector` names the

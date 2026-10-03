@@ -85,6 +85,10 @@ type FrameCompareProps = {
   /** A registry printing chosen via ?ref= (null = pinned/default) — the
    *  score must measure the same printing the page shows. */
   referenceId?: string | null;
+  /** The face on screen (TODO 5.0b) — the score must measure the same
+   *  face the page shows. Omitted = the template's own (the front, or a
+   *  back body's back). */
+  face?: "front" | "back" | null;
   /** The saved DB override for this template (null when none). */
   savedOverride?: FrameProfileOverride | null;
 };
@@ -153,6 +157,7 @@ export function FrameCompare({
   template,
   colorKey,
   referenceId = null,
+  face = null,
   savedOverride,
 }: FrameCompareProps) {
   const router = useRouter();
@@ -192,7 +197,14 @@ export function FrameCompare({
       const response = await fetch("/api/admin/frame-align-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template, color: colorKey, ref: referenceId ?? undefined }),
+        body: JSON.stringify({
+          template,
+          color: colorKey,
+          ref: referenceId ?? undefined,
+          // Only a front template's back view needs saying; a back body is
+          // scored on its back regardless, and the front is the default.
+          face: face === "back" ? "back" : undefined,
+        }),
       });
       const body = await response.json().catch(() => null);
       if (body?.ok) {

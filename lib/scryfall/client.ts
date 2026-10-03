@@ -741,11 +741,17 @@ export async function fetchScryfallImage(
  * uniform 745x1040), fall back to `large` (672x936), and finally `normal`.
  * For double-faced cards Scryfall puts image_uris on `card_faces[0]`
  * instead of the top level.
+ *
+ * `face` 1 (TODO 5.0b) is the SECOND face's own scan — `card_faces[1]`'s
+ * `image_uris`, which only a transform, modal DFC, battle or reversible
+ * printing has (hasBackFaceImage). It never falls back to the top level or
+ * the front: a printing with no second face answers null, so a back-face
+ * comparison can't silently measure against the front's scan.
  */
-export function pickPrintImageUrl(card: ScryfallCard): string | null {
-  const top = card.image_uris ?? null;
-  const face = card.card_faces?.[0]?.image_uris ?? null;
-  const source = top ?? face;
+export function pickPrintImageUrl(card: ScryfallCard, face: 0 | 1 = 0): string | null {
+  const top = face === 0 ? (card.image_uris ?? null) : null;
+  const faceUris = card.card_faces?.[face]?.image_uris ?? null;
+  const source = top ?? faceUris;
   if (!source) return null;
   return source.png ?? source.large ?? source.normal ?? source.border_crop ?? null;
 }

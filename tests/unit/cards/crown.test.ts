@@ -44,9 +44,9 @@ describe("which card draws the crown", () => {
     }
   });
 
-  it("only on m15, m15artifact, m15land and the borderless frames (4.6f) — and a legacy template, which draws the m15 frame", () => {
+  it("only on m15, m15artifact, m15land, the borderless frames, extended art and the snow frames (4.6f) — and a legacy template, which draws the m15 frame", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => showsCrown(legendary(["white"]), getFrameProfile(t)));
-    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact", "extendedart"];
+    const DRAWN = ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);
   });
@@ -116,7 +116,16 @@ describe("the crowned prints the crown is judged against", () => {
     expect(crownReferenceFor("m15", "m")).toMatchObject({ set: "fdn", collectorNumber: "243" });
     expect(crownReferenceFor("m15land", "c")).toMatchObject({ set: "uma", collectorNumber: "241" });
     expect(crownReferenceFor("m15artifact", "c")).toMatchObject({ set: "fdn", collectorNumber: "677" });
+    // The snow frames (4.6f, wave 2c): the twelve crowned snow printings
+    // give u, g and the gold pair a reference on m15snow and the one crowned
+    // snow-frame land (DMR #244) the land grey on m15snowland; no w, b, r or
+    // artifact snow crown was printed.
+    expect(Object.keys(CROWN_REFERENCES.m15snow ?? {}).sort()).toEqual(["g", "m", "u"]);
+    expect(crownReferenceFor("m15snow", "u")).toMatchObject({ set: "j22", collectorNumber: "12" });
+    expect(crownReferenceFor("m15snow", "m")).toMatchObject({ set: "khm", collectorNumber: "224" });
+    expect(crownReferenceFor("m15snowland", "c")).toMatchObject({ set: "dmr", collectorNumber: "244" });
     expect(crownReferenceFor("m15snow", "w")).toBeNull();
+    expect(crownReferenceFor("m15devoid", "m")).toBeNull();
     // Scryfall ids only (never a scan).
     for (const refs of Object.values(CROWN_REFERENCES)) {
       for (const ref of Object.values(refs ?? {})) expect(ref?.scryfallId).toMatch(/^[0-9a-f-]{36}$/);

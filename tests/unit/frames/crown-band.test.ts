@@ -23,6 +23,7 @@ import {
 import { PAIR_RAMPS, TWO_COLOR_PAIRS, lerpLayers, rampMask } from "@/scripts/lib/pair-ramp.mjs";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6a — the legendary crown band (scripts/lib/cc-frames.mjs
@@ -134,14 +135,25 @@ describe("the crown slot the profiles draw (M15_CROWN)", () => {
     expect(M15_CROWN.assetPathTemplate).toBe("/frames/m15crown/{key}.png");
   });
 
-  it("is on the m15, m15artifact and m15land entries, remapping a colourless card's key", () => {
+  it("is on the m15, m15artifact and m15land entries — and the snow pair since 4.6f wave 2c — remapping a colourless card's key", () => {
     // (Beside the holofoil stamp's notch since 4.9c — its own test:
     // tests/unit/frames/holo-stamp-notch.test.ts.)
     const crownOf = (t: string) => getFrameProfile(t).overlays?.filter((slot) => slot.anatomy === "crown");
     expect(crownOf("m15")).toEqual([M15_CROWN]);
     expect(crownOf("m15artifact")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
     expect(crownOf("m15land")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
+    // The snow frames share the band (the snow pack's title bar sits where
+    // the M15 pack's does): a colourless snow card's master is CC's snow
+    // ARTIFACT frame, so its crown is the artifact silver; a colourless snow
+    // land's the land grey, as on m15land.
+    expect(crownOf("m15snow")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
+    expect(crownOf("m15snowland")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
     expect(getFrameProfile("m15").overlays?.[0]).toBe(M15_CROWN);
+    // Nothing else reads the band (the borderless frames and extended art
+    // draw the floating crown; devoid draws none).
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.assetPathTemplate === M15_CROWN.assetPathTemplate))).toEqual(
+      ["m15", "m15land", "m15artifact", "m15snow", "m15snowland"],
+    );
   });
 });
 

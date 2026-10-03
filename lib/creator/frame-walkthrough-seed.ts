@@ -4,6 +4,7 @@ import {
   type FrameColorKey,
 } from "@/lib/cards/frame-reference-registry";
 import { colorIdentityForKey } from "@/components/cards/frame-layer";
+import type { CardFace } from "@/lib/cards/card-face";
 import type { CardKind } from "@/lib/creator/card-kinds";
 import type { CardType, FrameTemplate, Rarity } from "@/types/card";
 
@@ -27,12 +28,21 @@ export type WalkthroughSeed = {
 
 /** What the create page hands the form for a walk (serialisable). */
 export type FrameWalkthrough = {
+  /** The template under test — the checklist row's. */
   template: FrameTemplate;
   colorKey: FrameColorKey;
   kind: CardKind;
   seed: WalkthroughSeed | null;
   /** Shown in the page banner: which content seeded the walk and why. */
   note: string;
+  /** The face the live preview opens on (TODO 5.0b): the back for a back
+   *  body, or when the link asked (`?face=back`); the front otherwise. */
+  previewFace: CardFace;
+  /** The template the CARD is pinned to: the template under test, or — for
+   *  a back body, which never dresses a front — its paired front body
+   *  (lib/cards/dfc.ts frontBodyFor), the back drawn as the creator draws
+   *  it (its own body from 5.2). */
+  cardTemplate: FrameTemplate;
 };
 
 /** The sample name the chip shows for placeholder content. */

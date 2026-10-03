@@ -680,6 +680,39 @@ The standard operating procedure for one template:
    production does. A registry rule that names the frame `onceVerified`,
    and the import dialog's Exact badges, follow the tick by themselves.
 
+**Per face (TODO 5.0b).** Every step above is run on ONE face of the
+reference printing. A template that is a BACK body of a double-faced card
+(`FrameProfile.dfc.role === "back"`; none exists before 5.1a) is compared,
+scored, walked and ticked against its printing's **back** face — Scryfall's
+`card_faces[1]` and its back scan (the CDN's "back" path) — everywhere,
+with no switch to set:
+`faceUnderTest(template)` (`lib/cards/dfc.ts`) decides it for the checklist
+row (the back thumbnail, a "back face" tag, the Walk link with
+`&face=back`), the compare view (a fixed "Back" badge), the Score button,
+the tick's recorded score, the sign-off's side-by-side and job, and the
+walk-through, whose card is pinned to the body's paired FRONT
+(`frontBodyFor`, for the printing's front type) with the live preview
+opened on the back. The registry
+entries of a back body carry `face: 1`; "Change reference card" on such a
+row shows each printing's back art and refuses one with no second face,
+one whose back the import drops (a double-faced token, a Role card) or
+whose BACK is another colour (`validateReferenceForCombo`). The render is
+the back exactly as the card page and the bake will draw it —
+`backPreviewData` (`lib/cards/faces.ts`) on the card the import would
+store, in the back's own printed colour (`referenceBackColorIdentity`),
+with the front's facts in its `dfc.otherFace`. On any OTHER template the
+compare view takes `?face=back` — a Front / Back switch appears when the
+printing has a back scan — and shows the back as a **legacy back** draws
+today (its content on that frame in the front's colour, the way the
+imported double-faced cards flip) against the back scan, scores it on the
+Score button, and walks it with the preview flipped; the tick and its
+recorded score stay the front's. A printing with no such face (one face;
+a split, flip or adventure, which is one picture; a double-faced token or
+Role card, whose back the import drops) is named instead of silently
+measured against the front's scan (`FrameCompareFaceError`), and
+`buildFrameComparePayload(id, template)` with no face is byte for byte
+what it was (`tests/unit/scryfall/reference-preview-front-snapshot.test.ts`).
+
 **When a tick goes stale.** A tick records the layout version and a hash of
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
@@ -716,7 +749,17 @@ publishing it:
   handler as a user's Scryfall import, pins the frame and colour and starts
   on the Card step. A combo with no real printing (or a failed lookup) is
   seeded with the compare view's sample content (`seed=sample` asks for it
-  directly), and the banner says which. Art isn't imported.
+  directly), and the banner says which. Art isn't imported. `&face=back`
+  (TODO 5.0b) opens the live preview on the back face once the seed is
+  applied — a back body's links always carry it, and its card is pinned to
+  the body's paired front for the printing's front type
+  (`FrameWalkthrough.cardTemplate`, `frontBodyFor`: the land pair under a
+  land front); a printing with no second face opens on the front and the
+  banner says so. The compare view's walk link also carries the registry
+  alternate on screen (`&ref=`), so the walk seeds from the printing the
+  view shows — a front template's back view is reached only through a
+  double-faced alternate, and the row's default printing may have no
+  second face.
 - **Preview saves (2.3).** A save on an unverified combo in preview mode, and
   every save during a walk, asks the server for `frame_preview`;
   `createCardAction` / `updateCardAction` honour it only for an admin (the
@@ -1234,10 +1277,13 @@ default.
 
 **The legendary crown (4.6a)** is `M15_CROWN` in
 `lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
-only (never snow, devoid, adventure, saga, the tokens or a showcase: 4.6f
-and the token items; the borderless frames draw CC's FLOATING crown from
-crowned twin masters and the extended-art frame the same crown as its own
-band, `EXTENDED_CROWN` — [The borderless crown and pair
+— and, since 4.6f wave 2c, the m15snow and m15snowland entries, whose
+masters share the M15 pack's geometry ([Devoid and
+snow](#devoid-and-snow-46f-wave-2c)) — never devoid (the owner's call),
+adventure, saga, the tokens or a showcase (4.6f and the token items; the
+borderless frames draw CC's FLOATING crown from crowned twin masters and
+the extended-art frame the same crown as its own band, `EXTENDED_CROWN` —
+[The borderless crown and pair
 pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a), [The
 extended-art crown](#the-extended-art-crown-46f-wave-2b)). It draws when the switch is
 `true`, the supertype has the word Legendary and the card is not a
@@ -1308,11 +1354,12 @@ m15land (the land frame and bars, the split in the two land tints; MKM
 - **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
-  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
-  devoid, extended art (its crown band draws no pairs: wave 2b), the
-  borderless land — keeps the `two-colour` gaps,
-  now pointing at 4.6f (the borderless frames draw theirs since wave 2a,
-  below); an M20 token's gaps point at 4.48 (its own central rim split and
+  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures,
+  extended art (its crown band draws no pairs: wave 2b), the borderless
+  land — keeps the `two-colour` gaps, now pointing at 4.6f (the borderless
+  frames draw theirs since wave 2a, the snow frames since wave 2c, below;
+  devoid's two-colour printings ARE its gold frame, so the gap is no gap
+  there); an M20 token's gaps point at 4.48 (its own central rim split and
   pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
@@ -1479,6 +1526,122 @@ switch absent or off is byte-identical.
   `tests/unit/render/extended-crown-bake.test.tsx` (real bakes: the band
   inside the slot's rows only, 1:1 at HD, absent / off byte-identical), the
   matrix's `extendedart` `@crown` cases.
+
+#### Devoid and snow (4.6f, wave 2c)
+
+Owner round 20 (2026-10-01): devoid gets NO crown (option (i)); snow gets
+crown A — the standard band exactly as on M15, over the snow bars — and the
+white-bar pairs on m15snow and m15snowland. Opt-in per card like the rest
+of 4.6: every visible production card on the three frames (37 on
+2026-10-02: 20 devoid, 16 snow, 1 snow land) bakes byte-identical at 750
+and HD with the switches absent; with both on, 7 of them change (the band
+on 4 Legendary snow creatures, the pair on 3 snow pairs — one of them a
+stored "multicolor" card whose pair the switch pre-fills from its cost).
+
+- **Devoid draws neither — and its two-colour printings import exact.**
+  The one crowned devoid printing (M3C #4 Ulalek) is the see-through
+  Eldrazi frame with gold bars, not this patterned frame, so the `crown`
+  gap stays on m15devoid and crowned devoid imports stay `nearest`. The
+  pairs were to be built "checked against BFZ #200 and the three devoid
+  `m` references" — and the check says there is nothing to build: every
+  two-colour devoid printing on the devoid frame (29 of the 31 two-colour
+  printings Scryfall lists for the keyword: BFZ #199–207, OGW #148–150,
+  MH3 #177 / #204 / #206 / #208 and their reprints — DDP, M3C, PLST, the
+  prerelease stamps, MH3 #517 / #518) prints the UNIFORM gold devoid frame
+  — a gold title bar, a gold pinline on BOTH ends of every ring (R − B
+  65–119 at every x on the eight measured, where a mono devoid print's
+  ring is its colour: blue on BFZ #57, green on BFZ #169; the review
+  re-measured thirteen more — BFZ #199 / #201 / #202 / #204 / #205 / #207,
+  MH3 #206 / #208 / #517 / #518, M3C #272 / #275, DDP #64 — gold at both
+  ends of the body and of the bar, R − B +78 … +119, against blue / green /
+  red / white / black monos and the hybrid's green-left blue-right body),
+  the silver Eldrazi type bar and the grey plate — which is the `m` master
+  m15devoid already draws, verified against three of them (Void Grafter,
+  Flayer Drone, Abstruse Appropriation). So m15devoid declares no
+  `twoColorMasters`, offers no switch, and the registry's `two-colour` gap
+  is no gap on it (`GOLD_PAIR_TEMPLATES` in `lib/scryfall/frame-signatures.ts`):
+  OGW #150 and the 28 others import `exact` on the gold frame (the import
+  patch's identity is `multicolor`, so the card paints `m15devoid/m`; the
+  printing's `twoColor` switch is dropped at the save, as on any frame
+  without pair masters), the old "two-colour on devoid" request rows read
+  as answered. The other two of the 31: the ONE hybrid devoid printing
+  (MH3 #253 Drowner of Truth, an MDFC) prints the split hybrid dress —
+  green left, blue right, grey bars — so `two-colour-hybrid` stays a gap
+  there (behind the `dfc` gap, Phase 5); MH3 #342 Abstruse Appropriation
+  is a borderless `inverted` showcase, not the devoid frame at all (the
+  borderless rules take it).
+- **Snow's crown is the standard band.** Card Conjurer's 'Snow (Kaldheim)'
+  pack (`m15/new/snow/<k>.png`, packSnowNew.js) is the accurate M15 pack's
+  geometry — the dark ring rows of its title bar, type bar and box sit on
+  the same rows as `new/<k>.png`'s, letter for letter — so `M15_CROWN`
+  registers on the snow bar as it does on m15's, `keyMap: { c: "a" }` on
+  m15snow (its colourless master is CC's snow ARTIFACT frame: the artifact
+  silver crown) and `{ c: "l" }` on m15snowland (DMR #244 Dark Depths, the
+  one crowned snow-frame land). The band's black cover strip sits on the
+  snow frames' black border. The twelve crowned snow printings — KHM #224
+  Narfi U|B, #223 Moritte G|U, #230 Svella R|G (+ 3 PLST), J22 #12 Isu and
+  #319 Marit Lage's Slumber (u), PH19 #5 Myntasha and KHM #179 Jorn (g,
+  an MDFC), DMR #244 — print the standard crown's shape and registration
+  (the peak at row 42 ± 2 at HD, as 4.6a measured it) over a speckled
+  texture; no w, b, r or artifact snow crown exists. `CROWN_REFERENCES.
+  m15snow` names u (J22 #12), g (PH19 #5) and the gold pair (KHM #224),
+  `m15snowland` c (DMR #244). A snow pair's crown is the pair band
+  (`m15crown/<pair>`, 45→55): Moritte's G|U crown, de-shaded against KHM
+  #179's green and J22 #12's blue crown, reads 43.2 / 48.3 / 51.6 at
+  10 / 50 / 90 % against the band's 46.0 / 50.0 / 54.0 — one measurable
+  card (KHM printed no b or r snow crown), cross-set references, within
+  the texture's noise; the band is shared with m15, not re-cut.
+- **The snow pairs are white-bar pairs** (`snowPairLayers` in
+  `scripts/lib/cc-frames.mjs`, 4.6b's recipe over the snow pack's files
+  through the same six masks): the snow gold frame whole — the gold body
+  the prints have (the strip beside the box reads 152/142/126 on all three
+  KHM pairs, CC's snow m.png 161/149/124; the blue mono's 111/123/140) —
+  with the text box lerped across 45→57 %W and the pinline across 40→60
+  (the type-bar and box rings of the three pairs and the ten KHM snow duals
+  read a median 42.8 / 50.0 / 57.2 at 10 / 50 / 90 %, 24 of 26 readings
+  within 40.8–45.1 / 49.1–51.4 / 55.5–59.4), the GOLD plate (174/154/105
+  on all three; the monos print their colour's) — and the bars WHITE: the
+  pack's white frame's title and type regions through CC's Title and Type
+  masks, warmed a quarter toward the gold bar's (`SNOW_PAIR_BAR_GOLD_SHARE`
+  = 0.25, snow/m.png at 25 % through the same masks). Why a quarter: on
+  WotC's KHM renders the pairs' bars (246–248 / 241–243 / 239–243) are the
+  whitest of the set but for the white mono's (248/245/249), with a faint
+  warm cast (R − B +6 … +8, where the blue bar reads −8, the red +10 and
+  the white −1) — the gold snow bar at KHM's faint tint; CC's snow m bar
+  (236/231/213, R − B +23) is that bar at CC's tint strength, as CC's blue
+  bar (220/233/242) is to KHM's (240/239/248). One more gold snow pair
+  exists, uncrowned: MB2 #83 Ice-Fang Coatl (2024, white-bordered — it
+  imports `nearest` for the border), whose bar reads CREAM, 237/230/211
+  (R − B +26, CC's tint strength) on a scan whose border is pure white; so
+  the two printers disagree, KHM's three at +6 … +8 and MB2's one at +26.
+  The owner's call (round 20)
+  is the print's absolute look — white — so the least-squares share of
+  (m − w) that reproduces the prints' (pair − w) = (−1, −3, −8) against
+  CC's (−8, −13, −29), 0.26, is the recipe; CC's cream `m` bar as it is
+  would be one letter away (`typeTitle` "m"). The snow LAND pairs are the
+  land recipe over the snow land files: `snow/l.png` whole (its neutral
+  bars are every KHM snow land's, basics and duals alike: R − B −1 … −9)
+  with the box and pinline in the two land tints, as the ten KHM duals
+  print (saturation × 4 shows their box's two tints meeting at the
+  centre). No hybrid dress: no hybrid snow print exists; a hybrid snow
+  cost falls back to the split, like m15artifact. The #449 hairline can't
+  happen on this pack: every ring row of the snow m / snow l frames lies
+  inside CC's Pinline mask (`snow-pair-masters.test.ts` holds it, and
+  holds every pair master to the two colour masters' lerp inside the mask —
+  mean 0.1 level, worst pixel 14 — with no base-pinline pixel outside it).
+  V-A: the pairs ride each template's `m` tick, which is referenced to
+  KHM #224 (m15snow) and the KHM duals (m15snowland) — the switch gives
+  those references their printed look.
+- **Tests:** `tests/unit/frames/snow-pair-masters.test.ts` (the recipe,
+  the declared keys, the manifest and provenance, the masters' pixels),
+  `tests/unit/render/snow-crown-bake.test.tsx` (real bakes: the band
+  inside its rows only, 1:1 at HD with the peak at row 42, the pair
+  masters, a land's pair on the snow land frame only, absent / off / a
+  planeswalker byte-identical), the shared pair table
+  (`two-colour-cases.ts`: both renderers), `crown-preview` /
+  `two-colour-preview`, `frame-signatures` (KHM #224 / #249, J22 #12, DMR
+  #244 and OGW #150 exact; MH3 #253 nearest), the matrix's `m15snow*`
+  `@crown` / `@pair` cases.
 
 #### The collector line (4.9b)
 
@@ -1767,9 +1930,12 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   .test.ts` the recipe, the cut and the published objects.
 - **Editor and compare tool.** The Set & collector info step holds the
   stamp switch under the collector line's (`collector-panel.tsx`: the
-  switch toggles auto / none; the chips "Auto: rares & mythics", "Always"
-  (the frame's shape), "Never"; the live answer "Rare → stamp"; the pair
-  note), hidden on a token or an emblem — whose collector hint then names
+  switch is on while the card DRAWS a stamp; off writes "none", on writes
+  "auto" where the auto rule stamps the card and the frame's shape — the
+  chips' "Always" — where it would not, so a common never gets a dead
+  click; the chips "Auto: rares & mythics", "Always" (the frame's shape),
+  "Never"; the live answer "Rare → stamp"; the pair note), hidden on a
+  token or an emblem — whose collector hint then names
   the line alone. `/admin/frame-compare` (and the walkthrough) stamps the
   comparison card when the reference printing carries a `security_stamp`
   (`previewFromImportPatch`), so the notch is judged against the scan's.
@@ -1861,8 +2027,11 @@ templates, new columns; 0 stored cards change, no bump, no sweep, no badge.
   and the orphan sweep's `renderCardId` (a `.back.png` of a live card is
   never an orphan — before 5.0a it would have been swept). One
   `layout_version` and one `rendered_at` per card.
-- **What follows:** 5.0b (the compare / score / walkthrough tools per
-  face), 5.1a (the transform bodies: masters, riders, the colour indicator,
+- **The tools per face (5.0b):** [Verifying a frame](#verifying-a-frame)
+  "Per face" — a back body is compared, scored, walked and ticked on its
+  printing's back face by the template alone; any other template's compare
+  view takes `?face=back` for a legacy back.
+- **What follows:** 5.1a (the transform bodies: masters, riders, the colour indicator,
   the tone pass, a review sheet beside the prints, `frames:promote`), 5.2
   (the Transform and Modal kinds, the back-face panel, the one-click move
   of the 8 imported cards — Q3), 5.3 (both faces baked, the tile flip — Q6,

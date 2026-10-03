@@ -48,7 +48,10 @@ vi.mock("@/lib/cards/frame-profile-overrides", () => ({
     return state.overrides;
   },
 }));
-vi.mock("@/lib/scryfall/reference-preview", () => ({ buildFrameComparePayload: state.payload }));
+vi.mock("@/lib/scryfall/reference-preview", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/scryfall/reference-preview")>();
+  return { FrameCompareFaceError: actual.FrameCompareFaceError, buildFrameComparePayload: state.payload };
+});
 vi.mock("@/lib/scryfall/client", () => ({ fetchScryfallImage: state.fetchScan }));
 vi.mock("@/lib/render/card-image", () => ({ renderCardImage: state.render }));
 // The real scorer, behind a spy: most tests swap in a cheap fake that
@@ -225,7 +228,7 @@ describe("scoreFrameCombo — what is scored", () => {
   it("scores the pinned printing, fetching its scan and naming it in the result", async () => {
     state.reviews.set("lotr/u", { referenceScryfallId: PINNED, referenceName: "Pinned", referenceSet: "ltr" });
     const result = await scoreFrameCombo({ template: "lotr", color: "u" });
-    expect(state.payload).toHaveBeenCalledWith(PINNED, "lotr");
+    expect(state.payload).toHaveBeenCalledWith(PINNED, "lotr", "front");
     expect(state.fetchScan).toHaveBeenCalledWith(SCAN_URL);
     expect(result).toMatchObject({ ok: true, referenceId: PINNED });
   });
@@ -234,7 +237,7 @@ describe("scoreFrameCombo — what is scored", () => {
     state.reviews.set("lotr/u", { referenceScryfallId: PINNED, referenceName: "Pinned", referenceSet: "ltr" });
     const result = await scoreFrameCombo({ template: "lotr", color: "u", referenceId: LOTR_U_ALT.scryfallId });
     expect(state.reviewReads).toBe(0);
-    expect(state.payload).toHaveBeenCalledWith(LOTR_U_ALT.scryfallId, "lotr");
+    expect(state.payload).toHaveBeenCalledWith(LOTR_U_ALT.scryfallId, "lotr", "front");
     expect(result).toMatchObject({ ok: true, referenceId: LOTR_U_ALT.scryfallId });
   });
 

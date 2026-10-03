@@ -1130,6 +1130,33 @@ export function frontFaceColors(card: ScryfallCard): string[] {
 }
 
 /**
+ * The colours the printing's BACK FACE is dressed in, as WUBRG letters
+ * (TODO 5.0b: what the compare view draws a back body in, and what a pin
+ * on a back body is checked against) — frontFaceColors' rule read on
+ * `card_faces[1]`: its printed colours (`colors` + `color_indicator`); a
+ * colourless back stays colourless (Tergrid's Lantern KHM #15, an artifact)
+ * except a LAND back, dressed by its own mana symbols and basic land types
+ * (Agadeem, the Undercrypt ZNR #90 is black; identity and produced_mana
+ * cover both faces, so the card-level fields are never read). Empty when the
+ * printing has no second face. The import carries no back colour yet (5.4
+ * stores it); until then a legacy back draws in the front's.
+ */
+export function backFaceColors(card: ScryfallCard): string[] {
+  const faces = card.card_faces ?? [];
+  const back = faces.length >= 2 ? faces[1] : undefined;
+  if (!back) return [];
+  const colors = wubrgLetters([...(back.colors ?? []), ...(back.color_indicator ?? [])]);
+  if (colors.length > 0) return colors;
+  const backType = typeLineWords(back.type_line);
+  if (!backType.words.some((w) => w.cardType === "land")) return [];
+  return wubrgLetters([
+    ...manaSymbolColors(back.mana_cost),
+    ...manaSymbolColors(back.oracle_text),
+    ...backType.subtypes.map((subtype) => BASIC_LAND_TYPE_COLOR[subtype]),
+  ]);
+}
+
+/**
  * A single-faced land's frame colour (TODO 1.2). Scryfall has no field for
  * it, so this is a heuristic checked on Scryfall's scans — the land frame
  * follows the mana the land PRODUCES, not every symbol on it:
@@ -1260,6 +1287,17 @@ export function referenceColorIdentity(card: ScryfallCard): ColorIdentity[] {
   return colors.length === 2
     ? colors.map((code) => SCRYFALL_COLOR_TO_IDENTITY[code])
     : frameColorsFromScryfall(card);
+}
+
+/** The same for the printing's BACK face (TODO 5.0b): backFaceColors in the
+ *  creator's model — two colours stay two, none is colourless, three or
+ *  more "multicolor". Empty when the printing has no second face. */
+export function referenceBackColorIdentity(card: ScryfallCard): ColorIdentity[] {
+  const colors = backFaceColors(card).map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
+  if (!card.card_faces || card.card_faces.length < 2) return [];
+  if (colors.length > 2) return ["multicolor"];
+  if (colors.length === 0) return ["colorless"];
+  return colors;
 }
 
 /**
