@@ -7,6 +7,8 @@ import {
   FRAME_COLOR_KEYS,
   type FrameColorKey,
 } from "@/lib/cards/frame-reference-registry";
+import { parseCardFace, type CardFace } from "@/lib/cards/card-face";
+import { faceUnderTest, frontBodyFor, isDfcBackBody } from "@/lib/cards/dfc";
 import {
   parseWalkthroughSeed,
   walkthroughKind,
@@ -27,6 +29,13 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // content (buildFrameComparePayload, the second face included) — so an
 // adventure, split, flip, aftermath, battle or saga flows through Card →
 // Identity → Text & stats → Publish exactly as it would for a user.
+//
+// Per FACE (TODO 5.0b): `&face=back` opens the live preview on the back
+// face; a BACK body's walk always does (faceUnderTest) and pins the CARD to
+// the body's paired front (frontBodyFor) — a back body never dresses a
+// front, so the back is reached by the preview's flip, drawn as the creator
+// draws a back today (its own body from 5.2). The seed is the whole
+// printing either way: the import handler fills both faces.
 //
 // Admin-only: the create page calls this only after its own is_admin check
 // and only in preview mode. The Scryfall lookup is the compare view's
@@ -50,6 +59,8 @@ export type WalkthroughParams = {
   seed?: string;
   /** Optional registry alternate (the compare view's ?ref=). */
   ref?: string;
+  /** The face to open the preview on (the compare view's ?face=). */
+  face?: string | string[];
 };
 
 export async function buildFrameWalkthrough(
@@ -57,30 +68,33 @@ export async function buildFrameWalkthrough(
 ): Promise<FrameWalkthrough | null> {
   const { template, color } = params;
   if (!isTemplate(template) || !isColorKey(color)) return null;
-  const kind = walkthroughKind(template, params.kind);
+  const previewFace: CardFace = faceUnderTest(template, parseCardFace(params.face));
+  // A back body's card is its paired front; the kind is the card's.
+  const cardTemplate: FrameTemplate = (isDfcBackBody(template) ? frontBodyFor(template) : null) ?? template;
+  const kind = walkthroughKind(cardTemplate, params.kind);
   const seedMode = parseWalkthroughSeed(params.seed);
   const label = `${template}/${color}`;
+  const onBack = previewFace === "back" ? " The preview opens on the back face." : "";
+  const base = { template, colorKey: color, previewFace, cardTemplate };
 
   if (seedMode === "none") {
     return {
-      template,
-      colorKey: color,
+      ...base,
       kind,
       seed: null,
-      note: `Walking ${label} from a blank card.`,
+      note: `Walking ${label} from a blank card.${onBack}`,
     };
   }
 
   const sample = (why: string): FrameWalkthrough => ({
-    template,
-    colorKey: color,
+    ...base,
     kind,
     seed: {
-      patch: sampleWalkthroughPatch(template, color, kind),
+      patch: sampleWalkthroughPatch(cardTemplate, color, kind),
       source: { name: SAMPLE_SEED_NAME, scryfallUri: null },
       fromReference: false,
     },
-    note: `Walking ${label} with sample content — ${why}.`,
+    note: `Walking ${label} with sample content — ${why}.${onBack}`,
   });
 
   if (seedMode === "sample") return sample("as asked");
@@ -93,6 +107,8 @@ export async function buildFrameWalkthrough(
   );
   if (!reference) return sample("no real printing exists for this combination");
 
+  // The seed is the printing's PATCH (both faces), the same for either
+  // face: the front payload is enough, and says whether a back exists.
   const payload = await buildFrameComparePayload(reference.scryfallId, template);
   if (!payload) {
     return sample(`the lookup of ${reference.name} failed (reload to retry)`);
@@ -105,7 +121,7 @@ export async function buildFrameWalkthrough(
   // snow artifact on m15snow (Replicating Ring KHM #244) isn't in the
   // Artifact gallery, but it saves and walks as the artifact it is.
   const referenceKind = payload.patch.kind;
-  if (referenceKind && templateRefusesKind(template, referenceKind)) {
+  if (referenceKind && templateRefusesKind(cardTemplate, referenceKind)) {
     const label = KIND_DEFS[referenceKind].label.toLowerCase();
     return sample(
       `${payload.cardName} is ${/^[aeiou]/.test(label) ? "an" : "a"} ${label}, which this frame doesn't dress`,
@@ -114,15 +130,20 @@ export async function buildFrameWalkthrough(
   const seed: WalkthroughSeed = {
     // Pinned to the frame under test: the import handler then lands on it
     // (layout kinds already do through their kind).
-    patch: { ...payload.patch, frame_template: template },
+    patch: { ...payload.patch, frame_template: cardTemplate },
     source: { name: payload.cardName, scryfallUri: payload.scryfallUri },
     fromReference: true,
   };
+  // A back was asked for on a printing that has none: the preview has
+  // nothing to flip to, so it opens on the front and the banner says so.
+  const noBack = previewFace === "back" && !seed.patch.back_face;
   return {
-    template,
-    colorKey: color,
+    ...base,
+    previewFace: noBack ? "front" : previewFace,
     kind: seed.patch.kind ?? kind,
     seed,
-    note: `Walking ${label}, prefilled from ${reference.name} (${reference.set.toUpperCase()}) — the compare view's reference. Art isn't imported; add some on Identity if the art window matters.`,
+    note: `Walking ${label}, prefilled from ${reference.name} (${reference.set.toUpperCase()}) — the compare view's reference. Art isn't imported; add some on Identity if the art window matters.${
+      noBack ? ` ${reference.name} has no second face, so the preview opens on the front.` : onBack
+    }`,
   };
 }

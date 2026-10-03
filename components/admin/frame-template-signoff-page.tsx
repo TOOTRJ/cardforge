@@ -33,6 +33,7 @@ import { signOffStatus } from "@/lib/cards/frame-signoff";
 import { listFramePreviewCards } from "@/lib/cards/frame-preview-cards";
 import { framePreviewEditHref } from "@/lib/cards/frame-preview-groups";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { faceUnderTest } from "@/lib/cards/dfc";
 import { walkthroughHref } from "@/lib/creator/frame-preview";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { listSlotPaths, resolveFrameProfile } from "@/lib/cards/profile-override";
@@ -77,6 +78,9 @@ export async function FrameTemplateSignOffPage({
     await listFramePreviewCards(viewerId, { profileOverrides: overrides })
   ).filter((card) => card.template === template);
   const currentHash = overrideHash(overrides[template] ?? null);
+  // A back body is signed off on its printing's BACK face (TODO 5.0b):
+  // the thumbnails, the side-by-side and the walks all take it.
+  const face = faceUnderTest(template);
 
   const references = new Map(
     FRAME_COLOR_KEYS.map((k) => [k, pickFrameReferenceFrom(reviews, template, k)] as const),
@@ -108,7 +112,7 @@ export async function FrameTemplateSignOffPage({
     return {
       colorKey,
       reference: reference
-        ? { name: reference.name, set: reference.set, thumbUrl: referenceThumbUrl(reference) }
+        ? { name: reference.name, set: reference.set, thumbUrl: referenceThumbUrl(reference, face) }
         : null,
       referenceId: reference?.scryfallId ?? null,
       verified: state.verified,
@@ -126,7 +130,7 @@ export async function FrameTemplateSignOffPage({
         global: detail?.global ?? null,
         slots: detail && Object.keys(detail.slots).length > 0 ? detail.slots : null,
       },
-      walkHref: walkthroughHref({ template, colorKey }),
+      walkHref: walkthroughHref({ template, colorKey, face }),
       compareHref: `/admin/frame-compare?template=${template}&color=${colorKey}`,
       previews: previews
         .filter((card) => card.colorKey === colorKey)
@@ -168,7 +172,9 @@ export async function FrameTemplateSignOffPage({
         // across eras ("Token" = m20token and alphatoken, TODO 4.48a).
         eyebrow={`Admin · Frame sign-off · ${template}`}
         title={`${eraGroupFrameLabel(template)} · sign-off`}
-        description="Score every colour against its reference in one job, compare them side by side, walk the stepper on the frame, then publish the template in one go. Scoring never ticks anything; each colour stays individually withdrawable."
+        description={`Score every colour against its reference in one job, compare them side by side, walk the stepper on the frame, then publish the template in one go. Scoring never ticks anything; each colour stays individually withdrawable.${
+          face === "back" ? " A back-face frame: every colour is compared with its printing's back face." : ""
+        }`}
         actions={
           <span className="flex flex-wrap items-center gap-2">
             <Badge variant="default">{previews.length} walked previews</Badge>
@@ -189,6 +195,7 @@ export async function FrameTemplateSignOffPage({
             references={references}
             overrides={overrides}
             scores={scoreSummary}
+            face={face}
           />
         </Suspense>
       </section>

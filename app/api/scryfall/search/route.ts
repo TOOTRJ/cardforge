@@ -73,6 +73,10 @@ type TrimmedScryfallCard = {
   power: string | null;
   toughness: string | null;
   thumb_url: string | null;
+  /** The SECOND face's art crop (TODO 5.0b): a transform, modal DFC,
+   *  battle or reversible printing; null for every other card. The admin
+   *  reference picker shows it when pinning a back-face frame's printing. */
+  back_thumb_url: string | null;
   print_url: string | null;
   oracle_text: string | null;
   image_status: string | null;
@@ -92,6 +96,7 @@ function trim(card: ScryfallCard): TrimmedScryfallCard {
     power: card.power ?? card.card_faces?.[0]?.power ?? null,
     toughness: card.toughness ?? card.card_faces?.[0]?.toughness ?? null,
     thumb_url: pickArtCropUrl(card),
+    back_thumb_url: card.card_faces?.[1]?.image_uris?.art_crop ?? null,
     print_url: pickPrintImageUrl(card),
     oracle_text: card.oracle_text ?? null,
     image_status: card.image_status ?? null,

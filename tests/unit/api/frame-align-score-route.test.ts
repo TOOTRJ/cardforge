@@ -85,6 +85,8 @@ describe("POST /api/admin/frame-align-score", () => {
       { template: "lotr", color: "u", ref: "../../etc/passwd" },
       { template: "lotr", color: "u", ref: "1234" },
       { template: "lotr", color: "u", ref: 42 },
+      { template: "lotr", color: "u", face: "sideways" },
+      { template: "lotr", color: "u", face: 1 },
     ];
     for (const body of bad) {
       const response = await post(body);
@@ -105,6 +107,14 @@ describe("POST /api/admin/frame-align-score", () => {
     state.score.mockClear();
     await post({ template: "battle", color: "r" });
     expect(state.score).toHaveBeenCalledWith({ template: "battle", color: "r" });
+  });
+
+  it("passes the face the compare page shows (TODO 5.0b) — front or back, nothing else", async () => {
+    await post({ template: "m15", color: "w", face: "back" });
+    expect(state.score).toHaveBeenCalledWith({ template: "m15", color: "w", face: "back" });
+    state.score.mockClear();
+    await post({ template: "m15", color: "w", face: "front", ref: REF });
+    expect(state.score).toHaveBeenCalledWith({ template: "m15", color: "w", face: "front", ref: REF });
   });
 
   it("returns the score as JSON", async () => {

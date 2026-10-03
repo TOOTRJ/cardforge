@@ -159,6 +159,21 @@ describe("walk-through links", () => {
     expect(walkthroughHref({ template: "m15", colorKey: "w", seed: "none" })).not.toContain("seed=");
   });
 
+  it("walkthroughHref carries `face=back` only for a walk on the back face (TODO 5.0b)", () => {
+    const back = new URL(walkthroughHref({ template: "m15", colorKey: "w", face: "back" }), "https://pipglyph.test");
+    expect(Object.fromEntries(back.searchParams)).toEqual({
+      previewFrames: "all",
+      kind: "creature",
+      template: "m15",
+      color: "w",
+      seed: "reference",
+      face: "back",
+    });
+    for (const face of ["front", null, undefined] as const) {
+      expect(walkthroughHref({ template: "m15", colorKey: "w", face })).not.toContain("face=");
+    }
+  });
+
   it("parseWalkthroughSeed only knows reference and sample", () => {
     expect(parseWalkthroughSeed("reference")).toBe("reference");
     expect(parseWalkthroughSeed("sample")).toBe("sample");
@@ -197,6 +212,7 @@ describe("walk-through links", () => {
         kind: "saga",
         seed: "reference",
         ref: "abc",
+        face: "back",
         tag: "challenge-tag",
       }),
     ).toBe("/create?tag=challenge-tag");

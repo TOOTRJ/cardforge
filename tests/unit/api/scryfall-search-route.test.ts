@@ -67,6 +67,29 @@ beforeEach(() => {
   state.search.mockReset().mockResolvedValue([{ id: "c1", name: "Serra Angel" }]);
 });
 
+describe("GET /api/scryfall/search — the trimmed card", () => {
+  it("carries the second face's art crop for a double-faced printing, null otherwise (TODO 5.0b)", async () => {
+    state.search.mockResolvedValue([
+      {
+        id: "dfc",
+        name: "Archangel Avacyn // Avacyn, the Purifier",
+        card_faces: [
+          { name: "Archangel Avacyn", image_uris: { art_crop: "https://cards.scryfall.io/art_crop/front/a/1/x.jpg" } },
+          { name: "Avacyn, the Purifier", image_uris: { art_crop: "https://cards.scryfall.io/art_crop/back/a/1/x.jpg" } },
+        ],
+      },
+      { id: "single", name: "Serra Angel" },
+      { id: "split", name: "Fire // Ice", card_faces: [{ name: "Fire" }, { name: "Ice" }] },
+    ]);
+    const body = await (await get("q=avacyn")).json();
+    expect(body.results.map((c: { id: string; back_thumb_url: string | null }) => [c.id, c.back_thumb_url])).toEqual([
+      ["dfc", "https://cards.scryfall.io/art_crop/back/a/1/x.jpg"],
+      ["single", null],
+      ["split", null],
+    ]);
+  });
+});
+
 describe("GET /api/scryfall/search — per-user quota", () => {
   it("checks and logs a normal account's search", async () => {
     const res = await get("q=serra&limit=8");
