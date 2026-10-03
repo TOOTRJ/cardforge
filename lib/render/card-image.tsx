@@ -887,11 +887,6 @@ function CardImage({
         ) : null,
       )}
 
-      {/* The colour-indicator dot (TODO 5.1a): over the master, under every
-          text layer — the preview's ColorIndicatorOverlay twin. A plain
-          sibling, never a Fragment. */}
-      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills }) : null}
-
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -945,6 +940,15 @@ function CardImage({
           height={height}
         />
       ) : null}
+
+      {/* The colour-indicator dot (TODO 5.1a): printed INK over the frame —
+          above both finish sheens (the preview draws it at z 8, over the
+          sheens' z 6, like every text layer: a foil back's dot is not
+          tinted by the rainbow) and under the rules backdrop and every
+          text layer — the preview's ColorIndicatorOverlay twin. Satori
+          paints in document order, so it sits here, after the sheens. A
+          plain sibling, never a Fragment. */}
+      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills }) : null}
 
       {/* Rules-box backdrop — own layer under the watermark and the title /
           type bands (see the preview's twin comment: z9 under their z20).
