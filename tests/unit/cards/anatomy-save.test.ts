@@ -113,7 +113,7 @@ function stored(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  state.verified = ["m15/r", "m15/m", "m15snow/r", "m15land/m"];
+  state.verified = ["m15/r", "m15/m", "m15snow/r", "m15devoid/r", "m15land/m"];
   state.existing = null;
 });
 
@@ -142,9 +142,10 @@ describe("createCardAction — a new card", () => {
 
   it("a template that can't draw the pieces stores no switch at all", async () => {
     const stub = db();
-    await createCardAction(payload({ frame_style: { template: "m15snow", finish: "regular", crown: true, twoColor: true } }));
-    // (m15snow has the collector line's slot, 4.9b: that key stays.)
-    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15snow", finish: "regular", collector: "2023" });
+    await createCardAction(payload({ frame_style: { template: "m15devoid", finish: "regular", crown: true, twoColor: true } }));
+    // (m15devoid has the collector line's slot, 4.9b: that key stays; it
+    // draws no crown and no pair — owner round 20.)
+    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15devoid", finish: "regular", collector: "2023" });
   });
 
   it("stores a picked colour pair as the identity", async () => {
@@ -202,8 +203,8 @@ describe("updateCardAction — an edit", () => {
   it("a full frame_style (a non-revise update) is normalised to what its template draws", async () => {
     state.existing = stored();
     const stub = db();
-    await updateCardAction(CARD, { frame_style: { template: "m15snow", crown: true, twoColor: false } });
-    expect(written(stub, "update")?.frame_style).toEqual({ template: "m15snow" });
+    await updateCardAction(CARD, { frame_style: { template: "m15devoid", crown: true, twoColor: false } });
+    expect(written(stub, "update")?.frame_style).toEqual({ template: "m15devoid" });
   });
 });
 

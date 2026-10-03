@@ -128,54 +128,153 @@ const M15_MASK = {
   pinline: `${NEW}/pinline.png`,
 };
 
-/** A twoColorRecipe letter → its accurate-M15 file: a colour, "m", "a" or
- *  "l" → new/<k>.png; a land tint "wl" → new/lw.png (CC reverses it). */
+/** A twoColorRecipe letter → its file in a `new/`-geometry pack: a colour,
+ *  "m", "a" or "l" → <dir>/<k>.png; a land tint "wl" → <dir>/lw.png (CC
+ *  reverses it). The accurate M15 pack and its snow twin
+ *  (`m15/new/snow/`, packSnowNew.js: the same six masks, the same files by
+ *  letter) resolve the same way. */
+const packFrameFile = (dir) => (letter) =>
+  letter.length === 2 && letter[1] === "l" ? `${dir}/l${letter[0]}.png` : `${dir}/${letter}.png`;
 function m15FrameFile(letter) {
-  return letter.length === 2 && letter[1] === "l" ? `${NEW}/l${letter[0]}.png` : `${NEW}/${letter}.png`;
+  return packFrameFile(NEW)(letter);
 }
+/** The snow pack's file of a letter (4.6f, wave 2c). */
+const snowFrameFile = packFrameFile(SNOW);
 
 /** A pair layer: the recipe region's left file blended into its right file
  *  across the region's ramp (lerpLayers over rampMask), through `mask`. */
-function pairLayer(region, mask) {
+function pairLayer(region, mask, fileOf = m15FrameFile) {
   return {
-    src: m15FrameFile(region.left),
-    right: m15FrameFile(region.right),
+    src: fileOf(region.left),
+    right: fileOf(region.right),
     ramp: [...region.ramp],
     ...(mask ? { mask } : {}),
   };
 }
 
 /** The layers of one pair master (see above). `kind`: "m15", "artifact" or
- *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). */
-export function pairMasterLayers(pair, dress, kind) {
+ *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). `fileOf`
+ *  resolves a recipe letter to a pack file: the accurate M15 pack's (the
+ *  default) or the snow pack's, whose masks are the same (snowPairLayers). */
+export function pairMasterLayers(pair, dress, kind, fileOf = m15FrameFile) {
   const r = twoColorRecipe(pair, dress, kind);
   if (kind === "artifact") {
     return [
-      layer(m15FrameFile(r.frame.left), M15_MASK.border),
-      layer(m15FrameFile(r.frame.left), M15_MASK.frame),
-      pairLayer(r.rules, M15_MASK.rules),
-      layer(m15FrameFile(r.typeTitle), M15_MASK.title),
-      layer(m15FrameFile(r.typeTitle), M15_MASK.type),
-      pairLayer(r.pinline, M15_MASK.pinline),
+      layer(fileOf(r.frame.left), M15_MASK.border),
+      layer(fileOf(r.frame.left), M15_MASK.frame),
+      pairLayer(r.rules, M15_MASK.rules, fileOf),
+      layer(fileOf(r.typeTitle), M15_MASK.title),
+      layer(fileOf(r.typeTitle), M15_MASK.type),
+      pairLayer(r.pinline, M15_MASK.pinline, fileOf),
     ];
   }
-  const base = r.frame.right ? pairLayer(r.frame) : layer(m15FrameFile(r.frame.left));
+  const base = r.frame.right ? pairLayer(r.frame, undefined, fileOf) : layer(fileOf(r.frame.left));
   // The bars are the base's own unless the base is a split frame (hybrid:
   // grey l bars over a two-colour frame).
   const bars = r.frame.right
-    ? [layer(m15FrameFile(r.typeTitle), M15_MASK.title), layer(m15FrameFile(r.typeTitle), M15_MASK.type)]
+    ? [layer(fileOf(r.typeTitle), M15_MASK.title), layer(fileOf(r.typeTitle), M15_MASK.type)]
     : [];
-  return [base, pairLayer(r.rules, M15_MASK.rules), ...bars, pairLayer(r.pinline, M15_MASK.pinline)];
+  return [base, pairLayer(r.rules, M15_MASK.rules, fileOf), ...bars, pairLayer(r.pinline, M15_MASK.pinline, fileOf)];
 }
 
 /** A template's pair masters: `{ wu: layers, …, "wu-h": layers, … }`. */
-function pairMasters(kind, dresses) {
+function pairMasters(kind, dresses, layersOf = pairMasterLayers) {
   return Object.fromEntries(
     dresses.flatMap((dress) =>
-      TWO_COLOR_PAIRS.map((pair) => [dress === "hybrid" ? `${pair}-h` : pair, pairMasterLayers(pair, dress, kind)]),
+      TWO_COLOR_PAIRS.map((pair) => [dress === "hybrid" ? `${pair}-h` : pair, layersOf(pair, dress, kind)]),
     ),
   );
 }
+
+// --- 4.6f (wave 2c): the snow pairs — m15snow (the white-bar pairs) and
+// m15snowland (the snow dual lands). Card Conjurer's 'Snow (Kaldheim)' pack
+// (packSnowNew.js, `m15/new/snow/<k>.png`) is the accurate M15 pack's
+// geometry with frosted art, through the SAME six masks (groupAccurate.js
+// lists both), so the pair recipe is 4.6b's over the snow files
+// (pairMasterLayers with snowFrameFile): the dark ring rows of
+// `new/snow/m.png` sit where `new/snow/w.png`'s do (rows 134–138 / 293–298
+// / 310–317 and 1562–1569 / 1583–1587 / 1742–1747 / 2613–2619 at 2010 × 2814;
+// u / r / g draw one row more at four of them, covering the gold's), unlike
+// the borderless pack's M frame (one row higher than its colours, the #449
+// hairline) — the snow pair masters are checked row by row for any gold of
+// the m frame left inside the pinline mask's rows (legendary-masters.test.ts's
+// method; wave 2c's snow-pair-masters test).
+//
+// Measured on KHM's three crowned snow pairs (#224 Narfi U|B, #223 Moritte
+// G|U, #230 Svella R|G; WotC's renders) beside KHM's mono snow prints (#27
+// Search for Glory w, #47 Berg Strider u, #104 Priest of the Haunted Edge b,
+// #138 Frost Bite r, #193 Sculptor of Winter g, #244 Replicating Ring c):
+//   • the frame BODY is the gold snow body on all three (the strip beside
+//     the text box reads 152/142/126 left and 181/175/168 right on every
+//     pair; CC's snow m.png reads 161/149/124 and 185/177/159 there; KHM's
+//     u body reads 111/123/140), the P/T plate the gold plate (174/154/105 —
+//     m15PTM; the monos print their colour's);
+//   • the title and type BARS are white: 246–248 / 241–243 / 239–243 on
+//     the three pairs against the monos' 248/245/249 (w), 240/239/248 (u),
+//     237/233/240 (b), 246/235/236 (r), 238/237/242 (g), 244/242/249 (c) —
+//     the whitest bar of the set but for w's, with a faint warm cast
+//     (R − B +6 … +8, where w's is −1 and r's pink +10): the gold snow bar
+//     at KHM's faint tint. CC's snow m.png bar (236/231/213, R − B +23) is
+//     that bar at CC's tint strength — CC's u bar is as far from KHM's
+//     (220/233/242 against 240/239/248) — but the owner's call (round 20,
+//     2026-10-01: "white-bar pairs") is the print's absolute look, so the
+//     bars are the pack's WHITE frame's (snow/w.png, 244/244/242) through
+//     CC's Title and Type masks, warmed a quarter of the way to the gold
+//     bar's (snow/m.png at SNOW_PAIR_BAR_GOLD_SHARE source-over through the
+//     same masks): the least-squares share of (m − w) that reproduces the
+//     prints' (pair − w) = (−1, −3, −8) against CC's (−8, −13, −29) is 0.26;
+//     CC's m bar as it is would be one letter away (typeTitle "m");
+//   • the pinline splits across 4.6b's ramp: the type-bar and text-box
+//     rings of the three pairs and the ten snow duals (the KHM #248–274 run)
+//     read a median 42.8 / 50.0 / 57.2 %W at 10 / 50 / 90 % (24 of the 26
+//     ring readings within 40.8–45.1 / 49.1–51.4 / 55.5–59.4; Moritte's G|U
+//     ring is too low in contrast to read), an untilted 41→59 — the 40→60
+//     ramp's 42 / 50 / 58;
+//   • the text box splits too, faintly on a nonland (KHM's snow box is
+//     near-white: U|B reads 242/240/248 left and 245/242/248 right — the u
+//     and b monos' 240/238/247 and 245/241/247) and as a colour wash on the
+//     duals (saturation ×4 shows the two tints meeting at the centre);
+//     the rules region takes the box ramp (45→57) as on m15 / m15land;
+//   • the crown is the standard band (owner round 20, option A): KHM's snow
+//     crown is the standard crown's shape and registration over a speckled
+//     texture (Moritte's G|U split, de-shaded against KHM #179 Jorn's g and
+//     J22 #12 Isu's u crown, reads 43.2 / 48.3 / 51.6 at 10 / 50 / 90 %
+//     against the standard band's 46.0 / 50.0 / 54.0 — one measurable card,
+//     cross-set references; the band is shared with m15, m15crown/<pair>).
+// The snow LAND pairs are 4.6b's land recipe over the snow land files
+// (snow/l.png whole — its neutral bars are every snow land's: the KHM
+// basics and duals read R − B −1 … −9 on the title bar — the box and
+// pinline split in the two land tints snow/l<k>.png), as KHM #248–274
+// print (their type-bar and box rings are in the 24 readings above).
+/** How far the white bar is warmed toward the gold snow bar (see above). */
+export const SNOW_PAIR_BAR_GOLD_SHARE = 0.25;
+
+/** The layers of one SNOW pair master (4.6f, wave 2c): the nonland
+ *  ("snow") pair is the snow gold frame whole, the split text box, the
+ *  white bars (snow/w.png's title and type regions warmed a quarter toward
+ *  the gold bar's) and the split pinline; the snow LAND pair is the land
+ *  recipe over the snow land files. Keys: `<pair>` (the split dress only —
+ *  no hybrid snow print exists). */
+export function snowPairLayers(pair, dress, kind) {
+  if (dress !== "split") throw new Error(`snowPairLayers: the snow frames draw the split dress only (${dress})`);
+  if (kind === "snowland") return pairMasterLayers(pair, "split", "land", snowFrameFile);
+  if (kind !== "snow") throw new Error(`snowPairLayers: unknown kind ${kind}`);
+  const r = twoColorRecipe(pair, "split", "m15");
+  return [
+    layer(snowFrameFile(r.frame.left)),
+    pairLayer(r.rules, M15_MASK.rules, snowFrameFile),
+    // The white bars: the pack's white frame's bar regions, in place of the
+    // gold frame's, warmed a quarter toward the gold bar (prints: KHM #224 /
+    // #223 / #230, white with a faint warm cast).
+    layer(snowFrameFile("w"), M15_MASK.title),
+    layer(snowFrameFile("w"), M15_MASK.type),
+    layer(snowFrameFile(r.typeTitle), M15_MASK.title, SNOW_PAIR_BAR_GOLD_SHARE),
+    layer(snowFrameFile(r.typeTitle), M15_MASK.type, SNOW_PAIR_BAR_GOLD_SHARE),
+    pairLayer(r.pinline, M15_MASK.pinline, snowFrameFile),
+  ];
+}
+const SNOW_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %";
 
 /** How provenance records the pair masters (notes). */
 const PAIR_NOTE =
@@ -1105,14 +1204,28 @@ export const CC_TEMPLATES = {
       `${PAIR_NOTE}. <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print`,
     ],
   },
+  // 4.6f (wave 2c): the ten white-bar pair masters (snowPairLayers) beside
+  // the seven monos; the legendary crown is the standard band over them
+  // (M15_CROWN on the m15snow entry, keyMap c → a: no new objects).
   m15snow: {
-    colors: perColor((k) => [layer(k === "c" ? `${SNOW}/a.png` : `${SNOW}/${k}.png`)]),
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${SNOW}/a.png` : `${SNOW}/${k}.png`)]),
+      ...pairMasters("snow", ["split"], snowPairLayers),
+    },
     plates: ARTIFACT_PT,
-    notes: ["colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)"],
+    notes: [
+      "colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)",
+      `${SNOW_PAIR_NOTE}. <pair> = the snow gold frame m.png whole (the gold body KHM #224 / #223 / #230 print) with the split text box, WHITE title and type bars — the pack's white frame w.png through CC's Title and Type masks, warmed a quarter of the way to the gold bar (m.png at ${Math.round(SNOW_PAIR_BAR_GOLD_SHARE * 100)}% through the same masks: the prints' bars are the whitest of KHM's but for w's, with a faint warm cast; owner round 20: white bars) — and the split pinline, drawn with the gold plate pt/m as the prints are; no hybrid dress (no hybrid snow print exists)`,
+    ],
   },
   m15snowland: {
-    colors: perColor((k) => [layer(k === "c" ? `${SNOW}/l.png` : `${SNOW}/l${k}.png`)]),
-    notes: [],
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${SNOW}/l.png` : `${SNOW}/l${k}.png`)]),
+      ...pairMasters("snowland", ["split"], snowPairLayers),
+    },
+    notes: [
+      `${SNOW_PAIR_NOTE}. <pair> = CC's snow land frame l.png (the grey body and neutral white bars every KHM snow land prints) with the split text box and pinline in the two snow land tints (snow/l<k>.png), as the ten KHM snow duals #248–274 print`,
+    ],
   },
   m15devoid: {
     // Every CC devoid frame is see-through (text box alpha ~179): the

@@ -73,10 +73,11 @@ const ANATOMY_COPY: Record<SwitchKey, { label: string; help: string }> = {
 
 /** Shown under the two-colour switch when the card's cost asks for the
  *  hybrid dress on a frame that has none (m15artifact: no hybrid P/T plate
- *  yet, TODO 4.6b) — the render falls back to the gold-split pair master
- *  (lib/cards/anatomy.ts resolveTwoColor), and the owner should know why. */
+ *  yet, TODO 4.6b; the snow frames: no hybrid snow print exists, 4.6f wave
+ *  2c) — the render falls back to the split pair master (lib/cards/anatomy.ts
+ *  resolveTwoColor), and the owner should know why. */
 export const HYBRID_FALLBACK_NOTE =
-  "This frame has no hybrid version yet, so an all-hybrid cost gets the gold two-colour frame.";
+  "This frame has no hybrid version yet, so an all-hybrid cost gets its split two-colour frame.";
 
 const PAIR_COLORS = ["white", "blue", "black", "red", "green"] as const;
 type PairColor = (typeof PAIR_COLORS)[number];

@@ -23,6 +23,7 @@ import {
 import { PAIR_RAMPS, TWO_COLOR_PAIRS, lerpLayers, rampMask } from "@/scripts/lib/pair-ramp.mjs";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { M15_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6a — the legendary crown band (scripts/lib/cc-frames.mjs
@@ -134,10 +135,21 @@ describe("the crown slot the profiles draw (M15_CROWN)", () => {
     expect(M15_CROWN.assetPathTemplate).toBe("/frames/m15crown/{key}.png");
   });
 
-  it("is on the m15, m15artifact and m15land entries, remapping a colourless card's key", () => {
+  it("is on the m15, m15artifact and m15land entries — and the snow pair since 4.6f wave 2c — remapping a colourless card's key", () => {
     expect(getFrameProfile("m15").overlays).toEqual([M15_CROWN]);
     expect(getFrameProfile("m15artifact").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
     expect(getFrameProfile("m15land").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
+    // The snow frames share the band (the snow pack's title bar sits where
+    // the M15 pack's does): a colourless snow card's master is CC's snow
+    // ARTIFACT frame, so its crown is the artifact silver; a colourless snow
+    // land's the land grey, as on m15land.
+    expect(getFrameProfile("m15snow").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
+    expect(getFrameProfile("m15snowland").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
+    // Nothing else reads the band (the borderless frames and extended art
+    // draw the floating crown; devoid draws none).
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.assetPathTemplate === M15_CROWN.assetPathTemplate))).toEqual(
+      ["m15", "m15land", "m15artifact", "m15snow", "m15snowland"],
+    );
   });
 });
 

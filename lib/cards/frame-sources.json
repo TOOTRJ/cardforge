@@ -2243,6 +2243,96 @@
       ],
       "m": [
         "img/frames/m15/new/snow/m.png"
+      ],
+      "wu": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
     "plates": {
@@ -2255,6 +2345,8 @@
       "m": "img/frames/m15/regular/m15PTM.png"
     },
     "sourceFiles": [
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/rules.png",
       "img/frames/m15/new/snow/a.png",
       "img/frames/m15/new/snow/b.png",
       "img/frames/m15/new/snow/g.png",
@@ -2262,6 +2354,8 @@
       "img/frames/m15/new/snow/r.png",
       "img/frames/m15/new/snow/u.png",
       "img/frames/m15/new/snow/w.png",
+      "img/frames/m15/new/title.png",
+      "img/frames/m15/new/type.png",
       "img/frames/m15/regular/m15PTA.png",
       "img/frames/m15/regular/m15PTB.png",
       "img/frames/m15/regular/m15PTG.png",
@@ -2271,7 +2365,8 @@
       "img/frames/m15/regular/m15PTW.png"
     ],
     "notes": [
-      "colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)"
+      "colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)",
+      "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %. <pair> = the snow gold frame m.png whole (the gold body KHM #224 / #223 / #230 print) with the split text box, WHITE title and type bars — the pack's white frame w.png through CC's Title and Type masks, warmed a quarter of the way to the gold bar (m.png at 25% through the same masks: the prints' bars are the whitest of KHM's but for w's, with a faint warm cast; owner round 20: white bars) — and the split pinline, drawn with the gold plate pt/m as the prints are; no hybrid dress (no hybrid snow print exists)"
     ]
   },
   "m15snowland": {
@@ -2301,9 +2396,61 @@
       ],
       "m": [
         "img/frames/m15/new/snow/lm.png"
+      ],
+      "wu": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lu.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lb.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lb.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lb.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lb.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lr.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lr.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lr.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lr.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lg.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lg.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lg.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lg.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lw.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lw.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lw.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lw.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lu.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
     "sourceFiles": [
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/rules.png",
       "img/frames/m15/new/snow/l.png",
       "img/frames/m15/new/snow/lb.png",
       "img/frames/m15/new/snow/lg.png",
@@ -2312,7 +2459,9 @@
       "img/frames/m15/new/snow/lu.png",
       "img/frames/m15/new/snow/lw.png"
     ],
-    "notes": []
+    "notes": [
+      "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %. <pair> = CC's snow land frame l.png (the grey body and neutral white bars every KHM snow land prints) with the split text box and pinline in the two snow land tints (snow/l<k>.png), as the ten KHM snow duals #248–274 print"
+    ]
   },
   "m15token": {
     "source": "cardconjurer",

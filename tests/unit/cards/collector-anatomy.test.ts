@@ -81,7 +81,7 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     // and pair switches it draws, 4.6f wave 2a).
     expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true });
     // The creator's all-on switches on a frame with the slot but no crown.
-    expect(newCardFrameStyle({ template: "m15snow", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15snow", collector: "2023" });
+    expect(newCardFrameStyle({ template: "m15devoid", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15devoid", collector: "2023" });
   });
 });
 

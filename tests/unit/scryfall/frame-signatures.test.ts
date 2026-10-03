@@ -17,6 +17,7 @@ import {
   isKnownFrameSignature,
   landFrameColorRule,
   registryCoversEveryTemplate,
+  signatureDrawnOn,
   templatesReachedByRegistry,
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
@@ -557,14 +558,18 @@ describe("the general signatures (TODO 1.4)", () => {
   });
 
   it("names the anatomy gap and the blocking item", () => {
-    // The crown on a frame that doesn't draw it (snow: 4.6f); m15 does (4.6a).
-    const snow = scryfallCardSchema.parse({ ...printingsData["dmu-107"], frame_effects: ["legendary", "snow"] });
-    expect(frameMatchFromScryfall(snow)).toMatchObject({
+    // The crown on a frame that doesn't draw it (devoid: the owner's call,
+    // round 20 — the one crowned devoid printing is another frame); m15
+    // (4.6a) and snow (4.6f, wave 2c) draw it.
+    const devoid = scryfallCardSchema.parse({ ...printingsData["dmu-107"], frame_effects: ["legendary", "devoid"] });
+    expect(frameMatchFromScryfall(devoid)).toMatchObject({
       signature: "era/2015+crown",
-      template: "m15snow",
+      template: "m15devoid",
       blockedBy: "4.6f",
       reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     });
+    const snow = scryfallCardSchema.parse({ ...printingsData["dmu-107"], frame_effects: ["legendary", "snow"] });
+    expect(frameMatchFromScryfall(snow)).toMatchObject({ status: "exact", signature: "era/2015", template: "m15snow" });
     expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({ status: "exact", signature: "era/2015" });
     expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
@@ -593,13 +598,20 @@ describe("the general signatures (TODO 1.4)", () => {
       signature: "era/2015+colour-indicator",
       gaps: ["colour-indicator"],
     });
-    // …and on the snow frame, both, in order.
+    // …and on the devoid frame, both, in order (the snow frame draws its
+    // crown since 4.6f wave 2c: the dot alone there).
+    const devoidIndicator = scryfallCardSchema.parse({
+      ...printingsData["dmu-107"],
+      frame_effects: ["legendary", "devoid"],
+      color_indicator: ["B"],
+    });
+    expect(frameMatchFromScryfall(devoidIndicator).gaps).toEqual(["crown", "colour-indicator"]);
     const snowIndicator = scryfallCardSchema.parse({
       ...printingsData["dmu-107"],
       frame_effects: ["legendary", "snow"],
       color_indicator: ["B"],
     });
-    expect(frameMatchFromScryfall(snowIndicator).gaps).toEqual(["crown", "colour-indicator"]);
+    expect(frameMatchFromScryfall(snowIndicator).gaps).toEqual(["colour-indicator"]);
     // No gap rule matched: no list (an exact frame, a nearest showcase).
     expect(frameMatchFromScryfall(printing("m21-315")).gaps).toBeUndefined();
     expect(frameMatchFromScryfall(printing("blb-343")).gaps).toBeUndefined();
@@ -882,5 +894,35 @@ describe("the rule table", () => {
       expect(match.reason === null, key).toBe(match.status === "exact");
       expect(isKnownFrameSignature(match.signature), key).toBe(true);
     }
+  });
+});
+
+describe("the snow frames and devoid after 4.6f wave 2c", () => {
+  it("a crowned snow pair, a snow dual, a mono snow crown and the crowned snow land import exact: the snow frames draw the band and the pairs", () => {
+    expect(frameMatchFromScryfall(printing("khm-224"))).toMatchObject({ status: "exact", signature: "era/2015", template: "m15snow" });
+    expect(frameMatchFromScryfall(printing("khm-224")).gaps).toBeUndefined();
+    expect(frameMatchFromScryfall(printing("khm-249"))).toMatchObject({ status: "exact", signature: "era/2015", template: "m15snowland" });
+    expect(frameMatchFromScryfall(printing("j22-12"))).toMatchObject({ status: "exact", signature: "era/2015", template: "m15snow" });
+    expect(frameMatchFromScryfall(printing("dmr-244"))).toMatchObject({ status: "exact", signature: "era/2015", template: "m15snowland" });
+  });
+
+  it("a two-colour devoid printing imports exact on the gold devoid frame — every one prints the uniform gold frame (no split); the hybrid devoid MDFC stays nearest", () => {
+    expect(frameMatchFromScryfall(printing("ogw-150"))).toMatchObject({ status: "exact", signature: "era/2015", template: "m15devoid" });
+    expect(frameMatchFromScryfall(printing("ogw-150")).gaps).toBeUndefined();
+    // MH3 #253 Drowner of Truth prints the split hybrid dress on devoid,
+    // which no frame draws — its first gap is the double face (Phase 5).
+    const hybrid = frameMatchFromScryfall(printing("mh3-253"));
+    expect(hybrid.status).toBe("nearest");
+    expect(hybrid.template).toBe("m15devoid");
+    expect(hybrid.gaps).toEqual(["dfc", "two-colour-hybrid"]);
+    // The old "two-colour on devoid" request rows are answered by the gold
+    // frame; a snow one may have been a hybrid printing, so it stays open,
+    // like m15artifact's.
+    expect(signatureDrawnOn("era/2015+two-colour", "m15devoid")).toBe(true);
+    expect(signatureDrawnOn("era/2015+two-colour-hybrid", "m15devoid")).toBe(false);
+    expect(signatureDrawnOn("era/2015+crown", "m15devoid")).toBe(false);
+    expect(signatureDrawnOn("era/2015+crown", "m15snow")).toBe(true);
+    expect(signatureDrawnOn("era/2015+two-colour", "m15snowland")).toBe(true);
+    expect(signatureDrawnOn("era/2015+two-colour", "m15snow")).toBe(false);
   });
 });
