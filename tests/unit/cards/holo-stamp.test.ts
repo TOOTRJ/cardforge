@@ -197,6 +197,10 @@ describe("the notch and the resolved stamp", () => {
       expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, facts({ colors, cost, colorKey: "m" }))?.notch.key, p).toBe(p);
       expect(resolveHoloStamp(getFrameProfile("m15artifact"), { stamp: "oval", twoColor: true }, facts({ colors, cost, colorKey: "m", cardType: "artifact" }))?.notch.key, `artifact ${p}`).toBe(p);
       expect(resolveHoloStamp(getFrameProfile("m15land"), { stamp: "oval", twoColor: true }, facts({ colors, cost: null, colorKey: "m", cardType: "land" }))?.notch.key, `land ${p}`).toBe(p);
+      // The snow pairs (4.6f wave 2c): the same pieces — m15snow's and
+      // m15snowland's bar under the notch is m15's pair bar.
+      expect(resolveHoloStamp(getFrameProfile("m15snow"), { stamp: "oval", twoColor: true }, facts({ colors, cost, colorKey: "m", supertype: "Snow" }))?.notch.path, `snow ${p}`).toBe(`/frames/m15holostamp/${p}.png`);
+      expect(resolveHoloStamp(getFrameProfile("m15snowland"), { stamp: "oval", twoColor: true }, facts({ colors, cost: null, colorKey: "m", cardType: "land", supertype: "Snow" }))?.notch.path, `snow land ${p}`).toBe(`/frames/m15holostamp/${p}.png`);
     }
     // A two-colour LAND on m15 wears no pair (twoColorFits): the gold notch.
     expect(resolveHoloStamp(m15, { stamp: "oval", twoColor: true }, facts({ ...pair, cost: null, cardType: "land" }))?.notch.key).toBe("m");

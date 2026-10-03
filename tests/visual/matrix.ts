@@ -824,8 +824,10 @@ export function visualCases(): VisualCase[] {
   // The pair frames (the 4.9c follow-up, owner round 26, 2026-10-03): the
   // pair's notch — its rim the pair master's own bar, tinted per column
   // across the 40→60 %W ramp — on a rare on "auto" drawn as its pair master
-  // on every template with pairs AND the notch (m15, m15artifact, m15land:
-  // STAMP_PAIR_TEMPLATES; the gold-split dress, "@stamp-pair-split"), the
+  // on every template with pairs AND the notch (m15, m15artifact, m15land,
+  // and 4.6f wave 2c's m15snow and m15snowland — the same pieces: their
+  // bar under the notch is m15's pair bar — STAMP_PAIR_TEMPLATES; the
+  // gold-split dress, "@stamp-pair-split"), the
   // hybrid dress (the same piece over its own master), a crowned pair rare
   // (the split crown and the pair notch on one card), the stored bake's HD
   // size and a foil pair (the notch in the sheen). Wave 1's "@stamp-pair"
@@ -853,7 +855,7 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15
 /** The templates with BOTH the notch and pair masters — the pair notch's
  *  cases (the 4.9c follow-up; the same test keeps it in step: a template
  *  that gains pairs with the notch declared joins by itself). */
-export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land"];
+export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15snow", "m15snowland"];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
  *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at

@@ -68,6 +68,9 @@ const cases: Array<[string, Partial<CardPreviewData>, string]> = [
   ["a G|W hybrid rare (the hybrid dress)", { rarity: "rare", colorIdentity: ["green", "white"], cost: "{G/W}{G/W}", frameStyle: { template: "m15", stamp: "auto", twoColor: true } }, "m15holostamp/gw"],
   ["a U|R artifact pair", { rarity: "mythic", cardType: "artifact", colorIdentity: ["blue", "red"], cost: "{U}{R}", power: null, toughness: null, frameStyle: { template: "m15artifact", stamp: "auto", twoColor: true } }, "m15holostamp/ur"],
   ["a B|G land pair", { rarity: "rare", cardType: "land", colorIdentity: ["black", "green"], cost: null, power: null, toughness: null, frameStyle: { template: "m15land", stamp: "auto", twoColor: true } }, "m15holostamp/bg"],
+  // The snow pairs (4.6f wave 2c): the same pieces over the snow pair masters.
+  ["a U|B snow pair", { rarity: "rare", supertype: "Snow", colorIdentity: ["blue", "black"], cost: "{1}{U}{B}", frameStyle: { template: "m15snow", stamp: "auto", twoColor: true } }, "m15holostamp/ub"],
+  ["a R|W snow land pair", { rarity: "rare", cardType: "land", supertype: "Snow", colorIdentity: ["red", "white"], cost: null, power: null, toughness: null, frameStyle: { template: "m15snowland", stamp: "auto", twoColor: true } }, "m15holostamp/rw"],
 ];
 
 describe("the preview draws the bake's stamp", () => {

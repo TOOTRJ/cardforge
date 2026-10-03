@@ -34,8 +34,9 @@ import { STAMP_ARCH_RULES } from "@/tests/visual/matrix";
 //     land's colour, every devoid key's grey "c", a snow frame's colour, the
 //     walker's own piece;
 //   • a card drawn as its PAIR master (the 4.9c follow-up) takes the
-//     pair's notch on the split and the hybrid dress, on m15artifact and
-//     m15land too: at HD the piece 1:1 over the pair master, its rim foot
+//     pair's notch on the split and the hybrid dress, on m15artifact,
+//     m15land and the snow frames too: at HD the piece 1:1 over the pair
+//     master, its rim foot
 //     the master's own bar at every column of both feet (the bar is a
 //     40→60 %W ramp; the stamped bake equals the plain one there), and the
 //     arch keep-out applies as on a mono card;
@@ -66,12 +67,12 @@ function real(rel: string): Buffer | null {
 const MASTERS = [
   "m15/w", "m15/u", "m15/b", "m15/r", "m15/g", "m15/m", "m15/c", "m15/wu", "m15/gw-h",
   "m15artifact/c", "m15artifact/u", "m15artifact/ur", "m15land/c", "m15land/g", "m15land/bg",
-  "m15snow/r", "m15snowland/c", "m15devoid/u", "m15pw/w", "m15pw/c",
+  "m15snow/r", "m15snow/ub", "m15snowland/c", "m15snowland/rw", "m15devoid/u", "m15pw/w", "m15pw/c",
   "m15token/g",
   "m15/pt/w", "m15/pt/u", "m15/pt/b", "m15/pt/r", "m15/pt/g", "m15/pt/m", "m15/pt/c",
-  "m15artifact/pt/c", "m15artifact/pt/u", "m15artifact/pt/m", "m15snow/pt/r", "m15devoid/pt/u", "m15pw/loyalty/w", "m15pw/loyalty/c",
+  "m15artifact/pt/c", "m15artifact/pt/u", "m15artifact/pt/m", "m15snow/pt/r", "m15snow/pt/m", "m15devoid/pt/u", "m15pw/loyalty/w", "m15pw/loyalty/c",
 ];
-const NOTCHES = ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "gw", "ur", "bg"].map((k) => `m15holostamp/${k}`).concat(["w", "c"].map((k) => `m15pwholostamp/${k}`));
+const NOTCHES = ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "gw", "ur", "bg", "ub", "rw"].map((k) => `m15holostamp/${k}`).concat(["w", "c"].map((k) => `m15pwholostamp/${k}`));
 const objects = Object.fromEntries([...MASTERS, ...NOTCHES].map((rel) => [rel, real(`${rel}.png`)]));
 const available = Object.values(objects).every((b) => b !== null);
 
@@ -226,7 +227,7 @@ const ARCH_RULES = STAMP_ARCH_RULES;
 
 /** Two-colour cards drawn as their pair masters (FrameStyle.twoColor on, a
  *  stored pair): the four masters one pair notch serves. */
-const PAIR_CARDS: Record<"split" | "hybrid" | "artifact" | "land", Partial<CardPreviewData>> = {
+const PAIR_CARDS: Record<"split" | "hybrid" | "artifact" | "land" | "snow" | "snowland", Partial<CardPreviewData>> = {
   split: { rarity: "rare", colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15", finish: "regular", twoColor: true, stamp: "auto" } },
   hybrid: { rarity: "rare", colorIdentity: ["green", "white"], cost: "{G/W}{G/W}", frameStyle: { template: "m15", finish: "regular", twoColor: true, stamp: "auto" } },
   artifact: {
@@ -246,6 +247,18 @@ const PAIR_CARDS: Record<"split" | "hybrid" | "artifact" | "land", Partial<CardP
     power: null,
     toughness: null,
     frameStyle: { template: "m15land", finish: "regular", twoColor: true, stamp: "auto" },
+  },
+  // The snow pairs (4.6f wave 2c): the same pieces over the snow masters.
+  snow: { rarity: "rare", supertype: "Snow", colorIdentity: ["blue", "black"], cost: "{1}{U}{B}", frameStyle: { template: "m15snow", finish: "regular", twoColor: true, stamp: "auto" } },
+  snowland: {
+    rarity: "rare",
+    cardType: "land",
+    supertype: "Snow",
+    colorIdentity: ["red", "white"],
+    cost: null,
+    power: null,
+    toughness: null,
+    frameStyle: { template: "m15snowland", finish: "regular", twoColor: true, stamp: "auto" },
   },
 };
 
@@ -304,6 +317,8 @@ const cases: Case[] = [
   ["rare G|W hybrid creature (the hybrid dress)", PAIR_CARDS.hybrid, "m15holostamp", "gw"],
   ["mythic U|R artifact pair", PAIR_CARDS.artifact, "m15holostamp", "ur"],
   ["rare B|G land pair", PAIR_CARDS.land, "m15holostamp", "bg"],
+  ["rare U|B snow pair (4.6f wave 2c: the same piece)", PAIR_CARDS.snow, "m15holostamp", "ub"],
+  ["rare R|W snow land pair", PAIR_CARDS.snowland, "m15holostamp", "rw"],
 ];
 
 const walker = (over: Partial<CardPreviewData> = {}): CardPreviewData =>
@@ -430,7 +445,7 @@ describe.skipIf(!available)("the holofoil stamp in the bake — the real masters
     }
   }, 60_000);
 
-  it("the pair notch at HD: the piece 1:1 over the pair master, its foot the master's bar at every column of both feet, the keep-out on", async () => {
+  it("the pair notch at HD: the piece 1:1 over every pair master, its foot the master's bar at every column of both feet, the keep-out on", async () => {
     // The foot columns NOTCH_FOOT reads (piece px → card px at HD), on both
     // feet: each stands on its own side of the bar's 40→60 %W ramp.
     const foot = NOTCH_FOOT.m15holostamp;
@@ -440,6 +455,8 @@ describe.skipIf(!available)("the holofoil stamp in the bake — the real masters
       ["hybrid", PAIR_CARDS.hybrid, "gw"],
       ["artifact", PAIR_CARDS.artifact, "ur"],
       ["land", PAIR_CARDS.land, "bg"],
+      ["snow", PAIR_CARDS.snow, "ub"],
+      ["snowland", PAIR_CARDS.snowland, "rw"],
     ] as const) {
       const stamped = card(over);
       const resolved = resolveHoloStamp(getFrameProfile(stamped.frameStyle?.template), stamped.frameStyle, {
@@ -478,7 +495,7 @@ describe.skipIf(!available)("the holofoil stamp in the bake — the real masters
       const right = px(on, slot.x0 + foot.runs[1][1] - 2, slot.y0 + foot.y);
       expect(Math.max(...[0, 1, 2].map((c) => Math.abs(left[c] - right[c]))), label).toBeGreaterThan(20);
     }
-  }, 240_000);
+  }, 360_000);
 
   it("a full rules box on a pair steps down for the arch like a mono card", async () => {
     const stamped = card({ ...PAIR_CARDS.split, rulesText: ARCH_RULES });

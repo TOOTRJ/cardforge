@@ -51,9 +51,10 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 //     the rim tinted PER COLUMN to the pair master's bar — the pinline's
 //     40→60 %W ramp, which the notch sits inside — so the foot is the bar
 //     at every column of BOTH feet; one piece per pair serves every pair
-//     master with the notch (the m15 split and hybrid, m15artifact and
-//     m15land masters hold the same bar under it, checked here on the
-//     real masters and by the importer), and the keys are the slot's.
+//     master with the notch (the m15 split and hybrid, m15artifact,
+//     m15land, m15snow and m15snowland masters hold the same bar under it,
+//     checked here on the real masters and by the importer), and the keys
+//     are the slot's.
 // ---------------------------------------------------------------------------
 
 type Entry = { sha256: string; width: number; height: number };
@@ -107,7 +108,7 @@ describe("the recipe is the profile's slot", () => {
     for (const key of M15.keys) {
       if ((TWO_COLOR_PAIRS as readonly string[]).includes(key)) {
         expect((M15.barOf as Record<string, string>)[key], key).toBe(`m15/${key}`);
-        expect(M15.barSharedBy?.[key], key).toEqual([`m15/${key}-h`, `m15artifact/${key}`, `m15land/${key}`]);
+        expect(M15.barSharedBy?.[key], key).toEqual([`m15/${key}-h`, `m15artifact/${key}`, `m15land/${key}`, `m15snow/${key}`, `m15snowland/${key}`]);
       } else {
         expect((M15.barOf as Record<string, string>)[key], key).toMatch(/^m15(artifact|land)?\/[a-z]$/);
       }
@@ -249,7 +250,7 @@ describe("the decomposition and the cut", () => {
     // A pair key names the ramp across the piece and the masters that share it.
     const columns = Array.from({ length: 192 }, (_, i) => [i, 100, 200 - i]);
     expect(describeNotch(M15, "wu", columns)[1]).toBe(
-      "rim tinted per column to m15/wu.png's bar across x 654–845 (rows 1940–1947; 0,100,200 at x 654 → 96,100,104 at x 750 → 191,100,9 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/wu-h.png, m15artifact/wu.png, m15land/wu.png",
+      "rim tinted per column to m15/wu.png's bar across x 654–845 (rows 1940–1947; 0,100,200 at x 654 → 96,100,104 at x 750 → 191,100,9 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/wu-h.png, m15artifact/wu.png, m15land/wu.png, m15snow/wu.png, m15snowland/wu.png",
     );
   });
 
@@ -330,7 +331,7 @@ describe("published to the frames bucket", () => {
         expect(p.colors[key][0], `${folder}/${key}`).toContain(def.shape.src);
         const barOf = (def.barOf as Record<string, string>)[key];
         if (def.rampKeys?.includes(key)) {
-          expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`^rim tinted per column to ${barOf}\\.png's bar across x 654–845 \\(rows 1940–1947; \\d+,\\d+,\\d+ at x 654 → \\d+,\\d+,\\d+ at x 750 → \\d+,\\d+,\\d+ at x 845 — the pinline's procedural:ramp\\(40→60 %W\\)\\), the same bar on m15/${key}-h\\.png, m15artifact/${key}\\.png, m15land/${key}\\.png$`));
+          expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`^rim tinted per column to ${barOf}\\.png's bar across x 654–845 \\(rows 1940–1947; \\d+,\\d+,\\d+ at x 654 → \\d+,\\d+,\\d+ at x 750 → \\d+,\\d+,\\d+ at x 845 — the pinline's procedural:ramp\\(40→60 %W\\)\\), the same bar on m15/${key}-h\\.png, m15artifact/${key}\\.png, m15land/${key}\\.png, m15snow/${key}\\.png, m15snowland/${key}\\.png$`));
         } else {
           expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`rim tinted to ${barOf}\\.png's bar \\(\\d+,\\d+,\\d+\\)`));
         }
@@ -372,7 +373,7 @@ describe("published to the frames bucket", () => {
       }
     });
 
-    it.each(TWO_COLOR_PAIRS.map((pair) => [pair] as const))("%s: the bar under the notch is the same pixels on the split, hybrid, artifact and land pair masters, and its foot is each side of the ramp", async (pair) => {
+    it.each(TWO_COLOR_PAIRS.map((pair) => [pair] as const))("%s: the bar under the notch is the same pixels on the split, hybrid, artifact, land, snow and snow-land pair masters, and its foot is each side of the ramp", async (pair) => {
       const def = M15;
       const read = async (rel: string) => {
         const m = await sharp(onDisk(`${rel}.png`)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });

@@ -1375,7 +1375,8 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   pair master takes the pair's notch `m15holostamp/<pair>`, its rim the
   pair master's own bar read per column across the pinline ramp ([The
   holofoil stamp](#the-holofoil-stamp-49c)) — on every dress and template
-  that has the notch; drawn gold it takes the gold notch.
+  that has the notch, the snow pairs included; drawn gold it takes the
+  gold notch.
 - **Verification (owner decision 2026-09-29, V-A):** a pair rides its
   template's `m` tick — a deterministic recipe over the verified masters,
   like `a` riding `c` — and the owner signs off a pair sheet in the PR
@@ -1872,23 +1873,26 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   notch: the bar's flat rows (1941–1949) are the same bytes on
   `m15/<pair>`, `m15/<pair>-h` (the hybrid dress's grey L bars are its
   title and type bars; its text-box pinline is the pair's),
-  `m15artifact/<pair>` and `m15land/<pair>` (the land pair differs only on
-  the bar's anti-aliased top rows, ≤ 4 levels, as the mono `l` key does on
-  m15land) — `barSharedBy` lists them, the importer refuses a pair whose
-  shared master drifts, and `tests/unit/frames/holo-stamp-notch.test.ts`
-  re-checks it on the real masters; a template that gains pairs with the
-  notch declared (the snow pairs of 4.6f wave 2c, #458) fails that test
-  and the matrix test until `barSharedBy` names its pair masters (and the
-  importer has re-checked them) and `STAMP_PAIR_TEMPLATES` lists it with
-  its `@stamp-pair-split` case. 20 objects (10 PNG + 10 WebP), the 32
+  `m15artifact/<pair>`, `m15land/<pair>` and the snow pairs
+  `m15snow/<pair>` / `m15snowland/<pair>` (4.6f wave 2c, #458: their
+  white bars are the title and type bars too, and the snow pack's pinline
+  is M15's — measured, the bar under the notch is m15's pair bar at every
+  column; the land and snow pairs differ only on the bar's anti-aliased
+  top rows, ≤ 4 levels, as the mono `l` key does on m15land) —
+  `barSharedBy` lists them, the importer refuses a pair whose shared
+  master drifts, and `tests/unit/frames/holo-stamp-notch.test.ts` re-checks
+  it on the real masters; a template that gains pairs with the notch
+  declared fails that test and the matrix test until `barSharedBy` names
+  its pair masters (and the importer has re-checked them) and
+  `STAMP_PAIR_TEMPLATES` lists it with its `@stamp-pair-split` case. 20 objects (10 PNG + 10 WebP), the 32
   of wave 1 untouched byte for byte. The oval, the keep-out and the arch's
   position are wave 1's exactly; the creator's "no notch on the pair
   frame" note is gone. Opt-in like the rest: no stored card draws a pair
   notch until its owner's switch asks (every production pair card was
   saved without the key), no bump, no sweep; the visual gate retired wave
   1's `@stamp-pair` pin (the switch on a pair, nothing drawn — the gap this
-  closes) for the pair cases (`@stamp-pair-split` on m15, m15artifact and
-  m15land, `-hybrid`, `-crown`, `-hd`, `-foil`).
+  closes) for the pair cases (`@stamp-pair-split` on m15, m15artifact,
+  m15land, m15snow and m15snowland, `-hybrid`, `-crown`, `-hd`, `-foil`).
 - **The slots** (`M15_HOLO_STAMP`, `M15PW_HOLO_STAMP` in
   `lib/cards/template-layout.ts`) are `FrameOverlaySlot`s with `anatomy:
   "holoStamp"` — the slot type is now a discriminated union on `anatomy`

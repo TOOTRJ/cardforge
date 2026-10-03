@@ -425,8 +425,9 @@ Rules and gotchas:
   a card drawn as its PAIR master takes the pair's notch
   (`m15holostamp/<pair>`: the same arch with its rim tinted PER COLUMN to
   the pair master's bar across the 40→60 %W pinline ramp — one piece per
-  pair for the split, hybrid, artifact and land masters, whose bar under it
-  is the same pixels; the importer refuses a drift); its arch is a
+  pair for the split, hybrid, artifact, land, snow and snow-land masters,
+  whose bar under it is the same pixels; the importer refuses a drift); its
+  arch is a
   glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
   shrinks.
 - Notifications are push, not pull: `notifications` is on the

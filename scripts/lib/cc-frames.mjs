@@ -2696,9 +2696,12 @@ export function crownBandFindings(buf, width, height, rows, artSlot) {
 // piece per pair serves every pair master: the bar's flat rows (1941–1949)
 // are the same bytes on m15/<pair>, m15/<pair>-h (the hybrid dress's grey
 // L bars are its title and type bars; its text-box pinline is the pair's),
-// m15artifact/<pair> and m15land/<pair> (the land pair differs only on the
-// bar's anti-aliased top rows, by ≤ 4 levels, as the mono `l` key does on
-// m15land) — the importer refuses the key if any of them drifts.
+// m15artifact/<pair>, m15land/<pair> and the snow pairs m15snow/<pair> /
+// m15snowland/<pair> (4.6f wave 2c; their white bars are the title and type
+// bars, and the snow pack's pinline is M15's — measured: the bar under the
+// notch is m15's pair bar at every column; the land and snow pairs differ
+// only on the bar's anti-aliased top rows, by ≤ 4 levels, as the mono `l`
+// key does on m15land) — the importer refuses the key if any of them drifts.
 // ---------------------------------------------------------------------------
 
 /** Where a master's bar is sampled (card px): the centre column's run of
@@ -2746,8 +2749,15 @@ export const HOLO_STAMP_NOTCHES = {
       ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, `m15/${pair}`])),
     },
     rampKeys: [...TWO_COLOR_PAIRS],
+    // Every other pair master the pair key is drawn over (the hybrid dress,
+    // the artifact and land pairs, 4.6f wave 2c's snow and snow-land
+    // pairs): the importer checks each one's bar under the notch against
+    // the sampled one at every column.
     barSharedBy: Object.fromEntries(
-      TWO_COLOR_PAIRS.map((pair) => [pair, [`m15/${pair}-h`, `m15artifact/${pair}`, `m15land/${pair}`]]),
+      TWO_COLOR_PAIRS.map((pair) => [
+        pair,
+        [`m15/${pair}-h`, `m15artifact/${pair}`, `m15land/${pair}`, `m15snow/${pair}`, `m15snowland/${pair}`],
+      ]),
     ),
     barSample: M15_BAR_SAMPLE,
     oval: { leftPct: 45.54, topPct: 91.72, widthPct: 8.94, heightPct: 3.2 },
@@ -2756,7 +2766,7 @@ export const HOLO_STAMP_NOTCHES = {
       "the holofoil stamp's notch on the M15 family (TODO 4.9c): CC's arch — the text box's bottom pinline lifted over the stamp with its bevel — 1:1 at HD, 2 px below CC's bounds 43.6/90.34/12.8×4.58 % (654–846 × 1899–1995 px): the piece's rim foot is 11 rows, cut for CC's older M15 bar, and our accurate-pack bar is 12 (1938–1949), so at CC's bounds the foot stood 1 px proud of the bar's top and its black covered the bar's last 2 rows — a step at both feet; 2 px lower the foot's bottom edge is the bar's",
       "ONE geometry for every key: CC's U piece (its bevel, rim and black decomposed exactly), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947 (flat within 2 levels) — CC's per-key pieces predate its accurate M15 pack and their rims don't match our bars (W bluish white vs cream, R and G over-saturated, C darker); the unused CC pieces W B R G M A L C A2 A3 were fetched and inspected, never published",
       "a = the artifact silver sampled from m15artifact/c (the nearest of CC's three artifact rims is A2, 222,223,224); l = the land taupe from m15land/c; the snow frames' bars are these pixels and the devoid frames' the colourless grey, so their PROFILES entries map onto these keys",
-      "the ten two-colour PAIR keys (the 4.9c follow-up, owner round 26, 2026-10-03): the same geometry with the rim tinted PER COLUMN to the pair master's own bar — the pinline layer lerped across the untilted 40→60 %W ramp (scripts/lib/pair-ramp.mjs), which the notch's 654–846 px sit inside — read off m15/<pair>.png at rows 1940–1947 for every column of the piece's bounds (each column flat within 2 levels), so the foot is the bar it stands on at every column of both feet and the arch runs through the ramp as the pinline does; one piece per pair serves m15/<pair>-h (the hybrid dress's grey L bars are its title and type bars; its text-box pinline is the pair's), m15artifact/<pair> and m15land/<pair>, whose bars are checked against the sample at every column (the land pair differs only on the bar's anti-aliased top rows, ≤ 4 levels, like the mono l key on m15land) — the importer refuses a pair whose shared masters drift",
+      "the ten two-colour PAIR keys (the 4.9c follow-up, owner round 26, 2026-10-03): the same geometry with the rim tinted PER COLUMN to the pair master's own bar — the pinline layer lerped across the untilted 40→60 %W ramp (scripts/lib/pair-ramp.mjs), which the notch's 654–846 px sit inside — read off m15/<pair>.png at rows 1940–1947 for every column of the piece's bounds (each column flat within 2 levels), so the foot is the bar it stands on at every column of both feet and the arch runs through the ramp as the pinline does; one piece per pair serves m15/<pair>-h (the hybrid dress's grey L bars are its title and type bars; its text-box pinline is the pair's), m15artifact/<pair>, m15land/<pair> and the snow pairs m15snow/<pair> and m15snowland/<pair> (4.6f wave 2c: their WHITE bars are the title and type bars too; the snow pack's pinline is M15's, so the bar under the notch is m15's pair bar byte for byte at every column), whose bars are checked against the sample at every column (the land and snow pairs differ only on the bar's anti-aliased top rows, ≤ 4 levels, like the mono l key on m15land) — the importer refuses a pair whose shared masters drift",
       "the oval region — the slot's oval 45.54/91.72/8.94×3.2 % (683–817 × 1926–1993) plus 2 px — is cut to transparent in CARD coordinates (the piece's hologram, 685–815 × 1930–1993 once placed, sits inside), whatever CC's piece held there (its hologram capture: the planeswalker symbol tiled, WotC's mark), and the black around it is CC's own; our oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut with a 3 px black margin",
     ],
   },
