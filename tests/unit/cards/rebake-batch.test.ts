@@ -446,7 +446,7 @@ describe("runRebakeBatch", () => {
     // The failing card's front was rendered but never uploaded; the good
     // card's upload is the only one.
     expect(mocks.upload).toHaveBeenCalledTimes(1);
-    expect(mocks.upload.mock.calls[0][1]).toBe("good");
+    expect((mocks.upload.mock.calls[0] as unknown[])[1]).toBe("good");
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
   });
 

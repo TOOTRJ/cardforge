@@ -48,6 +48,7 @@ import {
   type DfcLayout,
   type DfcRole,
 } from "@/lib/cards/dfc";
+import type { CardFace } from "@/lib/cards/card-face";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { CardBackFace, CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -278,4 +279,27 @@ export function flippableBackOf(card: CardPreviewData): CardPreviewData | null {
  */
 export function bakedBackOf(card: CardPreviewData): CardPreviewData | null {
   return backBodyOf(card) ? backPreviewData(card) : null;
+}
+
+/** A stored ROW's `frame_style` / `back_face` columns, as the queries hand
+ *  them over (jsonb, unknown). */
+export type CardFaceColumns = { frame_style: unknown; back_face: unknown };
+
+/** True when a stored row has a back face with a BODY — the back a bake
+ *  writes and every download surface offers (TODO 5.3): the page name,
+ *  the deck export's manifest, the download modal, the JSON-LD. The row's
+ *  columns as the queries return them. */
+export function rowHasBakedBack(row: CardFaceColumns): boolean {
+  return (
+    backBodyOf({
+      frameStyle: (row.frame_style as CardPreviewData["frameStyle"]) ?? {},
+      backFace: (row.back_face as CardBackFace | null) ?? null,
+    }) !== null
+  );
+}
+
+/** The faces an export of a stored row fetches: the front, and the back
+ *  when it has one with a body (`["front"]` or `["front", "back"]`). */
+export function exportFacesOf(row: CardFaceColumns): CardFace[] {
+  return rowHasBakedBack(row) ? ["front", "back"] : ["front"];
 }

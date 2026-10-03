@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { faceQuery, type CardFace } from "@/lib/cards/card-face";
 
 // ---------------------------------------------------------------------------
 // PRINT exports of one card (TODO 6.1a bleed, 6.1b 800 ppi, on 6.10's
@@ -198,11 +199,12 @@ export function isPrintRequest(opts: PrintRequest): boolean {
 
 /** A card's print PNG URL: always square, never a preset (the resolution is
  *  the `ppi`), and always a PRINT render — at 600 ppi without a bleed it
- *  says so (`print=1`), since `ppi=600` alone is the plain HD download. */
-export function cardPrintPngHref(cardId: string, opts: { ppi: PrintPpi; bleed: PrintBleed }): string {
+ *  says so (`print=1`), since `ppi=600` alone is the plain HD download. The
+ *  back face with `face: "back"` (TODO 5.3). */
+export function cardPrintPngHref(cardId: string, opts: { ppi: PrintPpi; bleed: PrintBleed; face?: CardFace }): string {
   const print = isPrintRequest(opts) ? "" : "&print=1";
   const bleed = bleedQueryValue(opts.bleed);
-  return `/api/cards/${cardId}/png?ppi=${opts.ppi}&corners=square${bleed ? `&bleed=${bleed}` : ""}${print}`;
+  return `/api/cards/${cardId}/png?ppi=${opts.ppi}&corners=square${bleed ? `&bleed=${bleed}` : ""}${print}${faceQuery(opts.face)}`;
 }
 
 /** The print PNG's file name: `<slug>-800ppi.png`, `<slug>-bleed.png`,

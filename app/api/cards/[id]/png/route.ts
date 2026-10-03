@@ -40,6 +40,8 @@ import {
   ownerExportStamp,
 } from "@/lib/billing/entitlements";
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
+import { flippableBackOf } from "@/lib/cards/faces";
+import { faceSlug, parseFaceParam } from "@/lib/cards/card-face";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { isUuid } from "@/lib/ids";
@@ -101,6 +103,19 @@ import { isUuid } from "@/lib/ids";
 //                      named <slug>-print.png; clean-download only (a
 //                      watermarked viewer → 403 UPGRADE_REQUIRED whatever
 //                      PRINT_800_PPI_PAID_ONLY says: a free image is 750 px).
+//   ?face=back       → the BACK face of a double-faced card (TODO 5.3): the
+//                      face the card page flips to (lib/cards/faces.ts
+//                      flippableBackOf — a back with a body on its body, a
+//                      legacy back as the page draws it), with every option
+//                      above: a free viewer's download is the stored BACK
+//                      bake (rendered_back_image_url, under the card's one
+//                      hasServableStoredRender rule), a paid viewer's a live
+//                      clean render; the print variants composite the back's
+//                      art under the back's layout. Named <slug>-back…; the
+//                      face joins the ETag only for the back, so every front
+//                      download keeps the tag it had. A card with no back to
+//                      flip to answers 404. No or any other `face` is the
+//                      front, exactly as before.
 //
 // Every viewer may pick either corner. A FREE viewer's square PNG is the
 // stored round bake squared with the corner fills a live square render
@@ -191,11 +206,20 @@ export async function GET(
   // the admin rebake). A hand-rolled copy here used to drop the set icon,
   // the design watermark, structured face content and the back face, so a
   // downloaded PNG differed from the gallery render of the same card.
-  const previewData = rowToPreviewData(
+  const frontData = rowToPreviewData(
     card as CardRowForBake,
     pipOverrides,
     profileOverrides,
   );
+  // The face asked for (TODO 5.3): the back as the card page flips to it —
+  // the same mapping the bake renders (lib/cards/faces.ts), so the download
+  // is the gallery's back — or a 404 for a card with no back to flip to.
+  const face = parseFaceParam(request.nextUrl.searchParams.get("face"));
+  const backData = face === "back" ? flippableBackOf(frontData) : null;
+  if (face === "back" && !backData) {
+    return NextResponse.json({ error: "This card has no back face." }, { status: 404 });
+  }
+  const previewData = backData ?? frontData;
 
   // Resolution AND the brand mark follow the VIEWER's plan: a free viewer
   // always downloads a watermarked, capped card — whoever made it — and a
@@ -268,6 +292,9 @@ export async function GET(
         ...(printMode
           ? [`print:${print.ppi}:${print.bleed === "mpc" ? "mpc" : print.bleed ? "bleed" : "trim"}`]
           : []),
+        // …and the BACK face (TODO 5.3): its own bytes, folded in only for
+        // the back, so every front download keeps the tag it had.
+        ...(face === "back" ? ["face:back"] : []),
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
@@ -315,7 +342,9 @@ export async function GET(
     // live (TODO 6.1b "bake on demand, not stored").
     const squareFills = !printMode && corners === "square" ? squareCornerFillsOf(previewData) : null;
     const storedServes = !printMode && watermark && !squareFills?.includes(null);
-    const stored = storedServes ? await fetchStoredRender(card) : null;
+    // The face's own bake: the back's for `face=back` (a legacy back has
+    // none, so it renders live — the one the page shows).
+    const stored = storedServes ? await fetchStoredRender(card, { face }) : null;
     if (stored) {
       const fitted = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
       pngBytes = new Uint8Array(squareFills ? await flattenStoredCorners(fitted, squareFills) : fitted);
@@ -369,19 +398,23 @@ export async function GET(
         clean: !watermark,
         corners,
         ...(print.bleed ? { layout: print.bleed === "mpc" ? "mpc" : "bleed" } : {}),
+        // The back face names itself; a front download's props are as before.
+        ...(face === "back" ? { face } : {}),
       },
     });
   }
 
+  // The file's slug: the card's, or `<slug>-back` for the back face.
+  const slug = faceSlug(card.slug, face);
   return new NextResponse(Buffer.from(bytes), {
     status: 200,
     headers: {
       "Content-Type": format === "jpeg" ? "image/jpeg" : "image/png",
       // The header wins over the modal's download="" attribute, so the file
       // is named here: <slug>.png, <slug>-square.png (both corners can sit
-      // side by side) or <slug>.jpg.
+      // side by side) or <slug>.jpg — <slug>-back… for the back face.
       "Content-Disposition": `attachment; filename="${
-        printMode ? cardPrintFilename(card.slug, print) : cardImageFilename(card.slug, { format, corners })
+        printMode ? cardPrintFilename(slug, print) : cardImageFilename(slug, { format, corners })
       }"`,
       "Content-Length": String(bytes.byteLength),
       "Cache-Control": cacheControl,

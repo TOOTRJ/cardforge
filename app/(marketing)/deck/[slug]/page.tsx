@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DeckAnalyticsPanel } from "@/components/decks/deck-analytics-panel";
 import { DeckCardList } from "@/components/decks/deck-card-list";
 import { DeckExportMenu } from "@/components/decks/deck-export-menu";
+import { rowHasBakedBack } from "@/lib/cards/faces";
 import { DeckGuideSection } from "@/components/decks/deck-guide-section";
 import { getDeckGuide } from "@/lib/decks/guides";
 import { deckToText } from "@/lib/decks/export-text";
@@ -345,6 +346,9 @@ async function DeckBody({
         customCardCount={new Set(items.filter((i) => i.card && i.entry.board !== "maybe").map((i) => i.card!.id)).size}
         realCardCount={items.filter((i) => !i.card && i.entry.board !== "maybe").length}
         hasCover={hasCover}
+        doubleFacedCount={
+          new Set(items.filter((i) => i.card && i.entry.board !== "maybe" && rowHasBakedBack(i.card)).map((i) => i.card!.id)).size
+        }
       />
     ) : null;
 

@@ -71,7 +71,7 @@ const PROP_KEYS = new Set([
   "cancelReason", "cancelFeedback", "attempt", "fromTier", "toTier",
   "scheduled", "sessionId", "subscriptionId",
   "referrer", "utmSource", "utmMedium", "utmCampaign",
-  "visibility", "format", "layout", "preset", "clean", "corners",
+  "visibility", "format", "layout", "preset", "clean", "corners", "face",
 ]);
 const MAX_PROPS = 10;
 const MAX_STRING = 48;

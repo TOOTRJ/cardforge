@@ -80,6 +80,14 @@ describe("the remembered settings", () => {
     });
   });
 
+  it("includes back faces by default (TODO 5.3) and remembers the switch off; a stale value is the default", () => {
+    expect(DEFAULT_PRINT_SELECTION_SETTINGS.includeBacks).toBe(true);
+    expect(parsePrintSelectionSettings({ includeBacks: false })).toEqual({ ...DEFAULT_PRINT_SELECTION_SETTINGS, includeBacks: false });
+    expect(parsePrintSelectionSettings({ includeBacks: "no" }).includeBacks).toBe(true);
+    // A browser that remembered its settings before 5.3 includes backs.
+    expect(parsePrintSelectionSettings({ kind: "zip", quality: "hd", bleed: true }).includeBacks).toBe(true);
+  });
+
   it("keeps MakePlayingCards as a ZIP image size (TODO 6.1)", () => {
     expect(parsePrintSelectionSettings({ kind: "zip", quality: "mpc" })).toEqual({
       ...DEFAULT_PRINT_SELECTION_SETTINGS,

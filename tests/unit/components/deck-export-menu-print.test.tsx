@@ -81,6 +81,8 @@ describe("DeckExportMenu — the print options (TODO 6.15)", () => {
       layout: "sheet-a4",
       sheet: { gap: "sixteenth", marks: "lines", cardSize: "mm" },
       bleed: true,
+      // A double-faced card's back comes along by default (TODO 5.3).
+      includeBacks: true,
     });
     expect(JSON.parse(storage.get(PRINT_SELECTION_SETTINGS_KEY)!)).toMatchObject({
       kind: "pdf",

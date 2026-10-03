@@ -27,6 +27,7 @@ import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { useDeckExport } from "@/components/decks/deck-export-provider";
 import {
   perSheetLabel,
+  PrintBacksCheckbox,
   PrintBleedCheckbox,
   SheetOptionsFields,
 } from "@/components/cards/print-sheet-options";
@@ -77,6 +78,9 @@ type DeckExportMenuProps = {
   /** Entries without a custom proxy — listed, not printed. */
   realCardCount: number;
   hasCover: boolean;
+  /** Custom cards with a back face of their own (TODO 5.3): the "Include
+   *  back faces" option shows only when there is one. */
+  doubleFacedCount?: number;
 };
 
 const QUALITY_OPTIONS: Array<{ value: DeckExportQuality; label: string; detail: string; wide?: boolean }> = [
@@ -119,6 +123,7 @@ export function DeckExportMenu({
   customCardCount,
   realCardCount,
   hasCover,
+  doubleFacedCount = 0,
 }: DeckExportMenuProps) {
   const [open, setOpen] = useState(false);
   // The print options this browser used last (loaded as the dialog opens).
@@ -160,6 +165,8 @@ export function DeckExportMenu({
       sheet: { gap: settings.gap, marks: settings.marks, cardSize: settings.cardSize },
       // The bleed is a PDF option; the ZIP's images are the plain print files.
       bleed: kind === "pdf" && settings.bleed,
+      // A double-faced card's back too (TODO 5.3), unless switched off.
+      includeBacks: settings.includeBacks,
     });
     setOpen(false);
   };
@@ -195,6 +202,15 @@ export function DeckExportMenu({
               View progress
             </Button>
           </div>
+        ) : null}
+
+        {doubleFacedCount > 0 ? (
+          <PrintBacksCheckbox
+            checked={settings.includeBacks}
+            onChange={(next) => patch({ includeBacks: next })}
+            testId="deck-export-backs"
+            hint={`${doubleFacedCount} double-faced card${doubleFacedCount === 1 ? "" : "s"}: the back as its own image in the ZIP, and its own page or beside its front on the PDF.`}
+          />
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">

@@ -12,6 +12,7 @@ import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import { DECK_BOARD_LABELS, DECK_FORMAT_LABELS, isDeckFormat } from "@/types/deck";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import type { DeckExportManifest } from "@/lib/decks/export-client";
+import { exportFacesOf } from "@/lib/cards/faces";
 import { isUuid } from "@/lib/ids";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 
@@ -26,8 +27,10 @@ import { drawableMediaUrl } from "@/lib/media/media-urls";
 // PDF locally. That keeps a 100-card deck off a single 300 s function and
 // lets the user keep browsing while it builds. Owner-only, Pro-only.
 //
-//   ?part=manifest → JSON: the custom cards to render (+ copies), the
-//                    checklist of un-remixed entries, whether a cover exists
+//   ?part=manifest → JSON: the custom cards to render (+ copies, + the
+//                    faces each has — a double-faced card's back is fetched
+//                    too, TODO 5.3), the checklist of un-remixed entries,
+//                    whether a cover exists
 //   ?part=report   → deck.pdf (stats, decklist by board, AI guide + combos)
 //   ?part=decklist → decklist.txt
 //   ?part=cover    → the cover image bytes (proxied from our storage host)
@@ -166,7 +169,7 @@ export async function GET(
     }
     if (cards.length >= MAX_EXPORT_CARDS) continue;
     indexById.set(card.id, cards.length);
-    cards.push({ id: card.id, slug: card.slug, title: card.title, copies: Math.max(1, grant) });
+    cards.push({ id: card.id, slug: card.slug, title: card.title, copies: Math.max(1, grant), faces: exportFacesOf(card) });
   }
 
   const manifest: DeckExportManifest = {

@@ -172,6 +172,125 @@ describe("runDeckExport", () => {
     expect(APPROX_BYTES_PER_CARD.mpc).toBeGreaterThan(APPROX_BYTES_PER_CARD.hd);
   });
 
+  describe("both faces (TODO 5.3)", () => {
+    // Stone Matriarch is a transform card: the manifest lists its back.
+    const dfcManifest: DeckExportManifest = {
+      ...manifest,
+      cards: [
+        { ...manifest.cards[0], faces: ["front", "back"] },
+        { ...manifest.cards[1], faces: ["front"] },
+        manifest.cards[2],
+      ],
+    };
+    function dfcFetch(urls: string[], opts: { backFails?: boolean; png?: Uint8Array } = {}) {
+      const inner = fakeFetch();
+      return async (input: string, init?: RequestInit) => {
+        urls.push(input);
+        if (input.includes("part=manifest")) return Response.json(dfcManifest);
+        if (opts.backFails && input.includes("face=back")) return Response.json({ error: "Render failed" }, { status: 500 });
+        if (opts.png && input.includes("/api/cards/c1/png")) return new Response(opts.png as BodyInit, { headers: { "content-type": "image/png" } });
+        return inner(input, init);
+      };
+    }
+
+    it("the ZIP fetches the back as the same render with &face=back and adds <slug>-back.png beside the front", async () => {
+      const urls: string[] = [];
+      const seen: string[] = [];
+      const result = await runDeckExport(
+        { deckId: "d1", kind: "zip", quality: "hd", layout: "pages" },
+        { fetchImpl: dfcFetch(urls), onProgress: (p) => seen.push(`${p.phase}:${p.done}/${p.total}`) },
+      );
+      const cardUrls = urls.filter((u) => u.includes("/api/cards/"));
+      expect(cardUrls).toEqual([
+        "/api/cards/c1/png?ppi=600&corners=square&print=1",
+        "/api/cards/c1/png?ppi=600&corners=square&print=1&face=back",
+        "/api/cards/c2/png?ppi=600&corners=square&print=1",
+        "/api/cards/c3/png?ppi=600&corners=square&print=1",
+      ]);
+      // Progress counts renders, so the back is one more.
+      expect(seen).toContain("rendering:4/4");
+      const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+      expect(Object.keys(zip.files).filter((name) => name.startsWith("cards/")).sort()).toEqual([
+        "cards/",
+        "cards/01-stone-matriarch-back.png",
+        "cards/01-stone-matriarch.png",
+        "cards/02-petrifying-glance.png",
+      ]);
+      expect(result.cardsIncluded).toBe(2);
+    });
+
+    it("an MPC ZIP names the back <slug>-back-mpc.png", async () => {
+      const mpcPng = new Uint8Array(
+        await sharp({ create: { width: 1644, height: 2244, channels: 3, background: { r: 0, g: 0, b: 0 } } }).png().toBuffer(),
+      );
+      const urls: string[] = [];
+      const result = await runDeckExport(
+        { deckId: "d1", kind: "zip", quality: "mpc", layout: "pages" },
+        { fetchImpl: dfcFetch(urls, { png: mpcPng }), onProgress: () => {} },
+      );
+      expect(urls.filter((u) => u.includes("/api/cards/c1/"))).toEqual([
+        "/api/cards/c1/png?ppi=600&corners=square&bleed=mpc",
+        "/api/cards/c1/png?ppi=600&corners=square&bleed=mpc&face=back",
+      ]);
+      const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+      expect(Object.keys(zip.files).filter((name) => name.includes("stone-matriarch")).sort()).toEqual([
+        "cards/01-stone-matriarch-back-mpc.png",
+        "cards/01-stone-matriarch-mpc.png",
+      ]);
+    });
+
+    it("the PDF carries the back: a page of its own on pages, beside its front on a sheet", async () => {
+      const pages = await runDeckExport(
+        { deckId: "d1", kind: "pdf", quality: "hd", layout: "pages" },
+        { fetchImpl: dfcFetch([]), onProgress: () => {} },
+      );
+      // Stone Matriarch (front + back), Petrifying Glance, then the checklist page.
+      expect((await PDFDocument.load(await pages.blob.arrayBuffer())).getPageCount()).toBe(4);
+      const sheets = await runDeckExport(
+        { deckId: "d1", kind: "pdf", quality: "hd", layout: "sheet-letter" },
+        { fetchImpl: dfcFetch([]), onProgress: () => {} },
+      );
+      // 1 pair + 4 singles = 6 cells on one sheet, then the checklist page.
+      expect((await PDFDocument.load(await sheets.blob.arrayBuffer())).getPageCount()).toBe(2);
+    });
+
+    it("includeBacks: false fetches the front only — the export as it was before 5.3", async () => {
+      const urls: string[] = [];
+      const result = await runDeckExport(
+        { deckId: "d1", kind: "zip", quality: "hd", layout: "pages", includeBacks: false },
+        { fetchImpl: dfcFetch(urls), onProgress: () => {} },
+      );
+      expect(urls.filter((u) => u.includes("face=back"))).toEqual([]);
+      const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+      expect(Object.keys(zip.files).filter((name) => name.includes("stone-matriarch"))).toEqual(["cards/01-stone-matriarch.png"]);
+    });
+
+    it("a back that fails to render is listed by name; the card's front still prints", async () => {
+      const result = await runDeckExport(
+        { deckId: "d1", kind: "zip", quality: "hd", layout: "pages" },
+        { fetchImpl: dfcFetch([], { backFails: true }), onProgress: () => {} },
+      );
+      expect(result.failed).toEqual(["Stone Matriarch (back)", "Broken One"]);
+      const zip = await JSZip.loadAsync(await result.blob.arrayBuffer());
+      expect(Object.keys(zip.files).filter((name) => name.includes("stone-matriarch"))).toEqual(["cards/01-stone-matriarch.png"]);
+    });
+
+    it("a manifest from before 5.3 (no faces) is the front only", async () => {
+      const urls: string[] = [];
+      await runDeckExport(
+        { deckId: "d1", kind: "zip", quality: "hd", layout: "pages" },
+        {
+          fetchImpl: (input, init) => {
+            urls.push(input);
+            return fakeFetch()(input, init);
+          },
+          onProgress: () => {},
+        },
+      );
+      expect(urls.filter((u) => u.includes("face=back"))).toEqual([]);
+    });
+  });
+
   it("takes the print options: sheet gap / guides / size and the bleed (TODO 6.15)", async () => {
     const bleedPng = new Uint8Array(
       await sharp({ create: { width: 66, height: 90, channels: 3, background: "#000000" } }).png().toBuffer(),
