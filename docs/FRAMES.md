@@ -2086,10 +2086,16 @@ whatever the family (the 2016–22 parchment land back is TODO 5.8).
 - **The reverse P/T** (`DFC_REVERSE_PT`, `StatSlot.align: "end"`): CC's
   'Reverse PT' box, 61 px, #777 (the prints' neutral grey, luma 107–125;
   CC's #666 reads darker), no plate, its right edge run to 92.87 %W so the
-  digits' solid ink ends at 1389 px (the prints' 1389–1392; CC's edge put
-  them at 1384). Drawn only when the back PRINTS a P/T
-  (`dfc.otherFace.printsPt`); the tab prints EMPTY otherwise (XLN #22, VOW
-  #12, LCI #158 — owner decision Q7).
+  digits' solid ink ends at 1389 px (the builder's reading of the prints,
+  1389–1392; CC's edge put them at 1384). Drawn only when the back PRINTS a
+  P/T (`dfc.otherFace.printsPt`); the tab prints EMPTY otherwise (XLN #22,
+  VOW #12, LCI #158 — owner decision Q7). **Open (skeptic, 2026-10-02):**
+  read inside the caps' rows only (clear of the tab's shaded notch, which
+  the 1389–1392 reading took in), the prints' digits end at 1378–1390
+  (median 1382 on 13 scans — INR #60 1382, MID #169 1384, INR #287 1380,
+  SOI #203 1384, LCI #60 1380, MOM #43 1390), ours at 1387–1389: 3–8 px
+  right of the same digits. CC's own edge (92.4 %W) lands them at ≈ 1384.
+  An owner call beside the dot's 0.3 %W nudge; left as built.
 - **The colour indicator** (`lib/cards/color-indicator.ts`, design D4):
   intrinsic to the coloured back bodies (`indicator: "coloured"`), drawn by
   both renderers for any identity with a colour word — Ø 3.5 %W at 9.3 /

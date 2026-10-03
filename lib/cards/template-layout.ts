@@ -3992,11 +3992,17 @@ export const DFC_ICON_RIDER: FrameOverlaySlot = {
 
 /** The front's reverse P/T: CC's 'Reverse PT' text box (8.6 / 84.2 / 83.8 ×
  *  3.62 %), 61 px at HD — its right edge run 7 px past CC's 1386 to 1393
- *  (92.87 %W), where the prints' digits END (their solid ink at 1389–1392
- *  on MID #169, INR #60 / #193, SOI #203, MOM #43; CC's box set them 3–6 px
- *  left of the prints — a bake with CC's edge ended at 1384), the tab's
- *  paper running on to 1438–1441. End-aligned; measured on real bakes
- *  (tests/unit/render/dfc-bodies-bake.test.tsx). */
+ *  (92.87 %W), where the builder read the prints' digits ending (1389–1392
+ *  on MID #169, INR #60 / #193, SOI #203, MOM #43; a bake with CC's edge
+ *  ended at 1384), the tab's paper running on to 1438–1441. End-aligned;
+ *  measured on real bakes (tests/unit/render/dfc-bodies-bake.test.tsx).
+ *  OPEN (the #460 skeptic, 2026-10-02): measured inside the caps' rows
+ *  only (1788–1822, clear of the tab's shaded notch, which the 1389–1392
+ *  reading took in), the prints' digits end at 1378–1390 (median 1382 on
+ *  13 scans: INR #60 1382, MID #169 1384, INR #287 1380, SOI #203 1384,
+ *  LCI #60 1380, MOM #43 1390 …) and ours at 1387–1389 — 3 to 8 px right
+ *  of the same digits; CC's own edge (92.4 %W) would land them at ≈ 1384.
+ *  A 0.4 %W owner call beside the dot's nudge, left as built. */
 export const DFC_REVERSE_PT: StatSlot = {
   rect: { topPct: 84.2, leftPct: 8.6, widthPct: 92.87 - 8.6, heightPct: 3.62 },
   sizePct: 61 / 1500,
