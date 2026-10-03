@@ -59,6 +59,14 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m20tokenartifact",
   "m20tokenartifacttext",
   "m20tokenartifacttall",
+  // The transform bodies (TODO 5.1a, CC's 'Transform' packs): new
+  // templates, no stored card — CC's name and type sizes are the family's
+  // — so they joined without a bump too.
+  "m15dfcfront",
+  "m15dfcback",
+  "m15dfcbackleft",
+  "m15dfclandfront",
+  "m15dfclandback",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

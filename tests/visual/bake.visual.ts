@@ -133,6 +133,7 @@ type CaseResult = { hash: string | null; input: string; ms: number; stale?: bool
 
 it("bakes its shard of the visual-regression matrix", async () => {
   const { rowToPreviewData } = await import("@/lib/cards/bake-core");
+  const { backPreviewData } = await import("@/lib/cards/faces");
   const { renderCardImage } = await import("@/lib/render/card-image");
   const { CARD_LAYOUT_VERSION, isRenderStale } = await import("@/lib/cards/layout-version");
   const { resetFrameAssetCacheForTests } = await import("@/lib/render/card-frames");
@@ -172,10 +173,16 @@ it("bakes its shard of the visual-regression matrix", async () => {
       try {
         // The stored-bake path (lib/cards/bake-render.ts): the row mapped as
         // the bake maps it, then the resolved art swapped in as a data URL.
-        const card = rowToPreviewData(c.row);
-        if (c.row.art_url === "ART") card.artUrl = art;
+        const front = rowToPreviewData(c.row);
+        if (c.row.art_url === "ART") front.artUrl = art;
         const back = c.row.back_face as { art_url?: string } | null;
-        if (card.backFace && back?.art_url === "ART2") card.backFace = { ...card.backFace, art_url: art2 };
+        if (front.backFace && back?.art_url === "ART2") front.backFace = { ...front.backFace, art_url: art2 };
+        // The back face of a double-faced row (TODO 5.1a): the back's own
+        // body and colour through lib/cards/faces.ts, as 5.3's bake will
+        // draw it; its art is the harness's second picture.
+        const card = c.face === "back" ? backPreviewData(front) : front;
+        if (!card) throw new Error("the case bakes a back face the row has not got");
+        if (c.face === "back" && card.artUrl === "ART") card.artUrl = art2;
         const res = await renderCardImage(card, c.preset, { brandMark: true, watermarkText: null, corners: c.corners });
         const png = Buffer.from(await res.arrayBuffer());
         const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });

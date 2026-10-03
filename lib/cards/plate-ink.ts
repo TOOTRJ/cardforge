@@ -28,6 +28,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   "/frames/m15artifact/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15snow/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15devoid/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
+  // The transform backs' dark plates (TODO 5.1a; CC's transform pt<K>.png,
+  // 285 × 156, drawn at M15's plate box by m15dfcback and m15dfcbackleft):
+  // the body with its lit bevel, none of the soft shadow.
+  "/frames/m15dfcback/pt/{color}.png": { left: 0.0736, top: 0.0512, right: 0.993, bottom: 0.8654 },
   "/frames/m15borderless/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
   "/frames/m15borderlessartifact/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
   // The flip creatures' plates (TODO 4.21a, layout v38): CC's two-plate image

@@ -19,7 +19,7 @@ vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
   return { ...real, getFrameProfile: declaredGetFrameProfile(real.getFrameProfile) };
 });
 
-import { frameAssetPath as previewFramePath } from "@/components/cards/frame-layer";
+import { frameAssetPath as previewFramePath, frameOverlayImageUrl as previewOverlayUrl } from "@/components/cards/frame-layer";
 import {
   frameAssetPath as bakeFramePath,
   getFrameDataUrl,
@@ -95,29 +95,47 @@ describe("bake path = preview path", () => {
 
   it("every overlay key a slot publishes resolves to its own path, and the bake's loader never swaps in another", () => {
     // The crown bands: m15crown (4.6a) and the extended-art band (4.6f);
-    // the holofoil stamp's notch pieces (4.9c): m15holostamp on the M15
+    // the transform icon riders (5.1a): dfcicon, keyed by the glyph; the
+    // holofoil stamp's notch pieces (4.9c): m15holostamp on the M15
     // family, the walker's own m15pwholostamp.
+    let riders = 0;
     let notches = 0;
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const slot of getFrameProfile(template).overlays ?? []) {
         const folder =
-          slot.anatomy === "holoStamp"
-            ? template === "m15pw"
-              ? "m15pwholostamp"
-              : "m15holostamp"
-            : template === "extendedart"
-              ? "extendedcrown"
-              : "m15crown";
+          slot.anatomy === "dfcIcon"
+            ? "dfcicon"
+            : slot.anatomy === "holoStamp"
+              ? template === "m15pw"
+                ? "m15pwholostamp"
+                : "m15holostamp"
+              : template === "extendedart"
+                ? "extendedcrown"
+                : "m15crown";
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;
+          if (slot.anatomy === "dfcIcon") {
+            // The preview's frameOverlayImageUrl and the bake's loader read
+            // the same manifest key (the bake's data URL is null here: no
+            // bucket in a unit test — never a stand-in).
+            expect(previewOverlayUrl(slot.assetPathTemplate.replace("{key}", key))).toContain(`dfcicon/${key}.`);
+            riders += 1;
+          }
         }
         // A keyMap only ever points at a key the slot publishes.
         for (const to of Object.values(slot.keyMap ?? {})) expect(slot.keys, `${template} ${slot.anatomy} keyMap → ${to}`).toContain(to);
       }
     }
-    // Not vacuous: 9 keys × the six M15-family entries + the walker's 7.
+    // The three rider slots × 12 glyphs (m15dfcfront, m15dfclandfront, m15dfcbackleft).
+    expect(riders).toBe(36);
+    // Not vacuous: 9 keys × the six M15-family entries + the walker's 7 —
+    // and none on a DFC body (no holoStamp on a back body, ever; the fronts
+    // take it as their own addition later).
     expect(notches).toBe(9 * 6 + 7);
+    for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"] as const) {
+      expect((getFrameProfile(template).overlays ?? []).some((slot) => slot.anatomy === "holoStamp"), template).toBe(false);
+    }
     // A master outside the list still reads as "c" (no stored card has one);
     // an overlay that isn't there is nothing — never the "c" band.
     const colourless = getFrameDataUrl("tarkirdragon", "c");

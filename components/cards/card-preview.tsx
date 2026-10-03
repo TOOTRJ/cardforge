@@ -126,7 +126,17 @@ import {
   resolveFrameProfile,
   type FrameProfileOverridesMap,
 } from "@/lib/cards/profile-override";
-import type { DfcFace } from "@/lib/cards/faces";
+import { backBodyOf, backPreviewData, frontPreviewData, type DfcFace } from "@/lib/cards/faces";
+import {
+  COLOR_INDICATOR,
+  COLOR_INDICATOR_VIEW,
+  colorIndicatorBox,
+  colorIndicatorFills,
+  colorIndicatorOutlineRadius,
+  colorIndicatorWedges,
+  drawsColorIndicator,
+  typeRectWithIndicator,
+} from "@/lib/cards/color-indicator";
 import {
   plateKeyFor,
   resolveFrameOverlays,
@@ -345,6 +355,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
   // Only pictures lib/media/media-urls.ts accepts (migration 0127): a row
   // written before it could point its art, icon, watermark or pips at any
   // host. The bake drops the same ones (lib/cards/drawable-media.ts).
+  const drawable = drawableCardMedia(rawProps);
   const {
     title,
     cost,
@@ -381,10 +392,18 @@ export function CardPreview(rawProps: CardPreviewProps) {
     backCard,
     className,
     staticInEditor = false,
-  } = drawableCardMedia(rawProps);
+  } = drawable;
   const template = normalizeFrameTemplate(frameStyle?.template);
   const layout = resolveFrameProfile(template, profileOverrides);
   const finish: CardFinish = frameStyle?.finish ?? "regular";
+  // The two faces of a double-faced card (TODO 5.1a, lib/cards/faces.ts):
+  // the front's `dfc` block (the back's P/T for the grey tab, the icon
+  // family) and — for a back with a BODY of its own — the back face drawn
+  // on that body and colour, with the twin block. A legacy back (no body)
+  // keeps today's flip below, byte-identical.
+  const frontDfc = frontPreviewData(drawable).dfc ?? null;
+  const backBody = backBodyOf(drawable);
+  const backBodyData = backBody ? backPreviewData(drawable) : null;
 
   const frontFace: FaceData = {
     title: title ?? null,
@@ -494,9 +513,55 @@ export function CardPreview(rawProps: CardPreviewProps) {
       } as const)
     : null;
 
-  // The flippable second face: prefer the referenced card, fall back to the
-  // legacy jsonb. Adventure/multi-panel frames render inline, so no flip.
-  const flipBackFace = backCardFace ?? backFaceData;
+  // A back face with its own BODY (TODO 5.1a): its content, body, colour
+  // and `dfc` block from backPreviewData — the card's rarity, finish, set
+  // symbol, collector fields, watermark and switches (design D8 / D18).
+  const backBodyFace: FaceData | null = backBodyData
+    ? {
+        title: backBodyData.title ?? null,
+        cost: backBodyData.cost ?? null,
+        cardType: backBodyData.cardType ?? null,
+        supertype: backBodyData.supertype ?? null,
+        subtypes: backBodyData.subtypes ?? [],
+        rulesText: backBodyData.rulesText ?? null,
+        flavorText: backBodyData.flavorText ?? null,
+        power: backBodyData.power ?? null,
+        toughness: backBodyData.toughness ?? null,
+        loyalty: backBodyData.loyalty ?? null,
+        defense: backBodyData.defense ?? null,
+        artistCredit: backBodyData.artistCredit ?? null,
+        artUrl: backBodyData.artUrl ?? null,
+        artPosition: backBodyData.artPosition ?? {},
+        faceContent: null,
+        watermark: backBodyData.watermark ?? null,
+        setCode: backBodyData.setCode ?? null,
+        collectorNumber: backBodyData.collectorNumber ?? null,
+        lang: backBodyData.lang ?? null,
+      }
+    : null;
+  const backBodyTemplate = normalizeFrameTemplate(backBodyData?.frameStyle?.template);
+  const backBodyFaceProps = backBodyData
+    ? ({
+        template: backBodyTemplate,
+        colorIdentity: (backBodyData.colorIdentity ?? []) as ColorIdentity[],
+        rarity: rarity ?? null,
+        layout: resolveFrameProfile(backBodyTemplate, profileOverrides),
+        finish,
+        staticInEditor,
+        setIconUrl: setIconUrl ?? null,
+        setIconCode: setIconCode ?? null,
+        pipOverrides: pipOverrides ?? null,
+        footerWatermark: footerWatermark ?? null,
+        brandMark,
+        anatomy: frameStyle ?? null,
+        dfc: backBodyData.dfc ?? null,
+      } as const)
+    : null;
+
+  // The flippable second face: prefer the referenced card, then a back with
+  // its own body (5.1a), then the legacy jsonb. Adventure/multi-panel frames
+  // render inline, so no flip.
+  const flipBackFace = backCardFace ?? backBodyFace ?? backFaceData;
   const showFlip =
     Boolean(flipBackFace) && !isAdventure && !layout.secondFace;
 
@@ -524,6 +589,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
     footerWatermark: footerWatermark ?? null,
     brandMark,
     anatomy: frameStyle ?? null,
+    dfc: frontDfc,
   } as const;
 
   return (
@@ -594,7 +660,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
             >
               <CardFace
                 face={flipBackFace}
-                {...(backCardFaceProps ?? faceProps)}
+                {...(backCardFaceProps ?? backBodyFaceProps ?? faceProps)}
               />
             </div>
           </div>
@@ -682,7 +748,7 @@ function CardFace({
   template,
   colorIdentity,
   rarity,
-  layout,
+  layout: layoutProp,
   finish,
   staticInEditor,
   setIconUrl = null,
@@ -693,6 +759,7 @@ function CardFace({
   footerWatermark = null,
   brandMark = false,
   anatomy = null,
+  dfc = null,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -715,7 +782,20 @@ function CardFace({
   /** The card's anatomy switches (FrameStyle.crown / twoColor, TODO 4.6.0):
    *  a piece draws only when its switch is true — absent is today's look. */
   anatomy?: FrameAnatomyStyle | null;
+  /** This face's double-faced block (TODO 5.1a, lib/cards/faces.ts): the
+   *  icon family the rider draws, and what the OTHER face puts on this one
+   *  (the back's P/T in the front's grey tab). Null on every other card. */
+  dfc?: DfcFace | null;
 }) {
+  // The colour-indicator dot (TODO 5.1a, lib/cards/color-indicator.ts): a
+  // body that declares it draws it for a coloured identity, and the type
+  // line starts past it — the bake's twin (the profile the rest of this
+  // face reads is the indented one).
+  const indicatorFills = drawsColorIndicator(layoutProp.indicator, colorIdentity) ? colorIndicatorFills(colorIdentity) : [];
+  const layout = useMemo(
+    () => (indicatorFills.length ? { ...layoutProp, type: { ...layoutProp.type, rect: typeRectWithIndicator(layoutProp.type.rect) } } : layoutProp),
+    [layoutProp, indicatorFills.length],
+  );
   // The card's colour (plates, watermark tint) and the frame master it
   // paints — the same, but where the profile dresses a colour by type:
   // Alpha's colourless artifact paints the artifact card "a", and a stored
@@ -732,6 +812,8 @@ function CardFace({
     cost: face.cost,
     cardType: face.cardType,
     supertype: face.supertype,
+    // The icon rider's family and this face's role (TODO 5.1a).
+    dfc: dfc ? { role: dfc.role, icon: dfc.icon } : null,
     // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
     rarity,
   };
@@ -1087,6 +1169,9 @@ function CardFace({
           master at its z-index, under every text layer: the bake draws them
           right after its frame image. Nothing when the card draws none. */}
       <FrameOverlayLayer overlays={overlays} zIndex={5} />
+      {/* The colour-indicator dot (TODO 5.1a): over the master, under every
+          text layer — the bake's twin (ColorIndicatorBake). */}
+      {indicatorFills.length ? <ColorIndicatorOverlay fills={indicatorFills} /> : null}
 
       {/* Premium finish: etched — fine cross-hatch + sheen on the FRAME only
           (masked by the frame's own luminance), just above the frame and
@@ -1177,6 +1262,18 @@ function CardFace({
           masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
           foil={plateFoil && { ...plateFoil, id: `${foilId}-defense` }}
+        />
+      ) : null}
+      {/* The transform front's reverse P/T (TODO 5.1a): the BACK's P/T in
+          the grey tab the master paints — only when the back prints one;
+          the tab prints empty otherwise (owner decision Q7). No plate. */}
+      {layout.reversePt && dfc?.otherFace.printsPt ? (
+        <StatOverlay
+          slot={layout.reversePt}
+          value={ptValue(dfc.otherFace.power, dfc.otherFace.toughness)}
+          colorKey={plateKey}
+          masterKey={masterKey}
+          orientation={orientationFromAspect(aspect)}
         />
       ) : null}
 
@@ -1854,6 +1951,38 @@ function BasicSymbol({ plan, aspect }: { plan: BasicSymbolPlan; aspect: number }
   );
 }
 
+/** A stat value's horizontal alignment in its rect (StatSlot.align) — the
+ *  bake's twin. */
+function statJustify(slot: Pick<StatSlot, "align">): CSSProperties["justifyContent"] {
+  return slot.align === "end" ? "flex-end" : slot.align === "start" ? "flex-start" : "center";
+}
+
+// ---------------------------------------------------------------------------
+// ColorIndicatorOverlay — the colour-indicator dot (TODO 5.1a; lib/cards/
+// color-indicator.ts): the outline disc, then the fills — one disc, two
+// halves split on the diagonal, else wedges — in ONE inline SVG at the dot's
+// box. The bake draws the same geometry (ColorIndicatorBake).
+// ---------------------------------------------------------------------------
+
+function ColorIndicatorOverlay({ fills }: { fills: readonly string[] }) {
+  const box = colorIndicatorBox();
+  const c = COLOR_INDICATOR_VIEW / 2;
+  return (
+    <svg
+      aria-hidden
+      data-testid="color-indicator"
+      viewBox={`0 0 ${COLOR_INDICATOR_VIEW} ${COLOR_INDICATOR_VIEW}`}
+      className="pointer-events-none absolute"
+      style={{ ...rectStyle(box), zIndex: 8 }}
+    >
+      <circle cx={c} cy={c} r={colorIndicatorOutlineRadius()} fill={COLOR_INDICATOR.outlineHex} />
+      {colorIndicatorWedges(fills).map((wedge, i) => (
+        <path key={i} d={wedge.d} fill={wedge.fill} />
+      ))}
+    </svg>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // StatOverlay — P/T, loyalty, or defense. Renders the optional plate PNG or a
 // drawn badge behind the value, then the value centered on top.
@@ -1929,10 +2058,13 @@ function StatOverlay({
   const sizePct = fitStatSizePct(slot, value, orientation);
   return (
     <div
-      className="pointer-events-none absolute flex items-center justify-center"
+      className="pointer-events-none absolute flex items-center"
+      data-testid={slot.align === "end" ? "reverse-pt" : undefined}
       // Above the text layers (z20/21): printed cards draw the P/T plate and
       // the starting-loyalty shield OVER the text box edge, never under it.
-      style={{ ...rectStyle(slot.rect), zIndex: 22 }}
+      // Centred, or set against an edge (StatSlot.align — the transform
+      // front's reverse P/T, TODO 5.1a) — the bake's StatBake twin.
+      style={{ ...rectStyle(slot.rect), zIndex: 22, justifyContent: statJustify(slot) }}
     >
       {slot.plateAssetPathTemplate ? (
         // Browser-side WebP variant with PNG fallback; the bake resolves the

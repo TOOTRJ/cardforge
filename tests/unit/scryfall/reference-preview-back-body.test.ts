@@ -35,13 +35,14 @@ import { FrameCompareFaceError, buildFrameComparePayload } from "@/lib/scryfall/
 const BACK_PNG = (id: string) => `https://cards.scryfall.io/png/back/${id[0]}/${id[1]}/${id}.png`;
 
 describe("fixture", () => {
-  it("m15artifact is a transform back paired with m15; m15devoid a modal back paired with m15snow", () => {
+  it("m15artifact is a transform back paired with the transform front bodies; m15devoid a modal back paired with m15snow", () => {
     expect(isDfcBackBody("m15artifact")).toBe(true);
-    expect(frontBodyFor("m15artifact", "creature")).toBe("m15");
-    // bodyFor's table is empty until 5.1a fills it: the fallback is the
-    // declared front keyed like the front face — the fixture's m15land (a
-    // transform land front) under a land front, m15 otherwise.
-    expect(frontBodyFor("m15artifact", "land")).toBe("m15land");
+    // bodyFor's transform rows are filled (5.1a): a transform back pairs
+    // with the real front bodies, whatever template the fixture declares.
+    expect(frontBodyFor("m15artifact", "creature")).toBe("m15dfcfront");
+    expect(frontBodyFor("m15artifact", "land")).toBe("m15dfclandfront");
+    // The modal rows come with 5.1b: the fallback is the declared front
+    // keyed like the front face — the fixture's m15snow.
     expect(isDfcBackBody("m15devoid")).toBe(true);
     expect(frontBodyFor("m15devoid", "creature")).toBe("m15snow");
     expect(faceUnderTest("m15artifact")).toBe("back");

@@ -17,6 +17,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { PipOverrides } from "@/lib/pips/override";
 import { drawableCardMedia } from "@/lib/cards/drawable-media";
+import { frontPreviewData } from "@/lib/cards/faces";
 import { makeRenderThumb } from "@/lib/cards/render-thumb";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 
@@ -76,8 +77,11 @@ export function rowToPreviewData(
   // Only the pictures CardPreview would draw (lib/cards/drawable-media.ts,
   // migration 0127): every server render of a stored card — the bake, the
   // sweep, the PNG / PDF / share image — drops the same ones the live
-  // preview does.
-  return drawableCardMedia({
+  // preview does. The FRONT face's double-faced block (TODO 5.1a,
+  // lib/cards/faces.ts frontPreviewData: the back's P/T for the grey tab,
+  // the icon family) rides on it where the template is a DFC front body;
+  // every other card comes back as it is (the function returns its input).
+  return frontPreviewData(drawableCardMedia({
     pipOverrides,
     profileOverrides,
     title: card.title,
@@ -111,7 +115,7 @@ export function rowToPreviewData(
     setCode: card.set_code ?? null,
     collectorNumber: card.collector_number ?? null,
     lang: card.lang ?? null,
-  });
+  }));
 }
 
 // ---------------------------------------------------------------------------

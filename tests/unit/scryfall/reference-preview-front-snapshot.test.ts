@@ -15,6 +15,15 @@ import type { ScryfallCard } from "@/lib/scryfall/client";
 // has always used (a split card, an adventure, a transforming battle whose
 // images live on its faces) and the double-faced production sources of
 // fixtures/dfc-printings.ts.
+//
+// ONE later delta, by design: TODO 5.1a's registry rule `transform/2015`
+// (lib/scryfall/frame-signatures.ts) — a 2015-frame transform printing now
+// resolves `nearest` on the M15 standard WITH `onceVerified: m15dfcfront`
+// (exact once the front body is verified in its colour) instead of the
+// `era/2015+dfc` gap, so the three transform printings' `frameMatch` block
+// (signature, exactLabel, reason, blockedBy, onceVerified) changed with it;
+// the landing template, the status, the preview, the scan and the patch did
+// not. The snapshot was regenerated for that one block on the 5.1a head.
 // ---------------------------------------------------------------------------
 
 const PNG = (id: string) => `https://cards.scryfall.io/png/front/${id[0]}/${id[1]}/${id}.png`;

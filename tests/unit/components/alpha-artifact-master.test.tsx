@@ -2,6 +2,7 @@
 import { existsSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
+import manifestJson from "@/lib/frames/frame-manifest.json";
 import { CardPreview } from "@/components/cards/card-preview";
 import { FrameThumb } from "@/components/creator/frame-pickers";
 import {
@@ -14,6 +15,8 @@ import { frameGateError } from "@/lib/cards/frame-availability";
 import { FRAME_COLOR_KEYS, FRAME_MASTER_KEYS, LEGENDARY_MASTER_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
+
+const manifest = manifestJson as { files: Record<string, { sha256: string }> };
 
 // ---------------------------------------------------------------------------
 // Alpha's colourless ARTIFACT paints the brown artifact card, agclassic/a.png
@@ -63,12 +66,19 @@ describe("frameMasterKey — the one master rule", () => {
     }
   });
 
-  it("only agclassic dresses a colour by type: every other template paints the colour key", () => {
+  it("only agclassic and the three coloured transform bodies dress a colour by type: every other template paints the colour key", () => {
     const identities: ColorIdentity[][] = [["white"], ["blue"], ["black"], ["red"], ["green"], ["colorless"], [], ["white", "blue"]];
+    // The transform bodies (TODO 5.1a, design D2): their `c` is CC's
+    // artifact frame standing in, so an artifact draws it as `a` (the same
+    // bytes) and the land pair, one master under every key, dresses none.
+    const DRESSED = new Set(["agclassic", "m15dfcfront", "m15dfcback", "m15dfcbackleft"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
-      expect(Boolean(profile.artifactMasterKeys), t).toBe(t === "agclassic");
-      if (t === "agclassic") continue;
+      expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t));
+      if (DRESSED.has(t)) {
+        expect(profile.artifactMasterKeys, t).toEqual({ c: "a" });
+        continue;
+      }
       for (const colors of identities) {
         for (const cardType of ["artifact", "creature"] as const) {
           const [key] = frameColorKeysFor(profile, colors, { cardType, supertype: "Artifact" });
@@ -88,6 +98,13 @@ describe("frameMasterKey — the one master rule", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       for (const master of Object.values(getFrameProfile(t).artifactMasterKeys ?? {})) {
         expect(FRAME_MASTER_KEYS, `${t}/${master}`).toContain(master);
+        // In git (Alpha), or in the frames bucket by the manifest (the
+        // transform bodies, 5.1a — the same bytes as their `c`).
+        if (manifest.files[`${t}/${master}.png`]) {
+          expect(manifest.files[`${t}/${master}.webp`], `${t}/${master}.webp`).toBeDefined();
+          expect(manifest.files[`${t}/${master}.png`].sha256).toBe(manifest.files[`${t}/c.png`].sha256);
+          continue;
+        }
         expect(existsSync(`public/frames/${t}/${master}.png`), `${t}/${master}.png`).toBe(true);
         expect(existsSync(`public/frames/${t}/${master}.webp`), `${t}/${master}.webp`).toBe(true);
       }

@@ -133,6 +133,13 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,
   m15pw: ALL_BORDER,
+  // The transform bodies (TODO 5.1a, CC's 'Transform' packs): the M15
+  // black border on every edge of every face, the land pair included.
+  m15dfcfront: ALL_BORDER,
+  m15dfcback: ALL_BORDER,
+  m15dfcbackleft: ALL_BORDER,
+  m15dfclandfront: ALL_BORDER,
+  m15dfclandback: ALL_BORDER,
   // MSE-derived, in git.
   agclassic: ALL_BORDER,
   alphaland: ALL_BORDER,

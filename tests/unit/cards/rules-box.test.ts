@@ -80,7 +80,11 @@ describe("the main box on every template", () => {
     // x 130 to 1372 in CC's 129–1371 px box: 2 px either side, none above.
     for (const t of TOKEN_TEXT) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 2, y: 0 });
     expect([...withPrintMargins].sort()).toEqual(
-      ["m15", "m15artifact", "m15devoid", "m15land", "m15snow", "m15snowland", "nyx"].sort(),
+      [
+        "m15", "m15artifact", "m15devoid", "m15land", "m15snow", "m15snowland", "nyx",
+        // The transform bodies (TODO 5.1a): M15's box and margins on both faces.
+        "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+      ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });
     // Borderless and extended art spread M15's rules slot but keep 9 / 18.

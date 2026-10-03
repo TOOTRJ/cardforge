@@ -1137,6 +1137,153 @@ export const FLIP_LOWER_RECUT = {
 };
 const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius";
 
+// ---------------------------------------------------------------------------
+// The transform bodies (TODO 5.1a; design 2026-10-02, design-next/5/final.md
+// §2.1 / §2.3, frames.md §1.1–1.4 / §3.6 / §4.4): Card Conjurer's 'Transform
+// (Front)', 'Transform (Back)' (the 2016–22 look, the icon well EMPTY at the
+// left) and 'Transform (Back) (New)' (the ▼ baked at the RIGHT, every
+// transform printed since 2022-11) packs, 1500 × 2100 native, copied 1:1 —
+// the icon well, the grey reverse-P/T tab and the ▼ are the masters'. Keys
+// w u b r g m from the colour frames, `a` the pack's 'Artifact Frame' and
+// `c` the same artifact master STANDING IN (design D2: no colourless
+// transform face printed on the plain M15 frame; EMN's Eldrazi backs are
+// see-through, TODO 5.11), the land pair ONE master under every key (as the
+// emblem: verified on `c`). The backs' dark bars and greyed box are TONED
+// onto the prints before the first tick (DFC_BACK_TONES); the dark back
+// P/T plates are the pack's own `pt<K>.png` (285 × 156, white digits; `c`
+// takes the artifact plate). The 12 icon glyphs are a RIDER set
+// (CC_RIDERS.dfcicon), rasterised at 220 px.
+// ---------------------------------------------------------------------------
+const TRANSFORM = "img/frames/m15/transform/regular";
+const TRANSFORM_ICONS = "img/frames/m15/transform/icons";
+/** The pack's masks, in CC's draw order (Border, Frame, Rules, Title, Type,
+ *  Pinline); the backs' Rules mask and the Type mask are the regular M15
+ *  pack's (2010 × 2814, resized to the working size like any mask). */
+const TRANSFORM_MASK = {
+  frontTitle: `${TRANSFORM}/maskTitle.png`,
+  backTitle: `${TRANSFORM}/maskTitle.png`,
+  newBackTitle: `${TRANSFORM}/new/maskTitle.png`,
+  type: REG_TYPE_MASK,
+  rules: REG_RULES_MASK,
+  frontRules: `${TRANSFORM}/maskRulesFront.png`,
+};
+/** The dark back P/T plates per colour key: the pack's `pt<K>.png`; the
+ *  colourless stand-in draws the artifact plate (as m15tokenartifact's c). */
+const DFC_BACK_PT = perColor((k) => `${TRANSFORM}/pt${(k === "c" ? "a" : k).toUpperCase()}.png`);
+/** A transform master's file for a colour key: the colour's, or the
+ *  artifact frame for `a` and the `c` stand-in. */
+const transformFrame = (prefix, k) => `${TRANSFORM}/${prefix}${(k === "c" ? "a" : k).toUpperCase()}.png`;
+
+/**
+ * The backs' tone pass (TODO 5.1a, design D1 / §2.3: "tone the backs onto
+ * the prints before the first tick"): per colour key, the title and type
+ * bars and the text box of CC's back masters have their colour multiplied by
+ * a gain through the pack's Title, Type and Rules masks (toneMasked), with a
+ * luminance ramp (DFC_BACK_TONE_LUMA_RAMP) that leaves the white ring of the
+ * icon well, the ▼ glyph and the bars' light rims as CC draws them — a flat
+ * multiplier, so CC's bevels and lips keep their shading; the frame body and
+ * the plates are untouched (the prints don't darken the body either). Fitted
+ * on the medians of the bars' flat face (x 1000–1150, rows 118–205 / 1200–
+ * 1290 at HD, clear of the name and type ink) and of the box (x 300–1100,
+ * rows 1340–1920, the rules ink inside the median) of the 2015-frame
+ * transform back scans in the design folder and nine more fetched for the
+ * fit (Scryfall PNGs resized to 1500 × 2100, Lanczos), against the same
+ * regions of CC's masters (scratchpad dfc-1a/print-lumas.json, dfc-1a/
+ * tones.json):
+ *   w  bars 168 → 156 (VOW #12, MID #13 / #27, INR #32: 158 / 148 / 153 / 165), box 196 → 203 (205 / 198 / 201 / 209)
+ *   u  bars 118 → 96 (SOI #88, LCI #60, INR #60, ECL #124, MID #47: 90 / 104 / 98 / 100 / 86), box 201 → 191
+ *   b  bars 91 → 79 (FIN #125, MID #126 / #100, INR #287 / #107: 78 / 75 / 63 / 91 / 89), box 170 → 160
+ *   r  bars 78 → 97 (NEO #141, INR #179, MID #143: 90 / 108 / 93 — CC's red back is DARKER than the prints), box 172 → 182
+ *   g  bars 81 → 67 (SOI #203, INR #193, MID #169: 72 / 75 / 54), box 186 → 176
+ *   m  bars 130 → 137 (MOM #43 / #36, BOT #13: 141 / 136 / 147), box 205 → 187
+ *   a  bars 143 → 126 (MID #256, LCI #262: 117 / 135), box 180 → 181
+ *   l  bars 127 → 155 (FIN #31: 167 / 142 — CC's land back is a dark-barred
+ *      land where the one FIN / TLA print is light, with DARK name and type
+ *      ink), box 158 → 209
+ * `c` is the artifact stand-in and takes `a`'s. The old (2016–22) and new
+ * (2022-11+) back packs have the same tones key for key (measured), so one
+ * table serves both. The design's own numbers (G bars → ≈ 65, U → ≈ 100,
+ * W → ≈ 140; bars ×0.72–0.80) read the bars' whole height, outlines
+ * included; the gains here are the flat face's, which is what a multiplier
+ * moves.
+ */
+export const DFC_BACK_TONES = Object.freeze({
+  w: Object.freeze({ bars: 0.93, box: 1.03 }),
+  u: Object.freeze({ bars: 0.81, box: 0.95 }),
+  b: Object.freeze({ bars: 0.87, box: 0.94 }),
+  r: Object.freeze({ bars: 1.23, box: 1.06 }),
+  g: Object.freeze({ bars: 0.83, box: 0.95 }),
+  m: Object.freeze({ bars: 1.05, box: 0.91 }),
+  a: Object.freeze({ bars: 0.88, box: 1.0 }),
+  c: Object.freeze({ bars: 0.88, box: 1.0 }),
+  l: Object.freeze({ bars: 1.22, box: 1.32 }),
+});
+/** The gain fades to 1 between these lumas: the well's white ring, the ▼
+ *  and the bars' light rims (≥ 245) stay as CC draws them; the bars' flat
+ *  face (≤ 172 on every key) and the box (≤ 206) take the whole gain. */
+export const DFC_BACK_TONE_LUMA_RAMP = Object.freeze([215, 245]);
+
+/** One back body's tones for a colour key: the Title and Type masks at the
+ *  bars' gain, the Rules mask at the box's (toneMasked, in that order). */
+export function dfcBackTones(titleMask, key) {
+  const t = DFC_BACK_TONES[key];
+  if (!t) throw new Error(`dfcBackTones: no tone for key ${key}`);
+  return [
+    { mask: titleMask, gain: t.bars, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "title bar" },
+    { mask: TRANSFORM_MASK.type, gain: t.bars, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "type bar" },
+    { mask: TRANSFORM_MASK.rules, gain: t.box, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "text box" },
+  ];
+}
+
+/** How provenance describes a back body's tone pass. */
+function dfcBackToneTransform(titleMask) {
+  return `${NATIVE_1500}; then the title bar (through ${titleMask}), the type bar (through ${TRANSFORM_MASK.type}) and the text box (through ${TRANSFORM_MASK.rules}) have their colour multiplied by the key's gain (DFC_BACK_TONES: bars / box per colour), fading to ×1 between luma ${DFC_BACK_TONE_LUMA_RAMP[0]} and ${DFC_BACK_TONE_LUMA_RAMP[1]} so the well's white ring, the ▼ and the light rims keep CC's tone; the frame body and the plates untouched`;
+}
+
+const DFC_FRONT_NOTES = [
+  "source: CC 'Transform (Front)' (packM15TransformFront.js, groupDFC.js): the M15 frame with the icon WELL at the left of the name bar (a black disc with a white ring, outer circle x 84–220 × y 98–236 at HD, CC's default ▲ drawn in it — the icon rider overdraws it with the family's glyph) and the pentagonal grey reverse-P/T TAB cut out of the text box's right edge (x 1392–1440, y 1745–1848), both the master's; the prints put the well at 84–225 and the tab at 1398–1441 (MID #169, INR #60, MOM #43), within 2–4 px",
+  "the name starts at 16.7 %W (prints 249–252 px: SOI #203, MID #169, INR #60 / #193, XLN #22; CC's pack says 0.16 = 240) — the profile's title inset, not a pixel of the master (design D5)",
+  "colourless `c` = the pack's 'Artifact Frame' (frontA.png) as a RENDER STAND-IN (design D2): no colourless non-artifact transform FRONT was printed on the plain M15 frame (EMN's Eldrazi are backs, see-through — TODO 5.11); the row is ticked against an ARTIFACT print (LCI #60 Inverted Iceberg) and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
+  "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds; the reverse P/T in the tab is text (the profile's reversePt slot, #777, Beleren small caps), drawn only when the back prints a P/T — the tab prints EMPTY otherwise, as XLN #22 / VOW #12 / LCI #158 do (owner decision Q7)",
+  "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body; CC's DFC crown twins carry the older crown art, 4.6f)",
+];
+
+const DFC_BACK_NOTES = (pack, side) => [
+  `source: CC '${pack}': the M15 frame with DARK title and type bars (white name and type ink), a greyed text box (dark rules ink) and the icon well at the ${side} — the 'new' back's ▼ is baked in the master at the right (outer circle x 1280–1418, 6 px right of the prints' 1271–1413: accepted in wave 1, a re-cut for the sheet to flag), the old back's well is an EMPTY black disc at the left (84–220) the icon rider fills with the family's back glyph (moon, Emrakul, land, open fan)`,
+  "toned onto the prints before the first tick (DFC_BACK_TONES, design D1): CC's bars read 20–30 luma off the prints on most keys — too light on w u b g a, too DARK on r and the land back, gold within 7 — and its boxes 5–20 light; per-key gains through the pack's Title / Type / Rules masks, the white ring, the ▼ and the light rims kept by a luma ramp; the body and the plates untouched",
+  "P/T plates = the pack's dark `pt<K>.png` (285 × 156, interior luma W 160 U 95 B 85 R 75 G 69 M 122 A 112, within the prints' G 69–95 / U 93–106), drawn at M15's plate box with WHITE digits; the colourless stand-in takes the artifact plate; ONE set, m15dfcback/pt/<k>.png, which the 2016–22 back's profile draws too",
+  "colourless `c` = the pack's 'Artifact Frame' as a RENDER STAND-IN (design D2), ticked against an artifact print (LCI #262 Sunbird Effigy / MID #256 Mystic Monstrosity); a colourless Eldrazi or Avatar back (EMN #63, TLA #203) prints a see-through frame CC lacks — TODO 5.11",
+  "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10",
+];
+
+const DFC_LAND_NOTES = (file, print) => [
+  `source: CC 'Transform' ${file} — the pack's 'Land Frame', the M15 land body (stone texture) with the transform pieces; ONE master under every colour key, as the emblem's (a land face has no frame colour of its own here), verified on \`c\` against ${print}`,
+];
+
+/** The icon riders (CC_RIDERS.dfcicon): CC's 14 icon files less the two no
+ *  DFC prints (Lesson, Hammer — BOT prints the plain ▲ / ▼), each a black
+ *  disc with the white glyph, keyed by the glyph's name in lowercase (the
+ *  frames bucket's keys are lowercase: MANIFEST_KEY). The family → glyph
+ *  map is lib/cards/dfc.ts DFC_ICON_GLYPHS (a unit test holds its keys to
+ *  this list). */
+export const DFC_ICON_FILES = Object.freeze({
+  default: `${TRANSFORM_ICONS}/default.png`,
+  downarrow: `${TRANSFORM_ICONS}/downArrow.png`,
+  sun: `${TRANSFORM_ICONS}/sun.svg`,
+  moon: `${TRANSFORM_ICONS}/moon.svg`,
+  fullmoon: `${TRANSFORM_ICONS}/fullmoon.svg`,
+  emrakul: `${TRANSFORM_ICONS}/emrakul.svg`,
+  compass: `${TRANSFORM_ICONS}/compass.svg`,
+  land: `${TRANSFORM_ICONS}/land.svg`,
+  spark: `${TRANSFORM_ICONS}/spark.svg`,
+  planeswalker: `${TRANSFORM_ICONS}/planeswalker.svg`,
+  fanclosed: `${TRANSFORM_ICONS}/fanClosed.svg`,
+  fanopen: `${TRANSFORM_ICONS}/fanOpen.svg`,
+});
+/** The riders' published size: 2× the 110 px CC draws them at (icon bounds
+ *  0.0734 W = 110 px), so the HD bake never upsamples a glyph. */
+export const DFC_ICON_SIZE = 220;
+
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
  * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, pack?, transforms?,
@@ -1537,7 +1684,61 @@ export const CC_TEMPLATES = {
       "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)",
     ],
   },
+  // --- TODO 5.1a: the transform bodies (see the section above CC_TEMPLATES).
+  m15dfcfront: {
+    colors: { ...perColor((k) => [layer(transformFrame("front", k))]), a: [layer(transformFrame("front", "a"))] },
+    // No plates of its own: the profile draws M15's (m15/pt/<k>.png), which
+    // the pack draws at M15's bounds.
+    pack: "packM15TransformFront.js 'Transform (Front)' (groupDFC.js)",
+    transforms: NATIVE_1500,
+    notes: DFC_FRONT_NOTES,
+  },
+  m15dfcback: {
+    colors: { ...perColor((k) => [layer(transformFrame("new/back", k))]), a: [layer(transformFrame("new/back", "a"))] },
+    plates: DFC_BACK_PT,
+    tones: (k) => dfcBackTones(TRANSFORM_MASK.newBackTitle, k),
+    pack: "packM15TransformBackNew.js 'Transform (Back) (New)' (groupDFC.js)",
+    transforms: dfcBackToneTransform(TRANSFORM_MASK.newBackTitle),
+    notes: DFC_BACK_NOTES("Transform (Back) (New)", "RIGHT, with the ▼ baked in"),
+  },
+  m15dfcbackleft: {
+    colors: { ...perColor((k) => [layer(transformFrame("back", k))]), a: [layer(transformFrame("back", "a"))] },
+    // The same dark plates as the ▼ back: the profile draws m15dfcback's.
+    tones: (k) => dfcBackTones(TRANSFORM_MASK.backTitle, k),
+    pack: "packM15TransformBack.js 'Transform (Back)' (groupDFC.js)",
+    transforms: dfcBackToneTransform(TRANSFORM_MASK.backTitle),
+    notes: DFC_BACK_NOTES("Transform (Back)", "LEFT, an empty black disc"),
+  },
+  m15dfclandfront: {
+    colors: perColor(() => [layer(`${TRANSFORM}/frontL.png`)]),
+    // M15's plates, as m15dfcfront.
+    pack: "packM15TransformFront.js 'Transform (Front)' Land Frame (groupDFC.js)",
+    transforms: NATIVE_1500,
+    notes: [
+      ...DFC_LAND_NOTES("frontL.png", "INR #287 Westvale Abbey"),
+      "the icon well and the reverse-P/T tab are the master's, as on m15dfcfront; the tab prints the back's P/T when the back is a creature (INR #287 prints Ormendahl's 9/7) and empty otherwise",
+      "P/T plate = M15's (m15/pt/<k>.png, the profile's): a land creature front (none printed) would draw it; no plate set of its own",
+    ],
+  },
+  m15dfclandback: {
+    colors: perColor(() => [layer(`${TRANSFORM}/new/backL.png`)]),
+    tones: () => dfcBackTones(TRANSFORM_MASK.newBackTitle, "l"),
+    pack: "packM15TransformBackNew.js 'Transform (Back) (New)' Land Frame (groupDFC.js)",
+    transforms: dfcBackToneTransform(TRANSFORM_MASK.newBackTitle),
+    notes: [
+      ...DFC_LAND_NOTES("new/backL.png", "FIN #31 Cooking Campsite"),
+      "toned onto FIN #31 (the one plain M15 land back scanned: the FIN / TLA land backs; XLN / RIX / LCI print the parchment land back CC lacks, TODO 5.8): CC's land back has DARK bars (luma 127) and a grey box (158) where the print has light tan bars (155) with DARK name and type ink and a cream box (209) — bars ×1.22, box ×1.32 through the masks, the rims kept; the profile prints dark ink on it",
+      "no P/T plate (a land back prints none) and no indicator; no cost (hideCost)",
+    ],
+  },
 };
+
+/** A template's tones for a colour key: the same list for every key (the
+ *  emblem), or per key (the transform backs, DFC_BACK_TONES). */
+export function tonesFor(def, key) {
+  if (!def.tones) return [];
+  return typeof def.tones === "function" ? def.tones(key) : def.tones;
+}
 
 /** How provenance describes the text-box tokens' re-cut (TOKEN_REGULAR_RECUT). */
 function recutTransform(r) {
@@ -2010,10 +2211,46 @@ export function toneSilver(buf, width, height, spec) {
   return out;
 }
 
-/** One entry of a recipe's `tones`: the silver (it has `bodyFromY`) or an
- *  outlined region (toneRegion). */
-export function applyTone(buf, width, height, tone) {
-  return "bodyFromY" in tone ? toneSilver(buf, width, height, tone) : toneRegion(buf, width, height, tone);
+/**
+ * Tone a MASKED region of an 8-bit RGBA image (TODO 5.1a, the transform
+ * backs' bars and box — DFC_BACK_TONES): every pixel the mask's alpha
+ * covers has its colour multiplied by `gain`, weighted by the mask's
+ * coverage (an anti-aliased mask edge blends) and faded to ×1 across the
+ * pixel's own luma from `lumaRamp[0]` (the whole gain) to `lumaRamp[1]`
+ * (none) — the well's white ring, the ▼ glyph and the light rims inside
+ * CC's Title mask keep their tone while the bar's flat face takes the gain.
+ * Rounded, clamped to 255; alpha kept. Returns a new buffer. `mask` is the
+ * mask's raw RGBA at the image's size.
+ */
+export function toneMasked(buf, width, height, mask, { gain, lumaRamp = [...DFC_BACK_TONE_LUMA_RAMP] }) {
+  const [lo, hi] = lumaRamp;
+  if (!(Number.isFinite(gain) && gain >= 0) || !(lo >= 0 && hi > lo && hi <= 255)) {
+    throw new Error(`toneMasked: bad tone ${JSON.stringify({ gain, lumaRamp })}`);
+  }
+  const n = width * height;
+  if (!mask || mask.length !== n * 4) throw new Error(`toneMasked: the mask is not ${width}x${height} RGBA`);
+  const out = Buffer.from(buf);
+  for (let p = 0; p < n; p += 1) {
+    const o = p * 4;
+    const m = mask[o + 3] / 255;
+    if (m === 0 || buf[o + 3] === 0) continue;
+    const l = lumaAt(buf, o);
+    // 1 at or below lo, 0 at or above hi (smoothstep between).
+    const t = l <= lo ? 1 : l >= hi ? 0 : 1 - ((l - lo) / (hi - lo)) ** 2 * (3 - 2 * ((l - lo) / (hi - lo)));
+    const g = 1 + (gain - 1) * m * t;
+    if (g === 1) continue;
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
+  }
+  return out;
+}
+
+/** One entry of a recipe's `tones`: the silver (it has `bodyFromY`), a
+ *  masked region (it names a `mask`; `masks` maps the mask path to its raw
+ *  RGBA at the image's size) or an outlined region (toneRegion). */
+export function applyTone(buf, width, height, tone, masks = {}) {
+  if ("bodyFromY" in tone) return toneSilver(buf, width, height, tone);
+  if ("mask" in tone) return toneMasked(buf, width, height, masks[tone.mask], tone);
+  return toneRegion(buf, width, height, tone);
 }
 
 /**
@@ -2284,7 +2521,7 @@ export const LEGENDARY_MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLO
  *  then the two-colour pair masters (TODO 4.6b: gold-split `<pair>`, hybrid
  *  `<pair>-h`; lib/cards/frame-reference-registry.ts TWO_COLOR_MASTER_KEYS),
  *  then the crowned twins (4.6f). */
-export const MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`), ...LEGENDARY_MASTER_KEYS];
+export const MASTER_KEYS = ["a", ...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`), ...LEGENDARY_MASTER_KEYS];
 
 /** The masters a template builds (every key its recipe names, minus
  *  `excluded`), in MASTER_KEYS order. */
@@ -2313,6 +2550,10 @@ export function sourceFilesFor(def) {
   if (def.shield) files.add(def.shield.mask);
   for (const src of Object.values(def.ptCut?.image ?? {})) files.add(src);
   for (const mask of Object.values(def.ptCut?.masks ?? {})) files.add(mask);
+  // A masked tone's mask (TODO 5.1a, the transform backs).
+  for (const key of builtColors(def)) {
+    for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);
+  }
   return [...files].sort();
 }
 
@@ -2537,6 +2778,30 @@ export const CC_OVERLAY_BANDS = {
       "the standard legendary crown, drawn over the m15, m15artifact and m15land masters (TODO 4.6a; design 2026-09-29 §1.1): CC's autoM15NewFrame draws the black 'Legend Crown Border Cover' then the crown after the P/T plate — here composited alone at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
       "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 45→55 %W (the prints' crown split, each pixel de-shaded against the two single-colour crowns, measures 45.5 / 49.3 / 53.6 %W at 10 / 50 / 90 % on FDN's gold pairs, 46.4 / 49.4 / 53.6 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
       "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in",
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Rider sets (TODO 5.1a): small images a profile draws at a slot keyed by
+// something other than the card's colour — the transform icon glyphs, keyed
+// by the icon family's glyph for the face's role (FrameOverlaySlot
+// `anatomy: "dfcIcon"`, lib/cards/anatomy.ts resolveFrameOverlays). Built
+// by scripts/import-cc-frames.mjs (`--only dfcicon`) into
+// .frames-build/<folder>/<key>.png + .webp at `size` × `size`, published
+// like a master, never committed.
+// ---------------------------------------------------------------------------
+
+/** The rider sets the importer builds, by bucket folder. */
+export const CC_RIDERS = {
+  dfcicon: {
+    pack: "packM15TransformTypes.js 'Transform Icons' (groupDFC.js) — the 12 of CC's 14 icon files that a printing wears",
+    size: DFC_ICON_SIZE,
+    files: DFC_ICON_FILES,
+    notes: [
+      "the transform icon glyphs (TODO 5.1a; design 2026-10-02 §2.1, frames.md §1.4 / §4.6): each file is a black disc with the glyph in white — CC draws it INSIDE the master's well at 5.94 / 5.05 / 7.34 × 5.24 % (89 / 106, 110 × 110 px at HD), replacing the default ▲ the front master carries; rasterised at 220 px (2× the drawn 110, so the HD bake never upsamples; sharp at density 300 for the SVGs, Lanczos for the two PNGs)",
+      "the family → glyph map (lib/cards/dfc.ts DFC_ICON_GLYPHS): arrows ▲ `default` / ▼ `downarrow` (BOT 2022-11 → today; the ▼ is baked into the m15dfcback master, so `downarrow` is published but drawn by no wave-1 profile); sunmoondfc `sun` / `moon` (SOI, EMN, MID, VOW); mooneldrazidfc `fullmoon` / `emrakul` (EMN); compasslanddfc `compass` / `land` (XLN, RIX, LCI); fandfc `fanclosed` / `fanopen` (NEO); originpwdfc `spark` / `planeswalker` (ORI — the walker bodies, TODO 5.13, ask first)",
+      "keys are lowercase (the frames bucket's object keys are: downarrow, fanclosed, fanopen); CC's Lesson and Hammer icons have no DFC printing (BOT prints the plain ▲ / ▼) and are not built; the silver / SLD waxing-and-waning moon and upside-down families have no file",
     ],
   },
 };

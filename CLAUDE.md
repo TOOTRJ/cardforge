@@ -206,6 +206,12 @@ Rules and gotchas:
   `lib/cards/faces.ts` is the one source of a double-faced card's cross-face
   data (`frontPreviewData` / `backPreviewData`; derived at render, never
   stored — a body-less `back_face` draws on the front's frame as today).
+  The transform bodies (5.1a: `m15dfcfront`, `m15dfcback`, `m15dfcbackleft`
+  and the land pair) draw their icon rider, reverse P/T and colour dot from
+  that `dfc` block — never from the `dfcIcon` switch (off for an absent
+  key, which reads as `arrows`); a BACK body is never a card's own template
+  (`templateRefusesKind`), and nothing on them is offered until each colour
+  of the front AND the default back is ticked (after 5.3).
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a

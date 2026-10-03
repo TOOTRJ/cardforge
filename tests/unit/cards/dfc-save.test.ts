@@ -144,7 +144,7 @@ describe("the schema: a back face's own body and colour", () => {
     ["a finish beside the template", { frame_style: { template: "m15artifact", finish: "foil" } }],
     ["a switch beside the template", { frame_style: { template: "m15artifact", crown: true } }],
     ["a family beside the template", { frame_style: { template: "m15artifact", dfcIcon: "arrows" } }],
-    ["an unknown template", { frame_style: { template: "m15dfcback" } }],
+    ["an unknown template", { frame_style: { template: "m15dfcbackwards" } }],
     ["an empty body", { frame_style: { template: "" } }],
     ["a body with no template", { frame_style: { finish: "foil" } }],
     ["a body that is a string", { frame_style: "m15artifact" }],
@@ -288,13 +288,68 @@ describe("updateCardAction", () => {
   });
 });
 
+describe("the real transform bodies through the actions (TODO 5.1a)", () => {
+  const BACK_BODIES = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"] as const;
+
+  it("refuses a card ON a back body — the kind gate, even with the body's colour verified — and writes nothing", async () => {
+    state.verified = BACK_BODIES.map((b) => `${b}/w`);
+    for (const body of BACK_BODIES) {
+      const stub = db();
+      const result = await createCardAction(payload({ card_type: body === "m15dfclandback" ? "land" : "creature", cost: "", frame_style: { template: body } }));
+      expect(result.ok, body).toBe(false);
+      expect((result.ok ? null : result.fieldErrors?.frame_style) ?? "", body).toMatch(/doesn't dress/);
+      expect(written(stub, "insert"), body).toBeUndefined();
+    }
+    // …and an edit that moves a stored plain card onto one.
+    state.existing = stored();
+    const stub = db();
+    const edited = await updateCardAction(CARD, { frame_style: { template: "m15dfcback", finish: "regular" } });
+    expect(edited.ok).toBe(false);
+    expect(written(stub, "update")).toBeUndefined();
+  });
+
+  it("refuses a real back body under a plain front, and a non-back template as the body under the transform front; accepts the back body under the transform front once its colour is verified", async () => {
+    state.verified = ["m15/w", "m15dfcfront/w", "m15dfclandfront/c"];
+    const plain = db();
+    const underPlain = await createCardAction(payload({ back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] } }));
+    expect(underPlain.ok).toBe(false);
+    expect(underPlain.ok ? null : underPlain.fieldErrors).toEqual({ "back_face.frame_style": "This frame has no back face of its own." });
+    expect(written(plain, "insert")).toBeUndefined();
+
+    const notABack = db();
+    const wrongBody = await createCardAction(payload({ frame_style: { template: "m15dfcfront" }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15artifact" }, color_identity: ["white"] } }));
+    expect(wrongBody.ok).toBe(false);
+    expect(wrongBody.ok ? null : wrongBody.fieldErrors).toEqual({ "back_face.frame_style": "Not a back-face frame." });
+    expect(written(notABack, "insert")).toBeUndefined();
+
+    const ok = db();
+    const saved = await createCardAction(payload({ frame_style: { template: "m15dfcfront" }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] } }));
+    expect(saved.ok).toBe(true);
+    expect(written(ok, "insert")?.back_face).toEqual({ ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
+    // The family survives on the front body, the crown does not (D17); the
+    // collector line starts on, as on every new card with the slot (4.9b).
+    const land = db();
+    const landFront = await createCardAction(
+      payload({ card_type: "land", cost: "", color_identity: ["colorless"], frame_style: { template: "m15dfclandfront", dfcIcon: "compass", crown: true }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] } }),
+    );
+    expect(landFront.ok).toBe(true);
+    expect(written(land, "insert")?.frame_style).toEqual({ template: "m15dfclandfront", dfcIcon: "compass", collector: "2023" });
+  });
+});
+
 describe("every template today", () => {
-  it("is neither a DFC front nor a back body, so the family never survives a save on any of them", async () => {
+  it("the family survives a save on the two transform FRONT bodies only (5.1a); every other template — the back bodies included — drops it", async () => {
     // Spot-checked above through the actions; here the whole vocabulary,
     // through the save rule the actions call.
     const { normalizeAnatomy } = await import("@/lib/cards/anatomy");
     for (const template of FRAME_TEMPLATE_VALUES) {
-      expect(normalizeAnatomy({ template, dfcIcon: "arrows" }, template, "creature"), template).toEqual({ template });
+      const front = template === "m15dfcfront" || template === "m15dfclandfront";
+      expect(normalizeAnatomy({ template, dfcIcon: "arrows" }, template, "creature"), template).toEqual(front ? { template, dfcIcon: "arrows" } : { template });
+    }
+    // …and a DFC body drops the crown and the two-colour switch (design D17:
+    // no crown, no pair masters in wave 1).
+    for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"] as const) {
+      expect(normalizeAnatomy({ template, crown: true, twoColor: true, collector: "2023" }, template, "creature"), template).toEqual({ template, collector: "2023" });
     }
   });
 });
