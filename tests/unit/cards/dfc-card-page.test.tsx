@@ -28,7 +28,7 @@ const ID = "22222222-2222-4222-8222-222222222222";
 const HOST = "https://zkwkisxoqdhdchqyjwdc.supabase.co";
 const BACK_BAKE = `${HOST}/storage/v1/object/public/card-renders/${OWNER}/${ID}.back.png?v=7`;
 
-const BACK = {
+const BACK: Record<string, unknown> = {
   title: "Elder Wolf",
   cost: null,
   card_type: "creature",
@@ -162,7 +162,7 @@ describe("JSON-LD of a double-faced card", () => {
 });
 
 describe("Card details of a double-faced card", () => {
-  const html = (card: typeof DFC) => renderToStaticMarkup(<CardDetails card={card} inDecks={[]} />);
+  const html = (card: Parameters<typeof CardDetails>[0]["card"]) => renderToStaticMarkup(<CardDetails card={card} inDecks={[]} />);
 
   it("lists the back's type, colour, stats and artist under the front's rows", () => {
     const markup = html(DFC);
