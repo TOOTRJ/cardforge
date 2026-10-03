@@ -1,5 +1,6 @@
 import { hasBackFaceImage, type ScryfallCard } from "@/lib/scryfall/client";
 import {
+  droppedFaceOf,
   frameColorsFromScryfall,
   frameMatchFromScryfall,
   kindFromScryfall,
@@ -43,7 +44,8 @@ import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 //
 // A BACK body (TODO 5.0b; FrameProfile.dfc.role "back") is compared with
 // the printing's BACK face, so its pin is checked on that face: the printing
-// must have a second face with its own scan, and that face's colour must be
+// must have a second face with its own scan that the import keeps (not a
+// double-faced token's or a Role card's), and that face's colour must be
 // the row's (referenceBackColorIdentity). No kind check: a back body
 // dresses no kind of its own (the save's rule is the back's type against
 // bodyFor, 5.2), and no signature warning: the registry names the FRONT
@@ -120,9 +122,16 @@ export function validateReferenceForCombo(
   const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
 
   if (isDfcBackBody(template)) {
+    const dropped = droppedFaceOf(card);
     if (!hasBackFaceImage(card)) {
       errors.push(
         `${card.name} has no second face with its own scan; the ${label} frame is a back face, compared with the printing's back.`,
+      );
+    } else if (dropped) {
+      // The import keeps only the front of a double-faced token or a Role
+      // card (TODO 1.23): there is no stored back for the row to compare.
+      errors.push(
+        `${card.name} is ${dropped === "role" ? "a Role card" : "a double-faced token"}, whose second face PipGlyph doesn't import; the ${label} frame needs a transform or modal printing.`,
       );
     } else {
       const backColor = pickFrameColorKey(referenceBackColorIdentity(card));

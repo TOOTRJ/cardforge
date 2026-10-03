@@ -10,7 +10,10 @@ import { FRAME_REFERENCES } from "@/lib/cards/frame-reference-registry";
 // never a score against the front's scan. Under 5.0a's declared-profile
 // fixture (m15artifact = a transform back; never the real PROFILES); the
 // payload, the render and the scan download are stubbed like
-// score-combo.test.ts, the scorer runs for real on a flat card.
+// score-combo.test.ts, and so is the alignment itself: WHICH face reaches
+// the payload builder and the scan fetch is the point here, and the real
+// scorer on a full-size card (score-combo.test.ts runs it once) timed this
+// file out under CI's 5 s when it ran six times.
 // ---------------------------------------------------------------------------
 
 vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
@@ -33,24 +36,25 @@ vi.mock("@/lib/scryfall/reference-preview", async (importOriginal) => {
 });
 vi.mock("@/lib/scryfall/client", () => ({ fetchScryfallImage: state.fetchScan }));
 vi.mock("@/lib/render/card-image", () => ({ renderCardImage: state.render }));
+vi.mock("@/lib/frames/align", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/frames/align")>();
+  return {
+    ...actual,
+    alignAndScore: () => ({ overall: 1, perSlot: {}, global: { dxPct: 0, dyPct: 0, confidence: 1 } }),
+  };
+});
 
 import { FrameCompareFaceError } from "@/lib/scryfall/reference-preview";
 import { scoreFrameCombo } from "@/lib/frames/score-combo";
 
 const SCAN_URL = (face: "front" | "back") => `https://cards.scryfall.io/png/${face}/3/0/scan.png`;
 
+/** A tiny opaque PNG: the scorer only needs something sharp can resize onto
+ *  the grid (the alignment is stubbed above). */
 async function flatCard(): Promise<Buffer> {
-  const width = 745;
-  const height = 1040;
-  const data = Buffer.alloc(width * height * 4, 0);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const line = x % 97 < 3 || y % 131 < 3;
-      const i = (y * width + x) * 4;
-      data.set([line ? 255 : 0, line ? 255 : 0, line ? 255 : 0, 255], i);
-    }
-  }
-  return sharp(data, { raw: { width, height, channels: 4 } }).png().toBuffer();
+  const width = 8;
+  const height = 8;
+  return sharp(Buffer.alloc(width * height * 4, 255), { raw: { width, height, channels: 4 } }).png().toBuffer();
 }
 
 function payloadFor(id: string, template: string, face: "front" | "back" = "front") {
