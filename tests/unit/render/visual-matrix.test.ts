@@ -212,6 +212,29 @@ describe("visual-regression matrix", () => {
     expect(caseInput({ ...c, preset: c.preset === "hd" ? "default" : "hd" })).not.toBe(c.input);
   });
 
+  it("bakes each case in the finish it names: the row's frame_style carries the case's finish (a row override must not reset it)", () => {
+    // The transform bodies' first "@foil" cases (5.1a) baked REGULAR: their
+    // row override carried `finish: "regular"` over the case's foil, so the
+    // rider, the dot and the dark plate were never under the sheen.
+    for (const c of cases) {
+      const rowFinish = (c.row.frame_style as { finish?: string } | null)?.finish ?? "regular";
+      expect(rowFinish, c.id).toBe(c.finish);
+    }
+    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil"]);
+  });
+
+  it("bakes the long back-body cases with the LONG back (dense rules, the long name, 12/12 on the dark plate): never the short back under a long id (TODO 5.1a)", () => {
+    for (const c of cases) {
+      if (c.face !== "back") continue;
+      const back = c.row.back_face as { title?: string; rules_text?: string } | null;
+      const short = cases.find((s) => s.id === c.id.replace(/transform-long/, "transform-short"));
+      if (c.shape === "long" && short) {
+        expect(JSON.stringify(c.row.back_face), c.id).not.toBe(JSON.stringify(short.row.back_face));
+        expect(back?.title?.length ?? 0, c.id).toBeGreaterThan(((short.row.back_face as { title?: string } | null)?.title?.length ?? 0));
+      }
+    }
+  });
+
   it("splits into shards that cover every case exactly once", () => {
     for (const count of [1, 4, 12]) {
       const all = Array.from({ length: count }, (_, i) => shardCases(cases, i, count).map((c) => c.id)).flat();

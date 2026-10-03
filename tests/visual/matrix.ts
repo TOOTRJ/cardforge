@@ -858,7 +858,7 @@ export function visualCases(): VisualCase[] {
     if (isDfcBackBody(template)) {
       const front: FrameTemplate = template === "m15dfclandback" ? "m15dfclandfront" : "m15dfcfront";
       const back = { frontTemplate: front };
-      add(template, "transform", "g", "long", { suffix: "@collector", back, row: { ...dfcBodyRow(template, "g"), ...collectorRow(front, "2023", dfcBodyRow(template, "g")) } });
+      add(template, "transform", "g", "long", { suffix: "@collector", back, row: { ...dfcBodyRow(template, "g", "long"), ...collectorRow(front, "2023", dfcBodyRow(template, "g", "long")) } });
       add(template, "transform", "u", "short", { suffix: "@collector-2015", back, row: { ...dfcBodyRow(template, "u"), ...collectorRow(front, "2015", dfcBodyRow(template, "u")) } });
       continue;
     }
@@ -899,9 +899,9 @@ export function visualCases(): VisualCase[] {
     const front: FrameTemplate = body === "m15dfclandback" ? "m15dfclandfront" : "m15dfcfront";
     for (const colour of VISUAL_COLOURS) {
       add(body, "transform", colour, "short", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour) });
-      add(body, "transform", colour, "long", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour) });
+      add(body, "transform", colour, "long", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour, "long") });
     }
-    add(body, "transform", "g", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: front }, row: dfcBodyRow(body, "g") });
+    add(body, "transform", "g", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: front }, row: dfcBodyRow(body, "g", "long") });
   }
   // The other families' glyphs: the front's (sun, full moon, compass, closed
   // fan) and the 2016–22 back's (moon is the colour loop's; Emrakul, land,
@@ -920,8 +920,8 @@ export function visualCases(): VisualCase[] {
   // diagonally) and a three-colour one (wedges) — the colour loop's wu and
   // wub rows carry them; a colourless (artifact stand-in) back draws none.
   // The front at the stored bake's size, on foil and squared (print).
-  add("m15dfcfront", "transform", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15dfcback", "r") });
-  add("m15dfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: dfcBodyRow("m15dfcback", "r") });
+  add("m15dfcfront", "transform", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
+  add("m15dfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
   add("m15dfcfront", "transform", "b", "short", { corners: "square", suffix: "@square" });
   // A legacy-shaped back_face on m15 (the 8 imported DFCs' shape: content,
   // no body): the FRONT bake is today's, byte for byte (its hash must not
@@ -954,39 +954,49 @@ function dfcFamilyFor(body: FrameTemplate): DfcIconFamily {
 
 /** The row fields that put a transform row's back on `body` in `colour`:
  *  the family that derives it and the back's own body and colour (the
- *  content is transformContent's). */
-function dfcBodyRow(body: FrameTemplate, colour: VisualColour): Partial<CardRowForBake> {
-  return dfcFamilyRow(body, colour, dfcFamilyFor(body));
+ *  content is transformContent's, in the case's SHAPE — the long back's
+ *  dense rules, long name and 12/12 on a long case; the first matrix gave
+ *  every back case the short back, so the long back cases were the short
+ *  ones pixel for pixel). */
+function dfcBodyRow(body: FrameTemplate, colour: VisualColour, shape: VisualShape = "short", finish: VisualCase["finish"] = "regular"): Partial<CardRowForBake> {
+  return dfcFamilyRow(body, colour, dfcFamilyFor(body), shape, finish);
 }
 
-function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIconFamily): Partial<CardRowForBake> {
+/** `finish` rides on the row's frame_style: this row REPLACES rowFor's
+ *  (the first matrix's two "@foil" cases baked regular — their row override
+ *  carried `finish: "regular"` over the case's foil). */
+function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIconFamily, shape: VisualShape = "short", finish: VisualCase["finish"] = "regular"): Partial<CardRowForBake> {
   const land = body === "m15dfclandback";
+  const long = shape === "long";
   const front: FrameTemplate = land ? "m15dfclandfront" : "m15dfcfront";
   // The land BACK's cases are FIN #31's shape — a land // land (Cooking
   // Campsite: a mana ability, no P/T), so the land front's tab is empty
   // there; the land front's own loop cases keep INR #287's creature back.
+  // The long land back: a long legendary name and the long flavor on the
+  // same abilities.
   const back = land
     ? {
-        title: "Cooking Campsite",
+        title: long ? "Cooking Campsite of the Wandering Chocobo Riders" : "Cooking Campsite",
         cost: "",
         card_type: "land" as const,
+        ...(long ? { supertype: "Legendary" } : {}),
         subtypes: [],
         rules_text: "{T}: Add {W}.\n{3}, {T}, Sacrifice an artifact: Put a +1/+1 counter on each creature you control. Activate only as a sorcery.",
-        flavor_text: "\"Seeing how you enjoy fishing, you should learn how to prepare your catch.\"\n—Ignis Scientia",
+        flavor_text: long ? LONG_FLAVOR : "\"Seeing how you enjoy fishing, you should learn how to prepare your catch.\"\n—Ignis Scientia",
         art_url: "ART2",
         artist_credit: "Visual Regression",
         frame_style: { template: body },
         color_identity: IDENTITY[colour],
       }
     : {
-        ...(transformContent("short", colour, false).back_face as NonNullable<CardRowForBake["back_face"]>),
+        ...(transformContent(shape, colour, false).back_face as NonNullable<CardRowForBake["back_face"]>),
         frame_style: { template: body },
         color_identity: IDENTITY[colour],
       };
   // The default family (`arrows`) is never stored: a plain transform row
   // names no `dfcIcon` (lib/cards/faces.ts dfcIconOf reads it as arrows).
   return {
-    frame_style: family === "arrows" ? { template: front, finish: "regular" } : { template: front, finish: "regular", dfcIcon: family },
+    frame_style: family === "arrows" ? { template: front, finish } : { template: front, finish, dfcIcon: family },
     back_face: back,
   };
 }
