@@ -12,7 +12,15 @@
 //
 // Vertical placement: a run's top is its BASELINE less the face's ascent at
 // the run's size, and the run carries `lineHeight: ascent + descent` (the
-// face's content area, in em). The browser and Satori both put the baseline
+// face's content area, in em). Every run's SIZE is a whole HD pixel (TODO
+// 4.9c, the 4.9b review: the artist's lower-case small caps are 38 × 0.8 =
+// 30.4 px at HD, which the bake has always rounded to 30 — fpx — while the
+// preview drew 30.4): the layout now hands both renderers the bake's
+// rounding (quantizedPx), so the glyphs and the run's top agree to the
+// pixel. The pen ADVANCES keep the nominal size: quantising them too would
+// move the chunk after a lower-case run by ≈ 1 px per five letters (the
+// bake's gap today) on every card with the line — a correction for the
+// first collector-scoped sweep, never a 4.9c change. The browser and Satori both put the baseline
 // (L − (ascent + descent)) / 2 + ascent below a line box of height L (the
 // rule lib/cards/rules-metrics.ts states for MPlantin; Satori's "normal"
 // box leaves the lineGap out while the browser's keeps it, so every run
@@ -298,6 +306,13 @@ export function brandMarkWidthPct(scale: number): number {
   return (BRAND_MARK_GEOMETRY.starPct + BRAND_MARK_GEOMETRY.gapPct + text * BRAND_MARK_GEOMETRY.fontPct) * scale * 100;
 }
 
+/** A run's drawn size: the whole HD pixel nearest `px` — exactly what the
+ *  bake draws at HD (Math.round, lib/render/card-image.tsx fpx) and half of
+ *  it at 750, so the preview's glyphs are the bake's. */
+export function quantizedPx(px: number): number {
+  return Math.round(px);
+}
+
 type Frame = { w: number; h: number; orientation: CardOrientation };
 
 /** The HD px frame the slot's fractions are turned into (the stored bake's
@@ -348,15 +363,18 @@ export function collectorLayout(
     widthPx: number,
   ): CollectorTextRun => {
     const m = faces[face];
+    // The size both renderers draw: the whole HD pixel the bake rounds to
+    // (lib/render/card-image.tsx fpx), the top from the same pixel.
+    const drawnPx = quantizedPx(px);
     return {
       kind: "text",
       role,
       face,
       text: value,
       xPct: xPct(x),
-      topPct: yPct(baseline - m.ascent * px),
+      topPct: yPct(baseline - m.ascent * drawnPx),
       baselinePct: yPct(baseline),
-      sizePct: px / frame.w,
+      sizePct: drawnPx / frame.w,
       lineHeight: m.ascent + m.descent,
       letterSpacingEm,
       widthPct: xPct(widthPx),

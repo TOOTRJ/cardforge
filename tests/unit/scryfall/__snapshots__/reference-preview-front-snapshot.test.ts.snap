@@ -55,6 +55,7 @@ At the beginning of your upkeep, transform this creature.",
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": false,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -177,6 +178,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": undefined,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -294,6 +296,7 @@ When this creature transforms into Avacyn, the Purifier, it deals 3 damage to ea
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": false,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -421,6 +424,7 @@ When this creature transforms into Avacyn, the Purifier, it deals 3 damage to ea
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": false,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -541,6 +545,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": undefined,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -655,6 +660,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "off",
     "printed_crown": undefined,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -770,6 +776,7 @@ Draw a card.",
     "preview_art_url": null,
     "printed_collector": "off",
     "printed_crown": undefined,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -881,6 +888,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "off",
     "printed_crown": undefined,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -978,6 +986,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": undefined,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -1080,6 +1089,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": false,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -1199,6 +1209,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": false,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {
@@ -1320,6 +1331,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "preview_art_url": null,
     "printed_collector": "2023",
     "printed_crown": false,
+    "printed_stamp": "none",
     "printed_star": undefined,
     "printed_two_color": undefined,
     "printing": {

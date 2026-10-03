@@ -128,54 +128,153 @@ const M15_MASK = {
   pinline: `${NEW}/pinline.png`,
 };
 
-/** A twoColorRecipe letter → its accurate-M15 file: a colour, "m", "a" or
- *  "l" → new/<k>.png; a land tint "wl" → new/lw.png (CC reverses it). */
+/** A twoColorRecipe letter → its file in a `new/`-geometry pack: a colour,
+ *  "m", "a" or "l" → <dir>/<k>.png; a land tint "wl" → <dir>/lw.png (CC
+ *  reverses it). The accurate M15 pack and its snow twin
+ *  (`m15/new/snow/`, packSnowNew.js: the same six masks, the same files by
+ *  letter) resolve the same way. */
+const packFrameFile = (dir) => (letter) =>
+  letter.length === 2 && letter[1] === "l" ? `${dir}/l${letter[0]}.png` : `${dir}/${letter}.png`;
 function m15FrameFile(letter) {
-  return letter.length === 2 && letter[1] === "l" ? `${NEW}/l${letter[0]}.png` : `${NEW}/${letter}.png`;
+  return packFrameFile(NEW)(letter);
 }
+/** The snow pack's file of a letter (4.6f, wave 2c). */
+const snowFrameFile = packFrameFile(SNOW);
 
 /** A pair layer: the recipe region's left file blended into its right file
  *  across the region's ramp (lerpLayers over rampMask), through `mask`. */
-function pairLayer(region, mask) {
+function pairLayer(region, mask, fileOf = m15FrameFile) {
   return {
-    src: m15FrameFile(region.left),
-    right: m15FrameFile(region.right),
+    src: fileOf(region.left),
+    right: fileOf(region.right),
     ramp: [...region.ramp],
     ...(mask ? { mask } : {}),
   };
 }
 
 /** The layers of one pair master (see above). `kind`: "m15", "artifact" or
- *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). */
-export function pairMasterLayers(pair, dress, kind) {
+ *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). `fileOf`
+ *  resolves a recipe letter to a pack file: the accurate M15 pack's (the
+ *  default) or the snow pack's, whose masks are the same (snowPairLayers). */
+export function pairMasterLayers(pair, dress, kind, fileOf = m15FrameFile) {
   const r = twoColorRecipe(pair, dress, kind);
   if (kind === "artifact") {
     return [
-      layer(m15FrameFile(r.frame.left), M15_MASK.border),
-      layer(m15FrameFile(r.frame.left), M15_MASK.frame),
-      pairLayer(r.rules, M15_MASK.rules),
-      layer(m15FrameFile(r.typeTitle), M15_MASK.title),
-      layer(m15FrameFile(r.typeTitle), M15_MASK.type),
-      pairLayer(r.pinline, M15_MASK.pinline),
+      layer(fileOf(r.frame.left), M15_MASK.border),
+      layer(fileOf(r.frame.left), M15_MASK.frame),
+      pairLayer(r.rules, M15_MASK.rules, fileOf),
+      layer(fileOf(r.typeTitle), M15_MASK.title),
+      layer(fileOf(r.typeTitle), M15_MASK.type),
+      pairLayer(r.pinline, M15_MASK.pinline, fileOf),
     ];
   }
-  const base = r.frame.right ? pairLayer(r.frame) : layer(m15FrameFile(r.frame.left));
+  const base = r.frame.right ? pairLayer(r.frame, undefined, fileOf) : layer(fileOf(r.frame.left));
   // The bars are the base's own unless the base is a split frame (hybrid:
   // grey l bars over a two-colour frame).
   const bars = r.frame.right
-    ? [layer(m15FrameFile(r.typeTitle), M15_MASK.title), layer(m15FrameFile(r.typeTitle), M15_MASK.type)]
+    ? [layer(fileOf(r.typeTitle), M15_MASK.title), layer(fileOf(r.typeTitle), M15_MASK.type)]
     : [];
-  return [base, pairLayer(r.rules, M15_MASK.rules), ...bars, pairLayer(r.pinline, M15_MASK.pinline)];
+  return [base, pairLayer(r.rules, M15_MASK.rules, fileOf), ...bars, pairLayer(r.pinline, M15_MASK.pinline, fileOf)];
 }
 
 /** A template's pair masters: `{ wu: layers, …, "wu-h": layers, … }`. */
-function pairMasters(kind, dresses) {
+function pairMasters(kind, dresses, layersOf = pairMasterLayers) {
   return Object.fromEntries(
     dresses.flatMap((dress) =>
-      TWO_COLOR_PAIRS.map((pair) => [dress === "hybrid" ? `${pair}-h` : pair, pairMasterLayers(pair, dress, kind)]),
+      TWO_COLOR_PAIRS.map((pair) => [dress === "hybrid" ? `${pair}-h` : pair, layersOf(pair, dress, kind)]),
     ),
   );
 }
+
+// --- 4.6f (wave 2c): the snow pairs — m15snow (the white-bar pairs) and
+// m15snowland (the snow dual lands). Card Conjurer's 'Snow (Kaldheim)' pack
+// (packSnowNew.js, `m15/new/snow/<k>.png`) is the accurate M15 pack's
+// geometry with frosted art, through the SAME six masks (groupAccurate.js
+// lists both), so the pair recipe is 4.6b's over the snow files
+// (pairMasterLayers with snowFrameFile): the dark ring rows of
+// `new/snow/m.png` sit where `new/snow/w.png`'s do (rows 134–138 / 293–298
+// / 310–317 and 1562–1569 / 1583–1587 / 1742–1747 / 2613–2619 at 2010 × 2814;
+// u / r / g draw one row more at four of them, covering the gold's), unlike
+// the borderless pack's M frame (one row higher than its colours, the #449
+// hairline) — the snow pair masters are checked row by row for any gold of
+// the m frame left inside the pinline mask's rows (legendary-masters.test.ts's
+// method; wave 2c's snow-pair-masters test).
+//
+// Measured on KHM's three crowned snow pairs (#224 Narfi U|B, #223 Moritte
+// G|U, #230 Svella R|G; WotC's renders) beside KHM's mono snow prints (#27
+// Search for Glory w, #47 Berg Strider u, #104 Priest of the Haunted Edge b,
+// #138 Frost Bite r, #193 Sculptor of Winter g, #244 Replicating Ring c):
+//   • the frame BODY is the gold snow body on all three (the strip beside
+//     the text box reads 152/142/126 left and 181/175/168 right on every
+//     pair; CC's snow m.png reads 161/149/124 and 185/177/159 there; KHM's
+//     u body reads 111/123/140), the P/T plate the gold plate (174/154/105 —
+//     m15PTM; the monos print their colour's);
+//   • the title and type BARS are white: 246–248 / 241–243 / 239–243 on
+//     the three pairs against the monos' 248/245/249 (w), 240/239/248 (u),
+//     237/233/240 (b), 246/235/236 (r), 238/237/242 (g), 244/242/249 (c) —
+//     the whitest bar of the set but for w's, with a faint warm cast
+//     (R − B +6 … +8, where w's is −1 and r's pink +10): the gold snow bar
+//     at KHM's faint tint. CC's snow m.png bar (236/231/213, R − B +23) is
+//     that bar at CC's tint strength — CC's u bar is as far from KHM's
+//     (220/233/242 against 240/239/248) — but the owner's call (round 20,
+//     2026-10-01: "white-bar pairs") is the print's absolute look, so the
+//     bars are the pack's WHITE frame's (snow/w.png, 244/244/242) through
+//     CC's Title and Type masks, warmed a quarter of the way to the gold
+//     bar's (snow/m.png at SNOW_PAIR_BAR_GOLD_SHARE source-over through the
+//     same masks): the least-squares share of (m − w) that reproduces the
+//     prints' (pair − w) = (−1, −3, −8) against CC's (−8, −13, −29) is 0.26;
+//     CC's m bar as it is would be one letter away (typeTitle "m");
+//   • the pinline splits across 4.6b's ramp: the type-bar and text-box
+//     rings of the three pairs and the ten snow duals (the KHM #248–274 run)
+//     read a median 42.8 / 50.0 / 57.2 %W at 10 / 50 / 90 % (24 of the 26
+//     ring readings within 40.8–45.1 / 49.1–51.4 / 55.5–59.4; Moritte's G|U
+//     ring is too low in contrast to read), an untilted 41→59 — the 40→60
+//     ramp's 42 / 50 / 58;
+//   • the text box splits too, faintly on a nonland (KHM's snow box is
+//     near-white: U|B reads 242/240/248 left and 245/242/248 right — the u
+//     and b monos' 240/238/247 and 245/241/247) and as a colour wash on the
+//     duals (saturation ×4 shows the two tints meeting at the centre);
+//     the rules region takes the box ramp (45→57) as on m15 / m15land;
+//   • the crown is the standard band (owner round 20, option A): KHM's snow
+//     crown is the standard crown's shape and registration over a speckled
+//     texture (Moritte's G|U split, de-shaded against KHM #179 Jorn's g and
+//     J22 #12 Isu's u crown, reads 43.2 / 48.3 / 51.6 at 10 / 50 / 90 %
+//     against the standard band's 46.0 / 50.0 / 54.0 — one measurable card,
+//     cross-set references; the band is shared with m15, m15crown/<pair>).
+// The snow LAND pairs are 4.6b's land recipe over the snow land files
+// (snow/l.png whole — its neutral bars are every snow land's: the KHM
+// basics and duals read R − B −1 … −9 on the title bar — the box and
+// pinline split in the two land tints snow/l<k>.png), as KHM #248–274
+// print (their type-bar and box rings are in the 24 readings above).
+/** How far the white bar is warmed toward the gold snow bar (see above). */
+export const SNOW_PAIR_BAR_GOLD_SHARE = 0.25;
+
+/** The layers of one SNOW pair master (4.6f, wave 2c): the nonland
+ *  ("snow") pair is the snow gold frame whole, the split text box, the
+ *  white bars (snow/w.png's title and type regions warmed a quarter toward
+ *  the gold bar's) and the split pinline; the snow LAND pair is the land
+ *  recipe over the snow land files. Keys: `<pair>` (the split dress only —
+ *  no hybrid snow print exists). */
+export function snowPairLayers(pair, dress, kind) {
+  if (dress !== "split") throw new Error(`snowPairLayers: the snow frames draw the split dress only (${dress})`);
+  if (kind === "snowland") return pairMasterLayers(pair, "split", "land", snowFrameFile);
+  if (kind !== "snow") throw new Error(`snowPairLayers: unknown kind ${kind}`);
+  const r = twoColorRecipe(pair, "split", "m15");
+  return [
+    layer(snowFrameFile(r.frame.left)),
+    pairLayer(r.rules, M15_MASK.rules, snowFrameFile),
+    // The white bars: the pack's white frame's bar regions, in place of the
+    // gold frame's, warmed a quarter toward the gold bar (prints: KHM #224 /
+    // #223 / #230, white with a faint warm cast).
+    layer(snowFrameFile("w"), M15_MASK.title),
+    layer(snowFrameFile("w"), M15_MASK.type),
+    layer(snowFrameFile(r.typeTitle), M15_MASK.title, SNOW_PAIR_BAR_GOLD_SHARE),
+    layer(snowFrameFile(r.typeTitle), M15_MASK.type, SNOW_PAIR_BAR_GOLD_SHARE),
+    pairLayer(r.pinline, M15_MASK.pinline, snowFrameFile),
+  ];
+}
+const SNOW_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %";
 
 /** How provenance records the pair masters (notes). */
 const PAIR_NOTE =
@@ -1252,14 +1351,28 @@ export const CC_TEMPLATES = {
       `${PAIR_NOTE}. <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print`,
     ],
   },
+  // 4.6f (wave 2c): the ten white-bar pair masters (snowPairLayers) beside
+  // the seven monos; the legendary crown is the standard band over them
+  // (M15_CROWN on the m15snow entry, keyMap c → a: no new objects).
   m15snow: {
-    colors: perColor((k) => [layer(k === "c" ? `${SNOW}/a.png` : `${SNOW}/${k}.png`)]),
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${SNOW}/a.png` : `${SNOW}/${k}.png`)]),
+      ...pairMasters("snow", ["split"], snowPairLayers),
+    },
     plates: ARTIFACT_PT,
-    notes: ["colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)"],
+    notes: [
+      "colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)",
+      `${SNOW_PAIR_NOTE}. <pair> = the snow gold frame m.png whole (the gold body KHM #224 / #223 / #230 print) with the split text box, WHITE title and type bars — the pack's white frame w.png through CC's Title and Type masks, warmed a quarter of the way to the gold bar (m.png at ${Math.round(SNOW_PAIR_BAR_GOLD_SHARE * 100)}% through the same masks: the prints' bars are the whitest of KHM's but for w's, with a faint warm cast; owner round 20: white bars) — and the split pinline, drawn with the gold plate pt/m as the prints are; no hybrid dress (no hybrid snow print exists)`,
+    ],
   },
   m15snowland: {
-    colors: perColor((k) => [layer(k === "c" ? `${SNOW}/l.png` : `${SNOW}/l${k}.png`)]),
-    notes: [],
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${SNOW}/l.png` : `${SNOW}/l${k}.png`)]),
+      ...pairMasters("snowland", ["split"], snowPairLayers),
+    },
+    notes: [
+      `${SNOW_PAIR_NOTE}. <pair> = CC's snow land frame l.png (the grey body and neutral white bars every KHM snow land prints) with the split text box and pinline in the two snow land tints (snow/l<k>.png), as the ten KHM snow duals #248–274 print`,
+    ],
   },
   m15devoid: {
     // Every CC devoid frame is see-through (text box alpha ~179): the
@@ -2805,4 +2918,215 @@ export function crownBandFindings(buf, width, height, rows, artSlot) {
     }
   }
   return { lastAlphaRow, peakRow, artMaxAlpha, artPartialPct: (artPartial / (box.width * box.height)) * 100 };
+}
+
+// ---------------------------------------------------------------------------
+// The holofoil stamp's notch pieces (TODO 4.9c): Card Conjurer's holo-stamp
+// arch, drawn OVER a master (FrameOverlaySlot "holoStamp" — lib/cards/
+// template-layout.ts M15_HOLO_STAMP / M15PW_HOLO_STAMP), built by
+// scripts/import-cc-frames.mjs (`--only m15holostamp,m15pwholostamp`) into
+// .frames-build/<folder>/<key>.png + .webp and published to the bucket like a
+// master, never committed.
+//
+// Every one of CC's pieces holds a capture of WotC's hologram inside its
+// oval (the planeswalker symbol tiled in silver — all 11 M15 and 8 walker
+// pieces; `m15/holoStamps/stamp.png` too), so NOTHING of a piece reaches the
+// bucket as it is (owner 2026-09-29: cleaned of any hologram capture before
+// the bucket). The recipe takes ONE piece per pack as the arch's GEOMETRY —
+// CC's U, the one flat saturated rim (0,117,190), which decomposes exactly
+// into its three sources (the translucent white bevel, the rim, the black)
+// — tints the rim to the master's own bar (sampled where it is flat), keeps
+// the bevel and the black, and cuts the oval region (the slot's oval plus
+// HOLO_STAMP_CUT_MARGIN_PX) to transparent. The tint is the point, not a
+// convenience: CC's holo pack predates its accurate M15 pack, so its W rim
+// is a bluish white (252,254,255) against our cream bar (244,243,236), its
+// R (239,56,39) and G (0,123,67) more saturated than ours (209,77,53 /
+// 42,108,69), its C (192,191,188) darker than our grey (223,224,224) —
+// only U matches. The walker rims match our walker masters exactly, so the
+// tinted w u b r g m reproduce CC's own pieces; the colourless walker, which
+// CC has no piece for, is sampled like the rest. The snow and devoid frames
+// carry no pieces of their own: their bars are M15's pixels (snow) or the
+// colourless grey (devoid), so their entries map onto these keys.
+// ---------------------------------------------------------------------------
+
+/** Where a master's bar is sampled (card px): the centre column's run of
+ *  flat bar rows — every sampled pixel must agree within `tolerance`. */
+const M15_BAR_SAMPLE = Object.freeze({ x: 750, rows: [1940, 1947], tolerance: 2 });
+const M15PW_BAR_SAMPLE = Object.freeze({ x: 750, rows: [1932, 1935], tolerance: 2 });
+
+/** The notch pieces the importer builds, by bucket folder. `shape` is the
+ *  CC piece whose geometry every key takes, at CC's bounds (1:1 at HD);
+ *  `arc` its rim colour; `barOf` the master (template/key under the build
+ *  or cache dir) whose bar tints each key's rim; `oval` the slot's oval. */
+export const HOLO_STAMP_NOTCHES = {
+  m15holostamp: {
+    pack: "M15 'Holo Stamps' (packM15HoloStamps.js)",
+    shape: {
+      src: "img/frames/m15/holoStamps/m15HoloStampU.png",
+      size: { width: 192, height: 96 },
+      // 2 px below CC's bounds (90.34 %): see M15_HOLO_STAMP's note.
+      bounds: { leftPct: 43.6, topPct: 90.34 + (2 / 2100) * 100, widthPct: 12.8, heightPct: 4.58 },
+      arc: [0, 117, 190],
+    },
+    keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+    barOf: { w: "m15/w", u: "m15/u", b: "m15/b", r: "m15/r", g: "m15/g", m: "m15/m", c: "m15/c", a: "m15artifact/c", l: "m15land/c" },
+    barSample: M15_BAR_SAMPLE,
+    oval: { leftPct: 45.54, topPct: 91.72, widthPct: 8.94, heightPct: 3.2 },
+    cutMarginPx: 2,
+    notes: [
+      "the holofoil stamp's notch on the M15 family (TODO 4.9c): CC's arch — the text box's bottom pinline lifted over the stamp with its bevel — 1:1 at HD, 2 px below CC's bounds 43.6/90.34/12.8×4.58 % (654–846 × 1899–1995 px): the piece's rim foot is 11 rows, cut for CC's older M15 bar, and our accurate-pack bar is 12 (1938–1949), so at CC's bounds the foot stood 1 px proud of the bar's top and its black covered the bar's last 2 rows — a step at both feet; 2 px lower the foot's bottom edge is the bar's",
+      "ONE geometry for every key: CC's U piece (its bevel, rim and black decomposed exactly), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947 (flat within 2 levels) — CC's per-key pieces predate its accurate M15 pack and their rims don't match our bars (W bluish white vs cream, R and G over-saturated, C darker); the unused CC pieces W B R G M A L C A2 A3 were fetched and inspected, never published",
+      "a = the artifact silver sampled from m15artifact/c (the nearest of CC's three artifact rims is A2, 222,223,224); l = the land taupe from m15land/c; the snow frames' bars are these pixels and the devoid frames' the colourless grey, so their PROFILES entries map onto these keys",
+      "the oval region — the slot's oval 45.54/91.72/8.94×3.2 % (683–817 × 1926–1993) plus 2 px — is cut to transparent in CARD coordinates (the piece's hologram, 685–815 × 1930–1993 once placed, sits inside), whatever CC's piece held there (its hologram capture: the planeswalker symbol tiled, WotC's mark), and the black around it is CC's own; our oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut with a 3 px black margin",
+    ],
+  },
+  m15pwholostamp: {
+    pack: "Planeswalker 'Holo Stamps' (packPlaneswalkerHoloStamps.js)",
+    shape: {
+      src: "img/frames/planeswalker/holo/u.png",
+      size: { width: 182, height: 107 },
+      bounds: { leftPct: 43.94, topPct: 90.15, widthPct: 12.14, heightPct: 5.1 },
+      arc: [0, 117, 190],
+    },
+    keys: ["w", "u", "b", "r", "g", "m", "c"],
+    barOf: { w: "m15pw/w", u: "m15pw/u", b: "m15pw/b", r: "m15pw/r", g: "m15pw/g", m: "m15pw/m", c: "m15pw/c" },
+    barSample: M15PW_BAR_SAMPLE,
+    oval: { leftPct: 45.54, topPct: 91.72 - (7 / 2100) * 100, widthPct: 8.94, heightPct: 3.2 },
+    cutMarginPx: 2,
+    notes: [
+      "the planeswalker's notch (TODO 4.9c): CC's walker arch — a flat rim under a black line, no bevel, as the walker's box prints — at CC's bounds 43.94/90.15/12.14×5.1 % (659–841 × 1893–2000 px, 1:1 at HD)",
+      "the same recipe as m15holostamp over the walker masters' bars (x 750, rows 1928–1935): CC's own walker rims match them exactly, so w u b r g m reproduce CC's pieces outside the cut; c — the colourless walker's grey (181,181,181), which CC has no piece for — is sampled like the rest",
+      "the oval sits 7 px higher than M15's (45.54/91.39/8.94×3.2 %: 683–817 × 1919–1986), where CC's walker piece holds its hologram; cut to transparent plus 2 px like M15's",
+    ],
+  },
+};
+
+/** The flat bar colour of a master (8-bit RGBA, W × H) at the sample: the
+ *  mean of the rows, every pixel within the tolerance of it, or a throw. */
+export function sampleBar(master, width, sample) {
+  const [r0, r1] = sample.rows;
+  const px = [];
+  for (let y = r0; y <= r1; y += 1) {
+    const o = (y * width + sample.x) * 4;
+    if (master[o + 3] !== 255) throw new Error(`bar sample at (${sample.x}, ${y}) is not opaque (α ${master[o + 3]})`);
+    px.push([master[o], master[o + 1], master[o + 2]]);
+  }
+  const mean = [0, 1, 2].map((c) => Math.round(px.reduce((s, p) => s + p[c], 0) / px.length));
+  for (const p of px) {
+    for (let c = 0; c < 3; c += 1) {
+      if (Math.abs(p[c] - mean[c]) > sample.tolerance) throw new Error(`bar sample at x ${sample.x} rows ${r0}–${r1} is not flat: ${p} vs ${mean}`);
+    }
+  }
+  return mean;
+}
+
+/**
+ * One notch key from the shape piece (8-bit RGBA at its native size): each
+ * pixel decomposed into the bevel's white, the rim (`arc`) and black —
+ * w = r / 255 (only the white has red), a = (b − 255 w) / arc.b, k = the
+ * rest — and recomposed with `tint` for the rim, the alpha untouched; then
+ * every pixel whose centre lies inside the cut ellipse made transparent.
+ * The ellipse is the slot's oval grown by the margin, in the piece's own
+ * pixels (CC's bounds rounded to whole card px: the piece is 1:1 at HD).
+ */
+export function buildNotch(shape, piece, tint, oval, cutMarginPx) {
+  const { width, height } = shape.size;
+  const out = Buffer.alloc(width * height * 4);
+  const [, , arcB] = shape.arc;
+  for (let i = 0; i < width * height; i += 1) {
+    const o = i * 4;
+    const a = piece[o + 3];
+    if (a === 0) continue;
+    const w = Math.min(1, piece[o] / 255);
+    const arc = Math.max(0, Math.min(1 - w, (piece[o + 2] - 255 * w) / arcB));
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(Math.min(255, 255 * w + tint[c] * arc));
+    out[o + 3] = a;
+  }
+  cutOval(out, shape, oval, cutMarginPx);
+  return out;
+}
+
+/** The cut ellipse of a shape's slot oval, in the piece's pixels. */
+export function cutEllipse(shape, oval, marginPx) {
+  const origin = rectPx(shape.bounds, OUT_W, OUT_H);
+  const cx = ((oval.leftPct + oval.widthPct / 2) / 100) * OUT_W - origin.x;
+  const cy = ((oval.topPct + oval.heightPct / 2) / 100) * OUT_H - origin.y;
+  return { cx, cy, rx: ((oval.widthPct / 100) * OUT_W) / 2 + marginPx, ry: ((oval.heightPct / 100) * OUT_H) / 2 + marginPx };
+}
+
+/** Make every pixel whose centre lies inside the cut ellipse transparent. */
+export function cutOval(buf, shape, oval, marginPx) {
+  const { width, height } = shape.size;
+  const e = cutEllipse(shape, oval, marginPx);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const dx = (x + 0.5 - e.cx) / e.rx;
+      const dy = (y + 0.5 - e.cy) / e.ry;
+      if (dx * dx + dy * dy <= 1) buf.fill(0, (y * width + x) * 4, (y * width + x) * 4 + 4);
+    }
+  }
+}
+
+/**
+ * What the importer (and the unit test, on the published objects) checks
+ * on a built notch (8-bit RGBA at the shape's size, pure):
+ *   • `cutClear` — every pixel inside the cut ellipse is fully transparent;
+ *   • `ringBlack` — the pixels in the 4 px band outside the cut are CC's
+ *     black (r + g + b ≤ 60 at any alpha: the piece's bottom row is a
+ *     half-transparent black) or transparent: nothing of the hologram
+ *     survives at the cut's edge;
+ *   • `foot` — the rim's foot (the piece's row at the bar's height, 8 px in
+ *     from the left edge) is the tint, so the arch joins the master's bar
+ *     without a seam;
+ *   • `alphaKept` — outside the cut, the alpha is the shape piece's.
+ */
+export function notchFindings(buf, shape, piece, tint, oval, cutMarginPx, foot) {
+  const { width, height } = shape.size;
+  const e = cutEllipse(shape, oval, cutMarginPx);
+  const inside = (x, y, grow) => {
+    const dx = (x + 0.5 - e.cx) / (e.rx + grow);
+    const dy = (y + 0.5 - e.cy) / (e.ry + grow);
+    return dx * dx + dy * dy <= 1;
+  };
+  let cutClear = true;
+  let ringBlack = true;
+  let alphaKept = true;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const o = (y * width + x) * 4;
+      if (inside(x, y, 0)) {
+        if (buf[o + 3] !== 0 || buf[o] || buf[o + 1] || buf[o + 2]) cutClear = false;
+        continue;
+      }
+      if (piece && buf[o + 3] !== piece[o + 3]) alphaKept = false;
+      if (inside(x, y, 4) && buf[o + 3] !== 0 && buf[o] + buf[o + 1] + buf[o + 2] > 60) ringBlack = false;
+    }
+  }
+  const fo = (foot.y * width + foot.x) * 4;
+  const footPx = [buf[fo], buf[fo + 1], buf[fo + 2], buf[fo + 3]];
+  const footOk = footPx[3] === 255 && [0, 1, 2].every((c) => Math.abs(footPx[c] - tint[c]) <= 1);
+  const failures = [];
+  if (!cutClear) failures.push("a pixel inside the cut ellipse is not transparent");
+  if (!ringBlack) failures.push("a pixel in the 4 px band outside the cut is neither CC's black nor transparent");
+  if (!footOk) failures.push(`the rim's foot at (${foot.x}, ${foot.y}) is ${footPx}, the tint is ${tint}`);
+  if (piece && !alphaKept) failures.push("the alpha outside the cut differs from the shape piece's");
+  return { cutClear, ringBlack, footOk, footPx, alphaKept, failures };
+}
+
+/** Where a notch's rim foot is read (piece px): the row at the bar's
+ *  height, 8 px in from the left edge — solid rim on both packs. */
+export const NOTCH_FOOT = Object.freeze({ m15holostamp: { x: 8, y: 44 }, m15pwholostamp: { x: 8, y: 36 } });
+
+/** Every Card Conjurer file a notch folder reads. */
+export function notchSourceFiles(def) {
+  return [def.shape.src];
+}
+
+/** How provenance prints one notch key's recipe. */
+export function describeNotch(def, key, tint) {
+  return [
+    `${def.shape.src} (the arch's geometry: bevel, rim and black) at ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %`,
+    `rim tinted to ${def.barOf[key]}.png's bar (${tint.join(",")}) sampled at x ${def.barSample.x}, rows ${def.barSample.rows[0]}–${def.barSample.rows[1]}`,
+    `the oval ${def.oval.leftPct}/${def.oval.topPct.toFixed(2)}/${def.oval.widthPct}×${def.oval.heightPct} % plus ${def.cutMarginPx} px cut to transparent`,
+  ];
 }

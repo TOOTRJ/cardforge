@@ -228,11 +228,12 @@ on conflict (id) do nothing;
 --     stays on one 24-card page: the e2e gallery specs (seeded-data,
 --     browse-filters, like-toggle) read page 1, and 8 more public rows pushed
 --     Cinderwing Matriarch, Emberlash and Thornback Behemoth off it. Ids
---     …034–…049 (…026 is the emblems seed's: a reused id is a row that
+--     …034–…052 (…026 is the emblems seed's: a reused id is a row that
 --     silently never lands — tests/unit/devops/seed-card-ids.test.ts).
 --     Seraphine and The Glass Reliquary (…048 / …049) are 4.6f's: stored on
 --     the borderless frames with no key, before those drew the floating
---     crown and the pinline split.
+--     crown and the pinline split; Hrafn, Frostfall Deeps and Rimewood
+--     Clearing (…050–…052) wave 2c's, on the snow frames.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -310,7 +311,25 @@ from (values
      '{"template":"m15borderless","finish":"regular"}'::jsonb, 3),
   ('c0000000-0000-4000-a000-000000000049'::uuid, 'The Glass Reliquary', 'the-glass-reliquary', '{3}', array['colorless'], 'Legendary', 'artifact', array[]::text[], 'rare',
      E'{T}: Add one mana of any colour.\n{3}, {T}: Draw a card.', null, null, 11,
-     '{"template":"m15borderlessartifact","finish":"regular"}'::jsonb, 3)
+     '{"template":"m15borderlessartifact","finish":"regular"}'::jsonb, 3),
+  -- TODO 4.6f (wave 2c): the snow frames draw the standard crown band and
+  -- the split pairs (m15snow's white-bar pair, m15snowland's dual-land
+  -- pair). Two cards stored BEFORE they did (no key): a U|B legendary snow
+  -- creature on m15snow — gold bars and pinline, no crown; its editor shows
+  -- both switches off with their hints, and switching them on draws the
+  -- white-bar pair under the split crown (KHM #224's look) — and a
+  -- legendary colourless snow land on m15snowland (the crown hint only:
+  -- the land grey band, DMR #244's look); and a G|W snow dual stored the
+  -- way a new card is, with the switch on: the land split (KHM #249's).
+  ('c0000000-0000-4000-a000-000000000050'::uuid, 'Hrafn, Rimewarden', 'hrafn-rimewarden', '{3}{U}{B}', array['blue','black'], 'Legendary Snow', 'creature', array['Zombie','Wizard'], 'rare',
+     E'Other snow creatures you control get +1/+1.\n{S}{S}{S}: Return Hrafn from your graveyard to the battlefield tapped.', '4', '3', 14,
+     '{"template":"m15snow","finish":"regular"}'::jsonb, 3),
+  ('c0000000-0000-4000-a000-000000000051'::uuid, 'Frostfall Deeps', 'frostfall-deeps', null, array['colorless'], 'Legendary Snow', 'land', array[]::text[], 'mythic',
+     E'Frostfall Deeps enters with ten ice counters on it.\n{3}: Remove an ice counter from Frostfall Deeps.', null, null, 17,
+     '{"template":"m15snowland","finish":"regular"}'::jsonb, 3),
+  ('c0000000-0000-4000-a000-000000000052'::uuid, 'Rimewood Clearing', 'rimewood-clearing', null, array['green','white'], 'Snow', 'land', array['Forest','Plains'], 'common',
+     E'({T}: Add {G} or {W}.)\nRimewood Clearing enters tapped.', null, null, 22,
+     '{"template":"m15snowland","finish":"regular","twoColor":true}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

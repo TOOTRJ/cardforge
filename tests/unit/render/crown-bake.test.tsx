@@ -279,10 +279,12 @@ describe.skipIf(!available)("the crown in the bake — the real bands (set FRAME
       const without = await bake(card({ cardType, frameStyle: { template: "m15", finish: "regular" } }), "default");
       expect(differingRows(on, without), cardType).toEqual([]);
     }
-    // A template that draws no crown (4.6f): the switch changes nothing.
-    const snow = { template: "m15snow" as const, finish: "regular" as const };
+    // A template that draws no crown (devoid, owner round 20): the switch
+    // changes nothing. (The snow frames draw the band since 4.6f wave 2c:
+    // tests/unit/render/snow-crown-bake.test.tsx.)
+    const devoid = { template: "m15devoid" as const, finish: "regular" as const };
     fetched.length = 0;
-    expect(frameAssetPathsFor(card({ frameStyle: { ...snow, crown: true } })).some((p) => p.includes("m15crown"))).toBe(false);
+    expect(frameAssetPathsFor(card({ frameStyle: { ...devoid, crown: true } })).some((p) => p.includes("m15crown"))).toBe(false);
   }, 120_000);
 
   it.each(["foil", "etched"] as const)("%s: the crown takes the finish, inside the band's rows only", async (finish) => {

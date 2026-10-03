@@ -83,7 +83,7 @@ describe("the colour indicator (TODO 5.1a)", () => {
     for (const t of ["m15dfclandback", "m15dfcfront", "m15dfclandfront", "m15", "m15artifact", "emblem"]) expect(getFrameProfile(t).indicator, t).toBeUndefined();
   });
 
-  it("wedges: one disc, two halves on the top-right → bottom-left diagonal (the first colour top-left), else equal wedges from the top, clockwise", () => {
+  it("wedges: one disc, two halves on the top-right → bottom-left diagonal (the first colour top-left), else equal wedges clockwise from the bottom (BOT #13: the second colour centred at the top)", () => {
     expect(colorIndicatorWedges([])).toEqual([]);
     const one = colorIndicatorWedges(["#111"]);
     expect(one).toHaveLength(1);
@@ -99,9 +99,18 @@ describe("the colour indicator (TODO 5.1a)", () => {
     expect(two[1].d).toBe(`M ${c - k} ${c + k} A ${colorIndicatorFillRadius()} ${colorIndicatorFillRadius()} 0 0 0 ${c + k} ${c - k} Z`);
     const three = colorIndicatorWedges(["a", "b", "c"]);
     expect(three).toHaveLength(3);
-    // Each wedge starts at the centre; the first from the top (12 o'clock).
+    // Each wedge starts at the centre; the first from the BOTTOM (6 o'clock),
+    // clockwise — BOT #13 Optimus Prime, Autobot Leader ({U}{R}{W}) prints
+    // blue bottom-left, red centred at the top, white bottom-right: a
+    // boundary at 6 o'clock, never at 12.
     for (const w of three) expect(w.d.startsWith(`M ${c} ${c} L `)).toBe(true);
-    expect(three[0].d).toContain(`L ${c.toFixed(3)} ${(c - colorIndicatorFillRadius()).toFixed(3)} A`);
+    const r = colorIndicatorFillRadius();
+    expect(three[0].d).toContain(`L ${c.toFixed(3)} ${(c + r).toFixed(3)} A`);
+    // The second wedge runs from 10 o'clock to 2 o'clock through the top:
+    // its arc ends at the 2 o'clock point (x > centre, y < centre).
+    const end = /A [^ ]+ [^ ]+ 0 0 1 ([^ ]+) ([^ ]+) Z$/.exec(three[1].d)!;
+    expect(Number(end[1])).toBeGreaterThan(c);
+    expect(Number(end[2])).toBeLessThan(c);
     expect(colorIndicatorWedges(["a", "b", "c", "d", "e"])).toHaveLength(5);
   });
 

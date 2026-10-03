@@ -60,7 +60,13 @@ describe("the creator's frame tile shows the pair the card paints (FrameThumb)",
     // Off, absent, or a frame without pair masters: the gold tile, as before.
     expect(tile({ template: "m15", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" }, anatomy: { twoColor: false } })).toBe("m");
     expect(tile({ template: "m15", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" } })).toBe("m");
-    expect(tile({ template: "m15snow", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" }, anatomy: { twoColor: true } })).toBe("m");
+    expect(tile({ template: "m15devoid", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" }, anatomy: { twoColor: true } })).toBe("m");
+    // The snow frames draw their split pair since 4.6f wave 2c (a hybrid
+    // cost falls back to it; a land wears one on the snow land frame only).
+    expect(tile({ template: "m15snow", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" }, anatomy: { twoColor: true } })).toBe("wu");
+    expect(tile({ template: "m15snow", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{W/U}{W/U}" }, anatomy: { twoColor: true } })).toBe("wu");
+    expect(tile({ template: "m15snowland", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null }, anatomy: { twoColor: true } })).toBe("wu");
+    expect(tile({ template: "m15snow", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null }, anatomy: { twoColor: true } })).toBe("m");
     // Another colour's tile (the colour chips) is that colour, never the pair.
     expect(tile({ template: "m15", colorKey: "u", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" }, anatomy: { twoColor: true } })).toBe("u");
   });

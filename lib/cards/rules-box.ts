@@ -46,13 +46,20 @@ export const ADVENTURE_PAGE_PAD_PX = { x: 9, y: 15 } as const;
 export const SECOND_FACE_PAD_PX = { x: 18, y: 12 } as const;
 
 /** Which stat badges the card DRAWS — the renderers' gates (showPT /
- *  showLoyalty / showDefense, and a second face's showPT). Only a drawn
- *  badge keeps text out. */
+ *  showLoyalty / showDefense, and a second face's showPT), and the holofoil
+ *  stamp's arch while the stamp is drawn (TODO 4.9c: ResolvedHoloStamp
+ *  .keepOut, card percents). Only a drawn badge keeps text out. */
 export type DrawnStats = {
   pt?: boolean;
   loyalty?: boolean;
   defense?: boolean;
   secondFacePt?: boolean;
+  /** The stamp's keep-out rect over the notch's arch, or null / absent
+   *  when no stamp is drawn (lib/cards/holo-stamp.ts
+   *  M15_HOLO_STAMP_KEEP_OUT: x 655–845 px from the arch top at 1905 past
+   *  the box's bottom). Glyph-level like the badges — the rules rect never
+   *  shrinks, so a short block never moves. */
+  stamp?: Rect | null;
 };
 
 /**
@@ -64,6 +71,8 @@ export type DrawnStats = {
  */
 export function drawnStatInk(layout: FrameProfile, show: DrawnStats, aspect: number): Rect[] {
   const out = statKeepOuts(layout, show);
+  // The holofoil stamp's arch (4.9c), beside the badges, only while drawn.
+  if (show.stamp) out.push(show.stamp);
   const face = layout.secondFace;
   if (show.secondFacePt && face?.pt) {
     // A plate (flip's bottom creature, layout v38) is drawn UNTURNED at its

@@ -426,7 +426,17 @@ Rules and gotchas:
   character no font has with the LAST registered font (its `.notdef` and
   advance), so a new face at the end changes stored bakes
   (`collector-font.test.ts` pins the order) — and never add a glyph
-  MPlantin lacks.
+  MPlantin lacks. The holofoil stamp (4.9c) is `frame_style.stamp`
+  (`"auto"` = the oval on a rare or mythic, `"oval"` / `"triangle"` =
+  always the frame's own shape, `"none"`; absent = unstamped — cards saved
+  before it included): our own silver oval (`lib/cards/holo-stamp-art.ts`,
+  a generated bitmap drawn ABOVE the sheens at `holoStampArtRect`) over
+  CC's notch with its hologram region cut clear (`m15holostamp/*`,
+  `m15pwholostamp/*`: bucket only, `HOLO_STAMP_NOTCHES`), declared as the
+  `holoStamp` overlay on the seven wave-1 entries (`lib/cards/holo-stamp.ts`,
+  `resolveHoloStamp`); never on a token or an emblem, never on a pair master
+  in wave 1, the FRONT face only; its arch is a glyph-level rules keep-out
+  (`DrawnStats.stamp`) — the rules rect never shrinks.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

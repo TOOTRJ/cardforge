@@ -123,17 +123,26 @@ describe("a stored card (no switch key)", () => {
     expect(colors()).toBe("multicolor");
   });
 
-  it.each(["m15snow", "m15devoid", "m15borderlessland", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
+  it.each(["m15devoid", "m15borderlessland", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
     render(<Harness stored template={template} colors={["multicolor"]} />);
     expect(screen.queryByTestId("anatomy-panel")).toBeNull();
     expect(twoColorSwitch()).toBeNull();
     expect(crownSwitch()).toBeNull();
     expect(screen.queryByText(/New: the printed/)).toBeNull();
   });
+
+  it("m15snow draws both since 4.6f wave 2c: a stored legendary snow pair with no key shows both switches off, with their hints", () => {
+    render(<Harness stored template="m15snow" colors={["blue", "black"]} />);
+    expect(screen.queryByTestId("anatomy-panel")).not.toBeNull();
+    expect(crownSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(twoColorSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByTestId("anatomy-hint-crown")).not.toBeNull();
+    expect(screen.queryByTestId("anatomy-hint-twoColor")).not.toBeNull();
+  });
 });
 
 describe("a hybrid artifact (m15artifact has no hybrid dress yet)", () => {
-  it("says the all-hybrid cost gets the gold two-colour frame", () => {
+  it("says the all-hybrid cost gets the split two-colour frame", () => {
     render(<Harness stored template="m15artifact" cardType="artifact" cost="{W/U}{W/U}" colors={["white", "blue"]} />);
     expect(twoColorSwitch()).not.toBeNull();
     expect(screen.getByTestId("anatomy-note-twoColor").textContent).toBe(HYBRID_FALLBACK_NOTE);

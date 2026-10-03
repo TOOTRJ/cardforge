@@ -7,6 +7,7 @@ import {
   DFC_COLORLESS_NEEDS_ARTIFACT,
   DFC_FRONT_HAS_NO_BACK,
   DFC_NEEDS_BACK_FACE,
+  DFC_NOT_A_BACK_BODY,
   DFC_NO_BACK_BODY_YET,
   dfcBackArtMissing,
   dfcFamilyOf,
@@ -88,10 +89,14 @@ describe("resolveDfcBackFace — create", () => {
     expect(dfcFamilyOf("spark")).toBe("arrows");
   });
 
-  it("refuses a body that isn't the derived one (a crafted payload)", () => {
-    for (const body of ["m15dfcbackleft", "m15dfclandback", "m15dfcfront", "m15artifact", "m15"]) {
+  it("refuses a body that isn't the derived one (a crafted payload): another back body by name, a non-back template as such", () => {
+    for (const body of ["m15dfcbackleft", "m15dfclandback"]) {
       const result = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, frame_style: { template: body } }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED });
       expect(result, body).toEqual({ ok: false, field: "back_face.frame_style", message: DFC_BACK_BODY_MISMATCH });
+    }
+    for (const body of ["m15dfcfront", "m15artifact", "m15"]) {
+      const result = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, frame_style: { template: body } }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED });
+      expect(result, body).toEqual({ ok: false, field: "back_face.frame_style", message: DFC_NOT_A_BACK_BODY });
     }
     // The derived one named explicitly passes.
     const ok = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, frame_style: { template: "m15dfcback" } }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED });

@@ -16,6 +16,7 @@ import {
 } from "@/lib/cards/anatomy";
 import { isCollectorSwitch } from "@/lib/cards/collector-line";
 import { isDfcIconFamily } from "@/lib/cards/dfc";
+import { isHoloStampSwitch } from "@/lib/cards/holo-stamp";
 import type { ColorIdentity } from "@/types/card";
 
 /** Form fields a user may change while editing or remixing. Everything else
@@ -160,6 +161,10 @@ export function frameAnatomyPatchFor(
   if (isCollectorSwitch(collector) && collector !== storedStyle.collector) patch.collector = collector;
   const star = values.frame_style.star === true;
   if (star !== (storedStyle.star === true)) patch.star = star;
+  // The holofoil stamp (TODO 4.9c): a value the form holds and the card
+  // doesn't ("auto" / "oval" / "triangle" / "none").
+  const stamp = values.frame_style.stamp;
+  if (isHoloStampSwitch(stamp) && stamp !== storedStyle.stamp) patch.stamp = stamp;
   // The transform icon family (TODO 5.2): a family the form holds and the
   // card doesn't — the action re-derives the back body from it and refuses
   // the patch when that body isn't verified in the back's colour.

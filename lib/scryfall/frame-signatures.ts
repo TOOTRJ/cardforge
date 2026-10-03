@@ -879,9 +879,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // woodland …) carries Scryfall's `legendary` effect but prints no standard
   // crown, and imports with the crown off (crownSwitchFromPrinting) — no gap.
   // m15, m15artifact and m15land draw it (TODO 4.6a), m15borderless and
-  // m15borderlessartifact the floating crown (4.6f, wave 2a); every other
-  // frame's crown — snow, devoid, extended art, adventure, saga, the
-  // borderless land — is still 4.6f's.
+  // m15borderlessartifact the floating crown (4.6f, wave 2a), extendedart
+  // its band (wave 2b), m15snow and m15snowland the standard band (wave
+  // 2c); devoid draws none by the owner's call (round 20: the one crowned
+  // devoid printing, M3C #4, is another frame); every other frame's crown —
+  // adventure, saga, the borderless land — is still 4.6f's.
   crown: {
     match: { effectsAny: ["legendary"], effectsNone: ["showcase"] },
     reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
@@ -889,10 +891,13 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   },
   // 4.6b draws the pairs on m15 (split + hybrid), m15artifact and m15land
   // (split), 4.6f (wave 2a) on m15borderless (split + hybrid) and
-  // m15borderlessartifact (split): there these gaps drop. What is left is
-  // the rest of wave 2 (4.6f: snow, devoid, extended art, sagas /
-  // adventures, the borderless land's pairs 4.56) — and the tails it names
-  // (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003 frame).
+  // m15borderlessartifact (split), wave 2c on m15snow and m15snowland
+  // (split): there these gaps drop — and on m15devoid the gold-split gap
+  // is no gap at all (GOLD_PAIR_TEMPLATES: its two-colour printings ARE the
+  // gold frame). What is left is the rest of wave 2 (4.6f: extended art,
+  // sagas / adventures, the borderless land's pairs 4.56) — and the tails
+  // it names (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003
+  // frame).
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
@@ -2089,7 +2094,12 @@ const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map
  * piece (gapDrawnBy — never for a family that waits on another item for it,
  * the M20 token's crown). A "two-colour" row logged before the hybrid dress
  * had its own gap may be a hybrid printing: it counts only where the frame
- * draws both dresses, or only lands (a land's split is never hybrid).
+ * draws both dresses, or only lands (a land's split is never hybrid), or
+ * where the frame's gold-split printings are its gold master
+ * (GOLD_PAIR_TEMPLATES: devoid's one hybrid printing is an MDFC, logged
+ * under the dfc gap, never this one). A split-only frame that hosts
+ * creatures (m15artifact, m15snow) keeps such a row open: it can't tell a
+ * hybrid printing from a gold one.
  */
 export function signatureDrawnOn(signature: string, template: string | null | undefined): boolean {
   const rule = RULE_BY_KEY.get(signature);
@@ -2101,7 +2111,7 @@ export function signatureDrawnOn(signature: string, template: string | null | un
   const on = template as FrameTemplate;
   if (rule.gapBlockedBy?.[key] || !templatesOfRule(rule).includes(on) || !gapDrawnBy(key, on)) return false;
   if (key === "two-colour" && !gapDrawnBy("two-colour-hybrid", on)) {
-    return templateSupportsKind(on, "land") && !templateSupportsKind(on, "creature");
+    return GOLD_PAIR_TEMPLATES.has(on) || (templateSupportsKind(on, "land") && !templateSupportsKind(on, "creature"));
   }
   return true;
 }
@@ -2246,17 +2256,41 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   };
 }
 
+/**
+ * Frames whose two-colour (gold-split) printings carry NO split at all: the
+ * gold master IS the printed look, so the `two-colour` gap is no gap there.
+ * Devoid (TODO 4.6f, wave 2c; measured 2026-10-02): every two-colour devoid
+ * printing on the devoid frame — BFZ #199–207, OGW #148–150, MH3 #177 /
+ * #204 / #206 / #208 and their reprints (DDP, M3C, PLST, the prerelease
+ * stamps, MH3 #517 / #518): 29 of the 31 two-colour printings Scryfall lists
+ * for the keyword — prints the UNIFORM gold devoid frame: the title ring
+ * reads gold (R − B 65–119) at every x on the eight checked (OGW #148 /
+ * #149 / #150, BFZ #200 / #203 / #206, MH3 #177 / #204; the review
+ * re-measured thirteen more — BFZ #199 / #201 / #202 / #204 / #205 / #207,
+ * MH3 #206 / #208 / #517 / #518, M3C #272 / #275, DDP #64 — gold at both
+ * ends of the body and the bar, R − B +78 … +119), where a mono devoid
+ * print's ring is its colour. m15devoid's `m` tick is referenced to three
+ * of them (Void Grafter, Flayer Drone, Abstruse Appropriation). The other
+ * two: the one HYBRID devoid printing (MH3 #253, an MDFC) prints the split
+ * hybrid dress, so `two-colour-hybrid` stays a gap; MH3 #342 is a
+ * borderless `inverted` showcase, not the devoid frame at all (the
+ * borderless rules take it).
+ */
+const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15devoid"]);
+
 /** True when `template` draws the anatomy a gap names — its PROFILES entry
  *  declares the crown overlay or the two-colour dress (lib/cards/anatomy.ts,
  *  TODO 4.6.0): each gap drops where the landing frame draws it, with
  *  nothing to keep in step here (m15, m15artifact and m15land draw the
- *  crown, 4.6a, and the pairs, 4.6b; 4.6f the rest). */
+ *  crown, 4.6a, and the pairs, 4.6b; the borderless, extended-art and snow
+ *  frames theirs, 4.6f) — or, for the gold-split gap, where the frame's
+ *  two-colour printings are its plain gold master (GOLD_PAIR_TEMPLATES). */
 function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
   switch (gap) {
     case "crown":
       return frameAnatomyOf(template).crown;
     case "two-colour":
-      return frameAnatomyOf(template).twoColor.includes("split");
+      return frameAnatomyOf(template).twoColor.includes("split") || GOLD_PAIR_TEMPLATES.has(template);
     case "two-colour-hybrid":
       return frameAnatomyOf(template).twoColor.includes("hybrid");
     // The double-faced marks (TODO 5.1a): a transform FRONT body draws them

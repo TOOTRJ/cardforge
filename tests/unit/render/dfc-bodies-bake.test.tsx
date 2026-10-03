@@ -301,6 +301,34 @@ describe("the transform bodies on real bakes (TODO 5.1a)", () => {
     expect(COLOR_INDICATOR_FILLS.green).toBe("#00733e");
   }, 90_000);
 
+  it.each(PRESETS)("@%s: the dot is printed INK — above the foil and etched sheens, as the preview draws it (z 8 over the sheens' z 6): a foil back's dot is the regular back's, pixel for pixel", async (preset) => {
+    // The first bake drew the dot BEFORE the sheens: Satori paints in
+    // document order, so the rainbow tinted the dot on a foil back while
+    // the preview's dot (z 8) sat clean above its sheen (z 6).
+    const regular = await bake(backPreviewData(transform({}, { title: "HHHH" }))!, preset);
+    for (const finish of ["foil", "etched"] as const) {
+      const sheened = await bake(backPreviewData(transform({ frameStyle: { template: "m15dfcfront", finish } }, { title: "HHHH" }))!, preset);
+      const centre = PCT(regular, COLOR_INDICATOR.centre.xPct, COLOR_INDICATOR.centre.yPct);
+      const r = ((COLOR_INDICATOR.diameterPct / 100) * regular.w) / 2 - 2;
+      let differ = 0;
+      let n = 0;
+      for (let dy = -r; dy <= r; dy += 1) {
+        for (let dx = -r; dx <= r; dx += 1) {
+          if (dx * dx + dy * dy > r * r) continue;
+          const i = Math.round(centre.y + dy) * regular.w + Math.round(centre.x + dx);
+          n += 1;
+          if (regular.rgb[i * 3] !== sheened.rgb[i * 3] || regular.rgb[i * 3 + 1] !== sheened.rgb[i * 3 + 1] || regular.rgb[i * 3 + 2] !== sheened.rgb[i * 3 + 2]) differ += 1;
+        }
+      }
+      expect(n).toBeGreaterThan(100);
+      expect(differ, `${finish}: dot pixels tinted by the sheen`).toBe(0);
+      // …while the sheen itself IS drawn (the flat stand-in frame takes it):
+      // a pixel of the bar beside the dot differs from the regular bake's.
+      const beside = Math.round(centre.y) * regular.w + Math.round(centre.x + r + 40);
+      expect([regular.rgb[beside * 3], regular.rgb[beside * 3 + 1], regular.rgb[beside * 3 + 2]], `${finish}: sheen drawn`).not.toEqual([sheened.rgb[beside * 3], sheened.rgb[beside * 3 + 1], sheened.rgb[beside * 3 + 2]]);
+    }
+  }, 120_000);
+
   it.each(PRESETS)("@%s: a colourless (artifact stand-in) back draws no dot; the land back no P/T, no dot and dark band ink", async (preset, s) => {
     const colourless = backPreviewData(transform({ colorIdentity: ["colorless"] }, { title: "HHHH", color_identity: ["colorless"], supertype: "Artifact" }))!;
     const c = await bake(colourless, preset);

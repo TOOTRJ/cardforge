@@ -8,6 +8,7 @@ import {
   type CardLang,
 } from "@/lib/cards/collector-fields";
 import type { CollectorSwitch } from "@/lib/cards/collector-line";
+import type { HoloStampSwitch } from "@/lib/cards/holo-stamp";
 import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
@@ -219,6 +220,12 @@ export type ScryfallImportPatch = {
    *  separator, KLD #265 "KLD★EN" — also an etched-only one, ONC #29
    *  "ONC★EN"), else absent. */
   printed_star?: true;
+  /** The holofoil stamp THIS printing carries (TODO 4.9c, owner 2026-09-29:
+   *  imports follow the printing): Scryfall's `security_stamp` oval →
+   *  "oval", triangle → "triangle", anything else → "none"
+   *  (stampOfPrinting). The save drops it where the landed frame has no
+   *  notch (a stamped SLD token, a UB emblem). */
+  printed_stamp?: HoloStampSwitch;
   rules_text?: string;
   flavor_text?: string;
   power?: string;
@@ -711,6 +718,22 @@ export function starOfPrinting(card: Pick<ScryfallCard, "finishes">): true | und
   return finishes.length > 0 && finishes.every((finish) => finish === "foil" || finish === "etched")
     ? true
     : undefined;
+}
+
+/**
+ * The holofoil stamp a printing carries (ScryfallImportPatch.printed_stamp,
+ * TODO 4.9c): "oval" for Scryfall's `security_stamp` oval (every 2015-frame
+ * rare and mythic, the SLD and promo tokens), "triangle" for the Universes
+ * Beyond triangle (LTR on every rarity, the four UB emblems), and "none" for
+ * no stamp or any other mark (acorn, circle, heart, arena) — never absent:
+ * a printing always says whether it carries one, so an unstamped common
+ * imported onto a rare's frame stays unstamped and never gets "auto".
+ */
+export function stampOfPrinting(card: Pick<ScryfallCard, "security_stamp">): HoloStampSwitch {
+  const stamp = (card.security_stamp ?? "").trim().toLowerCase();
+  if (stamp === "oval") return "oval";
+  if (stamp === "triangle") return "triangle";
+  return "none";
 }
 
 /** Set types whose printings print their PARENT set's code (TDOM #1 prints
@@ -1418,6 +1441,8 @@ export function mapScryfallToFormPatch(
     // (or "off" for a pre-2015 frame) and the ★ of a foil-only printing.
     printed_collector: collectorStyleOfPrinting(card),
     printed_star: starOfPrinting(card),
+    // …and the holofoil stamp it carries (TODO 4.9c).
+    printed_stamp: stampOfPrinting(card),
     rules_text: pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),

@@ -104,6 +104,7 @@ export type DfcBackGateInput = {
 };
 
 export const DFC_FRONT_HAS_NO_BACK = "This frame has no back face of its own.";
+export const DFC_NOT_A_BACK_BODY = "Not a back-face frame.";
 export const DFC_NEEDS_BACK_FACE = "A double-faced card needs its back face.";
 export const DFC_BACK_TYPE_REFUSED =
   "A back face can be a creature, artifact, enchantment, land, instant or sorcery.";
@@ -204,7 +205,11 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
     // patch resent — the server decides, as it does for the stored one.
     const sent = back.frame_style?.template;
     if (!input.stored && sent && sent !== derived) {
-      return { ok: false, field: "back_face.frame_style", message: DFC_BACK_BODY_MISMATCH };
+      return {
+        ok: false,
+        field: "back_face.frame_style",
+        message: isDfcBackBody(sent) ? DFC_BACK_BODY_MISMATCH : DFC_NOT_A_BACK_BODY,
+      };
     }
     template = derived;
   }

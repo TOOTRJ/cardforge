@@ -49,8 +49,15 @@ export type SwitchKey = Exclude<FrameAnatomyKey, "dfcIcon">;
 export const ANATOMY_HINTS: Partial<Record<SwitchKey, string>> = {
   crown: "New: the printed legendary crown. Switch it on to add it.",
   twoColor: "New: the printed two-colour frame. Switch it on to add it.",
+  // The collector line's hint names the stamp too where the frame draws
+  // one (collector-panel.tsx picks COLLECTOR_ONLY_HINT otherwise).
   collector: "New: add a collector line and holofoil stamp",
+  stamp: "New: the printed holofoil stamp. Switch it on to add it.",
 };
+
+/** The collector line's hint on a frame that draws no stamp (a token, an
+ *  emblem): honest about what the switch adds. */
+export const COLLECTOR_ONLY_HINT = "New: add a collector line";
 
 const ANATOMY_COPY: Record<SwitchKey, { label: string; help: string }> = {
   crown: {
@@ -69,14 +76,19 @@ const ANATOMY_COPY: Record<SwitchKey, { label: string; help: string }> = {
     label: "Foil printing (★)",
     help: "Prints the ★ between the set code and the language, as a foil-only printing does. Free for every plan, no sheen.",
   },
+  stamp: {
+    label: "Holofoil stamp",
+    help: "The silver oval printed in the bottom border of rares and mythics since 2014. Our own neutral oval, no symbol.",
+  },
 };
 
 /** Shown under the two-colour switch when the card's cost asks for the
  *  hybrid dress on a frame that has none (m15artifact: no hybrid P/T plate
- *  yet, TODO 4.6b) — the render falls back to the gold-split pair master
- *  (lib/cards/anatomy.ts resolveTwoColor), and the owner should know why. */
+ *  yet, TODO 4.6b; the snow frames: no hybrid snow print exists, 4.6f wave
+ *  2c) — the render falls back to the split pair master (lib/cards/anatomy.ts
+ *  resolveTwoColor), and the owner should know why. */
 export const HYBRID_FALLBACK_NOTE =
-  "This frame has no hybrid version yet, so an all-hybrid cost gets the gold two-colour frame.";
+  "This frame has no hybrid version yet, so an all-hybrid cost gets its split two-colour frame.";
 
 const PAIR_COLORS = ["white", "blue", "black", "red", "green"] as const;
 type PairColor = (typeof PAIR_COLORS)[number];

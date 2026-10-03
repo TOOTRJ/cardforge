@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
 import { COLLECTOR_SWITCH_VALUES } from "@/lib/cards/collector-line";
+import { HOLO_STAMP_SWITCH_VALUES } from "@/lib/cards/holo-stamp";
 import {
   CARD_LANG_VALUES,
   COLLECTOR_NUMBER_MAX,
@@ -280,6 +281,10 @@ const frameStyleBaseSchema = z
     // from before the line); the foil-printing ★ is `true` or absent.
     collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
     star: z.literal(true).optional(),
+    // The holofoil stamp's switch (TODO 4.9c, lib/cards/holo-stamp.ts):
+    // "auto" (rares and mythics), "oval" / "triangle" (always), "none", or
+    // absent (a card from before the stamp).
+    stamp: z.enum(HOLO_STAMP_SWITCH_VALUES).optional(),
     // The transform icon family (TODO 5.0a, lib/cards/dfc.ts): one of the
     // five families or absent. The save drops it on any template that is
     // not a transform front body (normalizeAnatomy) — none exists until
@@ -311,6 +316,8 @@ export const frameAnatomyPatchSchema = z
     // absent).
     collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
     star: z.boolean().optional(),
+    // The holofoil stamp (TODO 4.9c): "auto", "oval", "triangle" or "none".
+    stamp: z.enum(HOLO_STAMP_SWITCH_VALUES).optional(),
     // The transform icon family (TODO 5.0a): a family only — there is no
     // "off" (a transform card always wears one); the save drops it off any
     // template that is not a transform front body.
