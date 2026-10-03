@@ -421,9 +421,14 @@ Rules and gotchas:
   CC's notch with its hologram region cut clear (`m15holostamp/*`,
   `m15pwholostamp/*`: bucket only, `HOLO_STAMP_NOTCHES`), declared as the
   `holoStamp` overlay on the seven wave-1 entries (`lib/cards/holo-stamp.ts`,
-  `resolveHoloStamp`); never on a token or an emblem, never on a pair master
-  in wave 1, the FRONT face only; its arch is a glyph-level rules keep-out
-  (`DrawnStats.stamp`) — the rules rect never shrinks.
+  `resolveHoloStamp`); never on a token or an emblem, the FRONT face only;
+  a card drawn as its PAIR master takes the pair's notch
+  (`m15holostamp/<pair>`: the same arch with its rim tinted PER COLUMN to
+  the pair master's bar across the 40→60 %W pinline ramp — one piece per
+  pair for the split, hybrid, artifact and land masters, whose bar under it
+  is the same pixels; the importer refuses a drift); its arch is a
+  glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
+  shrinks.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

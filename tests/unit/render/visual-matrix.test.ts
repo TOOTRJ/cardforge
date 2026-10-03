@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
-import { PAIR_TEMPLATES, STAMP_ARCH_RULES, STAMP_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
+import { PAIR_TEMPLATES, STAMP_ARCH_RULES, STAMP_PAIR_TEMPLATES, STAMP_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 
@@ -63,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|pair|token))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -166,16 +166,40 @@ describe("visual-regression matrix", () => {
       const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
       expect(["auto", "oval"], c.id).toContain(style.stamp);
       expect(style.collector, c.id).toBeUndefined();
-      expect(style.crown, c.id).toBeUndefined();
+      // The crown rides only on the crowned pair case (the split crown and
+      // the pair notch on one card).
+      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") ? true : undefined);
     }
+    // The pair notch (the 4.9c follow-up): a rare on auto drawn as its pair
+    // master on every template with BOTH pairs and the notch — and on no
+    // other (a template that gains pairs with the notch declared joins
+    // STAMP_PAIR_TEMPLATES by this check); the hybrid dress, the crowned
+    // pair, the HD size and the foil pair on m15.
+    expect([...STAMP_PAIR_TEMPLATES].sort()).toEqual(
+      FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp && frameAnatomyOf(t).twoColor.length > 0).sort(),
+    );
+    const pairStamped = stamped.filter((c) => (c.row.frame_style as { twoColor?: boolean }).twoColor === true);
+    expect([...new Set(pairStamped.map((c) => c.template))].sort()).toEqual([...STAMP_PAIR_TEMPLATES].sort());
+    for (const template of STAMP_PAIR_TEMPLATES) {
+      const auto = pairStamped.find((c) => c.template === template && c.id.endsWith("@stamp-pair-split"));
+      expect(auto, template).toBeDefined();
+      expect(auto!.row).toMatchObject({ rarity: "rare", frame_style: { stamp: "auto", twoColor: true } });
+      expect(auto!.colour).toBe("wu");
+    }
+    for (const c of pairStamped) expect(c.colour, c.id).toBe("wu");
     const byId = new Map(cases.map((c) => [c.id, c]));
+    expect(byId.get("m15/wu/creature-short@stamp-pair-hybrid")?.row.cost).toBe("{W/U}{W/U}");
+    expect(byId.get("m15/wu/creature-long@stamp-pair-crown")?.row).toMatchObject({ rarity: "mythic", frame_style: { crown: true, twoColor: true, stamp: "auto" } });
+    expect(byId.get("m15/wu/creature-long@stamp-pair-hd")?.preset).toBe("hd");
+    expect(byId.get("m15/wu/creature-short@stamp-pair-foil")?.finish).toBe("foil");
     expect(byId.get("m15/w/creature-short@stamp-always")?.row).toMatchObject({ rarity: "common", frame_style: { stamp: "oval" } });
     expect(byId.get("m15/b/creature-long@stamp-arch")?.row.rules_text).toBe(STAMP_ARCH_RULES);
     expect(byId.get("m15/g/creature-long@stamp-hd")?.preset).toBe("hd");
     expect(byId.get("m15/r/creature-short@stamp-foil")?.finish).toBe("foil");
     expect(byId.get("m15/u/creature-long@stamp-etched")?.finish).toBe("etched");
     expect(byId.get("m15/u/creature-short@stamp-square")?.corners).toBe("square");
-    expect((byId.get("m15/wu/creature-short@stamp-pair")?.row.frame_style as { twoColor?: boolean }).twoColor).toBe(true);
+    // Wave 1's "@stamp-pair" pin (nothing drawn on a pair) is retired.
+    expect(byId.has("m15/wu/creature-short@stamp-pair")).toBe(false);
     expect(byId.get("m15token/g/token-short@stamp-token")?.row.card_type).toBe("token");
     expect(byId.get("m15pw/u/planeswalker-short@stamp")?.row.card_type).toBe("planeswalker");
     // Every stored card's case names no stamp key.
@@ -192,7 +216,7 @@ describe("visual-regression matrix", () => {
 
   it("switches the legendary crown on only in its crown cases, on each template that draws it (TODO 4.6a)", () => {
     const crowned = cases.filter((c) => (c.row.frame_style as { crown?: boolean }).crown === true);
-    expect(crowned.map((c) => c.id)).toEqual(cases.filter((c) => /@(pair(-hybrid)?-)?crown/.test(c.id)).map((c) => c.id));
+    expect(crowned.map((c) => c.id)).toEqual(cases.filter((c) => /@(stamp-)?(pair(-hybrid)?-)?crown/.test(c.id)).map((c) => c.id));
     expect([...new Set(crowned.map((c) => c.template))].sort()).toEqual(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown).sort(),
     );

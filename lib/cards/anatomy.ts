@@ -504,9 +504,11 @@ export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & { rarity?: string 
  * "m" for a pair drawn gold; the holofoil stamp's notch (4.9c) when the
  * card's switch wants a stamp (holoStampWanted: "auto" on a rare or mythic,
  * never a token or emblem), keyed the same way — a card drawn as its pair
- * master asks for the pair's notch, which no slot publishes yet. Every key
- * is remapped by the slot's keyMap, and a key the slot doesn't publish
- * draws nothing: never a stand-in.
+ * master, in either dress, asks for the pair's notch (M15_HOLO_STAMP
+ * publishes the ten pairs since the 4.9c follow-up; one piece per pair
+ * serves the split and the hybrid master, whose bar under the notch is the
+ * same pixels). Every key is remapped by the slot's keyMap, and a key the
+ * slot doesn't publish draws nothing: never a stand-in.
  */
 export function resolveFrameOverlays(
   profile: AnatomyProfile,
@@ -563,9 +565,9 @@ export type ResolvedHoloStamp = {
  * The stamp a card face draws on `profile`, or null: the switch wants one
  * for this card (holoStampWanted) AND the profile's `holoStamp` notch is
  * drawn for the master the card paints (resolveFrameOverlays: the colour's
- * notch; none for a pair master in wave 1). The oval is never drawn without
- * its notch — the straight box edge would run through it — so a face with a
- * stamp switch on a frame without the notch, or on its pair master, shows
+ * notch, or the pair's for a card drawn as its pair master). The oval is
+ * never drawn without its notch — the straight box edge would run through
+ * it — so a face with a stamp switch on a frame without the notch shows
  * nothing, and the creator says why.
  */
 export function resolveHoloStamp(

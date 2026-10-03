@@ -115,8 +115,9 @@ describe("bake path = preview path", () => {
         for (const to of Object.values(slot.keyMap ?? {})) expect(slot.keys, `${template} ${slot.anatomy} keyMap → ${to}`).toContain(to);
       }
     }
-    // Not vacuous: 9 keys × the six M15-family entries + the walker's 7.
-    expect(notches).toBe(9 * 6 + 7);
+    // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the six
+    // M15-family entries + the walker's 7.
+    expect(notches).toBe((9 + 10) * 6 + 7);
     // A master outside the list still reads as "c" (no stored card has one);
     // an overlay that isn't there is nothing — never the "c" band.
     const colourless = getFrameDataUrl("tarkirdragon", "c");

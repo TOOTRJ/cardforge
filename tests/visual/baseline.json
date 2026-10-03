@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "587b9dd5d22380fa"
+    "manifest": "2c1a41fc6ffda771"
   },
   "cases": {
     "adventure/b/adventure-long": "62fb854bb9fd30f8:42614af9",
@@ -442,11 +442,15 @@
     "m15/wu/creature-long@pair-etched": "8ace1a4f78f2971b:51f574df",
     "m15/wu/creature-long@pair-hd": "2b008ad4d4978360:171951e0",
     "m15/wu/creature-long@pair-hybrid-crown": "b8005997c293b640:67dfb867",
+    "m15/wu/creature-long@stamp-pair-crown": "f847c7faf9612a87:642614e3",
+    "m15/wu/creature-long@stamp-pair-hd": "25c2daf8d4a4e462:9b333a6f",
     "m15/wu/creature-short": "84e6b5c6f6bc3ed3:64063ecc",
     "m15/wu/creature-short@pair": "36c65beb2971b418:6ed96a18",
     "m15/wu/creature-short@pair-foil": "79e2eb88f8618709:3cd206ec",
     "m15/wu/creature-short@pair-hybrid": "b036767480af86c0:c19c5e90",
-    "m15/wu/creature-short@stamp-pair": "dcf3af2248c834b5:fbd6a7c1",
+    "m15/wu/creature-short@stamp-pair-foil": "6588b7192c13001c:8c65a958",
+    "m15/wu/creature-short@stamp-pair-hybrid": "d2ae4b95f1cc0d67:134cf00e",
+    "m15/wu/creature-short@stamp-pair-split": "35b3ef50a086f200:3cbca739",
     "m15/wub/creature-long": "8fdf11d9d1b9bdc7:6421aa8e",
     "m15/wub/creature-long@crown": "8f9ea55c7fd297d7:7647dda5",
     "m15/wub/creature-short": "4275c9341809ea38:8fa21454",
@@ -476,6 +480,7 @@
     "m15artifact/wu/creature-long@pair-crown": "4cc235decdb29f2e:cc095c21",
     "m15artifact/wu/creature-short": "8c4c0d3e917238d1:b2af3822",
     "m15artifact/wu/creature-short@pair": "af68919f9280b79e:66cd2bf2",
+    "m15artifact/wu/creature-short@stamp-pair-split": "ed520ec66028e929:fe1dff63",
     "m15artifact/wub/creature-long": "a08e8f79f53b6656:1a8b0cbb",
     "m15artifact/wub/creature-short": "9bd752e565a49664:9969764a",
     "m15borderless/b/creature-edge": "372b002074765d76:53463dbd",
@@ -655,6 +660,7 @@
     "m15land/wu/land-long@pair-crown": "9a3f19255df65d13:5ef27392",
     "m15land/wu/land-short": "739045589380a13d:5546f3a9",
     "m15land/wu/land-short@pair": "22059b4daa119e14:3ec10842",
+    "m15land/wu/land-short@stamp-pair-split": "3e115fbc54d8f412:cc2ca17a",
     "m15land/wub/land-long": "5820a1b544668214:032f53b1",
     "m15land/wub/land-long@crown": "2bf00d6ab2f208c3:0c236b9a",
     "m15land/wub/land-short": "739045589380a13d:3dcaf10b",
