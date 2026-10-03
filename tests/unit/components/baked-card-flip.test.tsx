@@ -45,7 +45,9 @@ async function click(el: Element) {
 function tile(back: string | null) {
   const previewData = { title: "Village Elder", frameStyle: { template: "m15dfcfront" } } as CardPreviewData;
   const { container } = render(
-    <a href="/card/kesh/village-elder">
+    // A plain anchor stands in for the tile's <Link> (the same DOM: the
+    // button's click must not follow it).
+    <a href="https://pipglyph.com/card/kesh/village-elder">
       <BakedCardThumbnail
         renderedImageUrl={`${RENDERS}/probe.png?v=1`}
         renderedThumbUrl={`${RENDERS}/probe.thumb.webp?v=1`}
