@@ -11,7 +11,7 @@ import {
   isArtifactFrameType,
 } from "@/components/cards/frame-layer";
 import { frameGateError } from "@/lib/cards/frame-availability";
-import { FRAME_COLOR_KEYS, FRAME_MASTER_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
+import { FRAME_COLOR_KEYS, FRAME_MASTER_KEYS, LEGENDARY_MASTER_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
 
@@ -84,7 +84,7 @@ describe("frameMasterKey — the one master rule", () => {
     // back to "c"), and the browser has no PNG fallback.
     // (The two-colour pair masters join the list for TODO 4.6b's
     // twoColorMasters — never as type dresses.)
-    expect([...FRAME_MASTER_KEYS]).toEqual([...FRAME_COLOR_KEYS, "a", ...TWO_COLOR_MASTER_KEYS]);
+    expect([...FRAME_MASTER_KEYS]).toEqual([...FRAME_COLOR_KEYS, "a", ...TWO_COLOR_MASTER_KEYS, ...LEGENDARY_MASTER_KEYS]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       for (const master of Object.values(getFrameProfile(t).artifactMasterKeys ?? {})) {
         expect(FRAME_MASTER_KEYS, `${t}/${master}`).toContain(master);

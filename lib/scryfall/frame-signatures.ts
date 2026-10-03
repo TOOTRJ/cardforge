@@ -867,18 +867,21 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // The STANDARD crown: a showcase printing (LTR ring, TDM draconic, BLB
   // woodland …) carries Scryfall's `legendary` effect but prints no standard
   // crown, and imports with the crown off (crownSwitchFromPrinting) — no gap.
-  // m15, m15artifact and m15land draw it (TODO 4.6a); every other frame's
-  // crown — snow, devoid, borderless, extended art, adventure, saga — is 4.6f.
+  // m15, m15artifact and m15land draw it (TODO 4.6a), m15borderless and
+  // m15borderlessartifact the floating crown (4.6f, wave 2a); every other
+  // frame's crown — snow, devoid, extended art, adventure, saga, the
+  // borderless land — is still 4.6f's.
   crown: {
     match: { effectsAny: ["legendary"], effectsNone: ["showcase"] },
     reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     blockedBy: "4.6f",
   },
   // 4.6b draws the pairs on m15 (split + hybrid), m15artifact and m15land
-  // (split): there these gaps drop. What is left is wave 2 (4.6f: snow,
-  // devoid, borderless, extended art, sagas / adventures) — and the tails
-  // it names (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003
-  // frame).
+  // (split), 4.6f (wave 2a) on m15borderless (split + hybrid) and
+  // m15borderlessartifact (split): there these gaps drop. What is left is
+  // the rest of wave 2 (4.6f: snow, devoid, extended art, sagas /
+  // adventures, the borderless land's pairs 4.56) — and the tails it names
+  // (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003 frame).
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",

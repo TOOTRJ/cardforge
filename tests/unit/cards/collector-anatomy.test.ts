@@ -76,7 +76,9 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     expect(newCardFrameStyle({ template: "m15token", finish: "regular" }, "token")).toEqual({ template: "m15token", finish: "regular", collector: "2023" });
     expect(newCardFrameStyle({ template: "m15", collector: "2015", star: true }, "creature")).toMatchObject({ collector: "2015", star: true });
     expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toMatchObject({ collector: "off" });
-    expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless" });
+    // No slot on m15borderless: no collector key (it starts with the crown
+    // and pair switches it draws, 4.6f wave 2a).
+    expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true });
     // The creator's all-on switches on a frame with the slot but no crown.
     expect(newCardFrameStyle({ template: "m15snow", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15snow", collector: "2023" });
   });

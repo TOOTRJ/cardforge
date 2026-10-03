@@ -21,15 +21,18 @@ test.describe("admin frame requests", () => {
     ).toBeVisible();
 
     const missing = page.getByRole("table", { name: "Missing frames" });
-    const sheoldred = missing.locator('tr[data-signature="borderless/standard+crown"]');
-    await expect(sheoldred).toContainText("Borderless frame");
-    await expect(sheoldred).toContainText("window-cropped");
-    await expect(sheoldred.getByRole("link", { name: /DMU #435/ })).toHaveAttribute(
+    // Zilortha IKO #275: borderless with the nickname line (4.11). Sheoldred
+    // DMU #435 sat here until Borderless drew its crown (4.6f, wave 2a):
+    // it imports exact now, so the seed moved to a gap no frame draws.
+    const zilortha = missing.locator('tr[data-signature="borderless/standard+nickname"]');
+    await expect(zilortha).toContainText("Borderless frame");
+    await expect(zilortha).toContainText("window-cropped");
+    await expect(zilortha.getByRole("link", { name: /IKO #275/ })).toHaveAttribute(
       "href",
-      "https://scryfall.com/card/dmu/435",
+      "https://scryfall.com/card/iko/275",
     );
     // Distinct users first (D4): the Japan showcase (2 users, 2 requests)
-    // outranks Sheoldred (no users, 4 requests).
+    // outranks Zilortha (no users, 4 requests).
     await expect(missing.locator("tbody tr").first()).toHaveAttribute("data-signature", "japan-showcase");
     // A key no registry rule has is flagged (D6).
     await expect(

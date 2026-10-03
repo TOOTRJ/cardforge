@@ -194,6 +194,33 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15fullartland: ALL_BORDER,
 };
 
+/**
+ * The edges of a template's CROWNED twins where they differ from its plain
+ * masters' (TODO 4.6f, FrameProfile.crownMasters: `<key>-legendary.png`):
+ * the borderless floating crown's peak — its outline from 1.72 %H, the
+ * crown from 1.91 %H (rows 36–41 at HD) — reaches into the top band's 2 %
+ * between 46.0 and 54.0 %W, as the print's crown does (FDN #294 / #309 /
+ * #324: the peak at 1.4–1.9 %H @1040, on the art); everywhere else the
+ * twin's edges are the plain master's. Declared as printed, like
+ * EDGE_CONTRACTS; read through edgeContractFor.
+ */
+export const CROWNED_EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
+  m15borderless: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+  m15borderlessartifact: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+};
+
+/** The suffix of a crowned twin's key (lib/cards/frame-reference-registry.ts
+ *  LEGENDARY_MASTER_SUFFIX; repeated here because this module imports only
+ *  the card corner — a unit test holds the two together). */
+const LEGENDARY_SUFFIX = "-legendary";
+
+/** The contract master `key` of `template` is held to: the crowned twins'
+ *  own where they differ (CROWNED_EDGE_CONTRACTS), else the template's. */
+export function edgeContractFor(template: string, key: string): EdgeContract | undefined {
+  if (key.endsWith(LEGENDARY_SUFFIX) && CROWNED_EDGE_CONTRACTS[template]) return CROWNED_EDGE_CONTRACTS[template];
+  return EDGE_CONTRACTS[template];
+}
+
 /** Templates × colour masters that fail their contract today, with why.
  *  The test asserts they STILL fail (it.fails), so fixing one flips the
  *  test red until it is struck from this list. Every entry's `why` carries

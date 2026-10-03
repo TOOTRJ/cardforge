@@ -47,11 +47,13 @@ select
   v.scryfall_id::uuid, v.status, v.cause, v.template, v.art_flag, v.source, v.created_at
 from (values
   -- Missing frames ----------------------------------------------------------
-  -- Sheoldred, the Apocalypse DMU #435: borderless with the legendary crown (4.6)
-  ('fa000000-0000-4000-a000-000000000001', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '2 days'),
-  ('fa000000-0000-4000-a000-000000000002', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', null, 'import', now() - interval '6 days'),
-  ('fa000000-0000-4000-a000-000000000003', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', 'window-cropped', 'deck_prefill', now() - interval '45 days'),
-  ('fa000000-0000-4000-a000-00000000000c', null, 'borderless/standard+crown', 'Borderless frame', 'dmu', '435', '8df6603a-38c1-4d18-8b84-6211e9a7cc09', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '1 day'),
+  -- Zilortha, Strength Incarnate IKO #275: borderless with the nickname line
+  -- (4.11). (Sheoldred DMU #435 sat here until Borderless drew its crown,
+  -- 4.6f: it imports exact now.)
+  ('fa000000-0000-4000-a000-000000000001', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '2 days'),
+  ('fa000000-0000-4000-a000-000000000002', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', null, 'import', now() - interval '6 days'),
+  ('fa000000-0000-4000-a000-000000000003', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'deck_prefill', now() - interval '45 days'),
+  ('fa000000-0000-4000-a000-00000000000c', null, 'borderless/standard+nickname', 'Borderless frame', 'iko', '275', '9a0639a0-c898-4a07-975c-a02bdd53175b', 'nearest', 'missing', 'm15', 'window-cropped', 'import', now() - interval '1 day'),
   -- Oko, Thief of Crowns ELD #271: borderless planeswalker (4.33) in two
   -- colours, whose split frame is 4.6's
   ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),

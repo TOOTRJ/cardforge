@@ -26,7 +26,7 @@ import {
   getFrameOverlayDataUrl,
   plateAssetPath as bakePlatePath,
 } from "@/lib/render/card-frames";
-import { FRAME_COLOR_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
+import { FRAME_COLOR_KEYS, LEGENDARY_MASTER_KEYS, TWO_COLOR_MASTER_KEYS, legendaryMasterKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile, resolveColorAsset } from "@/lib/cards/template-layout";
 import { plateKeyFor, type TwoColorLook } from "@/lib/cards/anatomy";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -40,6 +40,8 @@ function masterKeysOf(template: string): string[] {
       if (dress === "hybrid" ? key.endsWith("-h") : !key.endsWith("-h")) keys.add(key);
     }
   }
+  // The crowned twins (4.6f): every master the profile paints, `-legendary`.
+  if (profile.crownMasters) for (const key of [...keys]) keys.add(legendaryMasterKey(key));
   return [...keys];
 }
 
@@ -56,16 +58,21 @@ function plateKeysOf(template: string): string[] {
 }
 
 describe("bake path = preview path", () => {
-  it("every frame master a profile can paint, pair masters included", () => {
+  it("every frame master a profile can paint, pair masters and crowned twins included", () => {
     let pairKeys = 0;
+    let crownedKeys = 0;
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const key of masterKeysOf(template)) {
         expect(bakeFramePath(template, key), `${template}/${key}`).toBe(previewFramePath(template, key));
         if ((TWO_COLOR_MASTER_KEYS as readonly string[]).includes(key)) pairKeys += 1;
+        if ((LEGENDARY_MASTER_KEYS as readonly string[]).includes(key)) crownedKeys += 1;
       }
     }
-    // Not vacuous: m15's 20, m15artifact's and m15land's 10 each.
-    expect(pairKeys).toBe(40);
+    // Not vacuous: m15's 20, m15artifact's and m15land's 10 each, the
+    // borderless frames' 10 and 20 (4.6f); the crowned twins of every
+    // borderless master (7 + 20 and 7 + 10).
+    expect(pairKeys).toBe(70);
+    expect(crownedKeys).toBe(44);
   });
 
   it("every stat plate a profile can paint (a hybrid pair's grey 'c' included)", () => {
@@ -86,10 +93,12 @@ describe("bake path = preview path", () => {
   });
 
   it("every overlay key a slot publishes resolves to its own path, and the bake's loader never swaps in another", () => {
+    // The crown bands: m15crown (4.6a) and the extended-art band (4.6f).
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const slot of getFrameProfile(template).overlays ?? []) {
+        const folder = template === "extendedart" ? "extendedcrown" : "m15crown";
         for (const key of slot.keys) {
-          expect(slot.assetPathTemplate.replace("{key}", key)).toBe(`/frames/m15crown/${key}.png`);
+          expect(slot.assetPathTemplate.replace("{key}", key)).toBe(`/frames/${folder}/${key}.png`);
         }
       }
     }

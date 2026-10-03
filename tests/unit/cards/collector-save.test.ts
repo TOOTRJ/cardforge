@@ -146,7 +146,8 @@ describe("createCardAction — the new-card default", () => {
     const stub = db();
     const result = await createCardAction(payload({ frame_style: { template: "m15borderless", finish: "regular", collector: "2015", star: true } }));
     expect(result.ok).toBe(true);
-    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15borderless", finish: "regular" });
+    // (m15borderless keeps the crown and pair switches it draws, 4.6f.)
+    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15borderless", finish: "regular", crown: true, twoColor: true });
   });
 
   it("keeps an explicit style, the owner's off and an import's ★", async () => {

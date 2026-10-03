@@ -135,7 +135,9 @@ into `.frames-build/` — 28 templates today (`CC_TEMPLATES` in
   m15tokenartifact;
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
-  plates;
+  plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
+  the crowned twin of every master (CC's floating crown, `<key>-legendary`;
+  [The borderless crown and pair pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a));
 - the borderless nonbasic land (4.34): m15borderlessland, a composite of
   the same pack's pixels (below), on m15borderless's plates;
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
@@ -311,6 +313,12 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   untilted 45→55 %W ramp). The importer fails a band with alpha below row
   409, a peak off row 42 ± 2 or more than a shadow (α ≤ 127) over the art.
   Build it with `node scripts/import-cc-frames.mjs --only m15crown`.
+  `extendedcrown` (4.6f, wave 2b) is the extended-art frame's FLOATING
+  crown — CC's black cover strip, the crown, the outline on top — composited
+  1:1 at 1500×2100 and cropped to rows 0–259, one band per colour key: a
+  generic band (`layers` / `findings`; [The extended-art
+  crown](#the-extended-art-crown-46f-wave-2b)), built with
+  `--only extendedcrown`.
 
 The M15 family shipped in 4.4 (#380): published, git copies deleted,
 profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
@@ -1215,7 +1223,9 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
 
 Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
 into `.frames-build`, publish to the dev bucket, declare it on the
-`PROFILES` entry, update the pinned sets in `tests/unit/cards/anatomy.test.ts`,
+`PROFILES` entry (`overlays` for a crown band, `crownMasters` for a crown
+baked into `-legendary` twins, `twoColorMasters` for the pairs), update the
+pinned sets in `tests/unit/cards/anatomy.test.ts`,
 add its cases to the visual matrix (`tests/visual/matrix.ts`: new cases, no
 bump), sign it off on a print sheet in the PR, promote, merge, and post the
 site update ([Announcing a change](#announcing-a-change)). No bump, no sweep:
@@ -1224,8 +1234,12 @@ default.
 
 **The legendary crown (4.6a)** is `M15_CROWN` in
 `lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
-only (never snow, devoid, borderless, extended art, adventure, saga, the
-tokens or a showcase: 4.6f and the token items). It draws when the switch is
+only (never snow, devoid, adventure, saga, the tokens or a showcase: 4.6f
+and the token items; the borderless frames draw CC's FLOATING crown from
+crowned twin masters and the extended-art frame the same crown as its own
+band, `EXTENDED_CROWN` — [The borderless crown and pair
+pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a), [The
+extended-art crown](#the-extended-art-crown-46f-wave-2b)). It draws when the switch is
 `true`, the supertype has the word Legendary and the card is not a
 planeswalker, token, battle or emblem (`qualifiesForCrown`). Its key is the
 pinline of the master actually drawn (`resolveFrameOverlays`): the colour,
@@ -1295,9 +1309,11 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
   (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
-  devoid, borderless, extended art — keeps the `two-colour` gaps, now
-  pointing at 4.6f; an M20 token's gaps point at 4.48 (its own central rim
-  split and pill crown).
+  devoid, extended art (its crown band draws no pairs: wave 2b), the
+  borderless land — keeps the `two-colour` gaps,
+  now pointing at 4.6f (the borderless frames draw theirs since wave 2a,
+  below); an M20 token's gaps point at 4.48 (its own central rim split and
+  pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
   the second's across 45→55 %W, the same `pair-ramp.mjs`), on every dress and
@@ -1316,6 +1332,148 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   (2026-09-30), with FDN's UNCROWNED gold prints as the references for the
   W|B, B|G and R|G split crowns (FDN #120 / #125 / #117: FDN printed no
   crowned card in those pairs).
+
+#### The borderless crown and pair pinline (4.6f, wave 2a)
+
+m15borderless and m15borderlessartifact draw both pieces from their own
+masters, through the same switches, hints, import rule and registry gaps
+as the band frames (`frameAnatomyOf` reads `crownMasters` as "draws the
+crown"). Opt-in per card: no stored card changes (every visible production
+card on the two frames bakes byte-identical with the switches absent).
+
+- **The crown is a crowned twin, not a band** (`FrameProfile.crownMasters`,
+  `lib/cards/master-key.ts`): beside every master the frame paints —
+  `w u b r g c m`, the pairs, m15borderless's hybrid pairs — the bucket
+  holds `<key>-legendary.png` (`LEGENDARY_MASTER_KEYS`), and a Legendary
+  card with `crown: true` paints that twin (`frameMasterKey` →
+  `crownedMasterKey`; `crownKeyFor` names its key). Why: the print's crown
+  is Card Conjurer's FLOATING crown (its packM15LegendCrownsFloating.js pack,
+  `autoBorderlessFrame`), drawn after CC ERASES the strip 3.94/2.77/92.14×
+  1.77 % of the frame — rows 58–94 at HD, where the master's title-bar ring
+  (its black outer line, rows 85–88, and the α 255 pinline ring under it, in
+  the frame's own colour: white on the white master) would show above the
+  crown's inner edge and in its end notches — 843 px of it, drawn without
+  the erase — then the outline (1416×223 at
+  2.8/1.72/94.4×10.62 %) UNDER the crown (1408×215 at 3.07/1.91/93.87×
+  10.24 %), all 1500-native, 1:1. An overlay can only add pixels, so the
+  importer (`borderlessMasters` / `borderlessCrownLayers`, a layer `at` CC's
+  bounds and an `erase` layer) bakes the twins; the plain masters rebuild
+  byte-identical. The crown letter is the master's: the colour, M on gold,
+  C on m15borderless's see-through frame, A on the artifact dress (its
+  colourless master IS CC's artifact frame; CC's crown letter for an
+  Artifact type line). What is keyed by the master a card paints — ink
+  maps, a see-through master's under-frame art — reads the plain key
+  (`baseMasterKey`): the crown changes nothing below the title bar. (Neither
+  profile declares an ink map or `underFrameArt` today — the art slot is the
+  whole card — so a unit test holds the rule on slots that have them. The
+  square-corner table is asked with the key as painted and names no key of
+  these frames: a crowned frame that gets a keyed entry there must read the
+  plain key too.) The twins' edges are the plain masters' but for the
+  crown's peak, which reaches into the top band's 2 % between 46 and 54 %W
+  as the prints' does (`CROWNED_EDGE_CONTRACTS`, `edgeContractFor`).
+- **The pairs split only the pinline** (`twoColorMasters`: both dresses on
+  m15borderless, the split on the artifact dress): the gold M frame with
+  the two colours' frames lerped across the pinline ramp (40→60 %W, m15's)
+  through the pack's own Pinline mask — the prints' look on the title and
+  type rings (FRA #376 / #377, HOB #213, TLA #306, BLC #86, MH2 #321, FRA
+  #461, FDN #343–351; the uncrowned FDN #344 / #345 measure 42.0–43.4 /
+  50.2–51.2 / 58.4–59.0 at 10 / 50 / 90 %). A HYBRID cost prints the same
+  split over CC's grey 'Land Frame' bars (2X2 #374 / #385, SPG #142 / #144,
+  ECL #292–296: `cardFrameProperties`'s `typeTitle` L), so m15borderless
+  builds `<pair>-h` on the L frame with the grey plate (`plateKeyFor`'s `c`
+  = the pack's listed colourless plate, pt/l.png; CC's auto frame names the
+  unlisted pt/c.png for its `pt` C — the same grey tone, medians within 3
+  levels); a hybrid artifact falls back to the split, like m15artifact.
+  m15borderlessartifact's `m` tick (verified 2026-09-28) has two-colour
+  references: the switch now gives them their split. Under the pinline the
+  split dress first takes CC's Rules and Type regions (the regular M15
+  masks CC's own stack lists for those layers) from the two colour frames,
+  in place of the gold frame's (`replace`): CC's gold M frame draws its
+  type-bar and box rings one row higher than the colour frames, so with the
+  M frame kept whole the split masters (and their twins) kept a 1 px gold
+  line above the text box's top and bottom pinline (rows 1302 and 1936 at
+  HD) that no print has (FDN #344 / #345 go black straight into the
+  pinline; the hybrid masters, on the L frame, never had it — found by the
+  skeptic on 2026-10-02 and re-cut in #449's review follow-up: the 20 split
+  masters per dress differ from the first build in rows 1181–1936 only, the
+  other 124 objects byte-identical). `legendary-masters.test.ts` holds the
+  two rows to the colour frames' pixels.
+- **The pair's crown** is the two floating crowns lerped across
+  `PAIR_RAMPS.crownFloating` = 40→60 %W — wider than the standard band's
+  45→55: FDN's seven crowned borderless pairs (#343 B|R, #346 W|B, #347 G|U,
+  #348 W|U, #349 B|G, #350 U|R, #351 G|U), each pixel de-shaded against the
+  set's crowned monos (#294 / #309 / #324 / #330 / #336) inside the crown's
+  own alpha, fit an untilted ramp at 41.6 / 50.0 / 58.4 %W on the crown's
+  top band (1.9–4.2 %H) and 41.6 / 50.2 / 58.8 on its wrap under the bar
+  (9.6–11.9 %H). The same fit on the standard crown (FDN #122 against #2 /
+  #45) gives 45.0 / 49.0 / 53.0, the 4.6b figure — the two crowns really
+  split differently.
+- **References and verification:** the crown rides the colour's tick (both
+  frames are verified in all seven colours), the pairs the `m` tick (V-A);
+  `CROWN_REFERENCES` names a crowned print per colour for the compare
+  page's Legendary toggle (FDN #294 / #309 / #324 / #330 / #336, 2XM #354,
+  2X2 #336; the artifact dress LTC #505, FIN #333 / #337, DFT #308, LCI
+  #340, MH3 #372, 2XM #362). The registry's `crown`, `two-colour` and
+  `two-colour-hybrid` gaps drop on the two frames by themselves
+  (`gapDrawnBy`): DMU #435 Sheoldred and 907 of the 925 crowned
+  standard-borderless printings behind the crown gap (81 of the artifact
+  dress's 92) import `exact` on their own frame (the art still lands them on
+  the bordered twin, 1.18); the other 29 fall to their next gap and stay
+  `nearest` — a light text box (12), the Vehicle plate (9), Nyx (8).
+- **Tests:** `tests/unit/frames/legendary-masters.test.ts` (the keys, the
+  recipe, the manifest, the twins' pixels against their masters),
+  `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin
+  and the pair in the bake, the switches off byte-identical), the matrix's
+  `m15borderless*` `@crown` / `@pair` cases.
+
+#### The extended-art crown (4.6f, wave 2b)
+
+`extendedart` draws the same floating crown as the borderless frames, as an
+OVERLAY band rather than crowned twins (`EXTENDED_CROWN` on its `PROFILES`
+entry: `extendedcrown/<key>.png`, 1500 × 260, keys `w u b r g m c`),
+through the same switch, hints, import rule and registry gap. Opt-in per
+card: production holds no visible card on the frame, and the bake with the
+switch absent or off is byte-identical.
+
+- **Why a band:** CC's `autoExtendedArtFrame` (its creator-23.js, lines
+  1311–1362; `makeExtendedArtFrameByLetter` 2296–2365) draws, for a Legendary card,
+  a BLACK 'Crown Border Cover' strip (`img/black.png` at 3.94/2.77/92.14×
+  1.77 %) — drawn, not erased, where the borderless frame erases its strip
+  — then the floating crown (3.07/1.91/93.87×10.24 %) with the outline ON
+  TOP (2.8/1.72/94.4×10.62 %: pushed first, and `drawFrames` draws the
+  list reversed). Nothing is removed from the master, so an overlay can add
+  it — and the extendedart masters are MSE-built, in git: CC's pixels stay
+  in the bucket. The importer composites the three pieces 1:1 at
+  1500 × 2100 (every piece 1500-native) and crops rows 0–259
+  (`CC_OVERLAY_BANDS.extendedcrown`, the importer's generic `layers` /
+  `findings` band: the outline's peak at row 36 ± 1 on the centre column,
+  the cover strip opaque black in a crown dip, no alpha below the band).
+- **The slot sits 10 px lower than CC's bounds** (`topPct` = 10/2100): the
+  print's title bar (FDN #442 / #455) and CC's `m15/new/extended` top out
+  at 4.98 %H, our MSE master's at 5.43, so the band is registered on OUR
+  bar — the crown's peak lands at row 50 against the print's 42 at
+  1500 × 2100, the bar's top at 110 against 99. 4.7's CC-built extendedart
+  master takes the offset back to 0 (and brings the print's floating title
+  plate and the non-legendary 'Title Cutout', neither of which ours draws).
+- **Keys:** the masters' seven colour keys. No pair masters: a pair wears
+  the gold crown and the two-colour switch is not offered
+  (`frameAnatomyOf("extendedart")` is the crown alone); a colourless card
+  wears CC's grey C crown over our grey master (PUMA U1), not the artifact
+  crown.
+- **References:** `CROWN_REFERENCES.extendedart` — w FDN #442, u #455,
+  b #463, r #466, g #470, m M21 #278, c PUMA U1; the crown rides the
+  colour's tick.
+- **Registry:** the `crown` gap drops on extendedart by itself
+  (`gapDrawnBy`). Of the 1,159 crowned extended-art printings behind it,
+  740 import `exact`; the 402 two-colour ones fall to the `two-colour`
+  gaps (383, and 19 hybrid) and stay `nearest` — this frame draws them
+  gold, with the gold crown — 13 fall to the Vehicle plate, and 4 two-part
+  prints stay `nearest` for their layout.
+- **Tests:** `tests/unit/frames/extended-crown-band.test.ts` (the recipe,
+  the slot, the manifest and provenance, the built bands' pixels),
+  `tests/unit/render/extended-crown-bake.test.tsx` (real bakes: the band
+  inside the slot's rows only, 1:1 at HD, absent / off byte-identical), the
+  matrix's `extendedart` `@crown` cases.
 
 #### The collector line (4.9b)
 

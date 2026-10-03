@@ -95,8 +95,8 @@ import { blendPair } from "./lib/pair-ramp.mjs";
 // checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
 // here after the downscale and the corner cut.
 import {
-  EDGE_CONTRACTS,
   cornerViolations,
+  edgeContractFor,
   edgeContractViolations,
   isKnownEdgeFailure,
 } from "../lib/frames/edge-contract.ts";
@@ -198,11 +198,17 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const { width: W, height: H } = await sharp(baseFile).metadata();
     const images = [];
     for (const l of def.colors[key]) {
-      // A pair layer (TODO 4.6b, pairLayer): its two files blended across
-      // the region's untilted ramp (scripts/lib/pair-ramp.mjs) first.
-      let data = l.right
-        ? blendPair(await rgba(await fetchCached(l.src), W, H), await rgba(await fetchCached(l.right), W, H), W, H, l.ramp)
-        : await rgba(await fetchCached(l.src), W, H);
+      // A layer at CC's bounds (TODO 4.6f: the floating crown, its outline
+      // and the erased strip) is resized to its box and placed on a clear
+      // canvas, as CC draws an image at its bounds; a whole-canvas layer is
+      // resized to the canvas. A pair layer (TODO 4.6b, pairLayer): its two
+      // files blended across the region's untilted ramp
+      // (scripts/lib/pair-ramp.mjs) first — a placed pair on the canvas, so
+      // the ramp's % of the card's width is the card's.
+      const box = l.at ? rectPx(l.at, W, H) : null;
+      const load = async (src) =>
+        box ? placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H) : await rgba(await fetchCached(src), W, H);
+      let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
       if (l.retint) {
         // 4.34's tinted box: a neutral structure re-tinted to the flat tint
         // read from another frame (both asserted flat where they are read).
@@ -222,6 +228,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         invert: l.invert,
         opacity: l.opacity,
         replace: l.replace,
+        erase: l.erase,
         gain: l.gain,
         recolour: l.recolour,
         lumaRamp: l.lumaRamp,
@@ -260,7 +267,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       .raw()
       .toBuffer();
     roundCornersRgba8(master, OUT_W, OUT_H, CORNER_RADIUS);
-    const contract = EDGE_CONTRACTS[template];
+    // A crowned twin (4.6f) is held to its own edges where they differ.
+    const contract = edgeContractFor(template, key);
     if (!contract) {
       edgeFailures.push(`${template}/${key}: no edge contract declared (lib/frames/edge-contract.ts)`);
     } else if (!isKnownEdgeFailure(template, key)) {
@@ -362,9 +370,44 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
   const bandFailures = [];
   const m15Art = getFrameProfile("m15").artSlot;
   for (const key of def.keys) {
+    const out = path.join(outDir, folder, `${key}.png`);
+    if (def.layers) {
+      // A generic band (TODO 4.6f, wave 2b: the extended-art crown): placed
+      // layers at CC's bounds in CC's draw order over a clear canvas, then
+      // the band's own findings.
+      const layers = def.layers(key);
+      recipe[key] = layers.map(describeLayer);
+      if (dryRun) {
+        console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+        continue;
+      }
+      const images = [{ data: Buffer.alloc(W * H * 4) }];
+      for (const l of layers) {
+        const box = rectPx(l.at, W, H);
+        const load = async (src) => placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H);
+        const data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
+        images.push({ data, erase: l.erase });
+      }
+      const composite = toRgba8(compositeLayers(images, W, H));
+      const full =
+        W === OUT_W && H === OUT_H
+          ? composite
+          : await sharp(composite, { raw: { width: W, height: H, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
+      roundCornersRgba8(full, OUT_W, OUT_H, CORNER_RADIUS);
+      const findings = def.findings(full, OUT_W, OUT_H, band.rows);
+      for (const f of findings.failures) bandFailures.push(`${folder}/${key}: ${f}`);
+      const cropped = cropRows(full, OUT_W, band.rows);
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      const image = sharp(cropped, { raw: { width: OUT_W, height: band.rows, channels: 4 } });
+      await image.clone().png({ compressionLevel: 9 }).toFile(out);
+      await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
+      console.log(
+        `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${OUT_W}×${band.rows} at ${W}×${H}: last alpha row ${findings.lastAlphaRow}, outline peak row ${findings.peakRow}, cover ${findings.cover.join(",")}`,
+      );
+      continue;
+    }
     const r = crownBandRecipe(key);
     recipe[key] = describeCrownBand(r);
-    const out = path.join(outDir, folder, `${key}.png`);
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
       continue;
@@ -404,7 +447,9 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     kind: "overlay",
     output: `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
     colors: recipe,
-    sourceFiles: crownBandSourceFiles(def.keys),
+    sourceFiles: def.layers
+      ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
+      : crownBandSourceFiles(def.keys),
     notes: def.notes,
   };
 }
