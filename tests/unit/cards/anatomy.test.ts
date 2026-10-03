@@ -24,7 +24,7 @@ import {
 } from "@/lib/cards/anatomy";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
-import { getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
+import { M15_CROWN, getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 
@@ -143,8 +143,14 @@ describe("the cards the two-colour frame is for (the creator's switch; 4.6 revie
     // The same pair on a nonland card keeps the switch on m15 and m15artifact.
     expect(offersTwoColor(["black", "green"], "{B}{G}", { template: undefined, cardType: "creature" })).toBe(true);
     expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15artifact", cardType: "artifact" })).toBe(true);
-    // A frame with no pair masters offers it to nobody.
-    expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15snow", cardType: "creature" })).toBe(false);
+    // A frame with no pair masters offers it to nobody (devoid: its
+    // two-colour printings are the gold frame, owner round 20).
+    expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15devoid", cardType: "creature" })).toBe(false);
+    // The snow frames offer it since 4.6f wave 2c — a LAND only on the
+    // snow land frame.
+    expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15snow", cardType: "creature" })).toBe(true);
+    expect(offersTwoColor(["black", "green"], null, { template: "m15snowland", cardType: "land" })).toBe(true);
+    expect(offersTwoColor(["black", "green"], null, { template: "m15snow", cardType: "land" })).toBe(false);
   });
 });
 
@@ -272,13 +278,15 @@ describe("the crown", () => {
   });
 });
 
-describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f: the borderless twins and the extended-art band)", () => {
+describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f: the borderless twins, the extended-art band, the snow band and pairs)", () => {
   /** The entries that draw the crown, in FRAME_TEMPLATE_VALUES order. */
-  const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact", "extendedart"].includes(t));
+  const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
+    ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"].includes(t),
+  );
   /** …and the pair masters (extendedart draws none: a pair wears gold there). */
   const PAIRED = CROWNED.filter((t): boolean => t !== "extendedart");
 
-  it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless and extended-art PROFILES entries — never a profile that spreads them", () => {
+  it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
     expect(crowned).toEqual(CROWNED);
     // The extended-art frame draws its floating crown as a band (wave 2b)
@@ -290,9 +298,11 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     expect(paired).toEqual({
       m15: ["split", "hybrid"],
       m15land: ["split"],
+      m15snowland: ["split"],
       m15artifact: ["split"],
       m15borderless: ["split", "hybrid"],
       m15borderlessartifact: ["split"],
+      m15snow: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no overlay slot, crownMasters set.
@@ -300,19 +310,25 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       expect(getFrameProfile(t).overlays, t).toBeUndefined();
       expect(getFrameProfile(t).crownMasters, t).toBe(true);
     }
+    // The snow pair (4.6f, wave 2c) draw the STANDARD band — the slot on
+    // their entries, never on M15SNOW / M15SNOWLAND — with the colourless
+    // card's crown the artifact silver on m15snow (its c master is CC's snow
+    // artifact frame) and the land grey on m15snowland, as on m15land.
+    // (Beside the holofoil stamp's notch since 4.9c: STAMP_TEMPLATES below.)
+    expect(getFrameProfile("m15snow").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
+    expect(getFrameProfile("m15snowland").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
     // Every profile that spreads M15 / M15LAND / M15BORDERLESS draws
-    // neither: m15snowland spreads M15LAND, m15borderlessland M15BORDERLESS
-    // (its pairs are 4.56's), m15snow / m15devoid / the layouts / the
-    // showcases spread M15 (their crowns and pairs are 4.6f); planeswalkers
-    // and tokens none here.
-    // (The collector line's slot — 4.9b — is on the snow, snow-land and
-    // devoid entries; the rest draw none of the three. extendedart draws the
-    // crown alone, wave 2b: checked above.)
-    // (…and the holofoil stamp's notch, 4.9c, on the snow, snow-land and
-    // devoid entries too: STAMP_TEMPLATES below.)
-    for (const t of ["m15snow", "m15snowland", "m15devoid"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false });
-    }
+    // neither: m15borderlessland spreads M15BORDERLESS (its pairs are
+    // 4.56's), m15devoid (no crown and no pairs by the owner's round-20
+    // call: its two-colour printings ARE the gold frame) / the layouts /
+    // the showcases spread M15 (the layouts' crowns and pairs are 4.6f's);
+    // planeswalkers and tokens none here.
+    // (The collector line's slot — 4.9b — is on the devoid entry; the rest
+    // draw none of the three. extendedart draws the crown alone, wave 2b:
+    // checked above.)
+    // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
+    // STAMP_TEMPLATES below.)
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false });
     for (const t of ["m15borderlessland", "adventure", "saga", "nyx", "fullart", "expeditionland"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false });
     }
@@ -363,7 +379,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // A stored card names no switch: nothing to drop, the same object back.
     const untouched: FrameStyle = { template: "m15", finish: "regular" };
     expect(normalizeAnatomy(untouched, "m15", "creature")).toBe(untouched);
-    expect(normalizeAnatomy(untouched, "m15snow", "creature")).toBe(untouched);
+    expect(normalizeAnatomy(untouched, "m15devoid", "creature")).toBe(untouched);
     const off: FrameStyle = { template: "m15", finish: "regular", crown: false };
     expect(normalizeAnatomy(off, "m15", "creature")).toBe(off);
   });
@@ -451,8 +467,8 @@ describe("an edit's switch flip (frame_anatomy)", () => {
     ).toEqual({ ok: true, frameStyle: { template: "regular", finish: "foil", crown: true, twoColor: true }, colorIdentity: null });
     // A frame that draws neither drops both switches.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: ["red"], cardType: "creature" }, { crown: true, twoColor: true }),
-    ).toEqual({ ok: true, frameStyle: { template: "m15snow", finish: "foil" }, colorIdentity: null });
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15devoid", finish: "foil" }, colorIdentity: ["red"], cardType: "creature" }, { crown: true, twoColor: true }),
+    ).toEqual({ ok: true, frameStyle: { template: "m15devoid", finish: "foil" }, colorIdentity: null });
   });
 
   it("stores a pair only as a refinement of a multicolour card; refuses one that would re-colour it", () => {
@@ -470,8 +486,8 @@ describe("an edit's switch flip (frame_anatomy)", () => {
     ).toMatchObject({ ok: false });
     // On a frame without pair masters the switch and the pair are ignored.
     expect(
-      applyFrameAnatomyPatch({ frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"], cardType: "creature" }, { twoColor: true, pair: ["white", "blue"] }),
-    ).toEqual({ ok: true, frameStyle: { template: "m15snow" }, colorIdentity: null });
+      applyFrameAnatomyPatch({ frameStyle: { template: "m15devoid" }, colorIdentity: ["multicolor"], cardType: "creature" }, { twoColor: true, pair: ["white", "blue"] }),
+    ).toEqual({ ok: true, frameStyle: { template: "m15devoid" }, colorIdentity: null });
   });
 });
 
@@ -483,9 +499,9 @@ describe("imports follow the printing — printing-only (owner round 17, 2026-09
         "m15",
       ),
     ).toEqual({ style: { crown: true, twoColor: true }, colorIdentity: ["white", "blue"] });
-    // m15snow draws no pair: the patch's own "multicolor" stays.
+    // m15devoid draws no pair: the patch's own "multicolor" stays.
     expect(
-      importedAnatomy({ color_identity: ["multicolor"], color_pair: "wu", printed_two_color: true }, "m15snow"),
+      importedAnatomy({ color_identity: ["multicolor"], color_pair: "wu", printed_two_color: true }, "m15devoid"),
     ).toEqual({ style: { twoColor: true }, colorIdentity: ["multicolor"] });
     // A crownless Legendary printing (or a showcase) says false.
     expect(importedAnatomy({ color_identity: ["black"], printed_crown: false }, "m15")).toEqual({
@@ -584,7 +600,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15snowland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

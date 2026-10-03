@@ -1,4 +1,5 @@
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import type { CardFace } from "@/lib/cards/card-face";
 import { LEGENDARY_MASTER_SUFFIX, baseMasterKey, isLegendaryMasterKey, legendaryMasterKey } from "@/lib/cards/master-key";
 import { basicLandNameForColorKey } from "@/lib/cards/watermark";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
@@ -36,7 +37,17 @@ export type FrameReference = {
   tier?: 1 | 2;
   /** Hand-researched default (2026-07-01) rather than a script candidate. */
   curated?: true;
+  /** The printing's SECOND face is the reference (TODO 5.0b): Scryfall's
+   *  `card_faces[1]` and its `/back/` scan — the entries of a BACK body
+   *  (FrameProfile.dfc.role "back"), whose template never dresses a front.
+   *  Absent = the front. */
+  face?: 1;
 };
+
+/** The face a registry entry stands for. */
+export function referenceFace(ref: FrameReference | { face?: 1 }): CardFace {
+  return ref.face === 1 ? "back" : "front";
+}
 
 export const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
 
@@ -160,9 +171,12 @@ export function referenceTierLabel(ref: FrameReference | null | undefined): stri
 
 /** Thumbnail URL for a reference — Scryfall's CDN shards by the id's first
  *  two characters, so the URL is constructible without an API call. The CDN
- *  has no rate limits. */
-export function referenceThumbUrl(ref: FrameReference): string {
-  return `https://cards.scryfall.io/normal/front/${ref.scryfallId[0]}/${ref.scryfallId[1]}/${ref.scryfallId}.jpg`;
+ *  has no rate limits. `face` picks the printing's `/front/` or `/back/`
+ *  scan (TODO 5.0b; a back body's rows show the back): the entry's own
+ *  face by default, the template's for an admin-pinned printing
+ *  (lib/cards/dfc.ts faceUnderTest). */
+export function referenceThumbUrl(ref: FrameReference, face: CardFace = referenceFace(ref)): string {
+  return `https://cards.scryfall.io/normal/${face}/${ref.scryfallId[0]}/${ref.scryfallId[1]}/${ref.scryfallId}.jpg`;
 }
 
 /** Stable key for a (template, color) combination — used by the review

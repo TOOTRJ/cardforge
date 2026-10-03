@@ -159,6 +159,41 @@ describe("walk-through links", () => {
     expect(walkthroughHref({ template: "m15", colorKey: "w", seed: "none" })).not.toContain("seed=");
   });
 
+  it("walkthroughHref carries `face=back` only for a walk on the back face (TODO 5.0b)", () => {
+    const back = new URL(walkthroughHref({ template: "m15", colorKey: "w", face: "back" }), "https://pipglyph.test");
+    expect(Object.fromEntries(back.searchParams)).toEqual({
+      previewFrames: "all",
+      kind: "creature",
+      template: "m15",
+      color: "w",
+      seed: "reference",
+      face: "back",
+    });
+    for (const face of ["front", null, undefined] as const) {
+      expect(walkthroughHref({ template: "m15", colorKey: "w", face })).not.toContain("face=");
+    }
+  });
+
+  it("walkthroughHref carries the registry alternate on screen (`ref`), so the walk seeds from the same printing", () => {
+    const id = "a8a23e3f-57c8-4cbb-bb6c-d5fdf49a2d9c";
+    const href = new URL(walkthroughHref({ template: "extendedart", colorKey: "w", ref: id, face: "back" }), "https://pipglyph.test");
+    expect(Object.fromEntries(href.searchParams)).toEqual({
+      previewFrames: "all",
+      kind: "creature",
+      template: "extendedart",
+      color: "w",
+      seed: "reference",
+      ref: id,
+      face: "back",
+    });
+    // A checklist row names none: the link is what it always was.
+    for (const ref of [null, undefined, ""] as const) {
+      expect(walkthroughHref({ template: "extendedart", colorKey: "w", ref })).toBe(
+        "/create?previewFrames=all&kind=creature&template=extendedart&color=w&seed=reference",
+      );
+    }
+  });
+
   it("parseWalkthroughSeed only knows reference and sample", () => {
     expect(parseWalkthroughSeed("reference")).toBe("reference");
     expect(parseWalkthroughSeed("sample")).toBe("sample");
@@ -197,6 +232,7 @@ describe("walk-through links", () => {
         kind: "saga",
         seed: "reference",
         ref: "abc",
+        face: "back",
         tag: "challenge-tag",
       }),
     ).toBe("/create?tag=challenge-tag");

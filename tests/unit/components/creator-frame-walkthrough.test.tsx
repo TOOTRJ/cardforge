@@ -81,6 +81,7 @@ vi.mock("@/components/cards/card-preview", () => ({
     supertype?: string | null;
     power?: string | null;
     toughness?: string | null;
+    face?: "front" | "back";
   }) => (
     <div
       data-testid="card-preview"
@@ -90,6 +91,7 @@ vi.mock("@/components/cards/card-preview", () => ({
       data-back-title={props.backFace?.title ?? ""}
       data-supertype={props.supertype ?? ""}
       data-pt={props.power || props.toughness ? `${props.power ?? ""}/${props.toughness ?? ""}` : ""}
+      data-face={props.face ?? ""}
     />
   ),
 }));
@@ -136,8 +138,50 @@ function preview() {
     backTitle: el.dataset.backTitle,
     supertype: el.dataset.supertype,
     pt: el.dataset.pt,
+    face: el.dataset.face,
   };
 }
+
+/** A transform printing's walk (TODO 5.0b): both faces seeded. */
+const avacynWalk = (over: Partial<NonNullable<CreatorFramePreview["walkthrough"]>> = {}): CreatorFramePreview => ({
+  param: "all",
+  publishedKeys: PUBLISHED,
+  walkthrough: {
+    template: "m15",
+    colorKey: "w",
+    kind: "creature",
+    note: "Walking m15/w",
+    previewFace: "front",
+    cardTemplate: "m15",
+    seed: {
+      patch: {
+        title: "Archangel Avacyn",
+        kind: "creature",
+        frame_template: "m15",
+        card_type: "creature",
+        supertype: "Legendary",
+        subtypes_text: "Angel",
+        cost: "{3}{W}{W}",
+        color_identity: ["white"],
+        power: "4",
+        toughness: "4",
+        rules_text: "Flash\nFlying, vigilance",
+        back_face: {
+          title: "Avacyn, the Purifier",
+          card_type: "creature",
+          supertype: "Legendary",
+          subtypes_text: "Angel",
+          rules_text: "Flying",
+          power: "6",
+          toughness: "5",
+        },
+      },
+      source: { name: "Archangel Avacyn // Avacyn, the Purifier", scryfallUri: null },
+      fromReference: true,
+    },
+    ...over,
+  },
+});
 
 const saveButton = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
 
@@ -149,6 +193,8 @@ const adventureWalk = (): CreatorFramePreview => ({
     colorKey: "g",
     kind: "adventure",
     note: "Walking adventure/g",
+    previewFace: "front",
+    cardTemplate: "adventure",
     seed: {
       patch: {
         title: "Beanstalk Giant",
@@ -191,6 +237,32 @@ afterEach(() => {
   }
 });
 
+describe("the face the walk opens on (TODO 5.0b)", () => {
+  it("a walk opens the live preview on the front by default", async () => {
+    renderForm(avacynWalk());
+    await waitFor(() => expect(preview().title).toBe("Archangel Avacyn"));
+    expect(preview().backTitle).toBe("Avacyn, the Purifier");
+    expect(preview().face).toBe("front");
+  });
+
+  it("previewFace: back opens the preview on the back face — after the Card step's own reset to the front", async () => {
+    renderForm(avacynWalk({ previewFace: "back" }));
+    await waitFor(() => expect(preview().title).toBe("Archangel Avacyn"));
+    await waitFor(() => expect(preview().face).toBe("back"));
+    expect(preview().backTitle).toBe("Avacyn, the Purifier");
+    expect(preview().template).toBe("m15");
+    expect(document.querySelector('[aria-current="step"]')?.textContent?.trim()).toBe("Card");
+  });
+
+  it("the CARD is pinned to cardTemplate, not the row's template (a back body walks its paired front)", async () => {
+    // Stand-in: the row is m15artifact, the card its paired front m15.
+    renderForm(avacynWalk({ template: "m15artifact", previewFace: "back", cardTemplate: "m15" }));
+    await waitFor(() => expect(preview().title).toBe("Archangel Avacyn"));
+    await waitFor(() => expect(preview().face).toBe("back"));
+    expect(preview().template).toBe("m15");
+  });
+});
+
 describe("walking the stepper (TODO 2.2)", () => {
   it("prefills from the seed — second face included — on the frame and colour under test", async () => {
     renderForm(adventureWalk());
@@ -214,6 +286,8 @@ describe("walking the stepper (TODO 2.2)", () => {
         colorKey: "r",
         kind: "battle",
         note: "sample",
+        previewFace: "front",
+        cardTemplate: "battle",
         seed: {
           patch: sampleWalkthroughPatch("battle", "r", "battle"),
           source: { name: "Sample content (no real printing)", scryfallUri: null },
@@ -245,6 +319,8 @@ describe("walking the stepper (TODO 2.2)", () => {
         colorKey,
         kind: "token",
         note: "sample",
+        previewFace: "front",
+        cardTemplate: template,
         seed: {
           patch: sampleWalkthroughPatch(template, colorKey, "token"),
           source: { name: "Sample content (no real printing)", scryfallUri: null },

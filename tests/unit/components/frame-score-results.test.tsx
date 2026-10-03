@@ -309,4 +309,42 @@ describe("every colour side by side", () => {
     await renderWith(edited);
     expect(payloads.build.mock.calls.filter((c) => c[0] === "ref-w")).toHaveLength(2);
   });
+
+  it("looks each colour up on the face it is signed off on, memoised per face (TODO 5.0b)", async () => {
+    payloads.build.mockImplementation(async (id: string, _template: string, face?: string) => ({
+      preview: { title: `Card ${id} ${face ?? "front"}` },
+      scanUrl: `https://cards.scryfall.io/png/${face ?? "front"}/${id}.png`,
+    }));
+    const renderWith = async (face?: "front" | "back") => {
+      cleanup();
+      render(
+        await FrameSignOffSideBySide({
+          template: "saga",
+          references: twoReferences(),
+          overrides: {} as never,
+          scores: new Map(),
+          face,
+        }),
+      );
+    };
+    // The front by default — the call shape every front sign-off makes.
+    await renderWith();
+    expect(payloads.build.mock.calls.map((c) => [c[0], c[1], c[2]])).toEqual([
+      ["ref-w", "saga", "front"],
+      ["ref-u", "saga", "front"],
+    ]);
+    expect(screen.getByTestId("side-by-side-w").textContent).toMatch(/Card ref-w front/);
+    // The back: its own lookups (the front's memo doesn't answer for it).
+    await renderWith("back");
+    expect(payloads.build.mock.calls.slice(2).map((c) => [c[0], c[2]])).toEqual([
+      ["ref-w", "back"],
+      ["ref-u", "back"],
+    ]);
+    const w = screen.getByTestId("side-by-side-w");
+    expect(w.textContent).toMatch(/Card ref-w back/);
+    expect(w.querySelector("img[alt]")?.getAttribute("src")).toBe("https://cards.scryfall.io/png/back/ref-w.png");
+    // Asked again for the back: the memo answers, no new lookup.
+    await renderWith("back");
+    expect(payloads.build).toHaveBeenCalledTimes(4);
+  });
 });

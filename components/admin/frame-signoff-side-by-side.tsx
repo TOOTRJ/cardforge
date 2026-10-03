@@ -10,6 +10,7 @@ import {
   type FrameColorKey,
   type FrameReference,
 } from "@/lib/cards/frame-reference-registry";
+import type { CardFace } from "@/lib/cards/card-face";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
 import type { FrameTemplate } from "@/types/card";
@@ -30,6 +31,10 @@ import type { FrameTemplate } from "@/types/card";
 // fresh). A lookup that hangs is given up after LOOKUP_TIMEOUT_MS — the
 // Scryfall client has no timeout of its own — and that colour shows its
 // sample, so one slow request can't hold the section's skeleton forever.
+//
+// Per FACE (TODO 5.0b): a back body's colours are each printing's BACK
+// face next to its back scan (the face is part of the memo key); a lookup
+// of a face the printing lacks shows the sample like a failed one.
 // ---------------------------------------------------------------------------
 
 /** A successful lookup is reused this long. */
@@ -41,8 +46,8 @@ const LOOKUP_MEMO_MAX = 256;
 type Lookup = { preview: CardPreviewData; scanUrl: string | null };
 const lookups = new Map<string, { at: number; lookup: Lookup }>();
 
-async function lookUp(scryfallId: string, template: FrameTemplate): Promise<Lookup | null> {
-  const key = `${template}:${scryfallId}`;
+async function lookUp(scryfallId: string, template: FrameTemplate, face: CardFace): Promise<Lookup | null> {
+  const key = `${template}:${scryfallId}:${face}`;
   const hit = lookups.get(key);
   if (hit && Date.now() - hit.at < LOOKUP_TTL_MS) return hit.lookup;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -50,7 +55,7 @@ async function lookUp(scryfallId: string, template: FrameTemplate): Promise<Look
     timer = setTimeout(() => resolve(null), LOOKUP_TIMEOUT_MS);
   });
   const payload = await Promise.race([
-    buildFrameComparePayload(scryfallId, template).catch(() => null),
+    buildFrameComparePayload(scryfallId, template, face).catch(() => null),
     timedOut,
   ]).finally(() => clearTimeout(timer));
   if (!payload) return null;
@@ -74,16 +79,19 @@ export async function FrameSignOffSideBySide({
   references,
   overrides,
   scores,
+  face = "front",
 }: {
   template: FrameTemplate;
   references: ReadonlyMap<FrameColorKey, FrameReference | null>;
   overrides: FrameProfileOverridesMap;
   scores: ReadonlyMap<string, { state: string; overall: number | null }>;
+  /** The face every colour is compared on (a back body's back). */
+  face?: CardFace;
 }) {
   const colours: SideBySideColour[] = await Promise.all(
     FRAME_COLOR_KEYS.map(async (colorKey): Promise<SideBySideColour> => {
       const reference = references.get(colorKey) ?? null;
-      const payload = reference ? await lookUp(reference.scryfallId, template) : null;
+      const payload = reference ? await lookUp(reference.scryfallId, template, face) : null;
       const base = payload?.preview ?? (sampleFramePreview(template, colorKey) as CardPreviewData);
       return {
         colorKey,

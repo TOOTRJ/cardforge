@@ -57,6 +57,15 @@ const cases: Array<[string, Partial<CardPreviewData>, string]> = [
   ["blue artifact: its colour", { cardType: "artifact", colorIdentity: ["blue"], cost: "{1}{U}", frameStyle: { template: "m15artifact", crown: true } }, "u"],
   ["white land: its colour", { cardType: "land", cost: null, colorIdentity: ["white"], frameStyle: { template: "m15land", crown: true } }, "w"],
   ["colourless land: the land grey", { cardType: "land", cost: null, colorIdentity: ["colorless"], frameStyle: { template: "m15land", crown: true } }, "l"],
+  // TODO 4.6f (wave 2c): the snow frames share the STANDARD band — a
+  // colourless snow card's master is CC's snow artifact frame (the silver
+  // crown), a colourless snow land's the land grey; a snow pair with the
+  // two-colour switch on wears the split band over its white-bar pair.
+  ["blue snow creature (J22 #12): its colour", { colorIdentity: ["blue"], cost: "{3}{U}{U}", supertype: "Legendary Snow", frameStyle: { template: "m15snow", crown: true } }, "u"],
+  ["colourless snow artifact: silver", { cardType: "artifact", colorIdentity: ["colorless"], cost: "{3}", supertype: "Legendary Snow", frameStyle: { template: "m15snow", crown: true } }, "a"],
+  ["a snow pair, drawn gold", { colorIdentity: ["blue", "black"], cost: "{3}{U}{B}", supertype: "Legendary Snow", frameStyle: { template: "m15snow", crown: true } }, "m"],
+  ["a snow pair with the two-colour switch on (KHM #224): the split band", { colorIdentity: ["blue", "black"], cost: "{3}{U}{B}", supertype: "Legendary Snow", frameStyle: { template: "m15snow", crown: true, twoColor: true } }, "ub"],
+  ["colourless snow land (DMR #244): the land grey", { cardType: "land", cost: null, colorIdentity: ["colorless"], supertype: "Legendary Snow", frameStyle: { template: "m15snowland", crown: true } }, "l"],
 ];
 
 describe("the preview draws the bake's crown", () => {
@@ -113,7 +122,6 @@ describe("the preview draws the bake's crown", () => {
       card({ supertype: null }),
       card({ cardType: "planeswalker", loyalty: "3", frameStyle: { template: "m15pw", crown: true } }),
       card({ cardType: "token", frameStyle: { template: "m15token", crown: true } }),
-      card({ frameStyle: { template: "m15snow", crown: true } }),
       card({ frameStyle: { template: "m15devoid", crown: true } }),
       card({ frameStyle: { template: "m15borderlessland", crown: true } }),
     ]) {

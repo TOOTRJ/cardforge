@@ -23,8 +23,14 @@
 // ---------------------------------------------------------------------------
 
 import { isArtifactFrameType, type FrameTypeInfo } from "@/components/cards/frame-layer";
+import type { CardFace } from "@/lib/cards/card-face";
 import { getFrameProfile, type DfcProfile } from "@/lib/cards/template-layout";
-import { DFC_ICON_FAMILY_VALUES, type DfcIconFamily, type FrameTemplate } from "@/types/card";
+import {
+  DFC_ICON_FAMILY_VALUES,
+  FRAME_TEMPLATE_VALUES,
+  type DfcIconFamily,
+  type FrameTemplate,
+} from "@/types/card";
 
 export { DFC_ICON_FAMILY_VALUES, type DfcIconFamily, type DfcProfile };
 
@@ -60,6 +66,53 @@ export function templateHasBackFace(template: FrameTemplate | string | null | un
  *  name, and never a card's own template. */
 export function isDfcBackBody(template: FrameTemplate | string | null | undefined): boolean {
   return dfcBodyOf(template)?.role === "back";
+}
+
+/**
+ * The face the admin tools compare, score and walk a template on (TODO
+ * 5.0b): a BACK body is always its reference printing's back face (the
+ * printing's `card_faces[1]`, Scryfall's `/back/` scan — a back body never
+ * dresses a front); any other template the face asked for — the compare
+ * view's `?face=back`, which shows a printing's back as the preview draws a
+ * legacy back today, on the front's own frame and colour — else the front.
+ */
+export function faceUnderTest(
+  template: FrameTemplate | string | null | undefined,
+  requested?: CardFace | null,
+): CardFace {
+  if (isDfcBackBody(template)) return "back";
+  return requested === "back" ? "back" : "front";
+}
+
+/**
+ * The FRONT body a back body pairs with — the card's own template when its
+ * back wears `backTemplate`: `bodyFor` for the layout and the front face's
+ * type (a land front wears the land pair), else the first declared front
+ * body of the same layout keyed like the front face (the land one for a
+ * land front, a non-land one otherwise), else any. The compare view and
+ * the walk-through build the card this way (lib/cards/faces.ts draws a
+ * back on its body only under a DFC front), both from the printing's
+ * front type. Null when `backTemplate` is not a back body, or no front
+ * body of its layout exists yet.
+ */
+export function frontBodyFor(
+  backTemplate: FrameTemplate | string | null | undefined,
+  frontFaceType?: string | null,
+  family: DfcIconFamily = DEFAULT_DFC_ICON,
+): FrameTemplate | null {
+  const body = dfcBodyOf(backTemplate);
+  if (!body || body.role !== "back") return null;
+  const fronts = FRAME_TEMPLATE_VALUES.filter((template) => {
+    const candidate = dfcBodyOf(template);
+    return candidate?.layout === body.layout && candidate.role === "front";
+  });
+  const landFront = frontFaceType === "land";
+  return (
+    bodyFor(body.layout, "front", frontFaceType, family) ??
+    fronts.find((template) => Boolean(dfcBodyOf(template)?.land) === landFront) ??
+    fronts[0] ??
+    null
+  );
 }
 
 /** The face type a body is keyed by: a land face wears the land pair. */

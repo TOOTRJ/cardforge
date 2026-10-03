@@ -69,9 +69,10 @@ describe("bake path = preview path", () => {
       }
     }
     // Not vacuous: m15's 20, m15artifact's and m15land's 10 each, the
-    // borderless frames' 10 and 20 (4.6f); the crowned twins of every
-    // borderless master (7 + 20 and 7 + 10).
-    expect(pairKeys).toBe(70);
+    // borderless frames' 10 and 20 (4.6f, wave 2a), the snow frames' 10
+    // each (wave 2c); the crowned twins of every borderless master (7 + 20
+    // and 7 + 10).
+    expect(pairKeys).toBe(90);
     expect(crownedKeys).toBe(44);
   });
 

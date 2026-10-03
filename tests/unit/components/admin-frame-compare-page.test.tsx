@@ -42,15 +42,18 @@ vi.mock("@/lib/cards/frame-review-events", () => ({ listFrameReviewEvents: async
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
 vi.mock("@/lib/cards/frame-preview-cards", () => ({ listFramePreviewCards: async () => [] }));
 const payloads = vi.hoisted(() => ({ build: vi.fn() }));
-vi.mock("@/lib/scryfall/reference-preview", () => ({ buildFrameComparePayload: payloads.build }));
+vi.mock("@/lib/scryfall/reference-preview", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/scryfall/reference-preview")>();
+  return { FrameCompareFaceError: actual.FrameCompareFaceError, buildFrameComparePayload: payloads.build };
+});
 
 // Client islands and panels: what the page hands them is what matters.
 vi.mock("@/components/layout/dashboard-shell", () => ({
   DashboardShell: ({ children }: { children: ReactNode }) => <main>{children}</main>,
 }));
 vi.mock("@/components/admin/frame-compare", () => ({
-  FrameCompare: (props: { preview: { title?: string }; scanUrl: string | null }) => (
-    <div data-testid="frame-compare" data-scan={props.scanUrl ?? "none"}>
+  FrameCompare: (props: { preview: { title?: string }; scanUrl: string | null; face?: string | null }) => (
+    <div data-testid="frame-compare" data-scan={props.scanUrl ?? "none"} data-face={props.face ?? ""}>
       {props.preview.title}
     </div>
   ),
@@ -68,7 +71,7 @@ import { FRAME_REFERENCES, sampleFramePreview } from "@/lib/cards/frame-referenc
 const REFERENCE = FRAME_REFERENCES.m15.w!;
 const SCAN = "https://cards.scryfall.io/png/front/a/b/scan.png";
 
-async function renderPage(params: { template?: string; color?: string; ref?: string }) {
+async function renderPage(params: { template?: string; color?: string; ref?: string; face?: string }) {
   const tree = await AdminFrameComparePage({ searchParams: Promise.resolve(params) });
   return render(tree);
 }
@@ -91,7 +94,7 @@ describe("/admin/frame-compare — the reference lookup", () => {
   it("renders the printing when the lookup answers", async () => {
     payloads.build.mockResolvedValue({ preview: { title: "From Scryfall" }, scanUrl: SCAN });
     await renderPage({ template: "m15", color: "w" });
-    expect(payloads.build).toHaveBeenCalledWith(REFERENCE.scryfallId, "m15");
+    expect(payloads.build).toHaveBeenCalledWith(REFERENCE.scryfallId, "m15", "front");
     expect(screen.getByText(new RegExp(`^Reference: ${REFERENCE.name}`))).toBeTruthy();
     const compare = screen.getByTestId("frame-compare");
     expect(compare.textContent).toBe("From Scryfall");
@@ -150,5 +153,123 @@ describe("/admin/frame-compare — the reference lookup", () => {
     await renderPage({ template: "m15", color: "w" });
     expect(screen.getByText(/^Reference lookup failed/)).toBeTruthy();
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("/admin/frame-compare — the face compared (TODO 5.0b)", () => {
+  const BACK_SCAN = "https://cards.scryfall.io/png/back/a/b/scan.png";
+
+  it("the front by default, with no face switch for a single-faced printing", async () => {
+    payloads.build.mockResolvedValue({
+      preview: { title: "Serra Angel" },
+      scanUrl: SCAN,
+      face: "front",
+      faceName: null,
+      hasBackScan: false,
+    });
+    await renderPage({ template: "m15", color: "w" });
+    expect(payloads.build).toHaveBeenCalledWith(REFERENCE.scryfallId, "m15", "front");
+    expect(screen.queryByTestId("face-switcher")).toBeNull();
+    expect(screen.getByTestId("frame-compare").dataset.face).toBe("front");
+    expect(screen.getByText(`Reference: ${REFERENCE.name} (${REFERENCE.set.toUpperCase()}).`)).toBeTruthy();
+  });
+
+  it("?face=back renders the printing's back against its back scan, names the face, and offers both faces", async () => {
+    payloads.build.mockResolvedValue({
+      preview: { title: "Avacyn, the Purifier" },
+      scanUrl: BACK_SCAN,
+      face: "back",
+      faceName: "Avacyn, the Purifier",
+      hasBackScan: true,
+    });
+    await renderPage({ template: "m15", color: "w", face: "back" });
+    expect(payloads.build).toHaveBeenCalledWith(REFERENCE.scryfallId, "m15", "back");
+    const compare = screen.getByTestId("frame-compare");
+    expect(compare.textContent).toBe("Avacyn, the Purifier");
+    expect(compare.dataset.scan).toBe(BACK_SCAN);
+    expect(compare.dataset.face).toBe("back");
+    expect(
+      screen.getByText(`Reference: ${REFERENCE.name} (${REFERENCE.set.toUpperCase()}) — back face (Avacyn, the Purifier).`),
+    ).toBeTruthy();
+    const switcher = screen.getByTestId("face-switcher");
+    expect(switcher.dataset.face).toBe("back");
+    const links = Array.from(switcher.querySelectorAll("a")).map((a) => [a.textContent, a.getAttribute("href")]);
+    expect(links).toEqual([
+      ["Front", "/admin/frame-compare?template=m15&color=w"],
+      ["Back · Avacyn, the Purifier", "/admin/frame-compare?template=m15&color=w&face=back"],
+    ]);
+    // The walk opens the stepper on the back.
+    const walk = screen.getByText(/^Walk the stepper on m15\/w \(back face\)/).closest("a");
+    expect(walk?.getAttribute("href")).toContain("face=back");
+    expect(screen.getByText(/as a legacy back draws today/)).toBeTruthy();
+  });
+
+  it("a two-faced printing on the front offers the back", async () => {
+    payloads.build.mockResolvedValue({
+      preview: { title: "Archangel Avacyn" },
+      scanUrl: SCAN,
+      face: "front",
+      faceName: "Archangel Avacyn",
+      hasBackScan: true,
+    });
+    await renderPage({ template: "m15", color: "w" });
+    const switcher = screen.getByTestId("face-switcher");
+    expect(switcher.dataset.face).toBe("front");
+    expect(Array.from(switcher.querySelectorAll("a")).map((a) => a.textContent)).toEqual([
+      "Front · Archangel Avacyn",
+      "Back",
+    ]);
+    expect(screen.getByText(/front face \(Archangel Avacyn\)\./)).toBeTruthy();
+  });
+
+  it("a face the printing can't show is named, and the sample stands in", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/scryfall/reference-preview")>(
+      "@/lib/scryfall/reference-preview",
+    );
+    payloads.build.mockRejectedValue(new actual.FrameCompareFaceError("Serra Angel has no second face to compare."));
+    await renderPage({ template: "m15", color: "w", face: "back" });
+    expect(screen.getByText("Serra Angel has no second face to compare. Showing sample content instead.")).toBeTruthy();
+    expect(screen.getByTestId("frame-compare").textContent).toBe(sampleFramePreview("m15", "w").title);
+    // Not a failure worth a log line.
+    expect(warn).not.toHaveBeenCalled();
+    // The switch still offers the way back to the front.
+    const switcher = screen.getByTestId("face-switcher");
+    expect(Array.from(switcher.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Front", "Back"]);
+  });
+
+  it("a value that names no face is the front", async () => {
+    payloads.build.mockResolvedValue({ preview: { title: "x" }, scanUrl: SCAN, face: "front", faceName: null, hasBackScan: false });
+    await renderPage({ template: "m15", color: "w", face: "sideways" });
+    expect(payloads.build).toHaveBeenCalledWith(REFERENCE.scryfallId, "m15", "front");
+  });
+
+  it("the walk link carries the registry alternate on screen (?ref=) and the face, so the walk seeds from the SAME printing", async () => {
+    // extendedart/w lists a double-faced alternate (LCI's Unstable
+    // Glyphbridge); its back view is reached only through ?ref=, and a
+    // walk that dropped it would open on the default printing's front.
+    const alternate = FRAME_REFERENCES.extendedart.w!;
+    const glyphbridge = (await import("@/lib/cards/frame-reference-registry")).frameReferenceOptions("extendedart", "w")[1]!;
+    expect(glyphbridge.scryfallId).not.toBe(alternate.scryfallId);
+    payloads.build.mockResolvedValue({
+      preview: { title: "Sandswirl Wanderglyph" },
+      scanUrl: BACK_SCAN,
+      face: "back",
+      faceName: "Sandswirl Wanderglyph",
+      hasBackScan: true,
+    });
+    await renderPage({ template: "extendedart", color: "w", ref: glyphbridge.scryfallId, face: "back" });
+    expect(payloads.build).toHaveBeenCalledWith(glyphbridge.scryfallId, "extendedart", "back");
+    const walk = screen.getByText(/^Walk the stepper on extendedart\/w \(back face\)/).closest("a");
+    const href = new URL(walk!.getAttribute("href")!, "https://pipglyph.test");
+    expect(href.pathname).toBe("/create");
+    expect(href.searchParams.get("ref")).toBe(glyphbridge.scryfallId);
+    expect(href.searchParams.get("face")).toBe("back");
+    expect(href.searchParams.get("template")).toBe("extendedart");
+    // The default printing on screen names no ref: the link is the row's.
+    payloads.build.mockResolvedValue({ preview: { title: "x" }, scanUrl: SCAN, face: "front", faceName: null, hasBackScan: false });
+    cleanup();
+    await renderPage({ template: "extendedart", color: "w" });
+    const plain = screen.getByText(/^Walk the stepper on extendedart\/w$/).closest("a");
+    expect(new URL(plain!.getAttribute("href")!, "https://pipglyph.test").searchParams.has("ref")).toBe(false);
   });
 });

@@ -13,6 +13,12 @@ import { cn } from "@/lib/utils";
 // the existing /api/scryfall/search proxy (session auth; an admin skips the
 // per-user quota there, the global throttle still applies) with the import
 // dialog's debounce pattern. Null pin = registry default.
+//
+// Per FACE (TODO 5.0b): a BACK body's row pins a printing whose BACK face is
+// the reference, so its results show the second face's art and say when a
+// printing has no second face (the server refuses that pin). The row's face
+// is the template's — never chosen here, never stored: the compare view,
+// the score and the tick derive it from the template.
 // ---------------------------------------------------------------------------
 
 const DEBOUNCE_MS = 300;
@@ -22,6 +28,8 @@ type SearchResult = {
   name: string;
   set: string | null;
   thumb_url: string | null;
+  /** The second face's art crop; null for a single-faced printing. */
+  back_thumb_url?: string | null;
   image_status: string | null;
 };
 
@@ -29,11 +37,14 @@ export function FrameReferencePicker({
   template,
   colorKey,
   isCustom,
+  face = "front",
 }: {
   template: string;
   colorKey: string;
   /** True when the active reference is admin-pinned (shows Revert). */
   isCustom: boolean;
+  /** The face this row is compared on: "back" for a back-face frame. */
+  face?: "front" | "back";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -110,6 +121,7 @@ export function FrameReferencePicker({
           className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground"
         >
           <Search className="h-3.5 w-3.5" aria-hidden /> Change reference card
+          {face === "back" ? " (back face)" : ""}
         </button>
         {isCustom ? (
           <button
@@ -141,7 +153,10 @@ export function FrameReferencePicker({
             ) : null}
           </div>
           <ul className="max-h-72 overflow-y-auto">
-            {results.map((card) => (
+            {results.map((card) => {
+              const onBack = face === "back";
+              const thumb = onBack ? (card.back_thumb_url ?? null) : card.thumb_url;
+              return (
               <li key={card.id}>
                 <button
                   type="button"
@@ -151,10 +166,10 @@ export function FrameReferencePicker({
                     "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-elevated",
                   )}
                 >
-                  {card.thumb_url ? (
+                  {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={card.thumb_url}
+                      src={thumb}
                       alt=""
                       loading="lazy"
                       className="h-10 w-14 shrink-0 rounded-sm object-cover"
@@ -169,11 +184,13 @@ export function FrameReferencePicker({
                     <span className="text-[10px] uppercase tracking-wider text-subtle">
                       {card.set ?? "—"}
                       {card.image_status === "lowres" ? " · low-res scan" : ""}
+                      {onBack ? (card.back_thumb_url ? " · back face" : " · no second face") : ""}
                     </span>
                   </span>
                 </button>
               </li>
-            ))}
+              );
+            })}
             {!searching && query.trim() && results.length === 0 ? (
               <li className="px-2 py-3 text-center text-xs text-subtle">
                 No matches.
