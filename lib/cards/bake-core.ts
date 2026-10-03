@@ -63,11 +63,17 @@ export type CardRowForBake = {
   set_code?: string | null;
   collector_number?: string | null;
   lang?: string | null;
+  /** The back face's stored render pointer (migration 0134, TODO 5.3) —
+   *  read, never drawn: a bake that writes no back (the card has no back
+   *  body any more) removes the `.back.*` objects a previous bake left
+   *  behind only when this says there were some. OPTIONAL for the same
+   *  reason as the collector fields above (the visual matrix's rows). */
+  rendered_back_image_url?: string | null;
 };
 
 /** Every column the renderer needs (plus owner/visibility for gating). */
 export const BAKE_SELECT_COLUMNS =
-  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang";
+  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
 
 export function rowToPreviewData(
   card: CardRowForBake,
@@ -224,27 +230,75 @@ export async function removeRenderObjects(
   return { error: message };
 }
 
+/** The faces a bake rendered (TODO 5.3): the front's HD PNG always, the
+ *  back's only for a card with a back BODY (lib/cards/faces.ts
+ *  bakedBackOf) — null for every other card. */
+export type BakeFaceBytes = {
+  front: ArrayBuffer | Buffer;
+  back: ArrayBuffer | Buffer | null;
+};
+
 export type UploadRenderResult =
-  | { ok: true; renderedImageUrl: string; renderedThumbUrl: string | null }
+  | {
+      ok: true;
+      renderedImageUrl: string;
+      renderedThumbUrl: string | null;
+      /** The back face's pair, null when the bake had no back (so the row's
+       *  back pointers are written null in the same update). */
+      renderedBackImageUrl: string | null;
+      renderedBackThumbUrl: string | null;
+    }
   | { ok: false; error: string };
 
+type RenderFolder = ReturnType<typeof userFolder>;
+
+/** The 600 px WebP beside a face's PNG (lib/cards/render-thumb.ts). A thumb
+ *  failure is not a bake failure: tiles fall back to next/image over the
+ *  front's PNG, and a back with no thumb simply offers no tile flip. */
+async function uploadThumb(folder: RenderFolder, name: string, pngBytes: ArrayBuffer | Buffer, cardId: string): Promise<boolean> {
+  try {
+    const thumbBytes = await makeRenderThumb(pngBytes);
+    const { error } = await folder.upload(name, thumbBytes, {
+      cacheControl: "31536000",
+      contentType: "image/webp",
+      upsert: true,
+    });
+    if (error) {
+      console.warn(`[bake] Thumb upload failed for ${cardId} (${name}): ${error.message}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn(
+      `[bake] Thumb encode failed for ${cardId} (${name}): ${err instanceof Error ? err.message : "error"}`,
+    );
+    return false;
+  }
+}
+
 /**
- * Upload a baked PNG (upsert — one object per card, overwritten on every
- * bake instead of a pile of versioned files to garbage-collect) plus the
- * 600 px WebP thumb beside it (lib/cards/render-thumb.ts) into `ownerId`'s
- * card-renders folder, and return the public URLs. A thumb failure is not a
- * bake failure: tiles fall back to next/image over the PNG. The FRONT's
- * pair only: the back face's bake (5.3) writes the `.back.*` names.
+ * Upload a card's baked PNGs (upsert — one object per name, overwritten on
+ * every bake instead of a pile of versioned files to garbage-collect) plus
+ * the 600 px WebP thumb beside each (lib/cards/render-thumb.ts) into
+ * `ownerId`'s card-renders folder, and return the public URLs: the front's
+ * pair always, the BACK's pair (`.back.png` / `.back.thumb.webp`, TODO 5.3)
+ * when the bake rendered one. Order: the front PNG, the back PNG, then the
+ * thumbs — a back PNG that fails to upload fails the whole bake (the caller
+ * clears every pointer: a card downloads the way it looks) and takes the
+ * back's names out of storage, so a half-written back never outlives the
+ * failure. A bake with no back and `staleBack` (the row still pointed at a
+ * back bake from before its back body went) removes the back's names too.
  */
 export async function uploadRenderObjects(
   ownerId: string,
   cardId: string,
-  pngBytes: ArrayBuffer | Buffer,
+  faces: BakeFaceBytes,
+  opts: { staleBack?: boolean } = {},
 ): Promise<UploadRenderResult> {
   if (!isUserStorageConfigured()) return { ok: false, error: STORAGE_UNCONFIGURED };
   const folder = userFolder("card-renders", ownerId);
-  const { png, thumb } = renderObjectNames(cardId);
-  const { error: uploadErr } = await folder.upload(png, pngBytes, {
+  const { png, thumb, backPng, backThumb } = renderObjectNames(cardId);
+  const { error: uploadErr } = await folder.upload(png, faces.front, {
     cacheControl: "31536000",
     contentType: "image/png",
     upsert: true,
@@ -253,32 +307,33 @@ export async function uploadRenderObjects(
     return { ok: false, error: `Upload failed: ${uploadErr.message}` };
   }
 
-  let thumbOk = false;
-  try {
-    const thumbBytes = await makeRenderThumb(pngBytes);
-    const { error: thumbErr } = await folder.upload(thumb, thumbBytes, {
+  if (faces.back) {
+    const { error: backErr } = await folder.upload(backPng, faces.back, {
       cacheControl: "31536000",
-      contentType: "image/webp",
+      contentType: "image/png",
       upsert: true,
     });
-    if (thumbErr) {
-      console.warn(`[bake] Thumb upload failed for ${cardId}: ${thumbErr.message}`);
-    } else {
-      thumbOk = true;
+    if (backErr) {
+      await folder.remove([backPng, backThumb]);
+      return { ok: false, error: `Back face upload failed: ${backErr.message}` };
     }
-  } catch (err) {
-    console.warn(
-      `[bake] Thumb encode failed for ${cardId}: ${err instanceof Error ? err.message : "error"}`,
-    );
+  } else if (opts.staleBack) {
+    const { error: removeErr } = await folder.remove([backPng, backThumb]);
+    if (removeErr) console.warn(`[bake] Could not remove the stale back bake of ${cardId}: ${removeErr.message}`);
   }
+
+  const thumbOk = await uploadThumb(folder, thumb, faces.front, cardId);
+  const backThumbOk = faces.back ? await uploadThumb(folder, backThumb, faces.back, cardId) : false;
 
   // Cache-bust query so next/image and the browser don't serve the prior
   // version after a resave. The base URL is stable; only the ?v changes —
-  // shared by the PNG and its thumb so both bust together.
+  // shared by every PNG and thumb of the bake so they all bust together.
   const version = Date.now();
   return {
     ok: true,
     renderedImageUrl: `${folder.publicUrl(png)}?v=${version}`,
     renderedThumbUrl: thumbOk ? `${folder.publicUrl(thumb)}?v=${version}` : null,
+    renderedBackImageUrl: faces.back ? `${folder.publicUrl(backPng)}?v=${version}` : null,
+    renderedBackThumbUrl: backThumbOk ? `${folder.publicUrl(backThumb)}?v=${version}` : null,
   };
 }

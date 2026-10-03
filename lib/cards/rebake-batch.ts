@@ -1,6 +1,6 @@
 import "server-only";
 
-import { resolveBakeArt } from "@/lib/cards/bake-render";
+import { renderBackFace, resolveBakeArt } from "@/lib/cards/bake-render";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
@@ -60,11 +60,6 @@ import {
 // is read AGAIN: if it moved during the upload, the card is re-marked
 // (conditional on the render we just wrote) instead of staying "current"
 // with the previous geometry.
-//
-// Environment gate (callers enforce it before calling): a bake carries the
-// pipglyph.com mark only when isBillingEnabled() — a server without
-// NEXT_PUBLIC_BILLING_ENABLED bakes every card CLEAN (layout v21, and again
-// on 2026-09-16).
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_BATCH = 8;
@@ -87,6 +82,16 @@ export type RebakeRow = CardRowForBake & {
   rendered_image_url: string | null;
   rendered_at: string | null;
 };
+
+// Environment gate (callers enforce it before calling): a bake carries the
+// pipglyph.com mark only when isBillingEnabled() — a server without
+// NEXT_PUBLIC_BILLING_ENABLED bakes every card CLEAN (layout v21, and again
+// on 2026-09-16).
+//
+// BOTH FACES (TODO 5.3): a card with a back BODY is re-baked on both faces
+// (lib/cards/bake-render.ts renderBackFace, the save bake's twin) and its
+// four pointers written in the one compare-and-set update below; a card
+// without one writes its back pointers null. ONE layout_version per card.
 
 export function parseRebakeScope(params: URLSearchParams): RebakeScope | { error: string } {
   const scope = params.get("scope");
@@ -256,6 +261,10 @@ export async function runRebakeBatch(
         corners: "round",
       });
       const pngBytes = await response.arrayBuffer();
+      // The back face of a card with a back body (TODO 5.3), before any
+      // upload — a back that fails fails the card, nothing written.
+      const back = await renderBackFace(previewData, { brandMark: billingEnabled });
+      if (!back.ok) throw new Error(back.error);
 
       // Overlap guard, part 1: is the card (and its layout) still what we
       // rendered? A residual race remains until the write; part 2 catches it.
@@ -276,17 +285,26 @@ export async function runRebakeBatch(
       }
 
       // The owner's card-renders folder (bake-core → lib/media/user-storage.ts):
-      // the key is `{row.owner_id}/{row.id}.png` and its thumb, nothing else.
-      const uploaded = await uploadRenderObjects(row.owner_id, row.id, pngBytes);
+      // the keys are `{row.owner_id}/{row.id}` + the bake's render names,
+      // nothing else.
+      const uploaded = await uploadRenderObjects(
+        row.owner_id,
+        row.id,
+        { front: pngBytes, back: back.png },
+        { staleBack: Boolean(row.rendered_back_image_url) },
+      );
       if (!uploaded.ok) throw new Error(uploaded.error);
       const { renderedImageUrl } = uploaded;
-      // Part 2 (compare-and-set): only the row as rendered may take the URL.
+      // Part 2 (compare-and-set): only the row as rendered may take the
+      // URLs — the four pointers of the one bake, in one write.
       const renderedAt = new Date().toISOString();
       const { data: written, error: updateErr } = await supabase
         .from("cards")
         .update({
           rendered_image_url: renderedImageUrl,
           rendered_thumb_url: uploaded.renderedThumbUrl,
+          rendered_back_image_url: uploaded.renderedBackImageUrl,
+          rendered_back_thumb_url: uploaded.renderedBackThumbUrl,
           rendered_at: renderedAt,
           layout_version: CARD_LAYOUT_VERSION,
         })

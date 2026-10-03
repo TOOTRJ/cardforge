@@ -13,14 +13,22 @@ import { chainClient, called, payloadOf, type ChainAnswer, type ChainCall } from
 
 const mocks = vi.hoisted(() => ({
   render: vi.fn(async () => new Response(new Uint8Array([137, 80, 78, 71]))),
-  upload: vi.fn(async () => ({ ok: true as const, renderedImageUrl: "https://cdn/r.png?v=2", renderedThumbUrl: "https://cdn/r.webp?v=2" })),
+  upload: vi.fn(async () => ({
+    ok: true as const,
+    renderedImageUrl: "https://cdn/r.png?v=2",
+    renderedThumbUrl: "https://cdn/r.webp?v=2",
+    renderedBackImageUrl: null as string | null,
+    renderedBackThumbUrl: null as string | null,
+  })),
   remove: vi.fn(async () => ({ error: null as string | null })),
   art: vi.fn(async () => ({ ok: true as const, artUrl: null as string | null })),
+  // The back face's render (TODO 5.3): none for an ordinary card.
+  back: vi.fn(async () => ({ ok: true as const, png: null as ArrayBuffer | null })),
   purge: vi.fn(async (ids: readonly string[]) => void ids),
 }));
 vi.mock("@/lib/cards/cache-purge", () => ({ purgeCardCdnCache: mocks.purge }));
 vi.mock("@/lib/render/card-image", () => ({ renderCardImage: mocks.render }));
-vi.mock("@/lib/cards/bake-render", () => ({ resolveBakeArt: mocks.art }));
+vi.mock("@/lib/cards/bake-render", () => ({ resolveBakeArt: mocks.art, renderBackFace: mocks.back }));
 vi.mock("@/lib/cards/bake-core", () => ({
   BAKE_SELECT_COLUMNS: "id, owner_id, visibility, updated_at, art_url, frame_style",
   rowToPreviewData: () => ({ title: "x" }),
@@ -138,9 +146,18 @@ const run = (stub: ReturnType<typeof db>, extra: Partial<Parameters<typeof runRe
 beforeEach(() => {
   mocks.render.mockClear();
   mocks.upload.mockClear();
+  mocks.upload.mockResolvedValue({
+    ok: true,
+    renderedImageUrl: "https://cdn/r.png?v=2",
+    renderedThumbUrl: "https://cdn/r.webp?v=2",
+    renderedBackImageUrl: null,
+    renderedBackThumbUrl: null,
+  });
   mocks.remove.mockClear();
   mocks.art.mockClear();
   mocks.art.mockResolvedValue({ ok: true, artUrl: null });
+  mocks.back.mockClear();
+  mocks.back.mockResolvedValue({ ok: true, png: null });
   mocks.purge.mockClear();
 });
 
@@ -368,6 +385,69 @@ describe("runRebakeBatch", () => {
     await run(db([row("c1")]), { dry: true, onPicked });
     await run(db([]), { onPicked });
     expect(onPicked).not.toHaveBeenCalled();
+  });
+
+  it("writes the four pointers of the one bake: an ordinary card's back pointers null, in the same compare-and-set write (TODO 5.3)", async () => {
+    const stub = db([row("c1")], { markedCount: 0 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.processed.map((p) => p.id)).toEqual(["c1"]);
+    // The front rendered, then the back asked for (none here), then ONE
+    // upload of both faces in the row's owner folder.
+    expect(mocks.back).toHaveBeenCalledTimes(1);
+    expect(mocks.back.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.render.mock.invocationCallOrder[0]);
+    expect(mocks.upload).toHaveBeenCalledWith("owner-1", "c1", { front: expect.any(ArrayBuffer), back: null }, { staleBack: false });
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
+    expect(payloadOf(update.calls, "update")).toEqual({
+      rendered_image_url: "https://cdn/r.png?v=2",
+      rendered_thumb_url: "https://cdn/r.webp?v=2",
+      rendered_back_image_url: null,
+      rendered_back_thumb_url: null,
+      rendered_at: expect.any(String),
+      layout_version: CARD_LAYOUT_VERSION,
+    });
+  });
+
+  it("carries the back face: a card with a back body uploads both faces and writes all four URLs (TODO 5.3)", async () => {
+    const backPng = new Uint8Array([1, 2, 3]).buffer;
+    mocks.back.mockResolvedValueOnce({ ok: true, png: backPng });
+    mocks.upload.mockResolvedValueOnce({
+      ok: true,
+      renderedImageUrl: "https://cdn/r.png?v=3",
+      renderedThumbUrl: "https://cdn/r.webp?v=3",
+      renderedBackImageUrl: "https://cdn/r.back.png?v=3",
+      renderedBackThumbUrl: "https://cdn/r.back.webp?v=3",
+    });
+    const stub = db([row("dfc", { rendered_back_image_url: "https://cdn/old.back.png" } as Partial<RebakeRow>)], { markedCount: 0 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.processed).toEqual([{ id: "dfc", verdict: "rebake", renderedImageUrl: "https://cdn/r.png?v=3" }]);
+    expect(mocks.upload).toHaveBeenCalledWith("owner-1", "dfc", { front: expect.any(ArrayBuffer), back: backPng }, { staleBack: true });
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
+    expect(payloadOf(update.calls, "update")).toMatchObject({
+      rendered_image_url: "https://cdn/r.png?v=3",
+      rendered_thumb_url: "https://cdn/r.webp?v=3",
+      rendered_back_image_url: "https://cdn/r.back.png?v=3",
+      rendered_back_thumb_url: "https://cdn/r.back.webp?v=3",
+      layout_version: CARD_LAYOUT_VERSION,
+    });
+    // One write: the CAS keys are the row's, as for any card.
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
+    expect(called(update.calls, "eq", "updated_at")).toBe(true);
+  });
+
+  it("a back face that fails fails the card: nothing uploaded, nothing written, reported like any failure (TODO 5.3)", async () => {
+    mocks.back.mockResolvedValueOnce({ ok: false, error: "Back face: Art unavailable — not baking an art-less render." } as never);
+    const stub = db([row("dfc"), row("good")], { markedCount: 1, markedAmongIds: 1 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.failed).toEqual([{ id: "dfc", error: "Back face: Art unavailable — not baking an art-less render." }]);
+    expect(result.processed.map((p) => p.id)).toEqual(["good"]);
+    // The failing card's front was rendered but never uploaded; the good
+    // card's upload is the only one.
+    expect(mocks.upload).toHaveBeenCalledTimes(1);
+    expect(mocks.upload.mock.calls[0][1]).toBe("good");
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
   });
 
   it("surfaces a scan error", async () => {

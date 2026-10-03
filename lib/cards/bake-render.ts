@@ -11,6 +11,7 @@ import { isUserStorageConfigured } from "@/lib/media/user-storage";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import type { CardPreviewData } from "@/components/cards/card-preview";
 import {
   BAKE_SELECT_COLUMNS,
   CLEARED_RENDER_POINTERS,
@@ -19,6 +20,7 @@ import {
   removeRenderObjects,
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
+import { bakedBackOf } from "@/lib/cards/faces";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -44,6 +46,21 @@ import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 //     rendered_at / layout_version) is written with the service role too:
 //     0126's cards_guard_render_columns trigger lets an API role only CLEAR
 //     those columns, so nobody can point their card at another picture
+//
+// BOTH FACES (TODO 5.3, migration 0134): a card whose back face has a BODY
+// of its own (lib/cards/faces.ts bakedBackOf — a DFC front body with a back
+// body stored on `back_face.frame_style.template`) is baked twice, the back
+// through the SAME renderer on backPreviewData (its own content, body,
+// colour and art; the card's one collector line with the back's artist; the
+// mark in its © slot; no holofoil stamp — the back bodies declare none),
+// with its own 600 px thumb: `{card_id}.back.png` + `.back.thumb.webp`. The
+// four pointers, rendered_at and layout_version are written in ONE
+// compare-and-set update; a back failure (art, render, upload) fails the
+// whole bake — nothing persisted, every pointer cleared. A legacy back (no
+// body: the 8 imported DFCs) gets ONE bake, as it always has, and its back
+// pointers stay null. THE ONE ENTRY for "bake this card, both faces":
+// bakeAndPersistCardRender(cardId, ownerId) re-reads the row, so a save that
+// wrote a back body (5.2's adoptDfcBodiesAction, the creator) just calls it.
 // ---------------------------------------------------------------------------
 
 type BakeRenderResult =
@@ -51,6 +68,10 @@ type BakeRenderResult =
       ok: true;
       renderedImageUrl: string | null;
       renderedThumbUrl: string | null;
+      /** The back face's bake (TODO 5.3) — null for a card with no back
+       *  body, and for a private card. */
+      renderedBackImageUrl: string | null;
+      renderedBackThumbUrl: string | null;
       /** The row's updated_at the bake rendered from — the persist step's
        *  compare-and-set key (see bakeAndPersistCardRender). */
       bakedFrom?: string;
@@ -91,6 +112,40 @@ export async function resolveBakeArt(
     return { ok: false, error: "Art unavailable — not baking an art-less render." };
   }
   return { ok: true, artUrl: resolved };
+}
+
+/**
+ * Render the BACK face a stored bake writes (TODO 5.3), or null when the
+ * card has none to bake (no back face, or a legacy back with no body —
+ * lib/cards/faces.ts bakedBackOf). Shared by the save-time bake below and
+ * the admin sweep (lib/cards/rebake-batch.ts), right after each has
+ * rendered the front: the back's art goes through the same guard as the
+ * front's (resolveBakeArt — a back whose art can't load is not baked
+ * art-less, and that fails the card's whole bake), and the render is the
+ * front's contract exactly — HD, the mark when billing is on, no footer
+ * text, round corners. `previewData` is the FRONT's mapping (rowToPreviewData,
+ * the front's art already resolved — the back's is resolved here).
+ */
+export async function renderBackFace(
+  previewData: CardPreviewData,
+  opts: { brandMark: boolean },
+): Promise<{ ok: true; png: ArrayBuffer | null } | { ok: false; error: string }> {
+  const back = bakedBackOf(previewData);
+  if (!back) return { ok: true, png: null };
+  const art = await resolveBakeArt(back.artUrl);
+  if (!art.ok) return { ok: false, error: `Back face: ${art.error}` };
+  if (art.artUrl) back.artUrl = art.artUrl;
+  try {
+    const response = await renderCardImage(back, "hd", {
+      brandMark: opts.brandMark,
+      watermarkText: null,
+      corners: "round",
+    });
+    return { ok: true, png: await response.arrayBuffer() };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "Render error";
+    return { ok: false, error: `Back face render failed: ${detail}` };
+  }
 }
 
 async function bakeCardRender(
@@ -143,7 +198,13 @@ async function bakeCardRender(
   // silently.
   if (card.visibility === "private") {
     await removeRenderObjects(ownerId, [card.id]);
-    return { ok: true, renderedImageUrl: null, renderedThumbUrl: null };
+    return {
+      ok: true,
+      renderedImageUrl: null,
+      renderedThumbUrl: null,
+      renderedBackImageUrl: null,
+      renderedBackThumbUrl: null,
+    };
   }
 
   if (!isUserStorageConfigured()) {
@@ -183,6 +244,12 @@ async function bakeCardRender(
     return { ok: false, error: `Render failed: ${detail}` };
   }
 
+  // The back face, when the card has one with a body of its own (TODO 5.3):
+  // rendered BEFORE anything is uploaded, so a back that fails leaves the
+  // storage objects exactly as they were.
+  const back = await renderBackFace(previewData, { brandMark: isBillingEnabled() });
+  if (!back.ok) return back;
+
   // Overlap guard, part 1: rendering is the slow step (seconds). If the card
   // was saved again meanwhile, THAT save's bake owns the row now — uploading
   // ours would overwrite the newer PNG with older pixels. (A residual race
@@ -196,7 +263,12 @@ async function bakeCardRender(
     return { ok: false, error: "Superseded by a newer save.", superseded: true };
   }
 
-  const uploaded = await uploadRenderObjects(ownerId, card.id, pngBytes);
+  const uploaded = await uploadRenderObjects(
+    ownerId,
+    card.id,
+    { front: pngBytes, back: back.png },
+    { staleBack: Boolean((card as CardRowForBake).rendered_back_image_url) },
+  );
   if (!uploaded.ok) return uploaded;
   return { ...uploaded, bakedFrom: card.updated_at };
 }
@@ -264,15 +336,18 @@ export async function bakeAndPersistCardRender(
       // null for private cards (no public render); a URL otherwise.
       rendered_image_url: result.renderedImageUrl,
       rendered_thumb_url: result.renderedThumbUrl,
+      // The back face's pair (migration 0134, TODO 5.3) in the SAME write:
+      // a URL for a card with a back body, null for every other card (and
+      // for a private card's clear, which took both faces' objects) — the
+      // four pointers always describe the one bake that just happened.
+      rendered_back_image_url: result.renderedBackImageUrl,
+      rendered_back_thumb_url: result.renderedBackThumbUrl,
       rendered_at: result.renderedImageUrl ? new Date().toISOString() : null,
       // Records WHICH renderer/profile generation baked this PNG, so
       // scripts/rebake-renders.mjs can find stale renders after template
-      // changes (see lib/cards/layout-version.ts).
+      // changes (see lib/cards/layout-version.ts). ONE stamp per card: the
+      // back is baked by the same renderer in the same run.
       layout_version: result.renderedImageUrl ? CARD_LAYOUT_VERSION : null,
-      // A private card's clear takes the back face's pointers with it
-      // (migration 0134 — removeRenderObjects took both faces' objects).
-      // The back BAKE, and its pointers on a successful bake, are 5.3's.
-      ...(result.renderedImageUrl ? {} : { rendered_back_image_url: null, rendered_back_thumb_url: null }),
     })
     .eq("id", cardId)
     .eq("owner_id", ownerId);

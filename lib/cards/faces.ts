@@ -37,7 +37,7 @@
 // ---------------------------------------------------------------------------
 
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { buildTypeLine, printsPowerToughness } from "@/lib/cards/card-display";
+import { buildTypeLine, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
 import {
   DEFAULT_DFC_ICON,
   dfcBodyOf,
@@ -48,6 +48,7 @@ import {
   type DfcLayout,
   type DfcRole,
 } from "@/lib/cards/dfc";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { CardBackFace, CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 
 /** What the OTHER face puts on this one. */
@@ -246,4 +247,35 @@ export function backPreviewData(card: CardPreviewData): CardPreviewData | null {
 /** Both faces of a card at once. */
 export function facesOf(card: CardPreviewData): { front: CardPreviewData; back: CardPreviewData | null } {
   return { front: frontPreviewData(card), back: backPreviewData(card) };
+}
+
+/**
+ * The back face a card FLIPS to, or null — the preview's own rule
+ * (components/cards/card-preview.tsx showFlip): a back face, unless the
+ * front's template paints it inline (an adventure's storybook page, a flip /
+ * split / aftermath's rotated panel — one master, two panels, never a
+ * second picture). What `/api/cards/[id]/png?face=back` and the card page's
+ * `?face=back` answer: a legacy back as the page draws it today, a back
+ * with a body on its body.
+ */
+export function flippableBackOf(card: CardPreviewData): CardPreviewData | null {
+  const back = backPreviewData(card);
+  if (!back) return null;
+  const profile = getFrameProfile(normalizeFrameTemplate(card.frameStyle?.template));
+  if (profile.adventure || profile.secondFace) return null;
+  return back;
+}
+
+/**
+ * The back face a stored bake WRITES, or null (TODO 5.3): only a back with
+ * a BODY of its own gets `{id}.back.png` + `.back.thumb.webp` beside the
+ * front's pair. A legacy back (the 8 imported DFCs, every row from before
+ * Phase 5) is never baked — its card stays single-bake, byte for byte, and
+ * its page keeps flipping to the live preview. Both bake paths
+ * (lib/cards/bake-render.ts, lib/cards/rebake-batch.ts) read this one
+ * predicate; so do the download modal, the deck export's manifest and the
+ * page name, which offer a back only where a bake of it exists.
+ */
+export function bakedBackOf(card: CardPreviewData): CardPreviewData | null {
+  return backBodyOf(card) ? backPreviewData(card) : null;
 }
