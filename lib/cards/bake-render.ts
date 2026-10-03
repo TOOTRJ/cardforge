@@ -13,6 +13,7 @@ import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import {
   BAKE_SELECT_COLUMNS,
+  CLEARED_RENDER_POINTERS,
   rowToPreviewData,
   type CardRowForBake,
   removeRenderObjects,
@@ -227,20 +228,16 @@ export async function bakeAndPersistCardRender(
     console.warn(
       `[bake-render] Failed to bake card ${cardId}: ${result.error}`,
     );
-    // Clear any previously-baked render so viewers fall back to the
-    // always-correct live <CardPreview> instead of an out-of-date PNG that
-    // no longer matches the just-saved card. (No-op for a brand-new card,
-    // whose render columns are already null.) The owner's own client may
-    // CLEAR the render columns (0126's guard only refuses a new pointer), so
-    // this works even without the service-role key.
+    // Clear any previously-baked render — every pointer, both faces' (a
+    // card downloads the way it looks; 0126 + 0134) — so viewers fall back
+    // to the always-correct live <CardPreview> instead of an out-of-date PNG
+    // that no longer matches the just-saved card. (No-op for a brand-new
+    // card, whose render columns are already null.) The owner's own client
+    // may CLEAR the render columns (0126's guard only refuses a new
+    // pointer), so this works even without the service-role key.
     const { error: clearErr } = await supabase
       .from("cards")
-      .update({
-        rendered_image_url: null,
-        rendered_thumb_url: null,
-        rendered_at: null,
-        layout_version: null,
-      })
+      .update({ ...CLEARED_RENDER_POINTERS, layout_version: null })
       .eq("id", cardId);
     if (clearErr) {
       console.warn(
@@ -272,6 +269,10 @@ export async function bakeAndPersistCardRender(
       // scripts/rebake-renders.mjs can find stale renders after template
       // changes (see lib/cards/layout-version.ts).
       layout_version: result.renderedImageUrl ? CARD_LAYOUT_VERSION : null,
+      // A private card's clear takes the back face's pointers with it
+      // (migration 0134 — removeRenderObjects took both faces' objects).
+      // The back BAKE, and its pointers on a successful bake, are 5.3's.
+      ...(result.renderedImageUrl ? {} : { rendered_back_image_url: null, rendered_back_thumb_url: null }),
     })
     .eq("id", cardId)
     .eq("owner_id", ownerId);

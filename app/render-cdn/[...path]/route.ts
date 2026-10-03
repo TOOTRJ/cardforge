@@ -4,8 +4,9 @@ import { bakeObjectCardId } from "@/lib/cards/render-cdn";
 import { createPublicClient } from "@/lib/supabase/public";
 
 // ---------------------------------------------------------------------------
-// /render-cdn/<owner>/<cardId>.png|.thumb.webp?v=… — a card's bake from the
-// card-renders bucket behind an immutable cache header.
+// /render-cdn/<owner>/<cardId>.png|.thumb.webp|.back.png|.back.thumb.webp?v=…
+// — a card's bake (either face) from the card-renders bucket behind an
+// immutable cache header.
 //
 // Supabase Storage's public endpoint answers browsers `cache-control:
 // no-cache` (the object's own max-age is honoured edge-side only), so every
@@ -15,8 +16,10 @@ import { createPublicClient } from "@/lib/supabase/public";
 // lets Vercel's CDN serve repeats without invoking the function.
 // BakedCardThumbnail maps storage URLs onto this path (lib/cards/render-cdn.ts).
 //
-// Only a bake's two names are served (`bakeObjectCardId`), and every image
-// carries `Vercel-Cache-Tag: card-<cardId>` — the tag the card's share image
+// Only a bake's four names are served (`bakeObjectCardId`: the front's PNG
+// and thumb, the back face's `.back.*` pair — lib/cards/bake-core.ts
+// renderObjectNames), and every image carries `Vercel-Cache-Tag:
+// card-<cardId>` — ONE tag for both faces, the tag the card's share image
 // already carries (/api/cards/[id]/og). Whatever takes a card out of public
 // view (made private, deleted, hidden by moderation, the owner's account
 // deleted, scripts/sweep-storage-orphans.mjs --private-renders) removes the

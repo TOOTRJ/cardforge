@@ -123,25 +123,68 @@ export function rowToPreviewData(
 //
 // Every one of them goes through the owner's folder handle
 // (lib/media/user-storage.ts `userFolder("card-renders", ownerId)`): the key
-// can only be `{ownerId}/{cardId}.png` or its `.thumb.webp`, never a path a
-// caller made up. Users hold no storage write policy since migration 0126, so
-// these calls use the service role — each caller passes an owner it has
-// verified (its authenticated user, or the owner_id of the card row it read).
+// can only be one of a card's render names (renderObjectNames: the front's
+// `{ownerId}/{cardId}.png` + `.thumb.webp`, the back face's `.back.png` +
+// `.back.thumb.webp`), never a path a caller made up. Users hold no storage
+// write policy since migration 0126, so these calls use the service role —
+// each caller passes an owner it has verified (its authenticated user, or
+// the owner_id of the card row it read).
 // ---------------------------------------------------------------------------
 
-/** The two objects a bake writes for a card, as bare names in its owner's
- *  folder: the HD PNG and its WebP thumbnail. `{ownerId}/{name}` is exactly
- *  `cardRenderPath(ownerId, cardId)` and `renderThumbPath()` of it
- *  (lib/cards/storage-paths.ts, lib/cards/render-thumb.ts). */
-export function renderObjectNames(cardId: string): { png: string; thumb: string } {
-  return { png: `${cardId}.png`, thumb: `${cardId}.thumb.webp` };
+/** The objects a bake may write for a card, as bare names in its owner's
+ *  folder (TODO 5.0a, design 2026-10-02 §3.3): the front's HD PNG and its
+ *  WebP thumbnail — `{ownerId}/{name}` is exactly `cardRenderPath(ownerId,
+ *  cardId)` and `renderThumbPath()` of it (lib/cards/storage-paths.ts,
+ *  lib/cards/render-thumb.ts) — and the BACK face's pair, `{cardId}.back.png`
+ *  / `{cardId}.back.thumb.webp` (migration 0134's rendered_back_image_url /
+ *  rendered_back_thumb_url; written by 5.3 only for a card with a back body).
+ *  THE ONE LIST every reader of a render name derives from: isStoredRenderUrl
+ *  and bakeObjectCardId (lib/cards/render-cdn.ts, the /render-cdn proxy),
+ *  removeRenderObjects below, the moderation hide, and the orphan sweep's
+ *  renderCardId (scripts/lib/storage-orphans.mjs, which can't import this
+ *  module — tests/unit/cards/render-object-names.test.ts holds the two to
+ *  the same four names). */
+export function renderObjectNames(cardId: string): {
+  png: string;
+  thumb: string;
+  backPng: string;
+  backThumb: string;
+} {
+  return {
+    png: `${cardId}.png`,
+    thumb: `${cardId}.thumb.webp`,
+    backPng: `${cardId}.back.png`,
+    backThumb: `${cardId}.back.thumb.webp`,
+  };
 }
+
+/** Every render name of a card, in one list (the front pair, then the back
+ *  pair) — what removeRenderObjects removes; a bake writes only the faces
+ *  the card has. */
+export function allRenderObjectNames(cardId: string): string[] {
+  const { png, thumb, backPng, backThumb } = renderObjectNames(cardId);
+  return [png, thumb, backPng, backThumb];
+}
+
+/** The render POINTER columns a card row carries (migration 0126 + 0134):
+ *  what every path that takes a card out of public view clears beside the
+ *  object removal — the moderation hide, going private, a failed bake.
+ *  `layout_version` is cleared by the bake paths only. Service-role writes
+ *  set them; an API role may only clear them (cards_guard_render_columns). */
+export const CLEARED_RENDER_POINTERS = Object.freeze({
+  rendered_image_url: null,
+  rendered_thumb_url: null,
+  rendered_back_image_url: null,
+  rendered_back_thumb_url: null,
+  rendered_at: null,
+});
 
 const STORAGE_UNCONFIGURED =
   "Render storage is unavailable (SUPABASE_SECRET_KEY is not set).";
 
 /**
- * Delete these cards' baked PNGs + thumbs from `ownerId`'s card-renders folder,
+ * Delete these cards' baked PNGs + thumbs — both faces' names, whether or
+ * not the card ever had a back bake — from `ownerId`'s card-renders folder,
  * retrying once. Returns the error (null on success) — and LOGS it: the render
  * path is deterministic and the bucket is public-read, so a render that
  * survives a delete or an unpublish stays fetchable by anyone who has (or
@@ -149,7 +192,8 @@ const STORAGE_UNCONFIGURED =
  * 0126 there is no user-session fallback for this delete.
  *
  * Note: Supabase Storage's `remove` treats a missing object as success (no
- * error), so the retry only fires on a genuine transient/permission error.
+ * error) — so a card with no back bake costs nothing extra — and the retry
+ * only fires on a genuine transient/permission error.
  */
 export async function removeRenderObjects(
   ownerId: string,
@@ -162,10 +206,7 @@ export async function removeRenderObjects(
     );
     return { error: STORAGE_UNCONFIGURED };
   }
-  const names = cardIds.flatMap((id) => {
-    const { png, thumb } = renderObjectNames(id);
-    return [png, thumb];
-  });
+  const names = cardIds.flatMap(allRenderObjectNames);
   const folder = userFolder("card-renders", ownerId);
   let message = "";
   for (let attempt = 1; attempt <= 2; attempt += 1) {
@@ -188,7 +229,8 @@ export type UploadRenderResult =
  * bake instead of a pile of versioned files to garbage-collect) plus the
  * 600 px WebP thumb beside it (lib/cards/render-thumb.ts) into `ownerId`'s
  * card-renders folder, and return the public URLs. A thumb failure is not a
- * bake failure: tiles fall back to next/image over the PNG.
+ * bake failure: tiles fall back to next/image over the PNG. The FRONT's
+ * pair only: the back face's bake (5.3) writes the `.back.*` names.
  */
 export async function uploadRenderObjects(
   ownerId: string,

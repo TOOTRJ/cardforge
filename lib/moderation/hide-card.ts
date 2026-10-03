@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { removeRenderObjects } from "@/lib/cards/bake-core";
+import { CLEARED_RENDER_POINTERS, removeRenderObjects } from "@/lib/cards/bake-core";
 import { purgeHiddenCard } from "@/lib/cards/revalidate";
 import { lookupUsername } from "@/lib/profile/username";
 
@@ -15,9 +15,11 @@ import { lookupUsername } from "@/lib/profile/username";
 //
 // In order, each step checked (they used to be fire-and-forget: a rejected
 // update still produced "Card hidden" while the card stayed public):
-//   1. the card → private, render pointer cleared, in ONE update;
-//   2. both render objects (PNG + thumb) removed from the owner's
-//      card-renders folder (removeRenderObjects retries once and logs);
+//   1. the card → private, every render pointer (both faces', 0126 + 0134)
+//      cleared, in ONE update;
+//   2. every render object (the PNG + thumb of each face) removed from the
+//      owner's card-renders folder (removeRenderObjects retries once and
+//      logs);
 //   3. the card's pending reports → actioned;
 //   4. the purge: card page, profile, gallery, discovery surfaces AND the CDN
 //      copies of its share image and its /render-cdn bake (tag card-<id>) —
@@ -45,7 +47,7 @@ export async function hideCard(
 
   const { error: hideError } = await admin
     .from("cards")
-    .update({ visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null })
+    .update({ visibility: "private", ...CLEARED_RENDER_POINTERS })
     .eq("id", cardId);
   if (hideError) return { ok: false, error: `Couldn't hide the card: ${hideError.message}` };
 

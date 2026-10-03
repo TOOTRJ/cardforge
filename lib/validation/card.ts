@@ -14,6 +14,7 @@ import {
   CARD_FINISH_VALUES,
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
+  DFC_ICON_FAMILY_VALUES,
   FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
   RETIRED_CARD_FINISHES,
@@ -279,6 +280,11 @@ const frameStyleBaseSchema = z
     // from before the line); the foil-printing ★ is `true` or absent.
     collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
     star: z.literal(true).optional(),
+    // The transform icon family (TODO 5.0a, lib/cards/dfc.ts): one of the
+    // five families or absent. The save drops it on any template that is
+    // not a transform front body (normalizeAnatomy) — none exists until
+    // 5.1a, so no stored card can carry it yet.
+    dfcIcon: z.enum(DFC_ICON_FAMILY_VALUES).optional(),
   })
   .strict();
 
@@ -305,6 +311,10 @@ export const frameAnatomyPatchSchema = z
     // absent).
     collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
     star: z.boolean().optional(),
+    // The transform icon family (TODO 5.0a): a family only — there is no
+    // "off" (a transform card always wears one); the save drops it off any
+    // template that is not a transform front body.
+    dfcIcon: z.enum(DFC_ICON_FAMILY_VALUES).optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")
@@ -319,11 +329,21 @@ export const frameAnatomyPatchSchema = z
 const uuidSchema = z.string().uuid("Must be a valid UUID.");
 
 // ---------------------------------------------------------------------------
-// Back-face schema (Phase 11 chunk 10)
+// Back-face schema (Phase 11 chunk 10; the back's own body since TODO 5.0a)
 //
 // Same field shape as the front face, minus the shared/cross-face fields
-// (rarity, color_identity, frame_style, visibility, slug, owner, etc.) —
-// those live on the front-card row and apply to both faces.
+// (rarity, finish, the set symbol, the collector fields, the anatomy
+// switches, visibility, slug, owner, etc.) — those live on the front-card
+// row and apply to both faces — plus, for a double-faced card (Phase 5,
+// owner decision Q1: ONE card holds both faces), the back's own BODY
+// (`frame_style.template`, a back-face template) and COLOUR
+// (`color_identity`). Both absent on a LEGACY back (the 8 imported DFCs,
+// every inline layout's second panel): the back draws on the front's
+// template and colour, as it always has. No DB CHECK exists on the jsonb
+// (0015 / 0041 by design), so this schema is the one gate; the actions add
+// the structural rule (lib/cards/dfc.ts backBodyError: a body only under a
+// front that has a back face, and only a back body — none exists until
+// 5.1a).
 //
 // The title may be empty HERE: a private draft may keep an unnamed second
 // face, and whether a save needs the name depends on the card's visibility
@@ -336,6 +356,12 @@ const backFaceTitleSchema = z
   .string()
   .trim()
   .max(CARD_TITLE_MAX, CARD_TITLE_MAX_MESSAGE);
+
+/** A back face's body: the template alone (the finish, the switches and the
+ *  rest of FrameStyle are the card's). Any template name passes HERE — the
+ *  structural rule (a back body under a DFC front) is the actions'
+ *  (lib/cards/dfc.ts), which keeps this module free of the profiles. */
+const backBodySchema = z.enum(FRAME_TEMPLATE_VALUES);
 
 export const backFaceSchema = z
   .object({
@@ -353,6 +379,8 @@ export const backFaceSchema = z
     artist_credit: cardArtistCreditSchema,
     art_url: cardArtUrlSchema,
     art_position: artPositionSchema,
+    frame_style: z.object({ template: backBodySchema }).strict().optional(),
+    color_identity: cardColorIdentityBaseSchema.optional(),
   })
   .strict();
 

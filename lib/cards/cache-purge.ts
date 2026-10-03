@@ -7,8 +7,9 @@ import "server-only";
 // `Vercel-Cache-Tag: card-<id>`:
 //   * /api/cards/[id]/og — the share image (s-maxage up to a day on the
 //     versioned URL);
-//   * /render-cdn/<owner>/<id>.png|.thumb.webp — the stored bake behind a
-//     one-year immutable header (app/render-cdn/[...path]/route.ts).
+//   * /render-cdn/<owner>/<id>.png|.thumb.webp|.back.png|.back.thumb.webp —
+//     the stored bake of either face behind a one-year immutable header
+//     (app/render-cdn/[...path]/route.ts); one tag covers both faces.
 // `revalidatePath()` does NOT touch that layer — it only purges Next's
 // page/data cache — so for months a card flipped to private (or hidden by an
 // admin) kept serving its image to every social scraper and to anyone

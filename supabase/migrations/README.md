@@ -68,13 +68,20 @@ add a policy for that bucket either, and never let a picture column (0127)
 accept it.
 
 **A card's render pointer is the server's too.** `cards_guard_render_columns`
-(0126) lets `anon` / `authenticated` only keep or clear
-`rendered_image_url`, `rendered_thumb_url`, `rendered_at` and
-`layout_version`; setting one (or inserting a card with one) is
-`insufficient_privilege`. The save bake persists with the service role
-(`lib/cards/bake-render.ts`). A new render-like column (a URL the app draws
-as the card's picture) joins that trigger, and any surface that draws one
-checks it with `isStoredRenderUrl()` (`lib/cards/render-cdn.ts`) first.
+(0126, re-created by 0134) lets `anon` / `authenticated` only keep or clear
+`rendered_image_url`, `rendered_thumb_url`, the back face's
+`rendered_back_image_url` / `rendered_back_thumb_url` (0134, TODO 5.0a:
+`{owner}/{id}.back.png` / `.back.thumb.webp` in `card-renders`, written by
+5.3 for a card with a back body), `rendered_at` and `layout_version`;
+setting one (or inserting a card with one) is `insufficient_privilege`. The
+save bake persists with the service role (`lib/cards/bake-render.ts`). The
+trigger is declared on a column LIST (`update of …`): a new render-like
+column (a URL the app draws as the card's picture) joins that list AND the
+function body — 0134 is the pattern — and 0108's `set_cards_updated_at`
+subtracts it (a bake is not an edit); its object name joins
+`renderObjectNames` (`lib/cards/bake-core.ts`, the one list every reader
+derives from), and any surface that draws one checks it with
+`isStoredRenderUrl()` (`lib/cards/render-cdn.ts`) first.
 
 **Every picture URL column is tied to our storage (0127, TODO 3.14b).** One
 guard trigger per table (`cards_guard_media_columns`,
@@ -238,10 +245,16 @@ instead. Each bullet: what the header says, and what is true now.
   refunds aged UNSETTLED spends without reading `ai_generation_jobs` at all.
 - **0100 ("ignore the counters when deciding whether a card changed")** —
   the guard also ignores the RENDER columns since 0108 (`rendered_image_url`,
-  `rendered_thumb_url`, `rendered_at`, `layout_version`): a bake or a render
-  sweep is not an edit, so `updated_at`, the sitemap's lastmod and the card
-  page's `dateModified` stay honest. The share-image cache-buster keys on
-  `max(updated_at, rendered_at)` (`lib/cards/render-version.ts`).
+  `rendered_thumb_url`, `rendered_at`, `layout_version`) and, since 0134,
+  the back face's `rendered_back_image_url` / `rendered_back_thumb_url`: a
+  bake or a render sweep is not an edit, so `updated_at`, the sitemap's
+  lastmod and the card page's `dateModified` stay honest. The share-image
+  cache-buster keys on `max(updated_at, rendered_at)`
+  (`lib/cards/render-version.ts`).
+- **0108 / 0126 (the FOUR render columns)** — six since 0134 (TODO 5.0a):
+  the back face's two pointers joined both the `updated_at` subtraction and
+  the render guard's column list and body; `tests/unit/db/card-back-face-
+  renders-migration.test.ts` holds both to the code's pointer list.
 - **0014 (`"etched"` = "gold-leaf inner border + faint cross-hatch
   overlay")** — since layout v26 the etched finish is a fine cross-hatch and
   sheen masked to the frame's own pixels (`lib/cards/etched-finish.tsx`, the

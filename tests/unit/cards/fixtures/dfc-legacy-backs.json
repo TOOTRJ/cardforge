@@ -1,0 +1,255 @@
+{
+  "_": "The SHAPES of production's nine visible `back_face` rows (anonymous REST read, 2026-10-02, TODO 5.0a): 8 imported double-faced cards — 4 transform backs, 4 modal backs (one a planeswalker, two on m15borderless) — and 1 adventure stored as a back face. Front titles, ids, slugs, art URLs and artist names are replaced; rules and flavour text are cut to the lines that matter (a land back's mana ability keeps its printed position). The back faces' names are the printed cards'. Every row has `frame_style` keys {finish, template} only and NO back body — the legacy shape lib/cards/faces.ts must keep drawing exactly as today.",
+  "rows": [
+    {
+      "label": "transform: red devoid creature // Avacyn, the Purifier (back art)",
+      "layout": "transform",
+      "front": {
+        "title": "Transform front A",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Fairy Wizard Knight"],
+        "cost": null,
+        "power": "6",
+        "toughness": "5",
+        "rules_text": "Flying\nWhen this creature transforms, it deals 3 damage to each other creature.",
+        "frame_style": { "finish": "regular", "template": "m15devoid" },
+        "color_identity": ["red"],
+        "rarity": "mythic"
+      },
+      "back_face": {
+        "title": "Avacyn, the Purifier",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Angel"],
+        "power": "6",
+        "toughness": "5",
+        "rules_text": "Flying\nWhen this creature transforms into Avacyn, the Purifier, it deals 3 damage to each other creature and each opponent.",
+        "flavor_text": "\"Wings that once bore hope are now stained with blood.\"",
+        "art_url": "https://auth.pipglyph.com/storage/v1/object/public/card-art/00000000-0000-4000-8000-000000000001/back-00000000-0000-4000-8000-00000000000a.webp",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "modal: black legendary creature // Tergrid's Lantern (artifact back with a cost, no art)",
+      "layout": "modal",
+      "front": {
+        "title": "Modal front B",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["God"],
+        "cost": "{3}{B}{B}",
+        "power": "4",
+        "toughness": "5",
+        "rules_text": "Menace\nWhenever an opponent sacrifices a nontoken permanent or discards a permanent card, you draw a card.",
+        "frame_style": { "finish": "regular", "template": "m15" },
+        "color_identity": ["black"],
+        "rarity": "rare"
+      },
+      "back_face": {
+        "title": "Tergrid's Lantern",
+        "cost": "{3}{B}",
+        "card_type": "artifact",
+        "supertype": "Legendary",
+        "subtypes": [],
+        "rules_text": "{T}: Target player loses 3 life unless they sacrifice a nonland permanent or discards a card.\n{3}{B}: Untap Tergrid's Lantern.",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "transform: white legendary creature // Avacyn, the Purifier (back art)",
+      "layout": "transform",
+      "front": {
+        "title": "Transform front C",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Wizard Knight"],
+        "cost": "{3}{W}{W}",
+        "power": "4",
+        "toughness": "4",
+        "rules_text": "Flash\nFlying, vigilance\nWhen this creature enters, creatures you control gain indestructible until end of turn.",
+        "frame_style": { "finish": "regular", "template": "m15" },
+        "color_identity": ["white"],
+        "rarity": "mythic"
+      },
+      "back_face": {
+        "title": "Avacyn, the Purifier",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Angel"],
+        "power": "6",
+        "toughness": "5",
+        "rules_text": "Flying\nWhen this creature transforms into Avacyn, the Purifier, it deals 3 damage to each other creature and each opponent.",
+        "flavor_text": "\"Wings that once bore hope are now stained with blood.\"",
+        "art_url": "https://auth.pipglyph.com/storage/v1/object/public/card-art/00000000-0000-4000-8000-000000000003/back-00000000-0000-4000-8000-00000000000c.webp",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "modal: multicolor legendary creature // Tibalt, Cosmic Impostor (a PLANESWALKER back)",
+      "layout": "modal",
+      "front": {
+        "title": "Modal front D",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Nen User"],
+        "cost": "{1}{B}",
+        "power": "2",
+        "toughness": "1",
+        "rules_text": "When this creature enters, each opponent reveals their hand.",
+        "frame_style": { "finish": "regular", "template": "m15" },
+        "color_identity": ["multicolor"],
+        "rarity": "mythic"
+      },
+      "back_face": {
+        "title": "Tibalt, Cosmic Impostor",
+        "cost": "{5}{B}{R}",
+        "card_type": "planeswalker",
+        "supertype": "Legendary",
+        "subtypes": ["Tibalt"],
+        "loyalty": "5",
+        "rules_text": "As Tibalt enters, you get an emblem.\n+2: Exile the top card of each player's library.\n−3: Draw three cards.\n−8: Exile all artifacts and creatures.",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "modal on m15borderless: black legendary creature // Tergrid's Lantern (artifact back with a cost)",
+      "layout": "modal",
+      "front": {
+        "title": "Modal front E",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Monarch"],
+        "cost": "{3}{B}{B}",
+        "power": "4",
+        "toughness": "5",
+        "rules_text": "Menace\nWhenever an opponent sacrifices a nontoken permanent or discards a permanent card, you draw a card.",
+        "frame_style": { "finish": "regular", "template": "m15borderless" },
+        "color_identity": ["black"],
+        "rarity": "rare"
+      },
+      "back_face": {
+        "title": "Tergrid's Lantern",
+        "cost": "{3}{B}",
+        "card_type": "artifact",
+        "supertype": "Legendary",
+        "subtypes": [],
+        "rules_text": "{T}: Target player loses 3 life unless they sacrifice a nonland permanent or discards a card.\n{3}{B}: Untap Tergrid's Lantern.",
+        "flavor_text": "When Tergrid was a child, her shadow tried to kill her.",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "transform: white legendary creature // Temple of Civilization (a LAND back, no cost, mana ability on line 2)",
+      "layout": "transform",
+      "front": {
+        "title": "Transform front F",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["God"],
+        "cost": "{4}{W}{W}",
+        "power": "6",
+        "toughness": "6",
+        "rules_text": "Vigilance\nIf one or more creature tokens would be created under your control, three times that many are created instead.",
+        "frame_style": { "finish": "regular", "template": "m15" },
+        "color_identity": ["white"],
+        "rarity": "mythic"
+      },
+      "back_face": {
+        "title": "Temple of Civilization",
+        "card_type": "land",
+        "subtypes": [],
+        "rules_text": "(Transforms from Ojer Taq, Deepest Foundation.)\n{T}: Add {W}.\n{2}{W}, {T}: Transform Temple of Civilization. Activate only if you attacked with three or more creatures this turn and only as a sorcery.",
+        "flavor_text": "Chimil gave the Oltec life.",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "NOT a DFC: an adventure stored as a back face on m15 (Beanstalk Giant // Fertile Footsteps)",
+      "layout": "adventure",
+      "front": {
+        "title": "Beanstalk Giant",
+        "card_type": "creature",
+        "supertype": null,
+        "subtypes": ["Giant"],
+        "cost": "{6}{G} // {2}{G}",
+        "power": "*",
+        "toughness": "*",
+        "rules_text": "Beanstalk Giant's power and toughness are each equal to the number of lands you control.",
+        "frame_style": { "finish": "regular", "template": "m15" },
+        "color_identity": ["green"],
+        "rarity": "uncommon"
+      },
+      "back_face": {
+        "title": "Fertile Footsteps",
+        "cost": "{2}{G}",
+        "card_type": "sorcery",
+        "subtypes": ["Adventure"],
+        "rules_text": "Search your library for a basic land card, put it onto the battlefield, then shuffle.",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "transform: five-colour legendary creature // Aang, Master of Elements (creature back, no art)",
+      "layout": "transform",
+      "front": {
+        "title": "Transform front H",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Human", "Avatar", "Ally"],
+        "cost": "{R}{G}{W}{U}",
+        "power": "4",
+        "toughness": "4",
+        "rules_text": "Flying, firebending 2\nWhenever you waterbend, earthbend, firebend, or airbend, draw a card.",
+        "frame_style": { "finish": "regular", "template": "m15" },
+        "color_identity": ["black", "green", "red", "blue", "white"],
+        "rarity": "mythic"
+      },
+      "back_face": {
+        "title": "Aang, Master of Elements",
+        "card_type": "creature",
+        "supertype": "Legendary",
+        "subtypes": ["Avatar", "Ally"],
+        "power": "6",
+        "toughness": "6",
+        "rules_text": "Flying\nSpells you cast cost {W}{U}{B}{R}{G} less to cast.",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    },
+    {
+      "label": "modal on m15borderless: black sorcery // Agadeem, the Undercrypt (a LAND back with art)",
+      "layout": "modal",
+      "front": {
+        "title": "Modal front I",
+        "card_type": "sorcery",
+        "supertype": null,
+        "subtypes": [],
+        "cost": "{X}{B}{B}{B}",
+        "power": null,
+        "toughness": null,
+        "rules_text": "Return from your graveyard to the battlefield any number of target creature cards that each have a different mana value X or less.",
+        "frame_style": { "finish": "regular", "template": "m15borderless" },
+        "color_identity": ["black"],
+        "rarity": "mythic"
+      },
+      "back_face": {
+        "title": "Agadeem, the Undercrypt",
+        "card_type": "land",
+        "subtypes": [],
+        "rules_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {B}.",
+        "flavor_text": "\"Here below the hedron fields, souls and secrets lie entombed.\"",
+        "art_url": "https://auth.pipglyph.com/storage/v1/object/public/card-art/00000000-0000-4000-8000-000000000009/back-00000000-0000-4000-8000-00000000000f.webp",
+        "art_position": { "scale": 1, "focalX": 0.5, "focalY": 0.5 },
+        "artist_credit": "Artist"
+      }
+    }
+  ]
+}

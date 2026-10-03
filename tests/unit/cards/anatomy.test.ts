@@ -291,7 +291,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     expect(crowned).toEqual(CROWNED);
     // The extended-art frame draws its floating crown as a band (wave 2b)
     // and no pair masters.
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false });
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, dfcIcon: false });
     const paired = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );
@@ -325,9 +325,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (The collector line's slot — 4.9b — is on the devoid entry; the rest
     // draw none of the three. extendedart draws the crown alone, wave 2b:
     // checked above.)
-    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, dfcIcon: false });
     for (const t of ["m15borderlessland", "adventure", "saga", "nyx", "fullart", "expeditionland"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false });
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, dfcIcon: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
       expect(frameAnatomyOf(t).crown, t).toBe(false);

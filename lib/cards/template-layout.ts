@@ -391,12 +391,40 @@ export type FrameOverlaySlot = {
   keyMap?: Readonly<Record<string, string>>;
 };
 
+/** A double-faced BODY (TODO 5.0a, design 2026-10-02 §2.2): the profile
+ *  dresses one printed FACE of a transform or modal double-faced card. A
+ *  front body is a card's `frame_style.template` (the kind gate reads
+ *  `role`); a back body is stored in `back_face.frame_style.template` and is
+ *  never a front (lib/cards/dfc.ts). Declared on a PROFILES entry only,
+ *  never on a base another profile spreads; code-owned (the override schema
+ *  refuses it). NO profile declares one yet — 5.1a brings the transform
+ *  bodies, 5.1b the modal ones; the icon rider, the reverse P/T and the
+ *  strip arrive with them. Declaring one changes no stored card: a legacy
+ *  `back_face` (no body) keeps drawing on the front's template. */
+export type DfcProfile = {
+  /** The printed layout: a transform (the back has no cost, the front's tab
+   *  prints the back's P/T) or a modal double-faced card (the strip). */
+  layout: "transform" | "modal";
+  /** Which face this body dresses. */
+  role: "front" | "back";
+  /** Which side of the title bar the icon well (transform) or the drop
+   *  housing (modal) sits on — the side the glyph rider draws and the name's
+   *  inset follows: `left` on every front and on the 2016–22 back, `right`
+   *  on the ▼ back printed since 2022-11. */
+  well: "left" | "right";
+  /** A land body: no mana cost, and on the back no P/T or indicator. */
+  land?: true;
+};
+
 export type FrameProfile = {
   label: string;
   /** Printed anatomy drawn over the frame master — see FrameOverlaySlot.
    *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
    *  stored card. Code-owned. */
   overlays?: readonly FrameOverlaySlot[];
+  /** This template is one FACE of a double-faced card — see DfcProfile.
+   *  Code-owned; set only on PROFILES entries (none yet). */
+  dfc?: DfcProfile;
   /** The two-colour dresses this template has pair masters for (TODO 4.6b):
    *  `<template>/<pair>.png` for "split", `<template>/<pair>-h.png` for
    *  "hybrid" (TWO_COLOR_MASTER_KEYS). A card with a stored colour pair and

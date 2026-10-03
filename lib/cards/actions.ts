@@ -36,7 +36,7 @@ import {
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
-import { removeRenderObjects } from "@/lib/cards/bake-core";
+import { CLEARED_RENDER_POINTERS, removeRenderObjects } from "@/lib/cards/bake-core";
 import {
   purgeHiddenCard,
   purgeHiddenCards,
@@ -51,6 +51,7 @@ import {
   type FrameAnatomyStyle,
 } from "@/lib/cards/anatomy";
 import { cardPageName, withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
+import { backBodyError } from "@/lib/cards/dfc";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -295,6 +296,17 @@ export async function createCardAction(
       ok: false,
       fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
     };
+  }
+  // A back face's own BODY (Phase 5, TODO 5.0a) only under a front that has
+  // a back face, and only a back body (lib/cards/dfc.ts) — no such body
+  // exists until 5.1a, so a crafted one is refused and no stored card gains
+  // one; a body-less back face (the imported DFCs, every inline layout) is
+  // untouched.
+  {
+    const bodyError = backBodyError(data.frame_style?.template, data.back_face);
+    if (bodyError) {
+      return { ok: false, fieldErrors: { "back_face.frame_style": bodyError } };
+    }
   }
 
   // Entitlement gates. Premium frame/finish (our own tech only — never WotC
@@ -782,8 +794,21 @@ export async function updateCardAction(
     update.parent_card_id = data.parent_card_id;
   }
   // Back face: `null` clears it; an object replaces it whole. Omitting
-  // the field leaves whatever the DB already had untouched.
-  if (data.back_face !== undefined) update.back_face = data.back_face ?? null;
+  // the field leaves whatever the DB already had untouched. A back BODY
+  // (Phase 5, TODO 5.0a) is judged against the front as it will be stored —
+  // the patched template, else the stored one (lib/cards/dfc.ts
+  // backBodyError; no back body exists until 5.1a).
+  if (data.back_face !== undefined) {
+    const storedTemplate = (existing.frame_style as { template?: string } | null)?.template;
+    const bodyError = backBodyError(
+      data.frame_style !== undefined ? data.frame_style?.template : storedTemplate,
+      data.back_face,
+    );
+    if (bodyError) {
+      return { ok: false, fieldErrors: { "back_face.frame_style": bodyError } };
+    }
+    update.back_face = data.back_face ?? null;
+  }
   // v2 back-face reference: null clears, a uuid links, omitted leaves alone.
   if (data.back_card_id !== undefined)
     update.back_card_id = data.back_card_id ?? null;
@@ -1075,13 +1100,14 @@ export async function updateCardsVisibilityAction(
   }
 
   // Going private must also drop the public render (the full card image) — both
-  // the row's URL and the stored object — for the same reason the single-card
-  // path does. Going public/unlisted bakes the missing renders below.
+  // the row's pointers (both faces', CLEARED_RENDER_POINTERS) and the stored
+  // objects — for the same reason the single-card path does. Going
+  // public/unlisted bakes the missing renders below.
   const { error } = await supabase
     .from("cards")
     .update(
       goingPrivate
-        ? { visibility: "private", rendered_image_url: null, rendered_thumb_url: null, rendered_at: null }
+        ? { visibility: "private", ...CLEARED_RENDER_POINTERS }
         : { visibility: parsed.data.visibility },
     )
     .in("id", targetIds)

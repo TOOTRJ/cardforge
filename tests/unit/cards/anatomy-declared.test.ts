@@ -39,12 +39,12 @@ describe("where the pieces are declared", () => {
     // round 20: its two-colour printings are the gold frame.)
     const DRAWN = ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false });
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, dfcIcon: false });
     expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false });
-    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true });
-    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true });
-    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true });
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false, dfcIcon: false });
+    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, dfcIcon: false });
+    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, dfcIcon: false });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, dfcIcon: false });
     // A legacy template draws the m15 frame, so it has m15's anatomy.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
