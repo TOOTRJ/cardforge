@@ -212,6 +212,13 @@ Rules and gotchas:
   key, which reads as `arrows`); a BACK body is never a card's own template
   (`templateRefusesKind`), and nothing on them is offered until each colour
   of the front AND the default back is ticked (after 5.3).
+  A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
+  PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
+  through `renderBackFace` in both bake paths, the four pointers in ONE
+  write; a back failure fails the whole bake; a legacy back stays
+  single-bake — `?face=back` serves it (png / pdf) and opens the page
+  flipped (the client island only), tiles flip by a corner button only, the
+  page is "Front // Back" (`cardPageName`), and the OG image stays the front.
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
