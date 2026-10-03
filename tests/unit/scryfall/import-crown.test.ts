@@ -70,7 +70,10 @@ describe("a crownless printing imports without the crown", () => {
   it("an M15–RIX legendary (M15 #3 Avacyn) stores the switch off: no crown", () => {
     const got = imported("m15-3");
     expect(got.match).toMatchObject({ status: "exact", template: "m15" });
-    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2015" });
+    // (The anatomy fixtures carry no security_stamp, so the stamp imports
+    // as "none" — a real M15 #3 carries the oval; tests/unit/scryfall/
+    // import-stamp.test.ts reads the collector fixtures, which do.)
+    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2015", stamp: "none" });
     expect(got.crown).toBeNull();
   });
 
@@ -83,7 +86,7 @@ describe("a crownless printing imports without the crown", () => {
   it("a Multiverse Legends etched printing (MUL #66) lands on m15 without the crown its frame never printed", () => {
     const got = imported("mul-66");
     expect(got.match).toMatchObject({ status: "nearest", template: "m15", signature: "showcase/mul" });
-    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2023" });
+    expect(got.frameStyle).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2023", stamp: "none" });
     expect(got.crown).toBeNull();
   });
 });

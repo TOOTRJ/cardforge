@@ -122,30 +122,30 @@ describe("createCardAction — a new card", () => {
     const stub = db();
     const values = defaultValuesFor(null, []);
     await createCardAction(payload({ frame_style: values.frame_style }));
-    expect(written(stub, "insert")?.frame_style).toEqual({ finish: "regular", template: "m15", crown: true, twoColor: true, collector: "2023" });
+    expect(written(stub, "insert")?.frame_style).toEqual({ finish: "regular", template: "m15", crown: true, twoColor: true, collector: "2023", stamp: "auto" });
   });
 
   it("an AI job's payload names no switch: stamped on", async () => {
     const stub = db();
     await createCardAction(payload());
-    expect(written(stub, "insert")?.frame_style).toEqual({ crown: true, twoColor: true, collector: "2023" });
+    expect(written(stub, "insert")?.frame_style).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     const stub2 = db();
     await createCardAction(payload({ frame_style: { template: "m15" } }));
-    expect(written(stub2, "insert")?.frame_style).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023" });
+    expect(written(stub2, "insert")?.frame_style).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023", stamp: "auto" });
   });
 
   it("an import of a crownless printing keeps the crown off", async () => {
     const stub = db();
     await createCardAction(payload({ frame_style: { template: "m15", crown: false, twoColor: false } }));
-    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15", crown: false, twoColor: false, collector: "2023" });
+    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15", crown: false, twoColor: false, collector: "2023", stamp: "auto" });
   });
 
   it("a template that can't draw the pieces stores no switch at all", async () => {
     const stub = db();
     await createCardAction(payload({ frame_style: { template: "m15devoid", finish: "regular", crown: true, twoColor: true } }));
-    // (m15devoid has the collector line's slot, 4.9b: that key stays; it
-    // draws no crown and no pair — owner round 20.)
-    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15devoid", finish: "regular", collector: "2023" });
+    // (m15devoid has the collector line's slot, 4.9b, and the stamp's notch,
+    // 4.9c: those keys stay; it draws no crown and no pair — owner round 20.)
+    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15devoid", finish: "regular", collector: "2023", stamp: "auto" });
   });
 
   it("stores a picked colour pair as the identity", async () => {
@@ -238,15 +238,15 @@ describe("a LAND's two-colour switch through the actions (owner round 17)", () =
   it("createCardAction drops it for a land on a nonland frame — a crafted payload or the default stamp", async () => {
     const crafted = db();
     await createCardAction(land({ frame_style: { template: "m15", crown: true, twoColor: true } }));
-    expect(written(crafted, "insert")?.frame_style).toEqual({ template: "m15", crown: true, collector: "2023" });
+    expect(written(crafted, "insert")?.frame_style).toEqual({ template: "m15", crown: true, collector: "2023", stamp: "auto" });
     // No frame_style (an AI job): the land is drawn on m15, so no stamp.
     const stamped = db();
     await createCardAction(land());
-    expect(written(stamped, "insert")?.frame_style).toEqual({ crown: true, collector: "2023" });
+    expect(written(stamped, "insert")?.frame_style).toEqual({ crown: true, collector: "2023", stamp: "auto" });
     // On the land frame it is kept.
     const onLandFrame = db();
     await createCardAction(land({ frame_style: { template: "m15land", twoColor: true } }));
-    expect(written(onLandFrame, "insert")?.frame_style).toEqual({ template: "m15land", twoColor: true, crown: true, collector: "2023" });
+    expect(written(onLandFrame, "insert")?.frame_style).toEqual({ template: "m15land", twoColor: true, crown: true, collector: "2023", stamp: "auto" });
   });
 
   it("updateCardAction drops an edit's crafted flip — and its pair — for a land stored with no template", async () => {

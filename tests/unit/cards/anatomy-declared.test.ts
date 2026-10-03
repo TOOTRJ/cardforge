@@ -39,12 +39,15 @@ describe("where the pieces are declared", () => {
     // round 20: its two-colour printings are the gold frame.)
     const DRAWN = ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, dfcIcon: false });
+    // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —
+    // the snow pair included; never extendedart or the borderless land. The
+    // transform icon family, 5.0a, on no entry yet.)
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false });
     expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false, dfcIcon: false });
-    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, dfcIcon: false });
-    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, dfcIcon: false });
-    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, dfcIcon: false });
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false });
+    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false });
+    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false });
     // A legacy template draws the m15 frame, so it has m15's anatomy.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
@@ -54,39 +57,47 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
   it("defaults every piece its template draws to on, whatever the card's type or colours", () => {
     // …and the collector line in today's printed style where the template
     // has its slot (TODO 4.9b; the walker has one, not the crown).
-    expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true, collector: "2023" });
-    expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true, collector: "2023" });
-    expect(anatomyDefaults("m15pw")).toEqual({ collector: "2023" });
-    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023" });
+    // …and the stamp on "auto" where the template has the notch (4.9c).
+    expect(anatomyDefaults("m15")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(anatomyDefaults("m15land")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+    expect(anatomyDefaults("m15pw")).toEqual({ collector: "2023", stamp: "auto" });
+    expect(anatomyDefaults("m15token")).toEqual({ collector: "2023" });
+    expect(newCardFrameStyle({ template: "m15" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     // The AI jobs send no frame_style at all: the default template's pieces.
-    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "2023" });
+    expect(newCardFrameStyle({}, "creature")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
   });
 
   it("keeps an explicit off (an import of a crownless printing, the creator's switch)", () => {
-    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2023" });
+    expect(newCardFrameStyle({ template: "m15", crown: false }, "creature")).toEqual({ template: "m15", crown: false, twoColor: true, collector: "2023", stamp: "auto" });
     expect(newCardFrameStyle({ template: "m15", crown: false, twoColor: false }, "creature")).toEqual({
       template: "m15",
       crown: false,
       twoColor: false,
       collector: "2023",
+      stamp: "auto",
     });
     // The collector line's explicit off and an import's printed style stay too.
-    expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "off" });
+    expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "off", stamp: "auto" });
     expect(newCardFrameStyle({ template: "m15", collector: "2015", star: true }, "creature")).toEqual({
       template: "m15",
       crown: true,
       twoColor: true,
       collector: "2015",
       star: true,
+      stamp: "auto",
     });
+    // …and the stamp's "none" (the owner's Never, an unstamped printing).
+    expect(newCardFrameStyle({ template: "m15", stamp: "none" }, "creature")).toEqual({ template: "m15", crown: true, twoColor: true, collector: "2023", stamp: "none" });
   });
 
   it("the creator's all-on switches store only what the template draws", () => {
-    // m15devoid draws no crown or pair but has the collector slot (4.9b).
+    // m15devoid draws no crown or pair but has the collector slot (4.9b)
+    // and the stamp's notch (4.9c).
     expect(newCardFrameStyle({ template: "m15devoid", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15devoid",
       finish: "regular",
       collector: "2023",
+      stamp: "auto",
     });
     // m15snow draws both since 4.6f wave 2c, and the line.
     expect(newCardFrameStyle({ template: "m15snow", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
@@ -95,6 +106,7 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       crown: true,
       twoColor: true,
       collector: "2023",
+      stamp: "auto",
     });
     // A frame with no collector slot drops the line's keys too (m15borderless
     // keeps the crown and pair switches it draws since 4.6f wave 2a).
@@ -108,6 +120,14 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       template: "m15artifact",
       crown: true,
       twoColor: true,
+      collector: "2023",
+      stamp: "auto",
+    });
+    // A token frame has the collector slot but no notch: the stamp's key
+    // is dropped (4.9c — tokens print no stamp).
+    expect(newCardFrameStyle({ template: "m15token", finish: "regular", ...NEW_CARD_ANATOMY }, "token")).toEqual({
+      template: "m15token",
+      finish: "regular",
       collector: "2023",
     });
   });
@@ -227,11 +247,19 @@ describe("an import (importedAnatomy)", () => {
 
   it("a crownless printing imports with the crown off, so the new-card default never crowns it", () => {
     const crownless = importedAnatomy({ ...facts, printed_crown: false }, "m15");
+    // (The stamp a printing names nothing for takes the new-card "auto";
+    // the mapper always names one — lib/scryfall/import-mapper.ts
+    // stampOfPrinting — so a real import stores the printing's.)
     expect(newCardFrameStyle({ template: "m15", ...crownless.style }, "creature")).toEqual({
       template: "m15",
       crown: false,
       twoColor: true,
       collector: "2023",
+      stamp: "auto",
     });
+    const unstamped = importedAnatomy({ ...facts, printed_stamp: "none" }, "m15");
+    expect(newCardFrameStyle({ template: "m15", ...unstamped.style }, "creature")).toMatchObject({ stamp: "none" });
+    const oval = importedAnatomy({ ...facts, printed_stamp: "oval" }, "m15token");
+    expect(newCardFrameStyle({ template: "m15token", ...oval.style }, "token")).not.toHaveProperty("stamp");
   });
 });

@@ -112,7 +112,8 @@ describe("declared and published", () => {
     expect(getFrameProfile("m15snowland").twoColorMasters).toEqual(["split"]);
     expect(getFrameProfile("m15snowland").twoColorForLands).toBe(true);
     expect(getFrameProfile("m15devoid").twoColorMasters).toBeUndefined();
-    expect(getFrameProfile("m15devoid").overlays).toBeUndefined();
+    // (Its only overlay is the holofoil stamp's notch, 4.9c — no crown band.)
+    expect(getFrameProfile("m15devoid").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([]);
     // Never on a base another profile spreads: nothing else gained a dress.
     const paired = FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).twoColorMasters ?? []).length > 0);
     expect(paired).toEqual(["m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact"]);

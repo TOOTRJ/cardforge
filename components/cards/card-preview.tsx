@@ -28,6 +28,7 @@ import {
   webpVariant,
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
+import { HOLO_STAMP_OVAL_ART } from "@/lib/cards/holo-stamp-art";
 import {
   FoilBackdropSheen,
   FoilSheen,
@@ -129,6 +130,8 @@ import type { DfcFace } from "@/lib/cards/faces";
 import {
   plateKeyFor,
   resolveFrameOverlays,
+  resolveHoloStamp,
+  type ResolvedHoloStamp,
   resolveTwoColor,
   type FrameAnatomyStyle,
 } from "@/lib/cards/anatomy";
@@ -729,9 +732,15 @@ function CardFace({
     cost: face.cost,
     cardType: face.cardType,
     supertype: face.supertype,
+    // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
+    rarity,
   };
   const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts));
   const overlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
+  // The holofoil stamp (TODO 4.9c): its notch is one of the overlays; the
+  // oval is our bitmap over the sheens (HoloStampOval), and its arch keeps
+  // the rules lines out while drawn — the bake's twins.
+  const holoStamp = resolveHoloStamp(layout, anatomy, { ...anatomyFacts, colorKey });
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(layout, colorIdentity);
@@ -820,14 +829,16 @@ function CardFace({
   // The stat badges this face draws — the rules boxes keep their lines out
   // of them (lib/cards/rules-box.ts), the bake's twin.
   const secondFacePtShown = Boolean(secondFace?.power || secondFace?.toughness);
+  const stampKeepOut = holoStamp?.keepOut ?? null;
   const drawnStats: DrawnStats = useMemo(
     () => ({
       pt: showPT,
       loyalty: showLoyalty,
       defense: showDefense,
       secondFacePt: Boolean(layout.secondFace?.pt && secondFacePtShown),
+      stamp: stampKeepOut,
     }),
-    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown],
+    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown, stampKeepOut],
   );
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).
@@ -1132,6 +1143,10 @@ function CardFace({
           style={{ zIndex: 6, pointerEvents: "none" }}
         />
       ) : null}
+
+      {/* The holofoil stamp's oval (TODO 4.9c): our silver oval bitmap over
+          the notch and above the sheens, at the bake's rect. */}
+      {holoStamp ? <HoloStampOval stamp={holoStamp} /> : null}
 
       {/* Stat overlays — P/T, loyalty, defense. */}
       {showPT && layout.pt ? (
@@ -1601,6 +1616,32 @@ function BandSlot({
  * layout's baseline — the bake's CollectorBake twin. The ★ and the brush
  * are the layout's path runs, scaled to their boxes.
  */
+/** The holofoil stamp's oval (TODO 4.9c): the generated bitmap
+ *  (lib/cards/holo-stamp-art.ts) stretched over the stamp's art rect — the
+ *  oval and its black margin — above the finish sheens (z 7), as the bake
+ *  draws it. The notch under it is one of the FrameOverlayLayer's images. */
+function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
+  const r = stamp.artRect;
+  return (
+    <div
+      aria-hidden
+      data-holo-stamp={stamp.shape}
+      data-stamp-key={stamp.notch.key}
+      className="pointer-events-none absolute"
+      style={{
+        top: `${r.topPct}%`,
+        left: `${r.leftPct}%`,
+        width: `${r.widthPct}%`,
+        height: `${r.heightPct}%`,
+        zIndex: 7,
+        backgroundImage: `url("${HOLO_STAMP_OVAL_ART.dataUri}")`,
+        backgroundSize: "100% 100%",
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+}
+
 function CollectorBlock({ layout, ink }: { layout: CollectorLayout; ink: string }) {
   return (
     <div aria-hidden data-collector-line={layout.style} className="pointer-events-none absolute inset-0 z-20">

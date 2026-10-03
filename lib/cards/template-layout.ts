@@ -52,6 +52,13 @@
 // ---------------------------------------------------------------------------
 
 import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
+import {
+  M15PW_HOLO_STAMP_KEEP_OUT,
+  M15PW_HOLO_STAMP_OVAL,
+  M15_HOLO_STAMP_KEEP_OUT,
+  M15_HOLO_STAMP_OVAL,
+  type HoloStampArt,
+} from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
 import type { FrameTemplate } from "@/types/card";
 import {
@@ -364,17 +371,32 @@ export type TwoColorSplit = {
 export type TwoColorDress = "split" | "hybrid";
 
 /** A piece of printed anatomy drawn OVER the frame master (TODO 4.6.0): the
- *  legendary crown band (4.6a). One image per key, stretched over `rect`,
- *  right after the frame master in both renderers and inside both finish
- *  masks (lib/cards/anatomy.ts resolveFrameOverlays). Code-owned: never part
- *  of the override schema. Set only on a PROFILES entry, never on a base
- *  another profile spreads (M15 is spread by 11 profiles, M15LAND by
- *  m15snowland), so a template gains an overlay only on purpose. */
-export type FrameOverlaySlot = {
-  /** The per-card switch that turns it on (FrameStyle[anatomy] === true),
-   *  and the rule that decides whether the card qualifies (the crown: a
-   *  Legendary card that is not a planeswalker, token or battle). */
-  anatomy: "crown";
+ *  legendary crown band (4.6a), the holofoil stamp's notch (4.9c). One image
+ *  per key, stretched over `rect`, right after the frame master in both
+ *  renderers and inside both finish masks (lib/cards/anatomy.ts
+ *  resolveFrameOverlays). `anatomy` is the discriminant: it names the
+ *  per-card switch and the rule that decides whether the card draws it and
+ *  with which key — the crown: FrameStyle.crown === true on a Legendary
+ *  card that is not a planeswalker, token, battle or emblem, keyed by the
+ *  pinline of the master drawn; the stamp: FrameStyle.stamp wanting it
+ *  (lib/cards/holo-stamp.ts holoStampWanted), keyed by the colour key —
+ *  each later rider (5.0's DFC icon) adds its own member here and its own
+ *  branch in resolveFrameOverlays. Code-owned: never part of the override
+ *  schema. Set only on a PROFILES entry, never on a base another profile
+ *  spreads (M15 is spread by 11 profiles, M15LAND by m15snowland), so a
+ *  template gains an overlay only on purpose. */
+export type FrameOverlaySlot =
+  | (FrameOverlaySlotBase & { anatomy: "crown" })
+  | (FrameOverlaySlotBase & {
+      anatomy: "holoStamp";
+      /** The stamp this notch is cut for: its shape, the oval the art
+       *  bitmap fills and the rules keep-out over the arch. */
+      stamp: HoloStampArt;
+    });
+
+export type FrameOverlayAnatomy = FrameOverlaySlot["anatomy"];
+
+type FrameOverlaySlotBase = {
   /** Where the image is stretched, in card percent. */
   rect: Rect;
   /** The image per key: `{key}` → the key, e.g. "/frames/m15crown/{key}.png"
@@ -3813,6 +3835,62 @@ export const M15_COLLECTOR: CollectorSlot = {
   markTextSizePct: 34 / 1500,
 };
 
+/**
+ * The holofoil stamp's notch on the black-bordered M15 family (TODO 4.9c):
+ * Card Conjurer's `m15/holoStamps` arch — the text box's bottom pinline
+ * lifted over the stamp with its bevel, 192 × 96 px, 1:1 at HD, 2 px below
+ * CC's bounds 43.6 / 90.34 / 12.8 × 4.58 % (654–846 × 1899–1995; the prints'
+ * arch bottoms out at 1910–1912 px at the centre, CC's rim 5–7 px lower) —
+ * built by the importer from ONE piece's geometry (CC's U, the one flat
+ * saturated arc) with the rim tinted to OUR master's own bar colour (CC's
+ * pieces predate its accurate M15 pack: its W rim is a bluish white against
+ * our cream, its R and G more saturated) and the oval region cut clear
+ * (scripts/lib/cc-frames.mjs HOLO_STAMP_NOTCHES). Keys: the colour's bar
+ * (w u b r g, m gold, c the colourless grey — the snow and devoid frames'
+ * bars are the same pixels, so they map onto these), a the artifact silver
+ * and l the land taupe (the entries' keyMap). No pair key: a card drawn as
+ * its pair master draws no stamp in wave 1 (the split notch is its own
+ * sheet). Opt-in per card (FrameStyle.stamp): declaring it changes no
+ * stored card.
+ *
+ * Set only on the PROFILES entries m15, m15land, m15artifact, m15snow,
+ * m15snowland and m15devoid — never on M15 / M15LAND, which other profiles
+ * spread.
+ */
+export const M15_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // 2 px (0.095 %H) BELOW CC's bounds (y 0.9034): the piece's rim foot is 11
+  // rows, cut for CC's older M15 bar, and our accurate-pack bar is 12 (rows
+  // 1938–1949 at HD). At CC's bounds the foot stood 1 px proud of the bar's
+  // top and the piece's black covered the bar's last two rows — a step at
+  // both feet; 2 px lower the foot's bottom edge is the bar's own (the
+  // importer builds the cut at the same offset, scripts/lib/cc-frames.mjs
+  // HOLO_STAMP_NOTCHES). The arch's rim then bottoms out at 1917 px at the
+  // centre against the prints' 1910–1912.
+  rect: { leftPct: 43.6, topPct: 90.34 + (2 / 2100) * 100, widthPct: 12.8, heightPct: 4.58 },
+  assetPathTemplate: "/frames/m15holostamp/{key}.png",
+  // HOLO_STAMP_NOTCHES.m15holostamp.keys in scripts/lib/cc-frames.mjs (a
+  // unit test holds them together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The planeswalker's notch (TODO 4.9c): CC's `planeswalker/holo` piece —
+ *  a flat rim with a black line above it, no bevel, as the walker's box
+ *  prints — 182 × 107 px at 43.94 / 90.15 / 12.14 × 5.1 % (659–841 ×
+ *  1893–2000), the same recipe over the walker masters' bars (CC's own
+ *  walker rims match them exactly; the colourless walker's grey, which CC
+ *  has no piece for, is sampled like the rest). The oval sits 7 px higher
+ *  than M15's, where CC's piece holds its hologram. The keep-out is read by
+ *  the plain box only; the ability rows keep their shield rule (4.9d). */
+export const M15PW_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: 43.94, topPct: 90.15, widthPct: 12.14, heightPct: 5.1 },
+  assetPathTemplate: "/frames/m15pwholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: M15PW_HOLO_STAMP_OVAL, keepOut: M15PW_HOLO_STAMP_KEEP_OUT },
+};
+
 /** The planeswalker's collector slot: M15's, with the © slot ALWAYS on line
  *  2. Every walker master draws the loyalty shield's outline itself (x
  *  1202–1427, y 1847–1984 px on all seven colour keys), so a walker saved
@@ -3847,7 +3925,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
-    overlays: [M15_CROWN],
+    overlays: [M15_CROWN, M15_HOLO_STAMP],
     twoColorMasters: ["split", "hybrid"],
     collector: M15_COLLECTOR,
   },
@@ -3855,7 +3933,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // land grey "l" (UMA #241 Dark Depths).
   m15land: {
     ...M15LAND,
-    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }, { ...M15_HOLO_STAMP, keyMap: { c: "l" } }],
     twoColorMasters: ["split"],
     // Its pairs are a land's (the only frame a two-colour LAND draws them
     // on — owner round 17, 2026-09-30).
@@ -3870,10 +3948,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // colourless crown is the land grey "l": DMR #244 Dark Depths, the one
   // crowned snow-frame land), and the land's split pairs over the snow land
   // files (m15snowland/<pair>: KHM's ten snow duals, #248–274). Declared on
-  // the entry, never on M15SNOWLAND / M15LAND.
+  // the entry, never on M15SNOWLAND / M15LAND. The snow frames' bars are
+  // M15's pixels (a colourless snow land's the land taupe), so the stamp's
+  // notch (TODO 4.9c) is M15's, keyed the same.
   m15snowland: {
     ...M15SNOWLAND,
-    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }, { ...M15_HOLO_STAMP, keyMap: { c: "l" } }],
     twoColorMasters: ["split"],
     twoColorForLands: true,
     collector: M15_COLLECTOR,
@@ -3915,7 +3995,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // colourless artifact's the artifact silver "a" (FDN #677).
   m15artifact: {
     ...M15ARTIFACT,
-    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
   },
@@ -3948,10 +4028,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // ARTIFACT frame, so its crown is the artifact silver "a" — and the
   // white-bar split pairs (m15snow/<pair>: the gold snow body and plate,
   // white bars, the split pinline and box; no hybrid snow print exists).
-  // Declared on the entry, never on M15SNOW / M15.
+  // Declared on the entry, never on M15SNOW / M15. Its bars are M15's
+  // pixels (the colourless one's the grey 223,224,224 of m15/c's bar), so
+  // the stamp's notch (TODO 4.9c) is M15's, keyed the same.
   m15snow: {
     ...M15SNOW,
-    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, M15_HOLO_STAMP],
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
   },
@@ -3963,7 +4045,13 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // the `m` master this entry already draws: measured 2026-10-02 on eight of
   // them, the title ring reads gold (R − B 65–119) at every x; the registry
   // imports them exact, lib/scryfall/frame-signatures.ts GOLD_PAIR_TEMPLATES).
-  m15devoid: { ...M15DEVOID, collector: M15_COLLECTOR },
+  // Every devoid master's bar is the colourless grey (223,224,225), so its
+  // stamp notch (TODO 4.9c) is the grey one whatever the card's colour.
+  m15devoid: {
+    ...M15DEVOID,
+    overlays: [{ ...M15_HOLO_STAMP, keyMap: { w: "c", u: "c", b: "c", r: "c", g: "c", m: "c" } }],
+    collector: M15_COLLECTOR,
+  },
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
   // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through
   // it): the art runs under the whole frame for "c" (TODO 4.17b, layout v35)
@@ -3978,7 +4066,13 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // lines at M15's positions; the loyalty shield counts as a stat plate —
   // and is part of the master, so the © slot is always on line 2:
   // M15PW_COLLECTOR).
-  m15pw: { ...M15PW, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT }, collector: M15PW_COLLECTOR },
+  // …and the stamp's notch through its own piece (M15PW_HOLO_STAMP, 4.9c).
+  m15pw: {
+    ...M15PW,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: UNDER_FRAME_RECT },
+    overlays: [M15PW_HOLO_STAMP],
+    collector: M15PW_COLLECTOR,
+  },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,

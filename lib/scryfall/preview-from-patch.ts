@@ -68,7 +68,15 @@ export function previewFromImportPatch(
     artistCredit: patch.artist_credit ?? null,
     // We don't rehost WotC art for a dev utility; the scan shows it.
     artUrl: null,
-    frameStyle: { template },
+    // The printing's holofoil stamp (TODO 4.9c): the comparison card draws
+    // the frame's own stamp where the reference printing carries one
+    // (security_stamp → printed_stamp "oval" / "triangle"), so the notch is
+    // judged against the scan's; the other switches stay the compare
+    // tool's own toggles (the "Legendary" crown).
+    frameStyle: {
+      template,
+      ...(patch.printed_stamp && patch.printed_stamp !== "none" ? { stamp: patch.printed_stamp } : {}),
+    },
     backFace: backFaceFromPatch(patch.back_face),
   };
 }
