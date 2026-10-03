@@ -691,7 +691,8 @@ row (the back thumbnail, a "back face" tag, the Walk link with
 `&face=back`), the compare view (a fixed "Back" badge), the Score button,
 the tick's recorded score, the sign-off's side-by-side and job, and the
 walk-through, whose card is pinned to the body's paired FRONT
-(`frontBodyFor`) with the live preview opened on the back. The registry
+(`frontBodyFor`, for the printing's front type) with the live preview
+opened on the back. The registry
 entries of a back body carry `face: 1`; "Change reference card" on such a
 row shows each printing's back art and refuses one with no second face or
 whose BACK is another colour (`validateReferenceForCombo`). The render is
@@ -749,8 +750,14 @@ publishing it:
   directly), and the banner says which. Art isn't imported. `&face=back`
   (TODO 5.0b) opens the live preview on the back face once the seed is
   applied — a back body's links always carry it, and its card is pinned to
-  the body's paired front (`FrameWalkthrough.cardTemplate`); a printing
-  with no second face opens on the front and the banner says so.
+  the body's paired front for the printing's front type
+  (`FrameWalkthrough.cardTemplate`, `frontBodyFor`: the land pair under a
+  land front); a printing with no second face opens on the front and the
+  banner says so. The compare view's walk link also carries the registry
+  alternate on screen (`&ref=`), so the walk seeds from the printing the
+  view shows — a front template's back view is reached only through a
+  double-faced alternate, and the row's default printing may have no
+  second face.
 - **Preview saves (2.3).** A save on an unverified combo in preview mode, and
   every save during a walk, asks the server for `frame_preview`;
   `createCardAction` / `updateCardAction` honour it only for an admin (the

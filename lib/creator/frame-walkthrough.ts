@@ -69,17 +69,20 @@ export async function buildFrameWalkthrough(
   const { template, color } = params;
   if (!isTemplate(template) || !isColorKey(color)) return null;
   const previewFace: CardFace = faceUnderTest(template, parseCardFace(params.face));
-  // A back body's card is its paired front; the kind is the card's.
-  const cardTemplate: FrameTemplate = (isDfcBackBody(template) ? frontBodyFor(template) : null) ?? template;
+  // A back body's card is its paired front (the one for the printing's
+  // front type once the reference is known, below — a land front wears
+  // the land pair, as the compare view pairs it); the kind is the card's.
+  const backBody = isDfcBackBody(template);
+  let cardTemplate: FrameTemplate = (backBody ? frontBodyFor(template) : null) ?? template;
   const kind = walkthroughKind(cardTemplate, params.kind);
   const seedMode = parseWalkthroughSeed(params.seed);
   const label = `${template}/${color}`;
   const onBack = previewFace === "back" ? " The preview opens on the back face." : "";
-  const base = { template, colorKey: color, previewFace, cardTemplate };
+  const base = () => ({ template, colorKey: color, previewFace, cardTemplate });
 
   if (seedMode === "none") {
     return {
-      ...base,
+      ...base(),
       kind,
       seed: null,
       note: `Walking ${label} from a blank card.${onBack}`,
@@ -87,7 +90,7 @@ export async function buildFrameWalkthrough(
   }
 
   const sample = (why: string): FrameWalkthrough => ({
-    ...base,
+    ...base(),
     kind,
     seed: {
       patch: sampleWalkthroughPatch(cardTemplate, color, kind),
@@ -113,6 +116,10 @@ export async function buildFrameWalkthrough(
   if (!payload) {
     return sample(`the lookup of ${reference.name} failed (reload to retry)`);
   }
+  // Now that the printing is known: a back body's card is the front body
+  // for the printing's FRONT type (the land pair under a land front), the
+  // same pairing the compare view renders the back under.
+  if (backBody) cardTemplate = frontBodyFor(template, payload.patch.card_type) ?? template;
   // A reference the frame prints but the save refuses on it (the Ghostfire
   // frame's Ugin #409, its only colourless printing: a walker, and the
   // showcases draw no loyalty since TODO 4.5a) would walk a card that can't
@@ -138,7 +145,7 @@ export async function buildFrameWalkthrough(
   // nothing to flip to, so it opens on the front and the banner says so.
   const noBack = previewFace === "back" && !seed.patch.back_face;
   return {
-    ...base,
+    ...base(),
     previewFace: noBack ? "front" : previewFace,
     kind: seed.patch.kind ?? kind,
     seed,

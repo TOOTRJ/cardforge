@@ -38,10 +38,10 @@ describe("fixture", () => {
   it("m15artifact is a transform back paired with m15; m15devoid a modal back paired with m15snow", () => {
     expect(isDfcBackBody("m15artifact")).toBe(true);
     expect(frontBodyFor("m15artifact", "creature")).toBe("m15");
-    // bodyFor's table is empty until 5.1a fills it, so even a land face
-    // falls back to the layout's first non-land front (the fixture's
-    // m15land is a transform land front, but not the fallback).
-    expect(frontBodyFor("m15artifact", "land")).toBe("m15");
+    // bodyFor's table is empty until 5.1a fills it: the fallback is the
+    // declared front keyed like the front face — the fixture's m15land (a
+    // transform land front) under a land front, m15 otherwise.
+    expect(frontBodyFor("m15artifact", "land")).toBe("m15land");
     expect(isDfcBackBody("m15devoid")).toBe(true);
     expect(frontBodyFor("m15devoid", "creature")).toBe("m15snow");
     expect(faceUnderTest("m15artifact")).toBe("back");

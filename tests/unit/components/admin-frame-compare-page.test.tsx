@@ -242,4 +242,34 @@ describe("/admin/frame-compare — the face compared (TODO 5.0b)", () => {
     await renderPage({ template: "m15", color: "w", face: "sideways" });
     expect(payloads.build).toHaveBeenCalledWith(REFERENCE.scryfallId, "m15", "front");
   });
+
+  it("the walk link carries the registry alternate on screen (?ref=) and the face, so the walk seeds from the SAME printing", async () => {
+    // extendedart/w lists a double-faced alternate (LCI's Unstable
+    // Glyphbridge); its back view is reached only through ?ref=, and a
+    // walk that dropped it would open on the default printing's front.
+    const alternate = FRAME_REFERENCES.extendedart.w!;
+    const glyphbridge = (await import("@/lib/cards/frame-reference-registry")).frameReferenceOptions("extendedart", "w")[1]!;
+    expect(glyphbridge.scryfallId).not.toBe(alternate.scryfallId);
+    payloads.build.mockResolvedValue({
+      preview: { title: "Sandswirl Wanderglyph" },
+      scanUrl: BACK_SCAN,
+      face: "back",
+      faceName: "Sandswirl Wanderglyph",
+      hasBackScan: true,
+    });
+    await renderPage({ template: "extendedart", color: "w", ref: glyphbridge.scryfallId, face: "back" });
+    expect(payloads.build).toHaveBeenCalledWith(glyphbridge.scryfallId, "extendedart", "back");
+    const walk = screen.getByText(/^Walk the stepper on extendedart\/w \(back face\)/).closest("a");
+    const href = new URL(walk!.getAttribute("href")!, "https://pipglyph.test");
+    expect(href.pathname).toBe("/create");
+    expect(href.searchParams.get("ref")).toBe(glyphbridge.scryfallId);
+    expect(href.searchParams.get("face")).toBe("back");
+    expect(href.searchParams.get("template")).toBe("extendedart");
+    // The default printing on screen names no ref: the link is the row's.
+    payloads.build.mockResolvedValue({ preview: { title: "x" }, scanUrl: SCAN, face: "front", faceName: null, hasBackScan: false });
+    cleanup();
+    await renderPage({ template: "extendedart", color: "w" });
+    const plain = screen.getByText(/^Walk the stepper on extendedart\/w$/).closest("a");
+    expect(new URL(plain!.getAttribute("href")!, "https://pipglyph.test").searchParams.has("ref")).toBe(false);
+  });
 });

@@ -289,12 +289,16 @@ describe("the face under test and the paired front (TODO 5.0b) once a body exist
     expect(faceUnderTest("m15snow")).toBe("front");
   });
 
-  it("frontBodyFor pairs a back body with a front of its layout; bodyFor first, else the first non-land front", () => {
+  it("frontBodyFor pairs a back body with a front of its layout; bodyFor first, else the declared front keyed like the front face", () => {
     // bodyFor's table is empty until 5.1a: the fallback scans the declared
-    // fronts of the same layout, skipping the land one.
+    // fronts of the same layout — the land one under a land front (Westvale
+    // Abbey's Ormendahl), a non-land one otherwise.
     expect(frontBodyFor("m15artifact")).toBe("m15");
     expect(frontBodyFor("m15artifact", "creature", "sunmoon")).toBe("m15");
+    expect(frontBodyFor("m15artifact", "land")).toBe("m15land");
     expect(frontBodyFor("m15devoid")).toBe("m15snow");
+    // The modal layout declares no land front here: any front of the layout.
+    expect(frontBodyFor("m15devoid", "land")).toBe("m15snow");
     // Not a back body: null.
     expect(frontBodyFor("m15")).toBeNull();
     expect(frontBodyFor("m15land")).toBeNull();

@@ -142,9 +142,9 @@ describe("the front path says what it has", () => {
     expect(payload).toMatchObject({ face: "front", faceName: null, hasBackScan: false });
   });
 
-  it("an adventure is one picture: a back face, no back scan", async () => {
+  it("an adventure is one picture: a back face, no back scan, and no face NAME (the scan shows both halves)", async () => {
     const payload = await buildFrameComparePayload(BEANSTALK_ID, "adventure");
-    expect(payload).toMatchObject({ face: "front", faceName: "Beanstalk Giant", hasBackScan: false });
+    expect(payload).toMatchObject({ face: "front", faceName: null, hasBackScan: false });
     expect(payload?.preview.backFace?.title).toBe("Fertile Footsteps");
   });
 });

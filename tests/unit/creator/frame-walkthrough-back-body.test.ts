@@ -67,6 +67,33 @@ describe("a back body's walk", () => {
     expect(walk?.note).toMatch(/The preview opens on the back face\.$/);
   });
 
+  it("a back body under a LAND front pins the land front body — the pairing the compare view renders the back under", async () => {
+    // Westvale Abbey // Ormendahl, Profane Prince (SOI #281): a land front
+    // with a creature back on the transform back body. Before the printing
+    // is known the card is the spell front; once it is, the land pair.
+    state.payload = {
+      cardName: "Westvale Abbey // Ormendahl, Profane Prince",
+      scryfallUri: "https://scryfall.com/card/soi/281",
+      patch: {
+        title: "Westvale Abbey",
+        kind: "land",
+        card_type: "land",
+        frame_template: "m15land",
+        color_identity: ["colorless"],
+        back_face: { title: "Ormendahl, Profane Prince", card_type: "creature" },
+      },
+    };
+    const walk = await buildFrameWalkthrough({ template: "m15artifact", color: "b", seed: "reference" });
+    expect(walk).toMatchObject({
+      template: "m15artifact",
+      cardTemplate: "m15land",
+      previewFace: "back",
+      kind: "land",
+    });
+    expect(walk?.seed?.patch.frame_template).toBe("m15land");
+    expect(walk?.seed?.fromReference).toBe(true);
+  });
+
   it("a modal back walks its own paired front", async () => {
     const walk = await buildFrameWalkthrough({ template: "m15devoid", color: "u", seed: "sample" });
     expect(walk).toMatchObject({ template: "m15devoid", cardTemplate: "m15snow", previewFace: "back" });

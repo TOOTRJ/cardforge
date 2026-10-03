@@ -53,9 +53,10 @@ export type FrameComparePayload = {
   /** The face rendered and scanned (TODO 5.0b); `front` for every
    *  single-faced path. */
   face: CardFace;
-  /** The rendered face's own name on a multi-face printing ("Brutal
-   *  Cathar" / "Moonrage Brute"); null when the printing's name is the
-   *  face's. */
+  /** The rendered face's own name on a printing with TWO pictures ("Brutal
+   *  Cathar" / "Moonrage Brute"); null when the picture is the whole
+   *  printing — a single face, or a split, flip or adventure, whose one
+   *  scan shows both halves. */
   faceName: string | null;
   /** The printing has a second face with its own scan: the compare view
    *  offers the other face. */
@@ -82,7 +83,7 @@ export async function buildFrameComparePayload(
   const patch = mapScryfallToFormPatch(card, { artPreviewUrl: null });
   const hasBackScan = hasBackFaceImage(card);
   const faces = card.card_faces ?? [];
-  const faceName = faces.length >= 2 ? (faces[scryfallFaceIndex(face)]?.name ?? null) : null;
+  const faceName = hasBackScan ? (faces[scryfallFaceIndex(face)]?.name ?? null) : null;
 
   if (face === "front") {
     return {

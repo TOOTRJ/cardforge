@@ -87,11 +87,13 @@ export function faceUnderTest(
 /**
  * The FRONT body a back body pairs with — the card's own template when its
  * back wears `backTemplate`: `bodyFor` for the layout and the front face's
- * type (a land front wears the land pair), else the first front body of the
- * same layout that isn't a land one, else any. The compare view and the
- * walk-through build the card this way (lib/cards/faces.ts draws a back on
- * its body only under a DFC front). Null when `backTemplate` is not a back
- * body, or no front body of its layout exists yet.
+ * type (a land front wears the land pair), else the first declared front
+ * body of the same layout keyed like the front face (the land one for a
+ * land front, a non-land one otherwise), else any. The compare view and
+ * the walk-through build the card this way (lib/cards/faces.ts draws a
+ * back on its body only under a DFC front), both from the printing's
+ * front type. Null when `backTemplate` is not a back body, or no front
+ * body of its layout exists yet.
  */
 export function frontBodyFor(
   backTemplate: FrameTemplate | string | null | undefined,
@@ -104,9 +106,10 @@ export function frontBodyFor(
     const candidate = dfcBodyOf(template);
     return candidate?.layout === body.layout && candidate.role === "front";
   });
+  const landFront = frontFaceType === "land";
   return (
     bodyFor(body.layout, "front", frontFaceType, family) ??
-    fronts.find((template) => !dfcBodyOf(template)?.land) ??
+    fronts.find((template) => Boolean(dfcBodyOf(template)?.land) === landFront) ??
     fronts[0] ??
     null
   );

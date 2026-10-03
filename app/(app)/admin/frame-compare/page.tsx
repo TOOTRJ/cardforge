@@ -517,9 +517,9 @@ export default async function AdminFrameComparePage({
         <div className="mt-4 flex flex-col gap-3">
           <p className="flex flex-wrap items-center gap-3 text-xs font-semibold">
             <Link
-              href={walkthroughHref({ template, colorKey: color, face })}
+              href={walkthroughHref({ template, colorKey: color, ref: chosen?.scryfallId ?? null, face })}
               className="text-muted underline-offset-2 hover:text-foreground hover:underline"
-              title={`Open the creator on this frame and colour as an admin preview, prefilled from the reference printing (TODO 2.2)${
+              title={`Open the creator on this frame and colour as an admin preview, prefilled from the reference printing on screen (TODO 2.2)${
                 face === "back" ? ", with the preview on the back face" : ""
               }.`}
             >
