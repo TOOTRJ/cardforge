@@ -1886,9 +1886,12 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   .test.ts` the recipe, the cut and the published objects.
 - **Editor and compare tool.** The Set & collector info step holds the
   stamp switch under the collector line's (`collector-panel.tsx`: the
-  switch toggles auto / none; the chips "Auto: rares & mythics", "Always"
-  (the frame's shape), "Never"; the live answer "Rare → stamp"; the pair
-  note), hidden on a token or an emblem — whose collector hint then names
+  switch is on while the card DRAWS a stamp; off writes "none", on writes
+  "auto" where the auto rule stamps the card and the frame's shape — the
+  chips' "Always" — where it would not, so a common never gets a dead
+  click; the chips "Auto: rares & mythics", "Always" (the frame's shape),
+  "Never"; the live answer "Rare → stamp"; the pair note), hidden on a
+  token or an emblem — whose collector hint then names
   the line alone. `/admin/frame-compare` (and the walkthrough) stamps the
   comparison card when the reference printing carries a `security_stamp`
   (`previewFromImportPatch`), so the notch is judged against the scan's.

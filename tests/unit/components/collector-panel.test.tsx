@@ -160,7 +160,7 @@ describe("the holofoil stamp (TODO 4.9c)", () => {
     expect(styleOf().stamp).toBe("none");
   });
 
-  it("a new common on Auto shows the switch off with the honest answer; Always switches it on", () => {
+  it("a new common on Auto shows the switch off with the honest answer; Always switches it on — and so does the switch itself (the frame's shape, never a dead click)", () => {
     render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} rarity="common" />);
     expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
     expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → no stamp");
@@ -168,6 +168,25 @@ describe("the holofoil stamp (TODO 4.9c)", () => {
     expect(styleOf().stamp).toBe("oval");
     expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
     expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → stamp");
+    // The switch: off writes Never; on, for a card the auto rule would not
+    // stamp, writes the frame's shape (what "Always" writes) — "auto" would
+    // draw nothing on a common and leave the switch off.
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("none");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("oval");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → stamp");
+  });
+
+  it("a stored key-less common: the hint's 'switch it on' adds the stamp (Always), not a dead 'auto'", () => {
+    render(<Harness frameStyle={{ template: "m15", finish: "regular" }} stored={{ template: "m15", finish: "regular" }} rarity="common" />);
+    expect(screen.getByTestId("anatomy-hint-stamp").textContent).toBe(ANATOMY_HINTS.stamp);
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("oval");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("anatomy-hint-stamp")).toBeNull();
   });
 
   it("a stored card from before the stamp shows the hint under the stamp (and under a key-less collector line); an explicit Never shows none", () => {

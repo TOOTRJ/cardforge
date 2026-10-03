@@ -146,6 +146,11 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
   // holds none (a click on the switch or a chip sets a value and hides it).
   const stampHint = showStamp && editing && stored?.stamp === undefined && !isHoloStampSwitch(stamp) ? (ANATOMY_HINTS.stamp ?? null) : null;
   const shape = (profile.overlays ?? []).find((slot) => slot.anatomy === "holoStamp")?.stamp.shape ?? "oval";
+  // The switch's "on" is a value that DRAWS for this card: "auto" where the
+  // auto rule stamps it (a rare or mythic), else the frame's own shape (the
+  // chips' "Always") — on a common, "auto" would leave the switch off and the
+  // click dead. "Off" is the owner's Never.
+  const switchOn: HoloStampSwitch = holoStampWanted("auto", { cardType, rarity }) ? "auto" : shape;
   return (
     <div className="flex flex-col gap-3" data-testid="collector-switches">
       <SwitchRow
@@ -189,7 +194,7 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
           anatomy="stamp"
           on={stampOn}
           hint={stampHint}
-          onToggle={(next) => setValue("frame_style.stamp", next ? "auto" : "none", { shouldDirty: true })}
+          onToggle={(next) => setValue("frame_style.stamp", next ? switchOn : "none", { shouldDirty: true })}
         >
           <div className="flex flex-col gap-2" data-testid="stamp-rule">
             <ChipGroup
