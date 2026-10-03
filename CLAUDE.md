@@ -216,9 +216,21 @@ Rules and gotchas:
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
   — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`
   — verified per colour, `c` only with an Artifact word, a transform back
-  with no cost; a public DFC needs both arts); the retired `back_card_id` is
-  accepted only to CLEAR; the 8 imported DFCs move onto the bodies only by
-  their owner's click (`adoptDfcBodiesAction`, `lib/cards/dfc-adopt.ts`).
+  with no cost; a public DFC needs both arts), and the FRONT its own
+  (`dfcFrontTypeError`: a wave-1 face type on the body its type derives —
+  the kind gate can't see it, a card on a front body IS the kind —
+  `dfcFrontColorError`: `c` only with an Artifact word); the retired
+  `back_card_id` is accepted only to CLEAR; the 8 imported DFCs move onto
+  the bodies only by their owner's click (`adoptDfcBodiesAction`,
+  `lib/cards/dfc-adopt.ts`; a land back goes colourless — the land pair
+  is verified on `c` alone).
+  A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
+  PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
+  through `renderBackFace` in both bake paths, the four pointers in ONE
+  write; a back failure fails the whole bake; a legacy back stays
+  single-bake — `?face=back` serves it (png / pdf) and opens the page
+  flipped (the client island only), tiles flip by a corner button only, the
+  page is "Front // Back" (`cardPageName`), and the OG image stays the front.
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
@@ -434,9 +446,15 @@ Rules and gotchas:
   CC's notch with its hologram region cut clear (`m15holostamp/*`,
   `m15pwholostamp/*`: bucket only, `HOLO_STAMP_NOTCHES`), declared as the
   `holoStamp` overlay on the seven wave-1 entries (`lib/cards/holo-stamp.ts`,
-  `resolveHoloStamp`); never on a token or an emblem, never on a pair master
-  in wave 1, the FRONT face only; its arch is a glyph-level rules keep-out
-  (`DrawnStats.stamp`) — the rules rect never shrinks.
+  `resolveHoloStamp`); never on a token or an emblem, the FRONT face only;
+  a card drawn as its PAIR master takes the pair's notch
+  (`m15holostamp/<pair>`: the same arch with its rim tinted PER COLUMN to
+  the pair master's bar across the 40→60 %W pinline ramp — one piece per
+  pair for the split, hybrid, artifact, land, snow and snow-land masters,
+  whose bar under it is the same pixels; the importer refuses a drift); its
+  arch is a
+  glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
+  shrinks.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

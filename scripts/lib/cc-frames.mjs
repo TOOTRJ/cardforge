@@ -2947,17 +2947,48 @@ export function crownBandFindings(buf, width, height, rows, artSlot) {
 // CC has no piece for, is sampled like the rest. The snow and devoid frames
 // carry no pieces of their own: their bars are M15's pixels (snow) or the
 // colourless grey (devoid), so their entries map onto these keys.
+//
+// The two-colour PAIR frames (the 4.9c follow-up, owner round 26,
+// 2026-10-03) take the same geometry with the rim tinted PER COLUMN: a pair
+// master's bar under the notch is its pinline layer, the two colours lerped
+// across PAIR_RAMPS.pinline (40→60 %W = 600–900 px) — and the notch sits at
+// 654–846 px, INSIDE the ramp, so its left foot stands on an ≈ 20 % blend
+// and its right on ≈ 80 %. One flat tint can't meet both; the rim takes the
+// bar's own colour at each column, read off the pair master itself (rows
+// 1940–1947 at every x of the piece's bounds), so the arch is that bar
+// lifted — the foot matches the bar pixel for pixel on both sides and the
+// rim runs through the ramp over the oval exactly as the pinline does. ONE
+// piece per pair serves every pair master: the bar's flat rows (1941–1949)
+// are the same bytes on m15/<pair>, m15/<pair>-h (the hybrid dress's grey
+// L bars are its title and type bars; its text-box pinline is the pair's),
+// m15artifact/<pair>, m15land/<pair> and the snow pairs m15snow/<pair> /
+// m15snowland/<pair> (4.6f wave 2c; their white bars are the title and type
+// bars, and the snow pack's pinline is M15's — measured: the bar under the
+// notch is m15's pair bar at every column; the land and snow pairs differ
+// only on the bar's anti-aliased top rows, by ≤ 5 levels, as the mono `l`
+// key does on m15land) — the importer refuses the key if any of them drifts.
 // ---------------------------------------------------------------------------
 
 /** Where a master's bar is sampled (card px): the centre column's run of
- *  flat bar rows — every sampled pixel must agree within `tolerance`. */
+ *  flat bar rows — every sampled pixel must agree within `tolerance`. A
+ *  per-column key (`rampKeys`) reads the same rows at every column of the
+ *  piece's bounds instead of `x`. */
 const M15_BAR_SAMPLE = Object.freeze({ x: 750, rows: [1940, 1947], tolerance: 2 });
 const M15PW_BAR_SAMPLE = Object.freeze({ x: 750, rows: [1932, 1935], tolerance: 2 });
+
+/** The mono keys of the M15 notch (the colour's bar; m gold; c the
+ *  colourless grey; a the artifact silver; l the land taupe). */
+const M15_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"];
 
 /** The notch pieces the importer builds, by bucket folder. `shape` is the
  *  CC piece whose geometry every key takes, at CC's bounds (1:1 at HD);
  *  `arc` its rim colour; `barOf` the master (template/key under the build
- *  or cache dir) whose bar tints each key's rim; `oval` the slot's oval. */
+ *  or cache dir) whose bar tints each key's rim; `oval` the slot's oval.
+ *  `rampKeys` are the keys tinted PER COLUMN (the pairs: their bar is a
+ *  ramp), and `barSharedBy` names the other masters each of those keys is
+ *  drawn over, whose bar must be the sampled one's within the tolerance at
+ *  every column — else the importer refuses the key (a dress whose bar
+ *  drifted needs its own key). */
 export const HOLO_STAMP_NOTCHES = {
   m15holostamp: {
     pack: "M15 'Holo Stamps' (packM15HoloStamps.js)",
@@ -2968,8 +2999,31 @@ export const HOLO_STAMP_NOTCHES = {
       bounds: { leftPct: 43.6, topPct: 90.34 + (2 / 2100) * 100, widthPct: 12.8, heightPct: 4.58 },
       arc: [0, 117, 190],
     },
-    keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
-    barOf: { w: "m15/w", u: "m15/u", b: "m15/b", r: "m15/r", g: "m15/g", m: "m15/m", c: "m15/c", a: "m15artifact/c", l: "m15land/c" },
+    keys: [...M15_NOTCH_MONO_KEYS, ...TWO_COLOR_PAIRS],
+    barOf: {
+      w: "m15/w",
+      u: "m15/u",
+      b: "m15/b",
+      r: "m15/r",
+      g: "m15/g",
+      m: "m15/m",
+      c: "m15/c",
+      a: "m15artifact/c",
+      l: "m15land/c",
+      // A pair's rim is read off m15's gold-split pair master, per column.
+      ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, `m15/${pair}`])),
+    },
+    rampKeys: [...TWO_COLOR_PAIRS],
+    // Every other pair master the pair key is drawn over (the hybrid dress,
+    // the artifact and land pairs, 4.6f wave 2c's snow and snow-land
+    // pairs): the importer checks each one's bar under the notch against
+    // the sampled one at every column.
+    barSharedBy: Object.fromEntries(
+      TWO_COLOR_PAIRS.map((pair) => [
+        pair,
+        [`m15/${pair}-h`, `m15artifact/${pair}`, `m15land/${pair}`, `m15snow/${pair}`, `m15snowland/${pair}`],
+      ]),
+    ),
     barSample: M15_BAR_SAMPLE,
     oval: { leftPct: 45.54, topPct: 91.72, widthPct: 8.94, heightPct: 3.2 },
     cutMarginPx: 2,
@@ -2977,6 +3031,7 @@ export const HOLO_STAMP_NOTCHES = {
       "the holofoil stamp's notch on the M15 family (TODO 4.9c): CC's arch — the text box's bottom pinline lifted over the stamp with its bevel — 1:1 at HD, 2 px below CC's bounds 43.6/90.34/12.8×4.58 % (654–846 × 1899–1995 px): the piece's rim foot is 11 rows, cut for CC's older M15 bar, and our accurate-pack bar is 12 (1938–1949), so at CC's bounds the foot stood 1 px proud of the bar's top and its black covered the bar's last 2 rows — a step at both feet; 2 px lower the foot's bottom edge is the bar's",
       "ONE geometry for every key: CC's U piece (its bevel, rim and black decomposed exactly), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947 (flat within 2 levels) — CC's per-key pieces predate its accurate M15 pack and their rims don't match our bars (W bluish white vs cream, R and G over-saturated, C darker); the unused CC pieces W B R G M A L C A2 A3 were fetched and inspected, never published",
       "a = the artifact silver sampled from m15artifact/c (the nearest of CC's three artifact rims is A2, 222,223,224); l = the land taupe from m15land/c; the snow frames' bars are these pixels and the devoid frames' the colourless grey, so their PROFILES entries map onto these keys",
+      "the ten two-colour PAIR keys (the 4.9c follow-up, owner round 26, 2026-10-03): the same geometry with the rim tinted PER COLUMN to the pair master's own bar — the pinline layer lerped across the untilted 40→60 %W ramp (scripts/lib/pair-ramp.mjs), which the notch's 654–846 px sit inside — read off m15/<pair>.png at rows 1940–1947 for every column of the piece's bounds (each column flat within 2 levels), so the foot is the bar it stands on at every column of both feet and the arch runs through the ramp as the pinline does; one piece per pair serves m15/<pair>-h (the hybrid dress's grey L bars are its title and type bars; its text-box pinline is the pair's), m15artifact/<pair>, m15land/<pair> and the snow pairs m15snow/<pair> and m15snowland/<pair> (4.6f wave 2c: their WHITE bars are the title and type bars too; the snow pack's pinline is M15's, so the bar under the notch is m15's pair bar byte for byte at every column), whose bars are checked against the sample at every column (the land and snow pairs differ only on the bar's anti-aliased top rows above the sampled ones — row 1938, ≤ 5 levels — like the mono l key on m15land) — the importer refuses a pair whose shared masters drift",
       "the oval region — the slot's oval 45.54/91.72/8.94×3.2 % (683–817 × 1926–1993) plus 2 px — is cut to transparent in CARD coordinates (the piece's hologram, 685–815 × 1930–1993 once placed, sits inside), whatever CC's piece held there (its hologram capture: the planeswalker symbol tiled, WotC's mark), and the black around it is CC's own; our oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut with a 3 px black margin",
     ],
   },
@@ -3021,25 +3076,76 @@ export function sampleBar(master, width, sample) {
 }
 
 /**
+ * A master's bar at EVERY column of a notch shape's bounds (a per-column
+ * tint, `rampKeys`): `sample`'s rows read at each card x from the shape's
+ * left edge across its width, each column flat within the tolerance (the
+ * untilted ramp lerps two flat bars, so every column is flat) — one
+ * `[r, g, b]` per piece column, or a throw. The mono keys read one column
+ * (sampleBar); this is the pair's bar as it is, never two constants lerped.
+ */
+export function sampleBarColumns(master, width, sample, shape) {
+  const origin = rectPx(shape.bounds, OUT_W, OUT_H);
+  const out = [];
+  for (let i = 0; i < shape.size.width; i += 1) out.push(sampleBar(master, width, { ...sample, x: origin.x + i }));
+  return out;
+}
+
+/** True when `tint` is a per-column tint (one `[r, g, b]` per piece
+ *  column) rather than one flat colour. */
+export function isColumnTint(tint) {
+  return Array.isArray(tint[0]);
+}
+
+/** The tint at a piece column: the column's own for a per-column tint,
+ *  the one flat colour otherwise. */
+export function tintAt(tint, x) {
+  return isColumnTint(tint) ? tint[x] : tint;
+}
+
+/**
+ * The gap between two bars at every column, for the shared-bar check: the
+ * largest channel difference and the first column it is found at. Both
+ * are per-column tints of the same length.
+ */
+export function columnTintGap(a, b) {
+  let max = 0;
+  let at = null;
+  for (let x = 0; x < a.length; x += 1) {
+    for (let c = 0; c < 3; c += 1) {
+      const d = Math.abs(a[x][c] - b[x][c]);
+      if (d > max) {
+        max = d;
+        at = x;
+      }
+    }
+  }
+  return { max, at };
+}
+
+/**
  * One notch key from the shape piece (8-bit RGBA at its native size): each
  * pixel decomposed into the bevel's white, the rim (`arc`) and black —
  * w = r / 255 (only the white has red), a = (b − 255 w) / arc.b, k = the
- * rest — and recomposed with `tint` for the rim, the alpha untouched; then
- * every pixel whose centre lies inside the cut ellipse made transparent.
- * The ellipse is the slot's oval grown by the margin, in the piece's own
- * pixels (CC's bounds rounded to whole card px: the piece is 1:1 at HD).
+ * rest — and recomposed with `tint` for the rim (one flat colour, or the
+ * pixel's own column of a per-column tint), the alpha untouched; then every
+ * pixel whose centre lies inside the cut ellipse made transparent. The
+ * ellipse is the slot's oval grown by the margin, in the piece's own pixels
+ * (CC's bounds rounded to whole card px: the piece is 1:1 at HD).
  */
 export function buildNotch(shape, piece, tint, oval, cutMarginPx) {
   const { width, height } = shape.size;
   const out = Buffer.alloc(width * height * 4);
   const [, , arcB] = shape.arc;
+  const perColumn = isColumnTint(tint);
+  if (perColumn && tint.length !== width) throw new Error(`buildNotch: a per-column tint needs ${width} columns, got ${tint.length}`);
   for (let i = 0; i < width * height; i += 1) {
     const o = i * 4;
     const a = piece[o + 3];
     if (a === 0) continue;
+    const t = perColumn ? tint[i % width] : tint;
     const w = Math.min(1, piece[o] / 255);
     const arc = Math.max(0, Math.min(1 - w, (piece[o + 2] - 255 * w) / arcB));
-    for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(Math.min(255, 255 * w + tint[c] * arc));
+    for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(Math.min(255, 255 * w + t[c] * arc));
     out[o + 3] = a;
   }
   cutOval(out, shape, oval, cutMarginPx);
@@ -3075,9 +3181,11 @@ export function cutOval(buf, shape, oval, marginPx) {
  *     black (r + g + b ≤ 60 at any alpha: the piece's bottom row is a
  *     half-transparent black) or transparent: nothing of the hologram
  *     survives at the cut's edge;
- *   • `foot` — the rim's foot (the piece's row at the bar's height, 8 px in
- *     from the left edge) is the tint, so the arch joins the master's bar
- *     without a seam;
+ *   • `foot` — the rim's foot (the piece's row at the bar's height, at
+ *     every column of both feet where CC's piece is solid rim: NOTCH_FOOT's
+ *     runs, or one point `{ x, y }`) is the tint of that column, so the
+ *     arch joins the master's bar without a seam — on a pair, the bar's
+ *     own ramp colour on each side;
  *   • `alphaKept` — outside the cut, the alpha is the shape piece's.
  */
 export function notchFindings(buf, shape, piece, tint, oval, cutMarginPx, foot) {
@@ -3102,31 +3210,85 @@ export function notchFindings(buf, shape, piece, tint, oval, cutMarginPx, foot) 
       if (inside(x, y, 4) && buf[o + 3] !== 0 && buf[o] + buf[o + 1] + buf[o + 2] > 60) ringBlack = false;
     }
   }
-  const fo = (foot.y * width + foot.x) * 4;
-  const footPx = [buf[fo], buf[fo + 1], buf[fo + 2], buf[fo + 3]];
-  const footOk = footPx[3] === 255 && [0, 1, 2].every((c) => Math.abs(footPx[c] - tint[c]) <= 1);
+  let footOk = true;
+  let footPx = null;
+  let footFailure = null;
+  for (const x of footColumns(foot)) {
+    const fo = (foot.y * width + x) * 4;
+    const have = [buf[fo], buf[fo + 1], buf[fo + 2], buf[fo + 3]];
+    const want = tintAt(tint, x);
+    footPx ??= have;
+    if (have[3] === 255 && [0, 1, 2].every((c) => Math.abs(have[c] - want[c]) <= 1)) continue;
+    footOk = false;
+    footFailure = `the rim's foot at (${x}, ${foot.y}) is ${have}, the tint there is ${want}`;
+    break;
+  }
   const failures = [];
   if (!cutClear) failures.push("a pixel inside the cut ellipse is not transparent");
   if (!ringBlack) failures.push("a pixel in the 4 px band outside the cut is neither CC's black nor transparent");
-  if (!footOk) failures.push(`the rim's foot at (${foot.x}, ${foot.y}) is ${footPx}, the tint is ${tint}`);
+  if (footFailure) failures.push(footFailure);
   if (piece && !alphaKept) failures.push("the alpha outside the cut differs from the shape piece's");
   return { cutClear, ringBlack, footOk, footPx, alphaKept, failures };
 }
 
+/** The piece columns a foot reads: the runs' every column, or the one x. */
+export function footColumns(foot) {
+  if (foot.runs) return foot.runs.flatMap(([x0, x1]) => Array.from({ length: x1 - x0 + 1 }, (_, i) => x0 + i));
+  return [foot.x];
+}
+
+/**
+ * Whether CC's piece is solid rim (exactly `arc`, opaque) at every column
+ * a foot reads — the importer refuses a foot the source piece doesn't
+ * hold, so the published-object test (which has no piece) reads real rim.
+ */
+export function footRunsSolid(shape, piece, foot) {
+  const { width } = shape.size;
+  const [ar, ag, ab] = shape.arc;
+  const off = [];
+  for (const x of footColumns(foot)) {
+    const o = (foot.y * width + x) * 4;
+    if (piece[o] !== ar || piece[o + 1] !== ag || piece[o + 2] !== ab || piece[o + 3] !== 255) off.push(x);
+  }
+  return off;
+}
+
 /** Where a notch's rim foot is read (piece px): the row at the bar's
- *  height, 8 px in from the left edge — solid rim on both packs. */
-export const NOTCH_FOOT = Object.freeze({ m15holostamp: { x: 8, y: 44 }, m15pwholostamp: { x: 8, y: 36 } });
+ *  height, and the columns of BOTH feet that are solid rim in CC's piece
+ *  there (measured on the U pieces, 2026-10-03; footRunsSolid holds it) —
+ *  654 + 4…12 and 654 + 180…188 at HD on M15, each foot inside the pair
+ *  ramp on its own side. */
+export const NOTCH_FOOT = Object.freeze({
+  m15holostamp: Object.freeze({ y: 44, runs: Object.freeze([Object.freeze([4, 12]), Object.freeze([180, 188])]) }),
+  m15pwholostamp: Object.freeze({ y: 36, runs: Object.freeze([Object.freeze([2, 12]), Object.freeze([170, 181])]) }),
+});
 
 /** Every Card Conjurer file a notch folder reads. */
 export function notchSourceFiles(def) {
   return [def.shape.src];
 }
 
-/** How provenance prints one notch key's recipe. */
+/** A per-column tint in three words: its colour at the piece's first,
+ *  centre and last column, with their card x. */
+export function describeColumnTint(def, tint) {
+  const origin = rectPx(def.shape.bounds, OUT_W, OUT_H);
+  const w = def.shape.size.width;
+  const at = (i) => `${tint[i].join(",")} at x ${origin.x + i}`;
+  return `${at(0)} → ${at(Math.floor(w / 2))} → ${at(w - 1)}`;
+}
+
+/** How provenance prints one notch key's recipe: a flat tint names its
+ *  colour and sample column; a per-column tint (a pair) names the bar's
+ *  ramp across the piece and the masters that share it. */
 export function describeNotch(def, key, tint) {
+  const origin = rectPx(def.shape.bounds, OUT_W, OUT_H);
+  const rows = `rows ${def.barSample.rows[0]}–${def.barSample.rows[1]}`;
+  const rim = isColumnTint(tint)
+    ? `rim tinted per column to ${def.barOf[key]}.png's bar across x ${origin.x}–${origin.x + def.shape.size.width - 1} (${rows}; ${describeColumnTint(def, tint)} — the pinline's ${rampName(PAIR_RAMPS.pinline)}), the same bar on ${(def.barSharedBy?.[key] ?? []).map((rel) => `${rel}.png`).join(", ")}`
+    : `rim tinted to ${def.barOf[key]}.png's bar (${tint.join(",")}) sampled at x ${def.barSample.x}, ${rows}`;
   return [
     `${def.shape.src} (the arch's geometry: bevel, rim and black) at ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %`,
-    `rim tinted to ${def.barOf[key]}.png's bar (${tint.join(",")}) sampled at x ${def.barSample.x}, rows ${def.barSample.rows[0]}–${def.barSample.rows[1]}`,
+    rim,
     `the oval ${def.oval.leftPct}/${def.oval.topPct.toFixed(2)}/${def.oval.widthPct}×${def.oval.heightPct} % plus ${def.cutMarginPx} px cut to transparent`,
   ];
 }

@@ -3,6 +3,7 @@ import { buildDeckPdf, type DeckPdfLayout, type DeckPdfSheetOptions } from "@/li
 import { cardPngHref } from "@/lib/cards/output-corners";
 import { BLEED_IN, CARD_TRIM_IN, cardPrintPngHref, printPixelSize } from "@/lib/cards/print-export";
 import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/print-selection";
+import { faceSlug, type CardFace } from "@/lib/cards/card-face";
 
 // ---------------------------------------------------------------------------
 // Client-side deck export pipeline — runs in the browser (no server-only
@@ -40,6 +41,15 @@ import { selectionExportFilename, type SelectionPdfLayout } from "@/lib/cards/pr
 // (My Cards' "Print / download" bulk action): the manifest comes from
 // POST /api/cards/export, with per-card copies.
 //
+// BOTH FACES (TODO 5.3): the manifest lists each card's `faces`; with
+// `includeBacks` (default on — a proxy of a DFC without its back is
+// unplayable) a double-faced card's back is fetched too (the same render,
+// `&face=back`), and lands as `<slug>-back.png` in the ZIP (HD and the 600
+// ppi print render, `-back-mpc.png` for MPC) and as its own page / beside
+// its front on the PDF (lib/render/card-pdf.ts). A back that fails to
+// render fails the card's back only: the front still prints, and the
+// failure is listed by name.
+//
 /** The card body face, shipped as a static asset. Null on any failure. */
 async function fetchChecklistFont(
   fetchImpl: FetchLike,
@@ -57,10 +67,16 @@ async function fetchChecklistFont(
 // `fetchImpl` is injectable so the pipeline unit-tests without a network.
 // ---------------------------------------------------------------------------
 
+/** One card of an export manifest: `copies` = physical copies to print;
+ *  `faces` = the faces it has (TODO 5.3: `["front"]`, or `["front", "back"]`
+ *  for a double-faced card with a back body). Absent on a manifest from
+ *  before 5.3: the front only. */
+export type ExportManifestCard = { id: string; slug: string; title: string; copies: number; faces?: CardFace[] };
+
 export type DeckExportManifest = {
   deck: { id: string; slug: string; title: string };
   /** Unique custom cards in deck order; `copies` = physical copies to print. */
-  cards: Array<{ id: string; slug: string; title: string; copies: number }>;
+  cards: ExportManifestCard[];
   /** Un-remixed entries, one line each ("4× Lightning Bolt  (Sideboard)"). */
   checklist: string[];
   hasCover: boolean;
@@ -70,10 +86,15 @@ export type DeckExportManifest = {
 /** A selection's manifest (POST /api/cards/export): the printable cards in
  *  the order asked, copies budgeted; `skipped` = ids it can't print. */
 export type CardsExportManifest = {
-  cards: Array<{ id: string; slug: string; title: string; copies: number }>;
+  cards: ExportManifestCard[];
   skipped: string[];
   totalCopies: number;
 };
+
+/** Whether a manifest card has a back face to fetch. */
+export function manifestCardHasBack(card: Pick<ExportManifestCard, "faces">): boolean {
+  return card.faces?.includes("back") === true;
+}
 
 export type DeckExportKind = "zip" | "pdf";
 /** A ZIP's image size: HD (the 600 ppi print render), standard (750 px), or
@@ -91,6 +112,9 @@ export type DeckExportRequest = {
   sheet?: DeckPdfSheetOptions;
   /** PDF only: every card with a 1/8 in bleed (the print render). */
   bleed?: boolean;
+  /** A double-faced card's back too (TODO 5.3): its own ZIP image, its own
+   *  page / beside its front on the PDF. Default on. */
+  includeBacks?: boolean;
 };
 
 /** Print / download a selection of cards (TODO 6.15). */
@@ -107,6 +131,8 @@ export type CardsExportRequest = {
   sheet?: DeckPdfSheetOptions;
   /** Every card with a 1/8 in bleed (the print render) — PDF and ZIP. */
   bleed?: boolean;
+  /** A double-faced card's back too (TODO 5.3). Default on. */
+  includeBacks?: boolean;
 };
 
 /** Either export; DeckExportProvider runs one at a time. */
@@ -221,60 +247,94 @@ function mpcZip(request: { kind: DeckExportKind; quality: DeckExportQuality }): 
  * Which render an export fetches for a card: the 600 ppi PRINT render (full-
  * resolution art; with the bleed when asked) for a PDF and for HD images,
  * MakePlayingCards' file for an MPC ZIP (TODO 6.1), the 750 px square render
- * for a standard-size ZIP.
+ * for a standard-size ZIP — of the FRONT, or of the back (`face: "back"`,
+ * TODO 5.3: the same render with `&face=back`).
  */
 export function exportCardHref(
   cardId: string,
-  opts: { kind: DeckExportKind; quality: DeckExportQuality; bleed: boolean },
+  opts: { kind: DeckExportKind; quality: DeckExportQuality; bleed: boolean; face?: CardFace },
 ): string {
-  if (mpcZip(opts)) return cardPrintPngHref(cardId, { ppi: 600, bleed: "mpc" });
+  const face = opts.face ?? "front";
+  if (mpcZip(opts)) return cardPrintPngHref(cardId, { ppi: 600, bleed: "mpc", face });
   if (opts.bleed || opts.kind === "pdf" || opts.quality === "hd") {
-    return cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed });
+    return cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed, face });
   }
-  return cardPngHref(cardId, { preset: "default", corners: "square" });
+  return cardPngHref(cardId, { preset: "default", corners: "square", face });
 }
 
-/** Fetch every card's PNG with a small worker pool, reporting each finish.
+/** One render to fetch: a card's face. The front is reported under the
+ *  card's title, the back as "<title> (back)". */
+type FaceJob = { id: string; title: string; face: CardFace };
+
+/** The renders an export fetches: every card's front, and the back of each
+ *  double-faced card when backs are included (TODO 5.3). */
+export function exportFaceJobs(
+  cards: ReadonlyArray<Pick<ExportManifestCard, "id" | "title" | "faces">>,
+  includeBacks: boolean,
+): FaceJob[] {
+  return cards.flatMap((card) =>
+    includeBacks && manifestCardHasBack(card)
+      ? [
+          { id: card.id, title: card.title, face: "front" as const },
+          { id: card.id, title: `${card.title} (back)`, face: "back" as const },
+        ]
+      : [{ id: card.id, title: card.title, face: "front" as const }],
+  );
+}
+
+/** The fetched renders of an export, by card id: the front, and the back
+ *  when it was asked for and came back. */
+export type FetchedFaces = Map<string, { front?: Uint8Array; back?: Uint8Array }>;
+
+/** Fetch every face's PNG with a small worker pool, reporting each finish.
  *  `hrefOf` names the render (exportCardHref: the print render, or the
  *  750 px square one);
  *  a response `accept` turns down counts as a failure. */
 async function fetchCardPngs(
-  cards: ReadonlyArray<{ id: string; title: string }>,
-  hrefOf: (card: { id: string }) => string,
+  jobs: ReadonlyArray<FaceJob>,
+  hrefOf: (job: FaceJob) => string,
   fetchImpl: FetchLike,
   signal: AbortSignal | undefined,
   onOne: (title: string, ok: boolean) => void,
   accept?: (bytes: Uint8Array) => boolean,
-): Promise<Map<string, Uint8Array>> {
-  const out = new Map<string, Uint8Array>();
+): Promise<FetchedFaces> {
+  const out: FetchedFaces = new Map();
   let cursor = 0;
   const worker = async () => {
-    while (cursor < cards.length) {
+    while (cursor < jobs.length) {
       if (signal?.aborted) return;
-      const card = cards[cursor++];
+      const job = jobs[cursor++];
       try {
-        const response = await fetchImpl(hrefOf(card), { signal });
+        const response = await fetchImpl(hrefOf(job), { signal });
         if (!response.ok) {
-          onOne(card.title, false);
+          onOne(job.title, false);
           continue;
         }
         const bytes = new Uint8Array(await response.arrayBuffer());
         if (accept && !accept(bytes)) {
-          onOne(card.title, false);
+          onOne(job.title, false);
           continue;
         }
-        out.set(card.id, bytes);
-        onOne(card.title, true);
+        const faces = out.get(job.id) ?? {};
+        faces[job.face] = bytes;
+        out.set(job.id, faces);
+        onOne(job.title, true);
       } catch (error) {
         if (signal?.aborted) return;
         void error;
-        onOne(card.title, false);
+        onOne(job.title, false);
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(EXPORT_CONCURRENCY, cards.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(EXPORT_CONCURRENCY, jobs.length) }, worker));
   if (signal?.aborted) throw new DeckExportError("Export cancelled.", "CANCELLED");
   return out;
+}
+
+/** A ZIP's file for one face: `cards/01-<slug>.png`, `…-<slug>-back.png`,
+ *  with `-mpc` / `-bleed` after the face. */
+function zipImageName(index: number, slug: string, face: CardFace, suffix: "" | "-mpc" | "-bleed"): string {
+  return `cards/${String(index).padStart(2, "0")}-${faceSlug(slug, face)}${suffix}.png`;
 }
 
 function extensionOf(contentType: string | null): string {
@@ -300,18 +360,20 @@ export async function runDeckExport(
 
   const manifest = await fetchDeckExportManifest(request.deckId, fetchImpl, signal);
   progress.deckTitle = manifest.deck.title;
-  progress.total = manifest.cards.length;
-  progress.phase = "rendering";
-  emit();
-
   // The bleed is a PDF option (the ZIP's images are the plain print files,
   // or MPC's, which carry MPC's own bleed).
   const bleed = request.kind === "pdf" && request.bleed === true;
   const mpc = mpcZip(request);
-  const hrefOf = (card: { id: string }) =>
-    exportCardHref(card.id, { kind: request.kind, quality: request.quality, bleed });
+  // Every card's front, and each double-faced card's back (TODO 5.3).
+  const jobs = exportFaceJobs(manifest.cards, request.includeBacks !== false);
+  progress.total = jobs.length;
+  progress.phase = "rendering";
+  emit();
+
+  const hrefOf = (job: FaceJob) =>
+    exportCardHref(job.id, { kind: request.kind, quality: request.quality, bleed, face: job.face });
   const pngs = await fetchCardPngs(
-    manifest.cards,
+    jobs,
     hrefOf,
     fetchImpl,
     signal,
@@ -330,8 +392,8 @@ export async function runDeckExport(
 
   if (request.kind === "pdf") {
     const entries = manifest.cards
-      .filter((card) => pngs.has(card.id))
-      .map((card) => ({ png: pngs.get(card.id) as Uint8Array, copies: card.copies }));
+      .filter((card) => pngs.get(card.id)?.front)
+      .map((card) => ({ png: pngs.get(card.id)!.front as Uint8Array, copies: card.copies, back: pngs.get(card.id)!.back ?? null }));
     if (entries.length === 0 && manifest.checklist.length === 0) {
       throw new DeckExportError("Nothing to print — remix some cards into custom proxies first.");
     }
@@ -383,10 +445,11 @@ export async function runDeckExport(
   if (cover) zip.file(`cover.${cover.ext}`, cover.bytes);
   let added = 0;
   for (const card of manifest.cards) {
-    const png = pngs.get(card.id);
-    if (!png) continue;
+    const faces = pngs.get(card.id);
+    if (!faces?.front) continue;
     added += 1;
-    zip.file(`cards/${String(added).padStart(2, "0")}-${card.slug}${mpc ? "-mpc" : ""}.png`, png);
+    zip.file(zipImageName(added, card.slug, "front", mpc ? "-mpc" : ""), faces.front);
+    if (faces.back) zip.file(zipImageName(added, card.slug, "back", mpc ? "-mpc" : ""), faces.back);
   }
   const notes: string[] = [];
   if (manifest.cards.length === 0) {
@@ -466,11 +529,6 @@ export async function runCardsExport(
   const manifest = await fetchCardsExportManifest(request.cards, fetchImpl, signal);
   const title = selectionTitle(manifest.cards);
   progress.deckTitle = title;
-  progress.total = manifest.cards.length;
-  progress.failed = manifest.skipped.map((id) => request.titles?.[id] ?? "A card that is no longer available");
-  progress.phase = "rendering";
-  emit();
-
   // Every PDF card and HD image is its 600 ppi PRINT render (1500 × 2100,
   // or 1650 × 2250 with the bleed; the art at full resolution, always
   // square); a standard-size ZIP image the 750 px square render; an MPC ZIP
@@ -478,10 +536,17 @@ export async function runCardsExport(
   // 1/8 in on top).
   const mpc = mpcZip(request);
   const bleed = request.bleed === true && !mpc;
-  const hrefOf = (card: { id: string }) =>
-    exportCardHref(card.id, { kind: request.kind, quality: request.quality, bleed });
+  // Every card's front, and each double-faced card's back (TODO 5.3).
+  const jobs = exportFaceJobs(manifest.cards, request.includeBacks !== false);
+  progress.total = jobs.length;
+  progress.failed = manifest.skipped.map((id) => request.titles?.[id] ?? "A card that is no longer available");
+  progress.phase = "rendering";
+  emit();
+
+  const hrefOf = (job: FaceJob) =>
+    exportCardHref(job.id, { kind: request.kind, quality: request.quality, bleed, face: job.face });
   const pngs = await fetchCardPngs(
-    manifest.cards,
+    jobs,
     hrefOf,
     fetchImpl,
     signal,
@@ -504,14 +569,14 @@ export async function runCardsExport(
     bleed,
     quality: request.quality,
   });
-  const rendered = manifest.cards.filter((card) => pngs.has(card.id));
+  const rendered = manifest.cards.filter((card) => pngs.get(card.id)?.front);
   if (rendered.length === 0) {
     throw new DeckExportError("None of the cards could be rendered — try again in a moment.");
   }
 
   if (request.kind === "pdf") {
     const bytes = await buildDeckPdf(
-      rendered.map((card) => ({ png: pngs.get(card.id) as Uint8Array, copies: card.copies })),
+      rendered.map((card) => ({ png: pngs.get(card.id)!.front as Uint8Array, copies: card.copies, back: pngs.get(card.id)!.back ?? null })),
       {
         title,
         layout: request.layout,
@@ -531,10 +596,10 @@ export async function runCardsExport(
 
   const zip = new JSZip();
   rendered.forEach((card, index) => {
-    zip.file(
-      `cards/${String(index + 1).padStart(2, "0")}-${card.slug}${mpc ? "-mpc" : bleed ? "-bleed" : ""}.png`,
-      pngs.get(card.id) as Uint8Array,
-    );
+    const faces = pngs.get(card.id)!;
+    const suffix = mpc ? "-mpc" : bleed ? "-bleed" : "";
+    zip.file(zipImageName(index + 1, card.slug, "front", suffix), faces.front as Uint8Array);
+    if (faces.back) zip.file(zipImageName(index + 1, card.slug, "back", suffix), faces.back);
   });
   if (progress.failed.length > 0) {
     zip.file("MISSING.txt", `These cards were skipped:\n${progress.failed.join("\n")}\n`);

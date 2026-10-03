@@ -129,10 +129,11 @@ describe("bake path = preview path", () => {
     }
     // The three rider slots × 12 glyphs (m15dfcfront, m15dfclandfront, m15dfcbackleft).
     expect(riders).toBe(36);
-    // Not vacuous: 9 keys × the six M15-family entries + the walker's 7 —
-    // and none on a DFC body (no holoStamp on a back body, ever; the fronts
-    // take it as their own addition later).
-    expect(notches).toBe(9 * 6 + 7);
+    // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the six
+    // M15-family entries + the walker's 7 — and none on a DFC body (no
+    // holoStamp on a back body, ever; the fronts take it as their own
+    // addition later).
+    expect(notches).toBe((9 + 10) * 6 + 7);
     for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"] as const) {
       expect((getFrameProfile(template).overlays ?? []).some((slot) => slot.anatomy === "holoStamp"), template).toBe(false);
     }

@@ -12,6 +12,7 @@ import { mainRulesLayout } from "@/lib/cards/rules-box";
 import { M15PW_HOLO_STAMP, M15_HOLO_STAMP, getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { RENDER_PRESETS, frameAssetPathsFor, renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+import { NOTCH_FOOT } from "@/scripts/lib/cc-frames.mjs";
 import { STAMP_ARCH_RULES } from "@/tests/visual/matrix";
 
 // ---------------------------------------------------------------------------
@@ -32,10 +33,16 @@ import { STAMP_ARCH_RULES } from "@/tests/visual/matrix";
 //     artifact's silver "a", a colourless land's taupe "l", a coloured
 //     land's colour, every devoid key's grey "c", a snow frame's colour, the
 //     walker's own piece;
-//   • absent, "none", "auto" on a common, a token, an emblem and a card
-//     drawn as its PAIR master (no pair notch in wave 1) bake byte-identical
-//     to the key-absent card; "oval" on a common and an imported "triangle"
-//     on an oval frame both draw the frame's oval;
+//   • a card drawn as its PAIR master (the 4.9c follow-up) takes the
+//     pair's notch on the split and the hybrid dress, on m15artifact,
+//     m15land and the snow frames too: at HD the piece 1:1 over the pair
+//     master, its rim foot
+//     the master's own bar at every column of both feet (the bar is a
+//     40→60 %W ramp; the stamped bake equals the plain one there), and the
+//     arch keep-out applies as on a mono card;
+//   • absent, "none", "auto" on a common, a token and an emblem bake
+//     byte-identical to the key-absent card; "oval" on a common and an
+//     imported "triangle" on an oval frame both draw the frame's oval;
 //   • a full rules box steps down for the arch (the keep-out) while a short
 //     block never moves;
 //   • frameAssetPathsFor lists the notch only while the stamp is drawn.
@@ -58,14 +65,14 @@ function real(rel: string): Buffer | null {
 }
 
 const MASTERS = [
-  "m15/w", "m15/u", "m15/b", "m15/r", "m15/g", "m15/m", "m15/c", "m15/wu",
-  "m15artifact/c", "m15artifact/u", "m15land/c", "m15land/g",
-  "m15snow/r", "m15snowland/c", "m15devoid/u", "m15pw/w", "m15pw/c",
+  "m15/w", "m15/u", "m15/b", "m15/r", "m15/g", "m15/m", "m15/c", "m15/wu", "m15/gw-h",
+  "m15artifact/c", "m15artifact/u", "m15artifact/ur", "m15land/c", "m15land/g", "m15land/bg",
+  "m15snow/r", "m15snow/ub", "m15snowland/c", "m15snowland/rw", "m15devoid/u", "m15pw/w", "m15pw/c",
   "m15token/g",
   "m15/pt/w", "m15/pt/u", "m15/pt/b", "m15/pt/r", "m15/pt/g", "m15/pt/m", "m15/pt/c",
-  "m15artifact/pt/c", "m15artifact/pt/u", "m15snow/pt/r", "m15devoid/pt/u", "m15pw/loyalty/w", "m15pw/loyalty/c",
+  "m15artifact/pt/c", "m15artifact/pt/u", "m15artifact/pt/m", "m15snow/pt/r", "m15snow/pt/m", "m15devoid/pt/u", "m15pw/loyalty/w", "m15pw/loyalty/c",
 ];
-const NOTCHES = ["w", "u", "b", "r", "g", "m", "a", "l", "c"].map((k) => `m15holostamp/${k}`).concat(["w", "c"].map((k) => `m15pwholostamp/${k}`));
+const NOTCHES = ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "gw", "ur", "bg", "ub", "rw"].map((k) => `m15holostamp/${k}`).concat(["w", "c"].map((k) => `m15pwholostamp/${k}`));
 const objects = Object.fromEntries([...MASTERS, ...NOTCHES].map((rel) => [rel, real(`${rel}.png`)]));
 const available = Object.values(objects).every((b) => b !== null);
 
@@ -218,6 +225,43 @@ const ART = holoStampArtRect(M15_HOLO_STAMP_OVAL);
  *  arch on m15 (tests/visual/matrix.ts STAMP_ARCH_RULES). */
 const ARCH_RULES = STAMP_ARCH_RULES;
 
+/** Two-colour cards drawn as their pair masters (FrameStyle.twoColor on, a
+ *  stored pair): the four masters one pair notch serves. */
+const PAIR_CARDS: Record<"split" | "hybrid" | "artifact" | "land" | "snow" | "snowland", Partial<CardPreviewData>> = {
+  split: { rarity: "rare", colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15", finish: "regular", twoColor: true, stamp: "auto" } },
+  hybrid: { rarity: "rare", colorIdentity: ["green", "white"], cost: "{G/W}{G/W}", frameStyle: { template: "m15", finish: "regular", twoColor: true, stamp: "auto" } },
+  artifact: {
+    rarity: "mythic",
+    cardType: "artifact",
+    colorIdentity: ["blue", "red"],
+    cost: "{U}{R}",
+    power: null,
+    toughness: null,
+    frameStyle: { template: "m15artifact", finish: "regular", twoColor: true, stamp: "auto" },
+  },
+  land: {
+    rarity: "rare",
+    cardType: "land",
+    colorIdentity: ["black", "green"],
+    cost: null,
+    power: null,
+    toughness: null,
+    frameStyle: { template: "m15land", finish: "regular", twoColor: true, stamp: "auto" },
+  },
+  // The snow pairs (4.6f wave 2c): the same pieces over the snow masters.
+  snow: { rarity: "rare", supertype: "Snow", colorIdentity: ["blue", "black"], cost: "{1}{U}{B}", frameStyle: { template: "m15snow", finish: "regular", twoColor: true, stamp: "auto" } },
+  snowland: {
+    rarity: "rare",
+    cardType: "land",
+    supertype: "Snow",
+    colorIdentity: ["red", "white"],
+    cost: null,
+    power: null,
+    toughness: null,
+    frameStyle: { template: "m15snowland", finish: "regular", twoColor: true, stamp: "auto" },
+  },
+};
+
 type Case = [string, Partial<CardPreviewData>, string, string];
 const cases: Case[] = [
   ["mythic black creature on m15", {}, "m15holostamp", "b"],
@@ -266,6 +310,15 @@ const cases: Case[] = [
     "m15holostamp",
     "c",
   ],
+  // The pair frames (the 4.9c follow-up): the pair's notch over the pair
+  // master — the gold-split dress, the hybrid dress (the same piece: the
+  // bar under the notch is the same pixels), an artifact pair, a land pair.
+  ["rare W|U creature drawn as its pair master", PAIR_CARDS.split, "m15holostamp", "wu"],
+  ["rare G|W hybrid creature (the hybrid dress)", PAIR_CARDS.hybrid, "m15holostamp", "gw"],
+  ["mythic U|R artifact pair", PAIR_CARDS.artifact, "m15holostamp", "ur"],
+  ["rare B|G land pair", PAIR_CARDS.land, "m15holostamp", "bg"],
+  ["rare U|B snow pair (4.6f wave 2c: the same piece)", PAIR_CARDS.snow, "m15holostamp", "ub"],
+  ["rare R|W snow land pair", PAIR_CARDS.snowland, "m15holostamp", "rw"],
 ];
 
 const walker = (over: Partial<CardPreviewData> = {}): CardPreviewData =>
@@ -392,7 +445,68 @@ describe.skipIf(!available)("the holofoil stamp in the bake — the real masters
     }
   }, 60_000);
 
-  it("absent, Never, Auto on a common, a token, an emblem and a pair master bake byte-identical to the key-absent card", async () => {
+  it("the pair notch at HD: the piece 1:1 over every pair master, its foot the master's bar at every column of both feet, the keep-out on", async () => {
+    // The foot columns NOTCH_FOOT reads (piece px → card px at HD), on both
+    // feet: each stands on its own side of the bar's 40→60 %W ramp.
+    const foot = NOTCH_FOOT.m15holostamp;
+    const slot = { x0: 654, y0: 1899 };
+    for (const [label, over, key] of [
+      ["split", PAIR_CARDS.split, "wu"],
+      ["hybrid", PAIR_CARDS.hybrid, "gw"],
+      ["artifact", PAIR_CARDS.artifact, "ur"],
+      ["land", PAIR_CARDS.land, "bg"],
+      ["snow", PAIR_CARDS.snow, "ub"],
+      ["snowland", PAIR_CARDS.snowland, "rw"],
+    ] as const) {
+      const stamped = card(over);
+      const resolved = resolveHoloStamp(getFrameProfile(stamped.frameStyle?.template), stamped.frameStyle, {
+        colors: stamped.colorIdentity,
+        cost: stamped.cost,
+        cardType: stamped.cardType,
+        supertype: stamped.supertype,
+        rarity: stamped.rarity,
+        colorKey: pickFrameColorKey(stamped.colorIdentity),
+      });
+      expect(resolved?.notch.path, label).toBe(`/frames/m15holostamp/${key}.png`);
+      expect(resolved?.keepOut, label).toEqual(M15_HOLO_STAMP_KEEP_OUT);
+      const on = await bake(stamped, "hd", { name: `pair-${label}-hd` });
+      const off = await bake(withoutKey(stamped), "hd", { name: `pair-${label}-hd-off` });
+      const rows = differingRows(on, off);
+      expect(rows.length, label).toBeGreaterThan(40);
+      expect(rows[0], label).toBeGreaterThanOrEqual(slot.y0 - 1);
+      expect(rows[rows.length - 1], label).toBeLessThanOrEqual(1995 + 1);
+      const fit = await offComposite(on, off, objects[`m15holostamp/${key}`]!, M15_HOLO_STAMP.rect, ART);
+      expect(fit.max, `${label}: max ${fit.max} mean ${fit.mean.toFixed(2)}`).toBeLessThanOrEqual(8);
+      expect(fit.mean, label).toBeLessThanOrEqual(0.5);
+      // No seam: at the foot row, every solid-rim column of both feet is the
+      // plain bake's own bar pixel (the piece's rim there IS the bar).
+      let seam = 0;
+      for (const [x0, x1] of foot.runs) {
+        for (let x = x0; x <= x1; x += 1) {
+          const a = px(on, slot.x0 + x, slot.y0 + foot.y);
+          const b = px(off, slot.x0 + x, slot.y0 + foot.y);
+          for (let c = 0; c < 3; c += 1) seam = Math.max(seam, Math.abs(a[c] - b[c]));
+        }
+      }
+      expect(seam, `${label}: the foot differs from the bar by ${seam}`).toBeLessThanOrEqual(1);
+      // …and the two feet are NOT one colour: the left stands on the first
+      // colour's side of the ramp, the right on the second's.
+      const left = px(on, slot.x0 + foot.runs[0][0] + 2, slot.y0 + foot.y);
+      const right = px(on, slot.x0 + foot.runs[1][1] - 2, slot.y0 + foot.y);
+      expect(Math.max(...[0, 1, 2].map((c) => Math.abs(left[c] - right[c]))), label).toBeGreaterThan(20);
+    }
+  }, 360_000);
+
+  it("a full rules box on a pair steps down for the arch like a mono card", async () => {
+    const stamped = card({ ...PAIR_CARDS.split, rulesText: ARCH_RULES });
+    const on = await bake(stamped, "default", { name: "pair-full-box" });
+    const off = await bake(withoutKey(stamped), "default");
+    const rows = differingRows(on, off);
+    const rulesTop = Math.round((getFrameProfile("m15").rules.rect.topPct / 100) * on.height);
+    expect(rows[0]).toBeLessThan(rulesTop + 40);
+  }, 60_000);
+
+  it("absent, Never, Auto on a common, a token and an emblem bake byte-identical to the key-absent card", async () => {
     const plain = await bake(withoutKey(card()), "default");
     const none = await bake(card({ frameStyle: { template: "m15", finish: "regular", stamp: "none" } }), "default");
     expect(Buffer.compare(none.data, plain.data)).toBe(0);
@@ -402,17 +516,13 @@ describe.skipIf(!available)("the holofoil stamp in the bake — the real masters
       expect(Buffer.compare(on.data, off.data), `auto on a ${rarity}`).toBe(0);
     }
     // A token on its token frame (no notch declared) and a token TYPE on
-    // m15 (never a stamp), an emblem, and a two-colour card drawn as its
-    // pair master (no pair notch in wave 1): each equal to itself with the
-    // key absent.
+    // m15 (never a stamp), an emblem: each equal to itself with the key
+    // absent. (A card drawn as its pair master draws the pair's notch since
+    // the 4.9c follow-up — the pair cases above.)
     for (const [label, data] of [
       ["token on m15token", card({ cardType: "token", rarity: "rare", colorIdentity: ["green"], cost: null, frameStyle: { template: "m15token", finish: "regular", stamp: "oval" } })],
       ["token type on m15", card({ cardType: "token", rarity: "rare", frameStyle: { template: "m15", finish: "regular", stamp: "oval" } })],
       ["emblem type on m15", card({ cardType: "emblem", rarity: "rare", frameStyle: { template: "m15", finish: "regular", stamp: "oval" } })],
-      [
-        "pair master",
-        card({ rarity: "rare", colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "m15", finish: "regular", twoColor: true, stamp: "auto" } }),
-      ],
     ] as const) {
       const on = await bake(data, "default");
       const off = await bake(withoutKey(data), "default");
@@ -482,6 +592,11 @@ describe.skipIf(!available)("the holofoil stamp in the bake — the real masters
     expect(frameAssetPathsFor(withoutKey(card()))).not.toContain("/frames/m15holostamp/b.png");
     expect(frameAssetPathsFor(card({ rarity: "common" }))).not.toContain("/frames/m15holostamp/b.png");
     expect(frameAssetPathsFor(walker())).toContain("/frames/m15pwholostamp/c.png");
+    // A pair card preloads the pair's notch (its plate beside it; the
+    // masters come through the bucket loader).
+    expect(frameAssetPathsFor(card(PAIR_CARDS.split))).toEqual(["/frames/m15/pt/m.png", "/frames/m15holostamp/wu.png"]);
+    expect(frameAssetPathsFor(card(PAIR_CARDS.hybrid))).toEqual(["/frames/m15/pt/c.png", "/frames/m15holostamp/gw.png"]);
+    expect(frameAssetPathsFor(withoutKey(card(PAIR_CARDS.split)))).toEqual(["/frames/m15/pt/m.png"]);
     expect(frameAssetPathsFor(card({ frameStyle: { template: "m15", finish: "regular", stamp: "none" } }))).not.toContain("/frames/m15holostamp/b.png");
     expect(RENDER_PRESETS.hd.width).toBe(1500);
   });

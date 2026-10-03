@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 // The print options every print surface shares (TODO 6.15): My Cards'
 // selection dialog, the Pro deck export and the single-card download modal.
 // One look and one wording for the sheet's spacing, cut guides and card
-// size, and for the 1/8″ bleed checkbox; the geometry is
-// lib/render/sheet-layout.ts, the remembered values lib/cards/print-selection.ts.
+// size, for the 1/8″ bleed checkbox and for the "Include back faces"
+// checkbox (TODO 5.3: a double-faced card's back printed beside its front);
+// the geometry is lib/render/sheet-layout.ts, the remembered values
+// lib/cards/print-selection.ts.
 // ---------------------------------------------------------------------------
 
 export type SheetOptionValues = { gap: SheetGap; marks: SheetMarks; cardSize: SheetCardSize };
@@ -109,6 +111,48 @@ export function PrintBleedCheckbox({
       />
       <span className="flex flex-col gap-0.5">
         <span className="font-medium">Add a 1/8″ bleed</span>
+        <span className="text-xs leading-5 text-muted">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
+/** The "Include back faces" checkbox (TODO 5.3): a double-faced card's
+ *  back as its own image / page, or beside its front on a sheet. Shown only
+ *  where a selection has one (the caller decides); default on. */
+export function PrintBacksCheckbox({
+  checked,
+  onChange,
+  disabled = false,
+  testId,
+  hint,
+  className,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  testId: string;
+  hint: string;
+  className?: string;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5",
+        disabled && "cursor-not-allowed opacity-60",
+        className,
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+        data-testid={testId}
+      />
+      <span className="flex flex-col gap-0.5">
+        <span className="font-medium">Include back faces</span>
         <span className="text-xs leading-5 text-muted">{hint}</span>
       </span>
     </label>

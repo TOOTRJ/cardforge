@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { hasPendingCorrection, type ScopeCard } from "@/lib/cards/layout-version";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import type { CardFace } from "@/lib/cards/card-face";
 import { squareCardCorners, type CardCornerFills } from "@/lib/cards/card-corner";
 import { RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 
@@ -48,17 +49,28 @@ const MAX_RENDER_BYTES = 25 * 1024 * 1024;
 export type StoredRenderRow = ScopeCard & {
   rendered_image_url: string | null;
   layout_version: number | null;
+  /** The BACK face's bake (migration 0134, TODO 5.3) — `face: "back"` reads
+   *  it; a row read without the column has no back bake to serve. */
+  rendered_back_image_url?: string | null;
   /** With both, the URL must be THIS card's own bake (see fetchStoredRender). */
   id?: string;
   owner_id?: string;
 };
 
-/** True when the row's baked PNG may stand in for a live render: a URL
- *  and no pending platform correction (see the header). */
-export function hasServableStoredRender(row: StoredRenderRow): boolean {
+/** The stored render URL of a face: the front's, or the back's (TODO 5.3). */
+export function storedRenderUrlOf(row: StoredRenderRow, face: CardFace = "front"): string | null {
+  const url = face === "back" ? row.rendered_back_image_url : row.rendered_image_url;
+  return typeof url === "string" && url.length > 0 ? url : null;
+}
+
+/** True when the row's baked PNG of `face` (the front unless asked for the
+ *  back, TODO 5.3) may stand in for a live render: a URL and no pending
+ *  platform correction (see the header). The correction is the CARD's —
+ *  one layout_version stamps both faces, baked by one run — so a back is
+ *  servable exactly when its front is, and only once it exists. */
+export function hasServableStoredRender(row: StoredRenderRow, face: CardFace = "front"): boolean {
   return (
-    typeof row.rendered_image_url === "string" &&
-    row.rendered_image_url.length > 0 &&
+    storedRenderUrlOf(row, face) !== null &&
     // The whole row: v29 also reads the type line, title and stat columns.
     !hasPendingCorrection({ ...row, frame_style: row.frame_style })
   );
@@ -76,17 +88,16 @@ export function hasServableStoredRender(row: StoredRenderRow): boolean {
  *     exists, because the gallery tile shows exactly that image and the
  *     owner-driven update flow means a card may keep an older look for a
  *     long time.
+ *   face — the front (default) or the back face's bake (TODO 5.3).
  */
 export async function fetchStoredRender(
   row: StoredRenderRow,
-  opts: { accept?: "servable" | "any" } = {},
+  opts: { accept?: "servable" | "any"; face?: CardFace } = {},
 ): Promise<Buffer | null> {
-  const usable =
-    opts.accept === "any"
-      ? typeof row.rendered_image_url === "string" && row.rendered_image_url.length > 0
-      : hasServableStoredRender(row);
-  if (!usable) return null;
-  const url = row.rendered_image_url as string;
+  const face = opts.face ?? "front";
+  if (opts.accept !== "any" && !hasServableStoredRender(row, face)) return null;
+  const url = storedRenderUrlOf(row, face);
+  if (!url) return null;
   // rendered_image_url is written by the bake, but it is still a row column —
   // the same SSRF gate the art fetch uses keeps this to our storage host, and
   // it must be a bake in card-renders — this card's own when the row carries

@@ -53,9 +53,11 @@ import { isDfcBackBody } from "@/lib/cards/dfc";
 //     gold rare, "Always" on a common, a full-box rare whose last line
 //     enters the arch (the keep-out steps it down), the HD bake, foil and
 //     etched (the notch in the sheen, the oval outside it), the squared
-//     print, a pair master (no pair notch in wave 1: nothing drawn) and a
-//     token with the key (nothing drawn). The cards WITHOUT the switch are
-//     the plain cases.
+//     print, a token with the key (nothing drawn), and — the 4.9c
+//     follow-up — the pair's notch on a rare drawn as its pair master on
+//     every template with pairs and the notch ("@stamp-pair-split"), the
+//     hybrid dress, a crowned pair, the HD size and a foil pair. The cards
+//     WITHOUT the switch are the plain cases.
 //
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
@@ -928,9 +930,28 @@ export function visualCases(): VisualCase[] {
   add("m15", "creature", "r", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "u", "long", { suffix: "@stamp-etched", finish: "etched", row: stampRow("m15", "auto", { rarity: "mythic", frame_style: { finish: "etched" } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15", "auto", { rarity: "rare" }) });
-  // A pair master (no pair notch in wave 1) and a token with the key: the
-  // switch on, nothing drawn — the plain look, pinned.
-  add("m15", "creature", "wu", "short", { suffix: "@stamp-pair", row: stampRow("m15", "oval", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  // The pair frames (the 4.9c follow-up, owner round 26, 2026-10-03): the
+  // pair's notch — its rim the pair master's own bar, tinted per column
+  // across the 40→60 %W ramp — on a rare on "auto" drawn as its pair master
+  // on every template with pairs AND the notch (m15, m15artifact, m15land,
+  // and 4.6f wave 2c's m15snow and m15snowland — the same pieces: their
+  // bar under the notch is m15's pair bar — STAMP_PAIR_TEMPLATES; the
+  // gold-split dress, "@stamp-pair-split"), the
+  // hybrid dress (the same piece over its own master), a crowned pair rare
+  // (the split crown and the pair notch on one card), the stored bake's HD
+  // size and a foil pair (the notch in the sheen). Wave 1's "@stamp-pair"
+  // pin (the switch on a pair master, nothing drawn) is retired: it pinned
+  // the gap this follow-up closes.
+  for (const template of STAMP_PAIR_TEMPLATES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, "wu", "short", { suffix: "@stamp-pair-split", row: stampRow(template, "auto", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  }
+  add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("m15", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-crown", row: stampRow("m15", "auto", { rarity: "mythic", frame_style: { crown: true, twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-hd", preset: "hd", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-foil", finish: "foil", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { finish: "foil", twoColor: true } as CardRowForBake["frame_style"] }) });
+  // A token with the key: the switch on, nothing drawn — the plain look,
+  // pinned.
   add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
   // TODO 5.1a: the transform bodies — NEW cases (new templates, no stored
   // card: no bump). The front bodies come out of the per-template loop
@@ -995,6 +1016,11 @@ export function visualCases(): VisualCase[] {
 /** The templates whose PROFILES entry declares the holofoil stamp's notch
  *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15pw"];
+
+/** The templates with BOTH the notch and pair masters — the pair notch's
+ *  cases (the 4.9c follow-up; the same test keeps it in step: a template
+ *  that gains pairs with the notch declared joins by itself). */
+export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15snow", "m15snowland"];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
  *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at

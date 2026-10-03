@@ -52,6 +52,14 @@
 // the margins and gaps — a mark never prints on a neighbouring card or into
 // a bleed. A bleed sheet puts each card's bleed box in its cell; the marks
 // sit on its trim lines, outside the bleed.
+//
+// BOTH FACES (TODO 5.3): a double-faced card's back is a second PNG. On the
+// single-card layout it is a second page after the front (the bleed page
+// when the front is one); on a sheet it is placed BESIDE its front — the
+// cells run front, back, front, back… in reading order, so a proxy sheet of
+// a DFC holds whole cards (a lone front at the end of a page is never
+// placed: pairs only, an odd last cell stays blank). Duplex alignment and
+// the generic card back stay TODO 6.27.
 // ---------------------------------------------------------------------------
 
 import fontkit from "@pdf-lib/fontkit";
@@ -211,6 +219,10 @@ function sheetSize(layout: string): readonly [number, number] {
   return [width, height];
 }
 
+/** A sheet slot: one image, or a double-faced card's two — placed in
+ *  adjacent cells, never split across pages (TODO 5.3). */
+type SheetSlot = PDFImage | readonly [front: PDFImage, back: PDFImage];
+
 /** One sheet page: the cut guides first (beneath — they show only in the
  *  margins and gaps), then `slots` into the plan's cells row by row. At
  *  most `plan.perPage` images; fewer leaves the remaining cells blank. */
@@ -233,10 +245,30 @@ function drawSheetPage(
   });
 }
 
+/** `slots` as pages of images, each at most `perPage` long: a two-faced
+ *  slot takes two adjacent cells and moves to the next page whole when only
+ *  one cell is left (the odd cell stays blank). Exported for tests. */
+export function pageSheetSlots<T>(slots: ReadonlyArray<T | readonly [T, T]>, perPage: number): T[][] {
+  const pages: T[][] = [];
+  let page: T[] = [];
+  for (const slot of slots) {
+    const images = Array.isArray(slot) ? (slot as readonly T[]) : [slot as T];
+    // (A page is never pushed empty: a slot wider than the page — no sheet
+    // plan has fewer than two cells — still goes on a page of its own.)
+    if (page.length && page.length + images.length > perPage) {
+      pages.push(page);
+      page = [];
+    }
+    page.push(...images);
+  }
+  if (page.length) pages.push(page);
+  return pages;
+}
+
 /** Lay `slots` out on as many sheet pages as they need. */
-function drawSheets(doc: PDFDocument, slots: readonly PDFImage[], plan: SheetPlan, marks: SheetOptions["marks"]): void {
-  for (let start = 0; start < slots.length; start += plan.perPage) {
-    drawSheetPage(doc, slots.slice(start, start + plan.perPage), plan, marks);
+function drawSheets(doc: PDFDocument, slots: readonly SheetSlot[], plan: SheetPlan, marks: SheetOptions["marks"]): void {
+  for (const page of pageSheetSlots(slots, plan.perPage)) {
+    drawSheetPage(doc, page, plan, marks);
   }
 }
 
@@ -275,13 +307,17 @@ export type PdfLayout = "card" | "sheet" | "sheet-letter" | "sheet-a4";
  *                   `sheet`: a sheet's gap, cut guides and card size (TODO
  *                   6.15, lib/render/sheet-layout.ts; default the 3 × 3).
  *                   A sheet is ONE page, every cell the same card.
+ *                   `back`: the card's BACK face's PNG (TODO 5.3) — a second
+ *                   page after the front ("card"), or beside its front in
+ *                   every pair of cells (a sheet: front, back, front, back…;
+ *                   the odd ninth cell of a 3 × 3 stays blank).
  * @returns          A Uint8Array of PDF bytes ready to stream to the client.
  */
 export async function buildCardPdf(
   pngBytes: Uint8Array,
   layout: PdfLayout = "card",
   cardTitle = "PipGlyph Card",
-  options: { bleed?: boolean; sheet?: DeckPdfSheetOptions } = {},
+  options: { bleed?: boolean; sheet?: DeckPdfSheetOptions; back?: Uint8Array | null } = {},
 ): Promise<Uint8Array> {
   const bleed = options.bleed === true;
   const doc = await newDocument(
@@ -289,16 +325,25 @@ export async function buildCardPdf(
     "Custom MTG card — fan-made, not affiliated with Wizards of the Coast.",
   );
   const img = await embedImage(doc, pngBytes);
+  const back = options.back ? await embedImage(doc, options.back) : null;
 
   if (layout === "card") {
     if (bleed) addBleedCardPage(doc, img);
     else addCardPage(doc, img);
+    if (back) {
+      if (bleed) addBleedCardPage(doc, back);
+      else addCardPage(doc, back);
+    }
   } else {
     // "sheet" (legacy) and "sheet-letter" both produce the US Letter sheet:
-    // one page of the grid, every cell the same card.
+    // one page of the grid, every cell the same card — or, with a back,
+    // every pair of cells the card's two faces.
     const sheet: SheetOptions = { ...DEFAULT_SHEET_OPTIONS, ...definedOnly(options.sheet), bleed };
     const plan = planSheet(sheetPaper(layout), sheet);
-    drawSheetPage(doc, Array.from({ length: plan.perPage }, () => img), plan, sheet.marks);
+    const slots: PDFImage[] = back
+      ? Array.from({ length: Math.floor(plan.perPage / 2) }, () => [img, back]).flat()
+      : Array.from({ length: plan.perPage }, () => img);
+    drawSheetPage(doc, slots, plan, sheet.marks);
   }
 
   return doc.save();
@@ -313,6 +358,9 @@ export type DeckPdfEntry = {
   /** Physical copies to print (sheet layouts repeat the card this many
    *  times — that's what you cut out and sleeve). */
   copies: number;
+  /** The card's BACK face (TODO 5.3): its own page after the front on the
+   *  "pages" layout; beside its front — every copy — on a sheet. */
+  back?: Uint8Array | null;
 };
 
 export type DeckPdfChecklist = {
@@ -455,14 +503,23 @@ export async function buildDeckPdf(
       const img = await embedImageNow(doc, entry.png);
       if (bleed) addBleedCardPage(doc, img);
       else addCardPage(doc, img);
+      // A double-faced card's back: its own page, right after the front.
+      if (entry.back) {
+        const back = await embedImageNow(doc, entry.back);
+        if (bleed) addBleedCardPage(doc, back);
+        else addCardPage(doc, back);
+      }
     }
   } else {
-    // Embed each unique PNG once; the slot list repeats the PDFImage.
-    const slots: PDFImage[] = [];
+    // Embed each unique PNG once; the slot list repeats the PDFImage — a
+    // double-faced card's two faces as one slot, so every copy prints whole
+    // (front beside back, never one without the other).
+    const slots: SheetSlot[] = [];
     for (const entry of entries) {
       const img = await embedImageNow(doc, entry.png);
+      const back = entry.back ? await embedImageNow(doc, entry.back) : null;
       for (let copy = 0; copy < Math.max(1, entry.copies); copy += 1) {
-        slots.push(img);
+        slots.push(back ? [img, back] : img);
       }
     }
 

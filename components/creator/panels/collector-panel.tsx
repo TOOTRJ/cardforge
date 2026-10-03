@@ -21,7 +21,7 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { ANATOMY_HINTS, COLLECTOR_ONLY_HINT, SwitchRow } from "@/components/creator/panels/anatomy-panel";
-import { frameAnatomyOf, resolveHoloStamp, twoColorPairOf } from "@/lib/cards/anatomy";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import {
   collectorLetter,
   collectorNumberRuns,
@@ -31,19 +31,14 @@ import {
 } from "@/lib/cards/collector-line";
 import { holoStampWanted, isHoloStampSwitch, offersHoloStampForType, type HoloStampSwitch } from "@/lib/cards/holo-stamp";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { FormValues } from "@/lib/creator/form-types";
-import type { ColorIdentity, FrameStyle } from "@/types/card";
+import type { FrameStyle } from "@/types/card";
 
 /** What a frame without the slot says instead of the switch. */
 export const NO_COLLECTOR_SLOT_NOTE = "This frame prints its own footer. The collector line comes to it in a later release.";
 
 /** Shown under the ★ switch while the card's finish is Foil. */
 export const FOIL_FINISH_STAR_NOTE = "A Foil or Etched finish prints the ★ already.";
-
-/** Shown under the stamp switch while the card draws its two-colour frame
- *  (TODO 4.9c, wave 1): the pair masters have no notch yet. */
-export const TWO_COLOUR_STAMP_NOTE = "The two-colour frame has no stamp notch yet, so this card prints no stamp until it does.";
 
 /** The stamp's chips (lib/cards/holo-stamp.ts): "Always" writes the frame's
  *  own shape — the oval on every wave-1 frame. */
@@ -91,21 +86,18 @@ export function collectorStyleExamples(card: {
  */
 export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | null }) {
   const { control, setValue } = useFormContext<FormValues>();
-  const [template, collector, star, stamp, twoColor, finish, cardType, supertype, rarity, collectorNumber, colorIdentity, cost] = useWatch({
+  const [template, collector, star, stamp, finish, cardType, supertype, rarity, collectorNumber] = useWatch({
     control,
     name: [
       "frame_style.template",
       "frame_style.collector",
       "frame_style.star",
       "frame_style.stamp",
-      "frame_style.twoColor",
       "frame_style.finish",
       "card_type",
       "supertype",
       "rarity",
       "collector_number",
-      "color_identity",
-      "cost",
     ],
   });
   const anatomy = frameAnatomyOf(template);
@@ -129,19 +121,11 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
     { value: "2023", label: `Current (${examples["2023"]})` },
     { value: "2015", label: `2015–2022 (${examples["2015"]})` },
   ];
-  // The stamp as the renderers resolve it for this card (the notch for the
-  // master drawn: none on its pair master in wave 1).
+  // The stamp's switch state for this card: on while the value asks for one
+  // the card draws (the renderers key the notch by the master drawn — the
+  // colour's, or the pair's on a two-colour card since the 4.9c follow-up).
   const profile = getFrameProfile(template);
-  const colors = (colorIdentity ?? []) as ColorIdentity[];
   const stampOn = showStamp && holoStampWanted(stamp, { cardType, rarity });
-  const resolved = showStamp
-    ? resolveHoloStamp(
-        profile,
-        { stamp, twoColor },
-        { colors, cost, cardType, supertype, rarity, colorKey: pickFrameColorKey(colors) },
-      )
-    : null;
-  const pairDrawn = stampOn && resolved === null && twoColor === true && twoColorPairOf(colors) !== null;
   // The hint while the stored card names no stamp and the form still
   // holds none (a click on the switch or a chip sets a value and hides it).
   const stampHint = showStamp && editing && stored?.stamp === undefined && !isHoloStampSwitch(stamp) ? (ANATOMY_HINTS.stamp ?? null) : null;
@@ -208,11 +192,6 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
             <p className="text-[11px] leading-4 text-subtle" data-testid="stamp-answer">
               {holoStampAnswer(stamp, { cardType, rarity })}
             </p>
-            {pairDrawn ? (
-              <p className="text-xs leading-5 text-muted" data-testid="stamp-pair-note">
-                {TWO_COLOUR_STAMP_NOTE}
-              </p>
-            ) : null}
           </div>
         </SwitchRow>
       ) : null}

@@ -13,10 +13,10 @@
 // lib/cards/dfc-gate.ts), the kind gate on the new front. Nothing is
 // offered until the owner ticks the combos (after 5.3).
 //
-// The re-bake: the existing front bake runs after the response
-// (bakeAndPersistCardRender, as every save). The BACK's bake is 5.3's —
-// bake-core.ts learns the back there; until then the stored render is the
-// front and the card page flips the live preview onto the new back body.
+// The re-bake: bakeAndPersistCardRender after the response, as every save
+// — the ONE bake entry, which writes the back's PNG and thumb beside the
+// front's now that the row has a back body (5.3, lib/cards/faces.ts
+// bakedBackOf): four objects, four pointers in one write.
 // ---------------------------------------------------------------------------
 
 import { after } from "next/server";
@@ -107,9 +107,8 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
 
   const ownerUsername = await getCurrentUsername();
   revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility });
-  // Both faces re-bake after the response: the front through the existing
-  // bake; the back's bake lands with 5.3 (bake-core.ts), through this same
-  // call — nothing else here changes then.
+  // Both faces re-bake after the response through the one bake entry (5.3:
+  // the back is baked wherever the row has a back body).
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);

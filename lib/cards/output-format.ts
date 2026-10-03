@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { faceQuery, type CardFace } from "@/lib/cards/card-face";
 import type { CardCorners } from "@/lib/cards/output-corners";
 
 // ---------------------------------------------------------------------------
@@ -39,9 +40,10 @@ export function effectiveCorners(format: CardImageFormat, corners: CardCorners):
   return format === "jpeg" ? "square" : corners;
 }
 
-/** A card's JPEG download URL (always square, so no `corners`). */
-export function cardJpegHref(cardId: string, opts: { preset: "hd" | "default" }): string {
-  return `/api/cards/${cardId}/png?preset=${opts.preset}&format=jpeg`;
+/** A card's JPEG download URL (always square, so no `corners`); the back
+ *  face with `face: "back"` (TODO 5.3). */
+export function cardJpegHref(cardId: string, opts: { preset: "hd" | "default"; face?: CardFace }): string {
+  return `/api/cards/${cardId}/png?preset=${opts.preset}&format=jpeg${faceQuery(opts.face)}`;
 }
 
 /** The saved file's name: `<slug>.png`, `<slug>-square.png` (both PNG corners

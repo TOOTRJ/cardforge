@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
+import { BakedCardFlip } from "@/components/cards/baked-card-flip";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 
@@ -45,6 +46,14 @@ import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 // a hair tighter than the image's own arc — over bg-background that sliver
 // showed as a pale rim on every dark-bordered card in LIGHT theme.
 //
+// A DOUBLE-FACED card (TODO 5.3, owner decision 2026-10-02 Q6): with the
+// back face's thumbnail too (cards.rendered_back_thumb_url — the bake's
+// second WebP, written only for a card with a back BODY), the tile shows the
+// front with a small corner flip button that turns it over in place
+// (components/cards/baked-card-flip.tsx — the card page's control); nothing
+// moves on hover or by itself. Only a portrait pair flips (every DFC body
+// is portrait); a tile without a back thumb is exactly what it was.
+//
 // The editor still uses <CardPreview> directly — that's where the live
 // preview matters and where the bake-from-form-state would be a chicken-
 // and-egg problem.
@@ -56,6 +65,9 @@ export type BakedCardThumbnailProps = {
   /** Public URL of the tile-sized WebP (cards.rendered_thumb_url). Preferred
    *  over the PNG whenever present. */
   renderedThumbUrl?: string | null;
+  /** The BACK face's tile-sized WebP (cards.rendered_back_thumb_url, TODO
+   *  5.3): with it, the tile gets its corner flip button. */
+  renderedBackThumbUrl?: string | null;
   /** Card title — used as the <img>'s accessible label. */
   title: string | null | undefined;
   /** Image alt override — defaults to the card title. */
@@ -78,6 +90,7 @@ const DEFAULT_SIZES =
 export function BakedCardThumbnail({
   renderedImageUrl,
   renderedThumbUrl = null,
+  renderedBackThumbUrl = null,
   title,
   alt,
   previewData,
@@ -88,6 +101,8 @@ export function BakedCardThumbnail({
   const isLandscape = isLandscapeFrame(previewData.frameStyle);
   const pngUrl = isStoredRenderUrl(renderedImageUrl) ? renderedImageUrl : null;
   const thumbUrl = pngUrl && isStoredRenderUrl(renderedThumbUrl) ? renderedThumbUrl : null;
+  // The back's thumb — only beside a front thumb, only portrait, only ours.
+  const backThumbUrl = thumbUrl && !isLandscape && isStoredRenderUrl(renderedBackThumbUrl) ? renderedBackThumbUrl : null;
 
   if (!pngUrl) {
     // Live-preview fallback. Portrait cards fill the cell; landscape (Battle)
@@ -110,7 +125,14 @@ export function BakedCardThumbnail({
   const label = alt ?? (title?.trim() || "Card");
   // The #101015 backdrop sits directly behind the image (see the header): it
   // only ever shows through a rounded bake's transparent corner sliver.
-  const image = thumbUrl ? (
+  const image = backThumbUrl && thumbUrl ? (
+    <BakedCardFlip
+      frontSrc={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
+      backSrc={toRenderCdnUrl(backThumbUrl) ?? backThumbUrl}
+      label={label}
+      priority={priority}
+    />
+  ) : thumbUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={toRenderCdnUrl(thumbUrl) ?? thumbUrl}

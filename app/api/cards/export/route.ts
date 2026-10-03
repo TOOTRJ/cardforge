@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { requireTier, UpgradeRequiredError } from "@/lib/billing/entitlements";
 import { budgetCopies, selectionManifestRequestSchema } from "@/lib/cards/print-selection";
 import type { CardsExportManifest } from "@/lib/decks/export-client";
+import { exportFacesOf } from "@/lib/cards/faces";
 
 // ---------------------------------------------------------------------------
 // POST /api/cards/export — the manifest of a "Print / download selected"
@@ -17,7 +18,8 @@ import type { CardsExportManifest } from "@/lib/decks/export-client";
 //
 // Body: { cards: [{ id, copies }] } — 1–150 cards, 1–99 copies each.
 // Answers the cards this viewer may print, in the order asked, with their
-// copies budgeted to 150 physical cards (lib/cards/print-selection.ts), and
+// copies budgeted to 150 physical cards (lib/cards/print-selection.ts), the
+// faces each has (a double-faced card's back is fetched too, TODO 5.3), and
 // the ids it skipped (gone, or private to someone else — RLS hides them).
 //
 // Entitlement: the deck export's — signed in (401), Pro (403
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cards")
-    .select("id, slug, title, visibility, owner_id")
+    .select("id, slug, title, visibility, owner_id, frame_style, back_face")
     .in(
       "id",
       asked.map((card) => card.id),
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       skipped.push(id);
       continue;
     }
-    cards.push({ id: row.id, slug: row.slug, title: row.title, copies });
+    cards.push({ id: row.id, slug: row.slug, title: row.title, copies, faces: exportFacesOf(row) });
   }
   if (cards.length === 0) {
     return NextResponse.json({ error: "None of those cards can be printed." }, { status: 404 });

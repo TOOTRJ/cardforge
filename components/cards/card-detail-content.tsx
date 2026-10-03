@@ -28,7 +28,7 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
-import { CardPreview } from "@/components/cards/card-preview";
+import { CardHeroPreview } from "@/components/cards/card-hero-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CardComments } from "@/components/cards/card-comments";
 import { DownloadModal } from "@/components/cards/download-modal";
@@ -72,9 +72,11 @@ import { collectorDrawn } from "@/lib/cards/collector-layout";
 import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
+import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
+import { rowHasBakedBack } from "@/lib/cards/faces";
+import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { renderVersionOf } from "@/lib/cards/render-version";
-import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
+import { isLandscapeTemplate, naturalRenderSize, RENDER_PRESETS } from "@/lib/render/card-image";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { countPublicRemixesBySource } from "@/lib/cards/source-queries";
 import { listCommentsForCard } from "@/lib/cards/comments-queries";
@@ -222,8 +224,13 @@ export async function CardDetailContent({
   const isShareable =
     card.visibility === "public" || card.visibility === "unlisted";
   // The page's name for the card: an emblem is "<walker> Emblem", like
-  // Scryfall's (cardPageName; the card itself prints the walker's name).
-  const pageName = cardPageName(card.title, card.card_type);
+  // Scryfall's (cardPageName; the card itself prints the walker's name); a
+  // double-faced card on the DFC bodies is "Front // Back" (TODO 5.3) —
+  // the <title>, H1, breadcrumb, share copy and JSON-LD name alike.
+  const pageName = cardPageName(card.title, card.card_type, cardPageFacesOf(card));
+  // A back with a body of its own (lib/cards/faces.ts): the download modal
+  // offers it, the details list it, the JSON-LD names it.
+  const hasBackFace = rowHasBakedBack(card);
   const jsonLd =
     variant === "page" && isShareable
       ? buildCardJsonLd({
@@ -291,8 +298,11 @@ export async function CardDetailContent({
           {/* The ONE row → preview mapper (shared with the bake and every
               tile), so the hero carries the design watermark and the
               structured loyalty / saga content — a hand-built prop bag here
-              used to drop both and diverge from the stored render. */}
-          <CardPreview
+              used to drop both and diverge from the stored render. The
+              hero is the live preview with its corner flip; `?face=back`
+              opens it flipped (TODO 5.3) — read by the client island, never
+              here, so the server render never varies on the query. */}
+          <CardHeroPreview
             {...cardToPreviewData(card, profileOverrides)}
             pipOverrides={pipOverrides}
             backFace={(card.back_face as CardBackFace | null) ?? null}
@@ -394,6 +404,7 @@ export async function CardDetailContent({
               canBatch={entitlements.allowBatchExport}
               downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
               frameTemplate={frameTemplateOf(card.frame_style)}
+              hasBackFace={hasBackFace}
             />
             <ShareTargets
               title={pageName}
@@ -902,6 +913,11 @@ export function buildCardJsonLd({
     set_code?: string | null;
     collector_number?: string | null;
     lang?: string | null;
+    /** The back face (TODO 5.3): with a body of its own, the work gains it
+     *  as `hasPart` with its own ImageObject — the back's stored bake. */
+    back_face?: unknown;
+    rendered_back_image_url?: string | null;
+    owner_id?: string;
   };
   username: string;
   ownerDisplay: string;
@@ -916,8 +932,17 @@ export function buildCardJsonLd({
 
   const canonical = `${siteBase}/card/${username}/${card.slug}`;
   // An emblem's name is "<walker> Emblem" (cardPageName, owner decision
-  // 2026-09-29).
-  const name = cardPageName(card.title, card.card_type);
+  // 2026-09-29); a double-faced card's "Front // Back" (TODO 5.3).
+  const faces = cardPageFacesOf({ frame_style: card.frame_style, back_face: card.back_face ?? null });
+  const name = cardPageName(card.title, card.card_type, faces);
+  // The back face with a body of its own (lib/cards/faces.ts): its words
+  // join the keywords and it becomes a part of the work, below.
+  const back = rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face ?? null })
+    ? ((card.back_face as CardBackFace | null) ?? null)
+    : null;
+  const backTypeLine = back
+    ? buildTypeLine({ supertype: back.supertype, cardType: back.card_type ?? null, subtypes: back.subtypes ?? [] })
+    : null;
   const typeLine = buildTypeLine({
     supertype: card.supertype,
     cardType: card.card_type as CardType | null,
@@ -938,6 +963,10 @@ export function buildCardJsonLd({
         collector && card.set_code ? card.set_code.trim() : "",
         ...typeLine.split(/[\s—–-]+/),
         ...(card.color_identity ?? []),
+        // The back face's words (TODO 5.3): "Werewolf", "Land" — what a
+        // reader searching the other side would ask for.
+        ...(backTypeLine ? backTypeLine.split(/[\s—–-]+/) : []),
+        ...(back?.color_identity ?? []),
         "custom MTG card",
       ]
         .map((k) => k.trim().toLowerCase())
@@ -1000,6 +1029,37 @@ export function buildCardJsonLd({
       name: deck.title,
       url: `${siteBase}/deck/${deck.slug}`,
     }));
+  }
+  // The back face as a PART of the work (TODO 5.3): its name, type line
+  // and description, and its own ImageObject — the back's stored bake,
+  // served from this site's /render-cdn path (one tag with the front's;
+  // purged with the card), only when the row carries THIS card's own
+  // `.back.png`. The OG image stays the front.
+  if (back) {
+    const backDescription = back.flavor_text?.trim() || back.rules_text?.trim() || "";
+    const backName = back.title?.trim() || "Back face";
+    const part: Record<string, unknown> = {
+      "@type": "CreativeWork",
+      name: backName,
+      position: 2,
+      ...(backDescription ? { description: backDescription.length > 280 ? `${backDescription.slice(0, 277)}…` : backDescription } : {}),
+      ...(back.artist_credit?.trim() ? { contributor: { "@type": "Person", name: back.artist_credit.trim() } } : {}),
+    };
+    const backBake =
+      card.id && card.owner_id && isStoredRenderUrl(card.rendered_back_image_url, { ownerId: card.owner_id, cardId: card.id })
+        ? toRenderCdnUrl(card.rendered_back_image_url)
+        : null;
+    if (backBake) {
+      // The stored bake is the HD PNG (every DFC body is portrait).
+      part.image = {
+        "@type": "ImageObject",
+        url: `${siteBase}${backBake}`,
+        width: RENDER_PRESETS.hd.width,
+        height: RENDER_PRESETS.hd.height,
+        caption: `${backName} — the back face of ${card.title}, custom MTG-style ${backTypeLine}`,
+      };
+    }
+    schema.hasPart = [part];
   }
 
   return schema;
@@ -1068,6 +1128,9 @@ export function CardDetails({
     collector_number?: string | null;
     lang?: string | null;
     frame_style?: unknown;
+    /** The back face (TODO 5.3): with a body of its own, its facts are
+     *  listed under the front's. */
+    back_face?: unknown;
   };
   inDecks: Array<{ slug: string; title: string }>;
 }) {
@@ -1131,6 +1194,13 @@ export function CardDetails({
       </span>,
     ]);
   }
+  // The back face with a body of its own (lib/cards/faces.ts): the facts
+  // its render shows, under the front's — never a legacy back's (the page
+  // flips to it, but the bake and the downloads are the front's).
+  const back = rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face ?? null })
+    ? ((card.back_face as CardBackFace | null) ?? null)
+    : null;
+  const backRows: Array<[string, React.ReactNode]> = back ? backFaceRows(back, card.color_identity) : [];
   return (
     <section aria-labelledby="card-details-heading" className="flex flex-col gap-2">
       <h2 id="card-details-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
@@ -1144,6 +1214,56 @@ export function CardDetails({
           </div>
         ))}
       </dl>
+      {back ? (
+        <>
+          <h3 id="card-back-details-heading" className="mt-2 font-mono text-[11px] uppercase tracking-wider text-muted">
+            Back face{back.title?.trim() ? ` — ${back.title.trim()}` : ""}
+          </h3>
+          <dl aria-labelledby="card-back-details-heading" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm" data-testid="card-back-details">
+            {backRows.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted">{label}</dt>
+                <dd className="text-foreground">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : null}
     </section>
   );
+}
+
+/** The back face's rows (TODO 5.3): its type line, mana cost (a modal
+ *  back prints one; a transform back none), colour (its own, else the
+ *  front's — the colour its body is drawn in, lib/cards/faces.ts
+ *  backPreviewData), the stats its render prints and its artist — the same
+ *  rules as the front's rows. */
+function backFaceRows(back: CardBackFace, frontColors: string[] | null): Array<[string, React.ReactNode]> {
+  const typeLine = buildTypeLine({
+    supertype: back.supertype,
+    cardType: back.card_type ?? null,
+    subtypes: back.subtypes ?? [],
+  });
+  const colors = (back.color_identity ?? frontColors ?? [])
+    .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
+    .join(", ");
+  const stats = printsPowerToughness({
+    cardType: back.card_type ?? null,
+    supertype: back.supertype,
+    subtypes: back.subtypes ?? [],
+    power: back.power,
+    toughness: back.toughness,
+  })
+    ? `${back.power ?? "?"}/${back.toughness ?? "?"}`
+    : back.loyalty != null
+      ? `Loyalty ${back.loyalty}`
+      : back.defense != null
+        ? `Defense ${back.defense}`
+        : null;
+  const rows: Array<[string, React.ReactNode]> = [["Type", typeLine]];
+  if (back.cost?.trim()) rows.push(["Mana cost", `${back.cost} (${describeManaCost(back.cost)})`]);
+  rows.push(["Color", colors || "Colorless"]);
+  if (stats) rows.push(["Stats", stats]);
+  if (back.artist_credit?.trim()) rows.push(["Art", back.artist_credit.trim()]);
+  return rows;
 }
