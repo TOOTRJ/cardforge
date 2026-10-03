@@ -33,8 +33,8 @@ import { FRAME_TEMPLATE_VALUES, type Card, type FrameStyle } from "@/types/card"
 
 describe("the keys and the defaults", () => {
   it("collector and star are anatomy keys; a new card starts with the line on in the 2023 style and no ★", () => {
-    expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star"]);
-    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023" });
+    expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star", "stamp"]);
+    expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     expect("star" in NEW_CARD_ANATOMY).toBe(false);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const slotted = (COLLECTOR_TEMPLATES as readonly string[]).includes(template);
@@ -72,7 +72,9 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
   it("a new card gets collector '2023' where the template has the slot, never a ★; an explicit value survives", () => {
     expect(newCardFrameStyle({ template: "m15" }, "creature")).toMatchObject({ collector: "2023" });
     expect("star" in newCardFrameStyle({ template: "m15" }, "creature")).toBe(false);
-    expect(newCardFrameStyle({ template: "m15pw" }, "planeswalker")).toEqual({ template: "m15pw", collector: "2023" });
+    // (…and the stamp on "auto" where the frame has the notch, 4.9c — the
+    // walker, never a token frame.)
+    expect(newCardFrameStyle({ template: "m15pw" }, "planeswalker")).toEqual({ template: "m15pw", collector: "2023", stamp: "auto" });
     expect(newCardFrameStyle({ template: "m15token", finish: "regular" }, "token")).toEqual({ template: "m15token", finish: "regular", collector: "2023" });
     expect(newCardFrameStyle({ template: "m15", collector: "2015", star: true }, "creature")).toMatchObject({ collector: "2015", star: true });
     expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toMatchObject({ collector: "off" });
@@ -80,7 +82,7 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     // and pair switches it draws, 4.6f wave 2a).
     expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true });
     // The creator's all-on switches on a frame with the slot but no crown.
-    expect(newCardFrameStyle({ template: "m15snow", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15snow", collector: "2023" });
+    expect(newCardFrameStyle({ template: "m15snow", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15snow", collector: "2023", stamp: "auto" });
   });
 });
 
@@ -92,7 +94,10 @@ describe("the schema (frameStyleSchema, frameAnatomyPatchSchema)", () => {
     expect(() => frameStyleSchema.parse({ collector: true })).toThrow();
     expect(() => frameStyleSchema.parse({ star: false })).toThrow();
     expect(() => frameStyleSchema.parse({ star: "yes" })).toThrow();
-    expect(() => frameStyleSchema.parse({ stamp: "auto" })).toThrow(); // 4.9c's key is not here yet
+    // 4.9c's key: its four values and nothing else.
+    for (const stamp of ["auto", "oval", "triangle", "none"]) expect(frameStyleSchema.parse({ template: "m15", stamp })).toEqual({ template: "m15", stamp });
+    expect(() => frameStyleSchema.parse({ stamp: true })).toThrow();
+    expect(() => frameStyleSchema.parse({ stamp: "acorn" })).toThrow();
   });
 
   it("an edit's patch: a style or off, and a boolean ★ (false takes a stored ★ off)", () => {
@@ -233,9 +238,9 @@ describe("imports follow the printing (importedAnatomy / importedFormAnatomy)", 
     expect(importedAnatomy({ printed_collector: "2015", printed_star: true }, "m15").style).toEqual({ collector: "2015", star: true });
     expect(importedAnatomy({ printed_collector: "off" }, "m15").style).toEqual({ collector: "off" });
     expect(importedAnatomy({}, "m15").style).toEqual({});
-    expect(importedFormAnatomy({ collector: "2015", star: true })).toEqual({ crown: true, twoColor: true, collector: "2015", star: true });
-    expect(importedFormAnatomy({ collector: "off" })).toEqual({ crown: true, twoColor: true, collector: "off" });
-    expect(importedFormAnatomy({})).toEqual({ crown: true, twoColor: true, collector: "2023" });
+    expect(importedFormAnatomy({ collector: "2015", star: true })).toEqual({ crown: true, twoColor: true, collector: "2015", star: true, stamp: "auto" });
+    expect(importedFormAnatomy({ collector: "off" })).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
+    expect(importedFormAnatomy({})).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     // Saved on a frame without the slot, the printing's switches are dropped.
     expect(newCardFrameStyle({ template: "lotr", collector: "2023", star: true }, "creature")).toEqual({ template: "lotr" });
   });

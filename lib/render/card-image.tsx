@@ -110,6 +110,7 @@ import {
 } from "@/lib/render/card-fonts";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
+import { HOLO_STAMP_OVAL_ART } from "@/lib/cards/holo-stamp-art";
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import {
   COLLECTOR_BRUSH_PATH,
@@ -134,6 +135,7 @@ import {
 import {
   plateKeyFor,
   resolveFrameOverlays,
+  resolveHoloStamp,
   resolveTwoColor,
 } from "@/lib/cards/anatomy";
 import {
@@ -268,6 +270,8 @@ function anatomyFactsOf(card: CardPreviewData) {
     cost: card.cost,
     cardType: card.cardType,
     supertype: card.supertype,
+    // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
+    rarity: card.rarity,
   };
 }
 
@@ -451,6 +455,11 @@ function CardImage({
   const overlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
     (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
+  // The holofoil stamp (TODO 4.9c): its notch is one of the overlays above;
+  // the oval is our bitmap, drawn over the sheens (never inside the foil
+  // mask) at the same rect the preview stretches it over, and its arch is a
+  // keep-out for the rules box while it is drawn — the preview's twins.
+  const holoStamp = resolveHoloStamp(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey });
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(
@@ -576,6 +585,7 @@ function CardImage({
     loyalty: showLoyalty,
     defense: showDefense,
     secondFacePt: Boolean(layout.secondFace?.pt && card.backFace && (card.backFace.power || card.backFace.toughness)),
+    stamp: holoStamp?.keepOut ?? null,
   };
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).
@@ -915,6 +925,22 @@ function CardImage({
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
+        />
+      ) : null}
+
+      {/* The holofoil stamp's oval (TODO 4.9c): our own silver oval bitmap
+          (lib/cards/holo-stamp-art.ts) over the notch and ABOVE the sheens
+          — a real stamp is foil of its own, never tinted by the card's —
+          stretched over the art rect (the oval plus its black margin, which
+          covers the notch piece's cut). The preview's HoloStampOval twin. */}
+      {holoStamp ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={HOLO_STAMP_OVAL_ART.dataUri}
+          alt=""
+          width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
+          height={Math.round((holoStamp.artRect.heightPct / 100) * height)}
+          style={{ ...slotBox(holoStamp.artRect), objectFit: "fill", zIndex: 7 }}
         />
       ) : null}
 

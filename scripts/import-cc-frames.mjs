@@ -19,9 +19,13 @@
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
 //   node scripts/import-cc-frames.mjs --only m15crown   # the crown band only
+//   node scripts/import-cc-frames.mjs --only m15holostamp,m15pwholostamp
+//                                                     # the stamp notches (4.9c)
 //   node scripts/import-cc-frames.mjs --dry-run       # print the recipe only
 //   CC_CACHE=/path  (source cache; default ~/.cache/pipglyph-cc/<commit>)
 //   --out <dir>     (default .frames-build — gitignored)
+//   FRAMES_BUILD_DIR=<dir>  (the sha-checked masters a notch's rim is tinted
+//                            from when <out> has none; default .frames-cache)
 //
 // For each template × colour it downloads the pack files from the PINNED
 // commit (cached outside the repo), composites the layers through their
@@ -54,6 +58,13 @@ import sharp from "sharp";
 import {
   CC_COMMIT,
   CC_OVERLAY_BANDS,
+  HOLO_STAMP_NOTCHES,
+  NOTCH_FOOT,
+  buildNotch,
+  describeNotch,
+  notchFindings,
+  notchSourceFiles,
+  sampleBar,
   CC_RAW,
   CC_REPO,
   CC_TEMPLATES,
@@ -122,10 +133,10 @@ const cacheDir = process.env.CC_CACHE ?? path.join(os.homedir(), ".cache", "pipg
 const PROVENANCE = "lib/cards/frame-sources.json";
 
 if (only) {
-  const unknown = only.filter((t) => !CC_TEMPLATES[t] && !CC_OVERLAY_BANDS[t]);
+  const unknown = only.filter((t) => !CC_TEMPLATES[t] && !CC_OVERLAY_BANDS[t] && !HOLO_STAMP_NOTCHES[t]);
   if (unknown.length) {
     console.error(
-      `✗ Unknown template(s): ${unknown.join(", ")}. Known: ${[...Object.keys(CC_TEMPLATES), ...Object.keys(CC_OVERLAY_BANDS)].join(", ")}`,
+      `✗ Unknown template(s): ${unknown.join(", ")}. Known: ${[...Object.keys(CC_TEMPLATES), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(HOLO_STAMP_NOTCHES)].join(", ")}`,
     );
     process.exit(1);
   }
@@ -178,7 +189,7 @@ const edgeFailures = [];
 const artWindowFailures = [];
 // Drop templates the recipe no longer builds (e.g. deferred ones).
 for (const template of Object.keys(provenance)) {
-  if (!CC_TEMPLATES[template] && !CC_OVERLAY_BANDS[template]) delete provenance[template];
+  if (!CC_TEMPLATES[template] && !CC_OVERLAY_BANDS[template] && !HOLO_STAMP_NOTCHES[template]) delete provenance[template];
 }
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
@@ -450,6 +461,68 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     sourceFiles: def.layers
       ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
       : crownBandSourceFiles(def.keys),
+    notes: def.notes,
+  };
+}
+// The holofoil stamp's notch pieces (TODO 4.9c): CC's arch geometry, the rim
+// tinted to our master's bar, the oval region cut clear — see
+// scripts/lib/cc-frames.mjs HOLO_STAMP_NOTCHES. Written 1:1 at the piece's
+// native size (the slot stretches it over CC's bounds).
+const masterDirs = [outDir, path.resolve(process.env.FRAMES_BUILD_DIR ?? ".frames-cache")];
+function notchBarMasterPath(def, key) {
+  const rel = `${def.barOf[key]}.png`;
+  for (const dir of masterDirs) {
+    const file = path.join(dir, rel);
+    if (fs.existsSync(file)) return file;
+  }
+  throw new Error(`notch ${key}: no master ${rel} under ${masterDirs.join(" or ")} — build it, or fetch the bucket's with scripts/frames-fetch.mjs`);
+}
+for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
+  if (only && !only.includes(folder)) continue;
+  const recipe = {};
+  const { width: PW, height: PH } = def.shape.size;
+  let piece = null;
+  const notchFailures = [];
+  for (const key of def.keys) {
+    const out = path.join(outDir, folder, `${key}.png`);
+    if (dryRun) {
+      console.log(`${path.relative(process.cwd(), out)} ← ${describeNotch(def, key, ["?", "?", "?"]).join(" + ")}`);
+      continue;
+    }
+    if (!piece) {
+      const file = await fetchCached(def.shape.src);
+      const meta = await sharp(file).metadata();
+      if (meta.width !== PW || meta.height !== PH) throw new Error(`${def.shape.src} is ${meta.width}×${meta.height}, the recipe says ${PW}×${PH} (the source moved?)`);
+      piece = await sharp(file).ensureAlpha().raw().toBuffer();
+    }
+    const masterFile = notchBarMasterPath(def, key);
+    const { data: master, info } = await sharp(masterFile).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    if (info.width !== OUT_W || info.height !== OUT_H) throw new Error(`${masterFile} is ${info.width}×${info.height}, not ${OUT_W}×${OUT_H}`);
+    const tint = sampleBar(master, info.width, def.barSample);
+    const built = buildNotch(def.shape, piece, tint, def.oval, def.cutMarginPx);
+    const findings = notchFindings(built, def.shape, piece, tint, def.oval, def.cutMarginPx, NOTCH_FOOT[folder]);
+    for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
+    recipe[key] = describeNotch(def, key, tint);
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    const image = sharp(built, { raw: { width: PW, height: PH, channels: 4 } });
+    await image.clone().png({ compressionLevel: 9 }).toFile(out);
+    await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
+    console.log(
+      `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${PW}×${PH}: rim ${tint.join(",")} from ${path.relative(process.cwd(), masterFile)}, cut clear ${findings.cutClear}, ring black ${findings.ringBlack}, foot ${findings.footPx.slice(0, 3).join(",")}`,
+    );
+  }
+  for (const f of notchFailures) edgeFailures.push(f);
+  provenance[folder] = {
+    source: "cardconjurer",
+    repo: CC_REPO,
+    commit: CC_COMMIT,
+    pack: def.pack,
+    converter: "scripts/import-cc-frames.mjs",
+    kind: "overlay",
+    output: `${PW}x${PH} notch piece (1:1 at ${OUT_W}x${OUT_H}, stretched over ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %), the oval region cut to transparent, webp q${WEBP.quality}`,
+    colors: recipe,
+    cut: { oval: def.oval, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published" },
+    sourceFiles: notchSourceFiles(def),
     notes: def.notes,
   };
 }

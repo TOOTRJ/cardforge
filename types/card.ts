@@ -777,6 +777,16 @@ export type FrameStyle = {
    *  for every plan (a Foil FINISH prints the ★ too). `true` or absent:
    *  an import sets it for a foil-only printing (`finishes` = ["foil"]). */
   star?: true;
+  /** The holofoil security stamp (TODO 4.9c): an ADDITION, opt-in per card.
+   *  "auto" draws the oval on a rare or mythic (a new card's default on a
+   *  frame with the notch); "oval" / "triangle" always draw the frame's own
+   *  stamp (the owner's "Always", or an import following its printing's
+   *  `security_stamp`); "none" is the owner's "Never"; absent = a card saved
+   *  before the stamp shipped, which keeps its look (cards saved between
+   *  4.9b and 4.9c included). Drawn only on a template whose PROFILES entry
+   *  declares a `holoStamp` overlay (lib/cards/holo-stamp.ts), never on a
+   *  token or an emblem; the save drops it elsewhere (normalizeAnatomy). */
+  stamp?: "auto" | "oval" | "triangle" | "none";
 };
 
 // ---------------------------------------------------------------------------

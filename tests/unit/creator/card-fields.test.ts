@@ -116,6 +116,7 @@ describe("a saved card's finish in the creator", () => {
       crown: true,
       twoColor: true,
       collector: "2023",
+      stamp: "auto",
     });
   });
 

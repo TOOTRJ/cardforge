@@ -1,8 +1,10 @@
 // ---------------------------------------------------------------------------
 // Frame anatomy — the printed pieces a card switches on one by one (TODO
-// 4.6.0): the legendary crown (4.6a), the two-colour frame (4.6b) and, since
-// TODO 4.9b, the collector line (`collector`: a printed style or "off") with
-// its foil-printing ★ (`star`).
+// 4.6.0): the legendary crown (4.6a), the two-colour frame (4.6b), since
+// TODO 4.9b the collector line (`collector`: a printed style or "off") with
+// its foil-printing ★ (`star`), and since TODO 4.9c the holofoil stamp
+// (`stamp`: "auto" — the oval on a rare or mythic — "oval" / "triangle",
+// "none"; lib/cards/holo-stamp.ts).
 //
 // THE OWNER RULE (2026-09-29, docs/FRAMES.md "Additions vs corrections"):
 // these are ADDITIONS, so each is OPT-IN PER CARD, stored as card data in
@@ -47,6 +49,14 @@
 
 import { supertypeHasWord } from "@/lib/cards/card-display";
 import { isCollectorStyle, isCollectorSwitch, type CollectorSwitch } from "@/lib/cards/collector-line";
+import {
+  holoStampArtRect,
+  holoStampWanted,
+  isHoloStampSwitch,
+  type HoloStampArt,
+  type HoloStampShape,
+  type HoloStampSwitch,
+} from "@/lib/cards/holo-stamp";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { TWO_COLOR_PAIRS, type TwoColorPair } from "@/lib/cards/frame-reference-registry";
 import { legendaryMasterKey } from "@/lib/cards/master-key";
@@ -61,31 +71,35 @@ import type { ColorIdentity, FrameStyle, FrameTemplate } from "@/types/card";
 
 export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
 
-/** The per-card anatomy switches, in FrameStyle: the booleans of 4.6.0 and
- *  the collector line's two keys (4.9b) — `collector` holds a printed style
- *  or "off", `star` is `true` or absent (lib/cards/collector-line.ts). */
-export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star"] as const;
+/** The per-card anatomy switches, in FrameStyle: the booleans of 4.6.0, the
+ *  collector line's two keys (4.9b) — `collector` holds a printed style or
+ *  "off", `star` is `true` or absent (lib/cards/collector-line.ts) — and
+ *  the holofoil stamp's (4.9c: "auto" / "oval" / "triangle" / "none",
+ *  lib/cards/holo-stamp.ts). */
+export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
 export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
 
 /** What a template can draw: the crown, the two-colour dresses it has
- *  pair masters for, and the collector line (FrameProfile.collector — the
- *  ★ rides on it). */
-export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[]; collector: boolean };
+ *  pair masters for, the collector line (FrameProfile.collector — the ★
+ *  rides on it) and the holofoil stamp (a `holoStamp` overlay: the notch). */
+export type FrameAnatomy = { crown: boolean; twoColor: readonly TwoColorDress[]; collector: boolean; stamp: boolean };
 
 type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "crownMasters" | "collector">
 
 /** The switches a NEW card starts with (the creator's create and remix
  *  forms): every piece on — the collector line in the style printed today
- *  ("2023"); the ★ is never a default (it follows a foil finish or an
+ *  ("2023"), the holofoil stamp on "auto" (the oval on a rare or mythic,
+ *  4.9c); the ★ is never a default (it follows a foil finish or an
  *  import's foil-only printing). The renderers draw only what the template
  *  can, and the save drops the rest (normalizeAnatomy), so the new-card
  *  preview is exactly what the saved bake draws on any template. */
-export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector">>> =
+export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">>> =
   Object.freeze({
     crown: true,
     twoColor: true,
     collector: "2023",
+    stamp: "auto",
   });
 
 export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
@@ -95,6 +109,7 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
     crown: (profile.overlays ?? []).some((slot) => slot.anatomy === "crown") || profile.crownMasters === true,
     twoColor: profile.twoColorMasters ?? [],
     collector: profile.collector !== undefined,
+    stamp: (profile.overlays ?? []).some((slot) => slot.anatomy === "holoStamp"),
   };
 }
 
@@ -106,13 +121,15 @@ export function frameAnatomyOf(template: FrameTemplate | string | null | undefin
 }
 
 /** True when a template with `anatomy` draws the piece `key` at all — the
- *  ★ only where the collector line is. */
+ *  ★ only where the collector line is, the stamp where the notch is. */
 export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boolean {
   switch (key) {
     case "crown":
       return anatomy.crown;
     case "twoColor":
       return anatomy.twoColor.length > 0;
+    case "stamp":
+      return anatomy.stamp;
     default:
       return anatomy.collector;
   }
@@ -145,20 +162,24 @@ export function twoColorFitsTemplate(
 
 /** The ONE render rule for a switch: on only when it is exactly `true` —
  *  the collector line when its value is a printed style ("off" and absent
- *  are both off). */
+ *  are both off); the stamp when its value asks for one ("auto", "oval" or
+ *  "triangle" — whether the CARD then draws it is holoStampWanted's call:
+ *  "auto" needs a rare or mythic, and a token or emblem never draws one). */
 export function anatomyOn(
   style: FrameAnatomyStyle | null | undefined,
   key: FrameAnatomyKey,
 ): boolean {
   if (key === "collector") return isCollectorStyle(style?.collector);
+  if (key === "stamp") return isHoloStampSwitch(style?.stamp) && style?.stamp !== "none";
   return style?.[key] === true;
 }
 
 /** The switches a new card saved on `template` defaults to: `true` for each
  *  piece the template draws (whatever the card's type or colours, so the
  *  crown appears if the card becomes Legendary later), the collector line
- *  in today's printed style where the template has its slot, never the ★
- *  (NEW_CARD_ANATOMY), nothing else. */
+ *  in today's printed style where the template has its slot, the stamp on
+ *  "auto" where it has the notch (so the oval appears if the card is made
+ *  rare later), never the ★ (NEW_CARD_ANATOMY), nothing else. */
 export function anatomyDefaults(
   template: FrameTemplate | string | null | undefined,
 ): FrameAnatomyStyle {
@@ -167,6 +188,7 @@ export function anatomyDefaults(
   if (anatomyDrawn(anatomy, "crown")) out.crown = true;
   if (anatomyDrawn(anatomy, "twoColor")) out.twoColor = true;
   if (anatomyDrawn(anatomy, "collector")) out.collector = NEW_CARD_ANATOMY.collector;
+  if (anatomyDrawn(anatomy, "stamp")) out.stamp = NEW_CARD_ANATOMY.stamp;
   return out;
 }
 
@@ -222,8 +244,8 @@ export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType:
 }
 
 /** The anatomy switches a stored frame_style names (the booleans, a
- *  collector style or "off", a ★ that is `true`) — what a remix keeps of its
- *  parent's (the creator's remixValuesFrom, and the AI deck remix of an own
+ *  collector style or "off", a ★ that is `true`, a stamp value) — what a
+ *  remix keeps of its parent's (the creator's remixValuesFrom, and the AI deck remix of an own
  *  card): an explicit off stays off, and a switch the parent never set gets
  *  the new-card default. Anything else is not a switch. */
 export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
@@ -233,6 +255,7 @@ export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   if (typeof stored.twoColor === "boolean") out.twoColor = stored.twoColor;
   if (isCollectorSwitch(stored.collector)) out.collector = stored.collector;
   if (stored.star === true) out.star = true;
+  if (isHoloStampSwitch(stored.stamp)) out.stamp = stored.stamp;
   return out;
 }
 
@@ -432,27 +455,35 @@ export type ResolvedFrameOverlay = {
   path: string;
 };
 
+/** The facts the stamp's rule reads beside the colour key. */
+export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & { rarity?: string | null };
+
 /**
  * The overlays one card face draws over its frame master, in order — the ONE
  * rule the preview (FrameOverlayLayer), the bake, both finish masks and the
  * bake's preload (frameAssetPathsFor) share. A slot draws when its switch is
- * on and the card qualifies. Its key is the pinline of the master actually
- * drawn: the pair (both dresses share one crown band per pair) when the
- * two-colour look is drawn, else the card's colour key (`colorKey`,
- * pickFrameColorKey) — "m" for a pair drawn gold — remapped by the slot's
- * keyMap. A key the slot doesn't publish draws nothing: never a stand-in.
+ * on and the card qualifies, under its anatomy's own rule (the slot's
+ * `anatomy` discriminant): the crown on a Legendary card that prints one
+ * (qualifiesForCrown), keyed by the pinline of the master actually drawn —
+ * the pair (both dresses share one crown band per pair) when the two-colour
+ * look is drawn, else the card's colour key (`colorKey`, pickFrameColorKey),
+ * "m" for a pair drawn gold; the holofoil stamp's notch (4.9c) when the
+ * card's switch wants a stamp (holoStampWanted: "auto" on a rare or mythic,
+ * never a token or emblem), keyed the same way — a card drawn as its pair
+ * master asks for the pair's notch, which no slot publishes yet. Every key
+ * is remapped by the slot's keyMap, and a key the slot doesn't publish
+ * draws nothing: never a stand-in.
  */
 export function resolveFrameOverlays(
   profile: AnatomyProfile,
   style: FrameAnatomyStyle | null | undefined,
-  facts: AnatomyFacts & { colorKey: string },
+  facts: AnatomyFacts & HoloStampFacts & { colorKey: string },
 ): ResolvedFrameOverlay[] {
   const slots = profile.overlays;
   if (!slots || slots.length === 0) return [];
   const out: ResolvedFrameOverlay[] = [];
   for (const slot of slots) {
-    if (!anatomyOn(style, slot.anatomy)) continue;
-    if (slot.anatomy === "crown" && !qualifiesForCrown(facts)) continue;
+    if (!overlayWanted(slot.anatomy, style, facts)) continue;
     const look = resolveTwoColor(profile, style, facts);
     const base = look ? look.pair : facts.colorKey;
     const key = slot.keyMap?.[base] ?? base;
@@ -460,6 +491,62 @@ export function resolveFrameOverlays(
     out.push({ anatomy: slot.anatomy, rect: slot.rect, key, path: slot.assetPathTemplate.replace("{key}", key) });
   }
   return out;
+}
+
+/** Whether a face's switches and facts ask for an overlay of `anatomy` at
+ *  all — each rider's own rule, keyed by the slot's discriminant (the
+ *  master's key is the caller's). */
+function overlayWanted(
+  anatomy: FrameOverlaySlot["anatomy"],
+  style: FrameAnatomyStyle | null | undefined,
+  facts: AnatomyFacts & HoloStampFacts,
+): boolean {
+  switch (anatomy) {
+    case "crown":
+      return anatomyOn(style, "crown") && qualifiesForCrown(facts);
+    case "holoStamp":
+      return anatomyOn(style, "stamp") && holoStampWanted(style?.stamp, facts);
+  }
+}
+
+/** The holofoil stamp one card face draws (TODO 4.9c), as both renderers,
+ *  the rules layout and the creator read it. */
+export type ResolvedHoloStamp = {
+  shape: HoloStampShape;
+  /** The notch overlay (its image is drawn by resolveFrameOverlays, inside
+   *  both sheen masks). */
+  notch: ResolvedFrameOverlay;
+  /** The oval the art fills. */
+  oval: Rect;
+  /** Where the art bitmap is stretched (the oval and its black margin),
+   *  drawn above the sheens — outside the foil mask. */
+  artRect: Rect;
+  /** The rules keep-out over the arch, for DrawnStats.stamp. */
+  keepOut: Rect;
+};
+
+/**
+ * The stamp a card face draws on `profile`, or null: the switch wants one
+ * for this card (holoStampWanted) AND the profile's `holoStamp` notch is
+ * drawn for the master the card paints (resolveFrameOverlays: the colour's
+ * notch; none for a pair master in wave 1). The oval is never drawn without
+ * its notch — the straight box edge would run through it — so a face with a
+ * stamp switch on a frame without the notch, or on its pair master, shows
+ * nothing, and the creator says why.
+ */
+export function resolveHoloStamp(
+  profile: AnatomyProfile,
+  style: FrameAnatomyStyle | null | undefined,
+  facts: AnatomyFacts & HoloStampFacts & { colorKey: string },
+): ResolvedHoloStamp | null {
+  const notch = resolveFrameOverlays(profile, style, facts).find((o) => o.anatomy === "holoStamp");
+  if (!notch) return null;
+  const slot = (profile.overlays ?? []).find(
+    (s): s is Extract<FrameOverlaySlot, { anatomy: "holoStamp" }> => s.anatomy === "holoStamp",
+  );
+  if (!slot) return null;
+  const art: HoloStampArt = slot.stamp;
+  return { shape: art.shape, notch, oval: art.oval, artRect: holoStampArtRect(art.oval), keepOut: art.keepOut };
 }
 
 /** The crown's switch is on and the card prints one (the ONE test the
@@ -522,6 +609,8 @@ export type FrameAnatomyPatch = {
   /** The foil-printing ★: `true` sets it, `false` takes a stored one off
    *  (the stored key is `true` or absent). */
   star?: boolean;
+  /** The holofoil stamp's switch (TODO 4.9c). */
+  stamp?: HoloStampSwitch;
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -563,7 +652,7 @@ export function applyFrameAnatomyPatch(
 ): AppliedFrameAnatomyPatch {
   const template = typeof stored.frameStyle.template === "string" ? stored.frameStyle.template : undefined;
   const merged: Record<string, unknown> = { ...stored.frameStyle };
-  for (const key of ["crown", "twoColor", "collector"] as const) {
+  for (const key of ["crown", "twoColor", "collector", "stamp"] as const) {
     if (patch[key] !== undefined) merged[key] = patch[key];
   }
   if (patch.star === true) merged.star = true;
@@ -613,6 +702,11 @@ export type ImportedAnatomyFacts = {
   /** `true` for a foil-only printing (`finishes` = ["foil"], the KLD #265
    *  "KLD★EN"), else absent. */
   printed_star?: true;
+  /** The holofoil stamp THIS printing carries (TODO 4.9c, owner 2026-09-29:
+   *  follow the printing): Scryfall's `security_stamp` oval → "oval",
+   *  triangle → "triangle", anything else (none, acorn, circle, heart,
+   *  arena) → "none" (lib/scryfall/import-mapper.ts stampOfPrinting). */
+  printed_stamp?: HoloStampSwitch;
 };
 
 /**
@@ -646,6 +740,10 @@ export function importedAnatomy(
   // style, or "off" for a pre-2015 frame; the ★ of a foil-only printing.
   if (patch.printed_collector !== undefined) style.collector = patch.printed_collector;
   if (patch.printed_star === true) style.star = true;
+  // …and the stamp (4.9c): the printing's own, "none" included — a stamped
+  // token or UB emblem lands on a frame without the notch and the save
+  // drops it.
+  if (patch.printed_stamp !== undefined) style.stamp = patch.printed_stamp;
   const drawsPairs = frameAnatomyOf(landedTemplate).twoColor.length > 0;
   const colorIdentity =
     drawsPairs && twoColourPrinting && patch.color_pair
@@ -666,11 +764,12 @@ export function importedAnatomy(
  */
 export function importedFormAnatomy(
   style: FrameAnatomyStyle,
-): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector">> & Pick<FrameAnatomyStyle, "star"> {
+): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star"> {
   return {
     crown: style.crown ?? NEW_CARD_ANATOMY.crown,
     twoColor: style.twoColor ?? NEW_CARD_ANATOMY.twoColor,
     collector: style.collector ?? NEW_CARD_ANATOMY.collector,
+    stamp: style.stamp ?? NEW_CARD_ANATOMY.stamp,
     ...(style.star === true ? { star: true as const } : {}),
   };
 }

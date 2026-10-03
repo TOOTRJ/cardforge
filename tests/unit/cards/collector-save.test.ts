@@ -131,6 +131,9 @@ describe("createCardAction — the new-card default", () => {
       expect((COLLECTOR_TEMPLATES as readonly string[]).includes(template), template).toBe(true);
       expect(style.collector, template).toBe("2023");
       expect("star" in style, template).toBe(false);
+      // …and the stamp's "auto" where the frame has the notch (4.9c): the
+      // walker too, never the token frame.
+      expect(style.stamp, template).toBe(template === "m15token" ? undefined : "auto");
     }
     for (const template of ["m15borderless", "saga", "modern"] as const) {
       const stub = db();
@@ -168,7 +171,7 @@ describe("createCardAction — the new-card default", () => {
     ["star 'yes'", { star: "yes" }],
     ["star false", { star: false }],
     ["star 1", { star: 1 }],
-    ["an unknown key", { collector: "2023", stamp: "oval" }],
+    ["an unknown key", { collector: "2023", seal: "oval" }],
     ["text smuggled beside the switch", { collector: "2023", collectorText: "™ & © Wizards" }],
   ])("refuses %s and writes nothing", async (_name, bad) => {
     const stub = db();

@@ -44,8 +44,15 @@ import type { ColorIdentity, FrameStyle } from "@/types/card";
 export const ANATOMY_HINTS: Partial<Record<FrameAnatomyKey, string>> = {
   crown: "New: the printed legendary crown. Switch it on to add it.",
   twoColor: "New: the printed two-colour frame. Switch it on to add it.",
+  // The collector line's hint names the stamp too where the frame draws
+  // one (collector-panel.tsx picks COLLECTOR_ONLY_HINT otherwise).
   collector: "New: add a collector line and holofoil stamp",
+  stamp: "New: the printed holofoil stamp. Switch it on to add it.",
 };
+
+/** The collector line's hint on a frame that draws no stamp (a token, an
+ *  emblem): honest about what the switch adds. */
+export const COLLECTOR_ONLY_HINT = "New: add a collector line";
 
 const ANATOMY_COPY: Record<FrameAnatomyKey, { label: string; help: string }> = {
   crown: {
@@ -63,6 +70,10 @@ const ANATOMY_COPY: Record<FrameAnatomyKey, { label: string; help: string }> = {
   star: {
     label: "Foil printing (★)",
     help: "Prints the ★ between the set code and the language, as a foil-only printing does. Free for every plan, no sheen.",
+  },
+  stamp: {
+    label: "Holofoil stamp",
+    help: "The silver oval printed in the bottom border of rares and mythics since 2014. Our own neutral oval, no symbol.",
   },
 };
 

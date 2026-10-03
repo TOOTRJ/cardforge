@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ARTIST_SMALL_CAP_EM,
+  quantizedPx,
   BRAND_MARK_GEOMETRY,
   COLLECTOR_METRICS,
   COLLECTOR_NUMBER_TRACKING_EM,
@@ -356,7 +357,14 @@ describe("the artist", () => {
     const layout = collectorLayout(m15, dmu(), display)!;
     const artist = texts(layout).filter((r) => r.role === "artist");
     expect(artist.map((r) => r.text)).toEqual(["C", "HRIS", "R", "AHN"]);
-    expect(artist.map((r) => Math.round(r.sizePct * W * 100) / 100)).toEqual([38, 30.4, 38, 30.4]);
+    // The small caps are 38 × 0.8 = 30.4 px nominal, DRAWN at the whole HD
+    // pixel the bake rounds to (4.9c: quantizedPx — the preview now draws
+    // the same 30); the chunk's advance keeps the nominal 30.4 (the bake's
+    // gap today, a correction for a collector-scoped sweep).
+    expect(artist.map((r) => Math.round(r.sizePct * W * 100) / 100)).toEqual([38, 30, 38, 30]);
+    expect((artist[1].widthPct / 100) * W).toBeCloseTo(displayTextWidthEm("HRIS") * 30.4, 6);
+    expect(quantizedPx(30.4)).toBe(30);
+    expect(quantizedPx(38)).toBe(38);
     // Each chunk starts where the one before ends; a word gap is the display face's space.
     expect(artist[1].xPct).toBeCloseTo(artist[0].xPct + artist[0].widthPct, 6);
     expect(artist[2].xPct).toBeCloseTo(artist[1].xPct + artist[1].widthPct + (displayTextWidthEm(" ") * 38 * 100) / W, 6);

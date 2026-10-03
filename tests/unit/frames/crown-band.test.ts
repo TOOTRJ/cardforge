@@ -135,9 +135,13 @@ describe("the crown slot the profiles draw (M15_CROWN)", () => {
   });
 
   it("is on the m15, m15artifact and m15land entries, remapping a colourless card's key", () => {
-    expect(getFrameProfile("m15").overlays).toEqual([M15_CROWN]);
-    expect(getFrameProfile("m15artifact").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
-    expect(getFrameProfile("m15land").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
+    // (Beside the holofoil stamp's notch since 4.9c — its own test:
+    // tests/unit/frames/holo-stamp-notch.test.ts.)
+    const crownOf = (t: string) => getFrameProfile(t).overlays?.filter((slot) => slot.anatomy === "crown");
+    expect(crownOf("m15")).toEqual([M15_CROWN]);
+    expect(crownOf("m15artifact")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
+    expect(crownOf("m15land")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
+    expect(getFrameProfile("m15").overlays?.[0]).toBe(M15_CROWN);
   });
 });
 
