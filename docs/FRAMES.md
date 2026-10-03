@@ -1934,8 +1934,9 @@ for any of them; Visual 0 changed / 0 redefined). Additions throughout.
   (`cardPageFacesOf(row)`; the 8 legacy pages keep their name; the slug
   call passes no faces): `<title>`, H1, breadcrumb, share copy, oEmbed and
   the JSON-LD name. The CreativeWork gains the back as `hasPart` with its
-  own `ImageObject` — the back bake through this site's `/render-cdn` path,
-  named only when it is THIS card's `.back.png` — and the back's words in
+  own `ImageObject` — the back bake through this site's
+  `/render-cdn/<owner>/<file>` path, named only when it is THIS card's
+  `.back.png` — and the back's words in
   `keywords`; "Card details" lists the back's facts; the OG image stays the
   front; both display bakes carry the mark (v20 unchanged).
 - **Downloads.** `/api/cards/[id]/png?face=back` (`lib/cards/card-face.ts`
@@ -1973,14 +1974,17 @@ for any of them; Visual 0 changed / 0 redefined). Additions throughout.
   per face.
 - **Tests:** `tests/unit/cards/bake-both-faces.test.ts` (the real save bake
   against mocked storage: four objects, one write, every failure path, the
-  legacy single bake, the stale back), `rebake-batch.test.ts` (the sweep
-  carries the back), `render/stored-render.test.ts` (`face`),
-  `api/card-png-route-faces.test.ts`, `api/card-pdf-route-faces.test.ts`,
-  `render/card-pdf-faces.test.ts`, `decks/export-client.test.ts` (faces),
-  `api/cards-export-route.test.ts` (faces), `cards/dfc-card-page.test.tsx`
-  (`cardPageName`, JSON-LD `hasPart`, Card details),
-  `components/baked-card-flip.test.tsx` (the tile flip, `?face=back`),
-  `components/download-modal-faces.test.tsx`.
+  legacy single bake, the stale back), `tests/unit/cards/rebake-batch.test.ts`
+  (the sweep carries the back), `tests/unit/render/stored-render.test.ts`
+  (`face`), `tests/unit/api/card-png-route-faces.test.ts`,
+  `tests/unit/api/card-pdf-route-faces.test.ts`,
+  `tests/unit/render/card-pdf-faces.test.ts`,
+  `tests/unit/decks/export-client.test.ts` (faces),
+  `tests/unit/api/cards-export-route.test.ts` (faces),
+  `tests/unit/cards/dfc-card-page.test.tsx` (`cardPageName`, JSON-LD
+  `hasPart`, Card details), `tests/unit/components/baked-card-flip.test.tsx`
+  (the tile flip, `?face=back`),
+  `tests/unit/components/download-modal-faces.test.tsx`.
 - **What waits:** the ticks — the walkthrough bakes both faces now, so the
   owner verifies the transform combos after merge and the Transform chip
   lights; the editor and the seeds (5.2 — the dev DB has no card on a DFC

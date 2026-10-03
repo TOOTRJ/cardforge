@@ -202,6 +202,8 @@ describe("PrintSelectionDialog", () => {
       layout: "sheet-a4",
       sheet: { gap: "sixteenth", marks: "lines", cardSize: "mm" },
       bleed: true,
+      // A double-faced card's back comes along by default (TODO 5.3).
+      includeBacks: true,
       titles: { [id(1)]: "Mine 1", [id(2)]: "Mine 2" },
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
