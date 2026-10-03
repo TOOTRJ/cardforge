@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // private-renders.mjs — `node scripts/sweep-storage-orphans.mjs
 // --private-renders` (TODO 3.14b, owner decision 2026-09-29 (c)): remove the
-// card-renders objects (the HD PNG and its WebP thumb) of cards that are
-// PRIVATE. The bucket is public-read and the key is fixed
+// card-renders objects (the HD PNG and its WebP thumb, of either face) of
+// cards that are PRIVATE. The bucket is public-read and the key is fixed
 // (`{owner}/{cardId}.png`), so such a render is the full card image,
 // fetchable by anyone who has — or guesses — the URL. The app deletes it when
 // a card goes private (lib/cards/bake-core.ts removeRenderObjects), but only
@@ -20,12 +20,14 @@
 // differ, so the plan never silently misses a private card.
 //
 // What it mirrors — nothing more:
-//   * the objects: the two names a bake writes (renderObjectNames,
-//     lib/cards/bake-core.ts), whatever folder they sit in;
+//   * the objects: the names a bake writes (renderObjectNames,
+//     lib/cards/bake-core.ts — the front's pair and the back face's),
+//     whatever folder they sit in;
 //   * the row: every go-private path clears the card's render pointer in the
 //     same UPDATE that makes it private (lib/cards/actions.ts bulk
 //     visibility, lib/moderation/actions.ts hide: rendered_image_url,
-//     rendered_thumb_url, rendered_at), then removes the objects. So does
+//     rendered_thumb_url, rendered_back_image_url, rendered_back_thumb_url,
+//     rendered_at), then removes the objects. So does
 //     this mode, per batch: first the pointers of the batch's cards that are
 //     private AT THAT MOMENT (a conditional UPDATE — a card made public
 //     since is not touched), then the objects. (The single-card save also
@@ -78,9 +80,16 @@ import {
 
 export const RENDER_BUCKET = "card-renders";
 
-/** The render pointer every go-private path clears in the UPDATE that makes
- *  the card private (see the header). */
-export const RENDER_POINTER_COLUMNS = ["rendered_image_url", "rendered_thumb_url", "rendered_at"];
+/** The render pointers every go-private path clears in the UPDATE that
+ *  makes the card private (see the header; lib/cards/bake-core.ts
+ *  CLEARED_RENDER_POINTERS — both faces' since migration 0134). */
+export const RENDER_POINTER_COLUMNS = [
+  "rendered_image_url",
+  "rendered_thumb_url",
+  "rendered_back_image_url",
+  "rendered_back_thumb_url",
+  "rendered_at",
+];
 
 /** A render of a card with one of these visibilities is never touched. */
 export const VISIBLE = new Set(["public", "unlisted"]);
@@ -93,7 +102,8 @@ export const LIST_CAP = 100;
 
 /**
  * The card-renders objects that are a card's bake (`{uuid}/{cardId}.png` or
- * `.thumb.webp`), grouped by card id (a Map). Anything else in the bucket is
+ * `.thumb.webp`, and the back face's `.back.png` / `.back.thumb.webp` —
+ * renderCardId), grouped by card id (a Map). Anything else in the bucket is
  * not a render (the sweep's review list covers it).
  */
 export function rendersByCard(objects) {

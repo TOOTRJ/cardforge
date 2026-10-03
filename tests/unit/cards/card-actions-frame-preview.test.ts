@@ -373,9 +373,10 @@ describe("updateCardsVisibilityAction — frame previews in the batch", () => {
       skippedPreviews: 0,
     });
     expect(updatedIds(stub)).toEqual([ORDINARY, PREVIEW]);
-    // Both public render objects of both cards, in the caller's folder.
+    // Every render object of both cards (both faces' names, TODO 5.0a), in
+    // the caller's folder.
     expect(removed).toEqual([
-      [ORDINARY, PREVIEW].flatMap((id) => [`${USER}/${id}.png`, `${USER}/${id}.thumb.webp`]),
+      [ORDINARY, PREVIEW].flatMap((id) => [`${USER}/${id}.png`, `${USER}/${id}.thumb.webp`, `${USER}/${id}.back.png`, `${USER}/${id}.back.thumb.webp`]),
     ]);
   });
 

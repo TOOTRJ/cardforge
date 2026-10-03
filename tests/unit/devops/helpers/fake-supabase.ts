@@ -32,6 +32,8 @@ export function emptyDb(): Db {
       metadata: "jsonb",
       rendered_image_url: "text",
       rendered_thumb_url: "text",
+      rendered_back_image_url: "text",
+      rendered_back_thumb_url: "text",
       tags: "text[]",
       created_at: "timestamp with time zone",
       likes_count: "integer",

@@ -40,11 +40,16 @@ export function storedRenderObject(url: string | null | undefined): string | nul
   return object;
 }
 
+/** The suffixes a bake's object names end in, after `{cardId}` — the four
+ *  names of lib/cards/bake-core.ts renderObjectNames (TODO 5.0a): the
+ *  front's PNG and thumb, the back face's PNG and thumb. */
+export const RENDER_NAME_SUFFIXES = [".png", ".thumb.webp", ".back.png", ".back.thumb.webp"] as const;
+
 /**
  * True when `url` is a bake in our card-renders bucket. With `card`, it must
- * also be THAT card's own object — `{ownerId}/{cardId}.png` or its
- * `.thumb.webp` (lib/cards/bake-core.ts renderObjectNames) — so a row can't
- * borrow another card's render either.
+ * also be THAT card's own object — one of `{ownerId}/{cardId}` +
+ * RENDER_NAME_SUFFIXES (lib/cards/bake-core.ts renderObjectNames) — so a
+ * row can't borrow another card's render either.
  */
 export function isStoredRenderUrl(
   url: string | null | undefined,
@@ -54,19 +59,20 @@ export function isStoredRenderUrl(
   if (!object) return false;
   if (!card) return true;
   const base = `${card.ownerId}/${card.cardId}`;
-  return object === `${base}.png` || object === `${base}.thumb.webp`;
+  return RENDER_NAME_SUFFIXES.some((suffix) => object === `${base}${suffix}`);
 }
 
 const BAKE_OBJECT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.(?:png|thumb\.webp)$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\.back)?\.(?:png|thumb\.webp)$/i;
 
 /**
- * The card a card-renders object key belongs to — `{ownerId}/{cardId}.png`
- * or `{ownerId}/{cardId}.thumb.webp`, the only two names a bake writes
- * (lib/cards/bake-core.ts renderObjectNames) — lower-cased; null for any
- * other key. The /render-cdn route serves only these, tagged
- * `card-<cardId>` (lib/cards/cache-purge.ts), so every copy the CDN holds
- * can be purged when its card leaves public view.
+ * The card a card-renders object key belongs to — `{ownerId}/{cardId}` +
+ * one of RENDER_NAME_SUFFIXES (`.png`, `.thumb.webp`, `.back.png`,
+ * `.back.thumb.webp`: the only names a bake writes, lib/cards/bake-core.ts
+ * renderObjectNames) — lower-cased; null for any other key. The /render-cdn
+ * route serves only these, tagged `card-<cardId>` (lib/cards/cache-purge.ts)
+ * — ONE tag for both faces — so every copy the CDN holds can be purged when
+ * its card leaves public view.
  */
 export function bakeObjectCardId(objectKey: string): string | null {
   const match = BAKE_OBJECT.exec(objectKey);

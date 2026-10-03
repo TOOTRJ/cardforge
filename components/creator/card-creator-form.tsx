@@ -229,6 +229,7 @@ import {
 } from "@/lib/creator/revise";
 import {
   FRAME_ANATOMY_KEYS,
+  type FrameAnatomyStyle,
   frameAnatomyOf,
   importedAnatomy,
   importedFormAnatomy,
@@ -1843,7 +1844,9 @@ export function CardCreatorForm({
       );
     }
     if (!isRevise) {
-      const switches = importedFormAnatomy(imported.style);
+      // Every anatomy key the form holds; an import names none for the
+      // transform icon family (5.4 will), so that key stays as it is.
+      const switches: Partial<FrameAnatomyStyle> = importedFormAnatomy(imported.style);
       for (const key of FRAME_ANATOMY_KEYS) {
         if (getValues(`frame_style.${key}`) !== switches[key]) {
           setValue(`frame_style.${key}`, switches[key], { shouldDirty: true });

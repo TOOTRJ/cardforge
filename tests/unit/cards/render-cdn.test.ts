@@ -62,11 +62,15 @@ describe("isStoredRenderUrl", () => {
     expect(isStoredRenderUrl(url)).toBe(false);
   });
 
-  it("with a card, only that card's own PNG or thumb", () => {
+  it("with a card, only that card's own PNG or thumb — of either face (TODO 5.0a)", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.pipglyph.com");
     const card = { ownerId: "o", cardId: "c" };
     expect(isStoredRenderUrl(`${ours}/o/c.png?v=1`, card)).toBe(true);
     expect(isStoredRenderUrl(`${ours}/o/c.thumb.webp?v=1`, card)).toBe(true);
+    expect(isStoredRenderUrl(`${ours}/o/c.back.png?v=1`, card)).toBe(true);
+    expect(isStoredRenderUrl(`${ours}/o/c.back.thumb.webp?v=1`, card)).toBe(true);
+    expect(isStoredRenderUrl(`${ours}/o/c.back.jpg`, card)).toBe(false);
+    expect(isStoredRenderUrl(`${ours}/o/c.front.png`, card)).toBe(false);
     expect(isStoredRenderUrl(`${ours}/o/other.png`, card)).toBe(false);
     expect(isStoredRenderUrl(`${ours}/x/c.png`, card)).toBe(false);
     expect(isStoredRenderUrl(`${ours}/o/c.jpg`, card)).toBe(false);
