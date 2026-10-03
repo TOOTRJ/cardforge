@@ -2,6 +2,7 @@ import "server-only";
 
 import { getCardById, hasBackFaceImage, pickPrintImageUrl } from "@/lib/scryfall/client";
 import {
+  droppedFaceNotice,
   mapScryfallToFormPatch,
   referenceBackColorIdentity,
   referenceColorIdentity,
@@ -58,8 +59,9 @@ export type FrameComparePayload = {
    *  printing — a single face, or a split, flip or adventure, whose one
    *  scan shows both halves. */
   faceName: string | null;
-  /** The printing has a second face with its own scan: the compare view
-   *  offers the other face. */
+  /** The printing has a second face with its own scan that the import
+   *  keeps (not a double-faced token's or a Role card's, which it drops):
+   *  the compare view offers the other face. */
   hasBackScan: boolean;
 };
 
@@ -81,7 +83,11 @@ export async function buildFrameComparePayload(
   if (!card) return null;
 
   const patch = mapScryfallToFormPatch(card, { artPreviewUrl: null });
-  const hasBackScan = hasBackFaceImage(card);
+  // A back the tools can show: the second face's own scan, AND a face the
+  // import keeps — a double-faced token's or a Role card's back is dropped
+  // (TODO 1.23; two-sided tokens are 5.5), so there is no stored back to
+  // draw and the view offers none.
+  const hasBackScan = hasBackFaceImage(card) && !patch.dropped_face;
   const faces = card.card_faces ?? [];
   const faceName = hasBackScan ? (faces[scryfallFaceIndex(face)]?.name ?? null) : null;
 
@@ -102,6 +108,11 @@ export async function buildFrameComparePayload(
     };
   }
 
+  if (patch.dropped_face) {
+    throw new FrameCompareFaceError(
+      droppedFaceNotice(patch, card.name) ?? `${card.name} has no second face to compare.`,
+    );
+  }
   if (!patch.back_face) {
     throw new FrameCompareFaceError(`${card.name} has no second face to compare.`);
   }

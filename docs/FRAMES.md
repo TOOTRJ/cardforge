@@ -706,8 +706,9 @@ today (its content on that frame in the front's colour, the way the
 imported double-faced cards flip) against the back scan, scores it on the
 Score button, and walks it with the preview flipped; the tick and its
 recorded score stay the front's. A printing with no such face (one face;
-or a split, flip or adventure, which is one picture) is named instead of
-silently measured against the front's scan (`FrameCompareFaceError`), and
+a split, flip or adventure, which is one picture; a double-faced token or
+Role card, whose back the import drops) is named instead of silently
+measured against the front's scan (`FrameCompareFaceError`), and
 `buildFrameComparePayload(id, template)` with no face is byte for byte
 what it was (`tests/unit/scryfall/reference-preview-front-snapshot.test.ts`).
 

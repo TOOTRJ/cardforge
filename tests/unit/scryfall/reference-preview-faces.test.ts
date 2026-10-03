@@ -27,6 +27,41 @@ import {
 
 const lookup = vi.hoisted(() => ({ ids: [] as string[] }));
 
+/** Incubator // Phyrexian (TMOM #16): a double-faced TOKEN — two scans,
+ *  but the import drops its back (TODO 1.23; two-sided tokens are 5.5). */
+const INCUBATOR_ID = "f9f9f9f9-0009-4009-8009-000000000009";
+const incubator = {
+  id: INCUBATOR_ID,
+  name: "Incubator // Phyrexian",
+  layout: "double_faced_token",
+  set: "tmom",
+  collector_number: "16",
+  rarity: "common",
+  frame: "2015",
+  color_identity: [],
+  image_status: "highres_scan",
+  card_faces: [
+    {
+      name: "Incubator",
+      mana_cost: "",
+      type_line: "Token Artifact — Incubator",
+      oracle_text: "{2}: Transform this artifact.",
+      colors: [],
+      image_uris: { png: `https://cards.scryfall.io/png/front/f/9/${INCUBATOR_ID}.png` },
+    },
+    {
+      name: "Phyrexian",
+      mana_cost: "",
+      type_line: "Token Artifact Creature — Phyrexian",
+      oracle_text: "",
+      colors: [],
+      power: "0",
+      toughness: "0",
+      image_uris: { png: `https://cards.scryfall.io/png/back/f/9/${INCUBATOR_ID}.png` },
+    },
+  ],
+} as unknown as ScryfallCard;
+
 vi.mock("@/lib/scryfall/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/scryfall/client")>();
   const { DFC_PRINTINGS } = await import("./fixtures/dfc-printings");
@@ -34,6 +69,7 @@ vi.mock("@/lib/scryfall/client", async (importOriginal) => {
     ...actual,
     getCardById: async (id: string) => {
       lookup.ids.push(id);
+      if (id === INCUBATOR_ID) return incubator;
       return (DFC_PRINTINGS as Record<string, ScryfallCard>)[id] ?? null;
     },
   };
@@ -154,6 +190,16 @@ describe("a face the printing can't show is a named refusal, never the front's s
     await expect(buildFrameComparePayload(SERRA_ANGEL_ID, "m15", "back")).rejects.toThrow(FrameCompareFaceError);
     await expect(buildFrameComparePayload(SERRA_ANGEL_ID, "m15", "back")).rejects.toThrow(
       "Serra Angel has no second face to compare.",
+    );
+  });
+
+  it("a double-faced token's back is dropped by the import: no back offered, and the back view names why", async () => {
+    const front = await buildFrameComparePayload(INCUBATOR_ID, "m15token");
+    expect(front).toMatchObject({ face: "front", faceName: null, hasBackScan: false });
+    expect(front?.patch.back_face).toBeUndefined();
+    await expect(buildFrameComparePayload(INCUBATOR_ID, "m15token", "back")).rejects.toThrow(FrameCompareFaceError);
+    await expect(buildFrameComparePayload(INCUBATOR_ID, "m15token", "back")).rejects.toThrow(
+      /^Incubator \/\/ Phyrexian is a double-faced token — PipGlyph imported its front face, Incubator\./,
     );
   });
 
