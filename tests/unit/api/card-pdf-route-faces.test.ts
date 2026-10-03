@@ -132,8 +132,13 @@ async function get(query: string) {
 }
 
 beforeEach(async () => {
-  const front = await sharp({ create: { width: 1500, height: 2100, channels: 3, background: "#102030" } }).png().toBuffer();
-  const back = await sharp({ create: { width: 1500, height: 2100, channels: 3, background: "#605040" } }).png().toBuffer();
+  // Small portrait stand-ins for the two renders: the PDF's structure (its
+  // pages, the order of the image draws) is the point here, never the
+  // pixels — pdf-lib decodes and re-deflates every embedded PNG in JS, and
+  // the HD-sized ones made the two-render cases time out on CI's
+  // coverage-instrumented runner. The builder only reads orientation.
+  const front = await sharp({ create: { width: 30, height: 42, channels: 3, background: "#102030" } }).png().toBuffer();
+  const back = await sharp({ create: { width: 30, height: 42, channels: 3, background: "#605040" } }).png().toBuffer();
   state.render.mockReset();
   state.render.mockImplementation(async (card: Rendered) => (card.dfc?.role === "back" ? back : front));
   state.card = dfcCard();
