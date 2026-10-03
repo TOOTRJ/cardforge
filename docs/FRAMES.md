@@ -1496,21 +1496,32 @@ stored "multicolor" card whose pair the switch pre-fills from its cost).
   gap stays on m15devoid and crowned devoid imports stay `nearest`. The
   pairs were to be built "checked against BFZ #200 and the three devoid
   `m` references" — and the check says there is nothing to build: every
-  two-colour devoid printing (30 of the 31: BFZ #199–207, OGW #148–150,
-  MH3 #177 / #204 / #206 / #208 and their reprints) prints the UNIFORM gold
-  devoid frame — a gold title bar, a gold pinline on BOTH ends of every
-  ring (R − B 65–119 at every x on the eight measured, where a mono devoid
-  print's ring is its colour: blue on BFZ #57, green on BFZ #169), the
-  silver Eldrazi type bar and the grey plate — which is the `m` master
+  two-colour devoid printing on the devoid frame (29 of the 31 two-colour
+  printings Scryfall lists for the keyword: BFZ #199–207, OGW #148–150,
+  MH3 #177 / #204 / #206 / #208 and their reprints — DDP, M3C, PLST, the
+  prerelease stamps, MH3 #517 / #518) prints the UNIFORM gold devoid frame
+  — a gold title bar, a gold pinline on BOTH ends of every ring (R − B
+  65–119 at every x on the eight measured, where a mono devoid print's
+  ring is its colour: blue on BFZ #57, green on BFZ #169; the review
+  re-measured thirteen more — BFZ #199 / #201 / #202 / #204 / #205 / #207,
+  MH3 #206 / #208 / #517 / #518, M3C #272 / #275, DDP #64 — gold at both
+  ends of the body and of the bar, R − B +78 … +119, against blue / green /
+  red / white / black monos and the hybrid's green-left blue-right body),
+  the silver Eldrazi type bar and the grey plate — which is the `m` master
   m15devoid already draws, verified against three of them (Void Grafter,
   Flayer Drone, Abstruse Appropriation). So m15devoid declares no
   `twoColorMasters`, offers no switch, and the registry's `two-colour` gap
   is no gap on it (`GOLD_PAIR_TEMPLATES` in `lib/scryfall/frame-signatures.ts`):
-  OGW #150 and the 29 others import `exact` on the gold frame, the old
-  "two-colour on devoid" request rows read as answered. The ONE hybrid
-  devoid printing (MH3 #253 Drowner of Truth, an MDFC) prints the split
-  hybrid dress — green left, blue right, grey bars — so `two-colour-hybrid`
-  stays a gap there (behind the `dfc` gap, Phase 5).
+  OGW #150 and the 28 others import `exact` on the gold frame (the import
+  patch's identity is `multicolor`, so the card paints `m15devoid/m`; the
+  printing's `twoColor` switch is dropped at the save, as on any frame
+  without pair masters), the old "two-colour on devoid" request rows read
+  as answered. The other two of the 31: the ONE hybrid devoid printing
+  (MH3 #253 Drowner of Truth, an MDFC) prints the split hybrid dress —
+  green left, blue right, grey bars — so `two-colour-hybrid` stays a gap
+  there (behind the `dfc` gap, Phase 5); MH3 #342 Abstruse Appropriation
+  is a borderless `inverted` showcase, not the devoid frame at all (the
+  borderless rules take it).
 - **Snow's crown is the standard band.** Card Conjurer's 'Snow (Kaldheim)'
   pack (`m15/new/snow/<k>.png`, packSnowNew.js) is the accurate M15 pack's
   geometry — the dark ring rows of its title bar, type bar and box sit on
@@ -1550,7 +1561,12 @@ stored "multicolor" card whose pair the switch pre-fills from its cost).
   warm cast (R − B +6 … +8, where the blue bar reads −8, the red +10 and
   the white −1) — the gold snow bar at KHM's faint tint; CC's snow m bar
   (236/231/213, R − B +23) is that bar at CC's tint strength, as CC's blue
-  bar (220/233/242) is to KHM's (240/239/248). The owner's call (round 20)
+  bar (220/233/242) is to KHM's (240/239/248). One more gold snow pair
+  exists, uncrowned: MB2 #83 Ice-Fang Coatl (2024, white-bordered — it
+  imports `nearest` for the border), whose bar reads CREAM, 237/230/211
+  (R − B +26, CC's tint strength) on a scan whose border is pure white; so
+  the two printers disagree, KHM's three at +6 … +8 and MB2's one at +26.
+  The owner's call (round 20)
   is the print's absolute look — white — so the least-squares share of
   (m − w) that reproduces the prints' (pair − w) = (−1, −3, −8) against
   CC's (−8, −13, −29), 0.26, is the recipe; CC's cream `m` bar as it is

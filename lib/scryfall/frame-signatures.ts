@@ -2212,14 +2212,21 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
  * Frames whose two-colour (gold-split) printings carry NO split at all: the
  * gold master IS the printed look, so the `two-colour` gap is no gap there.
  * Devoid (TODO 4.6f, wave 2c; measured 2026-10-02): every two-colour devoid
- * printing — BFZ #199–207, OGW #148–150, MH3 #177 / #204 / #206 / #208 and
- * their reprints, 30 of the 31 — prints the UNIFORM gold devoid frame: the
- * title ring reads gold (R − B 65–119) at every x on the eight checked
- * (OGW #148 / #149 / #150, BFZ #200 / #203 / #206, MH3 #177 / #204), where a
- * mono devoid print's ring is its colour. m15devoid's `m` tick is
- * referenced to three of them (Void Grafter, Flayer Drone, Abstruse
- * Appropriation). The one HYBRID devoid printing (MH3 #253, an MDFC) prints
- * the split hybrid dress, so `two-colour-hybrid` stays a gap.
+ * printing on the devoid frame — BFZ #199–207, OGW #148–150, MH3 #177 /
+ * #204 / #206 / #208 and their reprints (DDP, M3C, PLST, the prerelease
+ * stamps, MH3 #517 / #518): 29 of the 31 two-colour printings Scryfall lists
+ * for the keyword — prints the UNIFORM gold devoid frame: the title ring
+ * reads gold (R − B 65–119) at every x on the eight checked (OGW #148 /
+ * #149 / #150, BFZ #200 / #203 / #206, MH3 #177 / #204; the review
+ * re-measured thirteen more — BFZ #199 / #201 / #202 / #204 / #205 / #207,
+ * MH3 #206 / #208 / #517 / #518, M3C #272 / #275, DDP #64 — gold at both
+ * ends of the body and the bar, R − B +78 … +119), where a mono devoid
+ * print's ring is its colour. m15devoid's `m` tick is referenced to three
+ * of them (Void Grafter, Flayer Drone, Abstruse Appropriation). The other
+ * two: the one HYBRID devoid printing (MH3 #253, an MDFC) prints the split
+ * hybrid dress, so `two-colour-hybrid` stays a gap; MH3 #342 is a
+ * borderless `inverted` showcase, not the devoid frame at all (the
+ * borderless rules take it).
  */
 const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15devoid"]);
 
