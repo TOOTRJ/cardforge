@@ -4,8 +4,9 @@
 // cards): the dot before the type line that names the colour of a face with
 // no mana cost — every coloured transform back prints one (INR #60 Insectile
 // Aberration: the dot's outline at x 114–180 × y 1211–1267 on the 1500 × 2100
-// card, a blue fill; MOM #43 Burnished Dunestomper: white top-left, green
-// bottom-right), an artifact or colourless back none.
+// card, a blue fill; MOM #43 Burnished Dunestomper, a green-white back: GREEN
+// top-left, white bottom-right — the printed pair order {G}{W}, not WUBRG),
+// an artifact or colourless back none.
 //
 // ONE module for both renderers and the type line's indent: the geometry
 // (4.6c's measurement, held within the scans' blur — Ø 3.5 %W, centre 9.3 /
@@ -13,11 +14,17 @@
 // the fills (the standard mana-symbol colours: INR #60's print reads
 // 0 / 119 / 178 for blue), and the wedge geometry — one disc, two colours
 // split on the diagonal (the first colour top-left, as MOM #43 prints), three
-// or more in equal wedges from the top, clockwise, in WUBRG order. The
-// outline is a dark ring outside the fill, as printed.
+// or more in equal wedges from the top, clockwise. The colours run in the
+// order a mana cost prints them (`canonicalColorSequence`: the guild pairs
+// {G}{W} / {R}{W} / {G}{U}…, the shards and wedges), which is the order the
+// printed dot splits in. The outline is a dark ring outside the fill, as
+// printed.
 //
-// No imports: the client preview and the server bake share it.
+// Pure and client-safe (its one import is the pure mana-order module): the
+// client preview and the server bake share it.
 // ---------------------------------------------------------------------------
+
+import { canonicalColorSequence } from "@/lib/cards/mana-order";
 
 /** The dot's geometry in card percent (W for the diameter and the x's, H
  *  for the y). */
@@ -45,14 +52,15 @@ export const COLOR_INDICATOR_FILLS: Readonly<Record<"white" | "blue" | "black" |
   green: "#00733e",
 });
 
-const WUBRG = ["white", "blue", "black", "red", "green"] as const;
+const LETTER_OF = { white: "W", blue: "U", black: "B", red: "R", green: "G" } as const;
+const WORD_OF: Readonly<Record<string, keyof typeof COLOR_INDICATOR_FILLS>> = { W: "white", U: "blue", B: "black", R: "red", G: "green" };
 
-/** The fills a colour identity prints, in WUBRG order — empty for a
- *  colourless or word-less ("multicolor" alone) identity, which draws no
- *  dot. */
+/** The fills a colour identity prints, in the order its mana cost would
+ *  print them ({G}{W}: green first) — empty for a colourless or word-less
+ *  ("multicolor" alone) identity, which draws no dot. */
 export function colorIndicatorFills(colors: readonly string[] | null | undefined): string[] {
-  const set = new Set(colors ?? []);
-  return WUBRG.filter((c) => set.has(c)).map((c) => COLOR_INDICATOR_FILLS[c]);
+  const letters = (colors ?? []).map((c) => LETTER_OF[c as keyof typeof LETTER_OF]).filter(Boolean);
+  return [...canonicalColorSequence(letters)].map((l) => COLOR_INDICATOR_FILLS[WORD_OF[l]!]);
 }
 
 /** True when a body with `indicator: "coloured"` draws the dot for this

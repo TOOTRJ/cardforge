@@ -267,10 +267,12 @@ describe("the transform bodies on real bakes (TODO 5.1a)", () => {
     expect(getFrameProfile("m15dfcback").hideCost).toBe(true);
   }, 90_000);
 
-  it.each(PRESETS)("@%s: the 2016–22 back draws the family's back glyph in its left well and the name from 16.7 %%W; a two-colour back splits the dot, first colour top-left", async (preset, s) => {
+  it.each(PRESETS)("@%s: the 2016–22 back draws the family's back glyph in its left well and the name from 16.7 %%W; a two-colour back splits the dot in the PRINTED order (green-white: green top-left, as MOM #43)", async (preset, s) => {
+    // The identity is stored in WUBRG order (white, green); the print splits
+    // the dot as the cost {G}{W} reads — green top-left, white bottom-right.
     const card = transform(
-      { colorIdentity: ["white", "blue"], frameStyle: { template: "m15dfcfront", finish: "regular", dfcIcon: "sunmoon" } },
-      { title: "HHHH", frame_style: { template: "m15dfcbackleft" }, color_identity: ["white", "blue"] },
+      { colorIdentity: ["white", "green"], frameStyle: { template: "m15dfcfront", finish: "regular", dfcIcon: "sunmoon" } },
+      { title: "HHHH", frame_style: { template: "m15dfcbackleft" }, color_identity: ["white", "green"] },
     );
     const b = await bake(backPreviewData(card)!, preset);
     const r = DFC_ICON_RIDER.rect;
@@ -280,22 +282,23 @@ describe("the transform bodies on real bakes (TODO 5.1a)", () => {
     const name = inkBox(b, { x0: 230 * s, x1: 900 * s, y0: 100 * s, y1: 230 * s }, white)!;
     expect(name.x0 / s).toBeGreaterThanOrEqual(249 - 1 / s);
     expect(name.x0 / s).toBeLessThanOrEqual(252 + 1 / s);
-    // White top-left, blue bottom-right.
+    // Green top-left, white bottom-right (WUBRG order would swap them).
     const centre = PCT(b, COLOR_INDICATOR.centre.xPct, COLOR_INDICATOR.centre.yPct);
     const off = (COLOR_INDICATOR.diameterPct / 100) * b.w * 0.25;
     const at = (dx: number, dy: number) => {
       const i = Math.round(centre.y + dy) * b.w + Math.round(centre.x + dx);
       return [b.rgb[i * 3], b.rgb[i * 3 + 1], b.rgb[i * 3 + 2]];
     };
-    const [wr, wg, wb] = at(-off, -off);
+    const [gr, gg, gb] = at(-off, -off);
+    expect(Math.abs(gr - 0)).toBeLessThan(30);
+    expect(Math.abs(gg - 115)).toBeLessThan(30);
+    expect(Math.abs(gb - 62)).toBeLessThan(30);
+    const [wr, wg, wb] = at(off, off);
     expect(wr).toBeGreaterThan(230);
     expect(wg).toBeGreaterThan(230);
     expect(wb).toBeGreaterThan(220);
-    const [br, bg, bb] = at(off, off);
-    expect(Math.abs(br - 14)).toBeLessThan(30);
-    expect(Math.abs(bg - 104)).toBeLessThan(30);
-    expect(Math.abs(bb - 171)).toBeLessThan(30);
     expect(COLOR_INDICATOR_FILLS.white).toBe("#f9faf4");
+    expect(COLOR_INDICATOR_FILLS.green).toBe("#00733e");
   }, 90_000);
 
   it.each(PRESETS)("@%s: a colourless (artifact stand-in) back draws no dot; the land back no P/T, no dot and dark band ink", async (preset, s) => {

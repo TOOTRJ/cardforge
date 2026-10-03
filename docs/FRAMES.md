@@ -1689,6 +1689,144 @@ templates, new columns; 0 stored cards change, no bump, no sweep, no badge.
   import and the AI deck remix at 2 credits — Q4). Walker faces wait (ask
   first, 5.13).
 
+### The transform bodies (5.1a)
+
+TODO 5.1a, 2026-10-02 (`feat/dfc-transform-bodies`). Five templates on Card
+Conjurer's 'Transform' packs — the first double-faced bodies (`dfc` declared
+on their `PROFILES` entries; `bodyFor`'s transform rows filled). Additions
+under the owner rule: no stored card changes, no bump, no sweep, no badge;
+nothing is offered until the owner ticks each colour (after 5.3, when the
+walkthrough bakes both faces).
+
+| template | CC pack | masters | `dfc` | what it draws |
+|---|---|---|---|---|
+| `m15dfcfront` | 'Transform (Front)' `front{K}.png` | w u b r g m + `a` (= `c`, the artifact stand-in) | front, well left | the icon rider in the well, the name from the icon-face inset, the back's P/T in the grey tab |
+| `m15dfcback` | 'Transform (Back) (New)' `new/back{K}.png` | same | back, well right | the ▼ (in the master), no cost, white name / type, the dot, the dark plate |
+| `m15dfcbackleft` | 'Transform (Back)' `back{K}.png` | same | back, well left | the family's back glyph in the empty well, the inset name, the dot, the dark plate |
+| `m15dfclandfront` | `frontL.png` | one master under every key, `c` verified | front, land | the rider, the tab (INR #287 prints 9/7) |
+| `m15dfclandback` | `new/backL.png` | one master under every key, `c` verified | back, land | no cost, no P/T, no dot; dark band ink on the light tan bars (FIN #31) |
+
+Which back a card wears is the family's (`frame_style.dfcIcon`, default
+`arrows` — owner decision Q5): `arrows` → `m15dfcback`; `sunmoon`, `moon`,
+`compass`, `fan` → `m15dfcbackleft`; a land back is `m15dfclandback`
+whatever the family (the 2016–22 parchment land back is TODO 5.8).
+
+- **The masters.** CC's whole images 1:1 (the icon well with its white
+  ring, the grey pentagonal tab and the ▼ are the master's); `c` = the
+  pack's 'Artifact Frame' standing in (design D2: no colourless non-artifact
+  transform face printed on this frame — EMN's Eldrazi backs are see-through,
+  TODO 5.11), so `artifactMasterKeys: { c: "a" }` with `a.png` the same
+  bytes, and the `c` row is ticked against an ARTIFACT print (LCI #262
+  Sunbird Standard // Sunbird Effigy, MID #256 Mystic Monstrosity; LCI #60
+  Inverted Iceberg is a BLUE artifact — it draws the blue body, as every
+  coloured artifact face does in wave 1). Their own art slot
+  (`DFC_ART_SLOT`): the transform packs cut the window 1 px wider than the
+  plain M15 masters' on every side (115–1385 × 237–1166), so
+  `CC_M15_ART_SLOT` missed the 0.05 % the check asks. Edge contract
+  `border` on all four sides, square corners #000, the art-window check
+  clean on every master.
+- **The tone pass** (design D1: before the first tick, free; after, a
+  sweep). CC's back bars and box are off the prints on every key — mostly
+  LIGHT (G 81 → 67, U 118 → 96, B 91 → 79, W 168 → 156, A 143 → 126 on the
+  bars; the boxes 5–20 light), but the red back DARKER (78 → 97) and the
+  land back much darker (127 → 155 on the bars, 158 → 209 on the box: FIN
+  #31's light tan bars and cream box, with DARK name and type ink — so the
+  land back's bands print dark ink, unlike the coloured backs' white), gold
+  within 7. `DFC_BACK_TONES` (`scripts/lib/cc-frames.mjs`) multiplies the
+  bars and the box per key through the pack's Title / Type / Rules masks
+  (`toneMasked`: the gain fades to ×1 between luma 215 and 245, so the
+  well's white ring, the ▼ and the light rims keep CC's tone; the body and
+  the plates untouched). Fitted on the medians of the bars' flat face and
+  the box of 25 print scans (the design folder's plus nine fetched for the
+  fit); every key lands within ±1 luma of its targets
+  (`tests/unit/frames/dfc-importer.test.ts` holds the built masters to ±8).
+  Recorded per key in `frame-sources.json`.
+- **The plates.** The pack's dark `pt<K>.png` (285 × 156) ONCE, as
+  `m15dfcback/pt/<k>.png` (the 2016–22 back's profile draws the same set;
+  `c` the artifact plate), at M15's plate box with white digits; the lit face
+  from 79.3 to 93.0 %W (`inkSpanPct`); a plate-ink row (`PLATE_INK`) with
+  its `MEASURED_ON` hashes. The fronts draw M15's plates.
+- **The icon riders** (`CC_RIDERS.dfcicon`): the 12 glyphs a printing wears,
+  CC's SVGs / PNGs rasterised at 220 px (2× the drawn 110), keys LOWERCASE
+  (`default`, `downarrow`, `sun`, `moon`, `fullmoon`, `emrakul`, `compass`,
+  `land`, `spark`, `planeswalker`, `fanclosed`, `fanopen` — the bucket's keys
+  are lowercase). `FrameOverlaySlot` is now a discriminated union
+  (`anatomy: "crown" | "dfcIcon"`); the rider slot (`DFC_ICON_RIDER`, CC's
+  icon bounds 5.94 / 5.05 / 7.34 × 5.24 %) is keyed by the family's glyph
+  for the BODY's role (`lib/cards/dfc-icons.ts` `DFC_ICON_GLYPHS`) from the
+  face's `dfc` block — never from the `dfcIcon` switch, which is off for an
+  absent key while the family reads as `arrows`. The front's glyph
+  overdraws the master's own ▲; the 2016–22 back's fills its empty well;
+  the ▼ back carries no slot (`downarrow` is published but drawn by no
+  wave-1 body). Both renderers draw it right after the master, inside both
+  sheen masks; `frameAssetPathsFor` lists it (and the dark plate) for the
+  face drawn.
+- **The name.** On a face with the icon at the left the band starts at
+  16.45 %W (`DFC_ICON_FACE_TITLE_LEFT_PCT`) so the first capital's INK lands
+  at 250–252 px — the prints' 249–252 (SOI #203, MID #169, INR #60 / #193,
+  XLN #22; CC's pack sets its box at 0.16 = 240). The design's 16.7 %W was
+  the ink's start; Beleren's side bearing is ~4 px at 80 px, measured on
+  real bakes at HD and 750. The ▼ back keeps M15's 8.5 % start, its band
+  ending at 82.0 %W (the well's circle starts at 84.7).
+- **The reverse P/T** (`DFC_REVERSE_PT`, `StatSlot.align: "end"`): CC's
+  'Reverse PT' box, 61 px, #777 (the prints' neutral grey, luma 107–125;
+  CC's #666 reads darker), no plate, its right edge run to 92.87 %W so the
+  digits' solid ink ends at 1389 px (the prints' 1389–1392; CC's edge put
+  them at 1384). Drawn only when the back PRINTS a P/T
+  (`dfc.otherFace.printsPt`); the tab prints EMPTY otherwise (XLN #22, VOW
+  #12, LCI #158 — owner decision Q7).
+- **The colour indicator** (`lib/cards/color-indicator.ts`, design D4):
+  intrinsic to the coloured back bodies (`indicator: "coloured"`), drawn by
+  both renderers for any identity with a colour word — Ø 3.5 %W at 9.3 /
+  59.0 % with a dark ring outside, the standard mana colours, two colours
+  split on the top-right → bottom-left diagonal with the first colour
+  top-left, three or more in wedges from the top — the colours in the order
+  the mana cost would print them (`canonicalColorSequence`: MOM #43's
+  green-white back prints GREEN top-left, {G}{W}; WUBRG order would put
+  white there, which the scan refutes); the type line
+  starts at 13.4 %W while it draws (the prints' ink at 200–204 px). None on
+  an artifact / colourless back or a land back. 4.6c adds the per-card
+  switch for ordinary cards and reuses the module.
+- **Kind and gate.** `KIND_DEFS.transform` (`layoutTemplates:
+  [m15dfcfront, m15dfclandfront]`, `cardType` creature), the `dfcFront`
+  capability (`FrameProfile.dfc.role === "front"`), `LAYOUT_KIND_CARD_TYPES
+  .transform` = creature, artifact, enchantment, land, instant, sorcery;
+  a BACK body refuses every kind (`templateRefusesKind`, the server's gate
+  too); `kindHasAvailableFrame("transform")` needs a colour verified on a
+  front body AND on the default back body. The kind is not a chip of the
+  picker until its editor (5.2); `walkthroughKindFor` starts a back body's
+  walk on the Transform kind (5.0b flips it to the back).
+- **The registry.** A 2015-frame transform printing on a kind the front
+  draws is `transform/2015`: nearest on the M15 standard until the front
+  body is verified in its colour, then exact on it (`onceVerified` +
+  `exactOnceVerified`, the M20 token's model; `dfcFrontDressesKind` lets the
+  kind check through); the `dfc` gap drops where the landing body draws the
+  marks (`gapDrawnBy` → `templateHasBackFace`). The back bodies have no
+  signature of their own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`): a
+  printing's back wears `bodyFor`'s body (5.4's mapper). References per
+  colour per face in `frame-references.json`, `face: 1` on a back body's
+  (`referenceThumbUrl` → Scryfall's `/back/` scan; the pin check validates
+  the BACK face's colour, type and family, and the `c` row against an
+  Artifact face only where the profile dresses `c` as `a`).
+- **The visual matrix.** The front bodies' cases come out of the
+  per-template loop (the Transform kind's rows carry a back with a body);
+  the back bodies are never a card's own template, so their cases bake the
+  row's BACK face (`VisualCase.face`, `backPreviewData`; the fingerprint
+  carries `face: "back"`): every back body × 8 colours short / long, HD,
+  the families' glyphs on both faces, the empty tab, a foil, the squared
+  print, and a legacy-shaped `back_face` on m15 whose front hash is the
+  base's. The bake maps a row through `frontPreviewData`
+  (`rowToPreviewData`) — the identity for every non-DFC row, byte-identical
+  on the corpus.
+- **What waits:** the ticks (after 5.3); the editor (5.2) — until then
+  `?previewFrames=m15dfcfront,m15dfcback&kind=transform` shows the bodies;
+  the back bake (5.3); the import's back body / colour / family (5.4 — until
+  it lands, a transform import whose front body is verified lands on the
+  front body with a LEGACY back, drawn on the front's master: tick after
+  5.4, or accept that window); the modal bodies (5.1b); the parchment land
+  back (5.8); see-through colourless faces (5.11); two-colour fronts (5.12);
+  the walker faces (5.13, ask first); DFC crowns (4.6f).
+
 ## Kind anatomy and bodies
 
 TODO 4.5 (design 2026-09-29) and 4.5.0. A **body** is a template: its

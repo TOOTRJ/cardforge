@@ -132,17 +132,21 @@ export function bodyFor(
 
 /**
  * Whether a face may wear the colourless `c` key on `template` (D2, design
- * 2026-10-02): on a DFC body the `c` row is the ARTIFACT master standing in
- * (every DFC pack's colourless frame is its artifact one), so it is offered
- * only to a face whose type line says Artifact — never to a colourless
- * Eldrazi or Avatar face, whose see-through frame is wave 2 (TODO 5.11). On
- * any other template the ordinary frame gate decides, so this answers true.
+ * 2026-10-02): on a DFC body whose `c` is the ARTIFACT master standing in
+ * (every DFC pack's colourless frame is its artifact one — the profile
+ * dresses `c` as `a`, FrameProfile.artifactMasterKeys), it is offered only
+ * to a face whose type line says Artifact — never to a colourless Eldrazi
+ * or Avatar face, whose see-through frame is wave 2 (TODO 5.11). The land
+ * pair (5.1a) has ONE master under every key and no stand-in, so its `c`
+ * is any land face's. On any other template the ordinary frame gate
+ * decides, so this answers true.
  */
 export function colorlessFaceAllowed(
   template: FrameTemplate | string | null | undefined,
   face: FrameTypeInfo | null | undefined,
 ): boolean {
   if (!dfcBodyOf(template)) return true;
+  if (getFrameProfile(template ?? undefined).artifactMasterKeys?.c !== "a") return true;
   return isArtifactFrameType(face);
 }
 

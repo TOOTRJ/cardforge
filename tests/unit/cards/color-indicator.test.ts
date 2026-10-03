@@ -20,8 +20,10 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 // TODO 5.1a — lib/cards/color-indicator.ts, the ONE module both renderers
 // draw the dot from (4.6c reuses it as a switch on ordinary cards): the
 // geometry 4.6c measured (Ø 3.5 %W at 9.3 / 59.0 %, the type line from
-// 13.4 %W), the fills in WUBRG order, one disc / two halves on the diagonal
-// (the first colour top-left, MOM #43) / wedges from the top, and which
+// 13.4 %W), the fills in the PRINTED order (the mana cost's: {G}{W} green
+// first, as MOM #43's green-white back prints — WUBRG would put white
+// first, which the scan refutes), one disc / two halves on the diagonal
+// (the first colour top-left) / wedges from the top, and which
 // identities draw it on a body that declares `indicator: "coloured"`. And
 // the icon rider's resolution from a face's `dfc` block (never the
 // `dfcIcon` switch, which is off for an absent key while the family is
@@ -42,10 +44,25 @@ describe("the colour indicator (TODO 5.1a)", () => {
     expect(colorIndicatorFillRadius() / colorIndicatorOutlineRadius()).toBeCloseTo(3.5 / (3.5 + 0.6), 9);
   });
 
-  it("fills: WUBRG order, the standard mana colours; none for colourless or a word-less identity", () => {
-    expect(colorIndicatorFills(["blue"])).toEqual([COLOR_INDICATOR_FILLS.blue]);
-    expect(colorIndicatorFills(["green", "white"])).toEqual([COLOR_INDICATOR_FILLS.white, COLOR_INDICATOR_FILLS.green]);
-    expect(colorIndicatorFills(["black", "red", "blue", "multicolor"])).toEqual([COLOR_INDICATOR_FILLS.blue, COLOR_INDICATOR_FILLS.black, COLOR_INDICATOR_FILLS.red]);
+  it("fills: the mana cost's printed order, the standard mana colours; none for colourless or a word-less identity", () => {
+    const F = COLOR_INDICATOR_FILLS;
+    expect(colorIndicatorFills(["blue"])).toEqual([F.blue]);
+    // MOM #43 Burnished Dunestomper (green-white): green top-left, as the
+    // scan shows and as {G}{W} prints — whatever order the identity holds.
+    expect(colorIndicatorFills(["green", "white"])).toEqual([F.green, F.white]);
+    expect(colorIndicatorFills(["white", "green"])).toEqual([F.green, F.white]);
+    // The other guild pairs whose printed order isn't WUBRG's.
+    expect(colorIndicatorFills(["white", "red"])).toEqual([F.red, F.white]);
+    expect(colorIndicatorFills(["blue", "green"])).toEqual([F.green, F.blue]);
+    // Ally pairs and WB / UR / BG read as WUBRG does.
+    expect(colorIndicatorFills(["blue", "white"])).toEqual([F.white, F.blue]);
+    expect(colorIndicatorFills(["black", "white"])).toEqual([F.white, F.black]);
+    expect(colorIndicatorFills(["green", "black"])).toEqual([F.black, F.green]);
+    // Shards and wedges: Grixis {U}{B}{R}, Naya {R}{G}{W}, Mardu {R}{W}{B}.
+    expect(colorIndicatorFills(["black", "red", "blue", "multicolor"])).toEqual([F.blue, F.black, F.red]);
+    expect(colorIndicatorFills(["white", "red", "green"])).toEqual([F.red, F.green, F.white]);
+    expect(colorIndicatorFills(["white", "black", "red"])).toEqual([F.red, F.white, F.black]);
+    expect(colorIndicatorFills(["white", "blue", "black", "red", "green"])).toEqual([F.white, F.blue, F.black, F.red, F.green]);
     expect(colorIndicatorFills(["colorless"])).toEqual([]);
     expect(colorIndicatorFills(["multicolor"])).toEqual([]);
     expect(colorIndicatorFills([])).toEqual([]);

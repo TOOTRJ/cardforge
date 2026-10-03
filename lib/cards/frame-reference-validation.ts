@@ -16,10 +16,9 @@ import {
   typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { bodyFor, dfcBodyOf, dfcIconFamilyFromEffects, isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
+import { bodyFor, colorlessFaceAllowed, dfcBodyOf, dfcIconFamilyFromEffects, isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
-import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +100,14 @@ function referenceSays(card: ScryfallCard, word: "Artifact" | "Enchantment"): bo
   return typeLineHasWord({ cardType: card_type, supertype }, word);
 }
 
+/** A face's type, as the colourless gate reads it (lib/cards/dfc.ts
+ *  colorlessFaceAllowed → isArtifactFrameType). */
+function faceTypeOf(typeLine: string | null | undefined): { cardType: string | undefined; supertype: string | null } {
+  const { supertype, card_type } = parseTypeLine(typeLine);
+  return { cardType: card_type, supertype: supertype ?? null };
+}
+const frontFaceType = (card: ScryfallCard) => faceTypeOf(card.card_faces?.[0]?.type_line ?? card.type_line);
+
 /** A printing's BACK face's frame colour key (its printed colour: the
  *  indicator, else its colours), as pickFrameColorKey reads a face. */
 function backFaceColorKey(card: ScryfallCard): string {
@@ -150,7 +157,7 @@ function validateBackReference(card: ScryfallCard, template: FrameTemplate, colo
   const cardColor = backFaceColorKey(card);
   if (cardColor !== colorKey) {
     errors.push(`${back.name} is a ${COLOR_WORD[cardColor] ?? cardColor} back; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`);
-  } else if (colorKey === "c" && getFrameProfile(template).artifactMasterKeys?.c === "a" && !typeLineHasWord(parseTypeLine(back.type_line), "Artifact")) {
+  } else if (colorKey === "c" && !colorlessFaceAllowed(template, faceTypeOf(back.type_line))) {
     errors.push(`${back.name} isn't an Artifact back; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);
   }
   const expected = ERA_FRAME[eraForTemplate(template)];
@@ -199,7 +206,7 @@ export function validateReferenceForCombo(
     errors.push(
       `${card.name} is a ${COLOR_WORD[cardColor] ?? cardColor} card; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
     );
-  } else if (colorKey === "c" && templateHasBackFace(template) && getFrameProfile(template).artifactMasterKeys?.c === "a" && !referenceSays(card, "Artifact")) {
+  } else if (colorKey === "c" && !colorlessFaceAllowed(template, frontFaceType(card))) {
     // The `c` row of a DFC body with the artifact dress is the artifact
     // master standing in (D2); the land pair's `c` is its one master.
     errors.push(`${card.name} isn't an Artifact; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);

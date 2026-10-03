@@ -853,6 +853,15 @@ export function visualCases(): VisualCase[] {
   // token frames, a walker on m15pw, an emblem on emblem), and on m15 the
   // line's other shapes.
   for (const template of COLLECTOR_TEMPLATES) {
+    // A transform BACK body (TODO 5.1a) prints the card's one line on its
+    // back face: its collector cases bake the back of a transform row.
+    if (isDfcBackBody(template)) {
+      const front: FrameTemplate = template === "m15dfclandback" ? "m15dfclandfront" : "m15dfcfront";
+      const back = { frontTemplate: front };
+      add(template, "transform", "g", "long", { suffix: "@collector", back, row: { ...dfcBodyRow(template, "g"), ...collectorRow(front, "2023", dfcBodyRow(template, "g")) } });
+      add(template, "transform", "u", "short", { suffix: "@collector-2015", back, row: { ...dfcBodyRow(template, "u"), ...collectorRow(front, "2015", dfcBodyRow(template, "u")) } });
+      continue;
+    }
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, "g", "long", { suffix: "@collector", row: collectorRow(template, "2023") });
     add(template, primary, "u", "short", { suffix: "@collector-2015", row: collectorRow(template, "2015") });

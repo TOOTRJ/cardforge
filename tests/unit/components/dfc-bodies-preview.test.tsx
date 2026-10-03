@@ -105,9 +105,11 @@ describe("CardPreview — the transform bodies (TODO 5.1a)", () => {
     const { back } = preview({ dfcIcon: "sunmoon", backFace: { ...BACK, frame_style: { template: "m15dfcbackleft" } } });
     expect(overlayKeys(back)).toEqual(["dfcIcon:moon"]);
     expect(back!.querySelector("[data-frame-overlay]")?.getAttribute("style")).toContain(`left:${DFC_ICON_RIDER.rect.leftPct}%`);
-    const gold = preview({ colors: ["white", "blue"], backFace: { ...BACK, color_identity: ["white", "blue"] } });
+    // Green-white splits in the PRINTED order ({G}{W}: green first, as MOM
+    // #43's back prints), whatever order the identity holds.
+    const gold = preview({ colors: ["white", "green"], backFace: { ...BACK, color_identity: ["white", "green"] } });
     const paths = gold.back!.querySelectorAll<SVGPathElement>('[data-testid="color-indicator"] path');
-    expect(Array.from(paths).map((p) => p.getAttribute("fill"))).toEqual(["#f9faf4", "#0e68ab"]);
+    expect(Array.from(paths).map((p) => p.getAttribute("fill"))).toEqual(["#00733e", "#f9faf4"]);
     const three = preview({ colors: ["white", "blue", "black"], backFace: { ...BACK, color_identity: ["white", "blue", "black"] } });
     expect(three.back!.querySelectorAll('[data-testid="color-indicator"] path')).toHaveLength(3);
     // A colourless (artifact stand-in) back draws no dot and no indent.

@@ -1124,12 +1124,14 @@ const OLD_ERA_GAPS: readonly GapKey[] = [
 const showcaseLabel = ({ card, set }: Ctx) =>
   `${card.set_name ?? set.toUpperCase()} showcase`;
 
-const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "aftermath", "flip", "transform"];
+const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "aftermath", "flip"];
 
 /** The kinds a transform printing's FRONT face can be for the transform
  *  front body (lib/creator/card-kinds.ts LAYOUT_KIND_CARD_TYPES.transform):
- *  the front face's kind as kindFromScryfall reads it today (5.4 maps the
- *  layout to the Transform kind itself). */
+ *  the front face's kind as kindFromScryfall reads it today. The Transform
+ *  kind itself is not a layout kind of the `layout/2015` rules (whose
+ *  family pick isn't land-aware): 5.4, which maps the layout to the kind,
+ *  adds `transform` HERE so the printing keeps this rule. */
 const TRANSFORM_FRONT_KINDS: readonly CardKind[] = ["creature", "artifact", "enchantment", "land", "instant", "sorcery"];
 
 /** The layout frames whose two parts each print their own colour (TODO

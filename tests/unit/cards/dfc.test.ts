@@ -134,12 +134,19 @@ describe("the transform bodies (5.1a) and every other template", () => {
       expect(colorlessFaceAllowed(template, { cardType: "artifact" }), String(template)).toBe(true);
       expect(colorlessFaceAllowed(template, null), String(template)).toBe(true);
     }
-    for (const body of DFC_BODIES) {
+    for (const body of ["m15dfcfront", "m15dfcback", "m15dfcbackleft"] as const) {
       expect(colorlessFaceAllowed(body, { cardType: "artifact" }), body).toBe(true);
       expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: "Artifact" }), body).toBe(true);
       expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }), body).toBe(false);
       expect(colorlessFaceAllowed(body, { cardType: "enchantment" }), body).toBe(false);
       expect(colorlessFaceAllowed(body, null), body).toBe(false);
+    }
+    // The land pair: one master under every key, no stand-in — its `c` is
+    // any (land) face's.
+    for (const body of ["m15dfclandfront", "m15dfclandback"] as const) {
+      expect(colorlessFaceAllowed(body, { cardType: "land" }), body).toBe(true);
+      expect(colorlessFaceAllowed(body, { cardType: "creature", supertype: null }), body).toBe(true);
+      expect(colorlessFaceAllowed(body, null), body).toBe(true);
     }
   });
 
