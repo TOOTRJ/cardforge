@@ -283,11 +283,18 @@ async function uploadThumb(folder: RenderFolder, name: string, pngBytes: ArrayBu
  * `ownerId`'s card-renders folder, and return the public URLs: the front's
  * pair always, the BACK's pair (`.back.png` / `.back.thumb.webp`, TODO 5.3)
  * when the bake rendered one. Order: the front PNG, the back PNG, then the
- * thumbs — a back PNG that fails to upload fails the whole bake (the caller
- * clears every pointer: a card downloads the way it looks) and takes the
- * back's names out of storage, so a half-written back never outlives the
- * failure. A bake with no back and `staleBack` (the row still pointed at a
- * back bake from before its back body went) removes the back's names too.
+ * thumbs — a back PNG that fails to upload fails the whole bake (the save
+ * bake's caller clears every pointer: a card downloads the way it looks).
+ * Nothing is REMOVED on that failure: a refused upsert leaves the previous
+ * object as it was, and the admin sweep keeps a failed card's pointers
+ * (lib/cards/rebake-batch.ts) — deleting the back's names there would have
+ * left the row pointing at an object that no longer exists (a broken tile
+ * flip, a 404 in the JSON-LD) until a later bake succeeded. The one
+ * mismatch window — the front PNG already overwritten when the back's
+ * upload fails, under a sweep's unchanged pointers — is the thumb's
+ * (written after the PNG, non-fatal), closed by the next successful bake.
+ * A bake with no back and `staleBack` (the row still pointed at a back
+ * bake from before its back body went) removes the back's names.
  */
 export async function uploadRenderObjects(
   ownerId: string,
@@ -313,10 +320,7 @@ export async function uploadRenderObjects(
       contentType: "image/png",
       upsert: true,
     });
-    if (backErr) {
-      await folder.remove([backPng, backThumb]);
-      return { ok: false, error: `Back face upload failed: ${backErr.message}` };
-    }
+    if (backErr) return { ok: false, error: `Back face upload failed: ${backErr.message}` };
   } else if (opts.staleBack) {
     const { error: removeErr } = await folder.remove([backPng, backThumb]);
     if (removeErr) console.warn(`[bake] Could not remove the stale back bake of ${cardId}: ${removeErr.message}`);

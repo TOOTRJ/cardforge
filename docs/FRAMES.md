@@ -1910,9 +1910,12 @@ for any of them; Visual 0 changed / 0 redefined). Additions throughout.
   beside the front's pair; the four pointers, `rendered_at` and ONE
   `layout_version` go in the one compare-and-set write. A back failure
   (art, render, upload) fails the whole bake — nothing persisted, every
-  pointer cleared, a half-written back's names removed; a card that lost
-  its back body has the stale `.back.*` objects removed with its next bake
-  (`staleBack`, read off `BAKE_SELECT_COLUMNS`' `rendered_back_image_url`).
+  pointer cleared by the save bake; nothing removed from storage (a
+  refused upsert leaves the previous object, and the sweep keeps a failed
+  card's pointers, which must never point at a deleted object); a card
+  that lost its back body has the stale `.back.*` objects removed with its
+  next bake (`staleBack`, read off `BAKE_SELECT_COLUMNS`'
+  `rendered_back_image_url`).
   **The one entry for "bake this card, both faces"** is
   `bakeAndPersistCardRender(cardId, ownerId)` — it re-reads the row, so a
   save that wrote a back body (5.2's `adoptDfcBodiesAction`, the creator)

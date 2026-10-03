@@ -17,7 +17,8 @@ import { called, chainClient, type ChainAnswer } from "@/tests/stubs/supabase-ch
 //     the service role;
 //   * a back that fails (its art refused, its render throwing, its upload
 //     failing) fails the whole bake: nothing persisted, every pointer
-//     cleared, the half-written back names removed;
+//     cleared — and nothing removed from storage (a refused upsert leaves
+//     the previous object; the sweep keeps a failed card's pointers);
 //   * a LEGACY back (no body — the 8 imported DFCs) gets ONE bake as it
 //     always has, its back pointers written null; a card that lost its
 //     back body has the stale `.back.*` objects removed with its next bake.
@@ -309,15 +310,12 @@ describe("a card with a back body (TODO 5.3)", () => {
     }
   });
 
-  it("a back PNG that fails to upload fails the bake: its names removed, every pointer cleared, the front never persisted", async () => {
+  it("a back PNG that fails to upload fails the bake: every pointer cleared, the front never persisted, nothing removed (the sweep keeps a failed card's pointers — they must not dangle)", async () => {
     state.failUpload = NAMES.backPng;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
-      expect(state.ops).toEqual([
-        { op: "upload", keys: [KEY(NAMES.png)], contentType: "image/png" },
-        { op: "remove", keys: [KEY(NAMES.backPng), KEY(NAMES.backThumb)] },
-      ]);
+      expect(state.ops).toEqual([{ op: "upload", keys: [KEY(NAMES.png)], contentType: "image/png" }]);
       expect(state.writes).toEqual([expect.objectContaining({ via: "user", payload: CLEARED })]);
       expect(warn).toHaveBeenCalledWith(expect.stringMatching(/Back face upload failed: storage refused/));
     } finally {
