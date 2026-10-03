@@ -1887,7 +1887,8 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   white bars are the title and type bars too, and the snow pack's pinline
   is M15's — measured, the bar under the notch is m15's pair bar at every
   column; the land and snow pairs differ only on the bar's anti-aliased
-  top rows, ≤ 4 levels, as the mono `l` key does on m15land) —
+  rows above the sampled ones — row 1938, ≤ 5 levels — as the mono `l`
+  key does on m15land) —
   `barSharedBy` lists them, the importer refuses a pair whose shared
   master drifts, and `tests/unit/frames/holo-stamp-notch.test.ts` re-checks
   it on the real masters; a template that gains pairs with the notch
