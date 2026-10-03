@@ -200,7 +200,9 @@ Rules and gotchas:
   `.back.thumb.webp` — `renderObjectNames` (`lib/cards/bake-core.ts`) is the
   ONE list every reader derives from (`isStoredRenderUrl`, `/render-cdn`,
   `removeRenderObjects`, the hide, the orphan sweep's `renderCardId`), the
-  0126 guard lists all six pointer columns (`CLEARED_RENDER_POINTERS`), and
+  0126 guard lists all six render columns — the FIVE pointers of
+  `CLEARED_RENDER_POINTERS` (what every out-of-view path clears) plus
+  `layout_version` (cleared by the bake paths only) — and
   `lib/cards/faces.ts` is the one source of a double-faced card's cross-face
   data (`frontPreviewData` / `backPreviewData`; derived at render, never
   stored — a body-less `back_face` draws on the front's frame as today).
