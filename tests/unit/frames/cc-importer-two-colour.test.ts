@@ -255,8 +255,12 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
     expect(builtColors(CC_TEMPLATES.m15borderless)).toEqual([...borderless, ...twins(borderless)]);
     const artifact = ["w", "u", "b", "r", "g", "c", "m", ...pairs];
     expect(builtColors(CC_TEMPLATES.m15borderlessartifact)).toEqual([...artifact, ...twins(artifact)]);
+    // The snow pair build the split dress only (4.6f, wave 2c; no hybrid
+    // snow print exists) — tests/unit/frames/snow-pair-masters.test.ts.
+    expect(builtColors(CC_TEMPLATES.m15snow)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+    expect(builtColors(CC_TEMPLATES.m15snowland)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
     for (const [template, def] of Object.entries(CC_TEMPLATES)) {
-      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"].includes(template)) continue;
+      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }
   });

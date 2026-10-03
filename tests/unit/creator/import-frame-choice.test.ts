@@ -77,8 +77,11 @@ const legendWithIndicator = (keys: ReadonlySet<string>) =>
   variantPatch("dmu-107", { color_indicator: ["B"] }, keys);
 /** …on the snow frame (KHM #179 Jorn's look): a crown m15snow doesn't draw
  *  (4.6f), where m15 does — a real choice. */
-const snowLegend = (keys: ReadonlySet<string>) =>
-  variantPatch("dmu-107", { frame_effects: ["legendary", "snow"] }, keys);
+/** …as a legendary DEVOID printing: it lands on m15devoid, which draws no
+ *  crown (owner round 20; the snow frame draws the band since 4.6f wave
+ *  2c). */
+const devoidLegend = (keys: ReadonlySet<string>) =>
+  variantPatch("dmu-107", { frame_effects: ["legendary", "devoid"] }, keys);
 /** …as a W/U hybrid ARTIFACT creature (ELD #206-style cost): it lands on
  *  m15artifact, which draws the crown (4.6a) but has no hybrid dress (TODO
  *  4.6b), so the two-colour hybrid frame holds — a gap PipGlyph paints
@@ -404,10 +407,10 @@ describe("the substitution chip and the deck-remix toast", () => {
     expect(importSubstitutionMessage(match, "m15", undefined, "b")).toBeNull();
   });
 
-  it("a crown-only match on a frame that doesn't draw it is 'Nearest frame' and toasts (the snow frame, 4.6f)", () => {
-    const match = snowLegend(new Set([...STANDARD, ...verified("m15snow")])).frame_match;
-    expect(match).toMatchObject({ status: "nearest", template: "m15snow", gaps: ["crown"], blockedBy: "4.6f" });
-    const substitution = frameSubstitutionFor(match, "m15snow");
+  it("a crown-only match on a frame that doesn't draw it is 'Nearest frame' and toasts (the devoid frame, 4.6f)", () => {
+    const match = devoidLegend(new Set([...STANDARD, ...verified("m15devoid")])).frame_match;
+    expect(match).toMatchObject({ status: "nearest", template: "m15devoid", gaps: ["crown"], blockedBy: "4.6f" });
+    const substitution = frameSubstitutionFor(match, "m15devoid");
     expect(substitution).toMatchObject({
       nearestOnOwnFrame: true,
       reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
@@ -501,11 +504,11 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(plan.mode).toBe("choose");
   });
 
-  it("asks for a crown its own frame doesn't draw, where M15 does (the snow frame, 4.6a)", () => {
-    const keys = new Set([...STANDARD, ...verified("m15snow")]);
-    const plan = importFramePlan(snowLegend(keys), keys, "m15");
+  it("asks for a crown its own frame doesn't draw, where M15 does (the devoid frame, 4.6a)", () => {
+    const keys = new Set([...STANDARD, ...verified("m15devoid")]);
+    const plan = importFramePlan(devoidLegend(keys), keys, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
-    expect(plan.preselected).toEqual({ template: "m15snow" });
+    expect(plan.preselected).toEqual({ template: "m15devoid" });
     expect(plan.options.map((o) => o.template)).toContain("m15");
   });
 

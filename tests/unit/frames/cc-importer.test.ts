@@ -18,6 +18,7 @@ import {
   EMBLEM_TONES,
   EMBLEM_TYPE_PILL_TONE,
   FLIP_LOWER_RECUT,
+  HOLO_STAMP_NOTCHES,
   FLIP_PT_BOUNDS,
   FLIP_PT_BOXES,
   FLIP_PT_MASKS,
@@ -1829,9 +1830,12 @@ describe("provenance and hygiene", () => {
   it("records the pinned commit and the recipe for every imported template", () => {
     const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
     // Every template, every overlay band (4.6a's crown; its own test:
-    // tests/unit/frames/crown-band.test.ts) and every rider set (5.1a's icon
-    // glyphs: tests/unit/frames/dfc-importer.test.ts).
-    expect(Object.keys(provenance).sort()).toEqual([...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(CC_RIDERS)].sort());
+    // tests/unit/frames/crown-band.test.ts), every rider set (5.1a's icon
+    // glyphs: tests/unit/frames/dfc-importer.test.ts) and every notch folder
+    // (4.9c: tests/unit/frames/holo-stamp-notch.test.ts).
+    expect(Object.keys(provenance).sort()).toEqual(
+      [...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(CC_RIDERS), ...Object.keys(HOLO_STAMP_NOTCHES)].sort(),
+    );
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);

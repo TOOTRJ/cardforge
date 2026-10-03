@@ -3064,6 +3064,81 @@
       "m = the pack's 'Multicolored Frame' m.png, built so the key has a master; no multicolour basic exists, so no symbol disc and never offered"
     ]
   },
+  "m15holostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "M15 'Holo Stamps' (packM15HoloStamps.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "192x96 notch piece (1:1 at 1500x2100, stretched over 43.6/90.4352380952381/12.8×4.58 %), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/w.png's bar (244,243,236) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "u": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/u.png's bar (0,117,190) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "b": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/b.png's bar (58,56,50) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "r": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/r.png's bar (209,77,53) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "g": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/g.png's bar (42,108,69) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "m": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/m.png's bar (233,212,125) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "a": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15artifact/c.png's bar (223,225,225) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "l": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15land/c.png's bar (165,152,138) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "c": [
+        "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
+        "rim tinted to m15/c.png's bar (223,224,224) sampled at x 750, rows 1940–1947",
+        "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.54,
+        "topPct": 91.72,
+        "widthPct": 8.94,
+        "heightPct": 3.2
+      },
+      "marginPx": 2,
+      "what": "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published"
+    },
+    "sourceFiles": [
+      "img/frames/m15/holoStamps/m15HoloStampU.png"
+    ],
+    "notes": [
+      "the holofoil stamp's notch on the M15 family (TODO 4.9c): CC's arch — the text box's bottom pinline lifted over the stamp with its bevel — 1:1 at HD, 2 px below CC's bounds 43.6/90.34/12.8×4.58 % (654–846 × 1899–1995 px): the piece's rim foot is 11 rows, cut for CC's older M15 bar, and our accurate-pack bar is 12 (1938–1949), so at CC's bounds the foot stood 1 px proud of the bar's top and its black covered the bar's last 2 rows — a step at both feet; 2 px lower the foot's bottom edge is the bar's",
+      "ONE geometry for every key: CC's U piece (its bevel, rim and black decomposed exactly), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947 (flat within 2 levels) — CC's per-key pieces predate its accurate M15 pack and their rims don't match our bars (W bluish white vs cream, R and G over-saturated, C darker); the unused CC pieces W B R G M A L C A2 A3 were fetched and inspected, never published",
+      "a = the artifact silver sampled from m15artifact/c (the nearest of CC's three artifact rims is A2, 222,223,224); l = the land taupe from m15land/c; the snow frames' bars are these pixels and the devoid frames' the colourless grey, so their PROFILES entries map onto these keys",
+      "the oval region — the slot's oval 45.54/91.72/8.94×3.2 % (683–817 × 1926–1993) plus 2 px — is cut to transparent in CARD coordinates (the piece's hologram, 685–815 × 1930–1993 once placed, sits inside), whatever CC's piece held there (its hologram capture: the planeswalker symbol tiled, WotC's mark), and the black around it is CC's own; our oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut with a 3 px black margin"
+    ]
+  },
   "m15land": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -3213,6 +3288,70 @@
       "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes"
     ]
   },
+  "m15pwholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "Planeswalker 'Holo Stamps' (packPlaneswalkerHoloStamps.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "182x107 notch piece (1:1 at 1500x2100, stretched over 43.94/90.15/12.14×5.1 %), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/w.png's bar (252,254,255) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "u": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/u.png's bar (0,117,190) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "b": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/b.png's bar (39,38,36) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "r": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/r.png's bar (239,56,39) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "g": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/g.png's bar (0,123,67) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "m": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/m.png's bar (246,210,98) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ],
+      "c": [
+        "img/frames/planeswalker/holo/u.png (the arch's geometry: bevel, rim and black) at 43.94/90.15/12.14×5.1 %",
+        "rim tinted to m15pw/c.png's bar (182,182,182) sampled at x 750, rows 1932–1935",
+        "the oval 45.54/91.39/8.94×3.2 % plus 2 px cut to transparent"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.54,
+        "topPct": 91.38666666666667,
+        "widthPct": 8.94,
+        "heightPct": 3.2
+      },
+      "marginPx": 2,
+      "what": "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published"
+    },
+    "sourceFiles": [
+      "img/frames/planeswalker/holo/u.png"
+    ],
+    "notes": [
+      "the planeswalker's notch (TODO 4.9c): CC's walker arch — a flat rim under a black line, no bevel, as the walker's box prints — at CC's bounds 43.94/90.15/12.14×5.1 % (659–841 × 1893–2000 px, 1:1 at HD)",
+      "the same recipe as m15holostamp over the walker masters' bars (x 750, rows 1928–1935): CC's own walker rims match them exactly, so w u b r g m reproduce CC's pieces outside the cut; c — the colourless walker's grey (181,181,181), which CC has no piece for — is sampled like the rest",
+      "the oval sits 7 px higher than M15's (45.54/91.39/8.94×3.2 %: 683–817 × 1919–1986), where CC's walker piece holds its hologram; cut to transparent plus 2 px like M15's"
+    ]
+  },
   "m15snow": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -3240,6 +3379,96 @@
       ],
       "m": [
         "img/frames/m15/new/snow/m.png"
+      ],
+      "wu": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/w.png | img/frames/m15/new/snow/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/u.png | img/frames/m15/new/snow/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/b.png | img/frames/m15/new/snow/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/r.png | img/frames/m15/new/snow/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/new/snow/m.png",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/snow/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/title.png at 25%",
+        "img/frames/m15/new/snow/m.png through img/frames/m15/new/type.png at 25%",
+        "(img/frames/m15/new/snow/g.png | img/frames/m15/new/snow/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
     "plates": {
@@ -3252,6 +3481,8 @@
       "m": "img/frames/m15/regular/m15PTM.png"
     },
     "sourceFiles": [
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/rules.png",
       "img/frames/m15/new/snow/a.png",
       "img/frames/m15/new/snow/b.png",
       "img/frames/m15/new/snow/g.png",
@@ -3259,6 +3490,8 @@
       "img/frames/m15/new/snow/r.png",
       "img/frames/m15/new/snow/u.png",
       "img/frames/m15/new/snow/w.png",
+      "img/frames/m15/new/title.png",
+      "img/frames/m15/new/type.png",
       "img/frames/m15/regular/m15PTA.png",
       "img/frames/m15/regular/m15PTB.png",
       "img/frames/m15/regular/m15PTG.png",
@@ -3268,7 +3501,8 @@
       "img/frames/m15/regular/m15PTW.png"
     ],
     "notes": [
-      "colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)"
+      "colourless snow = CC's snow artifact frame (colourless snow nonland prints are artifacts)",
+      "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %. <pair> = the snow gold frame m.png whole (the gold body KHM #224 / #223 / #230 print) with the split text box, WHITE title and type bars — the pack's white frame w.png through CC's Title and Type masks, warmed a quarter of the way to the gold bar (m.png at 25% through the same masks: the prints' bars are the whitest of KHM's but for w's, with a faint warm cast; owner round 20: white bars) — and the split pinline, drawn with the gold plate pt/m as the prints are; no hybrid dress (no hybrid snow print exists)"
     ]
   },
   "m15snowland": {
@@ -3298,9 +3532,61 @@
       ],
       "m": [
         "img/frames/m15/new/snow/lm.png"
+      ],
+      "wu": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lu.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lb.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lw.png | img/frames/m15/new/snow/lb.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lb.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lb.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lr.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lu.png | img/frames/m15/new/snow/lr.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lr.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lr.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lg.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lb.png | img/frames/m15/new/snow/lg.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lg.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lg.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lw.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lr.png | img/frames/m15/new/snow/lw.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lw.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lw.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/new/snow/l.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lu.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/snow/lg.png | img/frames/m15/new/snow/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
     "sourceFiles": [
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/rules.png",
       "img/frames/m15/new/snow/l.png",
       "img/frames/m15/new/snow/lb.png",
       "img/frames/m15/new/snow/lg.png",
@@ -3309,7 +3595,9 @@
       "img/frames/m15/new/snow/lu.png",
       "img/frames/m15/new/snow/lw.png"
     ],
-    "notes": []
+    "notes": [
+      "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %. <pair> = CC's snow land frame l.png (the grey body and neutral white bars every KHM snow land prints) with the split text box and pinline in the two snow land tints (snow/l<k>.png), as the ten KHM snow duals #248–274 print"
+    ]
   },
   "m15token": {
     "source": "cardconjurer",

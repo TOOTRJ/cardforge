@@ -46,7 +46,16 @@ import { isDfcBackBody } from "@/lib/cards/dfc";
 //     no-plate card (an instant: the mark on line 1), the ★ by the flag and
 //     by a foil finish, a Spanish line ("DMU • SP"), empty fields (the bare
 //     letter), a long artist (cut with one "…"), the HD bake and the
-//     square print. The cards WITHOUT the switch are the plain cases.
+//     square print. The cards WITHOUT the switch are the plain cases;
+//   * the holofoil stamp switched ON (TODO 4.9c "@stamp…"): on every
+//     template with the notch (STAMP_TEMPLATES) a rare on "auto" (the oval
+//     and the notch), and on m15 a colourless (the see-through grey) and a
+//     gold rare, "Always" on a common, a full-box rare whose last line
+//     enters the arch (the keep-out steps it down), the HD bake, foil and
+//     etched (the notch in the sheen, the oval outside it), the squared
+//     print, a pair master (no pair notch in wave 1: nothing drawn) and a
+//     token with the key (nothing drawn). The cards WITHOUT the switch are
+//     the plain cases.
 //
 // A new template, kind or colour joins the matrix by itself; its new cases
 // fail the gate until the baseline is regenerated (no layout bump needed for
@@ -500,6 +509,13 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // overlay band (extendedcrown/<key>) on the MSE masters — every colour,
   // the grey colourless crown, gold (a pair wears gold: no pair masters).
   ["extendedart", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  // TODO 4.6f (wave 2c): the STANDARD band over the snow frames — the
+  // crowned snow prints' keys (u: J22 #12, g: PH19 #5, the gold pair wears
+  // gold with its two-colour switch off: KHM #224) and the keys no print
+  // has (c: the artifact silver over the snow artifact frame, wub); the
+  // snow land's green and its colourless land grey (DMR #244).
+  ["m15snow", ["u", "g", "c", "wu", "wub"]],
+  ["m15snowland", ["g", "c"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -812,6 +828,8 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   // The extended-art band at the stored bake's size (4.6f, wave 2b).
   add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // The snow band at the stored bake's size (4.6f, wave 2c).
+  add("m15snow", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on
@@ -847,6 +865,10 @@ export function visualCases(): VisualCase[] {
     row: { ...pairStyle("m15", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
   add("m15", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15", "regular", true) });
+  // The snow pair at the stored bake's size, with the split crown (4.6f,
+  // wave 2c: KHM #224's look), and the snow dual land.
+  add("m15snow", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15snow", "regular", true) });
+  add("m15snowland", "land", "wu", "short", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15snowland") });
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
@@ -884,6 +906,29 @@ export function visualCases(): VisualCase[] {
   // The stored bake's size, and the squared print.
   add("m15", "creature", "g", "long", { suffix: "@collector-hd", preset: "hd", row: collectorRow("m15", "2023") });
   add("m15", "creature", "u", "short", { suffix: "@collector-2015-square", corners: "square", row: collectorRow("m15", "2015") });
+  // TODO 4.9c: the holofoil stamp, opt-in per card (frame_style.stamp — no
+  // stored card has the key, so these are NEW cases, no bump): a rare on
+  // "auto" on every template with the notch (the primary kind: a walker on
+  // m15pw), and on m15 the stamp's other shapes.
+  for (const template of STAMP_TEMPLATES) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, "u", "short", { suffix: "@stamp", row: stampRow(template, "auto", { rarity: "rare" }) });
+  }
+  add("m15", "creature", "c", "short", { suffix: "@stamp-c", row: stampRow("m15", "auto", { rarity: "rare" }) });
+  add("m15", "creature", "wub", "short", { suffix: "@stamp-m", row: stampRow("m15", "auto", { rarity: "rare" }) });
+  // "Always" on a common; a full box whose last line enters the arch.
+  add("m15", "creature", "w", "short", { suffix: "@stamp-always", row: stampRow("m15", "oval", { rarity: "common" }) });
+  add("m15", "creature", "b", "long", { suffix: "@stamp-arch", row: stampRow("m15", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  // The stored bake's size, the finishes (the notch in the sheen, the oval
+  // outside it) and the squared print.
+  add("m15", "creature", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15", "auto", { rarity: "mythic" }) });
+  add("m15", "creature", "r", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "u", "long", { suffix: "@stamp-etched", finish: "etched", row: stampRow("m15", "auto", { rarity: "mythic", frame_style: { finish: "etched" } as CardRowForBake["frame_style"] }) });
+  add("m15", "creature", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15", "auto", { rarity: "rare" }) });
+  // A pair master (no pair notch in wave 1) and a token with the key: the
+  // switch on, nothing drawn — the plain look, pinned.
+  add("m15", "creature", "wu", "short", { suffix: "@stamp-pair", row: stampRow("m15", "oval", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
   // TODO 5.1a: the transform bodies — NEW cases (new templates, no stored
   // card: no bump). The front bodies come out of the per-template loop
   // above (the transform kind's rows carry a back with a body, so the grey
@@ -942,6 +987,32 @@ export function visualCases(): VisualCase[] {
   });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
+}
+
+/** The templates whose PROFILES entry declares the holofoil stamp's notch
+ *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
+export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15pw"];
+
+/** A rules text whose fitted last line enters the arch on m15 (found on the
+ *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at
+ *  HD, into the keep-out from 1905; with the arch the ladder steps to 48).
+ *  tests/unit/render/holo-stamp-bake.test.tsx reads the same text. */
+export const STAMP_ARCH_RULES =
+  "Flying, vigilance, deathtouch, lifelink, haste\nWhenever Kesh attacks, each opponent loses 2 life and you gain 2 life. Then if an opponent has 10 or less life, exile the top card of their library and you may play it this turn.\nWhenever a creature you control dies, draw a card, then discard a card unless you control a Phyrexian.\n{2}{B}: Kesh gets +2/+2 until end of turn. Activate only once each turn. The ancient ward endures beyond the last ember of the forge and every";
+
+/** The holofoil stamp's switch on a case (TODO 4.9c): `frame_style.stamp`
+ *  and the rarity the auto rule reads, on top of a stored row — nothing
+ *  else on the row changes. */
+function stampRow(
+  template: FrameTemplate,
+  stamp: "auto" | "oval" | "triangle" | "none",
+  over: Partial<CardRowForBake> = {},
+): Partial<CardRowForBake> {
+  const finish = (over.frame_style as { finish?: VisualCase["finish"] } | undefined)?.finish ?? "regular";
+  return {
+    ...over,
+    frame_style: { template, finish, ...((over.frame_style as object | undefined) ?? {}), stamp },
+  };
 }
 
 /** The transform BACK bodies (TODO 5.1a; FrameProfile.dfc role "back"). */
@@ -1027,7 +1098,7 @@ const DFC_AURA_BACK: Partial<CardRowForBake> = {
 
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
-export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"];
+export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
  *  (DMU #107's), on top of a stored row — `frame_style.collector` names the

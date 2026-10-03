@@ -1286,10 +1286,13 @@ default.
 
 **The legendary crown (4.6a)** is `M15_CROWN` in
 `lib/cards/template-layout.ts`, on the m15, m15artifact and m15land entries
-only (never snow, devoid, adventure, saga, the tokens or a showcase: 4.6f
-and the token items; the borderless frames draw CC's FLOATING crown from
-crowned twin masters and the extended-art frame the same crown as its own
-band, `EXTENDED_CROWN` — [The borderless crown and pair
+— and, since 4.6f wave 2c, the m15snow and m15snowland entries, whose
+masters share the M15 pack's geometry ([Devoid and
+snow](#devoid-and-snow-46f-wave-2c)) — never devoid (the owner's call),
+adventure, saga, the tokens or a showcase (4.6f and the token items; the
+borderless frames draw CC's FLOATING crown from crowned twin masters and
+the extended-art frame the same crown as its own band, `EXTENDED_CROWN` —
+[The borderless crown and pair
 pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a), [The
 extended-art crown](#the-extended-art-crown-46f-wave-2b)). It draws when the switch is
 `true`, the supertype has the word Legendary and the card is not a
@@ -1360,11 +1363,12 @@ m15land (the land frame and bars, the split in the two land tints; MKM
 - **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
-  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures, snow,
-  devoid, extended art (its crown band draws no pairs: wave 2b), the
-  borderless land — keeps the `two-colour` gaps,
-  now pointing at 4.6f (the borderless frames draw theirs since wave 2a,
-  below); an M20 token's gaps point at 4.48 (its own central rim split and
+  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures,
+  extended art (its crown band draws no pairs: wave 2b), the borderless
+  land — keeps the `two-colour` gaps, now pointing at 4.6f (the borderless
+  frames draw theirs since wave 2a, the snow frames since wave 2c, below;
+  devoid's two-colour printings ARE its gold frame, so the gap is no gap
+  there); an M20 token's gaps point at 4.48 (its own central rim split and
   pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
@@ -1527,6 +1531,122 @@ switch absent or off is byte-identical.
   inside the slot's rows only, 1:1 at HD, absent / off byte-identical), the
   matrix's `extendedart` `@crown` cases.
 
+#### Devoid and snow (4.6f, wave 2c)
+
+Owner round 20 (2026-10-01): devoid gets NO crown (option (i)); snow gets
+crown A — the standard band exactly as on M15, over the snow bars — and the
+white-bar pairs on m15snow and m15snowland. Opt-in per card like the rest
+of 4.6: every visible production card on the three frames (37 on
+2026-10-02: 20 devoid, 16 snow, 1 snow land) bakes byte-identical at 750
+and HD with the switches absent; with both on, 7 of them change (the band
+on 4 Legendary snow creatures, the pair on 3 snow pairs — one of them a
+stored "multicolor" card whose pair the switch pre-fills from its cost).
+
+- **Devoid draws neither — and its two-colour printings import exact.**
+  The one crowned devoid printing (M3C #4 Ulalek) is the see-through
+  Eldrazi frame with gold bars, not this patterned frame, so the `crown`
+  gap stays on m15devoid and crowned devoid imports stay `nearest`. The
+  pairs were to be built "checked against BFZ #200 and the three devoid
+  `m` references" — and the check says there is nothing to build: every
+  two-colour devoid printing on the devoid frame (29 of the 31 two-colour
+  printings Scryfall lists for the keyword: BFZ #199–207, OGW #148–150,
+  MH3 #177 / #204 / #206 / #208 and their reprints — DDP, M3C, PLST, the
+  prerelease stamps, MH3 #517 / #518) prints the UNIFORM gold devoid frame
+  — a gold title bar, a gold pinline on BOTH ends of every ring (R − B
+  65–119 at every x on the eight measured, where a mono devoid print's
+  ring is its colour: blue on BFZ #57, green on BFZ #169; the review
+  re-measured thirteen more — BFZ #199 / #201 / #202 / #204 / #205 / #207,
+  MH3 #206 / #208 / #517 / #518, M3C #272 / #275, DDP #64 — gold at both
+  ends of the body and of the bar, R − B +78 … +119, against blue / green /
+  red / white / black monos and the hybrid's green-left blue-right body),
+  the silver Eldrazi type bar and the grey plate — which is the `m` master
+  m15devoid already draws, verified against three of them (Void Grafter,
+  Flayer Drone, Abstruse Appropriation). So m15devoid declares no
+  `twoColorMasters`, offers no switch, and the registry's `two-colour` gap
+  is no gap on it (`GOLD_PAIR_TEMPLATES` in `lib/scryfall/frame-signatures.ts`):
+  OGW #150 and the 28 others import `exact` on the gold frame (the import
+  patch's identity is `multicolor`, so the card paints `m15devoid/m`; the
+  printing's `twoColor` switch is dropped at the save, as on any frame
+  without pair masters), the old "two-colour on devoid" request rows read
+  as answered. The other two of the 31: the ONE hybrid devoid printing
+  (MH3 #253 Drowner of Truth, an MDFC) prints the split hybrid dress —
+  green left, blue right, grey bars — so `two-colour-hybrid` stays a gap
+  there (behind the `dfc` gap, Phase 5); MH3 #342 Abstruse Appropriation
+  is a borderless `inverted` showcase, not the devoid frame at all (the
+  borderless rules take it).
+- **Snow's crown is the standard band.** Card Conjurer's 'Snow (Kaldheim)'
+  pack (`m15/new/snow/<k>.png`, packSnowNew.js) is the accurate M15 pack's
+  geometry — the dark ring rows of its title bar, type bar and box sit on
+  the same rows as `new/<k>.png`'s, letter for letter — so `M15_CROWN`
+  registers on the snow bar as it does on m15's, `keyMap: { c: "a" }` on
+  m15snow (its colourless master is CC's snow ARTIFACT frame: the artifact
+  silver crown) and `{ c: "l" }` on m15snowland (DMR #244 Dark Depths, the
+  one crowned snow-frame land). The band's black cover strip sits on the
+  snow frames' black border. The twelve crowned snow printings — KHM #224
+  Narfi U|B, #223 Moritte G|U, #230 Svella R|G (+ 3 PLST), J22 #12 Isu and
+  #319 Marit Lage's Slumber (u), PH19 #5 Myntasha and KHM #179 Jorn (g,
+  an MDFC), DMR #244 — print the standard crown's shape and registration
+  (the peak at row 42 ± 2 at HD, as 4.6a measured it) over a speckled
+  texture; no w, b, r or artifact snow crown exists. `CROWN_REFERENCES.
+  m15snow` names u (J22 #12), g (PH19 #5) and the gold pair (KHM #224),
+  `m15snowland` c (DMR #244). A snow pair's crown is the pair band
+  (`m15crown/<pair>`, 45→55): Moritte's G|U crown, de-shaded against KHM
+  #179's green and J22 #12's blue crown, reads 43.2 / 48.3 / 51.6 at
+  10 / 50 / 90 % against the band's 46.0 / 50.0 / 54.0 — one measurable
+  card (KHM printed no b or r snow crown), cross-set references, within
+  the texture's noise; the band is shared with m15, not re-cut.
+- **The snow pairs are white-bar pairs** (`snowPairLayers` in
+  `scripts/lib/cc-frames.mjs`, 4.6b's recipe over the snow pack's files
+  through the same six masks): the snow gold frame whole — the gold body
+  the prints have (the strip beside the box reads 152/142/126 on all three
+  KHM pairs, CC's snow m.png 161/149/124; the blue mono's 111/123/140) —
+  with the text box lerped across 45→57 %W and the pinline across 40→60
+  (the type-bar and box rings of the three pairs and the ten KHM snow duals
+  read a median 42.8 / 50.0 / 57.2 at 10 / 50 / 90 %, 24 of 26 readings
+  within 40.8–45.1 / 49.1–51.4 / 55.5–59.4), the GOLD plate (174/154/105
+  on all three; the monos print their colour's) — and the bars WHITE: the
+  pack's white frame's title and type regions through CC's Title and Type
+  masks, warmed a quarter toward the gold bar's (`SNOW_PAIR_BAR_GOLD_SHARE`
+  = 0.25, snow/m.png at 25 % through the same masks). Why a quarter: on
+  WotC's KHM renders the pairs' bars (246–248 / 241–243 / 239–243) are the
+  whitest of the set but for the white mono's (248/245/249), with a faint
+  warm cast (R − B +6 … +8, where the blue bar reads −8, the red +10 and
+  the white −1) — the gold snow bar at KHM's faint tint; CC's snow m bar
+  (236/231/213, R − B +23) is that bar at CC's tint strength, as CC's blue
+  bar (220/233/242) is to KHM's (240/239/248). One more gold snow pair
+  exists, uncrowned: MB2 #83 Ice-Fang Coatl (2024, white-bordered — it
+  imports `nearest` for the border), whose bar reads CREAM, 237/230/211
+  (R − B +26, CC's tint strength) on a scan whose border is pure white; so
+  the two printers disagree, KHM's three at +6 … +8 and MB2's one at +26.
+  The owner's call (round 20)
+  is the print's absolute look — white — so the least-squares share of
+  (m − w) that reproduces the prints' (pair − w) = (−1, −3, −8) against
+  CC's (−8, −13, −29), 0.26, is the recipe; CC's cream `m` bar as it is
+  would be one letter away (`typeTitle` "m"). The snow LAND pairs are the
+  land recipe over the snow land files: `snow/l.png` whole (its neutral
+  bars are every KHM snow land's, basics and duals alike: R − B −1 … −9)
+  with the box and pinline in the two land tints, as the ten KHM duals
+  print (saturation × 4 shows their box's two tints meeting at the
+  centre). No hybrid dress: no hybrid snow print exists; a hybrid snow
+  cost falls back to the split, like m15artifact. The #449 hairline can't
+  happen on this pack: every ring row of the snow m / snow l frames lies
+  inside CC's Pinline mask (`snow-pair-masters.test.ts` holds it, and
+  holds every pair master to the two colour masters' lerp inside the mask —
+  mean 0.1 level, worst pixel 14 — with no base-pinline pixel outside it).
+  V-A: the pairs ride each template's `m` tick, which is referenced to
+  KHM #224 (m15snow) and the KHM duals (m15snowland) — the switch gives
+  those references their printed look.
+- **Tests:** `tests/unit/frames/snow-pair-masters.test.ts` (the recipe,
+  the declared keys, the manifest and provenance, the masters' pixels),
+  `tests/unit/render/snow-crown-bake.test.tsx` (real bakes: the band
+  inside its rows only, 1:1 at HD with the peak at row 42, the pair
+  masters, a land's pair on the snow land frame only, absent / off / a
+  planeswalker byte-identical), the shared pair table
+  (`two-colour-cases.ts`: both renderers), `crown-preview` /
+  `two-colour-preview`, `frame-signatures` (KHM #224 / #249, J22 #12, DMR
+  #244 and OGW #150 exact; MH3 #253 nearest), the matrix's `m15snow*`
+  `@crown` / `@pair` cases.
+
 #### The collector line (4.9b)
 
 TODO 4.9b, owner decisions 2026-09-29/30. The two lines a 2015-frame card
@@ -1654,7 +1774,147 @@ sweep, no badge: production's 886 visible cards baked byte-identical at
   the ticks stay; the visual gate gained 33 new cases (`@collector…`,
   `@collector-etched` since round 22) and changed none — re-proved at
   layout v38 after folding in #451 (0 changed / 0 redefined against main's
-  1,051). The stamp (4.9c) and wave 2 (4.9d) follow.
+  1,051). The stamp (4.9c, below) and wave 2 (4.9d) follow.
+
+#### The holofoil stamp (4.9c)
+
+TODO 4.9c, owner decisions 2026-09-29. The silver oval the 2015 frame prints
+in its bottom border on rares and mythics, with the notch the text box's
+pinline arches over it — as an ADDITION: `frame_style.stamp` holds `"auto"`
+(the oval on a rare or mythic; a new card's default on a frame with the
+notch), `"oval"` / `"triangle"` (the owner's "Always", or an import
+following its printing's `security_stamp`), `"none"` (the owner's "Never")
+or nothing (a card saved before the stamp — cards saved between 4.9b and
+4.9c included — which keeps its look and gets the editor's hint "New: the
+printed holofoil stamp"). It joins `FRAME_ANATOMY_KEYS`, so it travels in
+an edit's `frame_anatomy` patch; a remix keeps its parent's explicit value;
+an import always names the printing's (`printed_stamp`: oval → `"oval"`,
+triangle → `"triangle"`, anything else → `"none"` — never `"auto"`, so an
+unstamped common imported onto a rare's frame stays unstamped); every save
+drops the key on a template without the notch (`normalizeAnatomy`). No
+`CARD_LAYOUT_VERSION` bump, no sweep, no badge, no verification tick: the
+stamp is gated in code by the overlay (`FrameOverlaySlot` with `anatomy:
+"holoStamp"`), production's visible cards bake byte-identical with the key
+absent, and the visual gate gained its `@stamp…` cases and changed none.
+
+- **The rule** (`lib/cards/holo-stamp.ts`, pure): `holoStampWanted` — "auto"
+  on a rare or mythic (23,889 + 7,732 of the 36,545 stamped 2015-frame
+  prints; 353 at any other rarity), "oval" and "triangle" always, "none" and
+  absent never, and never on a token or an emblem (`STAMPLESS_CARD_TYPES`:
+  ordinary tokens and emblems print none; their control is hidden). The
+  SHAPE drawn is the frame's own (`FrameOverlaySlot.stamp.shape`): every
+  wave-1 notch is cut for the oval, so an imported `"triangle"` draws the
+  oval here and keeps its key for a frame that prints the triangle (4.9d's
+  lotr / lotrscroll). `resolveHoloStamp` (lib/cards/anatomy.ts) answers
+  both renderers, the rules layout and the creator: the notch overlay
+  (resolved like the crown — `resolveFrameOverlays`, the master's key
+  through the slot's `keyMap`), the oval, the art rect and the keep-out —
+  or null. The oval is never drawn without its notch (the straight box edge
+  would run through it), so a card drawn as its PAIR master draws no stamp
+  in wave 1 (no slot publishes a pair key; the creator says so) — the split
+  notch is its own sheet, a follow-up.
+- **The oval is ours** (owner Q3): `lib/cards/holo-stamp-art.ts`, a
+  280 × 146 PNG data URI generated by `scripts/generate-holo-stamp-art.mjs`
+  from an SVG — a neutral mirror-silver gradient, fine diagonal sheen lines,
+  a faint holographic tint, a glint, a bevelled rim and a 2 px dark keyline,
+  NO symbol — inside a ring of the notch's black. A bitmap because Satori
+  draws no gradients; both renderers stretch it over `holoStampArtRect(oval)`
+  — CC's 'Plain Holo Stamp' box 45.54 / 91.72 / 8.94 × 3.2 % (683–817 ×
+  1926–1993 px at HD, the ellipse the prints' silver fills: M15 #3, KLD #124,
+  DMU #107, FDN #1) grown by `HOLO_STAMP_ART_MARGIN_PX` 3 px, one more than
+  the importer's cut — ABOVE the finish sheens (z 7 in the preview, after the
+  sheens in the bake): a real stamp is foil of its own, never tinted by the
+  card's. The walker's oval sits 7 px higher (`M15PW_HOLO_STAMP_OVAL`),
+  where CC's walker piece holds its hologram.
+- **The notch is Card Conjurer's arch, cleaned** (owner 2026-09-29): every
+  one of CC's `m15/holoStamps/m15HoloStamp{W,U,B,R,G,M,A,L,C,A2,A3}.png` and
+  `planeswalker/holo/{w,u,b,r,g,m,a,l}.png` holds a capture of WotC's
+  hologram inside its oval (the planeswalker symbol tiled in silver), so no
+  piece reaches the bucket as it is. `scripts/lib/cc-frames.mjs
+  HOLO_STAMP_NOTCHES` (`scripts/import-cc-frames.mjs --only
+  m15holostamp,m15pwholostamp`) takes ONE piece per pack as the arch's
+  geometry — CC's U, the one flat saturated rim, which decomposes exactly
+  into its bevel (white, translucent), rim (0,117,190) and black — tints the
+  rim to OUR master's bar (sampled at x 750 where it is flat: rows 1940–1947
+  on M15, 1932–1935 on the walker), keeps the bevel and the black, and cuts
+  the oval region (the slot's oval plus `HOLO_STAMP_CUT_MARGIN_PX` 2 px, in
+  card coordinates) to transparent — `notchFindings` refuses a piece that is
+  not clear inside the cut, not black in the 4 px band around it, or whose
+  rim foot is not the tint. The tint is the point: CC's holo pack predates
+  its accurate M15 pack, so its W rim is a bluish white (252,254,255)
+  against our cream bar (244,243,236), its R and G over-saturated (239,56,39
+  / 0,123,67 against 209,77,53 / 42,108,69), its C darker (192,191,188
+  against 223,224,224); only U matches. The walker rims match our walker
+  masters exactly, so the tinted w u b r g m reproduce CC's own pieces
+  outside the cut, and the colourless walker — which CC has no piece for —
+  is sampled like the rest. Keys: `m15holostamp/{w,u,b,r,g,m,a,l,c}`
+  (a = the artifact silver from m15artifact/c, the nearest of CC's three
+  artifact rims being A2; l = the land taupe from m15land/c) and
+  `m15pwholostamp/{w,u,b,r,g,m,c}` — 32 objects with their WebPs, 192 × 96
+  and 182 × 107, 1:1 at HD. Provenance (`lib/cards/frame-sources.json`)
+  names the one source piece, the tint per key and the cut; the unused CC
+  pieces were fetched and inspected, never published.
+- **The slots** (`M15_HOLO_STAMP`, `M15PW_HOLO_STAMP` in
+  `lib/cards/template-layout.ts`) are `FrameOverlaySlot`s with `anatomy:
+  "holoStamp"` — the slot type is now a discriminated union on `anatomy`
+  (`"crown" | "holoStamp"`, each with its own rule in
+  `resolveFrameOverlays`; 5.0's DFC icon adds its member) — on exactly the
+  seven wave-1 entries: m15, m15land (`c` → `l`), m15artifact (`c` → `a`),
+  m15snow (its bars are M15's pixels), m15snowland (`c` → `l`), m15devoid
+  (every key → `c`: every devoid bar is the colourless grey) and m15pw (its
+  own folder). Never on a token frame, the emblem, a base another profile
+  spreads, or through an admin override. M15's slot sits 2 px (0.095 %H)
+  BELOW CC's bounds 43.6 / 90.34 / 12.8 × 4.58 %: the piece's rim foot is 11
+  rows, cut for CC's older M15 bar, and our accurate-pack bar is 12 (rows
+  1938–1949), so at CC's bounds the foot stood 1 px proud of the bar's top
+  and the piece's black covered the bar's last two rows — a step at both
+  feet; 2 px lower the foot's bottom edge is the bar's own (the importer
+  builds the cut at the same offset). The arch's rim then bottoms out at
+  1917 px at the centre against the prints' 1910–1912. The walker's slot
+  keeps CC's bounds (its foot sits inside the bar).
+- **The rules keep-out** (`M15_HOLO_STAMP_KEEP_OUT`: x 655–845 px from 1905
+  past the box's bottom, 43.67 / 90.71 / 12.67 × 0.93 %): a glyph-level
+  keep-out beside the stat badges (`DrawnStats.stamp` →
+  `drawnStatInk`), passed only while the stamp is drawn. A line steps the
+  size down only when its ink enters the arch (the matrix's `@stamp-arch`
+  text: 50 → 48 px); a short block never moves, and the rules rect itself
+  NEVER shrinks — M15's box is `vAlign: "center"`, so a shrink would lift
+  every short block ≈ 9 px off the prints. The walker's plain box reads its
+  own keep-out; the ability rows keep their shield rule and get the arch in
+  4.9d.
+- **Renderers:** the notch rides `resolveFrameOverlays` — drawn right after
+  the master, inside both sheen masks, preloaded by `frameAssetPathsFor`
+  only while the stamp is drawn (a notch that failed to load fails the bake,
+  like a master); the oval `<img>` / `HoloStampOval` above the sheens.
+  `tests/unit/render/holo-stamp-bake.test.tsx` holds real bakes with the
+  real masters and notch pieces at 750 and HD (the stamped bake differs
+  from the key-absent one only inside the notch's rows; the notch is the
+  piece 1:1 over the master; the oval is the bitmap; the foil bake's oval
+  equals the regular bake's), `tests/unit/components/holo-stamp-preview
+  .test.tsx` the preview's twins, `tests/unit/frames/holo-stamp-notch
+  .test.ts` the recipe, the cut and the published objects.
+- **Editor and compare tool.** The Set & collector info step holds the
+  stamp switch under the collector line's (`collector-panel.tsx`: the
+  switch is on while the card DRAWS a stamp; off writes "none", on writes
+  "auto" where the auto rule stamps the card and the frame's shape — the
+  chips' "Always" — where it would not, so a common never gets a dead
+  click; the chips "Auto: rares & mythics", "Always" (the frame's shape),
+  "Never"; the live answer "Rare → stamp"; the pair note), hidden on a
+  token or an emblem — whose collector hint then names
+  the line alone. `/admin/frame-compare` (and the walkthrough) stamps the
+  comparison card when the reference printing carries a `security_stamp`
+  (`previewFromImportPatch`), so the notch is judged against the scan's.
+  The public card page lists nothing for it: the stamp is card design, not
+  data.
+- **The collector size quantisation** rode in with this, the first collector
+  pixel change (the 4.9b review): every collector run's drawn SIZE is now a
+  whole HD pixel in the layout (`quantizedPx`) — the artist's lower-case
+  small caps 38 × 0.8 = 30.4 px draw at 30 in BOTH renderers (the bake
+  always rounded; the preview drew 30.4). The pen advances keep the nominal
+  size, so the bake is byte-identical (the 33 collector cases unchanged);
+  quantising the advances too would move the chunk after a lower-case run
+  by ≈ 1 px per five letters on every collector card — a correction for the
+  first collector-scoped sweep.
 
 ### Double-faced cards (TODO 5; the 5.0a plumbing)
 

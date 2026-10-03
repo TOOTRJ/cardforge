@@ -115,7 +115,7 @@ describe("the crown switch", () => {
       { supertype: "", frameStyle: { template: "m15" as const, crown: true } },
       { supertype: "Lengendary", frameStyle: { template: "m15" as const, crown: true } },
       { supertype: "Legendary", cardType: "planeswalker", frameStyle: { template: "m15pw" as const, crown: true } },
-      { supertype: "Legendary", frameStyle: { template: "m15snow" as const, crown: true } },
+      { supertype: "Legendary", frameStyle: { template: "m15devoid" as const, crown: true } },
     ]) {
       render(<Harness seed={seed} which={["crown"]} />);
       expect(crownSwitch(), JSON.stringify(seed)).toBeNull();
