@@ -62,6 +62,12 @@ import {
 import { DFC_ICON_FAMILY_VALUES, type ColorIdentity, type DfcIconFamily, type FrameStyle, type FrameTemplate } from "@/types/card";
 import { dfcIconGlyph, type DfcIconRole } from "@/lib/cards/dfc-icons";
 
+/** The transform family a card wears when it names none (lib/cards/dfc.ts
+ *  DEFAULT_DFC_ICON — repeated here, not imported: dfc.ts reads
+ *  components/cards/frame-layer.tsx, which reads this module; a unit test
+ *  holds the two equal). */
+const DEFAULT_DFC_ICON: DfcIconFamily = "arrows";
+
 export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
 
 /** The per-card anatomy switches, in FrameStyle: the booleans of 4.6.0, the
@@ -92,10 +98,10 @@ type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoCo
  *  import's foil-only printing). The renderers draw only what the template
  *  can, and the save drops the rest (normalizeAnatomy), so the new-card
  *  preview is exactly what the saved bake draws on any template. No
- *  `dfcIcon` here (TODO 5.0a): the transform family's default (`arrows`,
- *  owner decision Q5) is the Transform KIND's, set by the Card step's chips
- *  and the save when the transform bodies exist (5.1a / 5.2) — until then no
- *  template draws it, and this constant stays as it was. */
+ *  `dfcIcon` here: the transform family's default (`arrows`, owner decision
+ *  Q5) is the Transform KIND's — the Card step's chips set it on entering
+ *  the kind, and the save stamps it on a transform front that names none
+ *  (anatomyDefaults, TODO 5.2); every other template drops it. */
 export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector">>> =
   Object.freeze({
     crown: true,
@@ -185,10 +191,11 @@ export function anatomyOn(
  *  piece the template draws (whatever the card's type or colours, so the
  *  crown appears if the card becomes Legendary later), the collector line
  *  in today's printed style where the template has its slot, never the ★
- *  (NEW_CARD_ANATOMY), nothing else — no icon family either: a transform
- *  card's default family is the Transform kind's (`arrows`, set by the
- *  creator and the save once the bodies exist, 5.1a / 5.2), and a template
- *  that draws none drops the key at the save (normalizeAnatomy). */
+ *  (NEW_CARD_ANATOMY), and — on a transform FRONT body, the one template
+ *  that draws it — the icon family's default, `arrows` (today's ▲ / ▼,
+ *  owner decision Q5, TODO 5.2: so a transform card saved by any path
+ *  names its family and the back body it derives); a template that draws
+ *  none drops the key at the save (normalizeAnatomy). */
 export function anatomyDefaults(
   template: FrameTemplate | string | null | undefined,
 ): FrameAnatomyStyle {
@@ -197,6 +204,7 @@ export function anatomyDefaults(
   if (anatomyDrawn(anatomy, "crown")) out.crown = true;
   if (anatomyDrawn(anatomy, "twoColor")) out.twoColor = true;
   if (anatomyDrawn(anatomy, "collector")) out.collector = NEW_CARD_ANATOMY.collector;
+  if (anatomyDrawn(anatomy, "dfcIcon")) out.dfcIcon = DEFAULT_DFC_ICON;
   return out;
 }
 

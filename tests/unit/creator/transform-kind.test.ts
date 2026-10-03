@@ -27,8 +27,8 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // `dfc`), draws the six card types a 2015-frame transform printed; a BACK
 // body is never a card's own template — it refuses every kind, the server's
 // gate included; the kind's chip is dark until a colour is verified on a
-// front body AND on the default back body; the chip itself is 5.2's (the
-// kind picker leaves the kind out until its editor exists).
+// front body AND on the default back body (the chip itself joined the kind
+// picker with its editor, TODO 5.2).
 // ---------------------------------------------------------------------------
 
 const EVERY_COMBO: ReadonlySet<string> = new Set(
@@ -113,8 +113,9 @@ describe("the Transform kind (TODO 5.1a)", () => {
     // Every other kind is unchanged by the rule.
     expect(kindHasAvailableFrame("creature", new Set([frameComboKey("m15", "w")]))).toBe(true);
     expect(kindHasAvailableFrame("creature", new Set())).toBe(false);
-    // Not a chip of the kind picker until 5.2.
-    expect(KIND_PICKER_KINDS).not.toContain("transform");
+    // A chip of the kind picker since its editor (TODO 5.2) — dark until
+    // both bodies are verified (the rule above).
+    expect(KIND_PICKER_KINDS).toContain("transform");
   });
 
   it("dfcFrontDressesKind / dfcKindFor: the front bodies dress the transform's types (the land front a land only); the back bodies belong to the Transform kind for the walkthrough", () => {

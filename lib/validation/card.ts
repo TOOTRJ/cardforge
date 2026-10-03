@@ -520,10 +520,12 @@ const baseCardSchema = z.object({
   // back face; `undefined` (omitted) leaves it untouched on update. The
   // back_face object must validate against backFaceSchema when provided.
   back_face: backFaceSchema.nullable().optional(),
-  // v2 double-faced cards: a FK to another owned card used as this card's back
-  // face (fully customisable). `null` clears; `undefined` leaves alone. The
-  // action pre-flights ownership + a self-reference guard (like parent_card_id).
-  back_card_id: uuidSchema.nullable().optional(),
+  // The retired "v2" back face — a FK to another owned card (migration
+  // 0041). A double-faced card is ONE row since Phase 5 (owner decision Q1;
+  // its editor is TODO 5.2), so the key stays only to CLEAR a stored link
+  // (`null`) until the column drops: an old tab's save that still sends it
+  // must not fail validation, and a crafted uuid is refused.
+  back_card_id: z.null().optional(),
   // Scryfall provenance (Phase 11 chunk 13). Set when the card was
   // imported from Scryfall via the import dialog. UUID-shaped per
   // Scryfall's id format. `null` clears; `undefined` leaves alone.

@@ -1885,6 +1885,143 @@ whatever the family (the 2016–22 parchment land back is TODO 5.8).
   back (5.8); see-through colourless faces (5.11); two-colour fronts (5.12);
   the walker faces (5.13, ask first); DFC crowns (4.6f).
 
+### The editor (5.2)
+
+TODO 5.2, 2026-10-02 (`feat/dfc-editor`, stacked on 5.1a). The Transform
+and Modal kinds as chips, the back-face panel, the veil gone, the one-click
+move of the imported cards. Minimal on purpose: two chips, two chip rows and
+one panel in the existing steps — nothing moves (6.29, the stepper
+redesign, stays last). Additions under the owner rule: 0 stored cards
+change, no bump, no sweep.
+
+- **The chips.** `CARD_KIND_VALUES` + `mdfc` ("Modal double-faced"; the
+  Transform kind is 5.1a's), both in `KIND_PICKER_KINDS`. A double-faced
+  chip lights only when a FRONT body AND the DEFAULT back body (`bodyFor`
+  with `arrows`) each have a verified colour (`kindHasAvailableFrame`);
+  until then "Frames awaiting verification" — none is ticked today (the
+  owner ticks after 5.3), so both are dark in production and on every
+  preview branch. The Modal kind's body family is EMPTY until 5.1b
+  (`KIND_DEFS.mdfc.layoutTemplates = []`): no gallery, `planKindChange`
+  keeps the card where it is, the thumbnail borrows the transform front.
+  `DFC_FACE_TYPES` (`lib/cards/dfc.ts`: creature, artifact, enchantment,
+  land, instant, sorcery — owner Q2: walker faces wait) is both kinds'
+  `LAYOUT_KIND_CARD_TYPES` row.
+- **The Card step** (`components/creator/panels/dfc-setup-sections.tsx`):
+  under the kind chips, the FRONT face's type row (`DfcFaceTypeSection`;
+  the body follows the type — the land front for a land, `dfcFrontBodyFor`
+  — in the current colour where verified, else in a colour it is, as a
+  frame tile: `handleDfcFaceTypePick`) and, for a transform, the icon
+  family row (`DfcIconFamilySection`: `arrows` default — owner Q5 —
+  sun / moon, moon / Emrakul, compass / land, fans; the family re-derives
+  the BACK body). Entering the Transform kind stamps `frame_style.dfcIcon =
+  "arrows"` and forces the back face on (`panelConfigFor.forcedBackFace`,
+  `blankSecondFaceFor` types it a creature); leaving the kind drops the
+  face with the frame.
+- **The back-face panel** (`components/creator/panels/dfc-face-panel.tsx`,
+  modelled on `layout-panel.tsx`): its own SurfaceCard "Back face" on the
+  Identity step under the front's art block (never inside "More options" —
+  a whole face is not an option). Back type chips (`DFC_FACE_TYPES` →
+  `back_face.card_type`), colour chips (`ColorSection`, extracted to
+  `panels/color-section.tsx` with `SetupSection` → `panels/setup-section.tsx`;
+  dressing the BACK body's verified keys; the Colorless chip dark with the
+  reason on a spell body unless the type line says Artifact —
+  `colorlessFaceAllowed`, D2), title, cost (modal only — a transform back
+  prints none), supertype / subtypes, rules (`PipTextEditor` + the shared
+  toolbar), flavour, P/T (`statVisibility` on the back's type), artist,
+  `ArtUploader` for `back_face.art_url` (the staged upload every art goes
+  through: `prepareUploadBytes`, `checkUploadRateLimit`, the 0127 rule) with
+  `RealCardArtButton target="back"`. Focusing anything in it flips the live
+  preview (`setPreviewFace("back")`); "Clear back face" empties the content
+  and keeps the type and colour — the face is never removed. The form holds
+  the back's COLOUR (`BackFaceFormValues.color_identity`; empty = the
+  front's, sent explicitly) and never its body: the submit and the preview
+  derive it (`bodyFor(layout, "back", back type, family)`), so the live
+  preview's `backFace` prop carries `frame_style.template` + `color_identity`
+  and `card-preview.tsx`'s back path draws the body through
+  `backPreviewData` — the admin walk of a back body now shows the body
+  (5.0b's limitation lifted: the walk sets the family that derives the body
+  under test, `dfcIconFamilyForBackBody`, and the back's colour). In REVISE
+  mode the back's type is locked (it decides the body) and the family chips
+  move into the panel (the Card step is absent); the back's colour stays
+  editable, gated like a changed colour.
+- **The gate** (`lib/cards/dfc-gate.ts` `resolveDfcBackFace` — ONE rule for
+  `createCardAction`, `updateCardAction` and the move; the client's
+  `form-schema.ts` mirrors what it can judge without the verified keys):
+  a card on a DFC front body NEEDS its back face, typed one of
+  `DFC_FACE_TYPES`; its body is `bodyFor(…)` — on a create filled in when
+  the payload names none, refused when it names another; on an update the
+  STORED body wins (structure, like the front's template — a back type that
+  would derive another body is refused), re-derived only by a changed
+  `frame_anatomy.dfcIcon` (`frameAnatomyPatchFor` carries it) and refused
+  when that body isn't verified in the back's colour; the colour (the
+  back's own, else the front's — stored explicitly) is verified for the
+  body (`frameGateError`; an update re-checks only a changed body or
+  colour, the front's legacy-pin rule), `c` only with an Artifact word;
+  a transform back saves with no cost (`withTransformBackShape`); a public
+  save needs the back's name (`missingSecondFaceName`, as before) AND art
+  (demoted to private without it, the front's "no artwork → no gallery"
+  rule on both faces, D13 — legacy backs keep today's rule); a kind without
+  a back carries no back body (refused, the front first), and a
+  `frame_style`-only patch moving the front off a DFC body takes the stored
+  back's body and colour off with it; `normalizeAnatomy` drops `crown` /
+  `twoColor` on the DFC bodies (D17 — they declare neither). An admin's
+  frame preview skips the back's verification as it skips the front's.
+  The save stamps a transform front's family (`anatomyDefaults` → `arrows`)
+  like every other switch.
+- **The veil.** `ComingSoon` "Double-faced cards" in `publish-panel.tsx`,
+  the back-face picker component, `onCreateBackFace` / `handleCreateBackFace`,
+  the `/create?backFor=` return path and `FormValues.back_card_id` are gone;
+  `ComingSoon` itself stays (the Subscriber step). The server keeps
+  `back_card_id` only to CLEAR (`z.null()`): an old tab's save passes, a
+  crafted uuid is refused; the column, its 0127 guard and the card page's
+  `backCard` flip wait for a cleanup migration.
+- **The imported cards** (owner Q3: in place, one click —
+  `lib/cards/dfc-adopt.ts` + `dfc-adopt-actions.ts`, the hint
+  `panels/dfc-adopt-hint.tsx` under the legacy back's art strip on a stored
+  card's Identity step): `dfcAdoptionOffer` names a row with a LEGACY back
+  (content only) on m15 or an M15 skin with no DFC twin (`m15devoid`,
+  `m15snow`, `m15artifact` — the devoid / snow dress is left behind and the
+  hint says so) whose faces are both wave-1 types and whose back is no
+  walker; never the two on `m15borderless` (5.7), the walker back (5.13),
+  nor the adventure stored as a back face (a costed instant / sorcery back
+  under a permanent — the storybook page, not a face; the same shape as
+  STX's creature // sorcery modal cards, which no imported row has: 5.1b
+  can tell them apart by the printing). 5 of the 8 qualify: Titânia (on
+  devoid), Erza Scarlet, Avatar Aang (a colourless back: the move gives it
+  the front's five colours, editable after), Tobirama (land back), Darth
+  Vader (modal, offered dark until 5.1b — a move onto Transform drops the
+  Lantern's cost, and says so). `adoptDfcBodiesAction(cardId, "transform" |
+  "mdfc")`: front → its DFC twin, the family stamped, the switches the body
+  can't draw dropped, the back onto its body in the front's colour, both
+  gates (verification of both bodies, the kind gate), then the existing
+  front bake after the response — the BACK's bake lands with 5.3 through
+  the same `bakeAndPersistCardRender` call. The button is dark until the
+  card's colour is verified on both bodies. Nothing happens until the click.
+- **Seeds** (`supabase/seeds/10_dev_data.sql` 2d, dev_pro, …053–…056): a
+  public transform creature // creature with both arts and bodies, a
+  private draft with an unnamed back, a transform land front // creature
+  back, a legacy-shaped `back_face` row for the hint. The modal seed waits
+  for 5.1b; `seed.sql`'s mirror follows production's ticks (none).
+- **Proofs.** `tests/unit/cards/dfc-gate.test.ts` (the gate on the real
+  bodies), `dfc-editor-save.test.ts` (the actions with a mocked
+  `frame_reviews`: the family stamp, both-arts rule, stored body wins, the
+  family re-derive, the strip-off, the preview skip), `dfc-adopt.test.ts`
+  (the nine production shapes: exactly five offered; the plan; the action's
+  gates), `tests/unit/creator/dfc-kinds.test.ts` (the chips with a mocked
+  verified set, the forced face, the hydrated colour, the family patch, the
+  form schema), `tests/unit/components/creator-dfc-editor.test.tsx` (the
+  real form: the chips, the rows, the panel, the flip on focus, the payload,
+  an edit's family patch, the hint), `tests/e2e/dfc-editor.spec.ts` (the
+  Transform chip → both faces → save → the card page flips; through the
+  admin preview since no combo is ticked anywhere and the spec never writes
+  `frame_reviews`). The Visual gate is 0 changed / 0 redefined: no renderer
+  changed.
+- **What waits:** per-face AI fill (5.2b); the modal kind's bodies (5.1b);
+  the back's bake, the tile flip, `?face=back` and the downloads (5.3); the
+  import's back colour / body / family (5.4 — the editor's chips accept
+  what it will store: a `ColorIdentity[]`, two colours kept as a pair,
+  three or more "multicolor"); the `back_card_id` cleanup migration.
+
 ## Kind anatomy and bodies
 
 TODO 4.5 (design 2026-09-29) and 4.5.0. A **body** is a template: its

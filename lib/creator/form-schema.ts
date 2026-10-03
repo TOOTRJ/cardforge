@@ -31,7 +31,10 @@ import {
   cardTitleSchema,
   loyaltyCostSchema,
 } from "@/lib/validation/card";
-import { kindFromCard } from "@/lib/creator/card-kinds";
+import { dfcFrontBodyFor, dfcLayoutForKind, kindFromCard } from "@/lib/creator/card-kinds";
+import { bodyFor, colorlessFaceAllowed, isDfcFaceType } from "@/lib/cards/dfc";
+import { dfcFamilyOf, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
   missingSecondFaceName,
   SECOND_FACE_NAME_ERROR,
@@ -186,6 +189,30 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
         back.artist_credit.trim(),
       );
       check(ctx, ["back_face", "art_url"], cardArtUrlSchema, back.art_url.trim());
+
+      // A double-faced card's back (TODO 5.2) — the server's rules the
+      // form can judge without the verified keys (lib/cards/dfc-gate.ts):
+      // the back is one of the wave-1 face types, and colourless only with
+      // "Artifact" on its type line where its body's `c` is the artifact
+      // stand-in (design D2). The body itself is derived at submit; its
+      // verification is the server's gate (the chips hide what isn't).
+      const dfcKind = kindFromCard(values.card_type, values.frame_style?.template);
+      const dfcLayout = dfcLayoutForKind(dfcKind);
+      if (dfcLayout && dfcFrontBodyFor(dfcKind, values.card_type)) {
+        if (!isDfcFaceType(back.card_type)) {
+          ctx.addIssue({ code: "custom", path: ["back_face", "card_type"], message: DFC_BACK_TYPE_REFUSED });
+        } else {
+          const body = bodyFor(dfcLayout, "back", back.card_type, dfcFamilyOf(values.frame_style?.dfcIcon));
+          const colour = back.color_identity.length > 0 ? back.color_identity : values.color_identity;
+          if (
+            body &&
+            pickFrameColorKey(colour) === "c" &&
+            !colorlessFaceAllowed(body, { cardType: back.card_type, supertype: back.supertype })
+          ) {
+            ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: DFC_COLORLESS_NEEDS_ARTIFACT });
+          }
+        }
+      }
     }
 
     // ----- Text step -----

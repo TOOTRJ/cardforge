@@ -10,6 +10,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -118,12 +119,16 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
     // (the artifact token frame, TODO 3b.15): the words pick it, never a
     // fallback — nor one it wears by its row count (the tall borderless
     // planeswalker, 4.33).
+    // Nor a double-faced front body of the other face kind (TODO 5.2): the
+    // land front dresses lands only, as the full-art basic frame does, and
+    // the spell front no land — a stand-in keeps the wanted body's kind.
     const any = gallery.find(
       (choice) =>
         !templateIsBasicOnly(choice.template) &&
         !isBorrowedVariation(kind, choice.template) &&
         !isTypeWordDress(kind, choice.template) &&
         !isRowDress(kind, choice.template) &&
+        Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
         choice.availableColorKeys.includes(colorKey),
     );
     return any

@@ -327,7 +327,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       const pair = PAIRED.includes(template);
       // The collector line's keys (4.9b) ride the same rule on the slotted templates.
       const line = (COLLECTOR_TEMPLATES as readonly string[]).includes(template) ? { collector: "2023" as const } : {};
-      expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line });
+      // …and the transform icon family's default (`arrows`, TODO 5.2) on the
+      // two transform FRONT bodies, the templates that draw it.
+      const family = template === "m15dfcfront" || template === "m15dfclandfront" ? { dfcIcon: "arrows" as const } : {};
+      expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...family });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false }, template, "creature"), template).toEqual({
         template,
         finish: "foil",
@@ -340,6 +343,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
         ...(crown ? { crown: true } : {}),
         ...(pair ? { twoColor: true } : {}),
         ...line,
+        ...family,
       });
     }
     // The AI jobs send no frame_style: the default template (m15) draws both.

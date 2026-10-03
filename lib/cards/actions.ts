@@ -51,7 +51,14 @@ import {
   type FrameAnatomyStyle,
 } from "@/lib/cards/anatomy";
 import { cardPageName, withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
-import { backBodyError } from "@/lib/cards/dfc";
+import { templateHasBackFace } from "@/lib/cards/dfc";
+import {
+  dfcBackArtMissing,
+  dfcFamilyOf,
+  resolveDfcBackFace,
+  stripBackBody,
+  type DfcBackFacePayload,
+} from "@/lib/cards/dfc-gate";
 import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
@@ -239,7 +246,7 @@ export async function createCardAction(
   const supabase = await createClient();
 
   // An emblem stores no colour, cost, supertype or stats (TODO 6.23).
-  const data = withEmblemShape(parsed.data);
+  let data = withEmblemShape(parsed.data);
 
   // An admin's frame preview (TODO 2.3): the creator's admin preview mode
   // asks for it, the server decides — only an admin (from the profile,
@@ -253,11 +260,15 @@ export async function createCardAction(
   // colour) pair saves only when the admin has published it in
   // /admin/frame-compare. The client hides unpublished chips, but a stale
   // page or a crafted payload must not get past.
+  // The verified set is read once, and only by a gate that needs it.
+  let verifiedKeysCache: Set<string> | null = null;
+  const verifiedKeysOf = async () =>
+    (verifiedKeysCache ??= new Set(await getVerifiedFrameKeys()));
   if (!framePreview) {
     const gateError = frameGateError(
       data.frame_style?.template,
       data.color_identity,
-      new Set(await getVerifiedFrameKeys()),
+      await verifiedKeysOf(),
     );
     if (gateError) {
       return { ok: false, fieldErrors: { frame_style: gateError } };
@@ -281,10 +292,14 @@ export async function createCardAction(
   // public save without art lands as a draft (private) so test/unfinished
   // cards never occupy gallery space; the creator predicts this client-side
   // and tells the user. Unlisted stays allowed — link-only sharing of a WIP
-  // is deliberate and gallery-free. A frame preview is always private.
+  // is deliberate and gallery-free. A frame preview is always private. A
+  // double-faced card's BACK face follows the same rule (TODO 5.2, design
+  // D13: a public DFC with an empty back window would be a broken card);
+  // a legacy back keeps today's rule.
   const storedVisibility: Visibility = framePreview
     ? "private"
-    : data.visibility === "public" && !data.art_url
+    : data.visibility === "public" &&
+        (!data.art_url || dfcBackArtMissing(data.frame_style?.template, data.back_face))
       ? "private"
       : data.visibility;
 
@@ -297,16 +312,32 @@ export async function createCardAction(
       fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
     };
   }
-  // A back face's own BODY (Phase 5, TODO 5.0a) only under a front that has
-  // a back face, and only a back body (lib/cards/dfc.ts) — no such body
-  // exists until 5.1a, so a crafted one is refused and no stored card gains
-  // one; a body-less back face (the imported DFCs, every inline layout) is
-  // untouched.
+  // The back face's gate (TODO 5.2, lib/cards/dfc-gate.ts): a card on a
+  // double-faced FRONT body needs its back face, typed one of the wave-1
+  // face types, on the body its type and the card's icon family derive
+  // (filled in when the payload names none, refused when it names another),
+  // in a colour verified for that body — colourless only with an Artifact
+  // word — and a transform back with no cost; a back BODY under any other
+  // front is refused, and a body-less back face (the imported DFCs, every
+  // inline layout) is untouched. The family is stamped like every other
+  // switch (newCardFrameStyle, below), so it is read the same way here.
+  const storedFrameStyle = newCardFrameStyle(data.frame_style ?? {}, data.card_type);
   {
-    const bodyError = backBodyError(data.frame_style?.template, data.back_face);
-    if (bodyError) {
-      return { ok: false, fieldErrors: { "back_face.frame_style": bodyError } };
+    const gate = resolveDfcBackFace({
+      frontTemplate: storedFrameStyle.template,
+      back: data.back_face as DfcBackFacePayload | null | undefined,
+      family: storedFrameStyle.dfcIcon,
+      frontColorIdentity: data.color_identity,
+      verifiedKeys:
+        !framePreview && templateHasBackFace(storedFrameStyle.template)
+          ? await verifiedKeysOf()
+          : new Set<string>(),
+      skipVerification: framePreview,
+    });
+    if (!gate.ok) {
+      return { ok: false, fieldErrors: { [gate.field]: gate.message } };
     }
+    data = { ...data, back_face: gate.back as typeof data.back_face };
   }
 
   // Entitlement gates. Premium frame/finish (our own tech only — never WotC
@@ -353,18 +384,6 @@ export async function createCardAction(
       ok: false,
       fieldErrors: { parent_card_id: "The card to remix could not be found." },
     };
-  }
-
-  // A back face references another of the user's OWN cards — pre-flight
-  // exists + ownership for a friendly error over a bare FK violation.
-  if (data.back_card_id) {
-    const backCard = await getCardById(data.back_card_id);
-    if (!backCard || backCard.owner_id !== user.id) {
-      return {
-        ok: false,
-        fieldErrors: { back_card_id: "That back-face card couldn't be found." },
-      };
-    }
   }
 
   // Cross-field sanity: loyalty rows belong to planeswalkers. (Saga chapters
@@ -427,8 +446,9 @@ export async function createCardAction(
     // (the AI jobs name none; an import names only what its printing says —
     // false for a crownless Legendary or a Legendary showcase printing), and never a
     // switch its template can't draw for the card — a land's two-colour
-    // frame only on a land frame (lib/cards/anatomy.ts).
-    frame_style: newCardFrameStyle(data.frame_style ?? {}, data.card_type),
+    // frame only on a land frame (lib/cards/anatomy.ts); a transform front
+    // names its icon family (`arrows` unless the payload says, TODO 5.2).
+    frame_style: storedFrameStyle,
     // No art or a frame preview → private (storedVisibility, above).
     visibility: storedVisibility,
     // Only a preview names the column, so an ordinary save never depends on
@@ -436,10 +456,9 @@ export async function createCardAction(
     ...(framePreview ? { frame_preview: true } : {}),
     parent_card_id: data.parent_card_id ?? null,
     // Back face (chunk 10): null when undefined or explicitly cleared,
-    // jsonb object when the user has filled in DFC content.
+    // jsonb object when the user has filled in DFC content — with its own
+    // body and colour on a double-faced card (TODO 5.2, the gate above).
     back_face: media.back_face ?? null,
-    // v2 back face: FK to a full owned card (fully customisable), or null.
-    back_card_id: data.back_card_id ?? null,
     // Scryfall provenance (chunk 13): the source card id when imported,
     // null otherwise. Stays null forever for forged-from-scratch cards.
     source_scryfall_id: data.source_scryfall_id ?? null,
@@ -585,29 +604,20 @@ export async function updateCardAction(
   // on the card as it will be stored.
   data = withEmblemUpdateShape(data, existing.card_type);
 
-  // Back-face reference (when setting it): must be another of the user's own
-  // cards and never the card itself.
-  if (data.back_card_id) {
-    if (data.back_card_id === cardId) {
-      return {
-        ok: false,
-        fieldErrors: { back_card_id: "A card can't be its own back face." },
-      };
-    }
-    const backCard = await getCardById(data.back_card_id);
-    if (!backCard || backCard.owner_id !== user.id) {
-      return {
-        ok: false,
-        fieldErrors: { back_card_id: "That back-face card couldn't be found." },
-      };
-    }
-  }
-
   // An admin's frame preview (TODO 2.3) stays one: it is always private.
   // A card becomes one when an admin's preview-mode save moves it onto an
   // unverified frame/colour (the gate below).
   const previewCard = existing.frame_preview === true;
   let becomesPreview = false;
+  // The verified set is read once, and only by a gate that needs it: a
+  // card on a since-withdrawn frame stays editable without a read.
+  let verifiedKeysCache: Set<string> | null = null;
+  const verifiedKeysOf = async () =>
+    (verifiedKeysCache ??= new Set(await getVerifiedFrameKeys()));
+  /** Only an admin (server-checked) previews an unverified frame — the
+   *  front's gate and the back's (TODO 5.2) ask the same. */
+  const previewAllowed = async () =>
+    (previewCard || data.frame_preview === true) && (await viewerIsAdmin());
 
   // Verification gate, only when the patch CHANGES the frame or the colour:
   // a card saved on a since-withdrawn frame (the picker's "legacy pin")
@@ -626,13 +636,10 @@ export async function updateCardAction(
       const gateError = frameGateError(
         nextTemplate ?? existingTemplate,
         data.color_identity ?? existing.color_identity,
-        new Set(await getVerifiedFrameKeys()),
+        await verifiedKeysOf(),
       );
       if (gateError) {
-        // Only an admin (server-checked) previews an unverified frame.
-        const preview =
-          (previewCard || data.frame_preview === true) && (await viewerIsAdmin());
-        if (!preview) {
+        if (!(await previewAllowed())) {
           return { ok: false, fieldErrors: { frame_style: gateError } };
         }
         becomesPreview = !previewCard;
@@ -745,16 +752,73 @@ export async function updateCardAction(
     if (normalized !== storedStyle) update.frame_style = normalized as CardUpdate["frame_style"];
   }
   if (data.visibility !== undefined) update.visibility = data.visibility;
+  // The back face's gate (TODO 5.2, lib/cards/dfc-gate.ts), on the card as
+  // it will be stored — the patched back over the stored one, under the
+  // patched front (else the stored one), with the family as it will be
+  // stored. The STORED back body wins (the body is structure, like the
+  // front's template): the one change that re-derives it is the family
+  // (an edit's frame_anatomy.dfcIcon), refused when the derived body isn't
+  // verified in the back's colour; a back whose type would derive another
+  // body is refused; a changed colour is verified for the body. A front
+  // that leaves a DFC body (a crafted frame_style patch — edits never send
+  // the template) takes the stored back's body and colour off with it.
+  const storedBackFace = (existing.back_face ?? null) as DfcBackFacePayload | null;
+  const nextFrontTemplate =
+    (update.frame_style as { template?: string } | undefined)?.template ??
+    (existing.frame_style as { template?: string } | null)?.template;
+  const nextFrameStyle = (update.frame_style ?? existing.frame_style ?? {}) as { dfcIcon?: string };
+  const familyChanged =
+    dfcFamilyOf(nextFrameStyle.dfcIcon) !==
+    dfcFamilyOf((existing.frame_style as { dfcIcon?: string } | null)?.dfcIcon);
+  // The front leaving a DFC body with the back left alone: the stored
+  // back's body and colour come off (its content stays, a legacy back).
+  const backLeavesBody =
+    data.back_face === undefined &&
+    storedBackFace?.frame_style !== undefined &&
+    storedBackFace?.frame_style !== null &&
+    !templateHasBackFace(nextFrontTemplate);
+  const nextBackFace =
+    data.back_face !== undefined
+      ? (data.back_face as DfcBackFacePayload | null)
+      : backLeavesBody
+        ? stripBackBody(storedBackFace!)
+        : storedBackFace;
+  if (data.back_face !== undefined || familyChanged || data.frame_style !== undefined) {
+    const gateInput = {
+      frontTemplate: nextFrontTemplate,
+      back: nextBackFace,
+      family: nextFrameStyle.dfcIcon,
+      frontColorIdentity: update.color_identity ?? existing.color_identity,
+      verifiedKeys: templateHasBackFace(nextFrontTemplate) ? await verifiedKeysOf() : new Set<string>(),
+      stored: { back: storedBackFace, familyChanged },
+    };
+    let gate = resolveDfcBackFace(gateInput);
+    if (!gate.ok && gate.code === "unverified" && (await previewAllowed())) {
+      becomesPreview = !previewCard;
+      gate = resolveDfcBackFace({ ...gateInput, skipVerification: true });
+    }
+    if (!gate.ok) {
+      return { ok: false, fieldErrors: { [gate.field]: gate.message } };
+    }
+    if (gate.layout || data.back_face !== undefined || backLeavesBody) {
+      update.back_face = (gate.back ?? null) as CardUpdate["back_face"];
+    }
+  }
   // No artwork → no gallery (same rule as create). The EFFECTIVE art is the
   // patched value when present, else what the row already stores — so both
   // "publish an artless card" and "remove the art from a public card"
-  // demote to draft.
+  // demote to draft. A double-faced card's BACK art too (TODO 5.2, D13).
   {
     const effectiveArt =
       data.art_url !== undefined ? data.art_url : existing.art_url;
     const effectiveVisibility =
       update.visibility !== undefined ? update.visibility : existing.visibility;
-    if (!effectiveArt && effectiveVisibility === "public") {
+    const effectiveBack =
+      update.back_face !== undefined ? (update.back_face as DfcBackFacePayload | null) : storedBackFace;
+    if (
+      (!effectiveArt || dfcBackArtMissing(nextFrontTemplate, effectiveBack)) &&
+      effectiveVisibility === "public"
+    ) {
       update.visibility = "private";
     }
   }
@@ -793,25 +857,11 @@ export async function updateCardAction(
     }
     update.parent_card_id = data.parent_card_id;
   }
-  // Back face: `null` clears it; an object replaces it whole. Omitting
-  // the field leaves whatever the DB already had untouched. A back BODY
-  // (Phase 5, TODO 5.0a) is judged against the front as it will be stored —
-  // the patched template, else the stored one (lib/cards/dfc.ts
-  // backBodyError; no back body exists until 5.1a).
-  if (data.back_face !== undefined) {
-    const storedTemplate = (existing.frame_style as { template?: string } | null)?.template;
-    const bodyError = backBodyError(
-      data.frame_style !== undefined ? data.frame_style?.template : storedTemplate,
-      data.back_face,
-    );
-    if (bodyError) {
-      return { ok: false, fieldErrors: { "back_face.frame_style": bodyError } };
-    }
-    update.back_face = data.back_face ?? null;
-  }
-  // v2 back-face reference: null clears, a uuid links, omitted leaves alone.
-  if (data.back_card_id !== undefined)
-    update.back_card_id = data.back_card_id ?? null;
+  // Back face: `null` clears it; an object replaces it whole (through the
+  // gate above). Omitting the field leaves whatever the DB already had
+  // untouched. The retired v2 link (back_card_id) is accepted only to CLEAR
+  // a stored one (lib/validation/card.ts).
+  if (data.back_card_id !== undefined) update.back_card_id = null;
   // Scryfall source: same semantics — null clears, omitted leaves alone.
   if (data.source_scryfall_id !== undefined)
     update.source_scryfall_id = data.source_scryfall_id ?? null;

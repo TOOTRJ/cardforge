@@ -211,7 +211,14 @@ Rules and gotchas:
   that `dfc` block — never from the `dfcIcon` switch (off for an absent
   key, which reads as `arrows`); a BACK body is never a card's own template
   (`templateRefusesKind`), and nothing on them is offered until each colour
-  of the front AND the default back is ticked (after 5.3).
+  of the front AND the default back is ticked (after 5.3). A back face's
+  body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
+  `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
+  — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`
+  — verified per colour, `c` only with an Artifact word, a transform back
+  with no cost; a public DFC needs both arts); the retired `back_card_id` is
+  accepted only to CLEAR; the 8 imported DFCs move onto the bodies only by
+  their owner's click (`adoptDfcBodiesAction`, `lib/cards/dfc-adopt.ts`).
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a

@@ -13,9 +13,9 @@
 // never move an element. And there's no fallback logic anywhere here —
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
-import { ChevronDown, Replace } from "lucide-react";
+import { Replace } from "lucide-react";
 import { toast } from "sonner";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import {
@@ -23,6 +23,12 @@ import {
   landModeLabel,
   type LandMode,
 } from "@/components/creator/panels/land-mode-panel";
+import { SetupSection } from "@/components/creator/panels/setup-section";
+import { ColorSection } from "@/components/creator/panels/color-section";
+import {
+  DfcFaceTypeSection,
+  DfcIconFamilySection,
+} from "@/components/creator/panels/dfc-setup-sections";
 import {
   colorIdentityForKey,
   colorWord,
@@ -43,6 +49,7 @@ import {
   KIND_DEFS,
   baseFrameFor,
   borrowedTypeWord,
+  dfcLayoutForKind,
   framesForKind,
   isSingleBasicLand,
   kindHasAvailableFrame,
@@ -76,13 +83,13 @@ import { KIND_PICKER_KINDS, kindPickerChip } from "@/lib/creator/card-kinds";
 import { EmblemChoice } from "@/components/creator/panels/emblem-choice";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import {
-  COLOR_IDENTITY_VALUES,
   COMING_SOON_ERAS,
   DEFAULT_FRAME_TEMPLATE,
   FRAME_ERA_HINTS,
   FRAME_ERA_LABELS,
   FRAME_ERA_VALUES,
   FRAME_TEMPLATE_LABELS,
+  type CardType,
   type ColorIdentity,
   type FrameEra,
   type FrameTemplate,
@@ -98,22 +105,10 @@ import {
   pairColorIdentity,
   twoColorPairOf,
 } from "@/lib/cards/anatomy";
-import { TwoColorPairRow } from "@/components/creator/panels/anatomy-panel";
 import {
   frameSubstitutionLabel,
   type FrameSubstitution,
 } from "@/lib/creator/import-frame-choice";
-
-// Single-color key each identity chip contributes (frame-layer's palette).
-const IDENTITY_COLOR_KEY: Record<ColorIdentity, string> = {
-  white: "w",
-  blue: "u",
-  black: "b",
-  red: "r",
-  green: "g",
-  colorless: "c",
-  multicolor: "m",
-};
 
 const KIND_HINTS: Partial<Record<CardKind, string>> = {
   saga: "Chapter rail (I–IV)",
@@ -121,64 +116,10 @@ const KIND_HINTS: Partial<Record<CardKind, string>> = {
   split: "Two side-by-side spells",
   aftermath: "Top half now, sideways half later",
   flip: "Top and upside-down halves",
+  // The double-faced kinds (TODO 5.2): two printed faces, one card.
+  transform: "Two faces: the front transforms into its back",
+  mdfc: "Two faces: cast either side",
 };
-
-// Collapsible chooser section: the summary always shows the CURRENT value,
-// so a collapsed step still reads as a complete sentence. All sections start
-// CLOSED (new cards carry sensible defaults) and close themselves once a
-// selection lands.
-function SetupSection({
-  title,
-  value,
-  children,
-  autoClose = true,
-}: {
-  title: string;
-  value: string;
-  children: React.ReactNode;
-  /** False for a section of toggles (the token's types): several picks in a
-   *  row, so it stays open until the user folds it. */
-  autoClose?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  // Auto-close on selection: the summary value changing while the section is
-  // open means the user just picked something — collapse so the step reads
-  // as its result. (Derived during render — no effect — so the kind-change
-  // confirm dialog closes the section only when the change actually lands.)
-  const [prevValue, setPrevValue] = useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    if (open && autoClose) setOpen(false);
-  }
-  return (
-    <details
-      open={open}
-      className="rounded-lg border border-border/60 bg-elevated/30"
-    >
-      <summary
-        onClick={(e) => {
-          e.preventDefault();
-          setOpen((v) => !v);
-        }}
-        className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden"
-      >
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          {title}
-        </span>
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
-            {value}
-          </span>
-          <ChevronDown
-            aria-hidden
-            className={`h-4 w-4 shrink-0 text-subtle transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </span>
-      </summary>
-      <div className="flex flex-col gap-3 px-4 pb-4 pt-1">{children}</div>
-    </details>
-  );
-}
 
 type CardSetupPanelProps = {
   /** The derived current kind (kindFromCard). */
@@ -219,6 +160,10 @@ type CardSetupPanelProps = {
   /** Why "Basic" is unavailable right now (multicolor frame), else null. */
   landBasicDisabledReason?: string | null;
   onLandModeChange?: (next: LandMode) => void;
+  /** A double-faced card's FRONT face type (TODO 5.2): routes through the
+   *  orchestrator, which writes the type, moves the card onto the body for
+   *  it (the land front for a land) and keeps the colour verified. */
+  onDfcFaceTypePick?: (next: CardType) => void;
 };
 
 export function CardSetupPanel({
@@ -234,6 +179,7 @@ export function CardSetupPanel({
   landMode,
   landBasicDisabledReason = null,
   onLandModeChange,
+  onDfcFaceTypePick,
 }: CardSetupPanelProps) {
   const { control, setValue, getValues, clearErrors } =
     useFormContext<FormValues>();
@@ -256,9 +202,9 @@ export function CardSetupPanel({
   // Basic-only frames (the full-art basic land) can't draw a nonbasic's
   // rules, so their chips are disabled unless the card IS one basic land —
   // the same rule the renderers and the server gate read.
-  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn] = useWatch({
+  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn, dfcIcon] = useWatch({
     control,
-    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor"],
+    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon"],
   });
   const isBasicLand = isSingleBasicLand({
     cardType,
@@ -373,7 +319,31 @@ export function CardSetupPanel({
         />
       </SetupSection>
 
-      {/* 1b · The token's types (TODO 3b.15) — the words its type line
+      {/* 1b · A double-faced card's FRONT face type and, for a transform,
+          its icon family (TODO 5.2) — the body follows the type (the land
+          front for a land), the back body follows the family. */}
+      {dfcLayoutForKind(kind) ? (
+        <>
+          <DfcFaceTypeSection
+            kind={kind}
+            cardType={cardType}
+            colorKey={colorKey as FrameColorKey}
+            verifiedKeys={verifiedKeys}
+            onPick={onDfcFaceTypePick}
+          />
+          {dfcLayoutForKind(kind) === "transform" ? (
+            <DfcIconFamilySection
+              family={dfcIcon}
+              onChange={(next) => {
+                clearErrors("frame_style");
+                setValue("frame_style.dfcIcon", next, { shouldDirty: true });
+              }}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {/* 1c · The token's types (TODO 3b.15) — the words its type line
           prints after "Token". The frame follows them (the orchestrator's
           effect): Artifact → the artifact token frame. */}
       {kind === "token" || kind === "emblem" ? (
@@ -761,6 +731,7 @@ export function CardSetupPanel({
         render={({ field }) => (
           <ColorSection
             summary={colorSummary}
+            template={normalizeFrameTemplate(watchedTemplate)}
             onPairTouched={onPairTouched}
             selection={(field.value ?? []) as ColorIdentity[]}
             onChange={(next) => {
@@ -865,109 +836,6 @@ function TokenTypeSection({
         None on prints a bare &ldquo;Token&rdquo;, like a Copy token. The
         power / toughness shows for a Creature token only.
       </p>
-    </SetupSection>
-  );
-}
-
-function ColorSection({
-  summary,
-  selection,
-  onChange,
-  onPairTouched,
-  verifiedKeys,
-  frameType,
-  frameFor,
-}: {
-  summary: string;
-  selection: ColorIdentity[];
-  onChange: (next: ColorIdentity[]) => void;
-  /** The user picked the pair by hand: the cost no longer re-fills it. */
-  onPairTouched?: () => void;
-  verifiedKeys: ReadonlySet<string>;
-  /** The card's type: each colour tile shows the master the card would
-   *  paint in that colour (Alpha's colourless tile: the artifact card for an
-   *  artifact, the grey card otherwise). */
-  frameType: FrameTypeInfo;
-  /** The frame a pick of each colour lands the card on (a new token on the
-   *  default switch's pick, CardSetupPanelProps.colorFrameFor); null = no
-   *  frame of it is verified there. Absent: the card's own frame. */
-  frameFor?: (colorKey: string) => FrameTemplate | null;
-}) {
-  // Live template so chip availability + thumbnails track frame changes.
-  const { watch } = useFormContext<FormValues>();
-  const template = normalizeFrameTemplate(watch("frame_style.template"));
-  // The two-colour frame (TODO 4.6b): on a template that draws it, a
-  // multicolour card picks its PAIR in the "Two colours" row, pre-filled
-  // from the cost (owner decision 2026-09-29, useTwoColorPairFollow).
-  // Nowhere else the row shows.
-  const drawsPairs = frameAnatomyOf(template).twoColor.length > 0;
-  const pair = twoColorPairOf(selection);
-  const currentKey = pickFrameColorKey(selection);
-  const currentAvailable = isFrameComboAvailable(
-    template,
-    currentKey,
-    verifiedKeys,
-  );
-
-  // SINGLE-select: a card wears exactly one frame dress, so the picker is
-  // one chip per dress — a gold card is the "Multicolor" chip, not a stack
-  // of color toggles. (Legacy multi-value identities select the Multicolor
-  // chip. Most frames render them with the gold "m" dress, but a split-frame
-  // template such as Dragon Wing (FrameProfile.twoColorSplit) renders a
-  // two-colour identity as split wings, and only FrameThumb tiles that show
-  // the card's own colour reflect that. Picking the Multicolor chip gives the
-  // gold dress.)
-  const selected: ColorIdentity =
-    selection.length > 1 ? "multicolor" : selection[0] ?? "colorless";
-
-  const options: ChipOption<ColorIdentity>[] = COLOR_IDENTITY_VALUES.map(
-    (color) => {
-      const key = IDENTITY_COLOR_KEY[color];
-      // The card's own colour keeps the card's frame (picking it again
-      // changes nothing); another colour, the frame a pick lands on.
-      const there = frameFor && key !== currentKey ? frameFor(key) : template;
-      const reachable =
-        there !== null && isFrameComboAvailable(there, key, verifiedKeys);
-      return {
-        value: color,
-        label: color,
-        leading: (
-          <FrameThumb template={there ?? template} colorKey={key} type={frameType} />
-        ),
-        disabled: !reachable,
-        badge: reachable ? undefined : <SoonBadge />,
-        activeClass: "border-foreground/50 bg-elevated text-foreground",
-      };
-    },
-  );
-
-  return (
-    <SetupSection title="Color" value={summary}>
-      <ChipGroup
-        ariaLabel="Color identity"
-        layout="grid-2"
-        size="md"
-        value={selected}
-        // Multicolor on a template with the two-colour frame: the creator
-        // pre-fills the pair from the cost (useTwoColorPairFollow).
-        onChange={(color) => onChange([color])}
-        options={options}
-      />
-      {drawsPairs && selected === "multicolor" ? (
-        <TwoColorPairRow
-          pair={pair}
-          onChange={(next) => {
-            onPairTouched?.();
-            onChange(next ? pairColorIdentity(next) : ["multicolor"]);
-          }}
-        />
-      ) : null}
-      {!currentAvailable ? (
-        <p className="text-[11px] text-subtle" role="status">
-          This frame isn&apos;t verified in the selected color yet — pick an
-          available color, or a different frame above.
-        </p>
-      ) : null}
     </SetupSection>
   );
 }

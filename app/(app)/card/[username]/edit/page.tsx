@@ -19,11 +19,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
-import {
-  getFantasyGameSystem,
-  getMyCardBySlug,
-  listMyCards,
-} from "@/lib/cards/queries";
+import { getFantasyGameSystem, getMyCardBySlug } from "@/lib/cards/queries";
 import { buildCardPath } from "@/lib/cards/utils";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
@@ -90,12 +86,11 @@ export default async function EditCardPage({
     notFound();
   }
 
-  const [gameSystem, profile, entitlements, allMyCards, myDecks, exportStamp] =
+  const [gameSystem, profile, entitlements, myDecks, exportStamp] =
     await Promise.all([
       getFantasyGameSystem(),
       getCurrentProfile(),
       getEntitlements(),
-      listMyCards(),
       // The AI dialog's "For a deck" picker (Pro deck-aware generation).
       listMyDecks(),
       // The owner's custom footer mark (paid perk) — live in the preview so
@@ -103,9 +98,6 @@ export default async function EditCardPage({
       ownerExportStamp(user.id),
     ]);
   const deckSeeds = await getDeckAiSeeds(myDecks.map((deck) => deck.id));
-  // Back-face picker candidates: every owned card except this one (can't be its
-  // own back). Includes the currently-linked back card so the flip renders.
-  const myCards = allMyCards.filter((c) => c.id !== card.id);
   const ownerUsername = profile?.username ?? null;
   const publicPath = buildCardPath({
     slug: card.slug,
@@ -191,7 +183,6 @@ export default async function EditCardPage({
           ownerUsername={ownerUsername}
           gameSystems={gameSystem ? [gameSystem] : []}
           card={card}
-          myCards={myCards}
           aiDecks={myDecks.map((deck) => ({
             id: deck.id,
             title: deck.title,

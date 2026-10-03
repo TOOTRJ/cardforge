@@ -19,6 +19,7 @@ import {
 } from "@/components/creator/field-group";
 import type { FormValues } from "@/lib/creator/form-types";
 import { realCardArtOrigin } from "@/lib/creator/real-card-art";
+import { templateHasBackFace } from "@/lib/cards/dfc";
 
 type ArtPanelProps = {
   userId: string | null;
@@ -41,6 +42,10 @@ type ArtPanelProps = {
   /** Real-card art landed on the back face of a two-faced card (an
    *  imported transform / modal DFC): the preview turns to that face. */
   onBackFaceArt?: () => void;
+  /** The one-click move onto the real double-faced frames (TODO 5.2, owner
+   *  Q3), rendered under the legacy back's art strip on a stored card whose
+   *  back qualifies. */
+  backFaceHint?: React.ReactNode;
 };
 
 export function ArtPanel({
@@ -51,6 +56,7 @@ export function ArtPanel({
   importedArtOrigin = null,
   onImportedArtOrigin,
   onBackFaceArt,
+  backFaceHint,
 }: ArtPanelProps) {
   const {
     register,
@@ -61,12 +67,15 @@ export function ArtPanel({
     control,
     name: ["art_url", "frame_style.template", "has_back_face", "back_face"],
   });
-  // A second face with its own art but no editor: an imported transform /
-  // modal DFC (Delver of Secrets) keeps its back in `back_face`, and the
-  // two-sided editor is Phase 5 (TODO 5.2). Its art can still come from a
-  // real card (TODO 1.15). The inline second faces (adventure, split,
-  // aftermath, flip) edit theirs in backFaceSlot instead.
-  const showBackFaceArt = Boolean(hasBackFace) && !backFaceSlot;
+  // A LEGACY second face with its own art but no editor: an imported
+  // transform / modal DFC (Delver of Secrets) from before Phase 5 keeps its
+  // back in `back_face`, drawn on the front's frame. Its art can still come
+  // from a real card (TODO 1.15), and its owner is offered the move onto the
+  // real double-faced frames (backFaceHint, TODO 5.2). The inline second
+  // faces (adventure, split, aftermath, flip) edit theirs in backFaceSlot;
+  // a card on a double-faced FRONT body edits its back in the back-face
+  // panel under this one (DfcFacePanel).
+  const showBackFaceArt = Boolean(hasBackFace) && !backFaceSlot && !templateHasBackFace(template);
 
   return (
     <>
@@ -145,6 +154,7 @@ export function ArtPanel({
           />
         </div>
       ) : null}
+      {showBackFaceArt ? backFaceHint : null}
 
       <MoreOptions
         summary={
