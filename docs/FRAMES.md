@@ -1548,6 +1548,91 @@ sweep, no badge: production's 886 visible cards baked byte-identical at
   layout v38 after folding in #451 (0 changed / 0 redefined against main's
   1,051). The stamp (4.9c) and wave 2 (4.9d) follow.
 
+### Double-faced cards (TODO 5; the 5.0a plumbing)
+
+Design 2026-10-02 (`design-next/5/final.md`, the owner's seven decisions
+Q1–Q7). A **DFC** has two printed faces — a transform card (SOI, MID, BOT…)
+or a modal double-faced card (ZNR, KHM, STX…); a two-part layout (flip,
+split, aftermath, adventure) is ONE face whose master paints a second panel
+and is not one (`templatePaintsSecondFace` stays that inline predicate).
+Every PR of Phase 5 is an **addition** under the rule above: new kinds, new
+templates, new columns; 0 stored cards change, no bump, no sweep, no badge.
+5.0a laid the plumbing with **no pixel and no template** (Visual 0 changed /
+0 new / 0 redefined):
+
+- **One card holds both faces (Q1).** `cards.back_face` keeps its 0015
+  content shape and gains the back's own BODY (`frame_style: { template }`,
+  a back-face template only) and COLOUR (`color_identity`); everything else
+  — rarity, finish, set symbol, the collector fields (both faces print the
+  card's one collector line, each its own artist), the watermark and the
+  anatomy switches — stays card-level. A `back_face` with no body (the 8
+  imported DFCs, every row from before Phase 5) is a **legacy back**: drawn
+  on the FRONT's template and colour exactly as today, by construction.
+  `backFaceSchema` is the gate (no CHECK on the jsonb, 0015 / 0041 by
+  design); the actions refuse a body under a front that has no back face,
+  and a body that is not a back body (`lib/cards/dfc.ts` `backBodyError`) —
+  so until 5.1a's bodies exist no stored card can gain one.
+- **Bodies are profiles that declare `dfc`** (`FrameProfile.dfc`: `layout`
+  transform | modal, `role` front | back, `well` left | right — the icon
+  well's or housing's side — and `land`): a FRONT body is a card's
+  template, a BACK body is the back face's and is never a front
+  (`templateHasBackFace` = the front role, `isDfcBackBody` = the back).
+  Code-owned, set on a `PROFILES` entry only (the override schema refuses
+  it); **none is declared yet** — 5.1a brings the five transform bodies
+  (`m15dfcfront`, `m15dfcback`, `m15dfcbackleft`, `m15dfclandfront`,
+  `m15dfclandback`), 5.1b the four modal ones. `bodyFor(layout, role, face
+  type, family)` is the ONE table the creator, the server gate, the import
+  and the remix read for which body a face draws on; it is empty until then.
+  The colourless `c` row of a DFC body is the ARTIFACT master standing in
+  (D2): `colorlessFaceAllowed` offers it only to a face whose type line says
+  Artifact.
+- **The transform icon FAMILY is one card-level switch**, `frame_style
+  .dfcIcon` (`arrows` — today's ▲ / ▼ with the ▼ at the right, every
+  transform printed since 2022-11, the default (Q5) — `sunmoon`, `moon`,
+  `compass`, `fan`; `spark` arrives with the walker bodies, 5.13). It joins
+  `FRAME_ANATOMY_KEYS` after `star`, travels in an edit's `frame_anatomy`,
+  and the save drops it on any template that is not a transform FRONT body
+  (`normalizeAnatomy`), so today it is always dropped. It picks the back
+  body too (`arrows` → the ▼ back, the four left families → the 2016–22
+  back; a land back its own whatever the family); the MDFC housing has no
+  family. `NEW_CARD_ANATOMY` is unchanged: the family's default is the
+  Transform kind's (5.2), not the template's.
+- **Cross-face data is derived at render, never stored** (D7):
+  `lib/cards/faces.ts` maps one card onto two `CardPreviewData`s —
+  `frontPreviewData` / `backPreviewData` / `facesOf` — each carrying a
+  `dfc` block `{ layout, role, icon, otherFace }`, the ONE source both
+  renderers will draw the icon rider, the front's grey reverse P/T and the
+  modal strip from (5.1a / 5.1b; nothing reads it yet). `otherFace` is the
+  other face's LAST type word ("Land", "Equipment", "God", "Warrior"), its
+  cost or a land's mana ability (`{T}: Add {W}.` — never a land's first
+  printed line, D9), and whether it PRINTS a P/T (`printsPowerToughness`;
+  the front's tab draws the back's P/T only then and prints empty otherwise,
+  Q7). A legacy back gets no block.
+- **Four render names, one list.** Migration 0134 adds
+  `cards.rendered_back_image_url` / `rendered_back_thumb_url` — the back's
+  bake `{owner}/{id}.back.png` and its `.back.thumb.webp` in `card-renders`
+  (written by 5.3 only for a card with a back body) — re-creates 0126's
+  `cards_guard_render_columns` with both in its `update of` list and body
+  (an API role may only CLEAR them) and 0108's `set_cards_updated_at`
+  ignoring them (a back bake is not an edit). `renderObjectNames` in
+  `lib/cards/bake-core.ts` returns all four and every reader derives from
+  it: `isStoredRenderUrl`, `bakeObjectCardId` and the
+  `/render-cdn/<owner>/<file>` proxy
+  (ONE tag `card-<id>` covers both faces, so the purge is unchanged),
+  `removeRenderObjects` (every out-of-view path removes all four names and
+  clears every pointer, `CLEARED_RENDER_POINTERS`), the moderation hide,
+  and the orphan sweep's `renderCardId` (a `.back.png` of a live card is
+  never an orphan — before 5.0a it would have been swept). One
+  `layout_version` and one `rendered_at` per card.
+- **What follows:** 5.0b (the compare / score / walkthrough tools per
+  face), 5.1a (the transform bodies: masters, riders, the colour indicator,
+  the tone pass, a review sheet beside the prints, `frames:promote`), 5.2
+  (the Transform and Modal kinds, the back-face panel, the one-click move
+  of the 8 imported cards — Q3), 5.3 (both faces baked, the tile flip — Q6,
+  `?face=back`, downloads and print), 5.1b (the modal bodies), 5.4 (the
+  import and the AI deck remix at 2 credits — Q4). Walker faces wait (ask
+  first, 5.13).
+
 ## Kind anatomy and bodies
 
 TODO 4.5 (design 2026-09-29) and 4.5.0. A **body** is a template: its

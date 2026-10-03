@@ -73,8 +73,9 @@
 //     JSON column of every table the API exposes (not a column list), and
 //     finds the key inside URLs, encoded URLs, Markdown, JSON at any depth,
 //     bare storage paths;
-//   * card-renders only: its card (`{cardId}.png` / `.thumb.webp`) no longer
-//     exists — a live card's bake or thumb is never touched, whatever the
+//   * card-renders only: its card (`{cardId}.png` / `.thumb.webp`, or the
+//     back face's `.back.png` / `.back.thumb.webp`) no longer exists — a
+//     live card's bake or thumb is never touched, whatever the
 //     row says;
 //   * it hasn't changed for --min-age-days (created/updated/last modified).
 //
@@ -101,8 +102,8 @@
 // Two more modes, one per list (owner decisions 2026-09-29), each with its
 // own state + manifest (`…<project>.<mode>.json` / `.manifest.jsonl`):
 //
-//   --private-renders   remove the card-renders PNG + thumb of every card
-//                       whose row says PRIVATE — never a public or unlisted
+//   --private-renders   remove the card-renders PNG + thumb (of either face)
+//                       of every card whose row says PRIVATE — never a public or unlisted
 //                       card's, and never on a missing row (a deleted card's
 //                       render is an orphan: the sweep above judges it) —
 //                       clear those cards' render pointer, as going private

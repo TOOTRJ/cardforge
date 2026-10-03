@@ -95,11 +95,18 @@ describe("object keys", () => {
     }
   });
 
-  it("a render belongs to the card its name carries — {cardId}.png or .thumb.webp only", () => {
+  it("a render belongs to the card its name carries — {cardId}.png / .thumb.webp and the back face's .back.png / .back.thumb.webp only (TODO 5.0a)", () => {
     expect(renderCardId(`${U1}/${CARD_LIVE}.png`)).toBe(CARD_LIVE);
     expect(renderCardId(`${U1}/${CARD_LIVE}.thumb.webp`)).toBe(CARD_LIVE);
+    expect(renderCardId(`${U1}/${CARD_LIVE}.back.png`)).toBe(CARD_LIVE);
+    expect(renderCardId(`${U1}/${CARD_LIVE}.back.thumb.webp`)).toBe(CARD_LIVE);
+    expect(renderCardId(`${U1}/${CARD_LIVE.toUpperCase()}.BACK.PNG`)).toBe(CARD_LIVE);
     expect(renderCardId(`${U1}/${CARD_LIVE}-1700000000.png`)).toBeNull();
     expect(renderCardId(`${U1}/${CARD_LIVE}.jpg`)).toBeNull();
+    expect(renderCardId(`${U1}/${CARD_LIVE}.back.jpg`)).toBeNull();
+    expect(renderCardId(`${U1}/${CARD_LIVE}.front.png`)).toBeNull();
+    expect(renderCardId(`${U1}/${CARD_LIVE}.back.back.png`)).toBeNull();
+    expect(renderCardId(`${U1}/${CARD_LIVE}.thumb.back.webp`)).toBeNull();
     expect(renderCardId(`${CARD_LIVE}.png`)).toBeNull();
   });
 
@@ -140,6 +147,8 @@ describe("names the server makes (the dry run's review list)", () => {
       ["set-covers", `${uuid}.webp`],
       ["card-renders", `${CARD_LIVE}.png`],
       ["card-renders", `${CARD_LIVE}.thumb.webp`],
+      ["card-renders", `${CARD_LIVE}.back.png`],
+      ["card-renders", `${CARD_LIVE}.back.thumb.webp`],
       ["custom-pips", "W.png"],
       ["custom-pips", "C.pending.png"],
     ]) {
@@ -155,6 +164,8 @@ describe("names the server makes (the dry run's review list)", () => {
       ["custom-pips", "X.png"],
       ["custom-pips", `${CARD_LIVE}.png`],
       ["card-art", "W.png"],
+      ["card-renders", `${CARD_LIVE}.front.png`],
+      ["card-renders", `${CARD_LIVE}.back.back.png`],
     ]) {
       expect(isServerMintedName(bucket, `${U1}/${name}`), `${bucket}/${name}`).toBe(false);
     }
@@ -231,7 +242,20 @@ describe("reference detection — every column, any depth, any URL form", () => 
     const [cards] = tablesFromOpenApi(openApiOf({ cards: emptyDb().cards }));
     expect(cards.pk).toEqual(["id"]);
     expect(textColumns(cards).sort()).toEqual(
-      ["art_url", "back_face", "face_content", "metadata", "rendered_image_url", "rendered_thumb_url", "set_icon_url", "tags", "title", "watermark"].sort(),
+      [
+        "art_url",
+        "back_face",
+        "face_content",
+        "metadata",
+        "rendered_image_url",
+        "rendered_thumb_url",
+        "rendered_back_image_url",
+        "rendered_back_thumb_url",
+        "set_icon_url",
+        "tags",
+        "title",
+        "watermark",
+      ].sort(),
     );
     // An unknown type (an enum, a domain) is read.
     expect(textColumns({ name: "x", pk: [], columns: [{ name: "v", format: "public.visibility" }] })).toEqual(["v"]);
@@ -298,15 +322,19 @@ describe("classify", () => {
     expect(verdicts([obj("card-art", `${U1}/old.jpg`, 10)], { ...ctx(), minAgeDays: 14 })[`card-art/${U1}/old.jpg`]).toBe("tooNew");
   });
 
-  it("a live card's bake and thumb are kept whatever references them; a deleted card's are orphans", () => {
+  it("a live card's bake and thumb — of either face — are kept whatever references them; a deleted card's are orphans", () => {
     expect(
       verdicts(
         [
           obj("card-renders", `${U1}/${CARD_LIVE}.png`),
           obj("card-renders", `${U1}/${CARD_LIVE}.thumb.webp`),
+          obj("card-renders", `${U1}/${CARD_LIVE}.back.png`), // the back face's bake (TODO 5.0a): never an orphan
+          obj("card-renders", `${U1}/${CARD_LIVE}.back.thumb.webp`),
           obj("card-renders", `${U2}/${CARD_LIVE}.png`), // another owner's folder: still that card
           obj("card-renders", `${U1}/${CARD_GONE}.png`),
           obj("card-renders", `${U1}/${CARD_GONE}.thumb.webp`),
+          obj("card-renders", `${U1}/${CARD_GONE}.back.png`),
+          obj("card-renders", `${U1}/${CARD_GONE}.back.thumb.webp`),
           obj("card-renders", `${U1}/legacy-render.png`),
         ],
         ctx([], [CARD_LIVE]),
@@ -314,9 +342,13 @@ describe("classify", () => {
     ).toEqual({
       [`card-renders/${U1}/${CARD_LIVE}.png`]: "liveCard",
       [`card-renders/${U1}/${CARD_LIVE}.thumb.webp`]: "liveCard",
+      [`card-renders/${U1}/${CARD_LIVE}.back.png`]: "liveCard",
+      [`card-renders/${U1}/${CARD_LIVE}.back.thumb.webp`]: "liveCard",
       [`card-renders/${U2}/${CARD_LIVE}.png`]: "liveCard",
       [`card-renders/${U1}/${CARD_GONE}.png`]: "orphan",
       [`card-renders/${U1}/${CARD_GONE}.thumb.webp`]: "orphan",
+      [`card-renders/${U1}/${CARD_GONE}.back.png`]: "orphan",
+      [`card-renders/${U1}/${CARD_GONE}.back.thumb.webp`]: "orphan",
       [`card-renders/${U1}/legacy-render.png`]: "unknownRender",
     });
     // A deleted card's bake that a row still names (a deck proxy) is kept.

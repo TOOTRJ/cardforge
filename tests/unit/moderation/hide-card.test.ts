@@ -28,7 +28,10 @@ const s = vi.hoisted(() => ({
   log: null as unknown,
 }));
 
-vi.mock("@/lib/cards/bake-core", () => ({
+vi.mock("@/lib/cards/bake-core", async (importOriginal) => ({
+  // The pointer list is the real one (0126 + 0134's six columns minus
+  // layout_version); only the storage call is faked.
+  CLEARED_RENDER_POINTERS: (await importOriginal<typeof import("@/lib/cards/bake-core")>()).CLEARED_RENDER_POINTERS,
   removeRenderObjects: async (owner: string, ids: string[]) => {
     s.seq.push(`remove ${owner} ${ids.join(",")}`);
     return { error: s.removeError };
@@ -96,6 +99,8 @@ describe("hideCard", () => {
       visibility: "private",
       rendered_image_url: null,
       rendered_thumb_url: null,
+      rendered_back_image_url: null,
+      rendered_back_thumb_url: null,
       rendered_at: null,
     });
     expect(called(update.calls, "eq", "id")).toBe(true);

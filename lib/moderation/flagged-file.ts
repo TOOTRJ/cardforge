@@ -59,6 +59,8 @@ export const CARD_PICTURE_COLUMNS = [
   "watermark",
   "rendered_image_url",
   "rendered_thumb_url",
+  "rendered_back_image_url",
+  "rendered_back_thumb_url",
 ] as const;
 
 const uuid = z.string().refine(isUuid, "not a uuid");
