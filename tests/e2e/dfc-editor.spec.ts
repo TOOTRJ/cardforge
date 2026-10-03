@@ -57,8 +57,9 @@ test.describe("double-faced editor", () => {
     await expect(panel.getByText(/^Cost$/)).toHaveCount(0);
     const backTitle = panel.locator('input[placeholder="Insectile Aberration"]');
     await backTitle.fill(`${title} (back)`);
-    // Focusing the panel flips the live preview to the back.
-    await expect(page.getByRole("button", { name: /show the front face/i }).first()).toBeVisible();
+    // Focusing the panel flips the live preview to the back (the desktop
+    // aside is the last preview in the DOM; the mobile one is hidden here).
+    await expect(page.getByRole("button", { name: /show the front face/i }).last()).toBeVisible();
 
     // A preview saves like a draft (no art needed).
     const saveButton = page.getByRole("button", { name: /^save$/i });
