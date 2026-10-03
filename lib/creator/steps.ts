@@ -17,6 +17,7 @@ import {
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
   KIND_DEFS,
+  dfcLayoutForKind,
   templatePaintsSecondFace,
   type CardKind,
 } from "@/lib/creator/card-kinds";
@@ -287,8 +288,10 @@ export type KindPanelConfig = {
    *  "loyalty" = the planeswalker ability-row editor; "saga" = the chapter
    *  editor; the rest use the standard rules textarea. */
   textVariant: "standard" | "loyalty" | "saga" | "adventure" | "split" | "flip";
-  /** The frame paints an intrinsic second face — has_back_face is forced on
-   *  and the layout editor presents "clear", never "remove". */
+  /** The frame paints an intrinsic second face — or the kind is a
+   *  double-faced card whose back is intrinsic to it (TODO 5.2) —
+   *  has_back_face is forced on and the back-face editor presents "clear",
+   *  never "remove". */
   forcedBackFace: boolean;
 };
 
@@ -306,6 +309,6 @@ export function panelConfigFor(ctx: StepContext): KindPanelConfig {
     artSlots:
       kind === "split" || kind === "aftermath" ? ["front", "second"] : ["front"],
     textVariant,
-    forcedBackFace: KIND_DEFS[kind].inlineSecondFace,
+    forcedBackFace: KIND_DEFS[kind].inlineSecondFace || dfcLayoutForKind(kind) !== null,
   };
 }

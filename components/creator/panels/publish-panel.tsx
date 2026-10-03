@@ -1,10 +1,12 @@
 "use client";
 
 // Publish panel — the "Save as a draft" checkbox + visibility lead, then
-// discovery tags, with back face, finish and watermark
-// tucked into Advanced. The challenge entry toggle leads when a challenge is
-// running. The slug is derived from the title automatically — not
-// user-editable.
+// discovery tags, with finish and watermark tucked into Advanced. The
+// challenge entry toggle leads when a challenge is running. The slug is
+// derived from the title automatically — not user-editable. The
+// "Double-faced cards — coming soon" veil that sat under Advanced is gone
+// (TODO 5.2): a double-faced card is a KIND of the Card step, its back a
+// panel of the Identity step.
 
 import { useState, useTransition } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
@@ -25,15 +27,12 @@ import {
   inputClass,
 } from "@/components/creator/field-group";
 import { mergeTag, parseTags, removeTag } from "@/lib/creator/card-fields";
-import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
-import { BackFacePicker } from "@/components/creator/back-face-picker";
 import { ChallengeBriefDialog } from "@/components/creator/challenge-brief-dialog";
 import { EffectsPanel } from "@/components/creator/panels/effects-panel";
-import { ComingSoon } from "@/components/creator/coming-soon";
 import { WatermarkPicker } from "@/components/creator/panels/watermark-picker";
 import { daysLeft, type Challenge } from "@/lib/challenges/shared";
 import { cn } from "@/lib/utils";
-import type { Card, Visibility } from "@/types/card";
+import type { Visibility } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 
 // Private is not a chip any more — it is the "Save as a draft" checkbox
@@ -68,17 +67,12 @@ export type DeckOption = {
 type PublishPanelProps = {
   /** Signed-in user id — gates the custom-watermark upload. */
   userId: string | null;
-  profileOverrides?: FrameProfileOverridesMap | null;
   /** The currently running challenge, if any — renders the entry toggle. */
   activeChallenge?: Challenge | null;
   /** The current user's decks — the "Add to deck" picker. `null` hides the
    *  picker entirely (edit mode: deck membership is managed from the deck
    *  dashboard, not the card editor). */
   myDecks?: DeckOption[] | null;
-  /** The current user's cards — the back-face picker. Excludes this card. */
-  myCards: Card[];
-  /** Save the current card + open a fresh creator to build/link a back face. */
-  onCreateBackFace: () => void;
   /** Edit / remix: deck and finish are locked structure
    *  (owner decision 2026-09-16) and are not offered. */
   revise?: boolean;
@@ -90,11 +84,8 @@ type PublishPanelProps = {
 
 export function PublishPanel({
   userId,
-  profileOverrides = null,
   activeChallenge,
   myDecks = null,
-  myCards,
-  onCreateBackFace,
   revise = false,
   showWatermark = true,
 }: PublishPanelProps) {
@@ -107,7 +98,6 @@ export function PublishPanel({
   const tagsText = useWatch({ control, name: "tags_text" }) ?? "";
   const visibility = useWatch({ control, name: "visibility" });
   const saveAsDraft = useWatch({ control, name: "save_as_draft" }) ?? false;
-  const backCardId = useWatch({ control, name: "back_card_id" }) ?? "";
   // The checkbox and the visibility field move together: ticking it forces
   // private; unticking a private card offers public (the default) again.
   const setSaveAsDraft = (next: boolean) => {
@@ -239,28 +229,12 @@ export function PublishPanel({
         />
       </FieldGroup>
 
-      {/* Back face + finish + watermark, under Advanced. */}
+      {/* Finish + watermark, under Advanced. */}
       <details className="rounded-lg border border-border/60 bg-elevated/30">
         <summary className="cursor-pointer list-none px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
           Advanced
         </summary>
         <div className="flex flex-col gap-4 px-4 pb-4">
-          {/* Double-faced cards (a second full card as the back) are parked
-              behind a "coming soon" veil (owner decision 2026-09-16): the
-              picker stays mounted so an already-linked back still shows,
-              but nothing here is interactive. */}
-          <ComingSoon label="Double-faced cards">
-            <BackFacePicker
-              profileOverrides={profileOverrides}
-              myCards={myCards}
-              value={backCardId}
-              onChange={(id) =>
-                setValue("back_card_id", id, { shouldDirty: true })
-              }
-              onCreateNew={onCreateBackFace}
-            />
-          </ComingSoon>
-
           {revise ? null : <EffectsPanel />}
           {showWatermark ? <WatermarkPicker userId={userId} /> : null}
         </div>

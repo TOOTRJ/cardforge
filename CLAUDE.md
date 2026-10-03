@@ -211,7 +211,19 @@ Rules and gotchas:
   that `dfc` block — never from the `dfcIcon` switch (off for an absent
   key, which reads as `arrows`); a BACK body is never a card's own template
   (`templateRefusesKind`), and nothing on them is offered until each colour
-  of the front AND the default back is ticked (after 5.3).
+  of the front AND the default back is ticked (after 5.3). A back face's
+  body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
+  `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
+  — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`
+  — verified per colour, `c` only with an Artifact word, a transform back
+  with no cost; a public DFC needs both arts), and the FRONT its own
+  (`dfcFrontTypeError`: a wave-1 face type on the body its type derives —
+  the kind gate can't see it, a card on a front body IS the kind —
+  `dfcFrontColorError`: `c` only with an Artifact word); the retired
+  `back_card_id` is accepted only to CLEAR; the 8 imported DFCs move onto
+  the bodies only by their owner's click (`adoptDfcBodiesAction`,
+  `lib/cards/dfc-adopt.ts`; a land back goes colourless — the land pair
+  is verified on `c` alone).
   A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
   PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
   through `renderBackFace` in both bake paths, the four pointers in ONE

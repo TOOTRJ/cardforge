@@ -396,6 +396,89 @@ from (values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
+-- 2d. Double-faced cards (TODO 5.2; design 2026-10-02): ONE row holds both
+--     faces — the front on a transform FRONT body, the back in `back_face`
+--     with its own BODY (`frame_style.template`, a back body) and COLOUR
+--     (`color_identity`), the card's icon family in frame_style.dfcIcon
+--     (`arrows` = the ▼-right back). dev_pro's, ids …053–…056 (…050–…052
+--     are 4.6f wave 2c's). Seeds never pass the frame gate, so these sit on
+--     the bodies before the owner ticks them (after 5.3): the Transform chip
+--     stays dark on a branch, and the stored rows still render through the
+--     live preview (no stored bake; the back bake is 5.3's). The modal seed
+--     waits for 5.1b's bodies. One PUBLIC row — the 24th public card, the
+--     last that fits the seeded gallery's one page (the e2e gallery specs,
+--     see 2b) — the rest unlisted or private:
+--       …053 a public transform creature // creature, both arts, both bodies;
+--       …054 a private draft with an UNNAMED back (a draft may, 3b.5);
+--       …055 a transform LAND front // creature back (the land pair's front,
+--            colourless, stored with the `c` row 5.1a verifies it on);
+--       …056 a LEGACY-shaped `back_face` on m15 — the shape of the 8 imported
+--            double-faced cards: content only, no body, no colour — for the
+--            editor's one-click move onto the real frames (owner Q3:
+--            "Move onto the transform frames" on its Identity step).
+-- ---------------------------------------------------------------------------
+
+insert into public.cards (
+  id, owner_id, game_system_id, title, slug, cost, color_identity, supertype,
+  card_type, subtypes, rarity, rules_text, flavor_text, power, toughness,
+  artist_credit, art_url, frame_style, back_face, visibility, tags, layout,
+  created_at, updated_at
+)
+select
+  c.id, 'd0000000-0000-4000-a000-000000000002'::uuid,
+  (select id from public.game_systems order by created_at limit 1),
+  c.title, c.slug, c.cost, c.colors, c.supertype, c.card_type, c.subtypes,
+  c.rarity, c.rules_text, c.flavor_text, c.power, c.toughness,
+  'PipGlyph Studio',
+  'https://pipglyph.com/defaults/avatars/avatar-' || lpad(c.art::text, 2, '0') || '.webp',
+  c.frame_style,
+  c.back_face
+    || jsonb_build_object(
+         'artist_credit', 'PipGlyph Studio',
+         'art_position', jsonb_build_object('focalX', 0.5, 'focalY', 0.5, 'scale', 1)
+       )
+    || case when c.back_art is null then '{}'::jsonb
+            else jsonb_build_object('art_url', 'https://pipglyph.com/defaults/avatars/avatar-' || lpad(c.back_art::text, 2, '0') || '.webp') end,
+  c.visibility, c.tags, 'normal',
+  now() - (c.age_days || ' days')::interval,
+  now() - (c.age_days || ' days')::interval
+from (values
+  -- A public transform creature // creature: a green werewolf, both faces
+  -- with art, the back on the ▼-right back body in its own (green) colour.
+  ('c0000000-0000-4000-a000-000000000053'::uuid, 'Thornhollow Villager', 'thornhollow-villager', '{2}{G}', array['green'], null, 'creature', array['Human','Werewolf'], 'uncommon',
+     E'Daybound (If a player casts no spells during their own turn, it becomes night next turn.)', 'By day a woodcutter. By night, the wood cuts back.', '2', '2', 2,
+     '{"template":"m15dfcfront","finish":"regular","collector":"2023","dfcIcon":"arrows"}'::jsonb,
+     '{"title":"Thornhollow Howler","card_type":"creature","subtypes":["Werewolf"],"power":"4","toughness":"3","rules_text":"Trample\nNightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)","frame_style":{"template":"m15dfcback"},"color_identity":["green"]}'::jsonb,
+     5, 'public', array['werewolves','transform'], 1),
+  -- A private draft with an UNNAMED back: a draft may leave the second
+  -- face unnamed (3b.5); publishing it needs the back's name and art.
+  ('c0000000-0000-4000-a000-000000000054'::uuid, 'Unfinished Delver', 'unfinished-delver', '{U}', array['blue'], null, 'creature', array['Human','Wizard'], 'common',
+     E'At the beginning of your upkeep, look at the top card of your library.', null, '1', '1', 8,
+     '{"template":"m15dfcfront","finish":"regular","collector":"2023","dfcIcon":"sunmoon"}'::jsonb,
+     '{"title":"","card_type":"creature","subtypes":["Human","Insect"],"power":"3","toughness":"2","frame_style":{"template":"m15dfcbackleft"},"color_identity":["blue"]}'::jsonb,
+     null, 'private', array['transform'], 1),
+  -- A transform LAND front // creature back: the land front (no cost,
+  -- colourless — one master under every key, verified on `c`) with a red
+  -- creature on the ▼-right back in its own colour. Unlisted.
+  ('c0000000-0000-4000-a000-000000000055'::uuid, 'Emberfall Shrine', 'emberfall-shrine', null, array['colorless'], null, 'land', array[]::text[], 'rare',
+     E'{T}: Add {C}.\n{3}{R}, {T}: Transform Emberfall Shrine. Activate only as a sorcery.', null, null, null, 12,
+     '{"template":"m15dfclandfront","finish":"regular","collector":"2023","dfcIcon":"arrows"}'::jsonb,
+     '{"title":"Emberfall, Awakened","card_type":"creature","supertype":"Legendary","subtypes":["Elemental","Spirit"],"power":"5","toughness":"5","rules_text":"Haste\nWhenever Emberfall, Awakened attacks, it deals 2 damage to each opponent.","frame_style":{"template":"m15dfcback"},"color_identity":["red"]}'::jsonb,
+     14, 'unlisted', array['transform','lands'], 1),
+  -- A LEGACY double-faced card: the shape the 8 imported ones store — the
+  -- front on m15, the back CONTENT only (no body, no colour), drawn on the
+  -- front's frame and colour. Its editor offers the one-click move.
+  ('c0000000-0000-4000-a000-000000000056'::uuid, 'Moorland Chaplain', 'moorland-chaplain', '{1}{W}', array['white'], null, 'creature', array['Human','Cleric','Werewolf'], 'uncommon',
+     E'Daybound', 'She tends the flock. Some nights she is the wolf.', '2', '2', 17,
+     '{"template":"m15","finish":"regular","collector":"2023","crown":true,"twoColor":true}'::jsonb,
+     '{"title":"Moorland Ravager","card_type":"creature","subtypes":["Werewolf"],"power":"3","toughness":"3","rules_text":"Nightbound\nMoorland Ravager has lifelink as long as it''s night."}'::jsonb,
+     19, 'unlisted', array['transform','legacy'], 2)
+) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
+        rules_text, flavor_text, power, toughness, art, frame_style, back_face,
+        back_art, visibility, tags, age_days)
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
 -- 3. Social graph. The like / comment / follow / remix triggers turn these
 --    into notification rows for free, so the bell has something in it.
 -- ---------------------------------------------------------------------------

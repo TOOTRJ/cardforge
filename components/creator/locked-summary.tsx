@@ -8,7 +8,7 @@
 
 import { Lock } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { KIND_DEFS, kindFromCard } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, dfcLayoutForKind, kindFromCard } from "@/lib/creator/card-kinds";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
@@ -32,17 +32,21 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   const template = normalizeFrameTemplate(frameStyle?.template) as FrameTemplate;
   const kind = kindFromCard(cardType, template);
   const subtypes = parseSubtypes(subtypesText);
-  // A token reads as it prints: "Token" first (TODO 3b.15).
+  // A token reads as it prints: "Token" first (TODO 3b.15). A double-faced
+  // card's front reads its own type line, the kind after it (TODO 5.2:
+  // "Legendary Creature — Human Werewolf · Transform").
   const typeLine =
     kind === "token"
       ? buildTypeLine({ supertype, cardType: "token", subtypes })
-      : [
-          supertype.trim(),
-          KIND_DEFS[kind].label,
-          subtypes.length > 0 ? `— ${subtypes.join(" ")}` : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
+      : dfcLayoutForKind(kind)
+        ? `${buildTypeLine({ supertype, cardType: cardType || KIND_DEFS[kind].cardType, subtypes })} · ${KIND_DEFS[kind].label}`
+        : [
+            supertype.trim(),
+            KIND_DEFS[kind].label,
+            subtypes.length > 0 ? `— ${subtypes.join(" ")}` : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
   const frameLabel = FRAME_TEMPLATE_LABELS[template] ?? template;
   const eraLabel = FRAME_ERA_LABELS[eraForTemplate(template)];
   const colorLabel =

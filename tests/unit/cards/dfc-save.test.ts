@@ -309,7 +309,9 @@ describe("the real transform bodies through the actions (TODO 5.1a)", () => {
   });
 
   it("refuses a real back body under a plain front, and a non-back template as the body under the transform front; accepts the back body under the transform front once its colour is verified", async () => {
-    state.verified = ["m15/w", "m15dfcfront/w", "m15dfclandfront/c"];
+    // Since 5.2 the BACK body's colour is verified too (lib/cards/dfc-gate.ts):
+    // the ▼ back and the 2016–22 back in white join the set.
+    state.verified = ["m15/w", "m15dfcfront/w", "m15dfclandfront/c", "m15dfcback/w", "m15dfcbackleft/w"];
     const plain = db();
     const underPlain = await createCardAction(payload({ back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] } }));
     expect(underPlain.ok).toBe(false);
@@ -328,12 +330,15 @@ describe("the real transform bodies through the actions (TODO 5.1a)", () => {
     expect(written(ok, "insert")?.back_face).toEqual({ ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
     // The family survives on the front body, the crown does not (D17); the
     // collector line starts on, as on every new card with the slot (4.9b).
+    // The family picks the BACK body (5.2): the compass family's creature
+    // back is the 2016–22 back, so that is the body the payload names.
     const land = db();
     const landFront = await createCardAction(
-      payload({ card_type: "land", cost: "", color_identity: ["colorless"], frame_style: { template: "m15dfclandfront", dfcIcon: "compass", crown: true }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] } }),
+      payload({ card_type: "land", cost: "", color_identity: ["colorless"], frame_style: { template: "m15dfclandfront", dfcIcon: "compass", crown: true }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcbackleft" }, color_identity: ["white"] } }),
     );
     expect(landFront.ok).toBe(true);
     expect(written(land, "insert")?.frame_style).toEqual({ template: "m15dfclandfront", dfcIcon: "compass", collector: "2023" });
+    expect((written(land, "insert")?.back_face as { frame_style: unknown }).frame_style).toEqual({ template: "m15dfcbackleft" });
   });
 });
 

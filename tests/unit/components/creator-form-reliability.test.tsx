@@ -367,24 +367,31 @@ describe("3b.1 a failed save request keeps the editor", () => {
   });
 
   it("a saved card whose follow-up link request throws still reports the save and moves on", async () => {
+    // The deck proxy's link (the one follow-up request left since the
+    // /create?backFor= back-face flow went with TODO 5.2).
     actions.createCardAction.mockResolvedValue({
       ok: true,
       cardId: "44444444-4444-4444-8444-444444444444",
       slug: "wyrm-of-the-second-dawn",
     });
-    actions.updateCardAction.mockRejectedValue(new TypeError("Failed to fetch"));
+    actions.linkDeckCardAction.mockRejectedValue(new TypeError("Failed to fetch"));
     renderForm({
       mode: "remix",
       card: savedCard({ visibility: "public" }),
-      backForCardId: "55555555-5555-4555-8555-555555555555",
-      backForSlug: "tester/front-card",
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: null,
+        deckSlug: "tester/burn",
+        deckTitle: "Burn",
+        entryName: "Lightning Bolt",
+      },
     });
     await typeTitle("Wyrm of the Second Dawn");
     await clickSave();
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledTimes(1));
-    expect(router.replace).toHaveBeenCalledWith("/card/tester/front-card/edit?step=publish");
-    expect(toast.error).toHaveBeenCalledWith("Saved, but couldn't link it as the back face.");
+    expect(router.replace).toHaveBeenCalledWith("/deck/tester/burn");
+    expect(toast.error).toHaveBeenCalledWith("Saved, but couldn't link it into the deck.");
     expect(screen.queryByTestId("error-boundary")).toBeNull();
   });
 });
@@ -913,12 +920,17 @@ describe("3b.7 a save takes the Back sentinel off before navigating", () => {
       cardId: "44444444-4444-4444-8444-444444444444",
       slug: "wyrm-of-the-second-dawn",
     });
-    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "front-card" });
+    actions.linkDeckCardAction.mockResolvedValue({ ok: true });
     renderForm({
       mode: "remix",
       card: savedCard({ visibility: "public" }),
-      backForCardId: "55555555-5555-4555-8555-555555555555",
-      backForSlug: "tester/front-card",
+      deckRemix: {
+        deckCardId: "66666666-6666-4666-8666-666666666666",
+        scryfallId: null,
+        deckSlug: "tester/burn",
+        deckTitle: "Burn",
+        entryName: "Lightning Bolt",
+      },
     });
     await typeTitle("Wyrm of the Second Dawn");
     await clickSave();
@@ -1859,7 +1871,6 @@ describe("4.48 the full-art token: the default switch and the automatic height",
 
 describe("a save from the leave dialog still links the new card", () => {
   const NEW_CARD = "44444444-4444-4444-8444-444444444444";
-  const FRONT_CARD = "55555555-5555-4555-8555-555555555555";
 
   async function leaveViaLinkAndSaveDraft() {
     const anchor = document.createElement("a");
@@ -1879,23 +1890,6 @@ describe("a save from the leave dialog still links the new card", () => {
       anchor.remove();
     }
   }
-
-  it("a back face is linked to its front, then the leave continues", async () => {
-    actions.createCardAction.mockResolvedValue({ ok: true, cardId: NEW_CARD, slug: "the-back" });
-    actions.updateCardAction.mockResolvedValue({ ok: true, slug: "front-card" });
-    renderForm({ mode: "create", backForCardId: FRONT_CARD, backForSlug: "tester/front-card" });
-    await clickNext(); // Identity
-    await typeTitle("The Back");
-    await leaveViaLinkAndSaveDraft();
-
-    expect(actions.createCardAction).toHaveBeenCalledTimes(1);
-    expect(actions.updateCardAction).toHaveBeenCalledWith(FRONT_CARD, { back_card_id: NEW_CARD });
-    expect(actions.updateCardAction.mock.invocationCallOrder[0]).toBeLessThan(
-      router.push.mock.invocationCallOrder[0],
-    );
-    // The dialog's destination wins over the flow's own "back to the front".
-    expect(router.replace).not.toHaveBeenCalled();
-  });
 
   it("a deck proxy is linked into its deck, then the leave continues", async () => {
     actions.createCardAction.mockResolvedValue({ ok: true, cardId: NEW_CARD, slug: "my-bolt" });

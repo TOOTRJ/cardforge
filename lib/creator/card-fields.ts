@@ -34,7 +34,7 @@ import {
   loyaltyFromRulesText,
   sagaFromRulesText,
 } from "@/lib/cards/face-content";
-import { KIND_DEFS, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
@@ -86,11 +86,12 @@ function structuredRowsFrom(card: Card): {
  *  paints one types it like the kind's own card — a split's halves are
  *  instants, an aftermath's sorceries, a flip's creatures (and an
  *  Adventure's spell, as before, until 3b.14 gives it a type choice); the
- *  blank used to be a Creature everywhere. Every other kind keeps the plain
- *  blank. */
+ *  blank used to be a Creature everywhere. A double-faced kind's back (TODO
+ *  5.2) starts as the kind's card type too — a creature. Every other kind
+ *  keeps the plain blank. */
 export function blankSecondFaceFor(kind: CardKind): BackFaceFormValues {
   const def = KIND_DEFS[kind];
-  return def.inlineSecondFace
+  return def.inlineSecondFace || dfcLayoutForKind(kind)
     ? { ...EMPTY_BACK_FACE, card_type: def.cardType }
     : EMPTY_BACK_FACE;
 }
@@ -140,6 +141,9 @@ function backFaceFormValuesFrom(
       focalY: 0.5,
       scale: 1,
     },
+    // The back's own colour (a double-faced card, TODO 5.2); a legacy back
+    // names none and draws in the front's.
+    color_identity: [...(source.color_identity ?? [])],
   };
 }
 
@@ -220,7 +224,6 @@ export function defaultValuesFor(
       save_as_draft: false,
       has_back_face: false,
       back_face: EMPTY_BACK_FACE,
-      back_card_id: "",
       source_scryfall_id: "",
       set_icon_url: "",
       set_icon_code: "",
@@ -286,7 +289,6 @@ export function defaultValuesFor(
       persistedBackFace,
       kindFromCard(card.card_type, normalizedFrameStyle.template),
     ),
-    back_card_id: card.back_card_id ?? "",
     source_scryfall_id: card.source_scryfall_id ?? "",
     // Denormalized icon columns — the Set icon step edits them directly.
     set_icon_url: card.set_icon_url ?? "",
@@ -309,8 +311,8 @@ export function defaultValuesFor(
 /** Form values for a NEW card remixed from `parent`: the parent's content and
  *  structure, retitled "… (remix)", with everything that belongs to the
  *  parent's OWNER left behind — its set membership and set icon, its deck,
- *  its linked back card, its slug. Nothing is inserted until the user saves
- *  (owner decision 2026-09-16); the slug then follows the saved title. */
+ *  its slug. Nothing is inserted until the user saves (owner decision
+ *  2026-09-16); the slug then follows the saved title. */
 export function remixValuesFrom(
   parent: Card,
   gameSystems: GameSystem[],
@@ -335,7 +337,6 @@ export function remixValuesFrom(
     // only the language its text is written in (TODO 4.9a).
     set_code: "",
     collector_number: "",
-    back_card_id: "",
     deck_id: "",
   };
 }
