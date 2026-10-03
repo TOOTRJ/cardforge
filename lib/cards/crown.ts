@@ -148,6 +148,22 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     m: ref("Rin and Seri, Inseparable", "m21", "278", "d605c780-a42a-4816-8fb9-63e3114a8246"),
     c: ref("Emrakul, the Aeons Torn", "puma", "U1", "38cd438d-be12-40aa-bd6c-be55e88b63ce"),
   },
+  // The snow frame (TODO 4.6f, wave 2c): the twelve crowned snow printings
+  // are three KHM pairs (U|B, G|U, R|G — the m key's references, and the
+  // pair bands'), two mono blues (J22 #12 Isu, #319 Marit Lage's Slumber),
+  // two mono greens (PH19 #5 Myntasha, KHM #179 Jorn — an MDFC), three
+  // List reprints and one land (below); no w, b, r or artifact snow crown
+  // was ever printed, so those keys have none.
+  m15snow: {
+    u: ref("Isu the Abominable", "j22", "12", "1e1d50c3-3219-49cb-8f63-c1faff93215c"),
+    g: ref("Myntasha, Honored One", "ph19", "5", "d7e57d2f-141f-461a-8f5a-4cec3020442e"),
+    m: ref("Narfi, Betrayer King", "khm", "224", "421376e4-a4ad-427c-bc9c-d315308dcf68"),
+  },
+  // The snow land: DMR #244 Dark Depths, the only crowned snow-frame land
+  // (colourless, so the land grey "l" crown over the snow land bars).
+  m15snowland: {
+    c: ref("Dark Depths", "dmr", "244", "3a8b11ad-d077-40b6-988c-0462e118fe3d"),
+  },
   // The artifact dress: a crowned borderless artifact per colour where one
   // was printed; its colourless crown is CC's artifact crown (2XM #362).
   m15borderlessartifact: {

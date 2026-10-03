@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
-import { CC_TEMPLATES, borderlessPairLayers, describeLayer, pairMasterLayers } from "@/scripts/lib/cc-frames.mjs";
+import { CC_TEMPLATES, borderlessPairLayers, describeLayer, pairMasterLayers, snowPairLayers } from "@/scripts/lib/cc-frames.mjs";
 import {
   FRAME_MASTER_KEYS,
   TWO_COLOR_MASTER_KEYS,
@@ -30,14 +30,18 @@ const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8
 >;
 
 const KIND: Record<string, "m15" | "artifact" | "land"> = { m15: "m15", m15artifact: "artifact", m15land: "land" };
+const SNOW_KIND: Record<string, "snow" | "snowland"> = { m15snow: "snow", m15snowland: "snowland" };
 /** The templates whose pairs the Card Conjurer importer builds, and the
  *  recipe each reads: m15 / m15artifact / m15land through pairMasterLayers
- *  (4.6b), the borderless dresses through borderlessPairLayers (4.6f). */
-const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact"] as const;
+ *  (4.6b), the borderless dresses through borderlessPairLayers (4.6f, wave
+ *  2a), the snow pair through snowPairLayers (wave 2c). */
+const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"] as const;
 function recipeOf(template: string, key: string) {
   const [pair, hybrid] = key.split("-");
   const dress = hybrid ? "hybrid" : "split";
-  return KIND[template] ? pairMasterLayers(pair, dress, KIND[template]) : borderlessPairLayers(pair, dress);
+  if (KIND[template]) return pairMasterLayers(pair, dress, KIND[template]);
+  if (SNOW_KIND[template]) return snowPairLayers(pair, dress, SNOW_KIND[template]);
+  return borderlessPairLayers(pair, dress);
 }
 
 function declaredKeys(template: string): string[] {
@@ -47,11 +51,11 @@ function declaredKeys(template: string): string[] {
 }
 
 describe("the declared pair masters", () => {
-  it("are 40 in wave 1 (m15 gold-split + hybrid, m15artifact and m15land gold-split) and 30 more in wave 2a (the borderless pinline split, and m15borderless's hybrid)", () => {
+  it("are 40 in wave 1 (m15 gold-split + hybrid, m15artifact and m15land gold-split), 30 more in wave 2a (the borderless pinline split, and m15borderless's hybrid) and 20 more in wave 2c (the snow pair's split)", () => {
     const declared = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.map((t) => [t, declaredKeys(t).length] as const).filter(([, n]) => n > 0),
     );
-    expect(declared).toEqual({ m15: 20, m15land: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10 });
+    expect(declared).toEqual({ m15: 20, m15land: 10, m15snowland: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10, m15snow: 10 });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);
   });

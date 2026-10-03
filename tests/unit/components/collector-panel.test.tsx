@@ -6,9 +6,11 @@ import {
   CollectorSwitches,
   FOIL_FINISH_STAR_NOTE,
   NO_COLLECTOR_SLOT_NOTE,
+  TWO_COLOUR_STAMP_NOTE,
   collectorStyleExamples,
+  holoStampAnswer,
 } from "@/components/creator/panels/collector-panel";
-import { ANATOMY_HINTS } from "@/components/creator/panels/anatomy-panel";
+import { ANATOMY_HINTS, COLLECTOR_ONLY_HINT } from "@/components/creator/panels/anatomy-panel";
 import { NEW_CARD_ANATOMY } from "@/lib/cards/anatomy";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { FrameStyle } from "@/types/card";
@@ -32,12 +34,16 @@ function Harness({
   cardType = "creature",
   rarity = "mythic",
   collectorNumber = "",
+  colorIdentity = ["black"],
+  cost = "{2}{B}{B}",
 }: {
   frameStyle: FrameStyle;
   stored?: FrameStyle | null;
   cardType?: string;
   rarity?: string;
   collectorNumber?: string;
+  colorIdentity?: string[];
+  cost?: string;
 }) {
   const methods = useForm<FormValues>({
     defaultValues: {
@@ -46,6 +52,8 @@ function Harness({
       rarity: rarity as FormValues["rarity"],
       frame_style: frameStyle,
       collector_number: collectorNumber,
+      color_identity: colorIdentity as FormValues["color_identity"],
+      cost,
     } as Partial<FormValues> as FormValues,
   });
   const style = useWatch({ control: methods.control, name: "frame_style" });
@@ -60,6 +68,7 @@ function Harness({
 const styleOf = () => JSON.parse(screen.getByTestId("style").textContent ?? "{}") as FrameStyle;
 const lineSwitch = () => screen.getByRole("switch", { name: "Collector line" });
 const starSwitch = () => screen.queryByRole("switch", { name: "Foil printing (★)" });
+const stampSwitch = () => screen.queryByRole("switch", { name: "Holofoil stamp" });
 
 describe("a new card", () => {
   it("starts with the line on in the 2023 style, the chips showing, no hint, the ★ off", () => {
@@ -129,6 +138,102 @@ describe("where the frame has no slot", () => {
       expect(screen.queryByRole("switch", { name: "Collector line" })).toBeNull();
       cleanup();
     }
+  });
+});
+
+describe("the holofoil stamp (TODO 4.9c)", () => {
+  it("a new rare starts on Auto with the chips and the live answer; Always and Never write the frame's oval and none; the switch itself toggles auto / none", () => {
+    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} rarity="rare" />);
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Rare → stamp");
+    expect(screen.queryByTestId("anatomy-hint-stamp")).toBeNull();
+    expect(screen.getByRole("radio", { name: "Auto: rares & mythics" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Always" }));
+    expect(styleOf().stamp).toBe("oval");
+    fireEvent.click(screen.getByRole("radio", { name: "Never" }));
+    expect(styleOf().stamp).toBe("none");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Rare → no stamp");
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("auto");
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("none");
+  });
+
+  it("a new common on Auto shows the switch off with the honest answer; Always switches it on — and so does the switch itself (the frame's shape, never a dead click)", () => {
+    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} rarity="common" />);
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → no stamp");
+    fireEvent.click(screen.getByRole("radio", { name: "Always" }));
+    expect(styleOf().stamp).toBe("oval");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → stamp");
+    // The switch: off writes Never; on, for a card the auto rule would not
+    // stamp, writes the frame's shape (what "Always" writes) — "auto" would
+    // draw nothing on a common and leave the switch off.
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("none");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("oval");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → stamp");
+  });
+
+  it("a stored key-less common: the hint's 'switch it on' adds the stamp (Always), not a dead 'auto'", () => {
+    render(<Harness frameStyle={{ template: "m15", finish: "regular" }} stored={{ template: "m15", finish: "regular" }} rarity="common" />);
+    expect(screen.getByTestId("anatomy-hint-stamp").textContent).toBe(ANATOMY_HINTS.stamp);
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("oval");
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("anatomy-hint-stamp")).toBeNull();
+  });
+
+  it("a stored card from before the stamp shows the hint under the stamp (and under a key-less collector line); an explicit Never shows none", () => {
+    render(<Harness frameStyle={{ template: "m15", finish: "regular" }} stored={{ template: "m15", finish: "regular" }} rarity="rare" />);
+    expect(screen.getByTestId("anatomy-hint-collector").textContent).toBe(ANATOMY_HINTS.collector);
+    expect(screen.getByTestId("anatomy-hint-stamp").textContent).toBe(ANATOMY_HINTS.stamp);
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("auto");
+    expect(screen.queryByTestId("anatomy-hint-stamp")).toBeNull();
+    cleanup();
+    // A card saved between 4.9b and 4.9c: the line on, the stamp key absent.
+    render(<Harness frameStyle={{ template: "m15", collector: "2023" }} stored={{ template: "m15", collector: "2023" }} rarity="rare" />);
+    expect(screen.queryByTestId("anatomy-hint-collector")).toBeNull();
+    expect(screen.getByTestId("anatomy-hint-stamp").textContent).toBe(ANATOMY_HINTS.stamp);
+    cleanup();
+    render(<Harness frameStyle={{ template: "m15", stamp: "none" }} stored={{ template: "m15", stamp: "none" }} rarity="rare" />);
+    expect(screen.queryByTestId("anatomy-hint-stamp")).toBeNull();
+  });
+
+  it("a token or an emblem has no stamp control, and its collector hint names the line alone", () => {
+    render(<Harness frameStyle={{ template: "m15token", finish: "regular" }} stored={{ template: "m15token", finish: "regular" }} cardType="token" rarity="rare" />);
+    expect(stampSwitch()).toBeNull();
+    expect(screen.getByTestId("anatomy-hint-collector").textContent).toBe(COLLECTOR_ONLY_HINT);
+    cleanup();
+    render(<Harness frameStyle={{ template: "emblem", ...NEW_CARD_ANATOMY }} cardType="emblem" rarity="common" />);
+    expect(stampSwitch()).toBeNull();
+    cleanup();
+    // A token TYPE on a notched frame: hidden too (never a stamp).
+    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} cardType="token" rarity="rare" />);
+    expect(stampSwitch()).toBeNull();
+  });
+
+  it("a two-colour card drawn as its pair master says the pair has no notch yet", () => {
+    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} rarity="rare" colorIdentity={["white", "blue"]} cost="{W}{U}" />);
+    expect(screen.getByTestId("stamp-pair-note").textContent).toBe(TWO_COLOUR_STAMP_NOTE);
+    cleanup();
+    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY, twoColor: false }} rarity="rare" colorIdentity={["white", "blue"]} cost="{W}{U}" />);
+    expect(screen.queryByTestId("stamp-pair-note")).toBeNull();
+  });
+
+  it("the live answer reads the rarity and the type", () => {
+    expect(holoStampAnswer("auto", { cardType: "creature", rarity: "mythic" })).toBe("Mythic → stamp");
+    expect(holoStampAnswer("auto", { cardType: "creature", rarity: "uncommon" })).toBe("Uncommon → no stamp");
+    expect(holoStampAnswer("oval", { cardType: "creature", rarity: "common" })).toBe("Common → stamp");
+    expect(holoStampAnswer("none", { cardType: "creature", rarity: "rare" })).toBe("Rare → no stamp");
+    expect(holoStampAnswer("auto", { cardType: "creature", rarity: null })).toBe("No rarity → no stamp");
   });
 });
 

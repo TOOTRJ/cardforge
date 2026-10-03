@@ -14,11 +14,14 @@
 // the fills (the standard mana-symbol colours: INR #60's print reads
 // 0 / 119 / 178 for blue), and the wedge geometry — one disc, two colours
 // split on the diagonal (the first colour top-left, as MOM #43 prints), three
-// or more in equal wedges from the top, clockwise. The colours run in the
-// order a mana cost prints them (`canonicalColorSequence`: the guild pairs
-// {G}{W} / {R}{W} / {G}{U}…, the shards and wedges), which is the order the
-// printed dot splits in. The outline is a dark ring outside the fill, as
-// printed.
+// or more in equal wedges clockwise from the BOTTOM (6 o'clock): BOT #13
+// Optimus Prime, Autobot Leader ({U}{R}{W}) prints blue bottom-left, red
+// centred at the top, white bottom-right — a wedge centred on 12 o'clock,
+// never a boundary there (the first bake started the wedges at the top,
+// the print's figure turned 180°). The colours run in the order a mana cost
+// prints them (`canonicalColorSequence`: the guild pairs {G}{W} / {R}{W} /
+// {G}{U}…, the shards and wedges), which is the order the printed dot
+// splits in. The outline is a dark ring outside the fill, as printed.
 //
 // Pure and client-safe (its one import is the pure mana-order module): the
 // client preview and the server bake share it.
@@ -94,7 +97,9 @@ type Wedge = { d: string; fill: string };
 
 /** The fill shapes as SVG path data in the COLOR_INDICATOR_VIEW box:
  *  one disc, two half-discs split on the top-right → bottom-left diagonal
- *  (the first colour top-left), else equal wedges from the top, clockwise.
+ *  (the first colour top-left), else equal wedges clockwise from the
+ *  bottom — the first colour's wedge from 6 o'clock round to the left, so
+ *  a three-colour dot has its second colour centred at the top (BOT #13).
  *  Each is a closed path a renderer fills; the outline is drawn under them
  *  as a full disc of the outline's ink (colorIndicatorOutlineRadius). */
 export function colorIndicatorWedges(fills: readonly string[]): Wedge[] {
@@ -117,7 +122,8 @@ export function colorIndicatorWedges(fills: readonly string[]): Wedge[] {
   }
   const n = fills.length;
   return fills.map((fill, i) => {
-    const a0 = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    // 6 o'clock is +π/2 in SVG's y-down frame; the angle grows clockwise.
+    const a0 = Math.PI / 2 + (i * 2 * Math.PI) / n;
     const a1 = a0 + (2 * Math.PI) / n;
     const p = (a: number) => `${(c + r * Math.cos(a)).toFixed(3)} ${(c + r * Math.sin(a)).toFixed(3)}`;
     const large = 2 * Math.PI / n > Math.PI ? 1 : 0;

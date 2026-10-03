@@ -15,6 +15,7 @@ import {
   type FrameAnatomyPatch,
 } from "@/lib/cards/anatomy";
 import { isCollectorSwitch } from "@/lib/cards/collector-line";
+import { isHoloStampSwitch } from "@/lib/cards/holo-stamp";
 import type { ColorIdentity } from "@/types/card";
 
 /** Form fields a user may change while editing or remixing. Everything else
@@ -157,6 +158,10 @@ export function frameAnatomyPatchFor(
   if (isCollectorSwitch(collector) && collector !== storedStyle.collector) patch.collector = collector;
   const star = values.frame_style.star === true;
   if (star !== (storedStyle.star === true)) patch.star = star;
+  // The holofoil stamp (TODO 4.9c): a value the form holds and the card
+  // doesn't ("auto" / "oval" / "triangle" / "none").
+  const stamp = values.frame_style.stamp;
+  if (isHoloStampSwitch(stamp) && stamp !== storedStyle.stamp) patch.stamp = stamp;
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;

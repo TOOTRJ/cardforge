@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
-import { PAIR_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
+import { PAIR_TEMPLATES, STAMP_ARCH_RULES, STAMP_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 
@@ -63,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|pair|token))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -148,6 +148,40 @@ describe("visual-regression matrix", () => {
     for (const c of cases.filter((x) => !lined.includes(x))) expect(c.row.frame_style, c.id).not.toHaveProperty("collector");
   });
 
+  it("switches the holofoil stamp on only in its stamp cases: a rare on auto on every notched template, the stamp's shapes on m15 (TODO 4.9c)", () => {
+    const stamped = cases.filter((c) => c.id.includes("@stamp"));
+    const keyed = cases.filter((c) => "stamp" in (c.row.frame_style as object));
+    expect(keyed.map((c) => c.id)).toEqual(stamped.map((c) => c.id));
+    expect([...STAMP_TEMPLATES].sort()).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp).sort());
+    // Every notched template has its auto rare; the token case is the one
+    // case on a frame without the notch (nothing drawn, pinned).
+    expect([...new Set(stamped.map((c) => c.template))].sort()).toEqual([...STAMP_TEMPLATES, "m15token"].sort());
+    for (const template of STAMP_TEMPLATES) {
+      const auto = stamped.find((c) => c.template === template && c.id.endsWith("@stamp"));
+      expect(auto, template).toBeDefined();
+      expect((auto!.row.frame_style as { stamp: string }).stamp).toBe("auto");
+      expect(auto!.row.rarity).toBe("rare");
+    }
+    for (const c of stamped) {
+      const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
+      expect(["auto", "oval"], c.id).toContain(style.stamp);
+      expect(style.collector, c.id).toBeUndefined();
+      expect(style.crown, c.id).toBeUndefined();
+    }
+    const byId = new Map(cases.map((c) => [c.id, c]));
+    expect(byId.get("m15/w/creature-short@stamp-always")?.row).toMatchObject({ rarity: "common", frame_style: { stamp: "oval" } });
+    expect(byId.get("m15/b/creature-long@stamp-arch")?.row.rules_text).toBe(STAMP_ARCH_RULES);
+    expect(byId.get("m15/g/creature-long@stamp-hd")?.preset).toBe("hd");
+    expect(byId.get("m15/r/creature-short@stamp-foil")?.finish).toBe("foil");
+    expect(byId.get("m15/u/creature-long@stamp-etched")?.finish).toBe("etched");
+    expect(byId.get("m15/u/creature-short@stamp-square")?.corners).toBe("square");
+    expect((byId.get("m15/wu/creature-short@stamp-pair")?.row.frame_style as { twoColor?: boolean }).twoColor).toBe(true);
+    expect(byId.get("m15token/g/token-short@stamp-token")?.row.card_type).toBe("token");
+    expect(byId.get("m15pw/u/planeswalker-short@stamp")?.row.card_type).toBe("planeswalker");
+    // Every stored card's case names no stamp key.
+    for (const c of cases.filter((x) => !stamped.includes(x))) expect(c.row.frame_style, c.id).not.toHaveProperty("stamp");
+  });
+
   it("marks exactly the square-corner (print) cases print-only — each has a stored round sibling", () => {
     for (const c of cases) expect(c.printOnly, c.id).toBe(c.corners === "square");
     for (const c of cases.filter((x) => x.printOnly)) {
@@ -170,10 +204,11 @@ describe("visual-regression matrix", () => {
     );
     const paired = cases.filter((c) => (c.row.frame_style as { twoColor?: boolean }).twoColor === true);
     const lined = cases.filter((c) => c.id.includes("@collector"));
+    const stamped = cases.filter((c) => c.id.includes("@stamp"));
     // A transform row with a stored icon family (TODO 5.1a: the 2016–22
     // back's cases and the family cases) names `dfcIcon` — a family, not a
     // switch, and the default (`arrows`) is never stored.
-    for (const c of cases.filter((x) => !crowned.includes(x) && !paired.includes(x) && !lined.includes(x))) {
+    for (const c of cases.filter((x) => !crowned.includes(x) && !paired.includes(x) && !lined.includes(x) && !stamped.includes(x))) {
       const keys = Object.keys(c.row.frame_style as object).sort();
       const family = (c.row.frame_style as { dfcIcon?: string }).dfcIcon;
       if (family) {
@@ -210,6 +245,29 @@ describe("visual-regression matrix", () => {
     expect(caseInput({ ...c, row: { ...c.row, rules_text: "Changed." } })).not.toBe(c.input);
     expect(caseInput({ ...c, corners: c.corners === "round" ? "square" : "round" })).not.toBe(c.input);
     expect(caseInput({ ...c, preset: c.preset === "hd" ? "default" : "hd" })).not.toBe(c.input);
+  });
+
+  it("bakes each case in the finish it names: the row's frame_style carries the case's finish (a row override must not reset it)", () => {
+    // The transform bodies' first "@foil" cases (5.1a) baked REGULAR: their
+    // row override carried `finish: "regular"` over the case's foil, so the
+    // rider, the dot and the dark plate were never under the sheen.
+    for (const c of cases) {
+      const rowFinish = (c.row.frame_style as { finish?: string } | null)?.finish ?? "regular";
+      expect(rowFinish, c.id).toBe(c.finish);
+    }
+    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil"]);
+  });
+
+  it("bakes the long back-body cases with the LONG back (dense rules, the long name, 12/12 on the dark plate): never the short back under a long id (TODO 5.1a)", () => {
+    for (const c of cases) {
+      if (c.face !== "back") continue;
+      const back = c.row.back_face as { title?: string; rules_text?: string } | null;
+      const short = cases.find((s) => s.id === c.id.replace(/transform-long/, "transform-short"));
+      if (c.shape === "long" && short) {
+        expect(JSON.stringify(c.row.back_face), c.id).not.toBe(JSON.stringify(short.row.back_face));
+        expect(back?.title?.length ?? 0, c.id).toBeGreaterThan(((short.row.back_face as { title?: string } | null)?.title?.length ?? 0));
+      }
+    }
   });
 
   it("splits into shards that cover every case exactly once", () => {

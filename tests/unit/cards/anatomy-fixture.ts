@@ -1,4 +1,5 @@
 import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
+import { M15_HOLO_STAMP_KEEP_OUT, M15_HOLO_STAMP_OVAL } from "@/lib/cards/holo-stamp";
 import type { FrameOverlaySlot, FrameProfile } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
@@ -17,12 +18,21 @@ export const TEST_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS],
 };
 
+/** …and the holofoil stamp's notch (TODO 4.9c) on the same three. */
+export const TEST_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: 43.6, topPct: 90.34, widthPct: 12.8, heightPct: 4.58 },
+  assetPathTemplate: "/frames/m15holostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c"],
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
+};
+
 type Declared = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands">;
 
 export const DECLARED: Record<string, Declared> = {
-  m15: { overlays: [TEST_CROWN], twoColorMasters: ["split", "hybrid"] },
-  m15artifact: { overlays: [{ ...TEST_CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split"] },
-  m15land: { overlays: [{ ...TEST_CROWN, keyMap: { c: "l" } }], twoColorMasters: ["split"], twoColorForLands: true },
+  m15: { overlays: [TEST_CROWN, TEST_STAMP], twoColorMasters: ["split", "hybrid"] },
+  m15artifact: { overlays: [{ ...TEST_CROWN, keyMap: { c: "a" } }, { ...TEST_STAMP, keyMap: { c: "a" } }], twoColorMasters: ["split"] },
+  m15land: { overlays: [{ ...TEST_CROWN, keyMap: { c: "l" } }, { ...TEST_STAMP, keyMap: { c: "l" } }], twoColorMasters: ["split"], twoColorForLands: true },
 };
 
 /** getFrameProfile with DECLARED merged in (an unknown template reads as

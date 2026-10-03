@@ -120,6 +120,7 @@ import {
   drawsColorIndicator,
   typeRectWithIndicator,
 } from "@/lib/cards/color-indicator";
+import { HOLO_STAMP_OVAL_ART } from "@/lib/cards/holo-stamp-art";
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import {
   COLLECTOR_BRUSH_PATH,
@@ -144,6 +145,7 @@ import {
 import {
   plateKeyFor,
   resolveFrameOverlays,
+  resolveHoloStamp,
   resolveTwoColor,
 } from "@/lib/cards/anatomy";
 import {
@@ -280,6 +282,8 @@ function anatomyFactsOf(card: CardPreviewData) {
     supertype: card.supertype,
     // The icon rider's family and this face's role (TODO 5.1a).
     dfc: card.dfc ? { role: card.dfc.role, icon: card.dfc.icon } : null,
+    // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
+    rarity: card.rarity,
   };
 }
 
@@ -474,6 +478,11 @@ function CardImage({
   const overlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
     (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
+  // The holofoil stamp (TODO 4.9c): its notch is one of the overlays above;
+  // the oval is our bitmap, drawn over the sheens (never inside the foil
+  // mask) at the same rect the preview stretches it over, and its arch is a
+  // keep-out for the rules box while it is drawn — the preview's twins.
+  const holoStamp = resolveHoloStamp(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey });
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(
@@ -599,6 +608,7 @@ function CardImage({
     loyalty: showLoyalty,
     defense: showDefense,
     secondFacePt: Boolean(layout.secondFace?.pt && card.backFace && (card.backFace.power || card.backFace.toughness)),
+    stamp: holoStamp?.keepOut ?? null,
   };
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).
@@ -887,11 +897,6 @@ function CardImage({
         ) : null,
       )}
 
-      {/* The colour-indicator dot (TODO 5.1a): over the master, under every
-          text layer — the preview's ColorIndicatorOverlay twin. A plain
-          sibling, never a Fragment. */}
-      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills }) : null}
-
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -945,6 +950,31 @@ function CardImage({
           height={height}
         />
       ) : null}
+
+      {/* The holofoil stamp's oval (TODO 4.9c): our own silver oval bitmap
+          (lib/cards/holo-stamp-art.ts) over the notch and ABOVE the sheens
+          — a real stamp is foil of its own, never tinted by the card's —
+          stretched over the art rect (the oval plus its black margin, which
+          covers the notch piece's cut). The preview's HoloStampOval twin. */}
+      {holoStamp ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={HOLO_STAMP_OVAL_ART.dataUri}
+          alt=""
+          width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
+          height={Math.round((holoStamp.artRect.heightPct / 100) * height)}
+          style={{ ...slotBox(holoStamp.artRect), objectFit: "fill", zIndex: 7 }}
+        />
+      ) : null}
+
+      {/* The colour-indicator dot (TODO 5.1a): printed INK over the frame —
+          above both finish sheens (the preview draws it at z 8, over the
+          sheens' z 6, like every text layer: a foil back's dot is not
+          tinted by the rainbow) and under the rules backdrop and every
+          text layer — the preview's ColorIndicatorOverlay twin. Satori
+          paints in document order, so it sits here, after the sheens. A
+          plain sibling, never a Fragment. */}
+      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills }) : null}
 
       {/* Rules-box backdrop — own layer under the watermark and the title /
           type bands (see the preview's twin comment: z9 under their z20).
