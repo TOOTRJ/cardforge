@@ -766,7 +766,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            Template-scoped (TEMPLATE_SCOPED_VERSIONS[39] = aftermath,
 //            flip): every card on the two, art or none. Public production
 //            (anonymous read, 2026-10-02): 0 public or unlisted cards on
-//            either. The visual matrix: only the 20 flip + 17 aftermath
+//            either. The visual matrix: only the 20 flip + 18 aftermath
 //            cases change. "sweep" (a correction). NOT verification-neutral
 //            (a master and slots move) — no tick exists on either to stale:
 //            the owner walks flip/g (C18 #134) and flip/b (CM2 #71) and the
