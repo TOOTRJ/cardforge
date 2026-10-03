@@ -145,6 +145,7 @@ export function DashboardCardTile({
             <BakedCardThumbnail
               renderedImageUrl={card.rendered_image_url}
               renderedThumbUrl={card.rendered_thumb_url}
+              renderedBackThumbUrl={card.rendered_back_thumb_url}
               title={card.title}
               previewData={previewData}
             />

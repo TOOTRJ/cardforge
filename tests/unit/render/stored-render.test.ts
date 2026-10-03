@@ -90,6 +90,62 @@ describe("stored-render — when the baked PNG can stand in for a live render", 
     ).toBe(false);
   });
 
+  it("reads the BACK face's bake for face: back (TODO 5.3) — servable exactly when the card's front is, and only once it exists", () => {
+    const BACK_URL = STORAGE_URL.replace("c.png", "c.back.png");
+    const current = { ...UNTOUCHED_SINCE_V22, rendered_image_url: STORAGE_URL, layout_version: CARD_LAYOUT_VERSION };
+    // No back bake: the front serves, the back doesn't.
+    expect(hasServableStoredRender(current, "front")).toBe(true);
+    expect(hasServableStoredRender(current, "back")).toBe(false);
+    expect(hasServableStoredRender({ ...current, rendered_back_image_url: null }, "back")).toBe(false);
+    expect(hasServableStoredRender({ ...current, rendered_back_image_url: "" }, "back")).toBe(false);
+    // A back bake: both faces serve — the default face is still the front.
+    const both = { ...current, rendered_back_image_url: BACK_URL };
+    expect(hasServableStoredRender(both)).toBe(true);
+    expect(hasServableStoredRender(both, "back")).toBe(true);
+    // ONE stamp per card: a pending correction takes both faces off the
+    // table, an opt-in look the owner kept keeps both on it.
+    expect(hasServableStoredRender({ ...both, layout_version: null }, "back")).toBe(false);
+    expect(hasServableStoredRender({ ...both, rarity: "common", layout_version: 22 }, "back")).toBe(false);
+    expect(hasServableStoredRender({ ...both, layout_version: 21 }, "back")).toBe(true);
+    // A back pointer with no front pointer is not a card with a servable
+    // back of its own front — but the back's URL is what the back serves.
+    expect(hasServableStoredRender({ ...both, rendered_image_url: null }, "back")).toBe(true);
+    expect(hasServableStoredRender({ ...both, rendered_image_url: null }, "front")).toBe(false);
+  });
+
+  it("fetches the back face's own object for face: back, never the front's (TODO 5.3)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://zkwkisxoqdhdchqyjwdc.supabase.co");
+    const BACK_URL = STORAGE_URL.replace("c.png", "c.back.png");
+    const fetched: string[] = [];
+    const png = await sharp({ create: { width: 2, height: 2, channels: 4, background: "#321" } }).png().toBuffer();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        fetched.push(url);
+        return new Response(new Uint8Array(png), { headers: { "content-type": "image/png" } });
+      }),
+    );
+    const row = {
+      ...UNTOUCHED_SINCE_V22,
+      id: "c",
+      owner_id: "o",
+      rendered_image_url: STORAGE_URL,
+      rendered_back_image_url: BACK_URL,
+      layout_version: CARD_LAYOUT_VERSION,
+    };
+    expect((await fetchStoredRender(row, { face: "back" }))?.equals(png)).toBe(true);
+    expect((await fetchStoredRender(row))?.equals(png)).toBe(true);
+    expect(fetched).toEqual([BACK_URL, STORAGE_URL]);
+    // The back's object must be THIS card's `.back.png` — another card's,
+    // or the front's name under the back pointer, is never fetched.
+    fetched.length = 0;
+    expect(await fetchStoredRender({ ...row, rendered_back_image_url: STORAGE_URL.replace("c.png", "other.back.png") }, { face: "back" })).toBeNull();
+    expect(fetched).toEqual([]);
+    // No back bake: nothing, even for a display surface.
+    expect(await fetchStoredRender({ ...row, rendered_back_image_url: null }, { face: "back", accept: "any" })).toBeNull();
+    expect(fetched).toEqual([]);
+  });
+
   it("never fetches a stale row or a foreign host", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);

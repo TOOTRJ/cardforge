@@ -29,6 +29,7 @@ import {
 import { planSheet } from "@/lib/render/sheet-layout";
 import {
   perSheetLabel,
+  PrintBacksCheckbox,
   PrintBleedCheckbox,
   PrintField as Field,
   SheetOptionsFields,
@@ -56,7 +57,14 @@ import {
 // remembered in this browser (lib/cards/print-selection.ts); copies are not.
 // ---------------------------------------------------------------------------
 
-export type PrintSelectionCard = { id: string; slug: string; title: string };
+export type PrintSelectionCard = {
+  id: string;
+  slug: string;
+  title: string;
+  /** A double-faced card with a back of its own (TODO 5.3): the "Include
+   *  back faces" option shows when the selection has one. */
+  hasBack?: boolean;
+};
 
 type PrintSelectionDialogProps = {
   open: boolean;
@@ -142,6 +150,8 @@ function PrintSelectionBody({
     : null;
   const sheets = plan ? Math.ceil(physical / plan.perPage) : 0;
 
+  const doubleFaced = included.filter((card) => card.hasBack).length;
+
   const start = () => {
     savePrintSelectionSettings(settings);
     exporter.start({
@@ -151,6 +161,8 @@ function PrintSelectionBody({
       layout: settings.layout,
       sheet: { gap: settings.gap, marks: settings.marks, cardSize: settings.cardSize },
       bleed,
+      // A double-faced card's back too (TODO 5.3), unless switched off.
+      includeBacks: settings.includeBacks,
       titles: Object.fromEntries(included.map((card) => [card.id, card.title])),
     });
     onClose();
@@ -235,6 +247,21 @@ function PrintSelectionBody({
                 : "Each page is the card with its bleed, crop marks on the trim."
           }
         />
+
+        {doubleFaced > 0 ? (
+          <PrintBacksCheckbox
+            checked={settings.includeBacks}
+            onChange={(next) => patch({ includeBacks: next })}
+            testId="print-selection-backs"
+            hint={
+              isPdf
+                ? isSheets
+                  ? `${doubleFaced} double-faced card${doubleFaced === 1 ? "" : "s"}: the back printed beside its front, every copy.`
+                  : `${doubleFaced} double-faced card${doubleFaced === 1 ? "" : "s"}: the back on its own page after the front.`
+                : `${doubleFaced} double-faced card${doubleFaced === 1 ? "" : "s"}: the back as its own image, <name>-back.png.`
+            }
+          />
+        ) : null}
 
         {isSheets ? (
           <Field label="Copies">

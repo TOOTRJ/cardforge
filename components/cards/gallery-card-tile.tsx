@@ -47,6 +47,7 @@ export function GalleryCardTile({
             <BakedCardThumbnail
               renderedImageUrl={card.rendered_image_url}
               renderedThumbUrl={card.rendered_thumb_url}
+              renderedBackThumbUrl={card.rendered_back_thumb_url}
               title={card.title}
               // An emblem names no rarity (CR 114, TODO 6.23).
               alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity && cardTypeHasRarity(card.card_type) ? `, ${card.rarity} rarity` : ""}`}

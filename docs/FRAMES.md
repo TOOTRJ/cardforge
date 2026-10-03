@@ -2205,6 +2205,115 @@ whatever the family (the 2016–22 parchment land back is TODO 5.8).
   back (5.8); see-through colourless faces (5.11); two-colour fronts (5.12);
   the walker faces (5.13, ask first); DFC crowns (4.6f).
 
+### Both faces baked (5.3)
+
+TODO 5.3, 2026-10-02 (`feat/dfc-bakes`, on 5.1a). A card whose back face
+has a BODY of its own is baked, shown, downloaded and printed on both
+faces; everything else is byte for byte what it was (a 120-row production
+replay incl. the 9 `back_face` rows at 750 and HD: identical, no back bake
+for any of them; Visual 0 changed / 0 redefined). Additions throughout.
+
+- **The bake writes two PNGs + two thumbs.** `lib/cards/faces.ts`
+  `bakedBackOf(card)` is the ONE predicate: the back is baked only when
+  `backBodyOf` names a back body (a DFC front with a back body stored on
+  `back_face.frame_style.template`); a legacy back (no body) never is — the
+  8 imported DFCs stay single-bake, their back pointers written null.
+  `renderBackFace` (`lib/cards/bake-render.ts`) renders the back right
+  after the front in BOTH bake paths (the save bake and the admin sweep,
+  `lib/cards/rebake-batch.ts` — so the auto-rebake cron and the compare
+  page's "Re-bake now" carry it) through the same `renderCardImage` on
+  `backPreviewData`: the back's own body, colour, art (through the same
+  `resolveBakeArt` guard) and content, the card's ONE collector line with
+  the back's artist, the mark in its © slot, the watermark; the back bodies
+  declare no holofoil stamp, so none prints on a back. `uploadRenderObjects`
+  takes `{ front, back }` and writes `{id}.back.png` + `.back.thumb.webp`
+  beside the front's pair; the four pointers, `rendered_at` and ONE
+  `layout_version` go in the one compare-and-set write. A back failure
+  (art, render, upload) fails the whole bake — nothing persisted, every
+  pointer cleared by the save bake; nothing removed from storage (a
+  refused upsert leaves the previous object, and the sweep keeps a failed
+  card's pointers, which must never point at a deleted object); a card
+  that lost its back body has the stale `.back.*` objects removed with its
+  next bake (`staleBack`, read off `BAKE_SELECT_COLUMNS`'
+  `rendered_back_image_url`).
+  **The one entry for "bake this card, both faces"** is
+  `bakeAndPersistCardRender(cardId, ownerId)` — it re-reads the row, so a
+  save that wrote a back body (5.2's `adoptDfcBodiesAction`, the creator)
+  just calls it. `hasServableStoredRender(row, face)` /
+  `fetchStoredRender(row, { face })` read the back's bake under the card's
+  one correction rule (one stamp stamps both faces).
+- **Display (owner decision Q6).** `BakedCardThumbnail` takes
+  `renderedBackThumbUrl` (every gallery-style tile passes
+  `rendered_back_thumb_url`; `list_gallery_cards()` returns `setof cards`,
+  `narrowCard` spreads the row) and, with one of ours beside a front thumb,
+  shows the FRONT with a small corner flip button that turns the tile over
+  in place (`components/cards/baked-card-flip.tsx` — the card page's
+  control; the back's image mounted on the first flip; nothing on hover
+  or by itself). The card page's hero is a client island
+  (`components/cards/card-hero-preview.tsx`) that reads `?face=back` with
+  `useSearchParams` inside its own Suspense boundary — never the server
+  component, so the route's rendering stays as it was. `cardPageName(title,
+  type, faces)` is "Front // Back" ONLY on a DFC body with a named back
+  (`cardPageFacesOf(row)`; the 8 legacy pages keep their name; the slug
+  call passes no faces): `<title>`, H1, breadcrumb, share copy, oEmbed and
+  the JSON-LD name. The CreativeWork gains the back as `hasPart` with its
+  own `ImageObject` — the back bake through this site's
+  `/render-cdn/<owner>/<file>` path, named only when it is THIS card's
+  `.back.png` — and the back's words in
+  `keywords`; "Card details" lists the back's facts; the OG image stays the
+  front; both display bakes carry the mark (v20 unchanged).
+- **Downloads.** `/api/cards/[id]/png?face=back` (`lib/cards/card-face.ts`
+  `parseFaceParam` / `faceSlug`): the face the card page flips to
+  (`flippableBackOf` — a back with a body on its body, a legacy back as the
+  page draws it; a card with no back to flip to answers 404). A free
+  viewer's download is the stored BACK bake (`rendered_back_image_url`), a
+  paid viewer's a live clean render; every print variant (`ppi=800`,
+  `bleed=1|mpc`, `print=1`) renders the back's mapping through
+  `lib/render/card-print.ts` unchanged (the back's art under the back's
+  layout). `face` joins the ETag only for the back (every front download
+  keeps its tag); files are `<slug>-back.png`, `-back-square.png`,
+  `-back.jpg`, `-back-800ppi.png`, `-back-mpc.png`, `-back-print.png`.
+  `/api/cards/[id]/pdf`: `face=back` (one page), `faces=both` (two pages,
+  `<slug>-both-faces.pdf`), and a sheet places the back BESIDE its front by
+  default — cells run front, back, front, back…, a two-faced slot never
+  split across pages (`lib/render/card-pdf.ts` `pageSheetSlots`) — unless
+  `backs=0`; a legacy back is offered by name only (`flippableBackOf`), so
+  a legacy two-faced card's sheet is unchanged. Duplex alignment and the
+  generic card back stay TODO 6.27.
+- **The modal and the exports.** The download modal (`hasBackFace` =
+  `rowHasBakedBack(row)`) gets a Face switch on the Image tab, Faces
+  (Front / Back / Both faces (2 pages)) on the one-card PDF and the shared
+  "Include back faces" checkbox (`PrintBacksCheckbox`,
+  `components/cards/print-sheet-options.tsx`) on the sheet, remembered
+  with the print settings (`print-selection.ts` `includeBacks`, default
+  ON — a proxy of a DFC without its back is unplayable). The deck and
+  selection manifests list each card's `faces` (`exportFacesOf(row)`:
+  `["front", "back"]` for a back body); the browser export
+  (`lib/decks/export-client.ts`) fetches the back as the same render with
+  `&face=back` and adds `<slug>-back.png` (HD and the 600 ppi print
+  render), `<slug>-back-mpc.png` for MPC, a page of its own or beside its
+  front on the PDF (`DeckPdfEntry.back`); a back that fails is listed as
+  "<title> (back)" and the front still prints. Free vs paid is unchanged
+  per face.
+- **Tests:** `tests/unit/cards/bake-both-faces.test.ts` (the real save bake
+  against mocked storage: four objects, one write, every failure path, the
+  legacy single bake, the stale back), `tests/unit/cards/rebake-batch.test.ts`
+  (the sweep carries the back), `tests/unit/render/stored-render.test.ts`
+  (`face`), `tests/unit/api/card-png-route-faces.test.ts`,
+  `tests/unit/api/card-pdf-route-faces.test.ts`,
+  `tests/unit/render/card-pdf-faces.test.ts`,
+  `tests/unit/decks/export-client.test.ts` (faces),
+  `tests/unit/api/cards-export-route.test.ts` (faces),
+  `tests/unit/cards/dfc-card-page.test.tsx` (`cardPageName`, JSON-LD
+  `hasPart`, Card details), `tests/unit/components/baked-card-flip.test.tsx`
+  (the tile flip, `?face=back`),
+  `tests/unit/components/download-modal-faces.test.tsx`.
+- **What waits:** the ticks — the walkthrough bakes both faces now, so the
+  owner verifies the transform combos after merge and the Transform chip
+  lights; the editor and the seeds (5.2 — the dev DB has no card on a DFC
+  body until then); the import (5.4); the DFC helper card (5.3b); duplex
+  alignment (6.27).
+
 ## Kind anatomy and bodies
 
 TODO 4.5 (design 2026-09-29) and 4.5.0. A **body** is a template: its

@@ -697,6 +697,12 @@ export function CardPreview(rawProps: CardPreviewProps) {
             event.preventDefault();
             toggleFace();
           }}
+          onKeyDown={(event) => {
+            // As components/cards/baked-card-flip.tsx: a tile body that
+            // handles keys itself (the dashboard tile opens the card on
+            // Enter) must not see the button's activation keys.
+            if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+          }}
           aria-label={
             currentFace === "front" ? "Flip to back face" : "Flip to front face"
           }

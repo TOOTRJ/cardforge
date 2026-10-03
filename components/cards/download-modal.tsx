@@ -37,6 +37,15 @@
 //                  browser used last (lib/cards/print-selection.ts — shared
 //                  with those exports) and are saved on download; the layout
 //                  always opens on One card. Links: lib/cards/card-pdf-link.ts.
+//   Both faces   — a double-faced card (TODO 5.3; `hasBackFace`: a back with
+//                  a body of its own, the one the bake writes): the Image
+//                  tab gets a Face switch, Front / Back (every option above
+//                  applies to the face chosen: ?face=back, named
+//                  <slug>-back…); the PDF tab's One card gets Faces — Front
+//                  / Back / Both faces (2 pages) — and its Sheet the shared
+//                  "Include back faces" checkbox (the back beside its front,
+//                  on by default; remembered with the other print settings).
+//                  A single-faced card's modal is exactly what it was.
 //
 // A free viewer gets exactly ONE live option — the low-resolution
 // watermarked image (PNG or JPEG) — and sees the other formats greyed out
@@ -90,7 +99,8 @@ import {
   type PrintBleed,
   type PrintPpi,
 } from "@/lib/cards/print-export";
-import { cardPdfFilename, cardPdfHref, type CardPdfLayout } from "@/lib/cards/card-pdf-link";
+import { cardPdfFilename, cardPdfHref, type CardPdfFaces, type CardPdfLayout } from "@/lib/cards/card-pdf-link";
+import { faceSlug, type CardFace } from "@/lib/cards/card-face";
 import {
   DEFAULT_PRINT_SELECTION_SETTINGS,
   loadPrintSelectionSettings,
@@ -98,7 +108,7 @@ import {
   type PrintSelectionSettings,
 } from "@/lib/cards/print-selection";
 import { planSheet } from "@/lib/render/sheet-layout";
-import { PrintBleedCheckbox, SheetOptionsFields } from "@/components/cards/print-sheet-options";
+import { PrintBacksCheckbox, PrintBleedCheckbox, SheetOptionsFields } from "@/components/cards/print-sheet-options";
 import { cn } from "@/lib/utils";
 
 const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
@@ -107,6 +117,19 @@ const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
 ];
 
 const FORMAT_LABEL: Record<CardImageFormat, string> = { png: "PNG", jpeg: "JPEG" };
+
+/** The Image tab's Face switch (TODO 5.3). */
+const FACE_OPTIONS: ChipOption<CardFace>[] = [
+  { value: "front", label: "Front" },
+  { value: "back", label: "Back" },
+];
+
+/** The PDF tab's Faces switch for One card (TODO 5.3). */
+const PDF_FACE_OPTIONS: ChipOption<CardPdfFaces>[] = [
+  { value: "front", label: "Front" },
+  { value: "back", label: "Back" },
+  { value: "both", label: "Both faces (2 pages)" },
+];
 
 /** A JPEG — or a print render (800 ppi, bleed) — can't be rounded: Rounded
  *  is shown but not selectable. */
@@ -147,6 +170,10 @@ type DownloadModalProps = {
   /** The card's frame template — the 800 ppi option says when its frame is
    *  upscaled (lib/cards/print-export.ts printFrameUpscaledAt800). */
   frameTemplate?: string;
+  /** A double-faced card with a back of its own (TODO 5.3, lib/cards/faces.ts
+   *  rowHasBakedBack): the Face / Faces switches and "Include back faces"
+   *  show. Default false — a single-faced card's modal is unchanged. */
+  hasBackFace?: boolean;
 };
 
 type DownloadTab = "png" | "single";
@@ -175,12 +202,17 @@ export function DownloadModal({
   canBatch = false,
   downloadDiffersFromGallery = false,
   frameTemplate,
+  hasBackFace = false,
 }: DownloadModalProps) {
   const upgrade = useUpgradeModal();
   // PNG first; its corner Rounded first, like the card in the gallery. A
   // JPEG is always square — the PNG's choice is kept for switching back.
   const [format, setFormat] = useState<CardImageFormat>("png");
   const [pngCorners, setPngCorners] = useState<CardCorners>("round");
+  // The face (TODO 5.3): the front first, on both tabs; a sheet's backs
+  // follow the remembered print settings (includeBacks).
+  const [face, setFace] = useState<CardFace>("front");
+  const [pdfFaces, setPdfFaces] = useState<CardPdfFaces>("front");
   // Print options (paid; TODO 6.1a/6.1b/6.1): a print render is square + PNG.
   const [ppi, setPpi] = useState<PrintPpi>(DEFAULT_PRINT_PPI);
   const [bleed, setBleed] = useState<PrintBleed>(false);
@@ -195,6 +227,8 @@ export function DownloadModal({
     if (next) {
       setPdfSettings(loadPrintSelectionSettings());
       setPdfLayout("card");
+      setFace("front");
+      setPdfFaces("front");
     }
     setOpen(next);
   };
@@ -204,9 +238,22 @@ export function DownloadModal({
   const pdfBleed = isPaid && pdfSettings.bleed;
   const sheetOptions = { gap: pdfSettings.gap, marks: pdfSettings.marks, cardSize: pdfSettings.cardSize };
   const sheetPlan = planSheet(sheetLayout === "sheet-a4" ? "a4" : "letter", { ...sheetOptions, bleed: pdfBleed });
+  // Which face(s) the PDF holds: One card follows the Faces switch; a
+  // sheet carries the back beside its front unless "Include back faces" is
+  // off. A single-faced card's PDF is the front, as ever.
+  const pdfFaceChoice: CardPdfFaces = !hasBackFace
+    ? "front"
+    : pdfChoice === "sheet"
+      ? pdfSettings.includeBacks
+        ? "both"
+        : "front"
+      : pdfFaces;
   const pdfLink = {
     layout: pdfChoice === "sheet" ? sheetLayout : ("card" as CardPdfLayout),
     bleed: pdfBleed,
+    // Named only for a double-faced card: a single-faced card's link and
+    // file name are exactly what they were.
+    ...(hasBackFace ? { faces: pdfFaceChoice } : {}),
   };
   // Remember what this PDF was printed with (the paper only for a sheet).
   const rememberPdf = () =>
@@ -220,18 +267,25 @@ export function DownloadModal({
   const preset = isPaid ? "hd" : "default";
   // Free users start on the Image tab — the one format they can actually use.
   const initialTab: DownloadTab = isPaid ? defaultTab : "png";
+  // The Image tab's face: the back only on a card that has one (TODO 5.3) —
+  // its files are named <slug>-back…, its links carry &face=back.
+  const imageFace: CardFace = hasBackFace ? face : "front";
+  const imageSlug = faceSlug(cardSlug, imageFace);
   const links: Record<DownloadTab, { href: string; filename: string }> = {
     // The server clamps a free viewer to 750 px anyway; asking for it
     // outright keeps the URL honest about what they get. A PNG always names
     // its corner: the route's default is square (older callers).
     png: print
-      ? { href: cardPrintPngHref(cardId, printOptions), filename: cardPrintFilename(cardSlug, printOptions) }
+      ? {
+          href: cardPrintPngHref(cardId, { ...printOptions, face: imageFace }),
+          filename: cardPrintFilename(imageSlug, printOptions),
+        }
       : {
           href:
             format === "jpeg"
-              ? cardJpegHref(cardId, { preset })
-              : cardPngHref(cardId, { preset, corners }),
-          filename: cardImageFilename(cardSlug, { format, corners }),
+              ? cardJpegHref(cardId, { preset, face: imageFace })
+              : cardPngHref(cardId, { preset, corners, face: imageFace }),
+          filename: cardImageFilename(imageSlug, { format, corners }),
         },
     single: {
       href: cardPdfHref(cardId, { ...pdfLink, sheet: sheetOptions }),
@@ -288,6 +342,7 @@ export function DownloadModal({
             ) : null}
 
             <TabsContent value="png" className="mt-5">
+              {hasBackFace ? <FaceSwitch value={face} onChange={setFace} /> : null}
               <FormatSwitch value={format} onChange={setFormat} jpegDisabled={print} />
               <CornersSwitch
                 value={corners}
@@ -383,6 +438,12 @@ export function DownloadModal({
                       </p>
                     ) : null}
                   </div>
+                  {hasBackFace && pdfChoice === "card" ? (
+                    <div className="flex flex-col gap-1.5" data-testid="download-pdf-faces">
+                      <span className="text-xs font-medium text-foreground">Faces</span>
+                      <ChipGroup ariaLabel="Faces" options={PDF_FACE_OPTIONS} value={pdfFaces} onChange={setPdfFaces} />
+                    </div>
+                  ) : null}
                   {pdfChoice === "sheet" ? (
                     <>
                       <div className="flex flex-col gap-1.5">
@@ -399,6 +460,14 @@ export function DownloadModal({
                         onChange={patchPdf}
                         className="gap-3 sm:grid-cols-1"
                       />
+                      {hasBackFace ? (
+                        <PrintBacksCheckbox
+                          checked={pdfSettings.includeBacks}
+                          onChange={(next) => patchPdf({ includeBacks: next })}
+                          testId="download-pdf-backs"
+                          hint="The back printed beside its front: every pair of cells is one whole card."
+                        />
+                      ) : null}
                     </>
                   ) : null}
                   <PrintBleedCheckbox
@@ -416,15 +485,19 @@ export function DownloadModal({
               {pdfChoice === "sheet" ? (
                 <DownloadPanel
                   title={`Print sheet — ${sheetLayout === "sheet-a4" ? "A4" : "US Letter"}`}
-                  description={sheetDescription(sheetLayout, sheetPlan, pdfSettings.marks, pdfBleed)}
+                  description={sheetDescription(sheetLayout, sheetPlan, pdfSettings.marks, pdfBleed, pdfFaceChoice === "both")}
                   href={links.single.href}
                   filename={links.single.filename}
                   onDownload={rememberPdf}
                 />
               ) : (
                 <DownloadPanel
-                  title="Single card PDF"
-                  description="One page sized exactly to a standard MTG card (2.5″ × 3.5″ / 63.5 × 88.9 mm). Drop it into a 9-pocket page or print onto card stock and cut."
+                  title={pdfFaceChoice === "both" ? "Both faces PDF" : pdfFaceChoice === "back" ? "Back face PDF" : "Single card PDF"}
+                  description={
+                    pdfFaceChoice === "both"
+                      ? "Two pages, the front then the back, each sized exactly to a standard MTG card (2.5″ × 3.5″ / 63.5 × 88.9 mm)."
+                      : "One page sized exactly to a standard MTG card (2.5″ × 3.5″ / 63.5 × 88.9 mm). Drop it into a 9-pocket page or print onto card stock and cut."
+                  }
                   href={links.single.href}
                   filename={links.single.filename}
                   locked={!isPaid}
@@ -437,6 +510,19 @@ export function DownloadModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Front or Back (TODO 5.3) — a double-faced card, every viewer. */
+function FaceSwitch({ value, onChange }: { value: CardFace; onChange: (next: CardFace) => void }) {
+  return (
+    <div className="mb-4 flex flex-col gap-1.5" data-testid="download-face">
+      <span className="text-xs font-medium text-foreground">Face</span>
+      <ChipGroup ariaLabel="Face" options={FACE_OPTIONS} value={value} onChange={onChange} />
+      <p className="text-[11px] leading-4 text-subtle">
+        {value === "back" ? "The back face, named <card>-back." : "The front face. Switch to Back for the other side."}
+      </p>
+    </div>
   );
 }
 
@@ -581,11 +667,16 @@ function sheetDescription(
   plan: ReturnType<typeof planSheet>,
   marks: PrintSelectionSettings["marks"],
   bleed: boolean,
+  withBacks = false,
 ): string {
   const paper = layout === "sheet-a4" ? "an A4 (210 × 297 mm)" : "a US Letter (8.5″ × 11″)";
   const guides = marks === "lines" ? "full-length cut lines" : "corner crop marks";
   const stock = layout === "sheet-a4" ? "250 g/m² card stock" : "110 lb. card stock";
-  return `${plan.perPage} copies of this card on ${paper} page${plan.orientation === "landscape" ? ", printed landscape" : ""}, with ${guides}${bleed ? " on the trim lines" : ""}. Recommended paper: ${stock}.`;
+  // With backs, every pair of cells is one whole card (TODO 5.3).
+  const copies = withBacks
+    ? `${Math.floor(plan.perPage / 2)} copies of this card, each face beside the other,`
+    : `${plan.perPage} copies of this card`;
+  return `${copies} on ${paper} page${plan.orientation === "landscape" ? ", printed landscape" : ""}, with ${guides}${bleed ? " on the trim lines" : ""}. Recommended paper: ${stock}.`;
 }
 
 /** The image's Rounded / Square switch — every viewer, free included. A

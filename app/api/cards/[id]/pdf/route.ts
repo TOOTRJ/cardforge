@@ -5,7 +5,8 @@ import { recordActivity } from "@/lib/analytics/funnel-server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardPrint } from "@/lib/render/card-print";
 import { parseBleedParam } from "@/lib/cards/print-export";
-import { cardPdfFilename, parseSheetQuery } from "@/lib/cards/card-pdf-link";
+import { cardPdfFilename, parsePdfFaces, parseSheetQuery } from "@/lib/cards/card-pdf-link";
+import { bakedBackOf, flippableBackOf } from "@/lib/cards/faces";
 import {
   downloadBrandMark,
   getEntitlements,
@@ -38,6 +39,19 @@ import { isUuid } from "@/lib/ids";
 //                                   landscape 4 × 2), the guides on the trim
 //                                   lines. Unknown values are the defaults.
 //   A sheet is one page, filled with copies of the card.
+//   faces (TODO 5.3, a double-faced card — lib/cards/card-pdf-link.ts):
+//     &face=back                  → the BACK face alone (a card with no back
+//                                   to flip to answers 404)
+//     &faces=both                 → ONE card: two pages, the front then the
+//                                   back (each with its bleed when asked)
+//     &backs=0                    → a sheet of the front only; by DEFAULT a
+//                                   sheet of a card with a back BODY places
+//                                   the back beside its front (cells run
+//                                   front, back, front, back…) — a proxy of
+//                                   a DFC without its back is unplayable.
+//                                   Duplex alignment stays TODO 6.27.
+//   The back renders through the same print path on the back's own
+//   mapping (lib/cards/faces.ts): the back's art under the back's layout.
 //
 // Every PDF renders through the PRINT path (lib/render/card-print.ts, TODO
 // 6.10): square corners, the art composited at full resolution under the
@@ -104,6 +118,9 @@ export async function GET(
   // grid as the selection export's — a 3 × 3 bleed sheet doesn't fit US
   // Letter (8.25" × 11.25"), so Letter turns landscape (3 × 2).
   const sheet = layout === "card" ? undefined : parseSheetQuery(params2);
+  // Which face(s) (TODO 5.3): the front alone unless the request names the
+  // back or both — a sheet carries both by default.
+  const faces = parsePdfFaces(params2, layout === "card" ? "card" : "sheet");
 
   // Fetch the card row (RLS applies — anon can read public/unlisted).
   let card: Awaited<ReturnType<typeof fetchCard>>;
@@ -148,11 +165,25 @@ export async function GET(
   // The shared row → render-input mapper (same as the bake), so the print
   // carries the set icon, design watermark, face content and back face.
   const profileOverrides = await getFrameProfileOverrides();
-  const previewData = rowToPreviewData(
+  const frontData = rowToPreviewData(
     card as CardRowForBake,
     await getPipOverrides(card.owner_id),
     profileOverrides,
   );
+  // The back face (TODO 5.3). Asked for BY NAME (`face=back`, `faces=both`)
+  // it is the face the card page flips to (a legacy back included) — or a
+  // 404 when there is none. A sheet's DEFAULT back is only a back with a
+  // BODY (what the bake writes and the modal offers), so a legacy two-faced
+  // card's sheet, and every single-faced card's, is unchanged.
+  const askedByName = params2.get("face") === "back" || params2.get("faces") === "both";
+  const backData = faces === "front" ? null : askedByName ? flippableBackOf(frontData) : bakedBackOf(frontData);
+  if (askedByName && !backData) {
+    return NextResponse.json({ error: "This card has no back face." }, { status: 404 });
+  }
+  // What renders: the back alone, or the front — with the back as a second
+  // render for a two-faced PDF (null: one face).
+  const previewData = faces === "back" && backData ? backData : frontData;
+  const secondData = faces === "both" ? backData : null;
 
   // The print source is the HD (1500×2100, 600 ppi) layout through the print
   // path (full-resolution art — TODO 6.10), plus the bleed when asked. The
@@ -167,20 +198,16 @@ export async function GET(
   // so the two routes can't drift.)
   const brandMark = downloadBrandMark(entitlements);
   let pngBytes: Uint8Array;
+  let backBytes: Uint8Array | null = null;
   try {
     // Print is always SQUARE (TODO 3.26): the card page and the sheets
     // are cut along the rectangle and its crop marks, and the corner outside
     // the arc prints in the card's border colour (the border black, #101015
     // on a ring — lib/frames/square-corners.ts), never transparent. The
     // print path squares every render it makes.
-    pngBytes = new Uint8Array(
-      await renderCardPrint(previewData, {
-        ppi: 600,
-        bleed,
-        brandMark,
-        watermarkText: footerText,
-      }),
-    );
+    const printOptions = { ppi: 600 as const, bleed, brandMark, watermarkText: footerText };
+    pngBytes = new Uint8Array(await renderCardPrint(previewData, printOptions));
+    if (secondData) backBytes = new Uint8Array(await renderCardPrint(secondData, printOptions));
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(
@@ -192,7 +219,7 @@ export async function GET(
   // Build the PDF.
   let pdfBytes: Uint8Array;
   try {
-    pdfBytes = await buildCardPdf(pngBytes, layout, card.title, { bleed, sheet });
+    pdfBytes = await buildCardPdf(pngBytes, layout, card.title, { bleed, sheet, back: backBytes });
   } catch (err) {
     const detail = err instanceof Error ? err.message : "PDF error";
     return NextResponse.json(
@@ -204,6 +231,9 @@ export async function GET(
   const filename = cardPdfFilename(card.slug, {
     layout: layout === "card" ? "card" : layout === "sheet-a4" ? "sheet-a4" : "sheet-letter",
     bleed,
+    // A sheet's name never changes for its (default) backs; a sheet that
+    // carried none because the card has none is the plain sheet too.
+    faces: faces === "both" && !backBytes ? "front" : faces,
   });
 
   // PDFs are entitlement-scoped downloads — never shared-cache them.
@@ -216,7 +246,13 @@ export async function GET(
     await recordActivity(createAdminClient(), {
       userId: viewer.id,
       kind: "download",
-      props: { format: "pdf", layout: bleed ? `${layout}-bleed` : layout },
+      props: {
+        format: "pdf",
+        layout: bleed ? `${layout}-bleed` : layout,
+        // A back alone or a two-faced PDF names its faces; a front PDF's
+        // props are as before.
+        ...(faces === "back" ? { face: "back" } : backBytes ? { face: "both" } : {}),
+      },
     });
   }
 

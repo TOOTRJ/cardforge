@@ -21,8 +21,11 @@ import { called, chainClient, type ChainAnswer } from "@/tests/stubs/supabase-ch
 // face's `.back.png` / `.back.thumb.webp` beside the front's — and two more
 // pointers (rendered_back_image_url / rendered_back_thumb_url): every
 // remove takes all four names (a missing object is not an error), and every
-// clear takes every pointer, so a back bake (5.3) can never outlive its
-// card's front. The front bake still writes its own pair only.
+// clear takes every pointer, so a back bake can never outlive its card's
+// front. Since TODO 5.3 the bake writes the back's pair for a card with a
+// back BODY and all four pointers in ONE write — an ordinary card's back
+// pointers null (tests/unit/cards/bake-both-faces.test.ts holds the
+// two-face cases; this file keeps the ordinary card's contract).
 // ---------------------------------------------------------------------------
 
 const RENDER_NAMES = (id: string) => [`${USER}/${id}.png`, `${USER}/${id}.thumb.webp`, `${USER}/${id}.back.png`, `${USER}/${id}.back.thumb.webp`];
@@ -234,11 +237,19 @@ describe("the save-time bake writes card-renders with the service role", () => {
     expect(state.writes).toEqual([expect.objectContaining({ via: "user", payload: CLEARED })]);
   });
 
-  it("a successful front bake writes the front's pair and never touches the back's pointers (the back bake is 5.3's)", async () => {
+  it("an ordinary card's bake writes the front's pair only, and ALL FOUR pointers in the one write — the back's null (TODO 5.3)", async () => {
     await bakeAndPersistCardRender(CARD, USER);
     expect(state.ops.map((op) => op.keys).flat()).toEqual([`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`]);
     const payload = state.writes[0].payload as Record<string, unknown>;
-    expect(Object.keys(payload).sort()).toEqual(["layout_version", "rendered_at", "rendered_image_url", "rendered_thumb_url"]);
+    expect(Object.keys(payload).sort()).toEqual([
+      "layout_version",
+      "rendered_at",
+      "rendered_back_image_url",
+      "rendered_back_thumb_url",
+      "rendered_image_url",
+      "rendered_thumb_url",
+    ]);
+    expect(payload).toMatchObject({ rendered_back_image_url: null, rendered_back_thumb_url: null });
   });
 
   it("a private card without the service-role key: the missing delete is logged loudly, never skipped silently", async () => {

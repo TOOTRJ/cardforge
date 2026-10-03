@@ -101,6 +101,10 @@ export type PrintSelectionSettings = {
   /** ZIP image size (HD, standard, MPC); the PDF is always HD. Shared with
    *  the deck export's ZIP. */
   quality: SelectionImageSize;
+  /** A double-faced card's back too (TODO 5.3): its own image in a ZIP,
+   *  its own page / beside its front on a PDF. Default ON — a proxy of a
+   *  DFC without its back is unplayable (design 2026-10-02). */
+  includeBacks: boolean;
 };
 
 export const DEFAULT_PRINT_SELECTION_SETTINGS: PrintSelectionSettings = {
@@ -111,6 +115,7 @@ export const DEFAULT_PRINT_SELECTION_SETTINGS: PrintSelectionSettings = {
   cardSize: DEFAULT_SHEET_OPTIONS.cardSize,
   bleed: false,
   quality: "hd",
+  includeBacks: true,
 };
 
 /** Per field: a stored value that is no longer valid falls back to its
@@ -123,6 +128,7 @@ const settingsFields = {
   cardSize: z.enum(SHEET_CARD_SIZES),
   bleed: z.boolean(),
   quality: z.enum(SELECTION_IMAGE_SIZES),
+  includeBacks: z.boolean(),
 } as const;
 
 export function parsePrintSelectionSettings(value: unknown): PrintSelectionSettings {

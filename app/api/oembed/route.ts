@@ -4,7 +4,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { isLandscapeTemplate, naturalRenderSize } from "@/lib/render/card-image";
-import { cardPageName } from "@/lib/cards/emblem";
+import { cardPageFacesOf, cardPageName } from "@/lib/cards/emblem";
 
 // ---------------------------------------------------------------------------
 // oEmbed provider endpoint (https://oembed.com) for public card pages.
@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
     updated_at: string;
     rendered_at: string | null;
     frame_style: unknown;
+    back_face: unknown;
   } | null = null;
   let ownerDisplay = username;
   try {
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     const { data } = await supabase
       .from("cards")
-      .select("id, title, card_type, updated_at, rendered_at, visibility, frame_style")
+      .select("id, title, card_type, updated_at, rendered_at, visibility, frame_style, back_face")
       .eq("owner_id", profile.id)
       .eq("slug", slug)
       .in("visibility", ["public", "unlisted"])
@@ -120,8 +121,9 @@ export async function GET(request: NextRequest) {
     {
       version: "1.0",
       type: "photo",
-      // An emblem is "<walker> Emblem", as on its page (cardPageName).
-      title: cardPageName(card.title, card.card_type),
+      // An emblem is "<walker> Emblem", as on its page (cardPageName); a
+      // double-faced card "Front // Back" (TODO 5.3).
+      title: cardPageName(card.title, card.card_type, cardPageFacesOf(card)),
       url: imageUrl,
       width,
       height,

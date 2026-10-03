@@ -35,6 +35,7 @@ import {
   MyCardListRow,
 } from "@/components/creator/my-cards-list-row";
 import { buildTypeLine } from "@/lib/cards/card-display";
+import { rowHasBakedBack } from "@/lib/cards/faces";
 import {
   DEFAULT_MY_CARDS_FILTER,
   DEFAULT_MY_CARDS_SORT,
@@ -324,7 +325,7 @@ export function MyCardsBrowser({
     () =>
       (isLiked ? likedResults : ownedResults)
         .filter((card) => selection.has(card.id))
-        .map(({ id, slug, title }) => ({ id, slug, title })),
+        .map((card) => ({ id: card.id, slug: card.slug, title: card.title, hasBack: rowHasBakedBack(card) })),
     [isLiked, likedResults, ownedResults, selection],
   );
 

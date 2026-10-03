@@ -205,14 +205,18 @@ describe("every caller names its corner", () => {
     expect(read("lib/cards/rebake-batch.ts")).toMatch(/renderCardImage\(previewData, "hd", \{[^}]*corners: "round"/);
     // The PDF card and sheets: the PRINT path (TODO 6.10), which squares
     // every render it makes — as do the 800 ppi / bleed PNGs.
-    expect(read("app/api/cards/[id]/pdf/route.ts")).toMatch(/renderCardPrint\(previewData, \{/);
+    // (Both faces of a double-faced card go through the same print options,
+    // TODO 5.3.)
+    const pdfRoute = read("app/api/cards/[id]/pdf/route.ts");
+    expect(pdfRoute).toMatch(/const printOptions = \{ ppi: 600 as const, bleed, brandMark, watermarkText: footerText \}/);
+    expect(pdfRoute).toMatch(/renderCardPrint\(previewData, printOptions\)/);
     expect(read("lib/render/card-print.ts")).toMatch(/squareCardCorners\(trim, trimW, trimH, cornerFills, radius\)/);
     // The deck and selection exports (PDF sheets AND the ZIP): every PDF card
     // and HD image is the print render (square — its link names
     // corners=square), a standard image the 750 px render, square by name.
     const exportClient = read("lib/decks/export-client.ts");
-    expect(exportClient).toContain("cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed })");
-    expect(exportClient).toContain('cardPngHref(cardId, { preset: "default", corners: "square" })');
+    expect(exportClient).toContain("cardPrintPngHref(cardId, { ppi: 600, bleed: opts.bleed, face })");
+    expect(exportClient).toContain('cardPngHref(cardId, { preset: "default", corners: "square", face })');
     expect(read("lib/cards/print-export.ts")).toMatch(/\/png\?ppi=\$\{opts\.ppi\}&corners=square/);
   });
 });

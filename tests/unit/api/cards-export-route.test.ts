@@ -63,6 +63,8 @@ const row = (n: number, extra: Record<string, unknown> = {}) => ({
   title: `Card ${n}`,
   visibility: "public",
   owner_id: OTHER,
+  frame_style: { template: "m15" },
+  back_face: null,
   ...extra,
 });
 
@@ -108,14 +110,32 @@ describe("POST /api/cards/export", () => {
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(await res.json()).toEqual({
       cards: [
-        { id: id(4), slug: "card-4", title: "Card 4", copies: 2 },
-        { id: id(1), slug: "card-1", title: "Card 1", copies: 3 },
+        { id: id(4), slug: "card-4", title: "Card 4", copies: 2, faces: ["front"] },
+        { id: id(1), slug: "card-1", title: "Card 1", copies: 3, faces: ["front"] },
         // Your own private card prints.
-        { id: id(2), slug: "card-2", title: "Card 2", copies: 1 },
+        { id: id(2), slug: "card-2", title: "Card 2", copies: 1, faces: ["front"] },
       ],
       skipped: [id(3), id(9)],
       totalCopies: 6,
     });
+  });
+
+  it("lists both faces of a double-faced card with a back body; a legacy back (no body) is the front only (TODO 5.3)", async () => {
+    const back = { title: "The Back", card_type: "creature", power: "4", toughness: "4" };
+    state.rows = [
+      row(1, { frame_style: { template: "m15dfcfront" }, back_face: { ...back, frame_style: { template: "m15dfcback" }, color_identity: ["green"] } }),
+      row(2, { frame_style: { template: "m15" }, back_face: back }),
+      row(3, { frame_style: { template: "m15" }, back_face: { ...back, frame_style: { template: "m15dfcback" } } }),
+    ];
+    const res = await post({ cards: [{ id: id(1), copies: 1 }, { id: id(2), copies: 1 }, { id: id(3), copies: 1 }] });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.cards.map((c: { id: string; faces: string[] }) => [c.id, c.faces])).toEqual([
+      [id(1), ["front", "back"]],
+      [id(2), ["front"]],
+      // A back body stored on a plain front is a stray value: never offered.
+      [id(3), ["front"]],
+    ]);
   });
 
   it("budgets the copies to 150 physical cards before reading", async () => {

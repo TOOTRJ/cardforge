@@ -3,7 +3,7 @@ import { renderVersionOf } from "@/lib/cards/render-version";
 import { notFound } from "next/navigation";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
-import { cardPageName } from "@/lib/cards/emblem";
+import { cardPageFacesOf, cardPageName } from "@/lib/cards/emblem";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cardAccentColor } from "@/lib/og/card-accent";
 import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
@@ -52,8 +52,9 @@ export async function generateMetadata({
 
   const isShareable =
     card.visibility === "public" || card.visibility === "unlisted";
-  // An emblem's page is "<walker> Emblem", like Scryfall's (cardPageName).
-  const name = cardPageName(card.title, card.card_type);
+  // An emblem's page is "<walker> Emblem", like Scryfall's (cardPageName); a
+  // double-faced card on the DFC bodies is "Front // Back" (TODO 5.3).
+  const name = cardPageName(card.title, card.card_type, cardPageFacesOf(card));
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||

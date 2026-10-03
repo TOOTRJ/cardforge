@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { faceQuery, type CardFace } from "@/lib/cards/card-face";
 
 // ---------------------------------------------------------------------------
 // The corner of a card image OUTPUT (TODO 3.26, owner decisions 2026-09-27).
@@ -36,10 +37,11 @@ export function parseCornersParam(value: string | null | undefined): CardCorners
   return parsed.success ? parsed.data : PNG_API_DEFAULT_CORNERS;
 }
 
-/** A card's PNG download URL, naming its corner explicitly. */
+/** A card's PNG download URL, naming its corner explicitly — and the BACK
+ *  face when asked (`&face=back`, TODO 5.3; a front link is unchanged). */
 export function cardPngHref(
   cardId: string,
-  opts: { preset: "hd" | "default"; corners: CardCorners },
+  opts: { preset: "hd" | "default"; corners: CardCorners; face?: CardFace },
 ): string {
-  return `/api/cards/${cardId}/png?preset=${opts.preset}&corners=${opts.corners}`;
+  return `/api/cards/${cardId}/png?preset=${opts.preset}&corners=${opts.corners}${faceQuery(opts.face)}`;
 }

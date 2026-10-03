@@ -180,6 +180,7 @@ function TrendingTile({
             <BakedCardThumbnail
               renderedImageUrl={card.rendered_image_url}
               renderedThumbUrl={card.rendered_thumb_url}
+              renderedBackThumbUrl={card.rendered_back_thumb_url}
               title={card.title}
               priority={priority}
               previewData={cardToPreviewData(card, null)}

@@ -30,3 +30,23 @@ export function parseCardFace(raw: string | string[] | null | undefined): CardFa
 export function scryfallFaceIndex(face: CardFace): 0 | 1 {
   return face === "back" ? 1 : 0;
 }
+
+/** The face a download names, or the front when the request names none:
+ *  the png / pdf routes' `?face=` (TODO 5.3). */
+export function parseFaceParam(raw: string | string[] | null | undefined): CardFace {
+  return parseCardFace(raw) ?? "front";
+}
+
+/** The slug a download of `face` is named by: the card's for the front,
+ *  `<slug>-back` for the back — so `<slug>-back.png`, `<slug>-back-square.png`,
+ *  `<slug>-back-mpc.png`, `<slug>-back.pdf` sit beside the front's files
+ *  (TODO 5.3). */
+export function faceSlug(slug: string, face: CardFace): string {
+  return face === "back" ? `${slug}-back` : slug;
+}
+
+/** The `&face=back` a download link carries for the back; nothing for the
+ *  front, so every front link keeps the URL it always had. */
+export function faceQuery(face: CardFace | null | undefined): string {
+  return face === "back" ? "&face=back" : "";
+}
