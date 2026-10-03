@@ -33,7 +33,7 @@ import {
 } from "@/lib/validation/card";
 import { dfcFrontBodyFor, dfcLayoutForKind, kindFromCard } from "@/lib/creator/card-kinds";
 import { bodyFor, colorlessFaceAllowed, isDfcFaceType } from "@/lib/cards/dfc";
-import { dfcFamilyOf, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
+import { dfcFamilyOf, dfcFrontColorError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
   missingSecondFaceName,
@@ -124,6 +124,20 @@ function checkSubtypesText(ctx: Ctx, path: PathSegment[], text: string): void {
 export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
   .custom<FormValues>()
   .superRefine((values, ctx) => {
+    // ----- Card step -----
+    // A double-faced FRONT may be colourless only with "Artifact" on its
+    // type line (design D2; lib/cards/dfc-gate.ts) — the back's rule below.
+    {
+      const frontColourError = dfcFrontColorError(
+        values.frame_style?.template,
+        { cardType: values.card_type || null, supertype: values.supertype },
+        values.color_identity,
+      );
+      if (frontColourError) {
+        ctx.addIssue({ code: "custom", path: ["color_identity"], message: frontColourError });
+      }
+    }
+
     // ----- Identity step -----
     check(ctx, ["title"], cardTitleSchema, values.title);
     check(ctx, ["supertype"], cardSupertypeSchema, values.supertype.trim());

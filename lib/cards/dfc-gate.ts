@@ -114,6 +114,27 @@ export const DFC_BACK_BODY_SET =
 export const DFC_NO_BACK_BODY_YET = "No back-face frame exists for this card yet.";
 export const DFC_COLORLESS_NEEDS_ARTIFACT =
   "A colourless back face needs “Artifact” on its type line — pick a colour.";
+export const DFC_COLORLESS_FRONT_NEEDS_ARTIFACT =
+  "A colourless double-faced card needs “Artifact” on its type line — pick a colour.";
+
+/**
+ * The FRONT face's colourless rule (design D2, the same as the back's): a
+ * card on a DFC front body may be colourless only with "Artifact" on its
+ * type line, where the body's `c` is the artifact master standing in
+ * (colorlessFaceAllowed; the land front has one master under every key and
+ * takes any land). Null when the card may wear its colour, else the
+ * `color_identity` field error. Any other template: null.
+ */
+export function dfcFrontColorError(
+  frontTemplate: FrameTemplate | string | null | undefined,
+  face: { cardType?: string | null; supertype?: string | null },
+  colorIdentity: readonly ColorIdentity[] | null | undefined,
+): string | null {
+  const front = normalizeFrameTemplate(frontTemplate);
+  if (dfcBodyOf(front)?.role !== "front") return null;
+  if (pickFrameColorKey(colorIdentity) !== "c") return null;
+  return colorlessFaceAllowed(front, face) ? null : DFC_COLORLESS_FRONT_NEEDS_ARTIFACT;
+}
 
 /** The family as stored: a named one, else the default (`arrows`). */
 export function dfcFamilyOf(value: unknown): DfcIconFamily {

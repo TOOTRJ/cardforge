@@ -1956,7 +1956,12 @@ change, no bump, no sweep.
   when that body isn't verified in the back's colour; the colour (the
   back's own, else the front's — stored explicitly) is verified for the
   body (`frameGateError`; an update re-checks only a changed body or
-  colour, the front's legacy-pin rule), `c` only with an Artifact word;
+  colour, the front's legacy-pin rule), `c` only with an Artifact word —
+  and the FRONT's `c` too (`dfcFrontColorError`, the same D2 rule: the
+  Card step's Colorless chip is dark with the reason on a DFC front unless
+  the type line says Artifact, and a card landing on a DFC front colourless
+  — a new card picking Transform, a creature picked for the front — moves
+  to the first colour the body is verified in and says so);
   a transform back saves with no cost (`withTransformBackShape`); a public
   save needs the back's name (`missingSecondFaceName`, as before) AND art
   (demoted to private without it, the front's "no artwork → no gallery"

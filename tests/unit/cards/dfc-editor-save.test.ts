@@ -61,6 +61,7 @@ import {
   DFC_BACK_BODY_MISMATCH,
   DFC_BACK_BODY_SET,
   DFC_BACK_TYPE_REFUSED,
+  DFC_COLORLESS_FRONT_NEEDS_ARTIFACT,
   DFC_COLORLESS_NEEDS_ARTIFACT,
   DFC_FRONT_HAS_NO_BACK,
   DFC_NEEDS_BACK_FACE,
@@ -223,6 +224,17 @@ describe("createCardAction on a transform front", () => {
     expect(written(front, "insert")).toBeUndefined();
   });
 
+  it("a colourless creature FRONT is refused (D2); a colourless artifact front passes", async () => {
+    const refused = db();
+    const result = await createCardAction(payload({ color_identity: ["colorless"], back_face: { ...BACK, color_identity: ["blue"] } }));
+    expect(result.ok ? null : result.fieldErrors).toEqual({ color_identity: DFC_COLORLESS_FRONT_NEEDS_ARTIFACT });
+    expect(written(refused, "insert")).toBeUndefined();
+    const artifact = db();
+    const ok = await createCardAction(payload({ card_type: "artifact", power: undefined, toughness: undefined, color_identity: ["colorless"], back_face: { ...BACK, color_identity: ["blue"] } }));
+    expect(ok.ok).toBe(true);
+    expect(written(artifact, "insert")!.color_identity).toEqual(["colorless"]);
+  });
+
   it("a colourless ARTIFACT back passes (the `c` row is the artifact stand-in, D2)", async () => {
     const stub = db();
     expect((await createCardAction(payload({ back_face: { ...BACK, card_type: "artifact", color_identity: ["colorless"] } }))).ok).toBe(true);
@@ -330,6 +342,18 @@ describe("updateCardAction on a stored transform card", () => {
     const stub = db();
     expect((await updateCardAction(CARD, { visibility: "public" })).ok).toBe(true);
     expect(written(stub, "update")!.visibility).toBe("private");
+  });
+
+  it("a patch that makes a DFC front colourless without an Artifact word is refused; a content edit of a stored one isn't re-judged", async () => {
+    state.existing = stored();
+    const refused = db();
+    const result = await updateCardAction(CARD, { color_identity: ["colorless"] });
+    expect(result.ok ? null : result.fieldErrors).toEqual({ color_identity: DFC_COLORLESS_FRONT_NEEDS_ARTIFACT });
+    expect(written(refused, "update")).toBeUndefined();
+    state.existing = stored({ color_identity: ["colorless"] });
+    const kept = db();
+    expect((await updateCardAction(CARD, { title: "Still here" })).ok).toBe(true);
+    expect(written(kept, "update")!.title).toBe("Still here");
   });
 
   it("the retired back_card_id is accepted only to clear", async () => {

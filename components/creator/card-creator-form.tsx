@@ -98,6 +98,7 @@ import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
+import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
@@ -192,6 +193,7 @@ import {
   KIND_DEFS,
   dfcFrontBodyFor,
   dfcLayoutForKind,
+  framesForKind,
   type CardKind,
   type FrameColorKey,
   type KindChangePatch,
@@ -200,6 +202,7 @@ import {
 import {
   DEFAULT_DFC_ICON,
   bodyFor,
+  colorlessFaceAllowed,
   dfcIconFamilyForBackBody,
   isDfcBackBody,
   templateHasBackFace,
@@ -417,6 +420,11 @@ function sameFormState(a: unknown, b: unknown): boolean {
     ),
   );
 }
+
+/** The card types' labels, for a toast. */
+const CARD_TYPE_LABEL: Partial<Record<string, string>> = Object.fromEntries(
+  CARD_TYPE_OPTIONS.map((option) => [option.value, option.label.toLowerCase()]),
+);
 
 /** "a, b and c" — the Save hint's list of what's missing. */
 function listPhrase(parts: readonly string[]): string {
@@ -1408,6 +1416,8 @@ export function CardCreatorForm({
     if (dfcLayoutForKind(nextKind) === "transform" && !getValues("frame_style.dfcIcon")) {
       setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
     }
+    // …and never colourless without an Artifact word (design D2).
+    if (dfcLayoutForKind(nextKind)) leaveColourlessDfcFront(template, patch.card_type);
     // The default watermark follows the type (owner decision 2026-09-17):
     // a free account's creature/spell always carries the PipGlyph Rose, and
     // leaving those types drops the forced Rose (it was never a choice).
@@ -1494,6 +1504,26 @@ export function CardCreatorForm({
       setPendingKindPlan(plan);
     }
   };
+  /** A double-faced FRONT may be colourless only with "Artifact" on its
+   *  type line (design D2: the body's `c` is the artifact stand-in). A card
+   *  that lands on a DFC front body colourless without the word — a new
+   *  card picking Transform, a creature picked for the front — moves to the
+   *  first colour the body is verified in and says so; none verified: the
+   *  colour stays and the chips say why. */
+  const leaveColourlessDfcFront = (template: FrameTemplate, cardType: CardType | "" | null | undefined) => {
+    const colour = getValues("color_identity");
+    if (pickFrameColorKey(colour) !== "c") return;
+    const dfcKind = kindFromCard(cardType, template);
+    if (!dfcLayoutForKind(dfcKind)) return;
+    if (colorlessFaceAllowed(template, { cardType, supertype: getValues("supertype") })) return;
+    const verified = framesForKind(dfcKind, verifiedFrameSet).find((choice) => choice.template === template);
+    const key = verified?.availableColorKeys.find((k) => k !== "c");
+    if (!key) return;
+    setValue("color_identity", [colorIdentityForKey(key)], { shouldDirty: true });
+    toast.info(
+      `A double-faced ${CARD_TYPE_LABEL[cardType || "creature"] ?? "card"} can't be colourless — switched the colour to ${colorWord(key)}.`,
+    );
+  };
   /** A double-faced card's FRONT face type (TODO 5.2, the Card step's
    *  face-type row): the type is written and the card moves onto the body
    *  for it — the land front for a land, the spell front for the rest — in
@@ -1526,6 +1556,7 @@ export function CardCreatorForm({
         `${describeFrame(body)} isn't verified in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
       );
     }
+    leaveColourlessDfcFront(resolution.template, next);
   };
   /** True when the card's current frame draws the two-colour frame (TODO
    *  4.6b): only there does a two-colour AI or idea identity stay a pair. */

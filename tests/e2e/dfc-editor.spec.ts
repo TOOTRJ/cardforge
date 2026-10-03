@@ -42,6 +42,13 @@ test.describe("double-faced editor", () => {
     // (collapsed sections; the family's summary reads the default).
     await expect(page.getByTestId("dfc-front-type")).toBeVisible();
     await expect(page.getByTestId("dfc-icon-family")).toContainText(/Arrows/);
+    // A new card is colourless, and a double-faced creature can't be (design
+    // D2): the colour moved to the first one the front is previewed in.
+    await expect(page.locator("summary").filter({ hasText: /^colou?r/i })).not.toContainText(/colorless/i);
+    // Pick blue by hand all the same, as a maker would.
+    await page.locator("summary").filter({ hasText: /^colou?r/i }).first().click();
+    await page.getByRole("radiogroup", { name: "Color identity" }).getByRole("radio", { name: /^blue/i }).click();
+    await expect(page.locator("summary").filter({ hasText: /^colou?r/i })).toContainText(/blue/i);
 
     // Identity: the front's name, then the back face panel.
     const title = `Walked Transform ${Date.now()}`;

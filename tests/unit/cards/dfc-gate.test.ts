@@ -3,12 +3,14 @@ import {
   DFC_BACK_BODY_MISMATCH,
   DFC_BACK_BODY_SET,
   DFC_BACK_TYPE_REFUSED,
+  DFC_COLORLESS_FRONT_NEEDS_ARTIFACT,
   DFC_COLORLESS_NEEDS_ARTIFACT,
   DFC_FRONT_HAS_NO_BACK,
   DFC_NEEDS_BACK_FACE,
   DFC_NO_BACK_BODY_YET,
   dfcBackArtMissing,
   dfcFamilyOf,
+  dfcFrontColorError,
   resolveDfcBackFace,
   stripBackBody,
 } from "@/lib/cards/dfc-gate";
@@ -168,6 +170,21 @@ describe("resolveDfcBackFace — update (the stored body wins)", () => {
     const legacy = { ...BACK };
     const result = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: legacy, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: legacy, familyChanged: false } });
     expect(result.ok && result.back).toEqual({ ...BACK, frame_style: { template: "m15dfcback" }, color_identity: ["blue"] });
+  });
+});
+
+describe("dfcFrontColorError — the front's colourless rule (D2)", () => {
+  it("refuses a colourless non-artifact front on a DFC body; an Artifact word or any colour passes; the land front and plain cards are never judged", () => {
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["colorless"])).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, [])).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "enchantment" }, null)).toBe(DFC_COLORLESS_FRONT_NEEDS_ARTIFACT);
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "artifact" }, ["colorless"])).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature", supertype: "Legendary Artifact" }, ["colorless"])).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["blue"])).toBeNull();
+    expect(dfcFrontColorError("m15dfcfront", { cardType: "creature" }, ["white", "blue"])).toBeNull();
+    expect(dfcFrontColorError("m15dfclandfront", { cardType: "land" }, ["colorless"])).toBeNull();
+    expect(dfcFrontColorError("m15", { cardType: "creature" }, ["colorless"])).toBeNull();
+    expect(dfcFrontColorError("m15dfcback", { cardType: "creature" }, ["colorless"])).toBeNull();
   });
 });
 

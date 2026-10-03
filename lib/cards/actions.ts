@@ -55,6 +55,7 @@ import { templateHasBackFace } from "@/lib/cards/dfc";
 import {
   dfcBackArtMissing,
   dfcFamilyOf,
+  dfcFrontColorError,
   resolveDfcBackFace,
   stripBackBody,
   type DfcBackFacePayload,
@@ -323,6 +324,16 @@ export async function createCardAction(
   // switch (newCardFrameStyle, below), so it is read the same way here.
   const storedFrameStyle = newCardFrameStyle(data.frame_style ?? {}, data.card_type);
   {
+    // The FRONT face's colourless rule (D2): on a DFC front body, `c` only
+    // with an Artifact word — the body's `c` is the artifact stand-in.
+    const frontColourError = dfcFrontColorError(
+      storedFrameStyle.template,
+      { cardType: data.card_type, supertype: data.supertype },
+      data.color_identity,
+    );
+    if (frontColourError) {
+      return { ok: false, fieldErrors: { color_identity: frontColourError } };
+    }
     const gate = resolveDfcBackFace({
       frontTemplate: storedFrameStyle.template,
       back: data.back_face as DfcBackFacePayload | null | undefined,
@@ -783,6 +794,26 @@ export async function updateCardAction(
       : backLeavesBody
         ? stripBackBody(storedBackFace!)
         : storedBackFace;
+  // The FRONT face's colourless rule (D2) on the card as it will be stored,
+  // when the patch moves the frame, the colour or the type line.
+  if (
+    data.frame_style !== undefined ||
+    data.color_identity !== undefined ||
+    data.card_type !== undefined ||
+    data.supertype !== undefined
+  ) {
+    const frontColourError = dfcFrontColorError(
+      nextFrontTemplate,
+      {
+        cardType: data.card_type !== undefined ? data.card_type : existing.card_type,
+        supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
+      },
+      update.color_identity ?? existing.color_identity,
+    );
+    if (frontColourError) {
+      return { ok: false, fieldErrors: { color_identity: frontColourError } };
+    }
+  }
   if (data.back_face !== undefined || familyChanged || data.frame_style !== undefined) {
     const gateInput = {
       frontTemplate: nextFrontTemplate,

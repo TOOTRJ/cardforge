@@ -237,6 +237,22 @@ describe("a new transform card", () => {
     expect(preview().backFace).toMatchObject({ card_type: "creature", frame_style: { template: "m15dfcback" }, color_identity: ["blue"] });
   });
 
+  it("a double-faced creature can't be colourless (D2): the front's `c` verified, the colour still moves off it and says so; the Colorless chip is dark with the reason until the type says Artifact", async () => {
+    renderForm({ verifiedFrameKeys: [...TRANSFORM_VERIFIED, frameComboKey("m15dfcfront", "c")] });
+    await clickChip("Card type", /^Transform/);
+    expect(preview().colour).toEqual(["blue"]);
+    expect(toast.info).toHaveBeenCalledWith(expect.stringMatching(/can't be colourless — switched the colour to blue/));
+    expect(chipIn("Color identity", /^colorless/i).disabled).toBe(true);
+    expect(chipIn("Color identity", /^colorless/i).textContent).toMatch(/needs “Artifact”/);
+    await clickChip("Front face type", /^Artifact/);
+    expect(chipIn("Color identity", /^colorless/i).disabled).toBe(false);
+    await clickChip("Color identity", /^colorless/i);
+    expect(preview().colour).toEqual(["colorless"]);
+    // Back to a creature: off colourless again.
+    await clickChip("Front face type", /^Creature/);
+    expect(preview().colour).toEqual(["blue"]);
+  });
+
   it("the front's face type moves the card between the spell and the land front, keeping the colour verified", async () => {
     renderForm();
     await clickChip("Card type", /^Transform/);
