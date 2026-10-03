@@ -9,14 +9,17 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   KIND_DEFS,
   borrowedTypeWord,
+  dfcFrontDressesKind,
   isSingleBasicLand,
   templateIsBasicOnly,
   templateSupportsKind,
   typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
+import { bodyFor, dfcBodyOf, dfcIconFamilyFromEffects, isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -98,11 +101,74 @@ function referenceSays(card: ScryfallCard, word: "Artifact" | "Enchantment"): bo
   return typeLineHasWord({ cardType: card_type, supertype }, word);
 }
 
+/** A printing's BACK face's frame colour key (its printed colour: the
+ *  indicator, else its colours), as pickFrameColorKey reads a face. */
+function backFaceColorKey(card: ScryfallCard): string {
+  const back = card.card_faces?.[1];
+  const letters = [...(back?.color_indicator ?? back?.colors ?? [])].map((c) => c.toUpperCase());
+  const identity = letters.map((code) => SCRYFALL_LETTER_TO_IDENTITY[code]).filter((v): v is NonNullable<typeof v> => Boolean(v));
+  return pickFrameColorKey(identity.length > 1 ? ["multicolor"] : identity.length === 0 ? ["colorless"] : identity);
+}
+
+const SCRYFALL_LETTER_TO_IDENTITY: Record<string, "white" | "blue" | "black" | "red" | "green"> = {
+  W: "white",
+  U: "blue",
+  B: "black",
+  R: "red",
+  G: "green",
+};
+
+/**
+ * A back body's reference (TODO 5.1a): the BACK face of a 2015-frame
+ * transform printing whose family and back type derive this very body
+ * (lib/cards/dfc.ts bodyFor), in the row's colour — the `c` row against an
+ * ARTIFACT back only (design D2). The front must resolve to a transform
+ * front body (its signature's `onceVerified`).
+ */
+function validateBackReference(card: ScryfallCard, template: FrameTemplate, colorKey: string, face: 0 | 1): ReferenceValidation {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const label = FRAME_TEMPLATE_LABELS[template] ?? template;
+  if (face !== 1) {
+    errors.push(`The ${label} frame is a back-face body: its reference is a printing's BACK face (face 1).`);
+    return { errors, warnings };
+  }
+  const back = card.card_faces?.[1];
+  const signature = frameMatchFromScryfall(card);
+  const front = signature.onceVerified ?? signature.template;
+  if ((card.layout ?? "") !== "transform" || !back || !templateHasBackFace(front) || dfcBodyOf(front)?.layout !== dfcBodyOf(template)?.layout) {
+    errors.push(`${card.name} isn't a transform printing whose front PipGlyph dresses (${signature.exactLabel}); the ${label} frame is a transform back.`);
+    return { errors, warnings };
+  }
+  const { card_type } = parseTypeLine(back.type_line);
+  const wears = bodyFor("transform", "back", card_type, dfcIconFamilyFromEffects(card.frame_effects));
+  if (wears !== template) {
+    errors.push(
+      `${back.name}'s back wears the ${wears ? (FRAME_TEMPLATE_LABELS[wears] ?? wears) : "(no)"} body (its icon family${card_type === "land" ? ", a land back" : ""}), not ${label}.`,
+    );
+  }
+  const cardColor = backFaceColorKey(card);
+  if (cardColor !== colorKey) {
+    errors.push(`${back.name} is a ${COLOR_WORD[cardColor] ?? cardColor} back; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`);
+  } else if (colorKey === "c" && getFrameProfile(template).artifactMasterKeys?.c === "a" && !typeLineHasWord(parseTypeLine(back.type_line), "Artifact")) {
+    errors.push(`${back.name} isn't an Artifact back; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);
+  }
+  const expected = ERA_FRAME[eraForTemplate(template)];
+  if (card.frame && expected && card.frame !== expected) {
+    warnings.push(`This printing uses the ${card.frame} frame; the ${template} template emulates the ${expected} era.`);
+  }
+  return { errors, warnings };
+}
+
 export function validateReferenceForCombo(
   card: ScryfallCard,
   template: FrameTemplate,
   colorKey: string,
+  /** Which printed face the reference is (TODO 5.1a / 5.0b): 1 for the
+   *  back face — a back body's reference. */
+  face: 0 | 1 = 0,
 ): ReferenceValidation {
+  if (isDfcBackBody(template) || face === 1) return validateBackReference(card, template, colorKey, face);
   const errors: string[] = [];
   const warnings: string[] = [];
   // Showcase frames name their set ("Zendikar Rising — Hedron"), as the
@@ -110,7 +176,10 @@ export function validateReferenceForCombo(
   const label = FRAME_TEMPLATE_LABELS[template] ? eraGroupFrameLabel(template) : template;
 
   const signature = frameMatchFromScryfall(card);
-  if (signature.template !== template) {
+  // A transform front body (5.1a) is the printing's frame once verified
+  // (the registry's `onceVerified`): that is the frame it resolves to here.
+  const resolvedTemplate = templateHasBackFace(template) && signature.onceVerified === template ? template : signature.template;
+  if (resolvedTemplate !== template) {
     const resolved = FRAME_TEMPLATE_LABELS[signature.template]
       ? eraGroupFrameLabel(signature.template)
       : signature.template;
@@ -130,6 +199,10 @@ export function validateReferenceForCombo(
     errors.push(
       `${card.name} is a ${COLOR_WORD[cardColor] ?? cardColor} card; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,
     );
+  } else if (colorKey === "c" && templateHasBackFace(template) && getFrameProfile(template).artifactMasterKeys?.c === "a" && !referenceSays(card, "Artifact")) {
+    // The `c` row of a DFC body with the artifact dress is the artifact
+    // master standing in (D2); the land pair's `c` is its one master.
+    errors.push(`${card.name} isn't an Artifact; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);
   }
 
   const kind = referenceKindFor(card);
@@ -137,8 +210,8 @@ export function validateReferenceForCombo(
     warnings.push(
       `Couldn't tell what kind of card ${card.name} is — the render may not match the frame.`,
     );
-  } else if (!templateSupportsKind(template, kind)) {
-    if (signature.template === template && !KIND_DEFS[kind].layoutTemplates) {
+  } else if (!templateSupportsKind(template, kind) && !dfcFrontDressesKind(template, kind)) {
+    if (resolvedTemplate === template && !KIND_DEFS[kind].layoutTemplates) {
       warnings.push(
         `${card.name} is ${withArticle(KIND_DEFS[kind].label.toLowerCase())}, which the ${label} frame doesn't dress in the creator yet — accepted because this printing is that frame (${signature.exactLabel}).`,
       );

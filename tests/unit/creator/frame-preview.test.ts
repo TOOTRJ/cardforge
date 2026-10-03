@@ -12,6 +12,7 @@ import {
   withoutPreviewParams,
 } from "@/lib/creator/frame-preview";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
+import { isDfcBackBody } from "@/lib/cards/dfc";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -130,10 +131,18 @@ describe("walkthroughKindFor", () => {
     expect(walkthroughKindFor(template)).toBe(kind);
   });
 
-  it("every template's walk starts on a kind that can wear it", () => {
+  it("every template's walk starts on a kind that can wear it — a double-faced BACK body's on the kind whose cards it dresses the back of (TODO 5.1a)", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      expect(templateSupportsKind(template, walkthroughKindFor(template)), template).toBe(true);
+      const kind = walkthroughKindFor(template);
+      if (isDfcBackBody(template)) {
+        expect(kind, template).toBe("transform");
+        expect(templateSupportsKind(template, kind), template).toBe(false);
+        continue;
+      }
+      expect(templateSupportsKind(template, kind), template).toBe(true);
     }
+    expect(walkthroughKindFor("m15dfcfront")).toBe("transform");
+    expect(walkthroughKindFor("m15dfclandfront")).toBe("transform");
   });
 
   it("walkthroughKind keeps a URL kind the template can wear, else the template's own", () => {

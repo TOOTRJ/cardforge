@@ -74,6 +74,14 @@ export const COLLECTOR_TEMPLATES = [
   "m15tokentext",
   "m15tokenartifacttext",
   "emblem",
+  // The transform bodies (TODO 5.1a): both faces print the card's ONE
+  // collector line through M15's slot (design D8; the © slot follows each
+  // face's own drawn plate).
+  "m15dfcfront",
+  "m15dfcback",
+  "m15dfcbackleft",
+  "m15dfclandfront",
+  "m15dfclandback",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

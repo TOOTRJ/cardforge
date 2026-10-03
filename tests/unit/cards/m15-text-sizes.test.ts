@@ -55,7 +55,7 @@ describe("one M15-era display size (layout v32)", () => {
     // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
     // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
     // planeswalkers and 4.52's emblem.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(35);
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(40);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -209,6 +209,16 @@ describe("baselines (TextSlot.dy)", () => {
     // are CC's M15 bars — the name kept, the type line on the prints' like
     // the other CC-framed M15 profiles.
     ["adventure", base.title, cc],
+    // The transform bodies (TODO 5.1a): CC's 'Transform' packs are the M15
+    // skeleton (the bands within 1–4 px of the prints), so each face is the
+    // registry's m15 entry's baselines — the name kept, the type line on
+    // the prints' (the back's white ink and the indicator's indent move no
+    // baseline).
+    ["m15dfcfront", base.title, cc],
+    ["m15dfcback", base.title, cc],
+    ["m15dfcbackleft", base.title, cc],
+    ["m15dfclandfront", base.title, cc],
+    ["m15dfclandback", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
     ["extendedart", base.title, base.type],
     ["expeditionland", base.title, base.type],
@@ -289,6 +299,7 @@ describe("baselines (TextSlot.dy)", () => {
     for (const t of [
       "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       "m15borderlesspw", "m15borderlesspwtall",
+      "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
     ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);
     }

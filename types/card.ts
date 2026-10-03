@@ -397,6 +397,21 @@ export const FRAME_TEMPLATE_VALUES = [
   // row count (lib/creator/card-kinds.ts walkerRowsFrameFor).
   "m15borderlesspw",
   "m15borderlesspwtall",
+  // The transform bodies (TODO 5.1a, Card Conjurer 'Transform (Front)',
+  // 'Transform (Back)' and 'Transform (Back) (New)'): a double-faced card's
+  // two printed faces, one body each (FrameProfile.dfc, lib/cards/dfc.ts).
+  // A FRONT body is a card's template (the Transform kind's); a BACK body
+  // is the back face's (`back_face.frame_style.template`) and never a
+  // card's own. `m15dfcback` is the ▼-right back every transform has
+  // printed since 2022-11 (the default, owner decision Q5), `m15dfcbackleft`
+  // the 2016–22 look (the sun / moon, moon / Emrakul, compass / land and
+  // fan families, the icon at the left); the land pair is one master under
+  // every key. Additions: no stored card changes.
+  "m15dfcfront",
+  "m15dfcback",
+  "m15dfcbackleft",
+  "m15dfclandfront",
+  "m15dfclandback",
   "agclassic",
   "alphaland",
   "alphatoken",
@@ -480,6 +495,13 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15borderlessland: "Borderless Land",
   m15borderlesspw: "Borderless Planeswalker",
   m15borderlesspwtall: "Borderless Planeswalker, 4+ abilities",
+  // The transform bodies (TODO 5.1a): the admin pages and describeFrame
+  // show the template key beside these.
+  m15dfcfront: "Transform front",
+  m15dfcback: "Transform back (2022–)",
+  m15dfcbackleft: "Transform back (2016–2022)",
+  m15dfclandfront: "Transform land front",
+  m15dfclandback: "Transform land back",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -586,6 +608,11 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15borderlessland: "borderless",
   m15borderlesspw: "borderless",
   m15borderlesspwtall: "borderless",
+  m15dfcfront: "m15",
+  m15dfcback: "m15",
+  m15dfcbackleft: "m15",
+  m15dfclandfront: "m15",
+  m15dfclandback: "m15",
   battle: "m15",
   saga: "m15",
   adventure: "m15",

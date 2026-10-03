@@ -450,6 +450,12 @@ describe("full-art and textless families (TODO 1.19)", () => {
         expect(match.onceVerified, key).toMatch(/^m20token/);
         continue;
       }
+      // …and the 2015-frame transform printings, whose front body takes
+      // over once verified (TODO 5.1a, transform/2015).
+      if (match.signature.startsWith("transform/2015")) {
+        expect(match.onceVerified, key).toMatch(/^m15dfc(land)?front$/);
+        continue;
+      }
       expect(match.signature, key).toBe("textless/old-frame");
     }
   });
@@ -566,7 +572,18 @@ describe("the general signatures (TODO 1.4)", () => {
       reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
     });
     expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({ status: "exact", signature: "era/2015" });
-    expect(frameMatchFromScryfall(printing("mid-7")).signature).toBe("era/2015+dfc");
+    // A 2015-frame transform printing (TODO 5.1a): the M15 standard stands
+    // in until the transform front body is verified in its colour, then
+    // exact on it — the `dfc` gap is drawn there, so it names no gap.
+    expect(frameMatchFromScryfall(printing("mid-7"))).toMatchObject({
+      signature: "transform/2015",
+      status: "nearest",
+      template: "m15",
+      blockedBy: "5.3",
+      onceVerified: "m15dfcfront",
+      onceVerifiedMatch: { status: "exact", reason: null },
+    });
+    expect(frameMatchFromScryfall(printing("mid-7")).gaps).toBeUndefined();
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
     // The two-colour land frame is drawn (4.6b): the plain era signature.
     expect(frameMatchFromScryfall(printing("ktk-233"))).toMatchObject({ status: "exact", signature: "era/2015" });

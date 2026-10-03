@@ -255,9 +255,29 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
   it("every template on the M15 plate shares its span", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const slot = getFrameProfile(template).pt;
-      // The borderless pack's plates are their own shape (checked above).
-      if (!slot?.plateAssetPathTemplate?.match(/^\/frames\/m15(?!borderless)[a-z]*\/pt\//)) continue;
+      // The borderless pack's plates are their own shape (checked above);
+      // so are the transform backs' dark plates (TODO 5.1a, below).
+      if (!slot?.plateAssetPathTemplate?.match(/^\/frames\/m15(?!borderless|dfcback)[a-z]*\/pt\//)) continue;
       expect(slot.inkSpanPct, template).toEqual(m15.inkSpanPct);
+    }
+  });
+
+  it("the transform backs' dark plates (TODO 5.1a): CC's 285 × 156 pt<K>.png at M15's plate box, its lit face from 55 to 262 of 285 px on the digits' rows — 1190–1395 px, inside M15's by 5 px on the left", () => {
+    for (const template of ["m15dfcback", "m15dfcbackleft"] as const) {
+      const slot = getFrameProfile(template).pt!;
+      expect(slot.plateAssetPathTemplate, template).toBe("/frames/m15dfcback/pt/{color}.png");
+      expect(slot.plateRect, template).toEqual(m15.plateRect);
+      expect(slot.rect, template).toEqual(m15.rect);
+      expect(slot.inkSpanPct, template).toEqual({ leftPct: 79.3, rightPct: 93.0 });
+      const span = spanPx(slot);
+      expect(span.left).toBeCloseTo(1189.5, 0);
+      expect(span.right).toBeCloseTo(1395, 0);
+      expect(slot.colorHex, template).toBe("#ffffff");
+    }
+    // The land back prints no P/T; the fronts print on M15's plates.
+    expect(getFrameProfile("m15dfclandback").pt).toBeUndefined();
+    for (const template of ["m15dfcfront", "m15dfclandfront"] as const) {
+      expect(getFrameProfile(template).pt, template).toEqual(m15);
     }
   });
 });

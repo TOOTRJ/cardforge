@@ -195,6 +195,10 @@ export type StatSlot = {
   sizePct: number;
   colorHex: string;
   weight?: number;
+  /** Horizontal alignment of the value in `rect`. Default "center" (every
+   *  plate and badge); "end" for a value set against a rect's right edge —
+   *  the transform front's reverse P/T in its grey tab (TODO 5.1a). */
+  align?: SlotAlign;
   /** Plate PNG template, {color} → frame color key. Renders behind the value
    *  (M15 P/T plate). */
   plateAssetPathTemplate?: string;
@@ -364,17 +368,28 @@ export type TwoColorSplit = {
 export type TwoColorDress = "split" | "hybrid";
 
 /** A piece of printed anatomy drawn OVER the frame master (TODO 4.6.0): the
- *  legendary crown band (4.6a). One image per key, stretched over `rect`,
- *  right after the frame master in both renderers and inside both finish
- *  masks (lib/cards/anatomy.ts resolveFrameOverlays). Code-owned: never part
+ *  legendary crown band (4.6a), the transform icon glyph (5.1a). One image
+ *  per key, stretched over `rect`, right after the frame master in both
+ *  renderers and inside both finish masks (lib/cards/anatomy.ts
+ *  resolveFrameOverlays). `anatomy` is the discriminant: it names the rule
+ *  that decides whether the card draws it and with which key — the crown:
+ *  FrameStyle.crown === true on a Legendary card that is not a
+ *  planeswalker, token, battle or emblem, keyed by the pinline of the
+ *  master drawn; the icon rider: a double-faced face's icon family
+ *  (CardPreviewData.dfc, lib/cards/faces.ts), keyed by the family's glyph
+ *  for the face's role (lib/cards/dfc.ts DFC_ICON_GLYPHS), no per-card
+ *  switch — each later rider (4.9c's holofoil stamp) adds its own member
+ *  here and its own branch in resolveFrameOverlays. Code-owned: never part
  *  of the override schema. Set only on a PROFILES entry, never on a base
  *  another profile spreads (M15 is spread by 11 profiles, M15LAND by
  *  m15snowland), so a template gains an overlay only on purpose. */
-export type FrameOverlaySlot = {
-  /** The per-card switch that turns it on (FrameStyle[anatomy] === true),
-   *  and the rule that decides whether the card qualifies (the crown: a
-   *  Legendary card that is not a planeswalker, token or battle). */
-  anatomy: "crown";
+export type FrameOverlaySlot =
+  | (FrameOverlaySlotBase & { anatomy: "crown" })
+  | (FrameOverlaySlotBase & { anatomy: "dfcIcon" });
+
+export type FrameOverlayAnatomy = FrameOverlaySlot["anatomy"];
+
+type FrameOverlaySlotBase = {
   /** Where the image is stretched, in card percent. */
   rect: Rect;
   /** The image per key: `{key}` → the key, e.g. "/frames/m15crown/{key}.png"
@@ -511,6 +526,21 @@ export type FrameProfile = {
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
+  /** A transform FRONT body's grey reverse P/T (TODO 5.1a; design 2026-10-02
+   *  §2.2): the BACK face's P/T in the tab at the text box's bottom right,
+   *  which the master paints — digits only (no plate), end-aligned, drawn by
+   *  both renderers from CardPreviewData.dfc.otherFace and only when the
+   *  back prints a P/T (`printsPt`); the tab prints empty otherwise (owner
+   *  decision Q7). Code-owned; set on a PROFILES entry only. */
+  reversePt?: StatSlot;
+  /** The colour-indicator dot (TODO 5.1a; design D4, lib/cards/
+   *  color-indicator.ts): "coloured" — drawn on every face whose colour
+   *  identity names a colour (one disc, two split diagonally, three or more
+   *  in wedges), with the type line indented past it, as every coloured
+   *  transform back prints (INR #60, MOM #43); none on an artifact or
+   *  colourless face. Intrinsic to the body, not a per-card switch (4.6c's
+   *  switch for ordinary cards reuses the module). Code-owned. */
+  indicator?: "coloured";
   /** When set, the mana cost renders absolutely inside THIS rect
    *  (right-aligned, vertically centered) instead of inline at the title
    *  band's right edge — lets the pips move independently of the name.
@@ -3817,6 +3847,175 @@ export const M15_COLLECTOR: CollectorSlot = {
  *  shield, already puts it on line 2 (DOM #1 prints its © line there). */
 export const M15PW_COLLECTOR: CollectorSlot = { ...M15_COLLECTOR, markLine: 2 };
 
+// ---------------------------------------------------------------------------
+// The transform bodies (TODO 5.1a; design 2026-10-02, design-next/5/final.md
+// §2.2, frames.md §3 / §4.3): Card Conjurer's 'Transform (Front)',
+// 'Transform (Back)' (2016–22, the icon well EMPTY at the left) and
+// 'Transform (Back) (New)' (the ▼ baked at the right, every transform
+// printed since 2022-11) packs — the M15 skeleton (the bands within 1–4 px
+// of the prints: MID #169, INR #60, ZNR #12), so each body is the registry's
+// m15 entry (the CC cost lift, type baseline and art slot; the family sizes,
+// `fit: "measured"`; M15's rules ladder, footer, plate box and collector
+// slot) with these deltas, measured on the scans at 1500 × 2100:
+//   • the name on a face with the icon at the LEFT starts at 16.7 %W (prints
+//     249–252 px on SOI #203, MID #169, INR #60 / #193, XLN #22; CC's pack
+//     says 0.16 = 240, the design's D5), right edge M15's 92.2; a face with
+//     the ▼ at the right keeps M15's 8.5 % start (prints 131–134) and ends
+//     at 82.0 (the well's circle starts at 84.7 %W: 1271 px);
+//   • the icon rider (DFC_ICON_RIDER): CC's icon bounds 5.94 / 5.05 /
+//     7.34 × 5.24 % (89 / 106, 110 × 110 px) inside the master's well, the
+//     glyph white on its black disc, keyed by the family's glyph for the
+//     face's role (lib/cards/dfc.ts) — the front's glyph overdraws the
+//     master's own ▲; the 2016–22 back's fills its empty well; the ▼ back
+//     carries no rider (the ▼ is in its master);
+//   • the front's reverse P/T (DFC_REVERSE_PT): CC's 'Reverse PT' box
+//     8.6 / 84.2 / 83.8 × 3.62 %, 61 px (0.0407 W → 43 px caps, the prints'
+//     43), end-aligned so the digits end at 1386 px (the prints' 1389–1392),
+//     in #777 (the prints' neutral grey, luma 107–125; CC's #666 reads
+//     darker), no plate — the grey pentagonal tab is the master's;
+//   • a back: no cost; WHITE name, type and P/T ink (247–254 on every print),
+//     dark rules ink on the greyed box; the pack's dark plates
+//     (`m15dfcback/pt/<k>.png`, 285 × 156 at M15's plate box, the digits'
+//     room re-measured on them: the lit face from 79.3 to 93.0 %W); the
+//     colour-indicator dot on every coloured back (`indicator: "coloured"`,
+//     lib/cards/color-indicator.ts: Ø 3.5 %W at 9.3 / 59.0 %, the type line
+//     from 13.4 %W while it draws — INR #60's type ink starts at 200–204 px);
+//   • the land pair (one master under every key, verified on `c`): no cost,
+//     the front keeps its tab (INR #287 prints Ormendahl's 9/7), the back
+//     prints no P/T and no indicator and — the one FIN / TLA print, FIN #31
+//     Cooking Campsite: light tan bars toned onto it, the name and type in
+//     DARK ink — dark band ink.
+// Additions (the owner rule): no stored card sits on them, no bump. Set on
+// the PROFILES entries only (`dfc` declares the body); no crown, no pair
+// masters in wave 1 (the save drops `crown` / `twoColor` on them, D17); no
+// holoStamp on a back body, ever.
+// ---------------------------------------------------------------------------
+
+/** The name band's start on a face whose icon well is at the LEFT (design
+ *  D5: the prints' ink starts at 249–252 px, 16.6–16.8 %W, where CC's pack
+ *  sets its box at 0.16 = 240). The BAND starts 4 px before the ink: Beleren
+ *  Bold's first capital carries ~4 px of side bearing at the family's 80 px
+ *  (a bake with the band at 16.7 put the ink at 255), so the band at
+ *  246.75 px lands the ink at 250–251 — measured on real bakes at HD and 750
+ *  (tests/unit/render/dfc-bodies-bake.test.tsx). */
+export const DFC_ICON_FACE_TITLE_LEFT_PCT = 16.45;
+/** The name band's right edge on a face whose ▼ well is at the RIGHT, %W
+ *  (the well's circle starts at 84.7 %W). */
+export const DFC_RIGHT_WELL_TITLE_RIGHT_PCT = 82.0;
+
+/** The icon rider's slot: CC's icon bounds (packM15TransformTypes.js
+ *  0.0594 / 0.0505 / 0.0734 × 0.0524), the 12 glyph keys the importer
+ *  publishes (scripts/lib/cc-frames.mjs DFC_ICON_FILES; a unit test holds
+ *  them together). Keyed by the glyph, never the colour. */
+export const DFC_ICON_RIDER: FrameOverlaySlot = {
+  anatomy: "dfcIcon",
+  rect: { leftPct: 5.94, topPct: 5.05, widthPct: 7.34, heightPct: 5.24 },
+  assetPathTemplate: "/frames/dfcicon/{key}.png",
+  keys: ["default", "downarrow", "sun", "moon", "fullmoon", "emrakul", "compass", "land", "spark", "planeswalker", "fanclosed", "fanopen"],
+};
+
+/** The front's reverse P/T: CC's 'Reverse PT' text box (8.6 / 84.2 / 83.8 ×
+ *  3.62 %), 61 px at HD — its right edge run 7 px past CC's 1386 to 1393
+ *  (92.87 %W), where the prints' digits END (their solid ink at 1389–1392
+ *  on MID #169, INR #60 / #193, SOI #203, MOM #43; CC's box set them 3–6 px
+ *  left of the prints — a bake with CC's edge ended at 1384), the tab's
+ *  paper running on to 1438–1441. End-aligned; measured on real bakes
+ *  (tests/unit/render/dfc-bodies-bake.test.tsx). */
+export const DFC_REVERSE_PT: StatSlot = {
+  rect: { topPct: 84.2, leftPct: 8.6, widthPct: 92.87 - 8.6, heightPct: 3.62 },
+  sizePct: 61 / 1500,
+  colorHex: "#777777",
+  weight: 700,
+  align: "end",
+};
+
+const DFC_BACK_INK = "#ffffff";
+/** M15's plate box and the dark plates' lit face on the digits' rows
+ *  (measured on the pack's pt<K>.png: from 55 to 262 of 285 px, drawn at
+ *  the box 75.73 → 94.53 %W). */
+const DFC_BACK_PT: StatSlot = {
+  ...M15.pt!,
+  plateAssetPathTemplate: "/frames/m15dfcback/pt/{color}.png",
+  inkSpanPct: { leftPct: 79.3, rightPct: 93.0 },
+  colorHex: DFC_BACK_INK,
+};
+
+/** The transform masters' art window (layout v35's rule, lib/frames/
+ *  art-window.ts): CC's 'Transform' packs cut their window at 115–1385 ×
+ *  237–1166 px on every colour of every face — ONE px wider than the plain
+ *  M15 masters' 116–1384 × 238–1165 on every side — so CC_M15_ART_SLOT
+ *  (115.05 / 236.25) misses the 0.05 % the check asks by 0.8 / 0.3 px.
+ *  This slot: 114 / 235.2 to 1386.45 / 1167.18 — overscan 1 / 1.45 / 1.8 /
+ *  1.18 px (left, right, top, bottom); the wells and the tab are in the
+ *  frame's opaque outline, outside it. */
+const DFC_ART_SLOT: Rect = { topPct: 11.2, leftPct: 7.6, widthPct: 84.83, heightPct: 44.38 };
+
+/** The CC-framed M15 skeleton every transform body starts from: the
+ *  registry's m15 geometry (cost lift, type baseline), its own art window,
+ *  no crown, no pairs, no see-through colourless (the `c` stand-in is the
+ *  opaque artifact master). */
+const DFC_SKELETON: FrameProfile = {
+  ...M15,
+  costDy: CC_M15_COST_DY,
+  artSlot: DFC_ART_SLOT,
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
+  artifactMasterKeys: { c: "a" },
+};
+
+const M15DFCFRONT: FrameProfile = {
+  ...DFC_SKELETON,
+  label: "Transform front",
+  dfc: { layout: "transform", role: "front", well: "left" },
+  title: { ...M15.title, rect: { ...M15.title.rect, leftPct: DFC_ICON_FACE_TITLE_LEFT_PCT, widthPct: 92.2 - DFC_ICON_FACE_TITLE_LEFT_PCT } },
+  overlays: [DFC_ICON_RIDER],
+  reversePt: DFC_REVERSE_PT,
+};
+
+const M15DFCBACK: FrameProfile = {
+  ...DFC_SKELETON,
+  label: "Transform back (2022–)",
+  dfc: { layout: "transform", role: "back", well: "right" },
+  hideCost: true,
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, widthPct: DFC_RIGHT_WELL_TITLE_RIGHT_PCT - M15.title.rect.leftPct },
+    colorHex: DFC_BACK_INK,
+  },
+  type: { ...DFC_SKELETON.type, colorHex: DFC_BACK_INK },
+  pt: DFC_BACK_PT,
+  indicator: "coloured",
+};
+
+const M15DFCBACKLEFT: FrameProfile = {
+  ...M15DFCBACK,
+  label: "Transform back (2016–2022)",
+  dfc: { layout: "transform", role: "back", well: "left" },
+  title: { ...M15DFCBACK.title, rect: M15DFCFRONT.title.rect },
+  overlays: [DFC_ICON_RIDER],
+};
+
+const M15DFCLANDFRONT: FrameProfile = {
+  ...M15DFCFRONT,
+  label: "Transform land front",
+  dfc: { layout: "transform", role: "front", well: "left", land: true },
+  hideCost: true,
+  // One master under every key: no artifact dress.
+  artifactMasterKeys: undefined,
+};
+
+/** The land back: the skeleton without M15's P/T slot (a land back prints
+ *  none — and no indicator), the ▼ back's name band in M15's DARK ink. */
+const { pt: _landBackPt, ...DFC_LAND_BACK_SKELETON } = DFC_SKELETON;
+void _landBackPt;
+const M15DFCLANDBACK: FrameProfile = {
+  ...DFC_LAND_BACK_SKELETON,
+  label: "Transform land back",
+  dfc: { layout: "transform", role: "back", well: "right", land: true },
+  hideCost: true,
+  artifactMasterKeys: undefined,
+  title: { ...M15.title, rect: M15DFCBACK.title.rect },
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -3923,6 +4122,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15borderlessland: M15BORDERLESSLAND,
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
+  // The transform bodies (TODO 5.1a): each declares its `dfc` on its own
+  // profile; the collector line (4.9b) on the entries here, like every
+  // other — both faces print the card's one line (D8). No crown, no pairs,
+  // no holoStamp here.
+  m15dfcfront: { ...M15DFCFRONT, collector: M15_COLLECTOR },
+  m15dfcback: { ...M15DFCBACK, collector: M15_COLLECTOR },
+  m15dfcbackleft: { ...M15DFCBACKLEFT, collector: M15_COLLECTOR },
+  m15dfclandfront: { ...M15DFCLANDFRONT, collector: M15_COLLECTOR },
+  m15dfclandback: { ...M15DFCLANDBACK, collector: M15_COLLECTOR },
   m15snow: { ...M15SNOW, collector: M15_COLLECTOR },
   m15devoid: { ...M15DEVOID, collector: M15_COLLECTOR },
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,

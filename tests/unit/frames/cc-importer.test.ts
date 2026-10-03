@@ -7,6 +7,7 @@ import {
   CC_COMMIT,
   CC_DEFERRED,
   CC_OVERLAY_BANDS,
+  CC_RIDERS,
   CC_TEMPLATES,
   COLORS,
   CORNER_RADIUS,
@@ -105,7 +106,7 @@ type Def = {
   recut?: { fromY: number; toY: number; shift: number; blend: number; blendBottom?: number };
   recutUp?: typeof FLIP_LOWER_RECUT;
   bridge?: typeof EMBLEM_RAY_BRIDGE;
-  tones?: readonly object[];
+  tones?: readonly object[] | ((key: string) => readonly object[]);
   excluded?: Record<string, string>;
   pack?: string;
   transforms?: string;
@@ -151,6 +152,12 @@ describe("Card Conjurer recipe", () => {
       "m15borderlesspw",
       "m15borderlesspwtall",
       "m15devoid",
+      // The transform bodies (TODO 5.1a; tests/unit/frames/dfc-importer.test.ts).
+      "m15dfcback",
+      "m15dfcbackleft",
+      "m15dfcfront",
+      "m15dfclandback",
+      "m15dfclandfront",
       "m15fullartland",
       "m15land",
       "m15pw",
@@ -172,7 +179,11 @@ describe("Card Conjurer recipe", () => {
       const covered = [...builtColors(def as never), ...Object.keys(def.excluded ?? {})].sort();
       // A template whose crown is baked into its masters (4.6f) builds the
       // crowned twin of every master it paints.
-      const plain = [...COLORS, ...pairKeysOf(template)];
+      // …and a template that dresses its colourless artifact as `a`
+      // (FrameProfile.artifactMasterKeys, the transform bodies, 5.1a) builds
+      // that master too.
+      const dressed = getFrameProfile(template).artifactMasterKeys?.c === "a" ? ["a"] : [];
+      const plain = [...COLORS, ...pairKeysOf(template), ...dressed];
       const crowned = getFrameProfile(template).crownMasters ? plain.map((k) => `${k}-legendary`) : [];
       expect(covered, template).toEqual([...plain, ...crowned].sort());
       for (const file of sourceFilesFor(def as never)) {
@@ -242,10 +253,11 @@ describe("Card Conjurer recipe", () => {
     }
     expect(def.transforms).toMatch(/the name pill's body \(rows 111–210/);
     expect(def.notes.some((n) => /name pill's body is toned onto the prints/.test(n))).toBe(true);
-    // No other template tones or bridges anything.
+    // No other template tones or bridges anything — but the transform backs'
+    // per-key tone pass (TODO 5.1a, tests/unit/frames/dfc-importer.test.ts).
     for (const [template, other] of Object.entries(templates)) {
       if (template === "emblem") continue;
-      expect(other.tones, template).toBeUndefined();
+      if (!["m15dfcback", "m15dfcbackleft", "m15dfclandback"].includes(template)) expect(other.tones, template).toBeUndefined();
       expect(other.bridge, template).toBeUndefined();
     }
   });
@@ -1816,16 +1828,17 @@ describe("published to the frames bucket", () => {
 describe("provenance and hygiene", () => {
   it("records the pinned commit and the recipe for every imported template", () => {
     const provenance = JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8"));
-    // Every template, and every overlay band (4.6a's crown; its own test:
-    // tests/unit/frames/crown-band.test.ts).
-    expect(Object.keys(provenance).sort()).toEqual([...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS)].sort());
+    // Every template, every overlay band (4.6a's crown; its own test:
+    // tests/unit/frames/crown-band.test.ts) and every rider set (5.1a's icon
+    // glyphs: tests/unit/frames/dfc-importer.test.ts).
+    expect(Object.keys(provenance).sort()).toEqual([...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(CC_RIDERS)].sort());
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);
       // Every master was cut at the one card corner (TODO 3.26's re-import).
       expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
-      const plainKeys = [...COLORS, ...pairKeysOf(template)];
+      const plainKeys = [...COLORS, ...pairKeysOf(template), ...(getFrameProfile(template).artifactMasterKeys?.c === "a" ? ["a"] : [])];
       // A template whose crown is baked into its masters (4.6f) records a
       // crowned twin for every master it paints.
       const twins = getFrameProfile(template).crownMasters ? plainKeys.map((k) => `${k}-legendary`) : [];

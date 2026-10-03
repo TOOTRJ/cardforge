@@ -110,6 +110,16 @@ import {
 } from "@/lib/render/card-fonts";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
+import {
+  COLOR_INDICATOR,
+  COLOR_INDICATOR_VIEW,
+  colorIndicatorBox,
+  colorIndicatorFills,
+  colorIndicatorOutlineRadius,
+  colorIndicatorWedges,
+  drawsColorIndicator,
+  typeRectWithIndicator,
+} from "@/lib/cards/color-indicator";
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import {
   COLLECTOR_BRUSH_PATH,
@@ -268,7 +278,18 @@ function anatomyFactsOf(card: CardPreviewData) {
     cost: card.cost,
     cardType: card.cardType,
     supertype: card.supertype,
+    // The icon rider's family and this face's role (TODO 5.1a).
+    dfc: card.dfc ? { role: card.dfc.role, icon: card.dfc.icon } : null,
   };
+}
+
+/** The profile a face is drawn with (TODO 5.1a, lib/cards/color-indicator.ts):
+ *  on a body that declares the colour-indicator dot, a coloured identity
+ *  draws it and the type line starts past it — the preview's twin. */
+function layoutForFace(profile: FrameProfile, card: Pick<CardPreviewData, "colorIdentity">): FrameProfile {
+  return drawsColorIndicator(profile.indicator, card.colorIdentity)
+    ? { ...profile, type: { ...profile.type, rect: typeRectWithIndicator(profile.type.rect) } }
+    : profile;
 }
 
 /** The overlays a finish masks with: the ones the card actually drew. */
@@ -419,8 +440,10 @@ function CardImage({
   children?: React.ReactNode;
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template);
-  const layout = resolveFrameProfile(template, card.profileOverrides);
+  const layout = layoutForFace(resolveFrameProfile(template, card.profileOverrides), card);
   const markLayout = brandMarkLayout(layout);
+  // The colour-indicator dot's fills (TODO 5.1a) — none on every other body.
+  const indicatorFills = drawsColorIndicator(layout.indicator, card.colorIdentity) ? colorIndicatorFills(card.colorIdentity) : [];
   // A textless frame (TODO 3.24) prints no type line and no text box — but
   // the full-art token's textless height keeps its type line (4.48,
   // FrameProfile.textlessTypeLine).
@@ -864,6 +887,11 @@ function CardImage({
         ) : null,
       )}
 
+      {/* The colour-indicator dot (TODO 5.1a): over the master, under every
+          text layer — the preview's ColorIndicatorOverlay twin. A plain
+          sibling, never a Fragment. */}
+      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills }) : null}
+
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -1231,6 +1259,20 @@ function CardImage({
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
             foil: plateFoil,
+          })
+        : null}
+      {/* The transform front's reverse P/T (TODO 5.1a): the BACK's P/T in
+          the grey tab the master paints, only when the back prints one (the
+          tab prints empty otherwise, owner decision Q7); no plate — the
+          preview's twin. */}
+      {layout.reversePt && card.dfc?.otherFace.printsPt
+        ? StatBake({
+            slot: layout.reversePt,
+            value: ptValue(card.dfc.otherFace.power, card.dfc.otherFace.toughness),
+            colorKey: plateKey,
+            masterKey,
+            cardWidth: width,
+            orientation: orientationFromAspect(aspect),
           })
         : null}
 
@@ -2653,7 +2695,9 @@ function StatBake({
         ...slotBox(slot.rect),
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
+        // Centred, or set against an edge (StatSlot.align — the transform
+        // front's reverse P/T, TODO 5.1a): the preview's statJustify twin.
+        justifyContent: slot.align === "end" ? "flex-end" : slot.align === "start" ? "flex-start" : "center",
         // Above the text layers (z20/21): printed cards draw the P/T plate
         // and the starting-loyalty shield OVER the text box edge.
         zIndex: 22,
@@ -2717,6 +2761,26 @@ function StatBake({
         {value}
       </span>
     </div>
+  );
+}
+
+// ColorIndicatorBake — the colour-indicator dot (TODO 5.1a; lib/cards/
+// color-indicator.ts), the preview's ColorIndicatorOverlay twin: the outline
+// disc, then the fills (one disc, two halves on the diagonal, else wedges)
+// in one inline SVG at the dot's box. Satori draws SVG paths and circles.
+function ColorIndicatorBake({ fills }: { fills: readonly string[] }) {
+  const box = colorIndicatorBox();
+  const c = COLOR_INDICATOR_VIEW / 2;
+  return (
+    <svg
+      viewBox={`0 0 ${COLOR_INDICATOR_VIEW} ${COLOR_INDICATOR_VIEW}`}
+      style={{ ...slotBox(box), zIndex: 8 }}
+    >
+      <circle cx={c} cy={c} r={colorIndicatorOutlineRadius()} fill={COLOR_INDICATOR.outlineHex} />
+      {colorIndicatorWedges(fills).map((wedge, i) => (
+        <path key={i} d={wedge.d} fill={wedge.fill} />
+      ))}
+    </svg>
   );
 }
 

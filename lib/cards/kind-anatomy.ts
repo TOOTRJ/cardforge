@@ -45,6 +45,10 @@ export const ANATOMY_CAPABILITIES = [
   "adventure",
   "secondFace",
   "basicSymbol",
+  // A double-faced FRONT body (TODO 5.1a: FrameProfile.dfc with role
+  // "front") — what the Transform kind needs; a back body is never a card's
+  // template and gives no kind anything.
+  "dfcFront",
 ] as const;
 export type AnatomyCapability = (typeof ANATOMY_CAPABILITIES)[number];
 
@@ -76,6 +80,9 @@ export const KIND_REQUIRES: Readonly<Record<CardKind, readonly AnatomyCapability
   split: ["secondFace"],
   aftermath: ["secondFace"],
   flip: ["secondFace"],
+  // The Transform kind (TODO 5.1a): a front body of a double-faced card —
+  // its icon well, its tab and a back face of its own.
+  transform: ["dfcFront"],
 };
 
 /** The anatomy a profile draws, from its FIELDS only — so a profile spread
@@ -91,6 +98,7 @@ export function capabilitiesOf(profile: FrameProfile): ReadonlySet<AnatomyCapabi
   if (profile.adventure) caps.add("adventure");
   if (profile.secondFace) caps.add("secondFace");
   if (profile.basicSymbol) caps.add("basicSymbol");
+  if (profile.dfc?.role === "front") caps.add("dfcFront");
   return caps;
 }
 

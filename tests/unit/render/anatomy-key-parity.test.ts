@@ -19,7 +19,7 @@ vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
   return { ...real, getFrameProfile: declaredGetFrameProfile(real.getFrameProfile) };
 });
 
-import { frameAssetPath as previewFramePath } from "@/components/cards/frame-layer";
+import { frameAssetPath as previewFramePath, frameOverlayImageUrl as previewOverlayUrl } from "@/components/cards/frame-layer";
 import {
   frameAssetPath as bakeFramePath,
   getFrameDataUrl,
@@ -93,15 +93,26 @@ describe("bake path = preview path", () => {
   });
 
   it("every overlay key a slot publishes resolves to its own path, and the bake's loader never swaps in another", () => {
-    // The crown bands: m15crown (4.6a) and the extended-art band (4.6f).
+    // The crown bands: m15crown (4.6a) and the extended-art band (4.6f);
+    // the transform icon riders (5.1a): dfcicon, keyed by the glyph.
+    let riders = 0;
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const slot of getFrameProfile(template).overlays ?? []) {
-        const folder = template === "extendedart" ? "extendedcrown" : "m15crown";
+        const folder = slot.anatomy === "dfcIcon" ? "dfcicon" : template === "extendedart" ? "extendedcrown" : "m15crown";
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key)).toBe(`/frames/${folder}/${key}.png`);
+          if (slot.anatomy === "dfcIcon") {
+            // The preview's frameOverlayImageUrl and the bake's loader read
+            // the same manifest key (the bake's data URL is null here: no
+            // bucket in a unit test — never a stand-in).
+            expect(previewOverlayUrl(slot.assetPathTemplate.replace("{key}", key))).toContain(`dfcicon/${key}.`);
+            riders += 1;
+          }
         }
       }
     }
+    // The three rider slots × 12 glyphs (m15dfcfront, m15dfclandfront, m15dfcbackleft).
+    expect(riders).toBe(36);
     // A master outside the list still reads as "c" (no stored card has one);
     // an overlay that isn't there is nothing — never the "c" band.
     const colourless = getFrameDataUrl("tarkirdragon", "c");

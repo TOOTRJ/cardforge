@@ -36,6 +36,11 @@ export type FrameReference = {
   tier?: 1 | 2;
   /** Hand-researched default (2026-07-01) rather than a script candidate. */
   curated?: true;
+  /** Which printed FACE the reference is (TODO 5.1a / 5.0b): 1 for the
+   *  BACK face of a double-faced printing — a back body's references, whose
+   *  scan is Scryfall's `/back/` image and whose compare, score and
+   *  walkthrough run on the card's back face (5.0b). Absent = the front. */
+  face?: 0 | 1;
 };
 
 export const FRAME_COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
@@ -162,7 +167,9 @@ export function referenceTierLabel(ref: FrameReference | null | undefined): stri
  *  two characters, so the URL is constructible without an API call. The CDN
  *  has no rate limits. */
 export function referenceThumbUrl(ref: FrameReference): string {
-  return `https://cards.scryfall.io/normal/front/${ref.scryfallId[0]}/${ref.scryfallId[1]}/${ref.scryfallId}.jpg`;
+  // A back-face reference (TODO 5.1a) is Scryfall's `/back/` scan.
+  const side = ref.face === 1 ? "back" : "front";
+  return `https://cards.scryfall.io/normal/${side}/${ref.scryfallId[0]}/${ref.scryfallId[1]}/${ref.scryfallId}.jpg`;
 }
 
 /** Stable key for a (template, color) combination — used by the review

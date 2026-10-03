@@ -30,6 +30,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { resolveLoyaltyRows } from "@/lib/cards/face-content";
+import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, type DfcLayout } from "@/lib/cards/dfc";
 import {
   TOKEN_TYPE_WORDS,
   hasRulesBoxText,
@@ -86,6 +87,11 @@ export const CARD_KIND_VALUES = [
   "split",
   "aftermath",
   "flip",
+  // The transform double-faced card (TODO 5.1a; the editor and the kind
+  // picker's chip are 5.2's): two printed faces, one card — the front on a
+  // transform FRONT body (`m15dfcfront`, the land front), the back on the
+  // body the card's icon family derives (lib/cards/dfc.ts bodyFor).
+  "transform",
 ] as const;
 export type CardKind = (typeof CARD_KIND_VALUES)[number];
 
@@ -207,6 +213,12 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     layoutTemplates: ["flip"],
     previewTemplate: "flip",
   },
+  transform: {
+    label: "Transform",
+    cardType: "creature",
+    layoutTemplates: ["m15dfcfront", "m15dfclandfront"],
+    previewTemplate: "m15dfcfront",
+  },
 };
 
 export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
@@ -259,7 +271,7 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
 //     enchantments, not this kind).
 // ---------------------------------------------------------------------------
 
-type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip";
+type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip" | "transform";
 
 export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardType[]>> = {
   saga: ["enchantment"],
@@ -267,6 +279,12 @@ export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardTy
   split: ["instant", "sorcery"],
   aftermath: ["instant", "sorcery"],
   flip: ["creature", "enchantment", "token"],
+  // The transform front (TODO 5.1a; design §4): every permanent and spell
+  // type a 2015-frame transform printed — creatures, artifacts (LCI #60),
+  // enchantments (XLN #22, the VOW auras), lands (INR #287 on the land
+  // front), instants and sorceries; walkers wait (5.13, ask first), sagas
+  // and battles are their own bodies (5.5).
+  transform: ["creature", "artifact", "enchantment", "land", "instant", "sorcery"],
 };
 
 /** The card type an import writes for its kind (TODO 1.21): a layout kind
@@ -343,9 +361,13 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
 // ---------------------------------------------------------------------------
 
 /** The kinds the Card step's kind picker lists as chips. The emblem is not
- *  one of them (owner 2026-09-29): the token kind's picker offers it. */
+ *  one of them (owner 2026-09-29): the token kind's picker offers it. The
+ *  transform kind (TODO 5.1a) joins with its editor, 5.2 — until then it is
+ *  reached by `?kind=transform` on the preview path only, and
+ *  kindHasAvailableFrame keeps it dark until a front AND a back body are
+ *  verified in a colour. */
 export const KIND_PICKER_KINDS: readonly CardKind[] = CARD_KIND_VALUES.filter(
-  (kind) => kind !== "emblem",
+  (kind) => kind !== "emblem" && kind !== "transform",
 );
 
 /** The kind-picker chip that stands for `kind`: an emblem sits under Token. */
@@ -500,6 +522,10 @@ export function templateRefusesKind(
   template: FrameTemplate,
   kind: CardKind,
 ): boolean {
+  // A double-faced BACK body (TODO 5.1a: FrameProfile.dfc role "back") is
+  // the back face's template and never a card's own: it refuses every kind
+  // (the server's kind gate, lib/cards/frame-kind-gate.ts, reads this too).
+  if (getFrameProfile(template).dfc?.role === "back") return true;
   const dress = TREATMENT_KINDS[template];
   if (dress && !dress.includes(kind)) return true;
   if (EXCLUSIVE_KINDS.has(kind) && !dress?.includes(kind)) return true;
@@ -1264,12 +1290,55 @@ export function firstAvailableFrame(
 }
 
 /** True when the kind has at least one published frame — drives the kind
- *  chips' enable/disable in the creator. */
+ *  chips' enable/disable in the creator. A double-faced kind (TODO 5.1a)
+ *  needs a colour verified on a FRONT body AND on the DEFAULT back body
+ *  the kind's default family derives (bodyFor with DEFAULT_DFC_ICON — a
+ *  front with no verified back could not be saved with its back): until
+ *  both are ticked the chip stays dark ("Frames awaiting verification"). */
 export function kindHasAvailableFrame(
   kind: CardKind,
   verifiedKeys: ReadonlySet<string>,
 ): boolean {
-  return firstAvailableFrame(kind, verifiedKeys) !== null;
+  if (firstAvailableFrame(kind, verifiedKeys) === null) return false;
+  const dfc = DFC_KIND_LAYOUT[kind];
+  if (!dfc) return true;
+  const back = bodyFor(dfc, "back", "creature", DEFAULT_DFC_ICON);
+  return back !== null && templateHasAvailableColor(back, verifiedKeys);
+}
+
+/** The double-faced kinds and their layout (lib/cards/dfc.ts): the
+ *  Transform kind (5.1a); the Modal kind joins with 5.1b / 5.2. */
+const DFC_KIND_LAYOUT: Partial<Record<CardKind, DfcLayout>> = { transform: "transform" };
+
+/** True when a double-faced FRONT body (TODO 5.1a) dresses a card of
+ *  `kind` as that kind's card type: the Transform kind draws the types in
+ *  LAYOUT_KIND_CARD_TYPES.transform (a creature, an artifact, an
+ *  enchantment, a land, an instant, a sorcery — a 2015-frame transform
+ *  printing's front face as kindFromScryfall reads it today), on the land
+ *  front only a land, on the spell front everything else. The creator's
+ *  gallery never lists the body under those kinds (a card on it IS the
+ *  Transform kind, kindFromCard), so templateSupportsKind says no; the
+ *  signature registry and the reference pin check ask this instead. */
+export function dfcFrontDressesKind(template: FrameTemplate, kind: CardKind): boolean {
+  const body = dfcBodyOf(template);
+  if (body?.role !== "front") return false;
+  const dfcKind = dfcKindFor(template);
+  if (!dfcKind || !KIND_DEFS[dfcKind].layoutTemplates?.includes(template)) return false;
+  const cardType = KIND_DEFS[kind].cardType;
+  if (KIND_DEFS[kind].layoutTemplates) return false;
+  if (!(LAYOUT_KIND_CARD_TYPES[dfcKind as LayoutKind] ?? []).includes(cardType)) return false;
+  return body.land ? cardType === "land" : cardType !== "land";
+}
+
+/** The double-faced kind a BODY belongs to — a front body's own kind, or
+ *  the kind whose cards a BACK body dresses the back of (a back body is
+ *  never a card's template, so templateSupportsKind says no: the
+ *  walkthrough and the admin tools start a back body's card on this kind
+ *  and flip to the back, TODO 5.0b). Null for every other template. */
+export function dfcKindFor(template: FrameTemplate): CardKind | null {
+  const layout = dfcBodyOf(template)?.layout;
+  if (!layout) return null;
+  return (Object.entries(DFC_KIND_LAYOUT) as [CardKind, DfcLayout][]).find(([, l]) => l === layout)?.[0] ?? null;
 }
 
 // ---------------------------------------------------------------------------

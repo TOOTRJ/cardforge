@@ -60,6 +60,7 @@ import {
   type TwoColorDress,
 } from "@/lib/cards/template-layout";
 import { DFC_ICON_FAMILY_VALUES, type ColorIdentity, type DfcIconFamily, type FrameStyle, type FrameTemplate } from "@/types/card";
+import { dfcIconGlyph, type DfcIconRole } from "@/lib/cards/dfc-icons";
 
 export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
 
@@ -398,6 +399,11 @@ export type AnatomyFacts = {
   cost?: string | null;
   cardType?: string | null;
   supertype?: string | null;
+  /** The face's double-faced block (CardPreviewData.dfc, lib/cards/faces.ts
+   *  — TODO 5.1a): the icon FAMILY the card wears (`icon`, `arrows` when the
+   *  stored key is absent — never read from the switch, which is off for an
+   *  absent key) and the face's role. The icon rider is keyed from it. */
+  dfc?: { role: DfcIconRole; icon: DfcIconFamily | null } | null;
 };
 
 /** The two-colour look a card draws (TODO 4.6b). */
@@ -466,12 +472,21 @@ export type ResolvedFrameOverlay = {
 /**
  * The overlays one card face draws over its frame master, in order — the ONE
  * rule the preview (FrameOverlayLayer), the bake, both finish masks and the
- * bake's preload (frameAssetPathsFor) share. A slot draws when its switch is
- * on and the card qualifies. Its key is the pinline of the master actually
- * drawn: the pair (both dresses share one crown band per pair) when the
- * two-colour look is drawn, else the card's colour key (`colorKey`,
- * pickFrameColorKey) — "m" for a pair drawn gold — remapped by the slot's
- * keyMap. A key the slot doesn't publish draws nothing: never a stand-in.
+ * bake's preload (frameAssetPathsFor) share. Per anatomy (the slot's
+ * discriminant):
+ *   • the crown draws when its switch is on and the card qualifies. Its key
+ *     is the pinline of the master actually drawn: the pair (both dresses
+ *     share one crown band per pair) when the two-colour look is drawn, else
+ *     the card's colour key (`colorKey`, pickFrameColorKey) — "m" for a pair
+ *     drawn gold — remapped by the slot's keyMap;
+ *   • the transform icon rider (TODO 5.1a) draws on a face whose `dfc`
+ *     block names a family — `arrows` for an absent key (lib/cards/faces.ts
+ *     dfcIconOf), so NOT the `dfcIcon` switch, which is off for an absent
+ *     key — keyed by the family's glyph for the BODY's role (profile.dfc:
+ *     the front glyph on a front body, the back glyph on the 2016–22 back;
+ *     the ▼ back carries no slot). No per-card switch: every transform face
+ *     prints its glyph.
+ * A key the slot doesn't publish draws nothing: never a stand-in.
  */
 export function resolveFrameOverlays(
   profile: AnatomyProfile,
@@ -482,11 +497,19 @@ export function resolveFrameOverlays(
   if (!slots || slots.length === 0) return [];
   const out: ResolvedFrameOverlay[] = [];
   for (const slot of slots) {
-    if (!anatomyOn(style, slot.anatomy)) continue;
-    if (slot.anatomy === "crown" && !qualifiesForCrown(facts)) continue;
-    const look = resolveTwoColor(profile, style, facts);
-    const base = look ? look.pair : facts.colorKey;
-    const key = slot.keyMap?.[base] ?? base;
+    let key: string;
+    if (slot.anatomy === "dfcIcon") {
+      const family = facts.dfc?.icon;
+      const role = profile.dfc?.role ?? facts.dfc?.role;
+      if (!family || !role) continue;
+      key = dfcIconGlyph(family, role);
+    } else {
+      if (!anatomyOn(style, slot.anatomy)) continue;
+      if (slot.anatomy === "crown" && !qualifiesForCrown(facts)) continue;
+      const look = resolveTwoColor(profile, style, facts);
+      const base = look ? look.pair : facts.colorKey;
+      key = slot.keyMap?.[base] ?? base;
+    }
     if (!slot.keys.includes(key)) continue;
     out.push({ anatomy: slot.anatomy, rect: slot.rect, key, path: slot.assetPathTemplate.replace("{key}", key) });
   }

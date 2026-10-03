@@ -282,6 +282,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       // 138 px taller still can't hold them.
       "m15borderlesspw/main", "m15borderlesspw/walker", "m15borderlesspwtall/main", "m15borderlesspwtall/walker",
       "nyx/main", "retro/main", "retroland/main", "tarkirdraconic/main", "tarkirdragon/main", "tarkirghostfire/main",
+      // 5.1a's transform bodies: M15's box on every face.
+      "m15dfcfront/main", "m15dfcback/main", "m15dfcbackleft/main", "m15dfclandfront/main", "m15dfclandback/main",
     ],
     ["1200 chars"],
   ],

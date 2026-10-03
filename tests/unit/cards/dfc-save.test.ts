@@ -144,7 +144,7 @@ describe("the schema: a back face's own body and colour", () => {
     ["a finish beside the template", { frame_style: { template: "m15artifact", finish: "foil" } }],
     ["a switch beside the template", { frame_style: { template: "m15artifact", crown: true } }],
     ["a family beside the template", { frame_style: { template: "m15artifact", dfcIcon: "arrows" } }],
-    ["an unknown template", { frame_style: { template: "m15dfcback" } }],
+    ["an unknown template", { frame_style: { template: "m15dfcbackwards" } }],
     ["an empty body", { frame_style: { template: "" } }],
     ["a body with no template", { frame_style: { finish: "foil" } }],
     ["a body that is a string", { frame_style: "m15artifact" }],
@@ -289,12 +289,18 @@ describe("updateCardAction", () => {
 });
 
 describe("every template today", () => {
-  it("is neither a DFC front nor a back body, so the family never survives a save on any of them", async () => {
+  it("the family survives a save on the two transform FRONT bodies only (5.1a); every other template — the back bodies included — drops it", async () => {
     // Spot-checked above through the actions; here the whole vocabulary,
     // through the save rule the actions call.
     const { normalizeAnatomy } = await import("@/lib/cards/anatomy");
     for (const template of FRAME_TEMPLATE_VALUES) {
-      expect(normalizeAnatomy({ template, dfcIcon: "arrows" }, template, "creature"), template).toEqual({ template });
+      const front = template === "m15dfcfront" || template === "m15dfclandfront";
+      expect(normalizeAnatomy({ template, dfcIcon: "arrows" }, template, "creature"), template).toEqual(front ? { template, dfcIcon: "arrows" } : { template });
+    }
+    // …and a DFC body drops the crown and the two-colour switch (design D17:
+    // no crown, no pair masters in wave 1).
+    for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"] as const) {
+      expect(normalizeAnatomy({ template, crown: true, twoColor: true, collector: "2023" }, template, "creature"), template).toEqual({ template, collector: "2023" });
     }
   });
 });
