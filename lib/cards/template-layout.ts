@@ -3699,9 +3699,14 @@ const M15TEXTLESSLAND: FrameProfile = {
  * two-colour frame is (FrameProfile.twoColorMasters, 4.6b). Opt-in per card
  * (FrameStyle.crown === true): declaring it changes no stored card.
  *
- * Set only on the PROFILES entries m15, m15artifact and m15land — never on
- * M15 / M15LAND, which 12 other profiles spread (snow, devoid, borderless,
- * extended art, the showcases and m15snowland draw other crowns, 4.6f).
+ * Set only on the PROFILES entries m15, m15artifact and m15land — and, since
+ * 4.6f wave 2c, m15snow (c → a) and m15snowland (c → l), whose Card Conjurer
+ * masters share the M15 pack's geometry row for row, so the band registers
+ * on their title bar as it does on m15's (KHM #224 / #223 / #230, J22 #12,
+ * PH19 #5, DMR #244) — never on M15 / M15LAND, which 12 other profiles
+ * spread (devoid draws no crown by the owner's call; borderless and
+ * extended art draw the floating crown; the showcases and the layouts
+ * none yet, 4.6f).
  */
 export const M15_CROWN: FrameOverlaySlot = {
   anatomy: "crown",
@@ -3832,7 +3837,19 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // The collector line (TODO 4.9b, M15_COLLECTOR) is set on each wave-1
   // entry here, like the crown — never on the M15 / M15LAND / M15TOKEN /
   // M15TOKENTEXT bases, which other profiles spread.
-  m15snowland: { ...M15SNOWLAND, collector: M15_COLLECTOR },
+  // The snow land (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): the
+  // standard crown band over the snow bars, as the land entry has it (the
+  // colourless crown is the land grey "l": DMR #244 Dark Depths, the one
+  // crowned snow-frame land), and the land's split pairs over the snow land
+  // files (m15snowland/<pair>: KHM's ten snow duals, #248–274). Declared on
+  // the entry, never on M15SNOWLAND / M15LAND.
+  m15snowland: {
+    ...M15SNOWLAND,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }],
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
+    collector: M15_COLLECTOR,
+  },
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
   // The artifact token's plate is M15's artifact set (TODO 4.49 (a)): CC's
@@ -3895,7 +3912,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15borderlessland: M15BORDERLESSLAND,
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
-  m15snow: { ...M15SNOW, collector: M15_COLLECTOR },
+  // The snow frame (TODO 4.6f, wave 2c; owner round 20, 2026-10-01, option
+  // A): the STANDARD crown band over the snow bars — KHM #224 / #223 / #230,
+  // J22 #12, PH19 #5 print the standard crown's shape and registration
+  // (the snow pack's title bar sits where the M15 pack's does, row for row)
+  // with a speckled texture; a colourless snow card's master is CC's snow
+  // ARTIFACT frame, so its crown is the artifact silver "a" — and the
+  // white-bar split pairs (m15snow/<pair>: the gold snow body and plate,
+  // white bars, the split pinline and box; no hybrid snow print exists).
+  // Declared on the entry, never on M15SNOW / M15.
+  m15snow: {
+    ...M15SNOW,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }],
+    twoColorMasters: ["split"],
+    collector: M15_COLLECTOR,
+  },
+  // Devoid draws neither (owner round 20, 2026-10-01, option (i): no crown —
+  // the one crowned devoid printing, M3C #4, is the see-through Eldrazi
+  // frame with gold bars, not this patterned frame; and no pairs — every
+  // two-colour devoid printing, BFZ #199–207, OGW #148–150, MH3 #177 / #204
+  // / #206 / #208 and their reprints, prints the UNIFORM gold devoid frame,
+  // the `m` master this entry already draws: measured 2026-10-02 on eight of
+  // them, the title ring reads gold (R − B 65–119) at every x; the registry
+  // imports them exact, lib/scryfall/frame-signatures.ts GOLD_PAIR_TEMPLATES).
   m15devoid: { ...M15DEVOID, collector: M15_COLLECTOR },
   // CC's colourless planeswalker is see-through like m15/c (body α ≈ 180,
   // a translucent type bar; DOM #1 Karn, M21 #1 Ugin show the art through

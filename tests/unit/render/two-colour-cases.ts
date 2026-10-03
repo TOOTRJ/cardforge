@@ -104,6 +104,60 @@ export const PAIR_CASES: readonly PairCase[] = [
     master: "m15artifact/wu",
     plate: "/frames/m15artifact/pt/m.png",
   },
+  // TODO 4.6f (wave 2c): the snow frames' split pairs — m15snow's white-bar
+  // pair under the gold plate (KHM #224 / #223 / #230 print the gold plate),
+  // a hybrid snow cost on the same (no hybrid snow print exists), the snow
+  // dual land (KHM #248–274); a LAND on the nonland snow frame stays gold
+  // (twoColorFits), and devoid draws no pair at all (owner round 20: every
+  // two-colour devoid printing IS the gold frame).
+  {
+    id: "snow pair (KHM #224 style): the white-bar pair, the gold plate",
+    card: { supertype: "Legendary Snow", colorIdentity: colours("blue", "black"), cost: "{3}{U}{B}", frameStyle: on("m15snow") },
+    master: "m15snow/ub",
+    plate: "/frames/m15snow/pt/m.png",
+  },
+  {
+    id: "snow pair with a hybrid cost: the split (no hybrid snow dress)",
+    card: { supertype: "Snow", colorIdentity: colours("green", "white"), cost: "{G/W}{G/W}", frameStyle: on("m15snow") },
+    master: "m15snow/gw",
+    plate: "/frames/m15snow/pt/m.png",
+  },
+  {
+    id: "snow dual land (KHM #249 Arctic Treeline style)",
+    card: {
+      cardType: "land",
+      supertype: "Snow",
+      subtypes: ["Forest", "Plains"],
+      colorIdentity: colours("green", "white"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("m15snowland"),
+    },
+    master: "m15snowland/gw",
+    plate: null,
+  },
+  {
+    id: "a snow LAND stored on the nonland snow frame: gold (a land wears the pairs on a land frame only)",
+    card: {
+      cardType: "land",
+      supertype: "Snow",
+      subtypes: ["Forest", "Plains"],
+      colorIdentity: colours("green", "white"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("m15snow"),
+    },
+    master: "m15snow/m",
+    plate: null,
+  },
+  {
+    id: "devoid pair (OGW #150 style): gold — the printed look, no pair masters",
+    card: { colorIdentity: colours("green", "blue"), cost: "{1}{G}{U}", frameStyle: on("m15devoid") },
+    master: "m15devoid/m",
+    plate: "/frames/m15devoid/pt/m.png",
+  },
   // The look each card had before 4.6b stays wherever the switch isn't on,
   // the identity isn't a pair, or the frame has no pair masters.
   {
@@ -143,10 +197,10 @@ export const PAIR_CASES: readonly PairCase[] = [
     plate: "/frames/m15/pt/b.png",
   },
   {
-    id: "a pair on a frame with no pair masters (m15snow): gold",
-    card: { colorIdentity: colours("white", "blue"), cost: "{2}{W}{U}", frameStyle: on("m15snow") },
-    master: "m15snow/m",
-    plate: "/frames/m15snow/pt/m.png",
+    id: "a pair on a frame with no pair masters (m15devoid): gold",
+    card: { colorIdentity: colours("white", "blue"), cost: "{2}{W}{U}", frameStyle: on("m15devoid") },
+    master: "m15devoid/m",
+    plate: "/frames/m15devoid/pt/m.png",
   },
   {
     id: "a land pair switched off: the gold land",

@@ -211,13 +211,22 @@ describe("window helpers", () => {
       ["era/2015+two-colour", "m15"],
       ["era/2015+two-colour", "m15land"],
       ["era/2015+two-colour-hybrid", "m15"],
+      // 4.6f wave 2c: the snow frames draw the band and the land's pairs;
+      // devoid's two-colour printings ARE its gold frame.
+      ["era/2015+crown", "m15snow"],
+      ["era/2015+crown", "m15snowland"],
+      ["era/2015+two-colour", "m15snowland"],
+      ["era/2015+two-colour", "m15devoid"],
     ]) {
       expect(at(signature, template), `${signature} on ${template}`).toMatchObject({ drawnNow: true, blockedBy: null });
     }
     // Still open, with the item that finishes it:
     for (const [signature, template] of [
-      ["era/2015+crown", "m15snow"], // 4.6f's snow crown
-      ["era/2015+crown", "m15devoid"],
+      ["era/2015+crown", "m15devoid"], // no devoid crown (owner round 20)
+      ["era/2015+two-colour-hybrid", "m15devoid"], // the one hybrid devoid print (MH3 #253) is a true split
+      // A split-only frame that hosts creatures can't tell a hybrid row
+      // from a gold one (like m15artifact below).
+      ["era/2015+two-colour", "m15snow"],
       ["layout/2015+crown", "adventure"],
       // A borderless printing that landed on its bordered equivalent is not
       // exact however the landing frame is dressed.

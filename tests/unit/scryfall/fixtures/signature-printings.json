@@ -3884,5 +3884,202 @@
       "R",
       "W"
     ]
+  },
+  "ogw-150": {
+    "id": "6c2e37e2-a4bd-4f90-9191-3125784a3369",
+    "name": "Void Grafter",
+    "layout": "normal",
+    "set": "ogw",
+    "set_name": "Oath of the Gatewatch",
+    "set_type": "expansion",
+    "collector_number": "150",
+    "frame": "2015",
+    "frame_effects": [
+      "devoid"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Devoid",
+      "Flash"
+    ],
+    "type_line": "Creature — Eldrazi Drone",
+    "mana_cost": "{1}{G}{U}",
+    "power": "2",
+    "toughness": "4",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "released_at": "2016-01-22",
+    "oracle_text": "Devoid (This card has no color.)\nFlash (You may cast this spell any time you could cast an instant.)\nWhen this creature enters, another target creature you control gains hexproof until end of turn."
+  },
+  "khm-224": {
+    "id": "421376e4-a4ad-427c-bc9c-d315308dcf68",
+    "name": "Narfi, Betrayer King",
+    "layout": "normal",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "224",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Snow Creature — Zombie Wizard",
+    "mana_cost": "{3}{U}{B}",
+    "power": "4",
+    "toughness": "3",
+    "colors": [
+      "B",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "released_at": "2021-02-05",
+    "oracle_text": "Other snow and Zombie creatures you control get +1/+1.\n{S}{S}{S}: Return this card from your graveyard to the battlefield tapped. ({S} can be paid with one mana from a snow source.)"
+  },
+  "khm-249": {
+    "id": "b20e3117-f1e4-4449-ae9d-0b66abfc717d",
+    "name": "Arctic Treeline",
+    "layout": "normal",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "249",
+    "frame": "2015",
+    "frame_effects": [
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Snow Land — Forest Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "W"
+    ],
+    "released_at": "2021-02-05",
+    "oracle_text": "({T}: Add {G} or {W}.)\nThis land enters tapped."
+  },
+  "j22-12": {
+    "id": "1e1d50c3-3219-49cb-8f63-c1faff93215c",
+    "name": "Isu the Abominable",
+    "layout": "normal",
+    "set": "j22",
+    "set_name": "Jumpstart 2022",
+    "set_type": "draft_innovation",
+    "collector_number": "12",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Snow Creature — Yeti",
+    "mana_cost": "{3}{U}{U}",
+    "power": "5",
+    "toughness": "5",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "U",
+      "W"
+    ],
+    "released_at": "2022-12-02",
+    "oracle_text": "You may look at the top card of your library any time.\nYou may play snow lands and cast snow spells from the top of your library.\nWhenever another snow permanent you control enters, you may pay {G}, {W}, or {U}. If you do, put a +1/+1 counter on Isu."
+  },
+  "dmr-244": {
+    "id": "3a8b11ad-d077-40b6-988c-0462e118fe3d",
+    "name": "Dark Depths",
+    "layout": "normal",
+    "set": "dmr",
+    "set_name": "Dominaria Remastered",
+    "set_type": "masters",
+    "collector_number": "244",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Snow Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "released_at": "2023-01-13",
+    "oracle_text": "Dark Depths enters with ten ice counters on it.\n{3}: Remove an ice counter from Dark Depths.\nWhen Dark Depths has no ice counters on it, sacrifice it. If you do, create Marit Lage, a legendary 20/20 black Avatar creature token with flying and indestructible."
+  },
+  "mh3-253": {
+    "id": "7a1d3c1d-1373-4ac4-bb26-9780976efc4f",
+    "name": "Drowner of Truth // Drowned Jungle",
+    "layout": "modal_dfc",
+    "set": "mh3",
+    "set_name": "Modern Horizons 3",
+    "set_type": "draft_innovation",
+    "collector_number": "253",
+    "frame": "2015",
+    "frame_effects": [
+      "devoid"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Devoid"
+    ],
+    "type_line": "Creature — Eldrazi // Land",
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "produced_mana": [
+      "C",
+      "G",
+      "U"
+    ],
+    "released_at": "2024-06-14",
+    "card_faces": [
+      {
+        "name": "Drowner of Truth",
+        "mana_cost": "{5}{G/U}{G/U}",
+        "type_line": "Creature — Eldrazi",
+        "oracle_text": "Devoid (This card has no color.)\nWhen you cast this spell, if {C} was spent to cast it, create two 0/1 colorless Eldrazi Spawn creature tokens with \"Sacrifice this token: Add {C}.\"",
+        "colors": [],
+        "power": "7",
+        "toughness": "6"
+      },
+      {
+        "name": "Drowned Jungle",
+        "mana_cost": "",
+        "type_line": "Land",
+        "oracle_text": "This land enters tapped.\n{T}: Add {G} or {U}.",
+        "colors": []
+      }
+    ]
   }
 }

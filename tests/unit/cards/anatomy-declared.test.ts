@@ -32,16 +32,19 @@ describe("where the pieces are declared", () => {
   it("only the m15, m15artifact, m15land and borderless entries draw them — never a profile that spreads them", () => {
     // 4.6f (wave 2a): the two borderless frames draw the crown from crowned
     // twin masters and the pairs from pinline-split masters; extendedart the
-    // crown alone, as an overlay band (wave 2b). (The snow pair carry the
-    // collector line's slot since 4.9b; the borderless land and extendedart
-    // have none.)
-    const DRAWN = ["m15", "m15land", "m15artifact", "m15borderless", "m15borderlessartifact", "extendedart"];
+    // crown alone, as an overlay band (wave 2b); the snow pair the standard
+    // band and the split pairs (wave 2c). (The snow pair and devoid carry
+    // the collector line's slot since 4.9b; the borderless land and
+    // extendedart have none; devoid draws neither crown nor pair — owner
+    // round 20: its two-colour printings are the gold frame.)
+    const DRAWN = ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false });
     expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
     expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false });
-    expect(frameAnatomyOf("m15snow")).toEqual({ crown: false, twoColor: [], collector: true });
-    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: false, twoColor: [], collector: true });
+    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true });
+    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true });
     // A legacy template draws the m15 frame, so it has m15's anatomy.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });
@@ -79,10 +82,18 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
   });
 
   it("the creator's all-on switches store only what the template draws", () => {
-    // m15snow draws no crown or pair but has the collector slot (4.9b).
+    // m15devoid draws no crown or pair but has the collector slot (4.9b).
+    expect(newCardFrameStyle({ template: "m15devoid", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
+      template: "m15devoid",
+      finish: "regular",
+      collector: "2023",
+    });
+    // m15snow draws both since 4.6f wave 2c, and the line.
     expect(newCardFrameStyle({ template: "m15snow", finish: "regular", ...NEW_CARD_ANATOMY }, "creature")).toEqual({
       template: "m15snow",
       finish: "regular",
+      crown: true,
+      twoColor: true,
       collector: "2023",
     });
     // A frame with no collector slot drops the line's keys too (m15borderless
@@ -104,7 +115,7 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
 
 describe("every save (normalizeAnatomy)", () => {
   it("drops a switch the template can't draw, so a template that gains the piece later never changes the card", () => {
-    expect(normalizeAnatomy({ template: "m15snow", crown: true, twoColor: false }, "m15snow", "creature")).toEqual({ template: "m15snow" });
+    expect(normalizeAnatomy({ template: "m15devoid", crown: true, twoColor: false }, "m15devoid", "creature")).toEqual({ template: "m15devoid" });
     expect(normalizeAnatomy({ template: "m15", crown: true, twoColor: false }, "m15", "creature")).toEqual({
       template: "m15",
       crown: true,
@@ -136,7 +147,14 @@ describe("the two-colour master (frameMasterKey — both renderers)", () => {
   });
 
   it("a template without pair masters stays gold", () => {
-    expect(frameMasterKey(getFrameProfile("m15snow"), ["white", "blue"], creature, { twoColor: true })).toBe("m");
+    expect(frameMasterKey(getFrameProfile("m15devoid"), ["white", "blue"], creature, { twoColor: true })).toBe("m");
+  });
+
+  it("the snow frames paint their split pair (4.6f, wave 2c); a hybrid cost falls back to it", () => {
+    expect(frameMasterKey(getFrameProfile("m15snow"), ["white", "blue"], creature, { twoColor: true })).toBe("wu");
+    expect(frameMasterKey(getFrameProfile("m15snow"), ["green", "white"], { cardType: "creature", cost: "{G/W}{G/W}" }, { twoColor: true })).toBe("gw");
+    expect(frameMasterKey(getFrameProfile("m15snowland"), ["white", "blue"], { cardType: "land", cost: null }, { twoColor: true })).toBe("wu");
+    expect(frameMasterKey(getFrameProfile("m15snow"), ["white", "blue"], { cardType: "land", cost: null }, { twoColor: true })).toBe("m");
   });
 });
 
@@ -182,10 +200,10 @@ describe("an edit's switch flip (applyFrameAnatomyPatch)", () => {
   it("ignores a pair on a frame that can't draw the two-colour frame", () => {
     expect(
       applyFrameAnatomyPatch(
-        { frameStyle: { template: "m15snow" }, colorIdentity: ["multicolor"], cardType: "creature" },
+        { frameStyle: { template: "m15devoid" }, colorIdentity: ["multicolor"], cardType: "creature" },
         { twoColor: true, pair: ["white", "blue"] },
       ),
-    ).toEqual({ ok: true, frameStyle: { template: "m15snow" }, colorIdentity: null });
+    ).toEqual({ ok: true, frameStyle: { template: "m15devoid" }, colorIdentity: null });
   });
 });
 
@@ -202,7 +220,8 @@ describe("an import (importedAnatomy)", () => {
       style: { crown: true, twoColor: true },
       colorIdentity: ["white", "blue"],
     });
-    expect(importedAnatomy(facts, "m15snow").colorIdentity).toEqual(["multicolor"]);
+    expect(importedAnatomy(facts, "m15snow").colorIdentity).toEqual(["white", "blue"]);
+    expect(importedAnatomy(facts, "m15devoid").colorIdentity).toEqual(["multicolor"]);
     expect(importedAnatomy(facts, "tarkirdragon").colorIdentity).toEqual(["multicolor"]);
   });
 

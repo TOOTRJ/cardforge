@@ -62,7 +62,7 @@ describe("the crown overlay layer", () => {
       card({ supertype: null }),
       card({ supertype: "Lengendary" }),
       card({ cardType: "planeswalker", frameStyle: { template: "m15pw", crown: true } }),
-      card({ frameStyle: { template: "m15snow", crown: true } }),
+      card({ frameStyle: { template: "m15devoid", crown: true } }),
     ]) {
       const { container } = render(<CardPreview {...data} />);
       expect(container.querySelector("[data-frame-overlays]"), JSON.stringify(data.frameStyle)).toBeNull();
