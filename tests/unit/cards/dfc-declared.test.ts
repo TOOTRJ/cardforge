@@ -290,14 +290,17 @@ describe("the face under test and the paired front (TODO 5.0b) once a body exist
   });
 
   it("frontBodyFor pairs a back body with a front of its layout; bodyFor first, else the declared front keyed like the front face", () => {
-    // bodyFor's table is empty until 5.1a: the fallback scans the declared
-    // fronts of the same layout — the land one under a land front (Westvale
-    // Abbey's Ormendahl), a non-land one otherwise.
-    expect(frontBodyFor("m15artifact")).toBe("m15");
-    expect(frontBodyFor("m15artifact", "creature", "sunmoon")).toBe("m15");
-    expect(frontBodyFor("m15artifact", "land")).toBe("m15land");
+    // bodyFor's transform rows are filled (5.1a): a transform back pairs
+    // with the REAL front bodies, whatever the fixture declares — the land
+    // front under a land front (Westvale Abbey's Ormendahl), the spell
+    // front otherwise.
+    expect(frontBodyFor("m15artifact")).toBe("m15dfcfront");
+    expect(frontBodyFor("m15artifact", "creature", "sunmoon")).toBe("m15dfcfront");
+    expect(frontBodyFor("m15artifact", "land")).toBe("m15dfclandfront");
+    // The modal rows come with 5.1b: the fallback scans the declared fronts
+    // of the same layout — the modal layout declares no land front here, so
+    // any front of the layout.
     expect(frontBodyFor("m15devoid")).toBe("m15snow");
-    // The modal layout declares no land front here: any front of the layout.
     expect(frontBodyFor("m15devoid", "land")).toBe("m15snow");
     // Not a back body: null.
     expect(frontBodyFor("m15")).toBeNull();

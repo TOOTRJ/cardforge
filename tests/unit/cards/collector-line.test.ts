@@ -61,6 +61,12 @@ describe("the switch values", () => {
       "m15tokentext",
       "m15tokenartifacttext",
       "emblem",
+      // The transform bodies (TODO 5.1a): both faces print the line.
+      "m15dfcfront",
+      "m15dfcback",
+      "m15dfcbackleft",
+      "m15dfclandfront",
+      "m15dfclandback",
     ]);
   });
 });

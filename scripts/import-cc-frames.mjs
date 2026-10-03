@@ -72,6 +72,7 @@ import {
   sampleBar,
   sampleBarColumns,
   CC_RAW,
+  CC_RIDERS,
   CC_REPO,
   CC_TEMPLATES,
   COLORS,
@@ -106,6 +107,7 @@ import {
   shiftRows,
   sourceFilesFor,
   toRgba8,
+  tonesFor,
 } from "./lib/cc-frames.mjs";
 import { blendPair } from "./lib/pair-ramp.mjs";
 // The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
@@ -139,10 +141,10 @@ const cacheDir = process.env.CC_CACHE ?? path.join(os.homedir(), ".cache", "pipg
 const PROVENANCE = "lib/cards/frame-sources.json";
 
 if (only) {
-  const unknown = only.filter((t) => !CC_TEMPLATES[t] && !CC_OVERLAY_BANDS[t] && !HOLO_STAMP_NOTCHES[t]);
+  const unknown = only.filter((t) => !CC_TEMPLATES[t] && !CC_OVERLAY_BANDS[t] && !CC_RIDERS[t] && !HOLO_STAMP_NOTCHES[t]);
   if (unknown.length) {
     console.error(
-      `✗ Unknown template(s): ${unknown.join(", ")}. Known: ${[...Object.keys(CC_TEMPLATES), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(HOLO_STAMP_NOTCHES)].join(", ")}`,
+      `✗ Unknown template(s): ${unknown.join(", ")}. Known: ${[...Object.keys(CC_TEMPLATES), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(CC_RIDERS), ...Object.keys(HOLO_STAMP_NOTCHES)].join(", ")}`,
     );
     process.exit(1);
   }
@@ -195,7 +197,7 @@ const edgeFailures = [];
 const artWindowFailures = [];
 // Drop templates the recipe no longer builds (e.g. deferred ones).
 for (const template of Object.keys(provenance)) {
-  if (!CC_TEMPLATES[template] && !CC_OVERLAY_BANDS[template] && !HOLO_STAMP_NOTCHES[template]) delete provenance[template];
+  if (!CC_TEMPLATES[template] && !CC_OVERLAY_BANDS[template] && !CC_RIDERS[template] && !HOLO_STAMP_NOTCHES[template]) delete provenance[template];
 }
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
@@ -277,8 +279,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     // A ray's top closed over by the frame (the emblem's spark, 4.52).
     const bridged = def.bridge ? bridgeRayTip(recut, W, H, def.bridge) : recut;
     // Toned regions, onto the prints' tone (the emblem's silver, name pill,
-    // type pill and text box, 4.52), in order.
-    const native = (def.tones ?? []).reduce((img, tone) => applyTone(img, W, H, tone), bridged);
+    // type pill and text box, 4.52; the transform backs' bars and box through
+    // the pack's masks, per key — 5.1a), in order.
+    const tones = tonesFor(def, key);
+    const toneMasks = Object.fromEntries(
+      await Promise.all([...new Set(tones.flatMap((t) => (t.mask ? [t.mask] : [])))].map(async (m) => [m, await rgba(await fetchCached(m), W, H)])),
+    );
+    const native = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
     const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
       .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
       .raw()
@@ -367,7 +374,10 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),
-    ...(def.tones ? { tones: def.tones } : {}),
+    // Per-key tones (a function) are recorded key by key.
+    ...(def.tones
+      ? { tones: typeof def.tones === "function" ? Object.fromEntries(builtColors(def).map((key) => [key, def.tones(key)])) : def.tones }
+      : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
   };
@@ -467,6 +477,44 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     sourceFiles: def.layers
       ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
       : crownBandSourceFiles(def.keys),
+    notes: def.notes,
+  };
+}
+// Rider sets (TODO 5.1a: the transform icon glyphs). Each file rasterised
+// to the set's square size — sharp at density 300 for an SVG, Lanczos for a
+// PNG — and written as <out>/<folder>/<key>.png + .webp. No card canvas, no
+// corner, no edge contract: a rider is drawn inside a master's own well.
+for (const [folder, def] of Object.entries(CC_RIDERS)) {
+  if (only && !only.includes(folder)) continue;
+  const recipe = {};
+  for (const [key, src] of Object.entries(def.files)) {
+    const out = path.join(outDir, folder, `${key}.png`);
+    recipe[key] = [`${src} rasterised at ${def.size}×${def.size}`];
+    if (dryRun) {
+      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+      continue;
+    }
+    const data = await rgba(await fetchCached(src), def.size, def.size);
+    // The disc's corners must be clear and its glyph white: a rider that
+    // fills its square would overdraw the well's ring.
+    const corner = data[3];
+    if (corner !== 0) throw new Error(`${folder}/${key}: the rider's corner is not clear (α ${corner})`);
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    const image = sharp(data, { raw: { width: def.size, height: def.size, channels: 4 } });
+    await image.clone().png({ compressionLevel: 9 }).toFile(out);
+    await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
+    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${def.size}×${def.size}`);
+  }
+  provenance[folder] = {
+    source: "cardconjurer",
+    repo: CC_REPO,
+    commit: CC_COMMIT,
+    pack: def.pack,
+    converter: "scripts/import-cc-frames.mjs",
+    kind: "rider",
+    output: `${def.size}x${def.size} rider glyphs (a black disc, the glyph in white), webp q${WEBP.quality}`,
+    colors: recipe,
+    sourceFiles: [...Object.values(def.files)].sort(),
     notes: def.notes,
   };
 }

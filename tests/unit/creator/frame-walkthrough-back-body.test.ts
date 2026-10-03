@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // "Walk the stepper" on a BACK body (TODO 5.0b), under 5.0a's declared-
 // profile fixture (tests/unit/cards/dfc-fixture.ts: m15artifact = a
-// transform back paired with m15; m15devoid = a modal back paired with
-// m15snow — never the real PROFILES). A back body never dresses a front, so
+// transform back, paired through bodyFor's filled transform rows (5.1a)
+// with the REAL front bodies m15dfcfront / m15dfclandfront; m15devoid = a
+// modal back paired with the fixture's m15snow, the modal rows being 5.1b's
+// — never the real PROFILES). A back body never dresses a front, so
 // the walk pins the CARD to the paired front body, keeps the row's template
 // as the one under test, and opens the preview on the back face whatever
 // the link says. The kind gate and the sample are the paired front's.
@@ -56,12 +58,12 @@ describe("a back body's walk", () => {
     expect(state.lookups).toEqual([{ id: reference.scryfallId, template: "m15artifact", face: undefined }]);
     expect(walk).toMatchObject({
       template: "m15artifact",
-      cardTemplate: "m15",
+      cardTemplate: "m15dfcfront",
       previewFace: "back",
       colorKey: "w",
       kind: "creature",
     });
-    expect(walk?.seed?.patch.frame_template).toBe("m15");
+    expect(walk?.seed?.patch.frame_template).toBe("m15dfcfront");
     expect(walk?.seed?.fromReference).toBe(true);
     expect(walk?.note).toMatch(/^Walking m15artifact\/w, prefilled from/);
     expect(walk?.note).toMatch(/The preview opens on the back face\.$/);
@@ -86,11 +88,11 @@ describe("a back body's walk", () => {
     const walk = await buildFrameWalkthrough({ template: "m15artifact", color: "b", seed: "reference" });
     expect(walk).toMatchObject({
       template: "m15artifact",
-      cardTemplate: "m15land",
+      cardTemplate: "m15dfclandfront",
       previewFace: "back",
       kind: "land",
     });
-    expect(walk?.seed?.patch.frame_template).toBe("m15land");
+    expect(walk?.seed?.patch.frame_template).toBe("m15dfclandfront");
     expect(walk?.seed?.fromReference).toBe(true);
   });
 
@@ -102,7 +104,7 @@ describe("a back body's walk", () => {
 
   it("a blank walk on a back body still pins the paired front", async () => {
     const walk = await buildFrameWalkthrough({ template: "m15artifact", color: "g" });
-    expect(walk).toMatchObject({ seed: null, cardTemplate: "m15", previewFace: "back" });
+    expect(walk).toMatchObject({ seed: null, cardTemplate: "m15dfcfront", previewFace: "back" });
     expect(state.lookups).toHaveLength(0);
   });
 

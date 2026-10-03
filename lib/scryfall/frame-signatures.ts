@@ -8,6 +8,7 @@ import {
 import {
   KIND_DEFS,
   borrowedTypeWord,
+  dfcFrontDressesKind,
   templateIsBasicOnly,
   templateSupportsKind,
   walkerRowCount,
@@ -18,6 +19,7 @@ import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
+import { bodyFor, templateHasBackFace } from "@/lib/cards/dfc";
 import { m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
@@ -449,7 +451,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -758,6 +760,15 @@ const FAMILIES: Record<
       "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ],
     pick: (ctx) => m20TokenFrame(ctx),
+  },
+  // The transform FRONT bodies (TODO 5.1a; lib/cards/dfc.ts bodyFor): the
+  // land front for a land front face, the spell front for every other —
+  // what a 2015-frame transform printing wears once the body is verified
+  // in its colour (the back body is the mapper's: 5.4 reads the printing's
+  // family and the back's type through bodyFor).
+  dfc: {
+    produces: ["m15dfclandfront", "m15dfcfront"],
+    pick: ({ facts }) => bodyFor("transform", "front", facts.kind === "land" ? "land" : "spell") ?? "m15dfcfront",
   },
 };
 
@@ -1119,6 +1130,14 @@ const showcaseLabel = ({ card, set }: Ctx) =>
   `${card.set_name ?? set.toUpperCase()} showcase`;
 
 const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "aftermath", "flip"];
+
+/** The kinds a transform printing's FRONT face can be for the transform
+ *  front body (lib/creator/card-kinds.ts LAYOUT_KIND_CARD_TYPES.transform):
+ *  the front face's kind as kindFromScryfall reads it today. The Transform
+ *  kind itself is not a layout kind of the `layout/2015` rules (whose
+ *  family pick isn't land-aware): 5.4, which maps the layout to the kind,
+ *  adds `transform` HERE so the printing keeps this rule. */
+const TRANSFORM_FRONT_KINDS: readonly CardKind[] = ["creature", "artifact", "enchantment", "land", "instant", "sorcery"];
 
 /** The layout frames whose two parts each print their own colour (TODO
  *  4.26's per-part colour): a two-colour printing on them is not the
@@ -1998,6 +2017,32 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     OLD_ERA_GAPS,
   ),
+  // A 2015-frame transform printing on a kind the transform front draws
+  // (TODO 5.1a; design 2026-10-02 §7 "Registry"): the M15 standard stands in
+  // (`nearest`, as before) until the transform front body is verified in
+  // the printing's colour — then `exact` on it (onceVerified +
+  // exactOnceVerified, the M20 token's model; lib/creator/frame-resolve.ts
+  // withVerification says "not yet verified in <colour>" meanwhile). The
+  // `dfc` gap is no gap on the body (gapDrawnBy), so it is left out of this
+  // rule's list; the other M15-era gaps hold as on the standard. The back
+  // face's body is the mapper's business (5.4: bodyFor by family and type).
+  // Walker, saga, battle and token fronts stay on their own rules.
+  ...withGaps(
+    {
+      key: "transform/2015",
+      exactLabel: "M15 (2015) transform frame",
+      match: { frames: ["2015"], layouts: ["transform"], kinds: TRANSFORM_FRONT_KINDS },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        reason: "PipGlyph's transform frames aren't verified in this colour yet",
+        blockedBy: "5.3",
+        onceVerified: { family: "dfc" },
+        exactOnceVerified: true,
+      },
+    },
+    M15_ERA_GAPS.filter((gap) => gap !== "dfc"),
+  ),
   ...withGaps(
     {
       key: "era/2015",
@@ -2071,9 +2116,12 @@ export function signatureDrawnOn(signature: string, template: string | null | un
   return true;
 }
 
-/** Templates no printed signature resolves to exact or nearest. Empty today:
- *  every PipGlyph frame is some printing's frame. */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = [];
+/** Templates no printed signature resolves to exact or nearest: the
+ *  transform BACK bodies (TODO 5.1a) — a printing resolves to its FRONT
+ *  template; its back wears the body the family and the back's type derive
+ *  (lib/cards/dfc.ts bodyFor, the mapper's business in 5.4), never a
+ *  signature of its own. */
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);
@@ -2245,6 +2293,10 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
       return frameAnatomyOf(template).twoColor.includes("split") || GOLD_PAIR_TEMPLATES.has(template);
     case "two-colour-hybrid":
       return frameAnatomyOf(template).twoColor.includes("hybrid");
+    // The double-faced marks (TODO 5.1a): a transform FRONT body draws them
+    // (the icon well, the grey tab; the back body the card's back wears).
+    case "dfc":
+      return templateHasBackFace(template);
     default:
       return false;
   }
@@ -2256,7 +2308,10 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
  *  type (the artifact frame, Nyx) on a card whose type line doesn't say it. */
 function kindMisfit(template: FrameTemplate, kind: CardKind, ctx: Ctx): string | null {
   const { facts } = ctx;
-  if (!templateSupportsKind(template, kind) || (templateIsBasicOnly(template) && !facts.singleBasic)) {
+  // A transform FRONT body (5.1a) dresses the printing's front kind when
+  // the Transform kind draws that card type (dfcFrontDressesKind): the
+  // creator's gallery never lists it under that kind.
+  if ((!templateSupportsKind(template, kind) && !dfcFrontDressesKind(template, kind)) || (templateIsBasicOnly(template) && !facts.singleBasic)) {
     return `PipGlyph's ${describeFrame(template)} frame doesn't dress ${kindWord(kind)} yet`;
   }
   const word = borrowedTypeWord(kind, template);

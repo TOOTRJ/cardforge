@@ -161,7 +161,9 @@ describe("the surfaces that draw a picture column", () => {
   const SURFACES: [string, RegExp][] = [
     ["components/cards/card-preview.tsx", /drawableCardMedia\(rawProps\)/],
     ["components/cards/set-symbol.tsx", /drawableMediaUrl\("set-icon", iconUrl\)/],
-    ["lib/cards/bake-core.ts", /return drawableCardMedia\(\{/],
+    // The row goes through the guard, then through the front face's twin
+    // (TODO 5.0a: frontPreviewData is the identity for a single-faced row).
+    ["lib/cards/bake-core.ts", /return frontPreviewData\(drawableCardMedia\(\{/],
     ["lib/cards/preview-data.ts", /return drawableCardMedia\(\{/],
     ["lib/cards/bake-render.ts", /if \(!isAllowedMediaUrl\("card-art", artUrl\)\)/],
     ["lib/pips/queries.ts", /isAllowedMediaUrl\("pip", row\.image_url, ownerId\)/],

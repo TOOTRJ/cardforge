@@ -4,8 +4,9 @@ import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { BASIC_LAND_NAME_BY_KEY } from "@/lib/cards/watermark";
 import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, type CardKind } from "@/lib/creator/card-kinds";
-import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_VALUES, type DfcIconFamily, type FrameTemplate } from "@/types/card";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
+import { isDfcBackBody } from "@/lib/cards/dfc";
 
 // ---------------------------------------------------------------------------
 // The visual-regression matrix (TODO 7.1 / 3.11): a FIXED list of cards baked
@@ -76,6 +77,10 @@ import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 export type VisualColour = "w" | "u" | "b" | "r" | "g" | "c" | "wu" | "wub";
 export type VisualShape = "short" | "long" | "edge";
 export type VisualPreset = "default" | "hd";
+/** Which face of the row a case bakes (TODO 5.1a): the front (every case
+ *  before Phase 5), or the BACK of a double-faced card with a back body —
+ *  lib/cards/faces.ts backPreviewData, as 5.3's bake will draw it. */
+export type VisualFace = "front" | "back";
 
 /**
  * The harness's own version: raise it when tests/visual/bake.visual.ts draws
@@ -101,6 +106,8 @@ export type VisualCase = {
   preset: VisualPreset;
   corners: "round" | "square";
   finish: "regular" | "foil" | "etched";
+  /** The face baked (VisualFace); part of the input fingerprint. */
+  face: VisualFace;
   /** The stored row this case bakes (lib/cards/bake-core.ts rowToPreviewData).
    *  `art_url` is the "ART" / "ART2" placeholder the harness swaps for its
    *  generated picture. */
@@ -152,6 +159,8 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   split: "wu",
   aftermath: "b",
   flip: "r",
+  // A transform card's front (TODO 5.1a): a blue Delver.
+  transform: "u",
 };
 
 const LONG_RULES =
@@ -161,10 +170,12 @@ const LONG_FLAVOR = "\"The sky remembers every wing that crossed it.\"\n—Capta
 type Fields = Partial<CardRowForBake>;
 
 /** The content of one kind in one shape — a stored row's text columns. */
-function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour): Fields {
+function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, template?: FrameTemplate): Fields {
   const long = shape === "long";
   const key = frameKeyOf(colour);
   switch (kind) {
+    case "transform":
+      return transformContent(shape, colour, template === "m15dfclandfront");
     case "land": {
       if (!long && key !== "m") {
         const name = BASIC_LAND_NAME_BY_KEY[key];
@@ -344,6 +355,73 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour): F
   }
 }
 
+/** A transform card's two faces (TODO 5.1a): the back has its own BODY —
+ *  the ▼-right back the default family derives (lib/cards/dfc.ts bodyFor)
+ *  — and the front's colour, so the front's grey tab prints the back's P/T
+ *  and the icon rider its glyph. Short: a Delver (1/1 // 3/2 Flying);
+ *  long: a Legendary front (no crown: the DFC bodies draw none) with the
+ *  long rules // a dense back; the land front: Westvale Abbey // Ormendahl
+ *  (INR #287, the tab prints 9/7). */
+function transformContent(shape: VisualShape, colour: VisualColour, land: boolean): Fields {
+  const long = shape === "long";
+  // The back's own body and colour, its art (the harness's second picture)
+  // and artist.
+  const backStyle = {
+    frame_style: { template: "m15dfcback" as FrameTemplate },
+    color_identity: IDENTITY[colour],
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+  };
+  if (land) {
+    return {
+      title: long ? "Westvale Abbey of the Profane Congregation" : "Westvale Abbey",
+      card_type: "land",
+      supertype: long ? "Legendary" : null,
+      subtypes: [],
+      cost: null,
+      rules_text:
+        "{T}: Add {C}.\n{5}, {T}, Pay 1 life: Create a 1/1 white and black Human Cleric creature token.\n{5}, {T}, Sacrifice five creatures: Transform Westvale Abbey, then untap it.",
+      flavor_text: long ? LONG_FLAVOR : null,
+      back_face: {
+        title: "Ormendahl, Profane Prince",
+        cost: "",
+        card_type: "creature",
+        supertype: "Legendary",
+        subtypes: ["Demon"],
+        rules_text: "Flying, lifelink, indestructible, haste",
+        power: "9",
+        toughness: "7",
+        ...backStyle,
+      },
+    };
+  }
+  return {
+    title: long ? "Sisay, Captain of the Endless Weatherlight Skies" : "Delver of Secrets",
+    card_type: "creature",
+    supertype: long ? "Legendary" : null,
+    subtypes: long ? ["Human", "Soldier", "Wizard", "Advisor"] : ["Human", "Wizard"],
+    cost: long ? `{X}${pips(colour, 3, 3)}` : pips(colour, 0, 1),
+    rules_text: long
+      ? LONG_RULES
+      : "At the beginning of your upkeep, look at the top card of your library. You may reveal it. If an instant or sorcery card is revealed this way, transform Delver of Secrets.",
+    flavor_text: long ? LONG_FLAVOR : null,
+    power: long ? "10" : "1",
+    toughness: long ? "10" : "1",
+    back_face: {
+      title: long ? "Sisay, Herald of the Weatherlight's Final Voyage" : "Insectile Aberration",
+      cost: "",
+      card_type: "creature",
+      supertype: long ? "Legendary" : null,
+      subtypes: long ? ["Human", "Soldier", "Avatar"] : ["Human", "Insect"],
+      rules_text: long ? DENSE_RULES : "Flying",
+      flavor_text: long ? LONG_FLAVOR : null,
+      power: long ? "12" : "3",
+      toughness: long ? "12" : "2",
+      ...backStyle,
+    },
+  };
+}
+
 /** A stored row for one case. */
 function rowFor(
   template: FrameTemplate,
@@ -384,7 +462,7 @@ function rowFor(
     back_face: null,
     face_content: null,
     watermark: long && colour !== "wu" && colour !== "wub" ? { kind: "mana", key: frameKeyOf(colour) } : null,
-    ...contentFor(kind, shape, colour),
+    ...contentFor(kind, shape, colour, template),
   };
 }
 
@@ -633,10 +711,20 @@ function canonical(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
-/** The input fingerprint of a case (VisualCase.input). */
-export function caseInput(c: Pick<VisualCase, "row" | "preset" | "corners">): string {
+/** The input fingerprint of a case (VisualCase.input). The face joins it
+ *  only when it is the back (TODO 5.1a), so every front case's fingerprint
+ *  is what it was. */
+export function caseInput(c: Pick<VisualCase, "row" | "preset" | "corners"> & { face?: VisualFace }): string {
   return createHash("sha256")
-    .update(canonical({ harness: VISUAL_HARNESS, row: c.row, preset: c.preset, corners: c.corners }))
+    .update(
+      canonical({
+        harness: VISUAL_HARNESS,
+        row: c.row,
+        preset: c.preset,
+        corners: c.corners,
+        ...(c.face === "back" ? { face: "back" } : {}),
+      }),
+    )
     .digest("hex")
     .slice(0, 8);
 }
@@ -659,21 +747,26 @@ export function visualCases(): VisualCase[] {
       crown?: boolean;
       /** Fields over the stored row (a switch on frame_style, a cost). */
       row?: Partial<CardRowForBake>;
+      /** The back face of a double-faced row (TODO 5.1a): the case's
+       *  `template` is the BACK body the row's back_face names; the row is
+       *  built for the front template given here. */
+      back?: { frontTemplate: FrameTemplate };
     } = {},
   ) => {
     const id = caseId(template, colour, kind, shape, extra.suffix);
     const finish = extra.finish ?? "regular";
     const preset = extra.preset ?? "default";
     const corners = extra.corners ?? "round";
+    const face: VisualFace = extra.back ? "back" : "front";
     const row = {
-      ...rowFor(template, kind, colour, shape, finish, id, extra.crown ?? false),
+      ...rowFor(extra.back?.frontTemplate ?? template, kind, colour, shape, finish, id, extra.crown ?? false),
       ...(extra.noArt ? { art_url: null } : {}),
       ...(extra.noText ? { rules_text: null, flavor_text: null, face_content: null } : {}),
       ...extra.row,
     };
     cases.push({
       id,
-      input: caseInput({ row, preset, corners }),
+      input: caseInput({ row, preset, corners, face }),
       printOnly: corners === "square",
       template,
       kind,
@@ -682,11 +775,15 @@ export function visualCases(): VisualCase[] {
       preset,
       corners,
       finish,
+      face,
       row,
     });
   };
   const hosted = kindsByTemplate();
   for (const template of FRAME_TEMPLATE_VALUES) {
+    // A double-faced BACK body (TODO 5.1a) is never a card's own template:
+    // its cases are the back face of a transform row (DFC_BACK_CASES).
+    if (isDfcBackBody(template)) continue;
     const kinds = hosted.get(template) ?? ["creature"];
     const [primary, ...others] = kinds;
     for (const colour of VISUAL_COLOURS) {
@@ -780,6 +877,15 @@ export function visualCases(): VisualCase[] {
   // token frames, a walker on m15pw, an emblem on emblem), and on m15 the
   // line's other shapes.
   for (const template of COLLECTOR_TEMPLATES) {
+    // A transform BACK body (TODO 5.1a) prints the card's one line on its
+    // back face: its collector cases bake the back of a transform row.
+    if (isDfcBackBody(template)) {
+      const front: FrameTemplate = template === "m15dfclandback" ? "m15dfclandfront" : "m15dfcfront";
+      const back = { frontTemplate: front };
+      add(template, "transform", "g", "long", { suffix: "@collector", back, row: { ...dfcBodyRow(template, "g", "long"), ...collectorRow(front, "2023", dfcBodyRow(template, "g", "long")) } });
+      add(template, "transform", "u", "short", { suffix: "@collector-2015", back, row: { ...dfcBodyRow(template, "u"), ...collectorRow(front, "2015", dfcBodyRow(template, "u")) } });
+      continue;
+    }
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, "g", "long", { suffix: "@collector", row: collectorRow(template, "2023") });
     add(template, primary, "u", "short", { suffix: "@collector-2015", row: collectorRow(template, "2015") });
@@ -844,6 +950,62 @@ export function visualCases(): VisualCase[] {
   // A token with the key: the switch on, nothing drawn — the plain look,
   // pinned.
   add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
+  // TODO 5.1a: the transform bodies — NEW cases (new templates, no stored
+  // card: no bump). The front bodies come out of the per-template loop
+  // above (the transform kind's rows carry a back with a body, so the grey
+  // tab prints the back's P/T and the rider its glyph; the long card is a
+  // crownless Legendary). Here: every BACK body × colour, short and long,
+  // baked as the back face (VisualCase.face) — the indicator on each
+  // coloured back, the dark plates, the 2016–22 back's moon in its well —
+  // the other families' glyphs on both faces, a back with no P/T (the empty
+  // tab on the front, no plate on the back), the land pair's back, the
+  // stored bake's size, a foil back, and a LEGACY-shaped back_face on m15
+  // (no body) whose front bake must not move.
+  for (const body of DFC_BACK_BODIES) {
+    const front: FrameTemplate = body === "m15dfclandback" ? "m15dfclandfront" : "m15dfcfront";
+    for (const colour of VISUAL_COLOURS) {
+      add(body, "transform", colour, "short", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour) });
+      add(body, "transform", colour, "long", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour, "long") });
+    }
+    add(body, "transform", "g", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: front }, row: dfcBodyRow(body, "g", "long") });
+  }
+  // The other families' glyphs: the front's (sun, full moon, compass, closed
+  // fan) and the 2016–22 back's (moon is the colour loop's; Emrakul, land,
+  // open fan here) — the icon rider keyed by the family and the face's role.
+  for (const family of ["sunmoon", "moon", "compass", "fan"] as const) {
+    add("m15dfcfront", "transform", "g", "short", { suffix: `@${family}`, row: dfcFamilyRow("m15dfcbackleft", "g", family) });
+    if (family !== "sunmoon") {
+      add("m15dfcbackleft", "transform", "g", "short", { suffix: `@${family}`, back: { frontTemplate: "m15dfcfront" }, row: dfcFamilyRow("m15dfcbackleft", "g", family) });
+    }
+  }
+  // A back that prints no P/T (an aura, VOW #12): the front's tab EMPTY
+  // (owner decision Q7), the back with no plate — its indicator still drawn.
+  add("m15dfcfront", "transform", "w", "short", { suffix: "@emptytab", row: DFC_AURA_BACK });
+  add("m15dfcback", "transform", "w", "short", { suffix: "@nopt", back: { frontTemplate: "m15dfcfront" }, row: DFC_AURA_BACK });
+  // A gold back with a two-colour identity (MOM #43: the dot split
+  // diagonally) and a three-colour one (wedges) — the colour loop's wu and
+  // wub rows carry them; a colourless (artifact stand-in) back draws none.
+  // The front at the stored bake's size, on foil and squared (print).
+  add("m15dfcfront", "transform", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
+  add("m15dfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
+  add("m15dfcfront", "transform", "b", "short", { corners: "square", suffix: "@square" });
+  // A legacy-shaped back_face on m15 (the 8 imported DFCs' shape: content,
+  // no body): the FRONT bake is today's, byte for byte (its hash must not
+  // move against the base this PR was cut from: the corpus proof).
+  add("m15", "creature", "u", "short", {
+    suffix: "@legacyback",
+    row: {
+      back_face: {
+        title: "Insectile Aberration",
+        cost: "",
+        card_type: "creature",
+        subtypes: ["Human", "Insect"],
+        rules_text: "Flying",
+        power: "3",
+        toughness: "2",
+      },
+    },
+  });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }
@@ -878,6 +1040,87 @@ function stampRow(
     frame_style: { template, finish, ...((over.frame_style as object | undefined) ?? {}), stamp },
   };
 }
+
+/** The transform BACK bodies (TODO 5.1a; FrameProfile.dfc role "back"). */
+export const DFC_BACK_BODIES: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"];
+
+/** The family whose default back is `body` (lib/cards/dfc.ts bodyFor). */
+function dfcFamilyFor(body: FrameTemplate): DfcIconFamily {
+  return body === "m15dfcbackleft" ? "sunmoon" : "arrows";
+}
+
+/** The row fields that put a transform row's back on `body` in `colour`:
+ *  the family that derives it and the back's own body and colour (the
+ *  content is transformContent's, in the case's SHAPE — the long back's
+ *  dense rules, long name and 12/12 on a long case; the first matrix gave
+ *  every back case the short back, so the long back cases were the short
+ *  ones pixel for pixel). */
+function dfcBodyRow(body: FrameTemplate, colour: VisualColour, shape: VisualShape = "short", finish: VisualCase["finish"] = "regular"): Partial<CardRowForBake> {
+  return dfcFamilyRow(body, colour, dfcFamilyFor(body), shape, finish);
+}
+
+/** `finish` rides on the row's frame_style: this row REPLACES rowFor's
+ *  (the first matrix's two "@foil" cases baked regular — their row override
+ *  carried `finish: "regular"` over the case's foil). */
+function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIconFamily, shape: VisualShape = "short", finish: VisualCase["finish"] = "regular"): Partial<CardRowForBake> {
+  const land = body === "m15dfclandback";
+  const long = shape === "long";
+  const front: FrameTemplate = land ? "m15dfclandfront" : "m15dfcfront";
+  // The land BACK's cases are FIN #31's shape — a land // land (Cooking
+  // Campsite: a mana ability, no P/T), so the land front's tab is empty
+  // there; the land front's own loop cases keep INR #287's creature back.
+  // The long land back: a long legendary name and the long flavor on the
+  // same abilities.
+  const back = land
+    ? {
+        title: long ? "Cooking Campsite of the Wandering Chocobo Riders" : "Cooking Campsite",
+        cost: "",
+        card_type: "land" as const,
+        ...(long ? { supertype: "Legendary" } : {}),
+        subtypes: [],
+        rules_text: "{T}: Add {W}.\n{3}, {T}, Sacrifice an artifact: Put a +1/+1 counter on each creature you control. Activate only as a sorcery.",
+        flavor_text: long ? LONG_FLAVOR : "\"Seeing how you enjoy fishing, you should learn how to prepare your catch.\"\n—Ignis Scientia",
+        art_url: "ART2",
+        artist_credit: "Visual Regression",
+        frame_style: { template: body },
+        color_identity: IDENTITY[colour],
+      }
+    : {
+        ...(transformContent(shape, colour, false).back_face as NonNullable<CardRowForBake["back_face"]>),
+        frame_style: { template: body },
+        color_identity: IDENTITY[colour],
+      };
+  // The default family (`arrows`) is never stored: a plain transform row
+  // names no `dfcIcon` (lib/cards/faces.ts dfcIconOf reads it as arrows).
+  return {
+    frame_style: family === "arrows" ? { template: front, finish } : { template: front, finish, dfcIcon: family },
+    back_face: back,
+  };
+}
+
+/** VOW #12's shape: an aura back (no P/T) on a white front. */
+const DFC_AURA_BACK: Partial<CardRowForBake> = {
+  title: "Dorothea's Retribution",
+  card_type: "enchantment",
+  supertype: null,
+  subtypes: ["Aura"],
+  cost: "{3}{W}",
+  rules_text: "Enchant creature\nEnchanted creature has \"Whenever this creature attacks, create a 4/4 white Spirit creature token with flying that's tapped and attacking. Sacrifice that token at end of combat.\"",
+  power: null,
+  toughness: null,
+  frame_style: { template: "m15dfcfront", finish: "regular" },
+  back_face: {
+    title: "Sinner's Judgment",
+    cost: "",
+    card_type: "enchantment",
+    subtypes: ["Aura"],
+    rules_text: "Enchant player\nAt the beginning of your upkeep, put a judgment counter on Sinner's Judgment. Then if there are three or more judgment counters on it, enchanted player loses the game.",
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+    frame_style: { template: "m15dfcback" },
+    color_identity: ["white"],
+  },
+};
 
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */

@@ -198,6 +198,174 @@
       "width": 1500,
       "height": 2100
     },
+    "dfcicon/compass.png": {
+      "hash": "2834e04afc6a",
+      "sha256": "2834e04afc6ad525354d19ff60fbeb5eda8d6973a1db5cdbccc39afa807b9218",
+      "bytes": 6456,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/compass.webp": {
+      "hash": "519baa399e5d",
+      "sha256": "519baa399e5d04aee0a85e4cebe719294a930b0cc5a0ec814995b901eb8d9854",
+      "bytes": 3868,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/default.png": {
+      "hash": "55bfe4643bcc",
+      "sha256": "55bfe4643bccb1959141644ae975ade20769338f3709c910e199b71d6b6fcab2",
+      "bytes": 10210,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/default.webp": {
+      "hash": "0928d4cc3d01",
+      "sha256": "0928d4cc3d01b0c11a5e77d3250b20593e6c135d316ad8e2131cc285fcf90d1a",
+      "bytes": 2724,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/downarrow.png": {
+      "hash": "9d9dd5146c76",
+      "sha256": "9d9dd5146c76664c44af602081701a212f7e0634b74e6e16ec1a28fe3bb18ceb",
+      "bytes": 10240,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/downarrow.webp": {
+      "hash": "cf09dcda2e6f",
+      "sha256": "cf09dcda2e6f5d9e2e383af357e1a01fdec81cb59567639e80fe1adbc42c4d38",
+      "bytes": 2726,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/emrakul.png": {
+      "hash": "d48960ce9353",
+      "sha256": "d48960ce935331290d2bb27b2979d41a5e5e23dd91a0213a76928b6c9dab5f93",
+      "bytes": 7860,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/emrakul.webp": {
+      "hash": "7b280352fbca",
+      "sha256": "7b280352fbca45a1b5089086144a5a027c0d0c1f52e6f31276ed9c0b2a90e900",
+      "bytes": 4804,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/fanclosed.png": {
+      "hash": "dffa424a64e6",
+      "sha256": "dffa424a64e644354a7f48c25a97aed3d85406ec995f7b09984131b733a1b3f6",
+      "bytes": 8466,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/fanclosed.webp": {
+      "hash": "377cc8b71526",
+      "sha256": "377cc8b71526082c0505fee9d875fcc2bce2f717e7d14c6f030edce3119b27a5",
+      "bytes": 4596,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/fanopen.png": {
+      "hash": "d7fe07eb0159",
+      "sha256": "d7fe07eb0159495fde043611aeecf78e8e32b2755ecf5a160e0df986cc16a243",
+      "bytes": 10173,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/fanopen.webp": {
+      "hash": "39b40d15ce19",
+      "sha256": "39b40d15ce19954ae57ffcd5a02d1a65c921e06ef514d362b156c3b3539ed4d6",
+      "bytes": 6694,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/fullmoon.png": {
+      "hash": "8d188c8d7ce9",
+      "sha256": "8d188c8d7ce9ddb18f1b38dfd82cab74984f3fcf1901a248976f25d9d56cdedf",
+      "bytes": 9248,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/fullmoon.webp": {
+      "hash": "f8cdca5262dd",
+      "sha256": "f8cdca5262dd619d8666d5a23e3c986636a3d62832eac326a19d2f686612ab15",
+      "bytes": 5866,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/land.png": {
+      "hash": "e3e397dd8e5f",
+      "sha256": "e3e397dd8e5f173812019003ba7e4f1ddd7cf8d8310e133ee6f7320cef0e4749",
+      "bytes": 5299,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/land.webp": {
+      "hash": "faa7a0e76c5a",
+      "sha256": "faa7a0e76c5a506f7f0730b855909639152a0ec37d600aa1950523fd534c015a",
+      "bytes": 3056,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/moon.png": {
+      "hash": "975ca153e76e",
+      "sha256": "975ca153e76e70a28fa57d939645183a1e79a4435d4ac35fa78a87ef1b9435a2",
+      "bytes": 6975,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/moon.webp": {
+      "hash": "7ed19085e9d0",
+      "sha256": "7ed19085e9d081109ce4ccf107f928cb5b775c905506bf19c89e9cc191513aed",
+      "bytes": 3616,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/planeswalker.png": {
+      "hash": "d3572a40ecff",
+      "sha256": "d3572a40ecffaa4b9e793822223706f2e6c34782d4638365a42f593d4ca287b1",
+      "bytes": 7952,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/planeswalker.webp": {
+      "hash": "ea69afa43fbc",
+      "sha256": "ea69afa43fbc059d8ff723d04957f8225cdfbb0e2b0787a619a6ed6dc17d18e0",
+      "bytes": 4106,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/spark.png": {
+      "hash": "f6286724fd3e",
+      "sha256": "f6286724fd3edd90d4824b894fff62117ea1fd216a04d0d35aaf6966a0dbb1c6",
+      "bytes": 5846,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/spark.webp": {
+      "hash": "ff684b3ddc26",
+      "sha256": "ff684b3ddc262dcb60457bd536ae6321132a33d3f91e306f8d96ca816b50f434",
+      "bytes": 3618,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/sun.png": {
+      "hash": "f959c62f339d",
+      "sha256": "f959c62f339dbf0a5023eb92dcc8566e58e96a11a8b946a7320283d8b234703a",
+      "bytes": 12740,
+      "width": 220,
+      "height": 220
+    },
+    "dfcicon/sun.webp": {
+      "hash": "3fc3ac3a0b14",
+      "sha256": "3fc3ac3a0b149e64c597e8912e9919de8f83d663ef83e8fe912bd56fdec0b02c",
+      "bytes": 6394,
+      "width": 220,
+      "height": 220
+    },
     "emblem/b.png": {
       "hash": "2adb45cd9c81",
       "sha256": "2adb45cd9c81e8e31e90639301fb988c029c34faf7d3a491237411d6438c2937",
@@ -4059,6 +4227,636 @@
       "hash": "b99b300b1081",
       "sha256": "b99b300b1081ccf82bc189d67466b3fc8136b97f69cb277157590766f27b5624",
       "bytes": 76204,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/a.png": {
+      "hash": "18945d44dd2e",
+      "sha256": "18945d44dd2e92dddf24f37df4f901e6b38fba0d86abf3bbf95040426b50453f",
+      "bytes": 1984833,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/a.webp": {
+      "hash": "939c504ab97d",
+      "sha256": "939c504ab97deedfe96b0b2747f34824d4083e3b904fd9c19071f4ddee261fde",
+      "bytes": 97134,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/b.png": {
+      "hash": "cd529342ee3e",
+      "sha256": "cd529342ee3eb502b868fe030cfba62296c30e47176e216a1f290e66063f9421",
+      "bytes": 1715711,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/b.webp": {
+      "hash": "9a2f331f4221",
+      "sha256": "9a2f331f4221ce1b66ee7a33af26ef6e567d15c140503b36d8c0f899374c9a72",
+      "bytes": 64868,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/c.png": {
+      "hash": "18945d44dd2e",
+      "sha256": "18945d44dd2e92dddf24f37df4f901e6b38fba0d86abf3bbf95040426b50453f",
+      "bytes": 1984833,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/c.webp": {
+      "hash": "939c504ab97d",
+      "sha256": "939c504ab97deedfe96b0b2747f34824d4083e3b904fd9c19071f4ddee261fde",
+      "bytes": 97134,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/g.png": {
+      "hash": "3cddb652b6e8",
+      "sha256": "3cddb652b6e8fcacb49043724a42474d139a88df1bcc24f22a137f9978dc0467",
+      "bytes": 1843026,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/g.webp": {
+      "hash": "db810023255f",
+      "sha256": "db810023255fab27e01d3c4f912e8a168ed8ff0e82477a05ea0bc1772037d178",
+      "bytes": 75622,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/m.png": {
+      "hash": "6e2dbe62fe42",
+      "sha256": "6e2dbe62fe4247682e6e0058db308edd4f0bcbe29c9d51858d14beeaa3692fe3",
+      "bytes": 1636658,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/m.webp": {
+      "hash": "221bfe1993a3",
+      "sha256": "221bfe1993a328da3ea9fd8bd6245e88ae80769d433ac5dee64c36ef338dee6d",
+      "bytes": 73026,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/pt/b.png": {
+      "hash": "1c41f454e2b4",
+      "sha256": "1c41f454e2b4fe51e5c6ca7f949e79a966cef3e8f8ad6b2be5dc4b0c636b98e8",
+      "bytes": 58164,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/b.webp": {
+      "hash": "9b795e28f4d5",
+      "sha256": "9b795e28f4d5f9f349bf3d6b332c3c6425071e089e41087893497a46d2ec1226",
+      "bytes": 5112,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/c.png": {
+      "hash": "f7b8ebcc1537",
+      "sha256": "f7b8ebcc1537e9a6bc49e1c5e05a3914c401f49d57a2afba7c0f9822a0f5fb12",
+      "bytes": 67719,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/c.webp": {
+      "hash": "d9c252a7a069",
+      "sha256": "d9c252a7a069fd03ceb2ece9ac003b3dbee852ada76b786250a3d78a4f3f0fba",
+      "bytes": 7970,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/g.png": {
+      "hash": "be5ede22c67c",
+      "sha256": "be5ede22c67c72cd19f3eae74e60fa9a6cc401e6300863dbad12dd8ae3d67787",
+      "bytes": 65642,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/g.webp": {
+      "hash": "58ceb15b01e3",
+      "sha256": "58ceb15b01e3e73715a6e7b09edaae0808782a36b845ec614dcf5e3c6dc4502b",
+      "bytes": 5984,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/m.png": {
+      "hash": "8d5223f0e4bc",
+      "sha256": "8d5223f0e4bc066fe8d2a4022af5255b8339f9fde0f92fedc0a09a75445c248e",
+      "bytes": 50021,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/m.webp": {
+      "hash": "8595e66130d7",
+      "sha256": "8595e66130d7bbe0a78c8e1c62df2cd192041e76ec93cdf6ce59cd3a992de50a",
+      "bytes": 5068,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/r.png": {
+      "hash": "a4483f6420f6",
+      "sha256": "a4483f6420f69362a2baac2290c33f5d9bad334924e1b1cdd8b75062d5d6cfbb",
+      "bytes": 70460,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/r.webp": {
+      "hash": "1affa95d5876",
+      "sha256": "1affa95d5876c8d738117c46bd1baf55a93523f9f5b9375cd5995667c6074e16",
+      "bytes": 6642,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/u.png": {
+      "hash": "b195a9a94201",
+      "sha256": "b195a9a9420116a42bd570fc9018ad26510c0e0fc34f09b70fa1a3288f70271c",
+      "bytes": 65210,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/u.webp": {
+      "hash": "b89e3152d95f",
+      "sha256": "b89e3152d95f9561984815b30185dd087c1aeb0ec26fd2917253aaab9c70e799",
+      "bytes": 5722,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/w.png": {
+      "hash": "eb3b5cd2819c",
+      "sha256": "eb3b5cd2819cb637a133e05c626eb5d615a1ccd83a297b50ed4c5fdf388addde",
+      "bytes": 67731,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/pt/w.webp": {
+      "hash": "eb249c74b4d8",
+      "sha256": "eb249c74b4d8d6fcfcb26a71e3f337aa800e11af97e85e0f58b98306ab0f16f9",
+      "bytes": 7860,
+      "width": 285,
+      "height": 156
+    },
+    "m15dfcback/r.png": {
+      "hash": "fe5a929fd235",
+      "sha256": "fe5a929fd2358ee6a52e598b35c457996c8c87aef547c8b4af9935b293de1988",
+      "bytes": 2063274,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/r.webp": {
+      "hash": "50e409c7d4ee",
+      "sha256": "50e409c7d4eeab3de3f5e3e53713425d77142d305982d8dfc7b2c45bcb3fbf1a",
+      "bytes": 109822,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/u.png": {
+      "hash": "988e035dcf02",
+      "sha256": "988e035dcf023cde671ff1258a07842a05ae72838be1c2d332d74edc6aa1ff3e",
+      "bytes": 1899522,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/u.webp": {
+      "hash": "674eb1a5279f",
+      "sha256": "674eb1a5279fea2d4369c95e8f620f19cf949776be673aef948ad40abe5a0cb3",
+      "bytes": 61348,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/w.png": {
+      "hash": "fae725a6ad69",
+      "sha256": "fae725a6ad69e13c61ec891779e69f7f7124e7d284caf514e9d8fe4d96352c0b",
+      "bytes": 1185136,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcback/w.webp": {
+      "hash": "f5c1923eb831",
+      "sha256": "f5c1923eb8319809f4ea638655861fefb8f0540c93d444fd5c27e1051195b9a8",
+      "bytes": 53728,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/a.png": {
+      "hash": "979dee7c9b9f",
+      "sha256": "979dee7c9b9fe6ffac92f160f436c3f54f763bcb93cec40130a4d77a73a251bf",
+      "bytes": 2169799,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/a.webp": {
+      "hash": "ff203c05a837",
+      "sha256": "ff203c05a837590d9b782bb9e9ccb31e26a1d31ebe8633dbbbfffa90714c628a",
+      "bytes": 99336,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/b.png": {
+      "hash": "bd8ea0190ef3",
+      "sha256": "bd8ea0190ef389a5fc449697c37c84e736848a00a2fd88961a3896e9a3ab94ad",
+      "bytes": 1720987,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/b.webp": {
+      "hash": "b9387635780d",
+      "sha256": "b9387635780db4d6cceb5a9f948329d7690d4d3257f01b0321e8020e2238c723",
+      "bytes": 64608,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/c.png": {
+      "hash": "979dee7c9b9f",
+      "sha256": "979dee7c9b9fe6ffac92f160f436c3f54f763bcb93cec40130a4d77a73a251bf",
+      "bytes": 2169799,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/c.webp": {
+      "hash": "ff203c05a837",
+      "sha256": "ff203c05a837590d9b782bb9e9ccb31e26a1d31ebe8633dbbbfffa90714c628a",
+      "bytes": 99336,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/g.png": {
+      "hash": "46701a0912ca",
+      "sha256": "46701a0912cab6be3ddc644befeee3369da3be5ac3f054d0a47b3572af2ed580",
+      "bytes": 1848065,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/g.webp": {
+      "hash": "60fd34e0afa9",
+      "sha256": "60fd34e0afa9f265f8e31e0a5b03375b3b75b13cb5dd9e7776bc4a6915fd9585",
+      "bytes": 75626,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/m.png": {
+      "hash": "bde62dad24b8",
+      "sha256": "bde62dad24b80da3ed2bdff5c0a36d02d97400b4c056f72fcc4fb5e0455d4b77",
+      "bytes": 1644211,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/m.webp": {
+      "hash": "814936974ced",
+      "sha256": "814936974ced899fd0230f10f03aec2fc7087d20c326ca91a393ba2ef3db8d1e",
+      "bytes": 72602,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/r.png": {
+      "hash": "8a5714f367e4",
+      "sha256": "8a5714f367e4d499ac3f864a3f70e9ef7a1a2d4473362d058e8430ad9524dc8d",
+      "bytes": 2064345,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/r.webp": {
+      "hash": "afb28062edfc",
+      "sha256": "afb28062edfc3f1a8c9fe9eff7456d1a35d893fc19368b908b64f4ca6fdb7f40",
+      "bytes": 109352,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/u.png": {
+      "hash": "0d188597af7f",
+      "sha256": "0d188597af7f8a9e13aa360d87b56e9a223b820df4607e4e3bdfb0bb902c4827",
+      "bytes": 1906285,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/u.webp": {
+      "hash": "4088c235d1fb",
+      "sha256": "4088c235d1fb1d4c479b47cb70b94a3711b8930b74750ff529dd073835f6c64b",
+      "bytes": 61606,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/w.png": {
+      "hash": "cdaf605cc84a",
+      "sha256": "cdaf605cc84a81a1c36509509befdcf53683bc66b8004e1896b333f5436fc920",
+      "bytes": 1187302,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcbackleft/w.webp": {
+      "hash": "89742b8c4ee0",
+      "sha256": "89742b8c4ee0d06d0f10dbc8d5b54c2a6758aaba51857e96f9d99f9b858014b8",
+      "bytes": 51850,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/a.png": {
+      "hash": "39263e405ac3",
+      "sha256": "39263e405ac3fc69e12cd0ab0783f5c308ffb1f87fb1168b3996e55c3c21dcdc",
+      "bytes": 2153844,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/a.webp": {
+      "hash": "d22dba4664ce",
+      "sha256": "d22dba4664cefbc41096c4d11888c34bb5b5e75e71bbdb65dc9ecb3e6ed4b861",
+      "bytes": 95490,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/b.png": {
+      "hash": "acffd99edd94",
+      "sha256": "acffd99edd94ad5728fe8d9da1897e1fec741c8e1645804991cc076c2e0349f8",
+      "bytes": 2090129,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/b.webp": {
+      "hash": "85e40f927939",
+      "sha256": "85e40f9279393fbf335f9220b70ede610dc16d69531842be422cd57958b9fabc",
+      "bytes": 89964,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/c.png": {
+      "hash": "39263e405ac3",
+      "sha256": "39263e405ac3fc69e12cd0ab0783f5c308ffb1f87fb1168b3996e55c3c21dcdc",
+      "bytes": 2153844,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/c.webp": {
+      "hash": "d22dba4664ce",
+      "sha256": "d22dba4664cefbc41096c4d11888c34bb5b5e75e71bbdb65dc9ecb3e6ed4b861",
+      "bytes": 95490,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/g.png": {
+      "hash": "712a0d8222e5",
+      "sha256": "712a0d8222e564e4eca7d36a25a58d8437a13d2c0346dac05ea6e9f026635eae",
+      "bytes": 2230573,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/g.webp": {
+      "hash": "9cb2e4388df8",
+      "sha256": "9cb2e4388df89f178eb9c643fa360e536e26d4e6a800240e8a9a6f2cd59dc727",
+      "bytes": 109424,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/m.png": {
+      "hash": "2d50afbae0f3",
+      "sha256": "2d50afbae0f334ecb9c1c94b94e39a88c93f6c11fc5d5a9ade426dd2fcdd7dc6",
+      "bytes": 1783712,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/m.webp": {
+      "hash": "5885dc8749c1",
+      "sha256": "5885dc8749c15164fcf0a939ddc55ef1a2db875678e7f761f6728f3c112820f1",
+      "bytes": 75186,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/r.png": {
+      "hash": "dd02013d7f31",
+      "sha256": "dd02013d7f31f4a3bdd1a7ce3611fe16467433725e54d5c2c63a5f0802f81aca",
+      "bytes": 2306330,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/r.webp": {
+      "hash": "adfee79a66ff",
+      "sha256": "adfee79a66fff616a16e37890af17d3399fffbfa30dfe4014382f46c72a8bb54",
+      "bytes": 136884,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/u.png": {
+      "hash": "0aafa3682932",
+      "sha256": "0aafa36829328d28a98fc495a24f91854d1ad8c804d1f4d22d6c9fff37de8741",
+      "bytes": 1595234,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/u.webp": {
+      "hash": "3d08298913cc",
+      "sha256": "3d08298913ccbf343a2d4bae4fd0bde381da0399b1f722c31fc324913bab0108",
+      "bytes": 51696,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/w.png": {
+      "hash": "13b1905c0c5f",
+      "sha256": "13b1905c0c5f0c6017a41b40bca290e7fdd97f18670fd3a7e8d53cee7990e878",
+      "bytes": 1819637,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfcfront/w.webp": {
+      "hash": "2eeb126e6426",
+      "sha256": "2eeb126e6426c50504d04ae68ae45d0102405c3170108e331fcf61bb0da6af84",
+      "bytes": 62416,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/b.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/b.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/c.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/c.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/g.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/g.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/m.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/m.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/r.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/r.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/u.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/u.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/w.png": {
+      "hash": "199237ce6539",
+      "sha256": "199237ce653990f320eaa750b5208cb82ac17988f8cca95a475ec8ea949eadfa",
+      "bytes": 1505171,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandback/w.webp": {
+      "hash": "f26817068543",
+      "sha256": "f268170685437dcd2e84718468fbad51f82e64ff2ce5ab82ea2e8729c2617cc5",
+      "bytes": 80470,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/b.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/b.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/c.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/c.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/g.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/g.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/m.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/m.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/r.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/r.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/u.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/u.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/w.png": {
+      "hash": "78d739f80b52",
+      "sha256": "78d739f80b521b8c7c99eee4f08d7f60e7e51717aa3b6503c9f6b6920a761869",
+      "bytes": 1455465,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15dfclandfront/w.webp": {
+      "hash": "81b4edcb4952",
+      "sha256": "81b4edcb49522612d7c56d0e83d2d4bbd357ff713fae830fcffd0d446ac4d39b",
+      "bytes": 63544,
       "width": 1500,
       "height": 2100
     },

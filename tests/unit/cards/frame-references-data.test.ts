@@ -111,6 +111,10 @@ const DOCUMENTED_NULLS = new Set([
   "bloomburrow/c",
   "tarkirdragon/u", "tarkirdragon/b", "tarkirdragon/r", "tarkirdragon/g", "tarkirdragon/c",
   "tarkirghostfire/u", "tarkirghostfire/b",
+  // The transform land pair (TODO 5.1a): one master under every key, the
+  // emblem's model — verified on c only (INR #287 / FIN #31).
+  "m15dfclandfront/w", "m15dfclandfront/u", "m15dfclandfront/b", "m15dfclandfront/r", "m15dfclandfront/g", "m15dfclandfront/m",
+  "m15dfclandback/w", "m15dfclandback/u", "m15dfclandback/b", "m15dfclandback/r", "m15dfclandback/g", "m15dfclandback/m",
 ]);
 
 describe("frame-references.json", () => {

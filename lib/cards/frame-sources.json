@@ -93,6 +93,72 @@
       "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)"
     ]
   },
+  "dfcicon": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15TransformTypes.js 'Transform Icons' (groupDFC.js) — the 12 of CC's 14 icon files that a printing wears",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "rider",
+    "output": "220x220 rider glyphs (a black disc, the glyph in white), webp q90",
+    "colors": {
+      "default": [
+        "img/frames/m15/transform/icons/default.png rasterised at 220×220"
+      ],
+      "downarrow": [
+        "img/frames/m15/transform/icons/downArrow.png rasterised at 220×220"
+      ],
+      "sun": [
+        "img/frames/m15/transform/icons/sun.svg rasterised at 220×220"
+      ],
+      "moon": [
+        "img/frames/m15/transform/icons/moon.svg rasterised at 220×220"
+      ],
+      "fullmoon": [
+        "img/frames/m15/transform/icons/fullmoon.svg rasterised at 220×220"
+      ],
+      "emrakul": [
+        "img/frames/m15/transform/icons/emrakul.svg rasterised at 220×220"
+      ],
+      "compass": [
+        "img/frames/m15/transform/icons/compass.svg rasterised at 220×220"
+      ],
+      "land": [
+        "img/frames/m15/transform/icons/land.svg rasterised at 220×220"
+      ],
+      "spark": [
+        "img/frames/m15/transform/icons/spark.svg rasterised at 220×220"
+      ],
+      "planeswalker": [
+        "img/frames/m15/transform/icons/planeswalker.svg rasterised at 220×220"
+      ],
+      "fanclosed": [
+        "img/frames/m15/transform/icons/fanClosed.svg rasterised at 220×220"
+      ],
+      "fanopen": [
+        "img/frames/m15/transform/icons/fanOpen.svg rasterised at 220×220"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/transform/icons/compass.svg",
+      "img/frames/m15/transform/icons/default.png",
+      "img/frames/m15/transform/icons/downArrow.png",
+      "img/frames/m15/transform/icons/emrakul.svg",
+      "img/frames/m15/transform/icons/fanClosed.svg",
+      "img/frames/m15/transform/icons/fanOpen.svg",
+      "img/frames/m15/transform/icons/fullmoon.svg",
+      "img/frames/m15/transform/icons/land.svg",
+      "img/frames/m15/transform/icons/moon.svg",
+      "img/frames/m15/transform/icons/planeswalker.svg",
+      "img/frames/m15/transform/icons/spark.svg",
+      "img/frames/m15/transform/icons/sun.svg"
+    ],
+    "notes": [
+      "the transform icon glyphs (TODO 5.1a; design 2026-10-02 §2.1, frames.md §1.4 / §4.6): each file is a black disc with the glyph in white — CC draws it INSIDE the master's well at 5.94 / 5.05 / 7.34 × 5.24 % (89 / 106, 110 × 110 px at HD), replacing the default ▲ the front master carries; rasterised at 220 px (2× the drawn 110, so the HD bake never upsamples; sharp at density 300 for the SVGs, Lanczos for the two PNGs)",
+      "the family → glyph map (lib/cards/dfc.ts DFC_ICON_GLYPHS): arrows ▲ `default` / ▼ `downarrow` (BOT 2022-11 → today; the ▼ is baked into the m15dfcback master, so `downarrow` is published but drawn by no wave-1 profile); sunmoondfc `sun` / `moon` (SOI, EMN, MID, VOW); mooneldrazidfc `fullmoon` / `emrakul` (EMN); compasslanddfc `compass` / `land` (XLN, RIX, LCI); fandfc `fanclosed` / `fanopen` (NEO); originpwdfc `spark` / `planeswalker` (ORI — the walker bodies, TODO 5.13, ask first)",
+      "keys are lowercase (the frames bucket's object keys are: downarrow, fanclosed, fanopen); CC's Lesson and Hammer icons have no DFC printing (BOT prints the plain ▲ / ▼) and are not built; the silver / SLD waxing-and-waning moon and upside-down families have no file"
+    ]
+  },
   "emblem": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -2004,6 +2070,937 @@
     "notes": [
       "see-through frames: the art runs under the whole frame (underFrameArt)",
       "true colourless = the colourless 'Eldrazi' frame; devoid colours keep their pinline"
+    ]
+  },
+  "m15dfcback": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15TransformBackNew.js 'Transform (Back) (New)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; then the title bar (through img/frames/m15/transform/regular/new/maskTitle.png), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/m15/regular/m15MaskRules.png) have their colour multiplied by the key's gain (DFC_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the well's white ring, the ▼ and the light rims keep CC's tone; the frame body and the plates untouched",
+    "colors": {
+      "a": [
+        "img/frames/m15/transform/regular/new/backA.png"
+      ],
+      "w": [
+        "img/frames/m15/transform/regular/new/backW.png"
+      ],
+      "u": [
+        "img/frames/m15/transform/regular/new/backU.png"
+      ],
+      "b": [
+        "img/frames/m15/transform/regular/new/backB.png"
+      ],
+      "r": [
+        "img/frames/m15/transform/regular/new/backR.png"
+      ],
+      "g": [
+        "img/frames/m15/transform/regular/new/backG.png"
+      ],
+      "c": [
+        "img/frames/m15/transform/regular/new/backA.png"
+      ],
+      "m": [
+        "img/frames/m15/transform/regular/new/backM.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/transform/regular/ptW.png",
+      "u": "img/frames/m15/transform/regular/ptU.png",
+      "b": "img/frames/m15/transform/regular/ptB.png",
+      "r": "img/frames/m15/transform/regular/ptR.png",
+      "g": "img/frames/m15/transform/regular/ptG.png",
+      "c": "img/frames/m15/transform/regular/ptA.png",
+      "m": "img/frames/m15/transform/regular/ptM.png"
+    },
+    "tones": {
+      "a": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "w": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 0.93,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.93,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.03,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "u": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 0.81,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.81,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.95,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "b": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 0.87,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.87,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.94,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "r": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.23,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.23,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.06,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "g": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 0.83,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.83,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.95,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "c": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "m": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.91,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/m15/transform/regular/new/backA.png",
+      "img/frames/m15/transform/regular/new/backB.png",
+      "img/frames/m15/transform/regular/new/backG.png",
+      "img/frames/m15/transform/regular/new/backM.png",
+      "img/frames/m15/transform/regular/new/backR.png",
+      "img/frames/m15/transform/regular/new/backU.png",
+      "img/frames/m15/transform/regular/new/backW.png",
+      "img/frames/m15/transform/regular/new/maskTitle.png",
+      "img/frames/m15/transform/regular/ptA.png",
+      "img/frames/m15/transform/regular/ptB.png",
+      "img/frames/m15/transform/regular/ptG.png",
+      "img/frames/m15/transform/regular/ptM.png",
+      "img/frames/m15/transform/regular/ptR.png",
+      "img/frames/m15/transform/regular/ptU.png",
+      "img/frames/m15/transform/regular/ptW.png"
+    ],
+    "notes": [
+      "source: CC 'Transform (Back) (New)': the M15 frame with DARK title and type bars (white name and type ink), a greyed text box (dark rules ink) and the icon well at the RIGHT, with the ▼ baked in — the 'new' back's ▼ is baked in the master at the right (outer circle x 1280–1418, 6 px right of the prints' 1271–1413: accepted in wave 1, a re-cut for the sheet to flag), the old back's well is an EMPTY black disc at the left (84–220) the icon rider fills with the family's back glyph (moon, Emrakul, land, open fan)",
+      "toned onto the prints before the first tick (DFC_BACK_TONES, design D1): CC's bars read 20–30 luma off the prints on most keys — too light on w u b g a, too DARK on r and the land back, gold within 7 — and its boxes 5–20 light; per-key gains through the pack's Title / Type / Rules masks, the white ring, the ▼ and the light rims kept by a luma ramp; the body and the plates untouched",
+      "P/T plates = the pack's dark `pt<K>.png` (285 × 156, interior luma W 160 U 95 B 85 R 75 G 69 M 122 A 112, within the prints' G 69–95 / U 93–106), drawn at M15's plate box with WHITE digits; the colourless stand-in takes the artifact plate; ONE set, m15dfcback/pt/<k>.png, which the 2016–22 back's profile draws too",
+      "colourless `c` = the pack's 'Artifact Frame' as a RENDER STAND-IN (design D2), ticked against an artifact print (LCI #262 Sunbird Effigy / MID #256 Mystic Monstrosity); a colourless Eldrazi or Avatar back (EMN #63, TLA #203) prints a see-through frame CC lacks — TODO 5.11",
+      "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10"
+    ]
+  },
+  "m15dfcbackleft": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15TransformBack.js 'Transform (Back)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; then the title bar (through img/frames/m15/transform/regular/maskTitle.png), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/m15/regular/m15MaskRules.png) have their colour multiplied by the key's gain (DFC_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the well's white ring, the ▼ and the light rims keep CC's tone; the frame body and the plates untouched",
+    "colors": {
+      "a": [
+        "img/frames/m15/transform/regular/backA.png"
+      ],
+      "w": [
+        "img/frames/m15/transform/regular/backW.png"
+      ],
+      "u": [
+        "img/frames/m15/transform/regular/backU.png"
+      ],
+      "b": [
+        "img/frames/m15/transform/regular/backB.png"
+      ],
+      "r": [
+        "img/frames/m15/transform/regular/backR.png"
+      ],
+      "g": [
+        "img/frames/m15/transform/regular/backG.png"
+      ],
+      "c": [
+        "img/frames/m15/transform/regular/backA.png"
+      ],
+      "m": [
+        "img/frames/m15/transform/regular/backM.png"
+      ]
+    },
+    "tones": {
+      "a": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "w": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 0.93,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.93,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.03,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "u": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 0.81,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.81,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.95,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "b": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 0.87,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.87,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.94,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "r": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.23,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.23,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.06,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "g": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 0.83,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.83,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.95,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "c": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.88,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "m": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 0.91,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/m15/transform/regular/backA.png",
+      "img/frames/m15/transform/regular/backB.png",
+      "img/frames/m15/transform/regular/backG.png",
+      "img/frames/m15/transform/regular/backM.png",
+      "img/frames/m15/transform/regular/backR.png",
+      "img/frames/m15/transform/regular/backU.png",
+      "img/frames/m15/transform/regular/backW.png",
+      "img/frames/m15/transform/regular/maskTitle.png"
+    ],
+    "notes": [
+      "source: CC 'Transform (Back)': the M15 frame with DARK title and type bars (white name and type ink), a greyed text box (dark rules ink) and the icon well at the LEFT, an empty black disc — the 'new' back's ▼ is baked in the master at the right (outer circle x 1280–1418, 6 px right of the prints' 1271–1413: accepted in wave 1, a re-cut for the sheet to flag), the old back's well is an EMPTY black disc at the left (84–220) the icon rider fills with the family's back glyph (moon, Emrakul, land, open fan)",
+      "toned onto the prints before the first tick (DFC_BACK_TONES, design D1): CC's bars read 20–30 luma off the prints on most keys — too light on w u b g a, too DARK on r and the land back, gold within 7 — and its boxes 5–20 light; per-key gains through the pack's Title / Type / Rules masks, the white ring, the ▼ and the light rims kept by a luma ramp; the body and the plates untouched",
+      "P/T plates = the pack's dark `pt<K>.png` (285 × 156, interior luma W 160 U 95 B 85 R 75 G 69 M 122 A 112, within the prints' G 69–95 / U 93–106), drawn at M15's plate box with WHITE digits; the colourless stand-in takes the artifact plate; ONE set, m15dfcback/pt/<k>.png, which the 2016–22 back's profile draws too",
+      "colourless `c` = the pack's 'Artifact Frame' as a RENDER STAND-IN (design D2), ticked against an artifact print (LCI #262 Sunbird Effigy / MID #256 Mystic Monstrosity); a colourless Eldrazi or Avatar back (EMN #63, TLA #203) prints a see-through frame CC lacks — TODO 5.11",
+      "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10"
+    ]
+  },
+  "m15dfcfront": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15TransformFront.js 'Transform (Front)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "a": [
+        "img/frames/m15/transform/regular/frontA.png"
+      ],
+      "w": [
+        "img/frames/m15/transform/regular/frontW.png"
+      ],
+      "u": [
+        "img/frames/m15/transform/regular/frontU.png"
+      ],
+      "b": [
+        "img/frames/m15/transform/regular/frontB.png"
+      ],
+      "r": [
+        "img/frames/m15/transform/regular/frontR.png"
+      ],
+      "g": [
+        "img/frames/m15/transform/regular/frontG.png"
+      ],
+      "c": [
+        "img/frames/m15/transform/regular/frontA.png"
+      ],
+      "m": [
+        "img/frames/m15/transform/regular/frontM.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/transform/regular/frontA.png",
+      "img/frames/m15/transform/regular/frontB.png",
+      "img/frames/m15/transform/regular/frontG.png",
+      "img/frames/m15/transform/regular/frontM.png",
+      "img/frames/m15/transform/regular/frontR.png",
+      "img/frames/m15/transform/regular/frontU.png",
+      "img/frames/m15/transform/regular/frontW.png"
+    ],
+    "notes": [
+      "source: CC 'Transform (Front)' (packM15TransformFront.js, groupDFC.js): the M15 frame with the icon WELL at the left of the name bar (a black disc with a white ring, outer circle x 84–220 × y 98–236 at HD, CC's default ▲ drawn in it — the icon rider overdraws it with the family's glyph) and the pentagonal grey reverse-P/T TAB cut out of the text box's right edge (x 1392–1440, y 1745–1848), both the master's; the prints put the well at 84–225 and the tab at 1398–1441 (MID #169, INR #60, MOM #43), within 2–4 px",
+      "the name starts at 16.7 %W (prints 249–252 px: SOI #203, MID #169, INR #60 / #193, XLN #22; CC's pack says 0.16 = 240) — the profile's title inset, not a pixel of the master (design D5)",
+      "colourless `c` = the pack's 'Artifact Frame' (frontA.png) as a RENDER STAND-IN (design D2): no colourless non-artifact transform FRONT was printed on the plain M15 frame (EMN's Eldrazi are backs, see-through — TODO 5.11); the row is ticked against an ARTIFACT print (LCI #60 Inverted Iceberg) and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
+      "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds; the reverse P/T in the tab is text (the profile's reversePt slot, #777, Beleren small caps), drawn only when the back prints a P/T — the tab prints EMPTY otherwise, as XLN #22 / VOW #12 / LCI #158 do (owner decision Q7)",
+      "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body; CC's DFC crown twins carry the older crown art, 4.6f)"
+    ]
+  },
+  "m15dfclandback": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15TransformBackNew.js 'Transform (Back) (New)' Land Frame (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; then the title bar (through img/frames/m15/transform/regular/new/maskTitle.png), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/m15/regular/m15MaskRules.png) have their colour multiplied by the key's gain (DFC_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the well's white ring, the ▼ and the light rims keep CC's tone; the frame body and the plates untouched",
+    "colors": {
+      "w": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ],
+      "u": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ],
+      "b": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ],
+      "r": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ],
+      "g": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ],
+      "c": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ],
+      "m": [
+        "img/frames/m15/transform/regular/new/backL.png"
+      ]
+    },
+    "tones": {
+      "w": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "u": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "b": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "r": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "g": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "c": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "m": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.22,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": 1.32,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/m15/transform/regular/new/backL.png",
+      "img/frames/m15/transform/regular/new/maskTitle.png"
+    ],
+    "notes": [
+      "source: CC 'Transform' new/backL.png — the pack's 'Land Frame', the M15 land body (stone texture) with the transform pieces; ONE master under every colour key, as the emblem's (a land face has no frame colour of its own here), verified on `c` against FIN #31 Cooking Campsite",
+      "toned onto FIN #31 (the one plain M15 land back scanned: the FIN / TLA land backs; XLN / RIX / LCI print the parchment land back CC lacks, TODO 5.8): CC's land back has DARK bars (luma 127) and a grey box (158) where the print has light tan bars (155) with DARK name and type ink and a cream box (209) — bars ×1.22, box ×1.32 through the masks, the rims kept; the profile prints dark ink on it",
+      "no P/T plate (a land back prints none) and no indicator; no cost (hideCost)"
+    ]
+  },
+  "m15dfclandfront": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15TransformFront.js 'Transform (Front)' Land Frame (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ],
+      "u": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ],
+      "b": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ],
+      "r": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ],
+      "g": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ],
+      "c": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ],
+      "m": [
+        "img/frames/m15/transform/regular/frontL.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/transform/regular/frontL.png"
+    ],
+    "notes": [
+      "source: CC 'Transform' frontL.png — the pack's 'Land Frame', the M15 land body (stone texture) with the transform pieces; ONE master under every colour key, as the emblem's (a land face has no frame colour of its own here), verified on `c` against INR #287 Westvale Abbey",
+      "the icon well and the reverse-P/T tab are the master's, as on m15dfcfront; the tab prints the back's P/T when the back is a creature (INR #287 prints Ormendahl's 9/7) and empty otherwise",
+      "P/T plate = M15's (m15/pt/<k>.png, the profile's): a land creature front (none printed) would draw it; no plate set of its own"
     ]
   },
   "m15fullartland": {

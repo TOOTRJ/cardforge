@@ -1875,6 +1875,296 @@
       ]
     }
   },
+  "m15dfcfront": {
+    "note": "The transform FRONT body (TODO 5.1a; design 2026-10-02, frames.md §4.1): a 2015-frame transform printing's front face, verified against the sun / moon-era and the plain ▲ prints alike (the front's icon well holds the family's glyph: the rider). w MOM #43 (▲), u / b / r / g INR's 2015-frame reprints (▲), m TLA #203 Aang (Legendary: the crown off — the DFC bodies draw none) with MID #231's sun as the alternate (a GR pair: the front draws gold in wave 1, the print's split pinline is TODO 5.12). c = the ARTIFACT stand-in (design D2): ticked against LCI #262 Sunbird Standard, a colourless artifact front, the only way the row passes the gate (LCI #60 Inverted Iceberg is a BLUE artifact: it draws the blue body and is u's alternate — a coloured artifact face draws the colour's body in wave 1); a colourless non-artifact front was never printed on this frame.",
+    "colors": {
+      "w": [
+        {
+          "name": "Tarkir Duneshaper",
+          "set": "mom",
+          "scryfallId": "fdc37acc-05ba-4457-8a03-d635497bfb1b"
+        },
+        {
+          "name": "Lunarch Veteran",
+          "set": "inr",
+          "scryfallId": "438e3302-daf9-436b-8b08-24b3f33295f6"
+        }
+      ],
+      "u": [
+        {
+          "name": "Delver of Secrets",
+          "set": "inr",
+          "scryfallId": "6904ea20-e504-47da-95a0-08739fdde260"
+        },
+        {
+          "name": "Inverted Iceberg",
+          "set": "lci",
+          "scryfallId": "ac5e9a53-cc4f-4ced-8088-5a73d619eae3"
+        }
+      ],
+      "b": [
+        {
+          "name": "Ecstatic Awakener",
+          "set": "inr",
+          "scryfallId": "abd587d8-2f71-4b3c-960a-d362133e967b"
+        },
+        {
+          "name": "Ecstatic Awakener",
+          "set": "mid",
+          "scryfallId": "bbdad18e-e262-41f9-b252-1cbdcdd1b5f9"
+        }
+      ],
+      "r": [
+        {
+          "name": "Village Messenger",
+          "set": "inr",
+          "scryfallId": "8bdc98cd-d03a-4c24-8642-b9ffb1f144c6"
+        },
+        {
+          "name": "Harvesttide Infiltrator",
+          "set": "mid",
+          "scryfallId": "35fdb976-291c-4824-9518-dd8c9f93fcde"
+        }
+      ],
+      "g": [
+        {
+          "name": "Duskwatch Recruiter",
+          "set": "inr",
+          "scryfallId": "4ef68479-ab2e-4a60-886c-ad007b64f185"
+        },
+        {
+          "name": "Bird Admirer",
+          "set": "mid",
+          "scryfallId": "71ccc444-54c8-4f7c-a425-82bc3eea1eb0"
+        }
+      ],
+      "c": [
+        {
+          "name": "Sunbird Standard",
+          "set": "lci",
+          "scryfallId": "e0b6d40a-fded-4625-b03c-765c88d75766"
+        },
+        {
+          "name": "Mystic Skull",
+          "set": "mid",
+          "scryfallId": "115a9a44-131d-45f3-852a-40fd18e4afb6"
+        }
+      ],
+      "m": [
+        {
+          "name": "Aang, at the Crossroads",
+          "set": "tla",
+          "scryfallId": "fea89ca0-8070-4f28-9851-994314f9d248"
+        },
+        {
+          "name": "Kessig Naturalist",
+          "set": "mid",
+          "scryfallId": "8ab5f2e6-0e0a-4f7d-a959-3d07948ff317"
+        }
+      ]
+    }
+  },
+  "m15dfcback": {
+    "note": "The ▼-right transform BACK body (2022-11 →; the default, owner decision Q5): every reference is the printing's BACK face (face 1 — the compare tool's and the walkthrough's second face, TODO 5.0b). w / u / b / r / g INR's 2015-frame reprints, m MOM #43 Burnished Dunestomper (a GW back: the gold frame, the dot split diagonally), c the ARTIFACT stand-in against LCI #262 Sunbird Effigy (an artifact creature back); a colourless Eldrazi or Avatar back (EMN, TLA #203) is see-through — TODO 5.11.",
+    "colors": {
+      "w": [
+        {
+          "name": "Luminous Phantom",
+          "set": "inr",
+          "scryfallId": "438e3302-daf9-436b-8b08-24b3f33295f6",
+          "face": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Insectile Aberration",
+          "set": "inr",
+          "scryfallId": "6904ea20-e504-47da-95a0-08739fdde260",
+          "face": 1
+        },
+        {
+          "name": "Ashling, Rimebound",
+          "set": "ecl",
+          "scryfallId": "7d7faefe-9c0d-45b6-8ea4-5fa666762a2c",
+          "face": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Awoken Demon",
+          "set": "inr",
+          "scryfallId": "abd587d8-2f71-4b3c-960a-d362133e967b",
+          "face": 1
+        },
+        {
+          "name": "Galian Beast",
+          "set": "fin",
+          "scryfallId": "028ef608-acfe-4e9d-90db-eca4411ba78a",
+          "face": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Moonrise Intruder",
+          "set": "inr",
+          "scryfallId": "8bdc98cd-d03a-4c24-8642-b9ffb1f144c6",
+          "face": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Krallenhorde Howler",
+          "set": "inr",
+          "scryfallId": "4ef68479-ab2e-4a60-886c-ad007b64f185",
+          "face": 1
+        }
+      ],
+      "c": [
+        {
+          "name": "Sunbird Effigy",
+          "set": "lci",
+          "scryfallId": "e0b6d40a-fded-4625-b03c-765c88d75766",
+          "face": 1
+        }
+      ],
+      "m": [
+        {
+          "name": "Burnished Dunestomper",
+          "set": "mom",
+          "scryfallId": "fdc37acc-05ba-4457-8a03-d635497bfb1b",
+          "face": 1
+        },
+        {
+          "name": "Seraph of New Phyrexia",
+          "set": "mom",
+          "scryfallId": "fbd9ed1d-1972-4db8-bc43-b05b94956aa0",
+          "face": 1
+        }
+      ]
+    }
+  },
+  "m15dfcbackleft": {
+    "note": "The 2016–22 transform BACK body (the sun / moon, moon / Emrakul, compass / land and fan families: the icon in the LEFT well — the rider draws the family's back glyph): MID's werewolf backs, face 1 of each. m MID #231 Lord of the Ulvenwald (a GR back: gold, no split — MOM #43's rule), c the ARTIFACT stand-in against MID #256 Mystic Monstrosity (an artifact creature back); EMN #63 Grisly Anglerfish is the colourless see-through sample (TODO 5.11, never this row's reference).",
+    "colors": {
+      "w": [
+        {
+          "name": "Luminous Phantom",
+          "set": "mid",
+          "scryfallId": "d2704743-2e23-40b9-a367-c73d2db45afc",
+          "face": 1
+        },
+        {
+          "name": "Sinner's Judgment",
+          "set": "vow",
+          "scryfallId": "db791fb6-b0ff-4ded-bd3d-9447cf398312",
+          "face": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Insectile Aberration",
+          "set": "mid",
+          "scryfallId": "abff6c81-65a4-48fa-ba8f-580f87b0344a",
+          "face": 1
+        },
+        {
+          "name": "Persistent Nightmare",
+          "set": "soi",
+          "scryfallId": "e630fc56-a96f-4abf-be8d-f0f40d5a9edf",
+          "face": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Awoken Demon",
+          "set": "mid",
+          "scryfallId": "bbdad18e-e262-41f9-b252-1cbdcdd1b5f9",
+          "face": 1
+        },
+        {
+          "name": "Strangling Grasp",
+          "set": "mid",
+          "scryfallId": "d4054ae6-0227-4d99-8cb5-72e8b5d0b726",
+          "face": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Harvesttide Assailant",
+          "set": "mid",
+          "scryfallId": "35fdb976-291c-4824-9518-dd8c9f93fcde",
+          "face": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Wing Shredder",
+          "set": "mid",
+          "scryfallId": "71ccc444-54c8-4f7c-a425-82bc3eea1eb0",
+          "face": 1
+        },
+        {
+          "name": "Krallenhorde Howler",
+          "set": "soi",
+          "scryfallId": "e1915d93-c7dd-4bb7-bd5c-63a359a02b97",
+          "face": 1
+        }
+      ],
+      "c": [
+        {
+          "name": "Mystic Monstrosity",
+          "set": "mid",
+          "scryfallId": "115a9a44-131d-45f3-852a-40fd18e4afb6",
+          "face": 1
+        }
+      ],
+      "m": [
+        {
+          "name": "Lord of the Ulvenwald",
+          "set": "mid",
+          "scryfallId": "8ab5f2e6-0e0a-4f7d-a959-3d07948ff317",
+          "face": 1
+        }
+      ]
+    }
+  },
+  "m15dfclandfront": {
+    "note": "The transform LAND front (one master under every key, as the emblem): verified on c against INR #287 Westvale Abbey, whose tab prints Ormendahl's 9/7. The other keys are the same master, built so each key has one, never offered (a land front has no frame colour of its own here).",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Westvale Abbey",
+          "set": "inr",
+          "scryfallId": "5fbc6091-a161-45b0-9932-543b569caaee"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m15dfclandback": {
+    "note": "The transform LAND back (CC's 'Transform (Back) (New)' land frame, toned onto the one plain M15 land back scanned): verified on c against FIN #31's back, Cooking Campsite (face 1) — light tan bars with DARK name and type ink, a cream box, no P/T, no indicator. XLN / RIX / LCI print the parchment land back instead (TODO 5.8). The other keys are the same master, never offered.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Cooking Campsite",
+          "set": "fin",
+          "scryfallId": "bdb5452e-d97f-409b-91d0-2664f39b09b8",
+          "face": 1
+        }
+      ],
+      "m": null
+    }
+  },
   "battle": {
     "note": "Every printed battle is a transform DFC; the front face is the landscape siege.",
     "colors": {

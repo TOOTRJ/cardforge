@@ -4,6 +4,8 @@ import printingsData from "./fixtures/reference-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
+import { bodyFor, dfcIconFamilyFromEffects, templateHasBackFace } from "@/lib/cards/dfc";
+import { parseTypeLine } from "@/lib/scryfall/import-mapper";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -18,7 +20,7 @@ import type { FrameTemplate } from "@/types/card";
 // 4.50); no network in tests.
 // ---------------------------------------------------------------------------
 
-type Ref = { name: string; set: string; scryfallId: string };
+type Ref = { name: string; set: string; scryfallId: string; face?: 1 };
 const registry = referencesData as unknown as Record<
   string,
   { colors: Record<string, Ref[] | null> }
@@ -65,6 +67,18 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
     const match = frameMatchFromScryfall(card);
     const { errors } = validateReferenceForCombo(card, row.template, row.colour);
     expect(errors, row.combo).toEqual([]);
+    if (row.ref.face === 1) {
+      // A back body's reference (TODO 5.1a; the pin check holds the same,
+      // folded into 5.0b's back-body rules): the printing's FRONT resolves
+      // to a transform front body (once verified), and its BACK wears this
+      // body — by its family (frame_effects) and the back's type.
+      const front = match.onceVerified ?? match.template;
+      expect(templateHasBackFace(front), `${row.combo} ${match.signature}`).toBe(true);
+      const back = card.card_faces?.[1];
+      const { card_type } = parseTypeLine(back?.type_line);
+      expect(bodyFor("transform", "back", card_type, dfcIconFamilyFromEffects(card.frame_effects)), row.combo).toBe(row.template);
+      return;
+    }
     if (row.combo in ALLOWLIST) {
       expect(match.template, `${row.combo} is allowlisted but now resolves to its own template`).not.toBe(
         row.template,

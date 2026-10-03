@@ -90,6 +90,19 @@ describe("frame reference registry", () => {
       "m20tokenartifacttall/r",
       "m20tokenartifacttall/g",
       "m20tokenartifacttall/m",
+      // 5.1a's transform land pair: one master under every key, c only.
+      "m15dfclandfront/w",
+      "m15dfclandfront/u",
+      "m15dfclandfront/b",
+      "m15dfclandfront/r",
+      "m15dfclandfront/g",
+      "m15dfclandfront/m",
+      "m15dfclandback/w",
+      "m15dfclandback/u",
+      "m15dfclandback/b",
+      "m15dfclandback/r",
+      "m15dfclandback/g",
+      "m15dfclandback/m",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -98,8 +111,8 @@ describe("frame reference registry", () => {
     // + 4.49 (b)'s two text-box tokens + 4.34's borderless land + 4.48 /
     // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
     // colour referenced, the tall one's c by the serialized DFT #376) +
-    // 4.52's emblem.
-    expect(m15Templates.length).toBe(29);
+    // 4.52's emblem + 5.1a's five transform bodies.
+    expect(m15Templates.length).toBe(34);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
@@ -120,9 +133,13 @@ describe("frame reference registry", () => {
         const ref = FRAME_REFERENCES[template][colorKey];
         if (!ref) continue;
         expect(ref.scryfallId).toMatch(UUID_RE);
+        // A back body's reference (TODO 5.1a, face 1) is the printing's
+        // BACK scan.
+        const side = ref.face === 1 ? "back" : "front";
         expect(referenceThumbUrl(ref)).toBe(
-          `https://cards.scryfall.io/normal/front/${ref.scryfallId[0]}/${ref.scryfallId[1]}/${ref.scryfallId}.jpg`,
+          `https://cards.scryfall.io/normal/${side}/${ref.scryfallId[0]}/${ref.scryfallId[1]}/${ref.scryfallId}.jpg`,
         );
+        expect(ref.face === 1, `${template}/${colorKey}`).toBe(getFrameProfile(template).dfc?.role === "back");
       }
     }
   });

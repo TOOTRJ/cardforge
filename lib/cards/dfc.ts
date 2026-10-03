@@ -11,18 +11,18 @@
 //
 // Bodies are profiles whose PROFILES entry declares `dfc` (FrameProfile.dfc,
 // lib/cards/template-layout.ts): a FRONT body is a card's template, a BACK
-// body is the back face's and is never a front. NONE EXISTS YET — 5.1a
-// brings the five transform bodies, 5.1b the four modal ones — so today
-// `templateHasBackFace` is false for every template and `bodyFor` answers
-// null for every question: the plumbing that lands with this file (the
-// render names, the schema, the anatomy key, lib/cards/faces.ts) changes
-// no stored card's look.
+// body is the back face's and is never a front. 5.1a brought the five
+// transform bodies (`m15dfcfront`, `m15dfcback` — the ▼-right back, the
+// default — `m15dfcbackleft` — the 2016–22 back — and the land pair);
+// 5.1b brings the four modal ones, so `bodyFor` still answers null for a
+// modal face. Additions: no stored card's look changes.
 //
 // Pure and client-safe: the creator, the actions, the import, the remix and
 // both renderers read these same functions.
 // ---------------------------------------------------------------------------
 
 import { isArtifactFrameType, type FrameTypeInfo } from "@/components/cards/frame-layer";
+import { DFC_ICON_GLYPHS, dfcIconGlyph } from "@/lib/cards/dfc-icons";
 import type { CardFace } from "@/lib/cards/card-face";
 import { getFrameProfile, type DfcProfile } from "@/lib/cards/template-layout";
 import {
@@ -32,7 +32,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 
-export { DFC_ICON_FAMILY_VALUES, type DfcIconFamily, type DfcProfile };
+export { DFC_ICON_FAMILY_VALUES, DFC_ICON_GLYPHS, dfcIconGlyph, type DfcIconFamily, type DfcProfile };
 
 export type DfcLayout = DfcProfile["layout"];
 export type DfcRole = DfcProfile["role"];
@@ -121,11 +121,58 @@ type DfcFaceKind = "land" | "spell";
 type DfcBodyKey = `${DfcLayout}/${DfcRole}/${DfcFaceKind}`;
 
 /** A body per (layout, role, face kind) — or, for the transform BACK, one
- *  per icon family: `arrows` → the ▼-right back, the four left families →
- *  the 2016–22 back. Filled by 5.1a (transform) and 5.1b (modal); EMPTY
- *  until then, so bodyFor answers null for every question and no save can
- *  derive a DFC body. */
-const DFC_BODIES: Partial<Record<DfcBodyKey, FrameTemplate | Partial<Record<DfcIconFamily, FrameTemplate>>>> = {};
+ *  per icon family: `arrows` → the ▼-right back (every transform printed
+ *  since 2022-11), the four left families → the 2016–22 back (the icon in
+ *  the left well). The transform rows are 5.1a's; the modal rows come with
+ *  5.1b, so a modal face has no body yet and bodyFor answers null for it. */
+const DFC_BODIES: Partial<Record<DfcBodyKey, FrameTemplate | Partial<Record<DfcIconFamily, FrameTemplate>>>> = {
+  "transform/front/spell": "m15dfcfront",
+  "transform/front/land": "m15dfclandfront",
+  "transform/back/spell": {
+    arrows: "m15dfcback",
+    sunmoon: "m15dfcbackleft",
+    moon: "m15dfcbackleft",
+    compass: "m15dfcbackleft",
+    fan: "m15dfcbackleft",
+  },
+  // The 2016–22 land back is the parchment frame (TODO 5.8): every family's
+  // land back is this one meanwhile (nearest for an XLN / RIX / LCI import).
+  "transform/back/land": "m15dfclandback",
+};
+
+/** The icon family a printing's `frame_effects` name (frames.md §4.6): the
+ *  sun / moon (SOI, EMN, MID, VOW), moon / Emrakul (EMN), compass / land
+ *  (XLN, RIX, LCI) and fan (NEO) families by their effect; `convertdfc`
+ *  (BOT) and no effect at all (MOM, LCI, MH3, FIN, TLA, ECL, INR) are the
+ *  plain ▲ / ▼. `originpwdfc` (ORI's walkers) has no body in wave 1 and
+ *  reads as the default too. */
+export function dfcIconFamilyFromEffects(effects: readonly string[] | null | undefined): DfcIconFamily {
+  const set = new Set((effects ?? []).map((e) => e.toLowerCase()));
+  if (set.has("sunmoondfc")) return "sunmoon";
+  if (set.has("mooneldrazidfc")) return "moon";
+  if (set.has("compasslanddfc")) return "compass";
+  if (set.has("fandfc")) return "fan";
+  return DEFAULT_DFC_ICON;
+}
+
+/** The templates `bodyFor` can answer: the declared bodies. A template that
+ *  only DECLARES `dfc` on its profile (a test fixture, a wave-2 body not yet
+ *  in the table) is a body by role but has no row here. */
+export function isDeclaredDfcBody(template: FrameTemplate | string | null | undefined): boolean {
+  if (!template) return false;
+  for (const entry of Object.values(DFC_BODIES)) {
+    if (typeof entry === "string" ? entry === template : Object.values(entry).includes(template as FrameTemplate)) return true;
+  }
+  return false;
+}
+
+/** The back body a transform card's family derives — the ONE place the
+ *  creator's family chips, the save and the import ask which back the card
+ *  wears (bodyFor's transform/back/spell row), or null for a land back
+ *  (which is the land back whatever the family). */
+export function transformBackBodyFor(family: DfcIconFamily, backFaceType: string | null | undefined): FrameTemplate | null {
+  return bodyFor("transform", "back", backFaceType, family);
+}
 
 /**
  * The ONE table the creator, the server gate, the import and the remix read:
@@ -149,17 +196,21 @@ export function bodyFor(
 
 /**
  * Whether a face may wear the colourless `c` key on `template` (D2, design
- * 2026-10-02): on a DFC body the `c` row is the ARTIFACT master standing in
- * (every DFC pack's colourless frame is its artifact one), so it is offered
- * only to a face whose type line says Artifact — never to a colourless
- * Eldrazi or Avatar face, whose see-through frame is wave 2 (TODO 5.11). On
- * any other template the ordinary frame gate decides, so this answers true.
+ * 2026-10-02): on a DFC body whose `c` is the ARTIFACT master standing in
+ * (every DFC pack's colourless frame is its artifact one — the profile
+ * dresses `c` as `a`, FrameProfile.artifactMasterKeys), it is offered only
+ * to a face whose type line says Artifact — never to a colourless Eldrazi
+ * or Avatar face, whose see-through frame is wave 2 (TODO 5.11). The land
+ * pair (5.1a) has ONE master under every key and no stand-in, so its `c`
+ * is any land face's. On any other template the ordinary frame gate
+ * decides, so this answers true.
  */
 export function colorlessFaceAllowed(
   template: FrameTemplate | string | null | undefined,
   face: FrameTypeInfo | null | undefined,
 ): boolean {
   if (!dfcBodyOf(template)) return true;
+  if (getFrameProfile(template ?? undefined).artifactMasterKeys?.c !== "a") return true;
   return isArtifactFrameType(face);
 }
 

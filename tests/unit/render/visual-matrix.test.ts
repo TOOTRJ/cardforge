@@ -63,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -229,8 +229,19 @@ describe("visual-regression matrix", () => {
     const paired = cases.filter((c) => (c.row.frame_style as { twoColor?: boolean }).twoColor === true);
     const lined = cases.filter((c) => c.id.includes("@collector"));
     const stamped = cases.filter((c) => c.id.includes("@stamp"));
+    // A transform row with a stored icon family (TODO 5.1a: the 2016–22
+    // back's cases and the family cases) names `dfcIcon` — a family, not a
+    // switch, and the default (`arrows`) is never stored.
     for (const c of cases.filter((x) => !crowned.includes(x) && !paired.includes(x) && !lined.includes(x) && !stamped.includes(x))) {
-      expect(Object.keys(c.row.frame_style as object).sort(), c.id).toEqual(["finish", "template"]);
+      const keys = Object.keys(c.row.frame_style as object).sort();
+      const family = (c.row.frame_style as { dfcIcon?: string }).dfcIcon;
+      if (family) {
+        expect(c.kind, c.id).toBe("transform");
+        expect(family, c.id).not.toBe("arrows");
+        expect(keys, c.id).toEqual(["dfcIcon", "finish", "template"]);
+        continue;
+      }
+      expect(keys, c.id).toEqual(["finish", "template"]);
     }
     // The split crown: both switches on, on every template that draws both.
     const both = crowned.filter((c) => paired.includes(c));
@@ -258,6 +269,29 @@ describe("visual-regression matrix", () => {
     expect(caseInput({ ...c, row: { ...c.row, rules_text: "Changed." } })).not.toBe(c.input);
     expect(caseInput({ ...c, corners: c.corners === "round" ? "square" : "round" })).not.toBe(c.input);
     expect(caseInput({ ...c, preset: c.preset === "hd" ? "default" : "hd" })).not.toBe(c.input);
+  });
+
+  it("bakes each case in the finish it names: the row's frame_style carries the case's finish (a row override must not reset it)", () => {
+    // The transform bodies' first "@foil" cases (5.1a) baked REGULAR: their
+    // row override carried `finish: "regular"` over the case's foil, so the
+    // rider, the dot and the dark plate were never under the sheen.
+    for (const c of cases) {
+      const rowFinish = (c.row.frame_style as { finish?: string } | null)?.finish ?? "regular";
+      expect(rowFinish, c.id).toBe(c.finish);
+    }
+    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil"]);
+  });
+
+  it("bakes the long back-body cases with the LONG back (dense rules, the long name, 12/12 on the dark plate): never the short back under a long id (TODO 5.1a)", () => {
+    for (const c of cases) {
+      if (c.face !== "back") continue;
+      const back = c.row.back_face as { title?: string; rules_text?: string } | null;
+      const short = cases.find((s) => s.id === c.id.replace(/transform-long/, "transform-short"));
+      if (c.shape === "long" && short) {
+        expect(JSON.stringify(c.row.back_face), c.id).not.toBe(JSON.stringify(short.row.back_face));
+        expect(back?.title?.length ?? 0, c.id).toBeGreaterThan(((short.row.back_face as { title?: string } | null)?.title?.length ?? 0));
+      }
+    }
   });
 
   it("splits into shards that cover every case exactly once", () => {

@@ -535,7 +535,7 @@ describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
     expect(leaks).toEqual([]);
   });
 
-  it("refuses exactly planeswalker, battle, the layout kinds and the emblem on the eight — 64 pairs — and keeps every standard kind", () => {
+  it("refuses exactly planeswalker, battle, the layout kinds (the transform kind among them, 5.1a) and the emblem on the eight — 72 pairs — and keeps every standard kind", () => {
     const refused: string[] = [];
     for (const template of STAT_LESS_SHOWCASES) {
       for (const kind of CARD_KIND_VALUES) {
@@ -550,7 +550,7 @@ describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
         if (!standard) refused.push(`${template}/${kind}`);
       }
     }
-    expect(refused).toHaveLength(64);
+    expect(refused).toHaveLength(72);
   });
 
   it("drops them from the planeswalker and battle galleries only", () => {

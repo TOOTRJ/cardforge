@@ -7,6 +7,7 @@ import {
 import {
   CARD_KIND_VALUES,
   KIND_DEFS,
+  dfcKindFor,
   isBorrowedVariation,
   templateSupportsKind,
   type CardKind,
@@ -162,6 +163,10 @@ export function walkthroughKindFor(template: FrameTemplate): CardKind {
   for (const kind of CARD_KIND_VALUES) {
     if (KIND_DEFS[kind].layoutTemplates?.includes(template)) return kind;
   }
+  // A double-faced BACK body (TODO 5.1a) is never a card's template: its
+  // walk is a card of its kind (Transform), flipped to the back (5.0b).
+  const dfcKind = dfcKindFor(template);
+  if (dfcKind) return dfcKind;
   for (const kind of CARD_KIND_VALUES) {
     const def = KIND_DEFS[kind];
     if (def.layoutTemplates) continue;
