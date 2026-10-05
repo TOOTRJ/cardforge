@@ -5,6 +5,7 @@ import {
   dfcFrontTypeError,
   DFC_BACK_BODY_MISMATCH,
   DFC_BACK_BODY_SET,
+  DFC_BACK_COLOR_SET,
   DFC_BACK_TYPE_REFUSED,
   DFC_COLORLESS_FRONT_NEEDS_ARTIFACT,
   DFC_COLORLESS_NEEDS_ARTIFACT,
@@ -159,15 +160,26 @@ describe("resolveDfcBackFace — update (the stored body wins)", () => {
     expect(same.ok).toBe(true);
   });
 
-  it("a changed colour is verified for the body (and a legacy pin stays editable)", () => {
-    const unverified = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, color_identity: ["red"] }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: stored, familyChanged: false } });
-    expect(unverified).toMatchObject({ ok: false, field: "back_face.color_identity", code: "unverified" });
-    const verified = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, color_identity: ["green"] }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: stored, familyChanged: false } });
-    expect(verified.ok && verified.back?.color_identity).toEqual(["green"]);
+  it("the stored COLOUR wins too (owner 2026-10-05: locked like the front's) — a patch naming another is refused, verified or not and under the preview skip; one naming none keeps it; a legacy pin stays editable", () => {
+    for (const colour of [["red"], ["green"]] as ColorIdentity[][]) {
+      const result = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, color_identity: colour }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: stored, familyChanged: false } });
+      expect(result, colour.join()).toEqual({ ok: false, field: "back_face.color_identity", message: DFC_BACK_COLOR_SET });
+    }
+    // The skip is verification's alone: the lock holds under it.
+    const skipped = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, color_identity: ["green"] }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, skipVerification: true, stored: { back: stored, familyChanged: false } });
+    expect(skipped).toEqual({ ok: false, field: "back_face.color_identity", message: DFC_BACK_COLOR_SET });
+    // No colour named: the STORED one — not the front's — and no re-check.
+    const none = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, rules_text: "Flying" }, family: "arrows", frontColorIdentity: ["red"], verifiedKeys: new Set(), stored: { back: stored, familyChanged: false } });
+    expect(none.ok && none.back?.color_identity).toEqual(["blue"]);
+    // A pair resent in another order is the same colour (the stored order
+    // is what is stored).
+    const pair = { ...stored, color_identity: ["blue", "green"] as ColorIdentity[] };
+    const reordered = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, color_identity: ["green", "blue"] }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: new Set(), stored: { back: pair, familyChanged: false } });
+    expect(reordered.ok && reordered.back?.color_identity).toEqual(["blue", "green"]);
     // A stored back on a since-withdrawn colour: left alone, it saves.
     const withdrawn = { ...stored, color_identity: ["red"] as ColorIdentity[] };
     const kept = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, rules_text: "Flying", color_identity: ["red"] }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: withdrawn, familyChanged: false } });
-    expect(kept.ok).toBe(true);
+    expect(kept.ok && kept.back?.color_identity).toEqual(["red"]);
   });
 
   it("a back type that would derive another body is refused; the same type keeps the body", () => {
@@ -183,12 +195,18 @@ describe("resolveDfcBackFace — update (the stored body wins)", () => {
     expect(ok.ok && ok.back?.frame_style).toEqual({ template: "m15dfcbackleft" });
     const refused = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: stored, family: "sunmoon", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: stored, familyChanged: true } });
     expect(refused).toMatchObject({ ok: false, field: "back_face.color_identity", code: "unverified" });
+    // The family is the ONE look change an edit may make: a colour change
+    // riding in with it is refused by the lock (m15dfcbackleft/g IS verified).
+    const smuggled = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...stored, color_identity: ["green"] }, family: "sunmoon", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: stored, familyChanged: true } });
+    expect(smuggled).toEqual({ ok: false, field: "back_face.color_identity", message: DFC_BACK_COLOR_SET });
   });
 
-  it("a stored back with no body under a DFC front (a 5.1a-era save) takes the derived body", () => {
+  it("a stored back with no body under a DFC front (a 5.1a-era save) takes the derived body — and the patch's colour, there being no stored one to lock", () => {
     const legacy = { ...BACK };
     const result = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: legacy, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: legacy, familyChanged: false } });
     expect(result.ok && result.back).toEqual({ ...BACK, frame_style: { template: "m15dfcback" }, color_identity: ["blue"] });
+    const own = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...BACK, color_identity: ["green"] }, family: "arrows", frontColorIdentity: ["blue"], verifiedKeys: VERIFIED, stored: { back: legacy, familyChanged: false } });
+    expect(own.ok && own.back?.color_identity).toEqual(["green"]);
   });
 });
 

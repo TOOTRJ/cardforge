@@ -51,9 +51,12 @@ export const REVISABLE_FIELDS = [
   "visibility",
   // The inline second face (Adventure spell / split half) and a double-faced
   // card's back (TODO 5.2) are CONTENT of the frame the card already has, so
-  // they stay editable: the action keeps the STORED back body whatever the
-  // patch carries (lib/cards/dfc-gate.ts) and takes the back's colour only
-  // where it is verified.
+  // they stay editable — the back's type and COLOUR excepted (owner
+  // 2026-10-05: structure, like the front's; the panel shows them read-only
+  // and the form resends them as stored, and the action keeps the STORED
+  // body and colour whatever the patch carries, refusing a changed colour —
+  // lib/cards/dfc-gate.ts). The one look change an edit may make to the
+  // back is the icon family, on `frame_anatomy`.
   "has_back_face",
   "back_face",
 ] as const satisfies readonly (keyof FormValues)[];

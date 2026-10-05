@@ -23,6 +23,14 @@
 //     colourless only with "Artifact" on the type line (colorlessFaceAllowed,
 //     design D2); an update re-checks only when the body or the colour
 //     changed, as the front's legacy pin;
+//   • on an UPDATE of a card whose back HAS a body the STORED colour wins
+//     too (owner 2026-10-05: the back's colour is locked like the front's —
+//     a colour change moves the back onto another master, which is what the
+//     lock exists for): a patch naming another is refused, verified or not
+//     and under an admin's preview skip (structure, not verification); one
+//     naming none keeps it; the family (frame_anatomy.dfcIcon) stays the ONE
+//     look change an edit may make. A back with no stored body — a legacy
+//     back, a half-moved row — and a create take the colour as sent;
 //   • a transform back saves with no mana cost (withTransformBackShape).
 //
 // Pure: no I/O. The caller fetches the verified keys and decides whether an
@@ -112,6 +120,8 @@ export const DFC_BACK_BODY_MISMATCH =
   "The back face's frame doesn't match its type and the card's icon family.";
 export const DFC_BACK_BODY_SET =
   "The back face's frame is set — its type can't move it onto another frame.";
+export const DFC_BACK_COLOR_SET =
+  "The back face's colour is set when the card is created, like the front's — to change it, forge a new card.";
 export const DFC_NO_BACK_BODY_YET = "No back-face frame exists for this card yet.";
 export const DFC_COLORLESS_NEEDS_ARTIFACT =
   "A colourless back face needs “Artifact” on its type line — pick a colour.";
@@ -179,6 +189,12 @@ function backColourOf(
   return own && own.length > 0 ? [...own] : [...(frontColorIdentity ?? [])];
 }
 
+/** The same colour identity as a SET — a pair resent in another order is
+ *  the same colour (updateCardAction's reading of the front's). */
+function sameColorIdentity(a: readonly ColorIdentity[], b: readonly ColorIdentity[]): boolean {
+  return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+}
+
 /** A back face with its body and colour taken off — what a card keeps of
  *  its back when its front leaves a DFC body (a crafted frame_style patch):
  *  the content, drawn as a legacy back on the new front. */
@@ -216,7 +232,8 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
 
   const storedBody = input.stored?.back?.frame_style?.template;
-  const storedWins = Boolean(input.stored && storedBody && isDfcBackBody(storedBody) && !input.stored.familyChanged);
+  const storedHasBody = Boolean(input.stored && storedBody && isDfcBackBody(storedBody));
+  const storedWins = storedHasBody && !input.stored?.familyChanged;
   let template: FrameTemplate;
   if (storedWins) {
     // The stored body is structure: a type that would derive another body
@@ -242,7 +259,21 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
     template = derived;
   }
 
-  const colour = backColourOf(back, input.frontColorIdentity);
+  // The colour: on an UPDATE of a card whose back HAS a body the STORED one
+  // wins, as the body does (owner 2026-10-05: locked like the front's) — a
+  // patch naming another is refused whatever the verified set says, one
+  // naming none keeps it. Else the back's own, or the front's.
+  let colour: ColorIdentity[];
+  if (storedHasBody) {
+    const storedColour = backColourOf(input.stored?.back, input.frontColorIdentity);
+    const sent = back.color_identity;
+    if (sent && sent.length > 0 && !sameColorIdentity(sent, storedColour)) {
+      return { ok: false, field: "back_face.color_identity", message: DFC_BACK_COLOR_SET };
+    }
+    colour = storedColour;
+  } else {
+    colour = backColourOf(back, input.frontColorIdentity);
+  }
   if (
     pickFrameColorKey(colour) === "c" &&
     !colorlessFaceAllowed(template, { cardType: backType, supertype: back.supertype })
