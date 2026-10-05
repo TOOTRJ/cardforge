@@ -3478,6 +3478,7 @@ export function CardCreatorForm({
             onImport={(payload) => handleScryfallImport(payload, "dialog")}
             verifiedFrameKeys={verifiedFrameKeys}
             currentFrameTemplate={watched.frame_style?.template ?? null}
+            previewFrames={framePreview?.param ?? null}
             open={scryfallOpen}
             onOpenChange={setScryfallOpen}
           />

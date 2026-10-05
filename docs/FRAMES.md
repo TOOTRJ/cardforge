@@ -2575,7 +2575,13 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   then imports exactly as before 5.4; once the owner ticks both faces the
   same printing lands on the bodies with the back's colour and family set
   (the form sets the printing's colour BEFORE the kind change, so the
-  colourless-front rule never fires on an import).
+  colourless-front rule never fires on an import). An ADMIN's frame preview
+  counts: the creator hands `previewFrames` to `/api/scryfall/named`
+  (`?preview=`), which unions every colour of those templates into the set
+  it finalizes against — for an admin only — so
+  `/create?previewFrames=m15dfcfront,m15dfcbackleft` imports a transform
+  printing onto the bodies before anyone has ticked them (the save is a
+  private frame preview, as always).
 - **The AI deck remix** keeps the back when the landed template
   `templateHasBackFace` (beside `templatePaintsSecondFace`): the back's
   body and colour ride through `scryfallRemixMechanics` → `createCardAction`
