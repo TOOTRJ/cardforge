@@ -654,7 +654,38 @@ test.describe("Scryfall import → the double-faced bodies (TODO 5.4)", () => {
 
   test("MID #7 lands on the transform body with both arts, the back on the sun / moon back in red", async ({ page }) => {
     const id = "0dbac7ce-a6fa-466e-b6ba-173cf2dec98e"; // MID #7
-    const title = `Brutal Cathar ${Date.now()}`;
+    const run = Date.now();
+    const title = `Brutal Cathar ${run}`;
+
+    // The art the mocked import-art route hands back must be SAVABLE: the
+    // save keeps only the caller's own storage objects on a registered
+    // origin (migration 0127; lib/validation/card.ts isSafeImageUrl takes
+    // the local stack's http origin outside production). So: the e2e
+    // user's id through the publishable client, the stack's origin
+    // registered as the app does before its first upload (tests/e2e/
+    // media-url-guards.spec.ts does the same), and the object URLs in the
+    // user's folder — the objects need not exist for the row to be stored.
+    const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+    const asUser = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "", {
+      auth: { persistSession: false },
+    });
+    const signedIn = await asUser.auth.signInWithPassword({
+      email: process.env.SUPABASE_E2E_USER_EMAIL!,
+      password: process.env.SUPABASE_E2E_USER_PASSWORD!,
+    });
+    expect(signedIn.error, "the seeded e2e user signs in").toBeNull();
+    const userId = signedIn.data.user!.id;
+    await asUser.auth.signOut();
+    const registered = await admin
+      .from("storage_origins")
+      .upsert(
+        { origin: new URL(supabaseUrl).origin, note: "e2e (as lib/media/storage-origin.ts)" },
+        { onConflict: "origin", ignoreDuplicates: true },
+      );
+    expect(registered.error).toBeNull();
+    const artUrl = (face: "front" | "back") =>
+      `${supabaseUrl}/storage/v1/object/public/card-art/${userId}/dfc-${face}-${run}.webp`;
+
     await page.route("**/api/scryfall/search**", async (route) => {
       await route.fulfill({
         json: {
@@ -737,7 +768,7 @@ test.describe("Scryfall import → the double-faced bodies (TODO 5.4)", () => {
       await route.fulfill({
         json: {
           ok: true,
-          publicUrl: mode === "art-back" ? "/defaults/banners/banner-06.webp" : "/defaults/banners/banner-05.webp",
+          publicUrl: artUrl(mode === "art-back" ? "back" : "front"),
           artist: null,
           warning: null,
           source: { scryfallId: id, cardName: "Brutal Cathar // Moonrage Brute", scryfallUri: null },
@@ -773,23 +804,29 @@ test.describe("Scryfall import → the double-faced bodies (TODO 5.4)", () => {
     await saveButton.dispatchEvent("click");
     await page.waitForURL(/\/card\/.+\/edit\?.*previewFrames=/);
 
-    const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
     const { data: row, error } = await admin
       .from("cards")
-      .select("frame_style, back_face, art_url, color_identity")
+      .select("id, frame_style, back_face, art_url, color_identity, visibility")
       .eq("title", title)
       .maybeSingle();
-    expect(error).toBeNull();
-    expect(row?.frame_style).toMatchObject({ template: "m15dfcfront", dfcIcon: "sunmoon" });
-    expect(row?.color_identity).toEqual(["white"]);
-    expect(row?.art_url).toContain("banner-05");
-    expect(row?.back_face).toMatchObject({
-      title: "Moonrage Brute",
-      card_type: "creature",
-      frame_style: { template: "m15dfcbackleft" },
-      color_identity: ["red"],
-    });
-    expect((row?.back_face as { art_url?: string }).art_url).toContain("banner-06");
-    expect((row?.back_face as { cost?: string }).cost).toBeUndefined();
+    try {
+      expect(error).toBeNull();
+      expect(row, "the saved card row").not.toBeNull();
+      expect(row?.frame_style).toMatchObject({ template: "m15dfcfront", dfcIcon: "sunmoon" });
+      expect(row?.color_identity).toEqual(["white"]);
+      expect(row?.art_url).toBe(artUrl("front"));
+      expect(row?.back_face).toMatchObject({
+        title: "Moonrage Brute",
+        card_type: "creature",
+        frame_style: { template: "m15dfcbackleft" },
+        color_identity: ["red"],
+        art_url: artUrl("back"),
+      });
+      expect((row?.back_face as { cost?: string }).cost).toBeUndefined();
+      // A frame preview is always private.
+      expect(row?.visibility).toBe("private");
+    } finally {
+      if (row?.id) await admin.from("cards").delete().eq("id", row.id);
+    }
   });
 });
