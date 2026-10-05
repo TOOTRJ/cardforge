@@ -2166,7 +2166,7 @@
     }
   },
   "m15mdfcfront": {
-    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c = the ARTIFACT stand-in (design D2): STX #154 Pestilent Cauldron, the one colourless modal face printed on this frame. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Valki #114 / Egon #92, r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
+    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c: NO reference — no colourless modal front was printed on the plain 2015 frame (the design's STX #154 Pestilent Cauldron is a BLACK artifact, {2}{B}, on the black body; STX #6 Wandering Archaic, the only colourless modal face, is an Avatar on the see-through colourless frame, wave 2 / TODO 5.11): the artifact stand-in (design D2) is never offered, as on the back. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Valki #114 / Egon #92, r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
     "colors": {
       "w": [
         {
@@ -2253,13 +2253,7 @@
           "scryfallId": "b76bed98-30b1-4572-b36c-684ada06826c"
         }
       ],
-      "c": [
-        {
-          "name": "Pestilent Cauldron",
-          "set": "stx",
-          "scryfallId": "aaa1e6be-08cc-4ccc-b2de-3511613e4fd0"
-        }
-      ],
+      "c": null,
       "m": [
         {
           "name": "Bloodsoaked Insight",

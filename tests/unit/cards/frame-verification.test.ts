@@ -103,8 +103,11 @@ describe("frame reference registry", () => {
       "m15dfclandback/r",
       "m15dfclandback/g",
       "m15dfclandback/m",
-      // 5.1b's modal bodies: no colourless modal back, no colourless or
-      // gold modal land printed on the plain 2015 frame.
+      // 5.1b's modal bodies: no colourless modal front or back (STX #154
+      // Pestilent Cauldron is a BLACK artifact; STX #6 Wandering Archaic an
+      // Avatar on the see-through frame), no colourless or gold modal land
+      // printed on the plain 2015 frame.
+      "m15mdfcfront/c",
       "m15mdfcback/c",
       "m15mdfclandfront/c",
       "m15mdfclandfront/m",

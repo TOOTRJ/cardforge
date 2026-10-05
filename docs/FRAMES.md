@@ -2228,7 +2228,7 @@ ticks each colour × face.
 
 | template | source | masters | `dfc` | what it draws |
 |---|---|---|---|---|
-| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (= `c`, the artifact stand-in: STX #154) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
+| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (= `c`, the artifact stand-in — no print: STX #154 Pestilent Cauldron is a BLACK artifact) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
 | `m15mdfcback` | `<k>b.png`, toned | same (`c` has no print) | back | a cost of its own, white name / type / P/T on the toned dark bars, the dark plates (m15dfcback/pt), the strip's texts DARK, no indicator |
 | `m15mdfclandfront` | recipe: `<k>.png` + the land tint's body and box | w u b r g (+ `m`, `c` stand-ins) | front, land | no cost, no P/T; the pathways' look |
 | `m15mdfclandback` | recipe: `<k>b.png` + the land tint's body, toned | same | back, land | no cost, no P/T; the ZNR / MH3 land backs' look |
@@ -2311,11 +2311,14 @@ ticks each colour × face.
   per face (`frame-references.json`): fronts ZNR #12 / MH3 #241 / ZNR #90 /
   #134 / #189, `m` MH3 #252 Bloodsoaked Insight (a HYBRID front — the only
   gold modal fronts on the plain frame are MH3's ten hybrid MDFC lands;
-  the split hybrid pinline is 5.12, as the transform front's `m`), `c` STX
-  #154; backs STX #150 / #147 / #148 / #159 / #151, `m` MSH #18 (its
-  Marvel strip form not built), `c` NONE; the land fronts the five
-  pathways; the land backs ZNR #12 / MH3 #241 / ZNR #90 / #134 / #189 —
-  with the KHM Gods and the other pathways as alternates. The pin check
+  the split hybrid pinline is 5.12, as the transform front's `m`), `c`
+  NONE (no colourless modal front was printed: the design's STX #154
+  Pestilent Cauldron is a BLACK artifact, {2}{B}, and STX #6 Wandering
+  Archaic, the only colourless modal face, is an Avatar on the see-through
+  frame — wave 2, 5.11); backs STX #150 / #147 / #148 / #159 / #151, `m`
+  MSH #18 (its Marvel strip form not built), `c` NONE; the land fronts the
+  five pathways; the land backs ZNR #12 / MH3 #241 / ZNR #90 / #134 / #189
+  — with the KHM Gods and the other pathways as alternates. The pin check
   judges a modal land back's row by the back's colour (its mana ability),
   unlike the transform land back's one master.
 - **The visual matrix:** the front bodies' cases come out of the
