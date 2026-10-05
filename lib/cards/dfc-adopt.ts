@@ -11,25 +11,33 @@
 // the front on its DFC twin (bodyFor's front body for the card's type),
 // gives the back its body (bodyFor's back body for the back's type and the
 // default family — `arrows`, owner Q5) and a colour (the front's — the
-// import never carried the back's; editable afterwards in the back-face
-// panel — or colourless on the land back, the one key its body is verified
-// in: adoptedBackColorIdentity), stamps the family, drops the switches the bodies can't draw
-// (normalizeAnatomy, design D17), strips a transform back's cost, and
-// re-bakes.
+// import never carried the back's — or colourless on the land back, the one
+// key its body is verified in: adoptedBackColorIdentity; locked afterwards
+// like the front's, owner 2026-10-05), stamps the family, drops the
+// switches the bodies can't draw (normalizeAnatomy, design D17), strips a
+// transform back's cost, and re-bakes.
 //
-// Who qualifies in wave 1 (5 of the 8: Titânia, Erza Scarlet, Avatar Aang,
-// Tobirama, Darth Vader): a row on the M15 standard or one of its skins
-// with no double-faced twin of its own — m15 (or no template, drawn as
-// m15), m15devoid, m15snow, m15artifact (DFC_ADOPTABLE_FRONTS; the devoid
-// or snow dress is lost on the move and the hint says so) — with a legacy
-// back whose faces are both wave-1 face types (DFC_FACE_TYPES) and whose
-// back is no walker (no loyalty). The two on `m15borderless` wait for the
+// The layout is the one the back's SHAPE derives, never a choice (owner
+// 2026-10-05): a back WITH a mana cost is a modal card (KHM / STX / MSH
+// backs carry one), a back without one a transform card — so a costed back
+// is never moved onto Transform, which would drop its cost and change the
+// card's rules. A layout whose bodies don't exist yet (the modal pair until
+// 5.1b) is offered NOTHING: dfcAdoptionShape still names it (the action's
+// message), dfcAdoptionOffer answers null (no hint), the action refuses
+// every layout by name.
+//
+// Who qualifies in wave 1 (4 of the 8 today: Titânia, Erza Scarlet, Avatar
+// Aang, Tobirama; Darth Vader's costed back the day the modal bodies
+// exist): a row on the M15 standard or one of its skins with no
+// double-faced twin of its own — m15 (or no template, drawn as m15),
+// m15devoid, m15snow, m15artifact (DFC_ADOPTABLE_FRONTS; the devoid or snow
+// dress is lost on the move and the hint says so) — with a legacy back
+// whose faces are both wave-1 face types (DFC_FACE_TYPES) and whose back is
+// no walker (no loyalty). The two on `m15borderless` wait for the
 // borderless DFC bodies (5.7), a walker back for the walker bodies (5.13,
 // ask first); a row on an inline layout — the adventure on m15's storybook
 // page is a second PANEL, not a face — is on another template and never
-// offered. The layout defaults from the back's cost (a modal back carries
-// one, a transform back never does); a layout whose bodies don't exist yet
-// (the modal pair until 5.1b) is offered dark.
+// offered.
 //
 // Pure: no I/O.
 // ---------------------------------------------------------------------------
@@ -55,19 +63,13 @@ export type DfcAdoptionCard = {
   back_face?: unknown;
 };
 
-export type DfcAdoptionLayoutOffer = {
+export type DfcAdoptionOffer = {
+  /** The layout the back's shape derives — modal for a back with a mana
+   *  cost, transform otherwise — the ONE the move offers. */
   layout: DfcLayout;
   label: string;
-  /** Both bodies exist (the modal pair is 5.1b's). */
-  available: boolean;
-  frontBody: FrameTemplate | null;
-  backBody: FrameTemplate | null;
-};
-
-export type DfcAdoptionOffer = {
-  /** Transform unless the back carries a mana cost. */
-  defaultLayout: DfcLayout;
-  layouts: DfcAdoptionLayoutOffer[];
+  frontBody: FrameTemplate;
+  backBody: FrameTemplate;
   /** The M15 dress the front leaves behind (no DFC twin of it exists):
    *  "devoid" / "snow", or null for the plain or artifact frame. */
   losesDress: "devoid" | "snow" | null;
@@ -113,12 +115,15 @@ function legacyBackOf(card: DfcAdoptionCard): CardBackFace | null {
 }
 
 /**
- * The hint's offer for a stored card, or null when the card doesn't
- * qualify: a legacy back (content only) on m15 — stored as "m15", with no
- * template, or a legacy value the renderers draw as m15 — whose two faces
- * the wave-1 bodies can draw.
+ * The candidate rule, the bodies aside: a legacy back (content only) on
+ * m15 — stored as "m15", with no template, or a legacy value the renderers
+ * draw as m15 — or an M15 skin with no DFC twin, whose two faces are wave-1
+ * face types, no walker back, not the adventure shape — and the layout the
+ * back's SHAPE derives. Null for a row that is no candidate at all.
  */
-export function dfcAdoptionOffer(card: DfcAdoptionCard): DfcAdoptionOffer | null {
+function candidateOf(
+  card: DfcAdoptionCard,
+): { back: CardBackFace; template: FrameTemplate; layout: DfcLayout } | null {
   const back = legacyBackOf(card);
   if (!back) return null;
   const template = normalizeFrameTemplate((card.frame_style as { template?: string } | null | undefined)?.template);
@@ -133,20 +138,37 @@ export function dfcAdoptionOffer(card: DfcAdoptionCard): DfcAdoptionOffer | null
   // Pugilist // Echoing Equation), which no imported row has; the modal
   // pair is 5.1b's, where the rule can tell them apart by the printing.
   if ((back.card_type === "instant" || back.card_type === "sorcery") && back.cost?.trim()) return null;
-  const layouts = (["transform", "modal"] as const).map((layout) => {
-    const frontBody = bodyFor(layout, "front", card.card_type);
-    const backBody = bodyFor(layout, "back", back.card_type, DEFAULT_DFC_ICON);
-    return {
-      layout,
-      label: DFC_LAYOUT_LABELS[layout],
-      available: frontBody !== null && backBody !== null,
-      frontBody,
-      backBody,
-    };
-  });
+  // A back WITH a mana cost is a modal card, one without a transform card
+  // (owner 2026-10-05): the shape decides, never a chip.
+  return { back, template, layout: back.cost?.trim() ? "modal" : "transform" };
+}
+
+/** The layout a stored card's legacy back would move onto — the one its
+ *  shape derives — or null when the card is no candidate at all. Named
+ *  whether or not that layout's bodies exist yet (the action's message);
+ *  the hint reads dfcAdoptionOffer, which needs them. */
+export function dfcAdoptionShape(card: DfcAdoptionCard): DfcLayout | null {
+  return candidateOf(card)?.layout ?? null;
+}
+
+/**
+ * The hint's offer for a stored card — the ONE layout its back's shape
+ * derives, with both bodies — or null when the card doesn't qualify, or
+ * when that layout's bodies don't exist yet (the modal pair until 5.1b:
+ * a costed back is offered nothing, never Transform).
+ */
+export function dfcAdoptionOffer(card: DfcAdoptionCard): DfcAdoptionOffer | null {
+  const candidate = candidateOf(card);
+  if (!candidate) return null;
+  const { back, template, layout } = candidate;
+  const frontBody = bodyFor(layout, "front", card.card_type);
+  const backBody = bodyFor(layout, "back", back.card_type, DEFAULT_DFC_ICON);
+  if (!frontBody || !backBody) return null;
   return {
-    defaultLayout: back.cost?.trim() ? "modal" : "transform",
-    layouts,
+    layout,
+    label: DFC_LAYOUT_LABELS[layout],
+    frontBody,
+    backBody,
     losesDress: template === "m15devoid" ? "devoid" : template === "m15snow" ? "snow" : null,
   };
 }
@@ -165,34 +187,35 @@ export type DfcAdoptionPlan = {
 };
 
 /** What the move writes, or null when the card doesn't qualify for that
- *  layout (not offered, or its bodies don't exist yet). */
+ *  layout: not offered, its bodies don't exist yet, or `layout` is not the
+ *  one the back's shape derives (a costed back is never moved onto
+ *  Transform, a cost-less one never onto Modal). */
 export function adoptDfcBodiesPlan(card: DfcAdoptionCard, layout: DfcLayout): DfcAdoptionPlan | null {
   const offer = dfcAdoptionOffer(card);
-  const choice = offer?.layouts.find((entry) => entry.layout === layout);
-  if (!choice?.available || !choice.frontBody || !choice.backBody) return null;
+  if (!offer || offer.layout !== layout) return null;
   const back = legacyBackOf(card)!;
   const stored = ((card.frame_style ?? {}) as Record<string, unknown>) ?? {};
   const frameStyle = normalizeAnatomy(
     {
       ...stored,
-      template: choice.frontBody,
+      template: offer.frontBody,
       ...(layout === "transform" ? { dfcIcon: DEFAULT_DFC_ICON } : {}),
     } as FrameAnatomyStyle & Record<string, unknown>,
-    choice.frontBody,
+    offer.frontBody,
     card.card_type,
   );
   const backFace = withTransformBackShape(
     {
       ...back,
-      frame_style: { template: choice.backBody },
-      color_identity: adoptedBackColorIdentity(choice.backBody, card.color_identity),
+      frame_style: { template: offer.backBody },
+      color_identity: adoptedBackColorIdentity(offer.backBody, card.color_identity),
     },
     layout,
   );
   return {
     layout,
-    frontBody: choice.frontBody,
-    backBody: choice.backBody,
+    frontBody: offer.frontBody,
+    backBody: offer.backBody,
     frame_style: frameStyle as Record<string, unknown>,
     back_face: backFace,
   };

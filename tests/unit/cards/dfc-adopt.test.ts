@@ -4,10 +4,13 @@ import legacy from "./fixtures/dfc-legacy-backs.json";
 
 // ---------------------------------------------------------------------------
 // TODO 5.2 — the 8 imported double-faced cards onto the real frames (owner
-// 2026-10-02, Q3: in place, one click): who the hint is offered to (5 of
-// the 8 — Titânia on devoid, Erza, Tobirama's land back, Aang, Vader's
-// modal artifact back; never the two on m15borderless, the walker back or
-// the adventure row), what the move writes, and the action's gates.
+// 2026-10-02, Q3: in place, one click): who the hint is offered to (4 of
+// the 8 today — Titânia on devoid, Erza, Tobirama's land back, Aang; Vader's
+// costed artifact back is a MODAL card and gets nothing until the modal
+// bodies exist — owner 2026-10-05: the hint offers ONLY the layout the
+// back's shape derives, see dfc-adopt-modal.test.ts for the day they do;
+// never the two on m15borderless, the walker back or the adventure row),
+// what the move writes, and the action's gates.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -37,7 +40,7 @@ vi.mock("@/lib/cards/bake-render", () => ({
 vi.mock("@/lib/cards/revalidate", () => ({ revalidateCardPaths: vi.fn() }));
 vi.mock("next/server", () => ({ after: (fn: () => Promise<void>) => void fn() }));
 
-import { adoptDfcBodiesPlan, dfcAdoptionOffer, parseDfcAdoptionLayout, type DfcAdoptionCard } from "@/lib/cards/dfc-adopt";
+import { adoptDfcBodiesPlan, dfcAdoptionOffer, dfcAdoptionShape, parseDfcAdoptionLayout, type DfcAdoptionCard } from "@/lib/cards/dfc-adopt";
 import type { ColorIdentity } from "@/types/card";
 import { adoptDfcBodiesAction } from "@/lib/cards/dfc-adopt-actions";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -52,34 +55,47 @@ const rows = (legacy as unknown as { rows: LegacyRow[] }).rows;
 const cardOf = (row: LegacyRow): DfcAdoptionCard & { back_face: LegacyRow["back_face"] } => ({ ...row.front, back_face: row.back_face });
 
 describe("dfcAdoptionOffer — who gets the hint", () => {
-  it("offers exactly the five wave-1 rows of production's nine, with the layout defaulted from the back's cost", () => {
+  it("offers exactly the FOUR wave-1 rows of production's nine today — the layout the back's SHAPE derives, so Vader's costed back (a modal card) waits for the modal bodies", () => {
     const offered = rows.map((row) => ({ label: row.label, offer: dfcAdoptionOffer(cardOf(row)) }));
     expect(offered.filter((r) => r.offer).map((r) => r.label.split("//")[1]?.trim().split(" (")[0])).toEqual([
       "Avacyn, the Purifier",
-      "Tergrid's Lantern",
       "Avacyn, the Purifier",
       "Temple of Civilization",
       "Aang, Master of Elements",
     ]);
     const refused = offered.filter((r) => !r.offer).map((r) => r.label);
-    expect(refused).toHaveLength(4);
+    expect(refused).toHaveLength(5);
     expect(refused.join("\n")).toMatch(/Tibalt/); // a walker back
     expect(refused.join("\n")).toMatch(/NOT a DFC/); // the adventure row
     expect(refused.filter((label) => /m15borderless/.test(label))).toHaveLength(2);
-    // The defaults: a modal back carries a cost, a transform back never does.
-    expect(offered[1].offer?.defaultLayout).toBe("modal");
-    expect(offered[0].offer?.defaultLayout).toBe("transform");
+    // Vader (owner 2026-10-05): a back WITH a mana cost is a modal card, so
+    // its shape derives the MODAL layout — whose bodies don't exist yet —
+    // and nothing is offered: a move onto Transform would have dropped the
+    // Lantern's cost. The shape is still read (the action's message).
+    expect(refused.filter((label) => /modal: black legendary creature \/\/ Tergrid's Lantern/.test(label))).toHaveLength(1);
+    expect(dfcAdoptionShape(cardOf(rows[1]))).toBe("modal");
+    expect(dfcAdoptionShape(cardOf(rows[0]))).toBe("transform");
+    // A row that is no candidate at all has no shape either.
+    expect(dfcAdoptionShape(cardOf(rows[3]))).toBeNull();
+    expect(dfcAdoptionShape(cardOf(rows[6]))).toBeNull();
     // The devoid front leaves its dress behind (no devoid DFC twin).
     expect(offered[0].offer?.losesDress).toBe("devoid");
     expect(offered[2].offer?.losesDress).toBeNull();
   });
 
-  it("the transform bodies are available; the modal pair is offered dark until 5.1b", () => {
-    const offer = dfcAdoptionOffer(cardOf(rows[1]))!;
-    expect(offer.layouts).toEqual([
-      { layout: "transform", label: "Transform", available: true, frontBody: "m15dfcfront", backBody: "m15dfcback" },
-      { layout: "modal", label: "Modal double-faced", available: false, frontBody: null, backBody: null },
-    ]);
+  it("the offer is ONE layout — the shape's — with both bodies; a modal-shaped back has none until 5.1b", () => {
+    expect(dfcAdoptionOffer(cardOf(rows[2]))).toEqual({
+      layout: "transform",
+      label: "Transform",
+      frontBody: "m15dfcfront",
+      backBody: "m15dfcback",
+      losesDress: null,
+    });
+    expect(dfcAdoptionOffer(cardOf(rows[1]))).toBeNull();
+    // The same back with its cost blanked is a transform card again.
+    const costless = { ...cardOf(rows[1]), back_face: { ...rows[1].back_face, cost: "" } };
+    expect(dfcAdoptionShape(costless)).toBe("transform");
+    expect(dfcAdoptionOffer(costless)?.backBody).toBe("m15dfcback");
   });
 
   it("never offers a card on a DFC body, one with a back body already, one with no back, or a template outside the M15 family", () => {
@@ -119,11 +135,12 @@ describe("adoptDfcBodiesPlan — what the move writes", () => {
     expect(adoptDfcBodiesPlan(cardOf(rows[5]), "transform")?.backBody).toBe("m15dfclandback");
     expect(adoptDfcBodiesPlan(cardOf(rows[5]), "transform")?.back_face.color_identity).toEqual(["colorless"]);
     expect(adoptDfcBodiesPlan(cardOf(rows[7]), "transform")?.back_face.color_identity).toEqual(rows[7].front.color_identity);
-    // Vader onto transform (the owner's pick over the dark modal default)
-    // drops the Lantern's cost.
-    const vader = adoptDfcBodiesPlan(cardOf(rows[1]), "transform")!;
-    expect(vader.back_face).not.toHaveProperty("cost");
+    // Vader (owner 2026-10-05): a costed back is a modal card — NO transform
+    // plan (it would drop the Lantern's cost) and no modal plan until the
+    // bodies exist. Erza's cost-less back is a transform card: never modal.
+    expect(adoptDfcBodiesPlan(cardOf(rows[1]), "transform")).toBeNull();
     expect(adoptDfcBodiesPlan(cardOf(rows[1]), "modal")).toBeNull();
+    expect(adoptDfcBodiesPlan(cardOf(rows[2]), "modal")).toBeNull();
     // A row that isn't offered has no plan.
     expect(adoptDfcBodiesPlan(cardOf(rows[3]), "transform")).toBeNull();
   });
@@ -197,12 +214,27 @@ describe("adoptDfcBodiesAction", () => {
     expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);
   });
 
-  it("refuses a card that isn't offered, a layout whose bodies don't exist, a bad layout, a card that isn't the caller's", async () => {
+  it("refuses a modal-shaped back's 'transform' — and its 'mdfc' until the modal bodies exist (owner 2026-10-05)", async () => {
+    state.verified = [frameComboKey("m15dfcfront", "b"), frameComboKey("m15dfcback", "b")];
+    state.existing = { id: CARD, owner_id: USER, slug: "vader", visibility: "public", ...cardOf(rows[1]) };
+    const stub = db();
+    const notYet = { ok: false, formError: "The Modal double-faced frames aren't built yet." };
+    expect(await adoptDfcBodiesAction(CARD, "transform")).toEqual(notYet);
+    expect(await adoptDfcBodiesAction(CARD, "modal")).toEqual(notYet);
+    expect(await adoptDfcBodiesAction(CARD, "mdfc")).toEqual(notYet);
+    expect(written(stub)).toBeUndefined();
+    expect(state.baked).toEqual([]);
+  });
+
+  it("refuses a card that isn't offered, the layout the back's shape rules out, a bad layout, a card that isn't the caller's", async () => {
     const stub = db();
     state.existing = { ...erza(), frame_style: { template: "m15borderless" } };
     expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);
     state.existing = erza();
-    expect(await adoptDfcBodiesAction(CARD, "modal")).toEqual({ ok: false, formError: "The Modal double-faced frames aren't available yet." });
+    expect(await adoptDfcBodiesAction(CARD, "modal")).toEqual({
+      ok: false,
+      formError: "This card moves onto the Transform frames only — its back has no mana cost.",
+    });
     expect((await adoptDfcBodiesAction(CARD, "flip")).ok).toBe(false);
     state.existing = { ...erza(), owner_id: "99999999-9999-4999-8999-999999999999" };
     expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);

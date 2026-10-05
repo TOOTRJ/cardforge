@@ -16,10 +16,13 @@
 // The face is intrinsic to the kind: "Clear" empties the content and never
 // removes the face (the orchestrator forces has_back_face on). Focusing
 // anything in here flips the live preview to the back (onFocus). In REVISE
-// mode the back's type is locked (it decides the body, structure like the
-// front's) and the transform family chips move here from the absent Card
-// step: a family change is an edit's `frame_anatomy.dfcIcon`, which the
-// server re-derives the back body from.
+// mode the back's type AND colour are locked (the type decides the body,
+// the colour its master — structure like the front's; owner 2026-10-05:
+// the gate refuses a changed colour, lib/cards/dfc-gate.ts
+// DFC_BACK_COLOR_SET) and the transform family chips move here from the
+// absent Card step: a family change is an edit's `frame_anatomy.dfcIcon` —
+// the ONE look change an edit may make — which the server re-derives the
+// back body from.
 
 import { Controller, useController, useFormContext, useWatch } from "react-hook-form";
 import { Lock } from "lucide-react";
@@ -160,11 +163,23 @@ export function DfcFacePanel({
       ) : null}
 
       {/* The back's TYPE: the body follows it (a land back wears the land
-          back). Locked in revise mode, like the front's type line. */}
+          back). Locked in revise mode, like the front's type line — and
+          the back's COLOUR with it (owner 2026-10-05: a colour change would
+          move the back onto another master; the gate refuses one). */}
       {revise ? (
-        <div className="flex items-center gap-2 text-xs text-muted" data-testid="dfc-back-type-locked">
-          <Lock className="h-3.5 w-3.5" aria-hidden />
-          Back face type: <span className="font-medium text-foreground">{typeLabel}</span>
+        <div className="flex flex-col gap-1.5 text-xs text-muted" data-testid="dfc-back-locked">
+          <div className="flex items-center gap-2" data-testid="dfc-back-type-locked">
+            <Lock className="h-3.5 w-3.5" aria-hidden />
+            Back face type: <span className="font-medium text-foreground">{typeLabel}</span>
+          </div>
+          <div className="flex items-center gap-2" data-testid="dfc-back-color-locked">
+            <Lock className="h-3.5 w-3.5" aria-hidden />
+            Back face color: <span className="font-medium text-foreground">{colorSummaryOf(colour)}</span>
+          </div>
+          <p className="text-[11px] leading-5">
+            The back&apos;s type and colour are set when the card is created, like the
+            front&apos;s — to change them, forge a new card.
+          </p>
         </div>
       ) : (
         <FieldGroup label="Back face type" error={backFaceErrorMessage(errors, "card_type")}>
@@ -202,8 +217,9 @@ export function DfcFacePanel({
         <DfcIconFamilySection family={family} onChange={onFamilyChange} testId="dfc-icon-family-revise" />
       ) : null}
 
-      {/* The back's COLOUR: its own body's verified keys. */}
-      {backBody ? (
+      {/* The back's COLOUR: its own body's verified keys — on a new card;
+          a saved card shows it read-only above. */}
+      {!revise && backBody ? (
         <Controller
           control={control}
           name="back_face.color_identity"

@@ -2261,9 +2261,16 @@ change, no bump, no sweep.
   `backPreviewData` — the admin walk of a back body now shows the body
   (5.0b's limitation lifted: the walk sets the family that derives the body
   under test, `dfcIconFamilyForBackBody`, and the back's colour). In REVISE
-  mode the back's type is locked (it decides the body) and the family chips
-  move into the panel (the Card step is absent); the back's colour stays
-  editable, gated like a changed colour.
+  mode the back's type AND colour are locked, as the front's (owner
+  2026-10-05: a colour change moves the back onto another master, which is
+  what the lock exists for) — the panel shows both read-only with the
+  lock's copy ("set when the card is created, like the front's"), the form
+  resends them as stored, and the gate refuses a changed
+  `back_face.color_identity` on a card whose back has a body
+  (`DFC_BACK_COLOR_SET`; structure, not verification, so no admin preview
+  skips it) and keeps the stored colour when a patch names none; the
+  family chips move into the panel (the Card step is absent) — the family
+  stays the ONE look change an edit may make to the back.
 - **The gate** (`lib/cards/dfc-gate.ts` `resolveDfcBackFace` — ONE rule for
   `createCardAction`, `updateCardAction` and the move; the client's
   `form-schema.ts` mirrors what it can judge without the verified keys):
@@ -2275,8 +2282,12 @@ change, no bump, no sweep.
   `frame_anatomy.dfcIcon` (`frameAnatomyPatchFor` carries it) and refused
   when that body isn't verified in the back's colour; the colour (the
   back's own, else the front's — stored explicitly) is verified for the
-  body (`frameGateError`; an update re-checks only a changed body or
-  colour, the front's legacy-pin rule), `c` only with an Artifact word —
+  body (`frameGateError`; an update re-checks only a changed body, the
+  front's legacy-pin rule) and on an update of a card whose back has a
+  body the STORED colour wins like the body does (owner 2026-10-05: a patch
+  naming another is refused, verified or not and under the preview skip —
+  `DFC_BACK_COLOR_SET`; a legacy back, a half-moved row and a create take
+  the colour as sent), `c` only with an Artifact word —
   and the FRONT's `c` too (`dfcFrontColorError`, the same D2 rule: the
   Card step's Colorless chip is dark with the reason on a DFC front unless
   the type line says Artifact, and a card landing on a DFC front colourless
@@ -2318,14 +2329,23 @@ change, no bump, no sweep.
   nor the adventure stored as a back face (a costed instant / sorcery back
   under a permanent — the storybook page, not a face; the same shape as
   STX's creature // sorcery modal cards, which no imported row has: 5.1b
-  can tell them apart by the printing). 5 of the 8 qualify: Titânia (on
-  devoid), Erza Scarlet, Avatar Aang (a colourless back: the move gives it
-  the front's five colours, editable after), Tobirama (a land back — moved
-  colourless, the one key the land back is verified in), Darth Vader
-  (modal, offered dark until 5.1b — a move onto Transform drops the
-  Lantern's cost, and says so). `adoptDfcBodiesAction(cardId, "transform" |
-  "mdfc")`: front → its DFC twin, the family stamped, the switches the body
-  can't draw dropped, the back onto its body in the front's colour —
+  can tell them apart by the printing). The layout is the one the back's
+  SHAPE derives, never a chip (owner 2026-10-05): a back WITH a mana cost
+  is a modal card, and a layout whose bodies don't exist yet shows NO hint
+  at all (`dfcAdoptionShape` still names it, `dfcAdoptionOffer` answers
+  null) — a costed back is never offered Transform, which would drop its
+  cost and change the card's rules. So 4 of the 8 qualify today: Titânia
+  (on devoid), Erza Scarlet, Avatar Aang (a colourless back: the move gives
+  it the front's five colours — locked after, like every stored back's),
+  Tobirama (a land back — moved colourless, the one key the land back is
+  verified in); Darth Vader's costed Lantern back the day the modal pair
+  exists (5.1b; `tests/unit/cards/dfc-adopt-modal.test.ts` holds that day
+  with the mocked-profile fixture). `adoptDfcBodiesAction(cardId,
+  "transform" | "mdfc")` refuses the other layout by name ("moves onto the
+  Transform frames only") and a shape whose bodies aren't built ("aren't
+  built yet" — the `mdfc` option until 5.1b): front → its DFC twin, the
+  family stamped, the switches the body can't draw dropped, the back onto
+  its body in the front's colour —
   colourless on the LAND back (`adoptedBackColorIdentity`: the land pair
   has one master under every key and is verified on `c` alone, so a land
   back in the front's white could never pass the gate; the hint judges the
@@ -2343,9 +2363,15 @@ change, no bump, no sweep.
 - **Proofs.** `tests/unit/cards/dfc-gate.test.ts` (the gate on the real
   bodies), `dfc-editor-save.test.ts` (the actions with a mocked
   `frame_reviews`: the family stamp, both-arts rule, stored body wins, the
-  family re-derive, the strip-off, the preview skip), `dfc-adopt.test.ts`
-  (the nine production shapes: exactly five offered; the plan; the action's
-  gates), `tests/unit/creator/dfc-kinds.test.ts` (the chips with a mocked
+  family re-derive, the strip-off, the preview skip, the colour lock),
+  `dfc-adopt.test.ts` (the nine production shapes: exactly four offered
+  today, the shape's layout only; the plan; the action's gates) +
+  `dfc-adopt-modal.test.ts` (Vader the fifth once `bodyFor` answers the
+  modal rows), `dfc-editor-hostile.test.ts` (the skeptic's crafted
+  payloads + the colour lock: refused verified or not, no preview
+  override, the stored colour kept when none is named, free on a legacy
+  back / a half-moved row / a create),
+  `tests/unit/creator/dfc-kinds.test.ts` (the chips with a mocked
   verified set, the forced face, the hydrated colour, the family patch, the
   form schema), `tests/unit/components/creator-dfc-editor.test.tsx` (the
   real form: the chips, the rows, the panel, the flip on focus, the payload,
@@ -2363,7 +2389,7 @@ change, no bump, no sweep.
   back face — `templatePaintsSecondFace` says a DFC body paints none — so
   the gate refuses that step with "A double-faced card needs its back
   face" until 5.4 hands the back through); the `back_card_id` cleanup
-  migration.
+  migration (5.0c — after 5.4, owner 2026-10-05).
 
 ### Both faces baked (5.3)
 

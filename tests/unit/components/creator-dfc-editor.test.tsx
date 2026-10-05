@@ -358,11 +358,18 @@ describe("a new transform card", () => {
 });
 
 describe("editing a stored transform card", () => {
-  it("locks the back's type, shows the family chips in the panel, and sends a family change as frame_anatomy.dfcIcon", async () => {
+  it("locks the back's type AND colour (owner 2026-10-05) with the lock's copy, shows the family chips in the panel, and sends a family change as frame_anatomy.dfcIcon with the stored colour", async () => {
     actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "delver-of-secrets" });
     renderForm({ mode: "edit", card: savedCard() });
     expect(screen.getByTestId("dfc-back-type-locked").textContent).toMatch(/Creature/);
     expect(screen.queryByRole("radiogroup", { name: "Back face type" })).toBeNull();
+    // The colour is read-only too: no chips, the stored colour named, and
+    // the lock's copy (a colour change would move the back onto another
+    // master — what the lock exists for).
+    expect(screen.getByTestId("dfc-back-color-locked").textContent).toMatch(/Blue/);
+    expect(screen.queryByRole("radiogroup", { name: "Back face color" })).toBeNull();
+    expect(screen.queryByTestId("dfc-back-color")).toBeNull();
+    expect(screen.getByTestId("dfc-face-panel").textContent).toMatch(/set when the card is created, like the front's/);
     expect(screen.getByTestId("dfc-icon-family-revise")).toBeTruthy();
     expect(screen.getByTestId("locked-summary").textContent).toMatch(/Creature — Human Wizard · Transform/);
     await clickChip("Transform icon family", /Sun \/ moon/);
@@ -375,6 +382,15 @@ describe("editing a stored transform card", () => {
     expect(payload.frame_anatomy).toEqual({ dfcIcon: "sunmoon" });
     expect(payload).not.toHaveProperty("frame_style");
     expect(payload.back_face).toMatchObject({ frame_style: { template: "m15dfcbackleft" }, color_identity: ["blue"] });
+  });
+
+  it("a remix locks the back's type and colour the same way (kept from the original)", () => {
+    renderForm({ mode: "remix", card: savedCard({ back_face: { ...(savedCard().back_face as object), color_identity: ["green"] } }) });
+    expect(screen.getByTestId("dfc-back-type-locked").textContent).toMatch(/Creature/);
+    expect(screen.getByTestId("dfc-back-color-locked").textContent).toMatch(/Green/);
+    expect(screen.queryByRole("radiogroup", { name: "Back face color" })).toBeNull();
+    // The preview's back keeps the stored colour.
+    expect(preview().backFace).toMatchObject({ color_identity: ["green"] });
   });
 });
 
@@ -399,8 +415,10 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     const button = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     expect(button.textContent).toMatch(/Move onto the transform frames/);
-    // The modal pair is offered dark (5.1b).
-    expect(chipIn("Double-faced layout", /Modal double-faced/).disabled).toBe(true);
+    // ONE layout — the one the back's shape derives (no cost: transform);
+    // no chip row to pick another (owner 2026-10-05).
+    expect(screen.queryByRole("radiogroup", { name: "Double-faced layout" })).toBeNull();
+    expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/the front gets the transform front/);
     await act(async () => {
       fireEvent.click(button);
     });
@@ -440,5 +458,27 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     cleanup();
     renderForm({ mode: "edit", card: savedCard({ frame_style: { template: "m15" }, back_face: { title: "Tibalt", card_type: "planeswalker", loyalty: "5" } }) });
     expect(screen.queryByTestId("dfc-adopt-hint")).toBeNull();
+  });
+
+  it("a legacy back WITH a mana cost is a modal card: no hint at all until the modal bodies exist (owner 2026-10-05), every transform combo verified or not", () => {
+    renderForm({
+      mode: "edit",
+      card: savedCard({
+        color_identity: ["black"],
+        cost: "{2}{B}",
+        frame_style: { finish: "regular", template: "m15" },
+        back_face: {
+          title: "Tergrid's Lantern",
+          card_type: "artifact",
+          cost: "{3}{B}",
+          rules_text: "{T}: Target player loses 3 life unless they sacrifice a nonland permanent or discard a card.",
+        },
+      }),
+      verifiedFrameKeys: [...TRANSFORM_VERIFIED, frameComboKey("m15dfcfront", "b"), frameComboKey("m15dfcback", "b")],
+    });
+    expect(screen.queryByTestId("dfc-adopt-hint")).toBeNull();
+    expect(screen.queryByTestId("dfc-adopt-move")).toBeNull();
+    // Still a legacy back: no back-face panel either.
+    expect(screen.queryByTestId("dfc-face-panel")).toBeNull();
   });
 });

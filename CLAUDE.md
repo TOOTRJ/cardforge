@@ -214,16 +214,20 @@ Rules and gotchas:
   of the front AND the default back is ticked (after 5.3). A back face's
   body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
-  — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`
-  — verified per colour, `c` only with an Artifact word, a transform back
-  with no cost; a public DFC needs both arts), and the FRONT its own
+  — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`,
+  and so does the stored COLOUR (owner 2026-10-05: locked like the front's;
+  a changed `back_face.color_identity` is refused, `DFC_BACK_COLOR_SET`, no
+  preview skip) — verified per colour, `c` only with an Artifact word, a
+  transform back with no cost; a public DFC needs both arts), and the FRONT its own
   (`dfcFrontTypeError`: a wave-1 face type on the body its type derives —
   the kind gate can't see it, a card on a front body IS the kind —
   `dfcFrontColorError`: `c` only with an Artifact word); the retired
-  `back_card_id` is accepted only to CLEAR; the 8 imported DFCs move onto
-  the bodies only by their owner's click (`adoptDfcBodiesAction`,
-  `lib/cards/dfc-adopt.ts`; a land back goes colourless — the land pair
-  is verified on `c` alone).
+  `back_card_id` is accepted only to CLEAR (its removal is 5.0c, after
+  5.4); the 8 imported DFCs move onto the bodies only by their owner's
+  click (`adoptDfcBodiesAction`, `lib/cards/dfc-adopt.ts`; onto the ONE
+  layout the back's shape derives — a costed back is a modal card, offered
+  nothing until the modal bodies exist and never Transform; a land back
+  goes colourless — the land pair is verified on `c` alone).
   A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
   PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
   through `renderBackFace` in both bake paths, the four pointers in ONE

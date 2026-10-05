@@ -60,6 +60,7 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   DFC_BACK_BODY_MISMATCH,
   DFC_BACK_BODY_SET,
+  DFC_BACK_COLOR_SET,
   DFC_BACK_TYPE_REFUSED,
   DFC_COLORLESS_FRONT_NEEDS_ARTIFACT,
   DFC_COLORLESS_NEEDS_ARTIFACT,
@@ -286,16 +287,19 @@ describe("updateCardAction on a stored transform card", () => {
     expect(written(stub, "update")!.back_face).toEqual({ ...BACK, rules_text: "Flying\nTrample", frame_style: { template: "m15dfcback" }, color_identity: ["blue"] });
   });
 
-  it("a changed back colour is verified for the body; the same colour is not re-checked", async () => {
+  it("a changed back colour is REFUSED on a stored card — the lock (owner 2026-10-05), verified or not; the stored colour resent saves", async () => {
     state.existing = stored();
     const green = db();
-    expect((await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["green"] } })).ok).toBe(true);
-    expect((written(green, "update")!.back_face as { color_identity: unknown }).color_identity).toEqual(["green"]);
+    const refused = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["green"] } });
+    expect(refused.ok ? null : refused.fieldErrors).toEqual({ "back_face.color_identity": DFC_BACK_COLOR_SET });
+    expect(written(green, "update")).toBeUndefined();
     const red = db();
-    const refused = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["red"] } });
-    expect(refused.ok).toBe(false);
-    expect(refused.ok ? null : refused.fieldErrors?.["back_face.color_identity"]).toMatch(/isn't available in red yet/);
+    const refused2 = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["red"] } });
+    expect(refused2.ok ? null : refused2.fieldErrors).toEqual({ "back_face.color_identity": DFC_BACK_COLOR_SET });
     expect(written(red, "update")).toBeUndefined();
+    const same = db();
+    expect((await updateCardAction(CARD, { back_face: { ...BACK, rules_text: "Flying", color_identity: ["blue"] } })).ok).toBe(true);
+    expect((written(same, "update")!.back_face as { color_identity: unknown }).color_identity).toEqual(["blue"]);
   });
 
   it("a frame_anatomy family change re-derives the back body — verified in the back's colour, or refused", async () => {
