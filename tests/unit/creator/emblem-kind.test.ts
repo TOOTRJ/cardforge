@@ -51,9 +51,11 @@ describe("the emblem kind", () => {
 
   it("is not a chip of the kind picker: the Token chip stands for it", () => {
     expect(KIND_PICKER_KINDS).not.toContain("emblem");
-    // …nor the transform kind until its editor (TODO 5.2).
-    expect(KIND_PICKER_KINDS).not.toContain("transform");
-    expect(KIND_PICKER_KINDS).toEqual(CARD_KIND_VALUES.filter((k) => k !== "emblem" && k !== "transform"));
+    // The two double-faced kinds ARE chips since their editor (TODO 5.2) —
+    // dark until their bodies are verified.
+    expect(KIND_PICKER_KINDS).toContain("transform");
+    expect(KIND_PICKER_KINDS).toContain("mdfc");
+    expect(KIND_PICKER_KINDS).toEqual(CARD_KIND_VALUES.filter((k) => k !== "emblem"));
     expect(kindPickerChip("emblem")).toBe("token");
     expect(kindPickerChip("token")).toBe("token");
     expect(kindPickerChip("creature")).toBe("creature");

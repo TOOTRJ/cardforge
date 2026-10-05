@@ -140,7 +140,7 @@ describe("the `dfcIcon` key (lib/cards/anatomy.ts)", () => {
     expect(normalizeAnatomy({ ...style, template: "m15snow", collector: "2023" }, "m15snow", "creature")).toEqual({ template: "m15snow", collector: "2023", finish: "regular" });
   });
 
-  it("is on only when it names a family; a new card gets no default from the template (the kind's default is 5.2's)", () => {
+  it("is on only when it names a family; a new card on a transform FRONT gets the kind's default (`arrows`, 5.2) and nowhere else", () => {
     expect(anatomyOn({ dfcIcon: "arrows" }, "dfcIcon")).toBe(true);
     expect(anatomyOn({ dfcIcon: "fan" }, "dfcIcon")).toBe(true);
     expect(anatomyOn({}, "dfcIcon")).toBe(false);
@@ -148,8 +148,13 @@ describe("the `dfcIcon` key (lib/cards/anatomy.ts)", () => {
     expect(anatomyOn({ dfcIcon: "spark" as never }, "dfcIcon")).toBe(false);
     expect(anatomyOn({ dfcIcon: true as never }, "dfcIcon")).toBe(false);
     expect("dfcIcon" in NEW_CARD_ANATOMY).toBe(false);
-    expect(anatomyDefaults("m15")).not.toHaveProperty("dfcIcon");
-    expect(newCardFrameStyle({ template: "m15" }, "creature")).not.toHaveProperty("dfcIcon");
+    // The declared transform FRONT (m15 here) stamps the default family; a
+    // back body and a modal front do not.
+    expect(anatomyDefaults("m15").dfcIcon).toBe("arrows");
+    expect((newCardFrameStyle({ template: "m15" }, "creature") as { dfcIcon?: string }).dfcIcon).toBe("arrows");
+    expect(anatomyDefaults("m15artifact")).not.toHaveProperty("dfcIcon");
+    expect(anatomyDefaults("m15snow")).not.toHaveProperty("dfcIcon");
+    expect(newCardFrameStyle({ template: "m15snow" }, "creature")).not.toHaveProperty("dfcIcon");
     // An explicit family on a transform front survives the new-card stamp.
     expect(newCardFrameStyle({ template: "m15", dfcIcon: "compass" }, "creature").dfcIcon).toBe("compass");
   });

@@ -98,6 +98,7 @@ import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
+import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
@@ -110,6 +111,8 @@ import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
+import { DfcFacePanel } from "@/components/creator/panels/dfc-face-panel";
+import { DfcAdoptHint } from "@/components/creator/panels/dfc-adopt-hint";
 import {
   PublishPanel,
   type DeckOption,
@@ -168,7 +171,6 @@ import {
 } from "@/lib/cards/face-content";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { missingSecondFaceName } from "@/lib/cards/second-face-name";
-import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
@@ -189,11 +191,26 @@ import {
   textBoxFrameFor,
   typeWordFrameFor,
   KIND_DEFS,
+  dfcFrontBodyFor,
+  dfcLayoutForKind,
+  framesForKind,
   type CardKind,
   type FrameColorKey,
   type KindChangePatch,
   type KindChangePlan,
 } from "@/lib/creator/card-kinds";
+import {
+  DEFAULT_DFC_ICON,
+  bodyFor,
+  colorlessFaceAllowed,
+  dfcIconFamilyForBackBody,
+  isDfcBackBody,
+  templateHasBackFace,
+  withTransformBackShape,
+  type DfcIconFamily,
+} from "@/lib/cards/dfc";
+import { dfcIconOf } from "@/lib/cards/faces";
+import { dfcAdoptionOffer } from "@/lib/cards/dfc-adopt";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
 import {
   EMBLEM_ENTRY_VALUES,
@@ -302,14 +319,6 @@ type CardCreatorFormProps = {
   /** Pro entitlement for deck-aware AI generation (the AI dialog's "For a
    *  deck" picker renders locked without it). */
   canDesignForDeck?: boolean;
-  /** The current user's cards — the Publish "back face" picker. Excludes the
-   *  card being edited (filtered by the page). */
-  myCards?: Card[];
-  /** The front card id + slug when building a NEW card to be its back face
-   *  (/create?backFor=…) — on save, the new card links back and we return to
-   *  the front card's edit page. */
-  backForCardId?: string | null;
-  backForSlug?: string | null;
   /** Set when remixing a deck entry (/create?deckCard=…): the form pre-fills
    *  from the entry's Scryfall card on mount, and on save the new card links
    *  back as the entry's proxy before returning to the deck. */
@@ -412,6 +421,11 @@ function sameFormState(a: unknown, b: unknown): boolean {
   );
 }
 
+/** The card types' labels, for a toast. */
+const CARD_TYPE_LABEL: Partial<Record<string, string>> = Object.fromEntries(
+  CARD_TYPE_OPTIONS.map((option) => [option.value, option.label.toLowerCase()]),
+);
+
 /** "a, b and c" — the Save hint's list of what's missing. */
 function listPhrase(parts: readonly string[]): string {
   return parts.length <= 1
@@ -470,9 +484,6 @@ export function CardCreatorForm({
   myDecks = null,
   aiDecks = null,
   canDesignForDeck = false,
-  myCards = [],
-  backForCardId = null,
-  backForSlug = null,
   deckRemix = null,
   aiConfigured,
   pipOverrides = {},
@@ -755,6 +766,16 @@ export function CardCreatorForm({
   // The kind ("what am I making") is DERIVED from card_type + template — never
   // stored — so drafts, edits, and legacy rows land on the right kind for free.
   const kind = kindFromCard(watched.card_type, watched.frame_style?.template);
+  // A double-faced card (TODO 5.2): its layout, the family it wears
+  // (frame_style.dfcIcon, else `arrows`) and the BACK body the back's type
+  // and that family derive — never form state, derived here for the live
+  // preview and at submit, re-derived by the server at every save
+  // (lib/cards/dfc-gate.ts). Null on every other kind.
+  const dfcLayout = templateHasBackFace(watched.frame_style?.template) ? dfcLayoutForKind(kind) : null;
+  const dfcFamily: DfcIconFamily = dfcIconOf({ frameStyle: watched.frame_style });
+  const dfcBackBody = dfcLayout
+    ? bodyFor(dfcLayout, "back", watched.back_face.card_type || null, dfcFamily)
+    : null;
   // The visible steps + their order depend on the kind/frame context
   // (lib/creator/steps.ts). `current` is clamped so it stays valid when the
   // list shrinks (e.g. switching to a token frame hides the Pips step).
@@ -802,13 +823,18 @@ export function CardCreatorForm({
       watched.back_face,
       savesAsDraft ? "private" : watched.visibility,
     );
+  // A double-faced card's back needs its artwork to publish too (TODO 5.2,
+  // design D13: the "no artwork → no gallery" rule on both faces).
   const saveMissing = [
     !watched.title.trim() ? "a title" : null,
     !savesAsDraft && !watched.art_url.trim() ? "artwork" : null,
+    !savesAsDraft && dfcLayout && !watched.back_face.art_url.trim() ? "the back face's artwork" : null,
     secondFaceNameMissing
       ? isAdventureFrame
         ? "the adventure's name"
-        : "the second face's name"
+        : dfcLayout
+          ? "the back face's name"
+          : "the second face's name"
       : null,
   ].filter((part): part is string => part !== null);
   // Edit / remix: at least one field must change (owner decision
@@ -1363,27 +1389,35 @@ export function CardCreatorForm({
     // Rows fold into rules_text on the way out and seed from it on the way
     // in — before anything else touches the text.
     carryStructuredRows(prevKind, nextKind);
-    // Leaving a frame with an intrinsic second face (Adventure/split/flip):
-    // that face was forced on for the frame, so drop it with the frame —
-    // otherwise an invisible, unfixable back_face.title error followed the
-    // card around.
-    if (hasInlineBackFace(prevTemplate) && !hasInlineBackFace(template)) {
+    // Leaving a frame with an intrinsic second face (Adventure/split/flip)
+    // or a double-faced front body (TODO 5.2): that face was forced on for
+    // the frame, so drop it with the frame — otherwise an invisible,
+    // unfixable back_face.title error followed the card around.
+    const prevOwnsBack = hasInlineBackFace(prevTemplate) || templateHasBackFace(prevTemplate);
+    const nextOwnsBack = hasInlineBackFace(template) || templateHasBackFace(template);
+    if (prevOwnsBack && !nextOwnsBack) {
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
-    } else if (
-      hasInlineBackFace(template) &&
-      isBlankBackFace(getValues("back_face"))
-    ) {
+    } else if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
       // Entering (or moving between) frames that paint a second face: an
       // untouched one takes the new kind's type — a split's second half
-      // used to start, and save, as a Creature (TODO 3b.8).
+      // used to start, and save, as a Creature (TODO 3b.8). A double-faced
+      // kind's back starts as a creature in the front's colour.
       setValue("back_face", blankSecondFaceFor(nextKind), { shouldDirty: true });
     }
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", template, { shouldDirty: true });
-    if (patch.has_back_face) {
+    if (patch.has_back_face || templateHasBackFace(template)) {
       setValue("has_back_face", true, { shouldDirty: true });
     }
+    // A NEW transform card starts on today's look (owner decision Q5): the
+    // arrows, the back's icon at the right — the pairs one chip away. The
+    // key is dropped by the save on any other template.
+    if (dfcLayoutForKind(nextKind) === "transform" && !getValues("frame_style.dfcIcon")) {
+      setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
+    }
+    // …and never colourless without an Artifact word (design D2).
+    if (dfcLayoutForKind(nextKind)) leaveColourlessDfcFront(template, patch.card_type);
     // The default watermark follows the type (owner decision 2026-09-17):
     // a free account's creature/spell always carries the PipGlyph Rose, and
     // leaving those types drops the forced Rose (it was never a choice).
@@ -1470,6 +1504,60 @@ export function CardCreatorForm({
       setPendingKindPlan(plan);
     }
   };
+  /** A double-faced FRONT may be colourless only with "Artifact" on its
+   *  type line (design D2: the body's `c` is the artifact stand-in). A card
+   *  that lands on a DFC front body colourless without the word — a new
+   *  card picking Transform, a creature picked for the front — moves to the
+   *  first colour the body is verified in and says so; none verified: the
+   *  colour stays and the chips say why. */
+  const leaveColourlessDfcFront = (template: FrameTemplate, cardType: CardType | "" | null | undefined) => {
+    const colour = getValues("color_identity");
+    if (pickFrameColorKey(colour) !== "c") return;
+    const dfcKind = kindFromCard(cardType, template);
+    if (!dfcLayoutForKind(dfcKind)) return;
+    if (colorlessFaceAllowed(template, { cardType, supertype: getValues("supertype") })) return;
+    const verified = framesForKind(dfcKind, verifiedFrameSet).find((choice) => choice.template === template);
+    const key = verified?.availableColorKeys.find((k) => k !== "c");
+    if (!key) return;
+    setValue("color_identity", [colorIdentityForKey(key)], { shouldDirty: true });
+    toast.info(
+      `A double-faced ${CARD_TYPE_LABEL[cardType || "creature"] ?? "card"} can't be colourless — switched the colour to ${colorWord(key)}.`,
+    );
+  };
+  /** A double-faced card's FRONT face type (TODO 5.2, the Card step's
+   *  face-type row): the type is written and the card moves onto the body
+   *  for it — the land front for a land, the spell front for the rest — in
+   *  the current colour where that body is verified, else in a colour it
+   *  is (and says so), as a frame tile does; a body verified nowhere keeps
+   *  the card where it is. */
+  const handleDfcFaceTypePick = (next: CardType) => {
+    if (next === watched.card_type) return;
+    const body = dfcFrontBodyFor(kind, next);
+    if (!body) return;
+    const currentColorKey = pickFrameColorKey(getValues("color_identity")) as FrameColorKey;
+    const resolution = resolvePublishedFrame({
+      kind,
+      candidates: [body],
+      colorKey: currentColorKey,
+      verifiedKeys: new Set(verifiedFrameKeys),
+      prefer: "frame",
+    });
+    if (resolution.status === "unavailable") {
+      toast.info(`${describeFrame(body)} isn't verified yet — keeping the current face type.`);
+      return;
+    }
+    setFrameSubstitution(null);
+    setValue("card_type", next, { shouldDirty: true });
+    setValue("frame_style.template", resolution.template, { shouldDirty: true });
+    clearErrors("frame_style");
+    if (resolution.status === "colour-switched") {
+      setValue("color_identity", [colorIdentityForKey(resolution.colorKey)], { shouldDirty: true });
+      toast.info(
+        `${describeFrame(body)} isn't verified in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
+      );
+    }
+    leaveColourlessDfcFront(resolution.template, next);
+  };
   /** True when the card's current frame draws the two-colour frame (TODO
    *  4.6b): only there does a two-colour AI or idea identity stay a pair. */
   const drawsTwoColorFrame = () =>
@@ -1530,13 +1618,14 @@ export function CardCreatorForm({
 
   // Frames with an intrinsic second face (Adventure's storybook page, the
   // flip/split/aftermath halves) always PAINT that face — leaving the editor
-  // disabled saved cards with a blank painted half. Force it on whenever such
-  // a frame is active; the LayoutPanel's action is "clear content", never
-  // "remove the face". Deliberately not marked dirty: on edit-mode load of a
-  // legacy card this is a repair, not a user change (submit sends values, not
-  // dirty flags, so it still persists on the next save).
+  // disabled saved cards with a blank painted half. So does a double-faced
+  // FRONT body (TODO 5.2): the back is intrinsic to the kind. Force it on
+  // whenever such a frame is active; the panel's action is "clear content",
+  // never "remove the face". Deliberately not marked dirty: on edit-mode
+  // load of a legacy card this is a repair, not a user change (submit sends
+  // values, not dirty flags, so it still persists on the next save).
   useEffect(() => {
-    if (hasInlineBackFace(currentTemplate) && !watched.has_back_face) {
+    if ((hasInlineBackFace(currentTemplate) || templateHasBackFace(currentTemplate)) && !watched.has_back_face) {
       setValue("has_back_face", true);
     }
   }, [currentTemplate, watched.has_back_face, setValue]);
@@ -1901,6 +1990,9 @@ export function CardCreatorForm({
           artist_credit: bf.artist_credit ?? "",
           art_url: bf.imported_art_url ?? "",
           art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+          // The back's own colour arrives with 5.4's import; until then it
+          // follows the front's.
+          color_identity: [],
         },
         { shouldDirty: true },
       );
@@ -2075,8 +2167,19 @@ export function CardCreatorForm({
         });
       }
       // The CARD's template: the combo under test, or — for a back body,
-      // which never dresses a front — its paired front (TODO 5.0b).
+      // which never dresses a front — its paired front (TODO 5.0b). A back
+      // body's walk sets the family that derives it (the 2016–22 back is a
+      // left family's) and the back's colour under test, so the live
+      // preview draws the body under test on its own colour (TODO 5.2).
       setValue("frame_style.template", walkthrough.cardTemplate, { shouldDirty: true });
+      if (isDfcBackBody(walkthrough.template)) {
+        const family = dfcIconFamilyForBackBody(walkthrough.template);
+        if (family) setValue("frame_style.dfcIcon", family, { shouldDirty: true });
+        setValue("has_back_face", true, { shouldDirty: true });
+        setValue("back_face.color_identity", [colorIdentityForKey(walkthrough.colorKey)], { shouldDirty: true });
+      } else if (dfcLayoutForKind(walkthrough.kind) === "transform" && !getValues("frame_style.dfcIcon")) {
+        setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
+      }
       // The combo under test is the frame: the text box never follows the
       // seed's text, or an edit of it, away from it (TODO 4.49 (b)).
       settleTokenTextFollow({ manual: true });
@@ -2414,24 +2517,20 @@ export function CardCreatorForm({
   };
 
   // ---- Submit ----
-  // `intent` decides the post-save flow:
-  //   • "save"  → the Publish step decides: "Save as a draft" forces
-  //               private, otherwise the chosen visibility applies.
-  //   • "back"  → same, then jump to a fresh creator (/create?backFor=…) to
-  //               build this card's back face.
-  // `afterSave` (the unsaved-changes dialog) replaces the default post-save
-  // destination with the navigation the user was attempting; `onFailure`
-  // hears why a save didn't happen, so that dialog can say so.
+  // The Publish step decides the post-save flow: "Save as a draft" forces
+  // private, otherwise the chosen visibility applies. `afterSave` (the
+  // unsaved-changes dialog) replaces the default post-save destination with
+  // the navigation the user was attempting; `onFailure` hears why a save
+  // didn't happen, so that dialog can say so.
   const runSubmit = (
     values: FormValues,
-    intent: "save" | "back",
+    intent: "save",
     options: {
       afterSave?: () => void;
       onFailure?: (message: string) => void;
     } = {},
   ) => {
     setServerError(null);
-    const createBackAfter = intent === "back";
     // An admin's frame preview is private and asks the server for the flag
     // (it decides — admins only).
     const previewSaveNow = previewSaveFor(values);
@@ -2449,8 +2548,18 @@ export function CardCreatorForm({
     // Build the back_face payload only when the user toggled it on.
     // When off, send `null` so the server clears any previously-persisted
     // back face (the action treats `null` as an explicit clear vs.
-    // `undefined` which would be a no-op).
-    const backFacePayload = values.has_back_face
+    // `undefined` which would be a no-op). A double-faced card's back (TODO
+    // 5.2) carries its BODY — derived from the kind, the back's type and the
+    // card's icon family, exactly as the server re-derives it — and its own
+    // colour (the front's when it picked none), and a transform back no cost.
+    const submitTemplate = values.frame_style?.template;
+    const submitDfcLayout = templateHasBackFace(submitTemplate)
+      ? dfcLayoutForKind(kindFromCard(values.card_type, submitTemplate))
+      : null;
+    const submitBackBody = submitDfcLayout
+      ? bodyFor(submitDfcLayout, "back", values.back_face.card_type || null, dfcIconOf({ frameStyle: values.frame_style }))
+      : null;
+    const backFaceContent = values.has_back_face
       ? {
           title: values.back_face.title.trim(),
           cost: values.back_face.cost.trim() || undefined,
@@ -2468,6 +2577,20 @@ export function CardCreatorForm({
           art_position: values.back_face.art_position,
         }
       : null;
+    const backFacePayload =
+      backFaceContent && submitDfcLayout
+        ? withTransformBackShape(
+            {
+              ...backFaceContent,
+              ...(submitBackBody ? { frame_style: { template: submitBackBody } } : {}),
+              color_identity:
+                values.back_face.color_identity.length > 0
+                  ? values.back_face.color_identity
+                  : values.color_identity,
+            },
+            submitDfcLayout,
+          )
+        : backFaceContent;
 
     // Structured rows: planeswalkers + sagas dual-write face_content AND a
     // canonically serialized rules_text (round-trip tested in
@@ -2590,8 +2713,6 @@ export function CardCreatorForm({
       // back face" save path, where intent doesn't force a visibility).
       visibility: finalVisibility,
       back_face: backFacePayload,
-      // v2 back face: a uuid links a card as the back; empty → null clears.
-      back_card_id: values.back_card_id || null,
       // Empty → null so an intentional clear (e.g. generating an AI card
       // over an imported one) actually REMOVES the stored provenance on
       // update; undefined would silently keep the old link. Cards whose
@@ -2641,8 +2762,8 @@ export function CardCreatorForm({
             setError(name as keyof FormValues, { message });
             if (!firstErrorField) firstErrorField = name;
           } else {
-            // No panel shows this key (face_content, back_card_id, …) — a
-            // setError here would vanish. Hand it back for the toast instead.
+            // No panel shows this key (face_content, …) — a setError here
+            // would vanish. Hand it back for the toast instead.
             unrendered.push(message);
           }
         }
@@ -2717,11 +2838,11 @@ export function CardCreatorForm({
         // blank /create (TODO 3b.7).
         await guard.release();
 
-        // A deck entry's proxy (/create?deckCard=) or another card's back
-        // face (/create?backFor=) is linked on EVERY save — the leave
-        // dialog's "Save as draft" included, which used to skip the link —
-        // and only then does the flow continue. The card IS saved at this
-        // point: a failed link request says so and still moves on.
+        // A deck entry's proxy (/create?deckCard=) is linked on EVERY save
+        // — the leave dialog's "Save as draft" included, which used to skip
+        // the link — and only then does the flow continue. The card IS
+        // saved at this point: a failed link request says so and still
+        // moves on.
         let linkedHome: string | null = null;
         if (deckRemix) {
           // Back to the deck dashboard so the progress ring ticks up.
@@ -2743,28 +2864,6 @@ export function CardCreatorForm({
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
           linkedHome = `/deck/${deckRemix.deckSlug}`;
-        } else if (backForCardId) {
-          // Back to the front card's editor.
-          let linkResult: Awaited<ReturnType<typeof updateCardAction>> | null =
-            null;
-          try {
-            linkResult = await updateCardAction(backForCardId, {
-              back_card_id: result.cardId,
-            });
-          } catch (error) {
-            console.error("[creator] back-face link request failed", error);
-          }
-          if (!linkResult?.ok) {
-            toast.error(
-              linkResult?.formError ??
-                "Saved, but couldn't link it as the back face.",
-            );
-          } else {
-            toast.success("Linked as the back face.");
-          }
-          linkedHome = backForSlug
-            ? `/card/${backForSlug}/edit?step=publish`
-            : "/dashboard";
         }
 
         if (options.afterSave) {
@@ -2774,12 +2873,6 @@ export function CardCreatorForm({
         if (linkedHome) {
           router.replace(linkedHome);
           router.refresh();
-          return;
-        }
-
-        // The user chose "Create a new card" for this card's back — go build it.
-        if (createBackAfter) {
-          router.push(`/create?backFor=${result.cardId}`);
           return;
         }
 
@@ -2845,8 +2938,7 @@ export function CardCreatorForm({
       // with unsent keystrokes, which keep their guard.
       const staysInEditor =
         !options.afterSave &&
-        !(intent === "save" && finalVisibility === "public") &&
-        !createBackAfter;
+        !(intent === "save" && finalVisibility === "public");
       if (!(typedDuringSave && staysInEditor)) await guard.release();
       if (options.afterSave) {
         options.afterSave();
@@ -2872,24 +2964,12 @@ export function CardCreatorForm({
         );
         return;
       }
-      // The user chose "Create a new card" for the back — go build it now that
-      // this (front) card is saved and has an id to link back to.
-      if (createBackAfter) {
-        router.push(`/create?backFor=${card.id}`);
-        return;
-      }
       // If the slug changed, follow it.
       if (result.slug !== card.slug) {
         router.replace(`/card/${result.slug}/edit`);
       }
       router.refresh();
     });
-  };
-
-  // "Create a new card" for the back: save this card first (so it has an id to
-  // link back to), then the submit flow jumps to a fresh creator.
-  const handleCreateBackFace = () => {
-    void handleSubmit((values) => runSubmit(values, "back"))();
   };
 
   const cardTypeForPreview =
@@ -2902,15 +2982,6 @@ export function CardCreatorForm({
       : watched.rarity === ""
         ? null
         : (watched.rarity as Rarity);
-
-  // v2 back face: the referenced card (from myCards) rendered on the flip with
-  // its OWN frame/colour/rarity/art. null when none is linked.
-  const selectedBackCard = watched.back_card_id
-    ? myCards.find((c) => c.id === watched.back_card_id) ?? null
-    : null;
-  const backCardPreview = selectedBackCard
-    ? cardToPreviewData(selectedBackCard, profileOverrides)
-    : null;
 
   // Live structured content for the preview: the row editors drive the
   // chapter rail / loyalty rows as the user types; empty rows fall back to
@@ -3031,10 +3102,21 @@ export function CardCreatorForm({
           artist_credit: watched.back_face.artist_credit || undefined,
           art_url: watched.back_face.art_url || undefined,
           art_position: watched.back_face.art_position,
+          // A double-faced card's back draws on its own BODY and colour
+          // (TODO 5.2; components/cards/card-preview.tsx → backPreviewData):
+          // the body the back's type and the family derive, the colour its
+          // own or the front's — exactly what the save stores.
+          ...(dfcBackBody
+            ? {
+                frame_style: { template: dfcBackBody },
+                color_identity:
+                  watched.back_face.color_identity.length > 0
+                    ? watched.back_face.color_identity
+                    : watched.color_identity,
+              }
+            : {}),
         }
       : null,
-    // v2 back face wins over the legacy jsonb when a card is linked.
-    backCard: backCardPreview,
     face: previewFace,
     onFaceChange: setPreviewFace,
     flipOnClick: true,
@@ -3162,6 +3244,7 @@ export function CardCreatorForm({
                     : null
                 }
                 onLandModeChange={handleLandModeChange}
+                onDfcFaceTypePick={handleDfcFaceTypePick}
               />
             ) : null}
             {/* The two-colour frame's switch (TODO 4.6b), under the colour —
@@ -3218,7 +3301,41 @@ export function CardCreatorForm({
                       />
                     ) : undefined
                   }
+                  // The one-click move of an imported double-faced card
+                  // onto the real frames (TODO 5.2, owner Q3): a stored
+                  // card with a legacy back the wave-1 bodies can draw.
+                  backFaceHint={
+                    isEdit && card && dfcAdoptionOffer(card) ? (
+                      <DfcAdoptHint
+                        cardId={card.id}
+                        card={card}
+                        verifiedFrameKeys={verifiedFrameSet}
+                        onMoved={() => router.refresh()}
+                      />
+                    ) : undefined
+                  }
                 />
+                {/* The back face of a double-faced card (TODO 5.2): its own
+                    panel under the front's art block. Focusing it flips the
+                    live preview to the back. */}
+                {dfcLayout ? (
+                  <DfcFacePanel
+                    userId={userId}
+                    layout={dfcLayout}
+                    backBody={dfcBackBody}
+                    frontColorIdentity={watched.color_identity}
+                    verifiedFrameKeys={verifiedFrameSet}
+                    revise={isRevise}
+                    family={watched.frame_style?.dfcIcon ?? null}
+                    onFamilyChange={(next) =>
+                      setValue("frame_style.dfcIcon", next, { shouldDirty: true })
+                    }
+                    backRulesTextRef={backRulesTextRef}
+                    onInsertSymbol={(token) => insertSymbol(backRulesTextRef, token)}
+                    onFocus={() => setPreviewFace("back")}
+                    blankBackFace={blankSecondFaceFor(kind)}
+                  />
+                ) : null}
               </>
             ) : null}
 
@@ -3324,11 +3441,8 @@ export function CardCreatorForm({
             {stepKey === "publish" ? (
               <PublishPanel
                 userId={userId}
-                profileOverrides={profileOverrides}
                 activeChallenge={activeChallenge}
                 myDecks={isRevise ? null : myDecks}
-                myCards={myCards}
-                onCreateBackFace={handleCreateBackFace}
                 revise={isRevise}
                 showWatermark={!usesDefaultWatermark(watched.card_type)}
               />

@@ -75,6 +75,12 @@ describe("kindFromCard", () => {
   it("round-trips every kind through planKindChange's patch", () => {
     for (const kind of CARD_KIND_VALUES) {
       const plan = planKindChange(kind, { cardType: "creature", template: "m15" });
+      // The modal kind has no bodies until 5.1b (TODO 5.2 names it): its plan
+      // keeps the card's own template, so it can't be entered yet.
+      if (kind === "mdfc") {
+        expect(plan).toEqual({ action: "apply", patch: { card_type: "creature", template: "m15" } });
+        continue;
+      }
       expect(kindFromCard(plan.patch.card_type, plan.patch.template)).toBe(kind);
     }
   });
@@ -83,7 +89,12 @@ describe("kindFromCard", () => {
 describe("framesForKind", () => {
   it("yields at least one frame for every kind, even with nothing verified", () => {
     for (const kind of CARD_KIND_VALUES) {
-      expect(framesForKind(kind, NO_VERIFIED).length).toBeGreaterThan(0);
+      // …except the modal kind, whose bodies are 5.1b's (TODO 5.2 names it).
+      if (kind === "mdfc") {
+        expect(framesForKind(kind, NO_VERIFIED)).toEqual([]);
+        continue;
+      }
+      expect(framesForKind(kind, NO_VERIFIED).length, kind).toBeGreaterThan(0);
     }
   });
 
@@ -535,7 +546,7 @@ describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
     expect(leaks).toEqual([]);
   });
 
-  it("refuses exactly planeswalker, battle, the layout kinds (the transform kind among them, 5.1a) and the emblem on the eight — 72 pairs — and keeps every standard kind", () => {
+  it("refuses exactly planeswalker, battle, the layout kinds (the two double-faced kinds among them, 5.1a / 5.2) and the emblem on the eight — 80 pairs — and keeps every standard kind", () => {
     const refused: string[] = [];
     for (const template of STAT_LESS_SHOWCASES) {
       for (const kind of CARD_KIND_VALUES) {
@@ -550,7 +561,7 @@ describe("frames with no walker or battle anatomy (TODO 4.5a)", () => {
         if (!standard) refused.push(`${template}/${kind}`);
       }
     }
-    expect(refused).toHaveLength(72);
+    expect(refused).toHaveLength(80);
   });
 
   it("drops them from the planeswalker and battle galleries only", () => {

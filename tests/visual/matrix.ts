@@ -161,6 +161,9 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   flip: "r",
   // A transform card's front (TODO 5.1a): a blue Delver.
   transform: "u",
+  // The modal kind (named by TODO 5.2) has no bodies until 5.1b: no
+  // template hosts it, so no case is baked for it yet.
+  mdfc: "u",
 };
 
 const LONG_RULES =

@@ -29,7 +29,11 @@ export type SagaChapterFormValues = {
 };
 
 // Back-face form values mirror the front-face fields the back face stores.
-// Doubles as the Adventure spell's content on Adventure frames.
+// Doubles as the Adventure spell's content on Adventure frames. A
+// double-faced card's back (TODO 5.2) adds its own COLOUR; its BODY is never
+// form state — the submit and the live preview derive it from the kind, the
+// back's type and the card's icon family (lib/cards/dfc.ts bodyFor), the
+// server re-derives it at every save (lib/cards/dfc-gate.ts).
 export type BackFaceFormValues = {
   title: string;
   cost: string;
@@ -45,6 +49,10 @@ export type BackFaceFormValues = {
   artist_credit: string;
   art_url: string;
   art_position: ArtPosition;
+  /** The back's own frame colour (a double-faced card); empty = the
+   *  front's, which the submit sends explicitly. Ignored on an inline
+   *  second face. */
+  color_identity: ColorIdentity[];
 };
 
 export type FormValues = {
@@ -82,9 +90,6 @@ export type FormValues = {
   save_as_draft: boolean;
   has_back_face: boolean;
   back_face: BackFaceFormValues;
-  /** v2 back face: id of another owned card used as the back (empty = none).
-   *  Standard frames use this; the inline frames keep using `back_face`. */
-  back_card_id: string;
   source_scryfall_id: string;
   /** Direct set-symbol override (Set icon step): an uploaded image URL OR a
    *  preset Keyrune code. Mutually exclusive — setting one clears the other;
@@ -146,4 +151,5 @@ export const EMPTY_BACK_FACE: BackFaceFormValues = {
   artist_credit: "",
   art_url: "",
   art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+  color_identity: [],
 };

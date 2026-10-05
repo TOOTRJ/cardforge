@@ -81,8 +81,10 @@ export const KIND_REQUIRES: Readonly<Record<CardKind, readonly AnatomyCapability
   aftermath: ["secondFace"],
   flip: ["secondFace"],
   // The Transform kind (TODO 5.1a): a front body of a double-faced card —
-  // its icon well, its tab and a back face of its own.
+  // its icon well, its tab and a back face of its own. The Modal kind (5.2
+  // names it; 5.1b's bodies) needs the same: a double-faced front.
   transform: ["dfcFront"],
+  mdfc: ["dfcFront"],
 };
 
 /** The anatomy a profile draws, from its FIELDS only — so a profile spread

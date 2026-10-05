@@ -30,7 +30,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { resolveLoyaltyRows } from "@/lib/cards/face-content";
-import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, type DfcLayout } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, DFC_FACE_TYPES, bodyFor, dfcBodyOf, type DfcLayout } from "@/lib/cards/dfc";
 import {
   TOKEN_TYPE_WORDS,
   hasRulesBoxText,
@@ -87,11 +87,15 @@ export const CARD_KIND_VALUES = [
   "split",
   "aftermath",
   "flip",
-  // The transform double-faced card (TODO 5.1a; the editor and the kind
-  // picker's chip are 5.2's): two printed faces, one card — the front on a
+  // The transform double-faced card (TODO 5.1a; its editor and the kind
+  // picker's chip 5.2's): two printed faces, one card — the front on a
   // transform FRONT body (`m15dfcfront`, the land front), the back on the
   // body the card's icon family derives (lib/cards/dfc.ts bodyFor).
   "transform",
+  // The modal double-faced card (TODO 5.2 names the kind; 5.1b brings its
+  // bodies): a chip of the picker that stays dark — kindHasAvailableFrame —
+  // until the modal front and back bodies exist and are verified.
+  "mdfc",
 ] as const;
 export type CardKind = (typeof CARD_KIND_VALUES)[number];
 
@@ -219,6 +223,17 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     layoutTemplates: ["m15dfcfront", "m15dfclandfront"],
     previewTemplate: "m15dfcfront",
   },
+  // The modal kind's bodies are 5.1b's (`m15mdfcfront`, `m15mdfclandfront`;
+  // the thumbnail `m15mdfcfront`): until they exist its family is EMPTY —
+  // no gallery, no first available frame, so the chip is dark and
+  // planKindChange keeps the card where it is — and the transform front
+  // stands in for the chip's thumbnail.
+  mdfc: {
+    label: "Modal double-faced",
+    cardType: "creature",
+    layoutTemplates: [],
+    previewTemplate: "m15dfcfront",
+  },
 };
 
 export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
@@ -229,7 +244,7 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
         ...def,
         // Standard kinds never paint a second face; layout kinds ask their
         // template's profile (saga's chapter rail is NOT a second face).
-        inlineSecondFace: def.layoutTemplates
+        inlineSecondFace: def.layoutTemplates?.[0]
           ? templatePaintsSecondFace(def.layoutTemplates[0])
           : false,
       },
@@ -271,7 +286,9 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
 //     enchantments, not this kind).
 // ---------------------------------------------------------------------------
 
-type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip" | "transform";
+type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip" | "transform" | "mdfc";
+
+export { DFC_FACE_TYPES };
 
 export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardType[]>> = {
   saga: ["enchantment"],
@@ -284,7 +301,10 @@ export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardTy
   // enchantments (XLN #22, the VOW auras), lands (INR #287 on the land
   // front), instants and sorceries; walkers wait (5.13, ask first), sagas
   // and battles are their own bodies (5.5).
-  transform: ["creature", "artifact", "enchantment", "land", "instant", "sorcery"],
+  transform: DFC_FACE_TYPES,
+  // The modal front (5.2 names it, 5.1b draws it): the same six — ZNR's
+  // spell // land, KHM's and STX's creatures and artifacts.
+  mdfc: DFC_FACE_TYPES,
 };
 
 /** The card type an import writes for its kind (TODO 1.21): a layout kind
@@ -362,12 +382,12 @@ const SHOWCASE_TEMPLATES: readonly FrameTemplate[] =
 
 /** The kinds the Card step's kind picker lists as chips. The emblem is not
  *  one of them (owner 2026-09-29): the token kind's picker offers it. The
- *  transform kind (TODO 5.1a) joins with its editor, 5.2 — until then it is
- *  reached by `?kind=transform` on the preview path only, and
- *  kindHasAvailableFrame keeps it dark until a front AND a back body are
- *  verified in a colour. */
+ *  two double-faced kinds (TODO 5.2) are chips that kindHasAvailableFrame
+ *  keeps dark until a FRONT body and the DEFAULT back body are each
+ *  verified in a colour — the Transform chip after the owner's ticks (5.3),
+ *  the Modal chip after 5.1b's bodies exist and are ticked. */
 export const KIND_PICKER_KINDS: readonly CardKind[] = CARD_KIND_VALUES.filter(
-  (kind) => kind !== "emblem" && kind !== "transform",
+  (kind) => kind !== "emblem",
 );
 
 /** The kind-picker chip that stands for `kind`: an emblem sits under Token. */
@@ -1307,8 +1327,25 @@ export function kindHasAvailableFrame(
 }
 
 /** The double-faced kinds and their layout (lib/cards/dfc.ts): the
- *  Transform kind (5.1a); the Modal kind joins with 5.1b / 5.2. */
-const DFC_KIND_LAYOUT: Partial<Record<CardKind, DfcLayout>> = { transform: "transform" };
+ *  Transform kind (5.1a) and the Modal kind (named by 5.2; its bodies are
+ *  5.1b's, so bodyFor answers null for its faces until then). */
+const DFC_KIND_LAYOUT: Partial<Record<CardKind, DfcLayout>> = { transform: "transform", mdfc: "modal" };
+
+/** The layout of a double-faced kind, or null for every other kind — the
+ *  ONE place the creator asks "does this kind have a back face of its own"
+ *  (the forced back face, the back-face panel, the derived back body). */
+export function dfcLayoutForKind(kind: CardKind): DfcLayout | null {
+  return DFC_KIND_LAYOUT[kind] ?? null;
+}
+
+/** The front BODY a double-faced kind's card wears for a face type (the
+ *  land front for a land, the spell front otherwise), or null when the kind
+ *  has no bodies yet (the modal kind until 5.1b) — what the Card step's
+ *  face-type row writes beside the type. */
+export function dfcFrontBodyFor(kind: CardKind, cardType: CardType | "" | null | undefined): FrameTemplate | null {
+  const layout = dfcLayoutForKind(kind);
+  return layout ? bodyFor(layout, "front", cardType || null) : null;
+}
 
 /** True when a double-faced FRONT body (TODO 5.1a) dresses a card of
  *  `kind` as that kind's card type: the Transform kind draws the types in
@@ -1496,13 +1533,16 @@ export function planKindChange(
   const def = KIND_DEFS[next];
   const backFace = def.inlineSecondFace ? { has_back_face: true as const } : {};
 
-  // Layout kinds are deterministic — one template family.
+  // Layout kinds are deterministic — one template family. A kind whose
+  // family is still EMPTY (the modal kind until 5.1b's bodies) keeps the
+  // card's own template: its chip is dark, and a programmatic pick lands
+  // on "frames not published" in the creator rather than on nothing.
   if (def.layoutTemplates) {
     return {
       action: "apply",
       patch: {
         card_type: def.cardType,
-        template: def.layoutTemplates[0],
+        template: def.layoutTemplates[0] ?? normalizeFrameTemplate(current.template),
         ...backFace,
       },
     };

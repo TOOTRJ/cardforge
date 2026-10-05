@@ -28,6 +28,7 @@ import { getFrameProfile, type DfcProfile } from "@/lib/cards/template-layout";
 import {
   DFC_ICON_FAMILY_VALUES,
   FRAME_TEMPLATE_VALUES,
+  type CardType,
   type DfcIconFamily,
   type FrameTemplate,
 } from "@/types/card";
@@ -36,6 +37,19 @@ export { DFC_ICON_FAMILY_VALUES, DFC_ICON_GLYPHS, dfcIconGlyph, type DfcIconFami
 
 export type DfcLayout = DfcProfile["layout"];
 export type DfcRole = DfcProfile["role"];
+
+/** The face types a double-faced card's EITHER face may be in wave 1
+ *  (owner 2026-10-02, Q2: planeswalker faces wait — 5.13, ask first; sagas
+ *  and battles are their own bodies, 5.5): what the Card step's face-type
+ *  row and the back-face panel's type chips offer (TODO 5.2), the kinds'
+ *  LAYOUT_KIND_CARD_TYPES rows, and what the server's back gate admits
+ *  (lib/cards/dfc-gate.ts). */
+export const DFC_FACE_TYPES = ["creature", "artifact", "enchantment", "land", "instant", "sorcery"] as const satisfies readonly CardType[];
+export type DfcFaceType = (typeof DFC_FACE_TYPES)[number];
+
+export function isDfcFaceType(value: unknown): value is DfcFaceType {
+  return typeof value === "string" && (DFC_FACE_TYPES as readonly string[]).includes(value);
+}
 
 /** The family a transform card wears when its `frame_style.dfcIcon` names
  *  none — today's ▲ / ▼ with the ▼ at the right, every transform printed
@@ -172,6 +186,29 @@ export function isDeclaredDfcBody(template: FrameTemplate | string | null | unde
  *  (which is the land back whatever the family). */
 export function transformBackBodyFor(family: DfcIconFamily, backFaceType: string | null | undefined): FrameTemplate | null {
   return bodyFor("transform", "back", backFaceType, family);
+}
+
+/** The FIRST icon family whose transform back is `template` (`arrows` for
+ *  the ▼-right back, `sunmoon` for the 2016–22 back), or null when no
+ *  family derives it — the land back, which every family shares, or a
+ *  template that is not a transform back. The admin walk-through of a back
+ *  body (TODO 5.0b / 5.2) sets the card's family from it so the live
+ *  preview draws the body under test. */
+export function dfcIconFamilyForBackBody(template: FrameTemplate | string | null | undefined): DfcIconFamily | null {
+  if (!template) return null;
+  return DFC_ICON_FAMILY_VALUES.find((family) => bodyFor("transform", "back", "creature", family) === template) ?? null;
+}
+
+/** A transform back saves with NO mana cost (TODO 5.2, design §2.2: the
+ *  back prints none — `hideCost` on every transform back body), whatever
+ *  the payload says — as an emblem's shape is enforced (lib/cards/emblem.ts);
+ *  a modal back keeps its cost (KHM / STX / MSH backs carry one). Returns
+ *  the input itself when nothing is dropped. */
+export function withTransformBackShape<T extends { cost?: string | null }>(back: T, layout: DfcLayout): T {
+  if (layout !== "transform" || !("cost" in back)) return back;
+  const { cost: _cost, ...rest } = back;
+  void _cost;
+  return rest as T;
 }
 
 /**

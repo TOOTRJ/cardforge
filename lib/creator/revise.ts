@@ -15,6 +15,7 @@ import {
   type FrameAnatomyPatch,
 } from "@/lib/cards/anatomy";
 import { isCollectorSwitch } from "@/lib/cards/collector-line";
+import { isDfcIconFamily } from "@/lib/cards/dfc";
 import { isHoloStampSwitch } from "@/lib/cards/holo-stamp";
 import type { ColorIdentity } from "@/types/card";
 
@@ -48,9 +49,11 @@ export const REVISABLE_FIELDS = [
   "watermark",
   "footer_text",
   "visibility",
-  // The inline second face (Adventure spell / split half) is CONTENT of the
-  // frame the card already has, so it stays editable; the standard-frame
-  // back-face link (back_card_id) is structural and stays locked.
+  // The inline second face (Adventure spell / split half) and a double-faced
+  // card's back (TODO 5.2) are CONTENT of the frame the card already has, so
+  // they stay editable: the action keeps the STORED back body whatever the
+  // patch carries (lib/cards/dfc-gate.ts) and takes the back's colour only
+  // where it is verified.
   "has_back_face",
   "back_face",
 ] as const satisfies readonly (keyof FormValues)[];
@@ -162,6 +165,11 @@ export function frameAnatomyPatchFor(
   // doesn't ("auto" / "oval" / "triangle" / "none").
   const stamp = values.frame_style.stamp;
   if (isHoloStampSwitch(stamp) && stamp !== storedStyle.stamp) patch.stamp = stamp;
+  // The transform icon family (TODO 5.2): a family the form holds and the
+  // card doesn't — the action re-derives the back body from it and refuses
+  // the patch when that body isn't verified in the back's colour.
+  const family = values.frame_style.dfcIcon;
+  if (isDfcIconFamily(family) && family !== storedStyle.dfcIcon) patch.dfcIcon = family;
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;

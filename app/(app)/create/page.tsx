@@ -16,11 +16,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
-import {
-  getCardById,
-  getFantasyGameSystem,
-  listMyCards,
-} from "@/lib/cards/queries";
+import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
 import { getMyDeckCardWithDeck, listMyDecks } from "@/lib/decks/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
@@ -51,7 +47,6 @@ export default async function CreatePage({
 }: {
   searchParams: Promise<{
     tag?: string;
-    backFor?: string;
     deckCard?: string;
     remix?: string;
     lab?: string;
@@ -69,7 +64,6 @@ export default async function CreatePage({
   const search = await searchParams;
   const {
     tag: tagParam,
-    backFor: backForParam,
     deckCard: deckCardParam,
     remix: remixParam,
     lab: labParam,
@@ -99,15 +93,13 @@ export default async function CreatePage({
   const labToggleHref = (() => {
     const params = new URLSearchParams();
     if (tagParam) params.set("tag", tagParam);
-    if (backForParam) params.set("backFor", backForParam);
     if (deckCardParam) params.set("deckCard", deckCardParam);
     if (remixParam) params.set("remix", remixParam);
     if (layout === "stepper") params.set("lab", "1");
     const query = params.toString();
     return query ? `/create?${query}` : "/create";
   })();
-  const [myCards, myDecks, entitlements, exportStamp] = await Promise.all([
-    listMyCards(),
+  const [myDecks, entitlements, exportStamp] = await Promise.all([
     listMyDecks(),
     getEntitlements(),
     // The owner's custom footer mark (paid perk): shown live in the preview
@@ -117,16 +109,6 @@ export default async function CreatePage({
   // Theme/style each deck was last generated with — the AI dialog imports
   // them when a deck is picked (Pro deck-aware generation).
   const deckSeeds = await getDeckAiSeeds(myDecks.map((deck) => deck.id));
-
-  // /create?backFor=<cardId> — building a NEW card that becomes another owned
-  // card's back face. Validate the target exists + is the user's before wiring
-  // the auto-link flow; otherwise ignore the param.
-  const backForCard =
-    backForParam && isUuid(backForParam)
-      ? await getCardById(backForParam)
-      : null;
-  const backFor =
-    backForCard && backForCard.owner_id === user.id ? backForCard : null;
 
   // /create?deckCard=<deckCardId> — remixing a deck entry into a custom
   // proxy. The query proves the user owns the entry's deck; on save the new
@@ -152,7 +134,7 @@ export default async function CreatePage({
   // inserted until Save, when the slug follows the chosen title and
   // parent_card_id links it back.
   const remixParent =
-    !backFor && !deckRemix && remixParam && isUuid(remixParam)
+    !deckRemix && remixParam && isUuid(remixParam)
       ? await getCardById(remixParam)
       : null;
 
@@ -180,7 +162,7 @@ export default async function CreatePage({
   // "Walk the stepper" (TODO 2.2): a plain create on the stepper, prefilled
   // from the combo's reference printing.
   const walkthrough =
-    framePreview && !backFor && !deckRemix && !remixParent && layout === "stepper"
+    framePreview && !deckRemix && !remixParent && layout === "stepper"
       ? await buildFrameWalkthrough({
           template: search.template,
           color: search.color,
@@ -196,22 +178,18 @@ export default async function CreatePage({
       <PageHeader
         eyebrow={remixParent ? "Remix" : "Creator"}
         title={
-          backFor
-            ? "Forge the back face"
-            : deckRemix
-              ? `Create a custom proxy of “${deckRemix.entryName}”`
-              : remixParent
-                ? `Remix “${remixParent.title}”`
-                : "Forge a new card"
+          deckRemix
+            ? `Create a custom proxy of “${deckRemix.entryName}”`
+            : remixParent
+              ? `Remix “${remixParent.title}”`
+              : "Forge a new card"
         }
         description={
-          backFor
-            ? `Build the back for “${backFor.title}”. When you save, it links back automatically.`
-            : deckRemix
-              ? `Your version of the real card, for “${deckRemix.deckTitle}”. Everything is pre-filled — change at least one thing to make it yours, then save to link it into the deck.`
-              : remixParent
-                ? "Your take on this card. The type, frame and colour stay as they are — change the name, art, text or numbers, then save it as a new card of your own."
-                : "Type on the left, watch the card take shape on the right. Save when you like the result."
+          deckRemix
+            ? `Your version of the real card, for “${deckRemix.deckTitle}”. Everything is pre-filled — change at least one thing to make it yours, then save to link it into the deck.`
+            : remixParent
+              ? "Your take on this card. The type, frame and colour stay as they are — change the name, art, text or numbers, then save it as a new card of your own."
+              : "Type on the left, watch the card take shape on the right. Save when you like the result."
         }
         actions={
           <>
@@ -263,12 +241,10 @@ export default async function CreatePage({
 
       <div id={FORM_SCROLL_TARGET_ID} className="mt-10 scroll-mt-24">
         <CardCreatorForm
-          // A different flow = a different form: "Create a new card" for a
-          // back face navigates /create → /create?backFor=… without leaving
-          // the page, and without a key the old form (and its filled-in
-          // state) stayed mounted for the new card.
+          // A different flow = a different form: a deck proxy, a remix or a
+          // frame walk-through each mount their own, so an earlier flow's
+          // filled-in state never stays behind for the next card.
           key={
-            backFor?.id ??
             deckRemix?.deckCardId ??
             remixParent?.id ??
             (walkthrough ? `walk:${walkthrough.template}/${walkthrough.colorKey}` : "new")
@@ -287,9 +263,6 @@ export default async function CreatePage({
             style: deckSeeds.get(deck.id)?.style ?? null,
           }))}
           canDesignForDeck={entitlements.effectiveTier === "pro"}
-          myCards={myCards}
-          backForCardId={backFor?.id ?? null}
-          backForSlug={backFor?.slug ?? null}
           deckRemix={deckRemix}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
