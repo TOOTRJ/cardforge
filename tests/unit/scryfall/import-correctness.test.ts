@@ -15,6 +15,7 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { toResolvedCardData } from "@/lib/decks/import-resolution";
+import { isDfcImportPatch } from "@/lib/scryfall/dfc-import";
 import { KIND_DEFS, importedCardTypeForKind } from "@/lib/creator/card-kinds";
 import { finalizeImportMatch, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -186,9 +187,14 @@ function productionVerifiedKeys(): Set<string> {
 const PROD_VERIFIED = productionVerifiedKeys();
 
 function landing(
-  patch: ScryfallImportPatch,
+  rawPatch: ScryfallImportPatch,
   verifiedKeys: ReadonlySet<string> = PROD_VERIFIED,
 ): { template: FrameTemplate; colorKey: string; status: string } {
+  // A double-faced patch as /api/scryfall/named hands it over: finalized
+  // against the verified combos — the landing (TODO 5.4) falls back to the
+  // front's standard kind and frame until BOTH bodies are ticked. Every
+  // other patch is read as it always was here (the registry's static match).
+  const patch = isDfcImportPatch(rawPatch) ? finalizeImportMatch(rawPatch, verifiedKeys) : rawPatch;
   const kind = patch.kind!;
   const def = KIND_DEFS[kind];
   const { colorKey, resolution } = resolveImportFrame({
@@ -247,12 +253,16 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     ["dmr-215", "split", "instant", undefined, undefined, undefined],
     ["eld-115", "adventure", "creature", undefined, "Giant", undefined],
     ["chk-202", "flip", "creature", undefined, "Human, Monk", undefined],
-    // Double-faced fronts.
-    ["isd-51", "creature", "creature", undefined, "Human, Wizard", "modern"],
+    // Double-faced fronts (TODO 5.4): a transform printing is the Transform
+    // kind on the front body its front's type picks — Delver (2003 frame)
+    // nearest on the M15 bodies, Westvale Abbey on the land front; a
+    // walker-faced one (Ajani, Valki) imports its front alone on the
+    // standard frame; a modal one lands as today until 5.1b's bodies.
+    ["isd-51", "transform", "creature", undefined, "Human, Wizard", "m15dfcfront"],
     ["mh3-237", "creature", "creature", "Legendary", "Cat, Warrior", "m15"],
     ["khm-114", "creature", "creature", "Legendary", "God", "m15"],
     ["znr-259", "land", "land", undefined, undefined, "m15land"],
-    ["soi-281", "land", "land", undefined, undefined, "m15land"],
+    ["soi-281", "transform", "land", undefined, undefined, "m15dfclandfront"],
     // Devoid re-dresses; a colourless Eldrazi without devoid doesn't.
     ["ogw-13", "creature", "creature", undefined, "Eldrazi", "m15devoid"],
     ["ogw-9", "creature", "creature", undefined, "Eldrazi", "m15"],

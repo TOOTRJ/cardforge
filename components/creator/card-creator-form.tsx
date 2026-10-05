@@ -1610,7 +1610,13 @@ export function CardCreatorForm({
       cardType: watched.card_type,
       template: getValues("frame_style.template"),
     });
-    applyKindPatch(cardType ? { ...plan.patch, card_type: cardType } : plan.patch);
+    // A double-faced kind's FRONT body follows the face type (TODO 5.4: an
+    // imported land front wears the land front, as the face-type row does),
+    // never the kind's first body alone.
+    const dfcBody = cardType ? dfcFrontBodyFor(nextKind, cardType) : null;
+    applyKindPatch(
+      cardType ? { ...plan.patch, card_type: cardType, ...(dfcBody ? { template: dfcBody } : {}) } : plan.patch,
+    );
     if (plan.action === "confirm") {
       toast.info("Switched to the M15 frame to fit the card's type.");
     }
@@ -1755,6 +1761,13 @@ export function CardCreatorForm({
         ? kindFromCard(patch.card_type as CardType, undefined)
         : null);
     if (importedKind) {
+      // A double-faced import (TODO 5.4) lands in the PRINTING's colour: set
+      // it before the kind change, whose colourless-front rule (design D2,
+      // leaveColourlessDfcFront) would otherwise move a fresh form's
+      // colourless card to the first verified colour and say so.
+      if (dfcLayoutForKind(importedKind) && patch.color_identity && !isRevise) {
+        setValue("color_identity", Array.from(patch.color_identity) as ColorIdentity[], { shouldDirty: true });
+      }
       // A layout kind keeps the PRINTED card type when its template can draw
       // it (TODO 1.21): Virtue of Loyalty is an Enchantment adventurer, not
       // a Creature; Commit // Memory an Instant, Beck // Call a Sorcery.
@@ -1990,9 +2003,13 @@ export function CardCreatorForm({
           artist_credit: bf.artist_credit ?? "",
           art_url: bf.imported_art_url ?? "",
           art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
-          // The back's own colour arrives with 5.4's import; until then it
-          // follows the front's.
-          color_identity: [],
+          // The back's own colour (TODO 5.4): the printing's back face's,
+          // on a double-faced body — colourless on the land back; a legacy
+          // back carries none and follows the front's. The body itself is
+          // never form state: derived at submit from the kind, the back's
+          // type and the family (the patch's printed_dfc_icon, set with the
+          // anatomy switches above), as the server re-derives it.
+          color_identity: bf.color_identity ? (Array.from(bf.color_identity) as ColorIdentity[]) : [],
         },
         { shouldDirty: true },
       );

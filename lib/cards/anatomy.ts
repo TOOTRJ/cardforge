@@ -776,6 +776,11 @@ export type ImportedAnatomyFacts = {
    *  triangle → "triangle", anything else (none, acorn, circle, heart,
    *  arena) → "none" (lib/scryfall/import-mapper.ts stampOfPrinting). */
   printed_stamp?: HoloStampSwitch;
+  /** The transform icon family THIS printing wears (TODO 5.4, owner Q5:
+   *  imports follow the printing per face) — named only on a printing that
+   *  lands on a double-faced body (lib/scryfall/import-mapper.ts
+   *  dfcImportOf); the save drops the key on any other frame. */
+  printed_dfc_icon?: DfcIconFamily;
 };
 
 /**
@@ -813,6 +818,9 @@ export function importedAnatomy(
   // token or UB emblem lands on a frame without the notch and the save
   // drops it.
   if (patch.printed_stamp !== undefined) style.stamp = patch.printed_stamp;
+  // …and the transform icon family (5.4): the printing's, on a double-faced
+  // body; dropped at the save anywhere else.
+  if (patch.printed_dfc_icon !== undefined) style.dfcIcon = patch.printed_dfc_icon;
   const drawsPairs = frameAnatomyOf(landedTemplate).twoColor.length > 0;
   const colorIdentity =
     drawsPairs && twoColourPrinting && patch.color_pair
@@ -833,12 +841,15 @@ export function importedAnatomy(
  */
 export function importedFormAnatomy(
   style: FrameAnatomyStyle,
-): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star"> {
+): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star" | "dfcIcon"> {
   return {
     crown: style.crown ?? NEW_CARD_ANATOMY.crown,
     twoColor: style.twoColor ?? NEW_CARD_ANATOMY.twoColor,
     collector: style.collector ?? NEW_CARD_ANATOMY.collector,
     stamp: style.stamp ?? NEW_CARD_ANATOMY.stamp,
     ...(style.star === true ? { star: true as const } : {}),
+    // The printing's icon family (5.4), where the import names one; the
+    // form's own default (the kind change's `arrows`) stands otherwise.
+    ...(style.dfcIcon !== undefined ? { dfcIcon: style.dfcIcon } : {}),
   };
 }

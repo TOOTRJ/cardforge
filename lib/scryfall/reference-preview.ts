@@ -3,6 +3,7 @@ import "server-only";
 import { getCardById, hasBackFaceImage, pickPrintImageUrl } from "@/lib/scryfall/client";
 import {
   droppedFaceNotice,
+  mapScryfallBackFacePatch,
   mapScryfallToFormPatch,
   referenceBackColorIdentity,
   referenceColorIdentity,
@@ -86,15 +87,24 @@ export async function buildFrameComparePayload(
   // A back the tools can show: the second face's own scan, AND a face the
   // import keeps — a double-faced token's or a Role card's back is dropped
   // (TODO 1.23; two-sided tokens are 5.5), so there is no stored back to
-  // draw and the view offers none.
-  const hasBackScan = hasBackFaceImage(card) && !patch.dropped_face;
+  // draw and the view offers none. A PLANESWALKER back (5.4 / 5.13) is
+  // dropped by a new import too, but the cards imported before it still
+  // carry one as a legacy back (Chrollo's Tibalt), so the view draws it as
+  // that — on the import's patch it stays dropped (the walk seeds the front
+  // alone), and a back-body pin refuses it (lib/cards/frame-reference-
+  // validation.ts).
+  const walkerBack = patch.dropped_face === "walker-face";
+  const comparePatch: ScryfallImportPatch = walkerBack
+    ? { ...patch, back_face: mapScryfallBackFacePatch(card) }
+    : patch;
+  const hasBackScan = hasBackFaceImage(card) && (!patch.dropped_face || walkerBack);
   const faces = card.card_faces ?? [];
   const faceName = hasBackScan ? (faces[scryfallFaceIndex(face)]?.name ?? null) : null;
 
   if (face === "front") {
     return {
       preview: {
-        ...previewFromImportPatch(patch, card.name, template),
+        ...previewFromImportPatch(comparePatch, card.name, template),
         // Two colours stay two here, so a split frame draws the scan's split.
         colorIdentity: referenceColorIdentity(card),
       },
@@ -108,12 +118,12 @@ export async function buildFrameComparePayload(
     };
   }
 
-  if (patch.dropped_face) {
+  if (patch.dropped_face && !walkerBack) {
     throw new FrameCompareFaceError(
       droppedFaceNotice(patch, card.name) ?? `${card.name} has no second face to compare.`,
     );
   }
-  if (!patch.back_face) {
+  if (!comparePatch.back_face) {
     throw new FrameCompareFaceError(`${card.name} has no second face to compare.`);
   }
   if (!hasBackScan) {
@@ -129,7 +139,7 @@ export async function buildFrameComparePayload(
   const backBody = isDfcBackBody(template);
   const frontTemplate = backBody ? (frontBodyFor(template, patch.card_type) ?? template) : template;
   const front: CardPreviewData = {
-    ...previewFromImportPatch(patch, card.name, frontTemplate),
+    ...previewFromImportPatch(comparePatch, card.name, frontTemplate),
     colorIdentity: referenceColorIdentity(card),
   };
   const stored: CardPreviewData =

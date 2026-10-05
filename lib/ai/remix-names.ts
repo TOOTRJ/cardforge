@@ -12,17 +12,25 @@
 
 import type { CardBackFace, FrameTemplate } from "@/types/card";
 import { kindFromCard, templatePaintsSecondFace } from "@/lib/creator/card-kinds";
+import { templateHasBackFace } from "@/lib/cards/dfc";
 
-/** The layout kinds whose frame paints a second half the remix names. */
-export const REMIX_SECOND_HALF_LAYOUTS = ["adventure", "split", "aftermath", "flip"] as const;
+/** The layout kinds whose frame paints a second half the remix names — and
+ *  the double-faced kinds (TODO 5.4), whose BACK FACE the remix names and
+ *  paints as a second picture. */
+export const REMIX_SECOND_HALF_LAYOUTS = ["adventure", "split", "aftermath", "flip", "transform", "mdfc"] as const;
 export type RemixSecondHalfLayout = (typeof REMIX_SECOND_HALF_LAYOUTS)[number];
 
+/** The double-faced layouts: the second half is a back face with its own
+ *  art, not a panel the front's master paints. */
+export const REMIX_DOUBLE_FACED_LAYOUTS: ReadonlySet<RemixSecondHalfLayout> = new Set(["transform", "mdfc"]);
+
 /** The layout a landed template's second half belongs to, or null when the
- *  template paints no second half (a standard frame, the saga's rail). */
+ *  template paints no second half (a standard frame, the saga's rail): a
+ *  two-part layout's kind, or the double-faced kind of a DFC front body. */
 export function remixSecondHalfLayout(
   template: FrameTemplate | string | undefined,
 ): RemixSecondHalfLayout | null {
-  if (!template || !templatePaintsSecondFace(template)) return null;
+  if (!template || !(templatePaintsSecondFace(template) || templateHasBackFace(template))) return null;
   const kind = kindFromCard(undefined, template);
   return (REMIX_SECOND_HALF_LAYOUTS as readonly string[]).includes(kind)
     ? (kind as RemixSecondHalfLayout)

@@ -22,6 +22,7 @@ import {
 } from "@/types/card";
 import {
   KIND_DEFS,
+  dfcLayoutForKind,
   isSingleBasicLand,
   kindFromCard,
   templateRefusesKind,
@@ -29,9 +30,17 @@ import {
   walkerRowsFrameFor,
   type CardKind,
 } from "@/lib/creator/card-kinds";
+import {
+  bodyFor,
+  colorlessFaceAllowed,
+  dfcIconFamilyFromEffects,
+  isDfcFaceType,
+  type DfcIconFamily,
+  type DfcLayout,
+} from "@/lib/cards/dfc";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
-import { describeFrame, withVerification } from "@/lib/creator/frame-resolve";
+import { describeFrame, finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
 import { qualifiesForCrown, twoColorPairOf, type TwoColorPair } from "@/lib/cards/anatomy";
 import { supertypeHasWord } from "@/lib/cards/card-display";
 import {
@@ -226,6 +235,13 @@ export type ScryfallImportPatch = {
    *  (stampOfPrinting). The save drops it where the landed frame has no
    *  notch (a stamped SLD token, a UB emblem). */
   printed_stamp?: HoloStampSwitch;
+  /** The transform icon FAMILY this printing wears (TODO 5.4, owner Q5:
+   *  imports follow the printing's family) — `frame_style.dfcIcon`, from
+   *  the printing's `frame_effects` (dfcIconFamilyFromEffects): sun / moon,
+   *  moon / Emrakul, compass / land, the fans, else `arrows`. Named only on
+   *  a printing that LANDS on a double-faced body (dfcImportOf); the save
+   *  drops the key on any other frame. */
+  printed_dfc_icon?: DfcIconFamily;
   rules_text?: string;
   flavor_text?: string;
   power?: string;
@@ -266,15 +282,18 @@ export type ScryfallImportPatch = {
   /** When present, the Scryfall card has two faces and the back-face
    *  content should be seeded into the form's back_face fields. The
    *  back-face art is imported separately via the `mode: "art-back"`
-   *  option on /api/scryfall/import-art. */
+   *  option on /api/scryfall/import-art. On a printing that lands on the
+   *  double-faced bodies (TODO 5.4: `kind` transform / mdfc) it also
+   *  carries the back's own BODY and COLOUR. */
   back_face?: ScryfallImportBackFacePatch;
-  /** Display-only: the second face this import left out (TODO 1.23) — a
-   *  double-faced token or a Role card imports its front face with no
-   *  `back_face`, and the creator says so (droppedFaceNotice). */
+  /** Display-only: the second face this import left out (TODO 1.23 / 5.4)
+   *  — a double-faced token, a Role card or a printing with a planeswalker
+   *  face imports its front face with no `back_face`, and the creator says
+   *  so (droppedFaceNotice). */
   dropped_face?: DroppedFace;
 };
 
-type ScryfallImportBackFacePatch = {
+export type ScryfallImportBackFacePatch = {
   title?: string;
   cost?: string;
   card_type?: CardType;
@@ -293,6 +312,17 @@ type ScryfallImportBackFacePatch = {
    *  face has its own image (the named route's `has_back_image`, TODO 1.8)
    *  — the back-face import is triggered in the same flow. */
   imported_art_url?: string | null;
+  /** The back's own frame colour (TODO 5.4): the back face's printed
+   *  colours in the creator's single-select model
+   *  (backFrameColorsFromScryfall) — colourless on the land back, whose
+   *  body has one master verified on `c` alone. Only on a printing that
+   *  lands on the double-faced bodies; a legacy back carries none. */
+  color_identity?: ColorIdentity[];
+  /** The back's BODY: `bodyFor(layout, "back", back type, family)` — what
+   *  the server's gate derives and stores (lib/cards/dfc-gate.ts); named
+   *  here so the creator, the compare tools and the AI deck remix read the
+   *  same body. Only on a printing that lands on the bodies. */
+  frame_style?: { template: FrameTemplate };
 };
 
 /** One word left of a type line's dash that the importer keeps. */
@@ -384,16 +414,31 @@ function isTokenTypeLine(typeLine: string | null | undefined): boolean {
   return typeLineWords(typeLine).words.some((w) => w.cardType === "token");
 }
 
-/** The second face an import leaves out (TODO 1.23), or undefined: a
+/** The second face an import leaves out (TODO 1.23 / 5.4), or undefined: a
  *  double-faced token (TMOM #16 Incubator // Phyrexian) imports its front
  *  face until two-sided tokens exist (5.5); a Role card (TWOE #15) its front
- *  Role, for good (no two-Role layout is planned). */
-export type DroppedFace = "double-faced-token" | "role";
+ *  Role, for good (no two-Role layout is planned); a transform or modal
+ *  printing with a PLANESWALKER face (ORI's Kytheon // Gideon, KHM's Valki
+ *  // Tibalt, MH3's Ajani, STX's Rowan // Will) imports its front alone
+ *  until the walker bodies exist (owner 2026-10-02, Q2: they wait — 5.13,
+ *  ask first), and the request log counts the ask (the registry's
+ *  `dfc/walker` signature). */
+export type DroppedFace = "double-faced-token" | "role" | "walker-face";
+
+/** True when either face of a transform / modal printing is a planeswalker. */
+function hasWalkerFace(card: ScryfallCard): boolean {
+  const layout = (card.layout ?? "").toLowerCase();
+  if (layout !== "transform" && layout !== "modal_dfc") return false;
+  return (card.card_faces ?? []).some((face) =>
+    typeLineWords(face.type_line).words.some((w) => w.cardType === "planeswalker"),
+  );
+}
 
 export function droppedFaceOf(card: ScryfallCard): DroppedFace | undefined {
   const layout = (card.layout ?? "").toLowerCase();
   if (layout === "double_faced_token") return "double-faced-token";
   if (layout === "flip" && isTokenTypeLine(frontTypeLine(card))) return "role";
+  if (hasWalkerFace(card)) return "walker-face";
   return undefined;
 }
 
@@ -409,9 +454,122 @@ export function droppedFaceNotice(
       return `${cardName} is a double-faced token — PipGlyph imported its front face, ${patch.title ?? "the front"}. Two-sided tokens aren't supported yet.`;
     case "role":
       return `${cardName} holds two Roles — PipGlyph imported the front one, ${patch.title ?? "the front Role"}.`;
+    case "walker-face":
+      return `${cardName} has a planeswalker face — PipGlyph imported the front face, ${patch.title ?? "the front"}, on its own. Double-faced planeswalkers aren't supported yet.`;
     default:
       return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Double-faced printings (TODO 5.4; design 2026-10-02 §2.4, §4, §5; owner
+// Q2, Q5): where a transform / modal printing lands.
+// ---------------------------------------------------------------------------
+
+/** Why a transform / modal printing does NOT land on the double-faced
+ *  bodies — today's landing instead (the front's standard kind with a legacy
+ *  back), with the registry naming the item:
+ *   • "walker-face" — either face is a planeswalker (5.13; the back is
+ *     dropped, droppedFaceOf);
+ *   • "face-type" — a face is not one of wave 1's six face types, or is a
+ *     Saga (the saga fronts and the MOM / LCI / FIN saga backs are their own
+ *     bodies, 5.5; a battle front stays a battle, 4.21b / 5.5);
+ *   • "no-body" — the layout has no body for a face yet (the modal bodies
+ *     until 5.1b: `bodyFor` answers null, and the printing turns onto them
+ *     by itself once they exist);
+ *   • "colourless-face" — a colourless face whose type line has no Artifact
+ *     word (EMN's Eldrazi backs, STX #6 Wandering Archaic's front): the
+ *     body's `c` is the artifact master standing in (design D2), and the
+ *     see-through frame is 5.11 — the printing keeps today's landing rather
+ *     than a colour the print doesn't have. */
+export type DfcImportBlock = "walker-face" | "face-type" | "no-body" | "colourless-face";
+
+export type DfcImportFacts = {
+  layout: DfcLayout;
+  /** The printing's icon family (dfcIconFamilyFromEffects). */
+  family: DfcIconFamily;
+  frontType: CardType | undefined;
+  backType: CardType | undefined;
+  /** Null when the printing lands on the bodies. */
+  blocked: DfcImportBlock | null;
+  /** The kind — set only when nothing blocks the landing. */
+  kind: "transform" | "mdfc" | null;
+  /** The bodies each face WOULD wear (by type and family) — set whenever
+   *  they exist, blocked or not: a blocked printing's frame is still the
+   *  body (the registry names it; the import lands on the standard instead,
+   *  `landOn`); null while no body exists for a face ("no-body"), or when a
+   *  face isn't a wave-1 face type. */
+  frontBody: FrameTemplate | null;
+  backBody: FrameTemplate | null;
+};
+
+/** A face's type words as the gate reads them (lib/cards/dfc.ts
+ *  colorlessFaceAllowed → isArtifactFrameType). */
+function faceTypeInfo(typeLine: string | null | undefined): { cardType: CardType | undefined; supertype: string | undefined; saga: boolean } {
+  const parsed = parseTypeLine(typeLine);
+  return {
+    cardType: parsed.card_type,
+    supertype: parsed.supertype,
+    saga: typeLineWords(typeLine).subtypes.includes("Saga"),
+  };
+}
+
+/**
+ * The double-faced landing of a printing (TODO 5.4), or null for any other
+ * layout: the layout, the family, each face's type and — when nothing blocks
+ * it — the kind (`transform` / `mdfc`) and the bodies each face wears
+ * (`bodyFor`: the land front / back for a land face, the spell bodies
+ * otherwise, the transform back by family). The ONE place the mapper, the
+ * registry (printingFacts) and the creator read this from.
+ */
+export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
+  const scryfallLayout = (card.layout ?? "").toLowerCase();
+  const layout: DfcLayout | null =
+    scryfallLayout === "transform" ? "transform" : scryfallLayout === "modal_dfc" ? "modal" : null;
+  if (!layout) return null;
+  const faces = card.card_faces ?? [];
+  const front = faceTypeInfo(faces[0]?.type_line ?? card.type_line);
+  const back = faceTypeInfo(faces[1]?.type_line);
+  const family = dfcIconFamilyFromEffects(card.frame_effects);
+  const facts: DfcImportFacts = {
+    layout,
+    family,
+    frontType: front.cardType,
+    backType: back.cardType,
+    blocked: null,
+    kind: null,
+    frontBody: null,
+    backBody: null,
+  };
+  const blocked = (why: DfcImportBlock): DfcImportFacts => ({ ...facts, blocked: why });
+  if (hasWalkerFace(card)) return blocked("walker-face");
+  if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || back.saga) {
+    return blocked("face-type");
+  }
+  const frontBody = bodyFor(layout, "front", front.cardType, family);
+  const backBody = bodyFor(layout, "back", back.cardType, family);
+  if (!frontBody || !backBody) return blocked("no-body");
+  // A colourless face wears the body's `c` only with an Artifact word (D2);
+  // a land face's colour is its body's one master (always allowed). The
+  // bodies stay on the facts: they ARE the printing's frame (the registry
+  // names them); the import lands on the standard meanwhile.
+  const frontColourless = frontFaceColors(card).length === 0;
+  const backColourless = backFaceColors(card).length === 0;
+  if (
+    (frontColourless && !colorlessFaceAllowed(frontBody, { cardType: front.cardType, supertype: front.supertype })) ||
+    (backColourless && !colorlessFaceAllowed(backBody, { cardType: back.cardType, supertype: back.supertype }))
+  ) {
+    return { ...blocked("colourless-face"), frontBody, backBody };
+  }
+  return { ...facts, kind: layout === "transform" ? "transform" : "mdfc", frontBody, backBody };
+}
+
+/** A face's STORED colour on a double-faced body: colourless on a land body
+ *  (the land pair has one master under every key, verified on `c` alone —
+ *  the editor's and the Q3 move's rule, lib/cards/dfc-adopt.ts
+ *  adoptedBackColorIdentity), else the face's own frame colour. */
+function dfcFaceColorIdentity(faceType: CardType | undefined, colors: ColorIdentity[]): ColorIdentity[] {
+  return faceType === "land" ? ["colorless"] : colors;
 }
 
 /** True when the card is a Room (Duskmourn): Scryfall files Rooms under
@@ -454,6 +612,14 @@ export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
   // for Roles only; Kamigawa's flip cards keep the flip kind).
   if (layout === "flip") return isTokenTypeLine(frontTypeLine(card)) ? "token" : "flip";
   if (layout === "adventure" || layout === "omen") return "adventure";
+  // A transform or modal printing lands on the double-faced bodies (TODO
+  // 5.4) when both faces can wear one: the Transform / Modal kind. A
+  // planeswalker face, a battle or token front (their own kinds), a Saga
+  // face, a face with no body yet (the modal bodies until 5.1b) or a
+  // colourless face without the Artifact word keeps the front face's
+  // standard kind — today's landing (dfcImportOf says which).
+  const dfc = dfcImportOf(card);
+  if (dfc?.kind) return dfc.kind;
 
   const { card_type } = parseTypeLine(frontTypeLine(card));
   if (!card_type) return undefined;
@@ -475,6 +641,7 @@ export function printingFacts(card: ScryfallCard): PrintingFacts {
   const multiFace = (card.card_faces?.length ?? 0) >= 2;
   const indicator = (multiFace ? front?.color_indicator : card.color_indicator) ?? [];
   const back = card.card_faces?.[1];
+  const backWords = typeLineWords(back?.type_line);
   return {
     kind: kindFromScryfall(card),
     cardTypes: new Set(words.flatMap((w) => (w.cardType ? [w.cardType] : []))),
@@ -489,7 +656,12 @@ export function printingFacts(card: ScryfallCard): PrintingFacts {
     }),
     colors: frontFaceColors(card),
     colorIndicator: indicator.length > 0,
-    omen: typeLineWords(back?.type_line).subtypes.includes("Omen"),
+    omen: backWords.subtypes.includes("Omen"),
+    // The second face, for the double-faced rules (TODO 5.4): its card type
+    // and subtypes, and where the printing lands (dfcImportOf).
+    backType: back ? parseTypeLine(back.type_line).card_type : undefined,
+    backSubtypes: backWords.subtypes,
+    dfc: dfcImportOf(card),
   };
 }
 
@@ -509,6 +681,14 @@ export function verifiedFrameMatchFromScryfall(
   verifiedKeys: ReadonlySet<string>,
   match: FrameMatch = frameMatchFromScryfall(card),
 ): FrameMatch {
+  const kind = kindFromScryfall(card);
+  if (kind && dfcLayoutForKind(kind)) {
+    // A double-faced landing is verified on BOTH faces (TODO 5.4): the
+    // front body in the front's colour and the back body in the back's —
+    // the same finalization the import's patch gets (finalizeImportMatch),
+    // so the printings grid and the import agree.
+    return finalizeImportMatch({ ...mapScryfallToFormPatch(card), frame_match: match }, verifiedKeys).frame_match ?? match;
+  }
   return withVerification(match, pickFrameColorKey(frameColorsFromScryfall(card)), verifiedKeys);
 }
 
@@ -516,7 +696,10 @@ export function verifiedFrameMatchFromScryfall(
  * The frame an import of THIS PRINTING lands on — the signature registry's
  * `landOn ?? template` (a thin wrapper kept for older callers and tests).
  * Undefined for layout kinds (their template is fixed by the kind — saga is
- * saga in every era) and for cards with no card type PipGlyph makes.
+ * saga in every era) and for cards with no card type PipGlyph makes — but
+ * NAMED for a double-faced kind (TODO 5.4): the front body follows the
+ * front face's type (the land front for a land), so the kind alone doesn't
+ * fix it.
  *
  * The registry keeps 1.3's dress rules on the M15 era: snow/devoid
  * printings re-dress the plain spell frame and a snow land the land frame
@@ -529,7 +712,8 @@ export function frameTemplateFromScryfall(
   match: FrameMatch = frameMatchFromScryfall(card),
 ): FrameTemplate | undefined {
   const kind = kindFromScryfall(card);
-  if (!kind || KIND_DEFS[kind].layoutTemplates) return undefined;
+  if (!kind) return undefined;
+  if (KIND_DEFS[kind].layoutTemplates && !dfcLayoutForKind(kind)) return undefined;
   return match.landOn ?? match.template;
 }
 
@@ -1157,6 +1341,24 @@ export function backFaceColors(card: ScryfallCard): string[] {
 }
 
 /**
+ * The BACK face's colour in the creator's single-select model (TODO 5.4 —
+ * frameColorsFromScryfall's sibling, read on `card_faces[1]`): the back's
+ * own printed colours (backFaceColors), none → ["colorless"], two or more →
+ * ["multicolor"] (the gold backs never split — MOM #43; a two-colour back
+ * prints gold, 5.12). What `back_face.color_identity` stores for a printing
+ * that lands on the double-faced bodies — except a LAND back, which the
+ * patch stores colourless (its body has one master, verified on `c`;
+ * dfcFaceColorIdentity). Empty when the printing has no second face.
+ */
+export function backFrameColorsFromScryfall(card: ScryfallCard): ColorIdentity[] {
+  if (!card.card_faces || card.card_faces.length < 2) return [];
+  const colors = backFaceColors(card).map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
+  if (colors.length > 1) return ["multicolor"];
+  if (colors.length === 0) return ["colorless"];
+  return colors.filter((v) => (COLOR_IDENTITY_VALUES as readonly string[]).includes(v));
+}
+
+/**
  * A single-faced land's frame colour (TODO 1.2). Scryfall has no field for
  * it, so this is a heuristic checked on Scryfall's scans — the land frame
  * follows the mana the land PRODUCES, not every symbol on it:
@@ -1406,6 +1608,15 @@ export function mapScryfallToFormPatch(
   // and a subtype only where the printing prints one.
   const emblem = kind === "emblem";
 
+  // A transform / modal printing on the double-faced bodies (TODO 5.4): the
+  // front's colour is its own — colourless on the land front, whose body has
+  // one master verified on `c` — and the family rides as `printed_dfc_icon`.
+  const dfc = dfcImportOf(card);
+  const dfcLanding = dfc?.kind ? dfc : null;
+  const frontColorIdentity = dfcLanding
+    ? dfcFaceColorIdentity(dfcLanding.frontType, colorIdentity)
+    : colorIdentity;
+
   return {
     // For a multi-face card, the front face's own name ("Fire", not "Fire //
     // Ice") is the right seed for the front we're populating.
@@ -1424,10 +1635,14 @@ export function mapScryfallToFormPatch(
     rarity: emblem ? "common" : rarityChecked,
     color_identity: emblem
       ? ["colorless"]
-      : colorIdentity.length > 0
-        ? colorIdentity
+      : frontColorIdentity.length > 0
+        ? frontColorIdentity
         : undefined,
     color_pair: frontFacePairFromScryfall(card) ?? undefined,
+    // The transform icon family the printing wears (TODO 5.4, owner Q5),
+    // only where the printing lands on a TRANSFORM body (the modal housing
+    // has no family).
+    ...(dfcLanding?.layout === "transform" ? { printed_dfc_icon: dfcLanding.family } : {}),
     // The printing's own anatomy (TODO 4.6.0): the import's values for the
     // card's crown and two-colour switches, named only where the printing
     // says something (owner round 17: printing-only). The save keeps only
@@ -1465,7 +1680,7 @@ export function mapScryfallToFormPatch(
     // face only (TODO 1.23) and say so.
     back_face:
       !droppedFace && card.card_faces && card.card_faces.length >= 2
-        ? mapScryfallBackFace(card)
+        ? mapScryfallBackFacePatch(card, dfcLanding)
         : undefined,
     dropped_face: droppedFace,
   };
@@ -1474,10 +1689,15 @@ export function mapScryfallToFormPatch(
 /**
  * Build the back-face patch from `card.card_faces[1]`. Mirrors the front
  * mapper's field-by-field defensiveness — invalid card_types and missing
- * fields are simply omitted rather than guessed.
+ * fields are simply omitted rather than guessed. On a printing that lands
+ * on the double-faced bodies (TODO 5.4) the back carries its BODY and its
+ * own COLOUR too; a legacy back (every other two-faced printing) neither.
+ * Exported for the admin compare view, which shows a face the import DROPS
+ * (a walker back, 5.13) as the legacy back a stored card still has.
  */
-function mapScryfallBackFace(
+export function mapScryfallBackFacePatch(
   card: ScryfallCard,
+  dfc: DfcImportFacts | null = null,
 ): ScryfallImportBackFacePatch | undefined {
   const back = card.card_faces?.[1];
   if (!back) return undefined;
@@ -1489,7 +1709,17 @@ function mapScryfallBackFace(
       ? typeParts.card_type
       : undefined;
 
+  const body = dfc?.kind && dfc.backBody ? dfc.backBody : null;
+
   return {
+    // The back's own frame colour and body, on the double-faced bodies only
+    // (the server's gate derives the same body; the colour is stored).
+    ...(body
+      ? {
+          color_identity: dfcFaceColorIdentity(dfc!.backType, backFrameColorsFromScryfall(card)),
+          frame_style: { template: body },
+        }
+      : {}),
     title: back.name ?? undefined,
     cost: back.mana_cost ?? undefined,
     card_type: cardType,
