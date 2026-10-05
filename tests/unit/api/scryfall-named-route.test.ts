@@ -16,6 +16,10 @@ import printings from "../scryfall/fixtures/import-printings.json";
 
 const state = vi.hoisted(() => ({
   user: { id: "user-1" } as { id: string } | null,
+  /** The viewer's profile (an admin's frame preview counts, TODO 5.4). */
+  profile: { is_admin: false } as { is_admin: boolean } | null,
+  /** The verified combos (frame_reviews), empty by default. */
+  verified: [] as string[],
   check: vi.fn(),
   log: vi.fn(),
   byId: vi.fn(),
@@ -26,6 +30,10 @@ const state = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => state.user,
+  getCurrentProfile: async () => state.profile,
+}));
+vi.mock("@/lib/cards/frame-reviews", () => ({
+  getVerifiedFrameKeys: async () => state.verified,
 }));
 vi.mock("@/lib/scryfall/rate-limit", () => ({
   checkScryfallRateLimit: state.check,
@@ -42,6 +50,7 @@ import { GET } from "@/app/api/scryfall/named/route";
 import { scryfallCardSchema, scryfallSetSchema } from "@/lib/scryfall/client";
 import collectorPrintings from "../scryfall/fixtures/collector-printings.json";
 import collectorSets from "../scryfall/fixtures/collector-sets.json";
+import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 
 type PrintingKey = keyof typeof printings;
 const card = (key: PrintingKey) => scryfallCardSchema.parse(printings[key]);
@@ -54,6 +63,8 @@ function get(query: string) {
 
 beforeEach(() => {
   state.user = { id: "user-1" };
+  state.profile = { is_admin: false };
+  state.verified = [];
   state.check.mockReset().mockResolvedValue({ ok: true });
   state.log.mockReset().mockResolvedValue(undefined);
   state.byId.mockReset().mockResolvedValue(null);
@@ -179,5 +190,47 @@ describe("GET /api/scryfall/named — has_back_image (TODO 1.8)", () => {
     expect(body.card.has_back_image).toBe(expected);
     // The patch still carries the second face's text either way.
     expect(Boolean(body.patch.back_face)).toBe(key !== "dom-168");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 5.4 — a double-faced landing is finalized on BOTH faces' combos, and
+// an ADMIN's frame preview (`?preview=<templates>`, the creator's
+// previewFrames) counts the previewed bodies as verified — for an admin
+// only; anyone else's list is ignored.
+// ---------------------------------------------------------------------------
+
+describe("GET /api/scryfall/named — a double-faced printing and the admin's frame preview (TODO 5.4)", () => {
+  const midSeven = () => scryfallCardSchema.parse(signaturePrintings["mid-7"]);
+
+  it("lands as before 5.4 while nothing is ticked: the front's standard kind, 'not yet verified', a legacy back", async () => {
+    state.byId.mockResolvedValue(midSeven());
+    const res = await get("id=0dbac7ce-a6fa-466e-b6ba-173cf2dec98e");
+    expect(res.status).toBe(200);
+    const { patch } = (await res.json()) as { patch: Record<string, unknown> };
+    expect(patch).toMatchObject({ kind: "creature", frame_template: "m15" });
+    expect(patch.frame_match).toMatchObject({ status: "nearest", template: "m15dfcfront", landOn: "m15", unverified: true });
+    expect((patch.back_face as Record<string, unknown>).frame_style).toBeUndefined();
+  });
+
+  it("an admin's previewed bodies count: the printing lands on the transform body with the back's body, colour and family", async () => {
+    state.byId.mockResolvedValue(midSeven());
+    state.profile = { is_admin: true };
+    const res = await get("id=0dbac7ce-a6fa-466e-b6ba-173cf2dec98e&preview=m15dfcfront,m15dfcbackleft");
+    const { patch } = (await res.json()) as { patch: Record<string, unknown> };
+    expect(patch).toMatchObject({ kind: "transform", frame_template: "m15dfcfront", printed_dfc_icon: "sunmoon" });
+    expect(patch.frame_match).toMatchObject({ status: "exact", template: "m15dfcfront" });
+    expect(patch.back_face).toMatchObject({ title: "Moonrage Brute", frame_style: { template: "m15dfcbackleft" }, color_identity: ["red"] });
+  });
+
+  it("a non-admin's preview list is ignored, and the front body alone isn't enough (the back's colour must be ticked too)", async () => {
+    state.byId.mockResolvedValue(midSeven());
+    const ignored = await get("id=0dbac7ce-a6fa-466e-b6ba-173cf2dec98e&preview=m15dfcfront,m15dfcbackleft");
+    expect(((await ignored.json()) as { patch: { kind: string } }).patch.kind).toBe("creature");
+    state.profile = { is_admin: true };
+    const frontOnly = await get("id=0dbac7ce-a6fa-466e-b6ba-173cf2dec98e&preview=m15dfcfront,nonsense");
+    const { patch } = (await frontOnly.json()) as { patch: Record<string, unknown> };
+    expect(patch.kind).toBe("creature");
+    expect(patch.frame_match).toMatchObject({ status: "nearest", unverified: true, reason: "the back face's frame isn't verified in red yet" });
   });
 });

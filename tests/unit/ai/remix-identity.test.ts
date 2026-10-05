@@ -210,3 +210,99 @@ describe("generateRemixIdentity", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// TODO 5.4 — a DOUBLE-FACED card's second half is its back face, with its
+// own artwork: the same one call names both faces AND describes the back's
+// picture (second_art_instruction), under the transform / modal
+// relationship; a two-part layout's request is unchanged.
+// ---------------------------------------------------------------------------
+
+const moonrageBrute: CardBackFace = {
+  title: "Moonrage Brute",
+  card_type: "creature",
+  subtypes: ["Werewolf"],
+  rules_text: "First strike\nWard—Pay 3 life.\nNightbound",
+  power: "3",
+  toughness: "3",
+  frame_style: { template: "m15dfcbackleft" },
+  color_identity: ["red"],
+};
+
+describe("buildRemixIdentityRequest — a double-faced card describes its back's picture", () => {
+  it("asks for second_art_instruction on a transform card, with the 'what the front becomes' relationship", () => {
+    const request = buildRemixIdentityRequest({
+      card: { ...giant, title: "Brutal Cathar", subtypes: ["Human", "Soldier", "Werewolf"] },
+      secondHalf: { layout: "transform", face: moonrageBrute },
+      style: "woodcut",
+    });
+    expect(request.twoPart).toBe(true);
+    expect(request.doubleFaced).toBe(true);
+    expect(request.system).toContain(SECOND_HALF_RELATIONSHIP.transform);
+    expect(request.system).toContain("on its back face");
+    expect(request.system).toContain("second_art_instruction: the back face has its OWN artwork");
+    expect(request.prompt).toContain('"layout": "transform"');
+    // The schema REQUIRES the back's instruction…
+    expect(
+      request.schema.safeParse({
+        title: "Grim Warden",
+        flavor_text: null,
+        art_instruction: "A soldier at dusk.",
+        second_title: "Moonlit Ravager",
+        second_flavor_text: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      request.schema.safeParse({
+        title: "Grim Warden",
+        flavor_text: null,
+        art_instruction: "A soldier at dusk.",
+        second_title: "Moonlit Ravager",
+        second_flavor_text: null,
+        second_art_instruction: "The same soldier as a werewolf under the moon. No text, no frame, no borders.",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("a modal card gets the 'other mode' relationship; a two-part layout is unchanged (no art instruction)", () => {
+    const modal = buildRemixIdentityRequest({
+      card: giant,
+      secondHalf: { layout: "mdfc", face: { ...moonrageBrute, title: "Echoing Equation", card_type: "sorcery" } },
+      style: "ink",
+    });
+    expect(modal.doubleFaced).toBe(true);
+    expect(modal.system).toContain(SECOND_HALF_RELATIONSHIP.mdfc);
+    const adventure = buildRemixIdentityRequest({ card: giant, secondHalf: { layout: "adventure", face: stomp }, style: "ink" });
+    expect(adventure.doubleFaced).toBe(false);
+    expect(adventure.system).not.toContain("second_art_instruction");
+    expect(adventure.system).toContain("on the same frame");
+    expect(
+      adventure.schema.safeParse({
+        title: "Crag Titan",
+        flavor_text: null,
+        art_instruction: "Repaint it.",
+        second_title: "Trample Down",
+        second_flavor_text: null,
+        second_art_instruction: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("generateRemixIdentity hands the back's instruction back", async () => {
+    s.object = {
+      title: "Grim Warden",
+      flavor_text: null,
+      art_instruction: "A soldier.",
+      second_title: "Moonlit Ravager",
+      second_flavor_text: null,
+      second_art_instruction: "A werewolf. No text, no frame, no borders.",
+    };
+    const identity = await generateRemixIdentity({
+      card: giant,
+      secondHalf: { layout: "transform", face: moonrageBrute },
+      style: "woodcut",
+    });
+    expect(identity.second_art_instruction).toBe("A werewolf. No text, no frame, no borders.");
+    expect(s.calls).toHaveLength(1);
+  });
+});

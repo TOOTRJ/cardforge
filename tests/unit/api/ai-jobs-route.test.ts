@@ -13,6 +13,12 @@ const s = vi.hoisted(() => ({
   credits: 10,
   capacity: { used: 0, cap: 50, tier: "free" } as { used: number; cap: number; tier: "free" | "plus" | "pro" } | null,
   remixable: 5,
+  /** Remixable entries that are double-faced (two credits each, TODO 5.4). */
+  doubleFaced: 0,
+  /** The AI rate limit's answer. */
+  rate: { ok: true } as Record<string, unknown>,
+  /** How often the deck remix's estimate (its Scryfall work) ran. */
+  estimateCalls: 0,
   created: [] as Array<{ kind: string; input: Record<string, unknown> }>,
 }));
 
@@ -25,7 +31,7 @@ vi.mock("@/lib/ai/provider", () => ({ isDesignAiConfigured: () => true }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => true }));
 vi.mock("@/lib/ai/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/rate-limit")>()),
-  checkAiRateLimit: async () => ({ ok: true }),
+  checkAiRateLimit: async () => s.rate,
   checkRandomCardDailyLimit: async () => ({ ok: true }),
   checkDailyActionLimit: async () => ({ ok: true }),
   getFreshCreditBalance: async () => s.credits,
@@ -43,7 +49,23 @@ vi.mock("@/lib/billing/entitlements", async (importOriginal) => {
   };
 });
 vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => s.capacity }));
-vi.mock("@/lib/decks/queries", () => ({ countRemixableDeckCards: async () => s.remixable }));
+// The deck remix's estimate (TODO 5.4): `remixable` entries, `doubleFaced`
+// of them priced at two credits (both faces painted).
+vi.mock("@/lib/ai/remix-estimate", () => ({
+  estimateDeckRemix: async () => {
+    s.estimateCalls += 1;
+    return {
+      cards: s.remixable,
+      credits: s.remixable + s.doubleFaced,
+      doubleFaced: s.doubleFaced,
+      skipped: 0,
+      unresolved: 0,
+      creditsByEntry: Object.fromEntries(
+        Array.from({ length: s.remixable }, (_, i) => [`entry-${i}`, i < s.doubleFaced ? 2 : 1]),
+      ),
+    };
+  },
+}));
 vi.mock("@/lib/ai/generation-jobs", () => {
   const record = (kind: string) => async (input: Record<string, unknown>) => {
     s.created.push({ kind, input });
@@ -76,6 +98,9 @@ beforeEach(() => {
   s.credits = 10;
   s.capacity = { used: 0, cap: 50, tier: "free" };
   s.remixable = 5;
+  s.doubleFaced = 0;
+  s.rate = { ok: true };
+  s.estimateCalls = 0;
   s.created = [];
 });
 
@@ -123,6 +148,38 @@ describe("POST /api/ai/jobs", () => {
     expect(String(json.error)).toMatch(/no cards to remix/);
     s.remixable = 5;
     expect((await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" })).status).toBe(200);
+  });
+
+  it("a rate-limited caller is refused BEFORE the deck remix's estimate does its Scryfall work", async () => {
+    s.rate = { ok: false, reason: "per_minute", retryAfterSeconds: 30, message: "Slow down." };
+    const { status } = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(status).toBe(429);
+    expect(s.estimateCalls).toBe(0);
+    expect(s.created).toHaveLength(0);
+  });
+
+  // TODO 5.4 (owner Q4): a deck remix's double-faced entries cost TWO
+  // credits — the estimate prices them, the pre-check needs them, and the
+  // plan's per-entry credits reach the job so each step reserves its own.
+  it("prices a deck remix's double-faced entries at two credits before anything is spent", async () => {
+    s.remixable = 3;
+    s.doubleFaced = 2;
+    s.credits = 4;
+    const short = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(short.status).toBe(402);
+    expect(short.json).toMatchObject({ code: "INSUFFICIENT_CREDITS", needed: 5, balance: 4 });
+    expect(String(short.json.error)).toMatch(/3 cards, 2 of them double-faced at 2 credits/);
+    expect(s.created).toHaveLength(0);
+
+    s.credits = 5;
+    const ok = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(ok.status).toBe(200);
+    expect(s.created).toEqual([
+      expect.objectContaining({
+        kind: "deck_remix",
+        input: expect.objectContaining({ creditsByEntry: { "entry-0": 2, "entry-1": 2, "entry-2": 1 } }),
+      }),
+    ]);
   });
 
   it("rejects a malformed body and an unknown kind", async () => {

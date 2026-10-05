@@ -37,7 +37,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { getCardCapacity } from "@/lib/cards/capacity";
-import { countRemixableDeckCards } from "@/lib/decks/queries";
+import { estimateDeckRemix, type DeckRemixEstimate } from "@/lib/ai/remix-estimate";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 
 // ---------------------------------------------------------------------------
@@ -244,8 +244,20 @@ export async function POST(request: Request) {
     );
   }
 
+  // The AI rate limit comes FIRST: sizing a deck remix resolves the deck's
+  // printings through Scryfall (estimateDeckRemix, TODO 5.4), and nothing
+  // that costs an outside call may run for a caller the limit refuses.
+  const rate = await checkAiRateLimit(user.id);
+  if (!rate.ok) {
+    return rateLimitedResponse(rate);
+  }
+
   const limit = await batchCardLimit();
   let size: number;
+  // The deck remix's estimate (TODO 5.4): the entries it runs and the
+  // credits they reserve — a double-faced printing on its bodies at two
+  // (owner Q4) — the same numbers the dialog showed before the confirm.
+  let remixEstimate: DeckRemixEstimate | null = null;
   if (parsed.data.kind === "card" || parsed.data.kind === "card_fill") {
     size = 1;
   } else if (parsed.data.kind === "deck_remix") {
@@ -254,8 +266,8 @@ export async function POST(request: Request) {
     // limit, sizing on the ceiling would demand 101 credits to remix a
     // 5-card deck). RLS hides decks that aren't the caller's; the count
     // then reads 0 and createDeckRemixJob rejects ownership downstream.
-    const count = await countRemixableDeckCards(parsed.data.deck_id);
-    if (count === 0) {
+    remixEstimate = await estimateDeckRemix(parsed.data.deck_id, limit);
+    if (remixEstimate.cards === 0) {
       // Nothing to remix — or a deck RLS hides (not the caller's). Refuse
       // here instead of sizing the job at the ceiling and answering "you
       // need 100 credits" for a 5-card deck.
@@ -264,7 +276,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    size = Math.max(1, Math.min(limit, count));
+    size = remixEstimate.cards;
   } else {
     // A missing size defaults to the classic 3-card batch, never the
     // ceiling — the UI always sends an explicit size; a bare API call
@@ -292,10 +304,6 @@ export async function POST(request: Request) {
     }
   }
 
-  const rate = await checkAiRateLimit(user.id);
-  if (!rate.ok) {
-    return rateLimitedResponse(rate);
-  }
   // Per-flow daily image ceilings apply ONLY while billing is off (previews,
   // local): there images aren't credit-charged, so the caps are what protect
   // AI spend. With billing on, credits are the sole limiter (owner decision,
@@ -331,13 +339,18 @@ export async function POST(request: Request) {
   // Covers are free (owner decision, 2026-09-15) — only the cards cost
   // credits.
   if (isBillingEnabled()) {
-    const needed = size;
+    // A deck remix needs what its estimate priced: a double-faced card's
+    // two pictures cost two (TODO 5.4, owner Q4).
+    const needed = remixEstimate?.credits ?? size;
+    const doubleFaced = remixEstimate?.doubleFaced ?? 0;
     const entitlements = await getEntitlements();
     if (entitlements.credits < needed) {
       return NextResponse.json(
         {
           ok: false,
-          error: `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"} (you have ${entitlements.credits}).`,
+          error: `You need ${needed} credit${needed === 1 ? "" : "s"} for this generation — ${size} card${size === 1 ? "" : "s"}${
+            doubleFaced > 0 ? `, ${doubleFaced} of them double-faced at 2 credits` : ""
+          } (you have ${entitlements.credits}).`,
           code: "INSUFFICIENT_CREDITS",
           balance: entitlements.credits,
           needed,
@@ -459,6 +472,9 @@ export async function POST(request: Request) {
     style: parsed.data.style,
     theme: parsed.data.theme,
     limit,
+    // The estimate's per-entry credits (TODO 5.4): what the dialog showed
+    // and the pre-check sized is what each step reserves.
+    creditsByEntry: remixEstimate?.creditsByEntry,
   });
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

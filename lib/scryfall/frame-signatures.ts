@@ -1,4 +1,5 @@
 import type { ScryfallCard } from "@/lib/scryfall/client";
+import type { DfcImportBlock, DfcImportFacts } from "@/lib/scryfall/import-mapper";
 import {
   FRAME_TEMPLATE_VALUES,
   type CardType,
@@ -19,7 +20,7 @@ import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
-import { bodyFor, templateHasBackFace } from "@/lib/cards/dfc";
+import { templateHasBackFace } from "@/lib/cards/dfc";
 import { m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
@@ -134,6 +135,15 @@ export type PrintingFacts = {
   colorIndicator: boolean;
   /** The second face is an Omen (Tarkir: Dragonstorm, layout "adventure"). */
   omen: boolean;
+  /** The second face's card type (the back of a transform / modal printing,
+   *  the second half of a two-part layout), or undefined with one face. */
+  backType: CardType | undefined;
+  /** The second face's subtypes ("Vehicle" on a BOT back). */
+  backSubtypes: readonly string[];
+  /** Where a transform / modal printing lands (TODO 5.4, the mapper's
+   *  dfcImportOf): the bodies each face wears, or what blocks the landing;
+   *  null for any other layout. */
+  dfc: DfcImportFacts | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -446,12 +456,20 @@ type Match = {
    *  4.6.0): every coloured pip a two-colour hybrid, or a nonland with no
    *  coloured pip — `false` for any other (the gold-split dress). */
   hybridCost?: boolean;
+  /** The second face's card type is in the list (a transform printing with
+   *  a LAND back). */
+  backTypes?: readonly CardType[];
+  /** The second face carries one of these subtypes ("Vehicle"). */
+  backSubtypesAny?: readonly string[];
+  /** A transform / modal printing that does NOT land on the double-faced
+   *  bodies for one of these reasons (PrintingFacts.dfc.blocked, TODO 5.4). */
+  dfcBlocked?: readonly DfcImportBlock[];
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "mdfc";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -476,6 +494,10 @@ type Outcome = {
   reject?: true;
   forGood?: true;
   blockedBy?: BlockedBy;
+  /** FrameMatch.landOn, named by the rule: where the import lands instead
+   *  of `template` — a double-faced printing whose colourless face can't
+   *  wear its body yet (5.11) is the body's frame, landing on the standard. */
+  landOn?: TemplateSpec;
   /** FrameMatch.onceVerified: the frame named instead once verified. */
   onceVerified?: TemplateSpec;
   /** Once `onceVerified` takes over the match is `exact` on it — `nearest`
@@ -594,6 +616,9 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.colorIndicator && !facts.colorIndicator) return false;
   if (match.omen && !facts.omen) return false;
   if (match.hybridCost !== undefined && isHybridCost(ctx) !== match.hybridCost) return false;
+  if (match.backTypes && (!facts.backType || !match.backTypes.includes(facts.backType))) return false;
+  if (match.backSubtypesAny && !match.backSubtypesAny.some((s) => facts.backSubtypes.includes(s))) return false;
+  if (match.dfcBlocked && (!facts.dfc?.blocked || !match.dfcBlocked.includes(facts.dfc.blocked))) return false;
   if (match.colorCount) {
     const n = facts.colors.length;
     if (match.colorCount.min !== undefined && n < match.colorCount.min) return false;
@@ -608,8 +633,13 @@ function matches(match: Match, ctx: Ctx): boolean {
 // Families: the template a kind takes inside one trade dress.
 // ---------------------------------------------------------------------------
 
-const layoutTemplateOf = (kind: CardKind | undefined): FrameTemplate | null =>
-  kind ? (KIND_DEFS[kind].layoutTemplates?.[0] ?? null) : null;
+/** The template a layout kind fixes: a double-faced kind's FRONT BODY for
+ *  the printing's front type (the land front for a land — TODO 5.4, the
+ *  mapper's dfcImportOf), else the kind's one layout template. */
+const layoutTemplateOf = (facts: PrintingFacts): FrameTemplate | null => {
+  if (facts.dfc?.kind) return facts.dfc.frontBody;
+  return facts.kind ? (KIND_DEFS[facts.kind].layoutTemplates?.[0] ?? null) : null;
+};
 
 const isArtifactCreature = (facts: PrintingFacts) =>
   facts.kind === "creature" && facts.cardTypes.has("artifact");
@@ -681,7 +711,7 @@ const FAMILIES: Record<
     ],
     pick: (ctx) => {
       const { facts, effects } = ctx;
-      const layout = layoutTemplateOf(facts.kind);
+      const layout = layoutTemplateOf(facts);
       if (layout) return layout;
       switch (facts.kind) {
         case "token":
@@ -713,7 +743,7 @@ const FAMILIES: Record<
       "m15borderlessartifact", "m15borderless",
     ],
     pick: ({ card, facts }) => {
-      const layout = layoutTemplateOf(facts.kind);
+      const layout = layoutTemplateOf(facts);
       if (layout) return layout;
       switch (facts.kind) {
         case "token":
@@ -761,23 +791,16 @@ const FAMILIES: Record<
     ],
     pick: (ctx) => m20TokenFrame(ctx),
   },
-  // The transform FRONT bodies (TODO 5.1a; lib/cards/dfc.ts bodyFor): the
-  // land front for a land front face, the spell front for every other —
-  // what a 2015-frame transform printing wears once the body is verified
-  // in its colour (the back body is the mapper's: 5.4 reads the printing's
-  // family and the back's type through bodyFor).
+  // The double-faced FRONT bodies (TODO 5.1a / 5.4; lib/cards/dfc.ts
+  // bodyFor): the body the mapper's dfcImportOf put the printing's front
+  // face on — the land front for a land, the spell front for every other;
+  // the transform bodies (5.1a) and the modal bodies (5.1b) alike (the back
+  // body rides on the patch: the printing's family and the back's type
+  // through bodyFor). A printing that doesn't land on the bodies (a blocked
+  // face) takes its kind's standard instead, as kindFallback does.
   dfc: {
-    produces: ["m15dfclandfront", "m15dfcfront"],
-    pick: ({ facts }) => bodyFor("transform", "front", facts.kind === "land" ? "land" : "spell") ?? "m15dfcfront",
-  },
-  // The modal FRONT bodies (TODO 5.1b): the land front for a land front
-  // face (the pathways), the spell front for every other — what a
-  // 2015-frame modal printing wears once the body is verified in its colour
-  // (the back body is the mapper's: 5.4 reads the back's type through
-  // bodyFor; a modal back has no family).
-  mdfc: {
-    produces: ["m15mdfclandfront", "m15mdfcfront"],
-    pick: ({ facts }) => bodyFor("modal", "front", facts.kind === "land" ? "land" : "spell") ?? "m15mdfcfront",
+    produces: ["m15dfclandfront", "m15dfcfront", "m15mdfclandfront", "m15mdfcfront"],
+    pick: (ctx) => ctx.facts.dfc?.frontBody ?? kindFallback(ctx),
   },
 };
 
@@ -786,7 +809,7 @@ function eraPick(
   standard: FrameTemplate,
   land: FrameTemplate,
 ): FrameTemplate {
-  const layout = layoutTemplateOf(facts.kind);
+  const layout = layoutTemplateOf(facts);
   if (layout) return layout;
   switch (facts.kind) {
     case "land":
@@ -814,7 +837,7 @@ const ERA_OF_FRAME: Record<string, FrameEra> = {
  *  Artifact Creature the M15 artifact frame); a layout kind its layout. */
 function kindFallback(ctx: Ctx): FrameTemplate {
   const { facts } = ctx;
-  const layout = layoutTemplateOf(facts.kind);
+  const layout = layoutTemplateOf(facts);
   if (layout) return layout;
   const cardType = facts.kind ? KIND_DEFS[facts.kind].cardType : "creature";
   const era = ERA_OF_FRAME[ctx.frame] ?? "m15";
@@ -854,6 +877,7 @@ type GapKey =
   | "colour-indicator"
   | "vehicle"
   | "dfc"
+  | "parchment-land-back"
   | "layout"
   | "omen"
   | "etched"
@@ -926,16 +950,37 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     blockedBy: "4.6",
   },
   vehicle: {
-    match: { subtypesAny: ["Vehicle"] },
+    // On either face: a BOT convert's Vehicle back (5.10) prints the plate
+    // the back body doesn't draw either.
+    match: { anyOf: [{ subtypesAny: ["Vehicle"] }, { backSubtypesAny: ["Vehicle"] }] },
     reason: "PipGlyph doesn't draw the Vehicle P/T plate yet",
     blockedBy: "4.6",
   },
+  // The double-faced marks on a frame that isn't a double-faced body (TODO
+  // 5.4): what is left once the transform / modal printings land on their
+  // bodies — the saga fronts (NEO's transforming Sagas) and backs (the MOM
+  // praetors), the battle fronts and the double-faced tokens (5.5). A
+  // walker face (5.13), a colourless face without the Artifact word (5.11)
+  // and a modal printing before 5.1b have rules of their own.
   dfc: {
     match: {
       anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
     },
-    reason: "PipGlyph doesn't draw the double-faced marks yet",
-    blockedBy: "Phase 5",
+    reason: "PipGlyph doesn't draw the double-faced marks on this frame yet",
+    blockedBy: "5.5",
+  },
+  // The Ixalan parchment land back (TODO 5.8): XLN / RIX / LCI's transform
+  // land backs print their own frame (uppercase name, a banner type line,
+  // the "(Transforms from …)" line); PipGlyph's land back is the plain one,
+  // so the import lands nearest on it (design 2026-10-02, 5.8).
+  "parchment-land-back": {
+    match: {
+      layouts: ["transform"],
+      backTypes: ["land"],
+      anyOf: [{ effectsAny: ["compasslanddfc"] }, { sets: ["xln", "rix", "lci"] }],
+    },
+    reason: "the Ixalan land back prints its own parchment frame, and PipGlyph draws the plain land back",
+    blockedBy: "5.8",
   },
   layout: {
     match: {
@@ -1140,13 +1185,9 @@ const showcaseLabel = ({ card, set }: Ctx) =>
 
 const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "aftermath", "flip"];
 
-/** The kinds a transform printing's FRONT face can be for the transform
- *  front body (lib/creator/card-kinds.ts LAYOUT_KIND_CARD_TYPES.transform):
- *  the front face's kind as kindFromScryfall reads it today. The Transform
- *  kind itself is not a layout kind of the `layout/2015` rules (whose
- *  family pick isn't land-aware): 5.4, which maps the layout to the kind,
- *  adds `transform` HERE so the printing keeps this rule. */
-const TRANSFORM_FRONT_KINDS: readonly CardKind[] = ["creature", "artifact", "enchantment", "land", "instant", "sorcery"];
+/** The M15-era gaps on a double-faced BODY (TODO 5.4): every M15-era gap but
+ *  the double-faced marks, which the body draws (gapDrawnBy). */
+const DFC_BODY_GAPS: readonly GapKey[] = M15_ERA_GAPS.filter((gap) => gap !== "dfc");
 
 /** The layout frames whose two parts each print their own colour (TODO
  *  4.26's per-part colour): a two-colour printing on them is not the
@@ -1444,6 +1485,45 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.35",
     },
   },
+  // A transform / modal printing with a PLANESWALKER face (TODO 5.4; owner
+  // 2026-10-02, Q2: the walker faces wait — 5.13, ask first): the front
+  // imports alone on its standard frame, the back is dropped
+  // (droppedFaceOf), and this row in the request log counts the ask.
+  // Before the borderless rules: a borderless walker DFC waits on 5.13 first.
+  {
+    key: "dfc/walker",
+    exactLabel: "Double-faced planeswalker",
+    match: { dfcBlocked: ["walker-face"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: "PipGlyph's double-faced planeswalker frames aren't built yet — the front face imports on its own",
+      blockedBy: "5.13",
+    },
+  },
+  // A colourless face without the Artifact word (EMN's Eldrazi backs, TLA's
+  // Aang backs, STX #6's Avatar front): the printing's frame IS the
+  // double-faced body (a front-body row may be verified against its front),
+  // but the body's `c` is the artifact master standing in (design D2) and
+  // the see-through frame is 5.11, so the import LANDS on the standard
+  // (`landOn`: today's landing, a legacy back) rather than giving the face
+  // a colour the print doesn't have.
+  {
+    key: "dfc/colourless-face",
+    exactLabel: "Double-faced card with a colourless face",
+    match: { dfcBlocked: ["colourless-face"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "dfc" },
+      landOn: { family: "m15" },
+      reason: "a colourless double-faced face without the Artifact word prints the see-through frame, which PipGlyph doesn't draw yet",
+      blockedBy: "5.11",
+    },
+  },
+  // The borderless transform / modal faces (5.7): nearest on the double-faced
+  // body the printing's faces wear (TODO 5.4 — the bordered twin of the
+  // borderless look, with the marks), or on the kind's standard while the
+  // modal bodies don't exist (5.1b).
   {
     key: "borderless/dfc",
     exactLabel: "Borderless double-faced card",
@@ -1453,7 +1533,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     outcome: {
       status: "nearest",
-      template: { family: "borderless" },
+      template: { family: "dfc" },
       reason: "PipGlyph doesn't have the borderless double-faced frames yet",
       blockedBy: "5.7",
     },
@@ -1945,6 +2025,82 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
   },
 
+  // --- 5.4: the double-faced kinds -------------------------------------------
+  // A transform / modal printing whose faces land on the double-faced bodies
+  // (the mapper's dfcImportOf: the Transform kind since 5.1a, the Modal kind
+  // since 5.1b) is EXACT on its front body — the `dfc` gap is drawn there
+  // (gapDrawnBy) — and the creator's verification (withVerification,
+  // finalizeImportMatch) says "not yet verified" until the front body is
+  // ticked in the front's colour AND the back body in the back's; a
+  // 2003-frame one (ISD / DKA / AVR) is nearest on the M15 bodies, a devoid
+  // or snow one (MH3 #253 Drowner of Truth, KHM #179 Jorn) nearest on the
+  // body for its dress and landing on the era's dress frame (5.11: no devoid
+  // or snow double-faced body exists). The walker, colourless-face and
+  // borderless rules above take theirs first.
+  {
+    key: "dfc/2003",
+    exactLabel: "Transform frame (2003)",
+    match: { frames: ["2003"], kinds: ["transform"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "dfc" },
+      reason: "PipGlyph's transform frames are M15-era",
+      blockedBy: "4.10",
+    },
+  },
+  // A devoid or snow double-faced printing (MH3's five devoid MDFCs, KHM
+  // #179 Jorn): the printing's frame IS the body, nearest for its dress,
+  // and the import LANDS on the era's dress frame with a legacy back
+  // (dfcImportOf blocks it as "dress"; `landOn` the m15 family's pick, which
+  // reads the effects: m15devoid / m15snow) — today's landing, never the
+  // plain body as a look the print doesn't have (5.1b skeptic: without the
+  // block `modal/2015` judged Jorn EXACT on the plain modal front, and an
+  // unverified Drowner fell to plain m15).
+  {
+    key: "dfc/devoid",
+    exactLabel: "Devoid double-faced card",
+    match: { dfcBlocked: ["dress"], effectsAny: ["devoid"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "dfc" },
+      landOn: { family: "m15" },
+      reason: "a devoid double-faced card prints the devoid frame, which PipGlyph's double-faced bodies don't dress yet",
+      blockedBy: "5.11",
+    },
+  },
+  {
+    key: "dfc/snow",
+    exactLabel: "Snow double-faced card",
+    match: { dfcBlocked: ["dress"], effectsAny: ["snow"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "dfc" },
+      landOn: { family: "m15" },
+      reason: "a snow double-faced card prints the snow frame, which PipGlyph's double-faced bodies don't dress yet",
+      blockedBy: "5.11",
+    },
+  },
+  ...withGaps(
+    {
+      key: "modal/2015",
+      exactLabel: "M15 (2015) modal double-faced frame",
+      match: { frames: ["2015"], kinds: ["mdfc"] },
+      outcome: { status: "exact", template: { family: "dfc" } },
+    },
+    DFC_BODY_GAPS,
+  ),
+  ...withGaps(
+    {
+      key: "transform/2015",
+      exactLabel: "M15 (2015) transform frame",
+      match: { frames: ["2015"], kinds: ["transform"] },
+      outcome: { status: "exact", template: { family: "dfc" } },
+    },
+    // The Ixalan parchment land back (5.8) is the most visible miss after an
+    // unmodelled layout; the rest are the M15 era's.
+    ["layout", "parchment-land-back", ...DFC_BODY_GAPS.filter((gap) => gap !== "layout")],
+  ),
+
   // --- 1.4: layout kinds ---------------------------------------------------
   ...withGaps(
     {
@@ -2025,54 +2181,6 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       outcome: { status: "exact", template: { family: "modern" } },
     },
     OLD_ERA_GAPS,
-  ),
-  // A 2015-frame transform printing on a kind the transform front draws
-  // (TODO 5.1a; design 2026-10-02 §7 "Registry"): the M15 standard stands in
-  // (`nearest`, as before) until the transform front body is verified in
-  // the printing's colour — then `exact` on it (onceVerified +
-  // exactOnceVerified, the M20 token's model; lib/creator/frame-resolve.ts
-  // withVerification says "not yet verified in <colour>" meanwhile). The
-  // `dfc` gap is no gap on the body (gapDrawnBy), so it is left out of this
-  // rule's list; the other M15-era gaps hold as on the standard. The back
-  // face's body is the mapper's business (5.4: bodyFor by family and type).
-  // Walker, saga, battle and token fronts stay on their own rules.
-  ...withGaps(
-    {
-      key: "transform/2015",
-      exactLabel: "M15 (2015) transform frame",
-      match: { frames: ["2015"], layouts: ["transform"], kinds: TRANSFORM_FRONT_KINDS },
-      outcome: {
-        status: "nearest",
-        template: { family: "m15" },
-        reason: "PipGlyph's transform frames aren't verified in this colour yet",
-        blockedBy: "5.3",
-        onceVerified: { family: "dfc" },
-        exactOnceVerified: true,
-      },
-    },
-    M15_ERA_GAPS.filter((gap) => gap !== "dfc"),
-  ),
-  // A 2015-frame modal double-faced printing on a kind the modal front
-  // draws (TODO 5.1b): the same model — the M15 standard stands in
-  // (`nearest`) until the modal front body is verified in the printing's
-  // colour, then `exact` on it; the `dfc` gap is drawn there. A snow or
-  // devoid modal printing (KHM #179 Jorn, MH3 #253 Drowner of Truth) keeps
-  // its dress on the era rule: no snow or devoid modal body exists.
-  ...withGaps(
-    {
-      key: "modal/2015",
-      exactLabel: "M15 (2015) modal double-faced frame",
-      match: { frames: ["2015"], layouts: ["modal_dfc"], kinds: TRANSFORM_FRONT_KINDS, effectsNone: ["snow", "devoid"] },
-      outcome: {
-        status: "nearest",
-        template: { family: "m15" },
-        reason: "PipGlyph's modal double-faced frames aren't verified in this colour yet",
-        blockedBy: "5.1b",
-        onceVerified: { family: "mdfc" },
-        exactOnceVerified: true,
-      },
-    },
-    M15_ERA_GAPS.filter((gap) => gap !== "dfc"),
   ),
   ...withGaps(
     {
@@ -2217,6 +2325,12 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
 
   if (!landOn && artReachesCardEdge(getFrameProfile(template))) {
     landOn = BORDERED_EQUIVALENT[template] ?? kindFallback(ctx);
+  }
+  // A rule that names its own landing (a double-faced printing whose
+  // colourless face can't wear the body yet, 5.11): the import lands there.
+  const ruleLanding = rule.outcome.landOn;
+  if (!landOn && ruleLanding) {
+    landOn = typeof ruleLanding === "string" ? ruleLanding : FAMILIES[ruleLanding.family].pick(ctx);
   }
 
   // The frame named instead once verified: only one that dresses this card

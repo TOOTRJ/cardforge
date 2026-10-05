@@ -2685,6 +2685,117 @@ carries it. The output is deep-frozen. There is no registry of shared
 overlays: the P/T is per body (22 distinct `pt` slots over 44 templates at
 4.5.0), and so is every shield.
 
+### Import and the AI remix (5.4)
+
+TODO 5.4, 2026-10-05 (`feat/dfc-import`, the last PR of the double-faced
+line's first wave). Imports follow the printing PER FACE (owner 2026-10-02,
+Q5: the family from `frame_effects`; the look per face); walker faces WAIT
+(Q2); the AI deck remix of a double-faced card costs 2 credits (Q4), shown
+before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
+
+- **One landing rule** — `dfcImportOf(card)` in `lib/scryfall/import-mapper.ts`
+  (the mapper, the registry's `PrintingFacts.dfc` and the creator read it):
+  a transform / modal printing lands on the double-faced bodies when both
+  faces can wear one — the kind (`transform` / `mdfc`), the front body by the
+  front's type (`bodyFor`: the land front for a land), the back body by the
+  back's type and the printing's icon family (`dfcIconFamilyFromEffects`:
+  `sunmoondfc` → sunmoon, `mooneldrazidfc` → moon, `compasslanddfc` →
+  compass, `fandfc` → fan, `convertdfc` / none → arrows), the family on the
+  patch as `printed_dfc_icon` (→ `frame_style.dfcIcon`, `importedAnatomy`),
+  the front's colour its own, the back's own colour
+  (`backFrameColorsFromScryfall`, single-select: 2+ → multicolor — the gold
+  backs never split) — a LAND face colourless on either body (the land pair
+  has one master, verified on `c`; the editor's and the Q3 move's rule).
+  What blocks it, and what the printing does instead:
+  - a **planeswalker face** (ORI's Kytheon // Gideon and Jace, KHM Valki,
+    MH3's five, STX Rowan // Will, ECL Oko): the front imports alone on its
+    standard frame, `dropped_face: "walker-face"` + the toast
+    ("… has a planeswalker face — PipGlyph imported the front face … on its
+    own"), and the registry's `dfc/walker` signature (nearest, 5.13) logs a
+    `frame_requests` row — the request log counts the asks. The admin
+    compare view still draws such a back as the legacy back a stored card
+    has (Chrollo's Tibalt); a back-body pin refuses it.
+  - a **Saga, battle or token face**: its own kind, as today (5.5) — the
+    `dfc` gap on the standard frame now names 5.5.
+  - **no body yet**: the modal bodies until 5.1b — `bodyFor("modal", …)`
+    answers null, the printing lands as TODAY (the front's standard frame
+    with a legacy back, `modal/2015/pending` → 5.1b) and turns onto the
+    modal bodies by itself once they exist (`modal/2015`, exact).
+  - a **colourless face without the Artifact word** (EMN's Eldrazi backs —
+    Grizzled Angler // Grisly Anglerfish — STX #6 Wandering Archaic's front):
+    the body's `c` is the artifact master standing in (D2), so the printing
+    keeps today's landing rather than a colour the print doesn't have;
+    `dfc/colourless-face` → 5.11. A colourless ARTIFACT face (Tergrid's
+    Lantern) wears `c`.
+- **The registry** (`lib/scryfall/frame-signatures.ts`): `transform/2015`
+  and `modal/2015` are EXACT on the front body (the family `dfc` pick is the
+  printing's front body); the M15-era gaps hold on it but the double-faced
+  marks (the body draws them), plus `parchment-land-back` (XLN / RIX /
+  LCI's land backs print the parchment frame — nearest on `m15dfclandback`,
+  5.8) and the `vehicle` gap read on the BACK too (a BOT convert's Vehicle
+  back, 5.10). `dfc/2003` (ISD / DKA / AVR) is nearest on the M15 bodies;
+  `dfc/devoid` nearest for the devoid frame (5.11); `borderless/dfc` nearest
+  on the body (5.7, no bordered twin to land on). The back bodies keep no
+  signature of their own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`).
+- **Verified on BOTH faces** (`lib/scryfall/dfc-import.ts`
+  `dfcImportLanding`): the front body in the front's colour AND the back
+  body in the back's colour must be ticked, or the server's gate would refuse
+  the save after the art. `finalizeImportMatch` (the `/api/scryfall/named`
+  route, the printings grid) downgrades the patch to today's landing — the
+  front's standard kind and frame, the back a legacy back — and the match
+  says so: an exact answer becomes "the back face's frame isn't verified in
+  red yet" (`unverified`, the request log's "Not yet verified" cause), a
+  nearest one keeps its reason, both `landOn` the standard. The creator
+  then imports exactly as before 5.4; once the owner ticks both faces the
+  same printing lands on the bodies with the back's colour and family set
+  (the form sets the printing's colour BEFORE the kind change, so the
+  colourless-front rule never fires on an import). An ADMIN's frame preview
+  counts: the creator hands `previewFrames` to `/api/scryfall/named`
+  (`?preview=`), which unions every colour of those templates into the set
+  it finalizes against — for an admin only — so
+  `/create?previewFrames=m15dfcfront,m15dfcbackleft` imports a transform
+  printing onto the bodies before anyone has ticked them (the save is a
+  private frame preview, as always).
+- **The AI deck remix** keeps the back when the landed template
+  `templateHasBackFace` (beside `templatePaintsSecondFace`): the back's
+  body and colour ride through `scryfallRemixMechanics` → `createCardAction`
+  (the gate derives the same body). The identity call names both halves and
+  DESCRIBES the back's picture (`second_art_instruction`; relationships:
+  transform "what the front becomes", mdfc "the other mode"); the step
+  paints a second image and fails — refunding both credits — when either
+  picture fails. **Two credits** (Q4): `remixCreditsOf` prices an entry at
+  plan time — `lib/ai/remix-estimate.ts` resolves the deck's printings
+  through Scryfall's collection endpoint (≤ 2 calls for 100 cards; for the
+  deck's OWNER only, and only behind the AI rate limit, which the jobs route
+  checks before it sizes a remix) and maps
+  them through the remix's own frame choice — so the dialog's confirm
+  (`GET /api/ai/remix-estimate`: "N double-faced cards cost 2 credits —
+  both faces get art"), the jobs route's 402 pre-check and the plan entry's
+  `credits` (what `withCreditedStep` reserves: one charge, one ledger ref,
+  settled with the step — `settle_spend`) are the same number. A one-credit
+  entry is remixed ONE-FACED whatever its printing; an entry priced for both
+  faces whose bodies were un-ticked since fails plainly and refunds. An own
+  card's remix is unchanged (one-faced; a follow-up).
+- **Proofs.** `tests/unit/scryfall/dfc-imports.test.ts` (the mapping table
+  on `fixtures/dfc-import-printings.json` — MID #7 / #169, INR #60, a VOW
+  werewolf, a MOM transform, a BOT convert, XLN #22, LCI #26, EMN #63, ORI
+  #23 / #60, a MOM battle, TMOM #16, ZNR #12 / #284, KHM #112, STX #6 /
+  #147, ISD #51; the modal state before AND after 5.1b under the mocked
+  bodies; the request row; the both-faces finalization), the parity test
+  (`anatomy-import-default.test.ts`: the creator and the remix store the
+  same frame style, family included), `deck-remix-step-frame.test.ts`
+  (both faces, the second picture, the one-faced fallback, the credits),
+  `deck-remix-dfc-credits.test.ts` (the money path through the REAL credit
+  wrapper: one 2-credit reserve, one ref stamped for settlement, every
+  failure after it refunded under that ref, a one-credit plan one-faced),
+  `tests/unit/cards/dfc-import-save.test.ts` (every fixture printing saved
+  through the real createCardAction — the bodies, the blocked landings, the
+  walker's request row), `remix-estimate.test.ts`, the jobs route's 402
+  (and its rate limit before the estimate), `remix-estimate-route.test.ts`,
+  `remix-identity.test.ts` (the back's art instruction),
+  `tests/e2e/scryfall-import.spec.ts` (MID #7 through the admin preview:
+  the transform body, both arts, the family). Visual: 0 changed / 0 new.
+
 ### The kind gate
 
 `templateRefusesKind` (`lib/creator/card-kinds.ts`) is two rules; either

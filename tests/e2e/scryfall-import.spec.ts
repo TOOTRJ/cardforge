@@ -631,3 +631,202 @@ test.describe("Scryfall search → import", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// TODO 5.4: a transform printing lands on the double-faced bodies with both
+// faces' art. supabase/seed.sql mirrors production's frame_reviews, where no
+// transform combo is ticked, so the import goes through the ADMIN's frame
+// preview (the seeded e2e user is an admin; `previewFrames` unions the
+// bodies with the verified set and the save is a private frame preview —
+// the spec never writes frame_reviews). /api/scryfall/named is mocked with
+// the patch the mapper emits for MID #7 Brutal Cathar // Moonrage Brute
+// once both bodies are verified (tests/unit/scryfall/dfc-imports.test.ts
+// pins that patch); /api/scryfall/import-art answers a same-origin image for
+// each face. Local stack only (the card row is read back through the
+// service client).
+// ---------------------------------------------------------------------------
+
+test.describe("Scryfall import → the double-faced bodies (TODO 5.4)", () => {
+  test.skip(
+    !hasCredentials || !hasLocalStack,
+    "Needs the seeded e2e admin and the local Supabase stack.",
+  );
+
+  test("MID #7 lands on the transform body with both arts, the back on the sun / moon back in red", async ({ page }) => {
+    const id = "0dbac7ce-a6fa-466e-b6ba-173cf2dec98e"; // MID #7
+    const run = Date.now();
+    const title = `Brutal Cathar ${run}`;
+
+    // The art the mocked import-art route hands back must be SAVABLE: the
+    // save keeps only the caller's own storage objects on a registered
+    // origin (migration 0127; lib/validation/card.ts isSafeImageUrl takes
+    // the local stack's http origin outside production). So: the e2e
+    // user's id through the publishable client, the stack's origin
+    // registered as the app does before its first upload (tests/e2e/
+    // media-url-guards.spec.ts does the same), and the object URLs in the
+    // user's folder — the objects need not exist for the row to be stored.
+    const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+    const asUser = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "", {
+      auth: { persistSession: false },
+    });
+    const signedIn = await asUser.auth.signInWithPassword({
+      email: process.env.SUPABASE_E2E_USER_EMAIL!,
+      password: process.env.SUPABASE_E2E_USER_PASSWORD!,
+    });
+    expect(signedIn.error, "the seeded e2e user signs in").toBeNull();
+    const userId = signedIn.data.user!.id;
+    await asUser.auth.signOut();
+    const registered = await admin
+      .from("storage_origins")
+      .upsert(
+        { origin: new URL(supabaseUrl).origin, note: "e2e (as lib/media/storage-origin.ts)" },
+        { onConflict: "origin", ignoreDuplicates: true },
+      );
+    expect(registered.error).toBeNull();
+    const artUrl = (face: "front" | "back") =>
+      `${supabaseUrl}/storage/v1/object/public/card-art/${userId}/dfc-${face}-${run}.webp`;
+
+    await page.route("**/api/scryfall/search**", async (route) => {
+      await route.fulfill({
+        json: {
+          ok: true,
+          results: [
+            {
+              id,
+              name: "Brutal Cathar // Moonrage Brute",
+              set: "mid",
+              set_name: "Innistrad: Midnight Hunt",
+              type_line: "Creature — Human Soldier Werewolf // Creature — Werewolf",
+              mana_cost: "{2}{W}",
+              rarity: "rare",
+              artist: null,
+              thumb_url: null,
+              print_url: null,
+              oracle_text: null,
+            },
+          ],
+        },
+      });
+    });
+    await page.route("**/api/scryfall/named**", async (route) => {
+      await route.fulfill({
+        json: {
+          ok: true,
+          card: {
+            id,
+            name: "Brutal Cathar // Moonrage Brute",
+            set: "mid",
+            set_name: "Innistrad: Midnight Hunt",
+            print_url: null,
+            thumb_url: null,
+            scryfall_uri: null,
+            has_back_image: true,
+          },
+          patch: {
+            title,
+            cost: "{2}{W}",
+            kind: "transform",
+            frame_template: "m15dfcfront",
+            frame_match: {
+              status: "exact",
+              template: "m15dfcfront",
+              exactLabel: "M15 (2015) transform frame",
+              reason: null,
+              signature: "transform/2015",
+            },
+            card_type: "creature",
+            subtypes_text: "Human, Soldier, Werewolf",
+            rarity: "rare",
+            color_identity: ["white"],
+            printed_dfc_icon: "sunmoon",
+            printed_collector: "2015",
+            printed_stamp: "oval",
+            rules_text: "When this creature enters, exile target creature an opponent controls until this creature leaves the battlefield.\nDaybound",
+            power: "2",
+            toughness: "2",
+            source_scryfall_id: id,
+            back_face: {
+              title: "Moonrage Brute",
+              cost: "",
+              card_type: "creature",
+              subtypes_text: "Werewolf",
+              rules_text: "First strike\nWard—Pay 3 life.\nNightbound",
+              power: "3",
+              toughness: "3",
+              color_identity: ["red"],
+              frame_style: { template: "m15dfcbackleft" },
+              imported_art_url: null,
+            },
+          },
+        },
+      });
+    });
+    const artModes: string[] = [];
+    await page.route("**/api/scryfall/import-art", async (route) => {
+      const mode = (route.request().postDataJSON() as { mode: string }).mode;
+      artModes.push(mode);
+      await route.fulfill({
+        json: {
+          ok: true,
+          publicUrl: artUrl(mode === "art-back" ? "back" : "front"),
+          artist: null,
+          warning: null,
+          source: { scryfallId: id, cardName: "Brutal Cathar // Moonrage Brute", scryfallUri: null },
+        },
+      });
+    });
+
+    // The admin's frame preview lights both bodies (nothing is ticked on the
+    // seeded frame_reviews).
+    await signIn(page);
+    await page.goto("/create?previewFrames=m15dfcfront,m15dfcbackleft");
+    await expect(page.getByTestId("frame-preview-banner")).toBeVisible();
+    await page.getByRole("button", { name: /^search a real card/i }).click();
+    await page.locator('input[aria-label="Search Scryfall"]').fill("Brutal Cathar");
+    await page.getByRole("option", { name: /brutal cathar/i }).click();
+    await expect(page.getByText(/Will populate/)).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /also import artwork/i })).toBeChecked();
+    await page.getByRole("button", { name: /use as starting point/i }).click();
+    await expect(page.getByText("Imported Brutal Cathar // Moonrage Brute with artwork.")).toBeVisible();
+    expect([...artModes].sort()).toEqual(["art", "art-back"]);
+
+    // The Card step: the Transform kind, the sun / moon family.
+    await page
+      .getByRole("navigation", { name: /card editor steps/i })
+      .getByRole("button", { name: /^card$/i })
+      .click();
+    await expect(page.locator("summary").filter({ hasText: /card type\s*transform/i })).toBeVisible();
+    await expect(page.getByTestId("dfc-icon-family")).toContainText(/Sun/i);
+
+    // Save (a frame preview saves private) and read the row back.
+    const saveButton = page.getByRole("button", { name: /^save$/i });
+    await expect(saveButton).toBeEnabled();
+    await saveButton.dispatchEvent("click");
+    await page.waitForURL(/\/card\/.+\/edit\?.*previewFrames=/);
+
+    const { data: row, error } = await admin
+      .from("cards")
+      .select("id, frame_style, back_face, art_url, color_identity, visibility")
+      .eq("title", title)
+      .maybeSingle();
+    try {
+      expect(error).toBeNull();
+      expect(row, "the saved card row").not.toBeNull();
+      expect(row?.frame_style).toMatchObject({ template: "m15dfcfront", dfcIcon: "sunmoon" });
+      expect(row?.color_identity).toEqual(["white"]);
+      expect(row?.art_url).toBe(artUrl("front"));
+      expect(row?.back_face).toMatchObject({
+        title: "Moonrage Brute",
+        card_type: "creature",
+        frame_style: { template: "m15dfcbackleft" },
+        color_identity: ["red"],
+        art_url: artUrl("back"),
+      });
+      expect((row?.back_face as { cost?: string }).cost).toBeUndefined();
+      // A frame preview is always private.
+      expect(row?.visibility).toBe("private");
+    } finally {
+      if (row?.id) await admin.from("cards").delete().eq("id", row.id);
+    }
+  });
+});

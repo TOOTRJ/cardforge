@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import printings from "../scryfall/fixtures/import-printings.json";
+import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import type { FrameTemplate } from "@/types/card";
 
@@ -25,6 +26,8 @@ const s = vi.hoisted(() => ({
   identity: vi.fn(),
   image: vi.fn(),
   job: null as unknown as Record<string, unknown>,
+  /** The credits each step reserved (withCreditedStep's amount). */
+  reserved: [] as number[],
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -65,11 +68,14 @@ vi.mock("@/lib/ai/credited-step", () => ({
   withCreditedStep: async (
     _user: string,
     _job: string,
-    _amount: number,
+    amount: number,
     _reason: string,
     _step: unknown,
     body: () => Promise<unknown>,
-  ) => body(),
+  ) => {
+    s.reserved.push(amount);
+    return body();
+  },
 }));
 vi.mock("@/lib/cards/frame-reviews", () => ({
   getVerifiedFrameKeys: async () => s.verified,
@@ -101,7 +107,7 @@ vi.mock("@/lib/cards/actions", () => ({
   updateCardAction: async () => ({ ok: true }),
 }));
 
-import { runNextJobStep } from "@/lib/ai/generation-jobs";
+import { REMIX_DFC_FRAMES_GONE, runNextJobStep } from "@/lib/ai/generation-jobs";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { REMIX_FRAME_UNAVAILABLE } from "@/lib/creator/frame-resolve";
 import { REMIX_NAME_REUSED, REMIX_SECOND_NAME_MISSING } from "@/lib/ai/remix-names";
@@ -112,8 +118,9 @@ const keys = (...combos: [string, string][]) =>
 async function remix(
   key: PrintingKey,
   override?: (raw: Record<string, unknown>) => Record<string, unknown>,
+  options: { credits?: number; printing?: Record<string, unknown> } = {},
 ) {
-  const raw = structuredClone(printings[key]) as Record<string, unknown>;
+  const raw = structuredClone(options.printing ?? printings[key]) as Record<string, unknown>;
   const printing = scryfallCardSchema.parse(override ? override(raw) : raw);
   s.printing = printing;
   s.job = {
@@ -130,10 +137,18 @@ async function remix(
       theme: null,
       skipped: 0,
       entries: [
-        { board: "main", quantity: 1, name: printing.name, card_id: null, scryfall_id: printing.id },
+        {
+          board: "main",
+          quantity: 1,
+          name: printing.name,
+          card_id: null,
+          scryfall_id: printing.id,
+          // The plan's price for a double-faced entry (TODO 5.4).
+          ...(options.credits ? { credits: options.credits } : {}),
+        },
       ],
     },
-    steps: [{ key: "remix:0", label: printing.name, status: "running" }],
+    steps: [{ key: "remix:0", label: printing.name, status: "running", ...(options.credits ? { credits: options.credits } : {}) }],
   };
   const result = await runNextJobStep("job-1", "remix:0");
   expect(result.ok).toBe(true);
@@ -143,6 +158,7 @@ async function remix(
 beforeEach(() => {
   s.created = [];
   s.patched = [];
+  s.reserved = [];
   // Like the real call: a second name only when a second half is sent.
   s.identity.mockReset().mockImplementation(async (input: { secondHalf?: unknown }) => ({
     title: "Remixed Name",
@@ -331,5 +347,88 @@ describe("executeDeckRemixStep — a token's text box follows the saved text", (
       frame_style: { template: "m15tokenartifacttext" },
       rules_text: "{T}, Sacrifice this artifact: Add one mana of any color.",
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 5.4 — a DOUBLE-FACED printing (owner Q4: two credits, two pictures).
+// The plan priced the entry (credits: 2); the step reserves that, lands on
+// the transform front body with the back's body and colour, paints the back
+// from the identity's second instruction, and hands both faces to the save.
+// A one-credit entry stays one-faced; a priced entry whose bodies were
+// un-ticked since fails plainly (and the wrapper refunds).
+// ---------------------------------------------------------------------------
+
+const BOTH_FACES = keys(["m15dfcfront", "w"], ["m15dfcbackleft", "r"], ["m15", "w"]);
+const identityWithBackArt = {
+  title: "Grim Warden",
+  flavor_text: "New flavour.",
+  art_instruction: "A soldier at dusk.",
+  second_title: "Moonlit Ravager",
+  second_flavor_text: null,
+  second_art_instruction: "The same soldier as a werewolf under a red moon.",
+};
+
+describe("executeDeckRemixStep — a double-faced printing (TODO 5.4)", () => {
+  it("reserves two credits, paints both faces and saves the back with its body and colour (MID #7)", async () => {
+    s.verified = [...BOTH_FACES];
+    s.identity.mockResolvedValueOnce(identityWithBackArt);
+    const { step, card } = await remix("mid-7" as never, undefined, { credits: 2, printing: signaturePrintings["mid-7"] as never });
+    expect(s.reserved).toEqual([2]);
+    expect(step).toMatchObject({ status: "done", label: "Grim Warden // Moonlit Ravager" });
+    expect(card).toMatchObject({
+      frame_style: { template: "m15dfcfront", dfcIcon: "sunmoon" },
+      card_type: "creature",
+      color_identity: ["white"],
+      back_face: {
+        title: "Moonlit Ravager",
+        card_type: "creature",
+        frame_style: { template: "m15dfcbackleft" },
+        color_identity: ["red"],
+        art_url: "https://example.supabase.co/storage/v1/object/public/card-art/x.png",
+      },
+    });
+    // The identity call saw the back as a transform back face…
+    expect(s.identity.mock.calls[0][0]).toMatchObject({
+      secondHalf: { layout: "transform", face: { title: "Moonrage Brute", card_type: "creature" } },
+    });
+    // …and two pictures were painted: the front's, then the back's from its
+    // own instruction.
+    expect(s.image).toHaveBeenCalledTimes(2);
+    expect(String(s.image.mock.calls[1][0])).toContain("The same soldier as a werewolf under a red moon.");
+    // A transform back saves with no cost; the printing's artist never rides.
+    expect((card?.back_face as { cost?: string }).cost).toBeUndefined();
+    expect((card?.back_face as { artist_credit?: string }).artist_credit).toBeUndefined();
+  });
+
+  it("a one-credit entry is remixed one-faced on the standard frame, whatever is ticked", async () => {
+    s.verified = [...BOTH_FACES];
+    const { step, card } = await remix("mid-7" as never, undefined, { printing: signaturePrintings["mid-7"] as never });
+    expect(s.reserved).toEqual([1]);
+    expect(step).toMatchObject({ status: "done", label: "Remixed Name" });
+    expect(card).toMatchObject({ frame_style: { template: "m15" } });
+    expect(card?.back_face).toBeUndefined();
+    expect((card?.frame_style as { dfcIcon?: string }).dfcIcon).toBeUndefined();
+    expect(s.image).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed back picture fails the step before the save (both credits refunded by the wrapper)", async () => {
+    s.verified = [...BOTH_FACES];
+    s.identity.mockResolvedValueOnce(identityWithBackArt);
+    s.image
+      .mockResolvedValueOnce({ ok: true, bytes: new Uint8Array([1]), contentType: "image/png" })
+      .mockResolvedValueOnce({ ok: false, error: "The image model refused." });
+    const { step, card } = await remix("mid-7" as never, undefined, { credits: 2, printing: signaturePrintings["mid-7"] as never });
+    expect(step).toMatchObject({ status: "failed", error: "The image model refused." });
+    expect(card).toBeUndefined();
+  });
+
+  it("an entry priced for both faces whose bodies aren't ticked any more fails plainly, before the identity and the art", async () => {
+    s.verified = keys(["m15", "w"]);
+    const { step, card } = await remix("mid-7" as never, undefined, { credits: 2, printing: signaturePrintings["mid-7"] as never });
+    expect(step).toMatchObject({ status: "failed", error: REMIX_DFC_FRAMES_GONE });
+    expect(card).toBeUndefined();
+    expect(s.identity).not.toHaveBeenCalled();
+    expect(s.image).not.toHaveBeenCalled();
   });
 });

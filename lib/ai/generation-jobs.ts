@@ -68,8 +68,15 @@ import type {
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
+import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
+import { templateHasBackFace } from "@/lib/cards/dfc";
+
+/** A remix step priced for both faces whose double-faced frames aren't
+ *  available any more (a tick withdrawn since the plan): refused, refunded. */
+export const REMIX_DFC_FRAMES_GONE =
+  "The double-faced frames this card was priced for aren't available any more — retry this card.";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -138,6 +145,11 @@ export type JobStep = {
    *  prompt (lib/ai/art-prompt-safety.ts) — the moderation filter refuses
    *  the same prompt every time, so a plain retry could never succeed. */
   attempts?: number | null;
+  /** The credits this step reserves when it runs, where that isn't one: a
+   *  deck remix of a double-faced printing (TODO 5.4, owner Q4: two
+   *  pictures, two credits). The client's cost projections read it; absent
+   *  = one (every older job). */
+  credits?: number;
 };
 
 export type GenerationJobRow = {
@@ -221,6 +233,12 @@ type DeckRemixPlanEntry = {
   /** Real-card source — mechanics come from Scryfall oracle data; art is
    *  generated FRESH from a text description (never from the scan). */
   scryfall_id: string | null;
+  /** The credits the step reserves (TODO 5.4): 2 for a double-faced
+   *  printing landing on its bodies — both faces painted (owner Q4) —
+   *  decided at plan time (lib/ai/remix-estimate.ts) so the estimate, the
+   *  pre-check and the reserve agree; absent = 1 (every older plan). A
+   *  one-credit entry is remixed ONE-FACED whatever its printing. */
+  credits?: number;
 };
 
 type DeckRemixJobPlan = {
@@ -1131,6 +1149,11 @@ export type CreateDeckRemixJobInput = {
   theme?: string;
   /** Max entries to remix this generation (batch cap). */
   limit: number;
+  /** The jobs route's estimate (lib/ai/remix-estimate.ts): the credits each
+   *  entry reserves, by deck_cards id — 2 for a double-faced printing that
+   *  lands on its bodies (TODO 5.4). An entry it doesn't name costs 1 and is
+   *  remixed one-faced. */
+  creditsByEntry?: Readonly<Record<string, number>>;
 };
 
 export async function createDeckRemixJob(
@@ -1178,19 +1201,26 @@ export async function createDeckRemixJob(
     deck_title: deck.title,
     style: input.style.trim(),
     theme: input.theme?.trim() || null,
-    entries: taken.map((item) => ({
-      board: item.entry.board,
-      quantity: item.entry.quantity,
-      name: item.entry.name,
-      card_id: item.entry.card_id,
-      scryfall_id: item.entry.scryfall_id,
-    })),
+    entries: taken.map((item) => {
+      const credits = input.creditsByEntry?.[item.entry.id];
+      return {
+        board: item.entry.board,
+        quantity: item.entry.quantity,
+        name: item.entry.name,
+        card_id: item.entry.card_id,
+        scryfall_id: item.entry.scryfall_id,
+        // A double-faced printing's two pictures (TODO 5.4): only what the
+        // estimate priced; everything else is one credit, one face.
+        ...(credits !== undefined && credits > 1 ? { credits } : {}),
+      };
+    }),
     skipped,
   };
   const steps: JobStep[] = plan.entries.map((entry, index) => ({
     key: `remix:${index}`,
     label: entry.name,
     status: "pending" as const,
+    ...(entry.credits !== undefined && entry.credits > 1 ? { credits: entry.credits } : {}),
   }));
   steps.push({ key: COVER_STEP_KEY, label: "Deck cover", status: "pending" });
   // Same free guide step as a generated deck — pushed BEFORE the insert (it
@@ -1352,10 +1382,17 @@ async function runDeckRemixStep(
   }
 
   // A failed remix step carries no card_id, so its retry reruns the whole
-  // pipeline; the credit wrapper refunds every failed attempt.
-  return withCreditedStep(userId, job.id, 1, "generate_deck", step, () =>
+  // pipeline; the credit wrapper refunds every failed attempt. A
+  // double-faced entry reserves its two credits (the plan's, TODO 5.4) —
+  // one charge, one ledger ref, settled with the step (migration 0106).
+  return withCreditedStep(userId, job.id, remixEntryCredits(entry), "generate_deck", step, () =>
     executeDeckRemixStep(userId, job, step, plan, entry),
   );
+}
+
+/** The credits a remix plan entry reserves: its priced amount, else one. */
+function remixEntryCredits(entry: Pick<DeckRemixPlanEntry, "credits">): number {
+  return entry.credits !== undefined && entry.credits > 1 ? entry.credits : 1;
 }
 
 async function executeDeckRemixStep(
@@ -1426,14 +1463,24 @@ async function executeDeckRemixStep(
     // printing's frame when it is published in the card's colour, else its
     // card type's standard; a layout kind on its layout template with the
     // printed card type. Nothing published in the colour fails the step
-    // plainly, before any credit-costing art is generated.
+    // plainly, before any credit-costing art is generated. A double-faced
+    // printing keeps its back face only when the plan priced it (two
+    // credits, TODO 5.4); a one-credit entry is remixed one-faced.
+    const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
     const resolved = scryfallRemixMechanics(
       mapScryfallToFormPatch(scry),
       entry.name,
       new Set(await getVerifiedFrameKeys()),
+      { singleFace: !doubleFacedPlan },
     );
     if (!resolved.ok) {
       return { ...step, status: "failed", error: resolved.error };
+    }
+    // The plan reserved two credits for both faces: a landing that lost
+    // its bodies since (a tick withdrawn) is refused rather than charged
+    // two for one picture — the wrapper refunds it.
+    if (doubleFacedPlan && remixCreditsOf(resolved.mechanics) < DFC_REMIX_CREDITS) {
+      return { ...step, status: "failed", error: REMIX_DFC_FRAMES_GONE };
     }
     mechanics = {
       ...resolved.mechanics,
@@ -1543,6 +1590,35 @@ async function executeDeckRemixStep(
     };
   }
 
+  // ---- The back face's own picture (TODO 5.4, owner Q4: two credits) ----
+  // A double-faced landing paints its back from the identity's second
+  // instruction; a back without art would save private (the gate's
+  // both-arts rule), so a failed second picture fails the step — and the
+  // wrapper refunds both credits.
+  let backArtUrl: string | undefined;
+  if (named.back_face && mechanics.frame_template && templateHasBackFace(mechanics.frame_template)) {
+    const instruction = identity.second_art_instruction?.trim() || identity.art_instruction;
+    const generated = await generatePlainImage(
+      `${instruction} Style: ${plan.style}.`,
+      "card",
+      { timeoutMs: REMIX_IMAGE_TIMEOUT_MS },
+    );
+    if (generated.ok) {
+      const persisted = await persistGeneratedArt(generated.bytes, generated.contentType);
+      if (persisted.ok) backArtUrl = persisted.publicUrl;
+      else artError = persisted.error;
+    } else {
+      artError = generated.error;
+    }
+    if (!backArtUrl) {
+      return {
+        ...step,
+        status: "failed",
+        error: artError ?? "The back face's art generation failed — retry this card.",
+      };
+    }
+  }
+
   // ---- Create the remixed custom card, linked into the new deck ----
   // The printing's frame followed its PRINTED text; the remix saves the AI's
   // flavour, so a token's text box follows the text it saves with (TODO 4.49
@@ -1592,7 +1668,11 @@ async function executeDeckRemixStep(
         : mechanics.anatomy && Object.keys(mechanics.anatomy).length > 0
           ? { ...mechanics.anatomy }
           : undefined,
-      back_face: named.back_face,
+      // A double-faced back carries its own picture (above); a two-part
+      // layout's half has none (the frame paints it from its text).
+      back_face: named.back_face
+        ? { ...named.back_face, ...(backArtUrl ? { art_url: backArtUrl } : {}) }
+        : named.back_face,
       parent_card_id: mechanics.parent_card_id,
       source_scryfall_id: mechanics.source_scryfall_id,
       // Art is guaranteed above; remixed cards ship public like the deck.

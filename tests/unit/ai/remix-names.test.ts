@@ -375,3 +375,17 @@ describe("the remix's two-part printings get both halves renamed", () => {
     expect(remixSecondHalfLayout(result.mechanics.frame_template)).toBeNull();
   });
 });
+
+// TODO 5.4: a double-faced FRONT body's second half is its back face — the
+// remix names it under its own layout (transform / mdfc), and a back body
+// is never a second half of its own.
+describe("remixSecondHalfLayout — the double-faced bodies", () => {
+  it("a transform front body's second half is 'transform'; the back bodies and the standard frames have none", () => {
+    expect(remixSecondHalfLayout("m15dfcfront")).toBe("transform");
+    expect(remixSecondHalfLayout("m15dfclandfront")).toBe("transform");
+    expect(remixSecondHalfLayout("m15dfcback")).toBeNull();
+    expect(remixSecondHalfLayout("m15dfclandback")).toBeNull();
+    expect(remixSecondHalfLayout("m15")).toBeNull();
+    expect(remixSecondHalfLayout("adventure")).toBe("adventure");
+  });
+});

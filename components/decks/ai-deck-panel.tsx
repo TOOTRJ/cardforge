@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -24,6 +24,33 @@ import { GenerationProgress } from "@/components/ai/generation-progress";
 import { StylePicker } from "@/components/ai/style-picker";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
+
+/** GET /api/ai/remix-estimate's answer (TODO 5.4): the entries a remix runs
+ *  and the credits they reserve, double-faced printings at two. */
+export type RemixEstimate = {
+  cards: number;
+  credits: number;
+  doubleFaced: number;
+  skipped: number;
+};
+
+/** The deck's remix estimate, or null when the request fails (the panel
+ *  then keeps its "one per card" copy; the server re-checks at the job). */
+export async function fetchRemixEstimate(deckId: string): Promise<RemixEstimate | null> {
+  try {
+    const response = await fetch(`/api/ai/remix-estimate?deck_id=${encodeURIComponent(deckId)}`, {
+      cache: "no-store",
+    });
+    const body = (await response.json().catch(() => null)) as
+      | ({ ok: true } & RemixEstimate)
+      | { ok: false }
+      | null;
+    if (!response.ok || !body || body.ok !== true) return null;
+    return { cards: body.cards, credits: body.credits, doubleFaced: body.doubleFaced, skipped: body.skipped };
+  } catch {
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // AiDeckPanel — deck-side AI generation. Two modes on the jobs pipeline:
@@ -95,6 +122,23 @@ export function AiDeckPanel({
   const { phase, steps, busy, hasFailures, run, retryStep, retryFailed } =
     useGenerationJob();
   const confirmSpend = useCreditConfirm();
+  // The remix's cost estimate (TODO 5.4, owner Q4): the entries it runs
+  // and the credits they reserve — a double-faced card's two pictures at
+  // two — from the same estimate the jobs route sizes the job by, so the
+  // number confirmed is the number charged. Null until it answers (the
+  // "one per card" copy stands in) or when it can't (the confirm then
+  // asks the server's fresh number anyway).
+  const [estimate, setEstimate] = useState<RemixEstimate | null>(null);
+  useEffect(() => {
+    if (mode !== "remix" || !deckId) return;
+    let cancelled = false;
+    void fetchRemixEstimate(deckId).then((next) => {
+      if (!cancelled) setEstimate(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, deckId]);
 
   const settle = (outcome: GenerationJobOutcome) => {
     setResultSlug(outcome.slug);
@@ -131,19 +175,28 @@ export function AiDeckPanel({
       return;
     }
     // The deck page already passes the remixable count and the batch ceiling —
-    // the same clamp the jobs route applies (no extra round trip).
-    const cost = mode === "remix" ? Math.max(1, Math.min(maxCards, remixableCount ?? 1)) : size;
+    // the same clamp the jobs route applies (no extra round trip). The
+    // estimate (TODO 5.4) prices a double-faced card's two pictures at two
+    // credits; without it the one-per-card count stands and the server's
+    // pre-check names the real number.
+    const remixCards = estimate?.cards ?? Math.max(1, Math.min(maxCards, remixableCount ?? 1));
+    const cost = mode === "remix" ? (estimate?.credits ?? remixCards) : size;
+    const doubleFaced = mode === "remix" ? (estimate?.doubleFaced ?? 0) : 0;
     const confirmed = await confirmSpend({
       cost,
       title:
         mode === "remix"
-          ? `Remix ${cost} card${cost === 1 ? "" : "s"} with AI?`
+          ? `Remix ${remixCards} card${remixCards === 1 ? "" : "s"} with AI?`
           : mode === "add"
             ? `Add ${size} AI card${size === 1 ? "" : "s"} to this deck?`
             : `Generate a ${size}-card deck?`,
       description:
         mode === "remix"
-          ? "A new public copy: every card keeps its rules and gets fresh AI art and a name in your style."
+          ? `A new public copy: every card keeps its rules and gets fresh AI art and a name in your style.${
+              doubleFaced > 0
+                ? ` ${doubleFaced} double-faced card${doubleFaced === 1 ? " costs" : "s cost"} 2 credits — both faces get art.`
+                : ""
+            }`
           : "One credit per card. The deck cover and how-to-play guide are free.",
       confirmLabel: mode === "remix" ? "Remix" : "Generate",
     });
@@ -305,10 +358,15 @@ export function AiDeckPanel({
           <span>
             <span className="font-medium text-gold-strong">
               {mode === "remix"
-                ? `Uses up to ${maxCards} credits`
+                ? estimate
+                  ? `Uses ${estimate.credits} credit${estimate.credits === 1 ? "" : "s"}`
+                  : `Uses up to ${maxCards} credits`
                 : `Uses ${size} credit${size === 1 ? "" : "s"}`}
             </span>{" "}
-            (1 per card · cover art is free) · publishes publicly
+            {mode === "remix" && estimate && estimate.doubleFaced > 0
+              ? `(1 per card, 2 for ${estimate.doubleFaced === 1 ? "the" : `the ${estimate.doubleFaced}`} double-faced card${estimate.doubleFaced === 1 ? "" : "s"} — both faces get art · cover art is free)`
+              : "(1 per card · cover art is free)"}{" "}
+            · publishes publicly
             {mode === "remix" ? ` · first ${maxCards} cards this generation` : ""}
           </span>
         </span>

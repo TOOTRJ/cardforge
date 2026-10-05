@@ -114,8 +114,10 @@ describe("borderless families (TODO 1.17)", () => {
     ["fra-381", "nearest", "m15borderlessland", "m15land"],
     ["sld-2143", "nearest", "m15borderlessland", "m15land"],
     ["sld-469", "nearest", "m15borderlessland", "m15land"],
-    // MDFC (5.7), saga / adventure / room (4.38).
-    ["znr-284", "nearest", "m15borderlessland", "m15land"],
+    // MDFC (5.7): nearest on the double-faced body the faces wear (5.4) —
+    // a borderless Pathway on the modal land front (5.1b; no bordered twin
+    // to land on). Saga / adventure / room (4.38).
+    ["znr-284", "nearest", "m15mdfclandfront", undefined],
     ["tdm-383", "nearest", "saga", undefined],
     ["woe-298", "nearest", "adventure", undefined],
     ["dsk-334", "nearest", "m15borderless", "m15"],
@@ -394,7 +396,10 @@ describe("full-art and textless families (TODO 1.19)", () => {
     ["unh-120", "nearest", "split", undefined],
     // The look-alikes that are never full art.
     ["znr-293", "exact", "fullart", undefined],
-    ["znr-305", "exact", "fullart", undefined],
+    // ZNR #305 Kazandu Mammoth, the hedron showcase of a MODAL card: the
+    // showcase frame can't dress the Modal kind, so the import lands on the
+    // modal front body (5.1b / 5.4).
+    ["znr-305", "nearest", "fullart", "m15mdfcfront"],
     // The Expeditions: exact, but for the black and green masters (A8) —
     // Flooded Strand is multicolour (its two colours, landFrameColorRule).
     ["zne-1", "exact", "expeditionland", undefined],
@@ -455,12 +460,6 @@ describe("full-art and textless families (TODO 1.19)", () => {
       // over once verified (TODO 5.1a, transform/2015).
       if (match.signature.startsWith("transform/2015")) {
         expect(match.onceVerified, key).toMatch(/^m15dfc(land)?front$/);
-        continue;
-      }
-      // …and the 2015-frame modal printings, whose front body takes over
-      // once verified (TODO 5.1b, modal/2015).
-      if (match.signature.startsWith("modal/2015")) {
-        expect(match.onceVerified, key).toMatch(/^m15mdfc(land)?front$/);
         continue;
       }
       expect(match.signature, key).toBe("textless/old-frame");
@@ -559,7 +558,9 @@ describe("the general signatures (TODO 1.4)", () => {
     // crowned mono legendary is exact), and a two-colour land is no gap
     // since 4.6b: m15land draws its split (Bloodfell Caves KTK #229).
     ["dmu-107", "exact", "m15", undefined],
-    ["mid-7", "nearest", "m15", undefined],
+    // A 2015-frame transform printing is exact on the transform FRONT body
+    // (TODO 5.4): the body draws the double-faced marks, so no gap holds.
+    ["mid-7", "exact", "m15dfcfront", undefined],
     ["ktk-229", "exact", "m15land", undefined],
     ["ust-1", "nearest", "m15", undefined],
   ];
@@ -583,40 +584,39 @@ describe("the general signatures (TODO 1.4)", () => {
     const snow = scryfallCardSchema.parse({ ...printingsData["dmu-107"], frame_effects: ["legendary", "snow"] });
     expect(frameMatchFromScryfall(snow)).toMatchObject({ status: "exact", signature: "era/2015", template: "m15snow" });
     expect(frameMatchFromScryfall(printing("dmu-107"))).toMatchObject({ status: "exact", signature: "era/2015" });
-    // A 2015-frame transform printing (TODO 5.1a): the M15 standard stands
-    // in until the transform front body is verified in its colour, then
-    // exact on it — the `dfc` gap is drawn there, so it names no gap.
+    // A 2015-frame transform printing (TODO 5.1a / 5.4): exact on the
+    // transform front body — the `dfc` gap is drawn there, so it names no
+    // gap; the creator's verification (finalizeImportMatch) says "not yet
+    // verified" until BOTH bodies are ticked (tests/unit/scryfall/
+    // dfc-imports.test.ts).
     expect(frameMatchFromScryfall(printing("mid-7"))).toMatchObject({
       signature: "transform/2015",
-      status: "nearest",
-      template: "m15",
-      blockedBy: "5.3",
-      onceVerified: "m15dfcfront",
-      onceVerifiedMatch: { status: "exact", reason: null },
+      status: "exact",
+      template: "m15dfcfront",
+      reason: null,
     });
     expect(frameMatchFromScryfall(printing("mid-7")).gaps).toBeUndefined();
-    // A 2015-frame MODAL printing (TODO 5.1b): the same model on the modal
-    // front body — the spell front for a sorcery front (ZNR #12 Emeria's
-    // Call), the land front for a pathway (ZNR #258); a SNOW modal front
-    // (KHM #179 Jorn) keeps the snow frame on the era rule, nearest under
-    // the dfc gap — no snow modal body exists (as MH3 #253's devoid hybrid).
+    expect(frameMatchFromScryfall(printing("mid-7")).onceVerified).toBeUndefined();
+    // A 2015-frame MODAL printing (TODO 5.1b / 5.4): the same model on the
+    // modal front body — the spell front for a sorcery front (ZNR #12
+    // Emeria's Call), the land front for a pathway (ZNR #258), exact there;
+    // a SNOW modal front (KHM #179 Jorn) is nearest on the plain modal front
+    // for its dress (dfc/snow → 5.11, as MH3 #253's devoid hybrid) — never
+    // exact on a frame that isn't snow.
     expect(frameMatchFromScryfall(printing("znr-12"))).toMatchObject({
       signature: "modal/2015",
-      status: "nearest",
-      template: "m15",
-      blockedBy: "5.1b",
-      onceVerified: "m15mdfcfront",
-      onceVerifiedMatch: { status: "exact", reason: null },
+      status: "exact",
+      template: "m15mdfcfront",
+      reason: null,
     });
     expect(frameMatchFromScryfall(printing("znr-12")).gaps).toBeUndefined();
+    expect(frameMatchFromScryfall(printing("znr-12")).onceVerified).toBeUndefined();
     expect(frameMatchFromScryfall(printing("znr-258"))).toMatchObject({
       signature: "modal/2015",
-      status: "nearest",
-      template: "m15land",
-      onceVerified: "m15mdfclandfront",
-      onceVerifiedMatch: { status: "exact", reason: null },
+      status: "exact",
+      template: "m15mdfclandfront",
     });
-    expect(frameMatchFromScryfall(printing("khm-179"))).toMatchObject({ signature: "era/2015+dfc", status: "nearest", template: "m15snow" });
+    expect(frameMatchFromScryfall(printing("khm-179"))).toMatchObject({ signature: "dfc/snow", status: "nearest", template: "m15mdfcfront", landOn: "m15snow", blockedBy: "5.11" });
     expect(frameMatchFromScryfall(printing("khm-179")).onceVerified).toBeUndefined();
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
     // The two-colour land frame is drawn (4.6b): the plain era signature.
@@ -956,11 +956,13 @@ describe("the snow frames and devoid after 4.6f wave 2c", () => {
     expect(frameMatchFromScryfall(printing("ogw-150"))).toMatchObject({ status: "exact", signature: "era/2015", template: "m15devoid" });
     expect(frameMatchFromScryfall(printing("ogw-150")).gaps).toBeUndefined();
     // MH3 #253 Drowner of Truth prints the split hybrid dress on devoid,
-    // which no frame draws — its first gap is the double face (Phase 5).
+    // which no frame draws — and it is a MODAL double-faced card: since
+    // 5.1b it lands on the modal front body, nearest for its devoid dress
+    // (5.4's `dfc/devoid` → 5.11; tests/unit/scryfall/dfc-imports.test.ts).
     const hybrid = frameMatchFromScryfall(printing("mh3-253"));
     expect(hybrid.status).toBe("nearest");
-    expect(hybrid.template).toBe("m15devoid");
-    expect(hybrid.gaps).toEqual(["dfc", "two-colour-hybrid"]);
+    expect(hybrid.template).toBe("m15mdfcfront");
+    expect(hybrid).toMatchObject({ signature: "dfc/devoid", landOn: "m15devoid", blockedBy: "5.11" });
     // The old "two-colour on devoid" request rows are answered by the gold
     // frame; a snow one may have been a hybrid printing, so it stays open,
     // like m15artifact's.

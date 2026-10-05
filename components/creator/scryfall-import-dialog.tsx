@@ -132,6 +132,11 @@ type ScryfallImportDialogProps = {
   verifiedFrameKeys?: readonly string[];
   /** The frame the card is on now — the chooser's "Keep my current frame". */
   currentFrameTemplate?: string | null;
+  /** An admin's frame preview (TODO 2.3): the `previewFrames` param, handed
+   *  to /api/scryfall/named so a double-faced landing (TODO 5.4) is
+   *  finalized against the previewed bodies too — the server unions them
+   *  for an admin only. */
+  previewFrames?: string | null;
   /** Label override for the trigger button. */
   triggerLabel?: string;
   triggerVariant?: "primary" | "secondary" | "outline" | "ghost";
@@ -151,6 +156,7 @@ export function ScryfallImportDialog({
   onImport,
   verifiedFrameKeys,
   currentFrameTemplate,
+  previewFrames = null,
   triggerLabel = "Search a real card",
   triggerVariant = "outline",
   open: controlledOpen,
@@ -210,6 +216,7 @@ export function ScryfallImportDialog({
           onImport={onImport}
           verifiedFrameKeys={verifiedFrameKeys}
           currentFrameTemplate={currentFrameTemplate}
+          previewFrames={previewFrames}
           committing={committing}
           startCommit={startCommit}
         />
@@ -228,6 +235,7 @@ function ScryfallImportContent({
   onImport,
   verifiedFrameKeys,
   currentFrameTemplate,
+  previewFrames = null,
   committing,
   startCommit,
 }: {
@@ -235,6 +243,7 @@ function ScryfallImportContent({
   onImport: (payload: ScryfallImportPayload) => unknown;
   verifiedFrameKeys?: readonly string[];
   currentFrameTemplate?: string | null;
+  previewFrames?: string | null;
   committing: boolean;
   startCommit: TransitionStartFunction;
 }) {
@@ -378,7 +387,12 @@ function ScryfallImportContent({
     }
     try {
       const response = await fetch(
-        `/api/scryfall/named?${new URLSearchParams({ id })}`,
+        `/api/scryfall/named?${new URLSearchParams({
+          id,
+          // An admin's previewed bodies (TODO 5.4): the server finalizes a
+          // double-faced landing against them too, for an admin only.
+          ...(previewFrames ? { preview: previewFrames } : {}),
+        })}`,
       );
       const body = (await response.json().catch(() => null)) as
         | NamedResponse
@@ -406,7 +420,7 @@ function ScryfallImportContent({
         setPendingPrintingId(null);
       }
     }
-  }, []);
+  }, [previewFrames]);
 
   const handleSelectResult = (id: string) => {
     setSelectedResultId(id);
