@@ -7,11 +7,15 @@
 //
 // The one place a saved card's frame changes: the front goes to its DFC
 // twin, the back gets its body and colour (the front's), the family is
-// stamped, and both faces are re-baked. Gated like any save: the owner
-// only, the front body × the card's colour verified, the back body × colour
-// verified and colourless only with an Artifact word (the shared back gate,
-// lib/cards/dfc-gate.ts), the kind gate on the new front. Nothing is
-// offered until the owner ticks the combos (after 5.3).
+// stamped, and both faces are re-baked. The layout is the one the back's
+// SHAPE derives (owner 2026-10-05: a back with a mana cost is a modal card,
+// never moved onto Transform — the other layout is refused by name, and
+// nothing moves while the shape's bodies don't exist, the modal pair until
+// 5.1b). Gated like any save: the owner only, the front body × the card's
+// colour verified, the back body × colour verified and colourless only with
+// an Artifact word (the shared back gate, lib/cards/dfc-gate.ts), the kind
+// gate on the new front. Nothing is offered until the owner ticks the
+// combos (after 5.3).
 //
 // The re-bake: bakeAndPersistCardRender after the response, as every save
 // — the ONE bake entry, which writes the back's PNG and thumb beside the
@@ -20,7 +24,13 @@
 // ---------------------------------------------------------------------------
 
 import { after } from "next/server";
-import { adoptDfcBodiesPlan, dfcAdoptionOffer, parseDfcAdoptionLayout } from "@/lib/cards/dfc-adopt";
+import {
+  DFC_LAYOUT_LABELS,
+  adoptDfcBodiesPlan,
+  dfcAdoptionOffer,
+  dfcAdoptionShape,
+  parseDfcAdoptionLayout,
+} from "@/lib/cards/dfc-adopt";
 import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
@@ -52,13 +62,24 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
     return { ok: false, formError: "Card not found or not yours to edit." };
   }
 
+  // The offer is the ONE layout the back's shape derives, with both bodies;
+  // a candidate whose layout has no bodies yet (a costed back until the
+  // modal pair, 5.1b) is told so, and never moved onto the other.
   const offer = dfcAdoptionOffer(existing);
-  if (!offer) return { ok: false, formError: "This card can't move onto the double-faced frames." };
+  if (!offer) {
+    const shape = dfcAdoptionShape(existing);
+    return {
+      ok: false,
+      formError: shape
+        ? `The ${DFC_LAYOUT_LABELS[shape]} frames aren't built yet.`
+        : "This card can't move onto the double-faced frames.",
+    };
+  }
   const plan = adoptDfcBodiesPlan(existing, layout);
   if (!plan) {
     return {
       ok: false,
-      formError: `The ${offer.layouts.find((entry) => entry.layout === layout)?.label ?? layout} frames aren't available yet.`,
+      formError: `This card moves onto the ${offer.label} frames only — its back ${offer.layout === "modal" ? "carries a mana cost" : "has no mana cost"}.`,
     };
   }
 
