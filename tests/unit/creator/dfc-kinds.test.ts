@@ -26,18 +26,18 @@ import type { Card } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // TODO 5.2 — the editor's model for the double-faced kinds: the two chips
-// (Transform lit only with a verified front AND default back; Modal dark
-// until 5.1b's bodies), the front body a face type derives, the forced back
+// (each lit only with a verified front AND default back — the Modal kind's
+// bodies are 5.1b's), the front body a face type derives, the forced back
 // face, the blank back, the hydrated back colour, an edit's family patch
 // and the form schema's back-face rules.
 // ---------------------------------------------------------------------------
 
 describe("the two double-faced kinds", () => {
-  it("are chips of the picker; the Modal kind has an empty body family until 5.1b", () => {
+  it("are chips of the picker; the Modal kind's body family is the modal front pair (5.1b)", () => {
     expect(CARD_KIND_VALUES).toContain("mdfc");
     expect(KIND_PICKER_KINDS).toContain("transform");
     expect(KIND_PICKER_KINDS).toContain("mdfc");
-    expect(KIND_DEFS.mdfc).toMatchObject({ label: "Modal double-faced", cardType: "creature", layoutTemplates: [], inlineSecondFace: false });
+    expect(KIND_DEFS.mdfc).toMatchObject({ label: "Modal double-faced", cardType: "creature", layoutTemplates: ["m15mdfcfront", "m15mdfclandfront"], previewTemplate: "m15mdfcfront", inlineSecondFace: false });
     expect(KIND_REQUIRES.mdfc).toEqual(["dfcFront"]);
     expect(LAYOUT_KIND_CARD_TYPES.mdfc).toEqual(DFC_FACE_TYPES);
     expect(LAYOUT_KIND_CARD_TYPES.transform).toEqual(DFC_FACE_TYPES);
@@ -48,31 +48,46 @@ describe("the two double-faced kinds", () => {
       expect(dfcLayoutForKind(kind), kind).toBeNull();
     }
     expect(dfcKindFor("m15dfcback")).toBe("transform");
+    expect(dfcKindFor("m15mdfcback")).toBe("mdfc");
+    expect(dfcKindFor("m15mdfclandfront")).toBe("mdfc");
   });
 
-  it("the Modal chip stays dark whatever is verified; the Transform chip lights with a front and the default back", () => {
-    const everything = new Set(["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback", "m15"].flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k))));
-    expect(kindHasAvailableFrame("mdfc", everything)).toBe(false);
-    expect(framesForKind("mdfc", everything)).toEqual([]);
-    expect(kindHasAvailableFrame("transform", everything)).toBe(true);
+  it("each chip lights only with a front AND the default back verified in a colour: the Transform pair's, the Modal pair's (5.1b)", () => {
+    const transformOnly = new Set(["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback", "m15"].flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k))));
+    // Every transform key verified lights nothing of the Modal kind.
+    expect(kindHasAvailableFrame("mdfc", transformOnly)).toBe(false);
+    expect(framesForKind("mdfc", transformOnly).flatMap((f) => f.availableColorKeys)).toEqual([]);
+    expect(kindHasAvailableFrame("transform", transformOnly)).toBe(true);
     expect(kindHasAvailableFrame("transform", new Set([frameComboKey("m15dfcfront", "u")]))).toBe(false);
     expect(kindHasAvailableFrame("transform", new Set([frameComboKey("m15dfcfront", "u"), frameComboKey("m15dfcback", "u")]))).toBe(true);
-    // Picking the modal kind programmatically keeps the card where it is.
-    expect(planKindChange("mdfc", { cardType: "creature", template: "m15" })).toEqual({ action: "apply", patch: { card_type: "creature", template: "m15" } });
-    expect(kindFromCard("creature", "m15")).toBe("creature");
-    // No template dresses the modal kind yet: a back body and a showcase
-    // refuse it (like every layout kind); border-era and layout frames are
-    // never judged by templateRefusesKind (the galleries decide there).
-    for (const t of ["m15dfcback", "m15dfcbackleft", "nyx", "fullart"] as const) expect(templateRefusesKind(t, "mdfc"), t).toBe(true);
-    for (const t of ["m15", "m15dfcfront"] as const) expect(templateRefusesKind(t, "mdfc"), t).toBe(false);
+    // The Modal chip: a front body's colour alone is dark; with the default
+    // back body (bodyFor "modal"/"back"/creature) in a colour it lights.
+    expect(kindHasAvailableFrame("mdfc", new Set([frameComboKey("m15mdfcfront", "u")]))).toBe(false);
+    expect(kindHasAvailableFrame("mdfc", new Set([frameComboKey("m15mdfcfront", "u"), frameComboKey("m15mdfcback", "u")]))).toBe(true);
+    expect(kindHasAvailableFrame("mdfc", new Set([frameComboKey("m15mdfclandfront", "w"), frameComboKey("m15mdfcback", "w")]))).toBe(true);
+    expect(framesForKind("mdfc", new Set([frameComboKey("m15mdfcfront", "u")])).map((f) => f.template)).toEqual(["m15mdfcfront", "m15mdfclandfront"]);
+    // Picking the modal kind moves the card onto the modal front.
+    expect(planKindChange("mdfc", { cardType: "creature", template: "m15" })).toEqual({ action: "apply", patch: { card_type: "creature", template: "m15mdfcfront" } });
+    expect(kindFromCard("creature", "m15mdfcfront")).toBe("mdfc");
+    expect(kindFromCard("land", "m15mdfclandfront")).toBe("mdfc");
+    // A back body and a showcase refuse the kind (like every layout kind);
+    // its own front bodies take it; border-era and layout frames are never
+    // judged by templateRefusesKind (the galleries decide there).
+    for (const t of ["m15dfcback", "m15dfcbackleft", "m15mdfcback", "m15mdfclandback", "nyx", "fullart"] as const) expect(templateRefusesKind(t, "mdfc"), t).toBe(true);
+    for (const t of ["m15", "m15dfcfront", "m15mdfcfront", "m15mdfclandfront"] as const) expect(templateRefusesKind(t, "mdfc"), t).toBe(false);
+    // …and the modal bodies refuse the Transform kind as the transform ones
+    // refuse the Modal kind: a body belongs to one layout.
+    for (const t of ["m15mdfcback", "m15mdfclandback"] as const) expect(templateRefusesKind(t, "transform"), t).toBe(true);
   });
 
-  it("the front body follows the face type: the land front for a land, the spell front for the rest; none for the modal kind yet", () => {
+  it("the front body follows the face type: the land front for a land, the spell front for the rest, for both kinds", () => {
     for (const type of ["creature", "artifact", "enchantment", "instant", "sorcery"] as const) {
       expect(dfcFrontBodyFor("transform", type), type).toBe("m15dfcfront");
-      expect(dfcFrontBodyFor("mdfc", type), type).toBeNull();
+      expect(dfcFrontBodyFor("mdfc", type), type).toBe("m15mdfcfront");
     }
     expect(dfcFrontBodyFor("transform", "land")).toBe("m15dfclandfront");
+    expect(dfcFrontBodyFor("mdfc", "land")).toBe("m15mdfclandfront");
+    expect(dfcFrontBodyFor("mdfc", "")).toBe("m15mdfcfront");
     expect(dfcFrontBodyFor("transform", "")).toBe("m15dfcfront");
     expect(dfcFrontBodyFor("creature", "creature")).toBeNull();
   });

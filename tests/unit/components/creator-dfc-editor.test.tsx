@@ -399,8 +399,10 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     const button = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     expect(button.textContent).toMatch(/Move onto the transform frames/);
-    // The modal pair is offered dark (5.1b).
-    expect(chipIn("Double-faced layout", /Modal double-faced/).disabled).toBe(true);
+    // The modal pair is offered (5.1b's bodies) — lit as a layout, though
+    // the move stays dark on it until its bodies are verified in the
+    // card's colour.
+    expect(chipIn("Double-faced layout", /Modal double-faced/).disabled).toBe(false);
     await act(async () => {
       fireEvent.click(button);
     });

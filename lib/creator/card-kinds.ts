@@ -223,16 +223,16 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     layoutTemplates: ["m15dfcfront", "m15dfclandfront"],
     previewTemplate: "m15dfcfront",
   },
-  // The modal kind's bodies are 5.1b's (`m15mdfcfront`, `m15mdfclandfront`;
-  // the thumbnail `m15mdfcfront`): until they exist its family is EMPTY —
-  // no gallery, no first available frame, so the chip is dark and
-  // planKindChange keeps the card where it is — and the transform front
-  // stands in for the chip's thumbnail.
+  // The modal double-faced card (TODO 5.1b's bodies; 5.2's editor): the
+  // front on a modal FRONT body (`m15mdfcfront`, the land front for a land
+  // face), the back on the modal back body its type derives (bodyFor: the
+  // housing has no family). The chip lights once a colour is verified on a
+  // front body AND the default back body (kindHasAvailableFrame).
   mdfc: {
     label: "Modal double-faced",
     cardType: "creature",
-    layoutTemplates: [],
-    previewTemplate: "m15dfcfront",
+    layoutTemplates: ["m15mdfcfront", "m15mdfclandfront"],
+    previewTemplate: "m15mdfcfront",
   },
 };
 

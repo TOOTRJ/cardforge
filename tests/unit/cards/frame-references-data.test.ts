@@ -115,6 +115,13 @@ const DOCUMENTED_NULLS = new Set([
   // emblem's model — verified on c only (INR #287 / FIN #31).
   "m15dfclandfront/w", "m15dfclandfront/u", "m15dfclandfront/b", "m15dfclandfront/r", "m15dfclandfront/g", "m15dfclandfront/m",
   "m15dfclandback/w", "m15dfclandback/u", "m15dfclandback/b", "m15dfclandback/r", "m15dfclandback/g", "m15dfclandback/m",
+  // The modal bodies (TODO 5.1b): no colourless modal BACK was printed on
+  // the plain 2015 frame (every KHM artifact back is a coloured artifact),
+  // and the land pair's `c` (CC's grey land modal) and `m` (the gold land
+  // tint) are stand-ins — no colourless or gold modal land was printed.
+  "m15mdfcback/c",
+  "m15mdfclandfront/c", "m15mdfclandfront/m",
+  "m15mdfclandback/c", "m15mdfclandback/m",
 ]);
 
 describe("frame-references.json", () => {

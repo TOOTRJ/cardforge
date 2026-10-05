@@ -74,12 +74,13 @@ describe("dfcAdoptionOffer — who gets the hint", () => {
     expect(offered[2].offer?.losesDress).toBeNull();
   });
 
-  it("the transform bodies are available; the modal pair is offered dark until 5.1b", () => {
+  it("both pairs are available (5.1b brought the modal bodies): Vader's artifact back on the modal back, Tobirama's land back on the modal land back", () => {
     const offer = dfcAdoptionOffer(cardOf(rows[1]))!;
     expect(offer.layouts).toEqual([
       { layout: "transform", label: "Transform", available: true, frontBody: "m15dfcfront", backBody: "m15dfcback" },
-      { layout: "modal", label: "Modal double-faced", available: false, frontBody: null, backBody: null },
+      { layout: "modal", label: "Modal double-faced", available: true, frontBody: "m15mdfcfront", backBody: "m15mdfcback" },
     ]);
+    expect(dfcAdoptionOffer(cardOf(rows[5]))!.layouts[1]).toMatchObject({ layout: "modal", available: true, frontBody: "m15mdfcfront", backBody: "m15mdfclandback" });
   });
 
   it("never offers a card on a DFC body, one with a back body already, one with no back, or a template outside the M15 family", () => {
@@ -123,7 +124,17 @@ describe("adoptDfcBodiesPlan — what the move writes", () => {
     // drops the Lantern's cost.
     const vader = adoptDfcBodiesPlan(cardOf(rows[1]), "transform")!;
     expect(vader.back_face).not.toHaveProperty("cost");
-    expect(adoptDfcBodiesPlan(cardOf(rows[1]), "modal")).toBeNull();
+    // Vader onto modal (the default): the Lantern keeps its cost, no family
+    // is stamped, the back on the modal back in the front's colour.
+    const vaderModal = adoptDfcBodiesPlan(cardOf(rows[1]), "modal")!;
+    expect(vaderModal).toMatchObject({ layout: "modal", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
+    expect(vaderModal.back_face.cost).toBe(rows[1].back_face.cost);
+    expect(vaderModal.frame_style).not.toHaveProperty("dfcIcon");
+    expect(vaderModal.back_face.color_identity).toEqual(rows[1].front.color_identity);
+    // Tobirama's land back onto the MODAL land back keeps the front's
+    // colour (one land tint per colour, verified per colour) — colourless
+    // is the transform land back's rule alone.
+    expect(adoptDfcBodiesPlan(cardOf(rows[5]), "modal")?.back_face.color_identity).toEqual(rows[5].front.color_identity);
     // A row that isn't offered has no plan.
     expect(adoptDfcBodiesPlan(cardOf(rows[3]), "transform")).toBeNull();
   });
@@ -202,7 +213,8 @@ describe("adoptDfcBodiesAction", () => {
     state.existing = { ...erza(), frame_style: { template: "m15borderless" } };
     expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);
     state.existing = erza();
-    expect(await adoptDfcBodiesAction(CARD, "modal")).toEqual({ ok: false, formError: "The Modal double-faced frames aren't available yet." });
+    // The modal pair exists (5.1b) but isn't verified in Erza's colour.
+    expect((await adoptDfcBodiesAction(CARD, "modal")).ok).toBe(false);
     expect((await adoptDfcBodiesAction(CARD, "flip")).ok).toBe(false);
     state.existing = { ...erza(), owner_id: "99999999-9999-4999-8999-999999999999" };
     expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);

@@ -451,7 +451,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "mdfc";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -769,6 +769,15 @@ const FAMILIES: Record<
   dfc: {
     produces: ["m15dfclandfront", "m15dfcfront"],
     pick: ({ facts }) => bodyFor("transform", "front", facts.kind === "land" ? "land" : "spell") ?? "m15dfcfront",
+  },
+  // The modal FRONT bodies (TODO 5.1b): the land front for a land front
+  // face (the pathways), the spell front for every other — what a
+  // 2015-frame modal printing wears once the body is verified in its colour
+  // (the back body is the mapper's: 5.4 reads the back's type through
+  // bodyFor; a modal back has no family).
+  mdfc: {
+    produces: ["m15mdfclandfront", "m15mdfcfront"],
+    pick: ({ facts }) => bodyFor("modal", "front", facts.kind === "land" ? "land" : "spell") ?? "m15mdfcfront",
   },
 };
 
@@ -2043,6 +2052,28 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     M15_ERA_GAPS.filter((gap) => gap !== "dfc"),
   ),
+  // A 2015-frame modal double-faced printing on a kind the modal front
+  // draws (TODO 5.1b): the same model — the M15 standard stands in
+  // (`nearest`) until the modal front body is verified in the printing's
+  // colour, then `exact` on it; the `dfc` gap is drawn there. A snow or
+  // devoid modal printing (KHM #179 Jorn, MH3 #253 Drowner of Truth) keeps
+  // its dress on the era rule: no snow or devoid modal body exists.
+  ...withGaps(
+    {
+      key: "modal/2015",
+      exactLabel: "M15 (2015) modal double-faced frame",
+      match: { frames: ["2015"], layouts: ["modal_dfc"], kinds: TRANSFORM_FRONT_KINDS, effectsNone: ["snow", "devoid"] },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        reason: "PipGlyph's modal double-faced frames aren't verified in this colour yet",
+        blockedBy: "5.1b",
+        onceVerified: { family: "mdfc" },
+        exactOnceVerified: true,
+      },
+    },
+    M15_ERA_GAPS.filter((gap) => gap !== "dfc"),
+  ),
   ...withGaps(
     {
       key: "era/2015",
@@ -2117,11 +2148,11 @@ export function signatureDrawnOn(signature: string, template: string | null | un
 }
 
 /** Templates no printed signature resolves to exact or nearest: the
- *  transform BACK bodies (TODO 5.1a) — a printing resolves to its FRONT
- *  template; its back wears the body the family and the back's type derive
- *  (lib/cards/dfc.ts bodyFor, the mapper's business in 5.4), never a
- *  signature of its own. */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"];
+ *  transform (TODO 5.1a) and modal (5.1b) BACK bodies — a printing resolves
+ *  to its FRONT template; its back wears the body the family and the back's
+ *  type derive (lib/cards/dfc.ts bodyFor, the mapper's business in 5.4),
+ *  never a signature of its own. */
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);

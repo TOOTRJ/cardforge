@@ -457,6 +457,12 @@ describe("full-art and textless families (TODO 1.19)", () => {
         expect(match.onceVerified, key).toMatch(/^m15dfc(land)?front$/);
         continue;
       }
+      // …and the 2015-frame modal printings, whose front body takes over
+      // once verified (TODO 5.1b, modal/2015).
+      if (match.signature.startsWith("modal/2015")) {
+        expect(match.onceVerified, key).toMatch(/^m15mdfc(land)?front$/);
+        continue;
+      }
       expect(match.signature, key).toBe("textless/old-frame");
     }
   });
@@ -589,6 +595,29 @@ describe("the general signatures (TODO 1.4)", () => {
       onceVerifiedMatch: { status: "exact", reason: null },
     });
     expect(frameMatchFromScryfall(printing("mid-7")).gaps).toBeUndefined();
+    // A 2015-frame MODAL printing (TODO 5.1b): the same model on the modal
+    // front body — the spell front for a sorcery front (ZNR #12 Emeria's
+    // Call), the land front for a pathway (ZNR #258); a SNOW modal front
+    // (KHM #179 Jorn) keeps the snow frame on the era rule, nearest under
+    // the dfc gap — no snow modal body exists (as MH3 #253's devoid hybrid).
+    expect(frameMatchFromScryfall(printing("znr-12"))).toMatchObject({
+      signature: "modal/2015",
+      status: "nearest",
+      template: "m15",
+      blockedBy: "5.1b",
+      onceVerified: "m15mdfcfront",
+      onceVerifiedMatch: { status: "exact", reason: null },
+    });
+    expect(frameMatchFromScryfall(printing("znr-12")).gaps).toBeUndefined();
+    expect(frameMatchFromScryfall(printing("znr-258"))).toMatchObject({
+      signature: "modal/2015",
+      status: "nearest",
+      template: "m15land",
+      onceVerified: "m15mdfclandfront",
+      onceVerifiedMatch: { status: "exact", reason: null },
+    });
+    expect(frameMatchFromScryfall(printing("khm-179"))).toMatchObject({ signature: "era/2015+dfc", status: "nearest", template: "m15snow" });
+    expect(frameMatchFromScryfall(printing("khm-179")).onceVerified).toBeUndefined();
     expect(frameMatchFromScryfall(printing("thb-18")).signature).toBe("era/2015+nyx");
     // The two-colour land frame is drawn (4.6b): the plain era signature.
     expect(frameMatchFromScryfall(printing("ktk-233"))).toMatchObject({ status: "exact", signature: "era/2015" });

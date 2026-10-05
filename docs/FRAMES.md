@@ -127,7 +127,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 33 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -189,7 +189,18 @@ into `.frames-build/` — 33 templates today (`CC_TEMPLATES` in
   back's dark P/T plates `m15dfcback/pt/<k>.png`, the backs toned onto the
   prints (`DFC_BACK_TONES`), and the 12 icon riders (`CC_RIDERS.dfcicon`,
   CC's glyph SVGs rasterised at 220 px) — see
-  [The transform bodies (5.1a)](#the-transform-bodies-51a).
+  [The transform bodies (5.1a)](#the-transform-bodies-51a);
+- the modal bodies (5.1b) from the 'Modal Regular' pack: m15mdfcfront
+  (`<k>.png`) and m15mdfcback (`<k>b.png`) in w u b r g m + `a` (= `c`, the
+  artifact stand-in) copied 1:1 (the housing, its ring and the flipside
+  strip are the masters'), the backs toned onto the prints
+  (`MDFC_BACK_TONES`), and the land pair m15mdfclandfront /
+  m15mdfclandback — a PipGlyph recipe: the colour's modal master with its
+  frame body (and the front's text box) REPLACED through the pack's own
+  `frame.svg` / `textbox.svg` by the 2015 land tint (`m15/new/l<k>.png`,
+  the m15land masters' file), the land backs toned onto ZNR / MH3's prints
+  (`MDFC_LAND_BACK_TONES`); `c` the pack's grey land modal, `m` the gold
+  tint, both stand-ins — see [The modal bodies (5.1b)](#the-modal-bodies-51b).
 
 ```bash
 node scripts/import-cc-frames.mjs --only m15,m15land
@@ -2205,6 +2216,120 @@ whatever the family (the 2016–22 parchment land back is TODO 5.8).
   back (5.8); see-through colourless faces (5.11); two-colour fronts (5.12);
   the walker faces (5.13, ask first); DFC crowns (4.6f).
 
+### The modal bodies (5.1b)
+
+TODO 5.1b, 2026-10-05 (`feat/dfc-modal-bodies`). Four templates on Card
+Conjurer's 'Modal Regular' pack — the modal double-faced bodies (`dfc`
+declared with `layout: "modal"`; `bodyFor`'s modal rows filled, by the
+face's kind alone: the housing's ▲ / ▲▼ is in the masters, so a modal card
+has no icon family). Additions under the owner rule: no stored card
+changes, no bump, no sweep, no badge; nothing is offered until the owner
+ticks each colour × face.
+
+| template | source | masters | `dfc` | what it draws |
+|---|---|---|---|---|
+| `m15mdfcfront` | 'Modal Regular' `<k>.png` | w u b r g m + `a` (= `c`, the artifact stand-in: STX #154) | front, land no | the name from the icon-face inset, M15's plate, the strip's texts in WHITE |
+| `m15mdfcback` | `<k>b.png`, toned | same (`c` has no print) | back | a cost of its own, white name / type / P/T on the toned dark bars, the dark plates (m15dfcback/pt), the strip's texts DARK, no indicator |
+| `m15mdfclandfront` | recipe: `<k>.png` + the land tint's body and box | w u b r g (+ `m`, `c` stand-ins) | front, land | no cost, no P/T; the pathways' look |
+| `m15mdfclandback` | recipe: `<k>b.png` + the land tint's body, toned | same | back, land | no cost, no P/T; the ZNR / MH3 land backs' look |
+
+- **The strip** (`FrameProfile.flipside`, `lib/cards/flipside-strip.ts`):
+  CC's housing-coloured tab at the text box's bottom left, its ◀ and its
+  box are the master's; only two TEXTS are drawn, from the OTHER face
+  (`CardPreviewData.dfc.otherFace`, `lib/cards/faces.ts`): its LAST type
+  word in Beleren Bold from CC's flipside box at 6.8 %W
+  (`MDFC_STRIP_WORD_PX` 49; the prints' ink from 103–110 px, capitals
+  35–36 px tall) and its mana cost or, for a land, its mana ability as ONE
+  inline-pip run (`MDFC_STRIP_LINE_PX` 54, the rules layout's own metrics
+  and v36's pips) set against the box's right edge at 43.2 %W (the prints'
+  last ink at 647–650 px). White on a front, `INK_DARK` on a back (CC's
+  pack says white on both; the prints disagree). Both renderers draw the
+  same runs (`FlipsideBake` / `FlipsideOverlay`), measured on real bakes
+  at HD and 750 (`tests/unit/render/mdfc-bodies-bake.test.tsx`). The
+  Marvel "4/4 Creature" form (SPM / MSH) is not built.
+- **The strip's colour — an open question.** The masters paint the strip
+  in their OWN colour. On a two-colour modal card the prints paint it in
+  the colour of the face it DESCRIBES: STX #147's green front carries a
+  blue strip for its blue back, the pathways' fronts their back's colour.
+  Every mono-colour print (ZNR's, MH3's) agrees with ours; every STX,
+  pathway and MH3-hybrid print differs on the strip's tint alone. A strip
+  RIDER keyed by the other face's colour (14 pieces cut through CC's
+  `reminder.svg`, an overlay like the icon rider) would follow the prints;
+  it is not built — the owner decides on the 5.1b sheet.
+- **The land pair** is a PipGlyph recipe (no CC coloured modal land
+  exists): the colour's modal master with its frame body — and, on the
+  front, its text box — REPLACED through the pack's own `frame.svg` /
+  `textbox.svg` masks (a premultiplied lerp by the mask's alpha) by the
+  2015 coloured land tint, `m15/new/l<k>.png`, the m15land masters' own
+  file downscaled the same way. The pathways (ZNR #258–261, KHM #252)
+  print the stone land body, the colour's pinline, the land tint's box
+  and the modal housing and strip; the land backs (ZNR #12 / #90 / #134 /
+  #189, MH3 #241) the stone body under the colour's dark bars and
+  housing, with the modal back's light box (ZNR's neutral marble — MH3's
+  is bluer) and light strip. `c` = CC's grey land modal (`l.png` /
+  `lb.png`), `m` = the gold tint under the gold modal pieces: stand-ins
+  with no reference, never offered.
+- **The tone pass** (design D1): CC's spell backs read 3–16 luma light on
+  w u b g m and 16 dark on r against STX / MSH's prints, the land backs
+  10–30 apart from those on u, b and g (darker on u and g, lighter on b),
+  so each template has its own table — `MDFC_BACK_TONES` (w 0.947 · u
+  0.866 · b 0.967 · r 1.182 · g 0.886 · m 0.905 on the bars) and
+  `MDFC_LAND_BACK_TONES` (w 0.95 · u 0.74 · b 1.088 · r 1.099 · g 0.783)
+  — through the pack's Title (the bar and the housing's fill), the regular
+  Type and the pack's Rules masks, `toneMasked` with the transform backs'
+  luma ramp (the white ▲▼ and the light rims kept). Every built master
+  lands within ±0.5 luma of its target (`tests/unit/frames/
+  mdfc-importer.test.ts` holds them to ±8). The artifact back is untoned:
+  no colourless modal back was printed (every KHM artifact back is a
+  COLOURED artifact — KHM #15 Sword of the Realms white, KHM #112
+  Tergrid's Lantern black — drawn on its colour's body in wave 1, as LCI
+  #60 is on the transform bodies).
+- **The name** starts at the icon face's inset on BOTH faces (the housing
+  is at the left of every modal face; the prints' ink at 247–252 px).
+  The art window is the transform bodies' (`DFC_ART_SLOT`: the pack cuts
+  it at 115–1384 × 237–1165 like the transform packs). Edge contract
+  `border` on all four sides, square corners #000, the art-window check
+  clean on every master.
+- **Kind and gate.** `KIND_DEFS.mdfc` (`layoutTemplates: [m15mdfcfront,
+  m15mdfclandfront]`); the Modal chip lights once a colour is verified on
+  a front body AND on `m15mdfcback` (`kindHasAvailableFrame`); the gate
+  derives a modal back's body from the back's type alone, keeps its cost
+  (`withTransformBackShape` strips a transform back's only) and refuses a
+  transform back body under a modal front by name; the modal bodies refuse
+  the Transform kind as the transform ones refuse the Modal kind. The
+  one-click move (5.2, Q3) offers the modal pair now — Vader's costed
+  artifact back onto `m15mdfcback` keeps its cost; a land back onto
+  `m15mdfclandback` keeps the FRONT's colour (one land tint per colour,
+  verified per colour — colourless is the TRANSFORM land back's rule).
+- **The registry.** `modal/2015`, mirroring `transform/2015`: a plain
+  2015-frame modal printing on a kind the front draws is nearest on the M15
+  standard until the modal front body is verified in its colour, then
+  exact on it (`onceVerified: { family: "mdfc" }`, the land front for a
+  pathway); a snow or devoid modal printing (KHM #179 Jorn, MH3 #253)
+  keeps its dress on the era rule. The modal backs have no signature of
+  their own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`). References per colour
+  per face (`frame-references.json`): fronts ZNR #12 / MH3 #241 / ZNR #90 /
+  #134 / #189, `m` MH3 #252 Bloodsoaked Insight (a HYBRID front — the only
+  gold modal fronts on the plain frame are MH3's ten hybrid MDFC lands;
+  the split hybrid pinline is 5.12, as the transform front's `m`), `c` STX
+  #154; backs STX #150 / #147 / #148 / #159 / #151, `m` MSH #18 (its
+  Marvel strip form not built), `c` NONE; the land fronts the five
+  pathways; the land backs ZNR #12 / MH3 #241 / ZNR #90 / #134 / #189 —
+  with the KHM Gods and the other pathways as alternates. The pin check
+  judges a modal land back's row by the back's colour (its mana ability),
+  unlike the transform land back's one master.
+- **The visual matrix:** the front bodies' cases come out of the
+  per-template loop (the Modal kind's rows: an instant // land, a pathway,
+  the long creature // creature with a cost on the back), every back body
+  × 8 colours short / long baked as the back face (`dfcBodyRow` builds a
+  modal row for a modal body), the strip's word cases (Equipment, God,
+  Enchantment — the longest wave-1 word — Tibalt), a foil, a square: 75
+  new cases, 0 changed, 0 redefined.
+- **What waits:** the ticks (the owner, after promote); the strip's colour
+  on two-colour cards (above); the import's modal body / colour (5.4);
+  the Marvel strip form; borderless / extended modal (5.7); the walker
+  faces (5.13, ask first).
+
 ### The editor (5.2)
 
 TODO 5.2, 2026-10-02 (`feat/dfc-editor`, stacked on 5.1a). The Transform
@@ -2640,11 +2765,12 @@ A change that must not move a pixel (4.5.0's builders) proves it four ways:
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 40 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 44 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
-land, the emblem and 5.1a's five transform bodies, new templates that
-joined without a bump; split and battle join with 4.21) prints its names, type
+land, the emblem, 5.1a's five transform bodies and 5.1b's four modal
+bodies, new templates that joined without a bump; split and battle join
+with 4.21) prints its names, type
 lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
 the prints. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),

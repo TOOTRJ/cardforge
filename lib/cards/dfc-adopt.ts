@@ -100,7 +100,11 @@ export function adoptedBackColorIdentity(
   backBody: FrameTemplate | null,
   frontColorIdentity: readonly ColorIdentity[] | null | undefined,
 ): ColorIdentity[] {
-  if (backBody && dfcBodyOf(backBody)?.land) return ["colorless"];
+  // The TRANSFORM land back only: the modal land back (5.1b) is one land
+  // tint per colour, verified per colour like any back, so it keeps the
+  // front's colour.
+  const body = backBody ? dfcBodyOf(backBody) : null;
+  if (body?.land && body.layout === "transform") return ["colorless"];
   return [...(frontColorIdentity ?? [])];
 }
 

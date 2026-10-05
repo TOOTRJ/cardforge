@@ -211,7 +211,14 @@ Rules and gotchas:
   that `dfc` block — never from the `dfcIcon` switch (off for an absent
   key, which reads as `arrows`); a BACK body is never a card's own template
   (`templateRefusesKind`), and nothing on them is offered until each colour
-  of the front AND the default back is ticked (after 5.3). A back face's
+  of the front AND the default back is ticked (after 5.3). The modal bodies
+  (5.1b: `m15mdfcfront`, `m15mdfcback` and the land pair) draw the flipside
+  strip's two TEXTS from that same block (`FrameProfile.flipside`,
+  `lib/cards/flipside-strip.ts`: the other face's LAST type word + its cost
+  or mana line, white on a front, dark on a back) — the housing, the ◀ and
+  the strip are in the masters, painted in the master's OWN colour (a
+  two-colour card's print paints it in the other face's: an owner question,
+  never a master "fix"). A back face's
   body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
   — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`

@@ -4081,5 +4081,131 @@
         "colors": []
       }
     ]
+  },
+  "znr-12": {
+    "id": "c470539a-9cc7-4175-8f7c-c982b6072b6d",
+    "name": "Emeria's Call // Emeria, Shattered Skyclave",
+    "layout": "modal_dfc",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "collector_number": "12",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Sorcery // Land",
+    "color_identity": [
+      "W"
+    ],
+    "card_faces": [
+      {
+        "name": "Emeria's Call",
+        "type_line": "Sorcery",
+        "mana_cost": "{4}{W}{W}{W}",
+        "colors": [
+          "W"
+        ],
+        "image_uris": null
+      },
+      {
+        "name": "Emeria, Shattered Skyclave",
+        "type_line": "Land",
+        "mana_cost": "",
+        "colors": [],
+        "image_uris": null
+      }
+    ],
+    "released_at": "2020-09-25",
+    "produced_mana": [
+      "W"
+    ]
+  },
+  "znr-258": {
+    "id": "0511e232-2a72-40f5-a400-4f7ebc442d17",
+    "name": "Branchloft Pathway // Boulderloft Pathway",
+    "layout": "modal_dfc",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "collector_number": "258",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land // Land",
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "card_faces": [
+      {
+        "name": "Branchloft Pathway",
+        "type_line": "Land",
+        "mana_cost": "",
+        "colors": [],
+        "image_uris": null
+      },
+      {
+        "name": "Boulderloft Pathway",
+        "type_line": "Land",
+        "mana_cost": "",
+        "colors": [],
+        "image_uris": null
+      }
+    ],
+    "released_at": "2020-09-25",
+    "produced_mana": [
+      "G",
+      "W"
+    ]
+  },
+  "khm-179": {
+    "id": "c697548f-925b-405e-970a-4e78067d5c8e",
+    "name": "Jorn, God of Winter // Kaldring, the Rimestaff",
+    "layout": "modal_dfc",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "179",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "snow"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Snow Creature — God // Legendary Snow Artifact",
+    "color_identity": [
+      "B",
+      "G",
+      "U"
+    ],
+    "card_faces": [
+      {
+        "name": "Jorn, God of Winter",
+        "type_line": "Legendary Snow Creature — God",
+        "mana_cost": "{2}{G}",
+        "colors": [
+          "G"
+        ],
+        "image_uris": null
+      },
+      {
+        "name": "Kaldring, the Rimestaff",
+        "type_line": "Legendary Snow Artifact",
+        "mana_cost": "{1}{U}{B}",
+        "colors": [
+          "B",
+          "U"
+        ],
+        "image_uris": null
+      }
+    ],
+    "released_at": "2021-02-05"
   }
 }

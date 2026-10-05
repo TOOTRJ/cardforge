@@ -114,12 +114,6 @@ describe("importedCardTypeForKind", () => {
 
   it("never changes the kind: the layout template decides it, whatever the type", () => {
     for (const [kind, types] of Object.entries(LAYOUT_KIND_CARD_TYPES) as [CardKind, readonly CardType[]][]) {
-      // The modal kind's bodies are 5.1b's (TODO 5.2 names the kind): no
-      // template decides it yet.
-      if (kind === "mdfc") {
-        expect(KIND_DEFS[kind].layoutTemplates).toEqual([]);
-        continue;
-      }
       for (const type of types) {
         expect(kindFromCard(type, KIND_DEFS[kind].layoutTemplates![0])).toBe(kind);
       }

@@ -161,6 +161,11 @@ describe("Card Conjurer recipe", () => {
       "m15dfclandfront",
       "m15fullartland",
       "m15land",
+      // The modal bodies (TODO 5.1b; tests/unit/frames/mdfc-importer.test.ts).
+      "m15mdfcback",
+      "m15mdfcfront",
+      "m15mdfclandback",
+      "m15mdfclandfront",
       "m15pw",
       "m15snow",
       "m15snowland",
@@ -258,7 +263,7 @@ describe("Card Conjurer recipe", () => {
     // per-key tone pass (TODO 5.1a, tests/unit/frames/dfc-importer.test.ts).
     for (const [template, other] of Object.entries(templates)) {
       if (template === "emblem") continue;
-      if (!["m15dfcback", "m15dfcbackleft", "m15dfclandback"].includes(template)) expect(other.tones, template).toBeUndefined();
+      if (!["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback"].includes(template)) expect(other.tones, template).toBeUndefined();
       expect(other.bridge, template).toBeUndefined();
     }
   });

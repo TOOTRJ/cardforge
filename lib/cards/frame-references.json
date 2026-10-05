@@ -2165,6 +2165,369 @@
       "m": null
     }
   },
+  "m15mdfcfront": {
+    "note": "The modal double-faced FRONT body (TODO 5.1b; design 2026-10-02, frames.md §4.1): a 2015-frame modal printing's front face — ZNR's mono-colour spell // land cards and MH3's. w ZNR #12 Emeria's Call, u MH3 #241 Sink into Stupor, b ZNR #90 Agadeem's Awakening, r ZNR #134 Akoum Warrior, g ZNR #189 Kazandu Mammoth; m MH3 #252 Bloodsoaked Insight, a HYBRID (B/R) sorcery front — the only gold modal fronts on the plain 2015 frame are MH3's ten hybrid MDFC lands (#252–261), whose split hybrid pinline is TODO 5.12 (the front draws the plain gold in wave 1, as the transform front's m does; the design's STX #147 Augmenter Pugilist is mono-green). c = the ARTIFACT stand-in (design D2): STX #154 Pestilent Cauldron, the one colourless modal face printed on this frame. Every strip on these references names the OTHER face in that face's colour — the masters paint the strip in their own colour (a 5.1b review question). Alternates: the KHM Gods' fronts (w Halvar #15 / Reidane #21, u Alrund #40, b Valki #114 / Egon #92, r Toralf #154, g Kolvori #181) and STX's other mono-colour fronts (u Torrent Sculptor #159, r Flamescroll Celebrant #150, g Augmenter Pugilist #147); m MH3 #260 Suppression Ray (W/U hybrid).",
+    "colors": {
+      "w": [
+        {
+          "name": "Emeria's Call",
+          "set": "znr",
+          "scryfallId": "c470539a-9cc7-4175-8f7c-c982b6072b6d"
+        },
+        {
+          "name": "Halvar, God of Battle",
+          "set": "khm",
+          "scryfallId": "97502411-5c93-434c-b77b-ceb2c32feae7"
+        },
+        {
+          "name": "Reidane, God of the Worthy",
+          "set": "khm",
+          "scryfallId": "3606519e-5677-4c21-a34e-be195b6669fa"
+        }
+      ],
+      "u": [
+        {
+          "name": "Sink into Stupor",
+          "set": "mh3",
+          "scryfallId": "5358b87a-1a29-426d-b165-40c97da2c14d"
+        },
+        {
+          "name": "Torrent Sculptor",
+          "set": "stx",
+          "scryfallId": "87463b68-3642-41c7-a11c-67d524759b60"
+        },
+        {
+          "name": "Alrund, God of the Cosmos",
+          "set": "khm",
+          "scryfallId": "5d131784-c1a3-463e-a37b-b720af67ab62"
+        }
+      ],
+      "b": [
+        {
+          "name": "Agadeem's Awakening",
+          "set": "znr",
+          "scryfallId": "67f4c93b-080c-4196-b095-6a120a221988"
+        },
+        {
+          "name": "Valki, God of Lies",
+          "set": "khm",
+          "scryfallId": "ea7e4c65-b4c4-4795-9475-3cba71c50ea5"
+        },
+        {
+          "name": "Egon, God of Death",
+          "set": "khm",
+          "scryfallId": "9dfdb73d-b001-4a59-b79e-8c8c1baea116"
+        }
+      ],
+      "r": [
+        {
+          "name": "Akoum Warrior",
+          "set": "znr",
+          "scryfallId": "d8ed0335-daa6-4dbe-a94d-4d56c8cfd093"
+        },
+        {
+          "name": "Flamescroll Celebrant",
+          "set": "stx",
+          "scryfallId": "0dba25e3-2b4f-45d4-965f-3834bcb359ee"
+        },
+        {
+          "name": "Toralf, God of Fury",
+          "set": "khm",
+          "scryfallId": "22a6a5f1-1405-4efb-af3e-e1f58d664e99"
+        }
+      ],
+      "g": [
+        {
+          "name": "Kazandu Mammoth",
+          "set": "znr",
+          "scryfallId": "2f632537-63bf-4490-86e6-e6067b9c1a3b"
+        },
+        {
+          "name": "Augmenter Pugilist",
+          "set": "stx",
+          "scryfallId": "d9131fc3-018a-4975-8795-47be3956160d"
+        },
+        {
+          "name": "Kolvori, God of Kinship",
+          "set": "khm",
+          "scryfallId": "b76bed98-30b1-4572-b36c-684ada06826c"
+        }
+      ],
+      "c": [
+        {
+          "name": "Pestilent Cauldron",
+          "set": "stx",
+          "scryfallId": "aaa1e6be-08cc-4ccc-b2de-3511613e4fd0"
+        }
+      ],
+      "m": [
+        {
+          "name": "Bloodsoaked Insight",
+          "set": "mh3",
+          "scryfallId": "0a08e0d2-1e60-47f5-9228-4c11a127089d"
+        },
+        {
+          "name": "Suppression Ray",
+          "set": "mh3",
+          "scryfallId": "0cccd328-457a-48ab-97fb-4bc319db2e60"
+        }
+      ]
+    }
+  },
+  "m15mdfcback": {
+    "note": "The modal BACK body (TODO 5.1b): every reference is the printing's BACK face (face 1 — the compare tool's and the walkthrough's second face, TODO 5.0b). The only 2015-frame modal backs that are spells are STX's (two-colour cards, one colour per face — the back's strip prints in the FRONT's colour, which the master's own-colour strip does not: a 5.1b review question) and the Marvel sets' creatures: w STX #150 Revel in Silence, u STX #147 Echoing Equation, b STX #148 Search for Blex, r STX #159 Flamethrower Sonata, g STX #151 Journey to the Oracle, m MSH #18 The Sensational She-Hulk (a GW back with a cost and the dark gold plate; its strip prints the Marvel '2/2 Creature' form, not built). c: NO reference — no colourless modal back was printed on the plain 2015 frame (every KHM artifact back is a COLOURED artifact: KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black — drawn on their colour's body in wave 1); the artifact stand-in is never offered. Alternates: the KHM Gods' backs — coloured artifacts drawn on their colour's body (w Sword of the Realms #15 / Valkmira #21, b Tergrid's Lantern #112 / Throne of Death #92, r Toralf's Hammer #154 / Harnfel #123, g The Ringhart Crest #181) and u Hakka, Whispering Raven #40 (a creature back: the dark plate).",
+    "colors": {
+      "w": [
+        {
+          "name": "Revel in Silence",
+          "set": "stx",
+          "scryfallId": "0dba25e3-2b4f-45d4-965f-3834bcb359ee",
+          "face": 1
+        },
+        {
+          "name": "Sword of the Realms",
+          "set": "khm",
+          "scryfallId": "97502411-5c93-434c-b77b-ceb2c32feae7",
+          "face": 1
+        },
+        {
+          "name": "Valkmira, Protector's Shield",
+          "set": "khm",
+          "scryfallId": "3606519e-5677-4c21-a34e-be195b6669fa",
+          "face": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Echoing Equation",
+          "set": "stx",
+          "scryfallId": "d9131fc3-018a-4975-8795-47be3956160d",
+          "face": 1
+        },
+        {
+          "name": "Hakka, Whispering Raven",
+          "set": "khm",
+          "scryfallId": "5d131784-c1a3-463e-a37b-b720af67ab62",
+          "face": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Search for Blex",
+          "set": "stx",
+          "scryfallId": "c204b7ca-0904-40fa-b20c-92400fae20b8",
+          "face": 1
+        },
+        {
+          "name": "Tergrid's Lantern",
+          "set": "khm",
+          "scryfallId": "14dc88ee-bba9-4625-af0d-89f3762a0ead",
+          "face": 1
+        },
+        {
+          "name": "Throne of Death",
+          "set": "khm",
+          "scryfallId": "9dfdb73d-b001-4a59-b79e-8c8c1baea116",
+          "face": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Flamethrower Sonata",
+          "set": "stx",
+          "scryfallId": "87463b68-3642-41c7-a11c-67d524759b60",
+          "face": 1
+        },
+        {
+          "name": "Toralf's Hammer",
+          "set": "khm",
+          "scryfallId": "22a6a5f1-1405-4efb-af3e-e1f58d664e99",
+          "face": 1
+        },
+        {
+          "name": "Harnfel, Horn of Bounty",
+          "set": "khm",
+          "scryfallId": "44657ab1-0a6a-4a5f-9688-86f239083821",
+          "face": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Journey to the Oracle",
+          "set": "stx",
+          "scryfallId": "d7148d24-373e-4485-860b-c3429c2337f2",
+          "face": 1
+        },
+        {
+          "name": "The Ringhart Crest",
+          "set": "khm",
+          "scryfallId": "b76bed98-30b1-4572-b36c-684ada06826c",
+          "face": 1
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "The Sensational She-Hulk",
+          "set": "msh",
+          "scryfallId": "61237530-ad49-469c-a952-67c92315708e",
+          "face": 1
+        }
+      ]
+    }
+  },
+  "m15mdfclandfront": {
+    "note": "The modal land FRONT body (TODO 5.1b, a PipGlyph recipe: the colour's modal front over the 2015 land tint): the pathways' front faces — g ZNR #258 Branchloft Pathway, w ZNR #259 Brightclimb Pathway, u ZNR #260 Clearwater Pathway, r ZNR #261 Cragcrown Pathway, b KHM #252 Blightstep Pathway (each a two-colour card whose strip names its back in the BACK's colour). c (CC's grey land modal) and m (the gold land tint under the gold modal pieces) are stand-ins: no colourless or gold modal land was printed. Alternates: KHM's pathways (w Hengegate #260, b Darkbore #254, g Barkchannel #251).",
+    "colors": {
+      "w": [
+        {
+          "name": "Brightclimb Pathway",
+          "set": "znr",
+          "scryfallId": "d24c3d51-795d-4c01-a34a-3280fccd2d78"
+        },
+        {
+          "name": "Hengegate Pathway",
+          "set": "khm",
+          "scryfallId": "7ef37cb3-d803-47d7-8a01-9c803aa2eadc"
+        }
+      ],
+      "u": [
+        {
+          "name": "Clearwater Pathway",
+          "set": "znr",
+          "scryfallId": "b4b99ebb-0d54-4fe5-a495-979aaa564aa8"
+        }
+      ],
+      "b": [
+        {
+          "name": "Blightstep Pathway",
+          "set": "khm",
+          "scryfallId": "0ce39a19-f51d-4a35-ae80-5b82eb15fcff"
+        },
+        {
+          "name": "Darkbore Pathway",
+          "set": "khm",
+          "scryfallId": "87a4e5fe-161f-42da-9ca2-67c8e8970e94"
+        }
+      ],
+      "r": [
+        {
+          "name": "Cragcrown Pathway",
+          "set": "znr",
+          "scryfallId": "da57eb54-5199-4a56-95f7-f6ac432876b1"
+        }
+      ],
+      "g": [
+        {
+          "name": "Branchloft Pathway",
+          "set": "znr",
+          "scryfallId": "0511e232-2a72-40f5-a400-4f7ebc442d17"
+        },
+        {
+          "name": "Barkchannel Pathway",
+          "set": "khm",
+          "scryfallId": "b6de14ae-0132-4261-af00-630bf15918cd"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "m15mdfclandback": {
+    "note": "The modal land BACK body (TODO 5.1b, the colour's modal back over the 2015 land tint), face 1 of each: w ZNR #12 Emeria, Shattered Skyclave, u MH3 #241 Soporific Springs, b ZNR #90 Agadeem, the Undercrypt, r ZNR #134 Akoum Teeth, g ZNR #189 Kazandu Valley — one land tint per colour, verified per colour (the transform land back's one-master rule doesn't apply). c and m: stand-ins, no print. Alternates: the pathways' backs, each dressed by its own mana ability (w Boulderloft #258, u Tidechannel KHM #251 / Mistgate KHM #260, b Grimclimb #259 / Murkwater #260, r Searstep KHM #252, g Timbercrown #261 / Slitherbore KHM #254).",
+    "colors": {
+      "w": [
+        {
+          "name": "Emeria, Shattered Skyclave",
+          "set": "znr",
+          "scryfallId": "c470539a-9cc7-4175-8f7c-c982b6072b6d",
+          "face": 1
+        },
+        {
+          "name": "Boulderloft Pathway",
+          "set": "znr",
+          "scryfallId": "0511e232-2a72-40f5-a400-4f7ebc442d17",
+          "face": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Soporific Springs",
+          "set": "mh3",
+          "scryfallId": "5358b87a-1a29-426d-b165-40c97da2c14d",
+          "face": 1
+        },
+        {
+          "name": "Tidechannel Pathway",
+          "set": "khm",
+          "scryfallId": "b6de14ae-0132-4261-af00-630bf15918cd",
+          "face": 1
+        },
+        {
+          "name": "Mistgate Pathway",
+          "set": "khm",
+          "scryfallId": "7ef37cb3-d803-47d7-8a01-9c803aa2eadc",
+          "face": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Agadeem, the Undercrypt",
+          "set": "znr",
+          "scryfallId": "67f4c93b-080c-4196-b095-6a120a221988",
+          "face": 1
+        },
+        {
+          "name": "Grimclimb Pathway",
+          "set": "znr",
+          "scryfallId": "d24c3d51-795d-4c01-a34a-3280fccd2d78",
+          "face": 1
+        },
+        {
+          "name": "Murkwater Pathway",
+          "set": "znr",
+          "scryfallId": "b4b99ebb-0d54-4fe5-a495-979aaa564aa8",
+          "face": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Akoum Teeth",
+          "set": "znr",
+          "scryfallId": "d8ed0335-daa6-4dbe-a94d-4d56c8cfd093",
+          "face": 1
+        },
+        {
+          "name": "Searstep Pathway",
+          "set": "khm",
+          "scryfallId": "0ce39a19-f51d-4a35-ae80-5b82eb15fcff",
+          "face": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Kazandu Valley",
+          "set": "znr",
+          "scryfallId": "2f632537-63bf-4490-86e6-e6067b9c1a3b",
+          "face": 1
+        },
+        {
+          "name": "Timbercrown Pathway",
+          "set": "znr",
+          "scryfallId": "da57eb54-5199-4a56-95f7-f6ac432876b1",
+          "face": 1
+        },
+        {
+          "name": "Slitherbore Pathway",
+          "set": "khm",
+          "scryfallId": "87a4e5fe-161f-42da-9ca2-67c8e8970e94",
+          "face": 1
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
   "battle": {
     "note": "Every printed battle is a transform DFC; the front face is the landscape siege.",
     "colors": {

@@ -72,6 +72,16 @@ export const TITLE_SIZE_PCT = 0.0533;
 /** Type line — CC 0.0324 H, 68 px at HD. */
 export const TYPE_SIZE_PCT = 0.0453;
 
+/** The modal double-faced flipside strip's two texts (TODO 5.1b; Card
+ *  Conjurer's packModalRegular.js, fractions of H turned into HD px): the
+ *  other face's type word in Beleren Bold — CC 0.0234 H, 49 px — and its
+ *  cost or mana line in the rules font with inline pips — CC 0.0258 H,
+ *  54 px. Measured on the prints: "Land"'s capitals 35–36 px tall (a 49–50
+ *  px Beleren Bold), "Add" 84 px wide (54 px MPlantin). Both profile slots
+ *  take them through rulesPxToPct. */
+export const MDFC_STRIP_WORD_PX = 49;
+export const MDFC_STRIP_LINE_PX = 54;
+
 /** Mana-cost pip DISC diameter (FrameProfile.costSizePct) — M15's measured
  *  disc (a DOM scan; CC mana 71/1638, prints ≈ 70 px), 72.75 px at HD.
  *  Planeswalker, saga and flip use it too (owner decision 2026-09-28). */
