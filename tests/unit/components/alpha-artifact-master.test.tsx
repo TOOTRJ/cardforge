@@ -71,7 +71,9 @@ describe("frameMasterKey — the one master rule", () => {
     // The transform bodies (TODO 5.1a, design D2): their `c` is CC's
     // artifact frame standing in, so an artifact draws it as `a` (the same
     // bytes) and the land pair, one master under every key, dresses none.
-    const DRESSED = new Set(["agclassic", "m15dfcfront", "m15dfcback", "m15dfcbackleft"]);
+    // …and the modal spell pair (5.1b) the same way; its land pair, one
+    // land tint per colour with the grey land modal as `c`, dresses none.
+    const DRESSED = new Set(["agclassic", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
       expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t));

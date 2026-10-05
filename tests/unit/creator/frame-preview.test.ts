@@ -135,7 +135,10 @@ describe("walkthroughKindFor", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const kind = walkthroughKindFor(template);
       if (isDfcBackBody(template)) {
-        expect(kind, template).toBe("transform");
+        // The kind whose cards the back body dresses the back of: the
+        // Transform kind for the transform backs, the Modal kind for the
+        // modal backs (5.1b).
+        expect(kind, template).toBe(template.startsWith("m15mdfc") ? "mdfc" : "transform");
         expect(templateSupportsKind(template, kind), template).toBe(false);
         continue;
       }
@@ -143,6 +146,9 @@ describe("walkthroughKindFor", () => {
     }
     expect(walkthroughKindFor("m15dfcfront")).toBe("transform");
     expect(walkthroughKindFor("m15dfclandfront")).toBe("transform");
+    expect(walkthroughKindFor("m15mdfcfront")).toBe("mdfc");
+    expect(walkthroughKindFor("m15mdfclandfront")).toBe("mdfc");
+    expect(walkthroughKindFor("m15mdfcback")).toBe("mdfc");
   });
 
   it("walkthroughKind keeps a URL kind the template can wear, else the template's own", () => {
