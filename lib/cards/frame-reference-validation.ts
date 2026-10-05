@@ -12,7 +12,10 @@ import {
   KIND_DEFS,
   borrowedTypeWord,
   dfcFrontDressesKind,
+  dfcKindFor,
+  dfcLayoutForKind,
   isSingleBasicLand,
+  kindFromCard,
   templateIsBasicOnly,
   templateSupportsKind,
   typeLineHasWord,
@@ -149,9 +152,17 @@ export function validateReferenceForCombo(
       );
     } else if (dropped) {
       // The import keeps only the front of a double-faced token or a Role
-      // card (TODO 1.23): there is no stored back for the row to compare.
+      // card (TODO 1.23) — and of a printing with a planeswalker face (5.4;
+      // the walker bodies wait, 5.13): there is no stored back for the row
+      // to compare.
+      const what =
+        dropped === "role"
+          ? "a Role card"
+          : dropped === "walker-face"
+            ? "a double-faced planeswalker"
+            : "a double-faced token";
       errors.push(
-        `${card.name} is ${dropped === "role" ? "a Role card" : "a double-faced token"}, whose second face PipGlyph doesn't import; the ${label} frame needs a transform or modal printing.`,
+        `${card.name} is ${what}, whose second face PipGlyph doesn't import; the ${label} frame needs a transform or modal printing.`,
       );
     } else {
       const back = card.card_faces?.[1];
@@ -226,12 +237,24 @@ export function validateReferenceForCombo(
     errors.push(`${card.name} isn't an Artifact; the colourless ${label} row is the artifact master standing in and verifies against an artifact print only.`);
   }
 
-  const kind = referenceKindFor(card);
+  // A transform / modal printing is the double-faced kind (TODO 5.4): on a
+  // double-faced body of that very kind it fits; on any other template it
+  // is judged as its front face's standard kind, as before 5.4 (a transform
+  // land front pinned on the plain land frame is a land there).
+  const importedKind = referenceKindFor(card);
+  const kind =
+    importedKind && dfcLayoutForKind(importedKind) && !dfcBodyOf(template)
+      ? kindFromCard(parseTypeLine(card.card_faces?.[0]?.type_line ?? card.type_line).card_type, undefined)
+      : importedKind;
   if (!kind) {
     warnings.push(
       `Couldn't tell what kind of card ${card.name} is — the render may not match the frame.`,
     );
-  } else if (!templateSupportsKind(template, kind) && !dfcFrontDressesKind(template, kind)) {
+  } else if (
+    !templateSupportsKind(template, kind) &&
+    !dfcFrontDressesKind(template, kind) &&
+    !(dfcLayoutForKind(kind) && dfcKindFor(template) === kind)
+  ) {
     if (resolvedTemplate === template && !KIND_DEFS[kind].layoutTemplates) {
       warnings.push(
         `${card.name} is ${withArticle(KIND_DEFS[kind].label.toLowerCase())}, which the ${label} frame doesn't dress in the creator yet — accepted because this printing is that frame (${signature.exactLabel}).`,

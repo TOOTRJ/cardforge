@@ -150,9 +150,13 @@ async function postStep(
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Credits a set of steps will reserve when (re)run: one per card/icon
- *  step; the deck cover and the how-to-play guide are free. */
-function creditedStepCount(steps: ReadonlyArray<{ key: string }>): number {
-  return steps.filter((s) => s.key !== "cover" && s.key !== "guide").length;
+ *  step — two for a deck remix of a double-faced printing (TODO 5.4, the
+ *  step's own `credits`); the deck cover and the how-to-play guide are
+ *  free. */
+function creditedStepCount(steps: ReadonlyArray<{ key: string; credits?: number }>): number {
+  return steps
+    .filter((s) => s.key !== "cover" && s.key !== "guide")
+    .reduce((total, s) => total + (s.credits !== undefined && s.credits > 1 ? s.credits : 1), 0);
 }
 
 /** The viewer's saved-card usage vs. plan cap (GET /api/me), null when
@@ -431,9 +435,11 @@ export function GenerationJobProvider({
         // steps about to charge). Each step response then overwrites the
         // projection with the real number, including any refunds.
         if (typeof planPayload.credits === "number") {
-          const pendingCost = startJob.steps.filter(
-            (s) => s.status === "pending",
-          ).length;
+          // Each pending step's own reserve (a double-faced remix step
+          // reserves two, TODO 5.4); the free cover and guide steps none.
+          const pendingCost = creditedStepCount(
+            startJob.steps.filter((s) => s.status === "pending"),
+          );
           publishCredits(planPayload.credits - pendingCost);
         }
         setJob(startJob);

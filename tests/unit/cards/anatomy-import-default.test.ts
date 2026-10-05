@@ -19,6 +19,7 @@ import { FRAME_COLOR_KEYS } from "@/lib/creator/card-kinds";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 import printings from "../scryfall/fixtures/anatomy-printings.json";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
+import dfcPrintings from "../scryfall/fixtures/dfc-import-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 4.6a / 4.6b, owner round 17 (2026-09-30) — IMPORTS = PRINTING-ONLY.
@@ -189,5 +190,41 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     expect(stored("mkm-264").style).toEqual({ twoColor: true, collector: "2023", stamp: "none" }); // Meticulous Archive (a land)
     expect(stored("fdn-2").style).toEqual({ crown: true, collector: "2023", stamp: "none" });
     expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 5.4 — the double-faced printings: the creator and the AI deck remix
+// store the same frame style for every transform printing that lands on
+// its bodies, the icon FAMILY included (the printing's, Q5), and the family
+// is dropped where the landing isn't a transform front body.
+// ---------------------------------------------------------------------------
+
+const D = dfcPrintings as unknown as Record<string, ScryfallCard>;
+
+describe("the double-faced printings (TODO 5.4)", () => {
+  it("the creator and the AI deck remix store the same frame style, family included", () => {
+    for (const key of ["mid-169", "inr-60", "vow-157", "mom-36", "bot-1", "xln-22", "lci-26"]) {
+      const got = stored(key, D[key]!);
+      expect(got.template, key).toBe("m15dfcfront");
+      expect(got.creator, key).toEqual(got.ai);
+      expect(got.ai.dfcIcon, key).toBe(got.patch.printed_dfc_icon);
+      expect(got.style.dfcIcon, key).toBe(got.patch.printed_dfc_icon);
+    }
+    // The families, per printing: no effect → arrows, sunmoondfc → sunmoon,
+    // compasslanddfc → compass, convertdfc → arrows.
+    expect(stored("inr-60", D["inr-60"]!).ai.dfcIcon).toBe("arrows");
+    expect(stored("mid-169", D["mid-169"]!).ai.dfcIcon).toBe("sunmoon");
+    expect(stored("xln-22", D["xln-22"]!).ai.dfcIcon).toBe("compass");
+    expect(stored("bot-1", D["bot-1"]!).ai.dfcIcon).toBe("arrows");
+  });
+
+  it("a printing that keeps today's landing names no family, and the standard frame stores none", () => {
+    for (const key of ["ori-60", "emn-63", "znr-12", "mom-20"]) {
+      const got = stored(key, D[key]!);
+      expect(got.patch.printed_dfc_icon, key).toBeUndefined();
+      expect(got.ai.dfcIcon, key).toBeUndefined();
+      expect(got.creator, key).toEqual(got.ai);
+    }
   });
 });

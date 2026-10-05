@@ -23,9 +23,20 @@ describe("a back body's pin", () => {
   it("accepts a printing whose back face is the row's colour, with no kind or signature noise", () => {
     // Avacyn, the Purifier is RED (colour indicator) under a white front.
     expect(validateReferenceForCombo(archangelAvacyn, "m15artifact", "r")).toEqual({ errors: [], warnings: [] });
-    // A colourless artifact back on the c row; a two-colour walker back on m.
+    // A colourless artifact back on the c row; a two-colour back on m (a
+    // creature-shaped Tibalt: a WALKER back is dropped by the import since
+    // 5.4 and refused as a pin — below).
     expect(validateReferenceForCombo(tergrid, "m15devoid", "c")).toEqual({ errors: [], warnings: [] });
-    expect(validateReferenceForCombo(valki, "m15devoid", "m")).toEqual({ errors: [], warnings: [] });
+    const twoColourBack = {
+      ...valki,
+      card_faces: [valki.card_faces![0], { ...valki.card_faces![1], type_line: "Legendary Creature — Devil" }],
+    } as typeof valki;
+    expect(validateReferenceForCombo(twoColourBack, "m15devoid", "m")).toEqual({ errors: [], warnings: [] });
+    // A planeswalker back (5.4 / 5.13): the import drops it, so no row can
+    // be verified against it.
+    const walker = validateReferenceForCombo(valki, "m15devoid", "m");
+    expect(walker.errors).toHaveLength(1);
+    expect(walker.errors[0]).toMatch(/is a double-faced planeswalker, whose second face PipGlyph doesn't import/);
     // A land back is the colour of its mana ability.
     expect(validateReferenceForCombo(agadeem, "m15devoid", "b")).toEqual({ errors: [], warnings: [] });
   });

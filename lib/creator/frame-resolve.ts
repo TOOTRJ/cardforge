@@ -20,10 +20,13 @@ import {
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
 import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
+import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import { dfcImportLanding, isDfcImportPatch, withoutDfcLanding } from "@/lib/scryfall/dfc-import";
 import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   KIND_DEFS,
   baseFrameFor,
+  dfcLayoutForKind,
   framesForKind,
   importedCardTypeForKind,
   isBorrowedVariation,
@@ -415,7 +418,7 @@ export function finalizeImportMatch<
     frame_match?: FrameMatch;
     frame_template?: FrameTemplate;
     color_identity?: readonly ColorIdentity[];
-  },
+  } & Partial<Pick<ScryfallImportPatch, "kind" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon">>,
 >(patch: P, verifiedKeys: ReadonlySet<string>): P {
   if (!patch.frame_match) return patch;
   const match = withVerification(
@@ -425,11 +428,40 @@ export function finalizeImportMatch<
   );
   const moved =
     patch.frame_template !== undefined && match.template !== patch.frame_match.template;
-  return {
+  const finalized: P = {
     ...patch,
     frame_match: match,
     ...(moved ? { frame_template: match.landOn ?? match.template } : {}),
   };
+  // A double-faced landing (TODO 5.4) is verified on BOTH faces: the front
+  // body in the front's colour (withVerification, above) and the back body
+  // in the back's (dfcImportLanding). Short of either, the import lands as
+  // it did before 5.4 — the front's standard kind and frame, the back as a
+  // legacy back (withoutDfcLanding) — and the match says so: the registry's
+  // exact answer becomes "not yet verified" on the body (the request log's
+  // "Not yet verified" cause, D1), a nearest one keeps its own reason; both
+  // land on the standard (`landOn`).
+  if (isDfcImportPatch(finalized)) {
+    const landing = dfcImportLanding(finalized, verifiedKeys);
+    if (!landing.ok) {
+      const fallback = withoutDfcLanding(finalized);
+      const unverifiedBack =
+        landing.reason === "back-unverified" && (match.status === "exact" || match.unverified === true);
+      const downgraded: FrameMatch = {
+        ...match,
+        status: "nearest",
+        ...(fallback.frame_template ? { landOn: fallback.frame_template } : {}),
+        ...(unverifiedBack
+          ? {
+              reason: `the back face's frame isn't verified in ${colorWord(landing.colorKey ?? "c")} yet`,
+              unverified: true as const,
+            }
+          : {}),
+      };
+      return { ...fallback, frame_match: downgraded } as P;
+    }
+  }
+  return finalized;
 }
 
 /** The AI deck remix's step error when no frame is published in the card's
@@ -471,19 +503,34 @@ export type RemixFrame =
  * doesn't log a frame request (TODO 1.6) — a follow-up.
  */
 export function remixFrameFor(
-  patch: {
-    kind?: CardKind;
-    frame_template?: FrameTemplate;
-    card_type?: CardType;
-    supertype?: string;
-    color_identity?: readonly ColorIdentity[];
-  },
+  patch: Pick<
+    ScryfallImportPatch,
+    "kind" | "frame_template" | "card_type" | "supertype" | "color_identity" | "back_face" | "printed_dfc_icon"
+  >,
   verifiedKeys: ReadonlySet<string>,
+  options: {
+    /** The remix is one-faced whatever the printing (the step's plan
+     *  reserved one credit): a double-faced landing is never taken. */
+    singleFace?: boolean;
+  } = {},
 ): RemixFrame {
   // A printing with no modelled card type (the mapper found neither) keeps
   // none; its frame resolves as a creature's, which is the default frame.
   const known = Boolean(patch.kind || patch.card_type);
-  const kind = patch.kind ?? kindFromCard(patch.card_type, undefined);
+  let kind = patch.kind ?? kindFromCard(patch.card_type, undefined);
+  let standardPatch: typeof patch = patch;
+  // A double-faced printing (TODO 5.4) lands on its front body when BOTH
+  // bodies are verified (dfcImportLanding — the back's body in the back's
+  // colour too, or the save's gate would refuse it after the art); else it
+  // lands as it did before 5.4: the front's standard kind, one-faced.
+  if (dfcLayoutForKind(kind)) {
+    const landing = options.singleFace ? null : dfcImportLanding(patch, verifiedKeys);
+    if (landing?.ok) {
+      return { ok: true, template: landing.frontBody, card_type: importedCardTypeForKind(kind, patch.card_type) };
+    }
+    standardPatch = withoutDfcLanding(patch);
+    kind = standardPatch.kind ?? kindFromCard(patch.card_type, undefined);
+  }
   const cardType = importedCardTypeForKind(kind, patch.card_type);
   const savedType = known ? cardType : undefined;
   const colors: readonly ColorIdentity[] = patch.color_identity ?? ["colorless"];
@@ -502,7 +549,7 @@ export function remixFrameFor(
   const standardKind = layoutTemplate ? kindFromCard(cardType, undefined) : kind;
   const { colorKey, resolution } = resolveImportFrame({
     patch: {
-      frame_template: layoutTemplate ? undefined : patch.frame_template,
+      frame_template: layoutTemplate ? undefined : standardPatch.frame_template,
       card_type: cardType,
       supertype: patch.supertype,
       color_identity: colors,

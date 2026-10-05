@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { FRAME_COLOR_KEYS } from "@/lib/creator/card-kinds";
+import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import {
   getCardById,
   getCardByNameResult,
@@ -58,6 +61,28 @@ function namedFailure(kind: ScryfallNamedFailure, name: string) {
         error: "Scryfall didn't answer — try again in a moment.",
       };
   }
+}
+
+/** The verified combos an import is finalized against: the verified set —
+ *  plus, for an ADMIN's frame preview (TODO 2.3 / 5.4), every colour of
+ *  the previewed templates (`preview`, the creator's `previewFrames` list),
+ *  as the creator's picker unions them. Unknown names are ignored; a
+ *  non-admin's list is ignored whole (the profile decides, never the
+ *  request). */
+async function verifiedKeysForImport(preview: string | undefined): Promise<Set<string>> {
+  const keys = new Set(await getVerifiedFrameKeys());
+  if (!preview) return keys;
+  const templates = preview
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name): name is FrameTemplate => (FRAME_TEMPLATE_VALUES as readonly string[]).includes(name));
+  if (templates.length === 0) return keys;
+  const profile = await getCurrentProfile();
+  if (!profile?.is_admin) return keys;
+  for (const template of templates) {
+    for (const colour of FRAME_COLOR_KEYS) keys.add(frameComboKey(template, colour));
+  }
+  return keys;
 }
 
 export async function GET(request: NextRequest) {
@@ -137,10 +162,15 @@ export async function GET(request: NextRequest) {
   const set = needsScryfallSet(card) && card.set ? await getScryfallSet(card.set) : undefined;
   // The registry's match is static; an `exact` frame that isn't verified in
   // the card's colour is only `nearest` to the user (TODO 1.4), and a match
-  // that names another frame once verified takes it when it is (A9).
+  // that names another frame once verified takes it when it is (A9). A
+  // double-faced landing (TODO 5.4) is finalized on BOTH faces' combos —
+  // for an ADMIN's frame preview (TODO 2.3, `?preview=<templates>` from the
+  // creator's previewFrames) the previewed bodies count as verified here,
+  // as they do in the creator's picker, so the preview can import onto a
+  // body nobody has ticked yet. Anyone else's `preview` is ignored.
   const mapped = mapScryfallToFormPatch(card, { artPreviewUrl, set });
   const patch = mapped.frame_match
-    ? finalizeImportMatch(mapped, new Set(await getVerifiedFrameKeys()))
+    ? finalizeImportMatch(mapped, await verifiedKeysForImport(read("preview")))
     : mapped;
 
   return NextResponse.json({

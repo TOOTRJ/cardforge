@@ -1,0 +1,1015 @@
+{
+  "_note": "The double-faced printings of TODO 5.4's import (captured from Scryfall /cards/:set/:number and /cards/search on 2026-10-05, User-Agent pipglyph-dev), trimmed to the fields the importer, the frame signature registry, the art import (per-face image_uris) and the AI deck remix read. Keys are set-collector_number. inr-60 Delver (no dfc effect → arrows, the ▼-right back), mid-169 Bird Admirer (sunmoondfc → the 2016–22 back), vow-157 a VOW werewolf, mom-36 a MOM transform (no effect), bot-1 a BOT convert (convertdfc, a Vehicle back), xln-22 Legion's Landing (compasslanddfc, an enchantment front // the parchment land back, 5.8), lci-26 Ojer Taq (LCI's land back), emn-63 Grizzled Angler (mooneldrazidfc, a COLOURLESS Eldrazi back — 5.11), ori-60 Jace (originpwdfc, a walker back — 5.13), mom-20 a battle front, tmom-16 a double-faced token, znr-12 Emeria's Call (modal, a sorcery // land), khm-112 Tergrid (modal, an artifact back with a cost), stx-6 Wandering Archaic (modal, a COLOURLESS non-artifact front — 5.11), stx-147 Augmenter Pugilist (modal, a green front // a blue sorcery back).",
+  "inr-60": {
+    "id": "6904ea20-e504-47da-95a0-08739fdde260",
+    "name": "Delver of Secrets // Insectile Aberration",
+    "layout": "transform",
+    "set": "inr",
+    "set_name": "Innistrad Remastered",
+    "set_type": "masters",
+    "collector_number": "60",
+    "released_at": "2025-01-24",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying",
+      "Transform"
+    ],
+    "type_line": "Creature — Human Wizard // Creature — Human Insect",
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/inr/60/delver-of-secrets-insectile-aberration?utm_source=api",
+    "artist": "Nils Hamm",
+    "card_faces": [
+      {
+        "name": "Delver of Secrets",
+        "mana_cost": "{U}",
+        "type_line": "Creature — Human Wizard",
+        "oracle_text": "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform this creature.",
+        "colors": [
+          "U"
+        ],
+        "power": "1",
+        "toughness": "1",
+        "artist": "Nils Hamm",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/6/9/6904ea20-e504-47da-95a0-08739fdde260.png?1783908173",
+          "normal": "https://cards.scryfall.io/normal/front/6/9/6904ea20-e504-47da-95a0-08739fdde260.jpg?1783908173",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/6/9/6904ea20-e504-47da-95a0-08739fdde260.jpg?1783908173"
+        }
+      },
+      {
+        "name": "Insectile Aberration",
+        "mana_cost": "",
+        "type_line": "Creature — Human Insect",
+        "oracle_text": "Flying",
+        "colors": [
+          "U"
+        ],
+        "color_indicator": [
+          "U"
+        ],
+        "power": "3",
+        "toughness": "2",
+        "artist": "Nils Hamm",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/6/9/6904ea20-e504-47da-95a0-08739fdde260.png?1783908173",
+          "normal": "https://cards.scryfall.io/normal/back/6/9/6904ea20-e504-47da-95a0-08739fdde260.jpg?1783908173",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/6/9/6904ea20-e504-47da-95a0-08739fdde260.jpg?1783908173"
+        }
+      }
+    ]
+  },
+  "mid-169": {
+    "id": "71ccc444-54c8-4f7c-a425-82bc3eea1eb0",
+    "name": "Bird Admirer // Wing Shredder",
+    "layout": "transform",
+    "set": "mid",
+    "set_name": "Innistrad: Midnight Hunt",
+    "set_type": "expansion",
+    "collector_number": "169",
+    "released_at": "2021-09-24",
+    "frame": "2015",
+    "frame_effects": [
+      "sunmoondfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Reach",
+      "Transform",
+      "Daybound",
+      "Nightbound"
+    ],
+    "type_line": "Creature — Human Archer Werewolf // Creature — Werewolf",
+    "color_identity": [
+      "G"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/mid/169/bird-admirer-wing-shredder?utm_source=api",
+    "artist": "Slawomir Maniak",
+    "card_faces": [
+      {
+        "name": "Bird Admirer",
+        "mana_cost": "{2}{G}",
+        "type_line": "Creature — Human Archer Werewolf",
+        "oracle_text": "Reach\nDaybound (If a player casts no spells during their own turn, it becomes night next turn.)",
+        "colors": [
+          "G"
+        ],
+        "power": "1",
+        "toughness": "4",
+        "artist": "Slawomir Maniak",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/7/1/71ccc444-54c8-4f7c-a425-82bc3eea1eb0.png?1783925590",
+          "normal": "https://cards.scryfall.io/normal/front/7/1/71ccc444-54c8-4f7c-a425-82bc3eea1eb0.jpg?1783925590",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/7/1/71ccc444-54c8-4f7c-a425-82bc3eea1eb0.jpg?1783925590"
+        }
+      },
+      {
+        "name": "Wing Shredder",
+        "mana_cost": "",
+        "type_line": "Creature — Werewolf",
+        "oracle_text": "Reach\nNightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)",
+        "colors": [
+          "G"
+        ],
+        "color_indicator": [
+          "G"
+        ],
+        "power": "3",
+        "toughness": "5",
+        "artist": "Slawomir Maniak",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/7/1/71ccc444-54c8-4f7c-a425-82bc3eea1eb0.png?1783925590",
+          "normal": "https://cards.scryfall.io/normal/back/7/1/71ccc444-54c8-4f7c-a425-82bc3eea1eb0.jpg?1783925590",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/7/1/71ccc444-54c8-4f7c-a425-82bc3eea1eb0.jpg?1783925590"
+        }
+      }
+    ]
+  },
+  "znr-12": {
+    "id": "c470539a-9cc7-4175-8f7c-c982b6072b6d",
+    "name": "Emeria's Call // Emeria, Shattered Skyclave",
+    "layout": "modal_dfc",
+    "set": "znr",
+    "set_name": "Zendikar Rising",
+    "set_type": "expansion",
+    "collector_number": "12",
+    "released_at": "2020-09-25",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Sorcery // Land",
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/znr/12/emerias-call-emeria-shattered-skyclave?utm_source=api",
+    "artist": "Matt Stewart",
+    "card_faces": [
+      {
+        "name": "Emeria's Call",
+        "mana_cost": "{4}{W}{W}{W}",
+        "type_line": "Sorcery",
+        "oracle_text": "Create two 4/4 white Angel Warrior creature tokens with flying. Non-Angel creatures you control gain indestructible until your next turn.",
+        "colors": [
+          "W"
+        ],
+        "artist": "Matt Stewart",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/c/4/c470539a-9cc7-4175-8f7c-c982b6072b6d.png?1783929425",
+          "normal": "https://cards.scryfall.io/normal/front/c/4/c470539a-9cc7-4175-8f7c-c982b6072b6d.jpg?1783929425",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/c/4/c470539a-9cc7-4175-8f7c-c982b6072b6d.jpg?1783929425"
+        }
+      },
+      {
+        "name": "Emeria, Shattered Skyclave",
+        "mana_cost": "",
+        "type_line": "Land",
+        "oracle_text": "As this land enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {W}.",
+        "colors": [],
+        "artist": "Matt Stewart",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/c/4/c470539a-9cc7-4175-8f7c-c982b6072b6d.png?1783929425",
+          "normal": "https://cards.scryfall.io/normal/back/c/4/c470539a-9cc7-4175-8f7c-c982b6072b6d.jpg?1783929425",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/c/4/c470539a-9cc7-4175-8f7c-c982b6072b6d.jpg?1783929425"
+        }
+      }
+    ]
+  },
+  "tmom-16": {
+    "id": "cca1decc-90fd-4df8-997e-52f8789032f8",
+    "name": "Incubator // Phyrexian",
+    "layout": "double_faced_token",
+    "set": "tmom",
+    "set_name": "March of the Machine Tokens",
+    "set_type": "token",
+    "collector_number": "16",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Transform"
+    ],
+    "type_line": "Token Artifact — Incubator // Token Artifact Creature — Phyrexian",
+    "color_identity": [],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/tmom/16/incubator-phyrexian?utm_source=api",
+    "artist": "Johann Bodin",
+    "card_faces": [
+      {
+        "name": "Incubator",
+        "mana_cost": "",
+        "type_line": "Token Artifact — Incubator",
+        "oracle_text": "{2}: Transform this artifact.",
+        "colors": [],
+        "artist": "Johann Bodin",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/c/c/cca1decc-90fd-4df8-997e-52f8789032f8.png?1783916674",
+          "normal": "https://cards.scryfall.io/normal/front/c/c/cca1decc-90fd-4df8-997e-52f8789032f8.jpg?1783916674",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/c/c/cca1decc-90fd-4df8-997e-52f8789032f8.jpg?1783916674"
+        }
+      },
+      {
+        "name": "Phyrexian",
+        "mana_cost": "",
+        "type_line": "Token Artifact Creature — Phyrexian",
+        "oracle_text": "",
+        "colors": [],
+        "power": "0",
+        "toughness": "0",
+        "artist": "Johann Bodin",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/c/c/cca1decc-90fd-4df8-997e-52f8789032f8.png?1783916674",
+          "normal": "https://cards.scryfall.io/normal/back/c/c/cca1decc-90fd-4df8-997e-52f8789032f8.jpg?1783916674",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/c/c/cca1decc-90fd-4df8-997e-52f8789032f8.jpg?1783916674"
+        }
+      }
+    ]
+  },
+  "emn-63": {
+    "id": "1eb4ddf4-f695-412d-be80-b93392432498",
+    "name": "Grizzled Angler // Grisly Anglerfish",
+    "layout": "transform",
+    "set": "emn",
+    "set_name": "Eldritch Moon",
+    "set_type": "expansion",
+    "collector_number": "63",
+    "released_at": "2016-07-22",
+    "frame": "2015",
+    "frame_effects": [
+      "mooneldrazidfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Transform",
+      "Mill"
+    ],
+    "type_line": "Creature — Human // Creature — Eldrazi Fish",
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "uncommon",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/emn/63/grizzled-angler-grisly-anglerfish?utm_source=api",
+    "artist": "Kev Walker",
+    "card_faces": [
+      {
+        "name": "Grizzled Angler",
+        "mana_cost": "{2}{U}",
+        "type_line": "Creature — Human",
+        "oracle_text": "{T}: Mill two cards. Then if there is a colorless creature card in your graveyard, transform this creature. (To mill two cards, put the top two cards of your library into your graveyard.)",
+        "colors": [
+          "U"
+        ],
+        "power": "2",
+        "toughness": "3",
+        "artist": "Kev Walker",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/1/e/1eb4ddf4-f695-412d-be80-b93392432498.png?1783937503",
+          "normal": "https://cards.scryfall.io/normal/front/1/e/1eb4ddf4-f695-412d-be80-b93392432498.jpg?1783937503",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/1/e/1eb4ddf4-f695-412d-be80-b93392432498.jpg?1783937503"
+        }
+      },
+      {
+        "name": "Grisly Anglerfish",
+        "mana_cost": "",
+        "type_line": "Creature — Eldrazi Fish",
+        "oracle_text": "{6}: Creatures your opponents control attack this turn if able.",
+        "colors": [],
+        "power": "4",
+        "toughness": "5",
+        "artist": "Kev Walker",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/1/e/1eb4ddf4-f695-412d-be80-b93392432498.png?1783937503",
+          "normal": "https://cards.scryfall.io/normal/back/1/e/1eb4ddf4-f695-412d-be80-b93392432498.jpg?1783937503",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/1/e/1eb4ddf4-f695-412d-be80-b93392432498.jpg?1783937503"
+        }
+      }
+    ]
+  },
+  "xln-22": {
+    "id": "05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c",
+    "name": "Legion's Landing // Adanto, the First Fort",
+    "layout": "transform",
+    "set": "xln",
+    "set_name": "Ixalan",
+    "set_type": "expansion",
+    "collector_number": "22",
+    "released_at": "2017-09-29",
+    "frame": "2015",
+    "frame_effects": [
+      "compasslanddfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Transform"
+    ],
+    "type_line": "Legendary Enchantment // Legendary Land",
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/xln/22/legions-landing-adanto-the-first-fort?utm_source=api",
+    "artist": "Svetlin Velinov",
+    "card_faces": [
+      {
+        "name": "Legion's Landing",
+        "mana_cost": "{W}",
+        "type_line": "Legendary Enchantment",
+        "oracle_text": "When Legion's Landing enters, create a 1/1 white Vampire creature token with lifelink.\nWhen you attack with three or more creatures, transform Legion's Landing.",
+        "colors": [
+          "W"
+        ],
+        "artist": "Svetlin Velinov",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/0/5/05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c.png?1783935808",
+          "normal": "https://cards.scryfall.io/normal/front/0/5/05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c.jpg?1783935808",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/0/5/05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c.jpg?1783935808"
+        }
+      },
+      {
+        "name": "Adanto, the First Fort",
+        "mana_cost": "",
+        "type_line": "Legendary Land",
+        "oracle_text": "(Transforms from Legion's Landing.)\n{T}: Add {W}.\n{2}{W}, {T}: Create a 1/1 white Vampire creature token with lifelink.",
+        "colors": [],
+        "artist": "Svetlin Velinov",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/0/5/05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c.png?1783935808",
+          "normal": "https://cards.scryfall.io/normal/back/0/5/05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c.jpg?1783935808",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/0/5/05e2a5e6-3aaa-4096-bdd0-fcc1afe5a36c.jpg?1783935808"
+        }
+      }
+    ]
+  },
+  "khm-112": {
+    "id": "14dc88ee-bba9-4625-af0d-89f3762a0ead",
+    "name": "Tergrid, God of Fright // Tergrid's Lantern",
+    "layout": "modal_dfc",
+    "set": "khm",
+    "set_name": "Kaldheim",
+    "set_type": "expansion",
+    "collector_number": "112",
+    "released_at": "2021-02-05",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Menace"
+    ],
+    "type_line": "Legendary Creature — God // Legendary Artifact",
+    "color_identity": [
+      "B"
+    ],
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/khm/112/tergrid-god-of-fright-tergrids-lantern?utm_source=api",
+    "artist": "Yongjae Choi",
+    "card_faces": [
+      {
+        "name": "Tergrid, God of Fright",
+        "mana_cost": "{3}{B}{B}",
+        "type_line": "Legendary Creature — God",
+        "oracle_text": "Menace\nWhenever an opponent sacrifices a nontoken permanent or discards a permanent card, you may put that card from a graveyard onto the battlefield under your control.",
+        "colors": [
+          "B"
+        ],
+        "power": "4",
+        "toughness": "5",
+        "artist": "Yongjae Choi",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/1/4/14dc88ee-bba9-4625-af0d-89f3762a0ead.png?1783928244",
+          "normal": "https://cards.scryfall.io/normal/front/1/4/14dc88ee-bba9-4625-af0d-89f3762a0ead.jpg?1783928244",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/1/4/14dc88ee-bba9-4625-af0d-89f3762a0ead.jpg?1783928244"
+        }
+      },
+      {
+        "name": "Tergrid's Lantern",
+        "mana_cost": "{3}{B}",
+        "type_line": "Legendary Artifact",
+        "oracle_text": "{T}: Target player loses 3 life unless they sacrifice a nonland permanent of their choice or discard a card.\n{3}{B}: Untap Tergrid's Lantern.",
+        "colors": [
+          "B"
+        ],
+        "artist": "Yongjae Choi",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/1/4/14dc88ee-bba9-4625-af0d-89f3762a0ead.png?1783928244",
+          "normal": "https://cards.scryfall.io/normal/back/1/4/14dc88ee-bba9-4625-af0d-89f3762a0ead.jpg?1783928244",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/1/4/14dc88ee-bba9-4625-af0d-89f3762a0ead.jpg?1783928244"
+        }
+      }
+    ]
+  },
+  "mom-36": {
+    "id": "fbd9ed1d-1972-4db8-bc43-b05b94956aa0",
+    "name": "Seraph of New Capenna // Seraph of New Phyrexia",
+    "layout": "transform",
+    "set": "mom",
+    "set_name": "March of the Machine",
+    "set_type": "expansion",
+    "collector_number": "36",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying",
+      "Transform"
+    ],
+    "type_line": "Creature — Angel Soldier // Creature — Phyrexian Angel",
+    "color_identity": [
+      "B",
+      "W"
+    ],
+    "rarity": "uncommon",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/mom/36/seraph-of-new-capenna-seraph-of-new-phyrexia?utm_source=api",
+    "artist": "Aaron J. Riley",
+    "card_faces": [
+      {
+        "name": "Seraph of New Capenna",
+        "mana_cost": "{2}{W}",
+        "type_line": "Creature — Angel Soldier",
+        "oracle_text": "Flying\n{4}{B/P}: Transform this creature. Activate only as a sorcery. ({B/P} can be paid with either {B} or 2 life.)",
+        "colors": [
+          "W"
+        ],
+        "power": "2",
+        "toughness": "2",
+        "artist": "Aaron J. Riley",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/f/b/fbd9ed1d-1972-4db8-bc43-b05b94956aa0.png?1783917057",
+          "normal": "https://cards.scryfall.io/normal/front/f/b/fbd9ed1d-1972-4db8-bc43-b05b94956aa0.jpg?1783917057",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/f/b/fbd9ed1d-1972-4db8-bc43-b05b94956aa0.jpg?1783917057"
+        }
+      },
+      {
+        "name": "Seraph of New Phyrexia",
+        "mana_cost": "",
+        "type_line": "Creature — Phyrexian Angel",
+        "oracle_text": "Flying\nWhenever this creature attacks, you may sacrifice another creature or artifact. If you do, this creature gets +2/+1 until end of turn.",
+        "colors": [
+          "B",
+          "W"
+        ],
+        "color_indicator": [
+          "B",
+          "W"
+        ],
+        "power": "3",
+        "toughness": "3",
+        "artist": "Aaron J. Riley",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/f/b/fbd9ed1d-1972-4db8-bc43-b05b94956aa0.png?1783917057",
+          "normal": "https://cards.scryfall.io/normal/back/f/b/fbd9ed1d-1972-4db8-bc43-b05b94956aa0.jpg?1783917057",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/f/b/fbd9ed1d-1972-4db8-bc43-b05b94956aa0.jpg?1783917057"
+        }
+      }
+    ]
+  },
+  "vow-157": {
+    "id": "5eb3a08e-1d31-4ab9-854f-a86b060696ec",
+    "name": "Fearful Villager // Fearsome Werewolf",
+    "layout": "transform",
+    "set": "vow",
+    "set_name": "Innistrad: Crimson Vow",
+    "set_type": "expansion",
+    "collector_number": "157",
+    "released_at": "2021-11-19",
+    "frame": "2015",
+    "frame_effects": [
+      "sunmoondfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Transform",
+      "Daybound",
+      "Menace",
+      "Nightbound"
+    ],
+    "type_line": "Creature — Human Werewolf // Creature — Werewolf",
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "common",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/vow/157/fearful-villager-fearsome-werewolf?utm_source=api",
+    "artist": "Andrew Mar",
+    "card_faces": [
+      {
+        "name": "Fearful Villager",
+        "mana_cost": "{2}{R}",
+        "type_line": "Creature — Human Werewolf",
+        "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\nDaybound (If a player casts no spells during their own turn, it becomes night next turn.)",
+        "colors": [
+          "R"
+        ],
+        "power": "2",
+        "toughness": "3",
+        "artist": "Andrew Mar",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/5/e/5eb3a08e-1d31-4ab9-854f-a86b060696ec.png?1783924841",
+          "normal": "https://cards.scryfall.io/normal/front/5/e/5eb3a08e-1d31-4ab9-854f-a86b060696ec.jpg?1783924841",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/5/e/5eb3a08e-1d31-4ab9-854f-a86b060696ec.jpg?1783924841"
+        }
+      },
+      {
+        "name": "Fearsome Werewolf",
+        "mana_cost": "",
+        "type_line": "Creature — Werewolf",
+        "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\nNightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)",
+        "colors": [
+          "R"
+        ],
+        "color_indicator": [
+          "R"
+        ],
+        "power": "4",
+        "toughness": "3",
+        "artist": "Andrew Mar",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/5/e/5eb3a08e-1d31-4ab9-854f-a86b060696ec.png?1783924841",
+          "normal": "https://cards.scryfall.io/normal/back/5/e/5eb3a08e-1d31-4ab9-854f-a86b060696ec.jpg?1783924841",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/5/e/5eb3a08e-1d31-4ab9-854f-a86b060696ec.jpg?1783924841"
+        }
+      }
+    ]
+  },
+  "mom-20": {
+    "id": "4fb0eb2d-9cb7-4e72-a970-5009b046df2a",
+    "name": "Invasion of Belenon // Belenon War Anthem",
+    "layout": "transform",
+    "set": "mom",
+    "set_name": "March of the Machine",
+    "set_type": "expansion",
+    "collector_number": "20",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Transform"
+    ],
+    "type_line": "Battle — Siege // Enchantment",
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "uncommon",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/mom/20/invasion-of-belenon-belenon-war-anthem?utm_source=api",
+    "artist": "Antonio José Manzanedo",
+    "card_faces": [
+      {
+        "name": "Invasion of Belenon",
+        "mana_cost": "{2}{W}",
+        "type_line": "Battle — Siege",
+        "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create a 2/2 white and blue Knight creature token with vigilance.",
+        "colors": [
+          "W"
+        ],
+        "defense": "5",
+        "artist": "Antonio José Manzanedo",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.png?1783917065",
+          "normal": "https://cards.scryfall.io/normal/front/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065"
+        }
+      },
+      {
+        "name": "Belenon War Anthem",
+        "mana_cost": "",
+        "type_line": "Enchantment",
+        "oracle_text": "Creatures you control get +1/+1.",
+        "colors": [
+          "W"
+        ],
+        "color_indicator": [
+          "W"
+        ],
+        "artist": "Antonio José Manzanedo",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.png?1783917065",
+          "normal": "https://cards.scryfall.io/normal/back/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065"
+        }
+      }
+    ]
+  },
+  "bot-1": {
+    "id": "f0a3dc50-a5c4-4073-8fec-2f68544bc2a1",
+    "name": "Prowl, Stoic Strategist // Prowl, Pursuit Vehicle",
+    "layout": "transform",
+    "set": "bot",
+    "set_name": "Transformers",
+    "set_type": "eternal",
+    "collector_number": "1",
+    "released_at": "2022-11-18",
+    "frame": "2015",
+    "frame_effects": [
+      "convertdfc",
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Living metal",
+      "Convert",
+      "More Than Meets the Eye"
+    ],
+    "type_line": "Legendary Artifact Creature — Robot // Legendary Artifact — Vehicle",
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "security_stamp": "triangle",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/bot/1/prowl-stoic-strategist-prowl-pursuit-vehicle?utm_source=api",
+    "artist": "Volta Creation",
+    "card_faces": [
+      {
+        "name": "Prowl, Stoic Strategist",
+        "mana_cost": "{3}{W}",
+        "type_line": "Legendary Artifact Creature — Robot",
+        "oracle_text": "More Than Meets the Eye {2}{W} (You may cast this card converted for {2}{W}.)\nWhenever Prowl attacks, exile up to one other target tapped creature or Vehicle. For as long as that card remains exiled, its owner may play it.\nWhenever a player plays a card exiled with Prowl, you draw a card and convert Prowl.",
+        "colors": [
+          "W"
+        ],
+        "power": "3",
+        "toughness": "3",
+        "artist": "Volta Creation",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/f/0/f0a3dc50-a5c4-4073-8fec-2f68544bc2a1.png?1783919909",
+          "normal": "https://cards.scryfall.io/normal/front/f/0/f0a3dc50-a5c4-4073-8fec-2f68544bc2a1.jpg?1783919909",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/f/0/f0a3dc50-a5c4-4073-8fec-2f68544bc2a1.jpg?1783919909"
+        }
+      },
+      {
+        "name": "Prowl, Pursuit Vehicle",
+        "mana_cost": "",
+        "type_line": "Legendary Artifact — Vehicle",
+        "oracle_text": "Living metal (During your turn, this Vehicle is also a creature.)\nWhenever another creature or Vehicle you control enters, put a +1/+1 counter on Prowl. If this is the second time this ability has resolved this turn, convert Prowl.",
+        "colors": [
+          "W"
+        ],
+        "color_indicator": [
+          "W"
+        ],
+        "power": "2",
+        "toughness": "3",
+        "artist": "Volta Creation",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/f/0/f0a3dc50-a5c4-4073-8fec-2f68544bc2a1.png?1783919909",
+          "normal": "https://cards.scryfall.io/normal/back/f/0/f0a3dc50-a5c4-4073-8fec-2f68544bc2a1.jpg?1783919909",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/f/0/f0a3dc50-a5c4-4073-8fec-2f68544bc2a1.jpg?1783919909"
+        }
+      }
+    ]
+  },
+  "stx-6": {
+    "id": "18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312",
+    "name": "Wandering Archaic // Explore the Vastlands",
+    "layout": "modal_dfc",
+    "set": "stx",
+    "set_name": "Strixhaven: School of Mages",
+    "set_type": "expansion",
+    "collector_number": "6",
+    "released_at": "2021-04-23",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Avatar // Sorcery",
+    "color_identity": [],
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/stx/6/wandering-archaic-explore-the-vastlands?utm_source=api",
+    "artist": "Wayne Reynolds",
+    "card_faces": [
+      {
+        "name": "Wandering Archaic",
+        "mana_cost": "{5}",
+        "type_line": "Creature — Avatar",
+        "oracle_text": "Whenever an opponent casts an instant or sorcery spell, they may pay {2}. If they don't, you may copy that spell. You may choose new targets for the copy.",
+        "colors": [],
+        "power": "4",
+        "toughness": "4",
+        "artist": "Wayne Reynolds",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/1/8/18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312.png?1783927400",
+          "normal": "https://cards.scryfall.io/normal/front/1/8/18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312.jpg?1783927400",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/1/8/18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312.jpg?1783927400"
+        }
+      },
+      {
+        "name": "Explore the Vastlands",
+        "mana_cost": "{3}",
+        "type_line": "Sorcery",
+        "oracle_text": "Each player looks at the top five cards of their library and may reveal a land card and/or an instant or sorcery card from among them. Each player puts the cards they revealed this way into their hand and the rest on the bottom of their library in a random order. Each player gains 3 life.",
+        "colors": [],
+        "artist": "Wayne Reynolds",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/1/8/18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312.png?1783927400",
+          "normal": "https://cards.scryfall.io/normal/back/1/8/18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312.jpg?1783927400",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/1/8/18a2bdc8-b705-4eb5-b3a5-ff2e2ab8f312.jpg?1783927400"
+        }
+      }
+    ]
+  },
+  "stx-147": {
+    "id": "d9131fc3-018a-4975-8795-47be3956160d",
+    "name": "Augmenter Pugilist // Echoing Equation",
+    "layout": "modal_dfc",
+    "set": "stx",
+    "set_name": "Strixhaven: School of Mages",
+    "set_type": "expansion",
+    "collector_number": "147",
+    "released_at": "2021-04-23",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Trample"
+    ],
+    "type_line": "Creature — Troll Druid // Sorcery",
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/stx/147/augmenter-pugilist-echoing-equation?utm_source=api",
+    "artist": "Volkan Baǵa",
+    "card_faces": [
+      {
+        "name": "Augmenter Pugilist",
+        "mana_cost": "{1}{G}{G}",
+        "type_line": "Creature — Troll Druid",
+        "oracle_text": "Trample\nAs long as you control eight or more lands, this creature gets +5/+5.",
+        "colors": [
+          "G"
+        ],
+        "power": "3",
+        "toughness": "3",
+        "artist": "Volkan Baǵa",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/d/9/d9131fc3-018a-4975-8795-47be3956160d.png?1783927337",
+          "normal": "https://cards.scryfall.io/normal/front/d/9/d9131fc3-018a-4975-8795-47be3956160d.jpg?1783927337",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/d/9/d9131fc3-018a-4975-8795-47be3956160d.jpg?1783927337"
+        }
+      },
+      {
+        "name": "Echoing Equation",
+        "mana_cost": "{3}{U}{U}",
+        "type_line": "Sorcery",
+        "oracle_text": "Choose target creature you control. Each other creature you control becomes a copy of it until end of turn, except those creatures aren't legendary.",
+        "colors": [
+          "U"
+        ],
+        "artist": "Volkan Baǵa",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/d/9/d9131fc3-018a-4975-8795-47be3956160d.png?1783927337",
+          "normal": "https://cards.scryfall.io/normal/back/d/9/d9131fc3-018a-4975-8795-47be3956160d.jpg?1783927337",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/d/9/d9131fc3-018a-4975-8795-47be3956160d.jpg?1783927337"
+        }
+      }
+    ]
+  },
+  "lci-26": {
+    "id": "1ca79dd4-67fc-496c-96fc-489b039c4932",
+    "name": "Ojer Taq, Deepest Foundation // Temple of Civilization",
+    "layout": "transform",
+    "set": "lci",
+    "set_name": "The Lost Caverns of Ixalan",
+    "set_type": "expansion",
+    "collector_number": "26",
+    "released_at": "2023-11-17",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Vigilance",
+      "Transform"
+    ],
+    "type_line": "Legendary Creature — God // Land",
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/lci/26/ojer-taq-deepest-foundation-temple-of-civilization?utm_source=api",
+    "artist": "Cristi Balanescu",
+    "card_faces": [
+      {
+        "name": "Ojer Taq, Deepest Foundation",
+        "mana_cost": "{4}{W}{W}",
+        "type_line": "Legendary Creature — God",
+        "oracle_text": "Vigilance\nIf one or more creature tokens would be created under your control, three times that many of those tokens are created instead.\nWhen Ojer Taq dies, return it to the battlefield tapped and transformed under its owner's control.",
+        "colors": [
+          "W"
+        ],
+        "power": "6",
+        "toughness": "6",
+        "artist": "Cristi Balanescu",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/1/c/1ca79dd4-67fc-496c-96fc-489b039c4932.png?1783913811",
+          "normal": "https://cards.scryfall.io/normal/front/1/c/1ca79dd4-67fc-496c-96fc-489b039c4932.jpg?1783913811",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/1/c/1ca79dd4-67fc-496c-96fc-489b039c4932.jpg?1783913811"
+        }
+      },
+      {
+        "name": "Temple of Civilization",
+        "mana_cost": "",
+        "type_line": "Land",
+        "oracle_text": "(Transforms from Ojer Taq, Deepest Foundation.)\n{T}: Add {W}.\n{2}{W}, {T}: Transform this land. Activate only if you attacked with three or more creatures this turn and only as a sorcery.",
+        "colors": [],
+        "artist": "Cristi Balanescu",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/1/c/1ca79dd4-67fc-496c-96fc-489b039c4932.png?1783913811",
+          "normal": "https://cards.scryfall.io/normal/back/1/c/1ca79dd4-67fc-496c-96fc-489b039c4932.jpg?1783913811",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/1/c/1ca79dd4-67fc-496c-96fc-489b039c4932.jpg?1783913811"
+        }
+      }
+    ]
+  },
+  "ori-60": {
+    "id": "02d6d693-f1f3-4317-bcc0-c21fa8490d38",
+    "name": "Jace, Vryn's Prodigy // Jace, Telepath Unbound",
+    "layout": "transform",
+    "set": "ori",
+    "set_name": "Magic Origins",
+    "set_type": "core",
+    "collector_number": "60",
+    "released_at": "2015-07-17",
+    "frame": "2015",
+    "frame_effects": [
+      "originpwdfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Transform",
+      "Mill"
+    ],
+    "type_line": "Legendary Creature — Human Wizard // Legendary Planeswalker — Jace",
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "image_status": "highres_scan",
+    "scryfall_uri": "https://scryfall.com/card/ori/60/jace-vryns-prodigy-jace-telepath-unbound?utm_source=api",
+    "artist": "Jaime Jones",
+    "card_faces": [
+      {
+        "name": "Jace, Vryn's Prodigy",
+        "mana_cost": "{1}{U}",
+        "type_line": "Legendary Creature — Human Wizard",
+        "oracle_text": "{T}: Draw a card, then discard a card. If there are five or more cards in your graveyard, exile Jace, then return him to the battlefield transformed under his owner's control.",
+        "colors": [
+          "U"
+        ],
+        "power": "0",
+        "toughness": "2",
+        "artist": "Jaime Jones",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.png?1783938353",
+          "normal": "https://cards.scryfall.io/normal/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353"
+        }
+      },
+      {
+        "name": "Jace, Telepath Unbound",
+        "mana_cost": "",
+        "type_line": "Legendary Planeswalker — Jace",
+        "oracle_text": "+1: Up to one target creature gets -2/-0 until your next turn.\n−3: You may cast target instant or sorcery card from your graveyard this turn. If that spell would be put into your graveyard, exile it instead.\n−9: You get an emblem with \"Whenever you cast a spell, target opponent mills five cards.\"",
+        "colors": [
+          "U"
+        ],
+        "color_indicator": [
+          "U"
+        ],
+        "loyalty": "5",
+        "artist": "Jaime Jones",
+        "image_uris": {
+          "png": "https://cards.scryfall.io/png/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.png?1783938353",
+          "normal": "https://cards.scryfall.io/normal/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/0/2/02d6d693-f1f3-4317-bcc0-c21fa8490d38.jpg?1783938353"
+        }
+      }
+    ]
+  }
+}

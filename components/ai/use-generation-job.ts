@@ -25,6 +25,10 @@ export type GenerationJobStep = {
   /** A plan limit (not a hiccup): the runner stops and opens the matching
    *  upgrade prompt. */
   error_code?: "CARD_CAPACITY" | "INSUFFICIENT_CREDITS" | null;
+  /** The credits the step reserves when it isn't one: a deck remix of a
+   *  double-faced printing paints both faces at two (TODO 5.4, owner Q4).
+   *  Absent = one. */
+  credits?: number;
 };
 
 export type GenerationJobPhase = "idle" | "planning" | "stepping" | "done";

@@ -238,6 +238,19 @@ Rules and gotchas:
   single-bake — `?face=back` serves it (png / pdf) and opens the page
   flipped (the client island only), tiles flip by a corner button only, the
   page is "Front // Back" (`cardPageName`), and the OG image stays the front.
+  Imports follow the printing PER FACE (5.4; `dfcImportOf` in the mapper):
+  a transform / modal printing lands on the bodies — the front body by the
+  front's type, the back body by the back's type and the printing's family
+  (`printed_dfc_icon` from `frame_effects`), the back's own colour (a land
+  face colourless) — only when BOTH combos are verified
+  (`lib/scryfall/dfc-import.ts`, `finalizeImportMatch`), else as before
+  (standard frame + legacy back); a walker face imports the front alone
+  (toast + a `dfc/walker` request row), a colourless face without an
+  Artifact word keeps today's landing (5.11). The AI deck remix of such an
+  entry costs 2 credits (two pictures), priced at plan time
+  (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
+  only, behind the AI rate limit: it calls Scryfall) and shown in the
+  estimate before anyone pays; the step reserves what the plan priced.
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a
