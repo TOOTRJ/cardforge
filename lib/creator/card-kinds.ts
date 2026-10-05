@@ -1327,8 +1327,8 @@ export function kindHasAvailableFrame(
 }
 
 /** The double-faced kinds and their layout (lib/cards/dfc.ts): the
- *  Transform kind (5.1a) and the Modal kind (named by 5.2; its bodies are
- *  5.1b's, so bodyFor answers null for its faces until then). */
+ *  Transform kind (5.1a) and the Modal kind (named by 5.2, its bodies
+ *  5.1b's). */
 const DFC_KIND_LAYOUT: Partial<Record<CardKind, DfcLayout>> = { transform: "transform", mdfc: "modal" };
 
 /** The layout of a double-faced kind, or null for every other kind — the
@@ -1339,9 +1339,10 @@ export function dfcLayoutForKind(kind: CardKind): DfcLayout | null {
 }
 
 /** The front BODY a double-faced kind's card wears for a face type (the
- *  land front for a land, the spell front otherwise), or null when the kind
- *  has no bodies yet (the modal kind until 5.1b) — what the Card step's
- *  face-type row writes beside the type. */
+ *  land front for a land, the spell front otherwise), or null for a kind
+ *  with no bodies (none since 5.1b's modal pair; a wave-2 kind until its
+ *  rows exist) — what the Card step's face-type row writes beside the
+ *  type. */
 export function dfcFrontBodyFor(kind: CardKind, cardType: CardType | "" | null | undefined): FrameTemplate | null {
   const layout = dfcLayoutForKind(kind);
   return layout ? bodyFor(layout, "front", cardType || null) : null;
@@ -1534,9 +1535,10 @@ export function planKindChange(
   const backFace = def.inlineSecondFace ? { has_back_face: true as const } : {};
 
   // Layout kinds are deterministic — one template family. A kind whose
-  // family is still EMPTY (the modal kind until 5.1b's bodies) keeps the
-  // card's own template: its chip is dark, and a programmatic pick lands
-  // on "frames not published" in the creator rather than on nothing.
+  // family is EMPTY (none since 5.1b's modal pair; a wave-2 kind before its
+  // bodies) keeps the card's own template: its chip is dark, and a
+  // programmatic pick lands on "frames not published" in the creator rather
+  // than on nothing.
   if (def.layoutTemplates) {
     return {
       action: "apply",

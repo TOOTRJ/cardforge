@@ -251,11 +251,13 @@ Rules and gotchas:
   a transform / modal printing lands on the bodies — the front body by the
   front's type, the back body by the back's type and the printing's family
   (`printed_dfc_icon` from `frame_effects`), the back's own colour (a land
-  face colourless) — only when BOTH combos are verified
+  face colourless on the TRANSFORM land bodies, its mana's colour on the
+  modal ones) — only when BOTH combos are verified
   (`lib/scryfall/dfc-import.ts`, `finalizeImportMatch`), else as before
   (standard frame + legacy back); a walker face imports the front alone
   (toast + a `dfc/walker` request row), a colourless face without an
-  Artifact word keeps today's landing (5.11). The AI deck remix of such an
+  Artifact word and a devoid / snow dress keep today's landing (5.11,
+  `dfc/colourless-face` / `dfc/devoid` / `dfc/snow`). The AI deck remix of such an
   entry costs 2 credits (two pictures), priced at plan time
   (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
   only, behind the AI rate limit: it calls Scryfall) and shown in the

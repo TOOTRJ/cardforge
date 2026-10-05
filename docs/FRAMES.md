@@ -2305,13 +2305,16 @@ ticks each colour × face.
   artifact back onto `m15mdfcback` keeps its cost; a land back onto
   `m15mdfclandback` keeps the FRONT's colour (one land tint per colour,
   verified per colour — colourless is the TRANSFORM land back's rule).
-- **The registry.** `modal/2015`, mirroring `transform/2015`: a plain
-  2015-frame modal printing on a kind the front draws is nearest on the M15
-  standard until the modal front body is verified in its colour, then
-  exact on it (`onceVerified: { family: "mdfc" }`, the land front for a
-  pathway); a snow or devoid modal printing (KHM #179 Jorn, MH3 #253)
-  keeps its dress on the era rule. The modal backs have no signature of
-  their own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`). References per colour
+- **The registry** (folded with 5.4's model, #465): `modal/2015` is EXACT
+  on the modal front body the mapper's `dfcImportOf` puts the printing on
+  (the `dfc` family's pick; the land front for a pathway) — the creator's
+  verification says "not yet verified" until both faces are ticked
+  (`finalizeImportMatch`); a snow or devoid modal printing (KHM #179 Jorn,
+  MH3 #253 Drowner of Truth) is nearest on the body for its dress and
+  LANDS on the era's snow / devoid frame with a legacy back (`dfc/snow` /
+  `dfc/devoid`, the mapper's `dress` block → 5.11): without that rule the
+  fold judged Jorn exact on the plain modal front. The modal backs have no
+  signature of their own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`). References per colour
   per face (`frame-references.json`): fronts ZNR #12 / MH3 #241 / ZNR #90 /
   #134 / #189, `m` MH3 #252 Bloodsoaked Insight (a HYBRID front — the only
   gold modal fronts on the plain frame are MH3's ten hybrid MDFC lands;
@@ -2322,9 +2325,28 @@ ticks each colour × face.
   frame — wave 2, 5.11); backs STX #150 / #147 / #148 / #159 / #151, `m`
   MSH #18 (its Marvel strip form not built), `c` NONE; the land fronts the
   five pathways; the land backs ZNR #12 / MH3 #241 / ZNR #90 / #134 / #189
-  — with the KHM Gods and the other pathways as alternates. The pin check
-  judges a modal land back's row by the back's colour (its mana ability),
-  unlike the transform land back's one master.
+  — with the KHM Gods (not Valki #114: its Tibalt back is a walker face the
+  import keeps off the bodies, 5.13) and the other pathways as alternates.
+  The pin check judges a modal land back's row by the back's colour (its
+  mana ability), unlike the transform land back's one master; the import
+  stores a modal LAND face in that colour too (`dfcFaceColorIdentity` —
+  colourless is the transform land pair's rule alone).
+- **Owner round 30 (2026-10-05), on the five sheets:** all signed off AS
+  BUILT; the stand-in masters (the spell pair's `c` = the artifact master,
+  the land pair's `c` grey and `m` gold) are KEPT and never offered; the
+  strip's colour on a two-colour card follows the prints LATER — TODO 5.1c,
+  after the ticks (a 14-piece rider through CC's `reminder.svg` keyed by
+  `otherFace.colorKey`, an overlay like the icon rider). Measured by the
+  skeptic on the signed masters and left for 5.1c's pass: the BACK strips'
+  fill is 14–44 luma darker than every mono-colour print's (u 208 vs MH3
+  #241's 231, b 175 vs ZNR #90 / KHM #112's 213–219, r 212 vs ZNR #134 /
+  MH3 #246's 226–229, g 201 vs ZNR #189's 218; w 238 within the prints'
+  238–249; CC's strips are also more saturated — the print's b strip is a
+  cool lavender, CC's a warm grey); the front strips are within 5–11. A
+  gain through the pack's Flipside mask (`reminder.svg` covers the whole
+  tab, so the ◀ and the outline stay dark) of u 1.111 · b 1.234 · r 1.073
+  · g 1.085 lands the lumas; not applied after the sign-off — a master
+  change needs its own before / after OK.
 - **The visual matrix:** the front bodies' cases come out of the
   per-template loop (the Modal kind's rows: an instant // land, a pathway,
   the long creature // creature with a cost on the back), every back body
@@ -2704,8 +2726,11 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   patch as `printed_dfc_icon` (→ `frame_style.dfcIcon`, `importedAnatomy`),
   the front's colour its own, the back's own colour
   (`backFrameColorsFromScryfall`, single-select: 2+ → multicolor — the gold
-  backs never split) — a LAND face colourless on either body (the land pair
-  has one master, verified on `c`; the editor's and the Q3 move's rule).
+  backs never split) — a LAND face colourless on the TRANSFORM land bodies
+  (that pair has one master, verified on `c`; the editor's and the Q3 move's
+  rule) and in the colour its mana ability adds on the MODAL land bodies
+  (5.1b: one tint per colour, verified per colour — Emeria's back is white,
+  a Pathway's faces each their own; `dfcFaceColorIdentity`).
   What blocks it, and what the printing does instead:
   - a **planeswalker face** (ORI's Kytheon // Gideon and Jace, KHM Valki,
     MH3's five, STX Rowan // Will, ECL Oko): the front imports alone on its
@@ -2717,10 +2742,14 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
     has (Chrollo's Tibalt); a back-body pin refuses it.
   - a **Saga, battle or token face**: its own kind, as today (5.5) — the
     `dfc` gap on the standard frame now names 5.5.
-  - **no body yet**: the modal bodies until 5.1b — `bodyFor("modal", …)`
-    answers null, the printing lands as TODAY (the front's standard frame
-    with a legacy back, `modal/2015/pending` → 5.1b) and turns onto the
-    modal bodies by itself once they exist (`modal/2015`, exact).
+  - **no body**: a layout with no body for a face — none since 5.1b's
+    modal pair (the `modal/2015/pending` rule that held modal printings on
+    the standard went with it); a wave-2 layout's printings turn onto their
+    bodies by themselves once `bodyFor` answers.
+  - a **devoid or snow dress** (MH3's five devoid MDFCs, KHM #179 Jorn):
+    no body carries the dress, so the printing keeps today's landing — the
+    era's devoid / snow frame with a legacy back (`dress`; `dfc/devoid` /
+    `dfc/snow` → 5.11, nearest on the body, `landOn` the dress frame).
   - a **colourless face without the Artifact word** (EMN's Eldrazi backs —
     Grizzled Angler // Grisly Anglerfish — STX #6 Wandering Archaic's front):
     the body's `c` is the artifact master standing in (D2), so the printing
@@ -2734,9 +2763,10 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   LCI's land backs print the parchment frame — nearest on `m15dfclandback`,
   5.8) and the `vehicle` gap read on the BACK too (a BOT convert's Vehicle
   back, 5.10). `dfc/2003` (ISD / DKA / AVR) is nearest on the M15 bodies;
-  `dfc/devoid` nearest for the devoid frame (5.11); `borderless/dfc` nearest
-  on the body (5.7, no bordered twin to land on). The back bodies keep no
-  signature of their own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`).
+  `dfc/devoid` / `dfc/snow` nearest on the body for the dress, landing on
+  the devoid / snow frame (5.11); `borderless/dfc` nearest on the body (5.7,
+  no bordered twin to land on). The back bodies keep no signature of their
+  own (`TEMPLATES_WITHOUT_PRINTED_SIGNATURE`).
 - **Verified on BOTH faces** (`lib/scryfall/dfc-import.ts`
   `dfcImportLanding`): the front body in the front's colour AND the back
   body in the back's colour must be ticked, or the server's gate would refuse
