@@ -244,6 +244,14 @@ export async function POST(request: Request) {
     );
   }
 
+  // The AI rate limit comes FIRST: sizing a deck remix resolves the deck's
+  // printings through Scryfall (estimateDeckRemix, TODO 5.4), and nothing
+  // that costs an outside call may run for a caller the limit refuses.
+  const rate = await checkAiRateLimit(user.id);
+  if (!rate.ok) {
+    return rateLimitedResponse(rate);
+  }
+
   const limit = await batchCardLimit();
   let size: number;
   // The deck remix's estimate (TODO 5.4): the entries it runs and the
@@ -296,10 +304,6 @@ export async function POST(request: Request) {
     }
   }
 
-  const rate = await checkAiRateLimit(user.id);
-  if (!rate.ok) {
-    return rateLimitedResponse(rate);
-  }
   // Per-flow daily image ceilings apply ONLY while billing is off (previews,
   // local): there images aren't credit-charged, so the caps are what protect
   // AI spend. With billing on, credits are the sole limiter (owner decision,

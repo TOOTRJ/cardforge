@@ -1,6 +1,7 @@
 import "server-only";
 
-import { listDeckCards } from "@/lib/decks/queries";
+import { getDeckById, listDeckCards } from "@/lib/decks/queries";
+import { getCurrentUser } from "@/lib/supabase/server";
 import { getCardCollection, SCRYFALL_COLLECTION_MAX, type ScryfallCard } from "@/lib/scryfall/client";
 import { chunkIdentifiers } from "@/lib/decks/import-resolution";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
@@ -49,11 +50,16 @@ async function resolvePrintings(ids: readonly string[]): Promise<Map<string, Scr
 }
 
 /**
- * The estimate for a deck the caller can read (RLS): `cards` entries at
- * `credits` in all. A deck with nothing remixable — or one the caller can't
- * read — answers zero cards.
+ * The estimate for a deck the caller OWNS: `cards` entries at `credits` in
+ * all. A deck with nothing remixable — or one that isn't the caller's (only
+ * its owner may remix it, createDeckRemixJob's rule; RLS still lets a
+ * public deck be read) — answers zero cards and makes no Scryfall call.
  */
 export async function estimateDeckRemix(deckId: string, limit: number): Promise<DeckRemixEstimate> {
+  const [user, deck] = await Promise.all([getCurrentUser(), getDeckById(deckId)]);
+  if (!user || !deck || deck.owner_id !== user.id) {
+    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, unresolved: 0, creditsByEntry: {} };
+  }
   const items = await listDeckCards(deckId);
   const remixable = items.filter((item) => item.entry.card_id || item.entry.scryfall_id);
   const taken = remixable.slice(0, Math.max(1, limit));

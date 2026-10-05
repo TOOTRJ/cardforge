@@ -15,6 +15,10 @@ const s = vi.hoisted(() => ({
   remixable: 5,
   /** Remixable entries that are double-faced (two credits each, TODO 5.4). */
   doubleFaced: 0,
+  /** The AI rate limit's answer. */
+  rate: { ok: true } as Record<string, unknown>,
+  /** How often the deck remix's estimate (its Scryfall work) ran. */
+  estimateCalls: 0,
   created: [] as Array<{ kind: string; input: Record<string, unknown> }>,
 }));
 
@@ -27,7 +31,7 @@ vi.mock("@/lib/ai/provider", () => ({ isDesignAiConfigured: () => true }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => true }));
 vi.mock("@/lib/ai/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/rate-limit")>()),
-  checkAiRateLimit: async () => ({ ok: true }),
+  checkAiRateLimit: async () => s.rate,
   checkRandomCardDailyLimit: async () => ({ ok: true }),
   checkDailyActionLimit: async () => ({ ok: true }),
   getFreshCreditBalance: async () => s.credits,
@@ -49,6 +53,7 @@ vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => s.capacity
 // of them priced at two credits (both faces painted).
 vi.mock("@/lib/ai/remix-estimate", () => ({
   estimateDeckRemix: async () => ({
+    ...(void (s.estimateCalls += 1) ?? {}),
     cards: s.remixable,
     credits: s.remixable + s.doubleFaced,
     doubleFaced: s.doubleFaced,
@@ -92,6 +97,8 @@ beforeEach(() => {
   s.capacity = { used: 0, cap: 50, tier: "free" };
   s.remixable = 5;
   s.doubleFaced = 0;
+  s.rate = { ok: true };
+  s.estimateCalls = 0;
   s.created = [];
 });
 
@@ -139,6 +146,14 @@ describe("POST /api/ai/jobs", () => {
     expect(String(json.error)).toMatch(/no cards to remix/);
     s.remixable = 5;
     expect((await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" })).status).toBe(200);
+  });
+
+  it("a rate-limited caller is refused BEFORE the deck remix's estimate does its Scryfall work", async () => {
+    s.rate = { ok: false, reason: "per_minute", retryAfterSeconds: 30, message: "Slow down." };
+    const { status } = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(status).toBe(429);
+    expect(s.estimateCalls).toBe(0);
+    expect(s.created).toHaveLength(0);
   });
 
   // TODO 5.4 (owner Q4): a deck remix's double-faced entries cost TWO

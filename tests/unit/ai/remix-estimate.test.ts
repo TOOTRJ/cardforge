@@ -23,9 +23,15 @@ const s = vi.hoisted(() => ({
   verified: [] as string[],
   collectionCalls: [] as Array<Array<{ id: string }>>,
   collectionFails: false,
+  /** The signed-in viewer and the deck's row (RLS lets a public deck be
+   *  read; only its OWNER may remix it). */
+  user: { id: "user-1" } as { id: string } | null,
+  deck: { id: "deck-1", owner_id: "user-1" } as { id: string; owner_id: string } | null,
 }));
 
-vi.mock("@/lib/decks/queries", () => ({ listDeckCards: async () => s.items }));
+vi.mock("@/lib/supabase/server", () => ({ getCurrentUser: async () => s.user }));
+
+vi.mock("@/lib/decks/queries", () => ({ listDeckCards: async () => s.items, getDeckById: async () => s.deck }));
 vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => s.verified }));
 vi.mock("@/lib/scryfall/client", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/scryfall/client")>();
@@ -71,6 +77,8 @@ beforeEach(() => {
   s.verified = [];
   s.collectionCalls = [];
   s.collectionFails = false;
+  s.user = { id: "user-1" };
+  s.deck = { id: "deck-1", owner_id: "user-1" };
 });
 
 describe("estimateDeckRemix", () => {
@@ -118,6 +126,18 @@ describe("estimateDeckRemix", () => {
 
   it("an empty (or unreadable) deck is zero cards, and never asks Scryfall", async () => {
     expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 0, credits: 0 });
+    expect(s.collectionCalls).toEqual([]);
+  });
+
+  it("a deck that isn't the caller's (a public one RLS lets them read) is zero cards, and never asks Scryfall", async () => {
+    s.items = [entry("e-cathar", { name: "Brutal Cathar", scryfall_id: idOf("mid-7") })];
+    s.deck = { id: "deck-1", owner_id: "someone-else" };
+    expect(await estimateDeckRemix("deck-1", 100)).toEqual({ cards: 0, credits: 0, doubleFaced: 0, skipped: 0, unresolved: 0, creditsByEntry: {} });
+    s.deck = null;
+    expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 0 });
+    s.deck = { id: "deck-1", owner_id: "user-1" };
+    s.user = null;
+    expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 0 });
     expect(s.collectionCalls).toEqual([]);
   });
 });
