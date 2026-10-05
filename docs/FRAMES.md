@@ -2246,7 +2246,11 @@ ticks each colour × face.
   pack says white on both; the prints disagree). Both renderers draw the
   same runs (`FlipsideBake` / `FlipsideOverlay`), measured on real bakes
   at HD and 750 (`tests/unit/render/mdfc-bodies-bake.test.tsx`). The
-  Marvel "4/4 Creature" form (SPM / MSH) is not built.
+  painted strip is a rules KEEP-OUT (`FlipsideSlots.keepOut` →
+  `DrawnStats.strip`, judged glyph by glyph like a plate): the prints cut
+  it into the text box, so a long text's last lines stop at its chevron
+  (KHM #15 Halvar, KHM #114 Valki on the 5.1b sheet 2) — the rules rect
+  never shrinks. The Marvel "4/4 Creature" form (SPM / MSH) is not built.
 - **The strip's colour — an open question.** The masters paint the strip
   in their OWN colour. On a two-colour modal card the prints paint it in
   the colour of the face it DESCRIBES: STX #147's green front carries a

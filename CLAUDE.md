@@ -218,7 +218,8 @@ Rules and gotchas:
   or mana line, white on a front, dark on a back) — the housing, the ◀ and
   the strip are in the masters, painted in the master's OWN colour (a
   two-colour card's print paints it in the other face's: an owner question,
-  never a master "fix"). A back face's
+  never a master "fix"); the painted strip is a rules keep-out
+  (`FlipsideSlots.keepOut` → `DrawnStats.strip`). A back face's
   body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
   — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`
