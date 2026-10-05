@@ -71,7 +71,8 @@ type DfcFacePanelProps = {
   /** The front's colour: the back's default until it picks its own. */
   frontColorIdentity: ColorIdentity[];
   verifiedFrameKeys: ReadonlySet<string>;
-  /** Edit / remix: the back's type is locked; the family chips show here. */
+  /** Edit / remix: the back's type and colour are locked (read-only rows);
+   *  the family chips show here. */
   revise?: boolean;
   /** The card's transform family (frame_style.dfcIcon) and its setter, for
    *  the revise-mode chips. */

@@ -98,6 +98,41 @@ describe("dfcAdoptionOffer — who gets the hint", () => {
     expect(dfcAdoptionOffer(costless)?.backBody).toBe("m15dfcback");
   });
 
+  it("a cost-less LAND back is a transform card only with the printed sign of one (skeptic 2026-10-05): Ojer Taq's Temple keeps its reminder and its offer, a modal land back (Agadeem's shape on m15) reads as modal and is offered nothing until 5.1b", () => {
+    // Row 6: the LCI transform land back prints "(Transforms from Ojer Taq,
+    // Deepest Foundation.)" — the sign the cost can't give.
+    const temple = cardOf(rows[5]);
+    expect(dfcAdoptionShape(temple)).toBe("transform");
+    expect(dfcAdoptionOffer(temple)).toMatchObject({ layout: "transform", frontBody: "m15dfcfront", backBody: "m15dfclandback" });
+    // Row 9's shape (a ZNR modal land back: "enters tapped", no "transform"
+    // on either face) moved onto m15 — the borderless skin aside, the cost
+    // alone would have read it as transform and offered the transform land
+    // back; the sign reads it as modal: no bodies, no hint.
+    const agadeemOnM15 = { ...cardOf(rows[8]), frame_style: { finish: "regular", template: "m15" } };
+    expect(/transform/i.test(`${rows[8].front.rules_text}${rows[8].back_face.rules_text}`)).toBe(false);
+    expect(dfcAdoptionShape(agadeemOnM15)).toBe("modal");
+    expect(dfcAdoptionOffer(agadeemOnM15)).toBeNull();
+    expect(adoptDfcBodiesPlan(agadeemOnM15, "transform")).toBeNull();
+    // The Temple with its reminder cut from the back and nothing on the
+    // front: modal too — held, never the transform land back on a guess.
+    const unmarked = {
+      ...temple,
+      rules_text: "Vigilance",
+      back_face: { ...rows[5].back_face, rules_text: "{T}: Add {W}." },
+    };
+    expect(dfcAdoptionShape(unmarked)).toBe("modal");
+    expect(dfcAdoptionOffer(unmarked)).toBeNull();
+    // The front's word alone is enough (Golden Guardian's "returns
+    // transformed"), as is the back's.
+    expect(dfcAdoptionShape({ ...unmarked, rules_text: "When it dies, return it to the battlefield transformed." })).toBe("transform");
+    expect(dfcAdoptionShape({ ...unmarked, back_face: { ...unmarked.back_face, rules_text: "(Transforms from Golden Guardian.)\n{T}: Add {C}." } })).toBe("transform");
+    // A cost-less NON-land back needs no sign: every modal back but a land
+    // carries a cost, so a cost-less creature back is a transform card
+    // (Aang's row says "transform" nowhere).
+    expect(/transform/i.test(`${rows[7].front.rules_text}${rows[7].back_face.rules_text}`)).toBe(false);
+    expect(dfcAdoptionShape(cardOf(rows[7]))).toBe("transform");
+  });
+
   it("never offers a card on a DFC body, one with a back body already, one with no back, or a template outside the M15 family", () => {
     const base = cardOf(rows[2]);
     expect(dfcAdoptionOffer({ ...base, frame_style: { template: "m15dfcfront" } })).toBeNull();
@@ -223,6 +258,16 @@ describe("adoptDfcBodiesAction", () => {
     expect(await adoptDfcBodiesAction(CARD, "modal")).toEqual(notYet);
     expect(await adoptDfcBodiesAction(CARD, "mdfc")).toEqual(notYet);
     expect(written(stub)).toBeUndefined();
+    expect(state.baked).toEqual([]);
+    // A modal LAND back (Agadeem's shape on m15: cost-less, no "transform"
+    // on either face) is the same modal card to the action — never moved
+    // onto the transform land back on the cost alone (skeptic 2026-10-05).
+    state.verified = [frameComboKey("m15dfcfront", "b"), frameComboKey("m15dfclandback", "c")];
+    state.existing = { id: CARD, owner_id: USER, slug: "agadeem", visibility: "public", ...cardOf(rows[8]), frame_style: { finish: "regular", template: "m15" } };
+    const land = db();
+    expect(await adoptDfcBodiesAction(CARD, "transform")).toEqual(notYet);
+    expect(await adoptDfcBodiesAction(CARD, "mdfc")).toEqual(notYet);
+    expect(written(land)).toBeUndefined();
     expect(state.baked).toEqual([]);
   });
 

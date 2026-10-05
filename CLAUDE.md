@@ -226,7 +226,10 @@ Rules and gotchas:
   5.4); the 8 imported DFCs move onto the bodies only by their owner's
   click (`adoptDfcBodiesAction`, `lib/cards/dfc-adopt.ts`; onto the ONE
   layout the back's shape derives — a costed back is a modal card, offered
-  nothing until the modal bodies exist and never Transform; a land back
+  nothing until the modal bodies exist and never Transform; a cost-less
+  LAND back is transform only with the printed sign of one, "(Transforms
+  from …)" or "transform" on either face, else modal — `cards.layout` is
+  never written before 5.4; a land back
   goes colourless — the land pair is verified on `c` alone).
   A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
   PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`

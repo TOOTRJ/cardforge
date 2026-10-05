@@ -57,6 +57,17 @@ describe("dfcAdoptionOffer once bodyFor answers the modal layout", () => {
     // permanent) is excluded by SHAPE, modal bodies or not.
     expect(dfcAdoptionShape(cardOf(rows[6]))).toBeNull();
     expect(dfcAdoptionOffer(cardOf(rows[6]))).toBeNull();
+    // A modal LAND back (Agadeem's shape, moved off the borderless skin onto
+    // m15) is offered the MODAL pair that day — never the transform land
+    // back: a cost-less land back without the printed sign of a transform
+    // card reads as modal (skeptic 2026-10-05). The Temple, with its
+    // "(Transforms from …)" reminder, stays transform.
+    const agadeemOnM15 = { ...cardOf(rows[8]), frame_style: { finish: "regular", template: "m15" } };
+    expect(dfcAdoptionShape(agadeemOnM15)).toBe("modal");
+    expect(dfcAdoptionOffer(agadeemOnM15)).toMatchObject({ layout: "modal", frontBody: "m15snow", backBody: "m15devoid" });
+    expect(adoptDfcBodiesPlan(agadeemOnM15, "transform")).toBeNull();
+    expect(adoptDfcBodiesPlan(agadeemOnM15, "modal")?.back_face).toMatchObject({ card_type: "land", frame_style: { template: "m15devoid" } });
+    expect(dfcAdoptionOffer(cardOf(rows[5]))).toMatchObject({ layout: "transform", backBody: "m15dfclandback" });
   });
 
   it("the modal plan keeps the Lantern's cost and stamps no family; a transform plan is still refused by shape", () => {

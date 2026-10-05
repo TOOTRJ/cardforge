@@ -21,10 +21,17 @@
 // 2026-10-05): a back WITH a mana cost is a modal card (KHM / STX / MSH
 // backs carry one), a back without one a transform card — so a costed back
 // is never moved onto Transform, which would drop its cost and change the
-// card's rules. A layout whose bodies don't exist yet (the modal pair until
-// 5.1b) is offered NOTHING: dfcAdoptionShape still names it (the action's
-// message), dfcAdoptionOffer answers null (no hint), the action refuses
-// every layout by name.
+// card's rules. The ONE shape the cost can't tell apart is a cost-less LAND
+// back — a transform land (XLN / RIX / LCI: Ojer Taq // Temple of
+// Civilization) and a modal land (ZNR / MH3: Emeria's Call // Emeria) look
+// the same — so it reads as transform only with the printed sign of one
+// (the back's "(Transforms from …)" reminder or either face saying
+// "transform"; a modal land back never says the word) and as modal
+// otherwise (skeptic 2026-10-05; `cards.layout` can't decide it: nothing
+// writes the column before 5.4, every row reads 'normal'). A layout whose
+// bodies don't exist yet (the modal pair until 5.1b) is offered NOTHING:
+// dfcAdoptionShape still names it (the action's message), dfcAdoptionOffer
+// answers null (no hint), the action refuses every layout by name.
 //
 // Who qualifies in wave 1 (4 of the 8 today: Titânia, Erza Scarlet, Avatar
 // Aang, Tobirama; Darth Vader's costed back the day the modal bodies
@@ -59,6 +66,9 @@ import type { CardBackFace, ColorIdentity, FrameTemplate } from "@/types/card";
 export type DfcAdoptionCard = {
   card_type?: string | null;
   color_identity?: readonly ColorIdentity[] | null;
+  /** The front's rules (with the back's, the printed sign of a transform
+   *  card on a cost-less land back — transformMarked). */
+  rules_text?: string | null;
   frame_style?: unknown;
   back_face?: unknown;
 };
@@ -92,7 +102,8 @@ export function parseDfcAdoptionLayout(value: unknown): DfcLayout | null {
 }
 
 /** The colour the move gives the back: the front's (the import never
- *  carried the back's; editable afterwards in the back-face panel) — except
+ *  carried the back's; locked afterwards like the front's, owner 2026-10-05
+ *  — lib/cards/dfc-gate.ts DFC_BACK_COLOR_SET) — except
  *  on a LAND back body, which is colourless: the land pair has one master
  *  under every key and is verified on `c` alone (design §7, the registry's
  *  note), so a land back in the front's white or green could never pass the
@@ -135,12 +146,30 @@ function candidateOf(
   // on m15 whose "back" is a costed instant or sorcery — the storybook
   // page, not a face) is never offered: the Adventure kind is a remix away.
   // The same shape as a creature // sorcery modal card (STX's Augmenter
-  // Pugilist // Echoing Equation), which no imported row has; the modal
-  // pair is 5.1b's, where the rule can tell them apart by the printing.
+  // Pugilist // Echoing Equation), which no imported row has; only the
+  // import can tell them apart, by the printing it stores (5.4).
   if ((back.card_type === "instant" || back.card_type === "sorcery") && back.cost?.trim()) return null;
   // A back WITH a mana cost is a modal card, one without a transform card
-  // (owner 2026-10-05): the shape decides, never a chip.
-  return { back, template, layout: back.cost?.trim() ? "modal" : "transform" };
+  // (owner 2026-10-05): the shape decides, never a chip. A cost-less LAND
+  // back is the one shape the cost can't settle: transform only with the
+  // printed sign of one, else modal (transformMarked).
+  const layout: DfcLayout = back.cost?.trim()
+    ? "modal"
+    : back.card_type === "land" && !transformMarked(card, back)
+      ? "modal"
+      : "transform";
+  return { back, template, layout };
+}
+
+/** The printed sign of a TRANSFORM card on a cost-less LAND back — the one
+ *  shape whose cost can't tell the layouts apart (a transform land back
+ *  under a creature, enchantment or artifact front: XLN / RIX / LCI; a
+ *  modal land back under a spell front: ZNR / MH3). A transform land back
+ *  prints "(Transforms from X.)" and its front says "transform"; a modal
+ *  land back never says the word on either face. Judged on both faces'
+ *  rules text — the import keeps Scryfall's oracle text, reminder included. */
+function transformMarked(card: DfcAdoptionCard, back: CardBackFace): boolean {
+  return /\btransform/i.test(`${back.rules_text ?? ""}\n${card.rules_text ?? ""}`);
 }
 
 /** The layout a stored card's legacy back would move onto — the one its

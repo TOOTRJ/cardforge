@@ -428,11 +428,14 @@ describe("an imported double-faced card (the Q3 hint)", () => {
   });
 
   it("judges a LAND back in colourless, the colour the move gives it — Tobirama lights with the front in white and the land back in `c`", () => {
-    const tobirama = () =>
+    // The production row's back keeps its printed "(Transforms from …)"
+    // reminder — the sign that reads a cost-less LAND back as a transform
+    // card (skeptic 2026-10-05; a modal land back never says the word).
+    const tobirama = (backRules = "(Transforms from Ojer Taq, Deepest Foundation.)\n{T}: Add {W}.") =>
       savedCard({
         color_identity: ["white"],
         frame_style: { finish: "regular", template: "m15" },
-        back_face: { title: "Temple of Civilization", card_type: "land", rules_text: "{T}: Add {W}." },
+        back_face: { title: "Temple of Civilization", card_type: "land", rules_text: backRules },
       });
     renderForm({
       mode: "edit",
@@ -442,6 +445,15 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     const button = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/colourless — a land has none/);
+    cleanup();
+    // The same land back without the sign (a ZNR modal land's shape) is a
+    // modal card: no hint, the land back verified or not.
+    renderForm({
+      mode: "edit",
+      card: tobirama("{T}: Add {W}."),
+      verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfclandback", "c")],
+    });
+    expect(screen.queryByTestId("dfc-adopt-hint")).toBeNull();
     cleanup();
     // The land back in the front's white is never what the move writes.
     renderForm({

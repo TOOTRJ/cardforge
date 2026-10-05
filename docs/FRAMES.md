@@ -2328,13 +2328,22 @@ change, no bump, no sweep.
   walker; never the two on `m15borderless` (5.7), the walker back (5.13),
   nor the adventure stored as a back face (a costed instant / sorcery back
   under a permanent — the storybook page, not a face; the same shape as
-  STX's creature // sorcery modal cards, which no imported row has: 5.1b
-  can tell them apart by the printing). The layout is the one the back's
+  STX's creature // sorcery modal cards, which no imported row has: only
+  the import can tell them apart, by the printing it stores — 5.4). The
+  layout is the one the back's
   SHAPE derives, never a chip (owner 2026-10-05): a back WITH a mana cost
   is a modal card, and a layout whose bodies don't exist yet shows NO hint
   at all (`dfcAdoptionShape` still names it, `dfcAdoptionOffer` answers
   null) — a costed back is never offered Transform, which would drop its
-  cost and change the card's rules. So 4 of the 8 qualify today: Titânia
+  cost and change the card's rules. The one shape the cost can't settle is
+  a cost-less LAND back (a transform land, XLN / RIX / LCI, and a modal
+  land, ZNR / MH3, look the same): it reads as transform only with the
+  printed sign of one — the back's "(Transforms from …)" reminder or
+  either face saying "transform", which Scryfall's oracle text keeps and
+  a modal land back never says — and as modal otherwise
+  (`transformMarked`, skeptic 2026-10-05; `cards.layout` can't decide it:
+  nothing writes that column before 5.4, so every row reads 'normal'). So
+  4 of the 8 qualify today: Titânia
   (on devoid), Erza Scarlet, Avatar Aang (a colourless back: the move gives
   it the front's five colours — locked after, like every stored back's),
   Tobirama (a land back — moved colourless, the one key the land back is
@@ -2365,7 +2374,8 @@ change, no bump, no sweep.
   `frame_reviews`: the family stamp, both-arts rule, stored body wins, the
   family re-derive, the strip-off, the preview skip, the colour lock),
   `dfc-adopt.test.ts` (the nine production shapes: exactly four offered
-  today, the shape's layout only; the plan; the action's gates) +
+  today, the shape's layout only — a cost-less land back by its printed
+  sign, Agadeem's shape on m15 modal; the plan; the action's gates) +
   `dfc-adopt-modal.test.ts` (Vader the fifth once `bodyFor` answers the
   modal rows), `dfc-editor-hostile.test.ts` (the skeptic's crafted
   payloads + the colour lock: refused verified or not, no preview
