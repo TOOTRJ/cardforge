@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import type { FrameTemplate } from "@/types/card";
+import type { DfcIconFamily, FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // TODO 5.4 skeptic pass — the MONEY path of a double-faced deck remix, end
@@ -204,7 +204,7 @@ describe("a double-faced remix step priced at two credits (owner Q4)", () => {
     // …and the server's gates, run on that payload with the same verified
     // set, accept it: the kind gate, the front's type and colour rules, the
     // back's body / colour / cost rule (lib/cards/dfc-gate.ts).
-    const frameStyle = card!.frame_style as { template: string; dfcIcon?: string };
+    const frameStyle = card!.frame_style as { template: FrameTemplate; dfcIcon?: DfcIconFamily };
     expect(frameKindGateError(frameStyle.template, cardFieldsFace(card as never))).toBeNull();
     expect(dfcFrontTypeError(frameStyle.template, card!.card_type as string)).toBeNull();
     expect(dfcFrontColorError(frameStyle.template, { cardType: card!.card_type as string }, card!.color_identity as never)).toBeNull();

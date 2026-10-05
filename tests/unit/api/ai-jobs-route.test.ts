@@ -52,17 +52,19 @@ vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => s.capacity
 // The deck remix's estimate (TODO 5.4): `remixable` entries, `doubleFaced`
 // of them priced at two credits (both faces painted).
 vi.mock("@/lib/ai/remix-estimate", () => ({
-  estimateDeckRemix: async () => ({
-    ...(void (s.estimateCalls += 1) ?? {}),
-    cards: s.remixable,
-    credits: s.remixable + s.doubleFaced,
-    doubleFaced: s.doubleFaced,
-    skipped: 0,
-    unresolved: 0,
-    creditsByEntry: Object.fromEntries(
-      Array.from({ length: s.remixable }, (_, i) => [`entry-${i}`, i < s.doubleFaced ? 2 : 1]),
-    ),
-  }),
+  estimateDeckRemix: async () => {
+    s.estimateCalls += 1;
+    return {
+      cards: s.remixable,
+      credits: s.remixable + s.doubleFaced,
+      doubleFaced: s.doubleFaced,
+      skipped: 0,
+      unresolved: 0,
+      creditsByEntry: Object.fromEntries(
+        Array.from({ length: s.remixable }, (_, i) => [`entry-${i}`, i < s.doubleFaced ? 2 : 1]),
+      ),
+    };
+  },
 }));
 vi.mock("@/lib/ai/generation-jobs", () => {
   const record = (kind: string) => async (input: Record<string, unknown>) => {
