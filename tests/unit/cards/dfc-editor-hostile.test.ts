@@ -4,7 +4,11 @@ import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/
 // ---------------------------------------------------------------------------
 // TODO 5.2 skeptic pass — crafted payloads through the REAL createCardAction /
 // updateCardAction on the transform bodies: every path that could store a
-// back body the gate should refuse, or lose one it should keep.
+// back body the gate should refuse, or lose one it should keep. The 5.2
+// follow-up (owner 2026-10-05) adds the back's COLOUR lock: on a card whose
+// back has a body the stored colour wins like the body does — a patch
+// naming another is refused, verified or not, admin preview or not; a
+// legacy back, a body-less back and a create stay free.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -55,7 +59,7 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
 import { createCardAction, updateCardAction } from "@/lib/cards/actions";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
-import { DFC_FRONT_BODY_MISMATCH, DFC_FRONT_TYPE_REFUSED } from "@/lib/cards/dfc-gate";
+import { DFC_BACK_COLOR_SET, DFC_FRONT_BODY_MISMATCH, DFC_FRONT_TYPE_REFUSED } from "@/lib/cards/dfc-gate";
 
 function db() {
   const stub = chainClient((table, calls): ChainAnswer => {
@@ -328,15 +332,16 @@ describe("update: crafted patches", () => {
     expect(written(stub, "update")!.back_face).toEqual(BACK);
   });
 
-  it("a back_face patch on a stored DFC that omits the colour keeps the stored colour? (it takes the FRONT's)", async () => {
-    // The stored back is green; the patch resends the back without a colour.
+  it("a back_face patch that names no colour keeps the STORED colour — never the front's (the lock, owner 2026-10-05)", async () => {
+    // The stored back is green under a blue front; the patch resends the
+    // back without a colour. Before the lock this stored the FRONT's blue.
     state.existing = stored({ back_face: { ...BACK, frame_style: { template: "m15dfcback" }, color_identity: ["green"] } });
     const stub = db();
     const result = await updateCardAction(CARD, { back_face: { ...BACK, rules_text: "Flying, trample" } });
     expect(result.ok, JSON.stringify(result)).toBe(true);
-    const back = written(stub, "update")!.back_face as { color_identity: unknown };
-    // Documenting the behaviour: a payload with no back colour means "the front's".
-    expect(back.color_identity).toEqual(["blue"]);
+    const back = written(stub, "update")!.back_face as { color_identity: unknown; rules_text: unknown };
+    expect(back.color_identity).toEqual(["green"]);
+    expect(back.rules_text).toBe("Flying, trample");
   });
 
   it("a family change on a card whose template is NOT a DFC front is dropped and the back untouched", async () => {
@@ -363,24 +368,27 @@ describe("update: crafted patches", () => {
     expect(written(ok, "update")!.back_face).toEqual({ ...BACK, frame_style: { template: "m15dfcbackleft" }, color_identity: ["blue"] });
   });
 
-  it("a non-admin's frame_preview claim on an update does not skip the back's verification", async () => {
+  it("a non-admin's frame_preview claim on an update does not skip the back's verification (the family re-derive)", async () => {
     state.admin = false;
     state.existing = stored();
     const stub = db();
-    const result = await updateCardAction(CARD, { frame_preview: true, back_face: { ...BACK, color_identity: ["red"] } });
+    // m15dfcbackleft/u is NOT verified: the re-derived body is refused.
+    const result = await updateCardAction(CARD, { frame_preview: true, frame_anatomy: { dfcIcon: "sunmoon" } });
     expect(result.ok).toBe(false);
+    expect(result.ok ? null : result.fieldErrors?.["back_face.color_identity"]).toMatch(/isn't available in blue yet/);
     expect(written(stub, "update")).toBeUndefined();
   });
 
-  it("an admin's preview save of an unverified back colour lands private and flagged", async () => {
+  it("an admin's preview save of a family re-derive onto an unverified back body lands private and flagged", async () => {
     state.admin = true;
     state.existing = stored();
     const stub = db();
-    const result = await updateCardAction(CARD, { frame_preview: true, back_face: { ...BACK, color_identity: ["red"] } });
+    const result = await updateCardAction(CARD, { frame_preview: true, frame_anatomy: { dfcIcon: "sunmoon" } });
     expect(result.ok, JSON.stringify(result)).toBe(true);
     const row = written(stub, "update")!;
     expect(row.visibility).toBe("private");
     expect(row.frame_preview).toBe(true);
+    expect((row.back_face as { frame_style: unknown }).frame_style).toEqual({ template: "m15dfcbackleft" });
   });
 
   it("the FRONT's type changed by a crafted patch to a walker on the DFC body", async () => {
@@ -413,5 +421,78 @@ describe("update: crafted patches", () => {
     const row = written(stub, "update")!;
     expect(row.color_identity).toEqual(["red"]);
     expect(row).not.toHaveProperty("back_face");
+  });
+});
+
+describe("update: the back's colour is locked on a card whose back has a body (owner 2026-10-05)", () => {
+  it("a changed back colour is refused — in a VERIFIED colour too: the lock, not the gate — and an admin's preview can't override it", async () => {
+    state.existing = stored();
+    // m15dfcback/g IS verified; the refusal is structural.
+    const stub = db();
+    const result = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["green"] } });
+    expect(result.ok ? null : result.fieldErrors).toEqual({ "back_face.color_identity": DFC_BACK_COLOR_SET });
+    expect(written(stub, "update")).toBeUndefined();
+    // An unverified colour: the same refusal, never "isn't available".
+    const red = db();
+    const result2 = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["red"] } });
+    expect(result2.ok ? null : result2.fieldErrors).toEqual({ "back_face.color_identity": DFC_BACK_COLOR_SET });
+    expect(written(red, "update")).toBeUndefined();
+    // The admin's preview skips VERIFICATION only.
+    state.admin = true;
+    const preview = db();
+    const result3 = await updateCardAction(CARD, { frame_preview: true, back_face: { ...BACK, color_identity: ["green"] } });
+    expect(result3.ok ? null : result3.fieldErrors).toEqual({ "back_face.color_identity": DFC_BACK_COLOR_SET });
+    expect(written(preview, "update")).toBeUndefined();
+  });
+
+  it("the family switch — the one look change an edit may make — can't carry a colour change in with it", async () => {
+    state.existing = stored();
+    const stub = db();
+    // m15dfcbackleft/g IS verified: only the lock can refuse this.
+    const result = await updateCardAction(CARD, {
+      frame_anatomy: { dfcIcon: "sunmoon" },
+      back_face: { ...BACK, color_identity: ["green"] },
+    });
+    expect(result.ok ? null : result.fieldErrors).toEqual({ "back_face.color_identity": DFC_BACK_COLOR_SET });
+    expect(written(stub, "update")).toBeUndefined();
+    // The family alone, with the stored colour resent: the body re-derives.
+    state.verified.push(frameComboKey("m15dfcbackleft", "u"));
+    const ok = db();
+    const result2 = await updateCardAction(CARD, { frame_anatomy: { dfcIcon: "sunmoon" }, back_face: { ...BACK, color_identity: ["blue"] } });
+    expect(result2.ok, JSON.stringify(result2)).toBe(true);
+    expect(written(ok, "update")!.back_face).toEqual({ ...BACK, frame_style: { template: "m15dfcbackleft" }, color_identity: ["blue"] });
+  });
+
+  it("the same colour resent is no change: a pair in another order, or the stored colour with a content edit", async () => {
+    state.existing = stored({ back_face: { ...BACK, frame_style: { template: "m15dfcback" }, color_identity: ["blue", "green"] } });
+    const pair = db();
+    const result = await updateCardAction(CARD, { back_face: { ...BACK, rules_text: "Flying", color_identity: ["green", "blue"] } });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect((written(pair, "update")!.back_face as { color_identity: unknown }).color_identity).toEqual(["blue", "green"]);
+    state.existing = stored();
+    const same = db();
+    const result2 = await updateCardAction(CARD, { back_face: { ...BACK, rules_text: "Flying", color_identity: ["blue"] } });
+    expect(result2.ok, JSON.stringify(result2)).toBe(true);
+    expect((written(same, "update")!.back_face as { color_identity: unknown }).color_identity).toEqual(["blue"]);
+  });
+
+  it("nothing to lock without a body: a legacy back on m15 takes the colour as sent, a body-less back under a DFC front takes it with the derived body, and a create takes it", async () => {
+    // A legacy back (the 8 imported cards' shape): stored as sent.
+    state.existing = stored({ frame_style: { template: "m15", finish: "regular" }, back_face: BACK });
+    const legacy = db();
+    const result = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["green"] } });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(written(legacy, "update")!.back_face).toEqual({ ...BACK, color_identity: ["green"] });
+    // A half-moved row: the body derives and the patch's colour lands.
+    state.existing = stored({ back_face: BACK });
+    const half = db();
+    const result2 = await updateCardAction(CARD, { back_face: { ...BACK, color_identity: ["green"] } });
+    expect(result2.ok, JSON.stringify(result2)).toBe(true);
+    expect(written(half, "update")!.back_face).toEqual({ ...BACK, frame_style: { template: "m15dfcback" }, color_identity: ["green"] });
+    // A create: the back's own colour, verified for the body.
+    const create = db();
+    const result3 = await createCardAction(payload({ back_face: { ...BACK, color_identity: ["green"] } }));
+    expect(result3.ok, JSON.stringify(result3)).toBe(true);
+    expect((written(create, "insert")!.back_face as { color_identity: unknown }).color_identity).toEqual(["green"]);
   });
 });

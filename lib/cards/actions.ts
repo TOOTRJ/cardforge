@@ -778,7 +778,9 @@ export async function updateCardAction(
   // front's template): the one change that re-derives it is the family
   // (an edit's frame_anatomy.dfcIcon), refused when the derived body isn't
   // verified in the back's colour; a back whose type would derive another
-  // body is refused; a changed colour is verified for the body. A front
+  // body is refused; so is a changed colour once the back has a body (the
+  // lock, owner 2026-10-05: DFC_BACK_COLOR_SET, no preview skip) — a patch
+  // naming none keeps the stored one. A front
   // that leaves a DFC body (a crafted frame_style patch — edits never send
   // the template) takes the stored back's body and colour off with it.
   const storedBackFace = (existing.back_face ?? null) as DfcBackFacePayload | null;
