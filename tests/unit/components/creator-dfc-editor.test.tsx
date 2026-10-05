@@ -309,6 +309,26 @@ describe("a new transform card", () => {
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfcback" }, color_identity: ["green"] });
   });
 
+  it("a MODAL land back keeps following the front (5.1b: one land tint per colour, verified per colour) — never the colourless stand-in — and a modal back keeps its cost field", async () => {
+    renderForm({
+      verifiedFrameKeys: [
+        ...BASE_VERIFIED,
+        frameComboKey("m15mdfcfront", "u"),
+        frameComboKey("m15mdfcback", "u"),
+        frameComboKey("m15mdfclandback", "u"),
+      ],
+    });
+    await clickChip("Card type", /Modal double-faced/);
+    await clickChip("Color identity", /^blue/i);
+    await goTo(/^identity$/i);
+    await clickChip("Back face type", /^Land/);
+    expect(preview().backFace).toMatchObject({ frame_style: { template: "m15mdfclandback" }, color_identity: ["blue"] });
+    expect(screen.getByTestId("dfc-back-color").textContent).toMatch(/follows the front/);
+    await clickChip("Back face type", /^Sorcery/);
+    expect(preview().backFace).toMatchObject({ frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] });
+    expect(screen.getByTestId("dfc-face-panel").textContent).toMatch(/Cost/);
+  });
+
   it("saves the derived body, the explicit colour and no cost; the back's art is needed to publish", async () => {
     actions.createCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "delver-of-secrets" });
     renderForm();

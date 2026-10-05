@@ -2304,7 +2304,11 @@ ticks each colour × face.
   one-click move (5.2, Q3) offers the modal pair now — Vader's costed
   artifact back onto `m15mdfcback` keeps its cost; a land back onto
   `m15mdfclandback` keeps the FRONT's colour (one land tint per colour,
-  verified per colour — colourless is the TRANSFORM land back's rule).
+  verified per colour — colourless is the TRANSFORM land back's rule), and
+  so does the creator's back-type chip: picking Land on a modal card keeps
+  the back following the front (the chip's Land → colourless switch is the
+  transform layout's alone; 5.1b skeptic — before that fix a modal spell //
+  land asked for the grey stand-in's `c`, which no tick offers).
 - **The registry** (folded with 5.4's model, #465): `modal/2015` is EXACT
   on the modal front body the mapper's `dfcImportOf` puts the printing on
   (the `dfc` family's pick; the land front for a pathway) — the creator's
