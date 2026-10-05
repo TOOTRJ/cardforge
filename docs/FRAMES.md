@@ -2591,7 +2591,9 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   paints a second image and fails — refunding both credits — when either
   picture fails. **Two credits** (Q4): `remixCreditsOf` prices an entry at
   plan time — `lib/ai/remix-estimate.ts` resolves the deck's printings
-  through Scryfall's collection endpoint (≤ 2 calls for 100 cards) and maps
+  through Scryfall's collection endpoint (≤ 2 calls for 100 cards; for the
+  deck's OWNER only, and only behind the AI rate limit, which the jobs route
+  checks before it sizes a remix) and maps
   them through the remix's own frame choice — so the dialog's confirm
   (`GET /api/ai/remix-estimate`: "N double-faced cards cost 2 credits —
   both faces get art"), the jobs route's 402 pre-check and the plan entry's
@@ -2607,10 +2609,16 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   #147, ISD #51; the modal state before AND after 5.1b under the mocked
   bodies; the request row; the both-faces finalization), the parity test
   (`anatomy-import-default.test.ts`: the creator and the remix store the
-  same frame style, family included), `remix-mechanics.test.ts` +
-  `deck-remix-step-frame.test.ts` (both faces, the second picture, the
-  one-faced fallback, the credits), `remix-estimate.test.ts`, the jobs
-  route's 402, `remix-identity.test.ts` (the back's art instruction),
+  same frame style, family included), `deck-remix-step-frame.test.ts`
+  (both faces, the second picture, the one-faced fallback, the credits),
+  `deck-remix-dfc-credits.test.ts` (the money path through the REAL credit
+  wrapper: one 2-credit reserve, one ref stamped for settlement, every
+  failure after it refunded under that ref, a one-credit plan one-faced),
+  `tests/unit/cards/dfc-import-save.test.ts` (every fixture printing saved
+  through the real createCardAction — the bodies, the blocked landings, the
+  walker's request row), `remix-estimate.test.ts`, the jobs route's 402
+  (and its rate limit before the estimate), `remix-estimate-route.test.ts`,
+  `remix-identity.test.ts` (the back's art instruction),
   `tests/e2e/scryfall-import.spec.ts` (MID #7 through the admin preview:
   the transform body, both arts, the family). Visual: 0 changed / 0 new.
 

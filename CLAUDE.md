@@ -241,7 +241,8 @@ Rules and gotchas:
   (toast + a `dfc/walker` request row), a colourless face without an
   Artifact word keeps today's landing (5.11). The AI deck remix of such an
   entry costs 2 credits (two pictures), priced at plan time
-  (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate`) and shown in the
+  (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
+  only, behind the AI rate limit: it calls Scryfall) and shown in the
   estimate before anyone pays; the step reserves what the plan priced.
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
