@@ -40,7 +40,9 @@ import type { DfcIconFamily, FrameTemplate } from "@/types/card";
 // "As it was": the last block holds the payloads this must NOT move — an
 // `arrows` reference, a modal one and every non-DFC template — to a snapshot
 // GENERATED ON THE BASE (origin/feat/dfc-strip-rider d9e877e6, this file run
-// there) and only read since.
+// there; the split and the adventure by the #470 skeptic with main's
+// builder — lib/ is the same tree at d9e877e6 and at main fe34b749) and only
+// read since.
 // ---------------------------------------------------------------------------
 
 vi.mock("@/lib/scryfall/client", async (importOriginal) => {
@@ -453,6 +455,12 @@ describe("as it was — generated on the base (d9e877e6), only read since", () =
     ["a non-DFC template: NEO #227 (a fan printing) on saga/m", () => refOf("saga", "m"), "saga", "front"],
     ["a non-DFC template: MID #169 (a sun / moon printing) on m15, front", () => refOf("m15dfcfront", "g", 1), "m15", "front"],
     ["a non-DFC template: MID #169 on m15, its legacy back", () => refOf("m15dfcfront", "g", 1), "m15", "back"],
+    // Two-part layouts (the skeptic's): ONE picture whose second half is
+    // the back-face content — a card WITH a back face on a template that is
+    // no double-faced body, the path every front now takes through
+    // frontPreviewData.
+    ["a non-DFC template: GRN Expansion // Explosion on split/m (a second half, no flip)", () => refOf("split", "m"), "split", "front"],
+    ["a non-DFC template: ELD Faerie Guidemother on adventure/w (the storybook page)", () => refOf("adventure", "w"), "adventure", "front"],
   ];
 
   it.each(WHOLE)("%s", async (_label, ref, template, face) => {
