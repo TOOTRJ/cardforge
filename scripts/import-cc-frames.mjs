@@ -19,6 +19,12 @@
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
 //   node scripts/import-cc-frames.mjs --only m15crown   # the crown band only
+//   node scripts/import-cc-frames.mjs --only m15dfccrown,m15dfccrownright,m15mdfccrown
+//                                                     # the double-faced bodies'
+//                                                     # crowns (5.1d): our m15crown
+//                                                     # band cut round the well —
+//                                                     # needs the published band
+//                                                     # under <out> or .frames-cache
 //   node scripts/import-cc-frames.mjs --only m15holostamp,m15pwholostamp
 //                                                     # the stamp notches (4.9c:
 //                                                     # the colour keys and the
@@ -57,10 +63,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
+import { createHash } from "node:crypto";
 import {
   CC_COMMIT,
   CC_OVERLAY_BANDS,
+  DFC_CROWN_TWIN_SIZE,
   HOLO_STAMP_NOTCHES,
+  cutCrownBand,
+  cutCrownFindings,
+  cutCrownRecipe,
+  cutCrownSourceFiles,
+  describeCutCrown,
+  placeTwin,
   NOTCH_FOOT,
   buildNotch,
   columnTintGap,
@@ -382,6 +396,29 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     notes: def.notes,
   };
 }
+// The published m15crown band a cut band reads (TODO 5.1d): this run's own
+// output when the band was built in it, else a local copy — FRAMES_BUILD_DIR,
+// .frames-cache (frames-fetch.mjs) or .frames-build — whose bytes are the
+// manifest's (sha256), so a cut is always over the band the bucket serves.
+const MANIFEST_FILE = path.resolve("lib/frames/frame-manifest.json");
+const manifestFiles = fs.existsSync(MANIFEST_FILE) ? JSON.parse(fs.readFileSync(MANIFEST_FILE, "utf8")).files ?? {} : {};
+function manifestShaOf(rel) {
+  return manifestFiles[rel]?.sha256 ?? null;
+}
+function publishedBand(rel) {
+  const want = manifestShaOf(`${rel}.png`);
+  if (!want) throw new Error(`cut band: ${rel}.png is not in lib/frames/frame-manifest.json — publish the band first`);
+  const dirs = [outDir, ...(process.env.FRAMES_BUILD_DIR ? [path.resolve(process.env.FRAMES_BUILD_DIR)] : []), path.resolve(".frames-cache"), path.resolve(".frames-build")];
+  for (const dir of dirs) {
+    const file = path.join(dir, `${rel}.png`);
+    if (!fs.existsSync(file)) continue;
+    const sha = createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+    if (sha === want) return { file, sha };
+    console.log(`cut band: ${path.relative(process.cwd(), file)} is not the published band (${sha.slice(0, 12)} ≠ ${want.slice(0, 12)}) — skipped`);
+  }
+  throw new Error(`cut band: no copy of ${rel}.png at the manifest's sha256 under ${dirs.map((d) => path.relative(process.cwd(), d) || ".").join(", ")} — build it (--only m15crown) or fetch the bucket's (scripts/frames-fetch.mjs)`);
+}
+
 // Overlay bands (TODO 4.6a: the legendary crown). Composited on the full card
 // at the pack's native size in CC's order — the black cover, then the crown
 // (a pair's two crowns lerped through the untilted crown ramp) — downscaled
@@ -433,6 +470,38 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       );
       continue;
     }
+    if (def.cut) {
+      // A cut band (TODO 5.1d: the double-faced bodies' crowns): our
+      // published m15crown band — read from this run's output or a local
+      // copy at the manifest's sha256 — cut through the CC twin's alpha
+      // round the well (scripts/lib/cc-frames.mjs cutCrownBand).
+      const r = cutCrownRecipe(folder, key);
+      if (dryRun) {
+        recipe[key] = describeCutCrown(folder, key, manifestShaOf(`${r.band}.png`) ?? "(unpublished)");
+        console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+        continue;
+      }
+      const { file: bandFile, sha: bandSha } = publishedBand(r.band);
+      recipe[key] = describeCutCrown(folder, key, bandSha);
+      const bandPixels = await sharp(bandFile).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      if (bandPixels.info.width !== OUT_W || bandPixels.info.height !== band.rows) throw new Error(`${bandFile} is ${bandPixels.info.width}×${bandPixels.info.height}, the band is ${OUT_W}×${band.rows}`);
+      const twinFile = await fetchCached(r.twin);
+      const twinMeta = await sharp(twinFile).metadata();
+      if (twinMeta.width !== DFC_CROWN_TWIN_SIZE.width || twinMeta.height !== DFC_CROWN_TWIN_SIZE.height) throw new Error(`${r.twin} is ${twinMeta.width}×${twinMeta.height}, the twins are 1418×350 (the source moved?)`);
+      const twin = placeTwin(await sharp(twinFile).ensureAlpha().raw().toBuffer(), band.rows);
+      const { piece, circle, refLuma } = cutCrownBand(bandPixels.data, twin, r.well, OUT_W, band.rows);
+      const findings = cutCrownFindings(piece, bandPixels.data, twin, r.well, circle, OUT_W, band.rows);
+      for (const f of findings.failures) bandFailures.push(`${folder}/${key}: ${f}`);
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      const image = sharp(piece, { raw: { width: OUT_W, height: band.rows, channels: 4 } });
+      await image.clone().png({ compressionLevel: 9 }).toFile(out);
+      await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
+      const well = circle ? `the well's circle (${circle.cx.toFixed(1)}, ${circle.cy.toFixed(1)}) r ${circle.r.toFixed(1)} (fit ${circle.maxErr.toFixed(2)} px)` : "the housing's teardrop";
+      console.log(
+        `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${OUT_W}×${band.rows}: ${well}, its hole ending at row ${findings.holeBottom}, twin leg luma ${refLuma.toFixed(1)}, fill ${findings.fillMean?.join(",")} vs the band's leg ${findings.legMean?.join(",")}`,
+      );
+      continue;
+    }
     const r = crownBandRecipe(key);
     recipe[key] = describeCrownBand(r);
     if (dryRun) {
@@ -472,11 +541,16 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     pack: def.pack,
     converter: "scripts/import-cc-frames.mjs",
     kind: "overlay",
-    output: `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
+    output: def.cut
+      ? `${OUT_W}x${band.rows} cut band: the published m15crown band (rows 0–${band.rows - 1}) cut through the twin's alpha round the well, webp q${WEBP.quality}`
+      : `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
     colors: recipe,
-    sourceFiles: def.layers
-      ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
-      : crownBandSourceFiles(def.keys),
+    sourceFiles: def.cut
+      ? cutCrownSourceFiles(folder)
+      : def.layers
+        ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
+        : crownBandSourceFiles(def.keys),
+    ...(def.cut ? { bands: Object.fromEntries(def.keys.map((key) => [key, `m15crown/${key}.png`])) } : {}),
     notes: def.notes,
   };
 }

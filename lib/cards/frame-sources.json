@@ -2104,6 +2104,56 @@
       ],
       "m": [
         "img/frames/m15/transform/regular/new/backM.png"
+      ],
+      "wu": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backW.png | img/frames/m15/transform/regular/new/backU.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backW.png | img/frames/m15/transform/regular/new/backU.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "wb": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backW.png | img/frames/m15/transform/regular/new/backB.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backW.png | img/frames/m15/transform/regular/new/backB.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "ub": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backU.png | img/frames/m15/transform/regular/new/backB.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backU.png | img/frames/m15/transform/regular/new/backB.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "ur": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backU.png | img/frames/m15/transform/regular/new/backR.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backU.png | img/frames/m15/transform/regular/new/backR.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "br": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backB.png | img/frames/m15/transform/regular/new/backR.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backB.png | img/frames/m15/transform/regular/new/backR.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "bg": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backB.png | img/frames/m15/transform/regular/new/backG.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backB.png | img/frames/m15/transform/regular/new/backG.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "rg": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backR.png | img/frames/m15/transform/regular/new/backG.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backR.png | img/frames/m15/transform/regular/new/backG.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "rw": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backR.png | img/frames/m15/transform/regular/new/backW.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backR.png | img/frames/m15/transform/regular/new/backW.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "gw": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backG.png | img/frames/m15/transform/regular/new/backW.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backG.png | img/frames/m15/transform/regular/new/backW.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
+      ],
+      "gu": [
+        "img/frames/m15/transform/regular/new/backM.png",
+        "(img/frames/m15/transform/regular/new/backG.png | img/frames/m15/transform/regular/new/backU.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/new/backG.png | img/frames/m15/transform/regular/new/backU.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/new/maskPinlineBack.png"
       ]
     },
     "plates": {
@@ -2347,6 +2397,366 @@
           ],
           "region": "text box"
         }
+      ],
+      "wu": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.03,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "wb": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.03,
+            "right": 0.94,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "ub": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 0.94,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "ur": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 1.06,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "br": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.94,
+            "right": 1.06,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "bg": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.94,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "rg": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.06,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "rw": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.06,
+            "right": 1.03,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "gw": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 1.03,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "gu": [
+        {
+          "mask": "img/frames/m15/transform/regular/new/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
       ]
     },
     "sourceFiles": [
@@ -2359,6 +2769,7 @@
       "img/frames/m15/transform/regular/new/backR.png",
       "img/frames/m15/transform/regular/new/backU.png",
       "img/frames/m15/transform/regular/new/backW.png",
+      "img/frames/m15/transform/regular/new/maskPinlineBack.png",
       "img/frames/m15/transform/regular/new/maskTitle.png",
       "img/frames/m15/transform/regular/ptA.png",
       "img/frames/m15/transform/regular/ptB.png",
@@ -2373,7 +2784,9 @@
       "toned onto the prints before the first tick (DFC_BACK_TONES, design D1): CC's bars read 20–30 luma off the prints on most keys — too light on w u b g a, too DARK on r and the land back, gold within 7 — and its boxes 5–20 light; per-key gains through the pack's Title / Type / Rules masks, the white ring, the ▼ and the light rims kept by a luma ramp; the body and the plates untouched",
       "P/T plates = the pack's dark `pt<K>.png` (285 × 156, interior luma W 160 U 95 B 85 R 75 G 69 M 122 A 112, within the prints' G 69–95 / U 93–106), drawn at M15's plate box with WHITE digits; the colourless stand-in takes the artifact plate; ONE set, m15dfcback/pt/<k>.png, which the 2016–22 back's profile draws too",
       "colourless `c` = the pack's 'Artifact Frame' as a RENDER STAND-IN (design D2), ticked against an artifact print (LCI #262 Sunbird Effigy / MID #256 Mystic Monstrosity); a colourless Eldrazi or Avatar back (EMN #63, TLA #203) prints a see-through frame CC lacks — TODO 5.11",
-      "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10"
+      "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10",
+      "the legendary crown (TODO 5.1d): the m15dfccrown / m15dfccrownright overlay (our m15crown band cut through CC's transform crown twin's alpha around the well; the ▼ back's well is at the right); the two-colour PAIR masters (5.1d): the prints split a two-colour BACK's pinline rings and text box over the gold bars, as the front's (MOM #43 G|W, MID #218 W|U, MID #246 R|G, EMN #191 R|G, STX #149 B|R measured 2026-10-05 — the design's \"gold backs never split\" was wrong), so the split recipe over this pack's back files: backM.png whole, the box and the pinline lerped from the two colour backs, the gold bars at m's gain and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
     ]
   },
   "m15dfcbackleft": {
@@ -2408,6 +2821,56 @@
       ],
       "m": [
         "img/frames/m15/transform/regular/backM.png"
+      ],
+      "wu": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backW.png | img/frames/m15/transform/regular/backU.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backW.png | img/frames/m15/transform/regular/backU.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "wb": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backW.png | img/frames/m15/transform/regular/backB.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backW.png | img/frames/m15/transform/regular/backB.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "ub": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backU.png | img/frames/m15/transform/regular/backB.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backU.png | img/frames/m15/transform/regular/backB.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "ur": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backU.png | img/frames/m15/transform/regular/backR.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backU.png | img/frames/m15/transform/regular/backR.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "br": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backB.png | img/frames/m15/transform/regular/backR.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backB.png | img/frames/m15/transform/regular/backR.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "bg": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backB.png | img/frames/m15/transform/regular/backG.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backB.png | img/frames/m15/transform/regular/backG.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "rg": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backR.png | img/frames/m15/transform/regular/backG.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backR.png | img/frames/m15/transform/regular/backG.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "rw": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backR.png | img/frames/m15/transform/regular/backW.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backR.png | img/frames/m15/transform/regular/backW.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "gw": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backG.png | img/frames/m15/transform/regular/backW.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backG.png | img/frames/m15/transform/regular/backW.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
+      ],
+      "gu": [
+        "img/frames/m15/transform/regular/backM.png",
+        "(img/frames/m15/transform/regular/backG.png | img/frames/m15/transform/regular/backU.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/transform/regular/backG.png | img/frames/m15/transform/regular/backU.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineBack.png"
       ]
     },
     "tones": {
@@ -2642,6 +3105,366 @@
           ],
           "region": "text box"
         }
+      ],
+      "wu": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.03,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "wb": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.03,
+            "right": 0.94,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "ub": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 0.94,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "ur": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 1.06,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "br": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.94,
+            "right": 1.06,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "bg": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.94,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "rg": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.06,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "rw": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 1.06,
+            "right": 1.03,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "gw": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 1.03,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "gu": [
+        {
+          "mask": "img/frames/m15/transform/regular/maskTitle.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.05,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskRules.png",
+          "gain": {
+            "left": 0.95,
+            "right": 0.95,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
       ]
     },
     "sourceFiles": [
@@ -2654,6 +3477,7 @@
       "img/frames/m15/transform/regular/backR.png",
       "img/frames/m15/transform/regular/backU.png",
       "img/frames/m15/transform/regular/backW.png",
+      "img/frames/m15/transform/regular/maskPinlineBack.png",
       "img/frames/m15/transform/regular/maskTitle.png"
     ],
     "notes": [
@@ -2661,7 +3485,245 @@
       "toned onto the prints before the first tick (DFC_BACK_TONES, design D1): CC's bars read 20–30 luma off the prints on most keys — too light on w u b g a, too DARK on r and the land back, gold within 7 — and its boxes 5–20 light; per-key gains through the pack's Title / Type / Rules masks, the white ring, the ▼ and the light rims kept by a luma ramp; the body and the plates untouched",
       "P/T plates = the pack's dark `pt<K>.png` (285 × 156, interior luma W 160 U 95 B 85 R 75 G 69 M 122 A 112, within the prints' G 69–95 / U 93–106), drawn at M15's plate box with WHITE digits; the colourless stand-in takes the artifact plate; ONE set, m15dfcback/pt/<k>.png, which the 2016–22 back's profile draws too",
       "colourless `c` = the pack's 'Artifact Frame' as a RENDER STAND-IN (design D2), ticked against an artifact print (LCI #262 Sunbird Effigy / MID #256 Mystic Monstrosity); a colourless Eldrazi or Avatar back (EMN #63, TLA #203) prints a see-through frame CC lacks — TODO 5.11",
-      "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10"
+      "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10",
+      "the legendary crown (TODO 5.1d): the m15dfccrown / m15dfccrownright overlay (our m15crown band cut through CC's transform crown twin's alpha around the well; the ▼ back's well is at the right); the two-colour PAIR masters (5.1d): the prints split a two-colour BACK's pinline rings and text box over the gold bars, as the front's (MOM #43 G|W, MID #218 W|U, MID #246 R|G, EMN #191 R|G, STX #149 B|R measured 2026-10-05 — the design's \"gold backs never split\" was wrong), so the split recipe over this pack's back files: backM.png whole, the box and the pinline lerped from the two colour backs, the gold bars at m's gain and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
+    ]
+  },
+  "m15dfccrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "Transform 'Legend Crowns' (packTransformLegendCrowns.js: the front / 2016–22 back crown, cut around the LEFT well)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x410 cut band: the published m15crown band (rows 0–409) cut through the twin's alpha round the well, webp q90",
+    "colors": {
+      "w": [
+        "m15crown/w.png (the published band, sha256 9310ceac2b5c) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "u": [
+        "m15crown/u.png (the published band, sha256 00b5e90d266a) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "b": [
+        "m15crown/b.png (the published band, sha256 441795575262) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "r": [
+        "m15crown/r.png (the published band, sha256 d9a3215c1931) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "g": [
+        "m15crown/g.png (the published band, sha256 992548e92722) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "m": [
+        "m15crown/m.png (the published band, sha256 c7f61a87305b) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/m.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "a": [
+        "m15crown/a.png (the published band, sha256 a4062886c598) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/a.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "l": [
+        "m15crown/l.png (the published band, sha256 d2e6fb2701c0) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/l.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "wu": [
+        "m15crown/wu.png (the published band, sha256 1e1f383c8ddb) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "wb": [
+        "m15crown/wb.png (the published band, sha256 0c940c2fc910) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "ub": [
+        "m15crown/ub.png (the published band, sha256 fec83248575f) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "ur": [
+        "m15crown/ur.png (the published band, sha256 e4dabca3be24) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "br": [
+        "m15crown/br.png (the published band, sha256 9c8e9b5b9df9) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "bg": [
+        "m15crown/bg.png (the published band, sha256 1823142c4572) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "rg": [
+        "m15crown/rg.png (the published band, sha256 2d07afc8e9a7) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "rw": [
+        "m15crown/rw.png (the published band, sha256 bf066b5e4f2d) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "gw": [
+        "m15crown/gw.png (the published band, sha256 07fa16429183) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "gu": [
+        "m15crown/gu.png (the published band, sha256 d848e185b795) cut at the well region x 80–235 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/transform/crowns/regular/a.png",
+      "img/frames/m15/transform/crowns/regular/b.png",
+      "img/frames/m15/transform/crowns/regular/g.png",
+      "img/frames/m15/transform/crowns/regular/l.png",
+      "img/frames/m15/transform/crowns/regular/m.png",
+      "img/frames/m15/transform/crowns/regular/r.png",
+      "img/frames/m15/transform/crowns/regular/u.png",
+      "img/frames/m15/transform/crowns/regular/w.png"
+    ],
+    "bands": {
+      "w": "m15crown/w.png",
+      "u": "m15crown/u.png",
+      "b": "m15crown/b.png",
+      "r": "m15crown/r.png",
+      "g": "m15crown/g.png",
+      "m": "m15crown/m.png",
+      "a": "m15crown/a.png",
+      "l": "m15crown/l.png",
+      "wu": "m15crown/wu.png",
+      "wb": "m15crown/wb.png",
+      "ub": "m15crown/ub.png",
+      "ur": "m15crown/ur.png",
+      "br": "m15crown/br.png",
+      "bg": "m15crown/bg.png",
+      "rg": "m15crown/rg.png",
+      "rw": "m15crown/rw.png",
+      "gw": "m15crown/gw.png",
+      "gu": "m15crown/gu.png"
+    },
+    "notes": [
+      "the legendary crown on the transform front, the transform land front and the 2016–22 transform back (TODO 5.1d): OUR m15crown band — the textured 'Legend Crowns (New)' art the owner signed off on m15 — cut through the alpha of Card Conjurer's transform 'Legend Crown' twin (m15/transform/crowns/regular/<k>.png, cut round the LEFT well), which carries the OLDER flat crown art and is never published; outside the well region the piece is the band byte for byte",
+      "inside the well region (the columns from the band's leg to the inset bar, rows 93–225) the alpha is the twin's (the well cleared, the crown round it — the prints wrap the crown round the well with the ring on top: MID #246, VOW #21, MOM #190, KHM #112) and the colour the band's own leg texture mirror-tiled on the same rows (the band has no pixels there: its hole is the plain M15 bar's), darkened only where the twin is darker than half its own leg (CC's outline round the hole, never its gradient — the prints' annulus reads 0.8–1.0 of the leg); the wrap under the bar is the band's own: the transform twins' well is a circle ((143.6, 160.5) r 60.9 on the left, fitted ≤ 1 px, rows 100–221), the modal twin's hole a teardrop (its point at x 59, row 160; its bottom at row 218) — both end above the wrap",
+      "keys: the band's w u b r g, m (gold), a (the artifact stand-in's silver: a DFC body's colourless is `c` → `a`), l (the land grey) and the ten pairs (the pair band cut through the twin of the colour whose half the well is in); never c"
+    ]
+  },
+  "m15dfccrownright": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "Transform 'Legend Crowns' (packTransformLegendCrowns.js: the '(Back)' crown of the ▼ back, cut around the RIGHT well)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x410 cut band: the published m15crown band (rows 0–409) cut through the twin's alpha round the well, webp q90",
+    "colors": {
+      "w": [
+        "m15crown/w.png (the published band, sha256 9310ceac2b5c) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "u": [
+        "m15crown/u.png (the published band, sha256 00b5e90d266a) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "b": [
+        "m15crown/b.png (the published band, sha256 441795575262) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "r": [
+        "m15crown/r.png (the published band, sha256 d9a3215c1931) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "g": [
+        "m15crown/g.png (the published band, sha256 992548e92722) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "m": [
+        "m15crown/m.png (the published band, sha256 c7f61a87305b) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/m.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "a": [
+        "m15crown/a.png (the published band, sha256 a4062886c598) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/a.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "l": [
+        "m15crown/l.png (the published band, sha256 d2e6fb2701c0) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/l.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "wu": [
+        "m15crown/wu.png (the published band, sha256 1e1f383c8ddb) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "wb": [
+        "m15crown/wb.png (the published band, sha256 0c940c2fc910) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "ub": [
+        "m15crown/ub.png (the published band, sha256 fec83248575f) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "ur": [
+        "m15crown/ur.png (the published band, sha256 e4dabca3be24) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "br": [
+        "m15crown/br.png (the published band, sha256 9c8e9b5b9df9) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "bg": [
+        "m15crown/bg.png (the published band, sha256 1823142c4572) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "rg": [
+        "m15crown/rg.png (the published band, sha256 2d07afc8e9a7) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "rw": [
+        "m15crown/rw.png (the published band, sha256 bf066b5e4f2d) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "gw": [
+        "m15crown/gw.png (the published band, sha256 07fa16429183) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "gu": [
+        "m15crown/gu.png (the published band, sha256 d848e185b795) cut at the well region x 1264–1419 × y 93–225 through the alpha of img/frames/m15/transform/crowns/regular/new/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 1422–1439 mirror-tiled on the same rows, darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/transform/crowns/regular/new/a.png",
+      "img/frames/m15/transform/crowns/regular/new/b.png",
+      "img/frames/m15/transform/crowns/regular/new/g.png",
+      "img/frames/m15/transform/crowns/regular/new/l.png",
+      "img/frames/m15/transform/crowns/regular/new/m.png",
+      "img/frames/m15/transform/crowns/regular/new/r.png",
+      "img/frames/m15/transform/crowns/regular/new/u.png",
+      "img/frames/m15/transform/crowns/regular/new/w.png"
+    ],
+    "bands": {
+      "w": "m15crown/w.png",
+      "u": "m15crown/u.png",
+      "b": "m15crown/b.png",
+      "r": "m15crown/r.png",
+      "g": "m15crown/g.png",
+      "m": "m15crown/m.png",
+      "a": "m15crown/a.png",
+      "l": "m15crown/l.png",
+      "wu": "m15crown/wu.png",
+      "wb": "m15crown/wb.png",
+      "ub": "m15crown/ub.png",
+      "ur": "m15crown/ur.png",
+      "br": "m15crown/br.png",
+      "bg": "m15crown/bg.png",
+      "rg": "m15crown/rg.png",
+      "rw": "m15crown/rw.png",
+      "gw": "m15crown/gw.png",
+      "gu": "m15crown/gu.png"
+    },
+    "notes": [
+      "the legendary crown on the ▼ transform back (TODO 5.1d): OUR m15crown band — the textured 'Legend Crowns (New)' art the owner signed off on m15 — cut through the alpha of Card Conjurer's transform 'Legend Crown (Back)' twin (m15/transform/crowns/regular/new/<k>.png, cut round the ▼ back's RIGHT well), which carries the OLDER flat crown art and is never published; outside the well region the piece is the band byte for byte",
+      "inside the well region (the columns from the band's leg to the inset bar, rows 93–225) the alpha is the twin's (the well cleared, the crown round it — the prints wrap the crown round the well with the ring on top: MID #246, VOW #21, MOM #190, KHM #112) and the colour the band's own leg texture mirror-tiled on the same rows (the band has no pixels there: its hole is the plain M15 bar's), darkened only where the twin is darker than half its own leg (CC's outline round the hole, never its gradient — the prints' annulus reads 0.8–1.0 of the leg); the wrap under the bar is the band's own: the transform twins' well is a circle ((143.6, 160.5) r 60.9 on the left, fitted ≤ 1 px, rows 100–221), the modal twin's hole a teardrop (its point at x 59, row 160; its bottom at row 218) — both end above the wrap",
+      "keys: the band's w u b r g, m (gold), a (the artifact stand-in's silver: a DFC body's colourless is `c` → `a`), l (the land grey) and the ten pairs (the pair band cut through the twin of the colour whose half the well is in); never c"
     ]
   },
   "m15dfcfront": {
@@ -2696,6 +3758,56 @@
       ],
       "m": [
         "img/frames/m15/transform/regular/frontM.png"
+      ],
+      "wu": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontW.png | img/frames/m15/transform/regular/frontU.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontW.png | img/frames/m15/transform/regular/frontU.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "wb": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontW.png | img/frames/m15/transform/regular/frontB.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontW.png | img/frames/m15/transform/regular/frontB.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "ub": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontU.png | img/frames/m15/transform/regular/frontB.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontU.png | img/frames/m15/transform/regular/frontB.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "ur": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontU.png | img/frames/m15/transform/regular/frontR.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontU.png | img/frames/m15/transform/regular/frontR.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "br": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontB.png | img/frames/m15/transform/regular/frontR.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontB.png | img/frames/m15/transform/regular/frontR.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "bg": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontB.png | img/frames/m15/transform/regular/frontG.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontB.png | img/frames/m15/transform/regular/frontG.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "rg": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontR.png | img/frames/m15/transform/regular/frontG.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontR.png | img/frames/m15/transform/regular/frontG.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "rw": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontR.png | img/frames/m15/transform/regular/frontW.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontR.png | img/frames/m15/transform/regular/frontW.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "gw": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontG.png | img/frames/m15/transform/regular/frontW.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontG.png | img/frames/m15/transform/regular/frontW.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
+      ],
+      "gu": [
+        "img/frames/m15/transform/regular/frontM.png",
+        "(img/frames/m15/transform/regular/frontG.png | img/frames/m15/transform/regular/frontU.png across procedural:ramp(45→57 %W)) through img/frames/m15/transform/regular/maskRulesFront.png",
+        "(img/frames/m15/transform/regular/frontG.png | img/frames/m15/transform/regular/frontU.png across procedural:ramp(40→60 %W)) through img/frames/m15/transform/regular/maskPinlineFront.png"
       ]
     },
     "sourceFiles": [
@@ -2705,14 +3817,17 @@
       "img/frames/m15/transform/regular/frontM.png",
       "img/frames/m15/transform/regular/frontR.png",
       "img/frames/m15/transform/regular/frontU.png",
-      "img/frames/m15/transform/regular/frontW.png"
+      "img/frames/m15/transform/regular/frontW.png",
+      "img/frames/m15/transform/regular/maskPinlineFront.png",
+      "img/frames/m15/transform/regular/maskRulesFront.png"
     ],
     "notes": [
       "source: CC 'Transform (Front)' (packM15TransformFront.js, groupDFC.js): the M15 frame with the icon WELL at the left of the name bar (a black disc with a white ring, outer circle x 84–220 × y 98–236 at HD, CC's default ▲ drawn in it — the icon rider overdraws it with the family's glyph) and the pentagonal grey reverse-P/T TAB cut out of the text box's right edge (x 1392–1440, y 1745–1848), both the master's; the prints put the well at 84–225 and the tab at 1398–1441 (MID #169, INR #60, MOM #43), within 2–4 px",
       "the name starts at 16.7 %W (prints 249–252 px: SOI #203, MID #169, INR #60 / #193, XLN #22; CC's pack says 0.16 = 240) — the profile's title inset, not a pixel of the master (design D5)",
       "colourless `c` = the pack's 'Artifact Frame' (frontA.png) as a RENDER STAND-IN (design D2): no colourless non-artifact transform FRONT was printed on the plain M15 frame (EMN's Eldrazi are backs, see-through — TODO 5.11); the row is ticked against an ARTIFACT print (LCI #60 Inverted Iceberg) and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds; the reverse P/T in the tab is text (the profile's reversePt slot, #777, Beleren small caps), drawn only when the back prints a P/T — the tab prints EMPTY otherwise, as XLN #22 / VOW #12 / LCI #158 do (owner decision Q7)",
-      "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body; CC's DFC crown twins carry the older crown art, 4.6f)"
+      "the legendary crown (TODO 5.1d): the m15dfccrown overlay — our m15crown band cut through CC's transform crown twin's alpha around the well (CC_OVERLAY_BANDS.m15dfccrown); the two-colour PAIR masters (5.1d / 5.12): 4.6b's split recipe over this pack's files and masks — frontM.png whole, the text box and the pinline lerped from the two colour fronts (dfcPairLayers); no hybrid dress: no hybrid-cost transform front was printed on the 2015 frame (MH3's hybrids are modal)",
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
     ]
   },
   "m15dfclandback": {
@@ -3292,7 +4407,7 @@
     "pack": "packModalRegular.js 'Modal Regular' backs (groupModal-1.js)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; then the title bar and the housing's fill (through img/frames/modal/regular/title.svg), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/modal/regular/textbox.svg) have their colour multiplied by the key's gain (MDFC_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline, the strip and the plates untouched",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; then the title bar and the housing's fill (through img/frames/modal/regular/title.svg), the type bar (through img/frames/m15/regular/m15MaskType.png), the text box (through img/frames/modal/regular/textbox.svg) and — on u, b, r, g and m (TODO 5.1d) — the whole flipside strip (through img/frames/modal/regular/reminder.svg: the tab, its ◀ and its outline, which a multiplier keeps dark) have their colour multiplied by the key's gain (MDFC_BACK_TONES: bars / box / strip per colour), fading to ×1 between luma 215 and 245 so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline and the plates untouched",
     "colors": {
       "a": [
         "img/frames/modal/regular/ab.png"
@@ -3317,6 +4432,56 @@
       ],
       "m": [
         "img/frames/modal/regular/mb.png"
+      ],
+      "wu": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/wb.png | img/frames/modal/regular/ub.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/wb.png | img/frames/modal/regular/ub.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "wb": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/wb.png | img/frames/modal/regular/bb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/wb.png | img/frames/modal/regular/bb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "ub": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/ub.png | img/frames/modal/regular/bb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/ub.png | img/frames/modal/regular/bb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "ur": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/ub.png | img/frames/modal/regular/rb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/ub.png | img/frames/modal/regular/rb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "br": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/bb.png | img/frames/modal/regular/rb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/bb.png | img/frames/modal/regular/rb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "bg": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/bb.png | img/frames/modal/regular/gb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/bb.png | img/frames/modal/regular/gb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "rg": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/rb.png | img/frames/modal/regular/gb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/rb.png | img/frames/modal/regular/gb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "rw": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/rb.png | img/frames/modal/regular/wb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/rb.png | img/frames/modal/regular/wb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "gw": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/gb.png | img/frames/modal/regular/wb.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/gb.png | img/frames/modal/regular/wb.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "gu": [
+        "img/frames/modal/regular/mb.png",
+        "(img/frames/modal/regular/gb.png | img/frames/modal/regular/ub.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/gb.png | img/frames/modal/regular/ub.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
       ]
     },
     "tones": {
@@ -3377,6 +4542,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.056,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "b": [
@@ -3406,6 +4580,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.263,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "r": [
@@ -3435,6 +4618,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.097,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "g": [
@@ -3464,6 +4656,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.119,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "c": [],
@@ -3494,6 +4695,465 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "wu": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.059,
+            "right": 0.981,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "wb": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.059,
+            "right": 1.029,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "ub": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 0.981,
+            "right": 1.029,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "ur": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 0.981,
+            "right": 1.075,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "br": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.029,
+            "right": 1.075,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "bg": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.029,
+            "right": 1.06,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "rg": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.075,
+            "right": 1.06,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "rw": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.075,
+            "right": 1.059,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "gw": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.06,
+            "right": 1.059,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
+        }
+      ],
+      "gu": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": {
+            "left": 1.06,
+            "right": 0.981,
+            "ramp": [
+              45,
+              57
+            ]
+          },
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ]
     },
@@ -3503,7 +5163,9 @@
       "img/frames/modal/regular/bb.png",
       "img/frames/modal/regular/gb.png",
       "img/frames/modal/regular/mb.png",
+      "img/frames/modal/regular/pinline.svg",
       "img/frames/modal/regular/rb.png",
+      "img/frames/modal/regular/reminder.svg",
       "img/frames/modal/regular/textbox.svg",
       "img/frames/modal/regular/title.svg",
       "img/frames/modal/regular/ub.png",
@@ -3514,7 +5176,128 @@
       "toned onto the prints before the first tick (MDFC_BACK_TONES, design D1): CC's bars read 3–16 luma light on w u b g m and 16 dark on r, its boxes 5–18 off; per-key gains through the pack's Title / Type / Rules masks, the white ▲▼ and the light rims kept by a luma ramp; the body, the pinline and the strip untouched; the artifact back untoned (no colourless modal back was printed)",
       "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
       "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
-      "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1"
+      "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
+      "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 14–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched",
+      "the legendary crown (TODO 5.1d): the m15mdfccrown overlay, as on the front; the two-colour PAIR masters (5.1d): the prints split a two-colour modal BACK's rings and box over the gold bars (STX #149's B|R back, MSH #18 / #219 / #23 / #49 / #80's crowned gold-barred pair backs), so the split recipe over this pack's back files: mb.png whole, the box and the pinline lerped from the two colour backs, the gold bars and strip at m's gains and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
+    ]
+  },
+  "m15mdfccrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "Modal 'Regular Legend Crowns' (packModalLegendCrowns.js: cut around the housing)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x410 cut band: the published m15crown band (rows 0–409) cut through the twin's alpha round the well, webp q90",
+    "colors": {
+      "w": [
+        "m15crown/w.png (the published band, sha256 9310ceac2b5c) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "u": [
+        "m15crown/u.png (the published band, sha256 00b5e90d266a) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "b": [
+        "m15crown/b.png (the published band, sha256 441795575262) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "r": [
+        "m15crown/r.png (the published band, sha256 d9a3215c1931) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "g": [
+        "m15crown/g.png (the published band, sha256 992548e92722) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "m": [
+        "m15crown/m.png (the published band, sha256 c7f61a87305b) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/m.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "a": [
+        "m15crown/a.png (the published band, sha256 a4062886c598) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/a.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "l": [
+        "m15crown/l.png (the published band, sha256 d2e6fb2701c0) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/l.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "wu": [
+        "m15crown/wu.png (the published band, sha256 1e1f383c8ddb) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "wb": [
+        "m15crown/wb.png (the published band, sha256 0c940c2fc910) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/w.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "ub": [
+        "m15crown/ub.png (the published band, sha256 fec83248575f) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "ur": [
+        "m15crown/ur.png (the published band, sha256 e4dabca3be24) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/u.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "br": [
+        "m15crown/br.png (the published band, sha256 9c8e9b5b9df9) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "bg": [
+        "m15crown/bg.png (the published band, sha256 1823142c4572) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/b.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "rg": [
+        "m15crown/rg.png (the published band, sha256 2d07afc8e9a7) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "rw": [
+        "m15crown/rw.png (the published band, sha256 bf066b5e4f2d) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/r.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "gw": [
+        "m15crown/gw.png (the published band, sha256 07fa16429183) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ],
+      "gu": [
+        "m15crown/gu.png (the published band, sha256 d848e185b795) cut at the well region x 40–235 × y 93–225 through the alpha of img/frames/modal/crowns/regular/g.png at 2.74/1.91/94.54×16.67 % (1:1)",
+        "the colour inside the region: the band's leg columns 60–77 mirror-tiled on the same rows (the band's own pixels left of x 84), darkened where the twin is below 0.5 of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/modal/crowns/regular/a.png",
+      "img/frames/modal/crowns/regular/b.png",
+      "img/frames/modal/crowns/regular/g.png",
+      "img/frames/modal/crowns/regular/l.png",
+      "img/frames/modal/crowns/regular/m.png",
+      "img/frames/modal/crowns/regular/r.png",
+      "img/frames/modal/crowns/regular/u.png",
+      "img/frames/modal/crowns/regular/w.png"
+    ],
+    "bands": {
+      "w": "m15crown/w.png",
+      "u": "m15crown/u.png",
+      "b": "m15crown/b.png",
+      "r": "m15crown/r.png",
+      "g": "m15crown/g.png",
+      "m": "m15crown/m.png",
+      "a": "m15crown/a.png",
+      "l": "m15crown/l.png",
+      "wu": "m15crown/wu.png",
+      "wb": "m15crown/wb.png",
+      "ub": "m15crown/ub.png",
+      "ur": "m15crown/ur.png",
+      "br": "m15crown/br.png",
+      "bg": "m15crown/bg.png",
+      "rg": "m15crown/rg.png",
+      "rw": "m15crown/rw.png",
+      "gw": "m15crown/gw.png",
+      "gu": "m15crown/gu.png"
+    },
+    "notes": [
+      "the legendary crown on the modal front and the modal back (TODO 5.1d): OUR m15crown band — the textured 'Legend Crowns (New)' art the owner signed off on m15 — cut through the alpha of Card Conjurer's modal 'Regular Legend Crown' twin (modal/crowns/regular/<k>.png, cut round the housing — its tip reaches into the crown's leg, which keeps its own pixels under the twin's alpha), which carries the OLDER flat crown art and is never published; outside the well region the piece is the band byte for byte",
+      "inside the well region (the columns from the band's leg to the inset bar, rows 93–225) the alpha is the twin's (the well cleared, the crown round it — the prints wrap the crown round the well with the ring on top: MID #246, VOW #21, MOM #190, KHM #112) and the colour the band's own leg texture mirror-tiled on the same rows (the band has no pixels there: its hole is the plain M15 bar's), darkened only where the twin is darker than half its own leg (CC's outline round the hole, never its gradient — the prints' annulus reads 0.8–1.0 of the leg); the wrap under the bar is the band's own: the transform twins' well is a circle ((143.6, 160.5) r 60.9 on the left, fitted ≤ 1 px, rows 100–221), the modal twin's hole a teardrop (its point at x 59, row 160; its bottom at row 218) — both end above the wrap",
+      "keys: the band's w u b r g, m (gold), a (the artifact stand-in's silver: a DFC body's colourless is `c` → `a`), l (the land grey) and the ten pairs (the pair band cut through the twin of the colour whose half the well is in); never c"
     ]
   },
   "m15mdfcfront": {
@@ -3549,14 +5332,139 @@
       ],
       "m": [
         "img/frames/modal/regular/m.png"
+      ],
+      "wu": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/u.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "wb": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/b.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "ub": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/b.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "ur": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/r.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "br": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/r.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "bg": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/g.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "rg": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/g.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "rw": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/w.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "gw": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/w.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "gu": [
+        "img/frames/modal/regular/m.png",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "wu-h": [
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/u.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "wb-h": [
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/b.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/w.png | img/frames/modal/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "ub-h": [
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/b.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "ur-h": [
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/r.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/u.png | img/frames/modal/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "br-h": [
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/r.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "bg-h": [
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/g.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/b.png | img/frames/modal/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "rg-h": [
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/g.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "rw-h": [
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/w.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/r.png | img/frames/modal/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "gw-h": [
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/w.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
+      ],
+      "gu-h": [
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(45→57 %W)) through img/frames/modal/regular/textbox.svg",
+        "img/frames/modal/regular/l.png through img/frames/modal/regular/title.svg",
+        "img/frames/modal/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/modal/regular/g.png | img/frames/modal/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/modal/regular/pinline.svg"
       ]
     },
     "sourceFiles": [
+      "img/frames/m15/regular/m15MaskType.png",
       "img/frames/modal/regular/a.png",
       "img/frames/modal/regular/b.png",
       "img/frames/modal/regular/g.png",
+      "img/frames/modal/regular/l.png",
       "img/frames/modal/regular/m.png",
+      "img/frames/modal/regular/pinline.svg",
       "img/frames/modal/regular/r.png",
+      "img/frames/modal/regular/textbox.svg",
+      "img/frames/modal/regular/title.svg",
       "img/frames/modal/regular/u.png",
       "img/frames/modal/regular/w.png"
     ],
@@ -3565,8 +5473,9 @@
       "the name starts at 16.7 %W (prints 247–252 px: ZNR #12, KHM #15, STX #147's back, ZNR #258; CC's pack says 0.1614 = 242) — the profile's title inset (the transform bodies' DFC_ICON_FACE_TITLE_LEFT_PCT), not a pixel of the master (design D5)",
       "colourless `c` = the pack's 'Artifact Frame' (a.png) as a RENDER STAND-IN (design D2): ticked against STX #154 Pestilent Cauldron, the one colourless modal face printed on the plain 2015 frame, and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
-      "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it",
-      "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body)"
+      "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it (TODO 5.1c); on a pair master the gold m.png's strip (split) or the two colour fronts' strips lerped across the frame ramp (hybrid)",
+      "the legendary crown (TODO 5.1d): the m15mdfccrown overlay (our m15crown band cut through CC's modal crown twin's alpha around the housing); the two-colour PAIR masters (5.1d / 5.12): 4.6b's recipe over this pack's files and masks — the split dress m.png whole with the box and the pinline lerped from the two colour fronts (STX #149 Extus W|B, MSH #219 King T'Challa W|U print it), the hybrid dress the two fronts lerped across the frame ramp under CC's grey Land frame's bars (l.png through the Title and Type masks: the housing's fill is the Title mask's) with the split box and pinline (MH3 #252–261's ten hybrid fronts print it; the grey plate pt/c)",
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
     ]
   },
   "m15mdfclandback": {
@@ -3576,7 +5485,7 @@
     "pack": "packModalRegular.js 'Modal Regular' backs + packM15RegularNew.js land tints (a PipGlyph recipe)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100 (the modal master's size): CC's modal back copied 1:1, then its frame body REPLACED (a premultiplied lerp by the mask's alpha) through the pack's img/frames/modal/regular/frame.svg by the 2015 coloured land tint (m15/new/l<k>.png, 2010x2814 resized to 1500x2100 with Lanczos — the m15land masters' own downscale); corners rounded to the importer radius; then the title bar and the housing's fill (through img/frames/modal/regular/title.svg), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/modal/regular/textbox.svg) have their colour multiplied by the key's gain (MDFC_LAND_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline, the strip and the plates untouched",
+    "transforms": "native 1500x2100 (the modal master's size): CC's modal back copied 1:1, then its frame body REPLACED (a premultiplied lerp by the mask's alpha) through the pack's img/frames/modal/regular/frame.svg by the 2015 coloured land tint (m15/new/l<k>.png, 2010x2814 resized to 1500x2100 with Lanczos — the m15land masters' own downscale); corners rounded to the importer radius; then the title bar and the housing's fill (through img/frames/modal/regular/title.svg), the type bar (through img/frames/m15/regular/m15MaskType.png), the text box (through img/frames/modal/regular/textbox.svg) and — on u, b, r, g and m (TODO 5.1d) — the whole flipside strip (through img/frames/modal/regular/reminder.svg: the tab, its ◀ and its outline, which a multiplier keeps dark) have their colour multiplied by the key's gain (MDFC_LAND_BACK_TONES: bars / box / strip per colour), fading to ×1 between luma 215 and 245 so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline and the plates untouched",
     "colors": {
       "w": [
         "img/frames/modal/regular/wb.png",
@@ -3663,6 +5572,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.106,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "b": [
@@ -3692,6 +5610,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.211,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "r": [
@@ -3721,6 +5648,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.082,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "g": [
@@ -3750,6 +5686,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.088,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ],
       "c": [],
@@ -3780,6 +5725,15 @@
             245
           ],
           "region": "text box"
+        },
+        {
+          "mask": "img/frames/modal/regular/reminder.svg",
+          "gain": 1.213,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "flipside strip"
         }
       ]
     },
@@ -3797,6 +5751,7 @@
       "img/frames/modal/regular/lb.png",
       "img/frames/modal/regular/mb.png",
       "img/frames/modal/regular/rb.png",
+      "img/frames/modal/regular/reminder.svg",
       "img/frames/modal/regular/textbox.svg",
       "img/frames/modal/regular/title.svg",
       "img/frames/modal/regular/ub.png",
