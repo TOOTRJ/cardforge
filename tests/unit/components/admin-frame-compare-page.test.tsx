@@ -594,6 +594,32 @@ describe("/admin/frame-compare — the page and the Score button are handed ONE 
     expect(previewDraws(back)).toEqual({ overlays: ["crown:r"], reversePt: null, stripWord: null });
   });
 
+  it("the colourless rows reach their crowned ARTIFACT prints: LCI #256 on the transform front, FIN #272 on the ▼ back", async () => {
+    // The table is keyed by the FRAME colour key the page asks with (as
+    // m15artifact's and m15land's `c` rows are), not by the crown's own key:
+    // on these bodies the colourless row draws the artifact crown (`c` → `a`,
+    // the slot's keyMap). 5.1d filed the two prints under `a`, where the
+    // toggle never found them and crowned the sample instead.
+    for (const [id, card] of Object.entries(crownPrintings)) if (id !== "_note") scryfall.cards.set(id, card);
+
+    await renderPage({ template: "m15dfcfront", color: "c", legendary: "1" });
+    expect(screen.getByText(/^Reference: Matzalantli, the Great Door \(LCI\) — crowned print/)).toBeTruthy();
+    expect(screen.queryByText("No crowned print for this colour — the sample render is crowned instead.")).toBeNull();
+    const front = compare.preview as CardPreviewData;
+    expect(front.title).toBe("Matzalantli, the Great Door");
+    expect(front.frameStyle).toMatchObject({ template: "m15dfcfront", crown: true });
+    // An artifact front over a land back: the ▲, an empty tab, the artifact crown.
+    expect(previewDraws(front)).toEqual({ overlays: ["crown:a", "dfcIcon:default"], reversePt: null, stripWord: null });
+    cleanup();
+
+    await renderPage({ template: "m15dfcback", color: "c", legendary: "1" });
+    expect(screen.getByText(/^Reference: Balamb Garden, Airborne \(FIN\) — crowned print — back face/)).toBeTruthy();
+    const back = compare.preview as CardPreviewData;
+    expect(back.title).toBe("Balamb Garden, Airborne");
+    expect(back.frameStyle).toMatchObject({ template: "m15dfcback", crown: true });
+    expect(previewDraws(back).overlays).toEqual(["crown:a"]);
+  });
+
   it("a single-faced reference: the same object too, with no block on either", async () => {
     // The registry capture keeps scans for the double-faced printings only.
     scryfall.cards.set(REFERENCE.scryfallId, {

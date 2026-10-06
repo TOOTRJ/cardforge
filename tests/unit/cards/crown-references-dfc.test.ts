@@ -23,13 +23,17 @@ import type { FrameTemplate } from "@/types/card";
 // green, three-colour or artifact legendary back was printed crowned in a
 // left-well family (Scryfall, 2026-10-06), so those rows have none.
 //
-// Each row is held to what the compare page does with it: the face it
-// compares (a back body's is the printing's back), a crowned print (the
-// `legendary` frame effect on a Legendary face), the colour the crown's key
-// names, and the PIN CHECK of its own row (validateReferenceForCombo — for a
-// transform back that is the icon family: the body the printing's
-// `frame_effects` and its back's type derive). The printings are captured
-// (fixtures/crown-reference-printings.json, Scryfall 2026-10-06); no network.
+// Each row is held to what the compare page does with it: the key the page
+// asks with (the FRAME colour key — 5.1d filed the two artifact prints under
+// `a`, the crown's own key, where the toggle on the `c` rows never found
+// them), the face it compares (a back body's is the printing's back), a
+// crowned print (the `legendary` frame effect on a Legendary face), the
+// colour its key names, and the PIN CHECK of its own row
+// (validateReferenceForCombo — for a transform back that is the icon family:
+// the body the printing's `frame_effects` and its back's type derive; for a
+// `c` row on these bodies an Artifact face, the artifact master standing
+// in). The printings are captured (fixtures/crown-reference-printings.json,
+// Scryfall 2026-10-06); no network.
 // ---------------------------------------------------------------------------
 
 type Face = { name?: string; type_line?: string; colors?: string[] };
@@ -49,16 +53,18 @@ const rows: Row[] = Object.entries(CROWN_REFERENCES)
   );
 
 const PAIR_KEY = /^[wubrg]{2}$/;
-/** The registry row a crown key is judged on: a pair is drawn gold on the
- *  compare page (its `m` row), the artifact crown is the body's colourless
- *  row (`c` dressed as `a`). */
-const pinColour = (key: string) => (PAIR_KEY.test(key) ? "m" : key === "a" ? "c" : key);
+/** The rows are keyed by the FRAME colour key the compare page's toggle asks
+ *  with (w u b r g c m), plus the pairs the print sheets use. */
+const ROW_KEY = /^(?:[wubrgcm]|[wubrg]{2})$/;
+/** The registry row a key is judged on: a pair is drawn gold on the compare
+ *  page (the body's `m` row). */
+const pinColour = (key: string) => (PAIR_KEY.test(key) ? "m" : key);
 
-/** The crown key a printed face's own colours name — the test's reading of
+/** The row key a printed face's own colours name — the test's reading of
  *  the print, not the code's. */
 function printedKey(face: Face, rowKey: string): string {
   const colours = (face.colors ?? []).map((c) => c.toLowerCase());
-  if (colours.length === 0) return /\bArtifact\b/.test(face.type_line ?? "") ? "a" : "c";
+  if (colours.length === 0) return "c";
   if (colours.length === 1) return colours[0];
   if (colours.length > 2) return "m";
   // Two colours: the row's key spells the pair in the crown's own order.
@@ -90,8 +96,10 @@ describe("the double-faced crown references vs their printings (TODO 5.1d / 5.0d
     expect(printing.frame_effects ?? [], row.combo).toContain("legendary");
     expect(face?.type_line, row.combo).toMatch(/^Legendary\b/);
 
-    // The crown's key is the face's own colour.
-    expect(printedKey(face!, row.key), row.combo).toBe(row.key === "c" ? "c" : row.key);
+    // The row is keyed as the page asks for it, and by the face's own colour.
+    expect(row.key, row.combo).toMatch(ROW_KEY);
+    expect(crownReferenceFor(row.template, row.key), row.combo).toBe(row.ref);
+    expect(printedKey(face!, row.key), row.combo).toBe(row.key);
 
     // …and the printing passes the pin check of the row the toggle sits on.
     const card = scryfallCardSchema.parse(printing);
@@ -111,6 +119,13 @@ describe("the double-faced crown references vs their printings (TODO 5.1d / 5.0d
       expect(dfcIconFamilyFromEffects(printings[ref!.scryfallId].frame_effects), ref!.name).toBe("sunmoon");
     }
     for (const key of ["r", "g", "m", "c"] as const) expect(crownReferenceFor("m15dfcbackleft", key), key).toBeNull();
+    // The colourless rows of the transform front and the ▼ back are their
+    // crowned ARTIFACT prints, under the key the page asks with.
+    expect(crownReferenceFor("m15dfcfront", "c")).toMatchObject({ set: "lci", collectorNumber: "256" });
+    expect(crownReferenceFor("m15dfcback", "c")).toMatchObject({ set: "fin", collectorNumber: "272" });
+    for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"] as const) {
+      expect(crownReferenceFor(template, "a"), template).toBeNull();
+    }
     // The ▼ back keeps its own red and gold prints (never BOT's vehicle backs).
     expect(crownReferenceFor("m15dfcback", "r")).toMatchObject({ set: "ecl", collectorNumber: "105" });
     expect(crownReferenceFor("m15dfcback", "m")).toMatchObject({ set: "fin", collectorNumber: "231" });
