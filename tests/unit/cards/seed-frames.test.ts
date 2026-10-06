@@ -72,6 +72,22 @@ describe("supabase/seed.sql verified frames", () => {
     }
   });
 
+  it("seeds the nine double-faced bodies and the portrait layouts in every colour, as production verified them (2026-10-06)", () => {
+    // supabase/seeds/10_dev_data.sql holds cards on the double-faced bodies
+    // (a transform pair, a modal spell // land): a preview branch that does
+    // not offer their frames shows the Transform and Modal kinds as "Soon"
+    // and cannot save an edit to those cards.
+    const combos = new Set(seededCombos());
+    const templates = [
+      "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+      "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+      "adventure", "aftermath", "flip",
+    ];
+    for (const template of templates) {
+      for (const colour of COLOR_KEYS) expect(combos.has(`${template}/${colour}`), `${template}/${colour}`).toBe(true);
+    }
+  });
+
   it("the snapshot count in the header is the number of seeded combos", () => {
     // Refreshing the list from production means refreshing the date and the
     // count beside it; a count that disagrees is a half-done refresh.

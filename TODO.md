@@ -78,8 +78,10 @@ work (4.8 fonts, 4.10 old borders, 4.23 era ink: a design pass and the
 owner's answers first). Walker follow-ups (4.5b, 4.19, 4.33, 4.33a, 5.13):
 ask the owner first. 6.29 stays the LAST task. Owner steps the repo can't
 show: the /news posts for the collector line and for double-faced cards.
-`supabase/seed.sql`'s production mirror (194 combos, 2026-09-30) lacks the 84
-ticks made since — its refresh is a small PR of its own.
+`supabase/seed.sql`'s production mirror was refreshed the same day (278
+combos: the 84 ticks made since 2026-09-30 added); the shared dev branch
+takes them only when the owner runs the file's `frame_reviews` block in its
+SQL editor.
 
 Status 2026-09-30 (main `f87657fb`, PRs to #440 merged; the items that
 shipped 2026-09-26 → 09-30 are ticked, or marked "partly" with what is left).

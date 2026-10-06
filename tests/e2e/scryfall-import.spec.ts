@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { signIn } from "./helpers/sign-in";
+import { everyColourOf, withFramesUnverified } from "./helpers/verified-frames";
 
 // ---------------------------------------------------------------------------
 // Scryfall import e2e (Phase 11 chunk 16 — scaffolded).
@@ -221,51 +222,10 @@ test.describe("Scryfall search → import", () => {
       .getByRole("radiogroup", { name: "Frame for the import" })
       .getByRole("radio", { name: label });
 
-  // The chooser reads the verified frame combos (frame_reviews), so a test
-  // that needs a combo UNpublished withdraws it for its own run instead of
-  // leaning on supabase/seed.sql, which mirrors production and only grows.
-  // (M15 is verified in every colour by scripts/seed-e2e.mjs.) Local stack
-  // only — the caller skips without it; the combos are restored after.
-  async function withFramesUnverified(
-    combos: ReadonlyArray<{ template: string; color_key: string }>,
-    run: () => Promise<void>,
-  ) {
-    const admin = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
-    const withdrawn: Array<{ template: string; color_key: string }> = [];
-    try {
-      // Inside the try: a withdrawal that fails part-way still restores the
-      // combos already withdrawn.
-      for (const combo of combos) {
-        const { data, error } = await admin
-          .from("frame_reviews")
-          .update({ verified: false })
-          .eq("template", combo.template)
-          .eq("color_key", combo.color_key)
-          .eq("verified", true)
-          .select("template, color_key");
-        if (error) throw new Error(`frame_reviews: ${error.message}`);
-        withdrawn.push(...(data ?? []));
-      }
-      await run();
-    } finally {
-      // A failed restore would leave the combo withdrawn for every later
-      // spec: say so rather than let it pass silently.
-      const failed: string[] = [];
-      for (const combo of withdrawn) {
-        const { error } = await admin
-          .from("frame_reviews")
-          .update({ verified: true })
-          .eq("template", combo.template)
-          .eq("color_key", combo.color_key);
-        if (error) failed.push(`${combo.template}/${combo.color_key}: ${error.message}`);
-      }
-      if (failed.length > 0) {
-        throw new Error(`frame_reviews: couldn't restore ${failed.join("; ")}`);
-      }
-    }
-  }
+  // A test that needs a combo UNpublished withdraws it for its own run
+  // (helpers/verified-frames.ts) instead of leaning on supabase/seed.sql,
+  // which mirrors production and only grows. (M15 is verified in every
+  // colour by scripts/seed-e2e.mjs.)
 
   // TODO 1.5 (with 1.18's owner decision): a printing whose frame PipGlyph
   // doesn't have — here a borderless Sheoldred, whose Scryfall art is only
@@ -634,11 +594,13 @@ test.describe("Scryfall search → import", () => {
 
 // ---------------------------------------------------------------------------
 // TODO 5.4: a transform printing lands on the double-faced bodies with both
-// faces' art. supabase/seed.sql mirrors production's frame_reviews, where no
-// transform combo is ticked, so the import goes through the ADMIN's frame
-// preview (the seeded e2e user is an admin; `previewFrames` unions the
-// bodies with the verified set and the save is a private frame preview —
-// the spec never writes frame_reviews). /api/scryfall/named is mocked with
+// faces' art, walked through the ADMIN's frame preview (the seeded e2e user
+// is an admin; `previewFrames` unions the bodies with the verified set and
+// the save is a private frame preview). Production verified the bodies on
+// 2026-10-06 and supabase/seed.sql mirrors that, so the spec withdraws the
+// two it previews for its own run (helpers/verified-frames.ts, local stack
+// only) — a save on a PUBLISHED combo is an ordinary save, not a preview.
+// /api/scryfall/named is mocked with
 // the patch the mapper emits for MID #7 Brutal Cathar // Moonrage Brute
 // once both bodies are verified (tests/unit/scryfall/dfc-imports.test.ts
 // pins that patch); /api/scryfall/import-art answers a same-origin image for
@@ -776,33 +738,35 @@ test.describe("Scryfall import → the double-faced bodies (TODO 5.4)", () => {
       });
     });
 
-    // The admin's frame preview lights both bodies (nothing is ticked on the
-    // seeded frame_reviews).
-    await signIn(page);
-    await page.goto("/create?previewFrames=m15dfcfront,m15dfcbackleft");
-    await expect(page.getByTestId("frame-preview-banner")).toBeVisible();
-    await page.getByRole("button", { name: /^search a real card/i }).click();
-    await page.locator('input[aria-label="Search Scryfall"]').fill("Brutal Cathar");
-    await page.getByRole("option", { name: /brutal cathar/i }).click();
-    await expect(page.getByText(/Will populate/)).toBeVisible();
-    await expect(page.getByRole("checkbox", { name: /also import artwork/i })).toBeChecked();
-    await page.getByRole("button", { name: /use as starting point/i }).click();
-    await expect(page.getByText("Imported Brutal Cathar // Moonrage Brute with artwork.")).toBeVisible();
-    expect([...artModes].sort()).toEqual(["art", "art-back"]);
+    // The admin's frame preview lights both bodies, withdrawn here so the
+    // walk is the preview's (the seed has them verified, as production does).
+    await withFramesUnverified(everyColourOf("m15dfcfront", "m15dfcbackleft"), async () => {
+      await signIn(page);
+      await page.goto("/create?previewFrames=m15dfcfront,m15dfcbackleft");
+      await expect(page.getByTestId("frame-preview-banner")).toBeVisible();
+      await page.getByRole("button", { name: /^search a real card/i }).click();
+      await page.locator('input[aria-label="Search Scryfall"]').fill("Brutal Cathar");
+      await page.getByRole("option", { name: /brutal cathar/i }).click();
+      await expect(page.getByText(/Will populate/)).toBeVisible();
+      await expect(page.getByRole("checkbox", { name: /also import artwork/i })).toBeChecked();
+      await page.getByRole("button", { name: /use as starting point/i }).click();
+      await expect(page.getByText("Imported Brutal Cathar // Moonrage Brute with artwork.")).toBeVisible();
+      expect([...artModes].sort()).toEqual(["art", "art-back"]);
 
-    // The Card step: the Transform kind, the sun / moon family.
-    await page
-      .getByRole("navigation", { name: /card editor steps/i })
-      .getByRole("button", { name: /^card$/i })
-      .click();
-    await expect(page.locator("summary").filter({ hasText: /card type\s*transform/i })).toBeVisible();
-    await expect(page.getByTestId("dfc-icon-family")).toContainText(/Sun/i);
+      // The Card step: the Transform kind, the sun / moon family.
+      await page
+        .getByRole("navigation", { name: /card editor steps/i })
+        .getByRole("button", { name: /^card$/i })
+        .click();
+      await expect(page.locator("summary").filter({ hasText: /card type\s*transform/i })).toBeVisible();
+      await expect(page.getByTestId("dfc-icon-family")).toContainText(/Sun/i);
 
-    // Save (a frame preview saves private) and read the row back.
-    const saveButton = page.getByRole("button", { name: /^save$/i });
-    await expect(saveButton).toBeEnabled();
-    await saveButton.dispatchEvent("click");
-    await page.waitForURL(/\/card\/.+\/edit\?.*previewFrames=/);
+      // Save (a frame preview saves private) and read the row back.
+      const saveButton = page.getByRole("button", { name: /^save$/i });
+      await expect(saveButton).toBeEnabled();
+      await saveButton.dispatchEvent("click");
+      await page.waitForURL(/\/card\/.+\/edit\?.*previewFrames=/);
+    });
 
     const { data: row, error } = await admin
       .from("cards")

@@ -136,14 +136,30 @@ describe("remixFrameFor — layout kinds land on their layout template", () => {
     expect(fable.mechanics.back_face).toBeUndefined();
   });
 
-  it("prints on the card type's standard frame while the layout frame is unpublished (production today)", () => {
-    // adventure / split / aftermath aren't verified on production: the
-    // remix saves where it always did (M15), now with the printed type.
-    expect(remixOf("eld-115")).toMatchObject({ template: "m15", cardType: "creature" });
-    expect(remixOf("woe-38")).toMatchObject({ template: "m15", cardType: "enchantment" });
-    expect(remixOf("akh-211")).toMatchObject({ template: "m15", cardType: "instant" });
+  it("adventure and aftermath are verified on production (2026-10-06): the remix lands there with no help", () => {
+    // supabase/seed.sql mirrors production, where both were ticked in every
+    // colour on 2026-10-06 — so the printing keeps its layout, second face
+    // included, against the production set alone.
+    expect(remixOf("eld-115")).toMatchObject({ template: "adventure", colorKey: "r", cardType: "creature" });
+    expect(remixOf("eld-115").mechanics.back_face).toMatchObject({ title: "Stomp", card_type: "instant" });
+    expect(remixOf("woe-38")).toMatchObject({ template: "adventure", colorKey: "w", cardType: "enchantment" });
+    expect(remixOf("akh-211")).toMatchObject({ template: "aftermath", colorKey: "u", cardType: "instant" });
+    expect(remixOf("akh-211").mechanics.back_face).toMatchObject({ title: "Memory", card_type: "sorcery" });
+  });
+
+  it("prints on the card type's standard frame while the layout frame is unpublished (split, production today)", () => {
+    // split isn't verified on production (TODO 4.21b rebuilds it first): the
+    // remix saves where it always did (M15), with the printed type…
+    expect(remixOf("dgm-123")).toMatchObject({ template: "m15", cardType: "sorcery" });
     // …and never becomes a double-faced card on it.
-    expect(remixOf("eld-115").mechanics.back_face).toBeUndefined();
+    expect(remixOf("dgm-123").mechanics.back_face).toBeUndefined();
+    // The same rule for the two layouts production has since verified, with
+    // their ticks taken away: back onto M15, one face.
+    const unpublished = without("adventure", "aftermath");
+    expect(remixOf("eld-115", unpublished)).toMatchObject({ template: "m15", cardType: "creature" });
+    expect(remixOf("woe-38", unpublished)).toMatchObject({ template: "m15", cardType: "enchantment" });
+    expect(remixOf("akh-211", unpublished)).toMatchObject({ template: "m15", cardType: "instant" });
+    expect(remixOf("eld-115", unpublished).mechanics.back_face).toBeUndefined();
   });
 });
 
