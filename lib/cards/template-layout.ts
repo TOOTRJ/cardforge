@@ -4252,7 +4252,8 @@ export const MDFC_FLIPSIDE_BACK: FlipsideSlots = {
  *  #114 Valki's front the B/R back's gold), the masters in their own — so
  *  each modal template publishes its masters' tabs as pieces,
  *  `<template>/strip/<key>.png` (scripts/lib/cc-frames.mjs MDFC_STRIP_CUTS:
- *  CC's Flipside mask's interior eroded 1 px, the tab's own pixels), and
+ *  CC's Flipside mask's interior eroded 1 px and snapped to the HD grid's
+ *  2 × 2 px blocks, the tab's own pixels), and
  *  both renderers draw the OTHER face's key's piece over the strip the
  *  master paints, under the strip's texts, when it differs from the
  *  master's own (a mono-colour card's bake is the master's bytes). The slot

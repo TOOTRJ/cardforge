@@ -2613,8 +2613,13 @@ TODO 5.1c, 2026-10-06 (`feat/dfc-strip-rider`; owner round 30: the strip's
 colour follows the prints after the ticks). On a modal card the prints
 paint the flipside strip in the colour of the face it DESCRIBES, while
 every master paints it in its own. An addition under the owner rule: no
-stored card changes (none sits on a modal body), no bump, no sweep, no
-badge; a mono-colour card keeps the master's bytes.
+stored card changes (none sits on a modal body), nothing re-bakes, no
+badge; a mono-colour card keeps the master's bytes. The visual gate records
+it as layout v41 (below). **Owner round 32 (2026-10-06): all five sheets
+signed off as built** — the rider draws only when the other face's colour
+differs from the master's own, the light back tabs keep Card Conjurer's
+tint, the brightness targets stay on STX (the decisions are at the end of
+this section).
 
 - **The rule, measured on every modal scan** (`scratchpad/dfc-1c/research/
   prints-rule2.json`: per-channel medians of the tab's text-free pixels at
@@ -2673,9 +2678,16 @@ badge; a mono-colour card keeps the master's bytes.
   pixels luma ≤ 12, their clear neighbours ≤ 1 — the fill is never
   reached). Alpha 0 / 255, never a partial pixel of the cut's own at either
   preset; the box x 44–701 × y 1866–1955 (the mask's bbox grown to an even
-  origin and size: 1:1 at HD, 2:1 at 750, the blocks aligned). Keys: w u b r g m a (spell bodies; `c` → `a`) / w u b r
-  g m c (land bodies; `l` → `c`), plus `l` on the spell bodies cut from
-  the land pair's grey `c` master (`l.png` / `lb.png` byte for byte). The
+  origin and size: 1:1 at HD, 2:1 at 750, the blocks aligned; the cut
+  itself spans x 48–699 × y 1868–1953). A piece carries its tab's own ◀
+  and the inner part of its outline (2,693–2,986 dark px), so their
+  anti-aliasing is against the piece's own fill; the outline's outer ring
+  stays the host master's. Keys: w u b r g m a (spell bodies; `c` → `a`) /
+  w u b r g m c (land bodies; `l` → `c`), plus `l` on the spell bodies cut
+  from the land pair's grey `c` master (`l.png` / `lb.png` byte for byte).
+  30 pieces, 60 objects, 54 distinct blobs (230,638 bytes): the spell
+  bodies' `l` is the land pair's `c`, and the gold BACK tab is one blob on
+  the spell back and the land back. The
   pieces are cut AFTER the template loop from the published masters
   (`localMaster`: this run's own output first, else a copy at the
   manifest's sha256) — the 120 modal PNG + WebP rebuilt from the cache
@@ -2703,90 +2715,147 @@ badge; a mono-colour card keeps the master's bytes.
   px blocks is 0 px at BOTH presets on all 28 own-key pieces (a real bake
   on a busy synthetic master proves the slot lands the blocks 1:1 at 750
   too), with the cut still inside the outline; those are the published
-  pieces now. Drawing always is a one-line change
-  (`resolveFrameOverlays` without the `mdfcStripOwnKey` skip) plus a scoped
-  bump for the gate's record; the skip rule stays as built — the owner's
-  call (c), with the residual argument gone. One tone source either way:
-  the pieces ARE the masters' tabs.
-- **The verified looks:** nothing changes on a mono-colour card, so the
-  ticks stand; a two-colour modal card is the only look the rider changes
-  (none ticked at the time of the PR).
-- **Open on the round-32 sheets:** (a) CC's tinted tabs — ours u
-  199,226,244 · r 255,223,201 · g 216,236,226 · m 255,235,163 on the backs
-  — against the prints' near-neutral ones (STX #147 216,221,229, #159
-  228,228,246, #151 226,227,246, KHM #168 233,234,235): a neutral-hue
-  variant is built in the scratchpad beside each print (30 more objects if
-  picked, never published without the owner); (b) the KHM-vs-STX luma
-  spread (the targets sit on STX); (c) STX #149's near-white gold tab and
-  the hybrid back's warm grey, followed as measured.
+  pieces now. So "always" became possible (a one-line change,
+  `resolveFrameOverlays` without the `mdfcStripOwnKey` skip — a mono card's
+  bake would be the same bytes either way) — and **the skip rule stays by
+  the owner's choice** (round 32, 2026-10-06): the rider draws ONLY when
+  the other face's colour differs from the master's own. One tone source
+  either way: the pieces ARE the masters' tabs.
+- **The compare page** (`lib/scryfall/reference-preview.ts`
+  `withComparedBack`, the 5.1c skeptic): viewed from the FRONT, a
+  reference's back used to carry content alone (`backFaceFromPatch`), and a
+  back with no colour follows the front's — so every two-colour reference
+  drew its own colour's tab beside a scan that prints the back's: all five
+  land-front references are pathways. On a MODAL front body under test
+  the back now carries its own printed colour (`referenceBackColorIdentity`:
+  a modal land's is its mana's) and the body its type derives (`bodyFor`),
+  as the import stores it; a walker back, which the import keeps off the
+  bodies (5.13), takes the colour alone and stays a legacy back (KHM #114's
+  front wears Tibalt's gold); a transform front, which draws nothing from
+  its back's colour, and every other template are untouched. Through
+  the real payload and Scryfall, the 51 references of the four faces:
+  `m15mdfcback` — all six primaries draw a rider (STX #150 r, #147 g, #148
+  g, #159 u, #151 u, MSH #18 w), the eight KHM alternates none (same-colour
+  cards); `m15mdfclandfront` — all five primaries (ZNR #259 b, #260 b, KHM
+  #252 r, ZNR #261 g, #258 w) and the three KHM alternates; `m15mdfcfront`
+  — `m` (MH3 #252 → `l`) and four alternates (STX #159 r, #150 w, #147 u,
+  MH3 #260 l), the five mono primaries and six KHM gods none;
+  `m15mdfclandback` — the five primaries none (a land back under a
+  same-colour spell), all eight pathway alternates one.
+- **The ticks:** v41 is NOT verification-neutral (below), so a tick made
+  on any of the four modal faces before it is KEPT — the row stays
+  verified, the creator and the import go on offering that face — and the
+  admin checklist flags it "Needs re-verification: the renderer changed
+  since layout v40 (now v41)" until the owner ticks the box again
+  (`verificationState`; `getVerifiedFrameKeys` reads `verified` alone).
+  Nothing is dropped; a mono-colour card's bake is unchanged.
+- **Owner round 32 (2026-10-06), on the five sheets: all signed off as
+  built.** (1) The rider draws only when the other face's colour differs
+  from the master's own — the skip rule stays although the snapped cut is
+  byte-identical at both presets. (2) The light back tabs KEEP Card
+  Conjurer's tint (ours u 199,226,244 · r 255,223,201 · g 216,236,226 · m
+  255,235,163 against the prints' near-neutral STX #147 216,221,229, #159
+  228,228,246, #151 226,227,246, KHM #168 233,234,235): no neutral-hue
+  variant — the one sketched in the scratchpad is not built into the
+  importer and nothing of it is published. (3) The brightness targets stay
+  on STX (the KHM scans read 5–13 lighter). STX #149's near-white gold tab
+  and the hybrid back's warm grey are followed as measured.
 - **Tests:** `tests/unit/frames/mdfc-strip-rider.test.ts` (the recipe, the
-  cut and its findings on a synthetic master, the key rule, what the
-  profiles declare and the resolver draws — mono none, the other face's
-  key, the split's gold, the hybrid's `l`, the land pair, the import's
-  literal `multicolor` — the snap on a synthetic mask (`snapToBlocks`:
-  whole blocks or none, the eroded map at a 1-px block), and, with the
-  masters on disk: every piece its master's tab (0 px, alpha binary,
-  nothing outside the snapped mask, 51,208 opaque), a fresh cut byte for
-  byte, the identity through the rasteriser at HD AND at 750 (0 px; the
-  un-snapped cut's 750 residual shown real)), `tests/unit/render/
-  mdfc-strip-rider-bake.test.tsx` (real bakes: the paths and the order
-  after the crown, the piece under the white / dark texts, the keep-out
-  diff, the 1:1 placement on a synthetic master at both presets),
+  cut and its findings on a synthetic master, the snap on a synthetic mask
+  (`snapToBlocks`: whole blocks or none), the key rule — the import's
+  literal `multicolor` included — what the profiles declare and the
+  resolver draws (mono none, the other face's key, the split's gold, the
+  hybrid's `l`, the land pair), and, with the bucket's PNGs on disk
+  (`FRAMES_BUILD_DIR`; CI fetches them from production or, before the
+  promote, the dev bucket, and a missing one fails there): every piece its
+  master's tab (0 px in colour, alpha binary), ONE cut for all thirty —
+  51,208 px in whole 2 × 2 blocks, its shape pinned by a sha256 — and the
+  identity through the bake's rasteriser at HD AND at 750 on the 28
+  own-key pieces (0 px; another key's piece repaints the tab and nothing
+  outside the box). None of that needs a Card Conjurer file; where this
+  machine's importer cache is (never in CI: those two cases SKIP there —
+  the first cut of this file asserted the cache and turned CI's unit job
+  red on 4600abaf) the cut is shown to be the Flipside mask's interior
+  eroded and snapped, a fresh cut reproduces every piece byte for byte and
+  the un-snapped cut's 750 residual is shown real),
+  `tests/unit/render/mdfc-strip-rider-bake.test.tsx` (real bakes: the
+  paths and the order after the crown, the piece under the white / dark
+  texts, the keep-out diff, the 1:1 placement on a synthetic master at both
+  presets), `tests/unit/components/mdfc-strip-rider-preview.test.tsx` (the
+  preview's twin), `tests/unit/scryfall/reference-preview-strip.test.ts`
+  (the compare page: a pathway, STX #147's and #149's shapes, a mono card,
+  KHM #114's walker back, a plain frame untouched),
   `tests/unit/cards/layout-version.test.ts` (v41: a sweep scoped to the
-  four faces, not neutral), `tests/unit/components/
-  mdfc-strip-rider-preview.test.tsx` (the preview's twin), the matrix's 13
-  `@strip-*` cases (new; the 14 existing two-colour-other-face modal cases
-  change under v41's scope, every mono case unchanged, 0 redefined),
-  `profiles-base.json` regenerated (the four overlays).
+  four faces, not neutral — a v40 tick on a modal face is stale, one on
+  m15 is not), the matrix's 13 `@strip-*` cases (new; the 14 existing
+  two-colour-other-face modal cases change under v41's scope, every mono
+  case unchanged, 0 redefined), `profiles-base.json` regenerated (the four
+  overlays).
 - **Layout v41** (`lib/cards/layout-version.ts`): the visual gate refuses a
   changed existing case without a bump, and the matrix already held
   two-colour-other-face modal cases (the Tibalt word case's B/R back, the
   `wu` / `wub` / `c` rows' two-colour and colourless land backs, the hybrid
   pair, the gold land pair) — template-scoped to the four modal faces,
   "sweep" as v40 (0 cards on any modal body: it re-bakes and badges
-  nothing; every other v40 card is stamped 41 unbaked by the cron), and
-  NOT verification-neutral (the 5.1c skeptic; the builder had it neutral
+  nothing; the cron stamps every other v40 card 41 without baking it), and
+  NOT verification-neutral (the 5.1c skeptic; the first cut had it neutral
   "because a tick is made on a mono-colour print"): no master, slot or
-  text moves, but the registry's references for the spell BACKS are STX's
-  modal cards — one colour per face, so their back's strip now takes the
-  front's colour — and the land FRONTS' are the pathways (each face its
-  own colour), and `m15mdfcfront/m`'s is MH3 #252 (a hybrid front over a
-  two-colour land back): the compare page's bake of those references
-  changes, so a tick made on them before v41 would have judged a look that
-  no longer renders. Only the five mono spell-front references and the
-  five land-back references bake the same. No modal face was ticked
-  anywhere when v41 shipped (production: 0 `frame_reviews` rows for the
-  four templates, anon-readable; the dev DB the same); the owner ticks at
-  v41.
+  text moves, but 12 of the 22 primary references — every spell-back and
+  land-front one, and the spell front's `m` — draw a rider on the compare
+  page now, and so do 15 alternates, the land back's eight among them (the
+  list above); a tick made there before v41 judged a look that no longer
+  renders. Every template has such a reference and a tick's scope is its
+  template, so the four faces' ticks are judged by the bump's own scope
+  (no `VERIFICATION_TEMPLATE_SCOPES` entry narrows it, as v38 / v39): kept
+  and flagged for a re-check, never dropped ("The ticks", above).
 
 - **Skeptic pass (2026-10-06, on 4600abaf):** the 60 objects re-fetched
   from the DEV bucket by manifest key (60 / 60 at the manifest's sha256 and
-  bytes); the four templates rebuilt through the committed importer into a
-  FRESH Card Conjurer cache (28 pack files fetched): 180 / 180 objects
-  byte-identical to the manifest (the 120 masters and the builder's 60
-  pieces) before the re-cut. The rule re-measured with own regions (the
-  luma-mode band of the tab's interior and two text-free edge bands) on
-  every modal scan: every number within 3 levels of the builder's, no
-  print contradicts the key table — STX #154's front (a black artifact
-  with a mono-GREEN back, {3}{G}{G}) prints green, not gold; all nine MH3
-  hybrid fronts on disk (#252, #254–261) read exactly 113,99,88; and MH3
-  #252's land back WEARS the grey land frame (its bars 161,147,138, its box
-  198,159,141 — not the gold land stand-in's 161,135,71), so the rule
-  "the frame the other face wears" holds literally there (its import onto
-  `m15mdfclandback/m` would be a 5.4 question, not this PR's). Found and
+  bytes, the first cut's and then the re-cut's); the four templates rebuilt
+  through the committed importer into a FRESH Card Conjurer cache (28 pack
+  files fetched): 180 / 180 objects byte-identical to the manifest before
+  the re-cut, the 120 masters still identical after it. The rule
+  re-measured with own regions (the luma-mode band of the tab's interior
+  and two text-free edge bands) on every modal scan: every number within 3
+  levels of the first measurement, no print contradicts the key table —
+  STX #154's front (a black artifact with a mono-GREEN back, {3}{G}{G})
+  prints green; all nine MH3 hybrid fronts on disk (#252, #254–261) read
+  exactly 113,99,88; MH3 #252's land back WEARS the grey land frame (its
+  bars 161,147,138, its box 198,159,141 — not the gold land stand-in's
+  161,135,71), so "the frame the other face wears" holds literally there;
+  the light back tabs follow the front's colour in a pale palette (a green
+  front: STX #147 216,221,229 = ZNR #189 216,220,227; a blue one: STX #151
+  / #159 226–228,227–228,245–246). The split pair masters' tabs are the
+  gold master's inside the cut (0 px on all 20; 104–126 px differ on the
+  mask's rim, outside it); the hybrid dress paints the FIRST colour's tab
+  with its tip lerped towards the second (778–887 px inside the cut), which
+  a rider always covers. Real bakes with the real masters, on main and on
+  the head (12 cards, both faces, 750 + HD): a mono card's and a split
+  pair's four PNGs byte-identical to main's; every ridden face differs on
+  0 px OUTSIDE the piece's box — a long rules text, a foil and an etched
+  card included — and its tab's fill is the key's. The preview in Chromium
+  at the HD width against the same bakes: the overlay's box x 44, y 1866,
+  658 × 90 exactly, the layer at z 5 under the word at z 22, the fill
+  within 1 level, the silhouette within 21 / 52 px of 14–15 thousand — the
+  WebP-against-PNG noise a mono card's master shows by itself. Found and
   fixed: `stripKeyOf` re-counted colour WORDS, so the colour chip's and the
-  import's literal `multicolor` (STX #149's back as `backFrameColorsFrom-
-  Scryfall` stores it) drew the artifact tab where the back is drawn gold
-  — it keys from `pickFrameColorKey` now; v41 was listed
-  verification-neutral although three of the four templates' references
-  change their compare bake (above); the builder's measuring copies of
-  `m15mdfcback/g.png` (`scratchpad/dfc-1c/frames-head`, `dfc-1d/frames-
-  all`) were the pre-recut master (sha 9d0a5a77…, tab 211,232,222 / 224.6)
-  while the manifest's is the 5.1d skeptic's re-cut (da8ce589…, tab
-  216,236,226 / 228.9) — the piece itself is cut from the true master (0
-  px), only the "ours" numbers were stale; and "no cut can block-align"
-  was wrong: the 2 × 2-snapped cut is 0 px at both presets (above), built
-  and published (60 new objects, the old 60 orphaned in the dev bucket).
+  import's literal `multicolor` (STX #149's back as
+  `backFrameColorsFromScryfall` stores it) drew the ARTIFACT tab where the
+  back is drawn gold — it keys from `pickFrameColorKey` now; the compare
+  page's front view never knew the back's colour ("The compare page",
+  above); v41 was listed verification-neutral; "no cut can block-align" was
+  wrong — the 2 × 2-snapped cut is 0 px at both presets, built and
+  published (60 new objects; the first cut's 60 stay in the dev bucket
+  unreferenced); CI's unit job was red on 4600abaf because two tests
+  asserted Card Conjurer's mask, which CI never has (the pieces themselves
+  were there: `frames-fetch` takes them from the dev bucket before the
+  promote); and the first measurement's copies of `m15mdfcback/g.png` were
+  the pre-recut master (tab 211,232,222 / 224.6) where the manifest's is
+  the 5.1d re-cut (216,236,226 / 228.9) — the piece was always cut from
+  the true one. Left alone, reported: the compare page draws the default
+  icon family on a transform body whatever the printing's (MID's backs on
+  `m15dfcbackleft` show ▼ for the moon) and its scorer bakes a front
+  without its cross-face block — both 5.1a's, neither this change's.
 
 ### The editor (5.2)
 

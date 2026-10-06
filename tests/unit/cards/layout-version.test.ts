@@ -1767,7 +1767,7 @@ describe("v41 — the modal flipside strip rider (TODO 5.1c)", () => {
     expect(classifyForSweep(at("m15mdfcfront", { layout_version: 41 }))).toBe("current");
   });
 
-  it("is NOT verification-neutral: the registry's references for the spell backs (STX's two-colour cards) and the land fronts (the pathways) change their compare bake, so a tick made on a modal face before v41 is stale; every other template's stays fresh", async () => {
+  it("is NOT verification-neutral: every one of the four faces has references whose compare render gains the rider (the spell backs' STX cards, the land fronts' pathways, the front's MH3 `m`, the land back's pathway alternates), so a tick made on a modal face before v41 is kept but stale; every other template's stays fresh", async () => {
     const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
     const { verificationState } = await import("@/lib/cards/frame-verification-state");
     expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(41);
@@ -1782,6 +1782,12 @@ describe("v41 — the modal flipside strip rider (TODO 5.1c)", () => {
     expect(verificationState(tick, "m15", "h", 41).stale).toBe(false);
     expect(verificationState(tick, "m15dfcfront", "h", 41).stale).toBe(false);
     expect(verificationState({ ...tick, verifiedLayoutVersion: 41 }, "m15mdfcback", "h", 41).stale).toBe(false);
+    // Flagged, never dropped: the row stays verified (what the creator's
+    // picker reads), with the reason the checklist prints.
+    const stale = verificationState(tick, "m15mdfcfront", "h", 41);
+    expect(stale).toMatchObject({ verified: true, stale: true, legacy: false });
+    expect(stale.reasons).toEqual(["the renderer changed since layout v40 (now v41)"]);
+    expect(verificationState(tick, "m15mdfclandback", "h", 41)).toMatchObject({ verified: true, stale: true });
     // No slot moves: the modal profiles' strip slots are 5.1b's; the rider's
     // slot is the piece's box, inside the painted strip's keep-out.
     expect(getFrameProfile("m15mdfcback").flipside?.keepOut).toEqual({ leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 });

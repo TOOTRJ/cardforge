@@ -579,13 +579,15 @@ export function resolveFrameOverlays(
 }
 
 /** The strip key a modal face's MASTER already paints (TODO 5.1c): the
- *  face's own colour key, `m` on a split pair master (its strip is the gold
- *  master's, byte for byte), null on the hybrid dress (its strip is the two
- *  colours' lerped — no piece equals it). The rider is drawn only when the
- *  other face's key differs: a mono-colour card's bake stays the master's
- *  bytes (at the 750 bake a piece over its own master is NOT byte-identical
- *  — the 2:1 resample blends the cut's edge on the chevron's diagonals —
- *  so the no-op is skipped, never drawn). */
+ *  face's own colour key, `m` on a split pair master (inside the piece's
+ *  cut its strip is the gold master's, byte for byte), null on the hybrid
+ *  dress (the first colour's tab, its tip lerped towards the second — no
+ *  piece equals it, so a rider always covers it). The rider is drawn ONLY
+ *  when the other face's key differs — the owner's choice (round 32,
+ *  2026-10-06): a mono-colour card draws no piece at all. Drawing it would
+ *  change nothing (the block-snapped cut is byte-identical over its own
+ *  master at HD and at the 750 bake, scripts/lib/cc-frames.mjs
+ *  stripRiderInterior), so the rule is a choice, not a necessity. */
 export function mdfcStripOwnKey(look: TwoColorLook | null, colorKey: string): string | null {
   if (!look) return colorKey;
   return look.dress === "hybrid" ? null : "m";
