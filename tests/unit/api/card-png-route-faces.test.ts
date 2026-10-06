@@ -152,6 +152,32 @@ function legacyCard() {
   return { ...card, back_face: back };
 }
 
+/** A MODAL double-faced card on 5.1b's bodies (the seeded `Tidewater
+ *  Reverie`): an instant on `m15mdfcfront`, its back a land on
+ *  `m15mdfclandback` in its own colour — the second kind of back a bake
+ *  writes (bakedBackOf), so `faces=both` must compose it like a transform. */
+function modalCard() {
+  return dfcCard({
+    title: "Tidewater Reverie",
+    cost: "{2}{U}",
+    card_type: "instant",
+    subtypes: [],
+    color_identity: ["blue"],
+    rules_text: "Return target spell or nonland permanent to its owner's hand.",
+    power: null,
+    toughness: null,
+    frame_style: { template: "m15mdfcfront", finish: "regular" },
+    back_face: {
+      title: "Tidewater Shoals",
+      card_type: "land",
+      subtypes: [],
+      rules_text: "As Tidewater Shoals enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {U}.",
+      frame_style: { template: "m15mdfclandback" },
+      color_identity: ["blue"],
+    },
+  });
+}
+
 async function download(query: string, headers: Record<string, string> = {}) {
   return GET(new NextRequest(`http://localhost/api/cards/${ID}/png?${query}`, { headers }), {
     params: Promise.resolve({ id: ID }),
@@ -439,6 +465,30 @@ describe("both faces in one PNG (TODO 5.3c)", () => {
     expect(state.render).toHaveBeenCalledTimes(1);
     expect(state.render.mock.calls[0][0]).toMatchObject({ title: "Elder Wolf", frameStyle: { template: "m15" }, dfc: null });
     await expectSideBySide("preset=default&corners=round");
+  });
+
+  it("a MODAL card (5.1b bodies, merged under this PR): the front // its land back compose the same way — the stored pair free, two live renders on the modal bodies paid", async () => {
+    state.card = modalCard();
+    const res = await download("preset=default&corners=round&faces=both");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toBe('attachment; filename="c-both.png"');
+    expect(state.fetched).toEqual([FRONT_BAKE, BACK_BAKE]);
+    expect(state.render).not.toHaveBeenCalled();
+    await expectSideBySide("preset=default&corners=round");
+    expect(state.render).not.toHaveBeenCalled();
+    // Paid: the front on the modal front body, the back on the modal LAND
+    // back in its own colour, both carrying the modal `dfc` block.
+    state.paid = true;
+    state.render.mockClear();
+    state.render.mockImplementation(async (card: { title?: string }, preset: "default" | "hd") => {
+      const { width, height } = RENDER_PRESETS[preset];
+      return new Response(new Uint8Array(await roundFace(width, height, card.title === "Tidewater Shoals" ? [0, 0, 0xff] : [0xff, 0xff, 0])));
+    });
+    const { both } = await expectSideBySide("preset=hd&corners=round");
+    expect([both.width, both.height]).toEqual([3060, 2100]);
+    const calls = state.render.mock.calls as [Rendered["card"] & { dfc?: { layout?: string; role?: string } | null; colorIdentity?: string[] }, string, unknown][];
+    expect(calls[0][0]).toMatchObject({ title: "Tidewater Reverie", frameStyle: { template: "m15mdfcfront" }, dfc: { layout: "modal", role: "front" } });
+    expect(calls[1][0]).toMatchObject({ title: "Tidewater Shoals", frameStyle: { template: "m15mdfclandback" }, colorIdentity: ["blue"], dfc: { layout: "modal", role: "back" } });
   });
 
   it("a card with no back to flip to answers 404 — nothing fetched or rendered", async () => {
