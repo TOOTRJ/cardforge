@@ -1,0 +1,1828 @@
+{
+ "pinned": "origin/main ed1a2cd0, layout v41",
+ "cases": {
+  "three short": [
+   {
+    "cost": "+1",
+    "text": "Draw a card."
+   },
+   {
+    "cost": "-2",
+    "text": "Return target creature to its owner's hand."
+   },
+   {
+    "cost": "-8",
+    "text": "You get an emblem with \"You have no maximum hand size.\""
+   }
+  ],
+  "1 / 1 / 5": [
+   {
+    "cost": "+1",
+    "text": "Scry 1."
+   },
+   {
+    "cost": "-2",
+    "text": "Draw a card."
+   },
+   {
+    "cost": "-8",
+    "text": "You get an emblem with \"At the beginning of your upkeep, exile the top three cards of your library. Until end of turn, you may play those cards, and you may spend mana as though it were mana of any color to cast them.\""
+   }
+  ],
+  "reaches the shield": [
+   {
+    "cost": "+1",
+    "text": "Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order."
+   },
+   {
+    "cost": "-3",
+    "text": "Return target creature card from your graveyard to your hand."
+   },
+   {
+    "cost": "-7",
+    "text": "Search your library for up to three creature cards, reveal them, put them into your hand, then shuffle. You gain 1 life for each card."
+   }
+  ],
+  "pips + reminder": [
+   {
+    "cost": "+1",
+    "text": "Add {B}{B}{B}. (Mana abilities don't use the stack.)"
+   },
+   {
+    "cost": "-2",
+    "text": "Target creature gets −{X}/−{X} until end of turn, where X is the number of {S} permanents you control."
+   },
+   {
+    "cost": "-6",
+    "text": "Search your library for up to {7} cards and put them into your hand."
+   }
+  ],
+  "a static ability's two paragraphs, accents": [
+   {
+    "cost": null,
+    "text": "Éowyn can be your commander.\nÉowyn can't be countered."
+   },
+   {
+    "cost": "+1",
+    "text": "Ölmir and Ñandú each draw a card."
+   },
+   {
+    "cost": "-4",
+    "text": "Destroy target creature. Its controller loses 2 life."
+   }
+  ],
+  "one ability": [
+   {
+    "cost": "0",
+    "text": "Create a 2/2 black Zombie creature token."
+   }
+  ],
+  "six abilities": [
+   {
+    "cost": "+2",
+    "text": "Untap target artifact."
+   },
+   {
+    "cost": "+1",
+    "text": "Draw a card."
+   },
+   {
+    "cost": "0",
+    "text": "Create a 0/0 colorless Construct artifact creature token."
+   },
+   {
+    "cost": "-1",
+    "text": "Urza deals 3 damage to any target."
+   },
+   {
+    "cost": "-2",
+    "text": "Exile target permanent. Its controller may search their library for a basic land card."
+   },
+   {
+    "cost": "-10",
+    "text": "You get an emblem with \"Artifacts you control have hexproof.\""
+   }
+  ],
+  "past the floor": [
+   {
+    "cost": "+1",
+    "text": "Look at the top five cards of your library. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom of your library in a random order. Then each opponent loses 1 life for each creature you control."
+   },
+   {
+    "cost": "-3",
+    "text": "Return up to two target creature cards from your graveyard to the battlefield. They gain haste until end of turn. At the beginning of the next end step, sacrifice them unless you pay {2}{B} for each. Then draw a card for each creature sacrificed this way."
+   },
+   {
+    "cost": "-9",
+    "text": "You get an emblem with \"Whenever a creature dies, return it to the battlefield under your control at the beginning of the next end step. It gains flying, lifelink and deathtouch, and it is a Zombie in addition to its other types. Whenever you cast a spell, copy it.\""
+   }
+  ],
+  "no abilities": []
+ },
+ "rows": {
+  "m15pw": {
+   "three short": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.27048260381593714,
+     0.36475869809203143,
+     0.36475869809203143
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "Return target creature to its owner's",
+       "hand."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"You have no",
+       "maximum hand size.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      161,
+      377,
+      594
+     ],
+     "default": [
+      0,
+      80,
+      189,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 7.654657687991021
+     },
+     {
+      "topPct": 70.75465768799103,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.322671156004489
+     },
+     {
+      "topPct": 81.07732884399552,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.322671156004489
+     }
+    ],
+    "digest": "4fe4e483ca32dc4f178a7a495f0803268185f326617ae7449c81587983f04372"
+   },
+   "1 / 1 / 5": {
+    "sizePx": 56,
+    "rowFractions": [
+     0.15656565656565657,
+     0.15656565656565657,
+     0.6868686868686869
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Scry 1."
+      ]
+     ],
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"At the",
+       "beginning of your upkeep, exile the",
+       "top three cards of your library. Until",
+       "end of turn, you may play those",
+       "cards, and you may spend mana as",
+       "though it were mana of any color to",
+       "cast them.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      93,
+      186,
+      594
+     ],
+     "default": [
+      0,
+      47,
+      93,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 67.53080808080809,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 71.96161616161616,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 19.43838383838384
+     }
+    ],
+    "digest": "dc83b7c46d23fb0519a561d52ef85fec490c987b909f8340e56530d23a6545ef"
+   },
+   "reaches the shield": {
+    "sizePx": 56,
+    "rowFractions": [
+     0.33333333333333337,
+     0.24074074074074078,
+     0.42592592592592593
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Look at the top three cards of your library.",
+       "Put one of them into your hand and the rest",
+       "on the bottom of your library in any order."
+      ]
+     ],
+     [
+      [
+       "Return target creature card from your",
+       "graveyard to your hand."
+      ]
+     ],
+     [
+      [
+       "Search your library for up to three",
+       "creature cards, reveal them, put",
+       "them into your hand, then shuffle.",
+       "You gain 1 life for each card."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      198,
+      341,
+      594
+     ],
+     "default": [
+      0,
+      99,
+      171,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 9.433333333333335
+     },
+     {
+      "topPct": 72.53333333333333,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 6.812962962962964
+     },
+     {
+      "topPct": 79.3462962962963,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 12.053703703703704
+     }
+    ],
+    "digest": "da91740a34ac0c021d7ef351394f43017624dccde97a6e80fef66c6f3bffbab5"
+   },
+   "pips + reminder": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.29797979797979796,
+     0.40404040404040403,
+     0.29797979797979796
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Add {b}{b}{b}. (Mana abilities don't use the",
+       "stack.)"
+      ]
+     ],
+     [
+      [
+       "Target creature gets −{x}/−{x} until end of",
+       "turn, where X is the number of {s}",
+       "permanents you control."
+      ]
+     ],
+     [
+      [
+       "Search your library for up to {7} cards",
+       "and put them into your hand."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      177,
+      417,
+      594
+     ],
+     "default": [
+      0,
+      88,
+      209,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.432828282828282
+     },
+     {
+      "topPct": 71.53282828282829,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 11.434343434343434
+     },
+     {
+      "topPct": 82.96717171717172,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.432828282828282
+     }
+    ],
+    "digest": "8f3b306dbc4092fc2592b0143fa5fada387a1f9461657515bd98f06f8712e7db"
+   },
+   "a static ability's two paragraphs, accents": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.39169472502805835,
+     0.2570145903479237,
+     0.35129068462401797
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Éowyn can be your commander."
+      ],
+      [
+       "Éowyn can't be countered."
+      ]
+     ],
+     [
+      [
+       "Ölmir and Ñandú each draw a card."
+      ]
+     ],
+     [
+      [
+       "Destroy target creature. Its controller",
+       "loses 2 life."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      233,
+      385,
+      594
+     ],
+     "default": [
+      0,
+      116,
+      193,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 11.084960718294052
+     },
+     {
+      "topPct": 74.18496071829405,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 7.27351290684624
+     },
+     {
+      "topPct": 81.45847362514029,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 9.94152637485971
+     }
+    ],
+    "digest": "b2276d43a6352fef86ad1c2a44d5aa329774f3b95f918c48e9dbbff978742a71"
+   },
+   "one ability": {
+    "sizePx": 64,
+    "rowFractions": [
+     1
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Create a 2/2 black Zombie creature",
+       "token."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      594
+     ],
+     "default": [
+      0,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 28.3
+     }
+    ],
+    "digest": "1e4f0d8374269750581c9ffe29482f43f2b3836d0a7923056cabbdba8e10f0eb"
+   },
+   "six abilities": {
+    "sizePx": 44,
+    "rowFractions": [
+     0.15656565656565657,
+     0.15656565656565657,
+     0.15656565656565657,
+     0.15656565656565657,
+     0.18686868686868688,
+     0.18686868686868688
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Untap target artifact."
+      ]
+     ],
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "Create a 0/0 colorless Construct artifact creature token."
+      ]
+     ],
+     [
+      [
+       "Urza deals 3 damage to any target."
+      ]
+     ],
+     [
+      [
+       "Exile target permanent. Its controller may search their",
+       "library for a basic land card."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"Artifacts you",
+       "control have hexproof.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      93,
+      186,
+      279,
+      372,
+      483,
+      594
+     ],
+     "default": [
+      0,
+      47,
+      93,
+      140,
+      186,
+      242,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 67.53080808080809,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 71.96161616161616,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 76.39242424242424,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 80.82323232323232,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 5.288383838383838
+     },
+     {
+      "topPct": 86.11161616161615,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 5.288383838383838
+     }
+    ],
+    "digest": "494c0bf3cdfcee289d5038178871acabe4533667924feeb891750ebc06cac948"
+   },
+   "past the floor": {
+    "sizePx": 42,
+    "rowFractions": [
+     0.31420765027322406,
+     0.31420765027322406,
+     0.37158469945355194
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": true,
+    "rows": [
+     [
+      [
+       "Look at the top five cards of your library. You may reveal a",
+       "creature card from among them and put it into your hand.",
+       "Put the rest on the bottom of your library in a random",
+       "order. Then each opponent loses 1 life for each creature",
+       "you control."
+      ]
+     ],
+     [
+      [
+       "Return up to two target creature cards from your graveyard",
+       "to the battlefield. They gain haste until end of turn. At the",
+       "beginning of the next end step, sacrifice them unless you",
+       "pay {2}{b} for each. Then draw a card for each creature",
+       "sacrificed this way."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"Whenever a creature",
+       "dies, return it to the battlefield under your",
+       "control at the beginning of the next end step. It",
+       "gains flying, lifelink and deathtouch, and it is a",
+       "Zombie in addition to its other types. Whenever",
+       "you cast a spell, copy it.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      187,
+      373,
+      594
+     ],
+     "default": [
+      0,
+      93,
+      187,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.892076502732241
+     },
+     {
+      "topPct": 71.99207650273225,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.892076502732241
+     },
+     {
+      "topPct": 80.88415300546448,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.51584699453552
+     }
+    ],
+    "digest": "2494567dad7a30f7344d96b032cac97d77f11167685752cf0bee88741665a7e7"
+   },
+   "no abilities": {
+    "sizePx": 64,
+    "rowFractions": [],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [],
+    "edges": {
+     "hd": [
+      0
+     ],
+     "default": [
+      0
+     ]
+    },
+    "stripes": [],
+    "digest": "ac16e15bec57d24e9517ec261f78c7acf9a7e094855cdf2058a3e913bd635311"
+   }
+  },
+  "m15borderlesspw": {
+   "three short": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.27048260381593714,
+     0.36475869809203143,
+     0.36475869809203143
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "Return target creature to its owner's",
+       "hand."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"You have no",
+       "maximum hand size.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      161,
+      377,
+      594
+     ],
+     "default": [
+      0,
+      80,
+      189,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 7.654657687991021
+     },
+     {
+      "topPct": 70.75465768799103,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.322671156004489
+     },
+     {
+      "topPct": 81.07732884399552,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.322671156004489
+     }
+    ],
+    "digest": "4fe4e483ca32dc4f178a7a495f0803268185f326617ae7449c81587983f04372"
+   },
+   "1 / 1 / 5": {
+    "sizePx": 56,
+    "rowFractions": [
+     0.15656565656565657,
+     0.15656565656565657,
+     0.6868686868686869
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Scry 1."
+      ]
+     ],
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"At the",
+       "beginning of your upkeep, exile the",
+       "top three cards of your library. Until",
+       "end of turn, you may play those",
+       "cards, and you may spend mana as",
+       "though it were mana of any color to",
+       "cast them.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      93,
+      186,
+      594
+     ],
+     "default": [
+      0,
+      47,
+      93,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 67.53080808080809,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 71.96161616161616,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 19.43838383838384
+     }
+    ],
+    "digest": "dc83b7c46d23fb0519a561d52ef85fec490c987b909f8340e56530d23a6545ef"
+   },
+   "reaches the shield": {
+    "sizePx": 56,
+    "rowFractions": [
+     0.33333333333333337,
+     0.24074074074074078,
+     0.42592592592592593
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Look at the top three cards of your library.",
+       "Put one of them into your hand and the rest",
+       "on the bottom of your library in any order."
+      ]
+     ],
+     [
+      [
+       "Return target creature card from your",
+       "graveyard to your hand."
+      ]
+     ],
+     [
+      [
+       "Search your library for up to three",
+       "creature cards, reveal them, put",
+       "them into your hand, then shuffle.",
+       "You gain 1 life for each card."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      198,
+      341,
+      594
+     ],
+     "default": [
+      0,
+      99,
+      171,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 9.433333333333335
+     },
+     {
+      "topPct": 72.53333333333333,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 6.812962962962964
+     },
+     {
+      "topPct": 79.3462962962963,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 12.053703703703704
+     }
+    ],
+    "digest": "da91740a34ac0c021d7ef351394f43017624dccde97a6e80fef66c6f3bffbab5"
+   },
+   "pips + reminder": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.29797979797979796,
+     0.40404040404040403,
+     0.29797979797979796
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Add {b}{b}{b}. (Mana abilities don't use the",
+       "stack.)"
+      ]
+     ],
+     [
+      [
+       "Target creature gets −{x}/−{x} until end of",
+       "turn, where X is the number of {s}",
+       "permanents you control."
+      ]
+     ],
+     [
+      [
+       "Search your library for up to {7} cards",
+       "and put them into your hand."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      177,
+      417,
+      594
+     ],
+     "default": [
+      0,
+      88,
+      209,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.432828282828282
+     },
+     {
+      "topPct": 71.53282828282829,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 11.434343434343434
+     },
+     {
+      "topPct": 82.96717171717172,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.432828282828282
+     }
+    ],
+    "digest": "8f3b306dbc4092fc2592b0143fa5fada387a1f9461657515bd98f06f8712e7db"
+   },
+   "a static ability's two paragraphs, accents": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.39169472502805835,
+     0.2570145903479237,
+     0.35129068462401797
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Éowyn can be your commander."
+      ],
+      [
+       "Éowyn can't be countered."
+      ]
+     ],
+     [
+      [
+       "Ölmir and Ñandú each draw a card."
+      ]
+     ],
+     [
+      [
+       "Destroy target creature. Its controller",
+       "loses 2 life."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      233,
+      385,
+      594
+     ],
+     "default": [
+      0,
+      116,
+      193,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 11.084960718294052
+     },
+     {
+      "topPct": 74.18496071829405,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 7.27351290684624
+     },
+     {
+      "topPct": 81.45847362514029,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 9.94152637485971
+     }
+    ],
+    "digest": "b2276d43a6352fef86ad1c2a44d5aa329774f3b95f918c48e9dbbff978742a71"
+   },
+   "one ability": {
+    "sizePx": 64,
+    "rowFractions": [
+     1
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Create a 2/2 black Zombie creature",
+       "token."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      594
+     ],
+     "default": [
+      0,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 28.3
+     }
+    ],
+    "digest": "1e4f0d8374269750581c9ffe29482f43f2b3836d0a7923056cabbdba8e10f0eb"
+   },
+   "six abilities": {
+    "sizePx": 44,
+    "rowFractions": [
+     0.15656565656565657,
+     0.15656565656565657,
+     0.15656565656565657,
+     0.15656565656565657,
+     0.18686868686868688,
+     0.18686868686868688
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Untap target artifact."
+      ]
+     ],
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "Create a 0/0 colorless Construct artifact creature token."
+      ]
+     ],
+     [
+      [
+       "Urza deals 3 damage to any target."
+      ]
+     ],
+     [
+      [
+       "Exile target permanent. Its controller may search their",
+       "library for a basic land card."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"Artifacts you",
+       "control have hexproof.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      93,
+      186,
+      279,
+      372,
+      483,
+      594
+     ],
+     "default": [
+      0,
+      47,
+      93,
+      140,
+      186,
+      242,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 67.53080808080809,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 71.96161616161616,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 76.39242424242424,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.430808080808081
+     },
+     {
+      "topPct": 80.82323232323232,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 5.288383838383838
+     },
+     {
+      "topPct": 86.11161616161615,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 5.288383838383838
+     }
+    ],
+    "digest": "494c0bf3cdfcee289d5038178871acabe4533667924feeb891750ebc06cac948"
+   },
+   "past the floor": {
+    "sizePx": 42,
+    "rowFractions": [
+     0.31420765027322406,
+     0.31420765027322406,
+     0.37158469945355194
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": true,
+    "rows": [
+     [
+      [
+       "Look at the top five cards of your library. You may reveal a",
+       "creature card from among them and put it into your hand.",
+       "Put the rest on the bottom of your library in a random",
+       "order. Then each opponent loses 1 life for each creature",
+       "you control."
+      ]
+     ],
+     [
+      [
+       "Return up to two target creature cards from your graveyard",
+       "to the battlefield. They gain haste until end of turn. At the",
+       "beginning of the next end step, sacrifice them unless you",
+       "pay {2}{b} for each. Then draw a card for each creature",
+       "sacrificed this way."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"Whenever a creature",
+       "dies, return it to the battlefield under your",
+       "control at the beginning of the next end step. It",
+       "gains flying, lifelink and deathtouch, and it is a",
+       "Zombie in addition to its other types. Whenever",
+       "you cast a spell, copy it.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      187,
+      373,
+      594
+     ],
+     "default": [
+      0,
+      93,
+      187,
+      297
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 63.1,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.892076502732241
+     },
+     {
+      "topPct": 71.99207650273225,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 8.892076502732241
+     },
+     {
+      "topPct": 80.88415300546448,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.51584699453552
+     }
+    ],
+    "digest": "2494567dad7a30f7344d96b032cac97d77f11167685752cf0bee88741665a7e7"
+   },
+   "no abilities": {
+    "sizePx": 64,
+    "rowFractions": [],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [],
+    "edges": {
+     "hd": [
+      0
+     ],
+     "default": [
+      0
+     ]
+    },
+    "stripes": [],
+    "digest": "ac16e15bec57d24e9517ec261f78c7acf9a7e094855cdf2058a3e913bd635311"
+   }
+  },
+  "m15borderlesspwtall": {
+   "three short": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.28233151183970856,
+     0.35883424408014575,
+     0.35883424408014575
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "Return target creature to its owner's",
+       "hand."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"You have no",
+       "maximum hand size.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      207,
+      469,
+      732
+     ],
+     "default": [
+      0,
+      103,
+      235,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 9.845303148581838
+     },
+     {
+      "topPct": 66.37387457715327,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 12.51306271142337
+     },
+     {
+      "topPct": 78.88693728857665,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 12.51306271142337
+     }
+    ],
+    "digest": "2ecb61a7a0c09d5dd9e1bcd59c639a7b4d47a2ca000c4ee509a7a8d0f277fa33"
+   },
+   "1 / 1 / 5": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.13570127504553736,
+     0.13570127504553736,
+     0.7285974499089254
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Scry 1."
+      ]
+     ],
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"At the",
+       "beginning of your upkeep, exile",
+       "the top three cards of your",
+       "library. Until end of turn, you",
+       "may play those cards, and you",
+       "may spend mana as though it",
+       "were mana of any color to cast",
+       "them.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      99,
+      199,
+      732
+     ],
+     "default": [
+      0,
+      50,
+      99,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.7320973198022385
+     },
+     {
+      "topPct": 61.26066874837367,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.7320973198022385
+     },
+     {
+      "topPct": 65.99276606817591,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 25.4072339318241
+     }
+    ],
+    "digest": "e15b31c4cf2559beb1fcd79ff2371c9d61f46cfbb7bf8e45e7042f2b63fc3ac1"
+   },
+   "reaches the shield": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.3907103825136612,
+     0.2185792349726776,
+     0.3907103825136612
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Look at the top three cards of your",
+       "library. Put one of them into your",
+       "hand and the rest on the bottom of",
+       "your library in any order."
+      ]
+     ],
+     [
+      [
+       "Return target creature card from your",
+       "graveyard to your hand."
+      ]
+     ],
+     [
+      [
+       "Search your library for up to three",
+       "creature cards, reveal them, put them",
+       "into your hand, then shuffle. You gain",
+       "1 life for each card."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      286,
+      446,
+      732
+     ],
+     "default": [
+      0,
+      143,
+      223,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 13.624629195940672
+     },
+     {
+      "topPct": 70.15320062451211,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 7.622170179547229
+     },
+     {
+      "topPct": 77.77537080405934,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 13.624629195940672
+     }
+    ],
+    "digest": "049933a644e4c2ea3d381addd0a63d3d9f9e89c4ab4fa4bbdf033f8d3f81061b"
+   },
+   "pips + reminder": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.3046448087431694,
+     0.3907103825136612,
+     0.3046448087431694
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Add {b}{b}{b}. (Mana abilities don't use the",
+       "stack.)"
+      ]
+     ],
+     [
+      [
+       "Target creature gets −{x}/−{x} until end of",
+       "turn, where X is the number of {s}",
+       "permanents you control."
+      ]
+     ],
+     [
+      [
+       "Search your library for up to {7} cards",
+       "and put them into your hand."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      223,
+      509,
+      732
+     ],
+     "default": [
+      0,
+      112,
+      254,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.623399687743952
+     },
+     {
+      "topPct": 67.15197111631538,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 13.624629195940672
+     },
+     {
+      "topPct": 80.77660031225605,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.623399687743952
+     }
+    ],
+    "digest": "4ec2b44fac245934332659327891a1cd2667b37a7207386d29433c8b4a7df0bc"
+   },
+   "a static ability's two paragraphs, accents": {
+    "sizePx": 64,
+    "rowFractions": [
+     0.3806921675774135,
+     0.27140255009107467,
+     0.34790528233151186
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Éowyn can be your commander."
+      ],
+      [
+       "Éowyn can't be countered."
+      ]
+     ],
+     [
+      [
+       "Ölmir and Ñandú each draw a card."
+      ]
+     ],
+     [
+      [
+       "Destroy target creature. Its controller",
+       "loses 2 life."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      279,
+      477,
+      732
+     ],
+     "default": [
+      0,
+      139,
+      239,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 13.275279729378092
+     },
+     {
+      "topPct": 69.80385115794952,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 9.464194639604475
+     },
+     {
+      "topPct": 79.268045797554,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 12.131954202446007
+     }
+    ],
+    "digest": "207ce6ac9f04572ab826de6824528618226dcf9a27f03921ea3b999fa9ff9e2d"
+   },
+   "one ability": {
+    "sizePx": 64,
+    "rowFractions": [
+     1
+    ],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Create a 2/2 black Zombie creature",
+       "token."
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      732
+     ],
+     "default": [
+      0,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 34.871428571428574
+     }
+    ],
+    "digest": "b954a01e1104d492b69442e2cb50605941860531134836631a8ca3ddde002f62"
+   },
+   "six abilities": {
+    "sizePx": 58,
+    "rowFractions": [
+     0.13661202185792348,
+     0.13661202185792348,
+     0.19672131147540983,
+     0.13661202185792348,
+     0.19672131147540983,
+     0.19672131147540983
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Untap target artifact."
+      ]
+     ],
+     [
+      [
+       "Draw a card."
+      ]
+     ],
+     [
+      [
+       "Create a 0/0 colorless Construct artifact",
+       "creature token."
+      ]
+     ],
+     [
+      [
+       "Urza deals 3 damage to any target."
+      ]
+     ],
+     [
+      [
+       "Exile target permanent. Its controller may",
+       "search their library for a basic land card."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"Artifacts",
+       "you control have hexproof.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      100,
+      200,
+      344,
+      444,
+      588,
+      732
+     ],
+     "default": [
+      0,
+      50,
+      100,
+      172,
+      222,
+      294,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.763856362217018
+     },
+     {
+      "topPct": 61.29242779078845,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.763856362217018
+     },
+     {
+      "topPct": 66.05628415300546,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 6.8599531615925065
+     },
+     {
+      "topPct": 72.91623731459796,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 4.763856362217018
+     },
+     {
+      "topPct": 77.68009367681498,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 6.8599531615925065
+     },
+     {
+      "topPct": 84.54004683840748,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 6.8599531615925065
+     }
+    ],
+    "digest": "8e7a8657044b84a754c74e5ef0d34ba7f60a88aa893c5c63776f23272de3eaf6"
+   },
+   "past the floor": {
+    "sizePx": 42,
+    "rowFractions": [
+     0.31420765027322406,
+     0.31420765027322406,
+     0.37158469945355194
+    ],
+    "lastRowInsetPct": 0.12400000000000005,
+    "clipped": false,
+    "rows": [
+     [
+      [
+       "Look at the top five cards of your library. You may reveal a",
+       "creature card from among them and put it into your hand.",
+       "Put the rest on the bottom of your library in a random",
+       "order. Then each opponent loses 1 life for each creature",
+       "you control."
+      ]
+     ],
+     [
+      [
+       "Return up to two target creature cards from your graveyard",
+       "to the battlefield. They gain haste until end of turn. At the",
+       "beginning of the next end step, sacrifice them unless you",
+       "pay {2}{b} for each. Then draw a card for each creature",
+       "sacrificed this way."
+      ]
+     ],
+     [
+      [
+       "You get an emblem with \"Whenever a creature",
+       "dies, return it to the battlefield under your",
+       "control at the beginning of the next end step. It",
+       "gains flying, lifelink and deathtouch, and it is a",
+       "Zombie in addition to its other types. Whenever",
+       "you cast a spell, copy it.\""
+      ]
+     ]
+    ],
+    "edges": {
+     "hd": [
+      0,
+      230,
+      460,
+      732
+     ],
+     "default": [
+      0,
+      115,
+      230,
+      366
+     ]
+    },
+    "stripes": [
+     {
+      "topPct": 56.52857142857143,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.956869633099142
+     },
+     {
+      "topPct": 67.48544106167057,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 10.956869633099142
+     },
+     {
+      "topPct": 78.44231069476972,
+      "leftPct": 8.5,
+      "widthPct": 83.5,
+      "heightPct": 12.957689305230291
+     }
+    ],
+    "digest": "65db8015546463582196ef47f3903b9fa0aad64b76c62a078da9812754a066a5"
+   },
+   "no abilities": {
+    "sizePx": 64,
+    "rowFractions": [],
+    "lastRowInsetPct": 0,
+    "clipped": false,
+    "rows": [],
+    "edges": {
+     "hd": [
+      0
+     ],
+     "default": [
+      0
+     ]
+    },
+    "stripes": [],
+    "digest": "ac16e15bec57d24e9517ec261f78c7acf9a7e094855cdf2058a3e913bd635311"
+   }
+  }
+ }
+}
