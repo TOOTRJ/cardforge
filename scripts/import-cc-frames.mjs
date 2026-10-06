@@ -132,7 +132,7 @@ import {
   sourceFilesFor,
   toRgba8,
   tonesFor,
-  insideMaskEroded,
+  stripRiderInterior,
   stripRiderFindings,
   stripRiderKeys,
   stripRiderSourceOf,
@@ -455,7 +455,9 @@ function localMaster(rel) {
 
 // The flipside strip riders (TODO 5.1c): each modal template's masters' tabs
 // cut through the pack's Flipside mask (the full-alpha interior eroded by
-// one pixel) into <out>/<template>/strip/<key>.png + .webp, from the
+// one pixel and snapped to the HD grid's 2 × 2 px blocks — a piece over its
+// own master is then byte-identical at HD and at the 750 bake) into
+// <out>/<template>/strip/<key>.png + .webp, from the
 // PUBLISHED masters (localMaster) — after the template loop, so a template
 // built in this run cuts from its own fresh output; the extra `l` key from
 // the land pair's grey `c` master.
@@ -479,7 +481,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     recipe[key] = describeStripRider(template, key, spec, sha);
     const { data: master, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     if (info.width !== OUT_W || info.height !== OUT_H) throw new Error(`${file} is ${info.width}×${info.height}, not ${OUT_W}×${OUT_H}`);
-    inside ??= insideMaskEroded(await rgba(await fetchCached(spec.mask), OUT_W, OUT_H), OUT_W, OUT_H, spec.erode);
+    inside ??= stripRiderInterior(await rgba(await fetchCached(spec.mask), OUT_W, OUT_H), OUT_W, OUT_H, spec);
     const piece = cutStripRider(master, inside, OUT_W, spec.box);
     const findings = stripRiderFindings(piece, master, inside, OUT_W, OUT_H, spec.box);
     for (const f of findings.failures) stripFailures.push(`${template}/strip/${key}: ${f}`);
@@ -492,6 +494,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       mask: spec.mask,
       box: spec.box,
       erodePx: spec.erode,
+      snapPx: spec.snap,
       keys: stripRiderKeys(spec),
       sources,
       output: "strip/<key>.png (+ .webp), the piece's box at 1:1",

@@ -1621,14 +1621,22 @@ function dfcBackTonesFor(body, monoTones) {
 // through CC's Flipside mask (`reminder.svg`, the whole tab from the
 // border's inner edge to the chevron's tip, so the ◀ and the outline stay
 // dark) — the mask's full-alpha interior, ERODED by one pixel so the cut runs
-// inside the tab's 4-px dark outline: a cross-colour rider then meets this
-// master's own outline on both sides of the cut (invisible), and the 750 px
-// bake's 2:1 resample blends outline over outline there (measured: the
-// plain mask's cut differs on 35 px at ≤ 32 levels at 750 for a piece drawn
-// over its own master, the eroded cut on 2–3 px at ≤ 4 levels — never 0 on
-// the chevron's diagonals; 0 px at HD with either). The piece's box is
-// x 44–701 × y 1866–1955 at HD (the mask's bbox 45–701 × 1866–1955 grown
-// to an even origin and size, so the slot maps 1:1 at HD and 2:1 at 750).
+// inside the tab's 4-px dark outline (a cross-colour rider then meets this
+// master's own outline on both sides of the cut: the outermost ring of the
+// tab is luma 0 on every master, so the seam is black on black), and then
+// SNAPPED to the 2 × 2 pixel blocks of the HD grid (a block is kept whole
+// when every pixel of it is inside the eroded interior, else dropped —
+// `snapToBlocks`, `stripRiderInterior`): the 750 px bake's 2:1 resample
+// reads exactly one block per pixel, so the piece's alpha lands 0 / 255
+// there too and a piece drawn over its own master is byte-identical at HD
+// AND at 750 (measured through the bake's rasteriser on all 28 own-key
+// pieces: 0 px at both; the un-snapped eroded cut was 1–6 px at ≤ 7 levels
+// at 750 on the chevron's diagonals, the plain mask's cut 35 px at ≤ 45).
+// The snapped cut's edge stays in the outline (its opaque edge pixels luma
+// ≤ 12, their clear neighbours ≤ 1 — the fill is never reached: eroding by
+// three or more would). The piece's box is x 44–701 × y 1866–1955 at HD
+// (the mask's bbox 45–701 × 1866–1955 grown to an even origin and size, so
+// the slot maps 1:1 at HD and 2:1 at 750, and the blocks stay aligned).
 // Keys: a template's own colour keys, plus `l` on the SPELL bodies — the
 // grey land modal's tab (`l.png` / `lb.png`, the land pair's `c` master byte
 // for byte) for a two-colour LAND other face (MH3 #252–261's ten hybrid
@@ -1643,13 +1651,16 @@ function dfcBackTonesFor(body, monoTones) {
 export const MDFC_STRIP_BOX = Object.freeze({ x: 44, y: 1866, width: 658, height: 90 });
 /** The cut runs this many px inside the mask's full-alpha interior. */
 export const MDFC_STRIP_ERODE_PX = 1;
+/** The cut is then snapped to blocks this many px square on the HD grid
+ *  (2 = the 750 bake's 2:1 resample reads one block per pixel). */
+export const MDFC_STRIP_SNAP_PX = 2;
 const MDFC_STRIP_SPELL_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "a"]);
 const MDFC_STRIP_LAND_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "c"]);
 /** A template's strip spec: the mask, the box, the erosion, its own keys and
  *  the extra keys cut from ANOTHER published master (`l` from the land
  *  pair's grey `c`). */
 function mdfcStripCut(keys, extra) {
-  return Object.freeze({ mask: MODAL_MASK.reminder, box: MDFC_STRIP_BOX, erode: MDFC_STRIP_ERODE_PX, keys, ...(extra ? { extra: Object.freeze(extra) } : {}) });
+  return Object.freeze({ mask: MODAL_MASK.reminder, box: MDFC_STRIP_BOX, erode: MDFC_STRIP_ERODE_PX, snap: MDFC_STRIP_SNAP_PX, keys, ...(extra ? { extra: Object.freeze(extra) } : {}) });
 }
 export const MDFC_STRIP_CUTS = Object.freeze({
   m15mdfcfront: mdfcStripCut(MDFC_STRIP_SPELL_KEYS, { l: "m15mdfclandfront/c" }),
@@ -1672,12 +1683,12 @@ export function stripRiderSourceOf(template, key, spec) {
 /** How provenance prints one strip piece's recipe. */
 export function describeStripRider(template, key, spec, sha) {
   return [
-    `${stripRiderSourceOf(template, key, spec)}.png (the published master, sha256 ${sha.slice(0, 12)}) cut at x ${spec.box.x}–${spec.box.x + spec.box.width - 1} × y ${spec.box.y}–${spec.box.y + spec.box.height - 1} through the full-alpha interior of ${spec.mask} eroded by ${spec.erode} px (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel)`,
+    `${stripRiderSourceOf(template, key, spec)}.png (the published master, sha256 ${sha.slice(0, 12)}) cut at x ${spec.box.x}–${spec.box.x + spec.box.width - 1} × y ${spec.box.y}–${spec.box.y + spec.box.height - 1} through the full-alpha interior of ${spec.mask} eroded by ${spec.erode} px and snapped to ${spec.snap} × ${spec.snap} px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)`,
   ];
 }
 
 const MDFC_STRIP_NOTE =
-  "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline; drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress";
+  "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress";
 
 const DFC_PAIR_NOTE =
   "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face";
@@ -2895,12 +2906,43 @@ export function insideMaskEroded(mask, width, height, erodePx) {
 }
 
 /**
+ * A 0/1 map snapped to `block` × `block` px blocks aligned to the image's
+ * origin: a block is kept whole when every pixel of it is set, else dropped
+ * (TODO 5.1c: with `block` 2 the 750 bake's 2:1 resample reads exactly one
+ * block per output pixel, so the cut's alpha lands 0 / 255 there too). A
+ * `block` of 1 is the map itself.
+ */
+export function snapToBlocks(map, width, height, block) {
+  if (!(Number.isInteger(block) && block >= 1)) throw new Error(`snapToBlocks: bad block ${block}`);
+  if (map.length !== width * height) throw new Error(`snapToBlocks: the map is not ${width}x${height}`);
+  if (block === 1) return map;
+  const out = new Uint8Array(width * height);
+  for (let y = 0; y + block <= height; y += block) {
+    for (let x = 0; x + block <= width; x += block) {
+      let all = true;
+      for (let dy = 0; dy < block && all; dy += 1) for (let dx = 0; dx < block; dx += 1) if (!map[(y + dy) * width + x + dx]) { all = false; break; }
+      if (!all) continue;
+      for (let dy = 0; dy < block; dy += 1) for (let dx = 0; dx < block; dx += 1) out[(y + dy) * width + x + dx] = 1;
+    }
+  }
+  return out;
+}
+
+/** The strip rider's cut for a template's spec (MDFC_STRIP_CUTS): the
+ *  mask's full-alpha interior, eroded by `spec.erode` px and snapped to
+ *  `spec.snap`-px blocks of the HD grid. `mask` is raw RGBA at width ×
+ *  height. */
+export function stripRiderInterior(mask, width, height, spec) {
+  return snapToBlocks(insideMaskEroded(mask, width, height, spec.erode), width, height, spec.snap);
+}
+
+/**
  * The strip rider piece of one master (TODO 5.1c): `box` cropped out of the
  * master's 8-bit RGBA, the colour the master's everywhere, the alpha the
  * master's where `inside` (insideMaskEroded) is set and 0 elsewhere — never
  * a partial pixel of the cut's own, so a piece drawn 1:1 over its master is
- * the master (0 px differ at HD; the 750 bake's resample blends the tab's
- * outline over itself on the chevron's diagonals, 2–3 px at ≤ 4 levels).
+ * the master (0 px differ at HD, and at the 750 bake too when `inside` is
+ * the block-snapped interior of stripRiderInterior).
  */
 export function cutStripRider(master, inside, width, box) {
   const out = Buffer.alloc(box.width * box.height * 4);

@@ -4,7 +4,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { backPreviewData, frontPreviewData } from "@/lib/cards/faces";
 import { MDFC_FLIPSIDE_FRONT, MDFC_STRIP_RIDER_FRONT } from "@/lib/cards/template-layout";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
-import { MDFC_STRIP_BOX, cutStripRider, insideMaskEroded } from "@/scripts/lib/cc-frames.mjs";
+import { MDFC_STRIP_BOX, MDFC_STRIP_CUTS, cutStripRider, stripRiderInterior } from "@/scripts/lib/cc-frames.mjs";
 
 // ---------------------------------------------------------------------------
 // TODO 5.1c on REAL bakes: the modal flipside strip rider. The masters live
@@ -21,8 +21,9 @@ import { MDFC_STRIP_BOX, cutStripRider, insideMaskEroded } from "@/scripts/lib/c
 //   • the painted strip stays the rules keep-out it was: a long rules text
 //     bakes the same pixels with the rider as without, outside the box;
 //   • the slot lands the piece 1:1 through Satori + the rasteriser: a piece
-//     cut from a synthetic master's tab and drawn back over it changes 0 px
-//     at HD, and at the 750 bake only the cut's resampled edge.
+//     cut from a synthetic master's tab (the spec's eroded, block-snapped
+//     interior) and drawn back over it changes 0 px at HD AND at the 750
+//     bake — the 2:1 resample reads one whole block per pixel.
 // ---------------------------------------------------------------------------
 
 const stand = vi.hoisted(() => ({ grey: "", plate: "", crown: "", strip: "" as string | null, master: null as string | null, overlays: [] as string[], masters: [] as string[] }));
@@ -221,7 +222,7 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
     }
   }, 120_000);
 
-  it("the slot lands the piece 1:1: a piece cut from a synthetic master's tab and drawn back over it changes 0 px at HD; at the 750 bake only the cut's resampled edge", async () => {
+  it("the slot lands the piece 1:1: a piece cut from a synthetic master's tab (the spec's snapped interior) and drawn back over it changes 0 px at HD and at the 750 bake", async () => {
     // A 1500 × 2100 master with a deterministic texture everywhere (a busy
     // strip zone), and a tab-shaped mask: the rectangle x 45–660 × y 1866–
     // 1955 with a 40-px chevron tip, a 128 rim round it.
@@ -246,7 +247,7 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
         else if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inTab(x + dx, y + dy))) mask[o + 3] = 128;
       }
     }
-    const inside = insideMaskEroded(mask, W, H, 1);
+    const inside = stripRiderInterior(mask, W, H, MDFC_STRIP_CUTS.m15mdfcfront);
     const piece = cutStripRider(master, inside, W, MDFC_STRIP_BOX);
     const masterPng = await sharp(master, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer();
     const piecePng = await sharp(piece, { raw: { width: MDFC_STRIP_BOX.width, height: MDFC_STRIP_BOX.height, channels: 4 } }).png().toBuffer();
@@ -259,17 +260,11 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
         stand.strip = null;
         const bare = await bake(frontPreviewData(card()), preset);
         const d = differing(ridden, bare, box(s));
-        expect(d.outside, `${preset}: outside the box`).toBe(0);
-        if (preset === "hd") {
-          expect(d, "HD: the piece is the master, pixel for pixel, where it lands").toEqual({ inside: 0, outside: 0, max: 0 });
-        } else {
-          // The 2:1 resample across the cut: only the cut's edge pixels differ
-          // (the synthetic master has no uniform outline for the cut to run
-          // inside, so every edge pixel moves — the real pieces' residual is
-          // 1–6 px, tests/unit/frames/mdfc-strip-rider.test.ts).
-          expect(d.inside).toBeGreaterThan(0);
-          expect(d.inside).toBeLessThanOrEqual(1500);
-        }
+        // The piece is the master, pixel for pixel, where it lands — at HD
+        // (1:1) and at 750 (2:1: the block-snapped cut's alpha lands 0 / 255
+        // on every output pixel, so even this busy synthetic texture, which
+        // has no uniform outline for the cut to hide in, blends nothing).
+        expect(d, `${preset}: the piece over its own master`).toEqual({ inside: 0, outside: 0, max: 0 });
       }
     } finally {
       stand.master = null;
