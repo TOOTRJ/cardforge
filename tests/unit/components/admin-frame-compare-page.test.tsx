@@ -111,6 +111,7 @@ vi.mock("@/components/admin/frame-template-signoff-page", () => ({ FrameTemplate
 import AdminFrameComparePage from "@/app/(app)/admin/frame-compare/page";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { resolveFrameOverlays } from "@/lib/cards/anatomy";
+import { crownReferenceFor } from "@/lib/cards/crown";
 import { frontPreviewData } from "@/lib/cards/faces";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
@@ -126,7 +127,7 @@ import type { FrameTemplate } from "@/types/card";
 const REFERENCE = FRAME_REFERENCES.m15.w!;
 const SCAN = "https://cards.scryfall.io/png/front/a/b/scan.png";
 
-async function renderPage(params: { template?: string; color?: string; ref?: string; face?: string }) {
+async function renderPage(params: { template?: string; color?: string; ref?: string; face?: string; legendary?: string }) {
   const tree = await AdminFrameComparePage({ searchParams: Promise.resolve(params) });
   return render(tree);
 }
@@ -490,6 +491,70 @@ describe("/admin/frame-compare — the page and the Score button are handed ONE 
     const drawn = previewDraws(shown);
     expect(drawn).toEqual(draws);
     expect(bakeOverlays(baked)).toEqual(drawn.overlays);
+  });
+
+  it("the Legendary toggle's crowned print carries its family too: VOW #21 draws the sun on its front and the moon on its back, over the crown", async () => {
+    // VOW #21 Katilda, Dawnhart Martyr // Katilda's Rising Dawn as Scryfall
+    // serves it (2026-10-06, trimmed) — `legendary` + `sunmoondfc`: the
+    // crowned print of the transform front's and the 2016–22 back's white
+    // rows (lib/cards/crown.ts). It drew the ▲ / the ▼ like every sun /
+    // moon printing; the page's own switches (the crown) ride beside the
+    // family.
+    const id = "0ef240aa-2a88-4ec4-888a-918466372adb";
+    expect(crownReferenceFor("m15dfcfront", "w")?.scryfallId).toBe(id);
+    expect(crownReferenceFor("m15dfcbackleft", "w")?.scryfallId).toBe(id);
+    const png = (face: "front" | "back") => `https://cards.scryfall.io/png/${face}/0/e/${id}.png`;
+    scryfall.cards.set(id, {
+      id,
+      name: "Katilda, Dawnhart Martyr // Katilda's Rising Dawn",
+      layout: "transform",
+      set: "vow",
+      collector_number: "21",
+      rarity: "rare",
+      frame: "2015",
+      frame_effects: ["legendary", "sunmoondfc"],
+      border_color: "black",
+      color_identity: ["W"],
+      type_line: "Legendary Creature — Spirit Warlock // Legendary Enchantment — Aura",
+      image_status: "highres_scan",
+      card_faces: [
+        {
+          name: "Katilda, Dawnhart Martyr",
+          mana_cost: "{1}{W}{W}",
+          type_line: "Legendary Creature — Spirit Warlock",
+          oracle_text: "Flying, lifelink, protection from Vampires",
+          colors: ["W"],
+          power: "*",
+          toughness: "*",
+          image_uris: { png: png("front") },
+        },
+        {
+          name: "Katilda's Rising Dawn",
+          mana_cost: "",
+          type_line: "Legendary Enchantment — Aura",
+          oracle_text: "Enchant creature",
+          colors: ["W"],
+          color_indicator: ["W"],
+          image_uris: { png: png("back") },
+        },
+      ],
+    });
+
+    await renderPage({ template: "m15dfcbackleft", color: "w", legendary: "1" });
+    const back = compare.preview as CardPreviewData;
+    expect(back.title).toBe("Katilda's Rising Dawn");
+    expect(back.frameStyle).toMatchObject({ template: "m15dfcbackleft", dfcIcon: "sunmoon", crown: true });
+    expect(back.dfc).toMatchObject({ layout: "transform", role: "back", icon: "sunmoon" });
+    expect(previewDraws(back)).toEqual({ overlays: ["crown:w", "dfcIcon:moon"], reversePt: null, stripWord: null });
+    cleanup();
+
+    await renderPage({ template: "m15dfcfront", color: "w", legendary: "1" });
+    const front = compare.preview as CardPreviewData;
+    expect(front.title).toBe("Katilda, Dawnhart Martyr");
+    expect(front.frameStyle).toMatchObject({ template: "m15dfcfront", dfcIcon: "sunmoon", crown: true });
+    // The back is an Aura: the grey tab prints empty (owner decision Q7).
+    expect(front.dfc).toMatchObject({ layout: "transform", role: "front", icon: "sunmoon", otherFace: { printsPt: false } });
+    expect(previewDraws(front)).toEqual({ overlays: ["crown:w", "dfcIcon:sun"], reversePt: null, stripWord: null });
   });
 
   it("a single-faced reference: the same object too, with no block on either", async () => {
