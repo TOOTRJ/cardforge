@@ -648,20 +648,51 @@ export type FrameProfile = {
     stripeAHex: string;
     stripeBHex: string;
   };
-  /** Saga chapter rail. When set, the card's rules text is parsed into chapters
-   *  (parseChapters in lib/cards/card-display) and rendered as stacked rows — a
-   *  Roman-numeral marker badge + ability text — inside this rect, REPLACING the
-   *  normal rules box. The Saga's art is a separate right-column artSlot. */
+  /** Saga chapter rail (TODO 4.21c = 3.7). When set, the card's rules text is
+   *  parsed into a reminder block and chapters (parseChapters in
+   *  lib/cards/card-display) and drawn as the printed rail — REPLACING the
+   *  normal rules box: the reminder (the intro) in its own block, then one
+   *  row per chapter, each sized by its text and never shorter than its
+   *  stack of chapter badges, a divider at each row's top. The geometry is
+   *  the frame's (card percents, HD px in the comments); the layout that
+   *  turns it into rows, lines, badges and dividers for both renderers is
+   *  lib/cards/saga-rail.ts sagaRail(). The Saga's art is a separate
+   *  right-column artSlot. */
   chapters?: {
+    /** The chapter TEXT column, from the rail's top — where the rows start
+     *  on a saga with no reminder block — to its foot. */
     rect: Rect;
-    /** Ability-text size, as a fraction of card width. */
+    /** Chapter-text ceiling, as a fraction of card width: the top of the
+     *  rules ladder the rows share. */
     sizePct: number;
+    /** The chapter text's line pitch (× the size); RULES_TEXT's when unset. */
+    lineHeight?: number;
     textColorHex: string;
-    /** Chapter-number badge fill + text colors. */
-    markerFillHex: string;
-    markerTextHex: string;
-    /** Row divider line color. */
-    dividerHex: string;
+    /** The reminder block above chapter I: its box (fixed — a long reminder
+     *  steps down the ladder inside it, it never pushes the rows), its
+     *  ceiling and its line pitch. */
+    intro: { rect: Rect; sizePct: number; lineHeight?: number };
+    /** Where the rows start UNDER a reminder block (card %H): the first
+     *  divider. Without one they start at `rect`'s top. */
+    rowsTopPct: number;
+    /** The chapter badge — a bitmap both renderers draw (a frames-bucket
+     *  object; frameAssetPathsFor preloads it): its left edge and size, the
+     *  centre-to-centre pitch of a stack (roomy while the rows have room,
+     *  down to the tight one before the text steps down), and its numeral. */
+    badge: {
+      assetPath: string;
+      leftPct: number;
+      widthPct: number;
+      heightPct: number;
+      /** Stack pitch, card %H: [tight, roomy]. */
+      pitchPct: { min: number; max: number };
+      /** The numeral's size (fraction of card width) and ink. */
+      numeralSizePct: number;
+      numeralColorHex: string;
+    };
+    /** The row divider — the pack's bitmap, drawn centred on each row's top
+     *  edge (a first row at the rail's own top has none). */
+    divider: { assetPath: string; leftPct: number; widthPct: number; heightPct: number };
   };
   /** Adventure (Eldraine) sub-panel. When set, the frame is a creature whose
    *  lower text area is an open storybook: this LEFT page holds an "adventure"
@@ -964,8 +995,6 @@ export function loyaltyBadgeShapeFor(
 export function loyaltyBadgeAssetFor(cost: string): string {
   return LOYALTY_BADGE_ASSETS[loyaltyBadgeShapeFor(cost)];
 }
-
-export const SAGA_MARKER_POINTS = "0,0 100,0 100,62 50,100 0,62";
 
 const INK_DARK = "#17120c";
 const INK_DARK_SOFT = "#2a2118";
@@ -2629,27 +2658,54 @@ const BATTLE: FrameProfile = {
   },
 };
 
-// Saga — the M15 Saga frame: a cream chapter rail on the LEFT (the parsed
-// chapters replace the normal rules box) and a tall art column on the RIGHT,
-// with a title bar (name + cost) on top and a type bar at the bottom. Source:
-// magic-modules.mse-include/cards/375 m15 saga cut.
+/** The saga's chapter-badge stack pitch, HD px (centre to centre): tight
+ *  (LTC #58, WHO #99) and roomy (DOM #21, THB #160) — see SAGA.chapters. Even,
+ *  so the 750 px bake draws exactly half. */
+export const SAGA_BADGE_PITCH_PX = { min: 138, max: 160 } as const;
+/** The chapter numeral's size, HD px (MPlantin; the prints' Plantin semibold
+ *  is TODO 4.8). */
+export const SAGA_NUMERAL_SIZE_PX = 72;
+/** The saga type line's print offset, a fraction of the card's width
+ *  (TextSlot.dy): 9.3 px down at HD (see SAGA.type). */
+const SAGA_TYPE_PRINT_DY = 9.3 / 1500;
+
+// Saga — the M15 Saga frame: the chapter rail on the LEFT (the reminder
+// block, then the chapters down a ribbon that carries their numbered badges —
+// they replace the normal rules box) and a tall art column on the RIGHT, with
+// a title bar (name + cost) on top and a type bar at the bottom. Masters:
+// Card Conjurer's 'Regular Frames' saga pack, native 1500 × 2100 (TODO 4.21c
+// = 3.7, scripts/lib/cc-frames.mjs CC_TEMPLATES.saga) — the 375 px MSE cut
+// had no ribbon and a window that started 26 px left of the prints'.
 // Layout v32: printed sagas set the name and type line at M15's sizes (81 /
 // 68 px on DOM #21 / #90 / #122; ours were 64 / 52) and their pips at M15's
-// ~70 px (owner decision 2026-09-28). Both bands keep their baseline — the
-// name's is the prints' (184.7 px); the type line's print offset (~11 px
-// lower) waits for the Card Conjurer re-source (TODO 4.21).
+// ~70 px (owner decision 2026-09-28). The name keeps the prints' baseline
+// (184.7 px); the type line took its print offset with the CC masters.
 const SAGA: FrameProfile = {
   label: "Saga",
   costSizePct: COST_DISC_PCT,
-  // MSE m15-saga spec: image 188,59 → 345,438; rail text from 60 to 437
-  // (badges at left 30, text indented to 45); type at 444.
-  artSlot: { topPct: 11.3, leftPct: 50.1, widthPct: 41.9, heightPct: 72.5 },
+  // The saga's title bar is M15's (the pack's Title mask is m15MaskTitle; the
+  // masters' bar faces span 104–210 px against M15's 104–208), and the prints
+  // set the pips where M15's are: the generic disc centres on 151.5 px on DOM
+  // #122 and 153 px on 40K #126 (segmented by its colour), the band's centre
+  // lifted by CC_M15_COST_DY puts ours on 152.25.
+  costDy: CC_M15_COST_DY,
+  // The masters' window + 0.1 % (752–1384 × 237–1758 px on every colour,
+  // the land saga included; packSagaRegular.js artBounds 0.5 / 0.1124 /
+  // 0.4247 × 0.7253 sit flush with it).
+  artSlot: { topPct: 11.19, leftPct: 50.03, widthPct: 42.4, heightPct: 72.68 },
   // CC's saga symbol box (packSagaRegular 0.12 W × 0.0381 H = 80 px; layout
   // v32) — see M15's symbolSizePct.
   symbolSizePct: SET_SYMBOL_BOX_PCT_THIN_BAR,
   setSymbolFit: "ink",
+  // The pack's symbol box: its right edge at 92.27 %W (1384 px), centred on
+  // 87.39 %H (1835 px) — the prints' symbols end at 1380–1384 px and centre
+  // on 1835–1836.5 (DOM #122, 40K #126, THB #160), where the type band's own
+  // centre put them 8 px high and 23 px left.
+  symbolRect: { topPct: 87.39 - 3.81 / 2, leftPct: 92.27 - 12, widthPct: 12, heightPct: 3.81 },
   title: {
-    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 4.8 },
+    // Ends where M15's band does (92.2 %W, 1383 px): the prints' last disc
+    // ends at 1383.5–1386 px (DOM #90 / #122 / #173, LTC #58).
+    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83.7, heightPct: 4.8 },
     sizePct: TITLE_SIZE_PCT,
     dy: keepBaseline(0.0427, TITLE_SIZE_PCT),
     fit: "measured",
@@ -2659,9 +2715,14 @@ const SAGA: FrameProfile = {
   },
   type: {
     // 85.1, not the MSE 84.9: production override 2026-07-08, folded 2026-09-25.
-    rect: { topPct: 85.1, leftPct: 8.8, widthPct: 82, heightPct: 3.9 },
+    // From 8.5 %W (the prints' type line starts 5–9 px left of the old 8.8)
+    // to M15's 92.2.
+    rect: { topPct: 85.1, leftPct: 8.5, widthPct: 83.7, heightPct: 3.9 },
     sizePct: TYPE_SIZE_PCT,
-    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
+    // …and on the prints' baseline: 1854–1857 px on DOM #21 / #42 / #90 /
+    // #122 / #173 (mean 1855.3), 9.3 px below where the MSE bar's centre had
+    // it (the +0.0065 W the 4.20 review measured).
+    dy: keepBaseline(0.0347, TYPE_SIZE_PCT) + SAGA_TYPE_PRINT_DY,
     fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
@@ -2675,13 +2736,66 @@ const SAGA: FrameProfile = {
     colorHex: INK_DARK,
     font: "body",
   },
+  // The printed rail (TODO 4.21c; lib/cards/saga-rail.ts lays it out). HD px
+  // of a 1500 × 2100 card; prints are Scryfall PNGs at that size.
   chapters: {
-    rect: { topPct: 11.5, leftPct: 8, widthPct: 41, heightPct: 72 },
-    sizePct: 0.029,
+    // The chapter text column: x 203–728 — the pack's 0.35 W column (ability
+    // text 0.1334 / 0.35 W), 3 px right of it: the prints' ink starts at
+    // 204–206 px (DOM #21, #90, LTC #58, 40K #126), ours from 200 started at
+    // 201–202 — from the rail's top at 237 px (11.29 %H: where the rows start
+    // on a saga with no reminder, owner decision 2026-09-29) to its foot at
+    // 1759 px (83.76 %H, the window's and the paper's bottom edge).
+    rect: { topPct: 11.29, leftPct: 13.53, widthPct: 35, heightPct: 72.47 },
+    // 64 px on a 62 px pitch: the prints' chapter text (DOM #21's "Create a
+    // 2/2 white" 504 px wide against our 503 at 64; x-height 29–30 px; the
+    // line pitch 62.0 px on DOM #21 / #42 / #90 / #122 / #173, 59.7 on LTC
+    // #58's 62 px text — 0.969 em, not the rules standard's 0.98).
+    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
+    lineHeight: 0.97,
     textColorHex: INK_DARK,
-    markerFillHex: "#1c1712",
-    markerTextHex: "#f4eee2",
-    dividerHex: "rgba(40,32,22,0.35)",
+    intro: {
+      // x 132–736 (the pack's 0.0867 / 0.404 W box from 130; the prints'
+      // "(" inks from 133, ours from 130 at 131), from the rail's top; 360 px
+      // tall, its text centred — the standard four-line reminder then sits
+      // on the prints' baselines (341 / 403 / 465 / 527 px on DOM #21, LTC
+      // #58, WHO #99, MH2 #259).
+      rect: { topPct: 11.29, leftPct: 8.8, widthPct: 40.27, heightPct: 17.14 },
+      // 62 px on a 62 px pitch. The prints set the reminder at the chapters'
+      // 64 px, but in an italic narrower than ours (public/fonts/
+      // mplantin-italic.ttf sets "step, add a lore counter." 614 px wide at
+      // 64 px; the prints' is 591): at 62 px ours is 594 and breaks into the
+      // prints' four lines, where 64 px took five.
+      sizePct: rulesPxToPct(62),
+      lineHeight: 1,
+    },
+    // 621 px: the divider under the reminder block on every print measured
+    // (619–621 on 50 of the 54 prints measured, DOM → MH3 — 613.6–622.8 over
+    // all, mean 620.1; the pack starts its rows at 608).
+    rowsTopPct: 29.57,
+    badge: {
+      assetPath: "/frames/saga/chapter/badge.png",
+      // The pack's box (0.0386 W, 0.0787 W × 0.0629 H): 118 × 132 px from
+      // x 58, centred on x 117 over the ribbon — the prints' badge reads
+      // 119–120 × 130–132 px, centred on x 117 ± 1.5.
+      leftPct: 3.86,
+      widthPct: 7.87,
+      heightPct: 6.29,
+      // A stack's pitch: 160 px on DOM, THB, KHM, 40K, WOE and PIP (DOM #21
+      // 159.8, DOM #173 160.1, THB #160 161), 134–142 px on LTR, LTC, WHO
+      // and MH3 (LTC #58 138.3 / 138.6, WHO #99's five 138.0) — the pack's
+      // 150 is neither. Roomy while the rows have room, tight before the
+      // text steps down (saga-rail.ts).
+      pitchPct: { min: SAGA_BADGE_PITCH_PX.min / 21, max: SAGA_BADGE_PITCH_PX.max / 21 },
+      numeralSizePct: SAGA_NUMERAL_SIZE_PX / 1500,
+      numeralColorHex: INK_DARK,
+    },
+    divider: {
+      assetPath: "/frames/saga/chapter/divider.png",
+      // The pack's: x 150–742 (0.1 / 0.3947 W), 0.0029 H = 6 px tall.
+      leftPct: 10,
+      widthPct: 39.47,
+      heightPct: 0.29,
+    },
   },
   // Standard M15-family bottom border — same artist line as M15.
   footer: {

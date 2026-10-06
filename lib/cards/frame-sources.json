@@ -7079,5 +7079,81 @@
       "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
     ]
+  },
+  "saga": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packSagaRegular.js 'Regular Frames' (groupSaga-1.js; versionSaga.js draws the chapter badges and dividers)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; the chapter badge and the row divider published at native size (118x132, 592x9)",
+    "colors": {
+      "w": [
+        "img/frames/saga/regular/sagaFrameW.png"
+      ],
+      "u": [
+        "img/frames/saga/regular/sagaFrameU.png"
+      ],
+      "b": [
+        "img/frames/saga/regular/sagaFrameB.png"
+      ],
+      "r": [
+        "img/frames/saga/regular/sagaFrameR.png"
+      ],
+      "g": [
+        "img/frames/saga/regular/sagaFrameG.png"
+      ],
+      "c": [
+        "img/frames/saga/regular/l.png"
+      ],
+      "m": [
+        "img/frames/saga/regular/sagaFrameM.png"
+      ]
+    },
+    "pieces": {
+      "chapter/badge": "img/frames/saga/sagaChapter.png",
+      "chapter/divider": "img/frames/saga/sagaDivider.png",
+      "output": "<name>.png, native size"
+    },
+    "maskInputs": {
+      "Pinline": "img/frames/saga/sagaMaskPinline.png",
+      "Title": "img/frames/m15/regular/m15MaskTitle.png",
+      "Type": "img/frames/saga/sagaMaskType.png",
+      "Frame": "img/frames/saga/sagaMaskFrame.png",
+      "Banner": "img/frames/saga/sagaMaskBanner.png",
+      "Banner (Right)": "img/frames/saga/sagaMaskBannerRight.png",
+      "Text": "img/frames/saga/sagaMaskText.png",
+      "Text (Right)": "img/frames/saga/sagaMaskTextRight.png",
+      "Border": "img/frames/saga/sagaMaskBorder.png",
+      "output": "not published — importer inputs for a later recipe"
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/saga/regular/l.png",
+      "img/frames/saga/regular/sagaFrameB.png",
+      "img/frames/saga/regular/sagaFrameG.png",
+      "img/frames/saga/regular/sagaFrameM.png",
+      "img/frames/saga/regular/sagaFrameR.png",
+      "img/frames/saga/regular/sagaFrameU.png",
+      "img/frames/saga/regular/sagaFrameW.png",
+      "img/frames/saga/sagaChapter.png",
+      "img/frames/saga/sagaDivider.png",
+      "img/frames/saga/sagaMaskBanner.png",
+      "img/frames/saga/sagaMaskBannerRight.png",
+      "img/frames/saga/sagaMaskBorder.png",
+      "img/frames/saga/sagaMaskFrame.png",
+      "img/frames/saga/sagaMaskPinline.png",
+      "img/frames/saga/sagaMaskText.png",
+      "img/frames/saga/sagaMaskTextRight.png",
+      "img/frames/saga/sagaMaskType.png"
+    ],
+    "notes": [
+      "source: CC 'Regular Frames' saga pack (packSagaRegular.js): the M15 title bar, the chapter rail with the reminder block and the RIBBON the chapter badges sit on, the art column on the right, the type bar — replaces the 375 px MSE cut (magic-m15-saga.mse-style, import-mse-profiles.mjs), which had no ribbon and whose window started 26 px left of the prints'",
+      "colourless = CC's 'Land Frame' (saga/regular/l.png), the land saga (owner decision 2026-09-29): the only printed colourless saga is MH2 #259 Urza's Saga, an Enchantment Land; a colourless non-land saga wears it too (none was printed)",
+      "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
+      "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
+      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
+    ]
   }
 }

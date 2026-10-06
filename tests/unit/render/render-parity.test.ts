@@ -228,33 +228,75 @@ describe("planeswalker ability rows", () => {
   });
 });
 
-describe("saga chapter rail (layout v33: correctness only)", () => {
+describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
   const fn = (src: string, name: string) => {
     const start = src.indexOf(`function ${name}(`);
     return src.slice(start, src.indexOf("\n}\n", start));
   };
   const BAKE_RAIL = fn(BAKE, "ChapterBake");
   const PREVIEW_RAIL = fn(PREVIEW, "ChapterRail");
+  const PREVIEW_PIECES = fn(PREVIEW, "SagaRailPieces");
 
-  it("draws the intro and every chapter as lib/cards/saga-rail.ts's lines in both renderers, at today's anatomy", () => {
-    // One layout call each (the same resolution of face_content / rules).
-    for (const src of [BAKE, PREVIEW]) {
-      expect(src).toContain("layoutSagaRail(layout.chapters, sagaContent.intro, sagaContent.chapters)");
-    }
-    expect(BAKE_RAIL).toContain("sagaRailPx(slot, target)");
-    expect(PREVIEW_RAIL).toContain('sagaRailPx(slot, "hd")');
+  it("lays the rail out ONCE in lib/cards/saga-rail.ts and draws its px in both renderers — the bake's target, the preview the HD bake's", () => {
+    // One layout call each (the same resolution of face_content / rules),
+    // then the drawing at the renderer's target.
+    expect(BAKE).toContain("const sagaRailLayout = profileSagaRail(layout, sagaContent, aspect);");
+    expect(BAKE).toContain("sagaRailDrawing(sagaRailLayout, rulesTarget)");
+    expect(PREVIEW).toContain("profileSagaRail(layout, resolveSagaChapters(face.faceContent, face.rulesText), aspect)");
+    expect(PREVIEW).toContain('sagaRailDrawing(rail, "hd")');
+    // Neither renderer computes a row, a badge or a divider itself.
     for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
-      // Real pips, reminder italics, U+2212 — never the raw text (DOM #122
-      // baked "Add {R}{R}." as literal braces).
-      expect(rail).not.toMatch(/\{(ch\.text|intro|bakeText\(intro\))\}/);
-      expect(rail).toMatch(/<RulesLines(Bake)? blocks=\{rail\.intro\} metrics=\{metrics\.intro\}/);
-      expect(rail).toMatch(/<RulesLines(Bake)? blocks=\{ch\.blocks\} metrics=\{metrics\.chapter\}/);
-      // The badge box the lines were broken beside, in both.
-      expect(rail).toMatch(/width: (hdCqw\()?sagaBadgeWidthPx\(ch\.marker, px\)/);
-      // Equal rows, as v32 drew them (owner decision 2026-09-28; TODO 4.21).
-      expect(rail).toContain("flex: 1,");
-      expect(rail).not.toMatch(/\* (0\.9|1\.7|1\.12|0\.32|0\.6|0\.82|1\.22|1\.2)\b/);
+      expect(rail).not.toMatch(/flex: 1\b/);
+      expect(rail).not.toMatch(/rowFractions|pitch|badgeLift|SAGA_RAIL\./);
+      expect(rail).not.toMatch(/\* (0\.9|1\.7|1\.12|0\.17|0\.32|0\.6|0\.82|1\.22|1\.2)\b/);
     }
+  });
+
+  it("draws the reminder and every chapter as rules layouts through the ONE rules box, never raw text", () => {
+    // Real pips, reminder italics, U+2212 (DOM #122 once baked "Add {R}{R}."
+    // as literal braces) — the layout's lines, in the layout's boxes.
+    expect(BAKE_RAIL).toContain("RulesBoxBake({ layout: rail.intro, target: rail.target, colorHex: slot.textColorHex");
+    expect(BAKE_RAIL).toMatch(/<RulesBoxBake\s+key=\{`text-\$\{i\}`\}\s+layout=\{row\.text\}\s+target=\{rail\.target\}/);
+    expect(PREVIEW_RAIL).toContain("<RulesBox layout={rail.intro} colorHex={slot.textColorHex} overrides={pipOverrides} />");
+    expect(PREVIEW_RAIL).toContain("<RulesBox key={`text-${i}`} layout={row.text} colorHex={slot.textColorHex} overrides={pipOverrides} />");
+    for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
+      expect(rail).not.toMatch(/\{(ch\.text|row\.marker|intro|bakeText\(intro\))\}/);
+      expect(rail).not.toMatch(/<RulesLines(Bake)?\b/);
+    }
+  });
+
+  it("draws each numeral in the layout's line box: the badge's width, one em tall, from labelTop, in the body face", () => {
+    expect(BAKE_RAIL).toMatch(/left: badge\.left,\s+top: badge\.labelTop,\s+width: badge\.width,\s+height: badge\.fontPx,/);
+    expect(BAKE_RAIL).toContain("fontSize: badge.fontPx,");
+    expect(BAKE_RAIL).toContain("fontFamily: BODY_FONT,");
+    expect(PREVIEW_RAIL).toMatch(/left: hdX\(badge\.left\),\s+top: hdY\(badge\.labelTop\),\s+width: hdX\(badge\.width\),\s+height: hdCqw\(badge\.fontPx\),/);
+    expect(PREVIEW_RAIL).toContain("fontSize: hdCqw(badge.fontPx),");
+    expect(PREVIEW_RAIL).toContain("fontFamily: CARD_FONT,");
+    for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
+      expect(rail).toContain("lineHeight: 1,");
+      expect(rail).toContain('justifyContent: "center",');
+      expect(rail).toContain("color: slot.badge.numeralColorHex,");
+      expect(rail).toContain("{badge.label}");
+    }
+  });
+
+  it("draws the badges and dividers as frame pieces — right after the frame, under both finishes, masked into them", () => {
+    // The one list (sagaRailPieces) in both; drawn at the frame's z, before
+    // the sheens in the bake's document order.
+    expect(BAKE).toContain("sagaRailPieces(sagaDrawing, layout.chapters).map((piece) => ({ ...piece, href: getFrameOverlayDataUrl(piece.path) }))");
+    expect(PREVIEW).toContain("sagaRailPieces(sagaRail, layout.chapters)");
+    expect(BAKE.indexOf("{railPieces.map((piece, i) =>")).toBeGreaterThan(BAKE.indexOf("{overlays.map((overlay) =>"));
+    expect(BAKE.indexOf("{railPieces.map((piece, i) =>")).toBeLessThan(BAKE.indexOf("{isEtched ? ("));
+    expect(BAKE.indexOf("{isEtched ? (")).toBeLessThan(BAKE.indexOf("{isFoil ? ("));
+    expect(PREVIEW.indexOf("<SagaRailPieces pieces={railPieces} />")).toBeGreaterThan(PREVIEW.indexOf("<FrameOverlayLayer overlays={overlays} zIndex={5} />"));
+    expect(PREVIEW.indexOf("<SagaRailPieces pieces={railPieces} />")).toBeLessThan(PREVIEW.indexOf("{isEtched ? ("));
+    expect(PREVIEW_PIECES).toContain("style={{ zIndex: 5 }}");
+    expect(PREVIEW_PIECES).toContain("...rectStyle(piece.rect),");
+    // Both finishes mask with the frame's overlays AND the rail's pieces.
+    expect(BAKE.match(/overlays=\{drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces\]\)\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/overlays=\{\[\.\.\.overlays, \.\.\.railPieces\]\.map\(/g)).toHaveLength(2);
+    // The bake preloads exactly what the rail draws.
+    expect(BAKE).toContain("paths.push(...sagaRailAssetPaths(profileSagaRail(layout, resolveSagaChapters(card.faceContent, card.rulesText))));");
   });
 });
 

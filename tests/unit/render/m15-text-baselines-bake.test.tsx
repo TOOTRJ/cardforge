@@ -128,7 +128,9 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
   const KEPT: [string, number | null, number | null][] = [
     ["m15", 189, null],
     ["extendedart", 189, 1264],
-    ["saga", 185, 1845],
+    // Saga: its name keeps v31's baseline; its type line moved onto the
+    // prints' in TODO 4.21c (below).
+    ["saga", 185, null],
     // (flip: its name and type line moved onto the prints' in layout v38,
     // TODO 4.21a — below.)
     // Its type line moved onto the prints' in TODO 4.49 (d) (below).
@@ -169,6 +171,20 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     const half = await bake("flip", "default");
     expect(Math.abs(measure(half, p.title).baseline - 155.5 / 2)).toBeLessThanOrEqual(1.5);
     expect(Math.abs(measure(half, p.type).baseline - 569 / 2)).toBeLessThanOrEqual(1.5);
+  });
+
+  it("puts the saga's type line on the prints' baseline (TODO 4.21c; v31–v41: 1845)", async () => {
+    // DOM #21 / #42 / #90 / #122 / #173 (Scryfall PNGs at 1500 × 2100): the
+    // type line's baseline reads 1854–1857 px (mean 1855.3); the MSE bar's
+    // centre had it at 1845–1846.
+    const p = getFrameProfile("saga");
+    const b = await bake("saga", "hd");
+    const type = measure(b, p.type);
+    expect(Math.abs(type.baseline - 1855.3), `type ${type.baseline}`).toBeLessThanOrEqual(1.5);
+    expect(type.baseline).toBeGreaterThan(1845 + 6);
+    expect(Math.abs(type.baseline - type.capTop - (1434 / 2048) * p.type.sizePct * b.w)).toBeLessThanOrEqual(1.5);
+    // …and at the default size (750 px): half of it.
+    expect(Math.abs(measure(await bake("saga", "default"), p.type).baseline - 1855.3 / 2)).toBeLessThanOrEqual(1.5);
   });
 
   it("puts the Card Conjurer masters' type line on the prints' baseline (was 4 px low)", async () => {

@@ -38,6 +38,9 @@ export type StandInSpec = {
   /** Stand-ins keyed by a slot's plateAssetPathTemplate; every other plate
    *  template the profile draws gets a flat light plate. */
   plates?: Record<string, StandInPlate>;
+  /** Any other bucket object the profile draws, by its public path (the
+   *  saga's `/frames/saga/chapter/badge.png`): a flat block of `rgb`. */
+  pieces?: Record<string, StandInPlate>;
 };
 
 export type StandInFrames = {
@@ -108,6 +111,9 @@ export async function serveStandInFrames(specs: readonly StandInSpec[]): Promise
       const plate = spec.plates?.[plateTemplate] ?? DEFAULT_PLATE;
       const bytes = await flatPng(plate.width ?? 243, plate.height ?? 160, plate.rgb, plate.mark ?? false);
       for (const key of COLOR_KEYS) files[manifestKey(plateTemplate.replace("{color}", key))] = bytes;
+    }
+    for (const [publicPath, piece] of Object.entries(spec.pieces ?? {})) {
+      files[manifestKey(publicPath)] = await flatPng(piece.width ?? 64, piece.height ?? 64, piece.rgb, piece.mark ?? false);
     }
   }
   const manifest: FrameManifest = {

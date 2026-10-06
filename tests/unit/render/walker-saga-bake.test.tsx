@@ -4,10 +4,10 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { parseChapters, parseLoyaltyAbilities, parseSagaIntro } from "@/lib/cards/card-display";
 import { layoutProfileLoyaltyRows, loyaltyRowLines, loyaltyRowsDrawing } from "@/lib/cards/loyalty-rows";
-import { rectPx, type RulesTarget } from "@/lib/cards/rules-layout";
-import { layoutSagaRail, sagaBadgeWidthPx, sagaRailMetrics, sagaRailPx } from "@/lib/cards/saga-rail";
+import { RULES_TARGET_SCALE, linePositions, rectPx, type RulesTarget } from "@/lib/cards/rules-layout";
+import { SAGA_RAIL, sagaRail, sagaRailDrawing } from "@/lib/cards/saga-rail";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { RENDER_PRESETS } from "@/lib/render/card-image";
+import { RENDER_PRESETS, frameAssetPathsFor } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
 // The walker rows and the saga rail on REAL bakes at BOTH targets — the 750
@@ -21,15 +21,19 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 //   * no line runs past its column, and none under the loyalty shield (baked
 //     WITHOUT the shield, so anything under it shows).
 //
-// For the sagas (owner decision 2026-09-28: correctness only, v32's sizes,
-// rows and badges): each chapter's lines are where the layout puts them in
-// v32's equal rows, as many as it broke, inside their column; DOM #122's
-// "Add {R}{R}." draws two red pips; U+2212 draws exactly as a hyphen.
+// For the sagas (TODO 4.21c: the printed rail, lib/cards/saga-rail.ts), at
+// each target: the reminder block and every chapter's lines are where the
+// layout puts them — in content-sized rows, inside their column — with real
+// pips; each chapter badge and row divider is drawn at the layout's box
+// (stand-in bitmaps: a red block for the badge, a green one for the
+// divider), each numeral's ink centred on its badge; a rail past its floor
+// and a saga that is ALL reminder leave nothing below the rail; U+2212
+// draws exactly as a hyphen.
 //
-// The m15pw masters live in the frames bucket (never in git): the walkers
-// get a white stand-in with a transparent art window through a stubbed
-// bucket, the rows / badges / geometry are the real M15PW profile's. The
-// saga frame is a git file (read from disk). Offline and deterministic.
+// The m15pw and saga masters live in the frames bucket (never in git): the
+// bakes get white stand-ins with a transparent art window through a stubbed
+// bucket; the rows, rail, badges and geometry are the real profiles'.
+// Offline and deterministic.
 // ---------------------------------------------------------------------------
 
 const ORIGIN = "https://frames.test";
@@ -75,9 +79,20 @@ const WALKERS: Record<string, { rulesText?: string; faceContent?: unknown }> = {
   },
 };
 
+const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";
 const SAGAS: Record<string, string> = {
-  "DOM #122": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI — This Saga deals 1 damage to each creature without flying.\nII — Add {R}{R}.\nIII — Sacrifice a Mountain. If you do, this Saga deals 3 damage to each creature.",
-  "combined marker": "I — Kashimo gets reach and double strike permanently give him 2 1/1 counters Kashimo also stuns for 3 turns now\nII, III, IV — Give target creature 4 stun counters and 2 −1/−1 counters (They're gone next turn.)\nV — Tap Kashimo.",
+  "DOM #122": `${REMINDER}\nI — This Saga deals 1 damage to each creature without flying.\nII — Add {R}{R}.\nIII — Sacrifice a Mountain. If you do, this Saga deals 3 damage to each creature.`,
+  // The stored production saga's shape: no reminder, a II–IV stack.
+  "no reminder, a three-badge stack": "I — Kashimo gets reach and double strike permanently give him 2 1/1 counters Kashimo also stuns for 3 turns now\nII, III, IV — Give target creature 4 stun counters and 2 −1/−1 counters (They're gone next turn.)\nV — Tap Kashimo.\nVI — Exile this card.",
+  "six rows": `${REMINDER.replace("III", "VI")}\nI — Draw a card.\nII — Create a 2/2 white Knight creature token with vigilance.\nIII — Draw two cards.\nIV — Add {R}{R}{R}.\nV — Knights you control get +2/+1 until end of turn.\nVI — Destroy target artifact or enchantment.`,
+};
+/** The stand-in badge and divider: flat colours a scan can tell from the
+ *  white master, the dark ink and each other. */
+const BADGE_RGB = [220, 60, 60];
+const DIVIDER_RGB = [60, 170, 60];
+const isRgb = (r: Raw, x: number, y: number, [wr, wg, wb]: number[]) => {
+  const i = (y * r.width + x) * 3;
+  return Math.abs(r.data[i] - wr) < 24 && Math.abs(r.data[i + 1] - wg) < 24 && Math.abs(r.data[i + 2] - wb) < 24;
 };
 
 async function standInBucket() {
@@ -97,7 +112,31 @@ async function standInBucket() {
   const plate = await sharp({ create: { width: 240, height: 154, channels: 4, background: { r: 128, g: 128, b: 128, alpha: 1 } } })
     .png()
     .toBuffer();
-  const files: Record<string, Buffer> = { "m15pw/b.png": frame, "m15pw/loyalty/b.png": plate };
+  // The saga: a white master with ITS window clear, and the rail's two
+  // bitmaps as flat blocks a pixel scan can find — the badge red, the
+  // divider green (neither is "ink": their luminance is above the scans').
+  const sagaPx = Buffer.alloc(fw * fh * 4);
+  {
+    const w = SAGA.artSlot;
+    const [sx0, sx1] = [Math.round((w.leftPct / 100) * fw), Math.round(((w.leftPct + w.widthPct) / 100) * fw)];
+    const [sy0, sy1] = [Math.round((w.topPct / 100) * fh), Math.round(((w.topPct + w.heightPct) / 100) * fh)];
+    for (let y = 0; y < fh; y += 1) {
+      for (let x = 0; x < fw; x += 1) {
+        if (x >= sx0 && x < sx1 && y >= sy0 && y < sy1) continue;
+        sagaPx.fill(255, (y * fw + x) * 4, (y * fw + x) * 4 + 4);
+      }
+    }
+  }
+  const sagaFrame = await sharp(sagaPx, { raw: { width: fw, height: fh, channels: 4 } }).png().toBuffer();
+  const block = (width: number, height: number, [r, g, b]: number[]) =>
+    sharp({ create: { width, height, channels: 4, background: { r, g, b, alpha: 1 } } }).png().toBuffer();
+  const files: Record<string, Buffer> = {
+    "m15pw/b.png": frame,
+    "m15pw/loyalty/b.png": plate,
+    "saga/r.png": sagaFrame,
+    "saga/chapter/badge.png": await block(118, 132, BADGE_RGB),
+    "saga/chapter/divider.png": await block(592, 9, DIVIDER_RGB),
+  };
   const manifest = {
     version: 1 as const,
     bucket: "frames",
@@ -181,6 +220,21 @@ describe("walker rows and the saga rail — real bakes at 750 and HD", () => {
     };
   }
 
+  /** A red saga on the stand-in master (white, its window clear). */
+  const saga = (rulesText: string, preset: "default" | "hd") =>
+    bake(
+      {
+        cost: "{2}{R}",
+        cardType: "enchantment",
+        supertype: null,
+        subtypes: ["Saga"],
+        colorIdentity: ["red"],
+        rulesText,
+        frameStyle: { template: "saga", finish: "regular" },
+      } as Partial<CardPreviewData>,
+      preset,
+    );
+
   for (const { target, preset } of TARGETS) {
     it(`holds every ability in its own stripe where the layout put its lines, clear of the shield (${preset})`, async () => {
       const box = rectPx(PW.rules.rect, "portrait", 7 / 5, target);
@@ -234,103 +288,198 @@ describe("walker rows and the saga rail — real bakes at 750 and HD", () => {
       }
     }, 120_000);
 
-    it(`draws each chapter's lines where the layout puts them in v32's equal rows, pips as pips (${preset})`, async () => {
-      const railBox = rectPx(SAGA.chapters!.rect, "portrait", 7 / 5, target);
-      const px = sagaRailPx(SAGA.chapters!, target);
+    it(`draws the reminder and each chapter's lines where the layout puts them, in content-sized rows, pips as pips (${preset})`, async () => {
+      const slot = SAGA.chapters!;
+      const column = rectPx(slot.rect, "portrait", 7 / 5, target);
       for (const [name, rules] of Object.entries(SAGAS)) {
-        const rail = layoutSagaRail(SAGA.chapters!, parseSagaIntro(rules), parseChapters(rules));
-        const m = sagaRailMetrics(rail, target);
-        const raw = await bake(
-          { cardType: "enchantment", subtypes: ["Saga"], rulesText: rules, frameStyle: { template: "saga", finish: "regular" } } as Partial<CardPreviewData>,
-          preset,
-        );
-        const introLines = rail.intro ? rail.intro.reduce((n, b) => n + b.lines.length, 0) : 0;
-        const introH = rail.intro ? 2 * px.introPadY + introLines * m.intro.linePx + 1 : 0;
-        const rowH = (railBox.height - introH) / rail.chapters.length;
-        rail.chapters.forEach((ch, i) => {
-          const label = `${name} ${ch.marker} (${preset})`;
-          const top = railBox.top + introH + i * rowH;
-          const lines = ch.blocks.reduce((n, b) => n + b.lines.length, 0);
-          const blockH = lines * m.chapter.linePx;
-          const blockTop = top + px.rowPadY + (rowH - 2 * px.rowPadY - blockH) / 2;
-          const left = railBox.left + px.rowPadX + sagaBadgeWidthPx(ch.marker, px) + px.badgeGap;
-          const column = railBox.width - 2 * px.rowPadX - sagaBadgeWidthPx(ch.marker, px) - px.badgeGap;
-          // The ink rows of the text column, as bands (one per line: at 1.22 em
-          // the lines' ink never touch).
+        const rail = sagaRail(slot, parseSagaIntro(rules), parseChapters(rules));
+        expect(rail.clipped, name).toBe(false);
+        const d = sagaRailDrawing(rail, target);
+        const raw = await saga(rules, preset);
+        d.rows.forEach((row, i) => {
+          const label = `${name} row ${i} (${preset})`;
+          const placed = linePositions(row.text, target);
+          const m = placed.metrics;
+          // The text column's ink rows inside this row, as bands — one per
+          // line (the lines' ink never touch at 0.97 em).
           const inked: number[] = [];
           let inkRight = -Infinity;
-          for (let y = Math.floor(top) + 1; y < Math.floor(top + rowH) - 1; y += 1) {
+          for (let y = row.top; y < row.bottom; y += 1) {
             let hit = false;
-            for (let x = left - 1; x < railBox.right - 1; x += 1) {
-              if (lum(raw, x, y) < 90) {
+            for (let x = column.left - 2; x < column.right + Math.ceil(0.1 * m.fontPx); x += 1) {
+              if (lum(raw, x, y) < 70) {
                 hit = true;
                 inkRight = Math.max(inkRight, x);
               }
             }
             if (hit) inked.push(y);
           }
-          const bands = inked.filter((y, k) => k === 0 || y - inked[k - 1] > 2).length;
-          expect(bands, label).toBe(lines);
-          expect(inked[0], label).toBeGreaterThanOrEqual(Math.floor(blockTop) - 1);
-          expect(inked.at(-1)!, label).toBeLessThanOrEqual(Math.ceil(blockTop + blockH) + 1);
-          expect(inkRight, label).toBeLessThanOrEqual(left + column + Math.ceil(0.1 * m.chapter.fontPx));
+          expect(inked.length, label).toBeGreaterThan(0);
+          // (At HD the lines' ink never touch — one band per line; at 750 a
+          // thin descender's rows anti-alias away, so the count is HD's, and
+          // tests/unit/render/rules-no-clip.test.tsx holds every word to its
+          // line at both.)
+          const bands = inked.filter((y, k) => k === 0 || y - inked[k - 1] > 1).length;
+          if (target === "hd") expect(bands, label).toBe(placed.lines.length);
+          // Inside its own row, where the layout put its lines (their ink
+          // reach is an upper bound; a px for Yoga's rounding of a centred
+          // block)…
+          expect(inked[0], label).toBeGreaterThanOrEqual(row.top);
+          expect(inked.at(-1)!, label).toBeLessThan(row.bottom);
+          expect(inked[0], label).toBeGreaterThanOrEqual(Math.floor(placed.lines[0].inkTop) - 1);
+          expect(inked.at(-1)!, label).toBeLessThanOrEqual(Math.ceil(placed.lines.at(-1)!.inkBottom) + 1);
+          // …its first line on the model's baseline: capitals reach ≈ 0.69 em
+          // above it…
+          const baseline = placed.lines[0].top + m.baselinePx.regular;
+          expect(Math.abs(inked[0] - (baseline - 0.69 * m.fontPx)), label).toBeLessThanOrEqual(0.22 * m.fontPx + 2);
+          // …and no line past its column.
+          expect(inkRight, label).toBeLessThanOrEqual(column.right + Math.ceil(0.1 * m.fontPx));
         });
+        if (d.intro) {
+          // The reminder: its lines' ink inside its box, as many bands as
+          // lines, the first on the model's baseline.
+          const placed = linePositions(d.intro, target);
+          const box = rectPx(d.intro.input.rect, "portrait", 7 / 5, target);
+          const inked: number[] = [];
+          for (let y = box.top; y < box.bottom; y += 1) {
+            for (let x = box.left - 2; x < box.right + 4; x += 1) {
+              if (lum(raw, x, y) < 70) {
+                inked.push(y);
+                break;
+              }
+            }
+          }
+          if (target === "hd") expect(inked.filter((y, k) => k === 0 || y - inked[k - 1] > 1).length, `${name} reminder (${preset})`).toBe(placed.lines.length);
+          const baseline = placed.lines[0].top + placed.metrics.baselinePx.italic;
+          expect(Math.abs(inked[0] - (baseline - 0.69 * placed.metrics.fontPx)), `${name} reminder (${preset})`).toBeLessThanOrEqual(3);
+          // No ink between the reminder's box and the first row.
+          for (let y = box.bottom; y < d.rows[0].top - 2; y += 1) {
+            for (let x = box.left; x < box.right; x += 1) expect(lum(raw, x, y) < 70, `${name}: ink under the reminder at ${x},${y}`).toBe(false);
+          }
+        }
         if (name === "DOM #122") {
+          // The standard reminder: the prints' baselines, 341 px at HD.
+          const placed = linePositions(d.intro!, target);
+          expect(placed.lines[0].top + placed.metrics.baselinePx.italic).toBe(target === "hd" ? 341 : 171);
           // Chapter II's "Add {R}{R}.": two red discs (the bake's r gem,
-          // #db8664), never the literal braces v32 baked.
-          const top = railBox.top + introH + rowH;
+          // #db8664), never literal braces.
+          const row = d.rows[1];
           let red = 0;
-          for (let y = Math.floor(top); y < Math.floor(top + rowH); y += 1) {
-            for (let x = railBox.left; x < railBox.right; x += 1) {
+          for (let y = row.top; y < row.bottom; y += 1) {
+            for (let x = column.left; x < column.right; x += 1) {
               const k = (y * raw.width + x) * 3;
               const [r, g, b] = [raw.data[k], raw.data[k + 1], raw.data[k + 2]];
               if (Math.abs(r - 0xdb) < 12 && Math.abs(g - 0x86) < 12 && Math.abs(b - 0x64) < 12) red += 1;
             }
           }
-          const disc = m.chapter.pipPx;
+          const disc = linePositions(row.text, target).metrics.pipPx;
           expect(red, "red pip area").toBeGreaterThan(2 * 0.25 * disc * disc);
+        }
+      }
+    }, 120_000);
+
+    it(`draws every badge and divider at the layout's box, each numeral's ink centred on its badge (${preset})`, async () => {
+      const slot = SAGA.chapters!;
+      const scale = RULES_TARGET_SCALE[target];
+      for (const [name, rules] of Object.entries(SAGAS)) {
+        const d = sagaRailDrawing(sagaRail(slot, parseSagaIntro(rules), parseChapters(rules)), target);
+        const raw = await saga(rules, preset);
+        for (const [i, row] of d.rows.entries()) {
+          const label = `${name} row ${i} (${preset})`;
+          // The divider: the stand-in's green over its whole box, the row's
+          // edge inside it, white above and below.
+          if (row.divider) {
+            const v = row.divider;
+            expect(v.top).toBeLessThanOrEqual(row.top);
+            expect(v.top + v.height).toBeGreaterThan(row.top);
+            // (Its first px lie under the badge, which is drawn over it.)
+            const pastBadge = row.badges[0].left + row.badges[0].width + 2;
+            for (const x of [pastBadge, v.left + Math.round(v.width / 2), v.left + v.width - 2]) {
+              for (let y = v.top; y < v.top + v.height; y += 1) expect(isRgb(raw, x, y, DIVIDER_RGB), `${label}: divider at ${x},${y}`).toBe(true);
+              expect(isRgb(raw, x, v.top - 1, DIVIDER_RGB), `${label}: above the divider`).toBe(false);
+              expect(isRgb(raw, x, v.top + v.height, DIVIDER_RGB), `${label}: below the divider`).toBe(false);
+            }
+          } else {
+            expect(i, label).toBe(0);
+          }
+          expect(row.badges.length, label).toBeGreaterThan(0);
+          for (const b of row.badges) {
+            // The badge: the stand-in's red at the box's corners and edges,
+            // none just outside (the divider's green may cross a point).
+            for (const [x, y] of [
+              [b.left, b.top],
+              [b.left + b.width - 1, b.top],
+              [b.left, b.top + b.height - 1],
+              [b.left + b.width - 1, b.top + b.height - 1],
+            ]) {
+              expect(isRgb(raw, x, y, BADGE_RGB), `${label}: badge corner ${x},${y}`).toBe(true);
+            }
+            expect(isRgb(raw, b.left - 1, b.top + 2, BADGE_RGB), `${label}: left of the badge`).toBe(false);
+            expect(isRgb(raw, b.left + b.width, b.top + 2, BADGE_RGB), `${label}: right of the badge`).toBe(false);
+            // Inside its row.
+            expect(b.top, label).toBeGreaterThanOrEqual(row.top);
+            expect(b.top + b.height, label).toBeLessThanOrEqual(row.bottom);
+            // The numeral: dark ink inside the badge, centred across it, its
+            // capitals centred a px below the badge's centre (the layout's
+            // labelTop; MPlantin's capitals are 0.682 em).
+            let [x0, x1, y0, y1] = [Infinity, -Infinity, Infinity, -Infinity];
+            for (let y = b.top; y < b.top + b.height; y += 1) {
+              for (let x = b.left; x < b.left + b.width; x += 1) {
+                if (lum(raw, x, y) >= 60) continue;
+                [x0, x1, y0, y1] = [Math.min(x0, x), Math.max(x1, x), Math.min(y0, y), Math.max(y1, y)];
+              }
+            }
+            expect(x0, `${label}: "${b.label}" drawn`).toBeLessThan(Infinity);
+            expect(Math.abs((x0 + x1 + 1) / 2 - (b.left + b.width / 2)), `${label}: "${b.label}" centred across`).toBeLessThanOrEqual(2.5 * scale + 0.5);
+            const capCentre = b.top + b.height / 2 + SAGA_RAIL.numeralDyPx * scale;
+            expect(Math.abs((y0 + y1 + 1) / 2 - capCentre), `${label}: "${b.label}" centred down`).toBeLessThanOrEqual(2 * scale + 1);
+            expect(y1 - y0 + 1, `${label}: "${b.label}" capitals`).toBeGreaterThanOrEqual(Math.floor(0.66 * b.fontPx));
+            expect(y1 - y0 + 1, `${label}: "${b.label}" capitals`).toBeLessThanOrEqual(Math.ceil(0.72 * b.fontPx) + 1);
+          }
         }
       }
     }, 120_000);
   }
 
-  it("keeps a saga typed with no chapter markers (ALL intro) inside its rail, at both targets", async () => {
-    // Without a "I —" marker every line is the intro, which a long text used
-    // to push out of the rail over the type line and the border below it
-    // (v32 did too; the layout v33 review). The rail clips it now: below the
-    // rail the card is exactly what a one-line intro bakes.
+  it("preloads the rail's two bitmaps only when it draws them", () => {
+    const card = (rulesText: string | null) =>
+      ({ cardType: "enchantment", subtypes: ["Saga"], colorIdentity: ["red"], rulesText, frameStyle: { template: "saga", finish: "regular" } }) as unknown as CardPreviewData;
+    expect(frameAssetPathsFor(card(SAGAS["DOM #122"]))).toEqual(["/frames/saga/chapter/badge.png", "/frames/saga/chapter/divider.png"]);
+    expect(frameAssetPathsFor(card("I — Draw a card."))).toEqual(["/frames/saga/chapter/badge.png"]);
+    expect(frameAssetPathsFor(card("Only a reminder."))).toEqual([]);
+    expect(frameAssetPathsFor(card(null))).toEqual([]);
+  });
+
+  it("leaves nothing below the rail — a saga that is ALL reminder, and a rail past its floor — at both targets", async () => {
+    // Without a "I —" marker every line is the reminder; six 600-character
+    // chapters can never fit. Both clip inside the rail: below it the card
+    // is exactly what a short saga bakes.
     const dense = "Whenever a creature you control dies, each opponent loses 1 life and you gain 1 life. ".repeat(14);
-    const saga = (rulesText: string, preset: "default" | "hd") =>
-      bake({ cardType: "enchantment", subtypes: ["Saga"], rulesText, frameStyle: { template: "saga", finish: "regular" } } as Partial<CardPreviewData>, preset);
+    const overfull = ["I", "II", "III", "IV", "V", "VI"].map((n) => `${n} — ${dense.slice(0, 590)}`).join("\n");
     for (const { target, preset } of TARGETS) {
-      const rail = layoutSagaRail(SAGA.chapters!, parseSagaIntro(dense), parseChapters(dense));
-      expect(rail.chapters).toHaveLength(0);
       const railBox = rectPx(SAGA.chapters!.rect, "portrait", 7 / 5, target);
-      const [long, short] = [await saga(dense, preset), await saga("Draw a card.", preset)];
-      let differ = 0;
-      const height = long.data.length / 3 / long.width;
-      for (let y = railBox.bottom + 1; y < height; y += 1) {
-        for (let x = railBox.left; x < railBox.right; x += 1) {
-          const k = (y * long.width + x) * 3;
-          if (long.data[k] !== short.data[k] || long.data[k + 1] !== short.data[k + 1] || long.data[k + 2] !== short.data[k + 2]) differ += 1;
+      const allReminder = sagaRail(SAGA.chapters!, parseSagaIntro(dense), parseChapters(dense));
+      expect(allReminder.rows).toHaveLength(0);
+      expect(sagaRail(SAGA.chapters!, null, parseChapters(overfull)).clipped).toBe(true);
+      const short = await saga("I — Draw a card.", preset);
+      const height = short.data.length / 3 / short.width;
+      for (const rules of [dense, overfull]) {
+        const long = await saga(rules, preset);
+        let differ = 0;
+        for (let y = railBox.bottom + 1; y < height; y += 1) {
+          for (let x = 0; x < railBox.right + 20 * RULES_TARGET_SCALE[target]; x += 1) {
+            const k = (y * long.width + x) * 3;
+            if (long.data[k] !== short.data[k] || long.data[k + 1] !== short.data[k + 1] || long.data[k + 2] !== short.data[k + 2]) differ += 1;
+          }
         }
+        expect(differ, `${preset}: ${rules.slice(0, 12)}`).toBe(0);
       }
-      expect(differ, preset).toBe(0);
     }
-  }, 60_000);
+  }, 120_000);
 
   it("draws U+2212 exactly as the hyphen MPlantin has, in a chapter and in an ability", async () => {
-    const saga = (dash: string) =>
-      bake(
-        {
-          cardType: "enchantment",
-          subtypes: ["Saga"],
-          rulesText: `I — Put a ${dash}1/${dash}1 counter on target creature.\nII — Draw a card.`,
-          frameStyle: { template: "saga", finish: "regular" },
-        } as Partial<CardPreviewData>,
-        "default",
-      );
-    expect((await saga("−")).sha).toBe((await saga("-")).sha);
+    const chapter = (dash: string) => saga(`I — Put a ${dash}1/${dash}1 counter on target creature.\nII — Draw a card.`, "default");
+    expect((await chapter("−")).sha).toBe((await chapter("-")).sha);
     const walker = (dash: string) => bake({ rulesText: `+1: Target creature gets ${dash}2/${dash}0.\n−3: Draw a card.` }, "default");
     expect((await walker("−")).sha).toBe((await walker("-")).sha);
     // (The badges' "−3" is the same text in both, and parseLoyaltyAbilities
