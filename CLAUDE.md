@@ -219,7 +219,15 @@ Rules and gotchas:
   the strip are in the masters, painted in the master's OWN colour (a
   two-colour card's print paints it in the other face's: an owner question,
   never a master "fix"); the painted strip is a rules keep-out
-  (`FlipsideSlots.keepOut` → `DrawnStats.strip`). A back face's
+  (`FlipsideSlots.keepOut` → `DrawnStats.strip`). Since 5.1d every DFC body
+  with a printed legendary face declares the crown — `m15dfccrown` /
+  `m15dfccrownright` / `m15mdfccrown`, the m15crown band CUT round the
+  well or housing through CC's twin's alpha (never the twin's older flat
+  art) — and the five spell faces the split pair masters (the prints split
+  a BACK's rings and box over its gold bars too: MOM #43, MID #246), the
+  modal front the hybrid dress as well; opt-in per card like m15's, the
+  rider drawn after the crown; the land pair and the ▼ land back draw
+  neither (no print). A back face's
   body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
   — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`,

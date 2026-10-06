@@ -2358,10 +2358,177 @@ ticks each colour × face.
   modal row for a modal body), the strip's word cases (Equipment, God,
   Enchantment — the longest wave-1 word — Tibalt), a foil, a square: 75
   new cases, 0 changed, 0 redefined.
+- **The strips toned (TODO 5.1d, before the first tick):** the skeptic's
+  finding above landed as a master correction — the whole tab of the
+  modal BACK masters takes a gain through the pack's Flipside mask
+  (`reminder.svg`: the tab from the border's inner edge to the chevron's
+  tip, so the ◀ and the outline stay dark — a multiplier keeps dark pixels
+  dark), fitted on the tab's text-free fill (the median luma of rows
+  1872–1876 and 1938–1942, x 110–640 at HD) of the same references as the
+  bars, one table per template, to the luma the clamped channels give
+  (`MDFC_BACK_TONES.strip` / `MDFC_LAND_BACK_TONES.strip`): the spell backs
+  u 208.2 → 220.0 (STX #147), b 175.2 → 221.0 (STX #148 223, KHM #112 219),
+  r 212.4 → 230.3 (STX #159), g 200.6 → 224.4 (STX #151), m 194.6 → 233.0
+  (KHM #168 The Prismatic Bridge's gold back 233, STX #149's B|R back 233 —
+  a mono-gold print does exist); the land backs u → 230.7 (MH3 #241), b →
+  212.4 (ZNR #90; the pathways' b backs read 229–240), r → 227.8 (ZNR #134
+  226, MH3 #246 229), g → 218.1 (ZNR #189). w stays (238 within STX #150's
+  230 … KHM #15's 249; ZNR #12's 237), `a` / `c` stay (no print), the
+  fronts stay (within 5–11). Ten masters re-cut (m15mdfcback u b r g m,
+  m15mdfclandback u b r g m), each byte-identical outside the Flipside
+  mask (bars, box, housing, body: 0 px differ; the built fills within
+  ±0.5 luma of the targets). The visual gate's record of the change is a
+  template-scoped **sweep bump, layout v40** (v38 / v39's pattern: the
+  modal faces, 0 cards on them, nothing re-bakes) — `tests/unit/frames/
+  dfc-crowns-pairs.test.ts` holds the built strips to ±2.
 - **What waits:** the ticks (the owner, after promote); the strip's colour
   on two-colour cards (above); the import's modal body / colour (5.4);
   the Marvel strip form; borderless / extended modal (5.7); the walker
   faces (5.13, ask first).
+
+### Crowns and pairs on the double-faced bodies (5.1d)
+
+TODO 5.1d, 2026-10-05 (`feat/dfc-crowns-pairs`; owner 2026-10-05: "go" on
+crowns and two-colour frames for transform cards). Additions under the
+owner rule: opt-in per card through the same switches, hints, import rule
+and registry gaps as m15's (`frame_style.crown` / `twoColor`; a new DFC
+card starts with both on; an import follows the printing; the save keeps a
+switch only where the body draws it; no stored card changes, no bump for
+them, no sweep, no badge).
+
+| body | crown | pairs | printed references |
+|---|---|---|---|
+| `m15dfcfront` | `m15dfccrown` (LEFT well; `c` → `a`) | split | crowns VOW #21 w, #65 u, MID #109 b, MOM #137 r, #200 g, FIN #231 m, LCI #256 a; crowned pairs MID #246 R|G, #217 W|U, VOW #236 W|B, FIN #221 B|R, MID #233 U|B, BOT #7 R|W, FIN #219 U|R, #220 B|G, #240 G|W; uncrowned pairs MID #218 W|U, #231 R|G, INR #241 R|G, LCI #233 W|U |
+| `m15dfcbackleft` | `m15dfccrown` (`c` → `a`) | split | VOW #21 w, #65 u, MID #109 b, BOT #6 r, #12 m; pairs MID #246 R|G, #233 U|B (no g or a back was printed crowned) |
+| `m15dfcback` | `m15dfccrownright` (RIGHT well; `c` → `a`) | split | FIN #39 w, MOM #63 u, #114 b, ECL #105 r, MOM #190 g, FIN #231 m, #272 a; pairs MOM #200 G|W, #75 U|B; uncrowned pairs MOM #43 G|W, MID #218 / #231 backs |
+| `m15dfclandfront` | `m15dfccrown` (`c` → `l`) | none | SLX #9 Havengul Laboratory (a colourless legendary land front: the land grey) |
+| `m15dfclandback` | none | none | no legendary land back on this frame: LCI's / XLN's are the parchment back (5.8), SLX #9's the 2016–22 dark one |
+| `m15mdfcfront` | `m15mdfccrown` (the housing; `c` → `a`) | split + hybrid | KHM #15 w, #40 u, #112 b, #123 r, #168 g; pairs MSH #219 W|U, STX #149 W|B (crowned, split); MH3 #252–261 (the ten hybrid fronts) |
+| `m15mdfcback` | `m15mdfccrown` (`c` → `a`) | split | KHM #15 w, #40 u, #112 b, #123 r, #181 g, #168 m (gold); pairs MSH #219 W|U, #23 R|W, #49 R|G, #80 U|R, #18 G|W; STX #149's uncrowned B|R back |
+| the modal land pair | none | none | no crowned or two-colour modal land face in print (the pathways and the MH3 land backs are mono) |
+
+Surveyed on Scryfall (2026-10-05): every transform / modal printing on the
+black-bordered 2015 frame (1,179; 682 with no showcase / borderless /
+extended / etched / devoid / snow effect), classified per face —
+scratchpad `dfc-1d/research/classified.json`.
+
+- **The crown pieces are CUT bands, not twins.** Card Conjurer's own DFC
+  crowns — 'Legend Crowns' (`m15/transform/crowns/regular/<k>.png`, cut
+  round the LEFT well; `regular/new/<k>.png`, cut round the ▼ back's RIGHT
+  well) and the modal 'Regular Legend Crowns' (`modal/crowns/regular/
+  <k>.png`, cut round the housing), all 1418 × 350 at 2.74 / 1.91 / 94.54 ×
+  16.67 % (x 41, y 40, 1:1 at HD) — carry the OLDER flat crown art, not the
+  textured 'Legend Crowns (New)' band our m15crown is built from, so none
+  is published. Each piece (`cutCrownBand`, `DFC_CROWN_WELLS` in
+  `scripts/lib/cc-frames.mjs`) is the published m15crown band byte for byte
+  outside the WELL REGION (the columns from the band's leg to the inset
+  bar — x 80–235 on the left well, 1264–1419 on the right, 40–235 on the
+  modal housing — rows 93–225); inside it the alpha is the twin's (the well
+  cleared, the crown round it, the bar's edge where the bar starts) and the
+  colour the band's OWN leg texture, its interior columns (60–77 / 1422–
+  1439) mirror-tiled across the region on the same rows — the band has no
+  pixels there: its hole is the plain M15 bar's, which starts at x 92,
+  while a DFC bar starts past the well at 228 and the prints wrap the crown
+  round the well with the ring on top (MID #246 Tovolar's sun well, VOW #21,
+  MOM #190 Zilortha's ▼ well, KHM #112 Tergrid's housing on both faces).
+  The fill is darkened only where the twin is darker than half its own leg
+  (`DFC_CROWN_SHADE_KNEE`): CC's outline round the hole, never its smooth
+  gradient (the prints' annulus reads 0.8–1.0 of the leg: MID #246 front
+  1.04, its back 0.97, VOW #21 0.78, MOM #190 0.80 — the twin's 0.70 would
+  be too dark). On the modal body the housing's tip reaches into the
+  crown's leg, which keeps its own pixels under the twin's alpha. The
+  transform twins' well is a circle (fitted on the twin's hole, 0.5 px:
+  (143.5, 160.5) r 61.0 on the left, (1355.5, 160.5) r 60.8 on the right;
+  the ▼ well's ring on the master spans 1296–1416), the modal twin's hole a
+  teardrop (its point at x 59, row 160; its bottom at row 218); both end
+  above the wrap under the bar, which stays the band's. Measured against
+  the twins (scratchpad `dfc-1d/research/twins.json`): outside the well
+  columns the twin's alpha lies entirely inside the band's (0 twin-only
+  pixels in x 280–1220; the band's extra pixels there are its cover and
+  the wrap's last 3 rows), and the twins' alphas are the same for every
+  colour letter (the left `a` twin differs by ≤ 48 levels on 3,077 px).
+  Keys per folder: w u b r g, m, a, l and the ten pairs (the pair band cut
+  through the twin of the colour whose half the well is in) — never `c`
+  (a DFC body's colourless is the artifact stand-in, `c` → `a`, or the land
+  front's `l`). The slots (`DFC_CROWN_LEFT` / `DFC_CROWN_RIGHT` /
+  `MDFC_CROWN`, `lib/cards/template-layout.ts`) are M15_CROWN's rect; the
+  icon rider is declared AFTER the crown on the faces that have one (the
+  well is cleared, so they never meet; the order keeps the glyph on top —
+  `tests/unit/render/dfc-crowns-bake.test.tsx`).
+- **The pair masters** are 4.6b's "m15" recipe over each body's OWN pack
+  files and masks (`dfcPairLayers`, `DFC_PAIR_BODIES`): the gold frame
+  whole (frontM / backM / m / mb), the text box lerped from the two colour
+  frames across the rules ramp (45→57 %W) through the pack's Rules mask,
+  the pinline across the pinline ramp (40→60) through the pack's Pinline
+  mask; the modal front's hybrid dress the two fronts lerped across the
+  frame ramp (44→57) under CC's grey Land frame's bars (`l.png` through
+  the Title mask — the housing's fill is the Title mask's — and the Type
+  mask) with the split box and pinline, the grey plate `pt/c`. No hairline
+  on these packs: CC's transform and modal gold frames draw their ring rows
+  where the colour frames do (the dark ring rows 100–103 / 218–221 / 1181–
+  1184 / 1299–1302 on every file), unlike the borderless M frame (#449).
+  Measured on the prints' title rings (per-row crossings at HD, scratchpad
+  `dfc-1d/research/pairs.json`): the 2023+ printings split at 40→60 — LCI
+  #233 41.7 / 49.5 / 57.4, the MH3 hybrids 41–43 / 49–52 / 58–60 (their
+  frame band above the title 46–49 / 50–54 / 55–57 ≈ the 44→57 ramp) —
+  and the Innistrad-era ones narrower, 45.5 / 51 / 56 (MID #218 / #231,
+  INR #241, every ring row within 0.5 %W); the one 40→60 ramp of the FDN /
+  TLA prints serves every DFC face, within 4 %W of Innistrad's. **The
+  backs split too:** the design's "the gold backs never split (MOM #43)"
+  was wrong — MOM #43's G|W back reads 44,74,47 → 133,135,129 across the
+  title ring, the type ring and the box's top edge; MID #218's W|U, MID
+  #246's R|G, EMN #191's R|G and STX #149's B|R backs the same, each over
+  gold bars; and a legendary pair back's crown is the SPLIT crown (MID
+  #246's back: a red leg 187,62,46 and a green leg 63,114,89; MOM #200,
+  MSH #18 / #219 / #23 / #49 / #80) — so the three spell backs build the
+  split dress over their back files and declare it (`twoColorMasters:
+  ["split"]`), the back resolving its own pair from its own colours (the
+  card-level switch), and the pair's crown with it. A pair BACK is toned
+  like its mono backs — the gold bars (and the modal strip) at m's gains,
+  the lerped box at the two colours' box gains lerped across the same
+  rules ramp (`dfcPairBackTones`; `toneMasked` takes a ramped gain since
+  5.1d) — so left of the ramp its box is the first colour's toned box,
+  right of it the second's (`dfc-crowns-pairs.test.ts` holds ±6). No pair
+  on a land body (no two-colour land face in print; the m15land land-tint
+  recipe would also sit 1–2 px off the transform pack's pinline mask) and
+  no hybrid dress on the transform front (no hybrid-cost transform front
+  was printed) or on a back (MH3's hybrid fronts have land backs). The
+  stamp notch: no DFC body declares a holo stamp (5.1a), so the pair
+  notches are not involved.
+- **Registry, import, creator:** the `crown` gap drops by itself on every
+  body that declares the slot and the two-colour gaps where a body
+  declares the dress (`gapDrawnBy` reads the profile), so KHM #112 Tergrid
+  and MID #218 / #246 import `exact` on their bodies; BOT #1 stays
+  `nearest` on its Vehicle back alone (`transform/2015+vehicle`, 5.10). The
+  import's switches are the card's (`printed_crown` from the `legendary`
+  effect, `printed_two_color` from the FRONT face's pair, which also stores
+  the pair as the identity on a front that draws pairs); a back face
+  qualifies for its own crown by its own supertype (`backPreviewData`
+  carries the card's switches) and resolves its own pair from its own
+  colours. A nonlegendary front with a legendary back prints the back's
+  crown while the creator's switch (keyed on the front's type line) is
+  hidden — the default is on, so it prints; a visible switch for that case
+  is a follow-up. The creator's hint for an all-hybrid cost on the
+  transform front ("This frame has no hybrid version yet…") is the
+  existing copy. `CROWN_REFERENCES` names a crowned print per body per key
+  (the table above) for the compare page's Legendary toggle — a back body's
+  reference is the printing's BACK face (`faceUnderTest`).
+- **Verification:** the crown rides each colour's tick, a pair its body's
+  `m` tick (V-A); the owner signs the round-31 sheets off in the PR and
+  re-judges nothing (the crowns and pairs are opt-in additions on bodies
+  with no tick yet). The strips (above) land before the first tick.
+- **Tests:** `tests/unit/frames/dfc-crowns-pairs.test.ts` (the recipes, the
+  ramped gain, the cut's geometry on a synthetic band and twin, what the
+  profiles declare and the save keeps, the published masters — the pair's
+  bars and body the gold master's, its box the colours' toned boxes, its
+  title ring 40→60 centred on 50; the pieces the band outside the well,
+  the hole a circle, the fill the band's leg; with the Card Conjurer cache
+  a fresh cut reproduces the published piece byte for byte),
+  `tests/unit/render/dfc-crowns-bake.test.tsx` (real bakes: the crown's
+  piece under the rider, the switch absent byte-identical, the pair
+  master and the pair's crown on a front and on each back, the modal
+  faces, the land back drawing neither), the matrix's `@crown` / `@pair`
+  cases on every declared body (`tests/visual/matrix.ts`: 63 new cases, 0 redefined; the 10 re-toned backs change their existing modal-back cases under v40).
 
 ### The editor (5.2)
 
