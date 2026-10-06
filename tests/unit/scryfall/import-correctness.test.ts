@@ -570,7 +570,14 @@ describe("colour from the front face (TODO 1.2)", () => {
     };
     expect(lands("mh3-237")).toEqual({ template: "m15", colorKey: "w" });
     expect(lands("khm-114")).toEqual({ template: "m15", colorKey: "b" });
-    expect(lands("soi-281")).toEqual({ template: "m15land", colorKey: "c" });
+    // SOI #281 Westvale Abbey is a transform land: since production verified
+    // the double-faced bodies (2026-10-06) its front lands on the transform
+    // land front, still colourless — the front face's own colour.
+    expect(lands("soi-281")).toEqual({ template: "m15dfclandfront", colorKey: "c" });
+    // Without those ticks it lands where it did: the plain land frame.
+    const beforeTheBodies = new Set([...PROD_VERIFIED].filter((key) => !/^m15m?dfc/.test(key)));
+    const { template, colorKey } = landing(mapScryfallToFormPatch(printing("soi-281")), beforeTheBodies);
+    expect({ template, colorKey }).toEqual({ template: "m15land", colorKey: "c" });
     expect(lands("msc-233")).toEqual({ template: "m15land", colorKey: "m" });
     expect(lands("ogw-13")).toEqual({ template: "m15devoid", colorKey: "w" });
     // Innistrad's 2003-frame land: modernland/c is verified on production
