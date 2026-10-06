@@ -2607,6 +2607,118 @@ scratchpad `dfc-1d/research/classified.json`.
   ink under 12/12 beside the same text running under an aura back's empty
   tab.
 
+### The flipside strip rider (5.1c)
+
+TODO 5.1c, 2026-10-06 (`feat/dfc-strip-rider`; owner round 30: the strip's
+colour follows the prints after the ticks). On a modal card the prints
+paint the flipside strip in the colour of the face it DESCRIBES, while
+every master paints it in its own. An addition under the owner rule: no
+stored card changes (none sits on a modal body), no bump, no sweep, no
+badge; a mono-colour card keeps the master's bytes.
+
+- **The rule, measured on every modal scan** (`scratchpad/dfc-1c/research/
+  prints-rule2.json`: per-channel medians of the tab's text-free pixels at
+  HD): the strip is painted in the colour of the FRAME the other face
+  wears. A mono-colour face → its letter — STX #147's green front carries
+  a BLUE tab for Echoing Equation (55,119,191), STX #148's a black one
+  (93,89,87), STX #151's a green (53,100,80), STX #159's a red
+  (180,80,58); a coloured artifact its colour (KHM #15's white Sword of the
+  Realms 170,160,151, KHM #112's black Lantern 99,95,84, KHM #123's red
+  Harnfel 199,79,45); the pathways their back's (ZNR #258 W 140,133,130,
+  #259 B 75,71,64, #260 B 102,97,87, #261 G 49,91,64, KHM #252 R
+  197,77,43). A two-colour spell → GOLD: STX #149's front for its B/R back
+  (160,143,111), KHM #114 Valki's for Tibalt (177,154,102), KHM #168's for
+  the five-colour Bridge (173,150,98), KHM #179's, MSH #18's and #219's
+  (149–150,132,90) — and on a back MSH #219's cream (246,239,211); STX
+  #149's back (for W/B Extus) prints that gold tab near-white
+  (240,232,230), the one light rendering. A two-colour LAND → the LAND
+  GREY: MH3 #252–261's ten hybrid fronts, whose backs add two colours, all
+  read 113,99,88 — CC's grey land modal's tab (`l.png`, 123,107,97), not
+  gold. A front in the HYBRID dress → the land grey too: MH3 #252's land
+  back reads 218,210,206, a warm light grey (the hybrid frame's bars are
+  the grey land frame's; `lb.png`'s tab 206,192,183), never the gold
+  cream. A colourless spell has no print on this frame (STX #6 Wandering
+  Archaic is the see-through frame, its tab 116,102,100): the artifact
+  stand-in. The back tabs the 5.1d gains were fitted on describe the OTHER
+  face (STX #147's back tab is a green strip, KHM #168's a green one), all
+  near-neutral — the lumas stand.
+- **The key** (`lib/cards/faces.ts` `stripKeyOf`, on `DfcOtherFace.stripKey`
+  — the one source both renderers read): a mono-colour face its letter; a
+  land with no colour or more than one `l`; a two-colour spell `m`, or `l`
+  when it is drawn in the hybrid dress (`wearsHybrid`: the two-colour look
+  both renderers resolve, `resolveTwoColor` on the face's own template —
+  the switch, a pair, an all-hybrid cost, a template with hybrid masters);
+  a colourless spell `c`. A back with no colour of its own follows the
+  front's (backPreviewData's rule), so an unfinished back is mono.
+- **The pieces** (`scripts/lib/cc-frames.mjs` `MDFC_STRIP_CUTS`;
+  `<template>/strip/<key>.png` + `.webp`, 658 × 90): each modal template's
+  OWN masters' tabs — the land pair's tab is a pixel off the spell pair's
+  and its back is toned on its own table, so four folders — cut through
+  CC's Flipside mask (`reminder.svg`: the whole tab, x 45–701 × y 1866–1955
+  at HD, 53,828 full-alpha px and a 352-px rim), its full-alpha interior
+  ERODED by one pixel (`insideMaskEroded`, 52,490 px) so the cut runs
+  inside the tab's 4-px dark outline: a cross-colour rider meets this
+  master's own outline on both sides of the cut (invisible: the contact
+  sheet), and the 750 bake's resample blends outline over outline there.
+  Alpha 0 / 255, never a partial pixel of the cut's own; the box x 44–701
+  × y 1866–1955 (the mask's bbox grown to an even origin and size: 1:1 at
+  HD, 2:1 at 750). Keys: w u b r g m a (spell bodies; `c` → `a`) / w u b r
+  g m c (land bodies; `l` → `c`), plus `l` on the spell bodies cut from
+  the land pair's grey `c` master (`l.png` / `lb.png` byte for byte). The
+  pieces are cut AFTER the template loop from the published masters
+  (`localMaster`: this run's own output first, else a copy at the
+  manifest's sha256) — the 120 modal PNG + WebP rebuilt from the cache
+  reproduced the manifest first; the provenance records each template's
+  `strip` (mask, box, erosion, keys, sources, the sha of each master).
+- **The renderers:** `FrameOverlaySlot` `anatomy: "mdfcStrip"` on the four
+  modal PROFILES entries after the crown (`MDFC_STRIP_RIDER_FRONT` / `_BACK`
+  / `_LAND_FRONT` / `_LAND_BACK`, `lib/cards/template-layout.ts`), resolved
+  by `resolveFrameOverlays` from `facts.dfc.stripKey` through the slot's
+  keyMap, **only when it differs from the key the master already paints**
+  (`mdfcStripOwnKey`: the face's colour key; `m` on a split pair master,
+  whose strip is the gold master's byte for byte; none on the hybrid dress,
+  whose strip is lerped). Both renderers draw it where they draw the crown
+  (the bake's overlay `<img>`s at z 5, the preview's `FrameOverlayLayer`),
+  under the strip's texts (z 22); the keep-out is unchanged; the finish
+  masks take it like the crown. `frameAssetPathsFor` preloads it.
+- **Why not "always" (the brief said always):** a piece drawn over its own
+  master is byte-identical at HD on every key — 0 px through the bake's
+  rasteriser (sharp / librsvg over the `<image>` Satori emits; a real bake
+  on a synthetic master proves the slot lands 1:1) — but never at the 750
+  bake: the 2:1 resample blends the cut's edge on the chevron's diagonals,
+  which no cut can block-align (`scratchpad/dfc-1c/research/residual.json`:
+  the eroded cut 1–3 px at ≤ 4 levels on the spell faces and the land
+  backs, 5–6 px at ≤ 7 on the land fronts; the plain mask's cut 35 px at
+  ≤ 32; eroding further brings the fill in). The visual gate's mono modal
+  cases could not have stayed at 0 changed without a bump, so the no-op is
+  skipped, never drawn. One tone source either way: the pieces ARE the
+  masters' tabs. Drawing always is a one-line change plus a scoped bump,
+  the owner's call.
+- **The verified looks:** nothing changes on a mono-colour card, so the
+  ticks stand; a two-colour modal card is the only look the rider changes
+  (none ticked at the time of the PR).
+- **Open on the round-32 sheets:** (a) CC's tinted tabs — ours u
+  199,226,244 · r 255,223,201 · g 211,232,222 · m 255,235,163 on the backs
+  — against the prints' near-neutral ones (STX #147 216,221,229, #159
+  228,228,246, #151 226,227,246, KHM #168 233,234,235): a neutral-hue
+  variant is built in the scratchpad beside each print (30 more objects if
+  picked, never published without the owner); (b) the KHM-vs-STX luma
+  spread (the targets sit on STX); (c) STX #149's near-white gold tab and
+  the hybrid back's warm grey, followed as measured.
+- **Tests:** `tests/unit/frames/mdfc-strip-rider.test.ts` (the recipe, the
+  cut and its findings on a synthetic master, the key rule, what the
+  profiles declare and the resolver draws — mono none, the other face's
+  key, the split's gold, the hybrid's `l`, the land pair — and, with the
+  masters on disk: every piece its master's tab (0 px, alpha binary,
+  nothing outside the mask), a fresh cut byte for byte, the HD identity and
+  the 750 residual through the rasteriser), `tests/unit/render/
+  mdfc-strip-rider-bake.test.tsx` (real bakes: the paths and the order
+  after the crown, the piece under the white / dark texts, the keep-out
+  diff, the 1:1 placement on a synthetic master), `tests/unit/components/
+  mdfc-strip-rider-preview.test.tsx` (the preview's twin), the matrix's 13
+  `@strip-*` cases (0 changed, 0 redefined), `profiles-base.json`
+  regenerated (the four overlays).
+
 ### The editor (5.2)
 
 TODO 5.2, 2026-10-02 (`feat/dfc-editor`, stacked on 5.1a). The Transform
