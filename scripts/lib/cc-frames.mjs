@@ -1391,7 +1391,9 @@ const modalLandTint = (k) => `${NEW}/l${k}.png`;
  *   b  175.2 → 221.0 (STX #148 Search for Blex 223, KHM #112 Tergrid's
  *      Lantern 219 — the skeptic's "b 216" averaged the land back in)
  *   r  212.4 → 230.3 (STX #159 Flamethrower Sonata; a 255 clamp on R)
- *   g  200.6 → 224.4 (STX #151 Journey to the Oracle)
+ *   g  200.6 → 228.9 (STX #151 Journey to the Oracle — read inside the
+ *      tab: the builder's 224.4 had a row on the tab's top outline, which
+ *      sits 3 px lower on this scan; KHM #181 The Ringhart Crest 233.8)
  *   m  194.6 → 233.0 (KHM #168 The Prismatic Bridge — a five-colour GOLD
  *      modal back, 233 — and STX #149's B|R back 233; MSH's gold backs read
  *      228–245: the skeptic's "no mono-gold print" missed Esika's back; a
@@ -1415,7 +1417,7 @@ export const MDFC_BACK_TONES = Object.freeze({
   u: Object.freeze({ bars: 0.866, box: 0.981, strip: 1.056 }),
   b: Object.freeze({ bars: 0.967, box: 1.029, strip: 1.263 }),
   r: Object.freeze({ bars: 1.182, box: 1.075, strip: 1.097 }),
-  g: Object.freeze({ bars: 0.886, box: 1.06, strip: 1.119 }),
+  g: Object.freeze({ bars: 0.886, box: 1.06, strip: 1.141 }),
   m: Object.freeze({ bars: 0.905, box: 0.91, strip: 1.213 }),
   a: Object.freeze({ bars: 1, box: 1 }),
   c: Object.freeze({ bars: 1, box: 1 }),
@@ -1473,7 +1475,7 @@ const MDFC_BACK_NOTES = [
   "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
   "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
   "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
-  "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 14–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched",
+  "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 12–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched; the KHM scans read 5–13 lighter than STX's on every key (u KHM #40 242 vs STX #147 220, r KHM #123 237 vs STX #159 230, g KHM #181 234 vs STX #151 229, b KHM #112 219 vs STX #148 223): the fitted targets sit on STX, with b on both",
   "the legendary crown (TODO 5.1d): the m15mdfccrown overlay, as on the front; the two-colour PAIR masters (5.1d): the prints split a two-colour modal BACK's rings and box over the gold bars (STX #149's B|R back, MSH #18 / #219 / #23 / #49 / #80's crowned gold-barred pair backs), so the split recipe over this pack's back files: mb.png whole, the box and the pinline lerped from the two colour backs, the gold bars and strip at m's gains and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
 ];
 

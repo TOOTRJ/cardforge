@@ -202,7 +202,7 @@ describe("the pair recipes of the double-faced bodies (5.1d / 5.12)", () => {
 
   it("the modal back strips take a gain through the Flipside mask on u b r g and m, fitted to the prints; w untouched", () => {
     for (const [table, targets] of [
-      [MDFC_BACK_TONES, { u: 220.0, b: 221.0, r: 230.3, g: 224.4, m: 233.0 }],
+      [MDFC_BACK_TONES, { u: 220.0, b: 221.0, r: 230.3, g: 228.9, m: 233.0 }],
       [tonesFor(def("m15mdfclandback") as never, "u") ? (CC_TEMPLATES.m15mdfclandback as never as { tones: (k: string) => { gain: number }[] }) : null, null],
     ] as const) {
       if (!targets) continue;
@@ -475,7 +475,9 @@ describe("the published masters and pieces (the frames bucket)", () => {
 
   run("the toned modal back strips land within ±2 luma of their reference prints; w and the fronts untouched", async () => {
     const fill = (img: Img) => { const v: number[] = []; for (const y of [1872, 1874, 1876, 1938, 1940, 1942]) for (let x = 110; x < 640; x += 2) v.push(luma(px(img, x, y))); v.sort((a, b) => a - b); return v[v.length >> 1]; };
-    const SPELL = { u: 220.0, b: 221.0, r: 230.3, g: 224.4, m: 233.0 };
+    // Read inside the tab (rows 1878–1884 and 1936–1942, x 120–480 at HD): STX
+    // #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back.
+    const SPELL = { u: 220.0, b: 221.0, r: 230.3, g: 228.9, m: 233.0 };
     const LAND = { u: 230.7, b: 212.4, r: 227.8, g: 218.1 };
     for (const [k, target] of Object.entries(SPELL)) expect(Math.abs(fill(await rgba(onDisk(`m15mdfcback/${k}.png`)!)) - target), `m15mdfcback/${k}`).toBeLessThanOrEqual(2);
     for (const [k, target] of Object.entries(LAND)) expect(Math.abs(fill(await rgba(onDisk(`m15mdfclandback/${k}.png`)!)) - target), `m15mdfclandback/${k}`).toBeLessThanOrEqual(2);
