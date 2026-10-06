@@ -96,11 +96,14 @@ describe("the modal bodies' recipes (TODO 5.1b)", () => {
   it("the spell pair over CC's 'Modal Regular' pack: w u b r g m + a, c the artifact stand-in, each master the whole image", () => {
     for (const t of ["m15mdfcfront", "m15mdfcback"] as const) {
       const d = def(t);
-      expect(builtColors(d as never)).toEqual(["a", ...COLORS]);
+      // Since 5.1d the split pair masters too, and the hybrid dress on the front.
+      const pairs = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+      expect(builtColors(d as never)).toEqual(["a", ...COLORS, ...pairs, ...(t === "m15mdfcfront" ? pairs.map((p) => `${p}-h`) : [])]);
       expect(d.colors.c).toEqual(d.colors.a);
       expect(d.colors.c[0].src).toMatch(/\/a(b)?\.png$/);
       for (const k of ["w", "u", "b", "r", "g", "m"]) expect(d.colors[k][0].src, `${t}/${k}`).toMatch(new RegExp(`${MODAL}/${k}${t.endsWith("back") ? "b" : ""}\\.png$`));
-      for (const layers of Object.values(d.colors)) {
+      for (const [k, layers] of Object.entries(d.colors)) {
+        if (k.length > 1) continue; // a pair master (5.1d) is its own recipe
         expect(layers).toHaveLength(1);
         expect(layers[0].mask).toBeUndefined();
       }
@@ -141,16 +144,21 @@ describe("the modal bodies' recipes (TODO 5.1b)", () => {
     for (const t of FRONTS) for (const k of ["a", ...COLORS]) expect(tonesFor(def(t) as never, k), `${t}/${k}`).toEqual([]);
     for (const k of ["w", "u", "b", "r", "g", "m"]) {
       const spell = tonesFor(def("m15mdfcback") as never, k) as { mask: string; gain: number; lumaRamp: number[]; region: string }[];
-      expect(spell.map((x) => x.region)).toEqual(["title bar + housing", "type bar", "text box"]);
-      expect(spell.map((x) => x.mask)).toEqual([`${MODAL}/title.svg`, "img/frames/m15/regular/m15MaskType.png", `${MODAL}/textbox.svg`]);
-      const { bars, box } = MDFC_BACK_TONES[k as keyof typeof MDFC_BACK_TONES];
-      expect(spell.map((x) => x.gain)).toEqual([bars, bars, box]);
+      // Since 5.1d the strip too (the whole tab through the pack's Flipside
+      // mask), on every key but w, whose strip sits within the prints'.
+      const strip = k === "w" ? [] : ["flipside strip"];
+      expect(spell.map((x) => x.region)).toEqual(["title bar + housing", "type bar", "text box", ...strip]);
+      expect(spell.map((x) => x.mask)).toEqual([`${MODAL}/title.svg`, "img/frames/m15/regular/m15MaskType.png", `${MODAL}/textbox.svg`, ...(strip.length ? [`${MODAL}/reminder.svg`] : [])]);
+      const { bars, box, strip: stripGain } = MDFC_BACK_TONES[k as keyof typeof MDFC_BACK_TONES] as { bars: number; box: number; strip?: number };
+      expect(spell.map((x) => x.gain)).toEqual([bars, bars, box, ...(stripGain !== undefined ? [stripGain] : [])]);
+      expect(stripGain === undefined).toBe(k === "w");
       for (const x of spell) expect(x.lumaRamp).toEqual([...DFC_BACK_TONE_LUMA_RAMP]);
       // The fit: CC's bars × the gain lands on the print's median (±1).
       expect(Math.abs(CC_BACK_BARS[k] * bars - SPELL_PRINTS[k].bars), `${k} bars`).toBeLessThanOrEqual(1.5);
       const land = tonesFor(def("m15mdfclandback") as never, k) as { gain: number }[];
-      const lt = MDFC_LAND_BACK_TONES[k as keyof typeof MDFC_LAND_BACK_TONES];
-      expect(land.map((x) => x.gain)).toEqual([lt.bars, lt.bars, lt.box]);
+      const lt = MDFC_LAND_BACK_TONES[k as keyof typeof MDFC_LAND_BACK_TONES] as { bars: number; box: number; strip?: number };
+      expect(land.map((x) => x.gain)).toEqual([lt.bars, lt.bars, lt.box, ...(lt.strip !== undefined ? [lt.strip] : [])]);
+      expect(lt.strip === undefined).toBe(k === "w");
       if (k !== "m") expect(Math.abs(CC_BACK_BARS[k] * lt.bars - LAND_PRINTS[k].bars), `${k} land bars`).toBeLessThanOrEqual(1.5);
     }
     // The land backs print the bars 10–30 luma apart from the spell backs on
@@ -175,7 +183,10 @@ describe("the modal bodies' recipes (TODO 5.1b)", () => {
     expect(sourceFilesFor(def("m15mdfclandfront") as never)).toEqual(
       expect.arrayContaining([`${MODAL}/w.png`, `${MODAL}/l.png`, "img/frames/m15/new/lw.png", `${MODAL}/frame.svg`, `${MODAL}/textbox.svg`]),
     );
-    expect(sourceFilesFor(def("m15mdfcfront") as never)).not.toContain(`${MODAL}/title.svg`);
+    // Since 5.1d the front's hybrid dress reads the grey Land frame's bars
+    // through the Title mask, so the mask is a source file of the front too.
+    expect(sourceFilesFor(def("m15mdfcfront") as never)).toContain(`${MODAL}/title.svg`);
+    expect(sourceFilesFor(def("m15mdfcfront") as never)).toContain(`${MODAL}/l.png`);
   });
 
   it("the provenance records each template's pack, recipe, tones and notes", () => {
@@ -193,10 +204,10 @@ describe("the modal bodies' recipes (TODO 5.1b)", () => {
     expect(provenance.m15mdfcfront.notes.join("\n")).toMatch(/strip is painted in the MASTER's colour/);
   });
 
-  it("publishes every master as PNG + WebP at 1500 × 2100 — 30 keys (a beside c), 56 distinct blobs", () => {
-    const keys = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc"));
-    expect(keys).toHaveLength(60);
-    expect(new Set(keys.map((k) => manifest.files[k].sha256)).size).toBe(56);
+  it("publishes every master as PNG + WebP at 1500 × 2100 — 30 keys (a beside c) and 5.1d's 30 pair masters, 116 distinct blobs", () => {
+    const keys = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc") && !k.startsWith("m15mdfccrown"));
+    expect(keys).toHaveLength(120);
+    expect(new Set(keys.map((k) => manifest.files[k].sha256)).size).toBe(116);
     for (const k of keys) expect([manifest.files[k].width, manifest.files[k].height], k).toEqual([1500, 2100]);
     for (const t of ALL) for (const k of builtColors(def(t) as never)) expect(manifest.files[`${t}/${k}.png`], `${t}/${k}`).toBeDefined();
     // `c` and `a` are the same bytes on the spell pair; the land pair's c is

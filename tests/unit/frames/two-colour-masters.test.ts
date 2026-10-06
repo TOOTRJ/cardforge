@@ -55,7 +55,12 @@ describe("the declared pair masters", () => {
     const declared = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.map((t) => [t, declaredKeys(t).length] as const).filter(([, n]) => n > 0),
     );
-    expect(declared).toEqual({ m15: 20, m15land: 10, m15snowland: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10, m15snow: 10 });
+    // …and 60 more in 5.1d: the double-faced spell faces' split, the modal
+    // front's hybrid too.
+    expect(declared).toEqual({
+      m15: 20, m15land: 10, m15snowland: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10, m15snow: 10,
+      m15dfcfront: 10, m15dfcback: 10, m15dfcbackleft: 10, m15mdfcfront: 20, m15mdfcback: 10,
+    });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);
   });

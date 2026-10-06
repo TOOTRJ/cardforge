@@ -167,7 +167,9 @@ describe("adoptDfcBodiesPlan — what the move writes", () => {
     const plan = adoptDfcBodiesPlan(card, "transform")!;
     expect(plan.frontBody).toBe("m15dfcfront");
     expect(plan.backBody).toBe("m15dfcback");
-    expect(plan.frame_style).toEqual({ finish: "foil", template: "m15dfcfront", collector: "2023", dfcIcon: "arrows" });
+    // The crown and the two-colour switch survive the move since 5.1d (the
+    // transform front body draws both).
+    expect(plan.frame_style).toEqual({ finish: "foil", template: "m15dfcfront", crown: true, twoColor: true, collector: "2023", dfcIcon: "arrows" });
     expect(plan.back_face).toEqual({ ...rows[2].back_face, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
     expect(plan.back_face).not.toHaveProperty("cost");
     // The land back (Tobirama) lands on the land back, COLOURLESS — the land

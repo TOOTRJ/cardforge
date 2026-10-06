@@ -164,11 +164,16 @@ describe("transform printings land on the bodies and SAVE there", () => {
     expect(row.color_identity, key).toEqual(frontColour);
     expect(row.visibility, key).toBe("public");
     expect(row.back_face, key).toMatchObject({ frame_style: { template: back }, color_identity: backColour, art_url: ART.back });
-    // A transform back stores no cost; the crown / two-colour switches are
-    // dropped on a DFC body (design D17) whatever the printing says.
+    // A transform back stores no cost. The crown / two-colour switches are
+    // KEPT on the transform front body since 5.1d (it draws both): the
+    // printing's crown where it names one (LCI #26's `legendary` effect; a
+    // nonlegendary printing names none), else the new-card default — on.
     expect(row.back_face, key).not.toHaveProperty("cost");
-    expect((row.frame_style as Record<string, unknown>).crown, key).not.toBe(true);
-    expect((row.frame_style as Record<string, unknown>).twoColor, key).not.toBe(true);
+    // XLN #22 Legion's Landing is a Legendary printed WITHOUT the crown
+    // (2017): the printing's `false` stays; the two-colour switch only on
+    // the spell front (the land front draws no pairs).
+    expect((row.frame_style as Record<string, unknown>).crown, key).toBe(key !== "xln-22");
+    expect((row.frame_style as Record<string, unknown>).twoColor, key).toBe(front === "m15dfclandfront" ? undefined : true);
   });
 
   it("LCI #26 and ISD #51 land on the bodies with a NEAREST match (the gap stays logged), MID #7 exact", () => {

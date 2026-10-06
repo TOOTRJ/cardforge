@@ -1655,3 +1655,71 @@ describe("v39 — flip's lower half and aftermath's cost onto the prints (TODO 4
     expect(getFrameProfile("adventure").artSlot).toEqual({ topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 });
   });
 });
+
+describe("v40 — the modal backs' flipside strip toned onto the prints (TODO 5.1d)", () => {
+  const png = "https://x/y.png";
+  /** A v39 bake. Its columns default to UNTOUCHED_SINCE_V22, so only v40 can
+   *  be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 39,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V40 = { current: 40 } as const;
+  const FACES = ["m15mdfcback", "m15mdfcfront", "m15mdfclandback", "m15mdfclandfront"];
+  const BACKS = ["m15mdfcback", "m15mdfclandback"];
+
+  it("is a sweep, never a badge, scoped to the four modal faces — frozen as a literal", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(40);
+    expect(lv.VERSION_ROLLOUT[40]).toBe("sweep");
+    expect(lv.rolloutPolicy(40)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 40)).toBe(40);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.V40_MODAL_FACE_TEMPLATES].sort()).toEqual(FACES);
+    expect([...lv.V40_MODAL_BACK_TEMPLATES].sort()).toEqual(BACKS);
+    // A master re-cut (the strip's tone): template-scoped, no card predicate.
+    expect(lv.VERSION_SCOPES[40]).toBeUndefined();
+    for (const t of ALL) expect(isRenderStale(39, t, undefined, 40), t).toBe(FACES.includes(t));
+    // The transform bodies and v39's pair are untouched: their cards stamp.
+    for (const t of ["m15dfcfront", "m15dfcback", "m15dfclandback", "flip", "aftermath", "m15"]) expect(isRenderStale(39, t, undefined, 40), t).toBe(false);
+  });
+
+  it("re-bakes every card on the modal faces — art or none, any finish, a back with or without a cost — and stamps every other template", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(40);
+    for (const t of ALL) {
+      const face = FACES.includes(t);
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(face ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row, AT_V40), t).toBe(face);
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V40), t).toBe(false);
+    }
+    for (const [t, over] of [
+      ["m15mdfcfront", { art_url: null }],
+      ["m15mdfcfront", { back_face: { title: "Echoing Equation", cost: "{3}{U}{U}", card_type: "sorcery", frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] } }],
+      ["m15mdfclandfront", { back_face: { title: "Grimclimb Pathway", card_type: "land", frame_style: { template: "m15mdfclandback" }, color_identity: ["black"] } }],
+      ["m15mdfcfront", { frame_style: { template: "m15mdfcfront", finish: "foil" } }],
+    ] as const) {
+      expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe("rebake");
+    }
+    expect(classifyForSweep(at("m15dfcfront"))).toBe("stamp");
+    expect(classifyForSweep(at("m15mdfcfront", { layout_version: 40 }))).toBe("current");
+  });
+
+  it("is NOT verification-neutral on the two back bodies (their masters change); the front bodies' ticks and every other template's stay fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(40);
+    expect([...VERIFICATION_SCOPED_VERSIONS[40]].sort()).toEqual(BACKS);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(39, t, VERIFICATION_SCOPED_VERSIONS, 40, regular), t).toBe(BACKS.includes(t));
+    }
+    // No slot moves: the modal profiles' strip slots are 5.1b's.
+    expect(getFrameProfile("m15mdfcback").flipside?.word.rect).toEqual({ leftPct: 6.8, topPct: 89.2, widthPct: 36.4, heightPct: 3.91 });
+    expect(getFrameProfile("m15mdfcback").flipside?.keepOut).toEqual({ leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 });
+  });
+});

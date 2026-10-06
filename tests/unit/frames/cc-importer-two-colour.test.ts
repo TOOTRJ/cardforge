@@ -259,8 +259,10 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
     // snow print exists) — tests/unit/frames/snow-pair-masters.test.ts.
     expect(builtColors(CC_TEMPLATES.m15snow)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
     expect(builtColors(CC_TEMPLATES.m15snowland)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+    // …and the double-faced spell faces since 5.1d (tests/unit/frames/
+    // dfc-crowns-pairs.test.ts); the land pair none.
     for (const [template, def] of Object.entries(CC_TEMPLATES)) {
-      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"].includes(template)) continue;
+      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }
   });
