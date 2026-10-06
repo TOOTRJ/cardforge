@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import crownPrintings from "../cards/fixtures/crown-reference-printings.json";
 import registryPrintings from "../cards/fixtures/reference-printings.json";
 
 // ---------------------------------------------------------------------------
@@ -555,6 +556,42 @@ describe("/admin/frame-compare — the page and the Score button are handed ONE 
     // The back is an Aura: the grey tab prints empty (owner decision Q7).
     expect(front.dfc).toMatchObject({ layout: "transform", role: "front", icon: "sunmoon", otherFace: { printsPt: false } });
     expect(previewDraws(front)).toEqual({ overlays: ["crown:w", "dfcIcon:sun"], reversePt: null, stripWord: null });
+  });
+
+  it("the 2016–22 back has no crowned red or gold print: the Legendary toggle crowns the SAMPLE there, never BOT's ▼-right backs", async () => {
+    // lib/cards/crown.ts listed BOT #6 Slicer and BOT #12 Megatron on these
+    // two rows (5.1d): `convertdfc` is the ▲ / ▼ family, their backs print
+    // the ▼ at the RIGHT, so the toggle drew the left-well body — a ▼ in its
+    // LEFT well — beside a ▼-right scan. No red or three-colour legendary
+    // back was printed crowned in a left-well family: the rows are gone. The
+    // captured printings are served, so a row naming one again would show it.
+    for (const [id, card] of Object.entries(crownPrintings)) if (id !== "_note") scryfall.cards.set(id, card);
+    for (const color of ["r", "m"] as const) {
+      expect(crownReferenceFor("m15dfcbackleft", color), color).toBeNull();
+      await renderPage({ template: "m15dfcbackleft", color, legendary: "1" });
+      expect(screen.getByText("No crowned print for this colour — the sample render is crowned instead.")).toBeTruthy();
+      const shown = compare.preview as CardPreviewData;
+      expect(shown.title, color).toBe(sampleFramePreview("m15dfcbackleft", color).title);
+      expect(shown.frameStyle, color).toMatchObject({ template: "m15dfcbackleft", crown: true });
+      expect(shown.supertype, color).toMatch(/\bLegendary\b/);
+      expect(screen.getByTestId("frame-compare").dataset.scan, color).toBe("none");
+      expect(payloads.build).not.toHaveBeenCalled();
+      cleanup();
+    }
+
+    // The ▼-right back — the body BOT's backs do wear — keeps its own
+    // crowned red print: ECL #105 Grub, Notorious Auntie, the ▼ in the
+    // master (no rider), the right-well crown over it.
+    const grub = crownReferenceFor("m15dfcback", "r");
+    expect(`${grub?.set} #${grub?.collectorNumber}`).toBe("ecl #105");
+    await renderPage({ template: "m15dfcback", color: "r", legendary: "1" });
+    expect(payloads.build).toHaveBeenCalledWith(grub!.scryfallId, "m15dfcback", "back");
+    const back = compare.preview as CardPreviewData;
+    expect(back.title).toBe("Grub, Notorious Auntie");
+    expect(back.frameStyle).toMatchObject({ template: "m15dfcback", crown: true });
+    expect(back.frameStyle).not.toHaveProperty("dfcIcon");
+    expect(back.dfc).toMatchObject({ layout: "transform", role: "back", icon: "arrows" });
+    expect(previewDraws(back)).toEqual({ overlays: ["crown:r"], reversePt: null, stripWord: null });
   });
 
   it("a single-faced reference: the same object too, with no block on either", async () => {

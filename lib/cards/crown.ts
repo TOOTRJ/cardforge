@@ -171,7 +171,20 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   // every transform / modal printing with the `legendary` effect on the
   // black-bordered 2015 frame, no showcase — scratchpad dfc-1d/research/
   // classified.json). The transform FRONT in every colour and pair; the
-  // 2016–22 back (MID / VOW / BOT) in w u b r m and two pairs — no g, no a;
+  // 2016–22 back (MID / VOW) in w u b and two pairs — no r, g, m or a: no
+  // red, green, three-colour or artifact legendary back was printed crowned
+  // in a left-well family (Scryfall, 2026-10-06: the 52 paper printings
+  // with a sun / moon, moon / Emrakul, compass or fan effect AND
+  // `legendary` — their backs are w, u, b, four pairs and XLN's / RIX's
+  // lands, the parchment back; SOI #5's red Avacyn, the Purifier predates
+  // the crown). The 5.1d survey read BOT's `convertdfc` as a left family
+  // and listed BOT #6 Slicer and #12 Megatron here — their backs print the
+  // ▼ at the RIGHT (the ▲ / ▼ family, lib/cards/dfc.ts
+  // dfcIconFamilyFromEffects) and the pin check refuses both on this body:
+  // removed in TODO 5.0d, where tests/unit/cards/crown-references-dfc.test.ts
+  // holds every row below to that check. The crown PIECES of r and m stay
+  // (m15dfccrown is the front body's band too, judged there against MOM
+  // #137 and FIN #231);
   // the ▼ back (MOM / FIN / ECL / LCC) in every colour, a and two pairs; the
   // transform land front SLX #9 Havengul Laboratory (a colourless legendary
   // land front: the `l` crown through the entry's keyMap); the modal front
@@ -204,8 +217,6 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     w: ref("Katilda's Rising Dawn", "vow", "21", "0ef240aa-2a88-4ec4-888a-918466372adb"),
     u: ref("Hauken's Insight", "vow", "65", "6b4529c3-8edb-4909-b910-806450a39d2e"),
     b: ref("Ormendahl, the Corrupter", "mid", "109", "0f6e668d-2502-4e82-b4c2-ef34c9afa27e"),
-    r: ref("Slicer, High-Speed Antagonist", "bot", "6", "9d9a9350-4734-4cc1-986d-467e6715199f"),
-    m: ref("Megatron, Destructive Force", "bot", "12", "ac6ded62-7bf2-476f-ad8e-020da6327c6b"),
     rg: ref("Tovolar, the Midnight Scourge", "mid", "246", "f953fad3-0cd1-48aa-8ed9-d7d2e293e6e2"),
     ub: ref("Olag, Ludevic's Hubris", "mid", "233", "788288f6-7944-48f4-91b0-f452e209c9ce"),
   },
