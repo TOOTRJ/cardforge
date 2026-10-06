@@ -2469,10 +2469,15 @@ it) — so the toggle on those two rows drew the left-well body, a ▼ in its
 LEFT well, beside a ▼-right scan. The crown PIECES of r and m are
 unaffected: `m15dfccrown` is the front body's band too, shown there beside
 MOM #137 and FIN #231. The `m15dfcback` r and m rows were always ECL #105
-and FIN #231.
+and FIN #231. A second slip in the same table: the two artifact prints
+(LCI #256 on the transform front, FIN #272 on the ▼ back) were filed under
+`a`, the crown's own key, while the toggle asks with the FRAME colour key —
+so on those bodies' `c` rows it never found them and crowned the sample.
+They are the `c` rows now, as on `m15artifact` and `m15land` (the crown
+drawn is still `a`, through the slot's `keyMap`).
 `tests/unit/cards/crown-references-dfc.test.ts` now holds every double-faced
-row to its printing: the face it names, the `legendary` effect, the colour
-of its key and the pin check of its own row.
+row to its printing: the key the page asks with, the face it names, the
+`legendary` effect, the colour of its key and the pin check of its own row.
 
 - **The crown pieces are CUT bands, not twins.** Card Conjurer's own DFC
   crowns — 'Legend Crowns' (`m15/transform/crowns/regular/<k>.png`, cut
