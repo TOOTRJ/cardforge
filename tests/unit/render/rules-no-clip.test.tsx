@@ -284,6 +284,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "nyx/main", "retro/main", "retroland/main", "tarkirdraconic/main", "tarkirdragon/main", "tarkirghostfire/main",
       // 5.1a's transform bodies: M15's box on every face.
       "m15dfcfront/main", "m15dfcback/main", "m15dfcbackleft/main", "m15dfclandfront/main", "m15dfclandback/main",
+      // 5.1b's modal bodies: the same box, the flipside strip a keep-out
+      // in its last lines.
+      "m15mdfcfront/main", "m15mdfcback/main", "m15mdfclandfront/main", "m15mdfclandback/main",
     ],
     ["1200 chars"],
   ],

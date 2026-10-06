@@ -411,12 +411,17 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
   // TODO 4.33's borderless planeswalkers.
   "m15borderlesspw", "m15borderlesspwtall",
-  // TODO 5.1a's transform bodies.
+  // TODO 5.1a's transform bodies and 5.1b's modal bodies.
   ...["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"],
+  ...["m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback"],
 ];
-/** Templates added after v36 (TODO 5.1a's transform bodies): no card was
- *  ever baked on them before v37, so v36's frozen lists never name them. */
-const POST_V36_TEMPLATES: readonly string[] = ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"];
+/** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
+ *  bodies): no card was ever baked on them before v37, so v36's frozen
+ *  lists never name them. */
+const POST_V36_TEMPLATES: readonly string[] = [
+  "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+  "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   const png = "https://x/y.png";
@@ -740,8 +745,9 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
       "m15borderlesspw", "m15borderlesspwtall",
       "emblem",
-      // …and 5.1a's transform bodies, the same way.
+      // …and 5.1a's transform bodies and 5.1b's modal bodies, the same way.
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+      "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
     ];
     expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
     for (const t of joinedLater) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);

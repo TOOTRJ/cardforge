@@ -404,8 +404,7 @@ on conflict (id) do nothing;
 --     are 4.6f wave 2c's). Seeds never pass the frame gate, so these sit on
 --     the bodies before the owner ticks them (after 5.3): the Transform chip
 --     stays dark on a branch, and the stored rows still render through the
---     live preview (no stored bake; the back bake is 5.3's). The modal seed
---     waits for 5.1b's bodies. One PUBLIC row — the 24th public card, the
+--     live preview (no stored bake; the back bake is 5.3's). One PUBLIC row — the 24th public card, the
 --     last that fits the seeded gallery's one page (the e2e gallery specs,
 --     see 2b) — the rest unlisted or private:
 --       …053 a public transform creature // creature, both arts, both bodies;
@@ -415,7 +414,11 @@ on conflict (id) do nothing;
 --       …056 a LEGACY-shaped `back_face` on m15 — the shape of the 8 imported
 --            double-faced cards: content only, no body, no colour — for the
 --            editor's one-click move onto the real frames (owner Q3:
---            "Move onto the transform frames" on its Identity step).
+--            "Move onto the transform frames" on its Identity step);
+--       …057 a MODAL instant // land on 5.1b's bodies (MH3 #241's shape:
+--            the front's strip prints "Land · {T}: Add {U}.", the back's
+--            "Instant · {2}{U}"), both arts, no family (the housing has
+--            none). Unlisted.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -472,7 +475,15 @@ from (values
      E'Daybound', 'She tends the flock. Some nights she is the wolf.', '2', '2', 17,
      '{"template":"m15","finish":"regular","collector":"2023","crown":true,"twoColor":true}'::jsonb,
      '{"title":"Moorland Ravager","card_type":"creature","subtypes":["Werewolf"],"power":"3","toughness":"3","rules_text":"Nightbound\nMoorland Ravager has lifelink as long as it''s night."}'::jsonb,
-     19, 'unlisted', array['transform','legacy'], 2)
+     19, 'unlisted', array['transform','legacy'], 2),
+  -- A modal double-faced instant // land (TODO 5.1b's bodies): the front on
+  -- the modal front body, the back — a land, with its own mana ability for
+  -- the front's strip — on the modal land back in its own (blue) colour.
+  ('c0000000-0000-4000-a000-000000000057'::uuid, 'Tidewater Reverie', 'tidewater-reverie', '{2}{U}', array['blue'], null, 'instant', array[]::text[], 'uncommon',
+     E'Return target spell or nonland permanent to its owner''s hand.', 'The tide takes what the shore forgets.', null, null, 21,
+     '{"template":"m15mdfcfront","finish":"regular","collector":"2023"}'::jsonb,
+     '{"title":"Tidewater Shoals","card_type":"land","subtypes":[],"rules_text":"As Tidewater Shoals enters, you may pay 3 life. If you don''t, it enters tapped.\n{T}: Add {U}.","frame_style":{"template":"m15mdfclandback"},"color_identity":["blue"]}'::jsonb,
+     22, 'unlisted', array['modal','lands'], 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, flavor_text, power, toughness, art, frame_style, back_face,
         back_art, visibility, tags, age_days)

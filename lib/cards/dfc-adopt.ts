@@ -29,13 +29,14 @@
 // "transform"; a modal land back never says the word) and as modal
 // otherwise (skeptic 2026-10-05; `cards.layout` can't decide it: nothing
 // writes the column before 5.4, every row reads 'normal'). A layout whose
-// bodies don't exist yet (the modal pair until 5.1b) is offered NOTHING:
-// dfcAdoptionShape still names it (the action's message), dfcAdoptionOffer
-// answers null (no hint), the action refuses every layout by name.
+// bodies don't exist is offered NOTHING — none in wave 1 since 5.1b's modal
+// pair, the mechanism stays for a later layout: dfcAdoptionShape still
+// names it (the action's message), dfcAdoptionOffer answers null (no
+// hint), the action refuses every layout by name.
 //
-// Who qualifies in wave 1 (4 of the 8 today: Titânia, Erza Scarlet, Avatar
-// Aang, Tobirama; Darth Vader's costed back the day the modal bodies
-// exist): a row on the M15 standard or one of its skins with no
+// Who qualifies in wave 1 (5 of the 8: Titânia, Erza Scarlet, Avatar Aang,
+// Tobirama onto the transform pair; Darth Vader's costed back onto the
+// modal pair, 5.1b): a row on the M15 standard or one of its skins with no
 // double-faced twin of its own — m15 (or no template, drawn as m15),
 // m15devoid, m15snow, m15artifact (DFC_ADOPTABLE_FRONTS; the devoid or snow
 // dress is lost on the move and the hint says so) — with a legacy back
@@ -113,7 +114,11 @@ export function adoptedBackColorIdentity(
   backBody: FrameTemplate | null,
   frontColorIdentity: readonly ColorIdentity[] | null | undefined,
 ): ColorIdentity[] {
-  if (backBody && dfcBodyOf(backBody)?.land) return ["colorless"];
+  // The TRANSFORM land back only: the modal land back (5.1b) is one land
+  // tint per colour, verified per colour like any back, so it keeps the
+  // front's colour.
+  const body = backBody ? dfcBodyOf(backBody) : null;
+  if (body?.land && body.layout === "transform") return ["colorless"];
   return [...(frontColorIdentity ?? [])];
 }
 
@@ -183,8 +188,8 @@ export function dfcAdoptionShape(card: DfcAdoptionCard): DfcLayout | null {
 /**
  * The hint's offer for a stored card — the ONE layout its back's shape
  * derives, with both bodies — or null when the card doesn't qualify, or
- * when that layout's bodies don't exist yet (the modal pair until 5.1b:
- * a costed back is offered nothing, never Transform).
+ * when that layout's bodies don't exist (none since 5.1b's modal pair; a
+ * costed back is never offered Transform).
  */
 export function dfcAdoptionOffer(card: DfcAdoptionCard): DfcAdoptionOffer | null {
   const candidate = candidateOf(card);
@@ -216,7 +221,7 @@ export type DfcAdoptionPlan = {
 };
 
 /** What the move writes, or null when the card doesn't qualify for that
- *  layout: not offered, its bodies don't exist yet, or `layout` is not the
+ *  layout: not offered, its bodies don't exist, or `layout` is not the
  *  one the back's shape derives (a costed back is never moved onto
  *  Transform, a cost-less one never onto Modal). */
 export function adoptDfcBodiesPlan(card: DfcAdoptionCard, layout: DfcLayout): DfcAdoptionPlan | null {

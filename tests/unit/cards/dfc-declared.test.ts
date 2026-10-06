@@ -302,11 +302,10 @@ describe("the face under test and the paired front (TODO 5.0b) once a body exist
     expect(frontBodyFor("m15artifact")).toBe("m15dfcfront");
     expect(frontBodyFor("m15artifact", "creature", "sunmoon")).toBe("m15dfcfront");
     expect(frontBodyFor("m15artifact", "land")).toBe("m15dfclandfront");
-    // The modal rows come with 5.1b: the fallback scans the declared fronts
-    // of the same layout — the modal layout declares no land front here, so
-    // any front of the layout.
-    expect(frontBodyFor("m15devoid")).toBe("m15snow");
-    expect(frontBodyFor("m15devoid", "land")).toBe("m15snow");
+    // bodyFor's modal rows are filled too (5.1b): a modal back pairs with
+    // the REAL modal front bodies, whatever front the fixture declares.
+    expect(frontBodyFor("m15devoid")).toBe("m15mdfcfront");
+    expect(frontBodyFor("m15devoid", "land")).toBe("m15mdfclandfront");
     // Not a back body: null.
     expect(frontBodyFor("m15")).toBeNull();
     expect(frontBodyFor("m15land")).toBeNull();

@@ -84,6 +84,8 @@ describe("the main box on every template", () => {
         "m15", "m15artifact", "m15devoid", "m15land", "m15snow", "m15snowland", "nyx",
         // The transform bodies (TODO 5.1a): M15's box and margins on both faces.
         "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+        // …and the modal bodies (5.1b), the same skeleton.
+        "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

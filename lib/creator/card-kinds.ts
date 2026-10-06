@@ -223,16 +223,16 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     layoutTemplates: ["m15dfcfront", "m15dfclandfront"],
     previewTemplate: "m15dfcfront",
   },
-  // The modal kind's bodies are 5.1b's (`m15mdfcfront`, `m15mdfclandfront`;
-  // the thumbnail `m15mdfcfront`): until they exist its family is EMPTY —
-  // no gallery, no first available frame, so the chip is dark and
-  // planKindChange keeps the card where it is — and the transform front
-  // stands in for the chip's thumbnail.
+  // The modal double-faced card (TODO 5.1b's bodies; 5.2's editor): the
+  // front on a modal FRONT body (`m15mdfcfront`, the land front for a land
+  // face), the back on the modal back body its type derives (bodyFor: the
+  // housing has no family). The chip lights once a colour is verified on a
+  // front body AND the default back body (kindHasAvailableFrame).
   mdfc: {
     label: "Modal double-faced",
     cardType: "creature",
-    layoutTemplates: [],
-    previewTemplate: "m15dfcfront",
+    layoutTemplates: ["m15mdfcfront", "m15mdfclandfront"],
+    previewTemplate: "m15mdfcfront",
   },
 };
 
@@ -1327,8 +1327,8 @@ export function kindHasAvailableFrame(
 }
 
 /** The double-faced kinds and their layout (lib/cards/dfc.ts): the
- *  Transform kind (5.1a) and the Modal kind (named by 5.2; its bodies are
- *  5.1b's, so bodyFor answers null for its faces until then). */
+ *  Transform kind (5.1a) and the Modal kind (named by 5.2, its bodies
+ *  5.1b's). */
 const DFC_KIND_LAYOUT: Partial<Record<CardKind, DfcLayout>> = { transform: "transform", mdfc: "modal" };
 
 /** The layout of a double-faced kind, or null for every other kind — the
@@ -1339,9 +1339,10 @@ export function dfcLayoutForKind(kind: CardKind): DfcLayout | null {
 }
 
 /** The front BODY a double-faced kind's card wears for a face type (the
- *  land front for a land, the spell front otherwise), or null when the kind
- *  has no bodies yet (the modal kind until 5.1b) — what the Card step's
- *  face-type row writes beside the type. */
+ *  land front for a land, the spell front otherwise), or null for a kind
+ *  with no bodies (none since 5.1b's modal pair; a wave-2 kind until its
+ *  rows exist) — what the Card step's face-type row writes beside the
+ *  type. */
 export function dfcFrontBodyFor(kind: CardKind, cardType: CardType | "" | null | undefined): FrameTemplate | null {
   const layout = dfcLayoutForKind(kind);
   return layout ? bodyFor(layout, "front", cardType || null) : null;
@@ -1534,9 +1535,10 @@ export function planKindChange(
   const backFace = def.inlineSecondFace ? { has_back_face: true as const } : {};
 
   // Layout kinds are deterministic — one template family. A kind whose
-  // family is still EMPTY (the modal kind until 5.1b's bodies) keeps the
-  // card's own template: its chip is dark, and a programmatic pick lands
-  // on "frames not published" in the creator rather than on nothing.
+  // family is EMPTY (none since 5.1b's modal pair; a wave-2 kind before its
+  // bodies) keeps the card's own template: its chip is dark, and a
+  // programmatic pick lands on "frames not published" in the creator rather
+  // than on nothing.
   if (def.layoutTemplates) {
     return {
       action: "apply",

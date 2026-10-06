@@ -3285,6 +3285,595 @@
       "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). <pair> = CC's land frame l.png (grey frame and bars) with the split text box and pinline in the two land tints (new/l<k>.png), as MKM #259–271 and LTR #258 print"
     ]
   },
+  "m15mdfcback": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packModalRegular.js 'Modal Regular' backs (groupModal-1.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius; then the title bar and the housing's fill (through img/frames/modal/regular/title.svg), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/modal/regular/textbox.svg) have their colour multiplied by the key's gain (MDFC_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline, the strip and the plates untouched",
+    "colors": {
+      "a": [
+        "img/frames/modal/regular/ab.png"
+      ],
+      "w": [
+        "img/frames/modal/regular/wb.png"
+      ],
+      "u": [
+        "img/frames/modal/regular/ub.png"
+      ],
+      "b": [
+        "img/frames/modal/regular/bb.png"
+      ],
+      "r": [
+        "img/frames/modal/regular/rb.png"
+      ],
+      "g": [
+        "img/frames/modal/regular/gb.png"
+      ],
+      "c": [
+        "img/frames/modal/regular/ab.png"
+      ],
+      "m": [
+        "img/frames/modal/regular/mb.png"
+      ]
+    },
+    "tones": {
+      "a": [],
+      "w": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.947,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.947,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.059,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "u": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.866,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.866,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 0.981,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "b": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.967,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.967,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.029,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "r": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 1.182,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.182,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.075,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "g": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.886,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.886,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.06,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "c": [],
+      "m": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 0.91,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/modal/regular/ab.png",
+      "img/frames/modal/regular/bb.png",
+      "img/frames/modal/regular/gb.png",
+      "img/frames/modal/regular/mb.png",
+      "img/frames/modal/regular/rb.png",
+      "img/frames/modal/regular/textbox.svg",
+      "img/frames/modal/regular/title.svg",
+      "img/frames/modal/regular/ub.png",
+      "img/frames/modal/regular/wb.png"
+    ],
+    "notes": [
+      "source: CC 'Modal Regular' backs (<k>b.png): the M15 frame with DARK title and type bars (white name and type ink), the housing in the bar's tone with the white ▲▼, a greyed text box (dark rules ink), and the LIGHT flipside strip (its ◀ dark) — the prints' back strip is light with DARK text (CC's pack says white: ours follows the print)",
+      "toned onto the prints before the first tick (MDFC_BACK_TONES, design D1): CC's bars read 3–16 luma light on w u b g m and 16 dark on r, its boxes 5–18 off; per-key gains through the pack's Title / Type / Rules masks, the white ▲▼ and the light rims kept by a luma ramp; the body, the pinline and the strip untouched; the artifact back untoned (no colourless modal back was printed)",
+      "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
+      "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
+      "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1"
+    ]
+  },
+  "m15mdfcfront": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packModalRegular.js 'Modal Regular' fronts (groupModal-1.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "a": [
+        "img/frames/modal/regular/a.png"
+      ],
+      "w": [
+        "img/frames/modal/regular/w.png"
+      ],
+      "u": [
+        "img/frames/modal/regular/u.png"
+      ],
+      "b": [
+        "img/frames/modal/regular/b.png"
+      ],
+      "r": [
+        "img/frames/modal/regular/r.png"
+      ],
+      "g": [
+        "img/frames/modal/regular/g.png"
+      ],
+      "c": [
+        "img/frames/modal/regular/a.png"
+      ],
+      "m": [
+        "img/frames/modal/regular/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/modal/regular/a.png",
+      "img/frames/modal/regular/b.png",
+      "img/frames/modal/regular/g.png",
+      "img/frames/modal/regular/m.png",
+      "img/frames/modal/regular/r.png",
+      "img/frames/modal/regular/u.png",
+      "img/frames/modal/regular/w.png"
+    ],
+    "notes": [
+      "source: CC 'Modal Regular' (packModalRegular.js, groupModal-1.js): the M15 frame with the drop-shaped icon HOUSING at the left of the name bar (a white fill, its ring, the black ▲ — tip x 41, circle to 201, rows 97–236 at HD; the prints' 44 / 198–205 / 98–236, within 3 px), the dark flipside STRIP at the bottom left in the colour's tone (x 64–690 × y 1866–1948 with its ◀; the prints' 64–681..694 × 1861..1866–1948, 6–10 luma lighter than theirs) and the strip's box cut into the text box's paper — all the master's; only the strip's two texts are drawn (the profile's `flipside` slots: the other face's last type word in Beleren Bold from CC's box at 6.8 %W, its cost or mana line in the rules font ending at 43.2 %W)",
+      "the name starts at 16.7 %W (prints 247–252 px: ZNR #12, KHM #15, STX #147's back, ZNR #258; CC's pack says 0.1614 = 242) — the profile's title inset (the transform bodies' DFC_ICON_FACE_TITLE_LEFT_PCT), not a pixel of the master (design D5)",
+      "colourless `c` = the pack's 'Artifact Frame' (a.png) as a RENDER STAND-IN (design D2): ticked against STX #154 Pestilent Cauldron, the one colourless modal face printed on the plain 2015 frame, and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
+      "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
+      "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it",
+      "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body)"
+    ]
+  },
+  "m15mdfclandback": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packModalRegular.js 'Modal Regular' backs + packM15RegularNew.js land tints (a PipGlyph recipe)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100 (the modal master's size): CC's modal back copied 1:1, then its frame body REPLACED (a premultiplied lerp by the mask's alpha) through the pack's img/frames/modal/regular/frame.svg by the 2015 coloured land tint (m15/new/l<k>.png, 2010x2814 resized to 1500x2100 with Lanczos — the m15land masters' own downscale); corners rounded to the importer radius; then the title bar and the housing's fill (through img/frames/modal/regular/title.svg), the type bar (through img/frames/m15/regular/m15MaskType.png) and the text box (through img/frames/modal/regular/textbox.svg) have their colour multiplied by the key's gain (MDFC_LAND_BACK_TONES: bars / box per colour), fading to ×1 between luma 215 and 245 so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline, the strip and the plates untouched",
+    "colors": {
+      "w": [
+        "img/frames/modal/regular/wb.png",
+        "img/frames/m15/new/lw.png replacing through img/frames/modal/regular/frame.svg"
+      ],
+      "u": [
+        "img/frames/modal/regular/ub.png",
+        "img/frames/m15/new/lu.png replacing through img/frames/modal/regular/frame.svg"
+      ],
+      "b": [
+        "img/frames/modal/regular/bb.png",
+        "img/frames/m15/new/lb.png replacing through img/frames/modal/regular/frame.svg"
+      ],
+      "r": [
+        "img/frames/modal/regular/rb.png",
+        "img/frames/m15/new/lr.png replacing through img/frames/modal/regular/frame.svg"
+      ],
+      "g": [
+        "img/frames/modal/regular/gb.png",
+        "img/frames/m15/new/lg.png replacing through img/frames/modal/regular/frame.svg"
+      ],
+      "c": [
+        "img/frames/modal/regular/lb.png"
+      ],
+      "m": [
+        "img/frames/modal/regular/mb.png",
+        "img/frames/m15/new/lm.png replacing through img/frames/modal/regular/frame.svg"
+      ]
+    },
+    "tones": {
+      "w": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.95,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.95,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.063,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "u": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.74,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.74,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 0.966,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "b": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 1.088,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.088,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.099,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "r": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 1.099,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 1.099,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.065,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "g": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.783,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.783,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 1.033,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ],
+      "c": [],
+      "m": [
+        {
+          "mask": "img/frames/modal/regular/title.svg",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "title bar + housing"
+        },
+        {
+          "mask": "img/frames/m15/regular/m15MaskType.png",
+          "gain": 0.905,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "type bar"
+        },
+        {
+          "mask": "img/frames/modal/regular/textbox.svg",
+          "gain": 0.91,
+          "lumaRamp": [
+            215,
+            245
+          ],
+          "region": "text box"
+        }
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/lb.png",
+      "img/frames/m15/new/lg.png",
+      "img/frames/m15/new/lm.png",
+      "img/frames/m15/new/lr.png",
+      "img/frames/m15/new/lu.png",
+      "img/frames/m15/new/lw.png",
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/modal/regular/bb.png",
+      "img/frames/modal/regular/frame.svg",
+      "img/frames/modal/regular/gb.png",
+      "img/frames/modal/regular/lb.png",
+      "img/frames/modal/regular/mb.png",
+      "img/frames/modal/regular/rb.png",
+      "img/frames/modal/regular/textbox.svg",
+      "img/frames/modal/regular/title.svg",
+      "img/frames/modal/regular/ub.png",
+      "img/frames/modal/regular/wb.png"
+    ],
+    "notes": [
+      "a PipGlyph recipe (no CC coloured modal land exists; design frames.md §4.4): the colour's modal back with its frame body replaced through the pack's own masks by the 2015 coloured land tint (m15/new/l<k>.png — the m15land masters' file, the same Lanczos downscale) — the land backs print the stone land body under the colour's dark bars and housing, the modal back's light box (ZNR #12 / #90 / #134 / #189: a neutral light box; MH3 #241 a bluer one) and light strip; the housing, its ring, the pinline and the strip are the modal master's pixels",
+      "keys w u b r g from the five land tints, m the gold land tint under the gold modal pieces (a stand-in: no gold modal land was printed), c = CC's grey land modal (l.png / lb.png) as it is (a stand-in: no colourless modal land was printed) — c and m are never offered (no reference)",
+      "no cost (hideCost) and no P/T (a land face prints none)"
+    ]
+  },
+  "m15mdfclandfront": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packModalRegular.js 'Modal Regular' fronts + packM15RegularNew.js land tints (a PipGlyph recipe)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100 (the modal master's size): CC's modal front copied 1:1, then its frame body and its text box REPLACED (a premultiplied lerp by the mask's alpha) through the pack's img/frames/modal/regular/frame.svg and img/frames/modal/regular/textbox.svg by the 2015 coloured land tint (m15/new/l<k>.png, 2010x2814 resized to 1500x2100 with Lanczos — the m15land masters' own downscale); corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/modal/regular/w.png",
+        "img/frames/m15/new/lw.png replacing through img/frames/modal/regular/frame.svg",
+        "img/frames/m15/new/lw.png replacing through img/frames/modal/regular/textbox.svg"
+      ],
+      "u": [
+        "img/frames/modal/regular/u.png",
+        "img/frames/m15/new/lu.png replacing through img/frames/modal/regular/frame.svg",
+        "img/frames/m15/new/lu.png replacing through img/frames/modal/regular/textbox.svg"
+      ],
+      "b": [
+        "img/frames/modal/regular/b.png",
+        "img/frames/m15/new/lb.png replacing through img/frames/modal/regular/frame.svg",
+        "img/frames/m15/new/lb.png replacing through img/frames/modal/regular/textbox.svg"
+      ],
+      "r": [
+        "img/frames/modal/regular/r.png",
+        "img/frames/m15/new/lr.png replacing through img/frames/modal/regular/frame.svg",
+        "img/frames/m15/new/lr.png replacing through img/frames/modal/regular/textbox.svg"
+      ],
+      "g": [
+        "img/frames/modal/regular/g.png",
+        "img/frames/m15/new/lg.png replacing through img/frames/modal/regular/frame.svg",
+        "img/frames/m15/new/lg.png replacing through img/frames/modal/regular/textbox.svg"
+      ],
+      "c": [
+        "img/frames/modal/regular/l.png"
+      ],
+      "m": [
+        "img/frames/modal/regular/m.png",
+        "img/frames/m15/new/lm.png replacing through img/frames/modal/regular/frame.svg",
+        "img/frames/m15/new/lm.png replacing through img/frames/modal/regular/textbox.svg"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/lb.png",
+      "img/frames/m15/new/lg.png",
+      "img/frames/m15/new/lm.png",
+      "img/frames/m15/new/lr.png",
+      "img/frames/m15/new/lu.png",
+      "img/frames/m15/new/lw.png",
+      "img/frames/modal/regular/b.png",
+      "img/frames/modal/regular/frame.svg",
+      "img/frames/modal/regular/g.png",
+      "img/frames/modal/regular/l.png",
+      "img/frames/modal/regular/m.png",
+      "img/frames/modal/regular/r.png",
+      "img/frames/modal/regular/textbox.svg",
+      "img/frames/modal/regular/u.png",
+      "img/frames/modal/regular/w.png"
+    ],
+    "notes": [
+      "a PipGlyph recipe (no CC coloured modal land exists; design frames.md §4.4): the colour's modal front with its frame body and text box replaced through the pack's own masks by the 2015 coloured land tint (m15/new/l<k>.png — the m15land masters' file, the same Lanczos downscale) — the pathways print the stone land body, the colour's pinline, the land tint's box and the modal housing and strip (ZNR #258–261, KHM #252); the housing, its ring, the pinline and the strip are the modal master's pixels",
+      "keys w u b r g from the five land tints, m the gold land tint under the gold modal pieces (a stand-in: no gold modal land was printed), c = CC's grey land modal (l.png / lb.png) as it is (a stand-in: no colourless modal land was printed) — c and m are never offered (no reference)",
+      "no cost (hideCost) and no P/T (a land face prints none)"
+    ]
+  },
   "m15pw": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

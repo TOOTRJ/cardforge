@@ -55,7 +55,7 @@ describe("one M15-era display size (layout v32)", () => {
     // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
     // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
     // planeswalkers and 4.52's emblem.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(40);
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(44);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
@@ -219,6 +219,11 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15dfcbackleft", base.title, cc],
     ["m15dfclandfront", base.title, cc],
     ["m15dfclandback", base.title, cc],
+    // …and the modal bodies (5.1b), on the same skeleton.
+    ["m15mdfcfront", base.title, cc],
+    ["m15mdfcback", base.title, cc],
+    ["m15mdfclandfront", base.title, cc],
+    ["m15mdfclandback", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
     ["extendedart", base.title, base.type],
     ["expeditionland", base.title, base.type],
@@ -300,6 +305,7 @@ describe("baselines (TextSlot.dy)", () => {
       "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       "m15borderlesspw", "m15borderlesspwtall",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+      "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
     ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);
     }

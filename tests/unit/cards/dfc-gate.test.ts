@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  DFC_FRONT_BODY_MISMATCH,
+  DFC_FRONT_TYPE_REFUSED,
+  dfcFrontTypeError,
   DFC_BACK_BODY_MISMATCH,
   DFC_BACK_BODY_SET,
   DFC_BACK_COLOR_SET,
@@ -126,10 +129,21 @@ describe("resolveDfcBackFace — create", () => {
     expect(landBack.ok && landBack.back?.frame_style).toEqual({ template: "m15dfclandback" });
   });
 
-  it("a kind whose back bodies don't exist yet (the modal pair until 5.1b) is refused by name", () => {
-    // No modal front body exists either, so the front reads as a plain
-    // card here; the rule shows through bodyFor's null on a declared front
-    // (tests/unit/cards/dfc-declared.test.ts holds the declared fixture).
+  it("a modal front (5.1b): the back body is the modal back its type derives — the spell back for a creature, the land back for a land — and a modal back KEEPS its cost", () => {
+    const modal = resolveDfcBackFace({ frontTemplate: "m15mdfcfront", back: { ...BACK, cost: "{1}{U}" }, family: null, frontColorIdentity: ["blue"], verifiedKeys: new Set([frameComboKey("m15mdfcback", "u")]) });
+    expect(modal.ok && modal.back).toEqual({ ...BACK, cost: "{1}{U}", frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] });
+    expect(modal.ok && modal.layout).toBe("modal");
+    const land = resolveDfcBackFace({ frontTemplate: "m15mdfcfront", back: { ...BACK, card_type: "land", cost: "" }, family: null, frontColorIdentity: ["blue"], verifiedKeys: new Set([frameComboKey("m15mdfclandback", "u")]) });
+    expect(land.ok && land.back?.frame_style).toEqual({ template: "m15mdfclandback" });
+    // A crafted transform back under a modal front is refused by name.
+    const crafted = resolveDfcBackFace({ frontTemplate: "m15mdfcfront", back: { ...BACK, frame_style: { template: "m15dfcback" } }, family: null, frontColorIdentity: ["blue"], verifiedKeys: VERIFIED });
+    expect(crafted).toMatchObject({ ok: false, field: "back_face.frame_style", message: DFC_BACK_BODY_MISMATCH });
+    // The modal land front dresses lands only; the spell front everything else.
+    expect(dfcFrontTypeError("m15mdfclandfront", "creature")).toBe(DFC_FRONT_BODY_MISMATCH);
+    expect(dfcFrontTypeError("m15mdfcfront", "land")).toBe(DFC_FRONT_BODY_MISMATCH);
+    expect(dfcFrontTypeError("m15mdfclandfront", "land")).toBeNull();
+    expect(dfcFrontTypeError("m15mdfcfront", "planeswalker")).toBe(DFC_FRONT_TYPE_REFUSED);
+    // The wording a kind with no bodies would get stays for wave-2 kinds.
     expect(DFC_NO_BACK_BODY_YET).toMatch(/No back-face frame exists/);
   });
 });

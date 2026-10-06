@@ -29,7 +29,7 @@ test.describe("double-faced editor", () => {
 
     // The Card step's sections start collapsed: open the kind chips. The
     // Transform chip, lit by the preview; the Modal chip stays dark (its
-    // bodies are 5.1b's).
+    // bodies, 5.1b's, aren't in this preview and aren't verified).
     await page.locator("summary").filter({ hasText: /^card type/i }).first().click();
     const kinds = page.getByRole("radiogroup", { name: "Card type" });
     const modal = kinds.getByRole("radio", { name: /Modal double-faced/ });

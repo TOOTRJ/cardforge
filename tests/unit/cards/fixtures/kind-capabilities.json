@@ -60,7 +60,11 @@
   { "template": "m15dfcback", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 5.1a (design 2026-10-02): a NEW template — a transform BACK body (CC 'Transform (Back)' packs): the dark plates' P/T; never a card's own template (templateRefusesKind refuses every kind on a back body), so it gives no kind anything beyond the P/T it draws for the back face. An addition." },
   { "template": "m15dfcbackleft", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 5.1a (design 2026-10-02): a NEW template — a transform BACK body (CC 'Transform (Back)' packs): the dark plates' P/T; never a card's own template (templateRefusesKind refuses every kind on a back body), so it gives no kind anything beyond the P/T it draws for the back face. An addition." },
   { "template": "m15dfclandfront", "change": "new-template", "capabilities": ["pt", "dfcFront"], "reason": "TODO 5.1a (design 2026-10-02): a NEW template — the transform front body (CC 'Transform (Front)'): M15's P/T plate and a double-faced front (FrameProfile.dfc role front: the icon well, the grey tab, a back face of its own). An addition: no stored card sits on it." },
-  { "template": "m15dfclandback", "change": "new-template", "capabilities": [], "reason": "TODO 5.1a (design 2026-10-02): a NEW template — the transform land BACK body (CC 'Transform (Back) (New)' Land Frame): no P/T (a land back prints none), no indicator; never a card's own template. An addition." }
+  { "template": "m15dfclandback", "change": "new-template", "capabilities": [], "reason": "TODO 5.1a (design 2026-10-02): a NEW template — the transform land BACK body (CC 'Transform (Back) (New)' Land Frame): no P/T (a land back prints none), no indicator; never a card's own template. An addition." },
+  { "template": "m15mdfcfront", "change": "new-template", "capabilities": ["pt", "dfcFront"], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal double-faced FRONT body (CC 'Modal Regular'): M15's P/T plate and a double-faced front (FrameProfile.dfc role front: the housing, the flipside strip, a back face of its own). An addition: no stored card sits on it." },
+  { "template": "m15mdfcback", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal BACK body (CC 'Modal Regular' backs): the dark plates' P/T and its own cost; never a card's own template (templateRefusesKind refuses every kind on a back body), so it gives no kind anything beyond the P/T it draws for the back face. An addition." },
+  { "template": "m15mdfclandfront", "change": "new-template", "capabilities": ["dfcFront"], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal land FRONT body (a PipGlyph recipe: the colour's modal front over the 2015 land tint): a double-faced front with no cost and no P/T (a land face prints none). An addition: no stored card sits on it." },
+  { "template": "m15mdfclandback", "change": "new-template", "capabilities": [], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal land BACK body (the colour's modal back over the 2015 land tint): no cost, no P/T, no indicator; never a card's own template. An addition." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -91,6 +95,10 @@
   "m15dfcbackleft": ["pt"],
   "m15dfclandfront": ["pt", "dfcFront"],
   "m15dfclandback": [],
+  "m15mdfcfront": ["pt", "dfcFront"],
+  "m15mdfcback": ["pt"],
+  "m15mdfclandfront": ["dfcFront"],
+  "m15mdfclandback": [],
   "agclassic": ["pt"],
   "alphaland": ["pt"],
   "alphatoken": ["pt"],

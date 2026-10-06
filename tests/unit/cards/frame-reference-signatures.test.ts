@@ -70,13 +70,15 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
     if (row.ref.face === 1) {
       // A back body's reference (TODO 5.1a; the pin check holds the same,
       // folded into 5.0b's back-body rules): the printing's FRONT resolves
-      // to a transform front body (once verified), and its BACK wears this
-      // body — by its family (frame_effects) and the back's type.
+      // to a front body of its layout (once verified) — transform, or
+      // 5.1b's modal — and its BACK wears this body: by its family
+      // (frame_effects; the modal pair has one) and the back's type.
       const front = match.onceVerified ?? match.template;
       expect(templateHasBackFace(front), `${row.combo} ${match.signature}`).toBe(true);
       const back = card.card_faces?.[1];
       const { card_type } = parseTypeLine(back?.type_line);
-      expect(bodyFor("transform", "back", card_type, dfcIconFamilyFromEffects(card.frame_effects)), row.combo).toBe(row.template);
+      const layout = card.layout === "modal_dfc" ? "modal" : "transform";
+      expect(bodyFor(layout, "back", card_type, dfcIconFamilyFromEffects(card.frame_effects)), row.combo).toBe(row.template);
       return;
     }
     if (row.combo in ALLOWLIST) {

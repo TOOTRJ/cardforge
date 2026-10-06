@@ -43,6 +43,7 @@ import {
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
 import { wordWidthPx, type RulesBlock, type RulesLayout, type RulesMetrics } from "@/lib/cards/rules-layout";
+import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import {
   layoutSagaRail,
   sagaBadgeWidthPx,
@@ -119,6 +120,7 @@ import {
   type SlotAlign,
   type StatSlot,
   artLayersFor,
+  type FlipsideSlots,
   type TextSlot,
   type TypeLineSplit,
 } from "@/lib/cards/template-layout";
@@ -918,6 +920,8 @@ function CardFace({
   // of them (lib/cards/rules-box.ts), the bake's twin.
   const secondFacePtShown = Boolean(secondFace?.power || secondFace?.toughness);
   const stampKeepOut = holoStamp?.keepOut ?? null;
+  // The modal strip (5.1b): the lines keep out of the painted tab.
+  const stripKeepOut = layout.flipside?.keepOut ?? null;
   const drawnStats: DrawnStats = useMemo(
     () => ({
       pt: showPT,
@@ -925,8 +929,9 @@ function CardFace({
       defense: showDefense,
       secondFacePt: Boolean(layout.secondFace?.pt && secondFacePtShown),
       stamp: stampKeepOut,
+      strip: stripKeepOut,
     }),
-    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown, stampKeepOut],
+    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown, stampKeepOut, stripKeepOut],
   );
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).
@@ -1281,6 +1286,12 @@ function CardFace({
           masterKey={masterKey}
           orientation={orientationFromAspect(aspect)}
         />
+      ) : null}
+      {/* The modal flipside strip's texts (TODO 5.1b): the OTHER face's type
+          word and its cost / mana line in the strip the master paints —
+          the bake's FlipsideBake twin. */}
+      {layout.flipside && dfc ? (
+        <FlipsideOverlay slots={layout.flipside} other={dfc.otherFace} orientation={orientationFromAspect(aspect)} overrides={pipOverrides} />
       ) : null}
 
       {/* Title band — name (left) + mana cost (right). When the profile
@@ -1964,6 +1975,112 @@ function statJustify(slot: Pick<StatSlot, "align">): CSSProperties["justifyConte
 }
 
 // ---------------------------------------------------------------------------
+// FlipsideOverlay — the modal strip's two texts (TODO 5.1b; lib/cards/
+// flipside-strip.ts), the bake's FlipsideBake twin: the other face's type
+// word in the display face from the box's left edge, and its cost / mana
+// line as ONE nowrap row of runs at the HD bake's px in cqw (RulesBoxLine's
+// construction: every word its ceiled box, word gaps as margins, each pip
+// at the layout's pipTopPx) set against the box's right edge.
+function FlipsideOverlay({
+  slots,
+  other,
+  orientation,
+  overrides,
+}: {
+  slots: FlipsideSlots;
+  other: DfcFace["otherFace"];
+  orientation: CardOrientation;
+  overrides: PipOverrides | null;
+}) {
+  const strip = flipsideStrip(slots, other, "hd");
+  if (!strip) return null;
+  return (
+    <>
+      {strip.word ? (
+        <div
+          data-testid="flipside-word"
+          style={{
+            ...rectStyle(slots.word.rect),
+            zIndex: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            fontFamily: fontFor(slots.word.font),
+            fontSize: cqw(slots.word.sizePct),
+            fontWeight: slots.word.weight ?? 700,
+            color: slots.word.colorHex,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {strip.word}
+        </div>
+      ) : null}
+      {strip.line ? <FlipsideLineOverlay slot={slots.line} line={strip.line} orientation={orientation} overrides={overrides} /> : null}
+    </>
+  );
+}
+
+function FlipsideLineOverlay({ slot, line, orientation, overrides }: { slot: TextSlot; line: FlipsideLine; orientation: CardOrientation; overrides: PipOverrides | null }) {
+  const m = line.metrics;
+  const hd = (px: number) => hdCqw(px, orientation);
+  return (
+    <div
+      data-testid="flipside-line"
+      style={{
+        ...rectStyle(slot.rect),
+        zIndex: 22,
+        display: "flex",
+        flexWrap: "nowrap",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        fontFamily: fontFor(slot.font),
+        fontSize: hd(m.fontPx),
+        color: slot.colorHex,
+      }}
+    >
+      {line.runs.map((run, ri) => (
+        <span
+          key={ri}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+            height: hd(m.linePx),
+            ...(ri > 0 ? { marginLeft: hd(m.wordGapPx) } : {}),
+          }}
+        >
+          {run.map((item, i) =>
+            item.t === "m" ? (
+              <RulesPip
+                key={i}
+                suffix={item.suffix}
+                fontSize={hd(m.pipPx / MS_COST_DISC_EM)}
+                top={hd(m.pipTopPx)}
+                gapBefore={i > 0 && run[i - 1].t === "m" ? hd(m.pipGapPx) : null}
+                overrides={overrides}
+              />
+            ) : (
+              <span
+                key={i}
+                style={{
+                  display: "inline-block",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  width: hd(wordWidthPx(item, m)),
+                  lineHeight: hd(m.linePx),
+                  ...(item.em ? { fontStyle: "italic" } : {}),
+                }}
+              >
+                {rulesWordText(item.v)}
+              </span>
+            ),
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // ColorIndicatorOverlay — the colour-indicator dot (TODO 5.1a; lib/cards/
 // color-indicator.ts): the outline disc, then the fills — one disc, two
 // halves split on the diagonal, else wedges — in ONE inline SVG at the dot's

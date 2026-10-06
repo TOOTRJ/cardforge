@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // profile fixture (tests/unit/cards/dfc-fixture.ts: m15artifact = a
 // transform back, paired through bodyFor's filled transform rows (5.1a)
 // with the REAL front bodies m15dfcfront / m15dfclandfront; m15devoid = a
-// modal back paired with the fixture's m15snow, the modal rows being 5.1b's
-// — never the real PROFILES). A back body never dresses a front, so
+// modal back paired through bodyFor's modal rows (5.1b) with the real
+// m15mdfcfront / m15mdfclandfront — never the real PROFILES). A back body never dresses a front, so
 // the walk pins the CARD to the paired front body, keeps the row's template
 // as the one under test, and opens the preview on the back face whatever
 // the link says. The kind gate and the sample are the paired front's.
@@ -98,8 +98,9 @@ describe("a back body's walk", () => {
 
   it("a modal back walks its own paired front", async () => {
     const walk = await buildFrameWalkthrough({ template: "m15devoid", color: "u", seed: "sample" });
-    expect(walk).toMatchObject({ template: "m15devoid", cardTemplate: "m15snow", previewFace: "back" });
-    expect(walk?.seed?.patch.frame_template).toBe("m15snow");
+    // bodyFor's modal rows are filled (5.1b): the real modal front.
+    expect(walk).toMatchObject({ template: "m15devoid", cardTemplate: "m15mdfcfront", previewFace: "back" });
+    expect(walk?.seed?.patch.frame_template).toBe("m15mdfcfront");
   });
 
   it("a blank walk on a back body still pins the paired front", async () => {

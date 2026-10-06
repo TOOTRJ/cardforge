@@ -8,7 +8,7 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // ---------------------------------------------------------------------------
 // TODO 5.2 — the double-faced editor through the real CardCreatorForm: the
 // Transform chip (dark until a front AND the default back are verified; the
-// Modal chip dark until 5.1b), the Card step's face-type and icon-family
+// Modal chip the same on 5.1b's bodies), the Card step's face-type and icon-family
 // rows, the back-face panel on the Identity step, the live preview's back
 // (its own body and colour, flipped when the panel takes focus), the save
 // (the derived body, the explicit colour, no cost on a transform back, the
@@ -309,6 +309,26 @@ describe("a new transform card", () => {
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfcback" }, color_identity: ["green"] });
   });
 
+  it("a MODAL land back keeps following the front (5.1b: one land tint per colour, verified per colour) — never the colourless stand-in — and a modal back keeps its cost field", async () => {
+    renderForm({
+      verifiedFrameKeys: [
+        ...BASE_VERIFIED,
+        frameComboKey("m15mdfcfront", "u"),
+        frameComboKey("m15mdfcback", "u"),
+        frameComboKey("m15mdfclandback", "u"),
+      ],
+    });
+    await clickChip("Card type", /Modal double-faced/);
+    await clickChip("Color identity", /^blue/i);
+    await goTo(/^identity$/i);
+    await clickChip("Back face type", /^Land/);
+    expect(preview().backFace).toMatchObject({ frame_style: { template: "m15mdfclandback" }, color_identity: ["blue"] });
+    expect(screen.getByTestId("dfc-back-color").textContent).toMatch(/follows the front/);
+    await clickChip("Back face type", /^Sorcery/);
+    expect(preview().backFace).toMatchObject({ frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] });
+    expect(screen.getByTestId("dfc-face-panel").textContent).toMatch(/Cost/);
+  });
+
   it("saves the derived body, the explicit colour and no cost; the back's art is needed to publish", async () => {
     actions.createCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "delver-of-secrets" });
     renderForm();
@@ -447,13 +467,26 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/colourless — a land has none/);
     cleanup();
     // The same land back without the sign (a ZNR modal land's shape) is a
-    // modal card: no hint, the land back verified or not.
+    // modal card: the hint offers the MODAL pair (5.1b) — dark on the
+    // transform land back's ticks, judged in the front's colour (the modal
+    // land back is one tint per colour), lit once both modal bodies are
+    // ticked in white.
     renderForm({
       mode: "edit",
       card: tobirama("{T}: Add {W}."),
       verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfclandback", "c")],
     });
-    expect(screen.queryByTestId("dfc-adopt-hint")).toBeNull();
+    const modalDark = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
+    expect(modalDark.textContent).toMatch(/Move onto the modal double-faced frames/);
+    expect(modalDark.disabled).toBe(true);
+    expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/colour \(the front's\)/);
+    cleanup();
+    renderForm({
+      mode: "edit",
+      card: tobirama("{T}: Add {W}."),
+      verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15mdfcfront", "w"), frameComboKey("m15mdfclandback", "w")],
+    });
+    expect((screen.getByTestId("dfc-adopt-move") as HTMLButtonElement).disabled).toBe(false);
     cleanup();
     // The land back in the front's white is never what the move writes.
     renderForm({
@@ -472,10 +505,9 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     expect(screen.queryByTestId("dfc-adopt-hint")).toBeNull();
   });
 
-  it("a legacy back WITH a mana cost is a modal card: no hint at all until the modal bodies exist (owner 2026-10-05), every transform combo verified or not", () => {
-    renderForm({
-      mode: "edit",
-      card: savedCard({
+  it("a legacy back WITH a mana cost is a modal card (owner 2026-10-05): the hint offers the modal pair alone (5.1b), dark until both modal bodies are verified in the card's colour — every transform combo verified or not", async () => {
+    const vader = () =>
+      savedCard({
         color_identity: ["black"],
         cost: "{2}{B}",
         frame_style: { finish: "regular", template: "m15" },
@@ -485,12 +517,32 @@ describe("an imported double-faced card (the Q3 hint)", () => {
           cost: "{3}{B}",
           rules_text: "{T}: Target player loses 3 life unless they sacrifice a nonland permanent or discard a card.",
         },
-      }),
+      });
+    renderForm({
+      mode: "edit",
+      card: vader(),
       verifiedFrameKeys: [...TRANSFORM_VERIFIED, frameComboKey("m15dfcfront", "b"), frameComboKey("m15dfcback", "b")],
     });
-    expect(screen.queryByTestId("dfc-adopt-hint")).toBeNull();
-    expect(screen.queryByTestId("dfc-adopt-move")).toBeNull();
+    const dark = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
+    expect(dark.textContent).toMatch(/Move onto the modal double-faced frames/);
+    expect(dark.disabled).toBe(true);
+    expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/the front gets the modal double-faced front/);
+    expect(screen.queryByRole("radiogroup", { name: "Double-faced layout" })).toBeNull();
     // Still a legacy back: no back-face panel either.
     expect(screen.queryByTestId("dfc-face-panel")).toBeNull();
+    cleanup();
+    actions.adoptDfcBodiesAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "vader", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
+    renderForm({
+      mode: "edit",
+      card: vader(),
+      verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15mdfcfront", "b"), frameComboKey("m15mdfcback", "b")],
+    });
+    const lit = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
+    expect(lit.disabled).toBe(false);
+    await act(async () => {
+      fireEvent.click(lit);
+    });
+    await waitFor(() => expect(actions.adoptDfcBodiesAction).toHaveBeenCalledWith(CARD_ID, "modal"));
+    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/Moved onto the modal double-faced frames/));
   });
 });

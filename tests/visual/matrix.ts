@@ -161,8 +161,8 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   flip: "r",
   // A transform card's front (TODO 5.1a): a blue Delver.
   transform: "u",
-  // The modal kind (named by TODO 5.2) has no bodies until 5.1b: no
-  // template hosts it, so no case is baked for it yet.
+  // A modal card's front (TODO 5.1b): a blue instant // land (MH3 #241's
+  // shape).
   mdfc: "u",
 };
 
@@ -179,6 +179,8 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
   switch (kind) {
     case "transform":
       return transformContent(shape, colour, template === "m15dfclandfront");
+    case "mdfc":
+      return modalContent(shape, colour, template === "m15mdfclandfront");
     case "land": {
       if (!long && key !== "m") {
         const name = BASIC_LAND_NAME_BY_KEY[key];
@@ -421,6 +423,90 @@ function transformContent(shape: VisualShape, colour: VisualColour, land: boolea
       power: long ? "12" : "3",
       toughness: long ? "12" : "2",
       ...backStyle,
+    },
+  };
+}
+
+/** A modal double-faced card's content (TODO 5.1b): a spell front // land
+ *  back (MH3 #241 Sink into Stupor // Soporific Springs's shape — the
+ *  front's strip prints "Land · {T}: Add {U}.", the back's "Instant · {2}{U}")
+ *  in the case's colour; the land front (a pathway, ZNR #260 Clearwater //
+ *  Murkwater's shape: both strips a land's mana line). The long card: a
+ *  creature // creature with a cost on the back (MSH #18's shape without
+ *  the Marvel strip form) — the dark plate and the long strip texts. */
+function modalContent(shape: VisualShape, colour: VisualColour, land: boolean): Fields {
+  const long = shape === "long";
+  const pip = pips(colour, 0, 1);
+  const backStyle = {
+    frame_style: { template: "m15mdfcback" as FrameTemplate },
+    color_identity: IDENTITY[colour],
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+  };
+  if (land) {
+    return {
+      title: long ? "Clearwater Pathway of the Drowned Archmage" : "Clearwater Pathway",
+      card_type: "land",
+      supertype: long ? "Legendary" : null,
+      subtypes: [],
+      cost: null,
+      rules_text: `{T}: Add ${pip}.`,
+      flavor_text: long ? LONG_FLAVOR : null,
+      back_face: {
+        title: long ? "Murkwater Pathway of the Sunken Archive" : "Murkwater Pathway",
+        cost: "",
+        card_type: "land",
+        subtypes: [],
+        rules_text: `{T}: Add ${pip}.`,
+        flavor_text: long ? LONG_FLAVOR : null,
+        ...backStyle,
+        frame_style: { template: "m15mdfclandback" as FrameTemplate },
+      },
+    };
+  }
+  if (long) {
+    return {
+      title: "Jennifer Walters, Counsel of the Avengers' Mansion",
+      card_type: "creature",
+      supertype: "Legendary",
+      subtypes: ["Human", "Advisor", "Hero"],
+      cost: `{X}${pips(colour, 3, 3)}`,
+      rules_text: LONG_RULES,
+      flavor_text: LONG_FLAVOR,
+      power: "10",
+      toughness: "10",
+      back_face: {
+        title: "The Sensational She-Hulk, Avenger of the Courtroom",
+        cost: `{3}${pips(colour, 2, 2)}`,
+        card_type: "creature",
+        supertype: "Legendary",
+        subtypes: ["Gamma", "Hero"],
+        rules_text: DENSE_RULES,
+        flavor_text: LONG_FLAVOR,
+        power: "12",
+        toughness: "12",
+        ...backStyle,
+      },
+    };
+  }
+  return {
+    title: "Sink into Stupor",
+    card_type: "instant",
+    supertype: null,
+    subtypes: [],
+    cost: `{1}${pips(colour, 0, 2)}`,
+    rules_text: "Return target spell or nonland permanent to its owner's hand.",
+    flavor_text: null,
+    power: null,
+    toughness: null,
+    back_face: {
+      title: "Soporific Springs",
+      cost: "",
+      card_type: "land",
+      subtypes: [],
+      rules_text: `As Soporific Springs enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add ${pip}.`,
+      ...backStyle,
+      frame_style: { template: "m15mdfclandback" as FrameTemplate },
     },
   };
 }
@@ -992,6 +1078,31 @@ export function visualCases(): VisualCase[] {
   add("m15dfcfront", "transform", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
   add("m15dfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
   add("m15dfcfront", "transform", "b", "short", { corners: "square", suffix: "@square" });
+  // TODO 5.1b: the modal bodies — NEW cases (new templates, no stored
+  // card: no bump). The front bodies come out of the per-template loop
+  // above (the modal kind's rows carry a back with a body, so the strip
+  // prints the back's type word and its cost / mana line). Here: every
+  // BACK body × colour, short and long, baked as the back face — the strip
+  // in dark ink on the light strip, a cost on the back (the short spell
+  // back is STX #147's sorcery, the long one a creature with the dark
+  // plate), the land back's mana line — the stored bake's size, a foil, a
+  // square, and the strip's word cases: Equipment (KHM #15's shape), God
+  // (its back's), Enchantment (the longest wave-1 type word) and Tibalt.
+  for (const body of MDFC_BACK_BODIES) {
+    const front: FrameTemplate = body === "m15mdfclandback" ? "m15mdfclandfront" : "m15mdfcfront";
+    for (const colour of VISUAL_COLOURS) {
+      add(body, "mdfc", colour, "short", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour) });
+      add(body, "mdfc", colour, "long", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour, "long") });
+    }
+    add(body, "mdfc", "u", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: front }, row: dfcBodyRow(body, "u", "long") });
+  }
+  add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@stripequipment", row: MDFC_EQUIPMENT_BACK });
+  add("m15mdfcback", "mdfc", "w", "short", { suffix: "@stripgod", back: { frontTemplate: "m15mdfcfront" }, row: MDFC_EQUIPMENT_BACK });
+  add("m15mdfcfront", "mdfc", "g", "short", { suffix: "@stripenchantment", row: MDFC_ENCHANTMENT_BACK });
+  add("m15mdfcfront", "mdfc", "b", "short", { suffix: "@striptibalt", row: MDFC_TIBALT_BACK });
+  add("m15mdfcfront", "mdfc", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15mdfcback", "r", "short", "foil") });
+  add("m15mdfcback", "mdfc", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15mdfcfront" }, row: dfcBodyRow("m15mdfcback", "r", "short", "foil") });
+  add("m15mdfcfront", "mdfc", "u", "short", { corners: "square", suffix: "@square" });
   // A legacy-shaped back_face on m15 (the 8 imported DFCs' shape: content,
   // no body): the FRONT bake is today's, byte for byte (its hash must not
   // move against the base this PR was cut from: the corpus proof).
@@ -1029,6 +1140,85 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifa
 export const STAMP_ARCH_RULES =
   "Flying, vigilance, deathtouch, lifelink, haste\nWhenever Kesh attacks, each opponent loses 2 life and you gain 2 life. Then if an opponent has 10 or less life, exile the top card of their library and you may play it this turn.\nWhenever a creature you control dies, draw a card, then discard a card unless you control a Phyrexian.\n{2}{B}: Kesh gets +2/+2 until end of turn. Activate only once each turn. The ancient ward endures beyond the last ember of the forge and every";
 
+/** KHM #15 Halvar, God of Battle // Sword of the Realms's shape (TODO
+ *  5.1b): a white creature front whose strip says "Equipment · {1}{W}", a
+ *  costed artifact back whose strip says "God · {2}{W}{W}". */
+const MDFC_EQUIPMENT_BACK: Partial<CardRowForBake> = {
+  title: "Halvar, God of Battle",
+  card_type: "creature",
+  supertype: "Legendary",
+  subtypes: ["God"],
+  cost: "{2}{W}{W}",
+  rules_text: "Creatures you control that are enchanted or equipped have double strike.\nAt the beginning of each combat, you may attach target Aura or Equipment attached to a creature you control to target creature you control.",
+  power: "4",
+  toughness: "4",
+  frame_style: { template: "m15mdfcfront", finish: "regular" },
+  back_face: {
+    title: "Sword of the Realms",
+    cost: "{1}{W}",
+    card_type: "artifact",
+    supertype: "Legendary",
+    subtypes: ["Equipment"],
+    rules_text: "Equipped creature gets +2/+0 and has vigilance.\nWhenever equipped creature dies, return it to its owner's hand.\nEquip {1}{W}",
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+    frame_style: { template: "m15mdfcback" },
+    color_identity: ["white"],
+  },
+};
+
+/** The longest wave-1 type word on the strip: an Enchantment back (an aura,
+ *  MH3 #254 Glasswing Grace's shape turned round) on a green creature. */
+const MDFC_ENCHANTMENT_BACK: Partial<CardRowForBake> = {
+  title: "Strength of the Harvest",
+  card_type: "creature",
+  supertype: null,
+  subtypes: ["Elf", "Druid"],
+  cost: "{2}{G}",
+  rules_text: "Whenever another creature you control enters, put a +1/+1 counter on it.",
+  power: "2",
+  toughness: "3",
+  frame_style: { template: "m15mdfcfront", finish: "regular" },
+  back_face: {
+    title: "Haven of the Harvest",
+    cost: "{2}{G}{G}",
+    card_type: "enchantment",
+    subtypes: [],
+    rules_text: "At the beginning of your end step, create a 1/1 green Elf Warrior creature token.",
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+    frame_style: { template: "m15mdfcback" },
+    color_identity: ["green"],
+  },
+};
+
+/** KHM #114 Valki, God of Lies's shape: the strip's word is the back's
+ *  Tibalt subtype (a walker back is wave 2's body: the back here is drawn
+ *  as a creature-less enchantment so only the word is under test). */
+const MDFC_TIBALT_BACK: Partial<CardRowForBake> = {
+  title: "Valki, God of Lies",
+  card_type: "creature",
+  supertype: "Legendary",
+  subtypes: ["God"],
+  cost: "{1}{B}",
+  rules_text: "When Valki, God of Lies enters, each opponent reveals their hand.",
+  power: "2",
+  toughness: "1",
+  frame_style: { template: "m15mdfcfront", finish: "regular" },
+  back_face: {
+    title: "Tibalt, Cosmic Impostor",
+    cost: "{5}{B}{R}",
+    card_type: "enchantment",
+    supertype: "Legendary",
+    subtypes: ["Tibalt"],
+    rules_text: "Emblem — You may play cards exiled with Tibalt, and you may spend mana as though it were mana of any color to cast those spells.",
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+    frame_style: { template: "m15mdfcback" },
+    color_identity: ["black", "red"],
+  },
+};
+
 /** The holofoil stamp's switch on a case (TODO 4.9c): `frame_style.stamp`
  *  and the rarity the auto rule reads, on top of a stored row — nothing
  *  else on the row changes. */
@@ -1046,6 +1236,8 @@ function stampRow(
 
 /** The transform BACK bodies (TODO 5.1a; FrameProfile.dfc role "back"). */
 export const DFC_BACK_BODIES: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"];
+/** The modal BACK bodies (TODO 5.1b). */
+export const MDFC_BACK_BODIES: readonly FrameTemplate[] = ["m15mdfcback", "m15mdfclandback"];
 
 /** The family whose default back is `body` (lib/cards/dfc.ts bodyFor). */
 function dfcFamilyFor(body: FrameTemplate): DfcIconFamily {
@@ -1066,6 +1258,32 @@ function dfcBodyRow(body: FrameTemplate, colour: VisualColour, shape: VisualShap
  *  (the first matrix's two "@foil" cases baked regular — their row override
  *  carried `finish: "regular"` over the case's foil). */
 function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIconFamily, shape: VisualShape = "short", finish: VisualCase["finish"] = "regular"): Partial<CardRowForBake> {
+  // A modal back body (TODO 5.1b): the modal row's back on it, in the
+  // case's colour — no family (the housing has none). The land back's
+  // cases are the pathway's shape (both faces lands); the spell back's the
+  // long creature // creature (a cost on the back) or the short instant
+  // front with the back retyped onto the spell back.
+  if ((MDFC_BACK_BODIES as readonly string[]).includes(body)) {
+    const landBack = body === "m15mdfclandback";
+    const content = modalContent(shape, colour, landBack);
+    const back = landBack
+      ? content.back_face
+      : shape === "long"
+        ? content.back_face
+        : {
+            ...(content.back_face as NonNullable<CardRowForBake["back_face"]>),
+            title: "Echoing Equation",
+            cost: `{3}${pips(colour, 0, 2)}`,
+            card_type: "sorcery" as const,
+            subtypes: [],
+            rules_text: "Choose target creature you control. Each other creature you control becomes a copy of it until end of turn, except those creatures aren't legendary if the chosen creature is legendary.",
+            frame_style: { template: body },
+          };
+    return {
+      frame_style: { template: landBack ? "m15mdfclandfront" : "m15mdfcfront", finish },
+      back_face: back as CardRowForBake["back_face"],
+    };
+  }
   const land = body === "m15dfclandback";
   const long = shape === "long";
   const front: FrameTemplate = land ? "m15dfclandfront" : "m15dfcfront";

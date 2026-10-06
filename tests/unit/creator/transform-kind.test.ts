@@ -51,9 +51,16 @@ describe("the Transform kind (TODO 5.1a)", () => {
       expect(capabilitiesOf(getFrameProfile(back)), back).not.toContain("dfcFront");
       expect(profileDrawsKind(getFrameProfile(back), "transform"), back).toBe(false);
     }
-    // No other template is a double-faced front.
+    // No other template is a double-faced front — but the Modal kind's two
+    // front bodies (5.1b), which draw the Modal kind and never this one.
     for (const t of FRAME_TEMPLATE_VALUES) {
       if ((FRONTS as readonly string[]).includes(t)) continue;
+      if (t === "m15mdfcfront" || t === "m15mdfclandfront") {
+        expect(capabilitiesOf(getFrameProfile(t)), t).toContain("dfcFront");
+        expect(profileDrawsKind(getFrameProfile(t), "transform"), t).toBe(true);
+        expect(templateSupportsKind(t, "transform"), t).toBe(false);
+        continue;
+      }
       expect(capabilitiesOf(getFrameProfile(t)), t).not.toContain("dfcFront");
     }
     // A card on a front body IS the transform kind, whatever its type.

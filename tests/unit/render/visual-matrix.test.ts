@@ -63,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -279,15 +279,15 @@ describe("visual-regression matrix", () => {
       const rowFinish = (c.row.frame_style as { finish?: string } | null)?.finish ?? "regular";
       expect(rowFinish, c.id).toBe(c.finish);
     }
-    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil"]);
+    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil", "m15mdfcback/r/mdfc-short@foil"]);
   });
 
-  it("bakes the long back-body cases with the LONG back (dense rules, the long name, 12/12 on the dark plate): never the short back under a long id (TODO 5.1a)", () => {
+  it("bakes the long back-body cases with the LONG back (dense rules, the long name, 12/12 on the dark plate): never the short back under a long id (TODO 5.1a; the modal backs too, 5.1b)", () => {
     for (const c of cases) {
       if (c.face !== "back") continue;
       const back = c.row.back_face as { title?: string; rules_text?: string } | null;
-      const short = cases.find((s) => s.id === c.id.replace(/transform-long/, "transform-short"));
-      if (c.shape === "long" && short) {
+      const short = cases.find((s) => s.id === c.id.replace(/(transform|mdfc)-long/, "$1-short"));
+      if (c.shape === "long" && short && short !== c) {
         expect(JSON.stringify(c.row.back_face), c.id).not.toBe(JSON.stringify(short.row.back_face));
         expect(back?.title?.length ?? 0, c.id).toBeGreaterThan(((short.row.back_face as { title?: string } | null)?.title?.length ?? 0));
       }

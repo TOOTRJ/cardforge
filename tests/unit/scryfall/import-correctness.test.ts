@@ -261,7 +261,9 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     ["isd-51", "transform", "creature", undefined, "Human, Wizard", "m15dfcfront"],
     ["mh3-237", "creature", "creature", "Legendary", "Cat, Warrior", "m15"],
     ["khm-114", "creature", "creature", "Legendary", "God", "m15"],
-    ["znr-259", "land", "land", undefined, undefined, "m15land"],
+    // A Pathway (a modal land // land) is the Modal kind on the modal land
+    // front (5.1b / 5.4).
+    ["znr-259", "mdfc", "land", undefined, undefined, "m15mdfclandfront"],
     ["soi-281", "transform", "land", undefined, undefined, "m15dfclandfront"],
     // Devoid re-dresses; a colourless Eldrazi without devoid doesn't.
     ["ogw-13", "creature", "creature", undefined, "Eldrazi", "m15devoid"],

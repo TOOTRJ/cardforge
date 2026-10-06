@@ -10,7 +10,7 @@
 // stamped, and both faces are re-baked. The layout is the one the back's
 // SHAPE derives (owner 2026-10-05: a back with a mana cost is a modal card,
 // never moved onto Transform — the other layout is refused by name, and
-// nothing moves while the shape's bodies don't exist, the modal pair until
+// nothing moves while the shape's bodies don't exist; both pairs do since
 // 5.1b). Gated like any save: the owner only, the front body × the card's
 // colour verified, the back body × colour verified and colourless only with
 // an Artifact word (the shared back gate, lib/cards/dfc-gate.ts), the kind
@@ -63,8 +63,8 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
   }
 
   // The offer is the ONE layout the back's shape derives, with both bodies;
-  // a candidate whose layout has no bodies yet (a costed back until the
-  // modal pair, 5.1b) is told so, and never moved onto the other.
+  // a candidate whose layout has no bodies (none since 5.1b's modal pair)
+  // is told so, and never moved onto the other.
   const offer = dfcAdoptionOffer(existing);
   if (!offer) {
     const shape = dfcAdoptionShape(existing);
@@ -77,10 +77,17 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
   }
   const plan = adoptDfcBodiesPlan(existing, layout);
   if (!plan) {
-    return {
-      ok: false,
-      formError: `This card moves onto the ${offer.label} frames only — its back ${offer.layout === "modal" ? "carries a mana cost" : "has no mana cost"}.`,
-    };
+    // The shape's reason: a cost (modal), none (transform) — or, on the one
+    // shape the cost can't settle, a land back without a transform card's
+    // printed sign (modal).
+    const back = existing.back_face as { cost?: string | null } | null | undefined;
+    const why =
+      offer.layout === "modal"
+        ? back?.cost?.trim()
+          ? "carries a mana cost"
+          : "is a land without the printed sign of a transform card"
+        : "has no mana cost";
+    return { ok: false, formError: `This card moves onto the ${offer.label} frames only — its back ${why}.` };
   }
 
   // The gates every save passes: verification on the front and the back,

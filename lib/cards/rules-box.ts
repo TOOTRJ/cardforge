@@ -60,6 +60,12 @@ export type DrawnStats = {
    *  the box's bottom). Glyph-level like the badges — the rules rect never
    *  shrinks, so a short block never moves. */
   stamp?: Rect | null;
+  /** The modal flipside strip's painted rect (TODO 5.1b,
+   *  FlipsideSlots.keepOut), or null / absent on every other body: the
+   *  strip is cut into the text box's paper, so the lines keep out of it
+   *  the same way — a long text ends above it or its last lines stop at
+   *  the chevron, as the prints set them. */
+  strip?: Rect | null;
 };
 
 /**
@@ -73,6 +79,8 @@ export function drawnStatInk(layout: FrameProfile, show: DrawnStats, aspect: num
   const out = statKeepOuts(layout, show);
   // The holofoil stamp's arch (4.9c), beside the badges, only while drawn.
   if (show.stamp) out.push(show.stamp);
+  // The modal strip (5.1b): painted on every modal face, text or not.
+  if (show.strip) out.push(show.strip);
   const face = layout.secondFace;
   if (show.secondFacePt && face?.pt) {
     // A plate (flip's bottom creature, layout v38) is drawn UNTURNED at its

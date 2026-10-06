@@ -412,6 +412,16 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15dfcbackleft",
   "m15dfclandfront",
   "m15dfclandback",
+  // The modal bodies (TODO 5.1b, Card Conjurer 'Modal Regular'): a modal
+  // double-faced card's two faces, the housing and the flipside strip in
+  // the masters, the strip's two texts drawn from the other face
+  // (lib/cards/faces.ts). A FRONT body is the Modal kind's template, a BACK
+  // body the back face's; the land pair is a PipGlyph recipe over the 2015
+  // land tints. Additions: no stored card changes.
+  "m15mdfcfront",
+  "m15mdfcback",
+  "m15mdfclandfront",
+  "m15mdfclandback",
   "agclassic",
   "alphaland",
   "alphatoken",
@@ -502,6 +512,11 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15dfcbackleft: "Transform back (2016–2022)",
   m15dfclandfront: "Transform land front",
   m15dfclandback: "Transform land back",
+  // The modal bodies (TODO 5.1b).
+  m15mdfcfront: "Modal front",
+  m15mdfcback: "Modal back",
+  m15mdfclandfront: "Modal land front",
+  m15mdfclandback: "Modal land back",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -613,6 +628,10 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15dfcbackleft: "m15",
   m15dfclandfront: "m15",
   m15dfclandback: "m15",
+  m15mdfcfront: "m15",
+  m15mdfcback: "m15",
+  m15mdfclandfront: "m15",
+  m15mdfclandback: "m15",
   battle: "m15",
   saga: "m15",
   adventure: "m15",

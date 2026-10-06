@@ -211,7 +211,15 @@ Rules and gotchas:
   that `dfc` block — never from the `dfcIcon` switch (off for an absent
   key, which reads as `arrows`); a BACK body is never a card's own template
   (`templateRefusesKind`), and nothing on them is offered until each colour
-  of the front AND the default back is ticked (after 5.3). A back face's
+  of the front AND the default back is ticked (after 5.3). The modal bodies
+  (5.1b: `m15mdfcfront`, `m15mdfcback` and the land pair) draw the flipside
+  strip's two TEXTS from that same block (`FrameProfile.flipside`,
+  `lib/cards/flipside-strip.ts`: the other face's LAST type word + its cost
+  or mana line, white on a front, dark on a back) — the housing, the ◀ and
+  the strip are in the masters, painted in the master's OWN colour (a
+  two-colour card's print paints it in the other face's: an owner question,
+  never a master "fix"); the painted strip is a rules keep-out
+  (`FlipsideSlots.keepOut` → `DrawnStats.strip`). A back face's
   body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
   — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`,
@@ -225,12 +233,13 @@ Rules and gotchas:
   `back_card_id` is accepted only to CLEAR (its removal is 5.0c, after
   5.4); the 8 imported DFCs move onto the bodies only by their owner's
   click (`adoptDfcBodiesAction`, `lib/cards/dfc-adopt.ts`; onto the ONE
-  layout the back's shape derives — a costed back is a modal card, offered
-  nothing until the modal bodies exist and never Transform; a cost-less
-  LAND back is transform only with the printed sign of one, "(Transforms
-  from …)" or "transform" on either face, else modal — `cards.layout` is
-  never written before 5.4; a land back
-  goes colourless — the land pair is verified on `c` alone).
+  layout the back's shape derives — a costed back is a modal card, onto
+  the modal pair (5.1b) and never Transform; a cost-less LAND back is
+  transform only with the printed sign of one, "(Transforms from …)" or
+  "transform" on either face, else modal — `cards.layout` is never written
+  before 5.4; a TRANSFORM land back goes colourless — that pair is verified
+  on `c` alone — while the modal land back keeps the front's colour, one
+  tint per colour).
   A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
   PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
   through `renderBackFace` in both bake paths, the four pointers in ONE
@@ -242,11 +251,13 @@ Rules and gotchas:
   a transform / modal printing lands on the bodies — the front body by the
   front's type, the back body by the back's type and the printing's family
   (`printed_dfc_icon` from `frame_effects`), the back's own colour (a land
-  face colourless) — only when BOTH combos are verified
+  face colourless on the TRANSFORM land bodies, its mana's colour on the
+  modal ones) — only when BOTH combos are verified
   (`lib/scryfall/dfc-import.ts`, `finalizeImportMatch`), else as before
   (standard frame + legacy back); a walker face imports the front alone
   (toast + a `dfc/walker` request row), a colourless face without an
-  Artifact word keeps today's landing (5.11). The AI deck remix of such an
+  Artifact word and a devoid / snow dress keep today's landing (5.11,
+  `dfc/colourless-face` / `dfc/devoid` / `dfc/snow`). The AI deck remix of such an
   entry costs 2 credits (two pictures), priced at plan time
   (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
   only, behind the AI rate limit: it calls Scryfall) and shown in the

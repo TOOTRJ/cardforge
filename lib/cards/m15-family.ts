@@ -67,6 +67,13 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m15dfcbackleft",
   "m15dfclandfront",
   "m15dfclandback",
+  // The modal bodies (TODO 5.1b, CC's 'Modal Regular' pack): new
+  // templates, no stored card — the same family sizes — so they joined
+  // without a bump too.
+  "m15mdfcfront",
+  "m15mdfcback",
+  "m15mdfclandfront",
+  "m15mdfclandback",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

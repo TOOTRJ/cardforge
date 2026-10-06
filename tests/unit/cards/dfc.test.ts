@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DFC_ICON_GLYPH_KEYS, DFC_ICON_GLYPHS, dfcIconGlyph } from "@/lib/cards/dfc-icons";
 import {
+  dfcIconFamilyForBackBody,
   DEFAULT_DFC_ICON,
   DFC_ICON_FAMILY_VALUES,
   backBodyError,
@@ -39,16 +40,21 @@ describe("the vocabulary", () => {
 
 const TRANSFORM_FRONTS = ["m15dfcfront", "m15dfclandfront"] as const;
 const TRANSFORM_BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"] as const;
-const DFC_BODIES = [...TRANSFORM_FRONTS, ...TRANSFORM_BACKS] as const;
+// The modal bodies (TODO 5.1b).
+const MODAL_FRONTS = ["m15mdfcfront", "m15mdfclandfront"] as const;
+const MODAL_BACKS = ["m15mdfcback", "m15mdfclandback"] as const;
+const DFC_FRONTS = [...TRANSFORM_FRONTS, ...MODAL_FRONTS] as const;
+const DFC_BACKS = [...TRANSFORM_BACKS, ...MODAL_BACKS] as const;
+const DFC_BODIES = [...DFC_FRONTS, ...DFC_BACKS] as const;
 
-describe("the transform bodies (5.1a) and every other template", () => {
-  it("exactly the five transform bodies declare `dfc`: two fronts (a back face of their own), three backs (never a card's own)", () => {
+describe("the transform bodies (5.1a), the modal bodies (5.1b) and every other template", () => {
+  it("exactly the nine bodies declare `dfc`: four fronts (a back face of their own), five backs (never a card's own), each of its layout", () => {
     expect(FRAME_TEMPLATE_VALUES.length).toBeGreaterThan(40);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const body = getFrameProfile(template).dfc;
       if ((DFC_BODIES as readonly string[]).includes(template)) {
         expect(body, template).toBeDefined();
-        expect(body!.layout, template).toBe("transform");
+        expect(body!.layout, template).toBe(template.startsWith("m15mdfc") ? "modal" : "transform");
         expect(dfcBodyOf(template), template).toEqual(body);
         continue;
       }
@@ -57,15 +63,20 @@ describe("the transform bodies (5.1a) and every other template", () => {
       expect(templateHasBackFace(template), template).toBe(false);
       expect(isDfcBackBody(template), template).toBe(false);
     }
-    for (const front of TRANSFORM_FRONTS) {
+    for (const front of DFC_FRONTS) {
       expect(templateHasBackFace(front), front).toBe(true);
       expect(isDfcBackBody(front), front).toBe(false);
       expect(getFrameProfile(front).dfc?.well, front).toBe("left");
     }
-    for (const back of TRANSFORM_BACKS) {
+    for (const back of DFC_BACKS) {
       expect(templateHasBackFace(back), back).toBe(false);
       expect(isDfcBackBody(back), back).toBe(true);
     }
+    // The modal housing is at the left of every modal face.
+    for (const t of MODAL_BACKS) expect(getFrameProfile(t).dfc?.well, t).toBe("left");
+    expect(getFrameProfile("m15mdfclandfront").dfc?.land).toBe(true);
+    expect(getFrameProfile("m15mdfclandback").dfc?.land).toBe(true);
+    for (const t of ["m15mdfcfront", "m15mdfcback"]) expect(getFrameProfile(t).dfc?.land, t).toBeUndefined();
     // The ▼ back's well is at the right; the 2016–22 back's at the left.
     expect(getFrameProfile("m15dfcback").dfc?.well).toBe("right");
     expect(getFrameProfile("m15dfcbackleft").dfc?.well).toBe("left");
@@ -81,7 +92,7 @@ describe("the transform bodies (5.1a) and every other template", () => {
     }
   });
 
-  it("bodyFor: the transform rows — the front by face kind, the back by family (arrows → the ▼ back, the four left families → the 2016–22 back), a land back whatever the family; modal rows still null (5.1b)", () => {
+  it("bodyFor: the transform rows — the front by face kind, the back by family (arrows → the ▼ back, the four left families → the 2016–22 back), a land back whatever the family; the modal rows by face kind alone (5.1b)", () => {
     for (const faceType of ["creature", "artifact", "instant", "enchantment", null, undefined]) {
       expect(bodyFor("transform", "front", faceType), `front ${faceType}`).toBe("m15dfcfront");
       expect(bodyFor("transform", "back", faceType), `back ${faceType} (default family)`).toBe("m15dfcback");
@@ -94,12 +105,18 @@ describe("the transform bodies (5.1a) and every other template", () => {
     for (const family of DFC_ICON_FAMILY_VALUES) expect(bodyFor("transform", "back", "land", family), family).toBe("m15dfclandback");
     expect(transformBackBodyFor("sunmoon", "creature")).toBe("m15dfcbackleft");
     expect(transformBackBodyFor("arrows", "land")).toBe("m15dfclandback");
-    // The modal rows are 5.1b's.
-    for (const role of ["front", "back"] as const) {
-      for (const faceType of ["creature", "land", "instant", null]) {
-        expect(bodyFor("modal", role, faceType), `modal/${role}/${faceType}`).toBeNull();
-      }
+    // The modal rows (5.1b): the spell pair for every non-land face, the
+    // land pair for a land — whatever the family (the housing has none).
+    for (const faceType of ["creature", "artifact", "instant", "enchantment", null, undefined]) {
+      expect(bodyFor("modal", "front", faceType), `modal front ${faceType}`).toBe("m15mdfcfront");
+      for (const family of DFC_ICON_FAMILY_VALUES) expect(bodyFor("modal", "back", faceType, family), `modal back ${faceType} ${family}`).toBe("m15mdfcback");
     }
+    expect(bodyFor("modal", "front", "land")).toBe("m15mdfclandfront");
+    for (const family of DFC_ICON_FAMILY_VALUES) expect(bodyFor("modal", "back", "land", family), family).toBe("m15mdfclandback");
+    for (const front of ["m15mdfcfront", "m15mdfclandfront"] as const) expect(templateHasBackFace(front)).toBe(true);
+    for (const back of ["m15mdfcback", "m15mdfclandback"] as const) expect(isDfcBackBody(back)).toBe(true);
+    // A modal back has no family: dfcIconFamilyForBackBody names none.
+    expect(dfcIconFamilyForBackBody("m15mdfcback")).toBeNull();
     // Every body bodyFor names IS a body of that role.
     for (const front of TRANSFORM_FRONTS) expect(templateHasBackFace(front)).toBe(true);
     for (const back of TRANSFORM_BACKS) expect(isDfcBackBody(back)).toBe(true);
@@ -153,16 +170,17 @@ describe("the transform bodies (5.1a) and every other template", () => {
     }
   });
 
-  it("backBodyError: a body-less back face is always fine; a back body only under a transform FRONT, and only a back body", () => {
+  it("backBodyError: a body-less back face is always fine; a back body only under a DFC FRONT, and only a back body (the layout match is the gate's, lib/cards/dfc-gate.ts)", () => {
     const legacy = { title: "Avacyn, the Purifier", card_type: "creature" };
     for (const front of FRAME_TEMPLATE_VALUES) {
       expect(backBodyError(front, legacy), front).toBeNull();
       expect(backBodyError(front, null), front).toBeNull();
       expect(backBodyError(front, undefined), front).toBeNull();
-      if ((TRANSFORM_FRONTS as readonly string[]).includes(front)) {
-        for (const back of TRANSFORM_BACKS) expect(backBodyError(front, { frame_style: { template: back } }), `${front} / ${back}`).toBeNull();
+      if ((DFC_FRONTS as readonly string[]).includes(front)) {
+        for (const back of DFC_BACKS) expect(backBodyError(front, { frame_style: { template: back } }), `${front} / ${back}`).toBeNull();
         expect(backBodyError(front, { frame_style: { template: "m15" } }), front).toBe("Not a back-face frame.");
         expect(backBodyError(front, { frame_style: { template: "m15dfcfront" } }), front).toBe("Not a back-face frame.");
+        expect(backBodyError(front, { frame_style: { template: "m15mdfcfront" } }), front).toBe("Not a back-face frame.");
         continue;
       }
       expect(backBodyError(front, { frame_style: { template: "m15" } }), front).toBe("This frame has no back face of its own.");
@@ -177,7 +195,7 @@ describe("the transform bodies (5.1a) and every other template", () => {
 describe("the face under test (TODO 5.0b) on the real profiles: a back body is always its back, every other template the face asked for", () => {
   it("every non-back template is compared on the front unless the view asks for the back; a back body always on the back", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      if ((TRANSFORM_BACKS as readonly string[]).includes(template)) {
+      if ((DFC_BACKS as readonly string[]).includes(template)) {
         expect(faceUnderTest(template), template).toBe("back");
         expect(faceUnderTest(template, "front"), template).toBe("back");
         continue;
@@ -191,9 +209,9 @@ describe("the face under test (TODO 5.0b) on the real profiles: a back body is a
     expect(faceUnderTest("no-such-frame")).toBe("front");
   });
 
-  it("frontBodyFor pairs the three transform backs with the front bodies bodyFor names, and is null for every other template", () => {
+  it("frontBodyFor pairs the five backs with the front bodies bodyFor names (its own layout's), and is null for every other template", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      if ((TRANSFORM_BACKS as readonly string[]).includes(template)) continue;
+      if ((DFC_BACKS as readonly string[]).includes(template)) continue;
       expect(frontBodyFor(template), template).toBeNull();
       expect(frontBodyFor(template, "land"), template).toBeNull();
     }
@@ -205,6 +223,12 @@ describe("the face under test (TODO 5.0b) on the real profiles: a back body is a
       expect(frontBodyFor(back), back).toBe("m15dfcfront");
       expect(frontBodyFor(back, "creature"), back).toBe("m15dfcfront");
       expect(frontBodyFor(back, "land"), back).toBe("m15dfclandfront");
+    }
+    // …and a modal back with the modal fronts (5.1b).
+    for (const back of MODAL_BACKS) {
+      expect(frontBodyFor(back), back).toBe("m15mdfcfront");
+      expect(frontBodyFor(back, "creature"), back).toBe("m15mdfcfront");
+      expect(frontBodyFor(back, "land"), back).toBe("m15mdfclandfront");
     }
   });
 

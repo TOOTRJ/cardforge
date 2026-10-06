@@ -14,8 +14,9 @@
 // body is the back face's and is never a front. 5.1a brought the five
 // transform bodies (`m15dfcfront`, `m15dfcback` — the ▼-right back, the
 // default — `m15dfcbackleft` — the 2016–22 back — and the land pair);
-// 5.1b brings the four modal ones, so `bodyFor` still answers null for a
-// modal face. Additions: no stored card's look changes.
+// 5.1b the four modal ones (`m15mdfcfront` / `m15mdfcback` and their land
+// pair — one back per face kind, whatever the family: the housing has
+// none). Additions: no stored card's look changes.
 //
 // Pure and client-safe: the creator, the actions, the import, the remix and
 // both renderers read these same functions.
@@ -137,8 +138,9 @@ type DfcBodyKey = `${DfcLayout}/${DfcRole}/${DfcFaceKind}`;
 /** A body per (layout, role, face kind) — or, for the transform BACK, one
  *  per icon family: `arrows` → the ▼-right back (every transform printed
  *  since 2022-11), the four left families → the 2016–22 back (the icon in
- *  the left well). The transform rows are 5.1a's; the modal rows come with
- *  5.1b, so a modal face has no body yet and bodyFor answers null for it. */
+ *  the left well). The transform rows are 5.1a's, the modal rows 5.1b's: a
+ *  modal face's body follows its face kind alone (the housing's ▲ / ▲▼ is
+ *  in the masters; no family). */
 const DFC_BODIES: Partial<Record<DfcBodyKey, FrameTemplate | Partial<Record<DfcIconFamily, FrameTemplate>>>> = {
   "transform/front/spell": "m15dfcfront",
   "transform/front/land": "m15dfclandfront",
@@ -152,6 +154,12 @@ const DFC_BODIES: Partial<Record<DfcBodyKey, FrameTemplate | Partial<Record<DfcI
   // The 2016–22 land back is the parchment frame (TODO 5.8): every family's
   // land back is this one meanwhile (nearest for an XLN / RIX / LCI import).
   "transform/back/land": "m15dfclandback",
+  // The modal bodies (TODO 5.1b): the spell pair and the land pair, by the
+  // face's kind — a modal back keeps its cost and has no family.
+  "modal/front/spell": "m15mdfcfront",
+  "modal/front/land": "m15mdfclandfront",
+  "modal/back/spell": "m15mdfcback",
+  "modal/back/land": "m15mdfclandback",
 };
 
 /** The icon family a printing's `frame_effects` name (frames.md §4.6): the
