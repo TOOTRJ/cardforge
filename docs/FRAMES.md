@@ -733,6 +733,20 @@ measured against the front's scan (`FrameCompareFaceError`), and
 `buildFrameComparePayload(id, template)` with no face is byte for byte
 what it was (`tests/unit/scryfall/reference-preview-front-snapshot.test.ts`).
 
+**A double-faced reference is drawn as it prints (TODO 5.0d).** On a
+transform body under test, front or back, the compared card carries the
+printing's icon family — `frame_style.dfcIcon` from its `frame_effects`
+through the import mapper's own `dfcIconFamilyFromEffects` (`arrows` stays
+the absent key) — so MID's backs on the 2016–22 body show the moon their
+scans print, not the default ▼; and a FRONT's `preview` is
+`frontPreviewData` of that card, its `dfc` block included, so the page, the
+sign-off's side-by-side and the scorer's bake are handed ONE object (the
+bake derives nothing: a front used to be scored without its reverse P/T,
+its icon rider and its modal strip). A score recorded for a double-faced
+front body, or for the 2016–22 back, before 5.0d measured another picture,
+which the staleness rule below cannot see: score those faces again before a
+sign-off's Publish (`tests/unit/scryfall/reference-preview-dfc-family.test.ts`).
+
 **When a tick goes stale.** A tick records the layout version and a hash of
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
