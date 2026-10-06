@@ -9,8 +9,9 @@ import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 // verified set and SAVED through the REAL createCardAction (Supabase
 // stubbed): a transform printing lands on its bodies with the back's body,
 // colour and family stored and the cost stripped; a blocked one (a walker
-// face, a colourless Eldrazi back, a modal printing before 5.1b, a Saga /
-// battle / token face, a devoid modal) saves exactly as before 5.4 — on the
+// face, a colourless Eldrazi back, a Saga / battle / token face, a devoid
+// modal) — and a modal printing whose bodies (5.1b) aren't ticked — saves
+// exactly as before 5.4 — on the
 // front's standard frame with a legacy, body-less back (or none). The
 // walker's request row passes the action's schema and the table's CHECKs.
 // ---------------------------------------------------------------------------

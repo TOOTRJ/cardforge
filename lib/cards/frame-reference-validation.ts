@@ -167,13 +167,17 @@ export function validateReferenceForCombo(
     } else {
       const back = card.card_faces?.[1];
       const backColor = pickFrameColorKey(referenceBackColorIdentity(card));
-      if (dfcBodyOf(template)?.land) {
-        // The land back (5.1a) has ONE master under every key and is
-        // verified on its colourless row, as the emblem is: any land back
-        // is its reference, whatever colour its mana ability names.
+      if (dfcBodyOf(template)?.land && dfcBodyOf(template)?.layout === "transform") {
+        // The transform land back (5.1a) has ONE master under every key
+        // and is verified on its colourless row, as the emblem is: any land
+        // back is its reference, whatever colour its mana ability names.
+        // The modal land back (5.1b) is one land tint per colour, so its
+        // rows are judged by colour below like any back.
         if (parseTypeLine(back?.type_line).card_type !== "land") {
           errors.push(`${back?.name ?? card.name} isn't a land; the ${label} frame is the land back (one master under every key, verified on its colourless row).`);
         }
+      } else if (dfcBodyOf(template)?.land && parseTypeLine(back?.type_line).card_type !== "land") {
+        errors.push(`${back?.name ?? card.name} isn't a land; the ${label} frame is the land back.`);
       } else if (backColor !== colorKey) {
         errors.push(
           `${card.name}'s back face is ${COLOR_WORD[backColor] ?? backColor}; this row verifies the ${COLOR_WORD[colorKey] ?? colorKey} ${label} frame.`,

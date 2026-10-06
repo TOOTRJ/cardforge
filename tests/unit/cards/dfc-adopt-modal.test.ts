@@ -2,14 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import legacy from "./fixtures/dfc-legacy-backs.json";
 
 // ---------------------------------------------------------------------------
-// TODO 5.2 follow-up (owner 2026-10-05) — the hint ONCE the modal bodies
-// exist (5.1b). The hint offers only the layout a legacy back's SHAPE
-// derives — a back with a mana cost is a modal card — so Vader's Lantern
-// gets nothing today (dfc-adopt.test.ts). Here the mocked-profile fixture
-// (tests/unit/cards/dfc-fixture.ts) declares m15snow a modal FRONT and
-// m15devoid a modal BACK, and bodyFor answers them for the modal layout:
-// Vader is then offered the Modal layout, the plan keeps the Lantern's
-// cost, and a move onto Transform is still refused by shape.
+// TODO 5.2 follow-up (owner 2026-10-05) — the hint's mechanism for a
+// modal-shaped back, with MOCKED bodies (the real modal pair is 5.1b's;
+// dfc-adopt.test.ts holds the hint on it). The hint offers only the layout
+// a legacy back's SHAPE derives — a back with a mana cost is a modal card.
+// Here the mocked-profile fixture (tests/unit/cards/dfc-fixture.ts)
+// declares m15snow a modal FRONT and m15devoid a modal BACK, and bodyFor
+// answers them for the modal layout: Vader is offered the Modal layout on
+// those, the plan keeps the Lantern's cost, and a move onto Transform is
+// still refused by shape.
 // ---------------------------------------------------------------------------
 
 vi.mock("@/lib/cards/template-layout", async (importOriginal) => {

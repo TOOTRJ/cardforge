@@ -67,6 +67,11 @@ describe("the switch values", () => {
       "m15dfcbackleft",
       "m15dfclandfront",
       "m15dfclandback",
+      // …and the modal bodies (5.1b).
+      "m15mdfcfront",
+      "m15mdfcback",
+      "m15mdfclandfront",
+      "m15mdfclandback",
     ]);
   });
 });

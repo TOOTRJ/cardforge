@@ -33,11 +33,13 @@ import type { ColorIdentity, DfcIconFamily, FrameTemplate } from "@/types/card";
 // Q5: imports follow the printing's family, per face). Real (trimmed)
 // Scryfall printings: fixtures/dfc-import-printings.json (captured
 // 2026-10-05) plus the double-faced ones of the older fixture files. The
-// REAL transform bodies (5.1a) are the only double-faced bodies here; the
-// modal state after 5.1b is dfc-imports-modal.test.ts, under mocked bodies.
+// REAL transform bodies (5.1a) and modal bodies (5.1b); the modal landing
+// in full is dfc-imports-modal.test.ts.
 // ---------------------------------------------------------------------------
 
-const ALL = { ...dfcPrintings, ...importPrintings, ...signaturePrintings } as Record<string, unknown>;
+// The double-faced fixture file wins: signature-printings.json carries
+// trimmed twins of a few of its printings (ZNR #12's back without its text).
+const ALL = { ...signaturePrintings, ...importPrintings, ...dfcPrintings } as Record<string, unknown>;
 type Key =
   | keyof typeof dfcPrintings
   | "isd-51"
@@ -180,24 +182,28 @@ describe("dfcImportOf — the one landing rule", () => {
     expect(patchOf("tmom-16")).toMatchObject({ kind: "token", dropped_face: "double-faced-token" });
   });
 
-  it("a modal printing has no body yet (5.1b): it lands as today, the front's standard kind with a legacy back", () => {
-    for (const [key, kind, template] of [
-      ["znr-12", "sorcery", "m15"],
-      ["khm-112", "creature", "m15"],
-      ["stx-147", "creature", "m15"],
-      ["znr-259", "land", "m15land"],
+  it("a modal printing lands on the modal bodies (5.1b): the Modal kind, the front body by the front's type, the back body by the back's, no family", () => {
+    for (const [key, front, back, backColour] of [
+      ["znr-12", "m15mdfcfront", "m15mdfclandback", ["white"]],
+      ["khm-112", "m15mdfcfront", "m15mdfcback", ["black"]],
+      ["stx-147", "m15mdfcfront", "m15mdfcback", ["blue"]],
+      ["znr-259", "m15mdfclandfront", "m15mdfclandback", undefined],
     ] as const) {
-      expect(dfcImportOf(printing(key)), key).toMatchObject({ layout: "modal", blocked: "no-body", kind: null, frontBody: null, backBody: null });
+      expect(dfcImportOf(printing(key)), key).toMatchObject({ layout: "modal", blocked: null, kind: "mdfc", frontBody: front, backBody: back });
       const patch = patchOf(key);
-      expect(patch.kind, key).toBe(kind);
-      expect(patch.frame_template, key).toBe(template);
-      expect(patch.back_face?.frame_style, key).toBeUndefined();
-      expect(patch.back_face?.color_identity, key).toBeUndefined();
+      expect(patch.kind, key).toBe("mdfc");
+      expect(patch.frame_template, key).toBe(front);
+      expect(patch.back_face?.frame_style, key).toEqual({ template: back });
+      // A modal LAND face keeps the colour its mana ability adds (Emeria's
+      // back is white): the modal land pair is one tint per colour.
+      if (backColour) expect(patch.back_face?.color_identity, key).toEqual(backColour);
       expect(patch.printed_dfc_icon, key).toBeUndefined();
     }
-    // STX #6 Wandering Archaic's front is a colourless Avatar: no body is the
-    // first block today; the colourless face is 5.11's once the bodies exist.
-    expect(dfcImportOf(printing("stx-6"))).toMatchObject({ blocked: "no-body" });
+    // STX #6 Wandering Archaic's front is a colourless Avatar: the body's
+    // `c` is the artifact stand-in, so the printing keeps today's landing
+    // (5.11); MH3 #253's devoid dress likewise (`dress`).
+    expect(dfcImportOf(printing("stx-6"))).toMatchObject({ blocked: "colourless-face", frontBody: "m15mdfcfront" });
+    expect(dfcImportOf(printing("mh3-253"))).toMatchObject({ blocked: "dress", frontBody: "m15mdfcfront", backBody: "m15mdfclandback" });
   });
 });
 
@@ -220,19 +226,21 @@ describe("the registry", () => {
     // Pre-2015 frames land nearest on the M15 bodies.
     ["isd-51", "dfc/2003", "nearest", "m15dfcfront", undefined, "4.10"],
     // Walker faces wait (5.13); a colourless face is the body's frame,
-    // landing on the standard (5.11); the modal bodies wait (5.1b).
+    // landing on the standard (5.11); a devoid dress the body's frame,
+    // landing on the devoid frame (5.11); the modal printings exact on the
+    // modal front body (5.1b).
     ["ori-60", "dfc/walker", "nearest", "m15", undefined, "5.13"],
     ["ori-23", "dfc/walker", "nearest", "m15", undefined, "5.13"],
     ["khm-114", "dfc/walker", "nearest", "m15", undefined, "5.13"],
     ["emn-63", "dfc/colourless-face", "nearest", "m15dfcfront", "m15", "5.11"],
-    ["znr-12", "modal/2015/pending", "nearest", "m15", undefined, "5.1b"],
-    ["khm-112", "modal/2015/pending", "nearest", "m15", undefined, "5.1b"],
-    ["stx-6", "modal/2015/pending", "nearest", "m15", undefined, "5.1b"],
-    ["znr-259", "modal/2015/pending", "nearest", "m15land", undefined, "5.1b"],
-    ["mh3-253", "modal/2015/pending", "nearest", "m15devoid", undefined, "5.1b"],
-    // A borderless modal Pathway: nearest on the body — the standard while
-    // the modal bodies don't exist (5.7).
-    ["znr-284", "borderless/dfc", "nearest", "m15land", undefined, "5.7"],
+    ["znr-12", "modal/2015", "exact", "m15mdfcfront", undefined, undefined],
+    // Tergrid is legendary: the crown is a gap on the body (4.6f), as BOT #1's.
+    ["khm-112", "modal/2015+crown", "nearest", "m15mdfcfront", undefined, "4.6f"],
+    ["stx-6", "dfc/colourless-face", "nearest", "m15mdfcfront", "m15", "5.11"],
+    ["znr-259", "modal/2015", "exact", "m15mdfclandfront", undefined, undefined],
+    ["mh3-253", "dfc/devoid", "nearest", "m15mdfcfront", "m15devoid", "5.11"],
+    // A borderless modal Pathway: nearest on the modal land front (5.7).
+    ["znr-284", "borderless/dfc", "nearest", "m15mdfclandfront", undefined, "5.7"],
     // A battle front and a Saga front keep their frames; the marks are 5.5's.
     ["mom-20", "era/2015+dfc", "nearest", "battle", undefined, "5.5"],
     ["neo-141", "layout/2015+dfc", "nearest", "saga", undefined, "5.5"],

@@ -10,8 +10,8 @@
 // afterwards like the front's, owner 2026-10-05), both faces re-bake
 // (adoptDfcBodiesAction). The layout is the one the back's SHAPE derives —
 // a back with a mana cost is a modal card — never a choice (owner
-// 2026-10-05), and a layout whose bodies don't exist yet (the modal pair
-// until 5.1b) shows NO hint at all: a costed back is never offered
+// 2026-10-05), and a layout whose bodies don't exist shows NO hint at all
+// (none since 5.1b's modal pair): a costed back is never offered
 // Transform, which would drop its cost. The button is dark until the card's
 // colour is verified on both bodies (the Transform chip's rule, after the
 // owner's ticks).

@@ -103,6 +103,16 @@ describe("frame reference registry", () => {
       "m15dfclandback/r",
       "m15dfclandback/g",
       "m15dfclandback/m",
+      // 5.1b's modal bodies: no colourless modal front or back (STX #154
+      // Pestilent Cauldron is a BLACK artifact; STX #6 Wandering Archaic an
+      // Avatar on the see-through frame), no colourless or gold modal land
+      // printed on the plain 2015 frame.
+      "m15mdfcfront/c",
+      "m15mdfcback/c",
+      "m15mdfclandfront/c",
+      "m15mdfclandfront/m",
+      "m15mdfclandback/c",
+      "m15mdfclandback/m",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -111,8 +121,8 @@ describe("frame reference registry", () => {
     // + 4.49 (b)'s two text-box tokens + 4.34's borderless land + 4.48 /
     // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
     // colour referenced, the tall one's c by the serialized DFT #376) +
-    // 4.52's emblem + 5.1a's five transform bodies.
-    expect(m15Templates.length).toBe(34);
+    // 4.52's emblem + 5.1a's five transform bodies + 5.1b's four modal bodies.
+    expect(m15Templates.length).toBe(38);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

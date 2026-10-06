@@ -33,6 +33,7 @@ import {
 import {
   bodyFor,
   colorlessFaceAllowed,
+  dfcBodyOf,
   dfcIconFamilyFromEffects,
   isDfcFaceType,
   type DfcIconFamily,
@@ -314,9 +315,10 @@ export type ScryfallImportBackFacePatch = {
   imported_art_url?: string | null;
   /** The back's own frame colour (TODO 5.4): the back face's printed
    *  colours in the creator's single-select model
-   *  (backFrameColorsFromScryfall) — colourless on the land back, whose
-   *  body has one master verified on `c` alone. Only on a printing that
-   *  lands on the double-faced bodies; a legacy back carries none. */
+   *  (backFrameColorsFromScryfall) — colourless on the TRANSFORM land back,
+   *  whose body has one master verified on `c` alone; a modal land back's
+   *  is its mana's (one tint per colour). Only on a printing that lands on
+   *  the double-faced bodies; a legacy back carries none. */
   color_identity?: ColorIdentity[];
   /** The back's BODY: `bodyFor(layout, "back", back type, family)` — what
    *  the server's gate derives and stores (lib/cards/dfc-gate.ts); named
@@ -474,15 +476,20 @@ export function droppedFaceNotice(
  *   • "face-type" — a face is not one of wave 1's six face types, or is a
  *     Saga (the saga fronts and the MOM / LCI / FIN saga backs are their own
  *     bodies, 5.5; a battle front stays a battle, 4.21b / 5.5);
- *   • "no-body" — the layout has no body for a face yet (the modal bodies
- *     until 5.1b: `bodyFor` answers null, and the printing turns onto them
- *     by itself once they exist);
+ *   • "no-body" — the layout has no body for a face (none since 5.1b's
+ *     modal pair; a later layout's rows turn a printing onto them by
+ *     themselves once `bodyFor` answers);
  *   • "colourless-face" — a colourless face whose type line has no Artifact
  *     word (EMN's Eldrazi backs, STX #6 Wandering Archaic's front): the
  *     body's `c` is the artifact master standing in (design D2), and the
  *     see-through frame is 5.11 — the printing keeps today's landing rather
- *     than a colour the print doesn't have. */
-export type DfcImportBlock = "walker-face" | "face-type" | "no-body" | "colourless-face";
+ *     than a colour the print doesn't have;
+ *   • "dress" — a devoid or snow printing (MH3's five devoid MDFCs, KHM
+ *     #179 Jorn): no double-faced body carries that dress (5.11), so the
+ *     printing keeps today's landing — the era's devoid / snow frame with a
+ *     legacy back — rather than lose the dress on the plain body
+ *     (`dfc/devoid`, `dfc/snow`: nearest on the body, `landOn` the dress). */
+export type DfcImportBlock = "walker-face" | "face-type" | "no-body" | "colourless-face" | "dress";
 
 export type DfcImportFacts = {
   layout: DfcLayout;
@@ -561,15 +568,24 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   ) {
     return { ...blocked("colourless-face"), frontBody, backBody };
   }
+  // A devoid or snow dress (5.1b skeptic): the bodies don't carry it, and
+  // the plain body would be a look the print doesn't have — today's landing
+  // (the era's dress frame, a legacy back) until a dressed body exists.
+  const effects = new Set((card.frame_effects ?? []).map((e) => e.toLowerCase()));
+  if (effects.has("devoid") || effects.has("snow")) return { ...blocked("dress"), frontBody, backBody };
   return { ...facts, kind: layout === "transform" ? "transform" : "mdfc", frontBody, backBody };
 }
 
-/** A face's STORED colour on a double-faced body: colourless on a land body
- *  (the land pair has one master under every key, verified on `c` alone —
- *  the editor's and the Q3 move's rule, lib/cards/dfc-adopt.ts
- *  adoptedBackColorIdentity), else the face's own frame colour. */
-function dfcFaceColorIdentity(faceType: CardType | undefined, colors: ColorIdentity[]): ColorIdentity[] {
-  return faceType === "land" ? ["colorless"] : colors;
+/** A face's STORED colour on a double-faced body: colourless on the
+ *  TRANSFORM land bodies (the 5.1a land pair has one master under every
+ *  key, verified on `c` alone — the editor's and the Q3 move's rule,
+ *  lib/cards/dfc-adopt.ts adoptedBackColorIdentity), else the face's own
+ *  frame colour — a MODAL land face's is the colour its mana ability adds
+ *  (the 5.1b land pair is one land tint per colour, verified per colour:
+ *  Emeria's back is white, a Pathway's faces each their own). */
+function dfcFaceColorIdentity(body: FrameTemplate, faceType: CardType | undefined, colors: ColorIdentity[]): ColorIdentity[] {
+  const profile = dfcBodyOf(body);
+  return faceType === "land" && profile?.land && profile.layout === "transform" ? ["colorless"] : colors;
 }
 
 /** True when the card is a Room (Duskmourn): Scryfall files Rooms under
@@ -1346,9 +1362,10 @@ export function backFaceColors(card: ScryfallCard): string[] {
  * own printed colours (backFaceColors), none → ["colorless"], two or more →
  * ["multicolor"] (the gold backs never split — MOM #43; a two-colour back
  * prints gold, 5.12). What `back_face.color_identity` stores for a printing
- * that lands on the double-faced bodies — except a LAND back, which the
- * patch stores colourless (its body has one master, verified on `c`;
- * dfcFaceColorIdentity). Empty when the printing has no second face.
+ * that lands on the double-faced bodies — except a TRANSFORM land back,
+ * which the patch stores colourless (its body has one master, verified on
+ * `c`; dfcFaceColorIdentity — a modal land back keeps its mana's colour).
+ * Empty when the printing has no second face.
  */
 export function backFrameColorsFromScryfall(card: ScryfallCard): ColorIdentity[] {
   if (!card.card_faces || card.card_faces.length < 2) return [];
@@ -1609,13 +1626,13 @@ export function mapScryfallToFormPatch(
   const emblem = kind === "emblem";
 
   // A transform / modal printing on the double-faced bodies (TODO 5.4): the
-  // front's colour is its own — colourless on the land front, whose body has
-  // one master verified on `c` — and the family rides as `printed_dfc_icon`.
+  // front's colour is its own — colourless on the TRANSFORM land front,
+  // whose body has one master verified on `c`; a modal land front's is its
+  // mana's — and the family rides as `printed_dfc_icon`.
   const dfc = dfcImportOf(card);
   const dfcLanding = dfc?.kind ? dfc : null;
-  const frontColorIdentity = dfcLanding
-    ? dfcFaceColorIdentity(dfcLanding.frontType, colorIdentity)
-    : colorIdentity;
+  const frontColorIdentity =
+    dfcLanding && dfcLanding.frontBody ? dfcFaceColorIdentity(dfcLanding.frontBody, dfcLanding.frontType, colorIdentity) : colorIdentity;
 
   return {
     // For a multi-face card, the front face's own name ("Fire", not "Fire //
@@ -1716,7 +1733,7 @@ export function mapScryfallBackFacePatch(
     // (the server's gate derives the same body; the colour is stored).
     ...(body
       ? {
-          color_identity: dfcFaceColorIdentity(dfc!.backType, backFrameColorsFromScryfall(card)),
+          color_identity: dfcFaceColorIdentity(body, dfc!.backType, backFrameColorsFromScryfall(card)),
           frame_style: { template: body },
         }
       : {}),

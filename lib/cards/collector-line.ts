@@ -82,6 +82,11 @@ export const COLLECTOR_TEMPLATES = [
   "m15dfcbackleft",
   "m15dfclandfront",
   "m15dfclandback",
+  // …and the modal bodies (5.1b), the same way.
+  "m15mdfcfront",
+  "m15mdfcback",
+  "m15mdfclandfront",
+  "m15mdfclandback",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

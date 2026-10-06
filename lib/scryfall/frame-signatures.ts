@@ -793,13 +793,13 @@ const FAMILIES: Record<
   },
   // The double-faced FRONT bodies (TODO 5.1a / 5.4; lib/cards/dfc.ts
   // bodyFor): the body the mapper's dfcImportOf put the printing's front
-  // face on — the land front for a land, the spell front for every other,
-  // the modal bodies once 5.1b declares them (the back body rides on the
-  // patch: the printing's family and the back's type through bodyFor). A
-  // printing that doesn't land on the bodies (a modal one until 5.1b, a
-  // blocked face) takes its kind's standard instead, as kindFallback does.
+  // face on — the land front for a land, the spell front for every other;
+  // the transform bodies (5.1a) and the modal bodies (5.1b) alike (the back
+  // body rides on the patch: the printing's family and the back's type
+  // through bodyFor). A printing that doesn't land on the bodies (a blocked
+  // face) takes its kind's standard instead, as kindFallback does.
   dfc: {
-    produces: ["m15dfclandfront", "m15dfcfront"],
+    produces: ["m15dfclandfront", "m15dfcfront", "m15mdfclandfront", "m15mdfcfront"],
     pick: (ctx) => ctx.facts.dfc?.frontBody ?? kindFallback(ctx),
   },
 };
@@ -2028,14 +2028,15 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // --- 5.4: the double-faced kinds -------------------------------------------
   // A transform / modal printing whose faces land on the double-faced bodies
   // (the mapper's dfcImportOf: the Transform kind since 5.1a, the Modal kind
-  // once 5.1b declares its bodies) is EXACT on its front body — the `dfc`
-  // gap is drawn there (gapDrawnBy) — and the creator's verification
-  // (withVerification, finalizeImportMatch) says "not yet verified" until
-  // the front body is ticked in the front's colour AND the back body in the
-  // back's; a 2003-frame one (ISD / DKA / AVR) is nearest on the M15 bodies,
-  // a devoid one nearest for its devoid frame (5.11), and a modal printing
-  // before 5.1b nearest on the front's standard, with a legacy back. The
-  // walker, colourless-face and borderless rules above take theirs first.
+  // since 5.1b) is EXACT on its front body — the `dfc` gap is drawn there
+  // (gapDrawnBy) — and the creator's verification (withVerification,
+  // finalizeImportMatch) says "not yet verified" until the front body is
+  // ticked in the front's colour AND the back body in the back's; a
+  // 2003-frame one (ISD / DKA / AVR) is nearest on the M15 bodies, a devoid
+  // or snow one (MH3 #253 Drowner of Truth, KHM #179 Jorn) nearest on the
+  // body for its dress and landing on the era's dress frame (5.11: no devoid
+  // or snow double-faced body exists). The walker, colourless-face and
+  // borderless rules above take theirs first.
   {
     key: "dfc/2003",
     exactLabel: "Transform frame (2003)",
@@ -2047,26 +2048,36 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.10",
     },
   },
+  // A devoid or snow double-faced printing (MH3's five devoid MDFCs, KHM
+  // #179 Jorn): the printing's frame IS the body, nearest for its dress,
+  // and the import LANDS on the era's dress frame with a legacy back
+  // (dfcImportOf blocks it as "dress"; `landOn` the m15 family's pick, which
+  // reads the effects: m15devoid / m15snow) — today's landing, never the
+  // plain body as a look the print doesn't have (5.1b skeptic: without the
+  // block `modal/2015` judged Jorn EXACT on the plain modal front, and an
+  // unverified Drowner fell to plain m15).
   {
     key: "dfc/devoid",
     exactLabel: "Devoid double-faced card",
-    match: { kinds: ["transform", "mdfc"], effectsAny: ["devoid"] },
+    match: { dfcBlocked: ["dress"], effectsAny: ["devoid"] },
     outcome: {
       status: "nearest",
       template: { family: "dfc" },
+      landOn: { family: "m15" },
       reason: "a devoid double-faced card prints the devoid frame, which PipGlyph's double-faced bodies don't dress yet",
       blockedBy: "5.11",
     },
   },
   {
-    key: "modal/2015/pending",
-    exactLabel: "M15 (2015) modal double-faced frame",
-    match: { frames: ["2015"], layouts: ["modal_dfc"], dfcBlocked: ["no-body"] },
+    key: "dfc/snow",
+    exactLabel: "Snow double-faced card",
+    match: { dfcBlocked: ["dress"], effectsAny: ["snow"] },
     outcome: {
       status: "nearest",
-      template: { family: "m15" },
-      reason: "PipGlyph's modal double-faced frames aren't built yet",
-      blockedBy: "5.1b",
+      template: { family: "dfc" },
+      landOn: { family: "m15" },
+      reason: "a snow double-faced card prints the snow frame, which PipGlyph's double-faced bodies don't dress yet",
+      blockedBy: "5.11",
     },
   },
   ...withGaps(
@@ -2245,11 +2256,11 @@ export function signatureDrawnOn(signature: string, template: string | null | un
 }
 
 /** Templates no printed signature resolves to exact or nearest: the
- *  transform BACK bodies (TODO 5.1a) — a printing resolves to its FRONT
- *  template; its back wears the body the family and the back's type derive
- *  (lib/cards/dfc.ts bodyFor, the mapper's business in 5.4), never a
- *  signature of its own. */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"];
+ *  transform (TODO 5.1a) and modal (5.1b) BACK bodies — a printing resolves
+ *  to its FRONT template; its back wears the body the family and the back's
+ *  type derive (lib/cards/dfc.ts bodyFor, the mapper's business in 5.4),
+ *  never a signature of its own. */
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);

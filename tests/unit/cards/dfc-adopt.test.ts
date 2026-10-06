@@ -4,13 +4,13 @@ import legacy from "./fixtures/dfc-legacy-backs.json";
 
 // ---------------------------------------------------------------------------
 // TODO 5.2 — the 8 imported double-faced cards onto the real frames (owner
-// 2026-10-02, Q3: in place, one click): who the hint is offered to (4 of
-// the 8 today — Titânia on devoid, Erza, Tobirama's land back, Aang; Vader's
-// costed artifact back is a MODAL card and gets nothing until the modal
-// bodies exist — owner 2026-10-05: the hint offers ONLY the layout the
-// back's shape derives, see dfc-adopt-modal.test.ts for the day they do;
-// never the two on m15borderless, the walker back or the adventure row),
-// what the move writes, and the action's gates.
+// 2026-10-02, Q3: in place, one click): who the hint is offered to (5 of
+// the 8 — Titânia on devoid, Erza, Tobirama's land back, Aang onto the
+// transform pair; Vader's costed artifact back is a MODAL card and goes onto
+// the modal pair, 5.1b — owner 2026-10-05: the hint offers ONLY the layout
+// the back's shape derives, dfc-adopt-modal.test.ts holds the mechanism
+// with mocked bodies; never the two on m15borderless, the walker back or
+// the adventure row), what the move writes, and the action's gates.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -55,24 +55,24 @@ const rows = (legacy as unknown as { rows: LegacyRow[] }).rows;
 const cardOf = (row: LegacyRow): DfcAdoptionCard & { back_face: LegacyRow["back_face"] } => ({ ...row.front, back_face: row.back_face });
 
 describe("dfcAdoptionOffer — who gets the hint", () => {
-  it("offers exactly the FOUR wave-1 rows of production's nine today — the layout the back's SHAPE derives, so Vader's costed back (a modal card) waits for the modal bodies", () => {
+  it("offers exactly the FIVE wave-1 rows of production's nine — the layout the back's SHAPE derives: Vader's costed back (a modal card) the modal pair since 5.1b", () => {
     const offered = rows.map((row) => ({ label: row.label, offer: dfcAdoptionOffer(cardOf(row)) }));
     expect(offered.filter((r) => r.offer).map((r) => r.label.split("//")[1]?.trim().split(" (")[0])).toEqual([
       "Avacyn, the Purifier",
+      "Tergrid's Lantern",
       "Avacyn, the Purifier",
       "Temple of Civilization",
       "Aang, Master of Elements",
     ]);
     const refused = offered.filter((r) => !r.offer).map((r) => r.label);
-    expect(refused).toHaveLength(5);
+    expect(refused).toHaveLength(4);
     expect(refused.join("\n")).toMatch(/Tibalt/); // a walker back
     expect(refused.join("\n")).toMatch(/NOT a DFC/); // the adventure row
     expect(refused.filter((label) => /m15borderless/.test(label))).toHaveLength(2);
     // Vader (owner 2026-10-05): a back WITH a mana cost is a modal card, so
-    // its shape derives the MODAL layout — whose bodies don't exist yet —
-    // and nothing is offered: a move onto Transform would have dropped the
-    // Lantern's cost. The shape is still read (the action's message).
-    expect(refused.filter((label) => /modal: black legendary creature \/\/ Tergrid's Lantern/.test(label))).toHaveLength(1);
+    // its shape derives the MODAL layout — the modal pair since 5.1b, never
+    // Transform, which would have dropped the Lantern's cost.
+    expect(offered[1].offer).toEqual({ layout: "modal", label: "Modal double-faced", frontBody: "m15mdfcfront", backBody: "m15mdfcback", losesDress: null });
     expect(dfcAdoptionShape(cardOf(rows[1]))).toBe("modal");
     expect(dfcAdoptionShape(cardOf(rows[0]))).toBe("transform");
     // A row that is no candidate at all has no shape either.
@@ -83,7 +83,7 @@ describe("dfcAdoptionOffer — who gets the hint", () => {
     expect(offered[2].offer?.losesDress).toBeNull();
   });
 
-  it("the offer is ONE layout — the shape's — with both bodies; a modal-shaped back has none until 5.1b", () => {
+  it("the offer is ONE layout — the shape's — with both bodies: Erza's cost-less back the transform pair, Vader's costed back the modal pair (5.1b)", () => {
     expect(dfcAdoptionOffer(cardOf(rows[2]))).toEqual({
       layout: "transform",
       label: "Transform",
@@ -91,14 +91,20 @@ describe("dfcAdoptionOffer — who gets the hint", () => {
       backBody: "m15dfcback",
       losesDress: null,
     });
-    expect(dfcAdoptionOffer(cardOf(rows[1]))).toBeNull();
+    expect(dfcAdoptionOffer(cardOf(rows[1]))).toEqual({
+      layout: "modal",
+      label: "Modal double-faced",
+      frontBody: "m15mdfcfront",
+      backBody: "m15mdfcback",
+      losesDress: null,
+    });
     // The same back with its cost blanked is a transform card again.
     const costless = { ...cardOf(rows[1]), back_face: { ...rows[1].back_face, cost: "" } };
     expect(dfcAdoptionShape(costless)).toBe("transform");
     expect(dfcAdoptionOffer(costless)?.backBody).toBe("m15dfcback");
   });
 
-  it("a cost-less LAND back is a transform card only with the printed sign of one (skeptic 2026-10-05): Ojer Taq's Temple keeps its reminder and its offer, a modal land back (Agadeem's shape on m15) reads as modal and is offered nothing until 5.1b", () => {
+  it("a cost-less LAND back is a transform card only with the printed sign of one (skeptic 2026-10-05): Ojer Taq's Temple keeps its reminder and its offer, a modal land back (Agadeem's shape on m15) reads as modal and is offered the modal pair (5.1b)", () => {
     // Row 6: the LCI transform land back prints "(Transforms from Ojer Taq,
     // Deepest Foundation.)" — the sign the cost can't give.
     const temple = cardOf(rows[5]);
@@ -107,11 +113,12 @@ describe("dfcAdoptionOffer — who gets the hint", () => {
     // Row 9's shape (a ZNR modal land back: "enters tapped", no "transform"
     // on either face) moved onto m15 — the borderless skin aside, the cost
     // alone would have read it as transform and offered the transform land
-    // back; the sign reads it as modal: no bodies, no hint.
+    // back; the sign reads it as modal: the modal front for its sorcery, the
+    // modal land back (5.1b).
     const agadeemOnM15 = { ...cardOf(rows[8]), frame_style: { finish: "regular", template: "m15" } };
     expect(/transform/i.test(`${rows[8].front.rules_text}${rows[8].back_face.rules_text}`)).toBe(false);
     expect(dfcAdoptionShape(agadeemOnM15)).toBe("modal");
-    expect(dfcAdoptionOffer(agadeemOnM15)).toBeNull();
+    expect(dfcAdoptionOffer(agadeemOnM15)).toMatchObject({ layout: "modal", frontBody: "m15mdfcfront", backBody: "m15mdfclandback" });
     expect(adoptDfcBodiesPlan(agadeemOnM15, "transform")).toBeNull();
     // The Temple with its reminder cut from the back and nothing on the
     // front: modal too — held, never the transform land back on a guess.
@@ -121,7 +128,7 @@ describe("dfcAdoptionOffer — who gets the hint", () => {
       back_face: { ...rows[5].back_face, rules_text: "{T}: Add {W}." },
     };
     expect(dfcAdoptionShape(unmarked)).toBe("modal");
-    expect(dfcAdoptionOffer(unmarked)).toBeNull();
+    expect(dfcAdoptionOffer(unmarked)).toMatchObject({ layout: "modal", frontBody: "m15mdfcfront", backBody: "m15mdfclandback" });
     // The front's word alone is enough (Golden Guardian's "returns
     // transformed"), as is the back's.
     expect(dfcAdoptionShape({ ...unmarked, rules_text: "When it dies, return it to the battlefield transformed." })).toBe("transform");
@@ -171,11 +178,27 @@ describe("adoptDfcBodiesPlan — what the move writes", () => {
     expect(adoptDfcBodiesPlan(cardOf(rows[5]), "transform")?.back_face.color_identity).toEqual(["colorless"]);
     expect(adoptDfcBodiesPlan(cardOf(rows[7]), "transform")?.back_face.color_identity).toEqual(rows[7].front.color_identity);
     // Vader (owner 2026-10-05): a costed back is a modal card — NO transform
-    // plan (it would drop the Lantern's cost) and no modal plan until the
-    // bodies exist. Erza's cost-less back is a transform card: never modal.
+    // plan (it would drop the Lantern's cost); the modal plan (5.1b) keeps
+    // the cost, stamps no family and puts the back on the modal back in the
+    // front's colour. Erza's cost-less back is a transform card: never modal.
     expect(adoptDfcBodiesPlan(cardOf(rows[1]), "transform")).toBeNull();
-    expect(adoptDfcBodiesPlan(cardOf(rows[1]), "modal")).toBeNull();
+    const vaderModal = adoptDfcBodiesPlan(cardOf(rows[1]), "modal")!;
+    expect(vaderModal).toMatchObject({ layout: "modal", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
+    expect(vaderModal.back_face.cost).toBe(rows[1].back_face.cost);
+    expect(vaderModal.frame_style).not.toHaveProperty("dfcIcon");
+    expect(vaderModal.back_face.color_identity).toEqual(rows[1].front.color_identity);
     expect(adoptDfcBodiesPlan(cardOf(rows[2]), "modal")).toBeNull();
+    // Tobirama's transform-shaped land back has no modal plan; a modal LAND
+    // back (Agadeem's shape on m15) onto the MODAL land back keeps the
+    // front's colour (one land tint per colour, verified per colour) —
+    // colourless is the transform land back's rule alone.
+    expect(adoptDfcBodiesPlan(cardOf(rows[5]), "modal")).toBeNull();
+    const agadeemOnM15 = { ...cardOf(rows[8]), frame_style: { finish: "regular", template: "m15" } };
+    expect(adoptDfcBodiesPlan(agadeemOnM15, "modal")?.back_face).toMatchObject({
+      card_type: "land",
+      frame_style: { template: "m15mdfclandback" },
+      color_identity: rows[8].front.color_identity,
+    });
     // A row that isn't offered has no plan.
     expect(adoptDfcBodiesPlan(cardOf(rows[3]), "transform")).toBeNull();
   });
@@ -249,26 +272,47 @@ describe("adoptDfcBodiesAction", () => {
     expect((await adoptDfcBodiesAction(CARD, "transform")).ok).toBe(false);
   });
 
-  it("refuses a modal-shaped back's 'transform' — and its 'mdfc' until the modal bodies exist (owner 2026-10-05)", async () => {
+  it("a modal-shaped back (owner 2026-10-05): 'transform' is refused by shape; 'mdfc' moves it onto the modal pair (5.1b) once both bodies are verified in the card's colour, the Lantern's cost kept", async () => {
     state.verified = [frameComboKey("m15dfcfront", "b"), frameComboKey("m15dfcback", "b")];
     state.existing = { id: CARD, owner_id: USER, slug: "vader", visibility: "public", ...cardOf(rows[1]) };
     const stub = db();
-    const notYet = { ok: false, formError: "The Modal double-faced frames aren't built yet." };
-    expect(await adoptDfcBodiesAction(CARD, "transform")).toEqual(notYet);
-    expect(await adoptDfcBodiesAction(CARD, "modal")).toEqual(notYet);
-    expect(await adoptDfcBodiesAction(CARD, "mdfc")).toEqual(notYet);
+    expect(await adoptDfcBodiesAction(CARD, "transform")).toEqual({
+      ok: false,
+      formError: "This card moves onto the Modal double-faced frames only — its back carries a mana cost.",
+    });
+    // The transform pair verified is not the modal pair.
+    const dark = await adoptDfcBodiesAction(CARD, "mdfc");
+    expect(dark.ok).toBe(false);
+    expect(dark.ok ? "" : dark.formError).toMatch(/isn't available in black yet/);
     expect(written(stub)).toBeUndefined();
     expect(state.baked).toEqual([]);
+    state.verified = [frameComboKey("m15mdfcfront", "b"), frameComboKey("m15mdfcback", "b")];
+    const result = await adoptDfcBodiesAction(CARD, "mdfc");
+    expect(result).toEqual({ ok: true, cardId: CARD, slug: "erza", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
+    const row = written(stub)!;
+    expect(row.frame_style).toMatchObject({ template: "m15mdfcfront" });
+    expect(row.frame_style).not.toHaveProperty("dfcIcon");
+    expect(row.back_face).toEqual({ ...rows[1].back_face, frame_style: { template: "m15mdfcback" }, color_identity: ["black"] });
+    expect(state.baked).toEqual([CARD]);
     // A modal LAND back (Agadeem's shape on m15: cost-less, no "transform"
-    // on either face) is the same modal card to the action — never moved
-    // onto the transform land back on the cost alone (skeptic 2026-10-05).
+    // on either face) is a modal card to the action too — never the
+    // transform land back on the cost alone (skeptic 2026-10-05); its pair
+    // is the modal front and the modal land back, in the front's colour.
+    state.baked = [];
     state.verified = [frameComboKey("m15dfcfront", "b"), frameComboKey("m15dfclandback", "c")];
     state.existing = { id: CARD, owner_id: USER, slug: "agadeem", visibility: "public", ...cardOf(rows[8]), frame_style: { finish: "regular", template: "m15" } };
     const land = db();
-    expect(await adoptDfcBodiesAction(CARD, "transform")).toEqual(notYet);
-    expect(await adoptDfcBodiesAction(CARD, "mdfc")).toEqual(notYet);
+    expect(await adoptDfcBodiesAction(CARD, "transform")).toEqual({
+      ok: false,
+      formError: "This card moves onto the Modal double-faced frames only — its back is a land without the printed sign of a transform card.",
+    });
+    expect((await adoptDfcBodiesAction(CARD, "mdfc")).ok).toBe(false);
     expect(written(land)).toBeUndefined();
-    expect(state.baked).toEqual([]);
+    state.verified = [frameComboKey("m15mdfcfront", "b"), frameComboKey("m15mdfclandback", "b")];
+    const moved = await adoptDfcBodiesAction(CARD, "mdfc");
+    expect(moved.ok, JSON.stringify(moved)).toBe(true);
+    expect(written(land)!.back_face).toMatchObject({ frame_style: { template: "m15mdfclandback" }, color_identity: ["black"] });
+    expect(state.baked).toEqual([CARD]);
   });
 
   it("refuses a card that isn't offered, the layout the back's shape rules out, a bad layout, a card that isn't the caller's", async () => {

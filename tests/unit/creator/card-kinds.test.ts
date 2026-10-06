@@ -75,12 +75,6 @@ describe("kindFromCard", () => {
   it("round-trips every kind through planKindChange's patch", () => {
     for (const kind of CARD_KIND_VALUES) {
       const plan = planKindChange(kind, { cardType: "creature", template: "m15" });
-      // The modal kind has no bodies until 5.1b (TODO 5.2 names it): its plan
-      // keeps the card's own template, so it can't be entered yet.
-      if (kind === "mdfc") {
-        expect(plan).toEqual({ action: "apply", patch: { card_type: "creature", template: "m15" } });
-        continue;
-      }
       expect(kindFromCard(plan.patch.card_type, plan.patch.template)).toBe(kind);
     }
   });
@@ -89,11 +83,6 @@ describe("kindFromCard", () => {
 describe("framesForKind", () => {
   it("yields at least one frame for every kind, even with nothing verified", () => {
     for (const kind of CARD_KIND_VALUES) {
-      // …except the modal kind, whose bodies are 5.1b's (TODO 5.2 names it).
-      if (kind === "mdfc") {
-        expect(framesForKind(kind, NO_VERIFIED)).toEqual([]);
-        continue;
-      }
       expect(framesForKind(kind, NO_VERIFIED).length, kind).toBeGreaterThan(0);
     }
   });

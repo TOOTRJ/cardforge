@@ -30,6 +30,7 @@ import {
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
 import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import { orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import {
   adventureRulesLayout,
@@ -164,6 +165,7 @@ import {
   type SlotAlign,
   type StatSlot,
   artLayersFor,
+  type FlipsideSlots,
   type TextSlot,
   type TypeLineSplit,
 } from "@/lib/cards/template-layout";
@@ -609,6 +611,8 @@ function CardImage({
     defense: showDefense,
     secondFacePt: Boolean(layout.secondFace?.pt && card.backFace && (card.backFace.power || card.backFace.toughness)),
     stamp: holoStamp?.keepOut ?? null,
+    // The modal strip (5.1b): the lines keep out of the painted tab.
+    strip: layout.flipside?.keepOut ?? null,
   };
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).
@@ -1304,6 +1308,15 @@ function CardImage({
             cardWidth: width,
             orientation: orientationFromAspect(aspect),
           })
+        : null}
+
+      {/* The modal flipside strip's texts (TODO 5.1b): the OTHER face's
+          type word and its cost / mana line in the strip the master paints
+          — white on a front, dark on a back; the preview's FlipsideOverlay
+          twin. Only text: the strip, its ◀ and the housing are the
+          master's. */}
+      {layout.flipside && card.dfc
+        ? FlipsideBake({ slots: layout.flipside, other: card.dfc.otherFace, cardWidth: width, target: rulesTarget, overrides: card.pipOverrides })
         : null}
 
       {/* Footer — artist + brand. A multi-layer outline (ON_ART_OUTLINE on
@@ -2790,6 +2803,95 @@ function StatBake({
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+// FlipsideBake — the modal strip's two texts (TODO 5.1b; lib/cards/
+// flipside-strip.ts), the preview's FlipsideOverlay twin: the other face's
+// type word in the display face from the box's left edge, and its cost /
+// mana line as ONE nowrap row of runs (RulesBoxLineBake's construction:
+// every word its own span, word gaps as margins, each pip at the layout's
+// pipTopPx) set against the box's right edge. Both in the profile's
+// flipside box, vertically centred, above the text layers.
+function FlipsideBake({
+  slots,
+  other,
+  cardWidth,
+  target,
+  overrides,
+}: {
+  slots: FlipsideSlots;
+  other: Parameters<typeof flipsideStrip>[1];
+  cardWidth: number;
+  target: RulesTarget;
+  overrides?: PipOverrides | null;
+}) {
+  const strip = flipsideStrip(slots, other, target);
+  if (!strip) return null;
+  return (
+    <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 22 }}>
+      {strip.word ? (
+        <div
+          style={{
+            ...slotBox(slots.word.rect),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            fontFamily: DISPLAY_FONT,
+            fontSize: fpx(slots.word.sizePct, cardWidth),
+            fontWeight: slots.word.weight ?? 700,
+            color: slots.word.colorHex,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {bakeText(strip.word)}
+        </div>
+      ) : null}
+      {strip.line ? FlipsideLineBake({ slot: slots.line, line: strip.line, overrides }) : null}
+    </div>
+  );
+}
+
+function FlipsideLineBake({ slot, line, overrides }: { slot: TextSlot; line: FlipsideLine; overrides?: PipOverrides | null }) {
+  const m = line.metrics;
+  return (
+    <div
+      style={{
+        ...slotBox(slot.rect),
+        display: "flex",
+        flexDirection: "row",
+        flexWrap: "nowrap",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        fontFamily: BODY_FONT,
+        fontSize: m.fontPx,
+        color: slot.colorHex,
+      }}
+    >
+      {line.runs.map((run, ri) => (
+        <div
+          key={ri}
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            flexShrink: 0,
+            height: m.linePx,
+            ...(ri > 0 ? { marginLeft: m.wordGapPx } : {}),
+          }}
+        >
+          {run.map((item, i) =>
+            item.t === "m" ? (
+              <RulesItemBake key={i} item={item} glyph={m.pipPx} top={m.pipTopPx} gapBefore={i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0} overrides={overrides} />
+            ) : (
+              <span key={i} style={{ display: "flex", flexShrink: 0, whiteSpace: "nowrap", lineHeight: m.linePx / m.fontPx, fontStyle: item.em ? "italic" : "normal" }}>
+                {rulesWordText(item.v)}
+              </span>
+            ),
+          )}
+        </div>
+      ))}
     </div>
   );
 }

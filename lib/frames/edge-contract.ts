@@ -140,6 +140,13 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15dfcbackleft: ALL_BORDER,
   m15dfclandfront: ALL_BORDER,
   m15dfclandback: ALL_BORDER,
+  // The modal bodies (TODO 5.1b, CC's 'Modal Regular' pack): the M15 black
+  // border on every edge of every face, the land pair included (the land
+  // tint replaces the body and the box only, inside the border).
+  m15mdfcfront: ALL_BORDER,
+  m15mdfcback: ALL_BORDER,
+  m15mdfclandfront: ALL_BORDER,
+  m15mdfclandback: ALL_BORDER,
   // MSE-derived, in git.
   agclassic: ALL_BORDER,
   alphaland: ALL_BORDER,

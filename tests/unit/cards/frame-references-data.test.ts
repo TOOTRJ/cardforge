@@ -115,6 +115,14 @@ const DOCUMENTED_NULLS = new Set([
   // emblem's model — verified on c only (INR #287 / FIN #31).
   "m15dfclandfront/w", "m15dfclandfront/u", "m15dfclandfront/b", "m15dfclandfront/r", "m15dfclandfront/g", "m15dfclandfront/m",
   "m15dfclandback/w", "m15dfclandback/u", "m15dfclandback/b", "m15dfclandback/r", "m15dfclandback/g", "m15dfclandback/m",
+  // The modal bodies (TODO 5.1b): no colourless modal FRONT or BACK was
+  // printed on the plain 2015 frame (STX #154 Pestilent Cauldron is a BLACK
+  // artifact, every KHM artifact back a coloured one; STX #6 Wandering
+  // Archaic is an Avatar on the see-through frame, wave 2), and the land pair's `c` (CC's grey land modal) and `m` (the gold land
+  // tint) are stand-ins — no colourless or gold modal land was printed.
+  "m15mdfcfront/c", "m15mdfcback/c",
+  "m15mdfclandfront/c", "m15mdfclandfront/m",
+  "m15mdfclandback/c", "m15mdfclandback/m",
 ]);
 
 describe("frame-references.json", () => {

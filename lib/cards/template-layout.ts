@@ -65,6 +65,8 @@ import {
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
   COST_DISC_PCT,
+  MDFC_STRIP_LINE_PX,
+  MDFC_STRIP_WORD_PX,
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
   TITLE_SIZE_PCT,
@@ -446,6 +448,17 @@ export type DfcProfile = {
   land?: true;
 };
 
+/** The modal strip's two text slots (FrameProfile.flipside) and the painted
+ *  strip's own rect, which the rules lines keep out of (DrawnStats.strip,
+ *  lib/cards/rules-box.ts): the prints cut the strip INTO the text box's
+ *  paper, so a long text's last lines end above it or stop at its chevron
+ *  (KHM #15 Halvar, KHM #114 Valki) — judged glyph by glyph like a plate. */
+export type FlipsideSlots = {
+  word: TextSlot;
+  line: TextSlot;
+  keepOut: Rect;
+};
+
 export type FrameProfile = {
   label: string;
   /** Printed anatomy drawn over the frame master — see FrameOverlaySlot.
@@ -556,6 +569,17 @@ export type FrameProfile = {
    *  colourless face. Intrinsic to the body, not a per-card switch (4.6c's
    *  switch for ordinary cards reuses the module). Code-owned. */
   indicator?: "coloured";
+  /** A modal double-faced body's flipside STRIP texts (TODO 5.1b; design
+   *  2026-10-02 §2.2, D9): two text slots in the strip CC paints into the
+   *  master (its housing-coloured tab at the text box's bottom left) — the
+   *  OTHER face's last type word (`word`: Beleren Bold, from the box's left
+   *  edge) and its mana cost or, for a land, its mana ability (`line`: the
+   *  rules font with inline pips, v36's run, set against the box's right
+   *  edge). Both renderers draw them from CardPreviewData.dfc.otherFace
+   *  (lib/cards/faces.ts typeWordOf / manaLineOf) and nothing else; white
+   *  ink on a front's dark strip, dark on a back's light one. Code-owned;
+   *  set on a PROFILES entry only. */
+  flipside?: FlipsideSlots;
   /** When set, the mana cost renders absolutely inside THIS rect
    *  (right-aligned, vertically centered) instead of inline at the title
    *  band's right edge — lets the pips move independently of the name.
@@ -4107,6 +4131,106 @@ const M15DFCLANDBACK: FrameProfile = {
   title: { ...M15.title, rect: M15DFCBACK.title.rect },
 };
 
+// ---------------------------------------------------------------------------
+// The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02 §2.2, frames.md
+// §1.5 / §3.5 / §4.3): Card Conjurer's 'Modal Regular' pack over the same
+// CC-framed M15 skeleton as the transform bodies — the drop housing with its
+// ▲ (front) / ▲▼ (back), its ring and the flipside strip are the masters'.
+//   • the name starts at the icon face's inset on BOTH faces (the housing
+//     is at the left of every modal face; the prints' ink at 247–252 px);
+//   • the strip's two texts (MDFC_STRIP_WORD / MDFC_STRIP_LINE) in CC's
+//     flipside box 6.8 / 89.2 / 36.4 × 3.91 % (102–648 × 1873–1955 px): the
+//     word in Beleren Bold at MDFC_STRIP_WORD_PX from the left edge (the
+//     prints' ink from 103–110 px, capitals 35–36 px tall), the line in the
+//     rules font with inline pips at MDFC_STRIP_LINE_PX against the right
+//     edge (the prints' last ink at 647–650 px) — white on a front's dark
+//     strip, dark (INK_DARK) on a back's light one;
+//   • a back: a cost prints as on any card (KHM / STX / MSH backs carry one),
+//     WHITE name, type and P/T ink on the toned dark bars, the transform
+//     pack's dark plates, no indicator (no modal back prints one), no rider;
+//   • the land pair: no cost and no P/T on either face (a land face prints
+//     none); w u b r g from the five land tints, `c` CC's grey land modal and
+//     `m` the gold tint, both stand-ins never offered (no reference) — no
+//     artifact dress on a land.
+// No crown, no pair masters, no holoStamp in wave 1 (the save drops `crown`
+// / `twoColor`, D17). Additions: no stored card sits on them, no bump.
+// ---------------------------------------------------------------------------
+
+/** CC's flipside text box (packModalRegular.js flipsideType /
+ *  flipSideReminder: x 0.068 y 0.892 w 0.364 h 0.0391), inside the painted
+ *  strip (64–690 × 1866–1948 px at HD). */
+const MDFC_STRIP_BOX: Rect = { leftPct: 6.8, topPct: 89.2, widthPct: 36.4, heightPct: 3.91 };
+const MDFC_STRIP_INK_FRONT = "#ffffff";
+/** The other face's type word: Beleren Bold from the box's left edge. */
+const MDFC_STRIP_WORD: TextSlot = {
+  rect: MDFC_STRIP_BOX,
+  sizePct: rulesPxToPct(MDFC_STRIP_WORD_PX),
+  colorHex: MDFC_STRIP_INK_FRONT,
+  weight: 700,
+  font: "display",
+  align: "start",
+};
+/** The other face's cost or mana line: the rules font (its pips the inline
+ *  run's) against the box's right edge. */
+const MDFC_STRIP_LINE: TextSlot = {
+  rect: MDFC_STRIP_BOX,
+  sizePct: rulesPxToPct(MDFC_STRIP_LINE_PX),
+  colorHex: MDFC_STRIP_INK_FRONT,
+  font: "body",
+  align: "end",
+};
+/** The painted strip: CC's Flipside mask spans x 45–701 × y 1866–1955 at
+ *  HD (the tab from the border's inner edge to its chevron's tip; the
+ *  prints' 64–694 × 1861–1948), with 4 px of air above it for the lines'
+ *  descenders. */
+const MDFC_STRIP_KEEP_OUT: Rect = { leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 };
+export const MDFC_FLIPSIDE_FRONT: FlipsideSlots = { word: MDFC_STRIP_WORD, line: MDFC_STRIP_LINE, keepOut: MDFC_STRIP_KEEP_OUT };
+export const MDFC_FLIPSIDE_BACK: FlipsideSlots = {
+  word: { ...MDFC_STRIP_WORD, colorHex: INK_DARK },
+  line: { ...MDFC_STRIP_LINE, colorHex: INK_DARK },
+  keepOut: MDFC_STRIP_KEEP_OUT,
+};
+
+const M15MDFCFRONT: FrameProfile = {
+  ...DFC_SKELETON,
+  label: "Modal front",
+  dfc: { layout: "modal", role: "front", well: "left" },
+  title: M15DFCFRONT.title,
+  flipside: MDFC_FLIPSIDE_FRONT,
+};
+
+const M15MDFCBACK: FrameProfile = {
+  ...M15MDFCFRONT,
+  label: "Modal back",
+  dfc: { layout: "modal", role: "back", well: "left" },
+  title: { ...M15MDFCFRONT.title, colorHex: DFC_BACK_INK },
+  type: { ...DFC_SKELETON.type, colorHex: DFC_BACK_INK },
+  pt: DFC_BACK_PT,
+  flipside: MDFC_FLIPSIDE_BACK,
+};
+
+/** The land pair: the two above with no cost and no P/T slot, one of the
+ *  five land tints under every colour (no artifact dress). */
+const { pt: _mdfcLandFrontPt, ...M15MDFCFRONT_NO_PT } = M15MDFCFRONT;
+void _mdfcLandFrontPt;
+const M15MDFCLANDFRONT: FrameProfile = {
+  ...M15MDFCFRONT_NO_PT,
+  label: "Modal land front",
+  dfc: { layout: "modal", role: "front", well: "left", land: true },
+  hideCost: true,
+  artifactMasterKeys: undefined,
+};
+
+const { pt: _mdfcLandBackPt, ...M15MDFCBACK_NO_PT } = M15MDFCBACK;
+void _mdfcLandBackPt;
+const M15MDFCLANDBACK: FrameProfile = {
+  ...M15MDFCBACK_NO_PT,
+  label: "Modal land back",
+  dfc: { layout: "modal", role: "back", well: "left", land: true },
+  hideCost: true,
+  artifactMasterKeys: undefined,
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -4236,6 +4360,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15dfcbackleft: { ...M15DFCBACKLEFT, collector: M15_COLLECTOR },
   m15dfclandfront: { ...M15DFCLANDFRONT, collector: M15_COLLECTOR },
   m15dfclandback: { ...M15DFCLANDBACK, collector: M15_COLLECTOR },
+  // The modal bodies (TODO 5.1b): the collector line as every M15 face.
+  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR },
+  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR },
+  m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR },
+  m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR },
   // The snow frame (TODO 4.6f, wave 2c; owner round 20, 2026-10-01, option
   // A): the STANDARD crown band over the snow bars — KHM #224 / #223 / #230,
   // J22 #12, PH19 #5 print the standard crown's shape and registration

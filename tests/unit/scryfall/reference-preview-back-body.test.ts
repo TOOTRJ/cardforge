@@ -41,10 +41,10 @@ describe("fixture", () => {
     // with the real front bodies, whatever template the fixture declares.
     expect(frontBodyFor("m15artifact", "creature")).toBe("m15dfcfront");
     expect(frontBodyFor("m15artifact", "land")).toBe("m15dfclandfront");
-    // The modal rows come with 5.1b: the fallback is the declared front
-    // keyed like the front face — the fixture's m15snow.
+    // bodyFor's modal rows are filled too (5.1b): a modal back pairs with
+    // the real modal front bodies, not the fixture's m15snow.
     expect(isDfcBackBody("m15devoid")).toBe(true);
-    expect(frontBodyFor("m15devoid", "creature")).toBe("m15snow");
+    expect(frontBodyFor("m15devoid", "creature")).toBe("m15mdfcfront");
     expect(faceUnderTest("m15artifact")).toBe("back");
     expect(faceUnderTest("m15artifact", "front")).toBe("back");
   });

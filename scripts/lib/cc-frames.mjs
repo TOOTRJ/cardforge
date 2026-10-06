@@ -1284,6 +1284,162 @@ export const DFC_ICON_FILES = Object.freeze({
  *  0.0734 W = 110 px), so the HD bake never upsamples a glyph. */
 export const DFC_ICON_SIZE = 220;
 
+// ---------------------------------------------------------------------------
+// The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02, design-next/5/
+// final.md §2.1 / §2.3, frames.md §1.5 / §3.5 / §3.6 / §4.4): Card
+// Conjurer's 'Modal Regular' pack (packModalRegular.js, groupModal-1.js),
+// 1500 × 2100 native, copied 1:1 — the drop-shaped icon HOUSING at the left
+// of the name bar (a white fill with the black ▲ on a front, the bar's tone
+// with the white ▲▼ on a back), its ring, the flipside STRIP at the bottom
+// left (dark on a front, light on a back, with CC's ◀ at its tip) and the
+// strip's box are the masters'; only the strip's two texts are drawn (the
+// profile's `flipside` slots, lib/cards/template-layout.ts). Keys w u b r g
+// m from the colour frames, `a` the pack's artifact frame and `c` the same
+// artifact master STANDING IN (design D2: STX #154 Pestilent Cauldron is
+// the one colourless modal face printed on this frame — a front; every
+// KHM artifact back is a COLOURED artifact, drawn on its colour's body in
+// wave 1 as LCI #60 is on the transform bodies). The backs' dark bars and
+// box are TONED onto the prints before the first tick (MDFC_BACK_TONES: the
+// STX / MSH spell backs; MDFC_LAND_BACK_TONES: the ZNR / MH3 land backs —
+// the two sets print the bars 10–30 luma apart on u, b and g, so each
+// template has its own table). The land pair is a PipGlyph recipe (no CC
+// coloured modal land exists): the colour's modal master with its frame
+// BODY (and, on the front, its text box) REPLACED through the pack's own
+// `frame.svg` / `textbox.svg` masks by the 2015 coloured land tint
+// (`m15/new/l<k>.png`, the m15land masters' own file, downscaled the same
+// way) — the pathways (ZNR #258–261, KHM #252) print the stone land body,
+// the colour's pinline, the land tint's box and the modal housing and
+// strip; the land backs (ZNR #12 / #90 / #134 / #189, MH3 #241) the stone
+// body under the colour's dark bars, housing and light box. `c` = the
+// pack's grey land modal (`l.png` / `lb.png`) and `m` = the gold land tint
+// under the gold modal pieces, both stand-ins with no print. The modal
+// back's P/T plates are the transform pack's dark ones (m15dfcback/pt:
+// MSH #18 She-Hulk's gold plate reads 117 against ptM's 123); no plates
+// of its own.
+// ---------------------------------------------------------------------------
+const MODAL = "img/frames/modal/regular";
+/** The pack's masks (SVG, 1500 × 2100), in CC's draw order: Flipside
+ *  (reminder), Pinline, Title, Type (the regular M15 pack's PNG), Rules
+ *  (textbox), MDFC Arrow, Frame, Border. */
+const MODAL_MASK = {
+  reminder: `${MODAL}/reminder.svg`,
+  pinline: `${MODAL}/pinline.svg`,
+  title: `${MODAL}/title.svg`,
+  type: REG_TYPE_MASK,
+  rules: `${MODAL}/textbox.svg`,
+  frame: `${MODAL}/frame.svg`,
+  border: `${MODAL}/border.svg`,
+};
+/** A modal master's file for a colour key: the colour's, the artifact
+ *  frame for `a` and the `c` stand-in; `b` suffixed for a back. */
+const modalFrame = (k, back) => `${MODAL}/${k === "c" ? "a" : k}${back ? "b" : ""}.png`;
+/** The 2015 coloured land tint a modal land face takes its body (and, on
+ *  the front, its box) from: the m15land masters' own files. */
+const modalLandTint = (k) => `${NEW}/l${k}.png`;
+
+/**
+ * The modal backs' tone pass (TODO 5.1b, design D1 / §2.3): per colour key,
+ * the title bar (with the housing's fill, whose tone is the bar's — CC's
+ * Title mask holds both), the type bar and the text box of CC's back
+ * masters multiplied through the pack's masks (toneMasked, the transform
+ * backs' DFC_BACK_TONE_LUMA_RAMP keeping the white ▲▼ and the bars' light
+ * rims). Fitted on the medians of the bars' flat face (x 1000–1150, rows
+ * 118–205 / 1200–1290 at HD) and of the box (x 300–1100, rows 1340–1920) of
+ * the reference scans resized to 1500 × 2100 (Lanczos), against the same
+ * regions of CC's masters (scratchpad dfc-1b/measure.json):
+ *   the spell backs (STX's two-colour cards, one colour per face, and
+ *   MSH #18's gold back — the only 2015-frame modal backs that are spells):
+ *   w  bars 188 → 178 (STX #150 Revel in Silence 176 / 181), box 205 → 217
+ *   u  bars 123 → 107 (STX #147 Echoing Equation 107 / 106), box 208 → 204
+ *   b  bars  91 →  88 (STX #148 Search for Blex 86 / 90), box 172 → 177
+ *   r  bars  91 → 107 (STX #159 Flamethrower Sonata 108 / 106 — CC's red
+ *      back is DARKER than the print, as the transform one), box 186 → 200
+ *   g  bars  88 →  78 (STX #151 Journey to the Oracle 79 / 76), box 182 → 193
+ *   m  bars 147 → 133 (MSH #18 The Sensational She-Hulk 135 / 131), box 201 → 183
+ *   a  no print: every artifact modal back is a COLOURED artifact (KHM
+ *      #15 Sword of the Realms is white, KHM #112 Tergrid's Lantern black),
+ *      so CC's artifact back stands as it is; `c` takes `a`'s;
+ *   the land backs (MDFC_LAND_BACK_TONES, the ZNR / MH3 land backs, whose
+ *   bars print darker than the spell backs' on u and g and lighter on b):
+ *   w  bars 188 → 179 (ZNR #12 Emeria 179 / 179), box 205 → 218
+ *   u  bars 123 →  91 (MH3 #241 Soporific Springs 91 / 91), box 208 → 201
+ *   b  bars  91 →  99 (ZNR #90 Agadeem 102 / 96), box 172 → 189
+ *   r  bars  91 → 100 (ZNR #134 Akoum Teeth 101 / 98), box 186 → 198
+ *   g  bars  88 →  69 (ZNR #189 Kazandu Valley 68 / 69), box 182 → 188
+ *   m  the spell back's (a stand-in, no gold modal land printed); `c`
+ *      (CC's grey land modal, no print) is left as it is.
+ * The design's own numbers (`ub` ×0.76, `rb` ×1.15, `ab` ×1.35) read the
+ * land backs for u and r and KHM #15 for `a`; the gains here are per
+ * template, each on its own references.
+ */
+export const MDFC_BACK_TONES = Object.freeze({
+  w: Object.freeze({ bars: 0.947, box: 1.059 }),
+  u: Object.freeze({ bars: 0.866, box: 0.981 }),
+  b: Object.freeze({ bars: 0.967, box: 1.029 }),
+  r: Object.freeze({ bars: 1.182, box: 1.075 }),
+  g: Object.freeze({ bars: 0.886, box: 1.06 }),
+  m: Object.freeze({ bars: 0.905, box: 0.91 }),
+  a: Object.freeze({ bars: 1, box: 1 }),
+  c: Object.freeze({ bars: 1, box: 1 }),
+});
+export const MDFC_LAND_BACK_TONES = Object.freeze({
+  w: Object.freeze({ bars: 0.95, box: 1.063 }),
+  u: Object.freeze({ bars: 0.74, box: 0.966 }),
+  b: Object.freeze({ bars: 1.088, box: 1.099 }),
+  r: Object.freeze({ bars: 1.099, box: 1.065 }),
+  g: Object.freeze({ bars: 0.783, box: 1.033 }),
+  m: MDFC_BACK_TONES.m,
+});
+
+/** One modal back body's tones for a colour key from `table`: the pack's
+ *  Title mask (the bar and the housing's fill) and the regular Type mask at
+ *  the bars' gain, the pack's Rules mask at the box's (toneMasked, in that
+ *  order); none for a key the table doesn't name (the grey land modal `c`)
+ *  or whose gains are 1 (the artifact stand-in). */
+export function mdfcBackTones(key, table = MDFC_BACK_TONES) {
+  const t = table[key];
+  if (!t) return [];
+  const tones = [
+    { mask: MODAL_MASK.title, gain: t.bars, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "title bar + housing" },
+    { mask: MODAL_MASK.type, gain: t.bars, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "type bar" },
+    { mask: MODAL_MASK.rules, gain: t.box, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "text box" },
+  ];
+  return tones.filter((tone) => tone.gain !== 1);
+}
+
+/** How provenance describes a modal back's tone pass. */
+function mdfcBackToneTransform(table) {
+  const name = table === MDFC_LAND_BACK_TONES ? "MDFC_LAND_BACK_TONES" : "MDFC_BACK_TONES";
+  return `then the title bar and the housing's fill (through ${MODAL_MASK.title}), the type bar (through ${MODAL_MASK.type}) and the text box (through ${MODAL_MASK.rules}) have their colour multiplied by the key's gain (${name}: bars / box per colour), fading to ×1 between luma ${DFC_BACK_TONE_LUMA_RAMP[0]} and ${DFC_BACK_TONE_LUMA_RAMP[1]} so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline, the strip and the plates untouched`;
+}
+
+/** How provenance describes the land pair's recipe. */
+const MODAL_LAND_TRANSFORM = (front) =>
+  `native 1500x2100 (the modal master's size): CC's modal ${front ? "front" : "back"} copied 1:1, then its frame body${front ? " and its text box" : ""} REPLACED (a premultiplied lerp by the mask's alpha) through the pack's ${MODAL_MASK.frame}${front ? ` and ${MODAL_MASK.rules}` : ""} by the 2015 coloured land tint (m15/new/l<k>.png, 2010x2814 resized to 1500x2100 with Lanczos — the m15land masters' own downscale); corners rounded to the importer radius`;
+
+const MDFC_FRONT_NOTES = [
+  "source: CC 'Modal Regular' (packModalRegular.js, groupModal-1.js): the M15 frame with the drop-shaped icon HOUSING at the left of the name bar (a white fill, its ring, the black ▲ — tip x 41, circle to 201, rows 97–236 at HD; the prints' 44 / 198–205 / 98–236, within 3 px), the dark flipside STRIP at the bottom left in the colour's tone (x 64–690 × y 1866–1948 with its ◀; the prints' 64–681..694 × 1861..1866–1948, 6–10 luma lighter than theirs) and the strip's box cut into the text box's paper — all the master's; only the strip's two texts are drawn (the profile's `flipside` slots: the other face's last type word in Beleren Bold from CC's box at 6.8 %W, its cost or mana line in the rules font ending at 43.2 %W)",
+  "the name starts at 16.7 %W (prints 247–252 px: ZNR #12, KHM #15, STX #147's back, ZNR #258; CC's pack says 0.1614 = 242) — the profile's title inset (the transform bodies' DFC_ICON_FACE_TITLE_LEFT_PCT), not a pixel of the master (design D5)",
+  "colourless `c` = the pack's 'Artifact Frame' (a.png) as a RENDER STAND-IN (design D2): ticked against STX #154 Pestilent Cauldron, the one colourless modal face printed on the plain 2015 frame, and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
+  "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
+  "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it",
+  "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body)",
+];
+
+const MDFC_BACK_NOTES = [
+  "source: CC 'Modal Regular' backs (<k>b.png): the M15 frame with DARK title and type bars (white name and type ink), the housing in the bar's tone with the white ▲▼, a greyed text box (dark rules ink), and the LIGHT flipside strip (its ◀ dark) — the prints' back strip is light with DARK text (CC's pack says white: ours follows the print)",
+  "toned onto the prints before the first tick (MDFC_BACK_TONES, design D1): CC's bars read 3–16 luma light on w u b g m and 16 dark on r, its boxes 5–18 off; per-key gains through the pack's Title / Type / Rules masks, the white ▲▼ and the light rims kept by a luma ramp; the body, the pinline and the strip untouched; the artifact back untoned (no colourless modal back was printed)",
+  "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
+  "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
+  "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
+];
+
+const MDFC_LAND_NOTES = (front) => [
+  `a PipGlyph recipe (no CC coloured modal land exists; design frames.md §4.4): the colour's modal ${front ? "front" : "back"} with its frame body${front ? " and text box" : ""} replaced through the pack's own masks by the 2015 coloured land tint (m15/new/l<k>.png — the m15land masters' file, the same Lanczos downscale) — ${front ? "the pathways print the stone land body, the colour's pinline, the land tint's box and the modal housing and strip (ZNR #258–261, KHM #252)" : "the land backs print the stone land body under the colour's dark bars and housing, the modal back's light box (ZNR #12 / #90 / #134 / #189: a neutral light box; MH3 #241 a bluer one) and light strip"}; the housing, its ring, the pinline and the strip are the modal master's pixels`,
+  "keys w u b r g from the five land tints, m the gold land tint under the gold modal pieces (a stand-in: no gold modal land was printed), c = CC's grey land modal (l.png / lb.png) as it is (a stand-in: no colourless modal land was printed) — c and m are never offered (no reference)",
+  "no cost (hideCost) and no P/T (a land face prints none)",
+];
+
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
  * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, pack?, transforms?,
@@ -1730,6 +1886,39 @@ export const CC_TEMPLATES = {
       "toned onto FIN #31 (the one plain M15 land back scanned: the FIN / TLA land backs; XLN / RIX / LCI print the parchment land back CC lacks, TODO 5.8): CC's land back has DARK bars (luma 127) and a grey box (158) where the print has light tan bars (155) with DARK name and type ink and a cream box (209) — bars ×1.22, box ×1.32 through the masks, the rims kept; the profile prints dark ink on it",
       "no P/T plate (a land back prints none) and no indicator; no cost (hideCost)",
     ],
+  },
+  // --- TODO 5.1b: the modal bodies (see the section above CC_TEMPLATES).
+  m15mdfcfront: {
+    colors: { ...perColor((k) => [layer(modalFrame(k, false))]), a: [layer(modalFrame("a", false))] },
+    // No plates of its own: the profile draws M15's (m15/pt/<k>.png).
+    pack: "packModalRegular.js 'Modal Regular' fronts (groupModal-1.js)",
+    transforms: NATIVE_1500,
+    notes: MDFC_FRONT_NOTES,
+  },
+  m15mdfcback: {
+    colors: { ...perColor((k) => [layer(modalFrame(k, true))]), a: [layer(modalFrame("a", true))] },
+    // The transform pack's dark plates: the profile draws m15dfcback's.
+    tones: (k) => mdfcBackTones(k, MDFC_BACK_TONES),
+    pack: "packModalRegular.js 'Modal Regular' backs (groupModal-1.js)",
+    transforms: `${NATIVE_1500}; ${mdfcBackToneTransform(MDFC_BACK_TONES)}`,
+    notes: MDFC_BACK_NOTES,
+  },
+  m15mdfclandfront: {
+    colors: perColor((k) =>
+      k === "c"
+        ? [layer(`${MODAL}/l.png`)]
+        : [layer(modalFrame(k, false)), replacing(modalLandTint(k), MODAL_MASK.frame), replacing(modalLandTint(k), MODAL_MASK.rules)],
+    ),
+    pack: "packModalRegular.js 'Modal Regular' fronts + packM15RegularNew.js land tints (a PipGlyph recipe)",
+    transforms: MODAL_LAND_TRANSFORM(true),
+    notes: MDFC_LAND_NOTES(true),
+  },
+  m15mdfclandback: {
+    colors: perColor((k) => (k === "c" ? [layer(`${MODAL}/lb.png`)] : [layer(modalFrame(k, true)), replacing(modalLandTint(k), MODAL_MASK.frame)])),
+    tones: (k) => mdfcBackTones(k, MDFC_LAND_BACK_TONES),
+    pack: "packModalRegular.js 'Modal Regular' backs + packM15RegularNew.js land tints (a PipGlyph recipe)",
+    transforms: `${MODAL_LAND_TRANSFORM(false)}; ${mdfcBackToneTransform(MDFC_LAND_BACK_TONES)}`,
+    notes: MDFC_LAND_NOTES(false),
   },
 };
 
