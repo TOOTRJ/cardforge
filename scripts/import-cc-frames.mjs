@@ -25,6 +25,14 @@
 //                                                     # band cut round the well —
 //                                                     # needs the published band
 //                                                     # under <out> or .frames-cache
+//   node scripts/import-cc-frames.mjs --only m15mdfcfront,m15mdfcback,m15mdfclandfront,m15mdfclandback
+//                                                     # the modal bodies AND their
+//                                                     # flipside strip riders (5.1c:
+//                                                     # strip/<key>.png, cut from the
+//                                                     # published masters after the
+//                                                     # templates — this run's output
+//                                                     # first, else a local copy at the
+//                                                     # manifest's sha256)
 //   node scripts/import-cc-frames.mjs --only m15holostamp,m15pwholostamp
 //                                                     # the stamp notches (4.9c:
 //                                                     # the colour keys and the
@@ -102,8 +110,10 @@ import {
   crownBandFindings,
   crownBandRecipe,
   crownBandSourceFiles,
+  cutStripRider,
   cutThroughMask,
   describeCrownBand,
+  describeStripRider,
   describeFinish,
   describeLayer,
   applyTone,
@@ -122,6 +132,10 @@ import {
   sourceFilesFor,
   toRgba8,
   tonesFor,
+  insideMaskEroded,
+  stripRiderFindings,
+  stripRiderKeys,
+  stripRiderSourceOf,
 } from "./lib/cc-frames.mjs";
 import { blendPair } from "./lib/pair-ramp.mjs";
 // The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
@@ -419,6 +433,72 @@ function publishedBand(rel) {
   throw new Error(`cut band: no copy of ${rel}.png at the manifest's sha256 under ${dirs.map((d) => path.relative(process.cwd(), d) || ".").join(", ")} — build it (--only m15crown) or fetch the bucket's (scripts/frames-fetch.mjs)`);
 }
 
+// A published MASTER a cut reads (TODO 5.1c: the strip riders): this run's
+// own output when the template was built in it (the master that is about to
+// be published), else a local copy at the manifest's sha256 (FRAMES_BUILD_DIR,
+// .frames-cache, .frames-build) — a piece is always cut from the bytes the
+// bucket serves.
+function localMaster(rel) {
+  const own = path.join(outDir, `${rel}.png`);
+  if (fs.existsSync(own)) return { file: own, sha: createHash("sha256").update(fs.readFileSync(own)).digest("hex"), fresh: true };
+  const want = manifestShaOf(`${rel}.png`);
+  if (!want) throw new Error(`strip rider: ${rel}.png is neither in this run's output nor in lib/frames/frame-manifest.json — build or publish the master first`);
+  for (const dir of [...(process.env.FRAMES_BUILD_DIR ? [path.resolve(process.env.FRAMES_BUILD_DIR)] : []), path.resolve(".frames-cache"), path.resolve(".frames-build")]) {
+    const file = path.join(dir, `${rel}.png`);
+    if (!fs.existsSync(file)) continue;
+    const sha = createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+    if (sha === want) return { file, sha, fresh: false };
+    console.log(`strip rider: ${path.relative(process.cwd(), file)} is not the published master (${sha.slice(0, 12)} ≠ ${want.slice(0, 12)}) — skipped`);
+  }
+  throw new Error(`strip rider: no copy of ${rel}.png at the manifest's sha256 — build it (--only <template>) or fetch the bucket's (scripts/frames-fetch.mjs)`);
+}
+
+// The flipside strip riders (TODO 5.1c): each modal template's masters' tabs
+// cut through the pack's Flipside mask (the full-alpha interior eroded by
+// one pixel) into <out>/<template>/strip/<key>.png + .webp, from the
+// PUBLISHED masters (localMaster) — after the template loop, so a template
+// built in this run cuts from its own fresh output; the extra `l` key from
+// the land pair's grey `c` master.
+for (const [template, def] of Object.entries(CC_TEMPLATES)) {
+  if (!def.strip || (only && !only.includes(template))) continue;
+  const spec = def.strip;
+  const recipe = {};
+  const sources = {};
+  const stripFailures = [];
+  let inside = null;
+  for (const key of stripRiderKeys(spec)) {
+    const out = path.join(outDir, template, "strip", `${key}.png`);
+    const src = stripRiderSourceOf(template, key, spec);
+    sources[key] = `${src}.png`;
+    if (dryRun) {
+      recipe[key] = describeStripRider(template, key, spec, manifestShaOf(`${src}.png`) ?? "(unpublished)");
+      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+      continue;
+    }
+    const { file, sha, fresh } = localMaster(src);
+    recipe[key] = describeStripRider(template, key, spec, sha);
+    const { data: master, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    if (info.width !== OUT_W || info.height !== OUT_H) throw new Error(`${file} is ${info.width}×${info.height}, not ${OUT_W}×${OUT_H}`);
+    inside ??= insideMaskEroded(await rgba(await fetchCached(spec.mask), OUT_W, OUT_H), OUT_W, OUT_H, spec.erode);
+    const piece = cutStripRider(master, inside, OUT_W, spec.box);
+    const findings = stripRiderFindings(piece, master, inside, OUT_W, OUT_H, spec.box);
+    for (const f of findings.failures) stripFailures.push(`${template}/strip/${key}: ${f}`);
+    await writeCutout(piece, spec.box, out);
+    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${spec.box.width}×${spec.box.height} from ${path.relative(process.cwd(), file)}${fresh ? " (this run)" : ` (published ${sha.slice(0, 12)})`}: ${findings.opaque} opaque px, 0 partial`);
+  }
+  for (const f of stripFailures) edgeFailures.push(f);
+  if (!dryRun && provenance[template]) {
+    provenance[template].strip = {
+      mask: spec.mask,
+      box: spec.box,
+      erodePx: spec.erode,
+      keys: stripRiderKeys(spec),
+      sources,
+      output: "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      colors: recipe,
+    };
+  }
+}
 // Overlay bands (TODO 4.6a: the legendary crown). Composited on the full card
 // at the pack's native size in CC's order — the black cover, then the crown
 // (a pair's two crowns lerped through the untilted crown ramp) — downscaled

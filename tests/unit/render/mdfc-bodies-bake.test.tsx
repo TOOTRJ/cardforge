@@ -212,9 +212,11 @@ describe("the modal bodies on real bakes (TODO 5.1b)", () => {
     expect(inkBox(b, { x0: 1250 * s, x1: 1420 * s, y0: 100 * s, y1: 230 * s }, dark), "cost drawn").not.toBeNull();
     // No reverse P/T slot on a modal front (no tab): nothing grey in the tab's rows.
     expect(getFrameProfile("m15mdfcfront").reversePt).toBeUndefined();
-    // The modal front's one overlay is 5.1d's crown (drawn only for a
-    // Legendary card with the switch on): no rider, no stamp.
-    expect(getFrameProfile("m15mdfcfront").overlays?.map((o) => o.anatomy)).toEqual(["crown"]);
+    // The modal front's overlays are 5.1d's crown (drawn only for a
+    // Legendary card with the switch on) and 5.1c's strip rider (drawn only
+    // when the other face's colour differs — a mono card draws none): no
+    // icon rider, no stamp.
+    expect(getFrameProfile("m15mdfcfront").overlays?.map((o) => o.anatomy)).toEqual(["crown", "mdfcStrip"]);
     expect(getFrameProfile("m15mdfcfront").indicator).toBeUndefined();
   }, 90_000);
 

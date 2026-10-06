@@ -178,10 +178,13 @@ describe("the crown and the pairs on the double-faced bodies (TODO 5.1d, real ba
     );
     await bake(frontPreviewData(modal));
     expect(stand.masters).toContain("m15mdfcfront/wu-h");
-    expect(stand.overlays).toEqual(["/frames/m15mdfccrown/wu.png"]);
+    // The strip rider (TODO 5.1c) after the crown: the W/U back's gold `m`
+    // over the hybrid front's lerped strip; the hybrid-dressed front's land
+    // grey `l` over the split back's gold strip.
+    expect(stand.overlays).toEqual(["/frames/m15mdfccrown/wu.png", "/frames/m15mdfcfront/strip/m.png"]);
     await bake(backPreviewData(modal)!);
     expect(stand.masters).toContain("m15mdfcback/wu");
-    expect(stand.overlays).toEqual(["/frames/m15mdfccrown/wu.png"]);
+    expect(stand.overlays).toEqual(["/frames/m15mdfccrown/wu.png", "/frames/m15mdfcback/strip/l.png"]);
     // A legendary land back on the ▼ land back: the stone master, no crown, no pair.
     const land = card(
       { frameStyle: { template: "m15dfcfront", finish: "regular", crown: true, twoColor: true } },

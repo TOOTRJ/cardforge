@@ -37,7 +37,9 @@
 // ---------------------------------------------------------------------------
 
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { resolveTwoColor } from "@/lib/cards/anatomy";
 import { buildTypeLine, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
   DEFAULT_DFC_ICON,
   dfcBodyOf,
@@ -68,6 +70,16 @@ export type DfcOtherFace = {
   printsPt: boolean;
   power: string | null;
   toughness: string | null;
+  /** The modal strip RIDER's key (TODO 5.1c, stripKeyOf): the colour the
+   *  prints paint this face's strip in — the OTHER face's. A letter for a
+   *  mono-colour face (an artifact's its colour: KHM #15's Sword is white),
+   *  `m` for a two-colour spell (STX #149, KHM #114 / #168), `l` for a
+   *  two-colour land (MH3 #252–261's fronts: the land grey) or a front in
+   *  the hybrid dress (MH3's land backs: a warm grey, never gold), `c` for
+   *  a colourless spell (the artifact stand-in; no print). The renderers
+   *  draw the piece only when it is not the master's own
+   *  (lib/cards/anatomy.ts resolveFrameOverlays). */
+  stripKey: string;
 };
 
 /** The cross-face block a DFC face carries (CardPreviewData.dfc). */
@@ -90,7 +102,45 @@ export type FaceContentFacts = {
   rulesText?: string | null;
   power?: string | null;
   toughness?: string | null;
+  /** The face's EFFECTIVE colour identity — the one it is drawn in (a
+   *  back with none follows the front's, backPreviewData's rule). */
+  colorIdentity?: readonly ColorIdentity[] | null;
+  /** The face is drawn in the hybrid dress (its grey bars): its strip on
+   *  the other face is the land grey, not gold (MH3 #252–261's backs). */
+  wearsHybrid?: boolean;
 };
+
+const REAL_COLORS: ReadonlySet<ColorIdentity> = new Set(["white", "blue", "black", "red", "green"]);
+
+/**
+ * The strip rider's key for a face's strip on the OTHER face (TODO 5.1c) —
+ * the prints' rule, measured on every modal scan (scratchpad dfc-1c/
+ * research/prints-rule2.json): the strip is painted in the colour of the
+ * frame the face it describes WEARS. A mono-colour face → its letter (a
+ * coloured artifact its colour: KHM #15 / #112 / #123); a two-colour spell →
+ * gold (STX #149's front and back, KHM #114, #168, #179, MSH #18 / #219); a
+ * LAND with no colour or more than one → the land grey `l` (MH3 #252–261's
+ * ten hybrid fronts: 113,99,88, the grey land modal's tab; a land's colour
+ * is its mana's, dfcFaceColorIdentity); a face in the hybrid dress → `l` too
+ * (MH3 #252's land back: 218,210,206, a warm light grey — the hybrid frame's
+ * bars are the grey land frame's); a colourless spell → `c` (no print; the
+ * artifact stand-in on the spell bodies, the land grey on the land bodies).
+ */
+export function stripKeyOf(face: Pick<FaceContentFacts, "colorIdentity" | "cardType" | "wearsHybrid">): string {
+  const colors = [...new Set((face.colorIdentity ?? []).filter((c) => REAL_COLORS.has(c)))];
+  if (face.cardType === "land") return colors.length === 1 ? pickFrameColorKey(colors) : "l";
+  if (colors.length > 1 && face.wearsHybrid) return "l";
+  return pickFrameColorKey(colors);
+}
+
+/** Whether a face drawn on `template` wears the hybrid dress — the two-colour
+ *  look resolved as both renderers resolve it (lib/cards/anatomy.ts
+ *  resolveTwoColor: the switch, a pair identity, an all-hybrid cost, a
+ *  template with hybrid masters). */
+function wearsHybridDress(template: FrameTemplate | string | null | undefined, style: CardPreviewData["frameStyle"], face: FaceContentFacts): boolean {
+  const profile = getFrameProfile(normalizeFrameTemplate(template));
+  return resolveTwoColor(profile, style, { colors: face.colorIdentity, cost: face.cost, cardType: face.cardType, supertype: face.supertype })?.dress === "hybrid";
+}
 
 const MANA_ABILITY_LINE = /^\{T\}:\s*Add\b/i;
 
@@ -133,11 +183,15 @@ export function otherFaceOf(face: FaceContentFacts): DfcOtherFace {
     }),
     power: face.power ?? null,
     toughness: face.toughness ?? null,
+    stripKey: stripKeyOf(face),
   };
 }
 
-function backFacts(back: CardBackFace): FaceContentFacts {
-  return {
+/** The back's content facts, in the colour it is drawn in (its own, else
+ *  the front's) and the dress it wears on its body (a legacy back draws on
+ *  the front's template). */
+function backFacts(back: CardBackFace, card: Pick<CardPreviewData, "frameStyle" | "backFace" | "colorIdentity">): FaceContentFacts {
+  const facts: FaceContentFacts = {
     cost: back.cost ?? null,
     cardType: back.card_type ?? null,
     supertype: back.supertype ?? null,
@@ -145,7 +199,26 @@ function backFacts(back: CardBackFace): FaceContentFacts {
     rulesText: back.rules_text ?? null,
     power: back.power ?? null,
     toughness: back.toughness ?? null,
+    colorIdentity: back.color_identity ?? card.colorIdentity ?? null,
   };
+  const template = backBodyOf(card)?.template ?? card.frameStyle?.template;
+  return { ...facts, wearsHybrid: wearsHybridDress(template, card.frameStyle, facts) };
+}
+
+/** The front's content facts as the back's other face: the card's own
+ *  colour and the dress it wears on its template. */
+function frontFacts(card: CardPreviewData): FaceContentFacts {
+  const facts: FaceContentFacts = {
+    cost: card.cost,
+    cardType: card.cardType,
+    supertype: card.supertype,
+    subtypes: card.subtypes,
+    rulesText: card.rulesText,
+    power: card.power,
+    toughness: card.toughness,
+    colorIdentity: card.colorIdentity ?? null,
+  };
+  return { ...facts, wearsHybrid: wearsHybridDress(card.frameStyle?.template, card.frameStyle, facts) };
 }
 
 /** The back's own BODY and colour, or null for a legacy back. Honoured only
@@ -184,7 +257,7 @@ function dfcBlock(card: CardPreviewData, role: DfcRole, other: FaceContentFacts)
  *  is a DFC front body (the block's `otherFace` is the back's — the grey
  *  tab, the strip). Any other card is returned as it is. */
 export function frontPreviewData(card: CardPreviewData): CardPreviewData {
-  const dfc = card.backFace ? dfcBlock(card, "front", backFacts(card.backFace)) : null;
+  const dfc = card.backFace ? dfcBlock(card, "front", backFacts(card.backFace, card)) : null;
   return dfc ? { ...card, dfc } : card;
 }
 
@@ -241,7 +314,7 @@ export function backPreviewData(card: CardPreviewData): CardPreviewData | null {
     // Structured rows on a back wait for the walker bodies (5.13); the
     // card's watermark and collector line print on both faces (D8, D18).
     faceContent: null,
-    dfc: dfcBlock(card, "back", card),
+    dfc: dfcBlock(card, "back", frontFacts(card)),
   };
 }
 

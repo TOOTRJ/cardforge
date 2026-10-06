@@ -1608,6 +1608,77 @@ function dfcBackTonesFor(body, monoTones) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// The flipside strip RIDERS of the modal bodies (TODO 5.1c): on a two-colour
+// modal card the prints paint the strip in the colour of the face it
+// DESCRIBES — STX #147's green front carries a blue strip for Echoing
+// Equation, the pathways' fronts their back's colour, KHM #114 Valki's front
+// the B/R back's gold — while every master paints it in its OWN colour. So
+// each modal template publishes its masters' tabs as PIECES, `<template>/
+// strip/<key>.png`: the tab of the key's master (the exact bytes the bucket
+// serves — a mono-colour card's rider is its own master's tab, which is why
+// the renderers draw a rider only when the other face's key differs) cut
+// through CC's Flipside mask (`reminder.svg`, the whole tab from the
+// border's inner edge to the chevron's tip, so the ◀ and the outline stay
+// dark) — the mask's full-alpha interior, ERODED by one pixel so the cut runs
+// inside the tab's 4-px dark outline: a cross-colour rider then meets this
+// master's own outline on both sides of the cut (invisible), and the 750 px
+// bake's 2:1 resample blends outline over outline there (measured: the
+// plain mask's cut differs on 35 px at ≤ 32 levels at 750 for a piece drawn
+// over its own master, the eroded cut on 2–3 px at ≤ 4 levels — never 0 on
+// the chevron's diagonals; 0 px at HD with either). The piece's box is
+// x 44–701 × y 1866–1955 at HD (the mask's bbox 45–701 × 1866–1955 grown
+// to an even origin and size, so the slot maps 1:1 at HD and 2:1 at 750).
+// Keys: a template's own colour keys, plus `l` on the SPELL bodies — the
+// grey land modal's tab (`l.png` / `lb.png`, the land pair's `c` master byte
+// for byte) for a two-colour LAND other face (MH3 #252–261's ten hybrid
+// fronts print it: 113,99,88, the land grey) and, on a back, for a front in
+// the hybrid dress (MH3's land backs: 218,210,206, a warm light grey, never
+// gold); the land bodies map `l` to their own `c`. The pieces are cut from
+// PUBLISHED masters (this run's own output first, else a local copy at the
+// manifest's sha256) after the template loop, like the cut crowns.
+// ---------------------------------------------------------------------------
+
+/** The piece's box at HD (even origin and size; the mask's bbox grown). */
+export const MDFC_STRIP_BOX = Object.freeze({ x: 44, y: 1866, width: 658, height: 90 });
+/** The cut runs this many px inside the mask's full-alpha interior. */
+export const MDFC_STRIP_ERODE_PX = 1;
+const MDFC_STRIP_SPELL_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "a"]);
+const MDFC_STRIP_LAND_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "c"]);
+/** A template's strip spec: the mask, the box, the erosion, its own keys and
+ *  the extra keys cut from ANOTHER published master (`l` from the land
+ *  pair's grey `c`). */
+function mdfcStripCut(keys, extra) {
+  return Object.freeze({ mask: MODAL_MASK.reminder, box: MDFC_STRIP_BOX, erode: MDFC_STRIP_ERODE_PX, keys, ...(extra ? { extra: Object.freeze(extra) } : {}) });
+}
+export const MDFC_STRIP_CUTS = Object.freeze({
+  m15mdfcfront: mdfcStripCut(MDFC_STRIP_SPELL_KEYS, { l: "m15mdfclandfront/c" }),
+  m15mdfcback: mdfcStripCut(MDFC_STRIP_SPELL_KEYS, { l: "m15mdfclandback/c" }),
+  m15mdfclandfront: mdfcStripCut(MDFC_STRIP_LAND_KEYS),
+  m15mdfclandback: mdfcStripCut(MDFC_STRIP_LAND_KEYS),
+});
+
+/** Every key a template's strip spec publishes: its own, then the extras. */
+export function stripRiderKeys(spec) {
+  return [...spec.keys, ...Object.keys(spec.extra ?? {})];
+}
+/** The published master a strip piece is cut from (`<template>/<key>`). */
+export function stripRiderSourceOf(template, key, spec) {
+  if (spec.keys.includes(key)) return `${template}/${key}`;
+  const extra = spec.extra?.[key];
+  if (!extra) throw new Error(`stripRiderSourceOf: ${template} publishes no strip piece ${key}`);
+  return extra;
+}
+/** How provenance prints one strip piece's recipe. */
+export function describeStripRider(template, key, spec, sha) {
+  return [
+    `${stripRiderSourceOf(template, key, spec)}.png (the published master, sha256 ${sha.slice(0, 12)}) cut at x ${spec.box.x}–${spec.box.x + spec.box.width - 1} × y ${spec.box.y}–${spec.box.y + spec.box.height - 1} through the full-alpha interior of ${spec.mask} eroded by ${spec.erode} px (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel)`,
+  ];
+}
+
+const MDFC_STRIP_NOTE =
+  "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline; drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress";
+
 const DFC_PAIR_NOTE =
   "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face";
 
@@ -2064,7 +2135,8 @@ export const CC_TEMPLATES = {
     // No plates of its own: the profile draws M15's (m15/pt/<k>.png).
     pack: "packModalRegular.js 'Modal Regular' fronts (groupModal-1.js)",
     transforms: NATIVE_1500,
-    notes: [...MDFC_FRONT_NOTES, DFC_PAIR_NOTE],
+    strip: MDFC_STRIP_CUTS.m15mdfcfront,
+    notes: [...MDFC_FRONT_NOTES, DFC_PAIR_NOTE, MDFC_STRIP_NOTE],
   },
   m15mdfcback: {
     colors: { ...perColor((k) => [layer(modalFrame(k, true))]), a: [layer(modalFrame("a", true))], ...dfcPairMasters("m15mdfcback") },
@@ -2072,7 +2144,8 @@ export const CC_TEMPLATES = {
     tones: dfcBackTonesFor("m15mdfcback", (k) => mdfcBackTones(k, MDFC_BACK_TONES)),
     pack: "packModalRegular.js 'Modal Regular' backs (groupModal-1.js)",
     transforms: `${NATIVE_1500}; ${mdfcBackToneTransform(MDFC_BACK_TONES)}`,
-    notes: [...MDFC_BACK_NOTES, DFC_PAIR_NOTE],
+    strip: MDFC_STRIP_CUTS.m15mdfcback,
+    notes: [...MDFC_BACK_NOTES, DFC_PAIR_NOTE, MDFC_STRIP_NOTE],
   },
   m15mdfclandfront: {
     colors: perColor((k) =>
@@ -2082,14 +2155,16 @@ export const CC_TEMPLATES = {
     ),
     pack: "packModalRegular.js 'Modal Regular' fronts + packM15RegularNew.js land tints (a PipGlyph recipe)",
     transforms: MODAL_LAND_TRANSFORM(true),
-    notes: MDFC_LAND_NOTES(true),
+    strip: MDFC_STRIP_CUTS.m15mdfclandfront,
+    notes: [...MDFC_LAND_NOTES(true), MDFC_STRIP_NOTE],
   },
   m15mdfclandback: {
     colors: perColor((k) => (k === "c" ? [layer(`${MODAL}/lb.png`)] : [layer(modalFrame(k, true)), replacing(modalLandTint(k), MODAL_MASK.frame)])),
     tones: (k) => mdfcBackTones(k, MDFC_LAND_BACK_TONES),
     pack: "packModalRegular.js 'Modal Regular' backs + packM15RegularNew.js land tints (a PipGlyph recipe)",
     transforms: `${MODAL_LAND_TRANSFORM(false)}; ${mdfcBackToneTransform(MDFC_LAND_BACK_TONES)}`,
-    notes: MDFC_LAND_NOTES(false),
+    strip: MDFC_STRIP_CUTS.m15mdfclandback,
+    notes: [...MDFC_LAND_NOTES(false), MDFC_STRIP_NOTE],
   },
 };
 
@@ -2792,6 +2867,100 @@ export function cutThroughMask(buf, mask, width, box) {
     }
   }
   return out;
+}
+
+/**
+ * A mask's full-alpha INTERIOR as a 0/1 map, eroded by `erodePx` pixels
+ * (4-neighbourhood iterations): 1 where the mask's alpha is 255 and every
+ * pixel within `erodePx` of it is too (TODO 5.1c: the strip rider's cut
+ * runs inside the tab's dark outline). `mask` is raw RGBA at width × height.
+ */
+export function insideMaskEroded(mask, width, height, erodePx) {
+  const n = width * height;
+  if (!mask || mask.length !== n * 4) throw new Error(`insideMaskEroded: the mask is not ${width}x${height} RGBA`);
+  if (!(Number.isInteger(erodePx) && erodePx >= 0)) throw new Error(`insideMaskEroded: bad erosion ${erodePx}`);
+  let cur = new Uint8Array(n);
+  for (let p = 0; p < n; p += 1) cur[p] = mask[p * 4 + 3] === 255 ? 1 : 0;
+  for (let i = 0; i < erodePx; i += 1) {
+    const next = new Uint8Array(n);
+    for (let y = 1; y < height - 1; y += 1) {
+      for (let x = 1; x < width - 1; x += 1) {
+        const p = y * width + x;
+        next[p] = cur[p] && cur[p - 1] && cur[p + 1] && cur[p - width] && cur[p + width] ? 1 : 0;
+      }
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+/**
+ * The strip rider piece of one master (TODO 5.1c): `box` cropped out of the
+ * master's 8-bit RGBA, the colour the master's everywhere, the alpha the
+ * master's where `inside` (insideMaskEroded) is set and 0 elsewhere — never
+ * a partial pixel of the cut's own, so a piece drawn 1:1 over its master is
+ * the master (0 px differ at HD; the 750 bake's resample blends the tab's
+ * outline over itself on the chevron's diagonals, 2–3 px at ≤ 4 levels).
+ */
+export function cutStripRider(master, inside, width, box) {
+  const out = Buffer.alloc(box.width * box.height * 4);
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const sx = box.x + x;
+      const sy = box.y + y;
+      const src = (sy * width + sx) * 4;
+      const dst = (y * box.width + x) * 4;
+      out[dst] = master[src];
+      out[dst + 1] = master[src + 1];
+      out[dst + 2] = master[src + 2];
+      out[dst + 3] = inside[sy * width + sx] ? master[src + 3] : 0;
+    }
+  }
+  return out;
+}
+
+/**
+ * What a cut strip piece must be: alpha 255 inside the eroded mask and 0
+ * outside (no partial pixel — the master is opaque there), the colour the
+ * master's on every opaque pixel, nothing inside the mask left clear, and
+ * the mask's interior entirely inside the box. Returns the counts and the
+ * failures.
+ */
+export function stripRiderFindings(piece, master, inside, width, height, box) {
+  let opaque = 0;
+  let partial = 0;
+  let colourOff = 0;
+  let outsideAlpha = 0;
+  let insideClear = 0;
+  let insideOutsideBox = 0;
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const sx = box.x + x;
+      const sy = box.y + y;
+      const src = (sy * width + sx) * 4;
+      const dst = (y * box.width + x) * 4;
+      const a = piece[dst + 3];
+      const inner = inside[sy * width + sx] === 1;
+      if (a === 255) opaque += 1;
+      else if (a > 0) partial += 1;
+      if (inner && a === 0) insideClear += 1;
+      if (!inner && a !== 0) outsideAlpha += 1;
+      if (a > 0 && (piece[dst] !== master[src] || piece[dst + 1] !== master[src + 1] || piece[dst + 2] !== master[src + 2])) colourOff += 1;
+    }
+  }
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (inside[y * width + x] && (x < box.x || x >= box.x + box.width || y < box.y || y >= box.y + box.height)) insideOutsideBox += 1;
+    }
+  }
+  const failures = [];
+  if (partial) failures.push(`${partial} partial-alpha px (the cut must be 0 / 255)`);
+  if (colourOff) failures.push(`${colourOff} px whose colour is not the master's`);
+  if (outsideAlpha) failures.push(`${outsideAlpha} px with alpha outside the eroded mask`);
+  if (insideClear) failures.push(`${insideClear} px clear inside the eroded mask (the master has a clear pixel in the tab?)`);
+  if (insideOutsideBox) failures.push(`${insideOutsideBox} px of the eroded mask fall outside the piece's box`);
+  if (opaque === 0) failures.push("no opaque pixel at all");
+  return { opaque, partial, colourOff, outsideAlpha, insideClear, insideOutsideBox, failures };
 }
 
 /** Float accumulator → 8-bit RGBA bytes. */

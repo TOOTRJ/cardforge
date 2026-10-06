@@ -1161,6 +1161,41 @@ export function visualCases(): VisualCase[] {
   add("m15mdfcfront", "mdfc", "b", "long", { suffix: "@crown-hd", preset: "hd", row: dfcSwitches(dfcBodyRow("m15mdfcback", "b", "long"), { crown: true }) });
   add("m15dfcfront", "transform", "r", "long", { finish: "foil", suffix: "@crown-foil", row: dfcSwitches(dfcBodyRow("m15dfcback", "r", "long", "foil"), { crown: true }) });
   add("m15dfcfront", "transform", "w", "long", { corners: "square", suffix: "@crown-square", row: dfcSwitches(dfcBodyRow("m15dfcback", "w", "long"), { crown: true }) });
+  // TODO 5.1c: the flipside strip rider in the OTHER face's colour — NEW
+  // cases (an addition no stored card draws; the mono-colour modal cases
+  // above stay byte-identical: the rider is drawn only when the other
+  // face's key differs from the master's own). A W front // U back on both
+  // faces, short, long and at the stored bake's size (the front's strip in
+  // blue, the back's in white); a colourless artifact back (the artifact
+  // tab, c → a); a W front with a W/U back (gold on the front) and that
+  // split back under the W front (its strip white); the pathway (a green
+  // land front // white land back); MH3 #252's shape (a hybrid-dressed W/U
+  // front // W/U land back: the land grey on both faces).
+  const stripRow = (body: FrameTemplate, front: VisualColour, back: VisualColour, shape: VisualShape = "short", backOver: Partial<NonNullable<CardRowForBake["back_face"]>> = {}, frontOver: Partial<CardRowForBake> = {}): Partial<CardRowForBake> => {
+    const row = dfcBodyRow(body, back, shape);
+    const backFace = row.back_face as Record<string, unknown> & { cost?: string | null };
+    const land = body === "m15mdfclandback";
+    return {
+      ...row,
+      color_identity: IDENTITY[front],
+      ...(land ? { cost: null, rules_text: `{T}: Add ${pips(front, 0, 1)}.` } : { cost: `{1}${pips(front, 0, 2)}` }),
+      ...frontOver,
+      back_face: { ...backFace, color_identity: IDENTITY[back], ...(backFace.cost ? { cost: `{3}${pips(back, 0, 2)}` } : {}), ...backOver } as CardRowForBake["back_face"],
+    };
+  };
+  add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-u", row: stripRow("m15mdfcback", "w", "u") });
+  add("m15mdfcfront", "mdfc", "w", "long", { suffix: "@strip-u", row: stripRow("m15mdfcback", "w", "u", "long") });
+  add("m15mdfcfront", "mdfc", "w", "long", { suffix: "@strip-u-hd", preset: "hd", row: stripRow("m15mdfcback", "w", "u", "long") });
+  add("m15mdfcback", "mdfc", "u", "short", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "u") });
+  add("m15mdfcback", "mdfc", "u", "long", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "u", "long") });
+  add("m15mdfcback", "mdfc", "u", "long", { suffix: "@strip-w-hd", preset: "hd", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "u", "long") });
+  add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-a", row: stripRow("m15mdfcback", "w", "c", "short", { title: "Sword of the Realms", card_type: "artifact", subtypes: ["Equipment"], cost: "{3}", rules_text: "Equipped creature gets +2/+0." }) });
+  add("m15mdfcfront", "mdfc", "w", "short", { suffix: "@strip-m", row: stripRow("m15mdfcback", "w", "wu") });
+  add("m15mdfcback", "mdfc", "wu", "short", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "wu") });
+  add("m15mdfclandfront", "mdfc", "g", "short", { suffix: "@strip-w", row: stripRow("m15mdfclandback", "g", "w") });
+  add("m15mdfclandback", "mdfc", "w", "short", { suffix: "@strip-g", back: { frontTemplate: "m15mdfclandfront" }, row: stripRow("m15mdfclandback", "g", "w") });
+  add("m15mdfcfront", "mdfc", "wu", "short", { suffix: "@strip-l", row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15mdfclandback", "mdfc", "wu", "short", { suffix: "@strip-c", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
   // A legacy-shaped back_face on m15 (the 8 imported DFCs' shape: content,
   // no body): the FRONT bake is today's, byte for byte (its hash must not
   // move against the base this PR was cut from: the corpus proof).

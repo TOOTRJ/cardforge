@@ -205,8 +205,12 @@ describe("the modal bodies' recipes (TODO 5.1b)", () => {
   });
 
   it("publishes every master as PNG + WebP at 1500 × 2100 — 30 keys (a beside c) and 5.1d's 30 pair masters, 116 distinct blobs", () => {
-    const keys = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc") && !k.startsWith("m15mdfccrown"));
+    const keys = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc") && !k.startsWith("m15mdfccrown") && !k.includes("/strip/"));
     expect(keys).toHaveLength(120);
+    // The strip riders (TODO 5.1c, tests/unit/frames/mdfc-strip-rider.test.ts): 30 pieces, PNG + WebP, at the piece's box.
+    const strips = Object.keys(manifest.files).filter((k) => k.startsWith("m15mdfc") && k.includes("/strip/"));
+    expect(strips).toHaveLength(60);
+    for (const k of strips) expect([manifest.files[k].width, manifest.files[k].height], k).toEqual([658, 90]);
     expect(new Set(keys.map((k) => manifest.files[k].sha256)).size).toBe(116);
     for (const k of keys) expect([manifest.files[k].width, manifest.files[k].height], k).toEqual([1500, 2100]);
     for (const t of ALL) for (const k of builtColors(def(t) as never)) expect(manifest.files[`${t}/${k}.png`], `${t}/${k}`).toBeDefined();
