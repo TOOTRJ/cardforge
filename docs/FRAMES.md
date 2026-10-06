@@ -742,10 +742,22 @@ scans print, not the default ▼; and a FRONT's `preview` is
 `frontPreviewData` of that card, its `dfc` block included, so the page, the
 sign-off's side-by-side and the scorer's bake are handed ONE object (the
 bake derives nothing: a front used to be scored without its reverse P/T,
-its icon rider and its modal strip). A score recorded for a double-faced
-front body, or for the 2016–22 back, before 5.0d measured another picture,
-which the staleness rule below cannot see: score those faces again before a
-sign-off's Publish (`tests/unit/scryfall/reference-preview-dfc-family.test.ts`).
+its icon rider and its modal strip;
+`tests/unit/scryfall/reference-preview-dfc-family.test.ts`). A score
+recorded for a double-faced front body, or for the 2016–22 back, before
+5.0d measured another picture, which the staleness rule below cannot see.
+Measured on the live printings, the real masters and the scans (the 50
+references whose scored picture changed — 39 fronts, the 11 left-well
+backs — each before and after): 49 move by at most 0.2 points and none
+crosses the 90 % line; MID #169's front (`m15dfcfront/g`'s alternate) reads
+6.3 → 8.0, because its rules text now breaks round the 3/5 and the scorer's
+vertical registration — which keeps the text rows — lands 0.8 %H off
+(confidence 0.72 → 0.55): the number moved, not the frame. To put today's
+picture on record, run "Score all N colours" and then **Publish** on the
+sign-off of `m15dfcfront`, `m15dfclandfront`, `m15mdfcfront`,
+`m15mdfclandfront` and `m15dfcbackleft` — Publish re-stamps a tick that
+already stands and never withdraws one. A tick made on `m15dfcbackleft`
+before 5.0d was made beside the ▼: look at its seven colours again.
 
 **When a tick goes stale.** A tick records the layout version and a hash of
 the template's override (migration 0115). It goes stale when a later bump
@@ -2423,8 +2435,8 @@ them, no sweep, no badge).
 | body | crown | pairs | printed references |
 |---|---|---|---|
 | `m15dfcfront` | `m15dfccrown` (LEFT well; `c` → `a`) | split | crowns VOW #21 w, #65 u, MID #109 b, MOM #137 r, #200 g, FIN #231 m, LCI #256 a; crowned pairs MID #246 R|G, #217 W|U, VOW #236 W|B, FIN #221 B|R, MID #233 U|B, BOT #7 R|W, FIN #219 U|R, #220 B|G, #240 G|W; uncrowned pairs MID #218 W|U, #231 R|G, INR #241 R|G, LCI #233 W|U |
-| `m15dfcbackleft` | `m15dfccrown` (`c` → `a`) | split | VOW #21 w, #65 u, MID #109 b, BOT #6 r, #12 m; pairs MID #246 R|G, #233 U|B (no g or a back was printed crowned) |
-| `m15dfcback` | `m15dfccrownright` (RIGHT well; `c` → `a`) | split | FIN #39 w, MOM #63 u, #114 b, ECL #105 r, MOM #190 g, FIN #231 m, #272 a; pairs MOM #200 G|W, #75 U|B; uncrowned pairs MOM #43 G|W, MID #218 / #231 backs |
+| `m15dfcbackleft` | `m15dfccrown` (`c` → `a`) | split | VOW #21 w, #65 u, MID #109 b; pairs MID #246 R|G, #233 U|B; uncrowned pairs MID #218 W|U, #231 R|G backs (no r, g, m or a back was printed crowned in a left-well family — corrected in 5.0d, below the table) |
+| `m15dfcback` | `m15dfccrownright` (RIGHT well; `c` → `a`) | split | FIN #39 w, MOM #63 u, #114 b, ECL #105 r, MOM #190 g, FIN #231 m, #272 a; pairs MOM #200 G|W, #75 U|B; uncrowned pair MOM #43 G|W |
 | `m15dfclandfront` | `m15dfccrown` (`c` → `l`) | none | SLX #9 Havengul Laboratory (a colourless legendary land front: the land grey) |
 | `m15dfclandback` | none | none | no legendary land back on this frame: LCI's / XLN's are the parchment back (5.8), SLX #9's the 2016–22 dark one |
 | `m15mdfcfront` | `m15mdfccrown` (the housing; `c` → `a`) | split + hybrid | KHM #15 w, #40 u, #112 b, #123 r, #168 g; pairs MSH #219 W|U, STX #149 W|B (crowned, split); MH3 #252–261 (the ten hybrid fronts) |
@@ -2435,6 +2447,32 @@ Surveyed on Scryfall (2026-10-05): every transform / modal printing on the
 black-bordered 2015 frame (1,179; 682 with no showcase / borderless /
 extended / etched / devoid / snow effect), classified per face —
 scratchpad `dfc-1d/research/classified.json`.
+
+**Corrected in 5.0d (2026-10-06): BOT's backs are the ▼-right body.** That
+classifier took any `…dfc` frame effect for a left-well family, so BOT's
+`convertdfc` — the plain ▲ / ▼ family, the ▼ at the RIGHT
+(`dfcIconFamilyFromEffects`) — was counted on the 2016–22 back, and
+`CROWN_REFERENCES.m15dfcbackleft` named BOT #6 Slicer, High-Speed Antagonist
+(r) and BOT #12 Megatron, Destructive Force (m). Both backs print the ▼ at
+the right, and the pin check refuses both on the left-well body. No red,
+green, three-colour or artifact legendary back was printed crowned in a
+left-well family (Scryfall, 2026-10-06: 52 paper printings carry a sun /
+moon, moon / Emrakul, compass or fan effect with `legendary`; their
+legendary backs are w, u, b, the pairs W|U, U|B, W|B, R|G and XLN's / RIX's
+lands — SOI #5's red Avacyn, the Purifier predates the crown), so the two
+rows are gone and the compare page's Legendary toggle on `m15dfcbackleft`
+r and m crowns the sample, as on g and c. Round 31's sheet 2b was right all
+along: its bake spec derived each body from the family, and its two BOT
+cells are labelled and baked `m15dfcback/r` and `m15dfcback/m`. What was
+wrong was the table (with the code comment and the TODO line that repeated
+it) — so the toggle on those two rows drew the left-well body, a ▼ in its
+LEFT well, beside a ▼-right scan. The crown PIECES of r and m are
+unaffected: `m15dfccrown` is the front body's band too, shown there beside
+MOM #137 and FIN #231. The `m15dfcback` r and m rows were always ECL #105
+and FIN #231.
+`tests/unit/cards/crown-references-dfc.test.ts` now holds every double-faced
+row to its printing: the face it names, the `legendary` effect, the colour
+of its key and the pin check of its own row.
 
 - **The crown pieces are CUT bands, not twins.** Card Conjurer's own DFC
   crowns — 'Legend Crowns' (`m15/transform/crowns/regular/<k>.png`, cut
