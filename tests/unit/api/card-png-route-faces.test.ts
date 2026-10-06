@@ -20,6 +20,15 @@ import { createHash } from "node:crypto";
 //     304 to a front's tag;
 //   * a card with no back to flip to answers 404; a front request on a
 //     double-faced card is the front, exactly as before.
+//
+// `?faces=both` (TODO 5.3c, owner decision 2026-10-05): BOTH faces in ONE
+// PNG — the front left, the back right, a transparent gutter of 1/25 of a
+// face's width between them on a transparent canvas — each half byte-equal
+// to what `face=front` / `face=back` serve at the same options (the stored
+// bakes, a live render where a face has none, the corner, the preset),
+// named <slug>-both.png / -both-square.png, its own ETag; 404 on a card with
+// no back, 400 on a print variant or a JPEG (one face each) before any
+// lookup; `face=back` wins over `faces=both` (the pdf route's reading).
 // ---------------------------------------------------------------------------
 
 const ID = "22222222-2222-4222-8222-222222222222";
@@ -36,10 +45,23 @@ const state = vi.hoisted(() => ({
   viewer: null as { id: string } | null,
   activity: vi.fn(),
   fetched: [] as string[],
+  /** Card row lookups (a refused request must make none). */
+  lookups: 0,
+  /** The anonymous live-render limiter, one call per live render. */
+  limit: vi.fn(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: state.card }) }) }) }),
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => {
+            state.lookups += 1;
+            return { data: state.card };
+          },
+        }),
+      }),
+    }),
   }),
   getCurrentUser: async () => state.viewer,
 }));
@@ -59,11 +81,14 @@ vi.mock("@/lib/render/card-image", async (orig) => ({
   renderCardImage: state.render,
 }));
 vi.mock("@/lib/render/card-print", () => ({ renderCardPrint: state.print }));
-vi.mock("@/lib/cards/anon-render-limit", () => ({ checkAnonLiveRenderLimit: async () => ({ ok: true }) }));
+vi.mock("@/lib/cards/anon-render-limit", () => ({ checkAnonLiveRenderLimit: (...args: unknown[]) => state.limit(...args) }));
 
 import { GET } from "@/app/api/cards/[id]/png/route";
 import { NextRequest } from "next/server";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { applyCardCornerMask } from "@/lib/cards/card-corner";
+import { RENDER_PRESETS } from "@/lib/render/card-image";
+import { FACE_GUTTER_OF_WIDTH, faceGutterPx } from "@/lib/render/faces-side-by-side";
 
 type Rendered = { card: { title?: string; dfc?: { role: string } | null; frameStyle?: { template?: string } } };
 
@@ -162,6 +187,9 @@ beforeEach(async () => {
   state.viewer = null;
   state.paid = false;
   state.card = dfcCard();
+  state.lookups = 0;
+  state.limit.mockReset();
+  state.limit.mockResolvedValue({ ok: true });
 });
 
 async function centre(res: Response): Promise<number[]> {
@@ -301,5 +329,204 @@ describe("the back face of a double-faced card (TODO 5.3)", () => {
       kind: "download",
       props: { format: "png", preset: "default", clean: false, corners: "round" },
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Both faces in one PNG (TODO 5.3c).
+// ---------------------------------------------------------------------------
+
+type Raw = { data: Buffer; width: number; height: number; channels: number };
+
+async function raw(res: Response): Promise<Raw> {
+  const buf = Buffer.from(await res.arrayBuffer());
+  const meta = await sharp(buf).metadata();
+  const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height, channels: meta.channels ?? 0 };
+}
+
+/** The RGBA pixels of the columns [left, left + width) of `image`, row by row. */
+function columns(image: Raw, left: number, width: number): Buffer {
+  const out = Buffer.alloc(width * image.height * 4);
+  for (let y = 0; y < image.height; y++) {
+    image.data.copy(out, y * width * 4, (y * image.width + left) * 4, (y * image.width + left + width) * 4);
+  }
+  return out;
+}
+
+/** A solid-colour face with the card's corner cut transparent (a v31 bake):
+ *  its anti-aliased arc has partial alpha, so an exact copy is provable. */
+async function roundFace(width: number, height: number, rgb: [number, number, number]): Promise<Buffer> {
+  const data = Buffer.alloc(width * height * 4);
+  for (let i = 0; i < data.length; i += 4) data.set([...rgb, 255], i);
+  applyCardCornerMask(data, width, height);
+  return sharp(data, { raw: { width, height, channels: 4 } }).png().toBuffer();
+}
+
+describe("both faces in one PNG (TODO 5.3c)", () => {
+  beforeEach(async () => {
+    // Round bakes, so the halves carry partial alpha on their arcs.
+    frontPng = await roundFace(1500, 2100, [0x10, 0x20, 0x30]);
+    backPng = await roundFace(1500, 2100, [0x60, 0x50, 0x40]);
+    // A live render coloured by the face it draws, at the preset's size —
+    // so the halves of a both-faces download can be told apart and checked
+    // against the single-face answers.
+    state.render.mockImplementation(async (card: { title?: string }, preset: "default" | "hd") => {
+      const { width, height } = RENDER_PRESETS[preset];
+      return new Response(new Uint8Array(await roundFace(width, height, card.title === "Elder Wolf" ? [0, 0xff, 0] : [0xff, 0, 0])));
+    });
+  });
+
+  /** The composite against its two single-face downloads at `options`:
+   *  the size, the exact halves, the transparent gutter. */
+  async function expectSideBySide(options: string) {
+    const both = await raw(await download(`${options}&faces=both`));
+    const front = await raw(await download(options));
+    const back = await raw(await download(`${options}&face=back`));
+    const gutter = faceGutterPx(front.width);
+    expect(gutter).toBe(front.width * FACE_GUTTER_OF_WIDTH);
+    expect([both.width, both.height]).toEqual([front.width + gutter + back.width, front.height]);
+    expect(both.channels).toBe(4);
+    expect(columns(both, 0, front.width).equals(front.data)).toBe(true);
+    expect(columns(both, front.width + gutter, back.width).equals(back.data)).toBe(true);
+    // The gutter: transparent, every row.
+    expect(columns(both, front.width, gutter).equals(Buffer.alloc(gutter * both.height * 4))).toBe(true);
+    return { both, front, back, gutter };
+  }
+
+  it("a free viewer's both faces are the two stored bakes side by side — each half byte-equal to its own download, a transparent 1/25 gutter between — named <slug>-both.png", async () => {
+    const res = await download("preset=default&corners=round&faces=both");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("content-disposition")).toBe('attachment; filename="c-both.png"');
+    expect(state.fetched).toEqual([FRONT_BAKE, BACK_BAKE]);
+    expect(state.render).not.toHaveBeenCalled();
+    const { both, gutter } = await expectSideBySide("preset=default&corners=round");
+    expect([both.width, both.height, gutter]).toEqual([1530, 1050, 30]);
+    expect(state.render).not.toHaveBeenCalled();
+  });
+
+  it("Square: the two squared faces with the gutter still transparent — <slug>-both-square.png", async () => {
+    const res = await download("preset=default&corners=square&faces=both");
+    expect(res.headers.get("content-disposition")).toBe('attachment; filename="c-both-square.png"');
+    const { both, front } = await expectSideBySide("preset=default&corners=square");
+    // Each face is opaque to its corner (squared), the canvas between is not.
+    expect(front.data[3]).toBe(255);
+    expect(both.data[(front.width + 1) * 4 + 3]).toBe(0);
+    expect(state.render).not.toHaveBeenCalled();
+  });
+
+  it("a paid viewer's both faces are two live clean renders at HD — the front then the back — 3060 × 2100", async () => {
+    state.paid = true;
+    const { both, gutter } = await expectSideBySide("preset=hd&corners=round");
+    expect([both.width, both.height, gutter]).toEqual([3060, 2100, 60]);
+    expect(state.fetched).toEqual([]);
+    // The both-faces download's two renders came first: the front, the back.
+    const calls = state.render.mock.calls as [Rendered["card"], string, unknown][];
+    expect(calls[0][0]).toMatchObject({ title: "Village Elder", dfc: { role: "front" } });
+    expect(calls[1][0]).toMatchObject({ title: "Elder Wolf", frameStyle: { template: "m15dfcback" }, dfc: { role: "back" } });
+    for (const call of calls.slice(0, 2)) {
+      expect(call[1]).toBe("hd");
+      expect(call[2]).toEqual({ brandMark: false, watermarkText: null, corners: "round" });
+    }
+  });
+
+  it("a legacy back (no body, no bake): the front from its bake, the back live as the page draws it — each half its own download's", async () => {
+    state.card = legacyCard();
+    const res = await download("preset=default&corners=round&faces=both");
+    expect(res.status).toBe(200);
+    expect(state.fetched).toEqual([FRONT_BAKE]);
+    expect(state.render).toHaveBeenCalledTimes(1);
+    expect(state.render.mock.calls[0][0]).toMatchObject({ title: "Elder Wolf", frameStyle: { template: "m15" }, dfc: null });
+    await expectSideBySide("preset=default&corners=round");
+  });
+
+  it("a card with no back to flip to answers 404 — nothing fetched or rendered", async () => {
+    state.card = dfcCard({ back_face: null, rendered_back_image_url: null });
+    const res = await download("preset=default&corners=round&faces=both");
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "This card has no back face." });
+    expect(state.fetched).toEqual([]);
+    expect(state.render).not.toHaveBeenCalled();
+  });
+
+  it("never a print file, never a JPEG: 400 before any lookup", async () => {
+    for (const query of ["ppi=800&corners=square", "bleed=1&corners=square", "bleed=mpc&corners=square", "print=1&corners=square", "ppi=800&bleed=mpc"]) {
+      const res = await download(`${query}&faces=both`);
+      expect(res.status, query).toBe(400);
+      expect(await res.json()).toEqual({ error: "Print files are one face each — ask for face=front or face=back." });
+    }
+    const jpeg = await download("preset=default&format=jpeg&faces=both");
+    expect(jpeg.status).toBe(400);
+    expect((await jpeg.json()).error).toMatch(/^Both faces come as one PNG/);
+    expect(state.lookups).toBe(0);
+    expect(state.fetched).toEqual([]);
+    expect(state.render).not.toHaveBeenCalled();
+    expect(state.print).not.toHaveBeenCalled();
+    // The same query for ONE face is the print file it was: with `face=back`
+    // named, `faces=both` is ignored — the back's print file (clean-only, so
+    // 403 for this free viewer; 200 paid).
+    expect((await download("ppi=800&corners=square&face=back&faces=both")).status).toBe(403);
+    state.paid = true;
+    expect((await download("ppi=800&corners=square&face=back&faces=both")).headers.get("content-disposition")).toBe(
+      'attachment; filename="c-back-800ppi.png"',
+    );
+  });
+
+  it("face=back beside faces=both is the back alone (the pdf route's reading); an unknown faces value is the front", async () => {
+    const back = await download("preset=default&corners=round&face=back&faces=both");
+    expect(back.headers.get("content-disposition")).toBe('attachment; filename="c-back.png"');
+    expect((await raw(back)).width).toBe(750);
+    const front = await download("preset=default&corners=round&faces=all");
+    expect(front.headers.get("content-disposition")).toBe('attachment; filename="c.png"');
+    expect((await raw(front)).width).toBe(750);
+  });
+
+  it("the ETag is its own: never the front's or the back's, 304 only to itself", async () => {
+    const front = (await download("preset=default&corners=round")).headers.get("etag")!;
+    const back = (await download("preset=default&corners=round&face=back")).headers.get("etag")!;
+    const both = (await download("preset=default&corners=round&faces=both")).headers.get("etag")!;
+    expect(new Set([front, back, both]).size).toBe(3);
+    expect((await download("preset=default&corners=round&faces=both", { "if-none-match": front })).status).toBe(200);
+    expect((await download("preset=default&corners=round&faces=both", { "if-none-match": back })).status).toBe(200);
+    expect((await download("preset=default&corners=round", { "if-none-match": both })).status).toBe(200);
+    const hit = await download("preset=default&corners=round&faces=both", { "if-none-match": both });
+    expect(hit.status).toBe(304);
+    expect(hit.headers.get("etag")).toBe(both);
+    // The corner is in it too: Square is other bytes.
+    expect((await download("preset=default&corners=square&faces=both")).headers.get("etag")).not.toBe(both);
+  });
+
+  it("records face: both for a signed-in viewer", async () => {
+    state.viewer = { id: "viewer-1" };
+    await download("preset=default&corners=round&faces=both");
+    expect(state.activity).toHaveBeenCalledWith(expect.anything(), {
+      userId: "viewer-1",
+      kind: "download",
+      props: { format: "png", preset: "default", clean: false, corners: "round", face: "both" },
+    });
+  });
+
+  it("a signed-out viewer's live renders are counted one per face; a refusal answers 429 + Retry-After, not a 500", async () => {
+    // A pending correction: neither bake serves, both faces render live.
+    state.card = dfcCard({ layout_version: null });
+    const res = await download("preset=default&corners=round&faces=both");
+    expect(res.status).toBe(200);
+    expect(state.limit).toHaveBeenCalledTimes(2);
+    expect(state.render).toHaveBeenCalledTimes(2);
+    state.limit.mockReset();
+    state.limit
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, retryAfterSeconds: 42, message: "Too many card downloads." });
+    const refused = await download("preset=default&corners=round&faces=both");
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("retry-after")).toBe("42");
+    expect(await refused.json()).toEqual({ ok: false, error: "Too many card downloads." });
+    // A signed-in viewer is never counted.
+    state.limit.mockReset();
+    state.limit.mockResolvedValue({ ok: false, retryAfterSeconds: 1, message: "no" });
+    state.viewer = { id: "viewer-1" };
+    expect((await download("preset=default&corners=round&faces=both")).status).toBe(200);
+    expect(state.limit).not.toHaveBeenCalled();
   });
 });

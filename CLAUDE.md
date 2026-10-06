@@ -236,8 +236,12 @@ Rules and gotchas:
   through `renderBackFace` in both bake paths, the four pointers in ONE
   write; a back failure fails the whole bake; a legacy back stays
   single-bake — `?face=back` serves it (png / pdf) and opens the page
-  flipped (the client island only), tiles flip by a corner button only, the
-  page is "Front // Back" (`cardPageName`), and the OG image stays the front.
+  flipped (the client island only), `?faces=both` (png, 5.3c) serves BOTH
+  faces side by side in ONE PNG — each half what `face=` serves, a
+  transparent gutter between, the modal's default on a two-faced card,
+  never a print variant or a JPEG (400) — tiles flip by a corner button
+  only, the page is "Front // Back" (`cardPageName`), and the OG image
+  stays the front.
   Imports follow the printing PER FACE (5.4; `dfcImportOf` in the mapper):
   a transform / modal printing lands on the bodies — the front body by the
   front's type, the back body by the back's type and the printing's family

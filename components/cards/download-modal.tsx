@@ -39,13 +39,21 @@
 //                  always opens on One card. Links: lib/cards/card-pdf-link.ts.
 //   Both faces   — a double-faced card (TODO 5.3; `hasBackFace`: a back with
 //                  a body of its own, the one the bake writes): the Image
-//                  tab gets a Face switch, Front / Back (every option above
-//                  applies to the face chosen: ?face=back, named
-//                  <slug>-back…); the PDF tab's One card gets Faces — Front
-//                  / Back / Both faces (2 pages) — and its Sheet the shared
-//                  "Include back faces" checkbox (the back beside its front,
-//                  on by default; remembered with the other print settings).
-//                  A single-faced card's modal is exactly what it was.
+//                  tab gets a Face switch — Both faces / Front / Back (TODO
+//                  5.3c, owner decision 2026-10-05: a two-sided card
+//                  downloads BOTH sides unless one is chosen, so Both faces
+//                  is first and the default: the front and the back side by
+//                  side in ONE PNG with a transparent gap, ?faces=both,
+//                  named <slug>-both…; the corners and the free / paid
+//                  image apply to it, while the print options and JPEG —
+//                  one face each — are disabled with a note until Front or
+//                  Back is picked; every option above applies to a single
+//                  face chosen: ?face=back, named <slug>-back…); the PDF
+//                  tab's One card gets Faces — Front / Back / Both faces (2
+//                  pages) — and its Sheet the shared "Include back faces"
+//                  checkbox (the back beside its front, on by default;
+//                  remembered with the other print settings). A
+//                  single-faced card's modal is exactly what it was.
 //
 // A free viewer gets exactly ONE live option — the low-resolution
 // watermarked image (PNG or JPEG) — and sees the other formats greyed out
@@ -100,7 +108,7 @@ import {
   type PrintPpi,
 } from "@/lib/cards/print-export";
 import { cardPdfFilename, cardPdfHref, type CardPdfFaces, type CardPdfLayout } from "@/lib/cards/card-pdf-link";
-import { faceSlug, type CardFace } from "@/lib/cards/card-face";
+import { faceSlug, type CardFace, type DownloadFaces } from "@/lib/cards/card-face";
 import {
   DEFAULT_PRINT_SELECTION_SETTINGS,
   loadPrintSelectionSettings,
@@ -118,11 +126,20 @@ const FORMAT_OPTIONS: ChipOption<CardImageFormat>[] = [
 
 const FORMAT_LABEL: Record<CardImageFormat, string> = { png: "PNG", jpeg: "JPEG" };
 
-/** The Image tab's Face switch (TODO 5.3). */
-const FACE_OPTIONS: ChipOption<CardFace>[] = [
+/** The Image tab's Face switch (TODO 5.3): both faces in one image first
+ *  (5.3c, the default), then either face alone. */
+const FACE_OPTIONS: ChipOption<DownloadFaces>[] = [
+  { value: "both", label: "Both faces" },
   { value: "front", label: "Front" },
   { value: "back", label: "Back" },
 ];
+
+/** Why the print options are off: a JPEG (PNG only), or both faces in one
+ *  image (a print file is one face each — TODO 5.3c). */
+const PRINT_OFF_NOTE = {
+  jpeg: "800 ppi and bleed are PNG only.",
+  both: "Print files come one face at a time — pick Front or Back.",
+} as const;
 
 /** The PDF tab's Faces switch for One card (TODO 5.3). */
 const PDF_FACE_OPTIONS: ChipOption<CardPdfFaces>[] = [
@@ -209,9 +226,11 @@ export function DownloadModal({
   // JPEG is always square — the PNG's choice is kept for switching back.
   const [format, setFormat] = useState<CardImageFormat>("png");
   const [pngCorners, setPngCorners] = useState<CardCorners>("round");
-  // The face (TODO 5.3): the front first, on both tabs; a sheet's backs
-  // follow the remembered print settings (includeBacks).
-  const [face, setFace] = useState<CardFace>("front");
+  // The face (TODO 5.3): the Image tab opens on BOTH faces in one image
+  // (5.3c — a two-sided card downloads both sides unless one is chosen; a
+  // single-faced card never reads it), the PDF tab on the front; a sheet's
+  // backs follow the remembered print settings (includeBacks).
+  const [face, setFace] = useState<DownloadFaces>("both");
   const [pdfFaces, setPdfFaces] = useState<CardPdfFaces>("front");
   // Print options (paid; TODO 6.1a/6.1b/6.1): a print render is square + PNG.
   const [ppi, setPpi] = useState<PrintPpi>(DEFAULT_PRINT_PPI);
@@ -227,7 +246,7 @@ export function DownloadModal({
     if (next) {
       setPdfSettings(loadPrintSelectionSettings());
       setPdfLayout("card");
-      setFace("front");
+      setFace("both");
       setPdfFaces("front");
     }
     setOpen(next);
@@ -262,30 +281,42 @@ export function DownloadModal({
   // bleed is always a clean-download feature.
   const can800 = isPaid || !PRINT_800_PPI_PAID_ONLY;
   const printOptions = { ppi: can800 ? ppi : DEFAULT_PRINT_PPI, bleed: isPaid ? bleed : false };
-  const print = format === "png" && isPrintRequest(printOptions);
-  const corners = print ? "square" : effectiveCorners(format, pngCorners);
+  // Both faces in one image (TODO 5.3c) — only a card with a back has the
+  // choice: a PNG, never a print file or a JPEG (one face each), so while
+  // it is picked the format reads PNG and no print option is sent; the
+  // viewer's JPEG and print picks are kept for a single face.
+  const bothFaces = hasBackFace && face === "both";
+  const imageFormat: CardImageFormat = bothFaces ? "png" : format;
+  const print = !bothFaces && imageFormat === "png" && isPrintRequest(printOptions);
+  const corners = print ? "square" : effectiveCorners(imageFormat, pngCorners);
   const preset = isPaid ? "hd" : "default";
   // Free users start on the Image tab — the one format they can actually use.
   const initialTab: DownloadTab = isPaid ? defaultTab : "png";
-  // The Image tab's face: the back only on a card that has one (TODO 5.3) —
-  // its files are named <slug>-back…, its links carry &face=back.
-  const imageFace: CardFace = hasBackFace ? face : "front";
-  const imageSlug = faceSlug(cardSlug, imageFace);
+  // The Image tab's ONE face: the back only on a card that has one (TODO
+  // 5.3) — its files are named <slug>-back…, its links carry &face=back.
+  const imageFace: CardFace = hasBackFace && face !== "both" ? face : "front";
+  const imageSlug = faceSlug(cardSlug, bothFaces ? "both" : imageFace);
   const links: Record<DownloadTab, { href: string; filename: string }> = {
     // The server clamps a free viewer to 750 px anyway; asking for it
     // outright keeps the URL honest about what they get. A PNG always names
     // its corner: the route's default is square (older callers).
-    png: print
+    png: bothFaces
+      ? {
+          // The two faces side by side: &faces=both, named <slug>-both….
+          href: cardPngHref(cardId, { preset, corners, face: "both" }),
+          filename: cardImageFilename(imageSlug, { format: "png", corners }),
+        }
+      : print
       ? {
           href: cardPrintPngHref(cardId, { ...printOptions, face: imageFace }),
           filename: cardPrintFilename(imageSlug, printOptions),
         }
       : {
           href:
-            format === "jpeg"
+            imageFormat === "jpeg"
               ? cardJpegHref(cardId, { preset, face: imageFace })
               : cardPngHref(cardId, { preset, corners, face: imageFace }),
-          filename: cardImageFilename(imageSlug, { format, corners }),
+          filename: cardImageFilename(imageSlug, { format: imageFormat, corners }),
         },
     single: {
       href: cardPdfHref(cardId, { ...pdfLink, sheet: sheetOptions }),
@@ -343,12 +374,12 @@ export function DownloadModal({
 
             <TabsContent value="png" className="mt-5">
               {hasBackFace ? <FaceSwitch value={face} onChange={setFace} /> : null}
-              <FormatSwitch value={format} onChange={setFormat} jpegDisabled={print} />
+              <FormatSwitch value={imageFormat} onChange={setFormat} jpegDisabled={print || bothFaces} />
               <CornersSwitch
                 value={corners}
                 onChange={setPngCorners}
                 isPaid={isPaid}
-                format={format}
+                format={imageFormat}
                 print={print}
               />
               {can800 ? (
@@ -357,19 +388,27 @@ export function DownloadModal({
                   onPpiChange={setPpi}
                   bleed={bleed}
                   onBleedChange={isPaid ? setBleed : null}
-                  disabled={format === "jpeg"}
+                  disabled={bothFaces ? "both" : imageFormat === "jpeg" ? "jpeg" : null}
                   frameUpscaled={printFrameUpscaledAt800(frameTemplate)}
                 />
               ) : null}
               {isPaid ? (
                 <DownloadPanel
-                  title={print ? printTitle(printOptions) : `High-resolution ${FORMAT_LABEL[format]}`}
+                  title={
+                    bothFaces
+                      ? "High-resolution PNG — both faces"
+                      : print
+                        ? printTitle(printOptions)
+                        : `High-resolution ${FORMAT_LABEL[imageFormat]}`
+                  }
                   description={
-                    print
-                      ? printDescription(printOptions, printFrameUpscaledAt800(frameTemplate))
-                      : format === "jpeg"
-                        ? "Clean, full-resolution (1500 × 2100) render with square corners, in a smaller file than the PNG."
-                        : "Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
+                    bothFaces
+                      ? "Clean, full-resolution (1500 × 2100 per face) render of the front and the back side by side in one PNG, a transparent gap between them. Rounded for sharing and embedding; Square for printing."
+                      : print
+                        ? printDescription(printOptions, printFrameUpscaledAt800(frameTemplate))
+                        : imageFormat === "jpeg"
+                          ? "Clean, full-resolution (1500 × 2100) render with square corners, in a smaller file than the PNG."
+                          : "Clean, full-resolution (1500 × 2100) render. Rounded for sharing and embedding; Square for printing single cards."
                   }
                   href={links.png.href}
                   filename={links.png.filename}
@@ -381,22 +420,28 @@ export function DownloadModal({
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="font-display text-sm font-semibold text-foreground">
-                      {print ? printTitle(printOptions) : `Low-resolution ${FORMAT_LABEL[format]}`}
+                      {bothFaces
+                        ? "Low-resolution PNG — both faces"
+                        : print
+                          ? printTitle(printOptions)
+                          : `Low-resolution ${FORMAT_LABEL[imageFormat]}`}
                     </h3>
                     <p className="text-xs leading-5 text-muted">
-                      {print
-                        ? // Only when PRINT_800_PPI_PAID_ONLY is off: a free
-                          // viewer's 800 ppi file keeps the mark (the bleed
-                          // stays paid, so this is never a bleed file).
-                          `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed or MakePlayingCards' size.`
-                        : "750 × 1050 with the PipGlyph mark — fine for sharing and playtesting. Plus and Pro download a clean, print-ready 1500 × 2100 image."}
+                      {bothFaces
+                        ? "750 × 1050 per face with the PipGlyph mark, the front and the back side by side in one PNG — fine for sharing and playtesting. Plus and Pro download it clean at 1500 × 2100 per face."
+                        : print
+                          ? // Only when PRINT_800_PPI_PAID_ONLY is off: a free
+                            // viewer's 800 ppi file keeps the mark (the bleed
+                            // stays paid, so this is never a bleed file).
+                            `${freePrintSize(printOptions.ppi)} with the PipGlyph mark, square — for printing and playtesting. Plus and Pro download it clean, with an optional 1/8″ bleed or MakePlayingCards' size.`
+                          : "750 × 1050 with the PipGlyph mark — fine for sharing and playtesting. Plus and Pro download a clean, print-ready 1500 × 2100 image."}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button asChild variant="outline">
                       <a href={links.png.href} download={links.png.filename}>
                         <Download className="h-4 w-4" aria-hidden /> Download
-                        free {FORMAT_LABEL[format]}
+                        free {FORMAT_LABEL[imageFormat]}
                       </a>
                     </Button>
                     <Button
@@ -513,14 +558,19 @@ export function DownloadModal({
   );
 }
 
-/** Front or Back (TODO 5.3) — a double-faced card, every viewer. */
-function FaceSwitch({ value, onChange }: { value: CardFace; onChange: (next: CardFace) => void }) {
+/** Both faces, Front or Back (TODO 5.3 / 5.3c) — a double-faced card, every
+ *  viewer. */
+function FaceSwitch({ value, onChange }: { value: DownloadFaces; onChange: (next: DownloadFaces) => void }) {
   return (
     <div className="mb-4 flex flex-col gap-1.5" data-testid="download-face">
       <span className="text-xs font-medium text-foreground">Face</span>
       <ChipGroup ariaLabel="Face" options={FACE_OPTIONS} value={value} onChange={onChange} />
       <p className="text-[11px] leading-4 text-subtle">
-        {value === "back" ? "The back face, named <card>-back." : "The front face. Switch to Back for the other side."}
+        {value === "both"
+          ? "The front and the back side by side in one PNG, named <card>-both. Pick a face for a single image, a JPEG or a print file."
+          : value === "back"
+            ? "The back face, named <card>-back."
+            : "The front face. Switch to Back for the other side."}
       </p>
     </div>
   );
@@ -604,13 +654,14 @@ function printDescription(opts: { ppi: PrintPpi; bleed: PrintBleed }, frameUpsca
   return parts.filter(Boolean).join(" ");
 }
 
-/** Resolution + bleed (paid; TODO 6.1a/6.1b/6.1) — PNG only. */
+/** Resolution + bleed (paid; TODO 6.1a/6.1b/6.1) — PNG only, one face at a
+ *  time: off (with the reason) for a JPEG or for both faces in one image. */
 function PrintOptions({
   ppi,
   onPpiChange,
   bleed,
   onBleedChange,
-  disabled,
+  disabled: disabledBy,
   frameUpscaled,
 }: {
   ppi: PrintPpi;
@@ -618,9 +669,11 @@ function PrintOptions({
   bleed: PrintBleed;
   /** Null: no bleed for this viewer (it follows the clean download). */
   onBleedChange: ((next: PrintBleed) => void) | null;
-  disabled: boolean;
+  /** Why the options are off, or null when they are on. */
+  disabled: keyof typeof PRINT_OFF_NOTE | null;
   frameUpscaled: boolean;
 }) {
+  const disabled = disabledBy !== null;
   const choice = disabled ? "none" : bleedChoiceOf(bleed);
   return (
     <div className="mb-4 flex flex-col gap-3" data-testid="download-print">
@@ -633,8 +686,8 @@ function PrintOptions({
           onChange={(next) => onPpiChange(Number(next) as PrintPpi)}
         />
         <p className="text-[11px] leading-4 text-subtle">
-          {disabled
-            ? "800 ppi and bleed are PNG only."
+          {disabledBy
+            ? PRINT_OFF_NOTE[disabledBy]
             : frameUpscaled
               ? "800 ppi draws the text and art sharper; the frame itself is upscaled."
               : "800 ppi for print shops that ask for it."}

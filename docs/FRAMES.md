@@ -2469,6 +2469,17 @@ for any of them; Visual 0 changed / 0 redefined). Additions throughout.
   layout). `face` joins the ETag only for the back (every front download
   keeps its tag); files are `<slug>-back.png`, `-back-square.png`,
   `-back.jpg`, `-back-800ppi.png`, `-back-mpc.png`, `-back-print.png`.
+  **Both faces in one image (5.3c, owner decision 2026-10-05):**
+  `?faces=both` serves ONE PNG with the front on the left and the back on
+  the right — each half exactly what `face=front` / `face=back` serve at
+  the same options, copied pixel for pixel onto a transparent canvas with
+  a gutter of 1/25 of a face's width between them
+  (`lib/render/faces-side-by-side.ts`), named `<slug>-both.png` /
+  `-both-square.png`, its own ETag — and it is the download modal's first
+  and default choice on a two-faced card. It is never a print file or a
+  JPEG (one face each: `faces=both` with `ppi=800`, a bleed, `print=1` or
+  `format=jpeg` answers 400; the modal disables those options with a note
+  until a face is picked), and a single-faced card answers 404.
   `/api/cards/[id]/pdf`: `face=back` (one page), `faces=both` (two pages,
   `<slug>-both-faces.pdf`), and a sheet places the back BESIDE its front by
   default — cells run front, back, front, back…, a two-faced slot never

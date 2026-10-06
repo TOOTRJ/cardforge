@@ -32,7 +32,7 @@ import {
   parsePrintParam,
   PRINT_800_PPI_PAID_ONLY,
 } from "@/lib/cards/print-export";
-import { checkAnonLiveRenderLimit } from "@/lib/cards/anon-render-limit";
+import { checkAnonLiveRenderLimit, type AnonRenderLimitResult } from "@/lib/cards/anon-render-limit";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import {
   downloadBrandMark,
@@ -41,7 +41,9 @@ import {
 } from "@/lib/billing/entitlements";
 import { rowToPreviewData, type CardRowForBake } from "@/lib/cards/bake-core";
 import { flippableBackOf } from "@/lib/cards/faces";
-import { faceSlug, parseFaceParam } from "@/lib/cards/card-face";
+import { faceSlug, parseDownloadFaces, type CardFace } from "@/lib/cards/card-face";
+import { composeFacesSideBySide } from "@/lib/render/faces-side-by-side";
+import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { isUuid } from "@/lib/ids";
@@ -116,6 +118,25 @@ import { isUuid } from "@/lib/ids";
 //                      download keeps the tag it had. A card with no back to
 //                      flip to answers 404. No or any other `face` is the
 //                      front, exactly as before.
+//   ?faces=both      → BOTH faces in ONE PNG (TODO 5.3c, owner decision
+//                      2026-10-05 — the way people share a double-faced
+//                      card): the front on the left, the back on the right,
+//                      a transparent gutter of 1/25 of a face's width
+//                      between them (60 px at HD) on a transparent canvas
+//                      (lib/render/faces-side-by-side.ts). Each half is
+//                      exactly what `face=front` / `face=back` serves at the
+//                      same options — the stored bakes for a free viewer
+//                      (each face under its own hasServableStoredRender,
+//                      else that face renders live, as today), live clean
+//                      renders for a paid viewer, `corners` and the preset
+//                      per face. Named <slug>-both.png / -both-square.png;
+//                      `faces` joins the ETag the way `face` does. A card
+//                      with no back to flip to answers 404 (flippableBackOf,
+//                      the face=back rule); a print variant (ppi=800, bleed,
+//                      print=1) or a JPEG with faces=both answers 400 — a
+//                      print file and a JPEG are one face each, so no
+//                      half-built print file ever ships. `face=back` wins
+//                      over `faces=both` (the pdf route's reading).
 //
 // Every viewer may pick either corner. A FREE viewer's square PNG is the
 // stored round bake squared with the corner fills a live square render
@@ -168,6 +189,27 @@ export async function GET(
       { status: 400 },
     );
   }
+  // The face(s) asked for (TODO 5.3 / 5.3c): `face=back`, `faces=both`, or
+  // the front. Both faces come as ONE PNG and never as a print file — a
+  // print file (800 ppi, a bleed, MPC, the exports' print render) and a
+  // JPEG are one face each — refused before any lookup, so no half-built
+  // print file ever ships.
+  const faces = parseDownloadFaces(
+    request.nextUrl.searchParams.get("face"),
+    request.nextUrl.searchParams.get("faces"),
+  );
+  if (faces === "both" && printMode) {
+    return NextResponse.json(
+      { error: "Print files are one face each — ask for face=front or face=back." },
+      { status: 400 },
+    );
+  }
+  if (faces === "both" && format === "jpeg") {
+    return NextResponse.json(
+      { error: "Both faces come as one PNG — ask for format=png, or face=front or face=back for a JPEG." },
+      { status: 400 },
+    );
+  }
   // A JPEG is always square; a PNG has the corner the request names — and
   // a print render is always square.
   const corners = printMode
@@ -214,12 +256,16 @@ export async function GET(
   // The face asked for (TODO 5.3): the back as the card page flips to it —
   // the same mapping the bake renders (lib/cards/faces.ts), so the download
   // is the gallery's back — or a 404 for a card with no back to flip to.
-  const face = parseFaceParam(request.nextUrl.searchParams.get("face"));
-  const backData = face === "back" ? flippableBackOf(frontData) : null;
-  if (face === "back" && !backData) {
+  // Both faces (5.3c) need the same back: a single-faced card has nothing
+  // to put beside its front.
+  const face: CardFace = faces === "back" ? "back" : "front";
+  const backData = faces === "front" ? null : flippableBackOf(frontData);
+  if (faces !== "front" && !backData) {
     return NextResponse.json({ error: "This card has no back face." }, { status: 404 });
   }
-  const previewData = backData ?? frontData;
+  // What a one-face download renders; a both-faces download renders the
+  // front AND `backData`.
+  const previewData = face === "back" && backData ? backData : frontData;
 
   // Resolution AND the brand mark follow the VIEWER's plan: a free viewer
   // always downloads a watermarked, capped card — whoever made it — and a
@@ -293,8 +339,9 @@ export async function GET(
           ? [`print:${print.ppi}:${print.bleed === "mpc" ? "mpc" : print.bleed ? "bleed" : "trim"}`]
           : []),
         // …and the BACK face (TODO 5.3): its own bytes, folded in only for
-        // the back, so every front download keeps the tag it had.
-        ...(face === "back" ? ["face:back"] : []),
+        // the back, so every front download keeps the tag it had — and
+        // BOTH faces in one PNG (5.3c), their own bytes again.
+        ...(face === "back" ? ["face:back"] : faces === "both" ? ["faces:both"] : []),
         watermark ? "wm" : "clean",
         // The owner's custom footer mark prints into the render — fold it in
         // so a changed mark busts the 304 path.
@@ -302,12 +349,16 @@ export async function GET(
         CARD_LAYOUT_VERSION,
         JSON.stringify(pipOverrides ?? null),
         // Frame-layout overrides change baked geometry without a code
-        // deploy — fingerprint the active template's override.
+        // deploy — fingerprint the active template's override (both faces'
+        // for a both-faces download: the back's body is its own template).
         JSON.stringify(
           profileOverrides[
             (previewData.frameStyle?.template as string) ?? ""
           ] ?? null,
         ),
+        ...(faces === "both" && backData
+          ? [JSON.stringify(profileOverrides[(backData.frameStyle?.template as string) ?? ""] ?? null)]
+          : []),
       ].join("|"),
     )
     .digest("hex")
@@ -320,9 +371,12 @@ export async function GET(
     });
   }
 
-  let bytes: Uint8Array;
-  try {
-    let pngBytes: Uint8Array;
+  /**
+   * ONE face's finished PNG, exactly as its own download serves it — the
+   * stored bake or a live render, the corner asked for, the viewer's preset
+   * and mark. A both-faces download calls it twice and composes the two.
+   */
+  const renderFace = async (data: CardPreviewData, which: CardFace): Promise<Uint8Array> => {
     // The stored bake is always watermarked with no footer text (layout
     // v20) — exactly what a FREE viewer downloads, so serve it (2×
     // downscaled) instead of re-rendering — lib/render/stored-render.ts.
@@ -340,42 +394,57 @@ export async function GET(
     //
     // A PRINT render (800 ppi, bleed) never serves the bake: it is always
     // live (TODO 6.1b "bake on demand, not stored").
-    const squareFills = !printMode && corners === "square" ? squareCornerFillsOf(previewData) : null;
+    const squareFills = !printMode && corners === "square" ? squareCornerFillsOf(data) : null;
     const storedServes = !printMode && watermark && !squareFills?.includes(null);
-    // The face's own bake: the back's for `face=back` (a legacy back has
+    // The face's own bake: the back's for the back face (a legacy back has
     // none, so it renders live — the one the page shows).
-    const stored = storedServes ? await fetchStoredRender(card, { face }) : null;
+    const stored = storedServes ? await fetchStoredRender(card, { face: which }) : null;
     if (stored) {
-      const fitted = await fitStoredRender(stored, preset, isLandscapeRender(previewData));
-      pngBytes = new Uint8Array(squareFills ? await flattenStoredCorners(fitted, squareFills) : fitted);
-    } else {
-      // A live render costs a Satori pass: a signed-out caller gets a
-      // limited number of them (TODO 7.8). Signed-in viewers never count.
-      if (!(await currentViewer())) {
-        const limit = await checkAnonLiveRenderLimit(request);
-        if (!limit.ok) return rateLimitedResponse(limit);
-      }
-      if (printMode) {
-        // Square, the art at full resolution (lib/render/card-print.ts).
-        pngBytes = new Uint8Array(
-          await renderCardPrint(previewData, {
-            ppi: print.ppi,
-            bleed: print.bleed,
-            brandMark: watermark,
-            watermarkText: footerText,
-          }),
-        );
-      } else {
-        const imgResponse = await renderCardImage(previewData, preset, {
+      const fitted = await fitStoredRender(stored, preset, isLandscapeRender(data));
+      return new Uint8Array(squareFills ? await flattenStoredCorners(fitted, squareFills) : fitted);
+    }
+    // A live render costs a Satori pass: a signed-out caller gets a
+    // limited number of them (TODO 7.8) — counted per render, so a
+    // both-faces download of two live renders is two. Signed-in viewers
+    // never count.
+    if (!(await currentViewer())) {
+      const limit = await checkAnonLiveRenderLimit(request);
+      if (!limit.ok) throw new RateLimited(limit);
+    }
+    if (printMode) {
+      // Square, the art at full resolution (lib/render/card-print.ts).
+      return new Uint8Array(
+        await renderCardPrint(data, {
+          ppi: print.ppi,
+          bleed: print.bleed,
           brandMark: watermark,
           watermarkText: footerText,
-          corners,
-        });
-        pngBytes = new Uint8Array(await imgResponse.arrayBuffer());
-      }
+        }),
+      );
+    }
+    const imgResponse = await renderCardImage(data, preset, {
+      brandMark: watermark,
+      watermarkText: footerText,
+      corners,
+    });
+    return new Uint8Array(await imgResponse.arrayBuffer());
+  };
+
+  let bytes: Uint8Array;
+  try {
+    let pngBytes: Uint8Array;
+    if (faces === "both" && backData) {
+      // Both faces in one PNG (TODO 5.3c): each face exactly what its own
+      // download would be, side by side on a transparent canvas.
+      const frontPng = await renderFace(frontData, "front");
+      const backPng = await renderFace(backData, "back");
+      pngBytes = new Uint8Array(await composeFacesSideBySide(frontPng, backPng));
+    } else {
+      pngBytes = await renderFace(previewData, face);
     }
     bytes = format === "jpeg" ? new Uint8Array(await encodeCardJpeg(pngBytes)) : pngBytes;
   } catch (err) {
+    if (err instanceof RateLimited) return rateLimitedResponse(err.denied);
     const detail = err instanceof Error ? err.message : "Render error";
     return NextResponse.json(
       { error: `Render failed: ${detail}` },
@@ -398,21 +467,24 @@ export async function GET(
         clean: !watermark,
         corners,
         ...(print.bleed ? { layout: print.bleed === "mpc" ? "mpc" : "bleed" } : {}),
-        // The back face names itself; a front download's props are as before.
-        ...(face === "back" ? { face } : {}),
+        // The back face names itself, and so do both faces in one image; a
+        // front download's props are as before.
+        ...(faces === "front" ? {} : { face: faces }),
       },
     });
   }
 
-  // The file's slug: the card's, or `<slug>-back` for the back face.
-  const slug = faceSlug(card.slug, face);
+  // The file's slug: the card's, `<slug>-back` for the back face, or
+  // `<slug>-both` for both faces in one image.
+  const slug = faceSlug(card.slug, faces);
   return new NextResponse(Buffer.from(bytes), {
     status: 200,
     headers: {
       "Content-Type": format === "jpeg" ? "image/jpeg" : "image/png",
       // The header wins over the modal's download="" attribute, so the file
       // is named here: <slug>.png, <slug>-square.png (both corners can sit
-      // side by side) or <slug>.jpg — <slug>-back… for the back face.
+      // side by side) or <slug>.jpg — <slug>-back… for the back face,
+      // <slug>-both… for both faces in one image.
       "Content-Disposition": `attachment; filename="${
         printMode ? cardPrintFilename(slug, print) : cardImageFilename(slug, { format, corners })
       }"`,
@@ -421,6 +493,14 @@ export async function GET(
       ETag: etag,
     },
   });
+}
+
+/** The anonymous limiter's refusal, thrown out of a face render so the one
+ *  response path answers it (429 + Retry-After) — never a 500. */
+class RateLimited extends Error {
+  constructor(readonly denied: Extract<AnonRenderLimitResult, { ok: false }>) {
+    super(denied.message);
+  }
 }
 
 async function fetchCard(id: string) {
