@@ -7,6 +7,7 @@ import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { frameTemplateOf } from "@/lib/cards/print-export";
+import { rowHasBakedBack } from "@/lib/cards/faces";
 import { RenderUpdateNotice } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { downloadDiffersFromGallery, hasNewerLook } from "@/lib/cards/layout-version";
@@ -141,6 +142,10 @@ export default async function EditCardPage({
               canBatch={entitlements.allowBatchExport}
               downloadDiffersFromGallery={downloadDiffersFromGallery(card, entitlements.isPaid)}
               frameTemplate={frameTemplateOf(card.frame_style)}
+              // A double-faced card's Face switch (TODO 5.3 / 5.3c) — the
+              // same `rowHasBakedBack` the public card page reads, so the
+              // owner's own editor offers Both faces / Front / Back too.
+              hasBackFace={rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face ?? null })}
             />
             <Button asChild variant="ghost">
               <Link href={publicPath}>
