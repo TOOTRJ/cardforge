@@ -190,14 +190,14 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   //     Slicer (r) and #12 Megatron (m) here: their backs print the ▼ at the
   //     RIGHT (the ▲ / ▼ family, lib/cards/dfc.ts dfcIconFamilyFromEffects)
   //     and the pin check refuses both on this body. No red, green,
-  //     three-colour or artifact legendary back was printed crowned in a
-  //     left-well family (Scryfall, 2026-10-06: the 52 paper printings with
-  //     a sun / moon, moon / Emrakul, compass or fan effect AND `legendary`
-  //     — their legendary backs are w, u, b, four pairs and XLN's / RIX's
-  //     lands, the parchment back; SOI #5's red Avacyn, the Purifier
-  //     predates the crown). The crown PIECES of r and m stay: m15dfccrown
-  //     is the front body's band too, judged there against MOM #137 and FIN
-  //     #231;
+  //     three-colour or colourless non-land legendary back was printed
+  //     crowned in a left-well family (Scryfall, 2026-10-06: the 52 paper
+  //     printings with a sun / moon, moon / Emrakul, compass or fan effect
+  //     AND `legendary` — their legendary backs are w, u, b, four pairs —
+  //     VOW #236's W|B artifact among them — and XLN's / RIX's lands, the
+  //     parchment back; SOI #5's red Avacyn, the Purifier predates the
+  //     crown). The crown PIECES of r and m stay: m15dfccrown is the front
+  //     body's band too, judged there against MOM #137 and FIN #231;
   //   • rows are keyed like every other entry here — the FRAME colour key
   //     the compare page's toggle asks with (or a pair): the artifact crowns
   //     of the transform front and the ▼ back are their `c` rows (the crown

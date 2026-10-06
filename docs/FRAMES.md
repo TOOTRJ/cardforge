@@ -2455,14 +2455,15 @@ classifier took any `…dfc` frame effect for a left-well family, so BOT's
 `CROWN_REFERENCES.m15dfcbackleft` named BOT #6 Slicer, High-Speed Antagonist
 (r) and BOT #12 Megatron, Destructive Force (m). Both backs print the ▼ at
 the right, and the pin check refuses both on the left-well body. No red,
-green, three-colour or artifact legendary back was printed crowned in a
-left-well family (Scryfall, 2026-10-06: 52 paper printings carry a sun /
-moon, moon / Emrakul, compass or fan effect with `legendary`; their
-legendary backs are w, u, b, the pairs W|U, U|B, W|B, R|G and XLN's / RIX's
-lands — SOI #5's red Avacyn, the Purifier predates the crown), so the two
-rows are gone and the compare page's Legendary toggle on `m15dfcbackleft`
-r and m crowns the sample, as on g and c. Round 31's sheet 2b was right all
-along: its bake spec derived each body from the family, and its two BOT
+green, three-colour or colourless non-land legendary back was printed
+crowned in a left-well family (Scryfall, 2026-10-06: 52 paper printings
+carry a sun / moon, moon / Emrakul, compass or fan effect with `legendary`;
+their legendary backs are w, u, b, the pairs W|U, U|B, W|B — VOW #236's
+artifact — and R|G, and XLN's / RIX's lands; SOI #5's red Avacyn, the
+Purifier predates the crown), so the two rows are gone and the compare
+page's Legendary toggle on `m15dfcbackleft` r and m crowns the sample, as
+on g and c. Round 31's sheet 2b was right all along: its bake spec derived
+each body from the family, and its two BOT
 cells are labelled and baked `m15dfcback/r` and `m15dfcback/m`. What was
 wrong was the table (with the code comment and the TODO line that repeated
 it) — so the toggle on those two rows drew the left-well body, a ▼ in its

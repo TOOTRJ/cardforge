@@ -20,8 +20,9 @@ import type { FrameTemplate } from "@/types/card";
 // Slicer and BOT #12 Megatron were listed as the crowned red and gold prints
 // of the 2016–22 (left-well) back. The compare page's Legendary toggle on
 // those two rows then drew the left-well body beside a ▼-right scan. No red,
-// green, three-colour or artifact legendary back was printed crowned in a
-// left-well family (Scryfall, 2026-10-06), so those rows have none.
+// green, three-colour or colourless non-land legendary back was printed
+// crowned in a left-well family (Scryfall, 2026-10-06), so those rows have
+// none.
 //
 // Each row is held to what the compare page does with it: the key the page
 // asks with (the FRAME colour key — 5.1d filed the two artifact prints under
