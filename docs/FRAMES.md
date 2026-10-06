@@ -2540,7 +2540,7 @@ scratchpad `dfc-1d/research/classified.json`.
   piece under the rider, the switch absent byte-identical, the pair
   master and the pair's crown on a front and on each back, the modal
   faces, the land back drawing neither), the matrix's `@crown` / `@pair`
-  cases on every declared body (`tests/visual/matrix.ts`: 63 new cases, 0 redefined; the 10 re-toned backs change their existing modal-back cases under v40).
+  cases on every declared body (`tests/visual/matrix.ts`: 63 new cases, 0 redefined; the 10 re-toned backs change their existing modal-back cases under v40, and the reverse-P/T float the ten `m15dfclandfront` long cases — 41 changed against main's baseline, every one in v40's scope).
 - **Skeptic pass (2026-10-05, on 9be382ad):** every one of the 248
   promote objects re-fetched from the DEV bucket by manifest key
   (248 / 248 at the manifest's sha256 and bytes; main's 20 old objects

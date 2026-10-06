@@ -184,6 +184,24 @@ describe("the reverse P/T as a rules float (5.1d)", () => {
     }
   });
 
+  it("a float too wide to wrap round (under a quarter of the column left) narrows nothing and is a keep-out: the size steps down until the lines clear it, no ink enters it", () => {
+    // One paragraph of five lines at the standard size: the block's bottom
+    // meets the tab's rows; at 64 px it is four lines and ends above them.
+    const medium = "Flying, vigilance, lifelink, menace, trample, haste, reach, deathtouch, first strike, double strike, hexproof, indestructible, shroud, ward 2 and protection from everything.";
+    const wide = { leftPct: 20, topPct: digits.topPct, widthPct: digits.leftPct + digits.widthPct - 20, heightPct: digits.heightPct };
+    const free = mainRulesLayout({ layout, rulesText: medium, flavorText: null, aspect: 7 / 5, show: { pt: true } });
+    const floated = mainRulesLayout({ layout, rulesText: medium, flavorText: null, aspect: 7 / 5, show: { pt: true, reversePt: wide } });
+    expect(floated.clipped).toBe(false);
+    expect(floated.sizePx).toBeLessThan(free.sizePx);
+    for (const target of ["hd", "default"] as const) {
+      expect(inkEntersRect(free, wide, target), `${target} set free`).toBe(true);
+      expect(inkEntersRect(floated, wide, target), target).toBe(false);
+      // Nothing was narrowed: no line meets the float's rows at all.
+      const f = rectPx(wide, "portrait", 7 / 5, target);
+      expect(linePositions(floated, target).lines.some((l) => l.top < f.bottom && l.top + l.height > f.top), target).toBe(false);
+    }
+  });
+
   it("on a real bake: a full text box above a 12/12 back keeps its ink out of the digits' footprint; the same text above an aura back runs through it (no digits, no float)", async () => {
     const withPt = await bake(frontPreviewData(card()));
     const keep = rectBox(withPt, digits);

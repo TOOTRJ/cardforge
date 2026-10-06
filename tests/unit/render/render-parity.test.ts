@@ -16,11 +16,12 @@ const SET_SYMBOL = read("components/cards/set-symbol.tsx");
 
 describe("the transform front's reverse P/T (TODO 5.1a; a rules float since 5.1d)", () => {
   it("both renderers build DrawnStats.reversePt from the ONE helper, only while the digits are drawn", () => {
-    for (const src of [BAKE, PREVIEW]) {
-      expect(src).toContain("endAlignedStatKeepOut(layout.reversePt, ");
-      expect(src).toContain("otherFace.printsPt");
-      expect(src).toContain("reversePt:");
-    }
+    expect(BAKE).toMatch(
+      /reversePt:\s*layout\.reversePt && card\.dfc\?\.otherFace\.printsPt\s*\? endAlignedStatKeepOut\(layout\.reversePt, ptValue\(card\.dfc\.otherFace\.power, card\.dfc\.otherFace\.toughness\), orientationFromAspect\(aspect\)\)\s*: null,/,
+    );
+    expect(PREVIEW).toContain("const reversePtValue = layout.reversePt && dfc?.otherFace.printsPt ? ptValue(dfc.otherFace.power, dfc.otherFace.toughness) : null;");
+    expect(PREVIEW).toContain("endAlignedStatKeepOut(layout.reversePt, reversePtValue, orientationFromAspect(aspect))");
+    expect(PREVIEW).toContain("reversePt: reversePtKeepOut,");
   });
 });
 
