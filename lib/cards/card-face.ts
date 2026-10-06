@@ -37,16 +37,40 @@ export function parseFaceParam(raw: string | string[] | null | undefined): CardF
   return parseCardFace(raw) ?? "front";
 }
 
+/** What an IMAGE download holds (TODO 5.3c): one face, or `both` — the
+ *  front and the back side by side in ONE PNG, the way people share a
+ *  double-faced card (owner decision 2026-10-05). The png route's
+ *  `?faces=both`; the download modal's first choice on a two-faced card.
+ *  A print file and a JPEG are one face each. */
+export type DownloadFaces = CardFace | "both";
+
+/** The faces the png route is asked for: `face=back` the back alone (as
+ *  the pdf route reads it — the named face wins), else `faces=both` both
+ *  side by side, else the front — exactly what every request before 5.3c
+ *  got. */
+export function parseDownloadFaces(
+  face: string | string[] | null | undefined,
+  faces: string | string[] | null | undefined,
+): DownloadFaces {
+  if (parseCardFace(face) === "back") return "back";
+  const both = Array.isArray(faces) ? faces[0] : faces;
+  return both === "both" ? "both" : "front";
+}
+
 /** The slug a download of `face` is named by: the card's for the front,
  *  `<slug>-back` for the back — so `<slug>-back.png`, `<slug>-back-square.png`,
  *  `<slug>-back-mpc.png`, `<slug>-back.pdf` sit beside the front's files
- *  (TODO 5.3). */
-export function faceSlug(slug: string, face: CardFace): string {
+ *  (TODO 5.3) — and `<slug>-both` for the two faces in one image
+ *  (`<slug>-both.png`, `<slug>-both-square.png`; TODO 5.3c). */
+export function faceSlug(slug: string, face: DownloadFaces): string {
+  if (face === "both") return `${slug}-both`;
   return face === "back" ? `${slug}-back` : slug;
 }
 
-/** The `&face=back` a download link carries for the back; nothing for the
- *  front, so every front link keeps the URL it always had. */
-export function faceQuery(face: CardFace | null | undefined): string {
+/** The `&face=back` a download link carries for the back, `&faces=both`
+ *  for both faces in one image; nothing for the front, so every front link
+ *  keeps the URL it always had. */
+export function faceQuery(face: DownloadFaces | null | undefined): string {
+  if (face === "both") return "&faces=both";
   return face === "back" ? "&face=back" : "";
 }
