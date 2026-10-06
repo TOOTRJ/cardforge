@@ -2368,7 +2368,9 @@ ticks each colour × face.
   bars, one table per template, to the luma the clamped channels give
   (`MDFC_BACK_TONES.strip` / `MDFC_LAND_BACK_TONES.strip`): the spell backs
   u 208.2 → 220.0 (STX #147), b 175.2 → 221.0 (STX #148 223, KHM #112 219),
-  r 212.4 → 230.3 (STX #159), g 200.6 → 224.4 (STX #151), m 194.6 → 233.0
+  r 212.4 → 230.3 (STX #159), g 200.6 → 228.9 (STX #151 — the first cut's
+  224.4 had a measuring row on the tab's top outline, which sits 3 px
+  lower on that scan; re-cut by the skeptic), m 194.6 → 233.0
   (KHM #168 The Prismatic Bridge's gold back 233, STX #149's B|R back 233 —
   a mono-gold print does exist); the land backs u → 230.7 (MH3 #241), b →
   212.4 (ZNR #90; the pathways' b backs read 229–240), r → 227.8 (ZNR #134
@@ -2377,7 +2379,15 @@ ticks each colour × face.
   fronts stay (within 5–11). Ten masters re-cut (m15mdfcback u b r g m,
   m15mdfclandback u b r g m), each byte-identical outside the Flipside
   mask (bars, box, housing, body: 0 px differ; the built fills within
-  ±0.5 luma of the targets). The visual gate's record of the change is a
+  ±0.5 luma of the targets). Two caveats for the sheet: the scans disagree
+  by set — KHM's backs read 5–13 lighter than STX's on every key (u KHM #40
+  242 vs STX #147 220, r KHM #123 237 vs STX #159 230, g KHM #181 234 vs
+  STX #151 229; b KHM #112 219 vs STX #148 223), so the targets sit on STX
+  with b on both — and a gain moves luma, not hue: Card Conjurer's tabs stay
+  tinted in the frame's colour (ours u 199,226,244 · r 255,223,201 · g
+  216,236,226 · m 255,235,163) where the prints' are near-neutral (STX #147
+  216,221,228 · STX #159 228,228,245 · STX #151 226,227,245 · KHM #168
+  233,233,234). The visual gate's record of the change is a
   template-scoped **sweep bump, layout v40** (v38 / v39's pattern: the
   modal faces, 0 cards on them, nothing re-bakes) — `tests/unit/frames/
   dfc-crowns-pairs.test.ts` holds the built strips to ±2.
@@ -2505,10 +2515,12 @@ scratchpad `dfc-1d/research/classified.json`.
   the pair as the identity on a front that draws pairs); a back face
   qualifies for its own crown by its own supertype (`backPreviewData`
   carries the card's switches) and resolves its own pair from its own
-  colours. A nonlegendary front with a legendary back prints the back's
-  crown while the creator's switch (keyed on the front's type line) is
-  hidden — the default is on, so it prints; a visible switch for that case
-  is a follow-up. The creator's hint for an all-hybrid cost on the
+  colours. The creator's one crown switch reads EITHER face (the skeptic's
+  fix): a nonlegendary front with a legendary back on a back body that
+  draws the crown (MOM #43's shape, Westvale Abbey // Ormendahl) shows the
+  row — judged on the body the back's type and family derive (`bodyFor`,
+  as the live preview does), never on the ▼ land back or the modal land
+  pair, which draw none. The creator's hint for an all-hybrid cost on the
   transform front ("This frame has no hybrid version yet…") is the
   existing copy. `CROWN_REFERENCES` names a crowned print per body per key
   (the table above) for the compare page's Legendary toggle — a back body's
@@ -2529,6 +2541,56 @@ scratchpad `dfc-1d/research/classified.json`.
   master and the pair's crown on a front and on each back, the modal
   faces, the land back drawing neither), the matrix's `@crown` / `@pair`
   cases on every declared body (`tests/visual/matrix.ts`: 63 new cases, 0 redefined; the 10 re-toned backs change their existing modal-back cases under v40).
+- **Skeptic pass (2026-10-05, on 9be382ad):** every one of the 248
+  promote objects re-fetched from the DEV bucket by manifest key
+  (248 / 248 at the manifest's sha256 and bytes; main's 20 old objects
+  still there); the 187 PNG + WebP of the ten templates and three cut
+  folders rebuilt through the committed importer into a FRESH Card
+  Conjurer cache (97 pack files fetched) — 374 / 374 byte-identical to
+  the manifest, the provenance unchanged. Measured on the scans with own
+  regions: **the two-colour backs DO split** — MOM #43's G|W back (a
+  mono-white front) reads green 25,67,44 at the left of its type ring and
+  white 141,139,139 at the right, its box 159,172,162 → 202,198,187 over
+  gold bars (186,161,87 / 181,157,89); MID #246 R|G 95,36,31 → 28,50,42;
+  MID #218 W|U 139,136,133 → 22,50,94; EMN #191, STX #149, MSH #219, MOM
+  #200 / #75 the same — the 5.12 note was wrong and the 30 back pair
+  masters stay. KHM #168's back is a gold modal back on the plain frame
+  (gold bars 175,141,54, body 132,120,76, an unsplit box), its tab 233.4
+  on the tab's own rows. Our pair masters: the gold master byte for byte
+  outside the Rules + Pinline masks on all 60, the box and ring left of
+  38 %W the first colour's and right of 62 %W the second's (the ~1,500 px
+  that differ are the masks' anti-aliased edges), every title / type /
+  box ring crossing 42 / 50 / 58, and the ring rows of the colour masters
+  and the gold one coincide (100–103 / 1181–1184 / 1299–1302 on every
+  file) — no hairline. The prints' rings: LCI #233 41.7 / 49.4 / 57.4 and
+  MOM #43's back 41.7 / 51.6 / 60.4 on the 40→60 ramp; the Innistrad-era
+  faces 45–46 / 50–51 / 55–56 (MID #218 front and back, MID #231, INR
+  #241) and MSH #219's title ring 46.3 / 49.8 / 54.6 narrower, as the PR
+  says. The 54 cut pieces: 0 px differ from the m15crown band outside the
+  well region, the alpha inside it the twin's to the pixel, no pixel
+  brighter than the tiled leg, the hole a circle (143.5, 160.5) r 61.0 /
+  (1355.5, 160.5) r 60.8 (fit 0.5 px) ending at row 220, the modal
+  teardrop at 216; the unshaded fill is the band's leg within 1–8 levels
+  on the left well and the modal housing, but the RIGHT well's b and g
+  pieces average 19–29 levels above the leg's reference rows (the band's
+  right leg is lighter at the well's rows than at the reference's; the
+  piece is still the band's own pixels, never brightened). The strips: the
+  toned masters differ from main's on 0 px outside CC's Flipside mask, only
+  brighter inside it, the outline and ◀ still 0; on rows inside the tab
+  (1878–1884 + 1936–1942, x 120–480) u 220.0, b 221.1, r 230.1, m 232.8
+  and the land backs within 0.9 of their prints — g read 224.6 against STX
+  #151's 228.9 (the first cut's rows hit that scan's outline), re-cut to
+  228.9 (`MDFC_BACK_TONES.g.strip` 1.141). Fixed: the creator's crown
+  switch for a legendary BACK under a nonlegendary front. Found and left
+  (its own item, 5.1e): the reverse P/T's digits run under dense rules
+  text — a plain keep-out (DrawnStats, like the strip) cannot fix it: the
+  tab's rows (84.2–87.8 %H) sit 80–155 px above the box's bottom, so any
+  block taller than ~277 px has lines there and the layout's only remedy,
+  stepping the size down, reaches the 42 px floor still colliding (tried:
+  a 9-line text shrank to the floor and kept 455 px of ink under 12/12);
+  the prints wrap the text round the digits, which is a float in the
+  rules engine. 120-row production replay at 750 + HD on 081ac82f and the
+  head: 120 / 120 identical.
 
 ### The editor (5.2)
 

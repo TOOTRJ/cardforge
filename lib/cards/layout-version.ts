@@ -777,14 +777,15 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            than every mono-colour print's (u 208 vs STX #147's 220 / MH3
 //            #241's 231, b 175 vs STX #148 / KHM #112's 221 / ZNR #90's 212,
 //            r 212 vs STX #159's 230 / ZNR #134's 228, g 201 vs STX #151's
-//            224 / ZNR #189's 218) and 38 on the gold back (195 vs KHM
+//            229 / ZNR #189's 218) and 38 on the gold back (195 vs KHM
 //            #168 The Prismatic Bridge's 233), so the importer multiplies
 //            the whole tab through the pack's Flipside mask (scripts/lib/
 //            cc-frames.mjs MDFC_BACK_TONES / MDFC_LAND_BACK_TONES `strip`:
 //            one table per template, the spell backs on STX / KHM, the
 //            land backs on ZNR / MH3; w within the prints' spread,
-//            untouched; the ◀ and the outline stay dark) — nine re-cut
-//            masters (m15mdfcback u b r g m, m15mdfclandback u b r g).
+//            untouched; the ◀ and the outline stay dark) — ten re-cut
+//            masters (m15mdfcback u b r g m, m15mdfclandback u b r g m;
+//            the land back's gold key is the spell table's stand-in).
 //            Template-scoped (TEMPLATE_SCOPED_VERSIONS[40] = the modal
 //            faces: the two front templates a modal card is stored on,
 //            whose BACK bake changes, and the two back bodies the visual
