@@ -110,13 +110,16 @@ export type FaceContentFacts = {
   wearsHybrid?: boolean;
 };
 
-const REAL_COLORS: ReadonlySet<ColorIdentity> = new Set(["white", "blue", "black", "red", "green"]);
-
 /**
  * The strip rider's key for a face's strip on the OTHER face (TODO 5.1c) —
  * the prints' rule, measured on every modal scan (scratchpad dfc-1c/
  * research/prints-rule2.json): the strip is painted in the colour of the
- * frame the face it describes WEARS. A mono-colour face → its letter (a
+ * frame the face it describes WEARS. So the key starts from the KEY THAT
+ * FACE'S MASTER IS PICKED BY (lib/cards/frame-color-key.ts pickFrameColorKey,
+ * what both renderers draw it on: a literal "multicolor" entry — the colour
+ * chip's and the import's spelling of a two-colour back — and a mixed
+ * identity are the gold master there, so they are gold here too; never a
+ * re-count of the face's colour words). A mono-colour face → its letter (a
  * coloured artifact its colour: KHM #15 / #112 / #123); a two-colour spell →
  * gold (STX #149's front and back, KHM #114, #168, #179, MSH #18 / #219); a
  * LAND with no colour or more than one → the land grey `l` (MH3 #252–261's
@@ -127,10 +130,10 @@ const REAL_COLORS: ReadonlySet<ColorIdentity> = new Set(["white", "blue", "black
  * artifact stand-in on the spell bodies, the land grey on the land bodies).
  */
 export function stripKeyOf(face: Pick<FaceContentFacts, "colorIdentity" | "cardType" | "wearsHybrid">): string {
-  const colors = [...new Set((face.colorIdentity ?? []).filter((c) => REAL_COLORS.has(c)))];
-  if (face.cardType === "land") return colors.length === 1 ? pickFrameColorKey(colors) : "l";
-  if (colors.length > 1 && face.wearsHybrid) return "l";
-  return pickFrameColorKey(colors);
+  const key = pickFrameColorKey(face.colorIdentity);
+  if (face.cardType === "land") return key === "c" || key === "m" ? "l" : key;
+  if (key === "m" && face.wearsHybrid) return "l";
+  return key;
 }
 
 /** Whether a face drawn on `template` wears the hybrid dress — the two-colour
