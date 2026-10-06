@@ -60,16 +60,21 @@ import { FRAME_TEMPLATE_VALUES, type CardBackFace } from "@/types/card";
 //     a two-colour card; the split pair's own strip is gold, the hybrid's
 //     none;
 //   • the published pieces (where a copy at the manifest's sha256 is on disk
-//     — FRAMES_BUILD_DIR, else .frames-build; CI fetches them, a missing one
-//     FAILS there): every key, PNG + WebP at the box's size; each piece the
-//     master's own pixels (0 px differ in colour, alpha binary, nothing
-//     outside the snapped mask) — the base-tone identity; a piece drawn over
+//     — FRAMES_BUILD_DIR, else .frames-build; CI fetches them from
+//     production's bucket or, before the owner's promote, the dev bucket's,
+//     and a missing one FAILS there): every key, PNG + WebP at the box's
+//     size; each piece the master's own pixels (0 px differ in colour, alpha
+//     binary), ONE cut for all thirty — 51,208 px in whole 2 × 2 blocks, its
+//     shape pinned by a sha256 — the base-tone identity; a piece drawn over
 //     its own master through the rasteriser the bake uses (sharp / librsvg,
 //     the <image> Satori emits) changes 0 px at HD AND at the 750 bake (the
 //     block snap: the 2:1 resample reads one whole block per pixel) — so a
-//     mono card's rider, skipped as built, could as well be drawn (the
-//     owner's call); with the Card Conjurer cache, a fresh cut reproduces
-//     the published piece byte for byte.
+//     mono card's rider, skipped by the owner's choice, would be the
+//     master's bytes either way. None of that needs a Card Conjurer file;
+//     with this machine's Card Conjurer cache (never in CI: those cases
+//     SKIP there) the cut is shown to BE the Flipside mask's interior eroded
+//     and snapped, a fresh cut reproduces every published piece byte for
+//     byte, and the un-snapped cut's 750 residual is shown real.
 // ---------------------------------------------------------------------------
 
 const manifest = manifestJson as { files: Record<string, { sha256: string; width: number; height: number; bytes: number }> };
@@ -509,6 +514,10 @@ describe("the published pieces (the frames bucket)", () => {
   if (missing && STRICT) throw new Error(`${missing} 5.1c pieces / masters missing from ${BUILD} (CI fetches them: frames-fetch.mjs)`);
   const run = missing ? it.skip : it;
   const cc = fs.existsSync(path.join(CC_CACHE, "img/frames/modal/regular/reminder.svg")) ? path.join(CC_CACHE, "img/frames/modal/regular/reminder.svg") : null;
+  /** Needs Card Conjurer's own mask beside the pieces: this machine's
+   *  importer cache — absent in CI, where these SKIP (the precedent:
+   *  dfc-crowns-pairs.test.ts's "with the Card Conjurer cache" case). */
+  const runCc = missing || !cc ? it.skip : it;
 
   it("the manifest lists every piece, PNG and WebP, at the box's size — 30 pieces; the provenance records each template's cut", () => {
     expect(pieces).toHaveLength(30);
@@ -526,21 +535,58 @@ describe("the published pieces (the frames bucket)", () => {
     }
   });
 
-  run("each piece is its source master's own tab: 0 px differ in colour, alpha 0 / 255, nothing outside the mask's eroded, block-snapped interior and nothing clear inside it — the base-tone identity for every key of every template", async () => {
-    expect(cc, "the Card Conjurer cache (the mask)").not.toBeNull();
-    const inside = stripRiderInterior(await maskAt(cc!, W, H), W, H, MDFC_STRIP_CUTS.m15mdfcfront);
-    const expectedOpaque = Array.from(inside).filter(Boolean).length;
-    // The mask's full-alpha tab is 53,828 px, eroded 52,490, snapped 51,208 — whole blocks.
-    expect(expectedOpaque).toBe(51_208);
-    expect(expectedOpaque % 4).toBe(0);
+  /** The cut every piece shares, with NO Card Conjurer file at hand (CI has
+   *  the bucket's PNGs, never the pack): the sha256 of the 658 × 90 alpha map
+   *  as bytes 0 / 1 — CC's Flipside mask's full-alpha interior eroded 1 px
+   *  and snapped to 2 × 2 blocks, x 48–699 × y 1868–1953 on the card. The
+   *  Card Conjurer test below derives the same map from the mask itself; a
+   *  new erosion, snap or mask changes both. */
+  const STRIP_CUT_SHA256 = "c852ad4571135858f3f85e48155c19ad63720c74adddcb3f9dea59a2adb91fa1";
+  const STRIP_CUT_OPAQUE = 51_208;
+  /** A piece's alpha as a 0 / 1 map; throws on a partial pixel. */
+  function alphaMap(piece: Img, label: string): Buffer {
+    const map = Buffer.alloc(piece.w * piece.h);
+    for (let i = 0; i < map.length; i += 1) {
+      const a = piece.data[i * 4 + 3];
+      if (a !== 0 && a !== 255) throw new Error(`${label}: a partial-alpha pixel (${a}) at ${i % piece.w},${Math.floor(i / piece.w)}`);
+      map[i] = a === 255 ? 1 : 0;
+    }
+    return map;
+  }
+
+  run("each piece is its source master's own tab: 0 px differ in colour, alpha 0 / 255, ONE cut for all thirty — 51,208 px in whole 2 × 2 blocks, its shape pinned — the base-tone identity for every key of every template (no Card Conjurer file needed)", async () => {
+    let shared: Buffer | null = null;
     for (const [t, k, file] of pieces) {
       const piece = await rgba(file!);
       expect([piece.w, piece.h], `${t}/strip/${k}`).toEqual([MDFC_STRIP_BOX.width, MDFC_STRIP_BOX.height]);
       const master = await rgba(onDisk(`${stripRiderSourceOf(t, k, MDFC_STRIP_CUTS[t])}.png`)!);
-      const findings = stripRiderFindings(piece.data, master.data, inside, W, H, MDFC_STRIP_BOX);
-      expect(findings.failures, `${t}/strip/${k}`).toEqual([]);
-      expect(findings.opaque, `${t}/strip/${k}`).toBe(expectedOpaque);
+      expect([master.w, master.h], `${t}/${k}`).toEqual([W, H]);
+      const map = alphaMap(piece, `${t}/strip/${k}`);
+      let colourOff = 0;
+      for (let y = 0; y < piece.h; y += 1) {
+        for (let x = 0; x < piece.w; x += 1) {
+          if (!map[y * piece.w + x]) continue;
+          const d = (y * piece.w + x) * 4;
+          const m = ((MDFC_STRIP_BOX.y + y) * W + MDFC_STRIP_BOX.x + x) * 4;
+          if (piece.data[d] !== master.data[m] || piece.data[d + 1] !== master.data[m + 1] || piece.data[d + 2] !== master.data[m + 2] || master.data[m + 3] !== 255) colourOff += 1;
+        }
+      }
+      expect(colourOff, `${t}/strip/${k}: px whose colour is not the master's`).toBe(0);
+      shared ??= map;
+      expect(Buffer.compare(map, shared), `${t}/strip/${k}: the same cut as every other piece`).toBe(0);
     }
+    const cut = shared!;
+    expect(cut.reduce((n, v) => n + v, 0)).toBe(STRIP_CUT_OPAQUE);
+    // Whole blocks of the HD grid (the box's origin is even): the 750 bake's
+    // 2:1 resample reads one block per pixel — never a partial pixel there.
+    const { width: bw, height: bh } = MDFC_STRIP_BOX;
+    for (let y = 0; y < bh; y += 2) {
+      for (let x = 0; x < bw; x += 2) {
+        const cells = cut[y * bw + x] + cut[y * bw + x + 1] + cut[(y + 1) * bw + x] + cut[(y + 1) * bw + x + 1];
+        if (cells !== 0 && cells !== 4) throw new Error(`the cut splits the 2 × 2 block at ${x},${y} (${cells} of 4 px)`);
+      }
+    }
+    expect(createHash("sha256").update(cut).digest("hex")).toBe(STRIP_CUT_SHA256);
     // The spell bodies' `l` is the land pair's grey c, byte for byte (CC's l.png / lb.png).
     const l = await rgba(onDisk("m15mdfcfront/strip/l.png")!);
     const c = await rgba(onDisk("m15mdfclandfront/strip/c.png")!);
@@ -550,14 +596,25 @@ describe("the published pieces (the frames bucket)", () => {
     expect(Buffer.compare(lb.data, cb.data), "m15mdfcback/strip/l = m15mdfclandback/strip/c").toBe(0);
   }, 300_000);
 
-  run("with the Card Conjurer cache, a fresh cut reproduces every published piece pixel for pixel", async () => {
-    expect(cc).not.toBeNull();
+  // The Card Conjurer pack is never in git and never in CI (only this
+  // machine's importer cache has it): these two run where the cache is, and
+  // SKIP elsewhere — the checks above hold the published pieces without it.
+  runCc("with the Card Conjurer cache: the pieces' cut IS the Flipside mask's full-alpha interior eroded 1 px and snapped to 2 × 2 blocks (the importer's findings clean), and a fresh cut reproduces every published piece pixel for pixel", async () => {
     const inside = stripRiderInterior(await maskAt(cc!, W, H), W, H, MDFC_STRIP_CUTS.m15mdfcfront);
+    // The mask's full-alpha tab is 53,828 px, eroded 52,490, snapped 51,208.
+    expect(Array.from(insideMaskEroded(await maskAt(cc!, W, H), W, H, 0)).filter(Boolean).length).toBe(53_828);
+    expect(Array.from(insideMaskEroded(await maskAt(cc!, W, H), W, H, MDFC_STRIP_ERODE_PX)).filter(Boolean).length).toBe(52_490);
+    expect(Array.from(inside).filter(Boolean).length).toBe(STRIP_CUT_OPAQUE);
+    const crop = Buffer.alloc(MDFC_STRIP_BOX.width * MDFC_STRIP_BOX.height);
+    for (let y = 0; y < MDFC_STRIP_BOX.height; y += 1) for (let x = 0; x < MDFC_STRIP_BOX.width; x += 1) crop[y * MDFC_STRIP_BOX.width + x] = inside[(MDFC_STRIP_BOX.y + y) * W + MDFC_STRIP_BOX.x + x];
+    expect(createHash("sha256").update(crop).digest("hex"), "the pinned shape is the importer's interior").toBe(STRIP_CUT_SHA256);
     for (const [t, k, file] of pieces) {
       const master = await rgba(onDisk(`${stripRiderSourceOf(t, k, MDFC_STRIP_CUTS[t])}.png`)!);
-      const fresh = cutStripRider(master.data, inside, W, MDFC_STRIP_BOX);
       const published = await rgba(file!);
-      expect(Buffer.compare(fresh, published.data), `${t}/strip/${k}`).toBe(0);
+      const findings = stripRiderFindings(published.data, master.data, inside, W, H, MDFC_STRIP_BOX);
+      expect(findings.failures, `${t}/strip/${k}`).toEqual([]);
+      expect(findings.opaque, `${t}/strip/${k}`).toBe(STRIP_CUT_OPAQUE);
+      expect(Buffer.compare(cutStripRider(master.data, inside, W, MDFC_STRIP_BOX), published.data), `${t}/strip/${k}: a fresh cut`).toBe(0);
     }
   }, 300_000);
 
@@ -587,8 +644,9 @@ describe("the published pieces (the frames bucket)", () => {
     }
     return { px, max };
   }
-  run("a piece drawn over its own master through the bake's rasteriser changes 0 px at HD AND at the 750 bake on every key (the block snap); the un-snapped eroded cut would not at 750", async () => {
+  run("a piece drawn over its own master through the bake's rasteriser changes 0 px at HD AND at the 750 bake on every key (the block snap) — and another key's piece over it changes the whole tab", async () => {
     const own = pieces.filter(([t, k]) => MDFC_STRIP_CUTS[t].keys.includes(k));
+    expect(own).toHaveLength(28);
     for (const [t, k, file] of own) {
       const masterPng = fs.readFileSync(onDisk(`${t}/${k}.png`)!);
       const piecePng = fs.readFileSync(file!);
@@ -597,16 +655,41 @@ describe("the published pieces (the frames bucket)", () => {
       expect(differ(await raster(W, H, [master]), await raster(W, H, [master, rider])), `${t}/strip/${k} at HD`).toEqual({ px: 0, max: 0 });
       expect(differ(await raster(750, 1050, [master]), await raster(750, 1050, [master, rider])), `${t}/strip/${k} at 750`).toEqual({ px: 0, max: 0 });
     }
-    // Not vacuous: the same cut WITHOUT the snap (the eroded interior alone)
-    // leaves the 2:1 resample a partial pixel on the chevron's diagonals.
-    const [t, k] = own[0];
-    const masterRaw = await rgba(onDisk(`${t}/${k}.png`)!);
-    const eroded = insideMaskEroded(await maskAt(cc!, W, H), W, H, MDFC_STRIP_ERODE_PX);
-    const unsnapped = await sharp(cutStripRider(masterRaw.data, eroded, W, MDFC_STRIP_BOX), { raw: { width: MDFC_STRIP_BOX.width, height: MDFC_STRIP_BOX.height, channels: 4 } }).png().toBuffer();
-    const master = { x: 0, y: 0, w: W, h: H, png: fs.readFileSync(onDisk(`${t}/${k}.png`)!) };
-    const rider = { x: MDFC_STRIP_BOX.x, y: MDFC_STRIP_BOX.y, w: MDFC_STRIP_BOX.width, h: MDFC_STRIP_BOX.height, png: unsnapped };
-    const low = differ(await raster(750, 1050, [master]), await raster(750, 1050, [master, rider]));
-    expect(low.px).toBeGreaterThan(0);
-    expect(low.px).toBeLessThanOrEqual(8);
+    // The comparison is not blind: the blue piece over the white master
+    // repaints the tab's fill at both sizes — and nothing outside the box.
+    const master = { x: 0, y: 0, w: W, h: H, png: fs.readFileSync(onDisk("m15mdfcfront/w.png")!) };
+    const blue = { x: MDFC_STRIP_BOX.x, y: MDFC_STRIP_BOX.y, w: MDFC_STRIP_BOX.width, h: MDFC_STRIP_BOX.height, png: fs.readFileSync(onDisk("m15mdfcfront/strip/u.png")!) };
+    for (const [w, h, s] of [[W, H, 1], [750, 1050, 0.5]] as const) {
+      const bare = await raster(w, h, [master]);
+      const ridden = await raster(w, h, [master, blue]);
+      const d = differ(bare, ridden);
+      expect(d.px, `u over w at ${w}`).toBeGreaterThan(40_000 * s * s);
+      expect(d.px, `u over w at ${w}`).toBeLessThanOrEqual(STRIP_CUT_OPAQUE * s * s);
+      let outside = 0;
+      const [x0, y0, x1, y1] = [MDFC_STRIP_BOX.x * s, MDFC_STRIP_BOX.y * s, (MDFC_STRIP_BOX.x + MDFC_STRIP_BOX.width) * s, (MDFC_STRIP_BOX.y + MDFC_STRIP_BOX.height) * s];
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          if (x >= x0 && x < x1 && y >= y0 && y < y1) continue;
+          const o = (y * w + x) * 4;
+          if (bare.data[o] !== ridden.data[o] || bare.data[o + 1] !== ridden.data[o + 1] || bare.data[o + 2] !== ridden.data[o + 2] || bare.data[o + 3] !== ridden.data[o + 3]) outside += 1;
+        }
+      }
+      expect(outside, `u over w at ${w}: px changed outside the piece's box`).toBe(0);
+    }
   }, 600_000);
+
+  runCc("with the Card Conjurer cache: the same cut WITHOUT the snap (the eroded interior alone) leaves the 750 bake a residual on the chevron's diagonals — the snap is what makes it 0", async () => {
+    const eroded = insideMaskEroded(await maskAt(cc!, W, H), W, H, MDFC_STRIP_ERODE_PX);
+    for (const [t, k] of [["m15mdfcfront", "w"], ["m15mdfclandfront", "w"]] as const) {
+      const masterRaw = await rgba(onDisk(`${t}/${k}.png`)!);
+      const unsnapped = await sharp(cutStripRider(masterRaw.data, eroded, W, MDFC_STRIP_BOX), { raw: { width: MDFC_STRIP_BOX.width, height: MDFC_STRIP_BOX.height, channels: 4 } }).png().toBuffer();
+      const master = { x: 0, y: 0, w: W, h: H, png: fs.readFileSync(onDisk(`${t}/${k}.png`)!) };
+      const rider = { x: MDFC_STRIP_BOX.x, y: MDFC_STRIP_BOX.y, w: MDFC_STRIP_BOX.width, h: MDFC_STRIP_BOX.height, png: unsnapped };
+      expect(differ(await raster(W, H, [master]), await raster(W, H, [master, rider])), `${t}/${k} un-snapped at HD`).toEqual({ px: 0, max: 0 });
+      const low = differ(await raster(750, 1050, [master]), await raster(750, 1050, [master, rider]));
+      expect(low.px, `${t}/${k} un-snapped at 750`).toBeGreaterThan(0);
+      expect(low.px, `${t}/${k} un-snapped at 750`).toBeLessThanOrEqual(8);
+      expect(low.max, `${t}/${k} un-snapped at 750`).toBeLessThanOrEqual(8);
+    }
+  }, 300_000);
 });
