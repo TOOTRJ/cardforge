@@ -379,7 +379,9 @@ Rules and gotchas:
   `lib/cards/plate-ink.ts` — a new or replaced plate needs
   `scripts/measure-plate-ink.mjs` + the test's `MEASURED_ON`), judged glyph
   by glyph. Walkers ≤ `walkerSizePct`, row anatomy at `LOYALTY_ROW_SIZE_PX`;
-  saga keeps v32's geometry (TODO 4.21).
+  the saga's rail (4.21c) is `lib/cards/saga-rail.ts` — the reminder block,
+  rows sized by the walkers' `contentRowsAt` (never shorter than their badge
+  stack), badges and dividers as frame pieces under the finishes.
   `tests/unit/render/rules-no-clip.test.tsx` holds real bakes to the layout.
 - Tokens (layout v34, TODO 4.49 + 3b.15): a token's card types are WORDS in
   `supertype` (Creature / Artifact / Enchantment / Legendary, printed order,

@@ -91,10 +91,10 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 Where every frame came from, and the rules that follow from it:
 
 - **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha,
-  1997 and 2003 eras, saga, split, battle, the showcase families, the
+  1997 and 2003 eras, split, battle, the showcase families, the
   variation treatments, the textless and expedition frames, and the
   planeswalker loyalty badges; adventure, flip and aftermath left for Card
-  Conjurer's masters with TODO 4.21a) are converted from Magic Set
+  Conjurer's masters with TODO 4.21a, saga with 4.21c) are converted from Magic Set
   Editor's Full-Magic-Pack styles by the builders under `scripts/`
   (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
   `build-showcase-frames.mjs`, `build-variation-frames.mjs`, …). The pack
@@ -127,7 +127,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 38 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -181,6 +181,17 @@ into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
   [The portrait layouts](#the-portrait-layouts-layout-v38). Their slots are
   the packs' own (packFlip.js, packAdventure.js, packAftermath.js) and the
   masters are copied 1:1 at their native 1500×2100;
+- the saga (4.21c): `saga` from the saga 'Regular Frames' pack — w u b r g
+  m are the pack's `sagaFrame<K>`, `c` its 'Land Frame' (the only printed
+  colourless saga is a land, MH2 #259 Urza's Saga), copied 1:1 at their
+  native 1500×2100 with the chapter ribbon in the master. Two more things a
+  recipe can carry ship with it: `pieces` — a pack's own bitmaps published
+  beside the masters at native size (the rail's `saga/chapter/badge.png`,
+  118 × 132, and `saga/chapter/divider.png`, 592 × 9, which both renderers
+  draw) — and `maskInputs`, pack masks RECORDED for a later recipe (the
+  two-colour saga's pair masters, 4.6f): fetched into the cache, listed in
+  provenance, never written to the build folder or the bucket — see
+  [The saga (4.21c)](#the-saga-421c);
 - the transform bodies (5.1a) from the 'Transform' packs: m15dfcfront
   ('Transform (Front)'), m15dfcback ('Transform (Back) (New)', the ▼ at the
   right) and m15dfcbackleft ('Transform (Back)', the empty left well) in
@@ -387,12 +398,12 @@ bake's transparent corner mask and the frame masters all read it.
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
   `scripts/lib/frame-corners.mjs`: retro, retroland, modern, modernland,
-  saga, extendedart, fullart, m15textless, m15textlessland, alphatoken, and
+  extendedart, fullart, m15textless, m15textlessland, alphatoken, and
   expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
   adventure — its 1–2 px grey paper rim just inside the arc, added
-  2026-09-28 — flip and aftermath left the list with 4.21a, their Card
-  Conjurer masters cut by the importer), never on a showcase family
-  (`NEVER_NORMALISE`):
+  2026-09-28 — flip and aftermath left the list with 4.21a and saga with
+  4.21c, their Card Conjurer masters cut by the importer), never on a
+  showcase family (`NEVER_NORMALISE`):
   Bloomburrow, LOTR and Tarkir draconic keep their drawn top corners in
   square outputs and print (owner, 2026-09-28). The paint is the border AS
   IT RUNS BESIDE THE CORNER: the edge band's colour at the same depth inside
@@ -1223,6 +1234,140 @@ production (0 cards on either template, anonymous read 2026-10-02). Masks
 stay importer inputs, never published: adventure's shaped book masks and
 aftermath's rectangles (cut at y 1139, 54.24 %H) are 4.26's; the flip
 plates' half masks are the card's halves.
+
+### The saga (4.21c)
+
+TODO 4.21c = 3.7 (the third of 4.21's PRs; design 2026-09-29, owner
+decisions 2026-09-29; its layout bump is `SAGA_RAIL_LAYOUT_VERSION` in
+`lib/cards/layout-version.ts`). The saga leaves its 375 px MSE cut in git
+for Card Conjurer's saga 'Regular Frames' pack in the bucket
+(`CC_TEMPLATES.saga`, native 1500×2100, copied 1:1 and cut at the one
+corner) and takes the printed anatomy: the chapter ribbon in the master,
+the rail on the profile. A CORRECTION — the frame was verified and in use.
+Against the prints (Scryfall PNGs at 1500 × 2100; the rail measured on 54
+of them, DOM → MH3):
+
+- **Masters.** w u b r g m are the pack's `sagaFrame<K>`; `c` is its 'Land
+  Frame' (owner 2026-09-29: the only printed colourless saga is a land, MH2
+  #259 Urza's Saga — a colourless non-land saga wears it too). The window
+  is 752–1384 × 237–1758 px on every key and the art slot is that + 0.1 %
+  (50.03/11.19/42.4 × 72.68; the MSE slot started 26 px left of the
+  prints'). The title bar, the type bar, the window and the rail's outline
+  register with DOM #21 / #42 / #90 / #122 / #173 and MH2 #259 within the
+  scans' own tolerance (1.5 px on most lines, 3.5 px on all), and the
+  ribbon within 0.4 px of the prints' horizontally (the median of each
+  print's row bands): no re-cut.
+- **The bars.** The cost discs at the CC-framed M15 height
+  (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px) in a title
+  band that ends at 92.2 %W (the last disc ends at 1383–1386 px on the
+  prints; ours ended at 1365 and sat 12 px lower). The type line on the
+  prints' baseline, 1855.3 px (1854–1857 on the five DOM references; ours
+  was 1846 — `TextSlot.dy` +9.3 px), from 8.5 %W. The set symbol in the
+  pack's box: its right edge at 92.27 %W and its centre on 87.39 %H (the
+  prints' 1380–1384 and 1835–1836.5 px; ours ended at 1360, centred 1827).
+- **The rail** is ONE layout, `lib/cards/saga-rail.ts` (`sagaRail` →
+  `sagaRailDrawing(rail, target)`), in whole px per bake target, and both
+  renderers only draw it (`ChapterBake` / `ChapterRail`, `RulesBoxBake` /
+  `RulesBox` for every text block). The frame's numbers are on the profile
+  (`FrameProfile.chapters`):
+  - *The reminder block* (`chapters.intro`): its own fixed box above the
+    first divider, 132–736 × 237–597 px, 62 px on a 62 px pitch — the
+    standard four-line reminder then sits on the prints' baselines (341 /
+    403 / 465 / 527 px). The prints set it at the chapters' 64 px in an
+    italic narrower than our MPlantin italic; at 62 px ours breaks into
+    their four lines. A longer reminder steps down the rules ladder INSIDE
+    the box and never pushes the rows; past the 42 px floor it clips from
+    its tail, like every rules box (about 270 characters; the editor takes
+    400). Its emphasis is the text's own — a parenthesised reminder italic,
+    a keyword before it roman (DMU #85's "Read ahead (…)") — where v33 set
+    the whole block italic.
+  - *Where the rows start*: the first divider, 621 px (`rowsTopPct`; 619–621
+    on 50 of the 54 prints, mean 620.1 — the pack draws 608), or the rail's
+    own top at 237 px when the saga has NO reminder (owner 2026-09-29: no
+    empty reminder band, no generated reminder — every stored production
+    saga). Chapter I's badge then sits beside the frame's fold, above where
+    the ribbon starts.
+  - *The text*: the column 203–728 px (`chapters.rect`; the prints' ink
+    starts at 204–206), 64 px at the top of the rules ladder on a 62 px
+    pitch (v33 drew 43.5 px); a line break typed inside a chapter is a
+    paragraph, as in every other rules box (v33 joined a chapter into one).
+  - *The rows* are sized by their content with the walker rows' arithmetic
+    (`contentRowsAt` in `lib/cards/loyalty-rows.ts`, fed a `RowAnatomy`: the
+    walker's badge rail and one-badge minimum, or the saga's column and
+    stack minimum): a row's natural height is its text block + 14 px above
+    and below, or its stack of chapter badges, whichever is taller; the
+    text is ONE size for the whole rail, the largest ladder step at which
+    every row fits at both bake targets; what the rail has left is shared
+    equally. (The prints set their rows by hand — DOM #21 gives chapter III
+    more room than the I / II row above it — so a row's edges are ours, not
+    a print's; of the simple rules, the equal share was the closest over 37
+    prints.) Past the floor the rows are scaled alike into the rail and a
+    row that cannot hold its text sets it from its top.
+  - *The badges*: the pack's gold hexagon (`saga/chapter/badge.png`,
+    118 × 132 px from x 58; the prints' reads 119–120 × 130–132, centred on
+    x 117), one per chapter numeral, stacked down the ribbon. A stack's
+    pitch is 160 px on DOM, THB, KHM, 40K, WOE and PIP (DOM #21 159.8) and
+    134–142 px on LTR, LTC, WHO and MH3 (LTC #58 138.3 / 138.6) — by set,
+    whatever room the row has: ours is the roomiest even step from 160 down
+    to 138 at which the rows fit at the text's size
+    (`SAGA_BADGE_PITCH_PX`), and the text steps down only once the stacks
+    are at 138. A stack is centred in its row and lifted 0.17 em onto the
+    text's leading, never out of the row. Up to six badges stack in ONE row
+    (`SAGA_RAIL.maxStack`), as the prints do (LTR #174 six, WHO #99 five,
+    WHO #86 four — the design's "four or more → the combined marker" took
+    those for unprinted).
+  - *The combined marker*: stacks that could never fit (repeated numerals:
+    validation lets several rows name the same chapter) turn every
+    multi-badge row into ONE badge with a combined label ("I–III", or
+    "I,III,V" when the numerals are not a run), its size fitted to the
+    badge; a legacy marker past VI is fitted the same way.
+  - *Numerals and dividers*: the numerals are MPlantin at 72 px, their
+    capitals centred on the badge (the prints set a bolder Plantin semibold
+    — TODO 4.8). The pack's divider (`saga/chapter/divider.png`, 592 × 9,
+    drawn 6 px tall from x 150) lies on every row's top edge but the first
+    row of a saga with no reminder.
+- **Pieces, not ink.** The badges and dividers are frame pieces: both
+  renderers draw them right after the frame, under both finish sheens and
+  in their masks (`sagaRailPieces`, with the profile's overlays), and
+  `frameAssetPathsFor` preloads them (`sagaRailAssetPaths`). The numerals
+  and the text stay above the sheens.
+- **Masks.** The pack's nine masks (Pinline, Title, Type, Frame, Banner,
+  Banner (Right), Text, Text (Right), Border) are recorded on the recipe as
+  `maskInputs` for the two-colour saga's pair masters (4.6f) and are never
+  published.
+- **What it does not do**: flavour text (no printed saga has any — a typed
+  one is not drawn, as on main); a saga creature's P/T (4.5d); the crown and
+  the pairs (4.6f); the holofoil stamp (4.9d); DMU's read-ahead frame, whose
+  reminder box is 97 px taller (chapters from 717 px) — a read-ahead
+  reminder steps down inside the regular box instead; NEO's transforming
+  sagas (5.5).
+
+The saga left Phase B's allow-list, `ART_WINDOW_KNOWN_FAILURES` and
+`import-mse-profiles.mjs` (its masters pass the edge contract, the corner
+check and the art-window check in the importer and in CI). **Rollout:** a
+template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[SAGA_RAIL_LAYOUT_VERSION]`
+= `saga`: every card on it, art or none), never a badge. Production,
+anonymous read 2026-10-06: 4 public sagas, one owner, none with a reminder
+(3 gold, 1 blue; unlisted and private ones: owner SQL) — the automatic
+sweep re-bakes the public and unlisted ones after the deploy, on the
+owner's before/after sheet (round 34); a private saga and a preview
+re-bake on their next save. NOT verification-neutral — the masters, the art
+slot, the type line and the whole rail move: production's seven saga ticks
+are judged by the bump's scope, so each stays offered in the creator
+(`getVerifiedFrameKeys` reads `verified` alone) and is flagged "needs
+re-verification" on the checklist until the owner ticks it again against
+its reference. **References** (`lib/cards/frame-references.json`): w u b r
+g keep their DOM defaults; gold is 40K #126 The Horus Heresy with LTC #58
+In the Darkness Bind Them (three-colour prints on the plain gold frame; NEO
+The Kami War is a transforming saga with an enchantment frame effect, and
+KHM's two-colour sagas wait for 4.6f's pair masters); colourless is MH2
+#259 alone; no FIN Summon and no DMU read-ahead saga is listed. The walker
+rows moved onto the shared arithmetic unchanged:
+`tests/unit/cards/loyalty-rows-pinned.test.ts` holds every size, row, line
+and foil stripe of 24 layouts on the three walker bodies to what layout
+v41 computed, and `tests/unit/render/pw-rows-pinned-bake.test.tsx` 28
+m15pw bakes (750 and HD, regular and foil) to the pixels main baked.
+Sheets: scratchpad `c421c/sheets/`.
 
 ### Printed pieces a card switches on
 
@@ -3625,9 +3770,12 @@ adventure page, the flip / split / aftermath second faces — is laid out by
 ONE pure module, `lib/cards/rules-layout.ts`, fed by `lib/cards/rules-box.ts`,
 and both renderers draw its lines (`RulesBox` in the preview, `RulesBoxBake`
 in the bake); neither wraps text itself. The planeswalker ability rows
-(`lib/cards/loyalty-rows.ts`) and the saga rail's text
-(`lib/cards/saga-rail.ts`) are broken by the same module and drawn by
-`RulesLines` / `RulesLinesBake`.
+(`lib/cards/loyalty-rows.ts`, drawn by `RulesLines` / `RulesLinesBake`) and
+the saga rail (`lib/cards/saga-rail.ts`: its reminder block and each
+chapter are rules layouts in their own boxes, drawn by the same
+`RulesBox` / `RulesBoxBake`) are broken by the same module; the rows of
+both are sized by one arithmetic (`contentRowsAt` in `loyalty-rows.ts` —
+[The saga (4.21c)](#the-saga-421c)).
 
 How rules text is sized and set:
 
