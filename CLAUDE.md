@@ -216,9 +216,15 @@ Rules and gotchas:
   strip's two TEXTS from that same block (`FrameProfile.flipside`,
   `lib/cards/flipside-strip.ts`: the other face's LAST type word + its cost
   or mana line, white on a front, dark on a back) — the housing, the ◀ and
-  the strip are in the masters, painted in the master's OWN colour (a
-  two-colour card's print paints it in the other face's: an owner question,
-  never a master "fix"); the painted strip is a rules keep-out
+  the strip are in the masters, painted in the master's OWN colour, and
+  since 5.1c a two-colour card's strip takes the OTHER face's colour as
+  the prints do, through the `mdfcStrip` overlay (`<template>/strip/<key>`:
+  the masters' own tabs cut through CC's Flipside mask, keyed by
+  `dfc.otherFace.stripKey` — `lib/cards/faces.ts` `stripKeyOf`: a letter,
+  gold `m` for a two-colour spell, the land grey `l` for a two-colour land
+  or a hybrid-dressed front — and drawn only when it differs from the
+  master's own: a mono-colour card's bake is the master's bytes; never a
+  master "fix"); the painted strip is a rules keep-out
   (`FlipsideSlots.keepOut` → `DrawnStats.strip`), and the transform
   front's reverse P/T digits are a rules FLOAT (`DrawnStats.reversePt` →
   `RulesLayoutInput.floats`, `endAlignedStatKeepOut`): the lines whose

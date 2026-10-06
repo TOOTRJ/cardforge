@@ -59,6 +59,7 @@ import {
   toRgba8,
   toneRegion,
   toneSilver,
+  stripRiderKeys,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
@@ -98,6 +99,7 @@ type Def = {
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
   shield?: { mask: string; box: typeof SHIELD_BOX };
+  strip?: { mask: string; box: { x: number; y: number; width: number; height: number }; erode: number; keys: readonly string[]; extra?: Record<string, string> };
   ptCut?: {
     image: Record<string, string>;
     bounds: typeof FLIP_PT_BOUNDS;
@@ -1791,6 +1793,8 @@ describe("published to the frames bucket", () => {
     for (const k of Object.keys(def.plates ?? {})) out.push([`${template}/pt/${k}.png`, ...plateSize]);
     for (const k of Object.keys(def.symbols ?? {})) out.push([`${template}/symbol/${k}.png`, 168, 168]);
     if (def.shield) for (const k of builtColors(def as never)) out.push([`${template}/loyalty/${k}.png`, def.shield.box.width, def.shield.box.height]);
+    // The modal strip riders (TODO 5.1c): the template's own keys and its extras, at the piece's box.
+    if (def.strip) for (const k of stripRiderKeys(def.strip)) out.push([`${template}/strip/${k}.png`, def.strip.box.width, def.strip.box.height]);
     return out;
   };
 

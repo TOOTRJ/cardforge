@@ -5179,8 +5179,67 @@
       "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
       "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 12–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched; the KHM scans read 5–13 lighter than STX's on every key (u KHM #40 242 vs STX #147 220, r KHM #123 237 vs STX #159 230, g KHM #181 234 vs STX #151 229, b KHM #112 219 vs STX #148 223): the fitted targets sit on STX, with b on both",
       "the legendary crown (TODO 5.1d): the m15mdfccrown overlay, as on the front; the two-colour PAIR masters (5.1d): the prints split a two-colour modal BACK's rings and box over the gold bars (STX #149's B|R back, MSH #18 / #219 / #23 / #49 / #80's crowned gold-barred pair backs), so the split recipe over this pack's back files: mb.png whole, the box and the pinline lerped from the two colour backs, the gold bars and strip at m's gains and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
-      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
-    ]
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face",
+      "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress"
+    ],
+    "strip": {
+      "mask": "img/frames/modal/regular/reminder.svg",
+      "box": {
+        "x": 44,
+        "y": 1866,
+        "width": 658,
+        "height": 90
+      },
+      "erodePx": 1,
+      "snapPx": 2,
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m",
+        "a",
+        "l"
+      ],
+      "sources": {
+        "w": "m15mdfcback/w.png",
+        "u": "m15mdfcback/u.png",
+        "b": "m15mdfcback/b.png",
+        "r": "m15mdfcback/r.png",
+        "g": "m15mdfcback/g.png",
+        "m": "m15mdfcback/m.png",
+        "a": "m15mdfcback/a.png",
+        "l": "m15mdfclandback/c.png"
+      },
+      "output": "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      "colors": {
+        "w": [
+          "m15mdfcback/w.png (the published master, sha256 b7719dd5078d) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "u": [
+          "m15mdfcback/u.png (the published master, sha256 614d4ac5ee3a) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "b": [
+          "m15mdfcback/b.png (the published master, sha256 920c5fdef966) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "r": [
+          "m15mdfcback/r.png (the published master, sha256 98edbac641a6) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "g": [
+          "m15mdfcback/g.png (the published master, sha256 da8ce5890100) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "m": [
+          "m15mdfcback/m.png (the published master, sha256 457d534614bb) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "a": [
+          "m15mdfcback/a.png (the published master, sha256 eb33a3423f62) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "l": [
+          "m15mdfclandback/c.png (the published master, sha256 38e5fdb6e49a) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ]
+      }
+    }
   },
   "m15mdfccrown": {
     "source": "cardconjurer",
@@ -5475,8 +5534,67 @@
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
       "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it (TODO 5.1c); on a pair master the gold m.png's strip (split) or the two colour fronts' strips lerped across the frame ramp (hybrid)",
       "the legendary crown (TODO 5.1d): the m15mdfccrown overlay (our m15crown band cut through CC's modal crown twin's alpha around the housing); the two-colour PAIR masters (5.1d / 5.12): 4.6b's recipe over this pack's files and masks — the split dress m.png whole with the box and the pinline lerped from the two colour fronts (STX #149 Extus W|B, MSH #219 King T'Challa W|U print it), the hybrid dress the two fronts lerped across the frame ramp under CC's grey Land frame's bars (l.png through the Title and Type masks: the housing's fill is the Title mask's) with the split box and pinline (MH3 #252–261's ten hybrid fronts print it; the grey plate pt/c)",
-      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face"
-    ]
+      "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face",
+      "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress"
+    ],
+    "strip": {
+      "mask": "img/frames/modal/regular/reminder.svg",
+      "box": {
+        "x": 44,
+        "y": 1866,
+        "width": 658,
+        "height": 90
+      },
+      "erodePx": 1,
+      "snapPx": 2,
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m",
+        "a",
+        "l"
+      ],
+      "sources": {
+        "w": "m15mdfcfront/w.png",
+        "u": "m15mdfcfront/u.png",
+        "b": "m15mdfcfront/b.png",
+        "r": "m15mdfcfront/r.png",
+        "g": "m15mdfcfront/g.png",
+        "m": "m15mdfcfront/m.png",
+        "a": "m15mdfcfront/a.png",
+        "l": "m15mdfclandfront/c.png"
+      },
+      "output": "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      "colors": {
+        "w": [
+          "m15mdfcfront/w.png (the published master, sha256 6674303e036a) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "u": [
+          "m15mdfcfront/u.png (the published master, sha256 2f32e057e9ec) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "b": [
+          "m15mdfcfront/b.png (the published master, sha256 41a0abdd6da7) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "r": [
+          "m15mdfcfront/r.png (the published master, sha256 1316b8491ceb) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "g": [
+          "m15mdfcfront/g.png (the published master, sha256 c65d083637a9) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "m": [
+          "m15mdfcfront/m.png (the published master, sha256 854bbfb45953) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "a": [
+          "m15mdfcfront/a.png (the published master, sha256 331c39adb9cd) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "l": [
+          "m15mdfclandfront/c.png (the published master, sha256 791f69b652c1) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ]
+      }
+    }
   },
   "m15mdfclandback": {
     "source": "cardconjurer",
@@ -5760,8 +5878,62 @@
     "notes": [
       "a PipGlyph recipe (no CC coloured modal land exists; design frames.md §4.4): the colour's modal back with its frame body replaced through the pack's own masks by the 2015 coloured land tint (m15/new/l<k>.png — the m15land masters' file, the same Lanczos downscale) — the land backs print the stone land body under the colour's dark bars and housing, the modal back's light box (ZNR #12 / #90 / #134 / #189: a neutral light box; MH3 #241 a bluer one) and light strip; the housing, its ring, the pinline and the strip are the modal master's pixels",
       "keys w u b r g from the five land tints, m the gold land tint under the gold modal pieces (a stand-in: no gold modal land was printed), c = CC's grey land modal (l.png / lb.png) as it is (a stand-in: no colourless modal land was printed) — c and m are never offered (no reference)",
-      "no cost (hideCost) and no P/T (a land face prints none)"
-    ]
+      "no cost (hideCost) and no P/T (a land face prints none)",
+      "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress"
+    ],
+    "strip": {
+      "mask": "img/frames/modal/regular/reminder.svg",
+      "box": {
+        "x": 44,
+        "y": 1866,
+        "width": 658,
+        "height": 90
+      },
+      "erodePx": 1,
+      "snapPx": 2,
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m",
+        "c"
+      ],
+      "sources": {
+        "w": "m15mdfclandback/w.png",
+        "u": "m15mdfclandback/u.png",
+        "b": "m15mdfclandback/b.png",
+        "r": "m15mdfclandback/r.png",
+        "g": "m15mdfclandback/g.png",
+        "m": "m15mdfclandback/m.png",
+        "c": "m15mdfclandback/c.png"
+      },
+      "output": "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      "colors": {
+        "w": [
+          "m15mdfclandback/w.png (the published master, sha256 bdf93ec34dc2) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "u": [
+          "m15mdfclandback/u.png (the published master, sha256 3b18bb998444) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "b": [
+          "m15mdfclandback/b.png (the published master, sha256 d8d3406ebb38) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "r": [
+          "m15mdfclandback/r.png (the published master, sha256 ec566ba072c8) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "g": [
+          "m15mdfclandback/g.png (the published master, sha256 11bb07813612) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "m": [
+          "m15mdfclandback/m.png (the published master, sha256 bd67933b7414) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "c": [
+          "m15mdfclandback/c.png (the published master, sha256 38e5fdb6e49a) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ]
+      }
+    }
   },
   "m15mdfclandfront": {
     "source": "cardconjurer",
@@ -5826,8 +5998,62 @@
     "notes": [
       "a PipGlyph recipe (no CC coloured modal land exists; design frames.md §4.4): the colour's modal front with its frame body and text box replaced through the pack's own masks by the 2015 coloured land tint (m15/new/l<k>.png — the m15land masters' file, the same Lanczos downscale) — the pathways print the stone land body, the colour's pinline, the land tint's box and the modal housing and strip (ZNR #258–261, KHM #252); the housing, its ring, the pinline and the strip are the modal master's pixels",
       "keys w u b r g from the five land tints, m the gold land tint under the gold modal pieces (a stand-in: no gold modal land was printed), c = CC's grey land modal (l.png / lb.png) as it is (a stand-in: no colourless modal land was printed) — c and m are never offered (no reference)",
-      "no cost (hideCost) and no P/T (a land face prints none)"
-    ]
+      "no cost (hideCost) and no P/T (a land face prints none)",
+      "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress"
+    ],
+    "strip": {
+      "mask": "img/frames/modal/regular/reminder.svg",
+      "box": {
+        "x": 44,
+        "y": 1866,
+        "width": 658,
+        "height": 90
+      },
+      "erodePx": 1,
+      "snapPx": 2,
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m",
+        "c"
+      ],
+      "sources": {
+        "w": "m15mdfclandfront/w.png",
+        "u": "m15mdfclandfront/u.png",
+        "b": "m15mdfclandfront/b.png",
+        "r": "m15mdfclandfront/r.png",
+        "g": "m15mdfclandfront/g.png",
+        "m": "m15mdfclandfront/m.png",
+        "c": "m15mdfclandfront/c.png"
+      },
+      "output": "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      "colors": {
+        "w": [
+          "m15mdfclandfront/w.png (the published master, sha256 64b0fb802cd8) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "u": [
+          "m15mdfclandfront/u.png (the published master, sha256 2e1246448f32) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "b": [
+          "m15mdfclandfront/b.png (the published master, sha256 82959daa9b47) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "r": [
+          "m15mdfclandfront/r.png (the published master, sha256 9ec05cb013e7) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "g": [
+          "m15mdfclandfront/g.png (the published master, sha256 f765c23898ba) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "m": [
+          "m15mdfclandfront/m.png (the published master, sha256 ffe82a478428) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ],
+        "c": [
+          "m15mdfclandfront/c.png (the published master, sha256 791f69b652c1) cut at x 44–701 × y 1866–1955 through the full-alpha interior of img/frames/modal/regular/reminder.svg eroded by 1 px and snapped to 2 × 2 px blocks of the HD grid (the tab's own colour, alpha 255 inside the cut, 0 outside — never a partial pixel, and none at the 750 bake either)"
+        ]
+      }
+    }
   },
   "m15pw": {
     "source": "cardconjurer",

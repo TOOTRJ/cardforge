@@ -820,8 +820,9 @@ function CardFace({
     cost: face.cost,
     cardType: face.cardType,
     supertype: face.supertype,
-    // The icon rider's family and this face's role (TODO 5.1a).
-    dfc: dfc ? { role: dfc.role, icon: dfc.icon } : null,
+    // The icon rider's family and this face's role (TODO 5.1a); the modal
+    // strip rider's key, the other face's (TODO 5.1c).
+    dfc: dfc ? { role: dfc.role, icon: dfc.icon, stripKey: dfc.otherFace.stripKey } : null,
     // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
     rarity,
   };

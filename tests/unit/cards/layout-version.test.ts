@@ -1729,3 +1729,68 @@ describe("v40 — the modal backs' flipside strip toned onto the prints (TODO 5.
     expect(getFrameProfile("m15mdfcback").flipside?.keepOut).toEqual({ leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 });
   });
 });
+
+describe("v41 — the modal flipside strip rider (TODO 5.1c)", () => {
+  const png = "https://x/y.png";
+  /** A v40 bake: only v41 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 40,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V41 = { current: 41 } as const;
+  /** The four modal faces: the rider is declared on them alone. */
+  const FACES = ["m15mdfcback", "m15mdfcfront", "m15mdfclandback", "m15mdfclandfront"];
+
+  it("is a sweep, never a badge, scoped to the four modal faces — frozen as a literal; every other v40 card stamps", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(41);
+    expect(lv.VERSION_ROLLOUT[41]).toBe("sweep");
+    expect(lv.rolloutPolicy(41)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 41)).toBe(41);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.V41_TEMPLATES].sort()).toEqual(FACES);
+    expect(lv.VERSION_SCOPES[41]).toBeUndefined();
+    for (const t of ALL) expect(isRenderStale(40, t, undefined, 41), t).toBe(FACES.includes(t));
+    const { hasNewerLook, hasPendingCorrection } = lv;
+    const classifyForSweep = await sweepAt(41);
+    for (const t of ALL) {
+      const face = FACES.includes(t);
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(face ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row, AT_V41), t).toBe(face);
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V41), t).toBe(false);
+    }
+    expect(classifyForSweep(at("m15mdfcfront", { layout_version: 41 }))).toBe("current");
+  });
+
+  it("is NOT verification-neutral: every one of the four faces has references whose compare render gains the rider (the spell backs' STX cards, the land fronts' pathways, the front's MH3 `m`, the land back's pathway alternates), so a tick made on a modal face before v41 is kept but stale; every other template's stays fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    const { verificationState } = await import("@/lib/cards/frame-verification-state");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(41);
+    expect([...VERIFICATION_SCOPED_VERSIONS[41]].sort()).toEqual(FACES);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(40, t, VERIFICATION_SCOPED_VERSIONS, 41, regular), t).toBe(FACES.includes(t));
+    }
+    const tick = { verified: true, verifiedLayoutVersion: 40, verifiedOverrideHash: "h" } as const;
+    expect(verificationState(tick, "m15mdfcback", "h", 41).stale).toBe(true);
+    expect(verificationState(tick, "m15mdfclandfront", "h", 41).stale).toBe(true);
+    expect(verificationState(tick, "m15", "h", 41).stale).toBe(false);
+    expect(verificationState(tick, "m15dfcfront", "h", 41).stale).toBe(false);
+    expect(verificationState({ ...tick, verifiedLayoutVersion: 41 }, "m15mdfcback", "h", 41).stale).toBe(false);
+    // Flagged, never dropped: the row stays verified (what the creator's
+    // picker reads), with the reason the checklist prints.
+    const stale = verificationState(tick, "m15mdfcfront", "h", 41);
+    expect(stale).toMatchObject({ verified: true, stale: true, legacy: false });
+    expect(stale.reasons).toEqual(["the renderer changed since layout v40 (now v41)"]);
+    expect(verificationState(tick, "m15mdfclandback", "h", 41)).toMatchObject({ verified: true, stale: true });
+    // No slot moves: the modal profiles' strip slots are 5.1b's; the rider's
+    // slot is the piece's box, inside the painted strip's keep-out.
+    expect(getFrameProfile("m15mdfcback").flipside?.keepOut).toEqual({ leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 });
+    expect(getFrameProfile("m15mdfcback").overlays?.find((o) => o.anatomy === "mdfcStrip")?.rect).toEqual({ leftPct: 44 / 15, topPct: 1866 / 21, widthPct: 658 / 15, heightPct: 90 / 21 });
+  });
+});

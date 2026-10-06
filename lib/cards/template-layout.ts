@@ -397,6 +397,11 @@ export type TwoColorDress = "split" | "hybrid";
 export type FrameOverlaySlot =
   | (FrameOverlaySlotBase & { anatomy: "crown" })
   | (FrameOverlaySlotBase & { anatomy: "dfcIcon" })
+  /** The modal flipside strip rider (TODO 5.1c): the OTHER face's colour's
+   *  tab over the one the master paints, keyed by `dfc.otherFace.stripKey`
+   *  (lib/cards/faces.ts) and drawn only when that key is not the master's
+   *  own (lib/cards/anatomy.ts resolveFrameOverlays). */
+  | (FrameOverlaySlotBase & { anatomy: "mdfcStrip" })
   | (FrameOverlaySlotBase & {
       anatomy: "holoStamp";
       /** The stamp this notch is cut for: its shape, the oval the art
@@ -4241,6 +4246,52 @@ export const MDFC_FLIPSIDE_BACK: FlipsideSlots = {
   keepOut: MDFC_STRIP_KEEP_OUT,
 };
 
+/** The flipside strip RIDER (TODO 5.1c): the prints paint the strip in the
+ *  colour of the face it DESCRIBES (STX #147's green front carries a blue
+ *  strip for its blue back; the pathways' fronts their back's colour; KHM
+ *  #114 Valki's front the B/R back's gold), the masters in their own — so
+ *  each modal template publishes its masters' tabs as pieces,
+ *  `<template>/strip/<key>.png` (scripts/lib/cc-frames.mjs MDFC_STRIP_CUTS:
+ *  CC's Flipside mask's interior eroded 1 px and snapped to the HD grid's
+ *  2 × 2 px blocks, the tab's own pixels), and
+ *  both renderers draw the OTHER face's key's piece over the strip the
+ *  master paints, under the strip's texts, when it differs from the
+ *  master's own (a mono-colour card's bake is the master's bytes). The slot
+ *  is the piece's box at HD, x 44–701 × y 1866–1955 (the mask's bbox grown
+ *  to an even origin and size: 1:1 at HD, 2:1 at the 750 bake). Keys: the
+ *  template's own colour keys and, on the spell bodies, `l` — the grey land
+ *  modal's tab for a two-colour LAND other face (MH3 #252–261's hybrid
+ *  fronts print the land grey) and, on a back, a front in the hybrid dress
+ *  (MH3's land backs: a warm light grey, never gold); the land bodies map
+ *  `l` to their own grey `c`. A two-colour spell other face is gold `m`
+ *  (STX #149, KHM #114 / #168 / #179, MSH #18 / #219); a colourless one
+ *  the artifact stand-in (`c` → `a`, no print). */
+const MDFC_STRIP_RIDER_RECT: Rect = { leftPct: 44 / 15, topPct: 1866 / 21, widthPct: 658 / 15, heightPct: 90 / 21 };
+const MDFC_STRIP_RIDER_SPELL_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l"] as const;
+const MDFC_STRIP_RIDER_LAND_KEYS = ["w", "u", "b", "r", "g", "m", "c"] as const;
+export const MDFC_STRIP_RIDER_FRONT: FrameOverlaySlot = {
+  anatomy: "mdfcStrip",
+  rect: MDFC_STRIP_RIDER_RECT,
+  assetPathTemplate: "/frames/m15mdfcfront/strip/{key}.png",
+  keys: MDFC_STRIP_RIDER_SPELL_KEYS,
+  keyMap: { c: "a" },
+};
+export const MDFC_STRIP_RIDER_BACK: FrameOverlaySlot = {
+  ...MDFC_STRIP_RIDER_FRONT,
+  assetPathTemplate: "/frames/m15mdfcback/strip/{key}.png",
+};
+export const MDFC_STRIP_RIDER_LAND_FRONT: FrameOverlaySlot = {
+  anatomy: "mdfcStrip",
+  rect: MDFC_STRIP_RIDER_RECT,
+  assetPathTemplate: "/frames/m15mdfclandfront/strip/{key}.png",
+  keys: MDFC_STRIP_RIDER_LAND_KEYS,
+  keyMap: { l: "c" },
+};
+export const MDFC_STRIP_RIDER_LAND_BACK: FrameOverlaySlot = {
+  ...MDFC_STRIP_RIDER_LAND_FRONT,
+  assetPathTemplate: "/frames/m15mdfclandback/strip/{key}.png",
+};
+
 const M15MDFCFRONT: FrameProfile = {
   ...DFC_SKELETON,
   label: "Modal front",
@@ -4424,10 +4475,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // the front draws both dresses (STX #149 / MSH #219 the split, MH3's ten
   // hybrid fronts the hybrid), the back the split (STX #149's back, MSH's
   // crowned pair backs); the land pair draws neither (no print).
-  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split", "hybrid"] },
-  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split"] },
-  m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR },
-  m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR },
+  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_FRONT], twoColorMasters: ["split", "hybrid"] },
+  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK], twoColorMasters: ["split"] },
+  m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_FRONT] },
+  m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_BACK] },
   // The snow frame (TODO 4.6f, wave 2c; owner round 20, 2026-10-01, option
   // A): the STANDARD crown band over the snow bars — KHM #224 / #223 / #230,
   // J22 #12, PH19 #5 print the standard crown's shape and registration

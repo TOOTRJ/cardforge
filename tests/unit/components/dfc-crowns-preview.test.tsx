@@ -96,10 +96,13 @@ describe("CardPreview — the crown and the pairs on the double-faced bodies (TO
       { colors: ["white", "blue"], cost: "{W/U}{W/U}", backFace: { ...BACK, title: "Black Panther, Hope Enduring", cost: "{3}{W}{U}", frame_style: { template: "m15mdfcback" }, color_identity: ["white", "blue"] } },
     );
     expect(modal.html).toContain("m15mdfcfront/wu-h.");
-    expect(overlays(modal.front)).toEqual(["crown:wu"]);
+    // The strip rider (TODO 5.1c) after the crown: the back is a W/U spell
+    // → gold `m` over the hybrid front's lerped strip; the front wears the
+    // hybrid dress → the land grey `l` over the split back's gold strip.
+    expect(overlays(modal.front)).toEqual(["crown:wu", "mdfcStrip:m"]);
     expect(overlayUrl(modal.front, "crown")).toContain("m15mdfccrown/wu.");
     expect(modal.html).toContain("m15mdfcback/wu.");
-    expect(overlays(modal.back)).toEqual(["crown:wu"]);
+    expect(overlays(modal.back)).toEqual(["crown:wu", "mdfcStrip:l"]);
     const land = preview(
       { template: "m15dfcfront", crown: true, twoColor: true },
       { backFace: { ...BACK, title: "Westvale Abbey", card_type: "land", cost: "", power: undefined, toughness: undefined, subtypes: [], frame_style: { template: "m15dfclandback" }, color_identity: ["colorless"] } },

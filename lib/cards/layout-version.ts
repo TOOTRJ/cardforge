@@ -809,9 +809,45 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            (VERIFICATION_TEMPLATE_SCOPES[40]); the modal front bodies'
 //            masters and layout are untouched (the crown and the pairs of
 //            5.1d are opt-in additions: new masters and overlays, no bump).
+//   41     — the modal flipside strip RIDER (TODO 5.1c, 2026-10-06): on a
+//            two-colour modal card the prints paint the strip in the colour
+//            of the face it DESCRIBES (STX #147's green front a blue strip,
+//            the pathways' fronts their back's, KHM #114's front the B/R
+//            back's gold); the masters paint their own. Both renderers now
+//            draw the OTHER face's tab — the masters' own tabs cut through
+//            CC's Flipside mask, <template>/strip/<key> — over the strip,
+//            under its texts, only when its key differs from the master's
+//            own (lib/cards/anatomy.ts resolveFrameOverlays, faces.ts
+//            stripKeyOf): a mono-colour card's bake is the master's bytes.
+//            An ADDITION under the rollout rule, bumped only because the
+//            visual gate refuses a changed existing case without one: the
+//            matrix's two-colour-other-face modal cases (a B/R back under
+//            the Tibalt word case, the gold and colourless land backs of
+//            the wu / wub / c rows, the hybrid pair, the gold land pair)
+//            change — 14 cases — while every mono case is unchanged.
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[41] = the four modal
+//            faces). Production (2026-10-06): 0 cards on any modal body —
+//            the sweep re-bakes nothing, badges nothing ("sweep", as v40:
+//            never a badge; every other v40 card is stamped 41 unbaked).
+//            NOT verification-neutral (the 5.1c skeptic): no master, slot or
+//            text moves, but the registry's references for the spell BACKS
+//            (STX's modal cards, one colour per face) and the land FRONTS
+//            (the pathways) are two-colour cards, m15mdfcfront/m's is MH3
+//            #252 (a hybrid front // a two-colour land) and the land back's
+//            eight alternates are pathways — 12 of the 22 primary references
+//            and 15 alternates draw a rider on the compare page now, so a
+//            tick made there before v41 judged a look that no longer
+//            renders. Every one of the four templates has such a reference
+//            and a tick's scope is its template: the four faces' ticks are
+//            judged by this bump's own scope (no narrower VERIFICATION_
+//            TEMPLATE_SCOPES entry, as v38 / v39). A tick made before v41 is
+//            KEPT (the creator goes on offering the face —
+//            getVerifiedFrameKeys reads `verified` alone) and FLAGGED "needs
+//            re-verification" on the admin checklist until it is ticked
+//            again; nothing is dropped.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 40;
+export const CARD_LAYOUT_VERSION = 41;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -856,6 +892,11 @@ export const V40_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfro
  *  the two transform FRONT bodies' rules layout does; the modal fronts'
  *  ticks — none yet — would stay fresh. */
 export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m15mdfclandback", "m15dfcfront", "m15dfclandfront"];
+/** v41 — the modal strip rider (TODO 5.1c): the four modal faces, whose
+ *  two-colour cards gain the other face's tab. Frozen like v40's; the
+ *  verification scope too (every one of the four has references whose
+ *  compare render changes), so there is no V41_VERIFICATION_TEMPLATES. */
+export const V41_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -914,6 +955,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // faces (its back bake changes), the back bodies for the matrix, and the
   // transform fronts (the reverse-P/T float).
   40: V40_TEMPLATES,
+  // v41: the modal strip rider (5.1c) — the four modal faces; a tick on
+  // them is judged by this scope too (each has references whose compare
+  // render gains the rider): kept, flagged for a re-check.
+  41: V41_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1529,6 +1574,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   38: "sweep", // the portrait layouts re-sourced from Card Conjurer (4.21a) — a frame swap, never a badge
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
   40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
+  41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

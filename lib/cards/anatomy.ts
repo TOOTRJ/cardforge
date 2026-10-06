@@ -436,7 +436,15 @@ export type AnatomyFacts = {
    *  — TODO 5.1a): the icon FAMILY the card wears (`icon`, `arrows` when the
    *  stored key is absent — never read from the switch, which is off for an
    *  absent key) and the face's role. The icon rider is keyed from it. */
-  dfc?: { role: DfcIconRole; icon: DfcIconFamily | null } | null;
+  dfc?: {
+    role: DfcIconRole;
+    icon: DfcIconFamily | null;
+    /** The modal strip rider's key (TODO 5.1c, lib/cards/faces.ts
+     *  stripKeyOf): the OTHER face's colour key as the prints paint the
+     *  strip — a letter, `m` for a two-colour spell, `l` for a two-colour
+     *  land or a hybrid-dressed front, `c` for a colourless face. */
+    stripKey?: string | null;
+  } | null;
 };
 
 /** The two-colour look a card draws (TODO 4.6b). */
@@ -529,7 +537,12 @@ export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & { rarity?: string 
  *     key — keyed by the family's glyph for the BODY's role (profile.dfc:
  *     the front glyph on a front body, the back glyph on the 2016–22 back;
  *     the ▼ back carries no slot). No per-card switch: every transform face
- *     prints its glyph.
+ *     prints its glyph;
+ *   • the modal strip rider (TODO 5.1c) draws the OTHER face's colour's tab
+ *     over the strip the master paints — keyed by `dfc.otherFace.stripKey`
+ *     (faces.ts stripKeyOf: the prints' rule), remapped by the slot's
+ *     keyMap, and only when it differs from the key the master already
+ *     paints (mdfcStripOwnKey): a mono-colour card draws none.
  * A key the slot doesn't publish draws nothing: never a stand-in.
  */
 export function resolveFrameOverlays(
@@ -547,6 +560,12 @@ export function resolveFrameOverlays(
       const role = profile.dfc?.role ?? facts.dfc?.role;
       if (!family || !role) continue;
       key = dfcIconGlyph(family, role);
+    } else if (slot.anatomy === "mdfcStrip") {
+      const other = facts.dfc?.stripKey;
+      if (!other) continue;
+      key = slot.keyMap?.[other] ?? other;
+      const own = mdfcStripOwnKey(resolveTwoColor(profile, style, facts), facts.colorKey);
+      if (own !== null && (slot.keyMap?.[own] ?? own) === key) continue;
     } else {
       if (!overlayWanted(slot.anatomy, style, facts)) continue;
       const look = resolveTwoColor(profile, style, facts);
@@ -559,11 +578,26 @@ export function resolveFrameOverlays(
   return out;
 }
 
+/** The strip key a modal face's MASTER already paints (TODO 5.1c): the
+ *  face's own colour key, `m` on a split pair master (inside the piece's
+ *  cut its strip is the gold master's, byte for byte), null on the hybrid
+ *  dress (the first colour's tab, its tip lerped towards the second — no
+ *  piece equals it, so a rider always covers it). The rider is drawn ONLY
+ *  when the other face's key differs — the owner's choice (round 32,
+ *  2026-10-06): a mono-colour card draws no piece at all. Drawing it would
+ *  change nothing (the block-snapped cut is byte-identical over its own
+ *  master at HD and at the 750 bake, scripts/lib/cc-frames.mjs
+ *  stripRiderInterior), so the rule is a choice, not a necessity. */
+export function mdfcStripOwnKey(look: TwoColorLook | null, colorKey: string): string | null {
+  if (!look) return colorKey;
+  return look.dress === "hybrid" ? null : "m";
+}
+
 /** Whether a face's switches and facts ask for an overlay of `anatomy` at
  *  all — each rider's own rule, keyed by the slot's discriminant (the
  *  master's key is the caller's). */
 function overlayWanted(
-  anatomy: Exclude<FrameOverlaySlot["anatomy"], "dfcIcon">,
+  anatomy: Exclude<FrameOverlaySlot["anatomy"], "dfcIcon" | "mdfcStrip">,
   style: FrameAnatomyStyle | null | undefined,
   facts: AnatomyFacts & HoloStampFacts,
 ): boolean {

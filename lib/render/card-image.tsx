@@ -282,8 +282,9 @@ function anatomyFactsOf(card: CardPreviewData) {
     cost: card.cost,
     cardType: card.cardType,
     supertype: card.supertype,
-    // The icon rider's family and this face's role (TODO 5.1a).
-    dfc: card.dfc ? { role: card.dfc.role, icon: card.dfc.icon } : null,
+    // The icon rider's family and this face's role (TODO 5.1a); the modal
+    // strip rider's key, the other face's (TODO 5.1c).
+    dfc: card.dfc ? { role: card.dfc.role, icon: card.dfc.icon, stripKey: card.dfc.otherFace.stripKey } : null,
     // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
     rarity: card.rarity,
   };

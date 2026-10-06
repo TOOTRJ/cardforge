@@ -223,9 +223,9 @@ describe("the strip's word and line (D9) on the design's scan cases", () => {
   });
 
   it("the other face's block: printsPt follows the plate rule (a land back prints none; a vehicle prints by its subtype)", () => {
-    expect(otherFaceOf({ cardType: "creature", power: "6", toughness: "5" })).toEqual({ typeWord: "Creature", line: null, printsPt: true, power: "6", toughness: "5" });
-    expect(otherFaceOf({ cardType: "land", rulesText: "{T}: Add {W}." })).toEqual({ typeWord: "Land", line: "{T}: Add {W}.", printsPt: false, power: null, toughness: null });
-    expect(otherFaceOf({ cardType: "artifact", subtypes: ["Vehicle"], cost: "{3}", power: "4", toughness: "4" })).toEqual({ typeWord: "Vehicle", line: "{3}", printsPt: true, power: "4", toughness: "4" });
+    expect(otherFaceOf({ cardType: "creature", power: "6", toughness: "5" })).toEqual({ typeWord: "Creature", line: null, printsPt: true, power: "6", toughness: "5", stripKey: "c" });
+    expect(otherFaceOf({ cardType: "land", rulesText: "{T}: Add {W}." })).toEqual({ typeWord: "Land", line: "{T}: Add {W}.", printsPt: false, power: null, toughness: null, stripKey: "l" });
+    expect(otherFaceOf({ cardType: "artifact", subtypes: ["Vehicle"], cost: "{3}", power: "4", toughness: "4" })).toEqual({ typeWord: "Vehicle", line: "{3}", printsPt: true, power: "4", toughness: "4", stripKey: "c" });
     // A P/T on a face whose type shows none is not printed (the tab stays empty, Q7).
     expect(otherFaceOf({ cardType: "sorcery", power: "1", toughness: "1" }).printsPt).toBe(false);
   });
