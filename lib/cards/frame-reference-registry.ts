@@ -13,7 +13,8 @@ import referencesData from "@/lib/cards/frame-references.json";
 // The DATA lives in lib/cards/frame-references.json (one entry per
 // template: an optional note, a `confirm` flag for families Scryfall can't
 // tell apart, and per colour an ORDERED list of printings or null when no
-// real printing exists — mono-colour split cards, 1993 tokens…). The first
+// real printing exists — a white, black or green split card, 1993 tokens…).
+// The first
 // printing is the default the checklist and the score use; the rest are
 // alternates the compare view can switch to (short vs long text, another
 // set), because one reference can't exercise every fit rule.
@@ -186,8 +187,8 @@ export function frameComboKey(template: string, colorKey: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Sample content for combos with NO real printing (mono-color splits,
-// colorless adventures, …): the compare tool still renders our frame with
+// Sample content for combos with NO real printing (a white, black or green
+// split, colorless adventures, …): the compare tool still renders our frame with
 // era-plausible placeholder content so geometry can be eyeballed.
 // ---------------------------------------------------------------------------
 

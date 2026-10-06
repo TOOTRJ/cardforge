@@ -88,12 +88,18 @@ describe("the Phase B allow-list", () => {
   });
 
   it("never normalises the showcase families, Alpha or the Card Conjurer masters", () => {
-    for (const t of ["bloomburrow", "bloomanime", "lotr", "lotrscroll", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar", "battle"]) {
+    for (const t of ["bloomburrow", "bloomanime", "lotr", "lotrscroll", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar"]) {
       expect(NEVER_NORMALISE.test(t), t).toBe(true);
       expect(shouldNormalise(t, "w"), t).toBe(false);
     }
-    for (const t of ["agclassic", "alphaland", "split", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
+    // The battle left the never-normalise list with TODO 4.21b (it was a
+    // borderless MSE ring): like the split's, its master is Card Conjurer's
+    // in the frames bucket now, cut at the one corner by the importer — the
+    // pass has no git file of either to touch.
+    expect(NEVER_NORMALISE.test("battle")).toBe(false);
+    for (const t of ["agclassic", "alphaland", "split", "battle", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
       expect(shouldNormalise(t, "w"), t).toBe(false);
+      expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }
     expect(shouldNormalise("retro", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "w")).toBe(true);

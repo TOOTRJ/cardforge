@@ -5,6 +5,7 @@ import { Copy, RotateCcw, Save, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
+  isStatSlotPath,
   listSlotPaths,
   slotRect,
   type FrameProfileOverride,
@@ -87,8 +88,11 @@ function fieldsForSlot(
   const node = getNodeAtPath(profile, path);
   if (!node || typeof node !== "object") return RECT_FIELDS;
   const slot = node as Record<string, unknown>;
+  // A stat slot by its PATH (the override schema's own split): the battle's
+  // defense, in the shield its master paints, carries no plate, badge or
+  // value offset, and a text slot's fields would be refused on save.
   const extra =
-    "valueDyEm" in slot || "plateAssetPathTemplate" in slot || "badgeColorHex" in slot
+    isStatSlotPath(path) || "valueDyEm" in slot || "plateAssetPathTemplate" in slot || "badgeColorHex" in slot
       ? STAT_FIELDS
       : "sizePct" in slot
         ? TEXT_FIELDS

@@ -83,12 +83,13 @@ describe("the edge-contract table", () => {
 
   it("lists today's known failures — 7.7's list, the four this check found, and the corner check's one", () => {
     // adventure's grey paper rim (a corner-check find) left the list when
-    // Phase B took it on (owner, 2026-09-28).
+    // Phase B took it on (owner, 2026-09-28); the battle when its borderless
+    // MSE ring gave way to Card Conjurer's black-bordered master (TODO
+    // 4.21b, layout v42).
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(
       [
         "alphaland",
         "avatar",
-        "battle",
         "bloomanime",
         "bloomburrow",
         "expeditionland",
@@ -105,6 +106,12 @@ describe("the edge-contract table", () => {
     expect(isKnownEdgeFailure("alphaland", "b")).toBe(true);
     expect(isKnownEdgeFailure("alphaland", "w")).toBe(false);
     for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownEdgeFailure("adventure", k), k).toBe(false);
+    // The landscape pair honours its contract on every colour: a black
+    // border on all four edges of the 2100 × 1500 master.
+    for (const template of ["battle", "split"]) {
+      expect(Object.values(EDGE_CONTRACTS[template]).every((e) => e.kind === "border"), template).toBe(true);
+      for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownEdgeFailure(template, k), `${template}/${k}`).toBe(false);
+    }
   });
 
   it("gives every known failure a corner note (3.26) — the rings', the painted corners' and the corner check's own one", () => {

@@ -18,8 +18,17 @@ describe("Card Conjurer frame profiles", () => {
   // OWN prints: flip's on C18 #134's (the pips centred on the name's
   // capitals, −9.6 px from packFlip.js's box), aftermath's on AKH #210–214
   // / HOU #157's (the discs centred on row 159.4 where v38's bake sat on
-  // 168: −8.6 px, layout v39).
-  const OWN_PRINT_COST_DY: Record<string, number | undefined> = { flip: -0.0064, aftermath: -8.6 / 1500 };
+  // 168: −8.6 px, layout v39). The landscape layouts (TODO 4.21b, layout
+  // v42) need NO lift: their title rects are the bars' own faces, and the
+  // prints centre the discs on them — the battle's on 128.5–129.3 px of a
+  // pill face centred on 128.75 (nine MOM prints), the split's on 156.6 of
+  // a bar face centred on 157.0 (MH2 #123 / #60, TSR #161 / #186).
+  const OWN_PRINT_COST_DY: Record<string, number | undefined> = {
+    flip: -0.0064,
+    aftermath: -8.6 / 1500,
+    battle: undefined,
+    split: undefined,
+  };
 
   it("lifts the inline mana cost ~0.55 % of the card height on every CC frame that shows one", () => {
     for (const template of ccTemplates) {

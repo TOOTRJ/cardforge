@@ -294,9 +294,12 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // …and the emblem's box (TODO 4.52: 74.4–91.9 %H, no plate; an emblem's
   // text is a sentence or two).
   [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
-  // Split's halves set their text inside the textbox border their boxes
-  // hold (SPLIT_TEXTBOX_BORDER_PX): 400 characters no longer fit either.
-  [["split/main", "split/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
+  // Split's halves on Card Conjurer's boxes (layout v42, TODO 4.21b): each
+  // 780 × 499 px text column holds 400 characters, TLA #112 and the level-up
+  // card at the floor again (the MSE boxes, 57 / 54 px of padding inside a
+  // narrower rect, clipped all three); a full card's 1,200 characters and
+  // EOE #30's three abilities still don't fit half a card.
+  [["split/main", "split/second face"], ["1200 chars", "EOE #30"]],
   [["aftermath/second face"], ["1200 chars", "EOE #30"]],
   // The text-box tokens' box (TODO 4.49 (b): 74.5–92.5 %H, the P/T plate in
   // its corner) holds 400 characters but not a planeswalker's worth.

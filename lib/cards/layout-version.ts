@@ -845,9 +845,70 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            getVerifiedFrameKeys reads `verified` alone) and FLAGGED "needs
 //            re-verification" on the admin checklist until it is ticked
 //            again; nothing is dropped.
+//   42     — the landscape layouts re-sourced from Card Conjurer (TODO
+//            4.21b; design 2026-09-29, owner decisions 2026-09-29; built
+//            2026-10-06): split and battle leave their MSE masters (git)
+//            for CC's (the frames bucket, scripts/lib/cc-frames.mjs — the
+//            first LANDSCAPE recipes, 2100 × 1500). Measured against the
+//            prints (Scryfall PNGs turned a quarter turn clockwise at 2100 ×
+//            1500, each edge registered by correlation):
+//            * split: CC's 'Split' pack turned clockwise without a resample
+//              (two half-cards with their own coloured body) for the MSE
+//              composite of two half-frames on a black canvas. The pack's
+//              collector border is 160 px where MH2 #123 / #60 and TSR #161
+//              / #186 print 147–148, so the importer moves the left half 11
+//              px left and the right half 3 px through the flat black
+//              border and spine (SPLIT_HALF_RECUT: byte for byte): every
+//              edge within 3.6 px of the four prints' mean (was up to 14.3).
+//              The art slots are the windows + 0.1 %. The prints set a
+//              split half SMALLER than a regular card on every line, so
+//              split stays out of the M15 family with constants of its own
+//              (lib/cards/typography.ts): the name 76 px (the design's 80
+//              came out 4–6 % wide on ten names), the type line 53 px on
+//              its 69 px bar (the design's 60, Card Conjurer's 0.0286 H,
+//              set "Sorcery" 201 px wide against the prints' 177–178), the
+//              pips 68 px, the set symbol fitted by its ink's HEIGHT to a
+//              48 px box (setSymbolFit "ink-height"). Both halves are
+//              `fit: "measured"` — the right one, an unturned second face,
+//              drawn exactly as the front draws its own lines — and both
+//              sit on the prints' baselines relative to their bars; the
+//              rules at the 9 pt ladder top, centred as the prints centre
+//              theirs. No coloured half-pair (TODO 4.26), no fuse.
+//            * battle: CC's 'Battle' pack (2814 × 2010 → 2100 × 1500 in one
+//              Lanczos pass) for the MSE master with no border, siege arc,
+//              icon or shield. Nine MOM battles print the type bar, the
+//              text box and the shield 2.5–5.5 px lower than the pack, so
+//              the importer moves that block 4 px down through flat rows
+//              (BATTLE_LOWER_RECUT: within 1.5 px of their mean; the
+//              prints' bars also end 8–11 px further right, which no block
+//              move reaches — kept as the pack has them). ONE art rect for every colour,
+//              from the border's inner edge to the bottom border (the
+//              window runs on in a sliver beside the shield), which is also
+//              the see-through colourless master's under-frame picture. The
+//              battle JOINS the M15 family through `displayPct(…,
+//              "landscape")`: an 80 px name with M15's tracking (it starts
+//              right of the icon, 23 px into the pill — closes 3.28), a 68
+//              px type line, the family's cost disc and symbol box, each
+//              on the prints' baseline relative to its bar. The defense is
+//              the value alone, white, in the shield the MASTER paints —
+//              the drawn disc and its outline are gone — and that shield is
+//              a rules keep-out on every battle.
+//            * both: the artist credit down the left border, M15's footer
+//              line turned with the card (FrameProfile.footerTurn — 3.8's
+//              slice; the collector number, set and language beside it are
+//              4.9d's); the brand mark centred in the new bottom border.
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[42] = battle, split):
+//            every card on the two, art or none. Public production
+//            (anonymous read, 2026-10-06): 0 public or unlisted cards on
+//            either (private cards and previews: owner SQL). The visual
+//            matrix: only their cases change. "sweep" (a correction,
+//            FRAMES.md "Additions vs corrections"). NOT
+//            verification-neutral: masters and every slot move — but no
+//            tick exists on either template to stale (0 of 7 each), so the
+//            first ticks are the owner's after the deploy.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 41;
+export const CARD_LAYOUT_VERSION = 42;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -875,8 +936,8 @@ export const V32_M15_FAMILY_TEMPLATES: readonly string[] = [
 
 // v38 — the portrait layouts 4.21a re-sourced from Card Conjurer (their
 // masters, art slots and text slots). Frozen like the lists below: v38 is
-// history once it ships (4.21b's split and battle and 4.21c's saga bring
-// their own bumps).
+// history once it ships (4.21b's split and battle — v42 — and 4.21c's saga
+// bring their own bumps).
 export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "aftermath", "flip"];
 
 // v39 — flip's lower half and aftermath's cost onto the prints (the 4.21a
@@ -897,6 +958,10 @@ export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m1
  *  verification scope too (every one of the four has references whose
  *  compare render changes), so there is no V41_VERIFICATION_TEMPLATES. */
 export const V41_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
+/** v42 — the landscape layouts 4.21b re-sourced from Card Conjurer (their
+ *  masters, art slots and every text slot). Frozen like v38's: v42 is
+ *  history once it ships (4.21c's saga brings its own bump). */
+export const V42_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "split"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -959,6 +1024,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // them is judged by this scope too (each has references whose compare
   // render gains the rider): kept, flagged for a re-check.
   41: V41_TEMPLATES,
+  // v42: the landscape layouts re-sourced from Card Conjurer (4.21b) —
+  // their masters, art slots and text slots; every card on the two. No
+  // narrower verification scope: neither has a tick.
+  42: V42_LANDSCAPE_LAYOUT_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1575,6 +1644,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
   40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
   41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
+  42: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

@@ -932,6 +932,13 @@ describe("the rule table", () => {
     expect(isBorderPending("expeditionland", "m")).toBe(false);
     expect(isBorderPending("lotr", "w")).toBe(true);
     expect(isBorderPending("m15", "w")).toBe(false);
+    // The battle left the list with TODO 4.21b: its Card Conjurer master
+    // has the printed black border on every colour (the MSE one was a
+    // transparent ring) — and the split never was on it.
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+      expect(isBorderPending("battle", key), key).toBe(false);
+      expect(isBorderPending("split", key), key).toBe(false);
+    }
   });
 
   it("an exact match never needs a reason, a non-exact one always has one", () => {

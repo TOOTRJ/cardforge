@@ -1140,6 +1140,368 @@ export const FLIP_LOWER_RECUT = {
 const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius";
 
 // ---------------------------------------------------------------------------
+// The landscape layouts (TODO 4.21b, design 2026-09-29 §3.2 / §3.3 / §4.2):
+// split and battle from CC's own packs, the first LANDSCAPE recipes
+// (`orientation: "landscape"`, a 2100×1500 master cut at the one card corner
+// — 64.5 px, 4.3 % of the SHORT side, as the bake cuts a landscape card).
+// They replace the MSE composites in git (build-split-frame.mjs: two
+// 240×345 half-frames on a black canvas, no coloured body round either
+// half, the title bars 31 px above the prints'; the "375 m15 battle" module:
+// no border, no siege arc, no icon, no defense shield — a transparent ring).
+//   • split — the pack draws the card PORTRAIT (1500×2100) with every text
+//     at −90°; `transform: "rotate-cw"` turns the composite a quarter turn
+//     clockwise, a pure pixel permutation (rotateCwRgba8: no resample), so
+//     the text is upright and the pack's "Right" set lands on our right half;
+//   • battle — the pack's canvas is 2814×2010 (resetCardIrregularities);
+//     `transform: "downscale"` is ONE Lanczos pass to 2100×1500, the M15
+//     family's one-downscale rule (2010×2814 → 1500×2100, the same ratio).
+// ---------------------------------------------------------------------------
+const SPLIT = "img/frames/m15/split";
+const BATTLE = "img/frames/m15/battle";
+/** A landscape master's size: the portrait one turned. */
+export const LANDSCAPE_OUT = Object.freeze({ width: OUT_H, height: OUT_W });
+/** The size a recipe's masters are written at: 2100×1500 for a landscape
+ *  recipe (`orientation: "landscape"`), else 1500×2100. */
+export function outputSizeOf(def) {
+  return def.orientation === "landscape" ? { ...LANDSCAPE_OUT } : { width: OUT_W, height: OUT_H };
+}
+/**
+ * An 8-bit RGBA image turned a quarter turn CLOCKWISE: the pixel at (x, y)
+ * of the `width × height` source lands at (height − 1 − y, x) of the
+ * `height × width` result. A permutation of the pixels — nothing is
+ * resampled, so every value of the source is in the result exactly once
+ * (split's `transform: "rotate-cw"`). Returns a new buffer.
+ */
+export function rotateCwRgba8(buf, width, height) {
+  if (buf.length !== width * height * 4) throw new Error(`rotateCwRgba8: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const out = Buffer.alloc(buf.length);
+  for (let y = 0; y < height; y += 1) {
+    const tx = height - 1 - y;
+    for (let x = 0; x < width; x += 1) {
+      const from = (y * width + x) * 4;
+      buf.copy(out, (x * height + tx) * 4, from, from + 4);
+    }
+  }
+  return out;
+}
+/**
+ * Whole blocks of an 8-bit RGBA image moved along one axis through the FLAT
+ * zones between them (TODO 4.21b: the split's two halves and the battle's
+ * lower block, onto the prints — SPLIT_HALF_RECUT, BATTLE_LOWER_RECUT).
+ * `spec.axis` "x" moves columns, "y" rows. `spec.blocks` lists the blocks in
+ * order: lines [from, to) of the source, landing `by` px further along
+ * (negative = toward 0). Everything outside the blocks is a ZONE — before
+ * the first block, between two, after the last — and a zone only grows or
+ * shrinks, so it must be flat: each of its lines identical to the next over
+ * the image's whole other side (the black border, the spine between the
+ * split's halves, the battle's art window between its border and arc). The
+ * result then holds every block byte for byte, `by` px from where it was,
+ * and every zone as its one line repeated: nothing is resampled or blended
+ * and no pixel of a block is lost. Throws when a zone isn't flat, when a
+ * block leaves the image, when two blocks would meet (a zone keeps ≥ 1
+ * line; an empty one stays empty) or when the blocks are out of order.
+ * Returns a new buffer.
+ */
+export function shiftBlocksRgba8(buf, width, height, spec) {
+  if (buf.length !== width * height * 4) throw new Error(`shiftBlocksRgba8: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const { axis, blocks } = spec;
+  if (axis !== "x" && axis !== "y") throw new Error(`shiftBlocksRgba8: axis ${JSON.stringify(axis)}`);
+  const lines = axis === "x" ? width : height;
+  const across = axis === "x" ? height : width;
+  const bad = (why) => new Error(`shiftBlocksRgba8: ${why} ${JSON.stringify({ axis, blocks, lines })}`);
+  if (!Array.isArray(blocks) || blocks.length === 0) throw bad("no blocks");
+  // Line `line` of the source equals line `other`, over the whole other side.
+  const sameLine = (line, other) => {
+    for (let i = 0; i < across; i += 1) {
+      const a = (axis === "x" ? i * width + line : line * width + i) * 4;
+      const b = (axis === "x" ? i * width + other : other * width + i) * 4;
+      if (buf[a] !== buf[b] || buf[a + 1] !== buf[b + 1] || buf[a + 2] !== buf[b + 2] || buf[a + 3] !== buf[b + 3]) return false;
+    }
+    return true;
+  };
+  // src[t] = the source line the result's line t shows.
+  const src = new Int32Array(lines).fill(-1);
+  let sourceAt = 0;
+  let targetAt = 0;
+  const zone = (sourceEnd, targetEnd) => {
+    const had = sourceEnd - sourceAt;
+    const has = targetEnd - targetAt;
+    if (had < 0 || has < 0) throw bad("blocks out of order or overlapping");
+    if (had === 0 ? has !== 0 : has < 1) throw bad(`the zone at source ${sourceAt}–${sourceEnd} can't become ${has} lines`);
+    for (let line = sourceAt + 1; line < sourceEnd; line += 1) {
+      if (!sameLine(sourceAt, line)) throw bad(`the zone ${sourceAt}–${sourceEnd} is not flat: line ${line} differs from line ${sourceAt}`);
+    }
+    for (let t = targetAt; t < targetEnd; t += 1) src[t] = sourceAt;
+  };
+  for (const block of blocks) {
+    const { from, to, by } = block;
+    if (![from, to, by].every(Number.isInteger) || !(to > from) || from < 0 || to > lines || from + by < 0 || to + by > lines) throw bad("bad block");
+    zone(from, from + by);
+    for (let line = from; line < to; line += 1) src[line + by] = line;
+    sourceAt = to;
+    targetAt = to + by;
+  }
+  zone(lines, lines);
+  const out = Buffer.alloc(buf.length);
+  if (axis === "y") {
+    for (let t = 0; t < lines; t += 1) buf.copy(out, t * width * 4, src[t] * width * 4, (src[t] + 1) * width * 4);
+  } else {
+    for (let y = 0; y < height; y += 1) {
+      const row = y * width;
+      for (let t = 0; t < lines; t += 1) {
+        const from = (row + src[t]) * 4;
+        buf.copy(out, (row + t) * 4, from, from + 4);
+      }
+    }
+  }
+  return out;
+}
+/** Where a line of the source lands after `spec`'s blocks moved (the `by`
+ *  of the block that holds it), or null inside a zone — a zone's lines have
+ *  no one place. */
+export function shiftedLine(spec, line) {
+  const block = spec.blocks.find((b) => line >= b.from && line < b.to);
+  return block ? line + block.by : null;
+}
+/** How provenance records a block shift. */
+export function describeBlockShift(spec, width, height) {
+  const lines = spec.axis === "x" ? width : height;
+  const unit = spec.axis === "x" ? "columns" : "rows";
+  const zones = [];
+  let at = 0;
+  let landed = 0;
+  for (const b of spec.blocks) {
+    if (b.from > at) zones.push(`${unit} ${at}–${b.from - 1} (flat) → ${b.from + b.by - landed} px`);
+    at = b.to;
+    landed = b.to + b.by;
+  }
+  if (lines > at) zones.push(`${unit} ${at}–${lines - 1} (flat) → ${lines - landed} px`);
+  return {
+    axis: spec.axis,
+    blocks: spec.blocks.map((b) => ({ ...b })),
+    zones,
+    why: spec.why,
+    lossless: "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend",
+  };
+}
+/**
+ * The split's halves, onto the prints (TODO 4.21b, measured 2026-10-06 on
+ * MH2 #123 Fast // Furious, MH2 #60 Said // Done, TSR #161 Dead // Gone and
+ * TSR #186 Rough // Tumble, each registered edge by edge against the turned
+ * master). Card Conjurer's pack draws the collector border 160 px thick
+ * where the prints' is 147–148 (a regular M15 print's is 148), so its left
+ * half sits 13–14 px right of the prints' at its left edges and 7–11 px at
+ * its right ones, its right half 5–6 px right at its left edges and on the
+ * prints' at its right ones. The left half (columns 160–1081 of the turned
+ * master: body, name bar, window, type bar, text box) moves 11 px LEFT, the
+ * right half (1118–2040) 3 px left: every edge of both halves then lies
+ * within 3.6 px of the four prints' mean (5.4 px of any one print; the
+ * pack's lay up to 14.3 / 16.4 px off). The collector border (columns
+ * 0–159), the spine (1082–1117) and the right border (2041–2099) are flat
+ * black — the zones the move runs through. Rows are the pack's (within
+ * 2.7 px of the prints).
+ */
+export const SPLIT_HALF_RECUT = Object.freeze({
+  axis: "x",
+  blocks: Object.freeze([Object.freeze({ from: 160, to: 1082, by: -11 }), Object.freeze({ from: 1118, to: 2041, by: -3 })]),
+  why: "the pack's collector border is 160 px, the prints' 147–148: the left half moves 11 px left, the right half 3 px, onto MH2 #123 / #60 and TSR #161 / #186 (every edge within 3.6 px of the four prints' mean, 5.4 of any one; the pack's up to 14.3 / 16.4)",
+});
+/**
+ * The battle's lower block, onto the prints (TODO 4.21b, measured
+ * 2026-10-06 on nine MOM battles — #1, #21, #22, #63, #115, #147, #149,
+ * #190, #230 — registered edge by edge): the prints set the type bar's top
+ * 5.3–5.5 px lower than the pack, its bottom and the text box's top 4.6,
+ * the box's bottom 2.5 (1.8–4.6), the shield's top 2.8 and its bottom 5.0,
+ * while the top border and the name pill are where the pack has them (−0.3
+ * / −2.5 … −0.8). Rows 842–1467 of the downscaled master (the type bar, the
+ * text box, the shield and the arc's foot) move 4 px DOWN: those edges then
+ * lie within 1.5 px of the nine prints' mean (2.3 px of any one). The rows
+ * above (363–841: the art window between the arc's straight stretch and the
+ * right border) and the bottom border's (1468–1499) are flat — the zones
+ * the move runs through. (The prints' name pill, type bar and text box also
+ * end 8–11 px further RIGHT and their shield sits 12 px right: no flat zone
+ * crosses the bars, so that needs their paper stretched — not done here, an
+ * owner decision.)
+ */
+export const BATTLE_LOWER_RECUT = Object.freeze({
+  axis: "y",
+  blocks: Object.freeze([Object.freeze({ from: 0, to: 363, by: 0 }), Object.freeze({ from: 842, to: 1468, by: 4 })]),
+  why: "the pack's type bar, text box and shield sit 2.5–5.5 px above the nine MOM prints': rows 842–1467 move 4 px down (those edges within 1.5 px of the prints' mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
+});
+/**
+ * The split pack's two half masks, named for the half each covers AFTER the
+ * clockwise turn (design D2): CC's 'Bottom Half' (bottom.svg, portrait rows
+ * 1000–2099) is our LEFT half, its 'Top Half' (top.svg, rows 0–999) our
+ * RIGHT half — plain rectangles meeting at X `packSeamX` of the pack's
+ * turned card (1100 px, 52.38 %W: inside its flat black spine, columns
+ * 1082–1117). Importer INPUTS only: the importer rasterises and turns them,
+ * checks each is the plain rectangle recorded here (halfMaskFindings) and
+ * writes the seam into the provenance — no `mask/*` object is ever
+ * published. `seamX` is that seam on OUR master, whose halves
+ * SPLIT_HALF_RECUT moved: the middle of its spine (columns 1071–1114), 1093
+ * px (52.05 %W) — where TODO 4.26's per-half colour cuts between two
+ * masters (a hard seam through flat black, FrameProfile.twoColorSplit's
+ * machinery), never a mask asset. The importer holds both seams inside
+ * their spine (seamInsideSpine).
+ */
+export const SPLIT_HALF_MASKS = Object.freeze({
+  left: `${SPLIT}/bottom.svg`,
+  right: `${SPLIT}/top.svg`,
+  packSeamX: 1100,
+  seamX: 1093,
+});
+/** The flat zone between a two-block shift's blocks — the spine between the
+ *  split's halves — before (`pack`) and after (`master`) the move: [x0, x1). */
+export function spineOf(shift) {
+  const [a, b] = shift.blocks;
+  return { pack: { x0: a.to, x1: b.from }, master: { x0: a.to + a.by, x1: b.from + b.by } };
+}
+/** Every way a recipe's two seams are not inside their spine: the pack's
+ *  mask seam in the pack's, the master's in the moved one (each strictly
+ *  inside, so a half's own pixels never cross it). */
+export function seamInsideSpine(masks, shift) {
+  const spine = spineOf(shift);
+  const failures = [];
+  if (!(masks.packSeamX > spine.pack.x0 && masks.packSeamX < spine.pack.x1)) failures.push(`the pack's seam x ${masks.packSeamX} is outside its spine ${spine.pack.x0}–${spine.pack.x1 - 1}`);
+  if (!(masks.seamX > spine.master.x0 && masks.seamX < spine.master.x1)) failures.push(`the master's seam x ${masks.seamX} is outside its spine ${spine.master.x0}–${spine.master.x1 - 1}`);
+  return failures;
+}
+/**
+ * What a turned half mask covers on a `width × height` card, and every way
+ * it is not the plain rectangle `expect` (columns x0 … x1 − 1, every row):
+ * a pixel that is neither clear nor solid (α 2–253: only the one
+ * anti-aliased seam column may be soft, and it reads α ≤ 1 or ≥ 254), a
+ * solid pixel outside the rectangle, a clear one inside it. Empty
+ * `failures` = the mask is that rectangle.
+ */
+export function halfMaskFindings(mask, width, height, expect) {
+  let x0 = width;
+  let x1 = 0;
+  let soft = 0;
+  let outside = 0;
+  let inside = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const a = mask[(y * width + x) * 4 + 3];
+      const solid = a >= 254;
+      if (!solid && a > 1) soft += 1;
+      if (solid) {
+        if (x < x0) x0 = x;
+        if (x + 1 > x1) x1 = x + 1;
+        if (x < expect.x0 || x >= expect.x1) outside += 1;
+      } else if (x >= expect.x0 && x < expect.x1) inside += 1;
+    }
+  }
+  const failures = [];
+  if (soft) failures.push(`${soft} px are neither clear nor solid`);
+  if (outside) failures.push(`${outside} solid px outside x ${expect.x0}–${expect.x1 - 1}`);
+  if (inside) failures.push(`${inside} clear px inside x ${expect.x0}–${expect.x1 - 1}`);
+  return { x0, x1, failures };
+}
+/** How provenance records a recipe's half masks (never published). */
+export function describeHalfMasks(masks, width) {
+  const pct = (x) => Math.round((x / width) * 10000) / 100;
+  return {
+    left: { src: masks.left, covers: `x 0–${masks.packSeamX - 1} of the pack's turned ${width} px card, every row` },
+    right: { src: masks.right, covers: `x ${masks.packSeamX}–${width - 1}, every row` },
+    packSeam: `x ${masks.packSeamX} px (${pct(masks.packSeamX)} %W) after the clockwise turn, inside the pack's flat black spine`,
+    seam: `x ${masks.seamX} px (${pct(masks.seamX)} %W) on the master, the middle of its spine after the halves moved`,
+    published: false,
+    use: "importer inputs only (rasterised, turned and checked to be these plain rectangles): TODO 4.26's per-half colour is a hard seam between two masters at the master's seam, no mask asset",
+  };
+}
+/**
+ * The battle's PAINTED defense shield (TODO 4.21b; owner decision
+ * 2026-09-29: the defense is drawn in the frame's own shield, the drawn
+ * badge is gone): the pack's 'Defense' mask and the box of its solid
+ * pixels (α ≥ 128) on the 2100×1500 MASTER, HD px — the shield the frame
+ * paints across the text box's bottom-right corner, on every colour: the
+ * pack's box 1881,1300 164×166, 4 px lower with the rest of the lower block
+ * (BATTLE_LOWER_RECUT). The importer rasterises the mask at the master's
+ * size, moves it as it moved the master, holds its box to this one
+ * (paintedShieldFindings) and records it; nothing is cut or published — the
+ * shield stays in the master. The BATTLE profile's `defense.paintedRect`
+ * (lib/cards/template-layout.ts BATTLE_SHIELD_RECT) is this box in card
+ * percent, the rules text's keep-out on every battle; a unit test holds the
+ * two together.
+ */
+export const BATTLE_SHIELD = Object.freeze({
+  mask: `${BATTLE}/maskDefense.png`,
+  box: Object.freeze({ x: 1881, y: 1304, width: 164, height: 166 }),
+});
+/** The box of a mask's solid pixels (α ≥ 128) on a `width × height` card,
+ *  or null when it has none. */
+export function solidBoxOf(mask, width, height) {
+  let x0 = width;
+  let y0 = height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (mask[(y * width + x) * 4 + 3] < 128) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+}
+/** How far a block shift moves a box that lies inside ONE of its blocks
+ *  (`{ dx, dy }`), or null when the box reaches into a zone or across two
+ *  blocks — it has no one place then. No shift = no move. */
+export function boxMoveOf(shift, box) {
+  if (!shift) return { dx: 0, dy: 0 };
+  const [from, to] = shift.axis === "x" ? [box.x, box.x + box.width] : [box.y, box.y + box.height];
+  const block = shift.blocks.find((b) => from >= b.from && to <= b.to);
+  if (!block) return null;
+  return shift.axis === "x" ? { dx: block.by, dy: 0 } : { dx: 0, dy: block.by };
+}
+/**
+ * Every way a painted shield is not what the recipe records: the pack
+ * mask's solid box, moved as `shift` moved the master's block it lies in,
+ * differs from `spec.box` (the box on the master) — or the box straddles a
+ * block's edge — or (with a `master`) the master is see-through (α < 250)
+ * somewhere under the mask's solid pixels: the shield is paint on every
+ * colour, the colourless frame's translucent text box included, so the art
+ * never shows through the defense value. `mask` is the pack's, unmoved.
+ */
+export function paintedShieldFindings(spec, mask, width, height, master, shift) {
+  const failures = [];
+  const packBox = solidBoxOf(mask, width, height);
+  const move = packBox ? boxMoveOf(shift, packBox) : null;
+  if (packBox && !move) failures.push(`the mask's solid box ${packBox.x},${packBox.y} ${packBox.width}×${packBox.height} is not inside one block of the shift`);
+  const box = packBox && move ? { x: packBox.x + move.dx, y: packBox.y + move.dy, width: packBox.width, height: packBox.height } : null;
+  const same = box && box.x === spec.box.x && box.y === spec.box.y && box.width === spec.box.width && box.height === spec.box.height;
+  if (!same && (box || !packBox)) {
+    failures.push(`the mask's solid box lands at ${box ? `${box.x},${box.y} ${box.width}×${box.height}` : "nowhere (it is empty)"}, the recipe records ${spec.box.x},${spec.box.y} ${spec.box.width}×${spec.box.height}`);
+  }
+  if (master && packBox && move) {
+    let thin = 0;
+    for (let y = packBox.y; y < packBox.y + packBox.height; y += 1) {
+      for (let x = packBox.x; x < packBox.x + packBox.width; x += 1) {
+        if (mask[(y * width + x) * 4 + 3] >= 254 && master[((y + move.dy) * width + x + move.dx) * 4 + 3] < 250) thin += 1;
+      }
+    }
+    if (thin) failures.push(`${thin} px of the master are see-through under the shield`);
+  }
+  return { box, failures };
+}
+/** How provenance records a painted shield (never cut, never published). */
+export function describePaintedShield(spec) {
+  return {
+    mask: spec.mask,
+    box: { ...spec.box },
+    published: false,
+    use: "the shield is the master's own paint: the importer holds the pack's Defense mask to this box (HD px) and every master to solid paint under it; the profile draws the defense value inside it and keeps the rules text out of it",
+  };
+}
+const SPLIT_TRANSFORM =
+  "native 1500x2100 (the pack draws the card portrait, its text at −90°), turned a quarter turn CLOCKWISE to 2100x1500 — a pixel permutation, no resample: source (x, y) → (2099 − y, x); then the two halves moved onto the prints through the flat black border and spine (shift: the left half 11 px left, the right half 3 px — whole blocks, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
+const BATTLE_TRANSFORM =
+  "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then the lower block (type bar, text box, shield) moved 4 px down onto the prints through the flat rows above and below it (shift: whole rows, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
+
+// ---------------------------------------------------------------------------
 // The transform bodies (TODO 5.1a; design 2026-10-02, design-next/5/final.md
 // §2.1 / §2.3, frames.md §1.1–1.4 / §3.6 / §4.4): Card Conjurer's 'Transform
 // (Front)', 'Transform (Back)' (the 2016–22 look, the icon well EMPTY at the
@@ -1695,7 +2057,8 @@ const DFC_PAIR_NOTE =
 
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, pack?, transforms?,
+ * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, orientation?,
+ * transform?, shift?, halfMasks?, paintedShield?, pack?, transforms?,
  * notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
  * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
@@ -1721,6 +2084,18 @@ const DFC_PAIR_NOTE =
  * silver, EMBLEM_SILVER_TONE; toneRegion for an outlined region — its name
  * pill, type pill and text box, EMBLEM_NAME_PILL_TONE, EMBLEM_TYPE_PILL_TONE,
  * EMBLEM_TEXT_BOX_TONE).
+ * `orientation: "landscape"` (4.21b's split and battle) writes 2100×1500
+ * masters (outputSizeOf), by its `transform`: "rotate-cw" turns the
+ * composite a quarter turn clockwise without resampling (rotateCwRgba8; the
+ * pack draws the card portrait), "downscale" resizes the pack's landscape
+ * canvas once. `shift` then moves whole blocks of the 2100×1500 master
+ * through the flat zones between them, onto the prints (shiftBlocksRgba8:
+ * SPLIT_HALF_RECUT, BATTLE_LOWER_RECUT) — before the corner is cut.
+ * `halfMasks` (split) names the pack's two half masks for the
+ * half each covers after the turn and the seam between them: importer
+ * inputs the importer checks and records, never published. `paintedShield`
+ * (battle) names the pack's Defense mask and the box of the shield the
+ * master paints: checked and recorded, never cut (BATTLE_SHIELD).
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
@@ -2091,6 +2466,53 @@ export const CC_TEMPLATES = {
       "colourless = CC's 'Artifact Frame' (aftermath/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless aftermath was ever printed and the pack has no colourless frame; never offered (no reference, never ticked)",
       "gold (m) is built for the key but needs TODO 4.26: every printed two-colour aftermath is mono // mono (21 mixed, 6 same-colour), none gold // gold — flagged in the registry, never ticked until a print or 4.26",
       "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)",
+    ],
+  },
+  // 4.21b — the M15 split frame (MH2 #123 Fast // Furious, MH2 #60 Said //
+  // Done, C16 #239 Trial // Error): two upright half-cards side by side on a
+  // landscape card, each with its own coloured body, name bar, window, thin
+  // type bar and text box.
+  split: {
+    orientation: "landscape",
+    transform: "rotate-cw",
+    colors: {
+      ...perColor((k) => [layer(`${SPLIT}/${k}.png`)], WUBRGM),
+      c: [layer(`${SPLIT}/a.png`)],
+    },
+    shift: SPLIT_HALF_RECUT,
+    halfMasks: SPLIT_HALF_MASKS,
+    pack: "packSplit.js 'Split'",
+    transforms: SPLIT_TRANSFORM,
+    notes: [
+      "source: CC 'Split' (packSplit.js): the two half-cards of the M15 split frame, each a coloured body round its name bar, art window, thin type bar and text box — replaces the MSE composite (build-split-frame.mjs: two 240×345 magic-m15-split-fusable half-frames on a black canvas), which drew no coloured body round either half, set the title bars 31 px above the prints' and both windows 37 px high (the left one 69 px left of the prints': 133–952 × 201–800 px against 202–1018 × 238–796)",
+      "the pack draws the card PORTRAIT with its text turned −90°: the importer turns each composite a quarter turn clockwise (a pixel permutation, no resample), so the text reads upright and the pack's 'Right' texts and art window are our right half, its 'Left' texts our left half",
+      "colourless = CC's 'Artifact Frame' (split/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless split was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "the two halves are moved onto the prints (SPLIT_HALF_RECUT): the pack's collector border is 160 px where MH2 #123 / #60 and TSR #161 / #186 print 147–148, so the left half moves 11 px left and the right half 3 px, through the flat black border and spine — every pixel of both halves is the pack's, byte for byte, and every edge of both lies within 3.6 px of the four prints' mean (5.4 px of any one print; the pack's up to 14.3 / 16.4)",
+      "the pack's 'Top Half' / 'Bottom Half' masks (top.svg, bottom.svg) are plain rectangles cutting the PORTRAIT card at y 1000: after the turn 'Bottom Half' is the LEFT half (x 0–1099) and 'Top Half' the RIGHT half (x 1100–2099), the seam at x 1100 (52.38 %W) inside the pack's spine — importer inputs, checked and recorded (halfMasks), never published; on the master, whose halves moved, the seam is the middle of its spine, x 1093: TODO 4.26's per-half colour is a hard seam between two masters there, no mask asset",
+      "gold (m) is the pack's 'Multicolored Frame' on BOTH halves (C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame's 2016 arrangement, its collector line along the bottom border); a mixed split (GRN's hybrid // gold, a mono // mono of two colours) needs TODO 4.26",
+      "the pack hides the set symbol (setSymbolBounds off the card) and has no fuse dress here (split/fuse/ is its own pack): neither is built",
+    ],
+  },
+  // 4.21b — the March of the Machine battle (Siege) frame, front face (MOM
+  // #149 Invasion of Tarkir and the 36 MOM battles): the black border with
+  // the siege arc down its left, the battle icon at the name bar's left end,
+  // full art under a name pill, a type bar and a text box, and the defense
+  // shield painted across the text box's bottom-right corner.
+  battle: {
+    orientation: "landscape",
+    transform: "downscale",
+    colors: perColor((k) => [layer(`${BATTLE}/${k}.png`)]),
+    shift: BATTLE_LOWER_RECUT,
+    paintedShield: BATTLE_SHIELD,
+    pack: "packBattle.js 'Battle'",
+    transforms: BATTLE_TRANSFORM,
+    notes: [
+      "source: CC 'Battle' (packBattle.js), 2814×2010: the black border with the siege arc, the battle icon in the name bar's left end, the name pill, the type bar, the text box and the defense shield — replaces the MSE 'm15 mainframe battles' master, which had no border, arc, icon or shield (a transparent ring: the art window was the whole card, and the defense sat on a drawn disc)",
+      "the lower block is moved onto the prints (BATTLE_LOWER_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them, so rows 842–1467 of the downscaled master move 4 px down through the flat rows above (the art window) and below (the bottom border) — byte for byte, to within 1.5 px of the prints' mean; the prints' name pill, type bar and text box also end 8–11 px further right and their shield sits 12 px right, which no flat zone can give (the bars' paper would have to stretch): left as the pack has it",
+      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "colourless = CC's see-through 'Colorless Frame' (battle/c.png), as MOM #1 Invasion of Ravnica prints: its name pill, type bar and text box are translucent down to the bottom border, so the BATTLE profile draws the art under the frame for 'c' in a LANDSCAPE under-frame rect that runs to the bottom border (underFrameArt; owner decision 2026-09-29) — the art-window check fails the import without it",
+      "the pack's Pinline / Title / Type / Rules / Defense / Border masks and its 'Holo Stamp' are not used and not published; its 'Artifact Frame' and 'Land Frame' are not built (no artifact or land battle was printed)",
+      "the grey reverse-P/T line the pack draws for the back face (its 'Reverse PT' text) and a legendary back face's crown are double-faced anatomy (TODO 5.5): not drawn",
     ],
   },
   // --- TODO 5.1a: the transform bodies (see the section above CC_TEMPLATES).
@@ -3142,6 +3564,10 @@ export function sourceFilesFor(def) {
   if (def.shield) files.add(def.shield.mask);
   for (const src of Object.values(def.ptCut?.image ?? {})) files.add(src);
   for (const mask of Object.values(def.ptCut?.masks ?? {})) files.add(mask);
+  // A recipe's half masks (4.21b's split) and its painted shield's mask
+  // (battle): importer inputs, checked and recorded.
+  if (def.halfMasks) for (const src of [def.halfMasks.left, def.halfMasks.right]) files.add(src);
+  if (def.paintedShield) files.add(def.paintedShield.mask);
   // A masked tone's mask (TODO 5.1a, the transform backs).
   for (const key of builtColors(def)) {
     for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);

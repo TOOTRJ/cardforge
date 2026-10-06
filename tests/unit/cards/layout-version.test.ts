@@ -451,9 +451,11 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   });
 
   // Templates that gained a display footer AFTER v29 (flip and aftermath:
-  // the artist credit, layout v38 / TODO 4.21a): v29's frozen list never
-  // held them, so its word-spacing track judges them as "other" templates.
-  const FOOTER_SINCE_V29 = ["flip", "aftermath"];
+  // the artist credit, layout v38 / TODO 4.21a; battle and split: the same
+  // credit turned down their left border, layout v42 / TODO 4.21b): v29's
+  // frozen list never held them, so its word-spacing track judges them as
+  // "other" templates.
+  const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split"];
 
   it("word spacing: every card on the 25 display-footer templates", async () => {
     const classifyForSweep = await sweepAt(29);
@@ -730,7 +732,7 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     ...over,
   });
 
-  it("freezes its scope as a literal: the M15 family as it stood at v32, split and battle left out", async () => {
+  it("freezes its scope as a literal: the M15 family as it stood at v32, split and battle left out (the battle joined with v42)", async () => {
     const { V32_M15_FAMILY_TEMPLATES } = await import("@/lib/cards/layout-version");
     const { M15_FAMILY_TEMPLATES } = await import("@/lib/cards/m15-family");
     // The family changed? Don't edit the frozen v32 list: ship the change in
@@ -749,14 +751,28 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
     ];
-    expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater].sort()).toEqual([...M15_FAMILY_TEMPLATES].sort());
-    for (const t of joinedLater) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
+    // An EXISTING template that joined brought its own bump: the battle
+    // (TODO 4.21b), with layout v42 — its Card Conjurer master and the
+    // family's sizes; a v31 battle bake never owed v32.
+    const joinedWithBump: Record<string, number> = { battle: 42 };
+    expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater, ...Object.keys(joinedWithBump)].sort()).toEqual(
+      [...M15_FAMILY_TEMPLATES].sort(),
+    );
+    for (const t of [...joinedLater, ...Object.keys(joinedWithBump)]) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
+    const { V42_LANDSCAPE_LAYOUT_TEMPLATES } = await import("@/lib/cards/layout-version");
+    for (const [t, version] of Object.entries(joinedWithBump)) {
+      expect(version).toBe(42);
+      expect(V42_LANDSCAPE_LAYOUT_TEMPLATES, t).toContain(t);
+    }
     expect(new Set(V32_M15_FAMILY_TEMPLATES).size).toBe(V32_M15_FAMILY_TEMPLATES.length);
     expect(V32_M15_FAMILY_TEMPLATES).toHaveLength(23);
     for (const t of V32_M15_FAMILY_TEMPLATES) expect(FRAME_TEMPLATE_VALUES, t).toContain(t);
-    // Their slots sit off the MSE masters' bars: their sizes ship with 4.21.
+    // Their slots sat off the MSE masters' bars at v32: their sizes shipped
+    // with 4.21b (v42) — the battle joining the family, split keeping the
+    // prints' own smaller sizes outside it.
     expect(V32_M15_FAMILY_TEMPLATES).not.toContain("split");
     expect(V32_M15_FAMILY_TEMPLATES).not.toContain("battle");
+    expect(M15_FAMILY_TEMPLATES).not.toContain("split");
   });
 
   it("is a template-scoped sweep: every v31 bake on the family re-bakes, every other template's is stamped", async () => {
@@ -1235,9 +1251,17 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     const rows = ALL.filter((t) => getFrameProfile(t).loyaltyRows);
     expect(lv.V36_EVERY_CARD_TEMPLATES).toEqual(rows);
     expect(lv.V36_EVERY_CARD_TEMPLATES).not.toContain("nyx");
-    // The printed-size templates: the profiles with setSymbolFit "ink".
+    // The printed-size templates: the profiles with setSymbolFit "ink" — as
+    // they stood at v36. The battle took the family's ink fit with its own
+    // bump (layout v42, TODO 4.21b), which re-bakes every battle card: v36's
+    // frozen list never names it.
+    const INK_FIT_SINCE_V36 = ["battle"];
+    expect(getFrameProfile("battle").setSymbolFit).toBe("ink");
+    expect(lv.V36_PRINTED_SYMBOL_TEMPLATES).not.toContain("battle");
     expect([...lv.V36_PRINTED_SYMBOL_TEMPLATES].sort()).toEqual(
-      ALL.filter((t) => getFrameProfile(t).setSymbolFit === "ink" && !POST_V36_TEMPLATES.includes(t)).sort(),
+      ALL.filter(
+        (t) => getFrameProfile(t).setSymbolFit === "ink" && !POST_V36_TEMPLATES.includes(t) && !INK_FIT_SINCE_V36.includes(t),
+      ).sort(),
     );
     expect(lv.V36_PRINTED_SYMBOL_SETS).toEqual(Object.keys(SET_SYMBOL_PRINTED_PX).sort());
     // The codes: exactly those whose glyph (as the renderers look it up) the
@@ -1792,5 +1816,106 @@ describe("v41 — the modal flipside strip rider (TODO 5.1c)", () => {
     // slot is the piece's box, inside the painted strip's keep-out.
     expect(getFrameProfile("m15mdfcback").flipside?.keepOut).toEqual({ leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 });
     expect(getFrameProfile("m15mdfcback").overlays?.find((o) => o.anatomy === "mdfcStrip")?.rect).toEqual({ leftPct: 44 / 15, topPct: 1866 / 21, widthPct: 658 / 15, heightPct: 90 / 21 });
+  });
+});
+
+describe("v42 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21b)", () => {
+  const png = "https://x/y.png";
+  /** A v41 bake: only v42 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 41,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V42 = { current: 42 } as const;
+  const PAIR = ["battle", "split"];
+
+  it("is a sweep, never a badge, scoped to battle and split — frozen as a literal", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(42);
+    expect(lv.VERSION_ROLLOUT[42]).toBe("sweep");
+    expect(lv.rolloutPolicy(42)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 42)).toBe(42);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.V42_LANDSCAPE_LAYOUT_TEMPLATES].sort()).toEqual(PAIR);
+    // New masters, art slots and text slots: template-scoped, no card
+    // predicate — a battle with no defense and a split with no second half
+    // change too.
+    expect(lv.VERSION_SCOPES[42]).toBeUndefined();
+    for (const t of ALL) expect(isRenderStale(41, t, undefined, 42), t).toBe(PAIR.includes(t));
+    // The saga (4.21c) and the portrait layouts (v38 / v39) are untouched.
+    for (const t of ["saga", "adventure", "aftermath", "flip", "m15"]) expect(isRenderStale(41, t, undefined, 42), t).toBe(false);
+  });
+
+  it("re-bakes every card on the two — art or none, any finish, a defense or none, a right half or none — and stamps every other template", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(42);
+    for (const t of ALL) {
+      const pair = PAIR.includes(t);
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(pair ? "rebake" : "stamp");
+      expect(hasPendingCorrection(row, AT_V42), t).toBe(pair);
+      // A correction: an owner never sees a badge for it.
+      expect(hasNewerLook({ ...row, visibility: "public" }, AT_V42), t).toBe(false);
+    }
+    for (const [t, over] of [
+      ["battle", { art_url: null }],
+      ["battle", { card_type: "battle", defense: "5" }],
+      ["battle", { card_type: "battle", defense: null }],
+      ["battle", { frame_style: { template: "battle", finish: "foil" } }],
+      ["battle", { color_identity: [] }],
+      ["split", { art_url: null }],
+      ["split", { back_face: { title: "Furious", card_type: "sorcery", cost: "{3}{R}{R}" } }],
+      ["split", { back_face: null }],
+      ["split", { frame_style: { template: "split", finish: "etched" } }],
+    ] as const) {
+      expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe("rebake");
+    }
+    expect(classifyForSweep(at("saga"))).toBe("stamp");
+    expect(classifyForSweep(at("battle", { layout_version: 42 }))).toBe("current");
+    expect(classifyForSweep(at("split", { layout_version: 42 }))).toBe("current");
+  });
+
+  it("is NOT verification-neutral (masters and every slot move); neither template has a tick to stale, every other template's ticks stay fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    const { verificationState } = await import("@/lib/cards/frame-verification-state");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(42);
+    expect([...VERIFICATION_SCOPED_VERSIONS[42]].sort()).toEqual(PAIR);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(41, t, VERIFICATION_SCOPED_VERSIONS, 42, regular), t).toBe(PAIR.includes(t));
+    }
+    // A tick made on either before v42 (production has none: 0 of 7 each)
+    // would be kept and flagged; one made on another template stays fresh.
+    const tick = { verified: true, verifiedLayoutVersion: 41, verifiedOverrideHash: "h" } as const;
+    expect(verificationState(tick, "battle", "h", 42).stale).toBe(true);
+    expect(verificationState(tick, "split", "h", 42).stale).toBe(true);
+    expect(verificationState(tick, "m15", "h", 42).stale).toBe(false);
+    expect(verificationState(tick, "saga", "h", 42).stale).toBe(false);
+    expect(verificationState(tick, "flip", "h", 42).stale).toBe(false);
+    expect(verificationState({ ...tick, verifiedLayoutVersion: 42 }, "battle", "h", 42).stale).toBe(false);
+    // What moved, in HD px of the 2100 × 1500 card. The battle's name starts
+    // right of its icon (the MSE rect began 269 px in, under it — TODO 3.28)…
+    const battle = getFrameProfile("battle");
+    expect(battle.title.rect.leftPct * 21).toBeCloseTo(392, 9);
+    expect(battle.artSlot).toEqual({ topPct: 3.88, leftPct: 7.85, widthPct: 89.4, heightPct: 91.91 });
+    // …its defense is the value alone in the shield the master paints…
+    expect(battle.defense?.paintedRect).toBeDefined();
+    expect(battle.defense?.badgeColorHex).toBeUndefined();
+    expect(battle.defense?.shadowCss).toBeUndefined();
+    // …and both carry the artist credit turned down the left border.
+    for (const t of PAIR) {
+      const p = getFrameProfile(t);
+      expect(p.footerTurn, t).toBe(90);
+      expect(p.footer?.rect.leftPct, t).toBeLessThan(6);
+      expect(p.footer!.rect.heightPct, t).toBeGreaterThan(p.footer!.rect.widthPct * 10);
+    }
+    // Split's two windows are the masters' own, one half apart.
+    const split = getFrameProfile("split");
+    expect((split.secondFace!.artSlot!.leftPct - split.artSlot.leftPct) * 21).toBeCloseTo(967, 9);
+    expect(split.artSlot.topPct).toBe(split.secondFace!.artSlot!.topPct);
   });
 });

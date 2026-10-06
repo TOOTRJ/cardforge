@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { readFileSync } from "node:fs";
 import {
+  isStatSlotPath,
   listSlotPaths,
   mergeProfile,
   parseFrameProfileOverride,
@@ -8,6 +10,7 @@ import {
   slotRect,
 } from "@/lib/cards/profile-override";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 describe("mergeProfile", () => {
   const base = getFrameProfile("m15");
@@ -123,6 +126,57 @@ describe("listSlotPaths / slotRect", () => {
         expect(typeof rect?.topPct).toBe("number");
       }
     }
+  });
+});
+
+describe("stat slots, by path (isStatSlotPath)", () => {
+  it("names exactly the paths the override schema reads as stat slots", () => {
+    const stat = ["pt", "loyalty", "defense", "secondFace.pt"] as const;
+    for (const path of stat) expect(isStatSlotPath(path), path).toBe(true);
+    for (const path of ["artSlot", "costRect", "symbolRect", "title", "type", "rules", "footer", "chapters", "adventure.title", "secondFace.title", "secondFace.rules", "secondFace.artSlot"] as const) {
+      expect(isStatSlotPath(path), path).toBe(false);
+    }
+    // The schema agrees: a stat path takes the value's offsets and refuses a
+    // text slot's fields; a text path the other way round.
+    const nested = (path: string, value: unknown) => path.split(".").reduceRight<unknown>((acc, key) => ({ [key]: acc }), value);
+    for (const path of stat) {
+      expect(parseFrameProfileOverride(nested(path, { valueDyEm: 0.1, sizePct: 0.03 })), path).not.toBeNull();
+      expect(parseFrameProfileOverride(nested(path, { lineHeight: 1.1 })), path).toBeNull();
+      expect(parseFrameProfileOverride(nested(path, { letterSpacingEm: 0.02 })), path).toBeNull();
+    }
+    for (const path of ["title", "rules", "secondFace.title"]) {
+      expect(parseFrameProfileOverride(nested(path, { lineHeight: 1.1 })), path).not.toBeNull();
+      expect(parseFrameProfileOverride(nested(path, { valueDyEm: 0.1 })), path).toBeNull();
+    }
+  });
+
+  it("covers the stat slots that carry no plate, badge or value offset — the battle's defense in its painted shield (TODO 4.21b)", () => {
+    // The layout editor used to tell a stat slot by those three keys. The
+    // battle's defense has none of them since its shield is the master's
+    // (it lost `badgeColorHex`), nor has a P/T printed on the art: by its
+    // keys each would be offered a text slot's line height and tracking,
+    // which the strict stat schema refuses on save.
+    const byKeys = (slot: object) => "valueDyEm" in slot || "plateAssetPathTemplate" in slot || "badgeColorHex" in slot;
+    const defense = getFrameProfile("battle").defense!;
+    expect(byKeys(defense)).toBe(false);
+    expect(Object.keys(defense).sort()).toEqual(["colorHex", "inkSpanPct", "paintedRect", "rect", "sizePct", "weight"]);
+    expect(listSlotPaths(getFrameProfile("battle"))).toContain("defense");
+    expect(isStatSlotPath("defense")).toBe(true);
+    const missed: string[] = [];
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      const profile = getFrameProfile(template);
+      for (const path of listSlotPaths(profile)) {
+        if (!isStatSlotPath(path)) continue;
+        const slot = path === "secondFace.pt" ? profile.secondFace!.pt! : profile[path as "pt" | "loyalty" | "defense"]!;
+        expect(typeof slot.sizePct, `${template}/${path}`).toBe("number");
+        if (!byKeys(slot)) missed.push(`${template}/${path}`);
+      }
+    }
+    expect(missed).toContain("battle/defense");
+    expect(missed).toContain("retro/pt");
+    // The editor reads the path first.
+    const editor = readFileSync("components/admin/frame-profile-editor.tsx", "utf8");
+    expect(editor).toMatch(/isStatSlotPath\(path\) \|\| "valueDyEm" in slot/);
   });
 });
 

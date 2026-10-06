@@ -7,11 +7,12 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 // (lib/cards/card-corner.ts), per template and corner:
 //
 //   "border" — the border black #000: every master whose border runs black
-//              to the corner (the Card Conjurer family, the MSE masters Phase
-//              B normalised, Alpha, nyx, split, adventure …). The default.
+//              to the corner (the Card Conjurer family — split and battle
+//              with it since TODO 4.21b — the MSE masters Phase B
+//              normalised, Alpha, nyx, adventure …). The default.
 //   "root"   — the card root's #101015: a master whose EDGE BAND is
 //              transparent at that corner, so the card's border there IS the
-//              root's backdrop — the rings (battle, avatar, bloomanime,
+//              root's backdrop — the rings (avatar, bloomanime,
 //              lotrscroll, tarkirdragon, tarkirghostfire), the bottom
 //              corners of bloomburrow, lotr and tarkirdraconic, and
 //              expeditionland b/g. A #000 cap in a #101015 band was a seam
@@ -52,7 +53,6 @@ const DESIGN_TOP_ROOT_BOTTOM = { tl: "frame", tr: "frame", bl: "root", br: "root
 /** Every template × corner that is not "border"; `keys` limits an entry to
  *  some colour masters. */
 export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: readonly string[] }>> = {
-  battle: { kinds: "root" },
   avatar: { kinds: "root" },
   bloomanime: { kinds: "root" },
   lotrscroll: { kinds: "root" },

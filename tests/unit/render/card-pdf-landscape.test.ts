@@ -10,9 +10,10 @@ import {
   PDFRawStream,
   PDFRef,
 } from "pdf-lib";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { BLEED_PT, buildCardPdf, buildDeckPdf, SLUG_PT, type PdfLayout } from "@/lib/render/card-pdf";
+import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
 // TODO 6.22 — the print PDF (single card, 3×3 sheets, the Pro deck export)
@@ -224,20 +225,20 @@ describe("card PDF — a landscape render is turned into the portrait slot (TODO
     expect(designCorners(pages[2].images[0].ctm)).toEqual(expectedCorners(0, 0, "portrait"));
   });
 
-  describe("real landscape bakes (public/frames/battle and split are in git — offline)", () => {
-    beforeAll(() => {
-      const realFetch = globalThis.fetch;
-      vi.stubGlobal(
-        "fetch",
-        vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-          // Satori loads its yoga wasm from a data: URL; nothing leaves the box.
-          if (String(input).startsWith("data:")) return realFetch(input, init);
-          throw new Error(`unexpected fetch: ${String(input)}`);
-        }),
-      );
-    });
+  // Battle and split are Card Conjurer masters in the frames bucket since
+  // TODO 4.21b (layout v42): the bakes are served flat stand-in masters
+  // (tests/stubs/stand-in-frames.ts) — the PDF's geometry doesn't read the
+  // frame — and every other fetch is refused, so nothing leaves the box.
+  describe("real landscape bakes (battle and split on stand-in masters — offline)", () => {
+    let frames: StandInFrames;
+    beforeAll(async () => {
+      frames = await serveStandInFrames([
+        { template: "battle", keys: ["g"] },
+        { template: "split", keys: ["m"] },
+      ]);
+    }, 60_000);
     afterAll(() => {
-      vi.unstubAllGlobals();
+      frames.restore();
     });
 
     const base = {

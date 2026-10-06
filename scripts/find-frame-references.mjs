@@ -8,7 +8,7 @@
 // English), and reports two candidates: the printing with the SHORTEST
 // rules text and the one with the LONGEST — the two ends of the fit ladder
 // a single reference can't exercise. Combos whose signature no real printing
-// carries (mono-colour split cards, 1993 tokens…) report `null`.
+// carries (a white, black or green split card, 1993 tokens…) report `null`.
 //
 //   node scripts/find-frame-references.mjs [out.json]
 //
@@ -195,8 +195,14 @@ const TEMPLATES = {
     q: (k) => (k === "c" ? null : `is:adventure frame:2015 (st:expansion or st:core) is:booster -is:showcase -is:borderless -is:extended ${spellColor(k)}`),
   },
   split: {
-    note: "Mono-colour split cards were never printed in the M15 frame.",
-    q: (k) => (k === "m" ? `is:split -kw:aftermath frame:2015 -is:showcase c>=2` : null),
+    note:
+      "The M15 split frame as printed since 2018 (the collector line down the left border): mono-red and mono-blue only (MH2, TSR, WHO). Rooms are their own frame.",
+    confirm:
+      "m: keep only a GOLD // GOLD printing (C16 #239 Trial // Error, in the frame's 2016 arrangement) — a split whose halves differ in colour (GRN's hybrid // gold, DMR's mono // mono) needs TODO 4.26, never a reference.",
+    q: (k) =>
+      k === "c"
+        ? null
+        : `is:split -kw:aftermath frame:2015 -is:showcase -t:room ${k === "m" ? "c>=2" : spellColor(k)}`,
   },
   aftermath: {
     q: (k) => (k === "c" ? null : `kw:aftermath ${spellColor(k)}`),

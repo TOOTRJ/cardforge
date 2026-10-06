@@ -361,6 +361,25 @@ Rules and gotchas:
   the full-art basics' "ink-box" never reads the table). Frames outside the
   family keep the old paths byte-for-byte — bringing one in is its own
   layout bump (`docs/FRAMES.md`).
+- The landscape pair (layout v42, TODO 4.21b): `split` and `battle` are Card
+  Conjurer masters in the bucket at 2100 × 1500 — the importer's
+  `orientation: "landscape"` recipes (split turned a quarter turn clockwise
+  with no resample, battle downscaled once). A recipe's `shift` moves whole
+  blocks onto the prints through FLAT zones only (`shiftBlocksRgba8` throws
+  otherwise; `SPLIT_HALF_RECUT`, `BATTLE_LOWER_RECUT`), and the profile
+  writes its rects in the PACK's px and rides the moves (`SPLIT_RECUT_PX`,
+  `BATTLE_LOWER_RECUT_PX`; a unit test holds recipe and profile together).
+  Battle is in the M15 family through `displayPct(…, "landscape")`; split
+  is NOT — a half prints smaller (`SPLIT_*` in `lib/cards/typography.ts`,
+  `setSymbolFit: "ink-height"`) — yet both its halves are `fit: "measured"`
+  (an unturned second face is fitted as a front band is). The battle's
+  defense is the value alone in the shield the MASTER paints
+  (`StatSlot.paintedRect`: a rules keep-out on every battle; never a drawn
+  badge), and both print the artist credit down the left border
+  (`FrameProfile.footerTurn`, both renderers through `unturnedRect`; the
+  collector line there is 4.9d's). The split's half masks and the battle's
+  Defense mask are importer inputs, never published. `docs/FRAMES.md` "The
+  landscape layouts".
 - ONE rules layout (layout v33, TODO 3.29): `lib/cards/rules-layout.ts`
   decides the size (the even HD-px ladder `RULES_SIZE_PX` 76 / 68 / 64 → 42;
   profiles use `rulesPxToPct(RULES_SIZE_PX.*)`, never a pt literal), every

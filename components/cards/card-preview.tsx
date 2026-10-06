@@ -120,6 +120,7 @@ import {
   type SlotAlign,
   type StatSlot,
   artLayersFor,
+  unturnedRect,
   type FlipsideSlots,
   type TextSlot,
   type TypeLineSplit,
@@ -1603,10 +1604,16 @@ function CardFace({
       {collector ? (
         <CollectorBlock layout={collector} ink={footerInkResolved?.colorHex ?? layout.footer?.colorHex ?? "#f4eee2"} />
       ) : null}
+      {/* A TURNED footer (FrameProfile.footerTurn, TODO 4.21b): a landscape
+          card's artist credit runs down its left border — the slot's rect is
+          the band it covers, drawn as its unturned box and turned in place
+          (unturnedRect, the bake's FooterBake twin). */}
       {!collector && layout.footer && footerInkResolved ? (
         <div
+          data-testid="card-footer"
           style={{
-            ...rectStyle(layout.footer.rect),
+            ...rectStyle(layout.footerTurn ? unturnedRect(layout.footer.rect, layout.footerTurn, aspect) : layout.footer.rect),
+            ...(layout.footerTurn ? { transform: `rotate(${layout.footerTurn}deg)`, transformOrigin: "center" } : {}),
             zIndex: 20,
             display: "flex",
             alignItems: "center",
@@ -2538,8 +2545,48 @@ function SecondFacePanel({
   // bake sets them (measuredLinePx); a face without it as before.
   const linePct = (fitted: number, base: number) =>
     slot.fitLines ? measuredLinePreviewPct(fitted, base, orientationFromAspect(aspect)) : fitted;
+  // An UNTURNED second face whose slots are measured (split's right half,
+  // TODO 4.21b) draws its name and type bands exactly as the front draws
+  // its own (CardFace's title / type BandSlot): fitTitleBand /
+  // fitTypeLineBand on its own slots, a shrunk line at the stored HD bake's
+  // whole px on its kept baseline (textDy), the pips at their own size — so
+  // both halves of a split card are set alike. It draws no set symbol (TODO
+  // 3.9). The bake's SecondFaceBake twin.
+  const orientation = orientationFromAspect(aspect);
+  const measured = slot.rotation === 0 && slot.title.fit === "measured";
+  const faceTitleFit = measured
+    ? fitTitleBand({ title: slot.title, costSizePct: slot.costSizePct }, name, showCost ? data.cost : null, orientation)
+    : null;
+  const faceTitleSizePct = faceTitleFit
+    ? measuredLinePreviewPct(faceTitleFit.sizePct, slot.title.sizePct, orientation)
+    : slot.title.sizePct;
+  const faceTypeFit =
+    measured && slot.type.fit === "measured"
+      ? fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null, orientation })
+      : null;
+  const faceTypeSizePct = faceTypeFit
+    ? measuredLinePreviewPct(faceTypeFit.sizePct, slot.type.sizePct, orientation)
+    : slot.type.sizePct;
   return (
     <>
+      {faceTitleFit ? (
+        <BandSlot slot={{ ...slot.title, sizePct: faceTitleSizePct }}>
+          <span
+            data-testid="second-face-title"
+            style={{ ...ELLIPSIS, ...textDy(slot.title, faceTitleSizePct), maxWidth: cqw(faceTitleFit.widthPct) }}
+            title={name}
+          >
+            {displayLine(faceTitleFit.text)}
+          </span>
+          {showCost ? (
+            <ManaCostGlyphs
+              cost={data.cost}
+              fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+              overrides={pipOverrides}
+            />
+          ) : null}
+        </BandSlot>
+      ) : (
       <div
         style={{
           ...rectStyle(slot.title.rect),
@@ -2567,6 +2614,21 @@ function SecondFacePanel({
           />
         ) : null}
       </div>
+      )}
+      {faceTypeFit ? (
+        <BandSlot slot={{ ...slot.type, sizePct: faceTypeSizePct }}>
+          <span
+            data-testid="second-face-type"
+            style={{
+              ...ELLIPSIS,
+              ...textDy(slot.type, faceTypeSizePct),
+              ...(faceTypeFit.widthPct !== null ? { maxWidth: cqw(faceTypeFit.widthPct) } : {}),
+            }}
+          >
+            {displayLine(faceTypeFit.text)}
+          </span>
+        </BandSlot>
+      ) : (
       <div
         style={{
           ...rectStyle(slot.type.rect),
@@ -2583,6 +2645,7 @@ function SecondFacePanel({
       >
         <span style={ELLIPSIS}>{displayLine(lineSizes.typeText)}</span>
       </div>
+      )}
       {/* The face's rules, line by line in its own frame, turned in place
           with it (layout v33) — at the slot's own alignment. */}
       {hasRulesLines(rules) ? (

@@ -40,7 +40,17 @@ describe("the square-corner table", () => {
   it("is border black by default, root on the rings, design on top of Bloomburrow / LOTR / Tarkir draconic", () => {
     expect(squareCornerKind("m15", "w", "tl")).toBe("border");
     expect(squareCornerKind("retro", "b", "br")).toBe("border");
-    for (const c of CORNER_NAMES) expect(squareCornerKind("battle", "r", c)).toBe("root");
+    for (const c of CORNER_NAMES) expect(squareCornerKind("lotrscroll", "r", c)).toBe("root");
+    // The battle's corner is border black since TODO 4.21b: its Card
+    // Conjurer master runs black to the corner (the MSE one was a
+    // transparent ring, whose corner showed the root's #101015) — like the
+    // split's, on every colour.
+    for (const template of ["battle", "split"]) {
+      expect(SQUARE_CORNERS[template], template).toBeUndefined();
+      for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+        for (const c of CORNER_NAMES) expect(squareCornerKind(template, key, c), `${template}/${key} ${c}`).toBe("border");
+      }
+    }
     for (const t of ["bloomburrow", "lotr", "tarkirdraconic"]) {
       expect(CORNER_NAMES.map((c) => squareCornerKind(t, "g", c))).toEqual(["frame", "frame", "root", "root"]);
     }

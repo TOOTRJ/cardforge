@@ -888,5 +888,146 @@
         "artist": "Jim Nelson"
       }
     ]
+  },
+  "mh2-123": {
+    "id": "5b209759-6215-49e8-a6a0-a6c94040adb2",
+    "oracle_id": "62411ced-843e-4b63-bdf6-dafb2ac27047",
+    "name": "Fast // Furious",
+    "released_at": "2021-06-18",
+    "layout": "split",
+    "set": "mh2",
+    "set_name": "Modern Horizons 2",
+    "set_type": "draft_innovation",
+    "collector_number": "123",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Instant // Sorcery",
+    "mana_cost": "{2}{R} // {3}{R}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "rarity": "uncommon",
+    "artist": "Deruchenko Alexander",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/mh2/123/fast-furious?utm_source=api",
+    "card_faces": [
+      {
+        "name": "Fast",
+        "mana_cost": "{2}{R}",
+        "type_line": "Instant",
+        "artist": "Deruchenko Alexander"
+      },
+      {
+        "name": "Furious",
+        "mana_cost": "{3}{R}{R}",
+        "type_line": "Sorcery",
+        "artist": "Deruchenko Alexander"
+      }
+    ]
+  },
+  "mh2-60": {
+    "id": "43ab3ed2-2b50-4488-a21f-60965222970a",
+    "oracle_id": "5d1d76e0-049c-4a33-96ec-8e60deed16d5",
+    "name": "Said // Done",
+    "released_at": "2021-06-18",
+    "layout": "split",
+    "set": "mh2",
+    "set_name": "Modern Horizons 2",
+    "set_type": "draft_innovation",
+    "collector_number": "60",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Sorcery // Instant",
+    "mana_cost": "{2}{U} // {3}{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "uncommon",
+    "artist": "Dallas Williams",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/mh2/60/said-done?utm_source=api",
+    "card_faces": [
+      {
+        "name": "Said",
+        "mana_cost": "{2}{U}",
+        "type_line": "Sorcery",
+        "artist": "Dallas Williams"
+      },
+      {
+        "name": "Done",
+        "mana_cost": "{3}{U}",
+        "type_line": "Instant",
+        "artist": "Dallas Williams"
+      }
+    ]
+  },
+  "c16-239": {
+    "id": "383451e1-9b97-4c85-a044-7c68b61c8c65",
+    "oracle_id": "a40bebe3-6f00-4754-9f70-351055e3b524",
+    "name": "Trial // Error",
+    "released_at": "2016-11-11",
+    "layout": "split",
+    "set": "c16",
+    "set_name": "Commander 2016",
+    "set_type": "commander",
+    "collector_number": "239",
+    "lang": "en",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Instant // Instant",
+    "mana_cost": "{W}{U} // {U}{B}",
+    "colors": [
+      "B",
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "U",
+      "W"
+    ],
+    "rarity": "uncommon",
+    "artist": "Ron Spears & Wayne Reynolds",
+    "finishes": [
+      "nonfoil"
+    ],
+    "scryfall_uri": "https://scryfall.com/card/c16/239/trial-error?utm_source=api",
+    "card_faces": [
+      {
+        "name": "Trial",
+        "mana_cost": "{W}{U}",
+        "type_line": "Instant",
+        "artist": "Ron Spears"
+      },
+      {
+        "name": "Error",
+        "mana_cost": "{U}{B}",
+        "type_line": "Instant",
+        "artist": "Wayne Reynolds"
+      }
+    ]
   }
 }

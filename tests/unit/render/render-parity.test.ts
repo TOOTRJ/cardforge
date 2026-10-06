@@ -123,10 +123,16 @@ describe("text dy (TextSlot.dy, TODO 4.20)", () => {
     expect(BAKE).toContain("...textDyBake(layout.title, width, titleSlot.sizePct)");
     expect(BAKE).toContain("...textDyBake(layout.type, width, typeSlot.sizePct)");
     expect(BAKE.match(/\.\.\.textDyBake\(slot, cardWidth\)/g)).toHaveLength(1);
-    // Nowhere else: a second face and the adventure panel keep centring
-    // their text in the rect.
-    expect(PREVIEW.match(/textDy\(/g)).toHaveLength(6);
-    expect(BAKE.match(/textDyBake\(/g)).toHaveLength(4);
+    // …and the two bands of an UNTURNED measured second face (split's right
+    // half, TODO 4.21b), which is drawn as the front draws its own.
+    expect(PREVIEW).toContain("...textDy(slot.title, faceTitleSizePct)");
+    expect(PREVIEW).toContain("...textDy(slot.type, faceTypeSizePct)");
+    expect(BAKE).toContain("...textDyBake(slot.title, cardWidth, faceTitleSlot.sizePct)");
+    expect(BAKE).toContain("...textDyBake(slot.type, cardWidth, faceTypeSlot.sizePct)");
+    // Nowhere else: a turned second face (flip, aftermath) and the adventure
+    // panel keep centring their text in the rect.
+    expect(PREVIEW.match(/textDy\(/g)).toHaveLength(8);
+    expect(BAKE.match(/textDyBake\(/g)).toHaveLength(6);
   });
 });
 
@@ -294,7 +300,8 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
     for (const src of [PREVIEW, BAKE]) {
       expect(src).not.toContain("fitSingleLineSizePct(");
       expect(src).not.toContain("fitTypeLine(");
-      expect(src.match(/fitTypeLineBand\(\{/g)).toHaveLength(2); // the type band, the adventure panel
+      // The type band, the adventure panel, a measured second face.
+      expect(src.match(/fitTypeLineBand\(\{/g)).toHaveLength(3);
     }
     expect(PREVIEW).toMatch(
       /fitTypeLineBand\(\{\s*layout,\s*text: typeLine,\s*symbolWidthPct: setSymbol\.drawnWidthPct,\s*symbolInkLeftPct: setSymbol\.inkLeftPct,\s*orientation: orientationFromAspect\(aspect\),/,
@@ -342,6 +349,59 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
     // The preview draws the name alone when there is no cost; the bake's
     // filler span must not take a gap from it.
     expect(bake).toContain("...(slot.fitLines && showCost ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),");
+  });
+
+  it("draw an unturned measured second face (split's right half, TODO 4.21b) as the front draws its own bands, in both renderers", () => {
+    const panel = fn(PREVIEW, "SecondFacePanel");
+    const bake = fn(BAKE, "SecondFaceBake");
+    for (const src of [panel, bake]) {
+      // One switch: the face isn't turned and its name slot is measured.
+      expect(src).toContain('const measured = slot.rotation === 0 && slot.title.fit === "measured";');
+      // The name before its cost, from the front's own fit, at the card's
+      // orientation (a landscape card's 5 pt floor)…
+      expect(src).toMatch(
+        /fitTitleBand\(\{ title: slot\.title, costSizePct: slot\.costSizePct \}, name, showCost \? \w+\.cost : null, orientation\)/,
+      );
+      // …and the type line to its own bar, with no set symbol (TODO 3.9).
+      expect(src).toContain(
+        'measured && slot.type.fit === "measured"\n      ? fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null, orientation })',
+      );
+      // The fit's text and room, cut with the one "…".
+      expect(src).toContain("{displayLine(faceTitleFit.text)}");
+      expect(src).toContain("{displayLine(faceTypeFit.text)}");
+      // The pips at their own disc, whatever the name's fit.
+      expect(src).toMatch(/\(slot\.costSizePct \?\? slot\.title\.sizePct/);
+    }
+    // The front's band component in each renderer, a shrunk line at the
+    // stored HD bake's whole px (measuredLinePx / measuredLinePreviewPct).
+    expect(panel).toContain("<BandSlot slot={{ ...slot.title, sizePct: faceTitleSizePct }}>");
+    expect(panel).toContain("<BandSlot slot={{ ...slot.type, sizePct: faceTypeSizePct }}>");
+    expect(panel).toContain("measuredLinePreviewPct(faceTitleFit.sizePct, slot.title.sizePct, orientation)");
+    expect(panel).toContain("measuredLinePreviewPct(faceTypeFit.sizePct, slot.type.sizePct, orientation)");
+    expect(panel).toContain("maxWidth: cqw(faceTitleFit.widthPct)");
+    expect(bake).toContain("<Band slot={faceTitleSlot} cardWidth={cardWidth}>");
+    expect(bake).toContain("<Band slot={faceTypeSlot} cardWidth={cardWidth}>");
+    expect(bake).toContain("measuredLinePx(faceTitleFit.sizePct, slot.title.sizePct, cardWidth, orientation) / cardWidth");
+    expect(bake).toContain("measuredLinePx(faceTypeFit.sizePct, slot.type.sizePct, cardWidth, orientation) / cardWidth");
+    expect(bake).toContain("maxWidth: Math.round(faceTitleFit.widthPct * cardWidth)");
+  });
+});
+
+describe("a turned footer (FrameProfile.footerTurn, TODO 4.21b)", () => {
+  it("is ONE box in both renderers: the band's unturned rect, turned about its centre", () => {
+    // The profile's rect is the BAND the turned line covers (what the
+    // compare page scores); both renderers lay the line out in the same
+    // unturned box (unturnedRect: the band's sides swapped through the
+    // card's aspect, about its centre) and turn it by the same angle.
+    expect(PREVIEW).toContain(
+      "...rectStyle(layout.footerTurn ? unturnedRect(layout.footer.rect, layout.footerTurn, aspect) : layout.footer.rect),",
+    );
+    expect(PREVIEW).toContain('...(layout.footerTurn ? { transform: `rotate(${layout.footerTurn}deg)`, transformOrigin: "center" } : {}),');
+    expect(BAKE).toContain("turn: layout.footerTurn ?? 0,");
+    expect(BAKE).toContain("...slotBox(turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect),");
+    expect(BAKE).toMatch(/turn \? \{ transform: `rotate\(\$\{turn\}deg\)`, transformOrigin: "50% 50%" \} : \{\}/);
+    // No renderer turns a footer any other way.
+    for (const src of [PREVIEW, BAKE]) expect(src.match(/unturnedRect\(/g)).toHaveLength(1);
   });
 });
 

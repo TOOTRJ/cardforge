@@ -48,6 +48,7 @@ import {
   gainAt,
   finishFor,
   flatPixelAt,
+  outputSizeOf,
   recutBand,
   recutBlockUp,
   retintStructure,
@@ -111,6 +112,10 @@ type Def = {
   bridge?: typeof EMBLEM_RAY_BRIDGE;
   tones?: readonly object[] | ((key: string) => readonly object[]);
   excluded?: Record<string, string>;
+  /** A landscape recipe (TODO 4.21b: split, battle) writes 2100 × 1500
+   *  masters by its transform (tests/unit/frames/landscape-importer.test.ts). */
+  orientation?: "landscape";
+  transform?: "rotate-cw" | "downscale";
   pack?: string;
   transforms?: string;
   notes: string[];
@@ -144,6 +149,8 @@ describe("Card Conjurer recipe", () => {
     expect(Object.keys(templates).sort()).toEqual([
       "adventure",
       "aftermath",
+      // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
+      "battle",
       "emblem",
       "flip",
       "fullartland",
@@ -181,6 +188,7 @@ describe("Card Conjurer recipe", () => {
       "m20tokenartifacttext",
       "m20tokentall",
       "m20tokentext",
+      "split",
     ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -1788,7 +1796,9 @@ describe("published to the frames bucket", () => {
   const manifest = manifestJson as FrameManifest;
   /** Every file a template's recipe writes, with its expected size. */
   const outputsOf = (template: string, def: Def): Array<[string, number, number]> => {
-    const out: Array<[string, number, number]> = builtColors(def as never).map((k) => [`${template}/${k}.png`, 1500, 2100]);
+    // 1500 × 2100, or 2100 × 1500 for a landscape recipe (split, battle).
+    const master = outputSizeOf(def as never);
+    const out: Array<[string, number, number]> = builtColors(def as never).map((k) => [`${template}/${k}.png`, master.width, master.height]);
     const plateSize: [number, number] = template.startsWith("m15borderless") ? [274, 140] : [0, 0];
     for (const k of Object.keys(def.plates ?? {})) out.push([`${template}/pt/${k}.png`, ...plateSize]);
     for (const k of Object.keys(def.symbols ?? {})) out.push([`${template}/symbol/${k}.png`, 168, 168]);
@@ -1848,8 +1858,12 @@ describe("provenance and hygiene", () => {
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);
-      // Every master was cut at the one card corner (TODO 3.26's re-import).
-      expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
+      // Every master was cut at the one card corner (TODO 3.26's re-import)
+      // — 64.5 px on either orientation (4.3 % of the short side): a
+      // landscape recipe's masters are 2100 × 1500.
+      const { width: outW, height: outH } = outputSizeOf(templates[template] as never);
+      expect([outW, outH], template).toEqual(templates[template].orientation === "landscape" ? [2100, 1500] : [1500, 2100]);
+      expect(provenance[template].output, template).toBe(`${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
       const plainKeys = [...COLORS, ...pairKeysOf(template), ...(getFrameProfile(template).artifactMasterKeys?.c === "a" ? ["a"] : [])];
       // A template whose crown is baked into its masters (4.6f) records a

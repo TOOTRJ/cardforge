@@ -1,9 +1,10 @@
 import sharp from "sharp";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { mainRulesLayout } from "@/lib/cards/rules-box";
 import { linePositions, rectPx, type RulesTarget } from "@/lib/cards/rules-layout";
 import { EOE_30 } from "@/tests/unit/cards/fixtures/rules-texts";
+import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
 // The v33 rules layout on REAL card bakes (renderCardImage, layout v33, TODO
@@ -11,9 +12,20 @@ import { EOE_30 } from "@/tests/unit/cards/fixtures/rules-texts";
 // lays it out — the same size, line count, line pitch, paragraph gap and
 // flavor step — at the 750 px and the HD preset, on a portrait and a
 // landscape frame. The rules ink is recoloured pure magenta (colour only),
-// so it is the only magenta on the card; frames the bucket holds draw as a
-// transparent pixel here, which leaves the text alone on the card.
+// so it is the only magenta on the card. The landscape frames (battle,
+// split) are Card Conjurer masters in the frames bucket since TODO 4.21b:
+// they are served flat grey stand-ins (tests/stubs/stand-in-frames.ts),
+// which leave the text alone on the card.
 // ---------------------------------------------------------------------------
+
+let frames: StandInFrames;
+beforeAll(async () => {
+  frames = await serveStandInFrames([
+    { template: "battle", keys: ["w"] },
+    { template: "split", keys: ["w"] },
+  ]);
+}, 60_000);
+afterAll(() => frames.restore());
 
 vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/cards/template-layout")>();
@@ -114,13 +126,16 @@ describe("rules lines on real bakes", () => {
   }
 });
 
-describe("split: both halves' text inside the textbox border on real bakes", () => {
-  // The split masters are in git, so the frame draws here: every magenta
-  // pixel of either half must land on the cream, SPLIT_TEXTBOX_BORDER_PX in
-  // from each rect's sides (the first v33 cut set an italic "f" on the gold
-  // and into the black frame).
+describe("split: both halves' text on the paper on real bakes", () => {
+  // Card Conjurer's rules rects lie inside the paper, 17 px from its sides
+  // on every colour master (tests/unit/cards/rules-box.test.ts measures it):
+  // every magenta pixel of either half must land within 14 px of its rect —
+  // an italic "f" leading a reminder, an overhanging last glyph included
+  // (the first v33 cut, on the MSE master, set an italic "f" on the gold and
+  // into the black frame).
+  const PAPER_MARGIN_PX = 14;
   for (const preset of ["default", "hd"] as const) {
-    it(`draws no rules ink on the border — ${preset}`, async () => {
+    it(`draws no rules ink off the paper — ${preset}`, async () => {
       const { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile } = await import("@/lib/cards/template-layout");
       const { renderCardImage } = await import("@/lib/render/card-image");
       const card = {
@@ -149,14 +164,18 @@ describe("split: both halves' text inside the textbox border on real bakes", () 
       );
       const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
       const scale = preset === "hd" ? 1 : 0.5;
+      expect(SPLIT_TEXTBOX_BORDER_PX).toEqual({ left: 0, right: 0 });
       for (const rect of [split.rules.rect, split.secondFace!.rules.rect]) {
         const box = rectPx(rect, "landscape", 5 / 7, preset);
-        const cream = { left: box.left + SPLIT_TEXTBOX_BORDER_PX.left * scale, right: box.right - SPLIT_TEXTBOX_BORDER_PX.right * scale };
+        const cream = { left: box.left - PAPER_MARGIN_PX * scale, right: box.right + PAPER_MARGIN_PX * scale };
         let inked = 0;
         let minX = Infinity;
         let maxX = -Infinity;
-        for (let y = box.top; y < box.bottom; y += 1) {
-          for (let x = box.left; x < box.right; x += 1) {
+        // Scan well past the rect on both sides (the halves' rects are 186
+        // px apart): ink that left the paper would show there.
+        const reach = Math.round(60 * scale);
+        for (let y = Math.floor(box.top); y < box.bottom; y += 1) {
+          for (let x = Math.floor(box.left) - reach; x < box.right + reach; x += 1) {
             const i = (y * info.width + x) * 3;
             if (!magenta(data[i], data[i + 1], data[i + 2])) continue;
             inked += 1;
