@@ -164,7 +164,7 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
     expect(count(back, area, isRed)).toBeGreaterThan(MDFC_STRIP_BOX.width * MDFC_STRIP_BOX.height * 0.6);
     // The back's word ("Druid") in DARK ink over the red.
     expect(count(back, word, isDark)).toBeGreaterThan(200);
-  });
+  }, 120_000);
 
   it("a mono-colour card, a back with no colour of its own, a legacy back, a transform front and a plain frame ask for no strip piece", async () => {
     await bake(frontPreviewData(card({}, { color_identity: ["white"], cost: "{3}{W}{W}" })));
@@ -181,7 +181,9 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
     expect(stand.overlays).toEqual(["/frames/dfcicon/default.png"]);
     await bake(frontPreviewData(card({ frameStyle: { template: "m15", finish: "regular" } })));
     expect(stand.overlays).toEqual([]);
-  });
+    // Six real bakes at HD: an explicit budget like every bake test's (the
+    // default 5 s ran out by 7 ms under CI's coverage run).
+  }, 120_000);
 
   it("the land pair (a pathway): each face carries the other's colour from its own folder; a Legendary pair card draws the crown first, then the rider", async () => {
     const pathway = card(
@@ -200,7 +202,7 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
     const front = await bake(frontPreviewData(valki));
     expect(stand.overlays).toEqual(["/frames/m15mdfccrown/b.png", "/frames/m15mdfcfront/strip/m.png"]);
     expect(count(front, box(), isRed)).toBeGreaterThan(MDFC_STRIP_BOX.width * MDFC_STRIP_BOX.height * 0.6);
-  });
+  }, 120_000);
 
   it("the painted strip stays the rules keep-out: a long text bakes the same pixels with the rider as without, outside the slot's box (HD and 750)", async () => {
     const long = "Whenever a creature you control attacks, draw a card. Whenever a creature you control attacks, draw a card. Whenever a creature you control attacks, draw a card. Whenever a creature you control attacks, draw a card. Whenever a creature you control attacks, draw a card. Whenever a creature you control attacks, draw a card.";
