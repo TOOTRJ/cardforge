@@ -18,7 +18,7 @@
 -- (0001) and storage buckets from migrations, so nothing else is required.
 --
 -- This list MIRRORS PRODUCTION: the (template, color_key) combos the owner has
--- verified in /admin/frame-compare, snapshotted 2026-09-30 (194 combos). When
+-- verified in /admin/frame-compare, snapshotted 2026-10-06 (278 combos). When
 -- more frames get verified on prod, refresh it from:
 --
 --   select template, string_agg(color_key, '' order by color_key)
@@ -56,7 +56,10 @@
 insert into public.frame_reviews (template, color_key, verified, verified_at)
 select t.template, c.color_key, true, now()
 from unnest(array[
+  'adventure',
+  'aftermath',
   'emblem',
+  'flip',
   'm15',
   'm15artifact',
   'm15borderless',
@@ -65,7 +68,16 @@ from unnest(array[
   'm15borderlesspw',
   'm15borderlesspwtall',
   'm15devoid',
+  'm15dfcback',
+  'm15dfcbackleft',
+  'm15dfcfront',
+  'm15dfclandback',
+  'm15dfclandfront',
   'm15land',
+  'm15mdfcback',
+  'm15mdfcfront',
+  'm15mdfclandback',
+  'm15mdfclandfront',
   'm15pw',
   'm15snow',
   'm15snowland',
