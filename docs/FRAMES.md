@@ -2716,8 +2716,17 @@ badge; a mono-colour card keeps the master's bytes.
   after the crown, the piece under the white / dark texts, the keep-out
   diff, the 1:1 placement on a synthetic master), `tests/unit/components/
   mdfc-strip-rider-preview.test.tsx` (the preview's twin), the matrix's 13
-  `@strip-*` cases (0 changed, 0 redefined), `profiles-base.json`
-  regenerated (the four overlays).
+  `@strip-*` cases (new; the 14 existing two-colour-other-face modal cases
+  change under v41's scope, every mono case unchanged, 0 redefined),
+  `profiles-base.json` regenerated (the four overlays).
+- **Layout v41** (`lib/cards/layout-version.ts`): the visual gate refuses a
+  changed existing case without a bump, and the matrix already held
+  two-colour-other-face modal cases (the Tibalt word case's B/R back, the
+  `wu` / `wub` / `c` rows' two-colour and colourless land backs, the hybrid
+  pair, the gold land pair) — template-scoped to the four modal faces,
+  "sweep" as v40 (0 cards on any modal body: it re-bakes and badges
+  nothing), VERIFICATION-NEUTRAL (no master, slot or text moves; a tick on
+  a modal face is made on a mono-colour print, whose bake is unchanged).
 
 ### The editor (5.2)
 
