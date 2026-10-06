@@ -22,7 +22,7 @@
 // An average glyph width (fitSingleLineSizePct's 0.56 em) would shrink values
 // that fit — `10/10` on the M15 plate — and pass ones that don't.
 
-import { getFrameProfile, type StatSlot } from "@/lib/cards/template-layout";
+import { getFrameProfile, type Rect, type StatSlot } from "@/lib/cards/template-layout";
 import {
   normalizeFrameTemplate,
   printsPowerToughness,
@@ -166,6 +166,35 @@ export function fitStatSizePct(
 /** The P/T string both renderers print: a missing side prints as an em dash. */
 export function ptValue(power: string | null | undefined, toughness: string | null | undefined): string {
   return `${power ?? "—"}/${toughness ?? "—"}`;
+}
+
+/** The air a rules line keeps left of an end-aligned value's ink, in em of
+ *  the value's size (a word gap's worth). */
+export const END_ALIGNED_STAT_AIR_EM = 0.25;
+
+/**
+ * The footprint of a value drawn END-aligned in a plate-less slot — the
+ * transform front's reverse P/T in its grey tab (DFC_REVERSE_PT, TODO 5.1a;
+ * the rules FLOAT since 5.1d): the digits' ink against the slot's right
+ * edge, over the slot's rows, in card percents. The width is the value's
+ * laid-out width (statWidthEm: the sum of its advance widths — Satori's
+ * box, the wider of the two renderers' runs) plus END_ALIGNED_STAT_AIR_EM
+ * of air on the left, at the size the value prints at (fitStatSizePct: the
+ * profile's unless the value is wider than the slot). Both renderers pass
+ * it as DrawnStats.reversePt, only while the digits are drawn (the tab
+ * prints empty otherwise, owner decision Q7); the rules lines whose rows
+ * meet it break short of it (RulesLayoutInput.floats).
+ */
+export function endAlignedStatKeepOut(slot: StatSlot, value: string, orientation: CardOrientation = "portrait"): Rect {
+  const sizePct = fitStatSizePct(slot, value, orientation);
+  const widthPct = (statWidthEm(value) + END_ALIGNED_STAT_AIR_EM) * sizePct * 100;
+  const rightPct = slot.rect.leftPct + slot.rect.widthPct;
+  return {
+    leftPct: Math.max(slot.rect.leftPct, rightPct - widthPct),
+    topPct: slot.rect.topPct,
+    widthPct: Math.min(widthPct, slot.rect.widthPct),
+    heightPct: slot.rect.heightPct,
+  };
 }
 
 /** The `cards` columns the stat scope reads, as stored. Optional like

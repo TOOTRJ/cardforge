@@ -14,6 +14,16 @@ const BAKE = read("lib/render/card-image.tsx");
 const PREVIEW = read("components/cards/card-preview.tsx");
 const SET_SYMBOL = read("components/cards/set-symbol.tsx");
 
+describe("the transform front's reverse P/T (TODO 5.1a; a rules float since 5.1d)", () => {
+  it("both renderers build DrawnStats.reversePt from the ONE helper, only while the digits are drawn", () => {
+    for (const src of [BAKE, PREVIEW]) {
+      expect(src).toContain("endAlignedStatKeepOut(layout.reversePt, ");
+      expect(src).toContain("otherFace.printsPt");
+      expect(src).toContain("reversePt:");
+    }
+  });
+});
+
 describe("set symbol", () => {
   it("uses ONE rarity ink table in the bake and the preview, with no preview-only gradient", () => {
     expect(BAKE).toContain("const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = RARITY_INK;");

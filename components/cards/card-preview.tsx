@@ -59,7 +59,7 @@ import {
   measuredLinePreviewPct,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
-import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { endAlignedStatKeepOut, fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
@@ -922,6 +922,14 @@ function CardFace({
   const stampKeepOut = holoStamp?.keepOut ?? null;
   // The modal strip (5.1b): the lines keep out of the painted tab.
   const stripKeepOut = layout.flipside?.keepOut ?? null;
+  // The transform front's reverse P/T digits (5.1d): the lines wrap round
+  // the back's P/T in the grey tab while it is drawn — the bake's twin
+  // (lib/cards/stat-fit.ts endAlignedStatKeepOut).
+  const reversePtValue = layout.reversePt && dfc?.otherFace.printsPt ? ptValue(dfc.otherFace.power, dfc.otherFace.toughness) : null;
+  const reversePtKeepOut = useMemo(
+    () => (layout.reversePt && reversePtValue !== null ? endAlignedStatKeepOut(layout.reversePt, reversePtValue, orientationFromAspect(aspect)) : null),
+    [layout.reversePt, reversePtValue, aspect],
+  );
   const drawnStats: DrawnStats = useMemo(
     () => ({
       pt: showPT,
@@ -930,8 +938,9 @@ function CardFace({
       secondFacePt: Boolean(layout.secondFace?.pt && secondFacePtShown),
       stamp: stampKeepOut,
       strip: stripKeepOut,
+      reversePt: reversePtKeepOut,
     }),
-    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown, stampKeepOut, stripKeepOut],
+    [showPT, showLoyalty, showDefense, layout.secondFace?.pt, secondFacePtShown, stampKeepOut, stripKeepOut, reversePtKeepOut],
   );
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).

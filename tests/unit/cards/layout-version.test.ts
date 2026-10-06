@@ -1669,26 +1669,31 @@ describe("v40 — the modal backs' flipside strip toned onto the prints (TODO 5.
   });
   const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
   const AT_V40 = { current: 40 } as const;
-  const FACES = ["m15mdfcback", "m15mdfcfront", "m15mdfclandback", "m15mdfclandfront"];
-  const BACKS = ["m15mdfcback", "m15mdfclandback"];
+  /** The four modal faces (the toned strips) and the two transform FRONT
+   *  bodies with the reverse-P/T tab (its digits a rules float since 5.1d). */
+  const FACES = ["m15dfcfront", "m15dfclandfront", "m15mdfcback", "m15mdfcfront", "m15mdfclandback", "m15mdfclandfront"];
+  /** …of which the two modal BACK bodies' masters and the two transform
+   *  fronts' rules layout change (a tick there would stale). */
+  const VERIFIED = ["m15dfcfront", "m15dfclandfront", "m15mdfcback", "m15mdfclandback"];
 
-  it("is a sweep, never a badge, scoped to the four modal faces — frozen as a literal", async () => {
+  it("is a sweep, never a badge, scoped to the four modal faces and the two transform fronts — frozen as a literal", async () => {
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(40);
     expect(lv.VERSION_ROLLOUT[40]).toBe("sweep");
     expect(lv.rolloutPolicy(40)).toBe("sweep");
     expect(lv.latestSweepVersion(undefined, 40)).toBe(40);
     expect(lv.latestOptInVersion()).toBe(22);
-    expect([...lv.V40_MODAL_FACE_TEMPLATES].sort()).toEqual(FACES);
-    expect([...lv.V40_MODAL_BACK_TEMPLATES].sort()).toEqual(BACKS);
-    // A master re-cut (the strip's tone): template-scoped, no card predicate.
+    expect([...lv.V40_TEMPLATES].sort()).toEqual(FACES);
+    expect([...lv.V40_VERIFICATION_TEMPLATES].sort()).toEqual(VERIFIED);
+    // A master re-cut (the strip's tone) and a layout correction (the
+    // float): template-scoped, no card predicate.
     expect(lv.VERSION_SCOPES[40]).toBeUndefined();
     for (const t of ALL) expect(isRenderStale(39, t, undefined, 40), t).toBe(FACES.includes(t));
-    // The transform bodies and v39's pair are untouched: their cards stamp.
-    for (const t of ["m15dfcfront", "m15dfcback", "m15dfclandback", "flip", "aftermath", "m15"]) expect(isRenderStale(39, t, undefined, 40), t).toBe(false);
+    // The transform BACK bodies and v39's pair are untouched: their cards stamp.
+    for (const t of ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "flip", "aftermath", "m15"]) expect(isRenderStale(39, t, undefined, 40), t).toBe(false);
   });
 
-  it("re-bakes every card on the modal faces — art or none, any finish, a back with or without a cost — and stamps every other template", async () => {
+  it("re-bakes every card on the modal faces and the transform fronts — art or none, any finish, a back with or without a cost — and stamps every other template", async () => {
     const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
     const classifyForSweep = await sweepAt(40);
     for (const t of ALL) {
@@ -1706,17 +1711,18 @@ describe("v40 — the modal backs' flipside strip toned onto the prints (TODO 5.
     ] as const) {
       expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe("rebake");
     }
-    expect(classifyForSweep(at("m15dfcfront"))).toBe("stamp");
+    expect(classifyForSweep(at("m15dfcback"))).toBe("stamp");
+    expect(classifyForSweep(at("m15dfcfront", { back_face: { title: "Ormendahl", card_type: "creature", power: "9", toughness: "7", frame_style: { template: "m15dfcback" }, color_identity: ["black"] } }))).toBe("rebake");
     expect(classifyForSweep(at("m15mdfcfront", { layout_version: 40 }))).toBe("current");
   });
 
-  it("is NOT verification-neutral on the two back bodies (their masters change); the front bodies' ticks and every other template's stay fresh", async () => {
+  it("is NOT verification-neutral on the two modal back bodies (their masters change) and the two transform fronts (their rules layout does); the modal fronts' ticks and every other template's stay fresh", async () => {
     const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
     expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(40);
-    expect([...VERIFICATION_SCOPED_VERSIONS[40]].sort()).toEqual(BACKS);
+    expect([...VERIFICATION_SCOPED_VERSIONS[40]].sort()).toEqual(VERIFIED);
     for (const t of ALL) {
       const regular = { frame_style: { template: t, finish: "regular" } };
-      expect(isRenderStale(39, t, VERIFICATION_SCOPED_VERSIONS, 40, regular), t).toBe(BACKS.includes(t));
+      expect(isRenderStale(39, t, VERIFICATION_SCOPED_VERSIONS, 40, regular), t).toBe(VERIFIED.includes(t));
     }
     // No slot moves: the modal profiles' strip slots are 5.1b's.
     expect(getFrameProfile("m15mdfcback").flipside?.word.rect).toEqual({ leftPct: 6.8, topPct: 89.2, widthPct: 36.4, heightPct: 3.91 });

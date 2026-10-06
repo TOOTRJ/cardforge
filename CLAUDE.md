@@ -219,7 +219,11 @@ Rules and gotchas:
   the strip are in the masters, painted in the master's OWN colour (a
   two-colour card's print paints it in the other face's: an owner question,
   never a master "fix"); the painted strip is a rules keep-out
-  (`FlipsideSlots.keepOut` → `DrawnStats.strip`). Since 5.1d every DFC body
+  (`FlipsideSlots.keepOut` → `DrawnStats.strip`), and the transform
+  front's reverse P/T digits are a rules FLOAT (`DrawnStats.reversePt` →
+  `RulesLayoutInput.floats`, `endAlignedStatKeepOut`): the lines whose
+  rows meet them break short of them, never a plain keep-out (the digits
+  sit too far up the box for a size step to clear). Since 5.1d every DFC body
   with a printed legendary face declares the crown — `m15dfccrown` /
   `m15dfccrownright` / `m15mdfccrown`, the m15crown band CUT round the
   well or housing through CC's twin's alpha (never the twin's older flat

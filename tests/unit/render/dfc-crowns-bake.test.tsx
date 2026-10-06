@@ -160,6 +160,17 @@ describe("the crown and the pairs on the double-faced bodies (TODO 5.1d, real ba
     expect(stand.overlays).toEqual(["/frames/m15dfccrownright/m.png"]);
   }, 120_000);
 
+  it("a nonlegendary front with a Legendary back (MOM #43's shape): the switch on draws the BACK's crown and none on the front; off removes it", async () => {
+    const on = card({ supertype: null, frameStyle: { template: "m15dfcfront", finish: "regular", crown: true } }, { frame_style: { template: "m15dfcback" }, supertype: "Legendary" });
+    await bake(frontPreviewData(on));
+    expect(stand.overlays).toEqual(["/frames/dfcicon/default.png"]);
+    await bake(backPreviewData(on)!);
+    expect(stand.overlays).toEqual(["/frames/m15dfccrownright/m.png"]);
+    const off = card({ supertype: null, frameStyle: { template: "m15dfcfront", finish: "regular", crown: false } }, { frame_style: { template: "m15dfcback" }, supertype: "Legendary" });
+    await bake(backPreviewData(off)!);
+    expect(stand.overlays).toEqual([]);
+  }, 120_000);
+
   it("the modal faces: the housing's folder on both, the hybrid dress for an all-hybrid front cost; the land back draws neither", async () => {
     const modal = card(
       { frameStyle: { template: "m15mdfcfront", finish: "regular", crown: true, twoColor: true }, cost: "{W/U}{W/U}", colorIdentity: ["white", "blue"] },

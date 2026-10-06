@@ -266,6 +266,8 @@ function breakRuns(
   runs: readonly RulesItem[][],
   metrics: Readonly<Record<RulesTarget, RulesMetrics>>,
   columns: Readonly<Record<RulesTarget, number>>,
+  lineColumns?: LineColumns,
+  lineOffset = 0,
 ): RulesLine[] {
   const lines: RulesLine[] = [];
   let current: RulesItem[][] = [];
@@ -274,18 +276,23 @@ function breakRuns(
     hd: lineWidthPx(line, metrics.hd),
     default: lineWidthPx(line, metrics.default),
   });
+  // The column of the line being built: a float's narrower one where a
+  // float names this line (by its global index), the box's otherwise.
+  const columnsAt = (index: number) => lineColumns?.get(lineOffset + index) ?? columns;
   for (const run of runs) {
+    const cols = columnsAt(lines.length);
     const next = { hd: 0, default: 0 };
     let overflows = false;
     for (const t of RULES_TARGETS) {
       const m = metrics[t];
       next[t] = width[t] + (current.length > 0 ? m.wordGapPx : 0) + runWidthPx(run, m);
-      if (next[t] > columns[t]) overflows = true;
+      if (next[t] > cols[t]) overflows = true;
     }
     if (current.length > 1 && overflows && gluesToWord(run, current[current.length - 1])) {
       const pair = [current[current.length - 1], run];
       const pairWidth = widthOf(pair);
-      if (RULES_TARGETS.every((t) => pairWidth[t] <= columns[t])) {
+      const nextCols = columnsAt(lines.length + 1);
+      if (RULES_TARGETS.every((t) => pairWidth[t] <= nextCols[t])) {
         const kept = current.slice(0, -1);
         lines.push({ runs: kept, widthPx: widthOf(kept) });
         current = pair;
@@ -353,18 +360,33 @@ function parseText(rulesText: string | null | undefined, flavorText: string | nu
   };
 }
 
+/** The columns of the lines a float narrows (floatColumnsFor): the global
+ *  line index — the rules paragraphs' lines in order, then the flavor's —
+ *  to its columns at both targets; a line not named takes the box's. */
+type LineColumns = ReadonlyMap<number, Readonly<Record<RulesTarget, number>>>;
+
 function breakParsed(
   parsed: ParsedText,
   sizePx: number,
   columns: Readonly<Record<RulesTarget, number>>,
   lineHeight: number,
+  lineColumns?: LineColumns,
 ): RulesBlock[] {
   const metrics = { hd: metricsFor(sizePx, lineHeight, "hd"), default: metricsFor(sizePx, lineHeight, "default") };
-  const blocks: RulesBlock[] = parsed.rules.map((runs) =>
-    runs === null ? { kind: "blank", lines: [] } : { kind: "rules", lines: breakRuns(runs, metrics, columns) },
-  );
+  let offset = 0;
+  const blocks: RulesBlock[] = parsed.rules.map((runs) => {
+    if (runs === null) return { kind: "blank", lines: [] };
+    const lines = breakRuns(runs, metrics, columns, lineColumns, offset);
+    offset += lines.length;
+    return { kind: "rules", lines };
+  });
   if (parsed.flavor.length > 0) {
-    blocks.push({ kind: "flavor", lines: parsed.flavor.flatMap((runs) => breakRuns(runs, metrics, columns)) });
+    const lines = parsed.flavor.flatMap((runs) => {
+      const broken = breakRuns(runs, metrics, columns, lineColumns, offset);
+      offset += broken.length;
+      return broken;
+    });
+    blocks.push({ kind: "flavor", lines });
   }
   return blocks;
 }
@@ -431,6 +453,16 @@ export type RulesLayoutInput = {
    *  keepOutInBoxFrame) no line's ink may enter: the stat badges the card
    *  DRAWS (statKeepOuts). A size where one does steps down. */
   keepOuts?: readonly Rect[];
+  /** Rects (card-relative percents, in the box's frame) the lines WRAP
+   *  ROUND (TODO 5.1d): a line whose box rows meet a float breaks against a
+   *  column ending at the float's left edge — the prints' setting round the
+   *  transform front's reverse P/T, whose grey digits sit INSIDE the box's
+   *  lower rows (80–155 px above its bottom at HD), where no size step could
+   *  clear a plain keep-out. A float is a keep-out too (its rect is judged
+   *  glyph by glyph like keepOuts', and a size where ink still enters it
+   *  steps down); the plate, stamp and strip stay keepOuts — a float never
+   *  moves a card that has none. */
+  floats?: readonly Rect[];
   /** TextSlot.paragraphGapMinPx (TODO 4.48, the full-art token's tall box):
    *  before a size steps down, fitRulesLayout sets the text at that size with
    *  its paragraph gaps squeezed — RULES_TEXT.paragraphGapPx down to this
@@ -806,7 +838,9 @@ function checkPlacement(
   const { interior } = placed;
   const overflowPx = placed.insetTop + placed.blockHeight + placed.insetBottom - interior.height;
   const orientation = orientationFromAspect(input.aspect);
-  const keepOuts = (input.keepOuts ?? []).map((r) => rectPx(r, orientation, input.aspect, placed.target));
+  // A float is judged like a keep-out: a line that still enters it (one
+  // too narrow to wrap round it, an inline pip) steps the size down.
+  const keepOuts = [...(input.keepOuts ?? []), ...(input.floats ?? [])].map((r) => rectPx(r, orientation, input.aspect, placed.target));
   const keepOutHit = placed.lines.some((l) =>
     keepOuts.some((k) => lineHitsKeepOut(l, blocks[l.block].lines[l.line], placed.metrics, k)),
   );
@@ -845,6 +879,58 @@ export function layoutRulesAt(input: RulesLayoutInput, sizePx: number): RulesLay
 
 /** How many times the side headroom may grow while the lines settle. */
 const SIDE_INSET_ROUNDS = 6;
+/** How many times the floats may re-break the lines while they settle (a
+ *  narrowed line adds a line, which can move another line onto the float). */
+const FLOAT_ROUNDS = 8;
+/** A float that would leave a line less than this share of the box's
+ *  column narrows nothing: the line keeps its column and the float's
+ *  keep-out check steps the size down instead. */
+const FLOAT_MIN_COLUMN = 0.25;
+
+/**
+ * The columns the floats narrow (TODO 5.1d): the blocks placed as they are
+ * at each target; a line whose box rows meet a float's rows breaks against a
+ * column ending at the float's left edge (the narrowest of the floats it
+ * meets), keyed by its global line index — the same index breakParsed
+ * counts. A float right of the column, or one leaving under
+ * FLOAT_MIN_COLUMN of it, narrows nothing. Empty without floats.
+ */
+function floatColumnsFor(
+  blocks: readonly RulesBlock[],
+  input: RulesLayoutInput,
+  sizePx: number,
+  side: Readonly<Record<RulesTarget, SideInset>>,
+  columns: Readonly<Record<RulesTarget, number>>,
+): LineColumns {
+  const out = new Map<number, Record<RulesTarget, number>>();
+  const floats = input.floats ?? [];
+  if (floats.length === 0) return out;
+  const orientation = orientationFromAspect(input.aspect);
+  for (const t of RULES_TARGETS) {
+    const placed = placeBlocks(blocks, sizePx, input, t, side[t]);
+    const rects = floats.map((f) => rectPx(f, orientation, input.aspect, t));
+    placed.lines.forEach((l, i) => {
+      let column = columns[t];
+      for (const f of rects) {
+        if (!(l.top < f.bottom && l.top + l.height > f.top)) continue;
+        column = Math.min(column, f.left - l.left);
+      }
+      if (column >= columns[t] || column < columns[t] * FLOAT_MIN_COLUMN) return;
+      out.set(i, { ...(out.get(i) ?? columns), [t]: column });
+    });
+  }
+  return out;
+}
+
+function sameLineColumns(a: LineColumns | undefined, b: LineColumns): boolean {
+  if (!a) return b.size === 0;
+  if (a.size !== b.size) return false;
+  for (const [i, cols] of b) {
+    const prev = a.get(i);
+    if (!prev || RULES_TARGETS.some((t) => prev[t] !== cols[t])) return false;
+  }
+  return true;
+}
 
 function layoutParsedAt(input: RulesLayoutInput, sizePx: number, parsed: ParsedText): RulesLayout {
   const orientation = orientationFromAspect(input.aspect);
@@ -855,21 +941,38 @@ function layoutParsedAt(input: RulesLayoutInput, sizePx: number, parsed: ParsedT
   // The side headroom depends on which words start and end the lines, and
   // the lines on the column it leaves: break, measure what the lines' ink
   // needs past the padding, and break again narrower until nothing needs
-  // more (it only grows, and at most to the widest overhang).
+  // more (it only grows, and at most to the widest overhang). The floats
+  // (TODO 5.1d) settle in the same rounds: the lines they meet, once placed,
+  // narrow and break again until the same lines meet them — each on its own
+  // budget, so a box without floats settles exactly as it always has.
   let side: Record<RulesTarget, SideInset> = { hd: NO_SIDE_INSET, default: NO_SIDE_INSET };
+  let lineColumns: LineColumns | undefined;
   let blocks = breakParsed(parsed, sizePx, columnsFor(input, sizePx, side), lineHeight);
-  for (let round = 0; round < SIDE_INSET_ROUNDS; round += 1) {
+  let sideRounds = 0;
+  let floatRounds = 0;
+  for (;;) {
     const need = {
       hd: sideInsetNeeded(blocks, metrics.hd, pads.hd),
       default: sideInsetNeeded(blocks, metrics.default, pads.default),
     };
-    if (!RULES_TARGETS.some((t) => need[t].left > side[t].left || need[t].right > side[t].right)) break;
-    const grow = (t: RulesTarget) => ({
-      left: Math.max(side[t].left, need[t].left),
-      right: Math.max(side[t].right, need[t].right),
-    });
-    side = { hd: grow("hd"), default: grow("default") };
-    blocks = breakParsed(parsed, sizePx, columnsFor(input, sizePx, side), lineHeight);
+    const grows = RULES_TARGETS.some((t) => need[t].left > side[t].left || need[t].right > side[t].right);
+    const floats = floatColumnsFor(blocks, input, sizePx, side, columnsFor(input, sizePx, side));
+    const canGrow = grows && sideRounds < SIDE_INSET_ROUNDS;
+    const canFloat = !sameLineColumns(lineColumns, floats) && floatRounds < FLOAT_ROUNDS;
+    if (!canGrow && !canFloat) break;
+    if (canGrow) {
+      const grow = (t: RulesTarget) => ({
+        left: Math.max(side[t].left, need[t].left),
+        right: Math.max(side[t].right, need[t].right),
+      });
+      side = { hd: grow("hd"), default: grow("default") };
+      sideRounds += 1;
+    }
+    if (canFloat) {
+      lineColumns = floats;
+      floatRounds += 1;
+    }
+    blocks = breakParsed(parsed, sizePx, columnsFor(input, sizePx, side), lineHeight, lineColumns?.size ? lineColumns : undefined);
   }
   const checks = {
     hd: checkPlacement(placeBlocks(blocks, sizePx, input, "hd", side.hd), blocks, input),

@@ -786,19 +786,29 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            untouched; the ◀ and the outline stay dark) — ten re-cut
 //            masters (m15mdfcback u b r g m, m15mdfclandback u b r g m;
 //            the land back's gold key is the spell table's stand-in).
+//            With it (the 5.1d skeptic, 2026-10-05) the transform FRONT's
+//            reverse P/T became a rules FLOAT (DrawnStats.reversePt →
+//            RulesLayoutInput.floats; lib/cards/stat-fit.ts
+//            endAlignedStatKeepOut): 5.1a drew the back's P/T in the grey
+//            tab but never set the rules lines round it, so a dense text
+//            ran under the digits — a correction on the two front bodies
+//            with the tab (m15dfcfront, m15dfclandfront), whose long bakes
+//            change.
 //            Template-scoped (TEMPLATE_SCOPED_VERSIONS[40] = the modal
 //            faces: the two front templates a modal card is stored on,
 //            whose BACK bake changes, and the two back bodies the visual
-//            matrix bakes as faces): every card on them. Production
-//            (2026-10-05): 0 cards on any modal body — the bodies are not
+//            matrix bakes as faces — and the two transform front bodies,
+//            whose rules layout changes): every card on them. Production
+//            (2026-10-05): 0 cards on any DFC body — the bodies are not
 //            ticked yet, nothing is offered — so the sweep re-bakes
 //            nothing; the bump is the visual gate's record of a master
 //            correction (v38 / v39's pattern), never a badge ("sweep").
-//            NOT verification-neutral on the two back bodies (their masters
-//            change) — no tick exists on them to stale
-//            (VERIFICATION_TEMPLATE_SCOPES[40]); the front bodies' masters
-//            are untouched (the crown and the pairs of 5.1d are opt-in
-//            additions: new masters and overlays, no bump).
+//            NOT verification-neutral on the two modal back bodies (their
+//            masters change) or the two transform front bodies (their rules
+//            layout does) — no tick exists on any of them to stale
+//            (VERIFICATION_TEMPLATE_SCOPES[40]); the modal front bodies'
+//            masters and layout are untouched (the crown and the pairs of
+//            5.1d are opt-in additions: new masters and overlays, no bump).
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 40;
@@ -838,10 +848,14 @@ export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "a
 export const V39_FLIP_AFTERMATH_TEMPLATES: readonly string[] = ["aftermath", "flip"];
 /** v40 — the modal faces (TODO 5.1d: the backs' strip toned): the two front
  *  templates a modal card is stored on and the two back bodies (the visual
- *  matrix's back-face cases, the ticks). Frozen like v38's. */
-export const V40_MODAL_FACE_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
-/** v40's verification scope: only the two BACK bodies' masters change. */
-export const V40_MODAL_BACK_TEMPLATES: readonly string[] = ["m15mdfcback", "m15mdfclandback"];
+ *  matrix's back-face cases, the ticks) — and the two transform FRONT
+ *  bodies with the reverse-P/T tab, whose rules lines wrap round the
+ *  digits since 5.1d. Frozen like v38's. */
+export const V40_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback", "m15dfcfront", "m15dfclandfront"];
+/** v40's verification scope: the two modal BACK bodies' masters change and
+ *  the two transform FRONT bodies' rules layout does; the modal fronts'
+ *  ticks — none yet — would stay fresh. */
+export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m15mdfclandback", "m15dfcfront", "m15dfclandfront"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -897,8 +911,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // (the 4.21a follow-up); every card on the two.
   39: V39_FLIP_AFTERMATH_TEMPLATES,
   // v40: the modal backs' strip toned (5.1d) — every card on the modal
-  // faces (its back bake changes), and the back bodies for the matrix.
-  40: V40_MODAL_FACE_TEMPLATES,
+  // faces (its back bake changes), the back bodies for the matrix, and the
+  // transform fronts (the reverse-P/T float).
+  40: V40_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -982,9 +997,10 @@ export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "fl
 const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> = {
   34: V34_TOKEN_FRAME_TEMPLATES,
   // (v36 is not here: verification-neutral, VERIFICATION_NEUTRAL_VERSIONS.)
-  // v40: only the two modal BACK bodies' masters change (their strip); the
-  // front bodies' ticks — none yet — would stay fresh.
-  40: V40_MODAL_BACK_TEMPLATES,
+  // v40: the two modal BACK bodies' masters change (their strip) and the
+  // two transform FRONT bodies' rules layout (the reverse-P/T float); the
+  // modal fronts' ticks — none yet — would stay fresh.
+  40: V40_VERIFICATION_TEMPLATES,
 };
 
 /**
@@ -1512,7 +1528,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   37: "sweep", // nyx's type bar + text box darkened to the THB prints (4.17e) — a correction, never a badge
   38: "sweep", // the portrait layouts re-sourced from Card Conjurer (4.21a) — a frame swap, never a badge
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
-  40: "sweep", // the modal backs' flipside strip toned onto the prints (5.1d) — a master correction on bodies no card uses yet, never a badge
+  40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

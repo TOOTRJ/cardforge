@@ -29,7 +29,7 @@ import {
   measuredLinePx,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
-import { fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { endAlignedStatKeepOut, fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import { orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import {
@@ -613,6 +613,13 @@ function CardImage({
     stamp: holoStamp?.keepOut ?? null,
     // The modal strip (5.1b): the lines keep out of the painted tab.
     strip: layout.flipside?.keepOut ?? null,
+    // The transform front's reverse P/T digits (5.1d): the lines wrap round
+    // the back's P/T in the grey tab while it is drawn — the preview's twin
+    // (lib/cards/stat-fit.ts endAlignedStatKeepOut).
+    reversePt:
+      layout.reversePt && card.dfc?.otherFace.printsPt
+        ? endAlignedStatKeepOut(layout.reversePt, ptValue(card.dfc.otherFace.power, card.dfc.otherFace.toughness), orientationFromAspect(aspect))
+        : null,
   };
   // Planeswalker ability rows when the frame defines them and the card is a
   // planeswalker; a walker with no abilities draws the plain box (below).

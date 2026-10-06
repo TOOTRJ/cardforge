@@ -2581,16 +2581,31 @@ scratchpad `dfc-1d/research/classified.json`.
   and the land backs within 0.9 of their prints — g read 224.6 against STX
   #151's 228.9 (the first cut's rows hit that scan's outline), re-cut to
   228.9 (`MDFC_BACK_TONES.g.strip` 1.141). Fixed: the creator's crown
-  switch for a legendary BACK under a nonlegendary front. Found and left
-  (its own item, 5.1e): the reverse P/T's digits run under dense rules
-  text — a plain keep-out (DrawnStats, like the strip) cannot fix it: the
-  tab's rows (84.2–87.8 %H) sit 80–155 px above the box's bottom, so any
-  block taller than ~277 px has lines there and the layout's only remedy,
-  stepping the size down, reaches the 42 px floor still colliding (tried:
-  a 9-line text shrank to the floor and kept 455 px of ink under 12/12);
-  the prints wrap the text round the digits, which is a float in the
-  rules engine. 120-row production replay at 750 + HD on 081ac82f and the
-  head: 120 / 120 identical.
+  switch for a legendary BACK under a nonlegendary front; and the reverse
+  P/T's digits running under dense rules text (sheet 4) — not as a plain
+  keep-out (tried: the tab's rows, 84.2–87.8 %H, sit 80–155 px above the
+  box's bottom, so any block taller than ~277 px has lines there, and the
+  layout's one remedy for a keep-out hit, stepping the size down, reached
+  the 42 px floor with 455 px of ink still under "12/12") but as a rules
+  FLOAT, the prints' setting: `RulesLayoutInput.floats`
+  (`lib/cards/rules-layout.ts`) — the lines whose box rows meet a float
+  break against a column ending at its left edge (`floatColumnsFor`, settled
+  with the side insets in `layoutParsedAt`, a float that would leave under
+  a quarter of the column narrowing nothing), and a float is a keep-out
+  too, so ink still entering it steps the size down; `DrawnStats.reversePt`
+  (`drawnFloats`, never `drawnStatInk`) carries the digits' footprint from
+  both renderers (`endAlignedStatKeepOut`: the value's laid-out width plus
+  a quarter em of air, end-aligned at 92.87 %W over the tab's rows) only
+  while they are drawn. The plate, stamp and strip stay keep-outs (a box
+  without floats settles as it always has: the 120-row production replay
+  at 750 + HD on 081ac82f and the final head is 120 / 120 identical); the
+  two transform front bodies join v40's scope (their long bakes change;
+  no tick, no card). `tests/unit/render/dfc-reverse-pt-float.test.tsx`: the
+  footprint, the layout (the lines meeting the digits end before them at
+  both targets, the ones above keep the column, two ladder steps at most
+  against the text set free, nothing clipped), a real bake with no rules
+  ink under 12/12 beside the same text running under an aura back's empty
+  tab.
 
 ### The editor (5.2)
 
