@@ -198,14 +198,14 @@ describe("faces.ts with a body (the twins)", () => {
       layout: "transform",
       role: "front",
       icon: "sunmoon",
-      otherFace: { typeWord: "Werewolf", line: null, printsPt: true, power: "3", toughness: "3" },
+      otherFace: { typeWord: "Werewolf", line: null, printsPt: true, power: "3", toughness: "3", stripKey: "r" },
     });
     const rest = { ...front };
     delete rest.dfc;
     expect(rest).toEqual(c);
     // A back that prints no P/T: the tab stays empty (Q7) — printsPt false.
     const landBack = card({ backFace: { ...c.backFace!, card_type: "land", subtypes: [], power: undefined, toughness: undefined, rules_text: "{T}: Add {W}." } });
-    expect(frontPreviewData(landBack).dfc?.otherFace).toEqual({ typeWord: "Land", line: "{T}: Add {W}.", printsPt: false, power: null, toughness: null });
+    expect(frontPreviewData(landBack).dfc?.otherFace).toEqual({ typeWord: "Land", line: "{T}: Add {W}.", printsPt: false, power: null, toughness: null, stripKey: "r" });
     // A DFC front with no back face at all: no block (nothing to read).
     expect(frontPreviewData(card({ backFace: null })).dfc).toBeUndefined();
   });
@@ -242,7 +242,7 @@ describe("faces.ts with a body (the twins)", () => {
       layout: "transform",
       role: "back",
       icon: "sunmoon",
-      otherFace: { typeWord: "Werewolf", line: "{2}{W}", printsPt: true, power: "2", toughness: "2" },
+      otherFace: { typeWord: "Werewolf", line: "{2}{W}", printsPt: true, power: "2", toughness: "2", stripKey: "w" },
     });
     expect(facesOf(c)).toEqual({ front: frontPreviewData(c), back });
   });
@@ -268,7 +268,7 @@ describe("faces.ts with a body (the twins)", () => {
       layout: "modal",
       role: "front",
       icon: null,
-      otherFace: { typeWord: "Land", line: "{T}: Add {W}.", printsPt: false, power: null, toughness: null },
+      otherFace: { typeWord: "Land", line: "{T}: Add {W}.", printsPt: false, power: null, toughness: null, stripKey: "w" },
     });
     const back = backPreviewData(znr12)!;
     expect(back.frameStyle?.template).toBe("m15devoid");
@@ -277,7 +277,7 @@ describe("faces.ts with a body (the twins)", () => {
       layout: "modal",
       role: "back",
       icon: null,
-      otherFace: { typeWord: "Sorcery", line: "{4}{W}{W}{W}", printsPt: false, power: null, toughness: null },
+      otherFace: { typeWord: "Sorcery", line: "{4}{W}{W}{W}", printsPt: false, power: null, toughness: null, stripKey: "w" },
     });
   });
 });

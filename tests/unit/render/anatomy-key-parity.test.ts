@@ -101,6 +101,7 @@ describe("bake path = preview path", () => {
     // family, the walker's own m15pwholostamp.
     let riders = 0;
     let notches = 0;
+    let strips = 0;
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const slot of getFrameProfile(template).overlays ?? []) {
         // The double-faced bodies' crowns (5.1d): the band cut round the
@@ -114,9 +115,13 @@ describe("bake path = preview path", () => {
               : template.startsWith("m15dfc")
                 ? "m15dfccrown"
                 : null;
+        // The modal strip riders (5.1c): each modal template's own strip
+        // folder, <template>/strip/<key>.
         const folder =
           slot.anatomy === "dfcIcon"
             ? "dfcicon"
+            : slot.anatomy === "mdfcStrip"
+              ? `${template}/strip`
             : slot.anatomy === "holoStamp"
               ? template === "m15pw"
                 ? "m15pwholostamp"
@@ -134,6 +139,10 @@ describe("bake path = preview path", () => {
             expect(previewOverlayUrl(slot.assetPathTemplate.replace("{key}", key))).toContain(`dfcicon/${key}.`);
             riders += 1;
           }
+          if (slot.anatomy === "mdfcStrip") {
+            expect(previewOverlayUrl(slot.assetPathTemplate.replace("{key}", key))).toContain(`${template}/strip/${key}.`);
+            strips += 1;
+          }
         }
         // A keyMap only ever points at a key the slot publishes.
         for (const to of Object.values(slot.keyMap ?? {})) expect(slot.keys, `${template} ${slot.anatomy} keyMap → ${to}`).toContain(to);
@@ -141,6 +150,9 @@ describe("bake path = preview path", () => {
     }
     // The three rider slots × 12 glyphs (m15dfcfront, m15dfclandfront, m15dfcbackleft).
     expect(riders).toBe(36);
+    // The four modal strip slots (5.1c): 8 keys on each spell body (w u b r
+    // g m a + l), 7 on each land body (w u b r g m c).
+    expect(strips).toBe(8 + 8 + 7 + 7);
     // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the six
     // M15-family entries + the walker's 7 — and none on a DFC body, the
     // transform (5.1a) and modal (5.1b) bodies alike (no holoStamp on a back

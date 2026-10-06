@@ -65,7 +65,7 @@ describe("a transform back body", () => {
       layout: "transform",
       role: "back",
       icon: "arrows",
-      otherFace: { typeWord: "Angel", line: "{3}{W}{W}", printsPt: true, power: "4", toughness: "4" },
+      otherFace: { typeWord: "Angel", line: "{3}{W}{W}", printsPt: true, power: "4", toughness: "4", stripKey: "w" },
     });
     // The card's rarity rides on both faces.
     expect(preview.rarity).toBe("mythic");
@@ -108,14 +108,14 @@ describe("a modal back body", () => {
       layout: "modal",
       role: "back",
       icon: null,
-      otherFace: { typeWord: "God", line: "{3}{B}{B}", printsPt: true, power: "4", toughness: "5" },
+      otherFace: { typeWord: "God", line: "{3}{B}{B}", printsPt: true, power: "4", toughness: "5", stripKey: "b" },
     });
   });
 
   it("a land back is coloured by its mana ability; a two-colour walker back keeps both colours", async () => {
     const land = await buildFrameComparePayload(AGADEEM_ID, "m15devoid", "back");
     expect(land?.preview.colorIdentity).toEqual(["black"]);
-    expect(land?.preview.dfc?.otherFace).toEqual({ typeWord: "Sorcery", line: "{X}{B}{B}{B}", printsPt: false, power: null, toughness: null });
+    expect(land?.preview.dfc?.otherFace).toEqual({ typeWord: "Sorcery", line: "{X}{B}{B}{B}", printsPt: false, power: null, toughness: null, stripKey: "b" });
     const walker = await buildFrameComparePayload(VALKI_ID, "m15devoid", "back");
     expect(walker?.preview.colorIdentity).toEqual(["black", "red"]);
     expect(walker?.preview.loyalty).toBe("5");

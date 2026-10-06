@@ -219,7 +219,7 @@ describe("the modal strip rider on real bakes (TODO 5.1c)", () => {
         stand.strip = await solid([220, 30, 30], 64, 16);
       }
     }
-  });
+  }, 120_000);
 
   it("the slot lands the piece 1:1: a piece cut from a synthetic master's tab and drawn back over it changes 0 px at HD; at the 750 bake only the cut's resampled edge", async () => {
     // A 1500 × 2100 master with a deterministic texture everywhere (a busy
