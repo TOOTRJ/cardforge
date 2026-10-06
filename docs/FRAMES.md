@@ -2648,8 +2648,13 @@ badge; a mono-colour card keeps the master's bytes.
   when it is drawn in the hybrid dress (`wearsHybrid`: the two-colour look
   both renderers resolve, `resolveTwoColor` on the face's own template —
   the switch, a pair, an all-hybrid cost, a template with hybrid masters);
-  a colourless spell `c`. A back with no colour of its own follows the
-  front's (backPreviewData's rule), so an unfinished back is mono.
+  a colourless spell `c`. The key starts from the key the face's MASTER is
+  picked by (`pickFrameColorKey`, the 5.1c skeptic): the colour chip's and
+  the 5.4 import's literal `multicolor` (`backFrameColorsFromScryfall`
+  stores a two-colour back that way) is the gold master, so its strip is
+  gold — the builder's re-count of colour words had made it the artifact
+  tab. A back with no colour of its own follows the front's
+  (backPreviewData's rule), so an unfinished back is mono.
 - **The pieces** (`scripts/lib/cc-frames.mjs` `MDFC_STRIP_CUTS`;
   `<template>/strip/<key>.png` + `.webp`, 658 × 90): each modal template's
   OWN masters' tabs — the land pair's tab is a pixel off the spell pair's
@@ -2657,12 +2662,18 @@ badge; a mono-colour card keeps the master's bytes.
   CC's Flipside mask (`reminder.svg`: the whole tab, x 45–701 × y 1866–1955
   at HD, 53,828 full-alpha px and a 352-px rim), its full-alpha interior
   ERODED by one pixel (`insideMaskEroded`, 52,490 px) so the cut runs
-  inside the tab's 4-px dark outline: a cross-colour rider meets this
-  master's own outline on both sides of the cut (invisible: the contact
-  sheet), and the 750 bake's resample blends outline over outline there.
-  Alpha 0 / 255, never a partial pixel of the cut's own; the box x 44–701
-  × y 1866–1955 (the mask's bbox grown to an even origin and size: 1:1 at
-  HD, 2:1 at 750). Keys: w u b r g m a (spell bodies; `c` → `a`) / w u b r
+  inside the tab's 4-px dark outline — the tab's outermost ring is luma 0
+  on every master, so a cross-colour rider meets black on black on both
+  sides of the cut (invisible: the contact sheet) — and then SNAPPED to the
+  HD grid's 2 × 2 px blocks (`snapToBlocks` / `stripRiderInterior`, the
+  5.1c skeptic: 51,208 px, every block kept whole or dropped), so the 750
+  bake's 2:1 resample reads exactly one block per pixel and a piece over
+  its own master is byte-identical at HD AND at 750 (0 px on all 28
+  own-key pieces through the bake's rasteriser; the cut's opaque edge
+  pixels luma ≤ 12, their clear neighbours ≤ 1 — the fill is never
+  reached). Alpha 0 / 255, never a partial pixel of the cut's own at either
+  preset; the box x 44–701 × y 1866–1955 (the mask's bbox grown to an even
+  origin and size: 1:1 at HD, 2:1 at 750, the blocks aligned). Keys: w u b r g m a (spell bodies; `c` → `a`) / w u b r
   g m c (land bodies; `l` → `c`), plus `l` on the spell bodies cut from
   the land pair's grey `c` master (`l.png` / `lb.png` byte for byte). The
   pieces are cut AFTER the template loop from the published masters
@@ -2681,24 +2692,27 @@ badge; a mono-colour card keeps the master's bytes.
   (the bake's overlay `<img>`s at z 5, the preview's `FrameOverlayLayer`),
   under the strip's texts (z 22); the keep-out is unchanged; the finish
   masks take it like the crown. `frameAssetPathsFor` preloads it.
-- **Why not "always" (the brief said always):** a piece drawn over its own
-  master is byte-identical at HD on every key — 0 px through the bake's
-  rasteriser (sharp / librsvg over the `<image>` Satori emits; a real bake
-  on a synthetic master proves the slot lands 1:1) — but never at the 750
-  bake: the 2:1 resample blends the cut's edge on the chevron's diagonals,
-  which no cut can block-align (`scratchpad/dfc-1c/research/residual.json`:
-  the eroded cut 1–3 px at ≤ 4 levels on the spell faces and the land
-  backs, 5–6 px at ≤ 7 on the land fronts; the plain mask's cut 35 px at
-  ≤ 32; eroding further brings the fill in). The visual gate's mono modal
-  cases could not have stayed at 0 changed without a bump, so the no-op is
-  skipped, never drawn. One tone source either way: the pieces ARE the
-  masters' tabs. Drawing always is a one-line change plus a scoped bump,
-  the owner's call.
+- **Why not "always" (the brief said always):** the builder's eroded cut
+  was byte-identical over its own master at HD on every key but never at
+  the 750 bake — the 2:1 resample blended the cut's edge on the chevron's
+  diagonals (1–3 px at ≤ 4 levels on the spell faces and the land backs,
+  5–6 px at ≤ 7 on the land fronts; the plain mask's cut 35 px at ≤ 45) —
+  so the visual gate's mono modal cases could not have stayed at 0 changed
+  without a bump, and the no-op was skipped. The 5.1c skeptic refuted "no
+  cut can block-align": the eroded interior snapped to the HD grid's 2 × 2
+  px blocks is 0 px at BOTH presets on all 28 own-key pieces (a real bake
+  on a busy synthetic master proves the slot lands the blocks 1:1 at 750
+  too), with the cut still inside the outline; those are the published
+  pieces now. Drawing always is a one-line change
+  (`resolveFrameOverlays` without the `mdfcStripOwnKey` skip) plus a scoped
+  bump for the gate's record; the skip rule stays as built — the owner's
+  call (c), with the residual argument gone. One tone source either way:
+  the pieces ARE the masters' tabs.
 - **The verified looks:** nothing changes on a mono-colour card, so the
   ticks stand; a two-colour modal card is the only look the rider changes
   (none ticked at the time of the PR).
 - **Open on the round-32 sheets:** (a) CC's tinted tabs — ours u
-  199,226,244 · r 255,223,201 · g 211,232,222 · m 255,235,163 on the backs
+  199,226,244 · r 255,223,201 · g 216,236,226 · m 255,235,163 on the backs
   — against the prints' near-neutral ones (STX #147 216,221,229, #159
   228,228,246, #151 226,227,246, KHM #168 233,234,235): a neutral-hue
   variant is built in the scratchpad beside each print (30 more objects if
@@ -2708,13 +2722,18 @@ badge; a mono-colour card keeps the master's bytes.
 - **Tests:** `tests/unit/frames/mdfc-strip-rider.test.ts` (the recipe, the
   cut and its findings on a synthetic master, the key rule, what the
   profiles declare and the resolver draws — mono none, the other face's
-  key, the split's gold, the hybrid's `l`, the land pair — and, with the
+  key, the split's gold, the hybrid's `l`, the land pair, the import's
+  literal `multicolor` — the snap on a synthetic mask (`snapToBlocks`:
+  whole blocks or none, the eroded map at a 1-px block), and, with the
   masters on disk: every piece its master's tab (0 px, alpha binary,
-  nothing outside the mask), a fresh cut byte for byte, the HD identity and
-  the 750 residual through the rasteriser), `tests/unit/render/
+  nothing outside the snapped mask, 51,208 opaque), a fresh cut byte for
+  byte, the identity through the rasteriser at HD AND at 750 (0 px; the
+  un-snapped cut's 750 residual shown real)), `tests/unit/render/
   mdfc-strip-rider-bake.test.tsx` (real bakes: the paths and the order
   after the crown, the piece under the white / dark texts, the keep-out
-  diff, the 1:1 placement on a synthetic master), `tests/unit/components/
+  diff, the 1:1 placement on a synthetic master at both presets),
+  `tests/unit/cards/layout-version.test.ts` (v41: a sweep scoped to the
+  four faces, not neutral), `tests/unit/components/
   mdfc-strip-rider-preview.test.tsx` (the preview's twin), the matrix's 13
   `@strip-*` cases (new; the 14 existing two-colour-other-face modal cases
   change under v41's scope, every mono case unchanged, 0 redefined),
@@ -2725,8 +2744,49 @@ badge; a mono-colour card keeps the master's bytes.
   `wu` / `wub` / `c` rows' two-colour and colourless land backs, the hybrid
   pair, the gold land pair) — template-scoped to the four modal faces,
   "sweep" as v40 (0 cards on any modal body: it re-bakes and badges
-  nothing), VERIFICATION-NEUTRAL (no master, slot or text moves; a tick on
-  a modal face is made on a mono-colour print, whose bake is unchanged).
+  nothing; every other v40 card is stamped 41 unbaked by the cron), and
+  NOT verification-neutral (the 5.1c skeptic; the builder had it neutral
+  "because a tick is made on a mono-colour print"): no master, slot or
+  text moves, but the registry's references for the spell BACKS are STX's
+  modal cards — one colour per face, so their back's strip now takes the
+  front's colour — and the land FRONTS' are the pathways (each face its
+  own colour), and `m15mdfcfront/m`'s is MH3 #252 (a hybrid front over a
+  two-colour land back): the compare page's bake of those references
+  changes, so a tick made on them before v41 would have judged a look that
+  no longer renders. Only the five mono spell-front references and the
+  five land-back references bake the same. No modal face was ticked
+  anywhere when v41 shipped (production: 0 `frame_reviews` rows for the
+  four templates, anon-readable; the dev DB the same); the owner ticks at
+  v41.
+
+- **Skeptic pass (2026-10-06, on 4600abaf):** the 60 objects re-fetched
+  from the DEV bucket by manifest key (60 / 60 at the manifest's sha256 and
+  bytes); the four templates rebuilt through the committed importer into a
+  FRESH Card Conjurer cache (28 pack files fetched): 180 / 180 objects
+  byte-identical to the manifest (the 120 masters and the builder's 60
+  pieces) before the re-cut. The rule re-measured with own regions (the
+  luma-mode band of the tab's interior and two text-free edge bands) on
+  every modal scan: every number within 3 levels of the builder's, no
+  print contradicts the key table — STX #154's front (a black artifact
+  with a mono-GREEN back, {3}{G}{G}) prints green, not gold; all nine MH3
+  hybrid fronts on disk (#252, #254–261) read exactly 113,99,88; and MH3
+  #252's land back WEARS the grey land frame (its bars 161,147,138, its box
+  198,159,141 — not the gold land stand-in's 161,135,71), so the rule
+  "the frame the other face wears" holds literally there (its import onto
+  `m15mdfclandback/m` would be a 5.4 question, not this PR's). Found and
+  fixed: `stripKeyOf` re-counted colour WORDS, so the colour chip's and the
+  import's literal `multicolor` (STX #149's back as `backFrameColorsFrom-
+  Scryfall` stores it) drew the artifact tab where the back is drawn gold
+  — it keys from `pickFrameColorKey` now; v41 was listed
+  verification-neutral although three of the four templates' references
+  change their compare bake (above); the builder's measuring copies of
+  `m15mdfcback/g.png` (`scratchpad/dfc-1c/frames-head`, `dfc-1d/frames-
+  all`) were the pre-recut master (sha 9d0a5a77…, tab 211,232,222 / 224.6)
+  while the manifest's is the 5.1d skeptic's re-cut (da8ce589…, tab
+  216,236,226 / 228.9) — the piece itself is cut from the true master (0
+  px), only the "ours" numbers were stale; and "no cut can block-align"
+  was wrong: the 2 × 2-snapped cut is 0 px at both presets (above), built
+  and published (60 new objects, the old 60 orphaned in the dev bucket).
 
 ### The editor (5.2)
 
