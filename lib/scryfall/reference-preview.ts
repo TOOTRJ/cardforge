@@ -11,8 +11,9 @@ import {
 } from "@/lib/scryfall/import-mapper";
 import { previewFromImportPatch } from "@/lib/scryfall/preview-from-patch";
 import { scryfallFaceIndex, type CardFace } from "@/lib/cards/card-face";
-import { frontBodyFor, isDfcBackBody } from "@/lib/cards/dfc";
+import { bodyFor, dfcBodyOf, frontBodyFor, isDfcBackBody } from "@/lib/cards/dfc";
 import { backPreviewData } from "@/lib/cards/faces";
+import type { ScryfallCard } from "@/lib/scryfall/client";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 
@@ -39,7 +40,10 @@ import type { FrameTemplate } from "@/types/card";
 // today. A printing with no second face, or one whose second face has no
 // scan of its own (split, flip, adventure: one picture), throws
 // FrameCompareFaceError, which the callers name instead of showing the
-// front. The front path is untouched: `face` omitted = what it always was.
+// front. The front path is what it always was — except on a MODAL front
+// body under test (TODO 5.1c, withComparedBack): there the back carries its
+// own printed colour and the body its type derives, as the import stores it,
+// because the front now draws a piece FROM them (the modal strip's colour).
 // ---------------------------------------------------------------------------
 
 export type FrameComparePayload = {
@@ -75,6 +79,37 @@ export class FrameCompareFaceError extends Error {
   }
 }
 
+/**
+ * A MODAL front body under test (TODO 5.1c): its back as the import would
+ * store it — in its own printed colour (referenceBackColorIdentity: a modal
+ * land's is its mana's) and on the back body its type derives (bodyFor) —
+ * so what the front draws FROM its back is the stored card's. The modal
+ * strip takes the colour of the frame the OTHER face wears
+ * (lib/cards/faces.ts stripKeyOf), and a back with no colour of its own
+ * follows the front's: without this every two-colour reference viewed from
+ * its front — the five pathways, STX's cards, KHM #114 — drew its own
+ * colour's tab beside a scan that prints the back's. A back the import
+ * keeps off the bodies (`legacyBack`: a walker face, 5.13) takes the colour
+ * alone and stays a legacy back — its colour is never drawn (backBodyOf
+ * honours a body only), it only keys the front's strip. A TRANSFORM front
+ * draws nothing from its back's colour or body (the tab's digits and the
+ * strip's texts read content alone), so it — like every other template and
+ * a printing with no second face — keeps the card as it is.
+ */
+function withComparedBack(front: CardPreviewData, card: ScryfallCard, legacyBack: boolean): CardPreviewData {
+  const body = dfcBodyOf(front.frameStyle?.template);
+  if (!front.backFace || body?.role !== "front" || body.layout !== "modal") return front;
+  const backBody = legacyBack ? null : bodyFor(body.layout, "back", front.backFace.card_type ?? null);
+  return {
+    ...front,
+    backFace: {
+      ...front.backFace,
+      ...(backBody ? { frame_style: { template: backBody } } : {}),
+      color_identity: referenceBackColorIdentity(card),
+    },
+  };
+}
+
 export async function buildFrameComparePayload(
   scryfallId: string,
   template: FrameTemplate,
@@ -103,11 +138,15 @@ export async function buildFrameComparePayload(
 
   if (face === "front") {
     return {
-      preview: {
-        ...previewFromImportPatch(comparePatch, card.name, template),
-        // Two colours stay two here, so a split frame draws the scan's split.
-        colorIdentity: referenceColorIdentity(card),
-      },
+      preview: withComparedBack(
+        {
+          ...previewFromImportPatch(comparePatch, card.name, template),
+          // Two colours stay two here, so a split frame draws the scan's split.
+          colorIdentity: referenceColorIdentity(card),
+        },
+        card,
+        walkerBack,
+      ),
       scanUrl: pickPrintImageUrl(card),
       cardName: card.name,
       patch,
