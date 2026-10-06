@@ -929,6 +929,8 @@ export function visualCases(): VisualCase[] {
     frame_style: crown ? { template, finish, crown: true, twoColor: true } : { template, finish, twoColor: true },
   });
   for (const template of PAIR_TEMPLATES) {
+    // A double-faced body's pair cases need a back face: the 5.1d block below.
+    if (getFrameProfile(template).dfc) continue;
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, "wu", "short", { suffix: "@pair", row: pairStyle(template) });
     // A two-colour legend with both switches on: the split crown over its
@@ -1103,6 +1105,62 @@ export function visualCases(): VisualCase[] {
   add("m15mdfcfront", "mdfc", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15mdfcback", "r", "short", "foil") });
   add("m15mdfcback", "mdfc", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15mdfcfront" }, row: dfcBodyRow("m15mdfcback", "r", "short", "foil") });
   add("m15mdfcfront", "mdfc", "u", "short", { corners: "square", suffix: "@square" });
+  // TODO 5.1d: the crown and the two-colour frames on the double-faced
+  // bodies — NEW cases (opt-in switches no stored card has: no bump). The
+  // long row is a Legendary front with a Legendary back on every body, so a
+  // crowned case bakes the crown cut round the well / housing — every
+  // declared body in the colour keys that pick a different piece (w u b r g,
+  // c = the artifact silver, wu = gold with the pair switch off, wub gold),
+  // the land front's land-grey `l` crown (c) and a coloured land front; the
+  // pairs on every spell face (short: the split dress; long: the pair's
+  // split crown over it), the modal front's hybrid dress, and the stored
+  // bake's size. The ▼ land back and the modal land pair draw neither.
+  const dfcSwitches = (row: Partial<CardRowForBake>, on: { crown?: true; twoColor?: true }): Partial<CardRowForBake> => ({
+    ...row,
+    frame_style: { ...(row.frame_style as Record<string, unknown>), ...on } as CardRowForBake["frame_style"],
+  });
+  const DFC_CROWN_COLOURS: readonly VisualColour[] = ["w", "u", "b", "r", "g", "c", "wu", "wub"];
+  for (const colour of DFC_CROWN_COLOURS) {
+    add("m15dfcfront", "transform", colour, "long", { suffix: "@crown", row: dfcSwitches(dfcBodyRow("m15dfcback", colour, "long"), { crown: true }) });
+    add("m15mdfcfront", "mdfc", colour, "long", { suffix: "@crown", row: dfcSwitches(dfcBodyRow("m15mdfcback", colour, "long"), { crown: true }) });
+    for (const body of ["m15dfcback", "m15dfcbackleft"] as const) {
+      add(body, "transform", colour, "long", { suffix: "@crown", back: { frontTemplate: "m15dfcfront" }, row: dfcSwitches(dfcBodyRow(body, colour, "long"), { crown: true }) });
+    }
+    add("m15mdfcback", "mdfc", colour, "long", { suffix: "@crown", back: { frontTemplate: "m15mdfcfront" }, row: dfcSwitches(dfcBodyRow("m15mdfcback", colour, "long"), { crown: true }) });
+  }
+  // The land front: Westvale Abbey's long row is a Legendary land — the
+  // land grey crown on a colourless front (c → l), the colour's on a green one.
+  for (const colour of ["c", "g"] as const) {
+    add("m15dfclandfront", "transform", colour, "long", { suffix: "@crown", row: dfcSwitches(dfcBodyRow("m15dfclandback", colour, "long"), { crown: true }) });
+  }
+  // The pairs: the split dress on every spell face (short), the pair's
+  // crown over it (long, both switches), the modal front's hybrid dress and
+  // its crowned twin, the stored bake's size on a front and a back.
+  const PAIR_FRONTS = [["m15dfcfront", "transform", "m15dfcback"], ["m15mdfcfront", "mdfc", "m15mdfcback"]] as const;
+  for (const [front, kind, back] of PAIR_FRONTS) {
+    add(front, kind, "wu", "short", { suffix: "@pair", row: dfcSwitches(dfcBodyRow(back, "wu"), { twoColor: true }) });
+    add(front, kind, "wu", "long", { suffix: "@pair-crown", row: dfcSwitches(dfcBodyRow(back, "wu", "long"), { crown: true, twoColor: true }) });
+    add(back, kind, "wu", "short", { suffix: "@pair", back: { frontTemplate: front }, row: dfcSwitches(dfcBodyRow(back, "wu"), { twoColor: true }) });
+    add(back, kind, "wu", "long", { suffix: "@pair-crown", back: { frontTemplate: front }, row: dfcSwitches(dfcBodyRow(back, "wu", "long"), { crown: true, twoColor: true }) });
+  }
+  add("m15dfcbackleft", "transform", "wu", "short", { suffix: "@pair", back: { frontTemplate: "m15dfcfront" }, row: dfcSwitches(dfcFamilyRow("m15dfcbackleft", "wu", "sunmoon"), { twoColor: true }) });
+  add("m15dfcbackleft", "transform", "wu", "long", { suffix: "@pair-crown", back: { frontTemplate: "m15dfcfront" }, row: dfcSwitches(dfcFamilyRow("m15dfcbackleft", "wu", "sunmoon", "long"), { crown: true, twoColor: true }) });
+  add("m15mdfcfront", "mdfc", "wu", "short", { suffix: "@pair-hybrid", row: { ...dfcSwitches(dfcBodyRow("m15mdfcback", "wu"), { twoColor: true }), cost: "{W/U}{W/U}" } });
+  add("m15mdfcfront", "mdfc", "wu", "long", { suffix: "@pair-hybrid-crown", row: { ...dfcSwitches(dfcBodyRow("m15mdfcback", "wu", "long"), { crown: true, twoColor: true }), cost: "{X}{W/U}{W/U}{W/U}" } });
+  // The transform front draws no hybrid dress: an all-hybrid cost falls to its split.
+  add("m15dfcfront", "transform", "wu", "short", { suffix: "@pair-hybrid", row: { ...dfcSwitches(dfcBodyRow("m15dfcback", "wu"), { twoColor: true }), cost: "{W/U}{W/U}" } });
+  add("m15dfcfront", "transform", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: dfcSwitches(dfcBodyRow("m15dfcback", "wu", "long"), { crown: true, twoColor: true }) });
+  add("m15dfcback", "transform", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", back: { frontTemplate: "m15dfcfront" }, row: dfcSwitches(dfcBodyRow("m15dfcback", "wu", "long"), { crown: true, twoColor: true }) });
+  add("m15mdfcback", "mdfc", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", back: { frontTemplate: "m15mdfcfront" }, row: dfcSwitches(dfcBodyRow("m15mdfcback", "wu", "long"), { crown: true, twoColor: true }) });
+  // The crown at the stored bake's size on a front and on the ▼ back, a
+  // foil crown, a crowned front squared (the glyph rides ABOVE the crown on
+  // every front and 2016–22 back case: the well is cleared, the order keeps
+  // it on top).
+  add("m15dfcfront", "transform", "g", "long", { suffix: "@crown-hd", preset: "hd", row: dfcSwitches(dfcBodyRow("m15dfcback", "g", "long"), { crown: true }) });
+  add("m15dfcback", "transform", "g", "long", { suffix: "@crown-hd", preset: "hd", back: { frontTemplate: "m15dfcfront" }, row: dfcSwitches(dfcBodyRow("m15dfcback", "g", "long"), { crown: true }) });
+  add("m15mdfcfront", "mdfc", "b", "long", { suffix: "@crown-hd", preset: "hd", row: dfcSwitches(dfcBodyRow("m15mdfcback", "b", "long"), { crown: true }) });
+  add("m15dfcfront", "transform", "r", "long", { finish: "foil", suffix: "@crown-foil", row: dfcSwitches(dfcBodyRow("m15dfcback", "r", "long", "foil"), { crown: true }) });
+  add("m15dfcfront", "transform", "w", "long", { corners: "square", suffix: "@crown-square", row: dfcSwitches(dfcBodyRow("m15dfcback", "w", "long"), { crown: true }) });
   // A legacy-shaped back_face on m15 (the 8 imported DFCs' shape: content,
   // no body): the FRONT bake is today's, byte for byte (its hash must not
   // move against the base this PR was cut from: the corpus proof).
@@ -1345,7 +1403,12 @@ const DFC_AURA_BACK: Partial<CardRowForBake> = {
 
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
-export const PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"];
+export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
+  "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland",
+  // The double-faced spell faces (5.1d): their cases carry a back face
+  // (the DFC block below), never the generic pair loop's rows.
+  "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
+];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
  *  (DMU #107's), on top of a stored row — `frame_style.collector` names the

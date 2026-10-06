@@ -70,9 +70,10 @@ describe("bake path = preview path", () => {
     }
     // Not vacuous: m15's 20, m15artifact's and m15land's 10 each, the
     // borderless frames' 10 and 20 (4.6f, wave 2a), the snow frames' 10
-    // each (wave 2c); the crowned twins of every borderless master (7 + 20
-    // and 7 + 10).
-    expect(pairKeys).toBe(90);
+    // each (wave 2c), the double-faced spell faces' 10 each but the modal
+    // front's 20 (5.1d: 60); the crowned twins of every borderless master
+    // (7 + 20 and 7 + 10).
+    expect(pairKeys).toBe(150);
     expect(crownedKeys).toBe(44);
   });
 
@@ -102,6 +103,17 @@ describe("bake path = preview path", () => {
     let notches = 0;
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const slot of getFrameProfile(template).overlays ?? []) {
+        // The double-faced bodies' crowns (5.1d): the band cut round the
+        // LEFT well (the transform front, the land front, the 2016–22 back),
+        // the RIGHT well (the ▼ back) or the modal housing.
+        const dfcCrown =
+          template === "m15dfcback"
+            ? "m15dfccrownright"
+            : template.startsWith("m15mdfc")
+              ? "m15mdfccrown"
+              : template.startsWith("m15dfc")
+                ? "m15dfccrown"
+                : null;
         const folder =
           slot.anatomy === "dfcIcon"
             ? "dfcicon"
@@ -111,7 +123,7 @@ describe("bake path = preview path", () => {
                 : "m15holostamp"
               : template === "extendedart"
                 ? "extendedcrown"
-                : "m15crown";
+                : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;

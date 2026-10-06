@@ -37,6 +37,8 @@ type Seed = {
   cardType?: string;
   cost?: string;
   colors?: ColorIdentity[];
+  /** A double-faced card's back (5.1d: the crown switch reads either face). */
+  backFace?: { card_type: string; supertype: string };
 };
 
 /** A form with the fields the panels read, plus readouts of what they write. */
@@ -64,6 +66,7 @@ function Harness({
       frame_style: seed.frameStyle ?? { template: (seed.template ?? "m15") as FrameStyle["template"] },
       title: "",
       subtypes_text: "",
+      ...(seed.backFace ? { has_back_face: true, back_face: { ...seed.backFace, title: "", cost: "", subtypes_text: "", rules_text: "", flavor_text: "", power: "", toughness: "", color_identity: [] } } : {}),
     } as Partial<FormValues> as FormValues,
   });
   const markTouched = useTwoColorPairFollow(methods, follow);
@@ -121,6 +124,24 @@ describe("the crown switch", () => {
       expect(crownSwitch(), JSON.stringify(seed)).toBeNull();
       cleanup();
     }
+  });
+
+  it("a double-faced card (5.1d): shown when only the BACK is Legendary on a back body that draws the crown — never for a plain card's back fields, nor a back body that draws none (the ▼ land back)", () => {
+    // MOM #43's shape on the transform bodies: a nonlegendary front whose
+    // back (on m15dfcback, which declares the crown) is Legendary.
+    render(<Harness seed={{ supertype: "", frameStyle: { template: "m15dfcfront", crown: true }, backFace: { card_type: "creature", supertype: "Legendary" } }} which={["crown"]} />);
+    expect(crownSwitch()?.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(crownSwitch()!);
+    expect(style()).toMatchObject({ crown: false });
+    cleanup();
+    // A legendary LAND back lands on the ▼ land back, which draws no crown:
+    // nothing to switch.
+    render(<Harness seed={{ supertype: "", cardType: "land", frameStyle: { template: "m15dfclandfront", crown: true }, backFace: { card_type: "land", supertype: "Legendary" } }} which={["crown"]} />);
+    expect(crownSwitch()).toBeNull();
+    cleanup();
+    // A plain card: its back fields (a legacy back) say nothing about a crown.
+    render(<Harness seed={{ supertype: "", frameStyle: { template: "m15", crown: true }, backFace: { card_type: "creature", supertype: "Legendary" } }} which={["crown"]} />);
+    expect(crownSwitch()).toBeNull();
   });
 
   it("a stored card with no key: off, with the one-line hint; switching it on removes the hint", () => {

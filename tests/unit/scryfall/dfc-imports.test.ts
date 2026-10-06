@@ -215,9 +215,9 @@ describe("the registry", () => {
     ["inr-60", "transform/2015", "exact", "m15dfcfront", undefined, undefined],
     ["vow-157", "transform/2015", "exact", "m15dfcfront", undefined, undefined],
     ["mom-36", "transform/2015", "exact", "m15dfcfront", undefined, undefined],
-    // A legendary BOT convert: the crown (4.6f) and its Vehicle back (5.10)
-    // are gaps on the body.
-    ["bot-1", "transform/2015+crown", "nearest", "m15dfcfront", undefined, "4.6f"],
+    // A legendary BOT convert: the crown is drawn by the body since 5.1d;
+    // its Vehicle back (5.10) is still a gap.
+    ["bot-1", "transform/2015+vehicle", "nearest", "m15dfcfront", undefined, "4.6"],
     // The Ixalan parchment land back (5.8) — on XLN's compass printings and
     // LCI's plain ones alike; the land front lands on the land pair.
     ["xln-22", "transform/2015+parchment-land-back", "nearest", "m15dfcfront", undefined, "5.8"],
@@ -234,8 +234,9 @@ describe("the registry", () => {
     ["khm-114", "dfc/walker", "nearest", "m15", undefined, "5.13"],
     ["emn-63", "dfc/colourless-face", "nearest", "m15dfcfront", "m15", "5.11"],
     ["znr-12", "modal/2015", "exact", "m15mdfcfront", undefined, undefined],
-    // Tergrid is legendary: the crown is a gap on the body (4.6f), as BOT #1's.
-    ["khm-112", "modal/2015+crown", "nearest", "m15mdfcfront", undefined, "4.6f"],
+    // Tergrid is legendary: the modal front draws the crown since 5.1d —
+    // exact on the body.
+    ["khm-112", "modal/2015", "exact", "m15mdfcfront", undefined, undefined],
     ["stx-6", "dfc/colourless-face", "nearest", "m15mdfcfront", "m15", "5.11"],
     ["znr-259", "modal/2015", "exact", "m15mdfclandfront", undefined, undefined],
     ["mh3-253", "dfc/devoid", "nearest", "m15mdfcfront", "m15devoid", "5.11"],
@@ -253,8 +254,8 @@ describe("the registry", () => {
     expect(isKnownFrameSignature(match.signature)).toBe(true);
   });
 
-  it("names the Vehicle plate on a convert's back, after the crown", () => {
-    expect(frameMatchFromScryfall(printing("bot-1")).gaps).toEqual(["crown", "vehicle"]);
+  it("names the Vehicle plate on a convert's back; the crown is the body's since 5.1d", () => {
+    expect(frameMatchFromScryfall(printing("bot-1")).gaps).toEqual(["vehicle"]);
   });
 
   it("the double-faced marks are drawn by the bodies: the old dfc rows are answered there, never the standard's", () => {

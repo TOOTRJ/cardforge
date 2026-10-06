@@ -46,7 +46,12 @@ describe("which card draws the crown", () => {
 
   it("only on m15, m15artifact, m15land, the borderless frames, extended art and the snow frames (4.6f) — and a legacy template, which draws the m15 frame", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => showsCrown(legendary(["white"]), getFrameProfile(t)));
-    const DRAWN = ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"];
+    // 5.1d: the double-faced bodies with a printed legendary face draw the
+    // crown cut round their well or housing.
+    const DRAWN = [
+      "m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+    ];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);
   });

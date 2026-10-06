@@ -279,12 +279,18 @@ describe("the crown", () => {
 });
 
 describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f: the borderless twins, the extended-art band, the snow band and pairs)", () => {
-  /** The entries that draw the crown, in FRAME_TEMPLATE_VALUES order. */
+  /** The entries that draw the crown, in FRAME_TEMPLATE_VALUES order —
+   *  since 5.1d the double-faced bodies with a printed legendary face too
+   *  (every transform body but the ▼ land back; the modal spell pair). */
   const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
-    ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"].includes(t),
+    [
+      "m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+    ].includes(t),
   );
-  /** …and the pair masters (extendedart draws none: a pair wears gold there). */
-  const PAIRED = CROWNED.filter((t): boolean => t !== "extendedart");
+  /** …and the pair masters (extendedart draws none: a pair wears gold there;
+   *  the transform land front none: no two-colour land face in print). */
+  const PAIRED = CROWNED.filter((t): boolean => t !== "extendedart" && t !== "m15dfclandfront");
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
@@ -303,6 +309,15 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15borderless: ["split", "hybrid"],
       m15borderlessartifact: ["split"],
       m15snow: ["split"],
+      // The double-faced spell faces (5.1d): the split on every one — the
+      // prints split a back's rings and box over its gold bars too — and the
+      // hybrid dress on the modal front alone (MH3 #252–261); never the land
+      // pair.
+      m15dfcfront: ["split"],
+      m15dfcback: ["split"],
+      m15dfcbackleft: ["split"],
+      m15mdfcfront: ["split", "hybrid"],
+      m15mdfcback: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no overlay slot, crownMasters set.

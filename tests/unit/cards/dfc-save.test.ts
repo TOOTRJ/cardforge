@@ -328,8 +328,9 @@ describe("the real transform bodies through the actions (TODO 5.1a)", () => {
     const saved = await createCardAction(payload({ frame_style: { template: "m15dfcfront" }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] } }));
     expect(saved.ok).toBe(true);
     expect(written(ok, "insert")?.back_face).toEqual({ ...LEGACY_BACK, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
-    // The family survives on the front body, the crown does not (D17); the
-    // collector line starts on, as on every new card with the slot (4.9b).
+    // The family survives on the front body, and since 5.1d the crown too
+    // (the land front draws it; no pairs there, so no two-colour default);
+    // the collector line starts on, as on every new card with the slot (4.9b).
     // The family picks the BACK body (5.2): the compass family's creature
     // back is the 2016–22 back, so that is the body the payload names.
     const land = db();
@@ -337,7 +338,7 @@ describe("the real transform bodies through the actions (TODO 5.1a)", () => {
       payload({ card_type: "land", cost: "", color_identity: ["colorless"], frame_style: { template: "m15dfclandfront", dfcIcon: "compass", crown: true }, back_face: { ...LEGACY_BACK, frame_style: { template: "m15dfcbackleft" }, color_identity: ["white"] } }),
     );
     expect(landFront.ok).toBe(true);
-    expect(written(land, "insert")?.frame_style).toEqual({ template: "m15dfclandfront", dfcIcon: "compass", collector: "2023" });
+    expect(written(land, "insert")?.frame_style).toEqual({ template: "m15dfclandfront", dfcIcon: "compass", crown: true, collector: "2023" });
     expect((written(land, "insert")?.back_face as { frame_style: unknown }).frame_style).toEqual({ template: "m15dfcbackleft" });
   });
 });
@@ -351,10 +352,15 @@ describe("every template today", () => {
       const front = template === "m15dfcfront" || template === "m15dfclandfront";
       expect(normalizeAnatomy({ template, dfcIcon: "arrows" }, template, "creature"), template).toEqual(front ? { template, dfcIcon: "arrows" } : { template });
     }
-    // …and a DFC body drops the crown and the two-colour switch (design D17:
-    // no crown, no pair masters in wave 1).
-    for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"] as const) {
-      expect(normalizeAnatomy({ template, crown: true, twoColor: true, collector: "2023" }, template, "creature"), template).toEqual({ template, collector: "2023" });
+    // …and since 5.1d the crown and the two-colour switch survive where the
+    // body draws them: both on the spell bodies (the prints split a back's
+    // rings and box too), the crown alone on the land front (no two-colour
+    // land face in print), neither on the ▼ land back (no legendary land
+    // back printed on this frame).
+    for (const template of ["m15dfcfront", "m15dfcback", "m15dfcbackleft"] as const) {
+      expect(normalizeAnatomy({ template, crown: true, twoColor: true, collector: "2023" }, template, "creature"), template).toEqual({ template, crown: true, twoColor: true, collector: "2023" });
     }
+    expect(normalizeAnatomy({ template: "m15dfclandfront", crown: true, twoColor: true, collector: "2023" }, "m15dfclandfront", "land")).toEqual({ template: "m15dfclandfront", crown: true, collector: "2023" });
+    expect(normalizeAnatomy({ template: "m15dfclandback", crown: true, twoColor: true, collector: "2023" }, "m15dfclandback", "land")).toEqual({ template: "m15dfclandback", collector: "2023" });
   });
 });

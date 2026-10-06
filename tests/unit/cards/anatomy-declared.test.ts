@@ -37,7 +37,14 @@ describe("where the pieces are declared", () => {
     // the collector line's slot since 4.9b; the borderless land and
     // extendedart have none; devoid draws neither crown nor pair — owner
     // round 20: its two-colour printings are the gold frame.)
-    const DRAWN = ["m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart"];
+    // 5.1d: the double-faced bodies draw the crown cut round their well or
+    // housing (a printed legendary face exists on each) — every transform
+    // body but the ▼ land back, and the modal spell pair; the modal land
+    // pair and the ▼ land back draw none (no print).
+    const DRAWN = [
+      "m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+    ];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —
     // the snow pair included; never extendedart or the borderless land. The

@@ -116,7 +116,11 @@ describe("declared and published", () => {
     expect(getFrameProfile("m15devoid").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([]);
     // Never on a base another profile spreads: nothing else gained a dress.
     const paired = FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).twoColorMasters ?? []).length > 0);
-    expect(paired).toEqual(["m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact"]);
+    // …and the five double-faced spell faces since 5.1d (their land pair none).
+    expect(paired).toEqual([
+      "m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact",
+      "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
+    ]);
   });
 
   it.each(["m15snow", "m15snowland"])("%s: every pair master is in the frames bucket, PNG + WebP, 1500 × 2100; the monos and plates are the same objects as before", (template) => {

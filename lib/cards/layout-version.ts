@@ -771,9 +771,47 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            (a master and slots move) — no tick exists on either to stale:
 //            the owner walks flip/g (C18 #134) and flip/b (CM2 #71) and the
 //            five AKH aftermath colours after the deploy.
+//   40     — the modal backs' flipside strip toned onto the prints (TODO
+//            5.1d; the 5.1b skeptic's finding, 2026-10-05): Card Conjurer's
+//            light strip on the modal BACK masters read 14–44 luma darker
+//            than every mono-colour print's (u 208 vs STX #147's 220 / MH3
+//            #241's 231, b 175 vs STX #148 / KHM #112's 221 / ZNR #90's 212,
+//            r 212 vs STX #159's 230 / ZNR #134's 228, g 201 vs STX #151's
+//            229 / ZNR #189's 218) and 38 on the gold back (195 vs KHM
+//            #168 The Prismatic Bridge's 233), so the importer multiplies
+//            the whole tab through the pack's Flipside mask (scripts/lib/
+//            cc-frames.mjs MDFC_BACK_TONES / MDFC_LAND_BACK_TONES `strip`:
+//            one table per template, the spell backs on STX / KHM, the
+//            land backs on ZNR / MH3; w within the prints' spread,
+//            untouched; the ◀ and the outline stay dark) — ten re-cut
+//            masters (m15mdfcback u b r g m, m15mdfclandback u b r g m;
+//            the land back's gold key is the spell table's stand-in).
+//            With it (the 5.1d skeptic, 2026-10-05) the transform FRONT's
+//            reverse P/T became a rules FLOAT (DrawnStats.reversePt →
+//            RulesLayoutInput.floats; lib/cards/stat-fit.ts
+//            endAlignedStatKeepOut): 5.1a drew the back's P/T in the grey
+//            tab but never set the rules lines round it, so a dense text
+//            ran under the digits — a correction on the two front bodies
+//            with the tab (m15dfcfront, m15dfclandfront), whose long bakes
+//            change.
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[40] = the modal
+//            faces: the two front templates a modal card is stored on,
+//            whose BACK bake changes, and the two back bodies the visual
+//            matrix bakes as faces — and the two transform front bodies,
+//            whose rules layout changes): every card on them. Production
+//            (2026-10-05): 0 cards on any DFC body — the bodies are not
+//            ticked yet, nothing is offered — so the sweep re-bakes
+//            nothing; the bump is the visual gate's record of a master
+//            correction (v38 / v39's pattern), never a badge ("sweep").
+//            NOT verification-neutral on the two modal back bodies (their
+//            masters change) or the two transform front bodies (their rules
+//            layout does) — no tick exists on any of them to stale
+//            (VERIFICATION_TEMPLATE_SCOPES[40]); the modal front bodies'
+//            masters and layout are untouched (the crown and the pairs of
+//            5.1d are opt-in additions: new masters and overlays, no bump).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 39;
+export const CARD_LAYOUT_VERSION = 40;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -808,6 +846,16 @@ export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "a
 // v39 — flip's lower half and aftermath's cost onto the prints (the 4.21a
 // follow-up). Frozen like the lists above: v39 is history once it ships.
 export const V39_FLIP_AFTERMATH_TEMPLATES: readonly string[] = ["aftermath", "flip"];
+/** v40 — the modal faces (TODO 5.1d: the backs' strip toned): the two front
+ *  templates a modal card is stored on and the two back bodies (the visual
+ *  matrix's back-face cases, the ticks) — and the two transform FRONT
+ *  bodies with the reverse-P/T tab, whose rules lines wrap round the
+ *  digits since 5.1d. Frozen like v38's. */
+export const V40_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback", "m15dfcfront", "m15dfclandfront"];
+/** v40's verification scope: the two modal BACK bodies' masters change and
+ *  the two transform FRONT bodies' rules layout does; the modal fronts'
+ *  ticks — none yet — would stay fresh. */
+export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m15mdfclandback", "m15dfcfront", "m15dfclandfront"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -862,6 +910,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v39: flip's re-cut masters + art slot and rules rect, aftermath's cost
   // (the 4.21a follow-up); every card on the two.
   39: V39_FLIP_AFTERMATH_TEMPLATES,
+  // v40: the modal backs' strip toned (5.1d) — every card on the modal
+  // faces (its back bake changes), the back bodies for the matrix, and the
+  // transform fronts (the reverse-P/T float).
+  40: V40_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -945,6 +997,10 @@ export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "fl
 const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> = {
   34: V34_TOKEN_FRAME_TEMPLATES,
   // (v36 is not here: verification-neutral, VERIFICATION_NEUTRAL_VERSIONS.)
+  // v40: the two modal BACK bodies' masters change (their strip) and the
+  // two transform FRONT bodies' rules layout (the reverse-P/T float); the
+  // modal fronts' ticks — none yet — would stay fresh.
+  40: V40_VERIFICATION_TEMPLATES,
 };
 
 /**
@@ -1472,6 +1528,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   37: "sweep", // nyx's type bar + text box darkened to the THB prints (4.17e) — a correction, never a badge
   38: "sweep", // the portrait layouts re-sourced from Card Conjurer (4.21a) — a frame swap, never a badge
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
+  40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

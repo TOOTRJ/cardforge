@@ -141,11 +141,14 @@ describe("the transform bodies (5.1a), the modal bodies (5.1b) and every other t
     expect([...DFC_ICON_RIDER.keys]).toEqual([...DFC_ICON_GLYPH_KEYS]);
     for (const key of DFC_ICON_GLYPH_KEYS) expect(key).toBe(key.toLowerCase());
     // The ▼ back carries no rider slot; the front and the 2016–22 back one.
-    expect(getFrameProfile("m15dfcback").overlays).toBeUndefined();
+    // Since 5.1d the crown (cut round the well) draws BEFORE the rider on
+    // every transform body with a printed legendary face; the ▼ land back
+    // has none (no print).
+    expect(getFrameProfile("m15dfcback").overlays?.map((o) => o.anatomy)).toEqual(["crown"]);
     expect(getFrameProfile("m15dfclandback").overlays).toBeUndefined();
-    expect(getFrameProfile("m15dfcfront").overlays?.map((o) => o.anatomy)).toEqual(["dfcIcon"]);
-    expect(getFrameProfile("m15dfclandfront").overlays?.map((o) => o.anatomy)).toEqual(["dfcIcon"]);
-    expect(getFrameProfile("m15dfcbackleft").overlays?.map((o) => o.anatomy)).toEqual(["dfcIcon"]);
+    expect(getFrameProfile("m15dfcfront").overlays?.map((o) => o.anatomy)).toEqual(["crown", "dfcIcon"]);
+    expect(getFrameProfile("m15dfclandfront").overlays?.map((o) => o.anatomy)).toEqual(["crown", "dfcIcon"]);
+    expect(getFrameProfile("m15dfcbackleft").overlays?.map((o) => o.anatomy)).toEqual(["crown", "dfcIcon"]);
   });
 
   it("colorlessFaceAllowed: the ordinary gate's business on a non-DFC template (always true); on a DFC body only an Artifact face (D2)", () => {

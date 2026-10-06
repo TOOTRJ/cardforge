@@ -16,7 +16,7 @@
 // The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
-import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName } from "./pair-ramp.mjs";
+import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName, rampShare } from "./pair-ramp.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
@@ -155,26 +155,28 @@ function pairLayer(region, mask, fileOf = m15FrameFile) {
 /** The layers of one pair master (see above). `kind`: "m15", "artifact" or
  *  "land"; `dress`: "split" or "hybrid" (hybrid only on "m15"). `fileOf`
  *  resolves a recipe letter to a pack file: the accurate M15 pack's (the
- *  default) or the snow pack's, whose masks are the same (snowPairLayers). */
-export function pairMasterLayers(pair, dress, kind, fileOf = m15FrameFile) {
+ *  default) or the snow pack's, whose masks are the same (snowPairLayers);
+ *  `masks` the pack's own masks where they differ (the double-faced
+ *  bodies' packs, TODO 5.1d: dfcPairLayers). */
+export function pairMasterLayers(pair, dress, kind, fileOf = m15FrameFile, masks = M15_MASK) {
   const r = twoColorRecipe(pair, dress, kind);
   if (kind === "artifact") {
     return [
-      layer(fileOf(r.frame.left), M15_MASK.border),
-      layer(fileOf(r.frame.left), M15_MASK.frame),
-      pairLayer(r.rules, M15_MASK.rules, fileOf),
-      layer(fileOf(r.typeTitle), M15_MASK.title),
-      layer(fileOf(r.typeTitle), M15_MASK.type),
-      pairLayer(r.pinline, M15_MASK.pinline, fileOf),
+      layer(fileOf(r.frame.left), masks.border),
+      layer(fileOf(r.frame.left), masks.frame),
+      pairLayer(r.rules, masks.rules, fileOf),
+      layer(fileOf(r.typeTitle), masks.title),
+      layer(fileOf(r.typeTitle), masks.type),
+      pairLayer(r.pinline, masks.pinline, fileOf),
     ];
   }
   const base = r.frame.right ? pairLayer(r.frame, undefined, fileOf) : layer(fileOf(r.frame.left));
   // The bars are the base's own unless the base is a split frame (hybrid:
   // grey l bars over a two-colour frame).
   const bars = r.frame.right
-    ? [layer(fileOf(r.typeTitle), M15_MASK.title), layer(fileOf(r.typeTitle), M15_MASK.type)]
+    ? [layer(fileOf(r.typeTitle), masks.title), layer(fileOf(r.typeTitle), masks.type)]
     : [];
-  return [base, pairLayer(r.rules, M15_MASK.rules, fileOf), ...bars, pairLayer(r.pinline, M15_MASK.pinline, fileOf)];
+  return [base, pairLayer(r.rules, masks.rules, fileOf), ...bars, pairLayer(r.pinline, masks.pinline, fileOf)];
 }
 
 /** A template's pair masters: `{ wu: layers, …, "wu-h": layers, … }`. */
@@ -1245,7 +1247,7 @@ const DFC_FRONT_NOTES = [
   "the name starts at 16.7 %W (prints 249–252 px: SOI #203, MID #169, INR #60 / #193, XLN #22; CC's pack says 0.16 = 240) — the profile's title inset, not a pixel of the master (design D5)",
   "colourless `c` = the pack's 'Artifact Frame' (frontA.png) as a RENDER STAND-IN (design D2): no colourless non-artifact transform FRONT was printed on the plain M15 frame (EMN's Eldrazi are backs, see-through — TODO 5.11); the row is ticked against an ARTIFACT print (LCI #60 Inverted Iceberg) and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
   "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds; the reverse P/T in the tab is text (the profile's reversePt slot, #777, Beleren small caps), drawn only when the back prints a P/T — the tab prints EMPTY otherwise, as XLN #22 / VOW #12 / LCI #158 do (owner decision Q7)",
-  "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body; CC's DFC crown twins carry the older crown art, 4.6f)",
+  "the legendary crown (TODO 5.1d): the m15dfccrown overlay — our m15crown band cut through CC's transform crown twin's alpha around the well (CC_OVERLAY_BANDS.m15dfccrown); the two-colour PAIR masters (5.1d / 5.12): 4.6b's split recipe over this pack's files and masks — frontM.png whole, the text box and the pinline lerped from the two colour fronts (dfcPairLayers); no hybrid dress: no hybrid-cost transform front was printed on the 2015 frame (MH3's hybrids are modal)",
 ];
 
 const DFC_BACK_NOTES = (pack, side) => [
@@ -1254,6 +1256,7 @@ const DFC_BACK_NOTES = (pack, side) => [
   "P/T plates = the pack's dark `pt<K>.png` (285 × 156, interior luma W 160 U 95 B 85 R 75 G 69 M 122 A 112, within the prints' G 69–95 / U 93–106), drawn at M15's plate box with WHITE digits; the colourless stand-in takes the artifact plate; ONE set, m15dfcback/pt/<k>.png, which the 2016–22 back's profile draws too",
   "colourless `c` = the pack's 'Artifact Frame' as a RENDER STAND-IN (design D2), ticked against an artifact print (LCI #262 Sunbird Effigy / MID #256 Mystic Monstrosity); a colourless Eldrazi or Avatar back (EMN #63, TLA #203) prints a see-through frame CC lacks — TODO 5.11",
   "no mana cost (the profile's hideCost: a transform back never prints one); the colour-indicator dot is the renderers' (lib/cards/color-indicator.ts), on every coloured back; the pack's 'Vehicle Frame' (new/backV.png, ptV) is TODO 5.10",
+  "the legendary crown (TODO 5.1d): the m15dfccrown / m15dfccrownright overlay (our m15crown band cut through CC's transform crown twin's alpha around the well; the ▼ back's well is at the right); the two-colour PAIR masters (5.1d): the prints split a two-colour BACK's pinline rings and text box over the gold bars, as the front's (MOM #43 G|W, MID #218 W|U, MID #246 R|G, EMN #191 R|G, STX #149 B|R measured 2026-10-05 — the design's \"gold backs never split\" was wrong), so the split recipe over this pack's back files: backM.png whole, the box and the pinline lerped from the two colour backs, the gold bars at m's gain and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
 ];
 
 const DFC_LAND_NOTES = (file, print) => [
@@ -1371,31 +1374,70 @@ const modalLandTint = (k) => `${NEW}/l${k}.png`;
  * The design's own numbers (`ub` ×0.76, `rb` ×1.15, `ab` ×1.35) read the
  * land backs for u and r and KHM #15 for `a`; the gains here are per
  * template, each on its own references.
+ *
+ * The STRIP (TODO 5.1d; the 5.1b skeptic's finding, 2026-10-05): the backs'
+ * flipside strip — CC's light tab at the text box's bottom left — reads
+ * 14–44 luma darker than every mono-colour print's on u, b, r and g (and
+ * 38 on the gold back), so the whole tab takes a gain through the pack's
+ * Flipside mask (`reminder.svg` covers the tab from the border's inner
+ * edge to its chevron's tip, so the ◀ and the outline stay dark: a
+ * multiplier keeps dark pixels dark). Fitted on the tab's text-free fill
+ * (the median luma of rows 1872–1876 and 1938–1942, x 110–640 at HD, the
+ * skeptic's regions) of the reference scans — the same references as the
+ * bars, one table per template — against CC's backs (scratchpad
+ * dfc-1d/research/strips.json), to the luma the clamped channels give:
+ *   the spell backs (m15mdfcback):
+ *   u  208.2 → 220.0 (STX #147 Echoing Equation 220)
+ *   b  175.2 → 221.0 (STX #148 Search for Blex 223, KHM #112 Tergrid's
+ *      Lantern 219 — the skeptic's "b 216" averaged the land back in)
+ *   r  212.4 → 230.3 (STX #159 Flamethrower Sonata; a 255 clamp on R)
+ *   g  200.6 → 228.9 (STX #151 Journey to the Oracle — read inside the
+ *      tab: the builder's 224.4 had a row on the tab's top outline, which
+ *      sits 3 px lower on this scan; KHM #181 The Ringhart Crest 233.8)
+ *   m  194.6 → 233.0 (KHM #168 The Prismatic Bridge — a five-colour GOLD
+ *      modal back, 233 — and STX #149's B|R back 233; MSH's gold backs read
+ *      228–245: the skeptic's "no mono-gold print" missed Esika's back; a
+ *      255 clamp on R, the tab a shade yellower than the prints' neutral
+ *      231/232/233 — a gain moves luma, not hue)
+ *   w  238.1 — untouched: within the prints' spread (STX #150 230, KHM #15
+ *      249, KHM #21 / STX #155 beside them)
+ *   the land backs (m15mdfclandback):
+ *   u  208.2 → 230.7 (MH3 #241 Soporific Springs)
+ *   b  175.2 → 212.4 (ZNR #90 Agadeem, the Undercrypt; the pathways'
+ *      b backs ZNR #259 / #261 read 240 / 229 — the reference row's print)
+ *   r  212.4 → 227.8 (ZNR #134 Akoum Teeth 226.3, MH3 #246 Boggart Trawler's
+ *      back 229.2)
+ *   g  200.6 → 218.1 (ZNR #189 Kazandu Valley)
+ *   w  238.1 — untouched (ZNR #12 Emeria 237.3)
+ *   m  the spell back's (a stand-in); `a` / `c` untouched (no print).
+ * The front strips are within 5–11 of the prints (5.1b) and stay.
  */
 export const MDFC_BACK_TONES = Object.freeze({
   w: Object.freeze({ bars: 0.947, box: 1.059 }),
-  u: Object.freeze({ bars: 0.866, box: 0.981 }),
-  b: Object.freeze({ bars: 0.967, box: 1.029 }),
-  r: Object.freeze({ bars: 1.182, box: 1.075 }),
-  g: Object.freeze({ bars: 0.886, box: 1.06 }),
-  m: Object.freeze({ bars: 0.905, box: 0.91 }),
+  u: Object.freeze({ bars: 0.866, box: 0.981, strip: 1.056 }),
+  b: Object.freeze({ bars: 0.967, box: 1.029, strip: 1.263 }),
+  r: Object.freeze({ bars: 1.182, box: 1.075, strip: 1.097 }),
+  g: Object.freeze({ bars: 0.886, box: 1.06, strip: 1.141 }),
+  m: Object.freeze({ bars: 0.905, box: 0.91, strip: 1.213 }),
   a: Object.freeze({ bars: 1, box: 1 }),
   c: Object.freeze({ bars: 1, box: 1 }),
 });
 export const MDFC_LAND_BACK_TONES = Object.freeze({
   w: Object.freeze({ bars: 0.95, box: 1.063 }),
-  u: Object.freeze({ bars: 0.74, box: 0.966 }),
-  b: Object.freeze({ bars: 1.088, box: 1.099 }),
-  r: Object.freeze({ bars: 1.099, box: 1.065 }),
-  g: Object.freeze({ bars: 0.783, box: 1.033 }),
+  u: Object.freeze({ bars: 0.74, box: 0.966, strip: 1.106 }),
+  b: Object.freeze({ bars: 1.088, box: 1.099, strip: 1.211 }),
+  r: Object.freeze({ bars: 1.099, box: 1.065, strip: 1.082 }),
+  g: Object.freeze({ bars: 0.783, box: 1.033, strip: 1.088 }),
   m: MDFC_BACK_TONES.m,
 });
 
 /** One modal back body's tones for a colour key from `table`: the pack's
  *  Title mask (the bar and the housing's fill) and the regular Type mask at
- *  the bars' gain, the pack's Rules mask at the box's (toneMasked, in that
- *  order); none for a key the table doesn't name (the grey land modal `c`)
- *  or whose gains are 1 (the artifact stand-in). */
+ *  the bars' gain, the pack's Rules mask at the box's, and — since 5.1d —
+ *  the pack's Flipside mask (the whole tab) at the strip's (toneMasked, in
+ *  that order); none for a key the table doesn't name (the grey land modal
+ *  `c`) or whose gains are 1 (the artifact stand-in), no strip tone for a
+ *  key with none (w, within the prints' spread). */
 export function mdfcBackTones(key, table = MDFC_BACK_TONES) {
   const t = table[key];
   if (!t) return [];
@@ -1403,6 +1445,7 @@ export function mdfcBackTones(key, table = MDFC_BACK_TONES) {
     { mask: MODAL_MASK.title, gain: t.bars, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "title bar + housing" },
     { mask: MODAL_MASK.type, gain: t.bars, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "type bar" },
     { mask: MODAL_MASK.rules, gain: t.box, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "text box" },
+    ...(t.strip !== undefined ? [{ mask: MODAL_MASK.reminder, gain: t.strip, lumaRamp: [...DFC_BACK_TONE_LUMA_RAMP], region: "flipside strip" }] : []),
   ];
   return tones.filter((tone) => tone.gain !== 1);
 }
@@ -1410,7 +1453,7 @@ export function mdfcBackTones(key, table = MDFC_BACK_TONES) {
 /** How provenance describes a modal back's tone pass. */
 function mdfcBackToneTransform(table) {
   const name = table === MDFC_LAND_BACK_TONES ? "MDFC_LAND_BACK_TONES" : "MDFC_BACK_TONES";
-  return `then the title bar and the housing's fill (through ${MODAL_MASK.title}), the type bar (through ${MODAL_MASK.type}) and the text box (through ${MODAL_MASK.rules}) have their colour multiplied by the key's gain (${name}: bars / box per colour), fading to ×1 between luma ${DFC_BACK_TONE_LUMA_RAMP[0]} and ${DFC_BACK_TONE_LUMA_RAMP[1]} so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline, the strip and the plates untouched`;
+  return `then the title bar and the housing's fill (through ${MODAL_MASK.title}), the type bar (through ${MODAL_MASK.type}), the text box (through ${MODAL_MASK.rules}) and — on u, b, r, g and m (TODO 5.1d) — the whole flipside strip (through ${MODAL_MASK.reminder}: the tab, its ◀ and its outline, which a multiplier keeps dark) have their colour multiplied by the key's gain (${name}: bars / box / strip per colour), fading to ×1 between luma ${DFC_BACK_TONE_LUMA_RAMP[0]} and ${DFC_BACK_TONE_LUMA_RAMP[1]} so the white ▲▼ and the light rims keep CC's tone; the frame body, the pinline and the plates untouched`;
 }
 
 /** How provenance describes the land pair's recipe. */
@@ -1422,8 +1465,8 @@ const MDFC_FRONT_NOTES = [
   "the name starts at 16.7 %W (prints 247–252 px: ZNR #12, KHM #15, STX #147's back, ZNR #258; CC's pack says 0.1614 = 242) — the profile's title inset (the transform bodies' DFC_ICON_FACE_TITLE_LEFT_PCT), not a pixel of the master (design D5)",
   "colourless `c` = the pack's 'Artifact Frame' (a.png) as a RENDER STAND-IN (design D2): ticked against STX #154 Pestilent Cauldron, the one colourless modal face printed on the plain 2015 frame, and offered only to a face whose type line says Artifact (colorlessFaceAllowed)",
   "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds",
-  "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it",
-  "no crown and no pair masters in wave 1 (design D17: the save drops `crown` / `twoColor` on every DFC body)",
+  "the strip is painted in the MASTER's colour: on a two-colour modal card the prints paint it in the colour of the face it DESCRIBES (STX #147's green front carries a blue strip, the pathways their back's) — an owner question of the 5.1b review, left as the masters paint it (TODO 5.1c); on a pair master the gold m.png's strip (split) or the two colour fronts' strips lerped across the frame ramp (hybrid)",
+  "the legendary crown (TODO 5.1d): the m15mdfccrown overlay (our m15crown band cut through CC's modal crown twin's alpha around the housing); the two-colour PAIR masters (5.1d / 5.12): 4.6b's recipe over this pack's files and masks — the split dress m.png whole with the box and the pinline lerped from the two colour fronts (STX #149 Extus W|B, MSH #219 King T'Challa W|U print it), the hybrid dress the two fronts lerped across the frame ramp under CC's grey Land frame's bars (l.png through the Title and Type masks: the housing's fill is the Title mask's) with the split box and pinline (MH3 #252–261's ten hybrid fronts print it; the grey plate pt/c)",
 ];
 
 const MDFC_BACK_NOTES = [
@@ -1432,6 +1475,8 @@ const MDFC_BACK_NOTES = [
   "P/T plates = the transform pack's dark `pt<K>.png` as m15dfcback/pt/<k>.png (MSH #18 She-Hulk's gold plate reads 117 against ptM's 123): the profile draws that set, no plates of its own",
   "a cost prints as on any card (the profile's hideCost is off: KHM / STX / MSH backs carry one); no colour indicator (no modal back prints one)",
   "colourless `c` = the pack's 'Artifact Frame' back (ab.png) as a RENDER STAND-IN with no reference: every artifact modal back printed is a coloured artifact (KHM #15 Sword of the Realms white, KHM #112 Tergrid's Lantern black), drawn on its colour's body in wave 1",
+  "the strip toned onto the prints (TODO 5.1d, the 5.1b skeptic's finding): CC's light tab reads 12–44 luma darker than the prints' on u b r g and 38 on the gold back — a gain through the pack's Flipside mask (the whole tab: the ◀ and the outline stay dark), the spell backs on STX #147 / #148 + KHM #112 / #159 / #151 and KHM #168's gold back, the land backs on MH3 #241, ZNR #90 / #134 + MH3 #246 / #189; w within the prints' spread, untouched; the KHM scans read 5–13 lighter than STX's on every key (u KHM #40 242 vs STX #147 220, r KHM #123 237 vs STX #159 230, g KHM #181 234 vs STX #151 229, b KHM #112 219 vs STX #148 223): the fitted targets sit on STX, with b on both",
+  "the legendary crown (TODO 5.1d): the m15mdfccrown overlay, as on the front; the two-colour PAIR masters (5.1d): the prints split a two-colour modal BACK's rings and box over the gold bars (STX #149's B|R back, MSH #18 / #219 / #23 / #49 / #80's crowned gold-barred pair backs), so the split recipe over this pack's back files: mb.png whole, the box and the pinline lerped from the two colour backs, the gold bars and strip at m's gains and the box at the two colours' box gains lerped across the rules ramp (dfcPairBackTones)",
 ];
 
 const MDFC_LAND_NOTES = (front) => [
@@ -1439,6 +1484,132 @@ const MDFC_LAND_NOTES = (front) => [
   "keys w u b r g from the five land tints, m the gold land tint under the gold modal pieces (a stand-in: no gold modal land was printed), c = CC's grey land modal (l.png / lb.png) as it is (a stand-in: no colourless modal land was printed) — c and m are never offered (no reference)",
   "no cost (hideCost) and no P/T (a land face prints none)",
 ];
+
+// ---------------------------------------------------------------------------
+// The two-colour PAIR masters of the double-faced bodies (TODO 5.1d / 5.12):
+// 4.6b's recipe (twoColorRecipe, kind "m15") over each body's OWN pack files
+// and masks — the gold frame whole, the text box lerped across the rules
+// ramp (45→57 %W) through the pack's Rules mask, the pinline lerped across
+// the pinline ramp (40→60) through the pack's Pinline mask; the hybrid dress
+// (the modal front only: MH3 #252–261 print it) the two colour fronts lerped
+// across the frame ramp (44→57) under CC's grey Land frame's bars. Measured
+// on the prints (scratchpad dfc-1d/research/pairs.json, per-row crossings of
+// the title ring at HD): the 2023+ printings split at 40→60 (LCI #233
+// 41.7 / 49.5 / 57.4; MH3's hybrids 41–43 / 49–52 / 58–60, their frame
+// band 46–49 / 50–54 / 55–57), the Innistrad-era ones (MID #218 / #231,
+// INR #241) narrower, 45.5 / 51 / 56 — the one 40→60 ramp of 4.6b serves
+// every pair master (the FDN / TLA prints' 42 / 50 / 58), within 4 %W of
+// Innistrad's. The BACKS print the split dress too (the design's "gold
+// backs never split" was wrong: MOM #43's G|W back reads 44,74,47 →
+// 133,135,129 across the title ring, MID #218's W|U, MID #246's R|G, EMN
+// #191's R|G and STX #149's B|R the same, each with a gold bar), with a
+// gold crown? No — the split crown (MID #246's back: a red leg and a green
+// leg): so the transform and modal spell backs build the split dress over
+// their back files, toned like their mono backs — the gold bars (and the
+// modal strip) at m's gains, the lerped box at the two colours' box gains
+// lerped across the same ramp (dfcPairBackTones; toneMasked's ramped gain).
+// No pair on a land body (a land face has no colour pair in print; the
+// pathways and the MH3 land backs are mono) and no hybrid dress on the
+// transform front (no hybrid-cost transform front was printed on the 2015
+// frame) or on a back (MH3's hybrid fronts have land backs).
+// ---------------------------------------------------------------------------
+
+/** A transform pack letter → its file: a colour, "m" (frontM / backM),
+ *  "a" (the artifact frame) or "l" (the land frame). */
+const transformPairFile = (prefix) => (letter) => transformFrame(prefix, letter);
+/** The modal pack's letter → its file (`l` = the pack's grey Land frame). */
+const modalPairFile = (back) => (letter) => modalFrame(letter, back);
+
+/** The five bodies that build pair masters: each its pack's files
+ *  (`fileOf`) and masks, the dresses, and — on a back — its tone table and
+ *  Title mask. */
+export const DFC_PAIR_BODIES = Object.freeze({
+  m15dfcfront: {
+    fileOf: transformPairFile("front"),
+    masks: { rules: TRANSFORM_MASK.frontRules, pinline: `${TRANSFORM}/maskPinlineFront.png`, title: TRANSFORM_MASK.frontTitle, type: TRANSFORM_MASK.type },
+    dresses: ["split"],
+  },
+  m15dfcback: {
+    fileOf: transformPairFile("new/back"),
+    masks: { rules: TRANSFORM_MASK.rules, pinline: `${TRANSFORM}/new/maskPinlineBack.png`, title: TRANSFORM_MASK.newBackTitle, type: TRANSFORM_MASK.type },
+    dresses: ["split"],
+    back: { tones: DFC_BACK_TONES, titleMask: TRANSFORM_MASK.newBackTitle, typeMask: TRANSFORM_MASK.type, rulesMask: TRANSFORM_MASK.rules },
+  },
+  m15dfcbackleft: {
+    fileOf: transformPairFile("back"),
+    masks: { rules: TRANSFORM_MASK.rules, pinline: `${TRANSFORM}/maskPinlineBack.png`, title: TRANSFORM_MASK.backTitle, type: TRANSFORM_MASK.type },
+    dresses: ["split"],
+    back: { tones: DFC_BACK_TONES, titleMask: TRANSFORM_MASK.backTitle, typeMask: TRANSFORM_MASK.type, rulesMask: TRANSFORM_MASK.rules },
+  },
+  m15mdfcfront: {
+    fileOf: modalPairFile(false),
+    masks: { rules: MODAL_MASK.rules, pinline: MODAL_MASK.pinline, title: MODAL_MASK.title, type: MODAL_MASK.type },
+    dresses: ["split", "hybrid"],
+  },
+  m15mdfcback: {
+    fileOf: modalPairFile(true),
+    masks: { rules: MODAL_MASK.rules, pinline: MODAL_MASK.pinline, title: MODAL_MASK.title, type: MODAL_MASK.type },
+    dresses: ["split"],
+    back: { tones: MDFC_BACK_TONES, titleMask: MODAL_MASK.title, typeMask: MODAL_MASK.type, rulesMask: MODAL_MASK.rules, stripMask: MODAL_MASK.reminder },
+  },
+});
+
+/** The layers of one pair master of a double-faced body: 4.6b's "m15"
+ *  recipe over the body's pack (pairMasterLayers with its files and masks).
+ *  Keys: `<pair>` (split), `<pair>-h` (hybrid, the modal front). */
+export function dfcPairLayers(body, pair, dress) {
+  const def = DFC_PAIR_BODIES[body];
+  if (!def) throw new Error(`dfcPairLayers: ${body} builds no pair masters`);
+  if (!def.dresses.includes(dress)) throw new Error(`dfcPairLayers: ${body} builds no ${dress} dress`);
+  return pairMasterLayers(pair, dress, "m15", def.fileOf, def.masks);
+}
+
+/** A body's pair masters, `{ wu: layers, …, "wu-h": layers, … }`. */
+function dfcPairMasters(body) {
+  return pairMasters("m15", DFC_PAIR_BODIES[body].dresses, (pair, dress) => dfcPairLayers(body, pair, dress));
+}
+
+/** The pair's two colour letters of a pair master key (`wu` or `wu-h`),
+ *  or null for any other key. */
+export function pairOfMasterKey(key) {
+  const pair = key.endsWith("-h") ? key.slice(0, -2) : key;
+  return TWO_COLOR_PAIRS.includes(pair) ? pair.split("") : null;
+}
+
+/** A pair BACK's tones: the gold bars (and, on the modal back, the strip)
+ *  at m's gains — they are backM's own pixels — and the lerped text box at
+ *  the two colours' box gains lerped across the rules ramp (the box under
+ *  it is lerped across the same ramp), through the body's masks. */
+export function dfcPairBackTones(body, pair) {
+  const def = DFC_PAIR_BODIES[body]?.back;
+  if (!def) throw new Error(`dfcPairBackTones: ${body} is no back body with pair masters`);
+  const [a, b] = pairSidesOf(pair);
+  const m = def.tones.m;
+  const ramp = [...DFC_BACK_TONE_LUMA_RAMP];
+  return [
+    { mask: def.titleMask, gain: m.bars, lumaRamp: ramp, region: def.stripMask ? "title bar + housing" : "title bar" },
+    { mask: def.typeMask, gain: m.bars, lumaRamp: ramp, region: "type bar" },
+    { mask: def.rulesMask, gain: { left: def.tones[a].box, right: def.tones[b].box, ramp: [...PAIR_RAMPS.rules] }, lumaRamp: ramp, region: "text box" },
+    ...(def.stripMask && m.strip !== undefined ? [{ mask: def.stripMask, gain: m.strip, lumaRamp: ramp, region: "flipside strip" }] : []),
+  ].filter((tone) => tone.gain !== 1);
+}
+
+function pairSidesOf(pair) {
+  if (!TWO_COLOR_PAIRS.includes(pair)) throw new Error(`not a pair in printed order: ${pair}`);
+  return pair.split("");
+}
+
+/** A back body's tones for ANY key: a pair's (dfcPairBackTones) or the
+ *  colour's (`monoTones`). */
+function dfcBackTonesFor(body, monoTones) {
+  return (key) => {
+    const pair = pairOfMasterKey(key);
+    return pair ? dfcPairBackTones(body, pair.join("")) : monoTones(key);
+  };
+}
+
+const DFC_PAIR_NOTE =
+  "two-colour pair masters (TODO 5.1d / 5.12): 4.6b's recipe over this body's own Card Conjurer pack files and masks — the gold frame whole, the text box lerped across the UNTILTED rules ramp (45→57 %W) through the pack's Rules mask, the pinline across the pinline ramp (40→60) through the pack's Pinline mask, by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured on the prints' title rings (per-row crossings at HD): LCI #233 41.7 / 49.5 / 57.4, MH3 #252 42.2 / 51.9 / 59.7, the Innistrad printings (MID #218 / #231, INR #241) 45.5 / 51 / 56 — the 40→60 ramp of the FDN / TLA prints serves every DFC face";
 
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
@@ -1842,28 +2013,28 @@ export const CC_TEMPLATES = {
   },
   // --- TODO 5.1a: the transform bodies (see the section above CC_TEMPLATES).
   m15dfcfront: {
-    colors: { ...perColor((k) => [layer(transformFrame("front", k))]), a: [layer(transformFrame("front", "a"))] },
+    colors: { ...perColor((k) => [layer(transformFrame("front", k))]), a: [layer(transformFrame("front", "a"))], ...dfcPairMasters("m15dfcfront") },
     // No plates of its own: the profile draws M15's (m15/pt/<k>.png), which
     // the pack draws at M15's bounds.
     pack: "packM15TransformFront.js 'Transform (Front)' (groupDFC.js)",
     transforms: NATIVE_1500,
-    notes: DFC_FRONT_NOTES,
+    notes: [...DFC_FRONT_NOTES, DFC_PAIR_NOTE],
   },
   m15dfcback: {
-    colors: { ...perColor((k) => [layer(transformFrame("new/back", k))]), a: [layer(transformFrame("new/back", "a"))] },
+    colors: { ...perColor((k) => [layer(transformFrame("new/back", k))]), a: [layer(transformFrame("new/back", "a"))], ...dfcPairMasters("m15dfcback") },
     plates: DFC_BACK_PT,
-    tones: (k) => dfcBackTones(TRANSFORM_MASK.newBackTitle, k),
+    tones: dfcBackTonesFor("m15dfcback", (k) => dfcBackTones(TRANSFORM_MASK.newBackTitle, k)),
     pack: "packM15TransformBackNew.js 'Transform (Back) (New)' (groupDFC.js)",
     transforms: dfcBackToneTransform(TRANSFORM_MASK.newBackTitle),
-    notes: DFC_BACK_NOTES("Transform (Back) (New)", "RIGHT, with the ▼ baked in"),
+    notes: [...DFC_BACK_NOTES("Transform (Back) (New)", "RIGHT, with the ▼ baked in"), DFC_PAIR_NOTE],
   },
   m15dfcbackleft: {
-    colors: { ...perColor((k) => [layer(transformFrame("back", k))]), a: [layer(transformFrame("back", "a"))] },
+    colors: { ...perColor((k) => [layer(transformFrame("back", k))]), a: [layer(transformFrame("back", "a"))], ...dfcPairMasters("m15dfcbackleft") },
     // The same dark plates as the ▼ back: the profile draws m15dfcback's.
-    tones: (k) => dfcBackTones(TRANSFORM_MASK.backTitle, k),
+    tones: dfcBackTonesFor("m15dfcbackleft", (k) => dfcBackTones(TRANSFORM_MASK.backTitle, k)),
     pack: "packM15TransformBack.js 'Transform (Back)' (groupDFC.js)",
     transforms: dfcBackToneTransform(TRANSFORM_MASK.backTitle),
-    notes: DFC_BACK_NOTES("Transform (Back)", "LEFT, an empty black disc"),
+    notes: [...DFC_BACK_NOTES("Transform (Back)", "LEFT, an empty black disc"), DFC_PAIR_NOTE],
   },
   m15dfclandfront: {
     colors: perColor(() => [layer(`${TRANSFORM}/frontL.png`)]),
@@ -1889,19 +2060,19 @@ export const CC_TEMPLATES = {
   },
   // --- TODO 5.1b: the modal bodies (see the section above CC_TEMPLATES).
   m15mdfcfront: {
-    colors: { ...perColor((k) => [layer(modalFrame(k, false))]), a: [layer(modalFrame("a", false))] },
+    colors: { ...perColor((k) => [layer(modalFrame(k, false))]), a: [layer(modalFrame("a", false))], ...dfcPairMasters("m15mdfcfront") },
     // No plates of its own: the profile draws M15's (m15/pt/<k>.png).
     pack: "packModalRegular.js 'Modal Regular' fronts (groupModal-1.js)",
     transforms: NATIVE_1500,
-    notes: MDFC_FRONT_NOTES,
+    notes: [...MDFC_FRONT_NOTES, DFC_PAIR_NOTE],
   },
   m15mdfcback: {
-    colors: { ...perColor((k) => [layer(modalFrame(k, true))]), a: [layer(modalFrame("a", true))] },
+    colors: { ...perColor((k) => [layer(modalFrame(k, true))]), a: [layer(modalFrame("a", true))], ...dfcPairMasters("m15mdfcback") },
     // The transform pack's dark plates: the profile draws m15dfcback's.
-    tones: (k) => mdfcBackTones(k, MDFC_BACK_TONES),
+    tones: dfcBackTonesFor("m15mdfcback", (k) => mdfcBackTones(k, MDFC_BACK_TONES)),
     pack: "packModalRegular.js 'Modal Regular' backs (groupModal-1.js)",
     transforms: `${NATIVE_1500}; ${mdfcBackToneTransform(MDFC_BACK_TONES)}`,
-    notes: MDFC_BACK_NOTES,
+    notes: [...MDFC_BACK_NOTES, DFC_PAIR_NOTE],
   },
   m15mdfclandfront: {
     colors: perColor((k) =>
@@ -2413,11 +2584,16 @@ export function toneSilver(buf, width, height, spec) {
  */
 export function toneMasked(buf, width, height, mask, { gain, lumaRamp = [...DFC_BACK_TONE_LUMA_RAMP] }) {
   const [lo, hi] = lumaRamp;
-  if (!(Number.isFinite(gain) && gain >= 0) || !(lo >= 0 && hi > lo && hi <= 255)) {
+  const ramped = isRampedGain(gain);
+  if ((!ramped && !(Number.isFinite(gain) && gain >= 0)) || !(lo >= 0 && hi > lo && hi <= 255)) {
     throw new Error(`toneMasked: bad tone ${JSON.stringify({ gain, lumaRamp })}`);
   }
   const n = width * height;
   if (!mask || mask.length !== n * 4) throw new Error(`toneMasked: the mask is not ${width}x${height} RGBA`);
+  // A ramped gain (TODO 5.1d, a pair back's text box): the left colour's
+  // gain lerped into the right's across the ramp, per column — the box
+  // under it is the two colours' boxes lerped across the same ramp.
+  const gainAt = ramped ? rampedGainRow(gain, width) : null;
   const out = Buffer.from(buf);
   for (let p = 0; p < n; p += 1) {
     const o = p * 4;
@@ -2426,11 +2602,27 @@ export function toneMasked(buf, width, height, mask, { gain, lumaRamp = [...DFC_
     const l = lumaAt(buf, o);
     // 1 at or below lo, 0 at or above hi (smoothstep between).
     const t = l <= lo ? 1 : l >= hi ? 0 : 1 - ((l - lo) / (hi - lo)) ** 2 * (3 - 2 * ((l - lo) / (hi - lo)));
-    const g = 1 + (gain - 1) * m * t;
+    const g = 1 + ((gainAt ? gainAt[p % width] : gain) - 1) * m * t;
     if (g === 1) continue;
     for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.round(buf[o + c] * g));
   }
   return out;
+}
+
+/** A tone gain that changes across the card: `{ left, right, ramp }` — the
+ *  left gain up to the ramp's start, the right from its end, lerped between
+ *  (pair-ramp.mjs rampShare; TODO 5.1d, the pair backs' box). */
+export function isRampedGain(gain) {
+  return Boolean(gain) && typeof gain === "object" && Number.isFinite(gain.left) && Number.isFinite(gain.right) && Array.isArray(gain.ramp);
+}
+
+/** The per-column gains of a ramped gain over `width` columns (pixel
+ *  centres, % of the width — the ramp mask's own rule). */
+export function rampedGainRow({ left, right, ramp }, width) {
+  if (!(left >= 0 && right >= 0)) throw new Error(`rampedGainRow: bad gains ${left} / ${right}`);
+  const row = new Float64Array(width);
+  for (let x = 0; x < width; x += 1) row[x] = left + (right - left) * rampShare(((x + 0.5) / width) * 100, ramp);
+  return row;
 }
 
 /** One entry of a recipe's `tones`: the silver (it has `bodyFromY`), a
@@ -2943,6 +3135,343 @@ export function extendedCrownFindings(buf, width, height, rows) {
   return { lastAlphaRow, peakRow, cover, failures };
 }
 
+// ---------------------------------------------------------------------------
+// The double-faced bodies' crowns (TODO 5.1d; the 4.6f note of the 5.0
+// design): CUT bands. Card Conjurer's own DFC crowns — 'Legend Crowns'
+// (packTransformLegendCrowns.js: `m15/transform/crowns/regular/<k>.png`,
+// cut around the LEFT well; `regular/new/<k>.png`, cut around the ▼ back's
+// RIGHT well) and 'Regular Legend Crowns' (packModalLegendCrowns.js:
+// `modal/crowns/regular/<k>.png`, cut around the housing), all 1418 × 350 at
+// 0.0274 / 0.0191 / 0.9454 × 0.1667 (x 41, y 40, 1:1 at HD) — carry the OLDER
+// flat crown art (a smooth gradient), not the textured band our m15crown is
+// built from (`crowns/new`), so none of them is published. The honest route
+// (the design's words) is a cut of OUR band through the twins' alpha — with
+// one more step, because our band has no pixels where the twin has crown:
+// the band's hole is cut for the plain M15 bar (x 92 → 1408), while a DFC
+// bar starts past the well (x 228) and the crown wraps the well all round
+// (MID #246 Tovolar, VOW #21, MOM #190 Zilortha's ▼ back, KHM #112 Tergrid
+// both faces: the crown's texture continues to the well's ring, with the
+// ring on top). So, inside the WELL REGION (DFC_CROWN_WELLS: the columns
+// from the band's leg to the inset bar, rows 93–225):
+//   • the alpha is the twin's — the well's circle (or the drop housing)
+//     cleared, the crown around it, the bar's edge where the bar starts;
+//   • the colour is the band's own LEG texture (its interior columns,
+//     mirror-tiled across the region on the same rows — the mottle the
+//     prints show around the well, never CC's flat gradient) — or, on the
+//     modal body, the band's own leg pixels where the housing's tip cuts
+//     into the leg — darkened only where the twin is darker than half its
+//     own leg (DFC_CROWN_SHADE_KNEE): CC's outline around the hole, not its
+//     smooth gradient (the prints' annulus reads 0.8–1.0 of the leg: MID
+//     #246 front 1.04, its back 0.97, VOW #21 0.78, MOM #190 0.80);
+//   • the wrap under the bar keeps the band's own pixels and geometry (the
+//     twin's wrap ends 3 rows higher): both holes end above it — the
+//     transform twins' well is a circle (fitted on the twin's hole, 0.8 px:
+//     (143.6, 160.5) r 60.9 on the left, rows 100–221), the modal twin's a
+//     teardrop whose point reaches x 59 at row 160 and whose bottom is at
+//     row 218 — so the region's rows 93–225 take them whole.
+// Everything outside the region is the m15crown band byte for byte: the
+// same crown the owner signed off on m15, on a bar the transform and modal
+// packs draw within 1 px of the accurate pack's (the dark ring rows 100–103
+// / 218–221 against 100–103 / 219–222). Measured against the twins
+// (scratchpad dfc-1d/research/twins.json): outside the well columns the
+// twin's alpha lies entirely INSIDE the band's (0 twin-only pixels in
+// x 280–1220; the band's extra pixels there are its cover and the wrap's
+// last 3 rows), and the twins' alphas are the same for every colour letter
+// (the `a` twin differs by ≤ 48 levels on 3,077 px). Keys: the band's
+// colours, `m`, `a`, `l` (no `c`: a DFC body's colourless is the artifact
+// stand-in, `c` → `a`, or a land's `l`) and the ten pairs — a pair's cut
+// reads the twin of the colour whose half the well is in.
+// ---------------------------------------------------------------------------
+
+/** CC's DFC crown bounds (card %): every twin is 1418 × 350 placed at
+ *  (41, 40) — 1:1 at HD. */
+export const DFC_CROWN_TWIN_BOUNDS = Object.freeze({ leftPct: 2.74, topPct: 1.91, widthPct: 94.54, heightPct: 16.67 });
+/** The twins' native size. */
+export const DFC_CROWN_TWIN_SIZE = Object.freeze({ width: 1418, height: 350 });
+/** Below this share of the twin's own leg luminance a twin pixel darkens
+ *  the cut (its outline around the hole); above it the band's texture
+ *  shows as it is. */
+export const DFC_CROWN_SHADE_KNEE = 0.5;
+/** The well regions, in band pixels (1500 × 410): `region` — the columns
+ *  and rows that take the twin's alpha and the synthesised colour (the
+ *  twin's hole lies inside them: rows 100–221 on the transform twins,
+ *  104–218 on the modal one); `keep` — within the region, band pixels left
+ *  of `x1` keep their own colour (the modal leg the housing's tip cuts
+ *  into); `texture` — the band's leg columns the fill is tiled from
+ *  (mirror-tiled from the region's inner edge); `ref` — where the twin's
+ *  leg luminance is read; `circleRows` — the twin's hole rows a circle is
+ *  fitted on, a measurement of the well (null on the modal twin: its hole
+ *  is a teardrop). */
+export const DFC_CROWN_WELLS = Object.freeze({
+  left: Object.freeze({
+    side: "left",
+    region: Object.freeze({ x0: 80, x1: 236, y0: 93, y1: 225 }),
+    keep: null,
+    texture: Object.freeze({ x0: 60, x1: 78 }),
+    ref: Object.freeze({ x0: 60, x1: 78, y0: 105, y1: 230 }),
+    circleRows: Object.freeze([Object.freeze([100, 221])]),
+  }),
+  right: Object.freeze({
+    side: "right",
+    region: Object.freeze({ x0: 1264, x1: 1420, y0: 93, y1: 225 }),
+    keep: null,
+    texture: Object.freeze({ x0: 1422, x1: 1440 }),
+    ref: Object.freeze({ x0: 1422, x1: 1440, y0: 105, y1: 230 }),
+    circleRows: Object.freeze([Object.freeze([100, 221])]),
+  }),
+  modal: Object.freeze({
+    side: "left",
+    region: Object.freeze({ x0: 40, x1: 236, y0: 93, y1: 225 }),
+    keep: Object.freeze({ x1: 84 }),
+    texture: Object.freeze({ x0: 60, x1: 78 }),
+    ref: Object.freeze({ x0: 60, x1: 78, y0: 105, y1: 230 }),
+    circleRows: null,
+  }),
+});
+/** A twin (1418 × 350 raw RGBA) placed on a 1500 × `rows` canvas at CC's
+ *  bounds, 1:1. */
+export function placeTwin(twin, rows = CROWN_BAND.rows) {
+  const box = rectPx(DFC_CROWN_TWIN_BOUNDS, OUT_W, OUT_H);
+  if (box.width !== DFC_CROWN_TWIN_SIZE.width || box.height !== DFC_CROWN_TWIN_SIZE.height) throw new Error(`placeTwin: CC's bounds are ${box.width}x${box.height} at HD, the twins 1418x350`);
+  return placeOnCanvas(twin, box, OUT_W, rows);
+}
+
+/**
+ * The well's circle, fitted (algebraic least squares) on the chords of the
+ * twin's hole: on each of the well's circle rows, the longest run of
+ * alpha < 128 inside the region's columns is the hole; its ends (±½ px) are
+ * the points. Returns { cx, cy, r, points, maxErr } — maxErr the worst
+ * point's distance from the circle.
+ */
+export function fitWellCircle(placedTwin, well, width = OUT_W) {
+  const { region, circleRows } = well;
+  if (!circleRows) return null;
+  const pts = [];
+  for (const [r0, r1] of circleRows) {
+    for (let y = r0; y <= r1; y += 1) {
+      let best = null;
+      let start = null;
+      for (let x = region.x0; x <= region.x1; x += 1) {
+        const clear = x < region.x1 && placedTwin[(y * width + x) * 4 + 3] < 128;
+        if (clear && start === null) start = x;
+        if (!clear && start !== null) {
+          if (!best || x - start > best[1] - best[0]) best = [start, x];
+          start = null;
+        }
+      }
+      if (best && best[1] - best[0] > 10) pts.push([best[0] - 0.5, y], [best[1] - 0.5, y]);
+    }
+  }
+  if (pts.length < 6) throw new Error("fitWellCircle: too few hole chords");
+  let Sxx = 0, Sxy = 0, Syy = 0, Sx = 0, Sy = 0, S = 0, Sxz = 0, Syz = 0, Sz = 0;
+  for (const [x, y] of pts) {
+    const z = x * x + y * y;
+    Sxx += x * x; Sxy += x * y; Syy += y * y; Sx += x; Sy += y; S += 1; Sxz += x * z; Syz += y * z; Sz += z;
+  }
+  const A = [[Sxx, Sxy, Sx], [Sxy, Syy, Sy], [Sx, Sy, S]];
+  const b = [-Sxz, -Syz, -Sz];
+  const det = (m) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(A);
+  const sol = [0, 1, 2].map((i) => det(A.map((row, j) => row.map((v, k) => (k === i ? b[j] : v)))) / D);
+  const cx = -sol[0] / 2;
+  const cy = -sol[1] / 2;
+  const r = Math.sqrt(cx * cx + cy * cy - sol[2]);
+  let maxErr = 0;
+  for (const [x, y] of pts) maxErr = Math.max(maxErr, Math.abs(Math.hypot(x - cx, y - cy) - r));
+  return { cx, cy, r, points: pts.length, maxErr };
+}
+
+/** The twin's leg luminance (mean over `ref`, opaque pixels only). */
+export function twinLegLuma(placedTwin, well, width = OUT_W) {
+  const { ref } = well;
+  let sum = 0;
+  let n = 0;
+  for (let y = ref.y0; y < ref.y1; y += 1) {
+    for (let x = ref.x0; x < ref.x1; x += 1) {
+      const o = (y * width + x) * 4;
+      if (placedTwin[o + 3] < 250) continue;
+      sum += lumaAt(placedTwin, o);
+      n += 1;
+    }
+  }
+  if (n < 100) throw new Error("twinLegLuma: the twin has no opaque leg at the reference columns");
+  return sum / n;
+}
+
+/** The band's texture column a region column reads: the leg's interior
+ *  columns mirror-tiled from the region's inner edge outward. */
+export function textureColumn(x, well) {
+  const { texture, region, side } = well;
+  const w = texture.x1 - texture.x0;
+  const k = side === "left" ? x - region.x0 : region.x1 - 1 - x;
+  const m = ((k % (2 * w)) + 2 * w) % (2 * w);
+  const t = m < w ? m : 2 * w - 1 - m;
+  return side === "left" ? texture.x0 + t : texture.x1 - 1 - t;
+}
+
+/**
+ * One DFC crown piece: `band` (our m15crown band, 1500 × 410 raw RGBA) cut
+ * through `placedTwin` (the CC twin placed by placeTwin) at `well` — see the
+ * section comment. Returns { piece, circle, refLuma } (`circle` null on a
+ * well with no circle rows, the modal teardrop).
+ */
+export function cutCrownBand(band, placedTwin, well, width = OUT_W, rows = CROWN_BAND.rows) {
+  const { region, keep } = well;
+  const circle = fitWellCircle(placedTwin, well, width);
+  const refLuma = twinLegLuma(placedTwin, well, width);
+  const piece = Buffer.from(band);
+  const shadeOf = (o) => {
+    if (placedTwin[o + 3] === 0) return 1;
+    const l = lumaAt(placedTwin, o) / refLuma;
+    return Math.min(1, l / DFC_CROWN_SHADE_KNEE);
+  };
+  for (let y = region.y0; y <= region.y1 && y < rows; y += 1) {
+    for (let x = region.x0; x < region.x1; x += 1) {
+      const o = (y * width + x) * 4;
+      const kept = keep && x < keep.x1 && band[o + 3] >= 250;
+      const src = kept ? o : (y * width + textureColumn(x, well)) * 4;
+      const shade = shadeOf(o);
+      for (let c = 0; c < 3; c += 1) piece[o + c] = Math.round(band[src + c] * shade);
+      piece[o + 3] = placedTwin[o + 3];
+    }
+  }
+  return { piece, circle, refLuma };
+}
+
+/**
+ * The last row of the twin's hole (the well or the housing): the lowest row
+ * from the region's top down to 40 rows past its bottom with a clear run
+ * (alpha < 128) of at least 20 px that starts and ends strictly inside the
+ * region's inner columns — the bar's hole reaches the region's right edge
+ * and the rows past the twin's wrap are clear edge to edge, so neither
+ * counts. The hole must end inside the region (the transform twins' circle
+ * ends at row 221, the modal teardrop at 218).
+ */
+export function twinHoleBottom(placedTwin, well, width = OUT_W, rows = CROWN_BAND.rows) {
+  const { region } = well;
+  const x0 = region.x0 + 20;
+  const x1 = region.x1 - 20;
+  let bottom = -1;
+  for (let y = region.y0; y <= Math.min(rows - 1, region.y1 + 40); y += 1) {
+    let start = null;
+    for (let x = x0; x <= x1; x += 1) {
+      const clear = x < x1 && placedTwin[(y * width + x) * 4 + 3] < 128;
+      if (clear && start === null) start = x;
+      if (!clear && start !== null) {
+        if (start > x0 && x < x1 && x - start >= 20) bottom = y;
+        start = null;
+      }
+    }
+  }
+  return bottom;
+}
+
+/**
+ * What the importer (and the unit test, on the published pieces) checks on a
+ * cut band: outside the well region the piece IS the band; inside the
+ * region its alpha is the twin's; the twin's hole ends inside the region's
+ * rows (twinHoleBottom — the band's wrap below it is kept, 3 rows longer
+ * than the twin's); on a well with circle rows the fitted circle is a circle
+ * (maxErr ≤ 1.5 px) of the expected size and the piece is clear inside it;
+ * the fill's colour is the band's leg's (within 8 levels per channel, over
+ * the unshaded fill).
+ */
+export function cutCrownFindings(piece, band, placedTwin, well, circle, width = OUT_W, rows = CROWN_BAND.rows) {
+  const { region, keep } = well;
+  const failures = [];
+  let outsideDiff = 0;
+  let alphaDiff = 0;
+  let circleLeak = 0;
+  const holeBottom = twinHoleBottom(placedTwin, well, width, rows);
+  const fill = [0, 0, 0];
+  const leg = [0, 0, 0];
+  let nFill = 0;
+  let nLeg = 0;
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const o = (y * width + x) * 4;
+      const inCols = x >= region.x0 && x < region.x1;
+      const inRegion = inCols && y >= region.y0 && y <= region.y1;
+      if (!inRegion) {
+        if (piece[o] !== band[o] || piece[o + 1] !== band[o + 1] || piece[o + 2] !== band[o + 2] || piece[o + 3] !== band[o + 3]) outsideDiff += 1;
+        continue;
+      }
+      if (piece[o + 3] !== placedTwin[o + 3]) alphaDiff += 1;
+      const d = circle ? Math.hypot(x + 0.5 - circle.cx, y + 0.5 - circle.cy) : Infinity;
+      if (circle && d < circle.r - 2 && piece[o + 3] !== 0) circleLeak += 1;
+      if (piece[o + 3] >= 250 && !(keep && x < keep.x1) && (!circle || d > circle.r + 6)) {
+        // Unshaded fill only: where the twin is at least its leg's brightness.
+        const l = lumaAt(placedTwin, o);
+        if (l >= DFC_CROWN_SHADE_KNEE * 255 * 0.75) { for (let c = 0; c < 3; c += 1) fill[c] += piece[o + c]; nFill += 1; }
+      }
+    }
+  }
+  for (let y = well.ref.y0; y < well.ref.y1; y += 1) {
+    for (let x = well.texture.x0; x < well.texture.x1; x += 1) {
+      const o = (y * width + x) * 4;
+      if (band[o + 3] < 250) continue;
+      for (let c = 0; c < 3; c += 1) leg[c] += band[o + c];
+      nLeg += 1;
+    }
+  }
+  const fillMean = nFill ? fill.map((v) => Math.round(v / nFill)) : null;
+  const legMean = nLeg ? leg.map((v) => Math.round(v / nLeg)) : null;
+  if (outsideDiff) failures.push(`${outsideDiff} px outside the well region differ from the band`);
+  if (alphaDiff) failures.push(`${alphaDiff} px inside the well region do not take the twin's alpha`);
+  if (holeBottom < 0 || holeBottom > region.y1) failures.push(`the twin's hole ends at row ${holeBottom}, outside the well region's rows ${region.y0}–${region.y1}`);
+  if (circle && circle.maxErr > 1.5) failures.push(`the twin's hole is not a circle (worst point ${circle.maxErr.toFixed(2)} px off)`);
+  if (circle && !(circle.r > 55 && circle.r < 66)) failures.push(`the well's circle has radius ${circle.r.toFixed(1)}, expected 55–66`);
+  if (circleLeak) failures.push(`${circleLeak} px inside the well's circle are not clear`);
+  return { outsideDiff, alphaDiff, circleLeak, holeBottom, fillMean, legMean, failures };
+}
+
+/** The cut crown folders, by bucket folder: the twin's pack dir and the
+ *  well. */
+export const DFC_CROWN_CUTS = Object.freeze({
+  m15dfccrown: Object.freeze({ twinDir: "img/frames/m15/transform/crowns/regular", well: DFC_CROWN_WELLS.left, pack: "Transform 'Legend Crowns' (packTransformLegendCrowns.js: the front / 2016–22 back crown, cut around the LEFT well)" }),
+  m15dfccrownright: Object.freeze({ twinDir: "img/frames/m15/transform/crowns/regular/new", well: DFC_CROWN_WELLS.right, pack: "Transform 'Legend Crowns' (packTransformLegendCrowns.js: the '(Back)' crown of the ▼ back, cut around the RIGHT well)" }),
+  m15mdfccrown: Object.freeze({ twinDir: "img/frames/modal/crowns/regular", well: DFC_CROWN_WELLS.modal, pack: "Modal 'Regular Legend Crowns' (packModalLegendCrowns.js: cut around the housing)" }),
+});
+/** The cut bands' keys: the band's colours, m, a, l (never c) and the pairs. */
+export const DFC_CROWN_KEYS = Object.freeze([...CROWN_BAND.keys.filter((k) => k !== "c"), ...TWO_COLOR_PAIRS]);
+
+/** The twin letter a cut band key reads: the key, or — for a pair — the
+ *  colour whose half the well is in (the first on a left well, the second
+ *  on the right). */
+export function twinLetterFor(key, well) {
+  if (TWO_COLOR_PAIRS.includes(key)) return well.side === "right" ? key[1] : key[0];
+  if (!DFC_CROWN_KEYS.includes(key)) throw new Error(`twinLetterFor: no DFC crown for key ${key}`);
+  return key;
+}
+
+/** A cut band's recipe for a key: the band it cuts and the twin it reads. */
+export function cutCrownRecipe(folder, key) {
+  const def = DFC_CROWN_CUTS[folder];
+  if (!def) throw new Error(`cutCrownRecipe: no cut crown folder ${folder}`);
+  return { band: `m15crown/${key}`, twin: `${def.twinDir}/${twinLetterFor(key, def.well)}.png`, well: def.well };
+}
+
+/** How provenance prints a cut band key's recipe. */
+export function describeCutCrown(folder, key, bandSha) {
+  const r = cutCrownRecipe(folder, key);
+  const w = r.well;
+  return [
+    `${r.band}.png (the published band, sha256 ${bandSha.slice(0, 12)}) cut at the well region x ${w.region.x0}–${w.region.x1 - 1} × y ${w.region.y0}–${w.region.y1} through the alpha of ${r.twin} at ${DFC_CROWN_TWIN_BOUNDS.leftPct}/${DFC_CROWN_TWIN_BOUNDS.topPct}/${DFC_CROWN_TWIN_BOUNDS.widthPct}×${DFC_CROWN_TWIN_BOUNDS.heightPct} % (1:1)`,
+    `the colour inside the region: the band's leg columns ${w.texture.x0}–${w.texture.x1 - 1} mirror-tiled on the same rows${w.keep ? ` (the band's own pixels left of x ${w.keep.x1})` : ""}, darkened where the twin is below ${DFC_CROWN_SHADE_KNEE} of its leg's luminance (its outline round the hole); the wrap under the bar the band's own (both holes end above it)`,
+  ];
+}
+
+/** Every Card Conjurer file a cut band folder reads (the band is ours). */
+export function cutCrownSourceFiles(folder) {
+  return [...new Set(DFC_CROWN_KEYS.map((key) => cutCrownRecipe(folder, key).twin))].sort();
+}
+
+const DFC_CROWN_NOTES = (what, bodies) => [
+  `the legendary crown on ${bodies} (TODO 5.1d): OUR m15crown band — the textured 'Legend Crowns (New)' art the owner signed off on m15 — cut through the alpha of Card Conjurer's ${what}, which carries the OLDER flat crown art and is never published; outside the well region the piece is the band byte for byte`,
+  "inside the well region (the columns from the band's leg to the inset bar, rows 93–225) the alpha is the twin's (the well cleared, the crown round it — the prints wrap the crown round the well with the ring on top: MID #246, VOW #21, MOM #190, KHM #112) and the colour the band's own leg texture mirror-tiled on the same rows (the band has no pixels there: its hole is the plain M15 bar's), darkened only where the twin is darker than half its own leg (CC's outline round the hole, never its gradient — the prints' annulus reads 0.8–1.0 of the leg); the wrap under the bar is the band's own: the transform twins' well is a circle ((143.6, 160.5) r 60.9 on the left, fitted ≤ 1 px, rows 100–221), the modal twin's hole a teardrop (its point at x 59, row 160; its bottom at row 218) — both end above the wrap",
+  "keys: the band's w u b r g, m (gold), a (the artifact stand-in's silver: a DFC body's colourless is `c` → `a`), l (the land grey) and the ten pairs (the pair band cut through the twin of the colour whose half the well is in); never c",
+];
+
 /** The overlay bands the importer builds, by bucket folder. */
 export const CC_OVERLAY_BANDS = {
   // 4.6f (wave 2b): the extended-art crown — a generic band (`layers` /
@@ -2968,6 +3497,29 @@ export const CC_OVERLAY_BANDS = {
       "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 45→55 %W (the prints' crown split, each pixel de-shaded against the two single-colour crowns, measures 45.5 / 49.3 / 53.6 %W at 10 / 50 / 90 % on FDN's gold pairs, 46.4 / 49.4 / 53.6 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
       "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in",
     ],
+  },
+  // TODO 5.1d: the double-faced bodies' crowns — our m15crown band cut
+  // through CC's DFC crown twins' alpha round the well / housing (`cut`).
+  m15dfccrown: {
+    pack: DFC_CROWN_CUTS.m15dfccrown.pack,
+    band: CROWN_BAND,
+    keys: DFC_CROWN_KEYS,
+    cut: DFC_CROWN_CUTS.m15dfccrown,
+    notes: DFC_CROWN_NOTES("transform 'Legend Crown' twin (m15/transform/crowns/regular/<k>.png, cut round the LEFT well)", "the transform front, the transform land front and the 2016–22 transform back"),
+  },
+  m15dfccrownright: {
+    pack: DFC_CROWN_CUTS.m15dfccrownright.pack,
+    band: CROWN_BAND,
+    keys: DFC_CROWN_KEYS,
+    cut: DFC_CROWN_CUTS.m15dfccrownright,
+    notes: DFC_CROWN_NOTES("transform 'Legend Crown (Back)' twin (m15/transform/crowns/regular/new/<k>.png, cut round the ▼ back's RIGHT well)", "the ▼ transform back"),
+  },
+  m15mdfccrown: {
+    pack: DFC_CROWN_CUTS.m15mdfccrown.pack,
+    band: CROWN_BAND,
+    keys: DFC_CROWN_KEYS,
+    cut: DFC_CROWN_CUTS.m15mdfccrown,
+    notes: DFC_CROWN_NOTES("modal 'Regular Legend Crown' twin (modal/crowns/regular/<k>.png, cut round the housing — its tip reaches into the crown's leg, which keeps its own pixels under the twin's alpha)", "the modal front and the modal back"),
   },
 };
 

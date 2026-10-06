@@ -93,7 +93,8 @@ describe("the transform bodies' recipes (TODO 5.1a)", () => {
   it("five templates over CC's 'Transform' packs: w u b r g m + a, c the artifact stand-in; the land pair one master under every key", () => {
     for (const t of ["m15dfcfront", "m15dfcback", "m15dfcbackleft"] as const) {
       const d = def(t);
-      expect(builtColors(d as never)).toEqual(["a", ...COLORS]);
+      // Since 5.1d the spell bodies build the ten split pair masters too.
+      expect(builtColors(d as never)).toEqual(["a", ...COLORS, "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"]);
       // `c` and `a` are the same file: the pack's 'Artifact Frame'.
       expect(d.colors.c).toEqual(d.colors.a);
       expect(d.colors.c[0].src).toMatch(/A\.png$/);
@@ -111,8 +112,10 @@ describe("the transform bodies' recipes (TODO 5.1a)", () => {
     }
     expect(def("m15dfclandfront").colors.c[0].src).toBe("img/frames/m15/transform/regular/frontL.png");
     expect(def("m15dfclandback").colors.c[0].src).toBe("img/frames/m15/transform/regular/new/backL.png");
-    // Every master is CC's whole image, no mask (the pieces are the master's).
-    for (const t of ALL) for (const layers of Object.values(def(t).colors)) for (const l of layers) expect(l.mask, t).toBeUndefined();
+    // Every mono master is CC's whole image, no mask (the pieces are the
+    // master's); a pair master (5.1d) lerps its box and pinline through the
+    // pack's masks — its own recipe, tests/unit/frames/dfc-crowns-pairs.test.ts.
+    for (const t of ALL) for (const [k, layers] of Object.entries(def(t).colors)) { if (k.length > 1) continue; for (const l of layers) expect(l.mask, t).toBeUndefined(); }
   });
 
   it("the dark back plates once (m15dfcback/pt, the pack's pt<K>.png, c → the artifact plate); the fronts and the 2016–22 back draw others' plates", () => {

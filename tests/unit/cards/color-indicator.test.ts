@@ -171,8 +171,11 @@ describe("the icon rider resolves from the face's dfc block, never from the dfcI
   it("an absent key draws the arrows' front glyph on the front; the family picks the glyph; the role is the BODY's", () => {
     const front = frontPreviewData(card());
     expect(front.dfc?.icon).toBe("arrows");
+    // (The crown slot sits before the rider since 5.1d; with no switch and
+    // no Legendary word it draws nothing.)
+    const riderSlot = getFrameProfile("m15dfcfront").overlays!.find((o) => o.anatomy === "dfcIcon")!;
     expect(resolveFrameOverlays(getFrameProfile("m15dfcfront"), front.frameStyle, facts(front))).toEqual([
-      { anatomy: "dfcIcon", rect: getFrameProfile("m15dfcfront").overlays![0].rect, key: "default", path: "/frames/dfcicon/default.png" },
+      { anatomy: "dfcIcon", rect: riderSlot.rect, key: "default", path: "/frames/dfcicon/default.png" },
     ]);
     const sun = frontPreviewData(card({ frameStyle: { template: "m15dfcfront", finish: "regular", dfcIcon: "sunmoon" } }));
     expect(resolveFrameOverlays(getFrameProfile("m15dfcfront"), sun.frameStyle, facts(sun)).map((o) => o.key)).toEqual(["sun"]);
@@ -201,8 +204,15 @@ describe("the icon rider resolves from the face's dfc block, never from the dfcI
     expect(resolveFrameOverlays(getFrameProfile("m15"), { crown: true }, facts(plain)).map((o) => o.anatomy)).not.toContain("dfcIcon");
   });
 
-  it("the front body's crown is never drawn (no overlay, no masters: design D17), whatever the switch", () => {
+  it("the front body's crown is drawn since 5.1d (the band cut round the well), BEFORE the rider — and only with the switch on a Legendary face", () => {
     const legend = frontPreviewData(card({ supertype: "Legendary", frameStyle: { template: "m15dfcfront", finish: "regular", crown: true } }));
-    expect(resolveFrameOverlays(getFrameProfile("m15dfcfront"), legend.frameStyle, facts(legend)).map((o) => o.anatomy)).toEqual(["dfcIcon"]);
+    const drawn = resolveFrameOverlays(getFrameProfile("m15dfcfront"), legend.frameStyle, facts(legend));
+    expect(drawn.map((o) => o.anatomy)).toEqual(["crown", "dfcIcon"]);
+    expect(drawn[0].path).toMatch(/^\/frames\/m15dfccrown\/[a-z]+\.png$/);
+    expect(drawn[1].path).toBe("/frames/dfcicon/default.png");
+    const off = frontPreviewData(card({ supertype: "Legendary", frameStyle: { template: "m15dfcfront", finish: "regular" } }));
+    expect(resolveFrameOverlays(getFrameProfile("m15dfcfront"), off.frameStyle, facts(off)).map((o) => o.anatomy)).toEqual(["dfcIcon"]);
+    const plain = frontPreviewData(card({ frameStyle: { template: "m15dfcfront", finish: "regular", crown: true } }));
+    expect(resolveFrameOverlays(getFrameProfile("m15dfcfront"), plain.frameStyle, facts(plain)).map((o) => o.anatomy)).toEqual(["dfcIcon"]);
   });
 });

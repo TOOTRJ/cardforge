@@ -66,7 +66,23 @@ export type DrawnStats = {
    *  the same way — a long text ends above it or its last lines stop at
    *  the chevron, as the prints set them. */
   strip?: Rect | null;
+  /** The transform front's reverse P/T digits (TODO 5.1a; a rules FLOAT
+   *  since 5.1d, lib/cards/stat-fit.ts endAlignedStatKeepOut): the BACK's
+   *  P/T drawn end-aligned in the grey tab at the text box's bottom right
+   *  — their ink footprint while they are drawn, null / absent otherwise
+   *  (the tab prints empty when the back prints no P/T, and no other body
+   *  has the slot). The lines whose rows meet it break short of the digits,
+   *  as the prints set them (RulesLayoutInput.floats) — a keep-out there
+   *  could only shrink the text, and the digits sit too far up the box for
+   *  any size to clear them. */
+  reversePt?: Rect | null;
 };
+
+/** The rects the rules lines wrap round (RulesLayoutInput.floats): the
+ *  reverse P/T's digits while drawn. */
+export function drawnFloats(show: DrawnStats): Rect[] {
+  return show.reversePt ? [show.reversePt] : [];
+}
 
 /**
  * Where the card's drawn stat badges put ink, in card percents: the front's
@@ -130,6 +146,7 @@ function fitSlot(
       ...(slot.paragraphGapMinPx !== undefined ? { paragraphGapMinPx: slot.paragraphGapMinPx } : {}),
       divider: layout.flavorDivider !== false,
       keepOuts: rulesKeepOuts(drawnStatInk(layout, show, aspect), slot.rect, defaults.rotation, aspect),
+      ...(drawnFloats(show).length ? { floats: rulesKeepOuts(drawnFloats(show), slot.rect, defaults.rotation, aspect) } : {}),
     }),
   );
 }
