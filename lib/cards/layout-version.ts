@@ -828,9 +828,17 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            Template-scoped (TEMPLATE_SCOPED_VERSIONS[41] = the four modal
 //            faces). Production (2026-10-06): 0 cards on any modal body —
 //            the sweep re-bakes nothing, badges nothing ("sweep", as v40:
-//            never a badge). VERIFICATION-NEUTRAL (VERIFICATION_NEUTRAL_
-//            VERSIONS): no master, slot or text moves — a tick on a modal
-//            face is made on a mono-colour print, whose bake is unchanged.
+//            never a badge; every other v40 card is stamped 41 unbaked).
+//            NOT verification-neutral (the 5.1c skeptic): no master, slot or
+//            text moves, but the registry's references for the spell BACKS
+//            (STX's modal cards, one colour per face) and the land FRONTS
+//            (the pathways) are two-colour cards, and m15mdfcfront/m's is
+//            MH3 #252 (a hybrid front // a two-colour land) — the compare
+//            page's bake of those references changes (the strip takes the
+//            other face's colour), so a tick made on them before v41 would
+//            have judged a look that no longer renders. No modal face was
+//            ticked anywhere when v41 shipped (production and the dev DB:
+//            0 frame_reviews rows); the owner ticks at v41.
 // ---------------------------------------------------------------------------
 
 export const CARD_LAYOUT_VERSION = 41;
@@ -939,8 +947,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // faces (its back bake changes), the back bodies for the matrix, and the
   // transform fronts (the reverse-P/T float).
   40: V40_TEMPLATES,
-  // v41: the modal strip rider (5.1c) — the four modal faces; verification-
-  // neutral (VERIFICATION_NEUTRAL_VERSIONS).
+  // v41: the modal strip rider (5.1c) — the four modal faces; a tick on
+  // them is judged by this scope too (their references are two-colour
+  // cards whose compare bakes change; none was ticked when v41 shipped).
   41: V41_TEMPLATES,
 };
 
@@ -1065,7 +1074,7 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 41];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
