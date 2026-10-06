@@ -10,9 +10,17 @@ import {
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import { previewFromImportPatch } from "@/lib/scryfall/preview-from-patch";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { scryfallFaceIndex, type CardFace } from "@/lib/cards/card-face";
-import { bodyFor, dfcBodyOf, frontBodyFor, isDfcBackBody } from "@/lib/cards/dfc";
-import { backPreviewData } from "@/lib/cards/faces";
+import {
+  DEFAULT_DFC_ICON,
+  bodyFor,
+  dfcBodyOf,
+  dfcIconFamilyFromEffects,
+  frontBodyFor,
+  isDfcBackBody,
+} from "@/lib/cards/dfc";
+import { backPreviewData, frontPreviewData } from "@/lib/cards/faces";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
@@ -44,9 +52,34 @@ import type { FrameTemplate } from "@/types/card";
 // body under test (TODO 5.1c, withComparedBack): there the back carries its
 // own printed colour and the body its type derives, as the import stores it,
 // because the front now draws a piece FROM them (the modal strip's colour).
+//
+// A DOUBLE-FACED body under test (TODO 5.0d) is the printing as it PRINTS,
+// on either face:
+//   • its icon FAMILY rides on the card (withPrintedFamily) — the sun / moon,
+//     moon / Emrakul, compass / land or fan its `frame_effects` name, read
+//     with the import mapper's own function (lib/cards/dfc.ts
+//     dfcIconFamilyFromEffects; never a second table). The preview never
+//     carried one, so both renderers read the absent key as `arrows`: MID's
+//     backs drew a ▼ in the left well beside a scan that prints the moon;
+//   • the FRONT's `preview` is the face as every renderer is handed it —
+//     lib/cards/faces.ts frontPreviewData, the cross-face block included
+//     (the back's P/T for the grey tab, the family, the modal strip's word,
+//     line and key), as the back's has been since 5.0b (backPreviewData).
+//     The live preview derives that block by itself, the bake derives
+//     NOTHING (only a stored card's row is mapped, lib/cards/bake-core.ts):
+//     the scorer bakes this preview as given (lib/frames/score-combo.ts),
+//     so without the block on it a front was scored with no reverse P/T, no
+//     icon rider and no strip beside a page that showed them. ONE preview
+//     feeds the page, the sign-off's side-by-side and the score.
+// A template that is no double-faced body gets neither: its payload is byte
+// for byte what it was (tests/unit/scryfall/reference-preview-dfc-family
+// .test.ts, snapshots taken before 5.0d).
 // ---------------------------------------------------------------------------
 
 export type FrameComparePayload = {
+  /** The face as a renderer is HANDED it — nothing left to derive: the live
+   *  preview (the page, the sign-off's side-by-side) and the scorer's bake
+   *  draw this one object, a double-faced face's `dfc` block included. */
   preview: CardPreviewData;
   /** 745×1040 PNG of the real printing's face, for the overlay. */
   scanUrl: string | null;
@@ -110,6 +143,28 @@ function withComparedBack(front: CardPreviewData, card: ScryfallCard, legacyBack
   };
 }
 
+/**
+ * The transform icon FAMILY the printing wears, on the card (TODO 5.0d) —
+ * `frame_style.dfcIcon`, from the printing's `frame_effects` through the
+ * mapper's ONE derivation (dfcIconFamilyFromEffects: what dfcImportOf names
+ * `printed_dfc_icon` from). Read from the PRINTING, not from the patch's
+ * `printed_dfc_icon`: the mapper names that only where the import lands on
+ * the bodies, and a reference is pinned on a body whether or not it does
+ * (EMN's fronts over their colourless Eldrazi backs; NEO's creature backs
+ * under their Saga fronts — the pin check accepts both).
+ * Where the save keeps the key (frameAnatomyOf(...).dfcIcon — a transform
+ * FRONT body, the card's own template; a back body reads it through the
+ * card, lib/cards/faces.ts dfcIconOf), and only for a family that is not
+ * the default: `arrows` IS the absent key, so a plain ▲ / ▼ reference, a
+ * modal one and every other template keep their style as it was.
+ */
+function withPrintedFamily(stored: CardPreviewData, card: ScryfallCard): CardPreviewData {
+  if (!frameAnatomyOf(stored.frameStyle?.template).dfcIcon) return stored;
+  const family = dfcIconFamilyFromEffects(card.frame_effects);
+  if (family === DEFAULT_DFC_ICON) return stored;
+  return { ...stored, frameStyle: { ...stored.frameStyle, dfcIcon: family } };
+}
+
 export async function buildFrameComparePayload(
   scryfallId: string,
   template: FrameTemplate,
@@ -136,17 +191,24 @@ export async function buildFrameComparePayload(
   const faces = card.card_faces ?? [];
   const faceName = hasBackScan ? (faces[scryfallFaceIndex(face)]?.name ?? null) : null;
 
+  /** The printing as a card on `cardTemplate` — its own (front) template —
+   *  in the colours and the icon family it prints. */
+  const storedOn = (cardTemplate: FrameTemplate): CardPreviewData =>
+    withPrintedFamily(
+      {
+        ...previewFromImportPatch(comparePatch, card.name, cardTemplate),
+        // Two colours stay two here, so a split frame draws the scan's split.
+        colorIdentity: referenceColorIdentity(card),
+      },
+      card,
+    );
+
   if (face === "front") {
     return {
-      preview: withComparedBack(
-        {
-          ...previewFromImportPatch(comparePatch, card.name, template),
-          // Two colours stay two here, so a split frame draws the scan's split.
-          colorIdentity: referenceColorIdentity(card),
-        },
-        card,
-        walkerBack,
-      ),
+      // The front as every renderer is handed it (TODO 5.0d): with its
+      // cross-face block on a double-faced front body, the card itself on
+      // any other template (frontPreviewData returns its input there).
+      preview: frontPreviewData(withComparedBack(storedOn(template), card, walkerBack)),
       scanUrl: pickPrintImageUrl(card),
       cardName: card.name,
       patch,
@@ -177,10 +239,7 @@ export async function buildFrameComparePayload(
   // template draws the back as a legacy back on that very template.
   const backBody = isDfcBackBody(template);
   const frontTemplate = backBody ? (frontBodyFor(template, patch.card_type) ?? template) : template;
-  const front: CardPreviewData = {
-    ...previewFromImportPatch(comparePatch, card.name, frontTemplate),
-    colorIdentity: referenceColorIdentity(card),
-  };
+  const front = storedOn(frontTemplate);
   const stored: CardPreviewData =
     backBody && front.backFace
       ? {

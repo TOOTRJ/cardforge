@@ -53,6 +53,19 @@ import type { FrameTemplate } from "@/types/card";
 // view shows (`face: "back"` = a legacy back on that frame, as the preview
 // draws it today), the front by default. A printing with no such face is a
 // 404, named, never the front's scan.
+//
+// ONE picture with the compare page (TODO 5.0d): what is baked is the
+// payload's `preview` AS GIVEN plus the override map — nothing is added or
+// derived here, and the renderer derives nothing either (only a stored
+// card's row is mapped through lib/cards/faces.ts, lib/cards/bake-core.ts).
+// So the payload itself carries a double-faced face's cross-face block and
+// the printing's icon family (lib/scryfall/reference-preview.ts): before
+// it did, a transform or modal FRONT was scored without its reverse P/T,
+// icon rider and strip, beside a page whose live preview derived them. A
+// score recorded for a double-faced front body, or for the 2016–22 back,
+// before that measured another picture than today's — the staleness rule
+// (layout version, override hash, reference printing) can't see it:
+// re-score those faces.
 // ---------------------------------------------------------------------------
 
 export type FrameAlignScore = {
@@ -123,6 +136,8 @@ export async function scoreFrameCombo(input: {
   }
 
   const overrides = input.overrides ?? (await getFrameProfileOverrides());
+  // The payload's preview as given (its `dfc` block and icon family are the
+  // payload's own, TODO 5.0d) — the compare page's expression, to the key.
   const preview = { ...payload.preview, profileOverrides: overrides };
   const resolved = resolveFrameProfile(template, overrides);
   const grid = scanGridFor(resolved.orientation ?? "portrait");

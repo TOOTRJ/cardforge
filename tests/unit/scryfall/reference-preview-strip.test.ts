@@ -90,11 +90,13 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { buildFrameComparePayload } from "@/lib/scryfall/reference-preview";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
-/** The strip rider a face draws, as both renderers resolve it (CardPreview
- *  and the bake derive a FRONT's block through frontPreviewData; a back
- *  payload is backPreviewData already). */
-function riderOf(preview: CardPreviewData, face: "front" | "back"): string | null {
-  const data = face === "front" ? frontPreviewData(preview) : preview;
+/** The strip rider a face draws from the payload AS GIVEN — the bake's
+ *  reading (the scorer hands the payload's preview to the renderer, which
+ *  derives nothing): a front payload carries its `dfc` block itself since
+ *  TODO 5.0d (frontPreviewData, run by the payload builder), as a back
+ *  payload (backPreviewData) always did. The live preview derives a front's
+ *  block again from the same card — the same block. */
+function riderOf(data: CardPreviewData): string | null {
   const profile = getFrameProfile(data.frameStyle?.template as never);
   const rider = resolveFrameOverlays(profile, data.frameStyle, {
     colors: data.colorIdentity,
@@ -118,40 +120,40 @@ describe("the compare page's FRONT view of a modal reference (TODO 5.1c)", () =>
     if (!payload) throw new Error("no payload");
     expect(payload.preview.colorIdentity).toEqual(["white"]);
     expect(payload.preview.backFace).toMatchObject({ title: "Grimclimb Pathway", card_type: "land", frame_style: { template: "m15mdfclandback" }, color_identity: ["black"] });
-    expect(frontPreviewData(payload.preview).dfc?.otherFace).toMatchObject({ typeWord: "Land", line: "{T}: Add {B}.", stripKey: "b" });
-    expect(riderOf(payload.preview, "front")).toBe("/frames/m15mdfclandfront/strip/b.png");
+    expect(payload.preview.dfc?.otherFace).toMatchObject({ typeWord: "Land", line: "{T}: Add {B}.", stripKey: "b" });
+    expect(riderOf(payload.preview)).toBe("/frames/m15mdfclandfront/strip/b.png");
     // …and its back, on the land back body: the FRONT's tab (white).
     const back = await buildFrameComparePayload(PATHWAY_ID, "m15mdfclandback", "back");
     expect(back?.preview.colorIdentity).toEqual(["black"]);
-    expect(riderOf(back!.preview, "back")).toBe("/frames/m15mdfclandback/strip/w.png");
+    expect(riderOf(back!.preview)).toBe("/frames/m15mdfclandback/strip/w.png");
   });
 
   it("STX #147's shape: the green front wears the BLUE tab for its sorcery back (on the spell back body), the blue back the green one", async () => {
     const payload = await buildFrameComparePayload(PUGILIST_ID, "m15mdfcfront");
     expect(payload?.preview.backFace).toMatchObject({ card_type: "sorcery", frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] });
-    expect(riderOf(payload!.preview, "front")).toBe("/frames/m15mdfcfront/strip/u.png");
+    expect(riderOf(payload!.preview)).toBe("/frames/m15mdfcfront/strip/u.png");
     const back = await buildFrameComparePayload(PUGILIST_ID, "m15mdfcback", "back");
-    expect(riderOf(back!.preview, "back")).toBe("/frames/m15mdfcback/strip/g.png");
+    expect(riderOf(back!.preview)).toBe("/frames/m15mdfcback/strip/g.png");
   });
 
   it("STX #149's shape: a two-colour back is GOLD on the front (the front, drawn gold without the compare tool's switch, already paints it: no piece); the back's own strip is gold for the two-colour front", async () => {
     const payload = await buildFrameComparePayload(EXTUS_ID, "m15mdfcfront");
     expect(payload?.preview.colorIdentity).toEqual(["black", "white"]);
     expect(payload?.preview.backFace).toMatchObject({ frame_style: { template: "m15mdfcback" }, color_identity: ["black", "red"] });
-    expect(frontPreviewData(payload!.preview).dfc?.otherFace.stripKey).toBe("m");
-    expect(riderOf(payload!.preview, "front")).toBeNull();
+    expect(payload!.preview.dfc?.otherFace.stripKey).toBe("m");
+    expect(riderOf(payload!.preview)).toBeNull();
     const back = await buildFrameComparePayload(EXTUS_ID, "m15mdfcback", "back");
     expect(back?.preview.dfc?.otherFace.stripKey).toBe("m");
-    expect(riderOf(back!.preview, "back")).toBeNull();
+    expect(riderOf(back!.preview)).toBeNull();
   });
 
   it("a mono-colour reference draws none (ZNR #90: a black front, a land back whose mana is black) — the look the ticks were made on", async () => {
     const payload = await buildFrameComparePayload(AGADEEM_ID, "m15mdfcfront");
     expect(payload?.preview.backFace).toMatchObject({ card_type: "land", frame_style: { template: "m15mdfclandback" }, color_identity: ["black"] });
-    expect(frontPreviewData(payload!.preview).dfc?.otherFace.stripKey).toBe("b");
-    expect(riderOf(payload!.preview, "front")).toBeNull();
+    expect(payload!.preview.dfc?.otherFace.stripKey).toBe("b");
+    expect(riderOf(payload!.preview)).toBeNull();
     const back = await buildFrameComparePayload(AGADEEM_ID, "m15mdfclandback", "back");
-    expect(riderOf(back!.preview, "back")).toBeNull();
+    expect(riderOf(back!.preview)).toBeNull();
   });
 
   it("KHM #114: the walker back stays a LEGACY back (no body — the import keeps it off the bodies) but names its colour, so Valki's front wears the gold tab the scan prints", async () => {
@@ -160,18 +162,26 @@ describe("the compare page's FRONT view of a modal reference (TODO 5.1c)", () =>
     expect(back.card_type).toBe("planeswalker");
     expect(back.frame_style).toBeUndefined();
     expect(back.color_identity).toEqual(["black", "red"]);
-    expect(frontPreviewData(payload!.preview).dfc?.otherFace).toMatchObject({ typeWord: "Tibalt", stripKey: "m" });
-    expect(riderOf(payload!.preview, "front")).toBe("/frames/m15mdfcfront/strip/m.png");
+    expect(payload!.preview.dfc?.otherFace).toMatchObject({ typeWord: "Tibalt", stripKey: "m" });
+    expect(riderOf(payload!.preview)).toBe("/frames/m15mdfcfront/strip/m.png");
   });
 
-  it("a TRANSFORM front is untouched (it draws nothing from its back's colour): the back stays content alone, and no strip rider exists there", async () => {
+  it("a TRANSFORM front's BACK is untouched (the front draws nothing from its back's colour): the back stays content alone, and no strip rider exists there", async () => {
     const payload = await buildFrameComparePayload(ARCHANGEL_AVACYN_ID, "m15dfcfront");
     expect(payload?.preview.backFace).toMatchObject({ title: "Avacyn, the Purifier" });
     expect(payload?.preview.backFace?.frame_style).toBeUndefined();
     expect(payload?.preview.backFace?.color_identity).toBeUndefined();
-    // The block is still derived (the tab's digits, the icon rider) — from content alone.
-    expect(frontPreviewData(payload!.preview).dfc).toMatchObject({ layout: "transform", role: "front" });
-    expect(riderOf(payload!.preview, "front")).toBeNull();
+    // The block rides on the payload (TODO 5.0d) — the tab's digits and,
+    // SOI #5 being a sun / moon printing, its family — from content alone.
+    expect(payload?.preview.dfc).toMatchObject({
+      layout: "transform",
+      role: "front",
+      icon: "sunmoon",
+      otherFace: { printsPt: true, power: "6", toughness: "5" },
+    });
+    expect(payload?.preview.frameStyle).toEqual({ template: "m15dfcfront", dfcIcon: "sunmoon" });
+    expect(frontPreviewData(payload!.preview)).toEqual(payload!.preview);
+    expect(riderOf(payload!.preview)).toBeNull();
   });
 
   it("any other template is untouched: a DFC printing on a plain frame keeps its content-only (legacy) back, a single-faced card has none", async () => {
@@ -179,9 +189,10 @@ describe("the compare page's FRONT view of a modal reference (TODO 5.1c)", () =>
     expect(plain?.preview.backFace).toMatchObject({ title: "Echoing Equation" });
     expect(plain?.preview.backFace?.frame_style).toBeUndefined();
     expect(plain?.preview.backFace?.color_identity).toBeUndefined();
+    expect(plain!.preview).not.toHaveProperty("dfc");
     expect(frontPreviewData(plain!.preview).dfc).toBeUndefined();
     const single = await buildFrameComparePayload(SERRA_ANGEL_ID, "m15mdfcfront");
     expect(single?.preview.backFace).toBeNull();
-    expect(riderOf(single!.preview, "front")).toBeNull();
+    expect(riderOf(single!.preview)).toBeNull();
   });
 });

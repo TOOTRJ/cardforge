@@ -398,7 +398,9 @@ describe("what the profiles declare and the save keeps (5.1d)", () => {
 
   it("CROWN_REFERENCES names a crowned print per declared body and colour where one exists — a back body's on the printing's back face", () => {
     for (const t of CROWNED_BODIES) expect(Object.keys(CROWN_REFERENCES[t] ?? {}).length, t).toBeGreaterThan(0);
-    expect(Object.keys(CROWN_REFERENCES.m15dfcfront!).sort()).toEqual(["a", "b", "bg", "br", "g", "gw", "m", "r", "rg", "rw", "u", "ub", "ur", "w", "wb", "wu"]);
+    // Keyed by the frame colour key the compare page asks with (the artifact
+    // crown is the `c` row: TODO 5.0d), plus the pairs.
+    expect(Object.keys(CROWN_REFERENCES.m15dfcfront!).sort()).toEqual(["b", "bg", "br", "c", "g", "gw", "m", "r", "rg", "rw", "u", "ub", "ur", "w", "wb", "wu"]);
     expect(CROWN_REFERENCES.m15dfcfront!.rg).toMatchObject({ set: "mid", collectorNumber: "246" });
     expect(CROWN_REFERENCES.m15dfcbackleft!.rg).toMatchObject({ set: "mid", collectorNumber: "246" });
     expect(CROWN_REFERENCES.m15dfcback!.g).toMatchObject({ set: "mom", collectorNumber: "190" });

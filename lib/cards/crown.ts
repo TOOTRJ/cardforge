@@ -171,8 +171,8 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   // every transform / modal printing with the `legendary` effect on the
   // black-bordered 2015 frame, no showcase — scratchpad dfc-1d/research/
   // classified.json). The transform FRONT in every colour and pair; the
-  // 2016–22 back (MID / VOW / BOT) in w u b r m and two pairs — no g, no a;
-  // the ▼ back (MOM / FIN / ECL / LCC) in every colour, a and two pairs; the
+  // 2016–22 back (MID / VOW) in w u b and two pairs — no r, g, m or c; the
+  // ▼ back (MOM / FIN / ECL / LCC) in every colour, c and two pairs; the
   // transform land front SLX #9 Havengul Laboratory (a colourless legendary
   // land front: the `l` crown through the entry's keyMap); the modal front
   // (the KHM gods, STX's deans, MSH) in the five colours and two pairs; the
@@ -182,6 +182,27 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   // ▼ land back or the modal land pair on this frame (LCI's and XLN's
   // legendary land backs are the parchment back, SLX #9's back the 2016–22
   // one), so those entries draw no crown.
+  //
+  // Corrected in TODO 5.0d (tests/unit/cards/crown-references-dfc.test.ts
+  // holds every row below to its printing and to the pin check of its row):
+  //   • the 2016–22 back has NO crowned red or gold print. The 5.1d survey
+  //     read BOT's `convertdfc` as a left-well family and listed BOT #6
+  //     Slicer (r) and #12 Megatron (m) here: their backs print the ▼ at the
+  //     RIGHT (the ▲ / ▼ family, lib/cards/dfc.ts dfcIconFamilyFromEffects)
+  //     and the pin check refuses both on this body. No red, green,
+  //     three-colour or colourless non-land legendary back was printed
+  //     crowned in a left-well family (Scryfall, 2026-10-06: the 52 paper
+  //     printings with a sun / moon, moon / Emrakul, compass or fan effect
+  //     AND `legendary` — their legendary backs are w, u, b, four pairs —
+  //     VOW #236's W|B artifact among them — and XLN's / RIX's lands, the
+  //     parchment back; SOI #5's red Avacyn, the Purifier predates the
+  //     crown). The crown PIECES of r and m stay: m15dfccrown is the front
+  //     body's band too, judged there against MOM #137 and FIN #231;
+  //   • rows are keyed like every other entry here — the FRAME colour key
+  //     the compare page's toggle asks with (or a pair): the artifact crowns
+  //     of the transform front and the ▼ back are their `c` rows (the crown
+  //     drawn is `a`, the slot's keyMap). 5.1d keyed them `a`, where the
+  //     toggle never found them and crowned the sample.
   m15dfcfront: {
     w: ref("Katilda, Dawnhart Martyr", "vow", "21", "0ef240aa-2a88-4ec4-888a-918466372adb"),
     u: ref("Jacob Hauken, Inspector", "vow", "65", "6b4529c3-8edb-4909-b910-806450a39d2e"),
@@ -189,7 +210,7 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     r: ref("Etali, Primal Conqueror", "mom", "137", "95c14c4d-6c16-4826-8d93-d89ad04aee09"),
     g: ref("Polukranos Reborn", "mom", "200", "47f7d313-8333-41fe-8bfa-c96774dac228"),
     m: ref("Kefka, Court Mage", "fin", "231", "8fcf3fbb-1ddd-437e-81c1-f5a3133f5ee8"),
-    a: ref("Matzalantli, the Great Door", "lci", "256", "b4c31b29-06ba-436d-a3d9-18f4796c39be"),
+    c: ref("Matzalantli, the Great Door", "lci", "256", "b4c31b29-06ba-436d-a3d9-18f4796c39be"),
     rg: ref("Tovolar, Dire Overlord", "mid", "246", "f953fad3-0cd1-48aa-8ed9-d7d2e293e6e2"),
     wu: ref("Dennick, Pious Apprentice", "mid", "217", "35cf2d72-931f-47b1-a1b4-916f0383551a"),
     wb: ref("Edgar, Charmed Groom", "vow", "236", "63ba8eef-b834-4031-b0a1-0f8505d53813"),
@@ -204,8 +225,6 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     w: ref("Katilda's Rising Dawn", "vow", "21", "0ef240aa-2a88-4ec4-888a-918466372adb"),
     u: ref("Hauken's Insight", "vow", "65", "6b4529c3-8edb-4909-b910-806450a39d2e"),
     b: ref("Ormendahl, the Corrupter", "mid", "109", "0f6e668d-2502-4e82-b4c2-ef34c9afa27e"),
-    r: ref("Slicer, High-Speed Antagonist", "bot", "6", "9d9a9350-4734-4cc1-986d-467e6715199f"),
-    m: ref("Megatron, Destructive Force", "bot", "12", "ac6ded62-7bf2-476f-ad8e-020da6327c6b"),
     rg: ref("Tovolar, the Midnight Scourge", "mid", "246", "f953fad3-0cd1-48aa-8ed9-d7d2e293e6e2"),
     ub: ref("Olag, Ludevic's Hubris", "mid", "233", "788288f6-7944-48f4-91b0-f452e209c9ce"),
   },
@@ -216,7 +235,7 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     r: ref("Grub, Notorious Auntie", "ecl", "105", "1f51adf8-8234-4dae-aedf-7633310d5111"),
     g: ref("Zilortha, Apex of Ikoria", "mom", "190", "5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce"),
     m: ref("Kefka, Ruler of Ruin", "fin", "231", "8fcf3fbb-1ddd-437e-81c1-f5a3133f5ee8"),
-    a: ref("Balamb Garden, Airborne", "fin", "272", "001e9f20-5b15-41cb-bf82-46172decc235"),
+    c: ref("Balamb Garden, Airborne", "fin", "272", "001e9f20-5b15-41cb-bf82-46172decc235"),
     gw: ref("Polukranos, Engine of Ruin", "mom", "200", "47f7d313-8333-41fe-8bfa-c96774dac228"),
     ub: ref("Rona, Tolarian Obliterator", "mom", "75", "f487b582-e73f-4325-939f-95fc5a9aba49"),
   },

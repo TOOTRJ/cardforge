@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ScryfallCard } from "@/lib/scryfall/client";
-import { AGADEEM_ID, ARCHANGEL_AVACYN_ID, SERRA_ANGEL_ID, TERGRID_ID, VALKI_ID } from "./fixtures/dfc-printings";
+import { AGADEEM_ID, ARCHANGEL_AVACYN_ID, SERRA_ANGEL_ID, TERGRID_ID, VALKI_ID, tergrid } from "./fixtures/dfc-printings";
 
 // ---------------------------------------------------------------------------
 // buildFrameComparePayload on a BACK BODY (TODO 5.0b) — what the compare
@@ -11,7 +11,12 @@ import { AGADEEM_ID, ARCHANGEL_AVACYN_ID, SERRA_ANGEL_ID, TERGRID_ID, VALKI_ID }
 // exactly as the card page and the bake will draw it — lib/cards/faces.ts
 // backPreviewData on the card the import would store: the back on the body
 // under test, in its OWN printed colour, under the body's paired front
-// (frontBodyFor), carrying the `dfc` block whose `otherFace` is the front's.
+// (frontBodyFor), carrying the `dfc` block whose `otherFace` is the front's
+// and whose `icon` is the family the PRINTING wears (TODO 5.0d: its
+// `frame_effects`, through the mapper's dfcIconFamilyFromEffects — it read
+// `arrows` whatever the printing, so MID's and SOI's backs drew a ▼ for
+// their moon). The real bodies and the registry's own references:
+// reference-preview-dfc-family.test.ts.
 // ---------------------------------------------------------------------------
 
 vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
@@ -56,7 +61,9 @@ describe("a transform back body", () => {
     if (!payload) throw new Error("no payload");
     const { preview } = payload;
     expect(preview.title).toBe("Avacyn, the Purifier");
-    expect(preview.frameStyle).toEqual({ template: "m15artifact" });
+    // SOI #5 is a sun / moon printing (`sunmoondfc`): the family rides on
+    // the card beside the body under test (TODO 5.0d).
+    expect(preview.frameStyle).toEqual({ template: "m15artifact", dfcIcon: "sunmoon" });
     // RED (the back's colour indicator), not the front's white.
     expect(preview.colorIdentity).toEqual(["red"]);
     expect(preview).toMatchObject({ cardType: "creature", supertype: "Legendary", subtypes: ["Angel"], power: "6", toughness: "5" });
@@ -64,7 +71,7 @@ describe("a transform back body", () => {
     expect(preview.dfc).toEqual({
       layout: "transform",
       role: "back",
-      icon: "arrows",
+      icon: "sunmoon",
       otherFace: { typeWord: "Angel", line: "{3}{W}{W}", printsPt: true, power: "4", toughness: "4", stripKey: "w" },
     });
     // The card's rarity rides on both faces.
@@ -94,6 +101,10 @@ describe("a transform back body", () => {
     const payload = await buildFrameComparePayload(aang.id, "m15artifact", "back");
     expect(payload?.preview.colorIdentity).toEqual(["colorless"]);
     expect(payload?.preview.dfc?.otherFace.typeWord).toBe("Avatar");
+    // The fixture's `convertdfc` (BOT's effect) is the plain ▲ / ▼: the
+    // default family is the absent key, so the style is what it was.
+    expect(payload?.preview.dfc?.icon).toBe("arrows");
+    expect(payload?.preview.frameStyle).toEqual({ template: "m15artifact" });
   });
 });
 
@@ -101,6 +112,9 @@ describe("a modal back body", () => {
   it("an artifact back with a cost: colourless, the cost kept, the strip facts from the front", async () => {
     const payload = await buildFrameComparePayload(TERGRID_ID, "m15devoid", "back");
     if (!payload) throw new Error("no payload");
+    // No family on a modal body — though this fixture's effects name one
+    // (`mooneldrazidfc`): the housing has none (TODO 5.0d).
+    expect(tergrid.frame_effects).toEqual(["mooneldrazidfc"]);
     expect(payload.preview.frameStyle).toEqual({ template: "m15devoid" });
     expect(payload.preview.colorIdentity).toEqual(["colorless"]);
     expect(payload.preview).toMatchObject({ title: "Tergrid's Lantern", cost: "{3}{B}", cardType: "artifact" });
