@@ -166,6 +166,85 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   },
   // The artifact dress: a crowned borderless artifact per colour where one
   // was printed; its colourless crown is CC's artifact crown (2XM #362).
+  // The double-faced bodies (TODO 5.1d): a crowned printing per face per
+  // colour where one exists on the plain 2015 frame (Scryfall, 2026-10-05:
+  // every transform / modal printing with the `legendary` effect on the
+  // black-bordered 2015 frame, no showcase — scratchpad dfc-1d/research/
+  // classified.json). The transform FRONT in every colour and pair; the
+  // 2016–22 back (MID / VOW / BOT) in w u b r m and two pairs — no g, no a;
+  // the ▼ back (MOM / FIN / ECL / LCC) in every colour, a and two pairs; the
+  // transform land front SLX #9 Havengul Laboratory (a colourless legendary
+  // land front: the `l` crown through the entry's keyMap); the modal front
+  // (the KHM gods, STX's deans, MSH) in the five colours and two pairs; the
+  // modal back in the five colours, gold (KHM #168 The Prismatic Bridge)
+  // and five pairs (MSH's heroes). A back body's reference is the
+  // printing's BACK face (faceUnderTest). No crowned print exists for the
+  // ▼ land back or the modal land pair on this frame (LCI's and XLN's
+  // legendary land backs are the parchment back, SLX #9's back the 2016–22
+  // one), so those entries draw no crown.
+  m15dfcfront: {
+    w: ref("Katilda, Dawnhart Martyr", "vow", "21", "0ef240aa-2a88-4ec4-888a-918466372adb"),
+    u: ref("Jacob Hauken, Inspector", "vow", "65", "6b4529c3-8edb-4909-b910-806450a39d2e"),
+    b: ref("Jerren, Corrupted Bishop", "mid", "109", "0f6e668d-2502-4e82-b4c2-ef34c9afa27e"),
+    r: ref("Etali, Primal Conqueror", "mom", "137", "95c14c4d-6c16-4826-8d93-d89ad04aee09"),
+    g: ref("Polukranos Reborn", "mom", "200", "47f7d313-8333-41fe-8bfa-c96774dac228"),
+    m: ref("Kefka, Court Mage", "fin", "231", "8fcf3fbb-1ddd-437e-81c1-f5a3133f5ee8"),
+    a: ref("Matzalantli, the Great Door", "lci", "256", "b4c31b29-06ba-436d-a3d9-18f4796c39be"),
+    rg: ref("Tovolar, Dire Overlord", "mid", "246", "f953fad3-0cd1-48aa-8ed9-d7d2e293e6e2"),
+    wu: ref("Dennick, Pious Apprentice", "mid", "217", "35cf2d72-931f-47b1-a1b4-916f0383551a"),
+    wb: ref("Edgar, Charmed Groom", "vow", "236", "63ba8eef-b834-4031-b0a1-0f8505d53813"),
+    br: ref("Garland, Knight of Cornelia", "fin", "221", "dd463dbe-5f2c-4d4f-86f8-ad8ff407af62"),
+    ub: ref("Ludevic, Necrogenius", "mid", "233", "788288f6-7944-48f4-91b0-f452e209c9ce"),
+    rw: ref("Arcee, Sharpshooter", "bot", "7", "21462db4-7739-4853-845f-0c2aa38fd2a6"),
+    ur: ref("The Emperor of Palamecia", "fin", "219", "3d75e8fd-6139-4b10-9ce3-195b47d72e0c"),
+    bg: ref("Exdeath, Void Warlock", "fin", "220", "1b4bab87-4000-461d-8b58-d34928fee305"),
+    gw: ref("Serah Farron", "fin", "240", "62fa74c0-43ae-445c-8039-ca9d00e9709a"),
+  },
+  m15dfcbackleft: {
+    w: ref("Katilda's Rising Dawn", "vow", "21", "0ef240aa-2a88-4ec4-888a-918466372adb"),
+    u: ref("Hauken's Insight", "vow", "65", "6b4529c3-8edb-4909-b910-806450a39d2e"),
+    b: ref("Ormendahl, the Corrupter", "mid", "109", "0f6e668d-2502-4e82-b4c2-ef34c9afa27e"),
+    r: ref("Slicer, High-Speed Antagonist", "bot", "6", "9d9a9350-4734-4cc1-986d-467e6715199f"),
+    m: ref("Megatron, Destructive Force", "bot", "12", "ac6ded62-7bf2-476f-ad8e-020da6327c6b"),
+    rg: ref("Tovolar, the Midnight Scourge", "mid", "246", "f953fad3-0cd1-48aa-8ed9-d7d2e293e6e2"),
+    ub: ref("Olag, Ludevic's Hubris", "mid", "233", "788288f6-7944-48f4-91b0-f452e209c9ce"),
+  },
+  m15dfcback: {
+    w: ref("Hydaelyn, the Mothercrystal", "fin", "39", "2625c00d-0a51-4481-bf36-cf13a2546242"),
+    u: ref("Caetus, Sea Tyrant of Segovia", "mom", "63", "9df3e743-7bb8-482a-afd1-4d51119d416c"),
+    b: ref("Marchesa, Resolute Monarch", "mom", "114", "b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a"),
+    r: ref("Grub, Notorious Auntie", "ecl", "105", "1f51adf8-8234-4dae-aedf-7633310d5111"),
+    g: ref("Zilortha, Apex of Ikoria", "mom", "190", "5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce"),
+    m: ref("Kefka, Ruler of Ruin", "fin", "231", "8fcf3fbb-1ddd-437e-81c1-f5a3133f5ee8"),
+    a: ref("Balamb Garden, Airborne", "fin", "272", "001e9f20-5b15-41cb-bf82-46172decc235"),
+    gw: ref("Polukranos, Engine of Ruin", "mom", "200", "47f7d313-8333-41fe-8bfa-c96774dac228"),
+    ub: ref("Rona, Tolarian Obliterator", "mom", "75", "f487b582-e73f-4325-939f-95fc5a9aba49"),
+  },
+  m15dfclandfront: {
+    c: ref("Havengul Laboratory", "slx", "9", "823b019e-10c0-4712-8167-d4f37a71e782"),
+  },
+  m15mdfcfront: {
+    w: ref("Halvar, God of Battle", "khm", "15", "97502411-5c93-434c-b77b-ceb2c32feae7"),
+    u: ref("Alrund, God of the Cosmos", "khm", "40", "5d131784-c1a3-463e-a37b-b720af67ab62"),
+    b: ref("Tergrid, God of Fright", "khm", "112", "14dc88ee-bba9-4625-af0d-89f3762a0ead"),
+    r: ref("Birgi, God of Storytelling", "khm", "123", "44657ab1-0a6a-4a5f-9688-86f239083821"),
+    g: ref("Esika, God of the Tree", "khm", "168", "f6cd7465-9dd0-473c-ac5e-dd9e2f22f5f6"),
+    wu: ref("King T'Challa", "msh", "219", "add7d3ce-aa58-4da0-8c2a-cfd01c3a8975"),
+    wb: ref("Extus, Oriq Overlord", "stx", "149", "ba09360a-067e-48a5-bdc5-a19fd066a785"),
+  },
+  m15mdfcback: {
+    w: ref("Sword of the Realms", "khm", "15", "97502411-5c93-434c-b77b-ceb2c32feae7"),
+    u: ref("Hakka, Whispering Raven", "khm", "40", "5d131784-c1a3-463e-a37b-b720af67ab62"),
+    b: ref("Tergrid's Lantern", "khm", "112", "14dc88ee-bba9-4625-af0d-89f3762a0ead"),
+    r: ref("Harnfel, Horn of Bounty", "khm", "123", "44657ab1-0a6a-4a5f-9688-86f239083821"),
+    g: ref("The Ringhart Crest", "khm", "181", "b76bed98-30b1-4572-b36c-684ada06826c"),
+    m: ref("The Prismatic Bridge", "khm", "168", "f6cd7465-9dd0-473c-ac5e-dd9e2f22f5f6"),
+    wu: ref("Black Panther, Hope Enduring", "msh", "219", "add7d3ce-aa58-4da0-8c2a-cfd01c3a8975"),
+    rw: ref("Photon, Living Light", "msh", "23", "3f995518-b12a-4623-9ab3-b79a5cef3cba"),
+    rg: ref("The Incredible Hulk", "msh", "49", "e0dbbdcf-84e1-494f-8b8c-0a094f603fa9"),
+    ur: ref("The Invincible Iron Man", "msh", "80", "4cea42fd-035e-4b8f-8b1d-ff363b694f14"),
+    gw: ref("The Sensational She-Hulk", "msh", "18", "61237530-ad49-469c-a952-67c92315708e"),
+  },
   m15borderlessartifact: {
     w: ref("Rammas Echor, Ancient Shield", "ltc", "505", "558c1fcc-cb01-4031-ada5-4e39d65aee27"),
     u: ref("The Water Crystal", "fin", "333", "7572888a-c394-4d9f-b66f-30d91364d265"),

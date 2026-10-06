@@ -3846,6 +3846,48 @@ export const EXTENDED_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The double-faced bodies' legendary crown (TODO 5.1d; the 4.6f note of the
+ * 5.0 design): the m15crown band CUT round the icon well or the housing —
+ * `m15dfccrown/<key>` for the faces whose well is at the LEFT (the
+ * transform front, the transform land front, the 2016–22 transform back),
+ * `m15dfccrownright/<key>` for the ▼ transform back (its well at the
+ * right), `m15mdfccrown/<key>` for the modal front and back (the housing).
+ * Each piece is the m15crown band byte for byte outside the well's columns;
+ * inside them the alpha is Card Conjurer's own DFC crown twin's (the well
+ * cleared, the crown round it — the prints wrap the crown round the well
+ * with the ring on top: MID #246 Tovolar, VOW #21 Katilda, MOM #190
+ * Zilortha's ▼ back, KHM #112 Tergrid both faces) and the colour the band's
+ * own leg texture, since the band's hole is the plain M15 bar's (scripts/lib/
+ * cc-frames.mjs DFC_CROWN_WELLS, cutCrownBand). The same rows as M15_CROWN
+ * (0–409 at HD); keys: the colours, gold, the artifact silver (`a`: a DFC
+ * body's colourless is the artifact master standing in, `c` → `a`), the
+ * land grey (`l`: the land front, `c` → `l`) and the ten pairs (DFC_CROWN_KEYS
+ * in the importer; a unit test holds them together) — never `c`. Opt-in per
+ * card like M15's: declaring it changes no stored card. The icon rider draws
+ * AFTER the crown on a face that has one (the well is cleared, so they never
+ * meet; the order keeps the glyph on top).
+ */
+const DFC_CROWN_KEYS: readonly string[] = ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+export const DFC_CROWN_LEFT: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: M15_CROWN.rect,
+  assetPathTemplate: "/frames/m15dfccrown/{key}.png",
+  keys: DFC_CROWN_KEYS,
+};
+export const DFC_CROWN_RIGHT: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: M15_CROWN.rect,
+  assetPathTemplate: "/frames/m15dfccrownright/{key}.png",
+  keys: DFC_CROWN_KEYS,
+};
+export const MDFC_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: M15_CROWN.rect,
+  assetPathTemplate: "/frames/m15mdfccrown/{key}.png",
+  keys: DFC_CROWN_KEYS,
+};
+
+/**
  * The collector line on the black-bordered M15 family (TODO 4.9b): one slot
  * for every wave-1 template — the tokens, the planeswalker and the emblem
  * print their lines at M15's positions (TDOM #1, DOM #1, TFDN #24), so they
@@ -3995,9 +4037,13 @@ export const M15PW_COLLECTOR: CollectorSlot = { ...M15_COLLECTOR, markLine: 2 };
 //     Cooking Campsite: light tan bars toned onto it, the name and type in
 //     DARK ink — dark band ink.
 // Additions (the owner rule): no stored card sits on them, no bump. Set on
-// the PROFILES entries only (`dfc` declares the body); no crown, no pair
-// masters in wave 1 (the save drops `crown` / `twoColor` on them, D17); no
-// holoStamp on a back body, ever.
+// the PROFILES entries only (`dfc` declares the body). The crown and the
+// pair masters came with TODO 5.1d (DFC_CROWN_LEFT / DFC_CROWN_RIGHT on the
+// PROFILES entries, `twoColorMasters: ["split"]` on the spell faces — the
+// prints split a two-colour BACK's rings and box over its gold bars too,
+// MOM #43 / MID #218 / MID #246; the land pair draws neither: no printed
+// legendary land back on this frame, no two-colour land face in print); no
+// holoStamp on a DFC body, ever.
 // ---------------------------------------------------------------------------
 
 /** The name band's start on a face whose icon well is at the LEFT (design
@@ -4152,8 +4198,12 @@ const M15DFCLANDBACK: FrameProfile = {
 //     none); w u b r g from the five land tints, `c` CC's grey land modal and
 //     `m` the gold tint, both stand-ins never offered (no reference) — no
 //     artifact dress on a land.
-// No crown, no pair masters, no holoStamp in wave 1 (the save drops `crown`
-// / `twoColor`, D17). Additions: no stored card sits on them, no bump.
+// The crown (MDFC_CROWN, cut round the housing) and the pair masters (the
+// split dress on both spell faces — STX #149 Extus and MSH #219 King
+// T'Challa print it, and their backs; the hybrid dress on the front — MH3
+// #252–261) came with TODO 5.1d, on the PROFILES entries; the land pair
+// draws neither (no print). No holoStamp. Additions: no stored card sits on
+// them, no bump.
 // ---------------------------------------------------------------------------
 
 /** CC's flipside text box (packModalRegular.js flipsideType /
@@ -4353,16 +4403,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15borderlesspwtall: M15BORDERLESSPWTALL,
   // The transform bodies (TODO 5.1a): each declares its `dfc` on its own
   // profile; the collector line (4.9b) on the entries here, like every
-  // other — both faces print the card's one line (D8). No crown, no pairs,
-  // no holoStamp here.
-  m15dfcfront: { ...M15DFCFRONT, collector: M15_COLLECTOR },
-  m15dfcback: { ...M15DFCBACK, collector: M15_COLLECTOR },
-  m15dfcbackleft: { ...M15DFCBACKLEFT, collector: M15_COLLECTOR },
-  m15dfclandfront: { ...M15DFCLANDFRONT, collector: M15_COLLECTOR },
+  // other — both faces print the card's one line (D8). The legendary crown
+  // and the two-colour pairs (TODO 5.1d) on the entries here too, opt-in
+  // per card as on m15: the crown cut round the well (the icon rider drawn
+  // after it), its colourless key the artifact stand-in's silver (`c` →
+  // `a`) or, on the land front, the land grey (`c` → `l`); the split pair
+  // masters on every spell face — the prints split a BACK's rings and box
+  // over its gold bars as the front's (MOM #43 G|W, MID #218 W|U, MID #246
+  // R|G) — never on the land pair (no two-colour land face in print), and
+  // no crown on the ▼ land back (no legendary land back was printed on this
+  // frame: LCI's and XLN's are the parchment back, SLX #9's the 2016–22
+  // one). No holoStamp here.
+  m15dfcfront: { ...M15DFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...DFC_CROWN_LEFT, keyMap: { c: "a" } }, DFC_ICON_RIDER], twoColorMasters: ["split"] },
+  m15dfcback: { ...M15DFCBACK, collector: M15_COLLECTOR, overlays: [{ ...DFC_CROWN_RIGHT, keyMap: { c: "a" } }], twoColorMasters: ["split"] },
+  m15dfcbackleft: { ...M15DFCBACKLEFT, collector: M15_COLLECTOR, overlays: [{ ...DFC_CROWN_LEFT, keyMap: { c: "a" } }, DFC_ICON_RIDER], twoColorMasters: ["split"] },
+  m15dfclandfront: { ...M15DFCLANDFRONT, collector: M15_COLLECTOR, overlays: [{ ...DFC_CROWN_LEFT, keyMap: { c: "l" } }, DFC_ICON_RIDER] },
   m15dfclandback: { ...M15DFCLANDBACK, collector: M15_COLLECTOR },
-  // The modal bodies (TODO 5.1b): the collector line as every M15 face.
-  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR },
-  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR },
+  // The modal bodies (TODO 5.1b): the collector line as every M15 face; the
+  // crown cut round the housing and the pairs (5.1d) on the spell faces —
+  // the front draws both dresses (STX #149 / MSH #219 the split, MH3's ten
+  // hybrid fronts the hybrid), the back the split (STX #149's back, MSH's
+  // crowned pair backs); the land pair draws neither (no print).
+  m15mdfcfront: { ...M15MDFCFRONT, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split", "hybrid"] },
+  m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }], twoColorMasters: ["split"] },
   m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR },
   m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR },
   // The snow frame (TODO 4.6f, wave 2c; owner round 20, 2026-10-01, option
