@@ -1,7 +1,9 @@
 import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { FRAME_REFERENCES, frameReferenceOptions } from "@/lib/cards/frame-reference-registry";
-import type { SlotPath } from "@/lib/cards/profile-override";
+import registryPrintings from "../cards/fixtures/reference-printings.json";
+import { FRAME_REFERENCES, frameReferenceOptions, type FrameColorKey } from "@/lib/cards/frame-reference-registry";
+import type { FrameProfileOverridesMap, SlotPath } from "@/lib/cards/profile-override";
+import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // scoreFrameCombo — the work behind POST /api/admin/frame-align-score, the
@@ -23,7 +25,12 @@ import type { SlotPath } from "@/lib/cards/profile-override";
 //     caller hashes, no brand mark, round corners;
 //   * the grids (TODO 0.1): a landscape frame's portrait scan is turned 90°
 //     clockwise and compared on the 1040×745 grid, and both images are
-//     flattened onto black so our transparent corners match the scan's.
+//     flattened onto black so our transparent corners match the scan's;
+//   * a double-faced reference (TODO 5.0d), on the REAL payload builder and
+//     the registry's captured printings: the bake is handed the payload's
+//     preview and nothing else — so a front's cross-face block (the back's
+//     P/T, the icon family, the modal strip's word, line and key) is on it,
+//     as on the compare page.
 // ---------------------------------------------------------------------------
 
 const state = vi.hoisted(() => ({
@@ -34,6 +41,9 @@ const state = vi.hoisted(() => ({
   payload: vi.fn(),
   render: vi.fn(),
   fetchScan: vi.fn(),
+  /** Captured Scryfall printings the REAL payload builder is served (the
+   *  double-faced cases); empty for every other test. */
+  cards: new Map<string, unknown>(),
 }));
 
 vi.mock("@/lib/cards/frame-reviews", () => ({
@@ -52,7 +62,14 @@ vi.mock("@/lib/scryfall/reference-preview", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/scryfall/reference-preview")>();
   return { FrameCompareFaceError: actual.FrameCompareFaceError, buildFrameComparePayload: state.payload };
 });
-vi.mock("@/lib/scryfall/client", () => ({ fetchScryfallImage: state.fetchScan }));
+vi.mock("@/lib/scryfall/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/scryfall/client")>();
+  return {
+    ...actual,
+    fetchScryfallImage: state.fetchScan,
+    getCardById: async (id: string) => (state.cards.has(id) ? actual.scryfallCardSchema.parse(state.cards.get(id)) : null),
+  };
+});
 vi.mock("@/lib/render/card-image", () => ({ renderCardImage: state.render }));
 // The real scorer, behind a spy: most tests swap in a cheap fake that
 // records the two greyscale grids it was handed (the scoring itself has its
@@ -68,6 +85,10 @@ import * as align from "@/lib/frames/align";
 const realAlign = (await vi.importActual<typeof import("@/lib/frames/align")>("@/lib/frames/align"))
   .alignAndScore;
 const alignSpy = vi.mocked(align.alignAndScore);
+/** The real payload builder (its Scryfall lookup served from `state.cards`). */
+const realBuildPayload = (
+  await vi.importActual<typeof import("@/lib/scryfall/reference-preview")>("@/lib/scryfall/reference-preview")
+).buildFrameComparePayload;
 
 type AlignInput = Parameters<typeof realAlign>[0];
 
@@ -156,6 +177,7 @@ beforeEach(async () => {
   state.overrideReads = 0;
   state.payload.mockReset();
   state.payload.mockImplementation(async (id: string) => payloadFor(id));
+  state.cards.clear();
   const ours = await renderPng(745, 1040);
   const scan = await scanPng(745, 1040);
   state.render.mockReset();
@@ -346,4 +368,128 @@ describe("scoreFrameCombo — grids", () => {
     if (!sideways.ok) throw new Error(sideways.error);
     expect(sideways.overall).toBeGreaterThan(same.overall + 2);
   }, 20_000);
+});
+
+// ---------------------------------------------------------------------------
+// A double-faced reference (TODO 5.0d). The scorer bakes the payload's
+// preview AS GIVEN — the renderer derives nothing (lib/render/card-image.tsx
+// reads `card.dfc`; only a STORED card's bake maps its row through
+// lib/cards/faces.ts) — while the compare page's live preview derives a
+// front's cross-face block by itself. So a front was scored without its
+// reverse P/T, its icon rider and its modal strip, beside a page that showed
+// them. The payload now carries the block (frontPreviewData, in
+// buildFrameComparePayload), and with it the printing's icon family: what is
+// baked is the payload's preview plus the override map, nothing else.
+// ---------------------------------------------------------------------------
+
+describe("scoreFrameCombo — a double-faced reference is baked as the compare page shows it (TODO 5.0d)", () => {
+  const overrides = {} as FrameProfileOverridesMap;
+
+  beforeEach(() => {
+    for (const [id, card] of Object.entries(registryPrintings)) state.cards.set(id, card);
+    state.payload.mockImplementation(realBuildPayload);
+  });
+
+  /** Score the combo's registry reference #index and hand back what the
+   *  bake was given — held equal to the compare page's own expression: the
+   *  payload's preview for the face the template is compared on, with the
+   *  override map (app/(app)/admin/frame-compare/page.tsx). */
+  async function bakedFor(template: FrameTemplate, color: FrameColorKey, index = 0) {
+    const reference = frameReferenceOptions(template, color)[index];
+    const result = await scoreFrameCombo({ template, color, ref: reference.scryfallId, overrides });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.referenceId).toBe(reference.scryfallId);
+    expect(state.render).toHaveBeenCalledTimes(1);
+    const [baked, variant, options] = state.render.mock.calls[0];
+    expect(variant).toBe("default");
+    expect(options).toEqual({ brandMark: false, corners: "round" });
+    const payload = await realBuildPayload(reference.scryfallId, template, result.face);
+    if (!payload) throw new Error("no payload");
+    expect(baked).toEqual({ ...payload.preview, profileOverrides: overrides });
+    expect(baked.profileOverrides).toBe(overrides);
+    return { baked, reference, face: result.face };
+  }
+
+  it("a transform front (MOM #43): the back's P/T for the grey tab and the ▲ family", async () => {
+    const { baked, reference, face } = await bakedFor("m15dfcfront", "w");
+    expect(`${reference.set} ${reference.name}`).toBe("mom Tarkir Duneshaper");
+    expect(face).toBe("front");
+    expect(baked.dfc).toEqual({
+      layout: "transform",
+      role: "front",
+      icon: "arrows",
+      // Burnished Dunestomper, a 4/3 Phyrexian Warrior.
+      otherFace: { typeWord: "Warrior", line: null, printsPt: true, power: "4", toughness: "3", stripKey: "w" },
+    });
+    expect(baked.frameStyle).not.toHaveProperty("dfcIcon");
+  });
+
+  it("a sun / moon front (MID #169): the printing's family, not the default", async () => {
+    const { baked, reference } = await bakedFor("m15dfcfront", "g", 1);
+    expect(`${reference.set} ${reference.name}`).toBe("mid Bird Admirer");
+    expect(baked.dfc).toEqual({
+      layout: "transform",
+      role: "front",
+      icon: "sunmoon",
+      // Wing Shredder, a 3/5.
+      otherFace: { typeWord: "Werewolf", line: null, printsPt: true, power: "3", toughness: "5", stripKey: "g" },
+    });
+    expect(baked.frameStyle).toMatchObject({ template: "m15dfcfront", dfcIcon: "sunmoon" });
+  });
+
+  it("the transform land front (INR #287): Ormendahl's 9/7 in the tab", async () => {
+    const { baked } = await bakedFor("m15dfclandfront", "c");
+    expect(baked.dfc).toMatchObject({
+      layout: "transform",
+      role: "front",
+      icon: "arrows",
+      otherFace: { typeWord: "Demon", printsPt: true, power: "9", toughness: "7" },
+    });
+  });
+
+  it("a modal front (STX #147): the strip's word, line and key are the back's", async () => {
+    const { baked, reference } = await bakedFor("m15mdfcfront", "g", 1);
+    expect(`${reference.set} ${reference.name}`).toBe("stx Augmenter Pugilist");
+    expect(baked.dfc).toEqual({
+      layout: "modal",
+      role: "front",
+      icon: null,
+      otherFace: { typeWord: "Sorcery", line: "{3}{U}{U}", printsPt: false, power: null, toughness: null, stripKey: "u" },
+    });
+    // …on the back body the import stores, in its own colour (5.1c).
+    expect(baked.backFace).toMatchObject({ frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] });
+  });
+
+  it("a pathway front (ZNR #259): the land back's mana line and colour", async () => {
+    const { baked, reference } = await bakedFor("m15mdfclandfront", "w");
+    expect(`${reference.set} ${reference.name}`).toBe("znr Brightclimb Pathway");
+    expect(baked.dfc).toEqual({
+      layout: "modal",
+      role: "front",
+      icon: null,
+      otherFace: { typeWord: "Land", line: "{T}: Add {B}.", printsPt: false, power: null, toughness: null, stripKey: "b" },
+    });
+  });
+
+  it("the 2016–22 back (MID #27) is scored on its back with the moon's family — as before for its block, now for its glyph", async () => {
+    const { baked, reference, face } = await bakedFor("m15dfcbackleft", "w");
+    expect(`${reference.set} ${reference.name}`).toBe("mid Luminous Phantom");
+    expect(face).toBe("back");
+    expect(baked.dfc).toEqual({
+      layout: "transform",
+      role: "back",
+      icon: "sunmoon",
+      otherFace: { typeWord: "Cleric", line: "{W}", printsPt: true, power: "1", toughness: "1", stripKey: "w" },
+    });
+    expect(baked.frameStyle).toEqual({ template: "m15dfcbackleft", dfcIcon: "sunmoon" });
+  });
+
+  it("a single-faced reference is baked as it always was: no block, no family", async () => {
+    // The registry capture keeps scans for the double-faced printings only.
+    const serra = FRAME_REFERENCES.m15.w!.scryfallId;
+    state.cards.set(serra, { ...(state.cards.get(serra) as object), image_uris: { png: SCAN_URL } });
+    const { baked } = await bakedFor("m15", "w");
+    expect(baked).not.toHaveProperty("dfc");
+    expect(baked.frameStyle).not.toHaveProperty("dfcIcon");
+  });
 });
