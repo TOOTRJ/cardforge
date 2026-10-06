@@ -497,9 +497,10 @@ describe("both faces in one PNG (TODO 5.3c)", () => {
     expect((await download("preset=default&corners=square&faces=both")).headers.get("etag")).not.toBe(both);
   });
 
-  it("records face: both for a signed-in viewer", async () => {
+  it("records face: both for a signed-in viewer — ONE download event for the pair, not one per face", async () => {
     state.viewer = { id: "viewer-1" };
     await download("preset=default&corners=round&faces=both");
+    expect(state.activity).toHaveBeenCalledTimes(1);
     expect(state.activity).toHaveBeenCalledWith(expect.anything(), {
       userId: "viewer-1",
       kind: "download",
