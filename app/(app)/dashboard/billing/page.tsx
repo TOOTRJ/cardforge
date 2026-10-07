@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
-import { KeepPlanButton } from "@/components/billing/keep-plan-button";
+import { PlanActions, PlanStatusLine, endingBadgeLabel } from "@/components/billing/plan-status";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
@@ -18,6 +18,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { billingViewerFromProfile } from "@/lib/billing/viewer";
+import { isEndingStatus, planStatusOf } from "@/lib/billing/plan-status";
 import {
   CARD_CAPACITY_UNLIMITED,
   MONTHLY_CREDITS,
@@ -75,6 +76,7 @@ export default async function BillingPage() {
       ? {
           subscription_status: profile.subscription_status ?? null,
           stripe_customer_id: profile.stripe_customer_id ?? null,
+          cancel_at_period_end: profile.cancel_at_period_end ?? false,
         }
       : null,
     entitlements,
@@ -96,16 +98,26 @@ export default async function BillingPage() {
     : plan.priceUsd > 0
       ? `$${plan.priceUsd} / month`
       : "Free forever";
-  const periodEnd = sub?.currentPeriodEnd ?? entitlements.currentPeriodEnd;
-  const cancelScheduled = sub?.cancelAtPeriodEnd ?? entitlements.cancelAtPeriodEnd;
-  // A downgrade scheduled for the end of the period (Pro → Plus, annual →
-  // monthly) — the plan card says so and offers to keep the current plan.
-  const pending = live ? (sub?.pendingChange ?? null) : null;
-  const pendingPlanName = pending?.tier ? planForTier(pending.tier).name : "a new plan";
-  const pendingPriceLine =
-    pending?.amountCents != null && pending.interval
-      ? ` (${formatMoney(pending.amountCents, pending.currency)} / ${pending.interval})`
-      : "";
+  // What happens to the plan next — ONE decision for the copy, the badge and
+  // the buttons (lib/billing/plan-status.ts). A cancelled plan ENDS: Stripe's
+  // live answer first (cancel_at, cancel_at_period_end, a schedule that ends
+  // in a cancellation), the webhook-written profile flag when Stripe is
+  // unreachable. A scheduled downgrade is not a cancellation.
+  const planStatus = planStatusOf({
+    live,
+    delinquent,
+    comped: Boolean(comped),
+    status,
+    subscription: sub,
+    profile: {
+      currentPeriodEnd: entitlements.currentPeriodEnd,
+      cancelAtPeriodEnd: entitlements.cancelAtPeriodEnd,
+    },
+  });
+  const ending = isEndingStatus(planStatus);
+  // The plan grid below reads the same fact (the profile flag can lag the
+  // live read until the next webhook event).
+  const gridViewer = { ...viewer, subscriptionEnding: live && ending };
   const capacity = entitlements.cardCapacity;
   const monthlyCredits = MONTHLY_CREDITS[entitlements.effectiveTier];
   // Packs at the subscriber price for an ACTIVE subscription (a no-card trial
@@ -142,7 +154,7 @@ export default async function BillingPage() {
             <div className="flex flex-col items-end gap-1">
               <Badge variant={entitlements.isPaid ? "primary" : "outline"}>
                 {live || delinquent
-                  ? (STATUS_LABEL[status ?? ""] ?? status)
+                  ? (endingBadgeLabel(planStatus) ?? STATUS_LABEL[status ?? ""] ?? status)
                   : comped
                     ? "Complimentary"
                     : "Free plan"}
@@ -152,39 +164,13 @@ export default async function BillingPage() {
           </div>
 
           <p className="text-sm leading-6 text-muted">
-            {delinquent ? (
-              <span className="text-danger">
-                Your last payment didn&apos;t go through, so paid perks are paused. Update your card to restore them.
-              </span>
-            ) : live && status === "trialing" && sub?.trialEnd ? (
-              <>
-                Your free trial ends on <strong className="text-foreground">{formatCalendarDate(sub.trialEnd)}</strong>
-                {stripeDetails?.paymentMethod
-                  ? `, then ${priceLine} on the card below.`
-                  : ". Add a card in the portal before then to keep the plan — without one it simply ends."}
-              </>
-            ) : live && pending ? (
-              <>
-                Changes to <strong className="text-foreground">{pendingPlanName}</strong>
-                {pendingPriceLine} on <strong className="text-foreground">{formatCalendarDate(pending.startsAt)}</strong>. You keep {plan.name} and everything you paid for until then; nothing is charged now. Changed your mind? Keep your current plan below.
-              </>
-            ) : live && cancelScheduled && periodEnd ? (
-              <>
-                Your plan is set to end on <strong className="text-foreground">{formatCalendarDate(periodEnd)}</strong>. You keep every perk until then. Changed your mind? Reactivate it in the portal.
-              </>
-            ) : live && periodEnd ? (
-              <>
-                Renews on <strong className="text-foreground">{formatCalendarDate(periodEnd)}</strong>. Cancel any time — the plan runs to the end of the period you paid for.
-              </>
-            ) : comped ? (
-              profile?.comp_expires_at
-                ? `Courtesy of the PipGlyph team until ${formatCalendarDate(profile.comp_expires_at)}.`
-                : "Courtesy of the PipGlyph team — no renewal, no card needed."
-            ) : status === "canceled" ? (
-              "Your previous plan has ended. You're on the free plan: every tool, up to 50 saved cards, and the credits you have left — Free doesn't refill; a pack tops you up any time and a plan refills every month."
-            ) : (
-              `Every tool is yours for free: all frames, the gallery, decks, ${SIGNUP_CREDITS} AI credits to start and up to 50 saved cards. Free doesn't refill — a credit pack tops you up any time, and plans add monthly credits, clean hi-res downloads and more room.`
-            )}
+            <PlanStatusLine
+              status={planStatus}
+              planName={plan.name}
+              priceLine={priceLine}
+              hasPaymentMethod={Boolean(stripeDetails?.paymentMethod)}
+              compExpiresAt={profile?.comp_expires_at ?? null}
+            />
           </p>
 
           <dl className="grid gap-3 sm:grid-cols-3">
@@ -203,30 +189,7 @@ export default async function BillingPage() {
           </dl>
 
           {viewer.hasBillingAccount ? (
-            <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
-              {delinquent ? (
-                <ManageBillingButton flow="payment_method_update" variant="primary" size="sm">
-                  Fix payment
-                </ManageBillingButton>
-              ) : null}
-              {live ? (
-                <ManageBillingButton flow="payment_method_update" size="sm">
-                  Update payment method
-                </ManageBillingButton>
-              ) : null}
-              <ManageBillingButton size="sm">Invoices &amp; receipts</ManageBillingButton>
-              {live && pending ? (
-                <KeepPlanButton>Keep {plan.name}</KeepPlanButton>
-              ) : null}
-              {live && !cancelScheduled && !pending ? (
-                <ManageBillingButton flow="subscription_cancel" variant="ghost" size="sm">
-                  Cancel plan
-                </ManageBillingButton>
-              ) : null}
-              {live && cancelScheduled ? (
-                <ManageBillingButton size="sm">Reactivate plan</ManageBillingButton>
-              ) : null}
-            </div>
+            <PlanActions status={planStatus} live={live} planName={plan.name} />
           ) : null}
         </SurfaceCard>
       </section>
@@ -237,13 +200,15 @@ export default async function BillingPage() {
           {live ? "Change plan" : entitlements.isPaid ? "Plans" : "Upgrade"}
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-          {live
+          {live && ending
+            ? "Your plan is set to end, so there's nothing to downgrade. To stay — on this plan or another — resume the plan above first, then change it here."
+            : live
             ? "Upgrades apply right away — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrades (Pro to Plus, or annual to monthly) take effect at the end of the period you've paid for, so nothing is lost. Downgrading to Free is a cancellation: you keep the plan until the period ends."
             : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
               : "First-time subscribers get a 7-day free trial: 25 AI credits to try, nothing charged until day 7, cancel anytime. Your plan's full monthly credits arrive with your first payment."}
         </p>
-        <PricingPlans initialViewer={viewer} surface="billing" />
+        <PricingPlans initialViewer={gridViewer} surface="billing" />
       </section>
 
       {/* ---- Credits ---- */}

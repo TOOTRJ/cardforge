@@ -97,3 +97,28 @@ describe("pricingCtaFor", () => {
     }
   });
 });
+
+describe("pricingCtaFor — a cancelled (ending) subscription", () => {
+  const ending = signedIn({
+    isPaid: true,
+    currentTier: "plus",
+    hasSubscribed: true,
+    hasBillingAccount: true,
+    hasLiveSubscription: true,
+    subscriptionStatus: "active",
+    subscriptionEnding: true,
+  });
+
+  it("the Free card offers nothing to 'manage': the plan is already on its way there", () => {
+    expect(pricingCtaFor(ending, "free")).toEqual({ kind: "none" });
+    // …while a subscriber who has NOT cancelled keeps the portal button.
+    expect(pricingCtaFor({ ...ending, subscriptionEnding: false }, "free")).toEqual({
+      kind: "portal",
+      label: "Manage plan",
+    });
+  });
+
+  it("can still switch to another paid plan", () => {
+    expect(pricingCtaFor(ending, "pro")).toEqual({ kind: "checkout", label: "Switch to Pro" });
+  });
+});

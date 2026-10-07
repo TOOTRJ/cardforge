@@ -49,7 +49,9 @@ export function BillingPanel({
   // than pretending to be the free plan.
   const lapsed = !isPaid && tier !== "free" && status != null;
   const statusLabel = isPaid
-    ? STATUS_LABEL[status ?? ""] ?? "Active"
+    ? cancelAtPeriodEnd && renewLabel
+      ? "Ending"
+      : STATUS_LABEL[status ?? ""] ?? "Active"
     : lapsed
       ? STATUS_LABEL[status ?? ""] ?? "Lapsed"
       : "Free plan";
@@ -76,8 +78,12 @@ export function BillingPanel({
       ) : renewLabel ? (
         <p className="text-xs leading-5 text-muted">
           {cancelAtPeriodEnd
-            ? `Your plan ends on ${renewLabel}.`
-            : `Renews on ${renewLabel}.`}
+            ? status === "trialing"
+              ? `You cancelled your trial: it ends on ${renewLabel} and you won't be charged.`
+              : `You cancelled this plan: it ends on ${renewLabel} and won't renew. You keep your perks until then.`
+            : status === "trialing"
+              ? `Your free trial ends on ${renewLabel}.`
+              : `Renews on ${renewLabel}.`}
         </p>
       ) : null}
 
@@ -103,7 +109,13 @@ export function BillingPanel({
         </Button>
         {hasBillingAccount ? (
           <ManageBillingButton size="sm">
-            {isPaid ? "Manage subscription" : lapsed ? "Fix payment" : "Billing history"}
+            {isPaid
+              ? cancelAtPeriodEnd
+                ? "Resume subscription"
+                : "Manage subscription"
+              : lapsed
+                ? "Fix payment"
+                : "Billing history"}
           </ManageBillingButton>
         ) : null}
         {!isPaid ? (

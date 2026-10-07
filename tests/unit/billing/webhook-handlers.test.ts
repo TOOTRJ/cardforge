@@ -820,6 +820,22 @@ describe("handleStripeEvent — trial_will_end", () => {
     expect(options).toEqual({ idempotencyKey: "trial-ending:sub_trial" });
   });
 
+  it.each([
+    ["the flag", { cancel_at_period_end: true }],
+    ["the portal's cancel_at at the trial end", { cancel_at_period_end: false, cancel_at: 1_790_735_200 }],
+  ])("a trial already CANCELLED (%s) gets no 'your card is charged then' reminder", async (_name, extra) => {
+    const { admin, inserts } = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub(extra)), { admin, stripe: trialStripe });
+    expect(inserts).toEqual([]);
+    expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it("a cancel date AFTER the trial still converts first — it is reminded", async () => {
+    const { admin, inserts } = makeTrialAdmin();
+    await handleStripeEvent(event(trialSub({ cancel_at: 1_790_735_200 + 40 * 86400 })), { admin, stripe: trialStripe });
+    expect(inserts).toHaveLength(1);
+  });
+
   it("a card on the CUSTOMER (Checkout stores it there) counts, like Stripe's own conversion check", async () => {
     customers.retrieve.mockResolvedValue({ id: "cus_1", invoice_settings: { default_payment_method: "pm_1" } });
     const { admin, inserts } = makeTrialAdmin();

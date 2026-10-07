@@ -15,6 +15,7 @@ import {
   type PaidTier,
 } from "@/lib/billing/plans";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
+import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
 import {
@@ -301,6 +302,16 @@ export async function createCheckoutSessionAction(
           const currentInterval = live.items.data[0]?.price?.recurring?.interval ?? null;
           const target = { tier: input.tier, period: input.period ?? "monthly" };
           if (isPlanDowngrade({ tier: currentTier, interval: currentInterval }, target)) {
+            // Cancelled by DATE (the portal's shape, `cancel_at`): the
+            // un-cancel in scheduleDowngrade only knows the flag, and a
+            // schedule on top of a dated cancellation is unverified — the
+            // plan would still end. Ask for the resume first; no write.
+            if (!live.cancel_at_period_end && subscriptionEndsAt(live) != null) {
+              return {
+                ok: false,
+                error: "This plan is set to end. Resume it first (Resume on the billing page), then pick the new plan.",
+              };
+            }
             return scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
           }
           // An upgrade replaces any pending downgrade (the portal refuses to

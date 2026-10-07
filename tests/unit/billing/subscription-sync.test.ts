@@ -234,6 +234,30 @@ describe("syncSubscriptionForUser", () => {
     expect(typeof updates[0].current_period_end).toBe("string");
   });
 
+  it("a portal cancellation that sets only cancel_at (flag false) is stored as ending", async () => {
+    // The Customer Portal / newer API versions write a cancellation DATE and
+    // can leave cancel_at_period_end false. On main the profile kept
+    // cancel_at_period_end=false and Settings said "Renews on".
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
+    const cancelled = sub("sub_1", "active", { id: "price_plus" }, { cancel_at_period_end: false, cancel_at: PERIOD_END });
+    await syncSubscriptionForUser(admin, makeStripe([cancelled]), "user-1", { eventSub: cancelled });
+    expect(updates[0]).toMatchObject({ subscription_status: "active", cancel_at_period_end: true });
+  });
+
+  it("a cancel_at in a LATER period is not 'ends at this period end' (it renews first)", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
+    const later = sub("sub_1", "active", { id: "price_plus" }, { cancel_at: PERIOD_END + 45 * 86400 });
+    await syncSubscriptionForUser(admin, makeStripe([later]), "user-1", { eventSub: later });
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: false });
+  });
+
+  it("resuming (cancel_at cleared) clears the flag", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
+    const resumed = sub("sub_1", "active", { id: "price_plus" }, { cancel_at: null });
+    await syncSubscriptionForUser(admin, makeStripe([resumed]), "user-1", { eventSub: resumed });
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: false });
+  });
+
   it("a resync with no event picks the live primary from Stripe", async () => {
     const { admin, updates } = makeAdmin({ subscription_tier: "free", subscription_status: "active", stripe_customer_id: "cus_1" });
     const pro = sub("sub_pro", "active", { id: "price_pro" });

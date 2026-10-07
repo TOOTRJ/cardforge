@@ -680,7 +680,13 @@ Rules and gotchas:
   schedule (`scheduleDowngrade`; "Keep {Plan}" =
   `cancelScheduledPlanChangeAction` releases it; the billing page reads
   `pendingChange` from the expanded schedule) — never through the portal,
-  whose `schedule_at_period_end` only works within one product. Stripe's
+  whose `schedule_at_period_end` only works within one product. A CANCELLED
+  plan is read ONLY through `subscriptionEndsAt()` / `endsByPeriodEnd()`
+  (`lib/billing/subscription-ending.ts`: `cancel_at_period_end`, the
+  portal's `cancel_at` date, a schedule ending in "cancel") and the plan
+  card's copy + buttons come from `planStatusOf()`
+  (`lib/billing/plan-status.ts`: ending is decided BEFORE trial / renews;
+  "Resume", never "Cancel plan") — never read the boolean alone. Stripe's
   `trial_will_end` becomes ONE `trial_ending` notification + "account" email
   per subscription (migration 0109; honest about whether a card is on file).
   `invoice.paid` writes ONE `billing_payments` row per invoice (0110; the
