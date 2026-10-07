@@ -1651,6 +1651,10 @@ export const BATTLE_PRINT_RECUT = Object.freeze({ right: BATTLE_RIGHT_RECUT, ico
  * (clearTo ≥ toX + by: the zone that gives up the columns is flat, so
  * nothing but that colour is lost) — it throws otherwise. Rows outside the
  * band keep every byte. Returns a new buffer.
+ * @param {Buffer} buf
+ * @param {number} width
+ * @param {number} height
+ * @param {{ rows: readonly number[], fromX: number, toX: number, by: number, blend: number, clearTo?: number, name?: string }} band
  */
 export function recutColumns(buf, width, height, { rows, fromX, toX, by, blend, clearTo }) {
   if (buf.length !== width * height * 4) throw new Error(`recutColumns: ${buf.length} bytes is not ${width}×${height} RGBA`);
@@ -1842,6 +1846,11 @@ export function redrawBattleIcon(buf, width, height, { rim, centre, disc, white,
  * (BATTLE_RIGHT_RECUT), icon (BATTLE_ICON_RECUT) }. With no bands, no
  * shield `dx` and no icon it returns the input's bytes. Returns a new
  * buffer.
+ * @param {Buffer} master
+ * @param {Buffer} mask
+ * @param {number} width
+ * @param {number} height
+ * @param {{ shift: any, shield: any, right?: any, icon?: any }} spec
  */
 export function recutBattleOntoPrints(master, mask, width, height, { shift, shield, right, icon }) {
   if (master.length !== width * height * 4 || mask.length !== master.length) throw new Error(`recutBattleOntoPrints: the master or the mask is not ${width}×${height} RGBA`);
