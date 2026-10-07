@@ -43,6 +43,11 @@ import { frameMatchFromScryfall, mapScryfallToFormPatch, printingFacts } from "@
 // Every printing must resolve as its look says, every pin must be a
 // printing here (so each exists on Scryfall under that set and number), and
 // a pinned look here must be on its list. Tests never call Scryfall.
+//
+// Pinning a new printing: add it to its list AND here, as a row like its
+// neighbours' — Scryfall's card object (api.scryfall.com/cards/<set>/<number>)
+// cut to these fields, with the look read on its scan and `two` = two
+// colours by the land rule (printingFacts).
 // ---------------------------------------------------------------------------
 
 type Look = "tinted" | "short-box" | "dark-type-and-box" | "dark-type-bar" | "shadow-box" | "crown" | "nickname";
