@@ -4597,6 +4597,66 @@ A change that must not move a pixel (4.5.0's builders) proves it four ways:
 - A corpus replay: every visible production card baked at 750 px and HD
   on the base and on the branch, over sha-checked frames, byte-identical.
 
+### Faces, footer and symbol style are profile data
+
+TODO 4.8.0 (a refactor: no pixel moved, no layout bump). Three things a
+frame's era decides are DATA on its profile; no renderer names them.
+
+- **Which face a text is set in** — `lib/cards/type-faces.ts`, the one
+  resolver both renderers read at every text site outside the rules box:
+  `slotFace(slot)` for a slot that carries `font` (`TextSlot.font`, and now
+  `StatSlot.font`), `faceOf(profile, role)` for a role (name, type line,
+  stat, numeral, badge, second-face name / type / stat, footer, strip word,
+  mark). The faces are the two the repo has: `"display"` (CardDisplay =
+  Beleren Bold) and `"body"` (MPlantin). Walker badges and saga numerals
+  have no slot: `loyaltyRows.badgeFont`, `chapters.badge.numeralFont`. The
+  pipglyph.com mark is ALWAYS the brand face, whatever the profile says. A
+  rules box is always the body face: its lines are broken on MPlantin's
+  advances (one rules layout). The fits measure in the slot's face too —
+  `fitTitleBand`, `fitTypeLineBand`, `secondFaceLineSizes`,
+  `fitStatSizePct`, a shrunk line's baseline (`slotTextDy`), the bake's
+  centred-line margin (`displayRunPx`) and the creator's glyph warning.
+- **The fonts of a render** — `cardFonts(profile)` in
+  `lib/render/card-fonts.ts`: MPlantin, MPlantin italic, CardDisplay, [a
+  profile's own faces], Mana, CollectorLine, Keyrune. Today the same six
+  for every profile. A new face is registered only for the profiles that
+  name it, in the bracketed place — never last (Satori draws a character no
+  font has with the LAST registered font).
+- **The metric tables** — `lib/cards/font-metrics.ts` is GENERATED from the
+  committed TTFs: `node scripts/generate-font-metrics.mjs` (`--check` exits
+  1 when stale). `display-metrics.ts`, `stat-fit.ts` and `rules-metrics.ts`
+  read it; a test holds it byte-equal to the generator and equal to a
+  frozen copy of the hand-kept tables it replaced. Regenerate after a font
+  file changes; a new face is a line in `FONT_METRIC_FACES`
+  (`scripts/lib/font-metrics.mjs`).
+- **The footer line** — `TextSlot.prefix` on the footer (`"Art: "` when
+  unset, `footerArtistLine` in `lib/cards/card-display.ts`) and the
+  footer's own `align`: unset = the line at the rect's start and a clean
+  download's custom mark at its end; `"center"` = the line centred, no
+  custom mark on it (the © slot it belongs to is 4.10a's).
+- **The symbol style** — `FrameProfile.symbolStyle`
+  (`lib/cards/symbol-style.ts`); one value today, `"modern"`: M15's discs,
+  their hard offset shadow, the modern tap. Both renderers and both shadow
+  models (the rules layout's inline pip, the cost row) read the resolved
+  spec. A style is a CORRECTION of a frame, never a per-card switch.
+
+Adding a face, a prefix or a style is a profile change with its own layout
+bump; `tests/unit/render/profile-data-parity.test.tsx` gives a throwaway
+profile each of them and requires the same answer from the bake and the
+preview.
+
+**A pip's class is never written out as a literal.** mana-font's class for
+generic mana is `ms-` + the number, and Tailwind reads the same token as a
+`margin-inline-start` utility — which it emits for every candidate it finds
+in ANY file git does not ignore (tests, scripts and docs too). The app
+builds the class from the symbol, so the build has no such utility; one
+literal anywhere (the first draft of the parity test spelled the generic-3
+pip's class in an expectation) gives every such pip in the browser a 12 px
+left margin — preview only, so no bake-side check sees it. mana-font guards
+the 2 itself (`margin-left: inherit !important`); nothing guards the rest.
+`tests/unit/content/mana-class-collision.test.ts` fails on any such token
+in the tree: use `{X}` or a colour in a test's expectation.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in

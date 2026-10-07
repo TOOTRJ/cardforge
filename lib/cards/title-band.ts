@@ -28,7 +28,9 @@ import {
   measuredLineSizePct,
   pastFloorText,
 } from "@/lib/cards/render-tiers";
+import { symbolStyleOf } from "@/lib/cards/symbol-style";
 import type { FrameProfile } from "@/lib/cards/template-layout";
+import { slotFace } from "@/lib/cards/type-faces";
 import type { CardOrientation } from "@/lib/cards/typography";
 
 /** The title band's name ↔ cost gap, as a fraction of card width (preview
@@ -119,7 +121,8 @@ export function fitDetachedCostTitle(
   if (widthPct === null) return null;
   const slot = layout.title;
   const name = title.trim();
-  const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase };
+  // Measured in the slot's own face (TODO 4.8.0).
+  const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase, face: slotFace(slot).metricsId };
   const sizePct = fitSingleLineSizePct({
     text: name,
     rect: { ...slot.rect, widthPct: widthPct * 100 },
@@ -150,7 +153,9 @@ export function fitDetachedCostTitle(
  *  TITLE_FIT_HEADROOM. */
 export const DETACHED_COST_GAP_PCT = BAND_GAP_PCT;
 
-type TitleBandLayout = Pick<FrameProfile, "title" | "costRect" | "costSizePct">;
+/** `symbolStyle` (the profile's; "modern" when absent) sizes the cost row's
+ *  shadow, which the name's room is measured against. */
+type TitleBandLayout = Pick<FrameProfile, "title" | "costRect" | "costSizePct" | "symbolStyle">;
 
 /**
  * The room (fraction of card width) a measured name has in its band:
@@ -175,7 +180,7 @@ export function titleBandRoomPct(layout: TitleBandLayout, cost: string | null | 
     const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(drawn, disc);
     return Math.min(band.widthPct / 100 - HALF_PX_PCT, pipsLeft - band.leftPct / 100 - DETACHED_COST_GAP_PCT);
   }
-  if (drawn) return band.widthPct / 100 - BAND_GAP_PCT - costRowWidthPct(drawn, disc);
+  if (drawn) return band.widthPct / 100 - BAND_GAP_PCT - costRowWidthPct(drawn, disc, symbolStyleOf(layout));
   return band.widthPct / 100;
 }
 
@@ -221,7 +226,7 @@ export function fitTitleBand(
   if (layout.title.fit !== "measured") return drawn ? fitDetachedCostTitle(layout, title, drawn) : null;
   const slot = layout.title;
   const name = title.trim();
-  const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase };
+  const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase, face: slotFace(slot).metricsId };
   const detached = Boolean(drawn && layout.costRect);
   const headroom = detached ? 1 : TITLE_FIT_HEADROOM;
   const measure = (s: string) => displayTextWidthEm(s, metrics) * headroom;

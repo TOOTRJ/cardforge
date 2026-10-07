@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { faceOf } from "@/lib/cards/type-faces";
 
 // ---------------------------------------------------------------------------
 // Preview ⇄ bake parity guards (CLAUDE.md: the browser preview and the Satori
@@ -143,13 +145,20 @@ describe("display-font lines", () => {
     for (const src of [BAKE, PREVIEW]) {
       expect(src).not.toMatch(/>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
     }
-    expect(PREVIEW).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
-    expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
+    // The footer's artist line is ONE helper's string in both renderers
+    // (footerArtistLine: the profile's prefix — "Art: " unless it says
+    // otherwise, TODO 4.8.0 — and the credit), set through slotLine in the
+    // footer's own face (footerFace).
+    expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerArtistLine(layout.footer, face.artistCredit))}");
+    expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerWatermark)}");
     // The bake's footer (FooterBake, which also draws the outline copies)
     // takes the same artist line and custom mark through slotLine.
-    expect(BAKE).toMatch(/artist: card\.artistCredit\?\.trim\(\) \? `Art: \$\{card\.artistCredit\}` : "Art: Unknown"/);
-    expect(BAKE).toContain("const line = slotLine(slot.font, artist);");
-    expect(BAKE).toContain("const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;");
+    expect(BAKE).toContain("artist: footerArtistLine(layout.footer, card.artistCredit),");
+    expect(BAKE).toContain("const face = footerFace(slot);");
+    expect(BAKE).toContain("const line = slotLine(face.id, artist);");
+    expect(BAKE).toContain("const mark = watermarkText && !aligned ? slotLine(face.id, watermarkText) : null;");
+    // No renderer spells the prefix itself.
+    for (const src of [BAKE, PREVIEW]) expect(src).not.toMatch(/["'`]Art: /);
     // The name: whole, or as fitted (fitTitleBand: before a detached cost,
     // and anywhere on a measured slot, TODO 4.20).
     expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
@@ -274,10 +283,12 @@ describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
   it("draws each numeral in the layout's line box: the badge's width, one em tall, from labelTop, in the body face", () => {
     expect(BAKE_RAIL).toMatch(/left: badge\.left,\s+top: badge\.labelTop,\s+width: badge\.width,\s+height: badge\.fontPx,/);
     expect(BAKE_RAIL).toContain("fontSize: badge.fontPx,");
-    expect(BAKE_RAIL).toContain("fontFamily: BODY_FONT,");
+    expect(BAKE_RAIL).toContain('fontFamily: faceOf({ chapters: slot }, "numeral").bakeFamily,');
     expect(PREVIEW_RAIL).toMatch(/left: hdX\(badge\.left\),\s+top: hdY\(badge\.labelTop\),\s+width: hdX\(badge\.width\),\s+height: hdCqw\(badge\.fontPx\),/);
     expect(PREVIEW_RAIL).toContain("fontSize: hdCqw(badge.fontPx),");
-    expect(PREVIEW_RAIL).toContain("fontFamily: CARD_FONT,");
+    expect(PREVIEW_RAIL).toContain('fontFamily: faceOf({ chapters: slot }, "numeral").previewFamily,');
+    // …which is the body face on every profile (the prints' MPlantin).
+    expect(faceOf(getFrameProfile("saga"), "numeral").id).toBe("body");
     for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
       expect(rail).toContain("lineHeight: 1,");
       expect(rail).toContain('justifyContent: "center",');
@@ -366,7 +377,7 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
     const panel = fn(PREVIEW, "AdventurePanel");
     const bake = fn(BAKE, "AdventureBake");
     for (const src of [panel, bake]) {
-      expect(src).toMatch(/fitTitleBand\(\s*\{ title: slot\.title, costSizePct: slot\.costSizePct \},\s*name,\s*showCost \? \w+\.cost : null,\s*\)/);
+      expect(src).toMatch(/fitTitleBand\(\s*\{ title: slot\.title, costSizePct: slot\.costSizePct, symbolStyle: symbols\.id \},\s*name,\s*showCost \? \w+\.cost : null,\s*\)/);
       expect(src).toContain('slot.type.fit === "measured"');
       expect(src).toContain("fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null })");
       // The pips keep the panel's disc whatever the name does.
@@ -402,7 +413,7 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
       // The name before its cost, from the front's own fit, at the card's
       // orientation (a landscape card's 5 pt floor)…
       expect(src).toMatch(
-        /fitTitleBand\(\{ title: slot\.title, costSizePct: slot\.costSizePct \}, name, showCost \? \w+\.cost : null, orientation\)/,
+        /fitTitleBand\(\{ title: slot\.title, costSizePct: slot\.costSizePct, symbolStyle: symbols\.id \}, name, showCost \? \w+\.cost : null, orientation\)/,
       );
       // …and the type line to its own bar, with no set symbol (TODO 3.9).
       expect(src).toContain(
@@ -440,7 +451,8 @@ describe("a turned footer (FrameProfile.footerTurn, TODO 4.21b)", () => {
     );
     expect(PREVIEW).toContain('...(layout.footerTurn ? { transform: `rotate(${layout.footerTurn}deg)`, transformOrigin: "center" } : {}),');
     expect(BAKE).toContain("turn: layout.footerTurn ?? 0,");
-    expect(BAKE).toContain("...slotBox(turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect),");
+    expect(BAKE).toContain("const rect = turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect;");
+    expect(BAKE).toContain("...slotBox(rect),");
     expect(BAKE).toMatch(/turn \? \{ transform: `rotate\(\$\{turn\}deg\)`, transformOrigin: "50% 50%" \} : \{\}/);
     // No renderer turns a footer any other way.
     for (const src of [PREVIEW, BAKE]) expect(src.match(/unturnedRect\(/g)).toHaveLength(1);

@@ -11,7 +11,9 @@
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import { displayTextEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
 import { setSymbolBoxPct } from "@/lib/cards/set-symbol-size";
+import { symbolStyle, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, TextSlot } from "@/lib/cards/template-layout";
+import { slotFace, type SlotFace } from "@/lib/cards/type-faces";
 import { RULES_TEXT, ptToPct, type CardOrientation } from "@/lib/cards/typography";
 
 // Display-font (CardDisplay) average advance width as a fraction of the font
@@ -136,13 +138,14 @@ export function measuredLineSizePct(
 
 /** A display slot's line width at a 1 em font size, as the browser sets it
  *  (an upper bound for both renderers — displayTextEm): its letters, every
- *  pair Beleren kerns apart, its case and its tracking. */
+ *  pair its face kerns apart, its case and its tracking — measured in the
+ *  slot's own face (TextSlot.font, TODO 4.8.0). */
 export function slotLineEm(
   text: string,
-  slot: Pick<TextSlot, "uppercase" | "letterSpacingEm">,
+  slot: Pick<TextSlot, "uppercase" | "letterSpacingEm" | "font">,
 ): number {
   const line = slot.uppercase ? text.toUpperCase() : text;
-  return displayTextEm(line) + (slot.letterSpacingEm ?? 0) * Array.from(line).length;
+  return displayTextEm(line, slotFace(slot).metricsId) + (slot.letterSpacingEm ?? 0) * Array.from(line).length;
 }
 
 type TypeLineLayout = Pick<FrameProfile, "type" | "symbolRect" | "symbolSizePct">;
@@ -358,18 +361,22 @@ export const LINE_FIT_SAFETY = 1.05;
  *  card's width: the bake rounds each disc, gap and floor-size font to whole
  *  pixels. */
 export const HALF_PX_PCT = 0.5 / 750;
-// The discs' hard shadow reaches ≈ 0.07 disc past either end of the row.
-const COST_SHADOW_DISCS = 0.1;
+// The discs' hard shadow reaches ≈ 0.07 disc past either end of the row:
+// the symbol style's costRowShadowDiscs (0.1 on "modern" —
+// lib/cards/symbol-style.ts, TODO 4.8.0).
 /** Past the floor a long name ellipsizes, but the cost still leaves it at
  *  least this much of the bar (≈ 4 letters), or all of it if it is shorter. */
 export const MIN_NAME_EM = 2;
 
 /** A cost row's length as a line `perDisc × disc + fixedPct` (fractions of
  *  the card's width), as the bake draws it. */
-function costRowTerms(cost: string | null | undefined): { perDisc: number; fixedPct: number } {
+function costRowTerms(
+  cost: string | null | undefined,
+  symbols: SymbolStyleSpec = symbolStyle(undefined),
+): { perDisc: number; fixedPct: number } {
   const tokens = tokenize((cost ?? "").trim());
   if (tokens.length === 0) return { perDisc: 0, fixedPct: 0 };
-  let perDisc = (tokens.length - 1) * COST_PIP_GAP + COST_SHADOW_DISCS;
+  let perDisc = (tokens.length - 1) * COST_PIP_GAP + symbols.costRowShadowDiscs;
   let fixedPct = (2 * tokens.length - 1) * HALF_PX_PCT;
   for (const token of tokens) {
     if (token.kind === "text") {
@@ -389,9 +396,15 @@ function costRowTerms(cost: string | null | undefined): { perDisc: number; fixed
  * the card's width), as the bake draws it — one disc per pip, COST_PIP_GAP
  * between tokens, the hard shadow and pixel rounding included — so the room
  * it leaves is room the preview's narrower row leaves too. 0 when empty.
+ * `symbols` is the frame's symbol style (its shadow's reach); "modern" when
+ * the caller names none.
  */
-export function costRowWidthPct(cost: string | null | undefined, discPct: number): number {
-  const { perDisc, fixedPct } = costRowTerms(cost);
+export function costRowWidthPct(
+  cost: string | null | undefined,
+  discPct: number,
+  symbols: SymbolStyleSpec = symbolStyle(undefined),
+): number {
+  const { perDisc, fixedPct } = costRowTerms(cost, symbols);
   return perDisc * discPct + fixedPct;
 }
 
@@ -434,10 +447,11 @@ export function secondFaceLineSizes({
   typeLine,
   cost,
   orientation = "portrait",
+  symbols,
 }: {
   slot: {
-    title: { rect: Rect; sizePct: number };
-    type: { rect: Rect; sizePct: number };
+    title: { rect: Rect; sizePct: number; font?: SlotFace };
+    type: { rect: Rect; sizePct: number; font?: SlotFace };
     costSizePct?: number;
     fitLines?: boolean;
   };
@@ -447,6 +461,8 @@ export function secondFaceLineSizes({
   cost: string | null | undefined;
   /** The card's orientation (orientationFromAspect) — picks the floor. */
   orientation?: CardOrientation;
+  /** The profile's symbol style (the cost row's shadow); "modern" unset. */
+  symbols?: SymbolStyle;
 }): SecondFaceLineSizes {
   const baseCost = slot.costSizePct ?? slot.title.sizePct;
   if (!slot.fitLines) {
@@ -459,8 +475,11 @@ export function secondFaceLineSizes({
     };
   }
   const floor = measuredLineFloorPct(orientation);
-  const nameEm = displayTextEm(name) * LINE_FIT_SAFETY;
-  const row = slot.costSizePct ? costRowTerms(cost) : { perDisc: 0, fixedPct: 0 };
+  // Each bar is measured in its own slot's face (TODO 4.8.0).
+  const titleFace = slotFace(slot.title).metricsId;
+  const typeFace = slotFace(slot.type).metricsId;
+  const nameEm = displayTextEm(name, titleFace) * LINE_FIT_SAFETY;
+  const row = slot.costSizePct ? costRowTerms(cost, symbolStyle(symbols)) : { perDisc: 0, fixedPct: 0 };
   // The bar's length left for the name and the discs' scalable part.
   const room = slot.title.rect.widthPct / 100 - (row.perDisc ? NAME_COST_GAP_PCT + row.fixedPct : 0);
   // Disc per unit of name size, as on the top half's bar.
@@ -476,11 +495,12 @@ export function secondFaceLineSizes({
           row.perDisc,
       )
     : baseCost;
-  const typeEm = displayTextEm(typeLine) * LINE_FIT_SAFETY;
+  const typeEm = displayTextEm(typeLine, typeFace) * LINE_FIT_SAFETY;
   const typeRoom = slot.type.rect.widthPct / 100;
   const typeFit = typeEm > 0 ? typeRoom / typeEm : slot.type.sizePct;
   const typeSizePct = Math.max(floor, Math.min(slot.type.sizePct, typeFit));
-  const measure = (s: string) => displayTextEm(s) * LINE_FIT_SAFETY;
+  const measure = (s: string) => displayTextEm(s, titleFace) * LINE_FIT_SAFETY;
+  const measureType = (s: string) => displayTextEm(s, typeFace) * LINE_FIT_SAFETY;
   // What the cost leaves the name on its bar, as drawn.
   const nameRoom = room - (row.perDisc ? row.perDisc * costSizePct : 0);
   return {
@@ -488,6 +508,6 @@ export function secondFaceLineSizes({
     typeSizePct,
     costSizePct,
     titleText: pastFloorText(name, nameRoom, titleSizePct, orientation, measure),
-    typeText: pastFloorText(typeLine, typeRoom, typeSizePct, orientation, measure),
+    typeText: pastFloorText(typeLine, typeRoom, typeSizePct, orientation, measureType),
   };
 }

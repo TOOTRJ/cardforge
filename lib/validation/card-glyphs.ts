@@ -1,6 +1,8 @@
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { faceOf, type FaceRole } from "@/lib/cards/type-faces";
 import {
   CARD_DISPLAY_COVERAGE,
   CARD_ITALIC_COVERAGE,
@@ -194,19 +196,30 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
   const abilities = v.loyalty_abilities ?? [];
   const chapters = v.saga_chapters ?? [];
   const collector = drawsCollectorLine(v.frame_style);
+  // The face each single-line field is DRAWN in is its frame's (TODO 4.8.0,
+  // lib/cards/type-faces.ts): the display face on every profile today, so
+  // nothing changed — and the body face's coverage where a profile sets a
+  // slot in MPlantin.
+  const profile = getFrameProfile(normalizeFrameTemplate(v.frame_style?.template ?? undefined));
+  const glyphFace = (role: FaceRole): GlyphFace => (faceOf(profile, role).id === "body" ? "body" : "display");
+  // (A profile without a footer draws no artist line; the check keeps the
+  // display face it always used.)
+  const footer: GlyphFace = profile.footer ? glyphFace("footer") : "display";
   const fields: GlyphCheckField[] = [
-    { label: "Name", face: "display", value: v.title },
-    { label: "Type line", face: "display", value: `${v.supertype} ${v.subtypes_text}` },
+    { label: "Name", face: glyphFace("name"), value: v.title },
+    { label: "Type line", face: glyphFace("typeLine"), value: `${v.supertype} ${v.subtypes_text}` },
     { label: "Rules text", face: "rules", value: v.rules_text },
     ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, face: "rules" as const, value: row.text })),
     { label: "Saga intro", face: "rules", value: v.saga_intro },
     ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, face: "rules" as const, value: row.text })),
     { label: "Flavor text", face: "italic", value: v.flavor_text },
-    { label: "Stats", face: "display", value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
-    { label: "Artist", face: "display", value: v.artist_credit, uppercase: true },
+    { label: "Stats", face: glyphFace("stat"), value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
+    // (On a collector card the artist is the collector line's own display
+    // small caps, whatever the footer slot says.)
+    { label: "Artist", face: collector ? "display" : footer, value: v.artist_credit, uppercase: true },
     collector
       ? { label: "Footer mark", face: "body", value: v.footer_text }
-      : { label: "Footer mark", face: "display", value: v.footer_text, uppercase: true },
+      : { label: "Footer mark", face: footer, value: v.footer_text, uppercase: true },
   ];
   if (v.has_back_face) {
     const b = v.back_face;

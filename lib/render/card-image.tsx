@@ -65,6 +65,7 @@ import {
 import {
   buildTypeLine,
   displayLine,
+  footerArtistLine,
   hasRulesBoxText,
   normalizeFrameTemplate,
   showsDefense,
@@ -98,17 +99,9 @@ import {
   basicSymbolGlyphSizePct,
   type BasicSymbolPlan,
 } from "@/lib/cards/basic-symbol";
-import {
-  COLLECTOR_FONT_BYTES,
-  DISPLAY_FONT_BYTES,
-  KEYRUNE_DEFAULT_GLYPH,
-  KEYRUNE_FONT_BYTES,
-  MANA_FONT_BYTES,
-  MPLANTIN_FONT_BYTES,
-  MPLANTIN_ITALIC_FONT_BYTES,
-  getKeyruneCodepoint,
-  getManaCodepoint,
-} from "@/lib/render/card-fonts";
+import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
+import { discShadowCss, styledSuffix, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
 import {
@@ -245,32 +238,27 @@ export type { CardCorners };
 // different grey here).
 const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = RARITY_INK;
 
-// Rules/flavor body text uses MPlantin (the real MTG body face); titles, type
-// lines, footer, and stat values use CardDisplay — Beleren Bold itself
-// (public/fonts/Beleren-Bold.ttf; what the file is: lib/render/card-fonts.ts
-// and docs/FRAMES.md "Provenance and legal"), not a stand-in and not an
-// OFL face — falling back to MPlantin. A TextSlot's `font` field selects
-// which.
-const BODY_FONT = '"MPlantin"';
-const DISPLAY_FONT = '"CardDisplay", "MPlantin"';
+// Which face a text is set in is decided by ONE resolver both renderers
+// read (lib/cards/type-faces.ts, TODO 4.8.0): slotFace(slot) for a slot that
+// carries `font`, faceOf(profile, role) for a role without one, BRAND_FACE
+// for the pipglyph.com mark. No site here names a display family itself.
+// Rules / flavor / walker-row / saga text is the body face — MPlantin, the
+// one lib/cards/rules-layout.ts lays every line out in.
+const BODY_FONT = TYPE_FACES.body.bakeFamily;
 // The collector line's face (TODO 4.9b; registered after MPlantin and before
-// Keyrune in renderCardImage, never last — lib/render/card-fonts.ts says
-// why).
+// Keyrune by cardFonts, never last — lib/render/card-fonts.ts says why).
 const COLLECTOR_FONT = '"CollectorLine"';
-
-function fontFamilyFor(font: TextSlot["font"]): string {
-  return font === "display" ? DISPLAY_FONT : BODY_FONT;
-}
 
 /** A collector run's face as the bake sets it: the family, its registered
  *  weight and the hhea ascent its baseline is placed by (the preview's
- *  collectorFaceStyle twin). */
+ *  collectorFaceStyle twin; the ascents are the collector layout's own
+ *  table, lib/cards/collector-metrics.ts). */
 function collectorFaceBake(face: "collector" | "display" | "body"): { fontFamily: string; fontWeight: number; ascent: number } {
   return face === "collector"
     ? { fontFamily: COLLECTOR_FONT, fontWeight: 500, ascent: COLLECTOR_FACES.collector.ascent }
     : face === "display"
-      ? { fontFamily: DISPLAY_FONT, fontWeight: 600, ascent: COLLECTOR_FACES.display.ascent }
-      : { fontFamily: BODY_FONT, fontWeight: 400, ascent: COLLECTOR_FACES.body.ascent };
+      ? { fontFamily: TYPE_FACES.display.bakeFamily, fontWeight: 600, ascent: COLLECTOR_FACES.display.ascent }
+      : { fontFamily: TYPE_FACES.body.bakeFamily, fontWeight: 400, ascent: COLLECTOR_FACES.body.ascent };
 }
 
 // ---------------------------------------------------------------------------
@@ -452,6 +440,9 @@ function CardImage({
 }) {
   const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = layoutForFace(resolveFrameProfile(template, card.profileOverrides), card);
+  // The frame's symbol style — one resolution per render, handed to every
+  // pip this card draws (TODO 4.8.0).
+  const symbols = symbolStyleOf(layout);
   const markLayout = brandMarkLayout(layout);
   // The colour-indicator dot's fills (TODO 5.1a) — none on every other body.
   const indicatorFills = drawsColorIndicator(layout.indicator, card.colorIdentity) ? colorIndicatorFills(card.colorIdentity) : [];
@@ -1077,6 +1068,7 @@ function CardImage({
             cost={card.cost}
             fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
             overrides={card.pipOverrides}
+            symbols={symbols}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
         ) : isAligned(layout.title) || layout.title.fit === "measured" ? null : (
@@ -1098,6 +1090,7 @@ function CardImage({
             cost={card.cost}
             fontSize={fpx(layout.costSizePct ?? layout.title.sizePct, width)}
             overrides={card.pipOverrides}
+            symbols={symbols}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
         </div>
@@ -1244,6 +1237,7 @@ function CardImage({
               slot: layout.chapters,
               rail: sagaDrawing,
               pipOverrides: card.pipOverrides,
+              symbols,
             })
           : null
         : layout.loyaltyRows && loyaltyAbilities.length > 0
@@ -1254,6 +1248,7 @@ function CardImage({
               rowsLayout: loyaltyLayout,
               target: rulesTarget,
               pipOverrides: card.pipOverrides,
+              symbols,
               cardWidth: width,
               foil: plateFoil,
             })
@@ -1262,8 +1257,8 @@ function CardImage({
                 layout: rulesLayout,
                 target: rulesTarget,
                 colorHex: layout.rules.colorHex,
-                font: layout.rules.font,
                 overrides: card.pipOverrides,
+                symbols,
               })
             : null}
 
@@ -1274,6 +1269,7 @@ function CardImage({
             back: card.backFace,
             cardWidth: width,
             pipOverrides: card.pipOverrides,
+            symbols,
             rules: adventureRules,
             target: rulesTarget,
           })
@@ -1287,6 +1283,7 @@ function CardImage({
             cardWidth: width,
             aspect,
             pipOverrides: card.pipOverrides,
+            symbols,
             rules: secondFaceRules,
             target: rulesTarget,
             colorKey: plateKey,
@@ -1352,7 +1349,7 @@ function CardImage({
           twin. Only text: the strip, its ◀ and the housing are the
           master's. */}
       {layout.flipside && card.dfc
-        ? FlipsideBake({ slots: layout.flipside, other: card.dfc.otherFace, cardWidth: width, target: rulesTarget, overrides: card.pipOverrides })
+        ? FlipsideBake({ slots: layout.flipside, other: card.dfc.otherFace, cardWidth: width, target: rulesTarget, overrides: card.pipOverrides, symbols })
         : null}
 
       {/* Footer — artist + brand. A multi-layer outline (ON_ART_OUTLINE on
@@ -1370,7 +1367,7 @@ function CardImage({
           ? FooterBake({
               slot: layout.footer,
               ink: footerInkResolved,
-              artist: card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
+              artist: footerArtistLine(layout.footer, card.artistCredit),
               watermarkText,
               cardWidth: width,
               turn: layout.footerTurn ?? 0,
@@ -1401,7 +1398,8 @@ function CardImage({
             zIndex: 40,
             display: "flex",
             alignItems: "center",
-            fontFamily: DISPLAY_FONT,
+            // Always the brand's face, whatever the frame's (faceOf "mark").
+            fontFamily: faceOf(layout, "mark").bakeFamily,
             fontSize: fpx(0.026 * markLayout.scale, width),
             fontWeight: 600,
             letterSpacing: "0.02em",
@@ -1450,6 +1448,10 @@ function Band({
   italic?: boolean;
   children: React.ReactNode;
 }) {
+  // The slot's own face (TextSlot.font) — as the preview's BandSlot reads
+  // it. (Until TODO 4.8.0 this band drew the display face whatever the slot
+  // said.)
+  const face = slotFace(slot);
   return (
     <div
       style={{
@@ -1467,7 +1469,7 @@ function Band({
         // The preview's `gap: 2cqw` between name and cost — without it a long
         // title ellipsized ~2% of the card width later in the bake.
         gap: fpx(0.02, cardWidth),
-        fontFamily: DISPLAY_FONT,
+        fontFamily: face.bakeFamily,
         fontSize: fpx(slot.sizePct, cardWidth),
         fontWeight: slot.weight ?? 600,
         fontStyle: italic || slot.italic ? "italic" : "normal",
@@ -1508,12 +1510,15 @@ function alignedText(
   line: string,
   fontPx: number,
   roomPx: number,
+  /** The face the line is set in (the slot's; a footer passes its own). */
+  face: TypeFace = slotFace(slot),
 ): typeof ELLIPSIS & { marginRight?: number } {
   if (!isAligned(slot)) return ELLIPSIS;
   const { box, ink } = displayRunPx(
     slot.uppercase ? line.toUpperCase() : line,
     fontPx,
     (slot.letterSpacingEm ?? 0) * fontPx,
+    face.id,
   );
   return ink > roomPx || box === ink ? ELLIPSIS : { ...ELLIPSIS, marginRight: ink - box };
 }
@@ -1552,15 +1557,24 @@ function FooterBake({
 }) {
   const fontPx = fpx(slot.sizePct, cardWidth);
   const copies = ink.shadowCss ? textShadowCopies(ink.shadowCss, fontPx) : null;
-  const line = slotLine(slot.font, artist);
-  const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;
+  const face = footerFace(slot);
+  const line = slotLine(face.id, artist);
+  // The footer's alignment is the slot's (TODO 4.8.0): unset = the line at
+  // the start and the owner's custom mark at the end, as every profile
+  // prints today; "center" (or "end") sets the line alone — a custom mark
+  // has no place on such a line.
+  const aligned = isAligned(slot);
+  const mark = watermarkText && !aligned ? slotLine(face.id, watermarkText) : null;
+  const rect = turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect;
+  // A centred line is the drawn (kerned) width, as in a centred Band.
+  const lineStyle = alignedText(slot, line, fontPx, (rect.widthPct / 100) * cardWidth, face);
   const box = (color: string, textShadow?: string) => ({
-    ...slotBox(turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect),
+    ...slotBox(rect),
     ...(turn ? { transform: `rotate(${turn}deg)`, transformOrigin: "50% 50%" } : {}),
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    fontFamily: fontFamilyFor(slot.font),
+    justifyContent: slot.align === "center" ? ("center" as const) : slot.align === "end" ? ("flex-end" as const) : ("space-between" as const),
+    fontFamily: face.bakeFamily,
     fontSize: fontPx,
     color,
     ...(textShadow ? { textShadow } : {}),
@@ -1570,7 +1584,7 @@ function FooterBake({
   });
   const footer = (
     <div style={box(ink.colorHex, copies ? undefined : ink.shadowCss)}>
-      <span style={ELLIPSIS}>{line}</span>
+      <span style={lineStyle}>{line}</span>
       {/* Footer-right: the owner's custom mark, or nothing. (The old
           hardcoded "PipGlyph" doubled up with the brand-mark overlay —
           layout v19 removed it.) */}
@@ -1585,7 +1599,7 @@ function FooterBake({
     <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
       {copies.map((copy, i) => (
         <div key={i} style={box(copy.color)}>
-          <span style={ELLIPSIS}>
+          <span style={lineStyle}>
             <span style={{ ...ELLIPSIS, position: "relative", left: copy.dx, top: copy.dy }}>{line}</span>
           </span>
           {mark ? (
@@ -1699,7 +1713,7 @@ function BrandMarkInCollectorSlotBake({
         zIndex: 40,
         display: "flex",
         alignItems: "center",
-        fontFamily: DISPLAY_FONT,
+        fontFamily: BRAND_FACE.bakeFamily,
         fontSize: fontPx,
         lineHeight: anchor.lineHeight,
         fontWeight: 600,
@@ -1927,16 +1941,24 @@ const MANA_SYMBOL_INK = "#150d08";
 // disc: a 135° two-color fill with the two half-symbols offset to the top-left
 // and bottom-right, exactly like mana-font's `::before`/`::after` halves.
 function ManaGem({
-  suffix,
+  suffix: symbol,
   size,
   style,
+  symbols,
 }: {
   suffix: string;
   size: number;
   style?: Record<string, unknown>;
+  /** The frame's symbol style: the disc's shadow and the {T} it draws. */
+  symbols: SymbolStyleSpec;
 }) {
+  const suffix = styledSuffix(symbols, symbol);
   const halves = hybridHalves(suffix);
-  const shadow = `${-Math.max(1, Math.round(size * 0.06))}px ${Math.max(1, Math.round(size * 0.07))}px 0 #111`;
+  // The style's hard offset shadow ("modern": 0.06 of the disc left, 0.07
+  // down, each at least 1 px, #111); no property at all for a style
+  // without one.
+  const shadowCss = discShadowCss(symbols, size);
+  const shadow = shadowCss ? { boxShadow: shadowCss } : {};
 
   if (halves) {
     const topCp = getManaCodepoint(halves.top);
@@ -1953,7 +1975,7 @@ function ManaGem({
           height: size,
           borderRadius: size,
           background: `linear-gradient(135deg, ${topBg} 50%, ${bottomBg} 50%)`,
-          boxShadow: shadow,
+          ...shadow,
           overflow: "hidden",
           ...style,
         }}
@@ -2007,7 +2029,7 @@ function ManaGem({
         height: size,
         borderRadius: size,
         background: bg,
-        boxShadow: shadow,
+        ...shadow,
         ...style,
       }}
     >
@@ -2035,12 +2057,15 @@ function CostGlyphs({
   cost,
   fontSize,
   overrides,
+  symbols,
   dy = 0,
 }: {
   cost: string;
   fontSize: number;
   /** Card owner's custom pip icons — see lib/pips/override.ts. */
   overrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
   /** Vertical nudge in px (profile.costDy) — the preview's translateY. */
   dy?: number;
 }) {
@@ -2079,7 +2104,7 @@ function CostGlyphs({
         if (overrideSrc) {
           // Same box + hard shadow as the ManaGem disc it replaces, so
           // custom pips line up exactly with standard ones beside them.
-          const shadow = `${-Math.max(1, Math.round(fontSize * 0.06))}px ${Math.max(1, Math.round(fontSize * 0.07))}px 0 #111`;
+          const shadow = discShadowCss(symbols, fontSize);
           return (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -2093,14 +2118,14 @@ function CostGlyphs({
                 height: fontSize,
                 borderRadius: fontSize,
                 objectFit: "cover",
-                boxShadow: shadow,
+                ...(shadow ? { boxShadow: shadow } : {}),
               }}
             />
           );
         }
         const suffix = tokenSuffix(token);
         if (!suffix) return null;
-        return <ManaGem key={`g-${i}`} suffix={suffix} size={fontSize} />;
+        return <ManaGem key={`g-${i}`} suffix={suffix} size={fontSize} symbols={symbols} />;
       })}
     </span>
   );
@@ -2117,6 +2142,7 @@ function RulesItemBake({
   top,
   gapBefore,
   overrides,
+  symbols,
 }: {
   item: RulesItem;
   glyph: number;
@@ -2124,6 +2150,8 @@ function RulesItemBake({
   top: number;
   gapBefore: number;
   overrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
 }) {
   if (item.t === "m") {
     const place: React.CSSProperties = {
@@ -2134,7 +2162,7 @@ function RulesItemBake({
     const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
     if (overrideSrc) {
       // Same box + hard shadow as the ManaGem disc it replaces.
-      const shadow = `${-Math.max(1, Math.round(glyph * 0.06))}px ${Math.max(1, Math.round(glyph * 0.07))}px 0 #111`;
+      const shadow = discShadowCss(symbols, glyph);
       return (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
@@ -2147,13 +2175,13 @@ function RulesItemBake({
             height: glyph,
             borderRadius: glyph,
             objectFit: "cover",
-            boxShadow: shadow,
+            ...(shadow ? { boxShadow: shadow } : {}),
             ...place,
           }}
         />
       );
     }
-    return <ManaGem suffix={item.suffix} size={glyph} style={place as Record<string, unknown>} />;
+    return <ManaGem suffix={item.suffix} size={glyph} style={place as Record<string, unknown>} symbols={symbols} />;
   }
   return (
     <span
@@ -2183,10 +2211,13 @@ function RulesLinesBake({
   blocks,
   metrics: m,
   overrides,
+  symbols,
 }: {
   blocks: readonly RulesBlock[];
   metrics: RulesMetrics;
   overrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
 }) {
   const lineHeight = m.linePx / m.fontPx;
   const rows: React.ReactNode[] = [];
@@ -2232,6 +2263,7 @@ function RulesLinesBake({
                     glyph={m.pipPx}
                     top={m.pipTopPx}
                     overrides={overrides}
+                    symbols={symbols}
                     gapBefore={i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0}
                   />
                 ) : (
@@ -2279,19 +2311,21 @@ export function RulesBoxBake({
   layout,
   target,
   colorHex,
-  font,
   zIndex = 20,
   rotation = 0,
   overrides,
+  symbols = symbolStyle(undefined),
   clip = true,
 }: {
   layout: RulesLayout;
   target: RulesTarget;
   colorHex: string;
-  font?: TextSlot["font"];
   zIndex?: number;
   rotation?: number;
   overrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts); "modern" when
+   *  the caller names none (the exported box's tests). */
+  symbols?: SymbolStyleSpec;
   clip?: boolean;
 }) {
   const d = rulesDraw(layout, target);
@@ -2308,7 +2342,7 @@ export function RulesBoxBake({
         paddingRight: d.pad.right,
         paddingBottom: d.pad.bottom,
         paddingLeft: d.pad.left,
-        fontFamily: fontFamilyFor(font),
+        fontFamily: BODY_FONT,
         fontSize: d.fontPx,
         color: colorHex,
         zIndex,
@@ -2357,7 +2391,7 @@ export function RulesBoxBake({
                   }}
                 >
                   {b.lines.map((runs, li) => (
-                    <RulesBoxLineBake key={li} runs={runs} indent={b.indents[li]} d={d} overrides={overrides} />
+                    <RulesBoxLineBake key={li} runs={runs} indent={b.indents[li]} d={d} overrides={overrides} symbols={symbols} />
                   ))}
                 </div>,
               ],
@@ -2376,11 +2410,14 @@ function RulesBoxLineBake({
   indent,
   d,
   overrides,
+  symbols,
 }: {
   runs: RulesItem[][];
   indent: number;
   d: RulesDraw;
   overrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
 }) {
   return (
     <div
@@ -2419,6 +2456,7 @@ function RulesBoxLineBake({
                   top={d.pipTopPx}
                   gapBefore={gapBefore}
                   overrides={overrides}
+                  symbols={symbols}
                 />
               );
             }
@@ -2457,6 +2495,7 @@ function LoyaltyRowsBake({
   target,
   cardWidth,
   pipOverrides,
+  symbols,
   foil = null,
 }: {
   slot: TextSlot;
@@ -2467,6 +2506,8 @@ function LoyaltyRowsBake({
   target: RulesTarget;
   cardWidth: number;
   pipOverrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
   /** Foil finish: each stripe gets its own sheen (FoilStripeSheen) — the
    *  translucent stripes sit above the full-card layer. */
   foil?: { cardHeight: number; landscape: boolean } | null;
@@ -2498,7 +2539,7 @@ function LoyaltyRowsBake({
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        fontFamily: fontFamilyFor(slot.font),
+        fontFamily: BODY_FONT,
         color: slot.colorHex,
         zIndex: 20,
         borderRadius: radius,
@@ -2567,7 +2608,7 @@ function LoyaltyRowsBake({
                 position: "relative",
                 display: "flex",
                 color: rows.badgeTextHex,
-                fontFamily: DISPLAY_FONT,
+                fontFamily: faceOf({ loyaltyRows: rows }, "badge").bakeFamily,
                 fontSize: a.badgeText,
                 fontWeight: 700,
                 ...(ab.cost
@@ -2596,7 +2637,7 @@ function LoyaltyRowsBake({
               paddingBottom: draw.text[i].insetBottom,
             }}
           >
-            <RulesLinesBake blocks={rowsLayout.text[i].blocks} metrics={draw.text[i].metrics} overrides={pipOverrides} />
+            <RulesLinesBake blocks={rowsLayout.text[i].blocks} metrics={draw.text[i].metrics} overrides={pipOverrides} symbols={symbols} />
           </div>
         </div>
       ))}
@@ -2813,7 +2854,7 @@ function StatBake({
       <span
         style={{
           position: "relative",
-          fontFamily: DISPLAY_FONT,
+          fontFamily: slotFace(slot).bakeFamily,
           color: ink.colorHex,
           fontWeight: slot.weight ?? 700,
           fontSize: size,
@@ -2856,14 +2897,17 @@ function FlipsideBake({
   cardWidth,
   target,
   overrides,
+  symbols,
 }: {
   slots: FlipsideSlots;
   other: Parameters<typeof flipsideStrip>[1];
   cardWidth: number;
   target: RulesTarget;
   overrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
 }) {
-  const strip = flipsideStrip(slots, other, target);
+  const strip = flipsideStrip(slots, other, target, symbols.id);
   if (!strip) return null;
   return (
     <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 22 }}>
@@ -2874,7 +2918,8 @@ function FlipsideBake({
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-start",
-            fontFamily: DISPLAY_FONT,
+            // The word's own face (as the preview's FlipsideOverlay reads it).
+            fontFamily: slotFace(slots.word).bakeFamily,
             fontSize: fpx(slots.word.sizePct, cardWidth),
             fontWeight: slots.word.weight ?? 700,
             color: slots.word.colorHex,
@@ -2884,12 +2929,22 @@ function FlipsideBake({
           {bakeText(strip.word)}
         </div>
       ) : null}
-      {strip.line ? FlipsideLineBake({ slot: slots.line, line: strip.line, overrides }) : null}
+      {strip.line ? FlipsideLineBake({ slot: slots.line, line: strip.line, overrides, symbols }) : null}
     </div>
   );
 }
 
-function FlipsideLineBake({ slot, line, overrides }: { slot: TextSlot; line: FlipsideLine; overrides?: PipOverrides | null }) {
+function FlipsideLineBake({
+  slot,
+  line,
+  overrides,
+  symbols,
+}: {
+  slot: TextSlot;
+  line: FlipsideLine;
+  overrides?: PipOverrides | null;
+  symbols: SymbolStyleSpec;
+}) {
   const m = line.metrics;
   return (
     <div
@@ -2919,7 +2974,7 @@ function FlipsideLineBake({ slot, line, overrides }: { slot: TextSlot; line: Fli
         >
           {run.map((item, i) =>
             item.t === "m" ? (
-              <RulesItemBake key={i} item={item} glyph={m.pipPx} top={m.pipTopPx} gapBefore={i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0} overrides={overrides} />
+              <RulesItemBake key={i} item={item} glyph={m.pipPx} top={m.pipTopPx} gapBefore={i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0} overrides={overrides} symbols={symbols} />
             ) : (
               <span key={i} style={{ display: "flex", flexShrink: 0, whiteSpace: "nowrap", lineHeight: m.linePx / m.fontPx, fontStyle: item.em ? "italic" : "normal" }}>
                 {rulesWordText(item.v)}
@@ -2964,16 +3019,19 @@ function ChapterBake({
   slot,
   rail,
   pipOverrides,
+  symbols,
 }: {
   slot: ChapterSlot;
   /** The rail at this bake's target (sagaRailDrawing). */
   rail: SagaRailDrawing;
   pipOverrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
 }) {
   return (
     <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
       {rail.intro && hasRulesLines(rail.intro)
-        ? RulesBoxBake({ layout: rail.intro, target: rail.target, colorHex: slot.textColorHex, font: "body", overrides: pipOverrides })
+        ? RulesBoxBake({ layout: rail.intro, target: rail.target, colorHex: slot.textColorHex, overrides: pipOverrides, symbols })
         : null}
       {rail.rows.map((row, i) =>
         hasRulesLines(row.text) ? (
@@ -2982,8 +3040,8 @@ function ChapterBake({
             layout={row.text}
             target={rail.target}
             colorHex={slot.textColorHex}
-            font="body"
             overrides={pipOverrides}
+            symbols={symbols}
           />
         ) : null,
       )}
@@ -3000,7 +3058,7 @@ function ChapterBake({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontFamily: BODY_FONT,
+              fontFamily: faceOf({ chapters: slot }, "numeral").bakeFamily,
               fontSize: badge.fontPx,
               lineHeight: 1,
               color: slot.badge.numeralColorHex,
@@ -3025,6 +3083,7 @@ function AdventureBake({
   back,
   cardWidth,
   pipOverrides,
+  symbols,
   rules,
   target,
 }: {
@@ -3032,6 +3091,8 @@ function AdventureBake({
   back: CardBackFace;
   cardWidth: number;
   pipOverrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
   /** The page's rules layout (lib/cards/rules-box.ts adventureRulesLayout). */
   rules: RulesLayout | null;
   target: RulesTarget;
@@ -3048,7 +3109,7 @@ function AdventureBake({
   // (AdventurePanel); the pips keep their size. A shrunk line is set at the
   // whole pixel below its fitted size. Otherwise the slots' sizes.
   const titleFit = fitTitleBand(
-    { title: slot.title, costSizePct: slot.costSizePct },
+    { title: slot.title, costSizePct: slot.costSizePct, symbolStyle: symbols.id },
     name,
     showCost ? back.cost : null,
   );
@@ -3083,6 +3144,7 @@ function AdventureBake({
             cost={back.cost}
             fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
             overrides={pipOverrides}
+            symbols={symbols}
           />
         ) : slot.title.fit === "measured" ? null : (
           // (A measured panel name with no cost has the whole band —
@@ -3102,8 +3164,8 @@ function AdventureBake({
             layout: rules,
             target,
             colorHex: slot.rules.colorHex,
-            font: slot.rules.font,
             overrides: pipOverrides,
+            symbols,
           })
         : null}
     </div>
@@ -3193,6 +3255,7 @@ function SecondFaceBake({
   cardWidth,
   aspect,
   pipOverrides,
+  symbols,
   rules,
   target,
   colorKey,
@@ -3203,6 +3266,8 @@ function SecondFaceBake({
   cardWidth: number;
   aspect: number;
   pipOverrides?: PipOverrides | null;
+  /** The frame's symbol style (lib/cards/symbol-style.ts). */
+  symbols: SymbolStyleSpec;
   /** The face's rules layout, in its own unturned frame
    *  (lib/cards/rules-box.ts secondFaceRulesLayout). */
   rules: RulesLayout | null;
@@ -3231,6 +3296,7 @@ function SecondFaceBake({
     typeLine,
     cost: showCost ? back.cost : null,
     orientation,
+    symbols: symbols.id,
   });
   // A `fitLines` face's shrunk name and type line are set at measuredLinePx
   // (the whole pixel below the fit, never below the floor's), as the front's
@@ -3247,7 +3313,7 @@ function SecondFaceBake({
   // twin.
   const measured = slot.rotation === 0 && slot.title.fit === "measured";
   const faceTitleFit = measured
-    ? fitTitleBand({ title: slot.title, costSizePct: slot.costSizePct }, name, showCost ? back.cost : null, orientation)
+    ? fitTitleBand({ title: slot.title, costSizePct: slot.costSizePct, symbolStyle: symbols.id }, name, showCost ? back.cost : null, orientation)
     : null;
   const faceTitleSlot =
     faceTitleFit && faceTitleFit.sizePct < slot.title.sizePct
@@ -3289,6 +3355,7 @@ function SecondFaceBake({
               cost={back.cost}
               fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
               overrides={pipOverrides}
+              symbols={symbols}
             />
           ) : null}
         </Band>
@@ -3308,7 +3375,7 @@ function SecondFaceBake({
           ...(slot.fitLines && showCost ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),
           transform: rot,
           transformOrigin: "50% 50%",
-          fontFamily: DISPLAY_FONT,
+          fontFamily: slotFace(slot.title).bakeFamily,
           fontSize: linePx(lineSizes.titleSizePct, slot.title.sizePct),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
@@ -3321,6 +3388,7 @@ function SecondFaceBake({
             cost={back.cost}
             fontSize={fpx(lineSizes.costSizePct, cardWidth)}
             overrides={pipOverrides}
+            symbols={symbols}
           />
         ) : (
           <span style={{ display: "flex" }} />
@@ -3348,7 +3416,7 @@ function SecondFaceBake({
           alignItems: "center",
           transform: rot,
           transformOrigin: "50% 50%",
-          fontFamily: DISPLAY_FONT,
+          fontFamily: slotFace(slot.type).bakeFamily,
           fontSize: linePx(lineSizes.typeSizePct, slot.type.sizePct),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
@@ -3366,9 +3434,9 @@ function SecondFaceBake({
             layout: rules,
             target,
             colorHex: slot.rules.colorHex,
-            font: slot.rules.font,
             rotation: slot.rotation,
             overrides: pipOverrides,
+            symbols,
           })
         : null}
       {/* The face's P/T plate (flip, layout v38): drawn at its own box
@@ -3420,7 +3488,7 @@ function SecondFaceBake({
                   justifyContent: "center",
                   transform: rot,
                   transformOrigin: "50% 50%",
-                  fontFamily: DISPLAY_FONT,
+                  fontFamily: slotFace(slot.pt).bakeFamily,
                   fontSize: size,
                   whiteSpace: "nowrap",
                   fontWeight: slot.pt.weight ?? 700,
@@ -3794,27 +3862,9 @@ export async function renderCardImage(
       squareCornerFills: !opts.printLayer && corners === "square" ? squareCornerFillsOf(source) : undefined,
       outputWidth: opts.printLayer?.outputWidth,
       onNodeDetected: opts.printLayer?.onNodeDetected,
-      // MPlantin is the real MTG body font (ships with mana-font); Mana +
-      // Keyrune supply the cost pips and set symbol. Satori has no auto-
-      // fallback once explicit fonts are provided, so all three are registered.
-      // A character none of these has goes to lib/render/fallback-assets.ts
-      // (bundled Noto Sans for extra Latin/Greek/Cyrillic, emoji stripped,
-      // other scripts drawn as missing glyphs) — never to the network.
-      fonts: [
-        { name: "MPlantin", data: MPLANTIN_FONT_BYTES, weight: 400, style: "normal" },
-        { name: "MPlantin", data: MPLANTIN_ITALIC_FONT_BYTES, weight: 400, style: "italic" },
-        { name: "CardDisplay", data: DISPLAY_FONT_BYTES, weight: 400, style: "normal" },
-        { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
-        // The collector line's face (TODO 4.9b) — after MPlantin and NEVER
-        // last. Its glyphs are all in MPlantin's cmap, so no other run
-        // resolves a character to it; and Satori draws a character NO font
-        // has (★, CJK, Thai…) with the LAST registered font — its .notdef
-        // box and advance, and the rest of a word that starts with one in
-        // that face — so the last font must stay Keyrune, as it was before
-        // this face (tests/unit/render/collector-font.test.ts).
-        { name: "CollectorLine", data: COLLECTOR_FONT_BYTES, weight: 500, style: "normal" },
-        { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
-      ],
+      // The render's fonts, in the ONE pinned order (lib/render/card-fonts.ts
+      // cardFonts: today's six for every profile; Keyrune last, always).
+      fonts: cardFonts(frameLayout),
     },
   );
 }
