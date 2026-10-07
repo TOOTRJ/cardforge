@@ -522,8 +522,14 @@ Rules and gotchas:
   subscribes — the browser client hands back the channel a topic already has,
   so a second `.on("postgres_changes")` throws once the first has subscribed
   (and binds twice, toasting twice, before that). Nothing in that effect may
-  throw (it reaches the root error boundary and replaces the page): a stream
-  that can't be set up or joined polls instead.
+  throw (it reaches the root error boundary and replaces the page). A stream
+  that is down — it can't be set up or joined, or the server closed it —
+  polls, and looks again after a pause (30 s doubling to 5 min): a freshly
+  read session token for the socket, and a fresh channel only if it holds
+  none (never a replacement for one the client is still retrying). The
+  server closes a channel whose token expired — any tab left in the
+  background past the token's lifetime — and the client never rejoins a
+  closed channel by itself.
 - AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
