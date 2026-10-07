@@ -973,9 +973,35 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            verification-neutral: masters and every slot move — but no
 //            tick exists on either template to stale (0 of 7 each), so the
 //            first ticks are the owner's after the deploy.
+//   44     — the 2003 frame's artist line in the prints' ink (TODO 4.23a;
+//            era design 2026-10-06, step E1): `modern` and `modernland`
+//            printed the footer in INK_DARK on every master — 1.1 : 1 on
+//            the black frame and 2.2–2.3 : 1 on the brown band all seven
+//            land keys share (only the brush painted into the MSE master
+//            showed). Eighth Edition → Journey into Nyx print it black on
+//            white, blue, red, green, gold and the artifact frame and WHITE
+//            on black and on lands (M12 #81, #224; Card Conjurer's
+//            pack8th.js). So: MODERN.footer.inkByColorKey = { b: white },
+//            MODERNLAND's = white on all seven keys (footerInk, both
+//            renderers; 16.2 : 1 and 8.1–8.5 : 1). No slot, size, master,
+//            plate or symbol moves (those are 4.10b). A CORRECTION
+//            ("sweep", FRAMES.md "Additions vs corrections"), never a
+//            badge. Template-scoped (TEMPLATE_SCOPED_VERSIONS[44] = modern,
+//            modernland) AND card-scoped (VERSION_SCOPES[44], v44Changed):
+//            every `modernland` card, and a `modern` card that paints the
+//            black master — every other `modern` card bakes byte for byte
+//            as before and is stamped without a re-bake. Public production
+//            (anonymous read, 2026-10-07): 7 `modern` cards on m ×4, c ×2,
+//            g ×1, none on b, none on `modernland` — the sweep re-bakes
+//            nothing. The visual matrix: only the `modern`/b and
+//            `modernland` cases change. VERIFICATION-NEUTRAL: the frame a
+//            tick verified is the same master with every slot where it
+//            was; the owner signs the ink off on the round-37 sheet
+//            instead of re-ticking the eight combos (4.10b re-opens all
+//            fourteen 2003 ticks once).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 43;
+export const CARD_LAYOUT_VERSION = 44;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1037,6 +1063,10 @@ export const SAGA_RAIL_TEMPLATES: readonly string[] = ["saga"];
  *  masters, art slots and every text slot). Frozen like v38's: v43 is
  *  history once it ships (4.21c's saga brings its own bump). */
 export const V43_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "split"];
+/** v44 — the 2003 pair whose artist line took the prints' white (4.23a).
+ *  Frozen like the lists above: v44 is history once it ships (4.10b's swap
+ *  of the same pair brings its own bump). */
+export const V44_FOOTER_INK_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -1110,6 +1140,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // their masters, art slots and text slots; every card on the two. No
   // narrower verification scope: neither has a tick.
   43: V43_LANDSCAPE_LAYOUT_TEMPLATES,
+  // v44: the 2003 footer ink (4.23a) — the pair; VERSION_SCOPES[44] narrows
+  // `modern` to the cards on the black master.
+  44: V44_FOOTER_INK_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1230,10 +1263,15 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * (legacy) stay fresh; the owner signed the walkers off on the sheet.
  * v37 is: it darkens the black of nyx's type bar and text box on the
  * masters (4.17e) and moves no slot — and nyx has no tick.
+ * v44 is (era design D9, TODO 4.23a): only the INK of the 2003 artist line
+ * changes, on `modern`/b and the seven `modernland` keys — no slot, size,
+ * master or plate moves, so no alignment score a tick stored would change.
+ * Production's fourteen 2003 ticks stay fresh; the owner signs the ink off
+ * on the round-37 sheet (black frame, land), and 4.10b re-opens them once.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1483,6 +1521,25 @@ function v35Changed(card: ScopeCard): boolean {
   return pickFrameColorKey(identities) === "c" && Boolean(card.art_url);
 }
 
+/**
+ * Whether layout v44 (the 2003 footer ink, TODO 4.23a) changed a card's
+ * bake: every `modernland` card (white on all seven keys), and a `modern`
+ * card that paints the BLACK master — the bake's own pick: `modern` has no
+ * pair, crowned or artifact-dressed master, so frameMasterKey is
+ * pickFrameColorKey of the identities the card keeps. Every other `modern`
+ * card (white, blue, red, green, gold, the artifact `c`) prints the same
+ * dark ink as before, byte for byte. Any column it needs that the row
+ * doesn't carry → affected.
+ */
+function v44Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  if (template === "modernland") return true;
+  if (template !== "modern") return false;
+  if (card.color_identity === undefined) return true;
+  return pickFrameColorKey((card.color_identity ?? []).filter(isColorIdentity)) === "b";
+}
+
 /** A mana token the rules tokenizer draws as a disc: braces around
  *  anything but whitespace (lib/cards/rules-text.ts tokenizeRulesText —
  *  every such token has a pip suffix; "{ }" draws nothing). A regex, not
@@ -1606,6 +1663,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v36 — the second correction round: every walker card, a listed
   // set's printed-size glyph, an inline pip — v36Changed.
   36: v36Changed,
+  // v44 — the 2003 footer ink: every `modernland` card and a `modern` card
+  // on the black master — v44Changed.
+  44: v44Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -1730,6 +1790,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
   [SAGA_RAIL_LAYOUT_VERSION]: "sweep", // the saga rebuilt from Card Conjurer (4.21c): the ribbon in the master, the printed rail — a correction after the owner's sheet, never a badge
   43: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
+  44: "sweep", // the 2003 artist line white on the black frame and on lands (4.23a) — a legibility correction against the prints on combos no stored card uses, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {
