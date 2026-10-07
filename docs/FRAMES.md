@@ -1300,9 +1300,16 @@ of them, DOM → MH3):
     needs at both bake targets, and the rows start 24 px under it (the
     fixed box's foot to the first divider) with the divider on their top
     edge. It may take the rail down to one badge a row; only past that does
-    it clip, from its tail (a 3,000-character reminder; skeptic pass
-    2026-10-06 — as built it clipped past ≈ 270 characters, mid-line, with
-    the rows half empty). Its emphasis is the text's own — a parenthesised
+    it clip, from its tail: a one-paragraph reminder past ≈ 900 characters
+    over one chapter, ≈ 810 over two, ≈ 730 over three, ≈ 450 over six
+    (fifteen lines). Inside the editor's 400 characters a one-paragraph
+    reminder reaches that only over SIX chapters, when its words are wide
+    enough for sixteen lines (about one random text in five; none of
+    20,000 over one to five chapters); line breaks cost a gap and a short
+    line each — five paragraphs clip over five or six chapters, not over
+    four (skeptic pass 2026-10-06 — as built it clipped past ≈ 270
+    characters, mid-line, with the rows half empty). Its emphasis is the
+    text's own — a parenthesised
     reminder italic, a keyword before it roman (DMU #85's "Read ahead (…)")
     — where v33 set the whole block italic.
   - *Where the rows start*: the first divider, 621 px (`rowsTopPct`; 619–621

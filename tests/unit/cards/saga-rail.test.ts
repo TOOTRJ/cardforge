@@ -264,7 +264,7 @@ describe("the reminder block", () => {
     expect(r.rows.map((row) => linesOf(row.text))).toEqual(rail(DOM_21).rows.map((row) => linesOf(row.text)));
   });
 
-  it("never clips a reminder the editor takes (400 characters), whatever the rows — it grows, the rows give way", () => {
+  it("draws a one-paragraph reminder of the editor's 400 characters in full over two, three and six chapters — it grows, the rows give way", () => {
     const six = chapters(["I", "II", "III", "IV", "V", "VI"].map((n) => [n, "Create a 2/2 white Knight creature token with vigilance."]));
     for (const rows of [parseChapters(DOM_21), parseChapters(LTC_58), six]) {
       for (let chars = 90; chars <= 400; chars += 10) {
@@ -286,6 +286,41 @@ describe("the reminder block", () => {
     // Four hundred characters over three short chapters: nothing clips.
     const full = sagaRail(SLOT, reminderOf(400), parseChapters(DOM_122));
     expect([full.introGrown, full.intro!.clipped, full.clipped]).toEqual([true, false, false]);
+  });
+
+  it("grows no further than the rows' badges allow: over six chapters fifteen lines, past which it clips from its tail", () => {
+    // Six rows keep a badge (132 px) and 2 px each — 804 px of the rail's
+    // 1522 — so the reminder's box ends at 929 px: fifteen lines at the
+    // floor (42 px on a 42 px pitch, the rows' 14 px above and below). This
+    // text fills them at about 450 characters (over ONE chapter it runs to
+    // about 900). Inside the editor's 400 a one-paragraph reminder reaches
+    // that only over six chapters, with words wide enough for sixteen
+    // lines; one with line breaks sooner (below).
+    const six = chapters(["I", "II", "III", "IV", "V", "VI"].map((n) => [n, "Draw a card."]));
+    const boxOf = (r: SagaRail) => rectPx(r.intro!.input.rect, "portrait", ASPECT, "hd");
+    const longerOf = (chars: number) => `${LONG_REMINDER.repeat(2).slice(0, chars - 1).trimEnd()})`;
+    expect([LONG_REMINDER.length, longerOf(460).length]).toEqual([422, 460]);
+    const fits = sagaRail(SLOT, longerOf(440), six);
+    expect([fits.introGrown, fits.intro!.clipped, fits.clipped]).toEqual([true, false, false]);
+    expect(linePositions(fits.intro!, "hd").lines).toHaveLength(15);
+    expect([boxOf(fits).top, boxOf(fits).bottom]).toEqual([237, 895]);
+    const over = sagaRail(SLOT, longerOf(460), six);
+    expect([over.introGrown, over.intro!.clipped]).toEqual([true, true]);
+    expect(linePositions(over.intro!, "hd").lines).toHaveLength(16);
+    expect([boxOf(over).top, boxOf(over).bottom]).toEqual([237, 929]);
+    expect(rectPx(over.rowsRect, "portrait", ASPECT, "hd").top).toBe(953);
+    for (const row of sagaRailDrawing(over, "hd").rows) expect(row.bottom - row.top).toBeGreaterThanOrEqual(134);
+    // The same 460 characters over one chapter: in full.
+    expect(sagaRail(SLOT, longerOf(460), chapters([["I", "Draw a card."]])).intro!.clipped).toBe(false);
+    // Paragraphs cost their gaps and their short last lines: 400 characters
+    // in five of them fit over four chapters, not over six — and never push
+    // a row under its badge.
+    const paragraphs = reminderOf(400).replace(/\. /g, ".\n");
+    expect(paragraphs.split("\n")).toHaveLength(5);
+    expect(sagaRail(SLOT, paragraphs, six.slice(0, 4)).intro!.clipped).toBe(false);
+    const tight = sagaRail(SLOT, paragraphs, six);
+    expect([tight.introGrown, tight.intro!.clipped]).toEqual([true, true]);
+    for (const row of sagaRailDrawing(tight, "hd").rows) expect(row.bottom - row.top).toBeGreaterThanOrEqual(134);
   });
 
   it("does not outgrow its box for a run wider than it — that clips at the box's side, as in every rules box", () => {
