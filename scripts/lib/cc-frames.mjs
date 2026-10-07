@@ -1238,7 +1238,7 @@ export function rotateCwRgba8(buf, width, height) {
 /**
  * Whole blocks of an 8-bit RGBA image moved along one axis through the FLAT
  * zones between them (TODO 4.21b: the split's two halves and the battle's
- * lower block, onto the prints — SPLIT_HALF_RECUT, BATTLE_LOWER_RECUT).
+ * two blocks, onto the prints — SPLIT_HALF_RECUT, BATTLE_BLOCK_RECUT).
  * `spec.axis` "x" moves columns, "y" rows. `spec.blocks` lists the blocks in
  * order: lines [from, to) of the source, landing `by` px further along
  * (negative = toward 0). Everything outside the blocks is a ZONE — before
@@ -1358,26 +1358,32 @@ export const SPLIT_HALF_RECUT = Object.freeze({
   why: "the pack's collector border is 160 px, the prints' 147–148: the left half moves 11 px left, the right half 3 px, onto MH2 #123 / #60 and TSR #161 / #186 (every edge within 3.6 px of the four prints' mean, 5.4 of any one; the pack's up to 14.3 / 16.4)",
 });
 /**
- * The battle's lower block, onto the prints (TODO 4.21b, measured
+ * The battle's two blocks, onto the prints (TODO 4.21b + 4.21d, measured
  * 2026-10-06 on nine MOM battles — #1, #21, #22, #63, #115, #147, #149,
- * #190, #230 — registered edge by edge): the prints set the type bar's top
- * 5.3–5.5 px lower than the pack, its bottom and the text box's top 4.6,
- * the box's bottom 2.5 (1.8–4.6), the shield's top 2.8 and its bottom 5.0,
- * while the top border and the name pill are where the pack has them (−0.3
- * / −2.5 … −0.8). Rows 842–1467 of the downscaled master (the type bar, the
- * text box, the shield and the arc's foot) move 4 px DOWN: those edges then
- * lie within 1.5 px of the nine prints' mean (2.3 px of any one). The rows
- * above (363–841: the art window between the arc's straight stretch and the
- * right border) and the bottom border's (1468–1499) are flat — the zones
- * the move runs through. (The prints' name pill, type bar and text box also
- * end 8–11 px further RIGHT and their shield sits 12 px right: no flat zone
- * crosses the bars, so that needs their paper stretched — not done here, an
- * owner decision.)
+ * #190, #230 — registered edge by edge).
+ *   • The LOWER block (4.21b): the prints set the type bar's top 5.3–5.5 px
+ *     lower than the pack, its bottom and the text box's top 4.6, the box's
+ *     bottom 2.5 (1.8–4.6), the shield's top 2.8 and its bottom 5.0. Rows
+ *     842–1467 of the downscaled master (the type bar, the text box, the
+ *     shield and the arc's foot) move 4 px DOWN: those edges then lie
+ *     within 1.5 px of the nine prints' mean (2.3 px of any one).
+ *   • The TOP block (4.21d): the prints set the name pill 2.5 px (its top)
+ *     and 1.4 px (its bottom) HIGHER than the pack, and the icon with it.
+ *     Rows 57–362 (the pill, the icon, the arc's upper curve) move 2 px UP:
+ *     the pill's top and bottom lie −0.5 / +0.6 px from the prints' mean.
+ *     The one edge the move takes off the prints is the top border's inner
+ *     edge (−0.7 → +1.3 px); 3 px up is worse (+2.3).
+ * The zones the moves run through are flat on all seven masters: rows 0–56
+ * (the top border: 57 → 55 rows), rows 363–841 (the art window between the
+ * arc's straight stretch and the right border: 479 → 485 rows) and rows
+ * 1468–1499 (the bottom border: 32 → 28 rows). What no flat zone reaches —
+ * the bars' right ends, the shield, the icon's rings — is BATTLE_RIGHT_RECUT
+ * and BATTLE_ICON_RECUT below.
  */
-export const BATTLE_LOWER_RECUT = Object.freeze({
+export const BATTLE_BLOCK_RECUT = Object.freeze({
   axis: "y",
-  blocks: Object.freeze([Object.freeze({ from: 0, to: 363, by: 0 }), Object.freeze({ from: 842, to: 1468, by: 4 })]),
-  why: "the pack's type bar, text box and shield sit 2.5–5.5 px above the nine MOM prints': rows 842–1467 move 4 px down (those edges within 1.5 px of the prints' mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
+  blocks: Object.freeze([Object.freeze({ from: 57, to: 363, by: -2 }), Object.freeze({ from: 842, to: 1468, by: 4 })]),
+  why: "the pack's name pill and icon sit 1.4–2.5 px below the nine MOM prints' and its type bar, text box and shield 2.5–5.5 px above them: rows 57–362 move 2 px up (the pill's top and bottom within 0.6 px of the prints' mean) and rows 842–1467 move 4 px down (those edges within 1.5 px of the mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
 });
 /**
  * The split pack's two half masks, named for the half each covers AFTER the
@@ -1468,17 +1474,21 @@ export function describeHalfMasks(masks, width) {
  * pixels (α ≥ 128) on the 2100×1500 MASTER, HD px — the shield the frame
  * paints across the text box's bottom-right corner, on every colour: the
  * pack's box 1881,1300 164×166, 4 px lower with the rest of the lower block
- * (BATTLE_LOWER_RECUT). The importer rasterises the mask at the master's
- * size, moves it as it moved the master, holds its box to this one
- * (paintedShieldFindings) and records it; nothing is cut or published — the
- * shield stays in the master. The BATTLE profile's `defense.paintedRect`
+ * (BATTLE_BLOCK_RECUT) and `dx` 12 px further RIGHT, over the right border,
+ * where nine MOM prints set theirs (TODO 4.21d: the black interior's
+ * centroid +11.7 px on the pack — BATTLE_RIGHT_RECUT lifts the shield
+ * through this mask and sets it there). The importer rasterises the mask at
+ * the master's size, moves it as it moved the master, holds its box to this
+ * one (paintedShieldFindings) and records it; the mask is never published —
+ * the shield stays in the master. The BATTLE profile's `defense.paintedRect`
  * (lib/cards/template-layout.ts BATTLE_SHIELD_RECT) is this box in card
  * percent, the rules text's keep-out on every battle; a unit test holds the
  * two together.
  */
 export const BATTLE_SHIELD = Object.freeze({
   mask: `${BATTLE}/maskDefense.png`,
-  box: Object.freeze({ x: 1881, y: 1304, width: 164, height: 166 }),
+  dx: 12,
+  box: Object.freeze({ x: 1893, y: 1304, width: 164, height: 166 }),
 });
 /** The box of a mask's solid pixels (α ≥ 128) on a `width × height` card,
  *  or null when it has none. */
@@ -1511,6 +1521,7 @@ export function boxMoveOf(shift, box) {
 /**
  * Every way a painted shield is not what the recipe records: the pack
  * mask's solid box, moved as `shift` moved the master's block it lies in,
+ * and then `spec.dx` px right (a shield the recipe sets aside, TODO 4.21d),
  * differs from `spec.box` (the box on the master) — or the box straddles a
  * block's edge — or (with a `master`) the master is see-through (α < 250)
  * somewhere under the mask's solid pixels: the shield is paint on every
@@ -1520,7 +1531,8 @@ export function boxMoveOf(shift, box) {
 export function paintedShieldFindings(spec, mask, width, height, master, shift) {
   const failures = [];
   const packBox = solidBoxOf(mask, width, height);
-  const move = packBox ? boxMoveOf(shift, packBox) : null;
+  const blockMove = packBox ? boxMoveOf(shift, packBox) : null;
+  const move = blockMove ? { dx: blockMove.dx + (spec.dx ?? 0), dy: blockMove.dy } : null;
   if (packBox && !move) failures.push(`the mask's solid box ${packBox.x},${packBox.y} ${packBox.width}×${packBox.height} is not inside one block of the shift`);
   const box = packBox && move ? { x: packBox.x + move.dx, y: packBox.y + move.dy, width: packBox.width, height: packBox.height } : null;
   const same = box && box.x === spec.box.x && box.y === spec.box.y && box.width === spec.box.width && box.height === spec.box.height;
@@ -1542,15 +1554,361 @@ export function paintedShieldFindings(spec, mask, width, height, master, shift) 
 export function describePaintedShield(spec) {
   return {
     mask: spec.mask,
+    ...(spec.dx ? { dx: spec.dx } : {}),
     box: { ...spec.box },
     published: false,
     use: "the shield is the master's own paint: the importer holds the pack's Defense mask to this box (HD px) and every master to solid paint under it; the profile draws the defense value inside it and keeps the rules text out of it",
   };
 }
+/**
+ * The battle's RIGHT SIDE, onto the prints (TODO 4.21d; owner round 33,
+ * 2026-10-06: re-cut before the first battle tick). After the block moves
+ * the pack still leaves nine MOM prints (#1, #21, #22, #63, #115, #147,
+ * #149, #190, #230; print − master, HD px, + = right) by: the name pill's
+ * right end +10.0, the type bar's +8.6, the text box's right edge +7.6 and
+ * the shield +11.7 (its black interior's centroid; the prints' shield lies
+ * OVER the right border, the pack's stops at it). No flat zone crosses the
+ * bars, so their paper is STRETCHED and the shield lifted and set aside —
+ * every row and column below is the MASTER's, after BATTLE_BLOCK_RECUT:
+ *   • `bands` — three column stretches (recutColumns): inside a band's rows
+ *     the columns [fromX, toX) land `by` px right and each row fades from
+ *     itself to itself `by` px back over the `blend` columns from `fromX` —
+ *     opened INSIDE each bar's own paper, where every line a row crosses is
+ *     horizontal, so only the mottled paper is blended. The clear window
+ *     columns [toX, clearTo) give up `by` columns (held to one colour a
+ *     row). The name pill +10 (its end then +0.1 px from the prints'
+ *     mean); the type bar and the text box with its arrow notch +8 (+0.7 /
+ *     −0.3; +9 puts the bar at −0.3 but the box at −1.3); the box's corner
+ *     under the shield the same +8, with the shield erased first.
+ *   • `erase` — the shield's footprint (the Defense mask's every covered
+ *     pixel, grown `grow` px) repainted with what is beside it
+ *     (eraseMaskFootprint): from `borderX` on the border's edge as on row
+ *     `refRow` (black from `sideToRow`); black from `bottomRow`; from
+ *     `boxEndX` and above `sideToRow` the box's rim and the clear window of
+ *     row `refRow`; above `tipToRow` each column continued from above (the
+ *     box's rim runs into the top tip); else the paper mirrored from the
+ *     left of the row. What shows of it once the shield is set back is a
+ *     4 px crescent along the shield's left-facing edges.
+ *   • the shield itself is BATTLE_SHIELD: lifted through its mask and drawn
+ *     `dx` 12 px right, source-OVER what is under it (setThroughMask) — a
+ *     plain replace would leave its anti-aliased edge see-through on top of
+ *     the opaque border. Its tips end at x 2056, short of the right edge's
+ *     42 px band.
+ * Result on the nine prints: pill end +0.1, type bar end +0.7, box edge
+ * −0.3, shield −0.3.
+ */
+export const BATTLE_RIGHT_RECUT = Object.freeze({
+  fromX: 1820,
+  blend: 24,
+  bands: Object.freeze([
+    Object.freeze({ name: "name pill", rows: Object.freeze([0, 600]), toX: 1998, by: 10, clearTo: 2012 }),
+    Object.freeze({ name: "type bar + text box", rows: Object.freeze([600, 1300]), toX: 2010, by: 8, clearTo: 2036 }),
+    Object.freeze({ name: "text box under the shield", rows: Object.freeze([1300, 1472]), toX: 2030, by: 8 }),
+  ]),
+  erase: Object.freeze({ grow: 1, borderX: 2037, boxEndX: 1986, refRow: 1295, tipToRow: 1326, sideToRow: 1425, bottomRow: 1448 }),
+  why: "nine MOM prints end the name pill 10.0 px, the type bar 8.6 px and the text box 7.6 px further right than the pack and set the shield 11.7 px right, over the border: the pill's paper is stretched 10 px, the type bar's and the text box's 8 px (a 24-column cross-fade inside each bar's own paper) and the shield, lifted through the pack's Defense mask, is set 12 px right — those edges within 0.7 px of the prints' mean",
+});
+/**
+ * The battle ICON's three flat rings, redrawn (TODO 4.21d): the pack's dark
+ * disc is 5 % large (r 54.9 px against the prints' 52.0) and sits
+ * concentric in its rim, where nine MOM prints set it 1.4 px above the
+ * rim's centre (8 px of rim above the disc, 11 below). Inside `repaint` px
+ * of the rim's centre (`rim`, pixel-INDEX coordinates on the master, the
+ * top block's 2 px up included) every pixel is repainted by its distance
+ * from `centre`: black to `disc`, white to `white`, black to `ring`, then
+ * the rim's own colour — sampled per angle `rimSample` px from the rim's
+ * centre, where every key's rim is flat — with 1 px linear edges. The
+ * pack's triangle is kept: its pixels inside `triangle.radius` of the rim's
+ * centre, `triangle.dx` px along x. A REDRAW of flat geometry at the
+ * prints' half-level radii (52.0 / 58.4 / 62.4 on six prints, five
+ * directions), not the pack's pixels — provenance says so. What it leaves:
+ * the rim's outer radius (72.0 against 72.2) and the triangle (58 × 49 px
+ * against 57 × 48.5) already agree.
+ */
+export const BATTLE_ICON_RECUT = Object.freeze({
+  rim: Object.freeze({ x: 290.5, y: 129.5 }),
+  centre: Object.freeze({ x: 289.1, y: 128.1 }),
+  disc: 52.0,
+  white: 58.5,
+  ring: 62.3,
+  repaint: 65,
+  rimSample: 67,
+  triangle: Object.freeze({ radius: 40, dx: -1 }),
+  why: "the pack's icon disc is r 54.6 px and concentric in its rim; nine MOM prints draw it r 52.0, 1.4 px above the rim's centre: the three rings are redrawn as flat anti-aliased circles at the prints' radii (52.0 / 58.5 / 62.3) about the prints' centre, the rim's colour continued inward, the pack's triangle kept 1 px left",
+});
+/** What the battle recipe re-cuts after its block moves (`printRecut`). */
+export const BATTLE_PRINT_RECUT = Object.freeze({ right: BATTLE_RIGHT_RECUT, icon: BATTLE_ICON_RECUT });
+/**
+ * Stretch a band of an 8-bit RGBA image to the RIGHT (recutBand's seam
+ * turned a quarter turn; BATTLE_RIGHT_RECUT): inside rows [rows[0],
+ * rows[1]) the columns [fromX, toX) land `by` px further right, and over
+ * the `blend` columns from `fromX` each row fades — premultiplied — from
+ * itself to itself `by` px back: out[x] = (1 − t)·row[x] + t·row[x − by],
+ * t = (x − fromX + 1) / (blend + 1); from fromX + blend on it is
+ * row[x − by]. So `by` columns are gained across the fade, none is copied
+ * twice at full weight, and the columns [toX, toX + by) are covered. With
+ * `clearTo`, every row must be ONE colour over the columns [toX, clearTo)
+ * (clearTo ≥ toX + by: the zone that gives up the columns is flat, so
+ * nothing but that colour is lost) — it throws otherwise. Rows outside the
+ * band keep every byte. Returns a new buffer.
+ * @param {Buffer} buf
+ * @param {number} width
+ * @param {number} height
+ * @param {{ rows: readonly number[], fromX: number, toX: number, by: number, blend: number, clearTo?: number, name?: string }} band
+ */
+export function recutColumns(buf, width, height, { rows, fromX, toX, by, blend, clearTo }) {
+  if (buf.length !== width * height * 4) throw new Error(`recutColumns: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const [r0, r1] = rows ?? [];
+  const ok =
+    [r0, r1, fromX, toX, by, blend].every(Number.isInteger) &&
+    r0 >= 0 &&
+    r1 > r0 &&
+    r1 <= height &&
+    by > 0 &&
+    blend >= 0 &&
+    fromX - by >= 0 &&
+    fromX + blend <= toX &&
+    toX + by <= width &&
+    (clearTo == null || (Number.isInteger(clearTo) && clearTo >= toX + by && clearTo <= width));
+  if (!ok) throw new Error(`recutColumns: bad band ${JSON.stringify({ rows, fromX, toX, by, blend, clearTo, width, height })}`);
+  if (clearTo != null) {
+    for (let y = r0; y < r1; y += 1) {
+      const first = (y * width + toX) * 4;
+      for (let x = toX + 1; x < clearTo; x += 1) {
+        const i = (y * width + x) * 4;
+        if (buf[i] !== buf[first] || buf[i + 1] !== buf[first + 1] || buf[i + 2] !== buf[first + 2] || buf[i + 3] !== buf[first + 3]) {
+          throw new Error(`recutColumns: row ${y} is not one colour over columns ${toX}–${clearTo - 1} (column ${x} differs): the band would cover it`);
+        }
+      }
+    }
+  }
+  const out = Buffer.from(buf);
+  for (let y = r0; y < r1; y += 1) {
+    const row = y * width * 4;
+    buf.copy(out, row + (fromX + by) * 4, row + fromX * 4, row + toX * 4);
+    for (let x = fromX; x < fromX + blend; x += 1) {
+      const t = (x - fromX + 1) / (blend + 1);
+      const ia = row + x * 4;
+      const ib = row + (x - by) * 4;
+      const aa = (buf[ia + 3] / 255) * (1 - t);
+      const ab = (buf[ib + 3] / 255) * t;
+      const alpha = aa + ab;
+      const clear = Math.round(alpha * 255) === 0;
+      for (let c = 0; c < 3; c += 1) out[ia + c] = clear ? 0 : Math.round((buf[ia + c] * aa + buf[ib + c] * ab) / alpha);
+      out[ia + 3] = Math.round(alpha * 255);
+    }
+  }
+  return out;
+}
+/**
+ * Repaint a mask's footprint with what is beside it (BATTLE_RIGHT_RECUT
+ * `erase`: the battle's shield, before the text box under it is stretched
+ * and the shield set back 12 px right). `cover` is the mask's coverage on
+ * the image (one byte a pixel); the footprint is every pixel it covers at
+ * all, grown `grow` px (4-neighbours). Each footprint pixel takes, by the
+ * first rule that holds (every source pixel is the INPUT's, outside the
+ * footprint):
+ *   x ≥ borderX                → row refRow's pixel of that column above
+ *                                sideToRow (the border's inner edge), black
+ *                                (0, 0, 0, 255) from it on;
+ *   y ≥ bottomRow              → black (the bottom border);
+ *   x ≥ boxEndX, y < sideToRow → row refRow's pixel of that column (the
+ *                                box's rim and the clear window);
+ *   y < tipToRow               → its column mirrored about the footprint's
+ *                                top in that column (lines continued down);
+ *   else                       → its row mirrored about the footprint's
+ *                                left end in that row (the paper).
+ * Returns a new buffer.
+ */
+export function eraseMaskFootprint(buf, width, height, cover, { grow, borderX, boxEndX, refRow, tipToRow, sideToRow, bottomRow }) {
+  if (buf.length !== width * height * 4 || cover.length !== width * height) throw new Error(`eraseMaskFootprint: the image or the cover is not ${width}×${height}`);
+  let foot = new Uint8Array(width * height);
+  for (let i = 0; i < cover.length; i += 1) foot[i] = cover[i] > 0 ? 1 : 0;
+  for (let n = 0; n < grow; n += 1) {
+    const grown = Uint8Array.from(foot);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (!foot[y * width + x]) continue;
+        if (y > 0) grown[(y - 1) * width + x] = 1;
+        if (y < height - 1) grown[(y + 1) * width + x] = 1;
+        if (x > 0) grown[y * width + x - 1] = 1;
+        if (x < width - 1) grown[y * width + x + 1] = 1;
+      }
+    }
+    foot = grown;
+  }
+  const colTop = new Int32Array(width).fill(-1);
+  for (let x = 0; x < width; x += 1) {
+    for (let y = 0; y < height; y += 1) {
+      if (foot[y * width + x]) {
+        colTop[x] = y;
+        break;
+      }
+    }
+  }
+  const out = Buffer.from(buf);
+  const BLACK = [0, 0, 0, 255];
+  for (let y = 0; y < height; y += 1) {
+    let left = -1;
+    for (let x = 0; x < width; x += 1) {
+      if (!foot[y * width + x]) continue;
+      if (left < 0) left = x;
+      const o = (y * width + x) * 4;
+      let from = -1;
+      if (x >= borderX) from = y < sideToRow ? refRow * width + x : -1;
+      else if (y >= bottomRow) from = -1;
+      else if (x >= boxEndX && y < sideToRow) from = refRow * width + x;
+      else if (y < tipToRow) from = Math.max(0, colTop[x] - 1 - (y - colTop[x])) * width + x;
+      else from = y * width + Math.max(0, left - 1 - (x - left));
+      if (from < 0) out.set(BLACK, o);
+      else buf.copy(out, o, from * 4, from * 4 + 4);
+    }
+  }
+  return out;
+}
+/**
+ * Draw `src` through a mask, `dx` px to the right, source-OVER `dst`
+ * (BATTLE_SHIELD's `dx`): a pixel of `src` at (x − dx, y) covers (x, y) by
+ * its own alpha times the mask's coverage there (`cover`, one byte a
+ * pixel, at `src`'s place), premultiplied — so an edge pixel that was
+ * anti-aliased against a clear window stays an edge pixel over whatever is
+ * under it, and an opaque pixel under it stays opaque. Returns a new
+ * buffer.
+ */
+export function setThroughMask(dst, src, cover, width, height, dx) {
+  if (dst.length !== width * height * 4 || src.length !== dst.length || cover.length !== width * height) throw new Error(`setThroughMask: an input is not ${width}×${height}`);
+  if (!Number.isInteger(dx) || dx < 0 || dx >= width) throw new Error(`setThroughMask: dx ${dx}`);
+  const out = Buffer.from(dst);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = dx; x < width; x += 1) {
+      const m = cover[y * width + x - dx];
+      if (!m) continue;
+      const s = (y * width + x - dx) * 4;
+      const o = (y * width + x) * 4;
+      const sa = (src[s + 3] / 255) * (m / 255);
+      if (sa === 0) continue;
+      const da = (dst[o + 3] / 255) * (1 - sa);
+      const alpha = sa + da;
+      // A trace of cover over a clear pixel that rounds to nothing leaves
+      // the pixel as it is (no colour under α 0).
+      if (Math.round(alpha * 255) === 0) continue;
+      for (let c = 0; c < 3; c += 1) out[o + c] = Math.round((src[s + c] * sa + dst[o + c] * da) / alpha);
+      out[o + 3] = Math.round(alpha * 255);
+    }
+  }
+  return out;
+}
+/**
+ * Redraw the battle icon's rings (BATTLE_ICON_RECUT): every pixel within
+ * `repaint` px of `rim` (the rim's centre; pixel-index coordinates — a
+ * pixel's centre is its index) becomes, by its distance d from `centre`,
+ * black for d ≤ disc, white to `white`, black to `ring` and beyond it the
+ * rim's own colour (the input's pixel `rimSample` px from `rim` at the
+ * pixel's angle), each boundary a 1 px linear edge (coverage r + 0.5 − d,
+ * clamped to 0–1); inside `triangle.radius` of `rim` the input's own pixel
+ * `triangle.dx` px back along x is kept instead (the pack's triangle,
+ * moved). Everything is opaque. Returns a new buffer.
+ */
+export function redrawBattleIcon(buf, width, height, { rim, centre, disc, white, ring, repaint, rimSample, triangle }) {
+  if (buf.length !== width * height * 4) throw new Error(`redrawBattleIcon: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const reach = Math.max(repaint, rimSample) + Math.abs(triangle.dx) + 1;
+  if (!(disc < white && white < ring && ring < repaint && repaint < rimSample) || rim.x - reach < 0 || rim.y - reach < 0 || rim.x + reach >= width || rim.y + reach >= height) {
+    throw new Error(`redrawBattleIcon: bad icon ${JSON.stringify({ rim, centre, disc, white, ring, repaint, rimSample, triangle })}`);
+  }
+  const out = Buffer.from(buf);
+  const cov = (r, d) => Math.min(1, Math.max(0, r + 0.5 - d));
+  for (let y = Math.floor(rim.y - repaint); y <= Math.ceil(rim.y + repaint); y += 1) {
+    for (let x = Math.floor(rim.x - repaint); x <= Math.ceil(rim.x + repaint); x += 1) {
+      if (Math.hypot(x - rim.x, y - rim.y) > repaint) continue;
+      const o = (y * width + x) * 4;
+      if (Math.hypot(x - triangle.dx - rim.x, y - rim.y) <= triangle.radius) {
+        buf.copy(out, o, (y * width + x - triangle.dx) * 4, (y * width + x - triangle.dx) * 4 + 4);
+        continue;
+      }
+      const angle = Math.atan2(y - rim.y, x - rim.x);
+      const sample = (Math.round(rim.y + rimSample * Math.sin(angle)) * width + Math.round(rim.x + rimSample * Math.cos(angle))) * 4;
+      const d = Math.hypot(x - centre.x, y - centre.y);
+      const [cDisc, cWhite, cRing] = [cov(disc, d), cov(white, d), cov(ring, d)];
+      // rim·(1 − ring) + black·(ring − white) + white·(white − disc) + black·disc
+      for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(buf[sample + c] * (1 - cRing) + 255 * (cWhite - cDisc));
+      out[o + 3] = Math.round(buf[sample + 3] * (1 - cRing) + 255 * cRing);
+    }
+  }
+  return out;
+}
+/**
+ * The battle master re-cut onto the prints (TODO 4.21d), after the block
+ * moves and before the corner is cut: the shield's footprint erased, the
+ * three bands stretched, the shield set `shield.dx` px right and the icon's
+ * rings redrawn — in that order. `mask` is the pack's Defense mask (RGBA)
+ * at the master's size, UNMOVED: it rides `shift` as the master's lower
+ * block did. `spec` = { shift, shield (BATTLE_SHIELD), right
+ * (BATTLE_RIGHT_RECUT), icon (BATTLE_ICON_RECUT) }. With no bands, no
+ * shield `dx` and no icon it returns the input's bytes. Returns a new
+ * buffer.
+ * @param {Buffer} master
+ * @param {Buffer} mask
+ * @param {number} width
+ * @param {number} height
+ * @param {{ shift: any, shield: any, right?: any, icon?: any }} spec
+ */
+export function recutBattleOntoPrints(master, mask, width, height, { shift, shield, right, icon }) {
+  if (master.length !== width * height * 4 || mask.length !== master.length) throw new Error(`recutBattleOntoPrints: the master or the mask is not ${width}×${height} RGBA`);
+  let out = Buffer.from(master);
+  if (right) {
+    const packBox = solidBoxOf(mask, width, height);
+    const move = packBox ? boxMoveOf(shift, packBox) : null;
+    if (!move) throw new Error("recutBattleOntoPrints: the Defense mask is empty or not inside one block of the shift");
+    // The mask's coverage where the master's shield is.
+    const cover = new Uint8Array(width * height);
+    for (let y = 0; y < height; y += 1) {
+      const ty = y + move.dy;
+      if (ty < 0 || ty >= height) continue;
+      for (let x = 0; x < width; x += 1) {
+        const tx = x + move.dx;
+        if (tx >= 0 && tx < width) cover[ty * width + tx] = mask[(y * width + x) * 4 + 3];
+      }
+    }
+    out = eraseMaskFootprint(out, width, height, cover, right.erase);
+    for (const band of right.bands) out = recutColumns(out, width, height, { fromX: right.fromX, blend: right.blend, ...band });
+    out = setThroughMask(out, master, cover, width, height, shield.dx);
+  }
+  if (icon) out = redrawBattleIcon(out, width, height, icon);
+  return out;
+}
+/** How provenance records the battle's re-cut (TODO 4.21d). */
+export function describeBattleRecut({ shield, right, icon }) {
+  return {
+    order: "after the block moves, before the corner cut: the shield's footprint erased, the bands stretched, the shield set right, the icon's rings redrawn",
+    columns: {
+      fromX: right.fromX,
+      blend: right.blend,
+      bands: right.bands.map((b) => ({ name: b.name, rows: [...b.rows], toX: b.toX, by: b.by, ...(b.clearTo == null ? {} : { clearTo: b.clearTo }) })),
+      how: "inside a band's rows the columns [fromX, toX) land `by` px right; over the `blend` columns from fromX each row is a premultiplied cross-fade of itself with itself `by` px back (the bar's own paper, where every line a row crosses is horizontal); the columns [toX, clearTo) are one colour a row (checked) and give up `by` columns",
+      why: right.why,
+    },
+    shield: {
+      mask: shield.mask,
+      dx: shield.dx,
+      erase: { ...right.erase },
+      how: "the shield's footprint (the mask's every covered pixel, grown 1 px) is repainted with the paper, rim, window and border beside it, the text box under it is stretched, then the pack's own shield pixels — lifted through the mask — are drawn `dx` px right, source-over (premultiplied; the shield's alpha times the mask's coverage)",
+    },
+    icon: {
+      rim: { ...icon.rim },
+      centre: { ...icon.centre },
+      radii: { disc: icon.disc, white: icon.white, ring: icon.ring },
+      repaint: icon.repaint,
+      rimSample: icon.rimSample,
+      triangle: { ...icon.triangle },
+      how: "a REDRAW of flat geometry, not the pack's pixels: inside `repaint` px of the rim's centre the three rings are flat anti-aliased circles about `centre` (black, white, black; 1 px linear edges), the rim's own colour — sampled per angle `rimSample` px out — continued inward; the pack's triangle is kept, its pixels `triangle.dx` px along x",
+      why: icon.why,
+    },
+  };
+}
 const SPLIT_TRANSFORM =
   "native 1500x2100 (the pack draws the card portrait, its text at −90°), turned a quarter turn CLOCKWISE to 2100x1500 — a pixel permutation, no resample: source (x, y) → (2099 − y, x); then the two halves moved onto the prints through the flat black border and spine (shift: the left half 11 px left, the right half 3 px — whole blocks, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
 const BATTLE_TRANSFORM =
-  "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then the lower block (type bar, text box, shield) moved 4 px down onto the prints through the flat rows above and below it (shift: whole rows, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
+  "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then two blocks moved onto the prints through the flat rows between them (shift: the name pill and icon 2 px up, the type bar, text box and shield 4 px down — whole rows, byte for byte); then the right side re-cut onto the prints (printRecut: the name pill's paper stretched 10 px right, the type bar's and text box's 8 px, the shield lifted through the pack's Defense mask and set 12 px right over the border, the icon's three rings redrawn at the prints' radii); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
 
 // ---------------------------------------------------------------------------
 // The saga (TODO 4.21c = 3.7; design 2026-09-29 §3.4, owner decisions
@@ -2193,12 +2551,16 @@ const DFC_PAIR_NOTE =
  * pack draws the card portrait), "downscale" resizes the pack's landscape
  * canvas once. `shift` then moves whole blocks of the 2100×1500 master
  * through the flat zones between them, onto the prints (shiftBlocksRgba8:
- * SPLIT_HALF_RECUT, BATTLE_LOWER_RECUT) — before the corner is cut.
+ * SPLIT_HALF_RECUT, BATTLE_BLOCK_RECUT) — before the corner is cut.
  * `halfMasks` (split) names the pack's two half masks for the
  * half each covers after the turn and the seam between them: importer
  * inputs the importer checks and records, never published. `paintedShield`
  * (battle) names the pack's Defense mask and the box of the shield the
- * master paints: checked and recorded, never cut (BATTLE_SHIELD).
+ * master paints: checked and recorded, never published (BATTLE_SHIELD).
+ * `printRecut` (battle, TODO 4.21d) re-cuts what no block move reaches,
+ * after the shift and before the corner: the bars' right ends stretched,
+ * the shield set right through its mask, the icon's rings redrawn
+ * (recutBattleOntoPrints: BATTLE_RIGHT_RECUT, BATTLE_ICON_RECUT).
  * `pieces` (4.21c's saga: its chapter badge and row divider) are a pack's
  * own bitmaps written at native size to <template>/<name>.png; `maskInputs`
  * are pack masks RECORDED for a later recipe (the two-colour saga's pair
@@ -2615,14 +2977,19 @@ export const CC_TEMPLATES = {
     orientation: "landscape",
     transform: "downscale",
     colors: perColor((k) => [layer(`${BATTLE}/${k}.png`)]),
-    shift: BATTLE_LOWER_RECUT,
+    shift: BATTLE_BLOCK_RECUT,
     paintedShield: BATTLE_SHIELD,
+    printRecut: BATTLE_PRINT_RECUT,
     pack: "packBattle.js 'Battle'",
     transforms: BATTLE_TRANSFORM,
     notes: [
       "source: CC 'Battle' (packBattle.js), 2814×2010: the black border with the siege arc, the battle icon in the name bar's left end, the name pill, the type bar, the text box and the defense shield — replaces the MSE 'm15 mainframe battles' master, which had no border, arc, icon or shield (a transparent ring: the art window was the whole card, and the defense sat on a drawn disc)",
-      "the lower block is moved onto the prints (BATTLE_LOWER_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them, so rows 842–1467 of the downscaled master move 4 px down through the flat rows above (the art window) and below (the bottom border) — byte for byte, to within 1.5 px of the prints' mean; the prints' name pill, type bar and text box also end 8–11 px further right and their shield sits 12 px right, which no flat zone can give (the bars' paper would have to stretch): left as the pack has it",
-      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "two blocks are moved onto the prints (BATTLE_BLOCK_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them and the name pill 1.4–2.5 px higher, so rows 842–1467 of the downscaled master move 4 px down and rows 57–362 (the pill, the icon, the arc's upper curve) 2 px up, through the flat rows of the top border, the art window and the bottom border — byte for byte, to within 1.5 px of the prints' mean (the top border's inner edge goes from −0.7 to +1.3 px)",
+      "the right side is re-cut onto the prints (BATTLE_RIGHT_RECUT, TODO 4.21d; owner round 33, 2026-10-06): the prints end the name pill 10.0 px, the type bar 8.6 px and the text box 7.6 px further right than the pack, which no flat zone can give — each bar's paper is stretched instead (a 24-column premultiplied cross-fade of each row with itself, opened inside the bar's own mottled paper from column 1820: the pill +10 px, the type bar and the text box +8 px), the clear window columns after each bar giving up as many; those ends then lie +0.1 / +0.7 / −0.3 px from the nine prints' mean",
+      "the defense shield is the pack's own pixels, lifted through the pack's Defense mask and set 12 px right, over the right border, where the prints print theirs (the pack's stops at the border; +11.7 px by the black interior's centroid, −0.3 after): its old footprint is repainted with the paper, the box's rim, the window and the border beside it (a 4 px crescent of that fill shows along its left-facing edges) and the shield is drawn source-over, so the border under its anti-aliased edge stays opaque",
+      "the battle icon's rings are REDRAWN, not the pack's pixels (BATTLE_ICON_RECUT): the pack's dark disc is r 54.6 px, concentric in its rim; the prints' is r 52.0, 1.4 px above the rim's centre — inside r 65 of the rim's centre the black disc (r 52.0), the white ring (to 58.5) and the black ring (to 62.3) are flat anti-aliased circles about the prints' centre, the rim's own colour continued inward, the pack's triangle kept 1 px left; the rim's outer edge and everything outside it are the pack's",
+      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block and set 12 px right): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "left as the pack has it: the bottom border's edge (−3.1 px: the prints' box rim is 2 px thinner), the siege arc down the left, and the name pill's left end (a plain concave arc on the pack, a bracket on the prints)",
       "colourless = CC's see-through 'Colorless Frame' (battle/c.png), as MOM #1 Invasion of Ravnica prints: its name pill, type bar and text box are translucent down to the bottom border, so the BATTLE profile draws the art under the frame for 'c' in a LANDSCAPE under-frame rect that runs to the bottom border (underFrameArt; owner decision 2026-09-29) — the art-window check fails the import without it",
       "the pack's Pinline / Title / Type / Rules / Defense / Border masks and its 'Holo Stamp' are not used and not published; its 'Artifact Frame' and 'Land Frame' are not built (no artifact or land battle was printed)",
       "the grey reverse-P/T line the pack draws for the back face (its 'Reverse PT' text) and a legendary back face's crown are double-faced anatomy (TODO 5.5): not drawn",

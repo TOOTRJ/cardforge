@@ -125,10 +125,12 @@ import {
   describeBlockShift,
   describeHalfMasks,
   describeLayer,
+  describeBattleRecut,
   describePaintedShield,
   halfMaskFindings,
   outputSizeOf,
   paintedShieldFindings,
+  recutBattleOntoPrints,
   rotateCwRgba8,
   seamInsideSpine,
   shiftBlocksRgba8,
@@ -371,6 +373,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     // them (TODO 4.21b: split's halves, battle's lower block) — it throws
     // when a zone isn't flat, so every moved pixel is the pack's.
     if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
+    // What no block move reaches, re-cut onto the prints (TODO 4.21d: the
+    // battle's right side and icon) — the bars' paper stretched, the shield
+    // set right through the pack's Defense mask, the icon's rings redrawn.
+    if (def.printRecut) {
+      if (!def.paintedShield || !def.shift) throw new Error(`${template}: a print re-cut needs the recipe's shift and painted shield`);
+      const mask = await rgba(await fetchCached(def.paintedShield.mask), outW, outH);
+      master = recutBattleOntoPrints(master, mask, outW, outH, { shift: def.shift, shield: def.paintedShield, ...def.printRecut });
+    }
     // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
     // orientation (CORNER_RADIUS).
     roundCornersRgba8(master, outW, outH, CORNER_RADIUS);
@@ -494,6 +504,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     output: `${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
     ...(landscape ? { orientation: "landscape", transform: def.transform } : {}),
     ...(def.shift ? { shift: describeBlockShift(def.shift, outW, outH) } : {}),
+    ...(def.printRecut ? { printRecut: describeBattleRecut({ shield: def.paintedShield, ...def.printRecut }) } : {}),
     ...(def.transforms ? { transforms: def.transforms } : {}),
     colors: recipe,
     ...(def.halfMasks ? { halfMasks: describeHalfMasks(def.halfMasks, outW) } : {}),

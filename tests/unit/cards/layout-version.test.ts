@@ -1986,8 +1986,10 @@ describe("v43 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21
     // What moved, in HD px of the 2100 × 1500 card. The battle's name starts
     // right of its icon (the MSE rect began 269 px in, under it — TODO 3.28)…
     const battle = getFrameProfile("battle");
-    expect(battle.title.rect.leftPct * 21).toBeCloseTo(392, 9);
-    expect(battle.artSlot).toEqual({ topPct: 3.88, leftPct: 7.85, widthPct: 89.4, heightPct: 91.91 });
+    expect(battle.title.rect.leftPct * 21).toBeCloseTo(388, 9); // v43's 392, 4 px left onto the prints with the re-cut (TODO 4.21d)
+    // (Its top rides the top block 2 px up since TODO 4.21d; the rest is v43's.)
+    expect(battle.artSlot).toMatchObject({ leftPct: 7.85, widthPct: 89.4 });
+    expect(battle.artSlot.topPct + battle.artSlot.heightPct).toBeCloseTo(3.88 + 91.91, 9);
     // …its defense is the value alone in the shield the master paints…
     expect(battle.defense?.paintedRect).toBeDefined();
     expect(battle.defense).not.toHaveProperty("badgeColorHex");
@@ -2109,5 +2111,94 @@ describe("v44 — the 2003 frame's artist line in the prints' ink (TODO 4.23a)",
     expect(land.footer!.sizePct).toBe(modern.footer!.sizePct);
     expect(Object.keys(modern.footer!.inkByColorKey ?? {})).toEqual(["b"]);
     expect(Object.keys(land.footer!.inkByColorKey ?? {}).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
+  });
+});
+
+// The battle's re-cut is addressed by its constant, never by its number: it
+// was built as 44 beside another bump (the 2003 footer ink, which merged
+// first) and took the next number, 45, by changing its constant
+// (lib/cards/layout-version.ts BATTLE_RECUT_LAYOUT_VERSION).
+describe("the battle re-cut onto the prints (TODO 4.21d) — its bump", () => {
+  const png = "https://x/y.png";
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+
+  it("is ONE version in one constant: a sweep, never a badge, scoped to `battle` alone — every other card stamps", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const V = lv.BATTLE_RECUT_LAYOUT_VERSION;
+    expect(Number.isInteger(V)).toBe(true);
+    expect(V).toBeGreaterThan(43);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.BATTLE_RECUT_TEMPLATES]).toEqual(["battle"]);
+    // Nothing but the template list scopes it: a battle with no art, no
+    // text or no defense re-bakes too (its master changes).
+    expect(lv.VERSION_SCOPES[V]).toBeUndefined();
+    for (const t of ALL) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "battle");
+
+    /** A bake stamped just before the bump: only it can be pending. */
+    const at = (template: string, over: Record<string, unknown> = {}) => ({
+      ...UNTOUCHED_SINCE_V22,
+      layout_version: V - 1,
+      rendered_image_url: png,
+      frame_style: { template, finish: "regular" },
+      ...over,
+    });
+    const classifyForSweep = await sweepAt(V);
+    for (const t of ALL) {
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(t === "battle" ? "rebake" : "stamp");
+      expect(lv.hasPendingCorrection(row, { current: V }), t).toBe(t === "battle");
+      // Never a badge: no owner is asked to accept a correction.
+      expect(lv.hasNewerLook({ ...row, visibility: "public" }, { current: V }), t).toBe(false);
+    }
+    for (const over of [
+      { art_url: null },
+      { card_type: "battle", defense: "5" },
+      { card_type: "battle", defense: null },
+      { rules_text: null },
+      { frame_style: { template: "battle", finish: "foil" } },
+      { color_identity: [] },
+    ]) {
+      expect(classifyForSweep(at("battle", over)), JSON.stringify(over)).toBe("rebake");
+    }
+    expect(classifyForSweep(at("battle", { layout_version: V }))).toBe("current");
+    // Split shared v43 with the battle; this bump is not its.
+    expect(classifyForSweep(at("split"))).toBe("stamp");
+    expect(classifyForSweep(at("saga"))).toBe("stamp");
+  });
+
+  it("is NOT verification-neutral: the masters and every slot on the right move — a battle tick made before it would be kept and flagged, every other template's stays fresh", async () => {
+    const { BATTLE_RECUT_LAYOUT_VERSION: V, VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    const { verificationState } = await import("@/lib/cards/frame-verification-state");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect([...VERIFICATION_SCOPED_VERSIONS[V]]).toEqual(["battle"]);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(V - 1, t, VERIFICATION_SCOPED_VERSIONS, V, regular), t).toBe(t === "battle");
+    }
+    // Production has no battle tick (0 of 7: the first ticks waited for this
+    // bump); one made at v43 would be kept and flagged.
+    const tick = { verified: true, verifiedLayoutVersion: V - 1, verifiedOverrideHash: "h" } as const;
+    const stale = verificationState(tick, "battle", "h", V);
+    expect(stale).toMatchObject({ verified: true, stale: true });
+    expect(stale.reasons).toEqual([`the renderer changed since layout v${V - 1} (now v${V})`]);
+    expect(verificationState({ ...tick, verifiedLayoutVersion: V }, "battle", "h", V).stale).toBe(false);
+    for (const t of ["split", "saga", "m15", "m15pw", "flip", "aftermath"]) expect(verificationState(tick, t, "h", V).stale, t).toBe(false);
+    // What moved on the profile, HD px of the 2100 × 1500 card: the name 2 px
+    // up and its cost's end 10 px right, the type line's rect and the
+    // symbol 8 px right, the shield and its value 12 px right, the art
+    // rect's top 2 px up.
+    const battle = getFrameProfile("battle");
+    expect(battle.title.rect.topPct * 15).toBeCloseTo(74, 9);
+    expect((battle.title.rect.leftPct + battle.title.rect.widthPct) * 21).toBeCloseTo(1952.3, 9);
+    expect((battle.type.rect.leftPct + battle.type.rect.widthPct) * 21).toBeCloseTo(1943, 9);
+    expect((battle.symbolRect!.leftPct + battle.symbolRect!.widthPct) * 21).toBeCloseTo(1950, 9);
+    // (The rules box keeps the pack's column.)
+    expect((battle.rules.rect.leftPct + battle.rules.rect.widthPct) * 21).toBeCloseTo(1933, 9);
+    expect(battle.defense!.paintedRect!.leftPct * 21).toBeCloseTo(1893, 9);
+    expect(battle.artSlot.topPct * 15).toBeCloseTo(56.2, 9);
   });
 });
