@@ -3190,6 +3190,11 @@
       "u": [
         {
           "name": "Unsummon",
+          "set": "leb",
+          "scryfallId": "686843c8-8c8a-4af6-bca8-e7f7583cc886"
+        },
+        {
+          "name": "Unsummon",
           "set": "itp",
           "scryfallId": "550313e1-f8aa-4c31-a78c-3da2d8aada6f"
         },
@@ -3200,6 +3205,11 @@
         }
       ],
       "b": [
+        {
+          "name": "Dark Ritual",
+          "set": "leb",
+          "scryfallId": "0690f724-eb95-416b-b064-f1239e2a30e8"
+        },
         {
           "name": "Dark Ritual",
           "set": "itp",
@@ -3214,6 +3224,11 @@
       "r": [
         {
           "name": "Stone Rain",
+          "set": "leb",
+          "scryfallId": "901831ad-1840-4287-b6a0-bea310598dc2"
+        },
+        {
+          "name": "Stone Rain",
           "set": "4ed",
           "scryfallId": "b9029bfb-fcff-4f80-a423-c2cfdc881c61"
         },
@@ -3226,6 +3241,11 @@
       "g": [
         {
           "name": "Tsunami",
+          "set": "leb",
+          "scryfallId": "1f4b6f5a-1ba2-409d-9b9b-91e2c1470f62"
+        },
+        {
+          "name": "Tsunami",
           "set": "4ed",
           "scryfallId": "227c2abc-d484-4198-863c-3266a83249c6"
         },
@@ -3236,6 +3256,11 @@
         }
       ],
       "c": [
+        {
+          "name": "Jayemdae Tome",
+          "set": "leb",
+          "scryfallId": "e48b1c51-c0fd-4c08-8631-80f507b04d28"
+        },
         {
           "name": "Jayemdae Tome",
           "set": "itp",
@@ -3266,61 +3291,61 @@
       "w": [
         {
           "name": "Plains",
-          "set": "itp",
-          "scryfallId": "9919afe3-b65e-4ec6-8a4f-9adbe5682ac7"
+          "set": "lea",
+          "scryfallId": "b1623d57-4729-4796-b3f7-f1837a05c6ed"
         },
         {
           "name": "Plains",
-          "set": "lea",
-          "scryfallId": "b1623d57-4729-4796-b3f7-f1837a05c6ed"
+          "set": "itp",
+          "scryfallId": "9919afe3-b65e-4ec6-8a4f-9adbe5682ac7"
         }
       ],
       "u": [
         {
           "name": "Island",
-          "set": "itp",
-          "scryfallId": "1b42446b-379e-4952-ab41-8fffeff7d14b"
+          "set": "lea",
+          "scryfallId": "90a57c0e-fa61-45ef-955d-d296403967d5"
         },
         {
           "name": "Island",
-          "set": "lea",
-          "scryfallId": "90a57c0e-fa61-45ef-955d-d296403967d5"
+          "set": "itp",
+          "scryfallId": "1b42446b-379e-4952-ab41-8fffeff7d14b"
         }
       ],
       "b": [
         {
           "name": "Swamp",
-          "set": "itp",
-          "scryfallId": "026cdd68-9a0e-4261-9390-e8abbcd378ba"
+          "set": "lea",
+          "scryfallId": "6176936d-72e2-4205-8871-4c5a4f1cb2d8"
         },
         {
           "name": "Swamp",
-          "set": "lea",
-          "scryfallId": "6176936d-72e2-4205-8871-4c5a4f1cb2d8"
+          "set": "itp",
+          "scryfallId": "026cdd68-9a0e-4261-9390-e8abbcd378ba"
         }
       ],
       "r": [
         {
           "name": "Mountain",
-          "set": "itp",
-          "scryfallId": "f7a2af07-ef48-4492-bd2e-53320a26a89a"
+          "set": "lea",
+          "scryfallId": "eace2c85-976c-425e-9800-5a6ccbd91b56"
         },
         {
           "name": "Mountain",
-          "set": "lea",
-          "scryfallId": "eace2c85-976c-425e-9800-5a6ccbd91b56"
+          "set": "itp",
+          "scryfallId": "f7a2af07-ef48-4492-bd2e-53320a26a89a"
         }
       ],
       "g": [
         {
           "name": "Forest",
-          "set": "itp",
-          "scryfallId": "f9f4448e-076b-4add-828f-6f218bef8a93"
+          "set": "lea",
+          "scryfallId": "6f1c8cb0-38eb-408b-94e8-16db83999b3b"
         },
         {
           "name": "Forest",
-          "set": "lea",
-          "scryfallId": "6f1c8cb0-38eb-408b-94e8-16db83999b3b"
+          "set": "itp",
+          "scryfallId": "f9f4448e-076b-4add-828f-6f218bef8a93"
         }
       ],
       "c": [
@@ -3336,6 +3361,11 @@
         }
       ],
       "m": [
+        {
+          "name": "Volcanic Island",
+          "set": "leb",
+          "scryfallId": "0324641d-af55-4c53-b4dc-c8262e967da5"
+        },
         {
           "name": "Volcanic Island",
           "set": "sum",
@@ -3365,17 +3395,22 @@
     "colors": {
       "w": [
         {
-          "name": "Disenchant",
-          "set": "tsb",
-          "scryfallId": "b7be41f0-7391-49dd-b63c-2e8db9430f07"
-        },
-        {
           "name": "White Knight",
           "set": "lgn",
           "scryfallId": "cb9cb8ed-7abb-4e71-b42f-5041dd0c0394"
+        },
+        {
+          "name": "Disenchant",
+          "set": "tsb",
+          "scryfallId": "b7be41f0-7391-49dd-b63c-2e8db9430f07"
         }
       ],
       "u": [
+        {
+          "name": "Aven Fisher",
+          "set": "ody",
+          "scryfallId": "5b27130d-2296-4076-9829-15ab63081896"
+        },
         {
           "name": "Merfolk Assassin",
           "set": "tsb",
@@ -3389,14 +3424,14 @@
       ],
       "b": [
         {
-          "name": "Bad Moon",
-          "set": "tsb",
-          "scryfallId": "58fbbc7f-1d6e-4a6c-b5df-33bc275ee514"
-        },
-        {
           "name": "Shambling Swarm",
           "set": "tor",
           "scryfallId": "b5b93715-985f-4719-a3c3-044c2a150e96"
+        },
+        {
+          "name": "Bad Moon",
+          "set": "tsb",
+          "scryfallId": "58fbbc7f-1d6e-4a6c-b5df-33bc275ee514"
         }
       ],
       "r": [
@@ -3413,6 +3448,11 @@
       ],
       "g": [
         {
+          "name": "Elvish Warrior",
+          "set": "ons",
+          "scryfallId": "2c6b767b-49e5-4845-9b3f-29540e5fa330"
+        },
+        {
           "name": "Avoid Fate",
           "set": "tsb",
           "scryfallId": "04c9f48d-2213-4f95-8eac-b23bd2d95e34"
@@ -3425,33 +3465,39 @@
       ],
       "c": [
         {
-          "name": "Sky Diamond",
-          "set": "7ed",
-          "scryfallId": "b426b86d-b1d9-4aee-ac17-4eae7a3b69a3"
-        },
-        {
           "name": "Tangle Wire",
           "set": "nem",
           "scryfallId": "ad62f313-8a8a-4ffa-ada2-b12b76288729"
+        },
+        {
+          "name": "Sky Diamond",
+          "set": "7ed",
+          "scryfallId": "b426b86d-b1d9-4aee-ac17-4eae7a3b69a3"
         }
       ],
       "m": [
         {
-          "name": "Lightning Angel",
-          "set": "tsb",
-          "scryfallId": "322d5ba3-41cc-4e60-9d0a-074f48a71ea3"
-        },
-        {
           "name": "Cauldron Dance",
           "set": "inv",
           "scryfallId": "8dadcae0-f2b2-487c-bb93-0a2c073044c0"
+        },
+        {
+          "name": "Lightning Angel",
+          "set": "tsb",
+          "scryfallId": "322d5ba3-41cc-4e60-9d0a-074f48a71ea3"
         }
       ]
     }
   },
   "retroland": {
+    "note": "m: no printing read. A two-colour land on the 1997 frame prints a BLEND of its two colours in the text box (from Sixth Edition, 1999), which this frame does not draw yet (TODO 4.6h), and no three-colour 1997-frame land was read; m is a render stand-in and is not ticked (TODO 4.10a). Seaside Haven (W/U) and Hinterland Harbor (a 2023 reprint) are kept to look at, not to verify against. The reference is the 1996-2003 printing (owner 2026-10-07): the INR basics are 2025 reprints in the reprints' lighter colours, the Mirage basics print the left-aligned footer of 1996-98.",
     "colors": {
       "w": [
+        {
+          "name": "Plains",
+          "set": "ons",
+          "scryfallId": "7bf7d68a-dbd0-45f3-acbb-59ee38e6057e"
+        },
         {
           "name": "Plains",
           "set": "inr",
@@ -3466,6 +3512,11 @@
       "u": [
         {
           "name": "Island",
+          "set": "ons",
+          "scryfallId": "36e062ec-df51-40c0-ad8a-2ee1cb8f8f17"
+        },
+        {
+          "name": "Island",
           "set": "inr",
           "scryfallId": "4f8d16ec-cba6-43b7-be97-5ab184941e29"
         },
@@ -3476,6 +3527,11 @@
         }
       ],
       "b": [
+        {
+          "name": "Swamp",
+          "set": "ons",
+          "scryfallId": "0356ae45-e5ca-46b9-8ebc-42bf4776e89c"
+        },
         {
           "name": "Swamp",
           "set": "inr",
@@ -3490,6 +3546,11 @@
       "r": [
         {
           "name": "Mountain",
+          "set": "ons",
+          "scryfallId": "05f9bdca-0d54-46c7-b803-9083dfc9ee24"
+        },
+        {
+          "name": "Mountain",
           "set": "inr",
           "scryfallId": "787da7ce-527d-4abf-9e92-5de9db2250cd"
         },
@@ -3502,6 +3563,11 @@
       "g": [
         {
           "name": "Forest",
+          "set": "ons",
+          "scryfallId": "b361b42d-401f-440a-bae9-35338b5dde0e"
+        },
+        {
+          "name": "Forest",
           "set": "inr",
           "scryfallId": "7afdc917-ec37-4e03-853f-36cfe90053d9"
         },
@@ -3512,6 +3578,11 @@
         }
       ],
       "c": [
+        {
+          "name": "Rishadan Port",
+          "set": "mmq",
+          "scryfallId": "477a1f53-5cdf-4b45-b584-2e36b31a3fdb"
+        },
         {
           "name": "Crystal Vein",
           "set": "6ed",
@@ -3621,6 +3692,16 @@
           "name": "Whispering Madness",
           "set": "gtc",
           "scryfallId": "64e4b0cc-e611-4a4b-8392-b37bfc3a77e1"
+        },
+        {
+          "name": "Sprouting Thrinax",
+          "set": "ala",
+          "scryfallId": "8950df86-1e27-4b6b-8b5c-25298a3bda85"
+        },
+        {
+          "name": "Rhox War Monk",
+          "set": "ala",
+          "scryfallId": "19fb67e1-b791-4246-aebc-49fcf0f92c6c"
         }
       ]
     }
@@ -3635,8 +3716,8 @@
         },
         {
           "name": "Plains",
-          "set": "8ed",
-          "scryfallId": "a37c667a-f035-49b2-9f34-9831e186ae82"
+          "set": "m14",
+          "scryfallId": "334ca29a-7fb3-426f-922b-5a2b905a5565"
         }
       ],
       "u": [
@@ -3647,8 +3728,8 @@
         },
         {
           "name": "Island",
-          "set": "8ed",
-          "scryfallId": "4146a316-c409-4121-931f-1d3b5ae63675"
+          "set": "m14",
+          "scryfallId": "94de0250-53a6-45c8-85a7-a473f271102e"
         }
       ],
       "b": [
@@ -3671,8 +3752,8 @@
         },
         {
           "name": "Mountain",
-          "set": "8ed",
-          "scryfallId": "f243292a-e8a6-43c2-805c-15715fcebd67"
+          "set": "m14",
+          "scryfallId": "6e82bb8b-2a95-4935-a728-6898f64ce39a"
         }
       ],
       "g": [
@@ -3683,8 +3764,8 @@
         },
         {
           "name": "Forest",
-          "set": "8ed",
-          "scryfallId": "ac82d07b-f8f2-4cdd-b799-98d4dc228e5c"
+          "set": "m14",
+          "scryfallId": "5b5277ee-f1e0-4777-9011-d7a23c855919"
         }
       ],
       "c": [

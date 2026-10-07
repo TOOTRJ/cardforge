@@ -285,8 +285,9 @@ type CardPreviewProps = CardPreviewData & {
 // for the brief moment before the web font loads.
 const CARD_FONT = '"MPlantin", Georgia, "Times New Roman", serif';
 
-// Display face for titles, type lines, footer, and stat values — an OFL
-// Beleren stand-in (CardDisplay, declared in globals.css), falling back to
+// Display face for titles, type lines, footer, and stat values — Beleren
+// Bold itself (CardDisplay, declared in globals.css; not a stand-in and not
+// an OFL face — docs/FRAMES.md "Provenance and legal"), falling back to
 // MPlantin then serifs before it loads. A slot's `font` field selects display
 // vs the MPlantin body font; the Satori bake reads the same `font` field, so
 // preview and PNG stay identical.
