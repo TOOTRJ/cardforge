@@ -2552,6 +2552,20 @@ const RETROLAND: FrameProfile = {
 // MSE magic-new spec (375×523): name 30 (23h); image 32,62 311×228;
 // type 298 (20h); text 31,328 311×142; pt box 284,466 60×28 (+plate overlay).
 // ---------------------------------------------------------------------------
+/** The 2003 frame's artist line where the prints set it in WHITE (TODO
+ *  4.23a, layout v44): on the black frame and on every land. Eighth Edition
+ *  → Journey into Nyx print the footer black on white, blue, red, green,
+ *  gold and the artifact frame, and white on black (M12 #81: #fcfdf8) and
+ *  on lands (M12 #224: #f9fcf9) — Card Conjurer's pack8th.js encodes the
+ *  same rule. INK_DARK on those masters measured 1.1 : 1 (`modern`/b) and
+ *  2.2–2.3 : 1 (the one brown band every `modernland` key shares); white
+ *  is 16.2 : 1 and 8.1–8.5 : 1. No shadow: the prints have none. */
+const MODERN_FOOTER_WHITE = "#ffffff";
+/** `modernland`'s footer ink: one brown land frame under the artist line on
+ *  all seven colour keys, so all seven print white. */
+const MODERN_LAND_FOOTER_INK: InkByColorKey = Object.fromEntries(
+  (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [k, { colorHex: MODERN_FOOTER_WHITE }]),
+);
 const MODERN: FrameProfile = {
   flavorDivider: false,
   label: "Modern border (2003)",
@@ -2592,6 +2606,9 @@ const MODERN: FrameProfile = {
     rect: { topPct: 92.2, leftPct: 15.5, widthPct: 58, heightPct: 2.6 },
     sizePct: 0.015,
     colorHex: INK_DARK,
+    // White on the black frame, as the prints (4.23a). `c` stays dark: on
+    // `modern` it is the artifact frame, whose print is black.
+    inkByColorKey: { b: { colorHex: MODERN_FOOTER_WHITE } },
     uppercase: true,
     letterSpacingEm: 0.04,
     font: "display",
@@ -2617,6 +2634,9 @@ const MODERNLAND: FrameProfile = {
   ...MODERN,
   label: "Modern Land",
   hideCost: true,
+  // The land frame is the same brown under the artist line on every colour
+  // key: the footer prints white on all seven (4.23a).
+  footer: { ...MODERN.footer!, inkByColorKey: MODERN_LAND_FOOTER_INK },
 };
 
 // ---------------------------------------------------------------------------

@@ -1917,6 +1917,35 @@ v41 computed, and `tests/unit/render/pw-rows-pinned-bake.test.tsx` 28
 m15pw bakes (750 and HD, regular and foil) to the pixels main baked.
 Sheets: scratchpad `c421c/sheets/`.
 
+### The 2003 footer ink (4.23a, layout v44)
+
+Era step E1 (design 2026-10-06), a correction. Eighth Edition → Journey into
+Nyx print the artist line black on white, blue, red, green, gold and the
+artifact frame and **white on the black frame and on lands** (M12 #81 Blood
+Seeker `#fcfdf8`, M12 #224 Buried Ruin `#f9fcf9`; Card Conjurer's 8th
+Edition pack script encodes the same rule). `MODERN.footer` printed `INK_DARK` on
+every master: 1.1 : 1 on `modern`/b and 2.2–2.3 : 1 on the one brown band all
+seven `modernland` keys share, so only the brush painted into the MSE master
+showed. Now `MODERN.footer.inkByColorKey = { b: white }` and `MODERNLAND`'s is
+white on all seven keys (`footerInk()`, both renderers; 16.2 : 1 and
+8.1–8.5 : 1, no shadow — the prints have none). `c` stays dark on `modern`:
+it is the artifact frame, whose print is black. Nothing else moves: sizes,
+masters, the P/T plate, symbols and the footer's layout are 4.10b; a hybrid
+card following its left half and the Eldrazi frame have no master here.
+
+Rollout: `"sweep"`, template-scoped to the pair
+(`TEMPLATE_SCOPED_VERSIONS[44]`) and card-scoped (`VERSION_SCOPES[44]`,
+`v44Changed`: every `modernland` card, a `modern` card on the black master).
+Production, anonymous read 2026-10-07: 7 `modern` cards (gold ×4, the
+artifact `c` ×2, green ×1), none on b, none on `modernland` — all seven are
+stamped without a re-bake, and a replay of their rows (their own art, HD and
+750, before and after) is byte-identical. The visual matrix against v43: 20
+cases change (`modern`/b ×3, `modernland` ×17) and no other. Verification-
+neutral (`VERIFICATION_NEUTRAL_VERSIONS`): no slot moves, so the fourteen 2003
+ticks stay fresh on the owner's round-37 sheet; 4.10b re-opens them once.
+Tests: `tests/unit/render/modern-footer-ink.test.tsx` (contrast on the
+masters, real bakes at 750 and HD) and its preview twin under `components/`.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
