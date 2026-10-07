@@ -49,7 +49,24 @@ export function PlanStatusLine({
           {` and you won't be charged — you keep every ${planName} perk until then, and afterwards you're on the free plan with your cards and any credits you have left. Changed your mind? Resume the plan below.`}
         </>
       );
+    case "stale":
+      return (
+        <>
+          {"Stripe reports that this subscription has ended, but your account hasn't caught up yet. Nothing more is charged. If this page still says so tomorrow, let us know and we'll put it right."}
+        </>
+      );
     case "ending":
+      if (status.billedBeforeAt) {
+        return (
+          <>
+            {"This plan is set to end on "}
+            <Strong>{formatCalendarDate(status.endsAt)}</Strong>
+            {". Until then it is still billed as usual — next on "}
+            <Strong>{formatCalendarDate(status.billedBeforeAt)}</Strong>
+            {`. You keep every ${planName} perk until it ends; afterwards you're on the free plan with your cards and any credits you have left. Changed your mind? Resume the plan below.`}
+          </>
+        );
+      }
       return (
         <>
           {"You cancelled this plan. It ends on "}
@@ -122,6 +139,7 @@ export function PlanStatusLine({
 export function endingBadgeLabel(status: PlanStatus): string | null {
   if (status.kind === "trial_ending") return "Trial ending";
   if (status.kind === "ending") return "Ending";
+  if (status.kind === "stale") return "Ended";
   return null;
 }
 
@@ -136,6 +154,8 @@ export function PlanActions({
   planName: string;
 }) {
   const ending = isEndingStatus(status);
+  // Stripe says the subscription is over: nothing left to cancel or pay for.
+  if (status.kind === "stale") live = false;
   return (
     <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
       {status.kind === "delinquent" ? (

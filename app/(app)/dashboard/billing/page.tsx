@@ -201,7 +201,7 @@ export default async function BillingPage() {
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
           {live && ending
-            ? "Your plan is set to end, so there's nothing to downgrade. To stay, resume the plan above; you can also switch to another plan, which Stripe confirms before anything is charged."
+            ? "Your plan is set to end, so there's nothing to downgrade. To stay — on this plan or another — resume the plan above first, then change it here."
             : live
             ? "Upgrades apply right away — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrades (Pro to Plus, or annual to monthly) take effect at the end of the period you've paid for, so nothing is lost. Downgrading to Free is a cancellation: you keep the plan until the period ends."
             : entitlements.isPaid

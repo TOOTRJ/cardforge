@@ -16,6 +16,7 @@ import { checkoutReminderEmail, trialEndingEmail, trialWinbackEmail } from "@/li
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { formatMoney } from "@/lib/format/money";
+import { endsByPeriodEnd } from "@/lib/billing/subscription-ending";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import {
   CREDIT_PACKS,
@@ -193,6 +194,11 @@ async function handleTrialWillEnd(
 ): Promise<void> {
   const { admin, stripe } = deps;
   if (sub.status !== "trialing") return;
+  // Already cancelled (the portal's `cancel_at`, or the flag): the trial ends
+  // and nothing is charged, so "your card is charged then" would be false —
+  // and the customer needs no reminder of a conversion that won't happen.
+  // An end date AFTER the trial still converts first, and is reminded.
+  if (endsByPeriodEnd({ ...sub, items: { data: [{ current_period_end: sub.trial_end }] } })) return;
   const userId = await resolveSubscriptionUserId(sub, admin);
   if (!userId) return;
 

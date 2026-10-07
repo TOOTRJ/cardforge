@@ -118,6 +118,35 @@ describe("planStatusOf", () => {
     expect(planStatusOf({ ...base, profile: { currentPeriodEnd: END_ISO, cancelAtPeriodEnd: true } }).kind).toBe("renews");
   });
 
+  it("an end date PAST the next renewal says the plan is billed first — never 'nothing more is charged'", () => {
+    const later = new Date((PERIOD_END + 40 * 86400) * 1000).toISOString();
+    expect(planStatusOf({ ...base, subscription: { ...liveSub, cancelAtPeriodEnd: true, endsAt: later } })).toEqual({
+      kind: "ending",
+      endsAt: later,
+      billedBeforeAt: END_ISO,
+    });
+    // A trial with a later cancel date converts at the trial end first.
+    expect(
+      planStatusOf({
+        ...base,
+        status: "trialing",
+        subscription: { ...liveSub, trialEnd: END_ISO, cancelAtPeriodEnd: true, endsAt: later },
+      }),
+    ).toEqual({ kind: "ending", endsAt: later, billedBeforeAt: END_ISO });
+  });
+
+  it("Stripe says the subscription is OVER while the profile still says live (a missed webhook): stale, never 'renews'", () => {
+    const status = planStatusOf({ ...base, subscription: { ...liveSub, status: "canceled" } });
+    expect(status).toEqual({ kind: "stale" });
+    expect(isEndingStatus(status)).toBe(false);
+  });
+
+  it("the flag with no derivable date falls back to the profile's period end", () => {
+    expect(
+      planStatusOf({ ...base, subscription: { ...liveSub, currentPeriodEnd: null, cancelAtPeriodEnd: true, endsAt: null } }),
+    ).toEqual({ kind: "ending", endsAt: END_ISO });
+  });
+
   it("delinquent, comped, ended and free accounts", () => {
     expect(planStatusOf({ ...base, live: false, delinquent: true, status: "past_due" }).kind).toBe("delinquent");
     expect(planStatusOf({ ...base, live: false, comped: true, status: null, subscription: null }).kind).toBe("comped");

@@ -125,6 +125,10 @@ export type InvoiceLike = {
   hosted_invoice_url?: string | null;
 };
 
+function isOver(status: string): boolean {
+  return status === "canceled" || status === "incomplete_expired";
+}
+
 function iso(unixSeconds: number | null | undefined): string | null {
   return typeof unixSeconds === "number" ? new Date(unixSeconds * 1000).toISOString() : null;
 }
@@ -186,11 +190,13 @@ export function summarizeBillingDetails(input: {
         currency: item?.price?.currency ?? "usd",
         currentPeriodEnd: iso(item?.current_period_end),
         trialEnd: iso(sub.trial_end),
-        cancelAtPeriodEnd: endsAt != null,
+        // The flag stays true even if no end date could be derived (no item
+        // period): the profile's period end then dates it — never "renews".
+        cancelAtPeriodEnd: endsAt != null || (sub.cancel_at_period_end === true && !isOver(sub.status)),
         endsAt,
         // A plan that is ending has no "next plan": the schedule's later
         // phases never start.
-        pendingChange: endsAt != null ? null : pendingChangeOf(sub.schedule),
+        pendingChange: endsAt != null || isOver(sub.status) ? null : pendingChangeOf(sub.schedule),
       }
     : null;
 

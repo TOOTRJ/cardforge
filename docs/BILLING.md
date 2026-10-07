@@ -364,6 +364,15 @@ renew" in three ways, and `subscriptionEndsAt()`
 | `cancel_at: <timestamp>` — what the Customer Portal and newer API versions write; `cancel_at_period_end` can stay `false` | that date |
 | a subscription schedule with `end_behavior: "cancel"` | the schedule's last phase end |
 
+Why the portal writes the date: every subscription this app creates is in
+Stripe's **flexible billing mode** (the default for Checkout-created
+subscriptions since API `2025-09-30.clover`; the client pins
+`2026-05-27.dahlia` and never sets `billing_mode`), and in that mode a
+Customer Portal cancellation sets `cancel_at_period_end: false` and
+`cancel_at` = the period end
+([Stripe: compare billing modes, "Cancellations in the Customer Portal"](https://docs.stripe.com/billing/subscriptions/billing-mode/compare)).
+A `classic` subscription gets both the flag and the date.
+
 Until 2026-10-07 only the boolean was read, and the trial copy was decided
 before the cancellation was looked at: a subscriber who had cancelled in the
 portal was told "Renews on …", and a cancelled trial "then $6 on the card
@@ -378,6 +387,21 @@ below".
   (`pending_change`, NOT a cancellation) → renews. A plan that is ending shows
   the badge "Ending" / "Trial ending", **Resume {Plan}** (the portal's home —
   Stripe has no deep link to "don't cancel") and no "Cancel plan".
+- **Honest edges** (`planStatusOf`): an end date PAST the next renewal (a
+  custom date set in the Dashboard, a schedule that ends in a cancellation
+  after another phase) is `ending` with `billedBeforeAt` — "still billed as
+  usual, next on …", never "nothing more is charged"; a subscription Stripe
+  reports as `canceled` while the profile still says live (a missed
+  `customer.subscription.deleted`) is `stale` — "Stripe reports that this
+  subscription has ended", badge "Ended", no Cancel / Resume — never "Renews".
+- **Changing plan while ending**: a downgrade of a plan cancelled by DATE is
+  refused with "Resume it first" before any Stripe write
+  (`createCheckoutSessionAction`; `scheduleDowngrade`'s un-cancel only knows
+  the flag, and clearing `cancel_at` + scheduling over it is unverified —
+  follow-up). An upgrade still goes to the portal's confirm flow.
+- **Trial reminder**: `trial_will_end` for a trial already set to end at or
+  before its trial end sends nothing (the old "your card is charged then"
+  was false for it).
 - **Profile row**: `profiles.cancel_at_period_end` is written by the sync as
   `endsByPeriodEnd()` — true when the subscription stops at or before the
   stored period end, however Stripe expresses it (a `cancel_at` in a LATER

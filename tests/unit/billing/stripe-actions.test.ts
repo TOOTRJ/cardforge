@@ -29,6 +29,7 @@ const s = vi.hoisted(() => ({
     status: string;
     trial_end?: number | null;
     cancel_at_period_end?: boolean;
+    cancel_at?: number | null;
     schedule?: string | null;
     default_payment_method?: string | null;
     items: {
@@ -445,6 +446,22 @@ describe("createCheckoutSessionAction", () => {
       (fn) => fn.mock.invocationCallOrder[0],
     );
     expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
+  it("a plan cancelled by DATE (the portal's cancel_at) is not downgraded over: resume first, and nothing is written", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: 1792722400,
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result).toMatchObject({ ok: false });
+    expect(result.ok === false && result.error).toMatch(/Resume it first/);
+    expect(s.scheduleRelease).not.toHaveBeenCalled();
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
   });
 
   it("an UPGRADE drops a pending downgrade first, then confirms in the portal (a scheduled subscription can't be updated there)", async () => {
