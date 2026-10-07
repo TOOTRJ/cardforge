@@ -370,7 +370,7 @@ Rules and gotchas:
   writes its rects in the PACK's px and rides the moves (`SPLIT_RECUT_PX`,
   `BATTLE_LOWER_RECUT_PX`; a unit test holds recipe and profile together).
   What no block reaches on the battle is re-cut after the shift (layout
-  v44, TODO 4.21d, the recipe's `printRecut`): the bars' paper stretched
+  v45, TODO 4.21d, the recipe's `printRecut`): the bars' paper stretched
   right (`recutColumns`, `BATTLE_RIGHT_RECUT` — it throws unless the
   window columns it covers are one colour a row), the shield set 12 px
   right through the pack's Defense mask, source-over (`BATTLE_SHIELD.dx`),

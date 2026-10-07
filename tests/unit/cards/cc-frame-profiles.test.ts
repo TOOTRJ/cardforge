@@ -23,7 +23,7 @@ describe("Card Conjurer frame profiles", () => {
   // prints centre the discs on them — the battle's on 128.5–129.3 px of a
   // pill face centred on 128.75 (nine MOM prints), the split's on 156.6 of
   // a bar face centred on 157.0 (MH2 #123 / #60, TSR #161 / #186). Since
-  // layout v44 (TODO 4.21d) the battle's pill and name sit 2 px higher, on
+  // layout v45 (TODO 4.21d) the battle's pill and name sit 2 px higher, on
   // the prints', and its cost keeps those rows: costDy gives the 2 px back.
   const OWN_PRINT_COST_DY: Record<string, number | undefined> = {
     flip: -0.0064,

@@ -326,8 +326,8 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   layouts](#the-landscape-layouts-421b-layout-v43)). A fifth stretches a
   band SIDEWAYS through a cross-fade in a bar's own paper (`recutColumns`,
   the battle's right ends — with its shield set aside through a mask and
-  its icon's rings redrawn, layout v44: [The battle re-cut onto the
-  prints](#the-battle-re-cut-onto-the-prints-421d-layout-v44)).
+  its icon's rings redrawn, layout v45: [The battle re-cut onto the
+  prints](#the-battle-re-cut-onto-the-prints-421d-layout-v45)).
 - **The borderless land (4.34).** A borderless land prints its colour on
   the title bar, the type bar AND the text box, where a borderless spell
   tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
@@ -1419,7 +1419,7 @@ print − ours, + = right or down.
     px, the spine 44 (1071–1114; the pack's 36), the right border 62
     (from 2038; the pack's 59).
   - `BATTLE_BLOCK_RECUT` (v43's `BATTLE_LOWER_RECUT`, with a second block
-    since layout v44) — nine MOM battles print the type bar, the text box
+    since layout v45) — nine MOM battles print the type bar, the text box
     and the shield 2.5–5.5 px lower than the pack: rows 842–1467 move 4 px
     down. The window's sides grow 4 rows and the bottom border is 54 px
     (from 1446; the pack's 58). TODO 4.21d added the top block — rows
@@ -1520,7 +1520,7 @@ print − ours, + = right or down.
   redrawn flat at the prints' radii, 1.4 px above the centre of their rim
   as the prints set them (the disc r 52.0, 0.5 px from the prints'
   centre; its triangle kept — the prints' is the pack's size). **Built as
-  layout v44** — "The battle re-cut onto the prints" below; the table
+  layout v45** — "The battle re-cut onto the prints" below; the table
   above is the master as v43 shipped it.
 
 - **How text is placed on both.** Where the prints set a line RELATIVE TO
@@ -1584,7 +1584,7 @@ print − ours, + = right or down.
     exactly as the front draws its own, in both renderers; a turned one
     (aftermath, flip) keeps the character estimate.
 - **Battle's slots** (`BATTLE`; the MOM Siege front, MOM #149):
-  - (The numbers in this list are layout v43's. Since v44 the art rect's
+  - (The numbers in this list are layout v43's. Since v45 the art rect's
     top is 56.2 px, the name sits 2 px higher, the cost ends at 1952.3 px, the type line's rect, the
     symbol and the rules box end 8 px further right and the shield, its
     value and its ink span sit 12 px right — "The battle re-cut onto the
@@ -1727,7 +1727,7 @@ A private card has no stored bake, so its My Cards tile is the live
 preview letterboxed in the 5:7 tile; a public one shows its baked
 thumbnail in the same box.
 
-### The battle re-cut onto the prints (4.21d, layout v44)
+### The battle re-cut onto the prints (4.21d, layout v45)
 
 Owner round 33 (2026-10-06): the battle merged as built (v43) and its right
 side is re-cut BEFORE the first battle tick. After v43's block move Card
@@ -1793,7 +1793,7 @@ black interior on the rows clear of the digit; the icon by circle fits to
 radial half-level crossings. The 4.21b skeptic's numbers, measured on
 other rows by correlation and crossings, are in brackets):
 
-| Edge | v43 | v44 |
+| Edge | v43 | v45 |
 |---|---|---|
 | Name pill, right end | +9.6 (7.5 … 12.1) [+10.0] | **−0.4** (−2.4 … +2.1) [+0.1] |
 | Type bar, right end | +8.7 (7.1 … 9.2) [+8.6] | **+0.7** (−0.9 … +1.2) [+0.7] |
@@ -1882,9 +1882,10 @@ shield 12 } — `landscape-importer.test.ts` holds them to the recipe):
 - the brand mark stays where it was (it ends 28 px short of the shield's
   left point now).
 
-**Rollout.** Layout v44 (`BATTLE_RECUT_LAYOUT_VERSION` — ONE constant: it
-was built beside another bump, and whichever merges second takes the next
-number by changing it and `CARD_LAYOUT_VERSION`), template-scoped to
+**Rollout.** Layout v45 (`BATTLE_RECUT_LAYOUT_VERSION` — ONE constant: it
+was built as v44 beside the 2003 footer ink, which merged first and holds
+44; this bump took the next number by changing the constant and
+`CARD_LAYOUT_VERSION`), template-scoped to
 `battle`, a "sweep" (a correction). Production, anonymous read 2026-10-07:
 0 public or unlisted battles. NOT verification-neutral — the masters and
 the right-side slots move — and no battle tick exists to stale: **the

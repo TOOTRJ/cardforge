@@ -2634,7 +2634,7 @@ const MODERNLAND: FrameProfile = {
 // and ride those moves as the tokens ride TOKEN_RECUT_PX); what a block
 // move can't reach — the battle's bars ended 8–10 px short of the prints',
 // its shield 12 px left of theirs — the importer re-cuts (TODO 4.21d,
-// layout v44: BATTLE_RIGHT_RECUT_PX, which the slots ride the same way;
+// layout v45: BATTLE_RIGHT_RECUT_PX, which the slots ride the same way;
 // docs/FRAMES.md "The landscape layouts").
 // ---------------------------------------------------------------------------
 

@@ -973,11 +973,11 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            verification-neutral: masters and every slot move — but no
 //            tick exists on either template to stale (0 of 7 each), so the
 //            first ticks are the owner's after the deploy.
-//   44     — the battle's right side, top block and icon re-cut onto the
+//   45     — the battle's right side, top block and icon re-cut onto the
 //            prints (TODO 4.21d; owner round 33, 2026-10-06: re-cut before
 //            the first battle tick). ITS number lives in
-//            BATTLE_RECUT_LAYOUT_VERSION below (another PR was built beside
-//            it: whichever merges second renumbers). After v43's block move
+//            BATTLE_RECUT_LAYOUT_VERSION below (built as 44 beside the 2003
+//            footer ink, which merged first and holds that number). After v43's block move
 //            Card Conjurer's 'Battle' master still left nine MOM prints
 //            (#1, #21, #22, #63, #115, #147, #149, #190, #230) by: the name
 //            pill's right end +10.0 px, the type bar's +8.6, the text box's
@@ -1012,7 +1012,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            stale (the first ticks wait for this bump).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 44;
+export const CARD_LAYOUT_VERSION = 45;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1081,7 +1081,7 @@ export const V43_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "spl
  *  whichever of the two merges second takes the next number by changing
  *  this constant (and CARD_LAYOUT_VERSION, when it becomes the latest).
  *  Frozen like the lists above once it ships. */
-export const BATTLE_RECUT_LAYOUT_VERSION = 44;
+export const BATTLE_RECUT_LAYOUT_VERSION = 45;
 export const BATTLE_RECUT_TEMPLATES: readonly string[] = ["battle"];
 
 /**

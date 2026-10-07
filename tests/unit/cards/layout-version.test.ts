@@ -2009,8 +2009,9 @@ describe("v43 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21
 });
 
 // The battle's re-cut is addressed by its constant, never by its number: it
-// was built as 44 beside another bump, and whichever merges second takes the
-// next number (lib/cards/layout-version.ts BATTLE_RECUT_LAYOUT_VERSION).
+// was built as 44 beside another bump (the 2003 footer ink, which merged
+// first) and took the next number, 45, by changing its constant
+// (lib/cards/layout-version.ts BATTLE_RECUT_LAYOUT_VERSION).
 describe("the battle re-cut onto the prints (TODO 4.21d) — its bump", () => {
   const png = "https://x/y.png";
   const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
