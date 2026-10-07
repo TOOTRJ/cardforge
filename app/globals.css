@@ -24,7 +24,13 @@
   font-display: swap;
 }
 
-/* MPlantin — the real MTG body-text font (ships with mana-font, SIL OFL 1.1).
+/* MPlantin — the real MTG body-text font. The file ships inside the
+   mana-font npm package; that package's licence statement does not name
+   it: its README licenses "the Mana font" (SIL OFL 1.1) and its CSS (MIT),
+   not mplantin.ttf. The file's own name table says "Converted by
+   ALLTYPE" and carries no copyright line and no licence string; no licence
+   text accompanies it (an earlier comment here called it "SIL OFL 1.1": that
+   was wrong — docs/FRAMES.md "Provenance and legal").
    Loaded as a web font so the live card preview uses the exact same typeface
    the Satori bake (lib/render/card-image.tsx) renders with, making the editor
    preview and the exported PNG pixel-identical. Copied to /public/fonts so the
@@ -55,7 +61,8 @@
 
 /* MPlantin Italic — the real italic master (flavor text, reminder text). The
    browser would otherwise synthesize an oblique that doesn't match what the
-   Satori bake renders. Same Full-Magic-Pack sourcing as the frames.
+   Satori bake renders. Same Full-Magic-Pack sourcing as the frames (name
+   table: "Converted by ALLTYPE"; no licence string, no licence text).
    The .ttf masters stay in /public/fonts — the Satori bake reads those exact
    bytes server-side; the .woff2 copies exist purely for browser transfer. */
 @font-face {
@@ -75,7 +82,10 @@
 /* CardDisplay — title/type/footer/stat face: Beleren Bold, the face real cards
    use, sourced from the same non-commercial Full-Magic-Pack as the frame trade
    dress (this project knowingly reproduces WotC trade dress for personal use —
-   see 12_CREATION_AUDIT.md). The family name + file path are the swap contract.
+   see 12_CREATION_AUDIT.md). The file's name table says "Copyright (c) 2013
+   Wizards of the Coast, a Hasbro Subsidiary. All rights reserved." and
+   carries no licence string; no licence text accompanies it (docs/FRAMES.md
+   "Provenance and legal"). The family name + file path are the swap contract.
    The 400–700 weight RANGE over the single master suppresses browser faux-bold,
    so a `font-weight: 600` title renders the same master the Satori bake
    registers — keeping preview == PNG. */
