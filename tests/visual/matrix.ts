@@ -625,7 +625,7 @@ const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
   // The see-through flip/c (layout v38, TODO 4.21a): no under-frame layer
   // without art, the empty-art box in the window.
   ["flip", "c"],
-  // The see-through battle/c (layout v42, TODO 4.21b): the same — the
+  // The see-through battle/c (layout v43, TODO 4.21b): the same — the
   // empty-art box under its translucent pill, type bar and text box.
   ["battle", "c"],
 ];
@@ -710,7 +710,7 @@ const LAYOUT_CASES: readonly [FrameTemplate, CardKind, VisualColour, VisualShape
       },
     },
   ],
-  // The landscape layouts (TODO 4.21b, layout v42) — new cases:
+  // The landscape layouts (TODO 4.21b, layout v43) — new cases:
   //   • split: a long name at the fit's floor on BOTH halves beside a heavy
   //     cost, dense rules down the ladder in both text boxes;
   //   • battle: a long name beside a heavy cost, a three-digit defense

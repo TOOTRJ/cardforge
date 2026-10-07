@@ -182,7 +182,7 @@ into `.frames-build/` — 39 templates today (`CC_TEMPLATES` in
   [The portrait layouts](#the-portrait-layouts-layout-v38). Their slots are
   the packs' own (packFlip.js, packAdventure.js, packAftermath.js) and the
   masters are copied 1:1 at their native 1500×2100;
-- the landscape layouts (4.21b, layout v42), the importer's first
+- the landscape layouts (4.21b, layout v43), the importer's first
   2100×1500 masters: `split` from 'Split' (the pack draws it portrait with
   its text turned; the composite is turned a quarter turn clockwise, a
   pixel permutation, then its two halves are moved onto the prints through
@@ -191,7 +191,7 @@ into `.frames-build/` — 39 templates today (`CC_TEMPLATES` in
   pack's 2814×2010 canvas downscaled once, then its lower block moved 4 px
   down through flat rows; the defense shield stays in the master;
   colourless = the pack's see-through frame) — see
-  [The landscape layouts](#the-landscape-layouts-421b-layout-v42);
+  [The landscape layouts](#the-landscape-layouts-421b-layout-v43);
 - the transform bodies (5.1a) from the 'Transform' packs: m15dfcfront
   ('Transform (Front)'), m15dfcback ('Transform (Back) (New)', the ▼ at the
   right) and m15dfcbackleft ('Transform (Back)', the empty left well) in
@@ -260,8 +260,8 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   cross-fade: whole blocks moved through FLAT zones (`shiftBlocksRgba8`, a
   recipe's `shift` — it throws on a zone that isn't flat): the split's two
   halves and the battle's lower block (`SPLIT_HALF_RECUT`,
-  `BATTLE_LOWER_RECUT`, layout v42 — [The landscape
-  layouts](#the-landscape-layouts-421b-layout-v42)).
+  `BATTLE_LOWER_RECUT`, layout v43 — [The landscape
+  layouts](#the-landscape-layouts-421b-layout-v43)).
 - **The borderless land (4.34).** A borderless land prints its colour on
   the title bar, the type bar AND the text box, where a borderless spell
   tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
@@ -1242,7 +1242,7 @@ stay importer inputs, never published: adventure's shaped book masks and
 aftermath's rectangles (cut at y 1139, 54.24 %H) are 4.26's; the flip
 plates' half masks are the card's halves.
 
-### The landscape layouts (4.21b, layout v42)
+### The landscape layouts (4.21b, layout v43)
 
 TODO 4.21b (the second of 4.21's three PRs; design 2026-09-29, owner
 decisions 2026-09-29, built 2026-10-06): split and battle leave their MSE
@@ -1554,11 +1554,11 @@ split windows with 1.5–2.1 px to spare, the battle's with 2.8–3.8, its
 translucent body with 0.8–1.25. Held by
 `tests/unit/frames/landscape-importer.test.ts` (the helpers, the recipes
 against the profiles, the published masters pixel by pixel) and
-`tests/unit/render/landscape-v42-bake.test.tsx` (real bakes at HD and at
+`tests/unit/render/landscape-v43-bake.test.tsx` (real bakes at HD and at
 the 1050 px default: where each line, the shield's value, the turned
 credit and the mark land).
 
-Template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[42]`: every card on the
+Template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[43]`: every card on the
 two, art or none); production, anonymous read 2026-10-06: 0 public or
 unlisted cards on either (private cards and previews re-bake on their next
 save). NOT verification-neutral — masters and every slot move — but neither
@@ -3821,7 +3821,7 @@ hand, never regenerated.
 The bake draws a stat plate only for a card that prints the stat: the P/T
 under `printsPowerToughness`, the loyalty shield on a planeswalker with a
 starting loyalty, the defense on a battle with one — the value alone since
-layout v42, in the shield the battle's master paints
+layout v43, in the shield the battle's master paints
 (`drawnStatSlots` in `lib/render/card-image.tsx`). It preloads exactly
 those plates (`frameAssetPathsFor` calls the same function): a bucket plate
 that can't load fails the whole bake, so before 4.5.0 one missing plate
@@ -3907,13 +3907,13 @@ TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies and 5.1b's four modal
 bodies, new templates that joined without a bump, and the battle, which
-joined WITH one — layout v42, on its Card Conjurer master, the family's
+joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,
 type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
 match the prints. Split is M15-era too and stays OUT: a split half prints
 every line smaller than a regular card (the `SPLIT_*` constants, [The
-landscape layouts](#the-landscape-layouts-421b-layout-v42)) — its slots
+landscape layouts](#the-landscape-layouts-421b-layout-v43)) — its slots
 are `fit: "measured"` all the same. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),
 `TYPE_SIZE_PCT` 0.0453 (68 px), `COST_DISC_PCT` 0.0485, the set-symbol box
@@ -3945,7 +3945,7 @@ A family profile:
   band's baseline too (`slotTextDy`). Front faces only; second faces and the
   adventure panel centre their text in the rect (an UNTURNED second face
   with `fit: "measured"` — the split's right half — is fitted and drawn as
-  a front band is, v42);
+  a front band is, v43);
 - gives the set symbol a box in `symbolSizePct` and sets
   `setSymbolFit: "ink"` (code-owned, never in an override). `setSymbolSize`
   (`lib/cards/set-symbol-size.ts`) draws an uploaded icon or the default mark
@@ -3989,7 +3989,7 @@ A family profile:
   it wider than the print's, TODO 4.8). The full-art basics keep 4.39's print-checked
   0.065 W glyph (`setSymbolFit: "ink-box"`), whatever the set; the split's
   thin bar fits a glyph's ink to its 48 px box by HEIGHT
-  (`setSymbolFit: "ink-height"`, v42) and reads no printed-size table,
+  (`setSymbolFit: "ink-height"`, v43) and reads no printed-size table,
   which holds a regular card's sizes. A NEW entry
   (or a re-measured one) changes its set's stored bakes: a layout bump whose
   scope names the set. The planeswalkers' `symbolRect` ends where M15's
@@ -4068,7 +4068,7 @@ What a frame gives it:
   a 0.98 em line box already holds the air above the ascenders, and an
   accented first capital gets its own headroom). A rect that holds part of
   the frame's own textbox border pads past it, per side
-  (`SPLIT_TEXTBOX_BORDER_PX`: 0 / 0 since layout v42 — the Card Conjurer
+  (`SPLIT_TEXTBOX_BORDER_PX`: 0 / 0 since layout v43 — the Card Conjurer
   split's rules rects lie inside the paper, 17–20 px from its sides, which
   `tests/unit/cards/rules-box.test.ts` measures on every colour master; the
   MSE rects spanned the window's width and held 33 / 38 px of border);
@@ -4099,7 +4099,7 @@ What a frame gives it:
   promoted plate replaces one the table was measured on. A value printed on
   the art (no plate) keeps its rect clear, and a badge the MASTER paints
   its box, whether the card has a value or not (`StatSlot.paintedRect`:
-  the battle's defense shield, v42). The renderers draw no badge of their
+  the battle's defense shield, v43). The renderers draw no badge of their
   own: the rounded disc behind a plate-less value went with the battle's,
   its one user (no override could ever declare one).
 

@@ -845,7 +845,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            getVerifiedFrameKeys reads `verified` alone) and FLAGGED "needs
 //            re-verification" on the admin checklist until it is ticked
 //            again; nothing is dropped.
-//   42     — the landscape layouts re-sourced from Card Conjurer (TODO
+//   43     — the landscape layouts re-sourced from Card Conjurer (TODO
 //            4.21b; design 2026-09-29, owner decisions 2026-09-29; built
 //            2026-10-06): split and battle leave their MSE masters (git)
 //            for CC's (the frames bucket, scripts/lib/cc-frames.mjs — the
@@ -897,7 +897,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              line turned with the card (FrameProfile.footerTurn — 3.8's
 //              slice; the collector number, set and language beside it are
 //              4.9d's); the brand mark centred in the new bottom border.
-//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[42] = battle, split):
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[43] = battle, split):
 //            every card on the two, art or none. Public production
 //            (anonymous read, 2026-10-06): 0 public or unlisted cards on
 //            either (private cards and previews: owner SQL). The visual
@@ -908,7 +908,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            first ticks are the owner's after the deploy.
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 42;
+export const CARD_LAYOUT_VERSION = 43;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -936,7 +936,7 @@ export const V32_M15_FAMILY_TEMPLATES: readonly string[] = [
 
 // v38 — the portrait layouts 4.21a re-sourced from Card Conjurer (their
 // masters, art slots and text slots). Frozen like the lists below: v38 is
-// history once it ships (4.21b's split and battle — v42 — and 4.21c's saga
+// history once it ships (4.21b's split and battle — v43 — and 4.21c's saga
 // bring their own bumps).
 export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "aftermath", "flip"];
 
@@ -958,10 +958,10 @@ export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m1
  *  verification scope too (every one of the four has references whose
  *  compare render changes), so there is no V41_VERIFICATION_TEMPLATES. */
 export const V41_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
-/** v42 — the landscape layouts 4.21b re-sourced from Card Conjurer (their
- *  masters, art slots and every text slot). Frozen like v38's: v42 is
+/** v43 — the landscape layouts 4.21b re-sourced from Card Conjurer (their
+ *  masters, art slots and every text slot). Frozen like v38's: v43 is
  *  history once it ships (4.21c's saga brings its own bump). */
-export const V42_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "split"];
+export const V43_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "split"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -1024,10 +1024,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // them is judged by this scope too (each has references whose compare
   // render gains the rider): kept, flagged for a re-check.
   41: V41_TEMPLATES,
-  // v42: the landscape layouts re-sourced from Card Conjurer (4.21b) —
+  // v43: the landscape layouts re-sourced from Card Conjurer (4.21b) —
   // their masters, art slots and text slots; every card on the two. No
   // narrower verification scope: neither has a tick.
-  42: V42_LANDSCAPE_LAYOUT_TEMPLATES,
+  43: V43_LANDSCAPE_LAYOUT_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1644,7 +1644,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
   40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
   41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
-  42: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
+  43: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

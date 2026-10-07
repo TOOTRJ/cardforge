@@ -127,7 +127,7 @@ describe("pipglyph.com mark sits inside the black border (v25)", () => {
   // (Battle and split left this list with TODO 4.21b: their Card Conjurer
   // masters live in the frames bucket — their mark, centred in the new
   // bottom borders, is held to the real masters' black border by
-  // tests/unit/render/landscape-v42-bake.test.tsx.)
+  // tests/unit/render/landscape-v43-bake.test.tsx.)
   it.each<FrameTemplate>(["agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland"])(
     "%s",
     async (template) => {

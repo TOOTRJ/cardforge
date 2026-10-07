@@ -294,7 +294,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // …and the emblem's box (TODO 4.52: 74.4–91.9 %H, no plate; an emblem's
   // text is a sentence or two).
   [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
-  // Split's halves on Card Conjurer's boxes (layout v42, TODO 4.21b): each
+  // Split's halves on Card Conjurer's boxes (layout v43, TODO 4.21b): each
   // 780 × 499 px text column holds 400 characters, TLA #112 and the level-up
   // card at the floor again (the MSE boxes, 57 / 54 px of padding inside a
   // narrower rect, clipped all three); a full card's 1,200 characters and

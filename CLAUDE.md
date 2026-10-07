@@ -361,7 +361,7 @@ Rules and gotchas:
   the full-art basics' "ink-box" never reads the table). Frames outside the
   family keep the old paths byte-for-byte — bringing one in is its own
   layout bump (`docs/FRAMES.md`).
-- The landscape pair (layout v42, TODO 4.21b): `split` and `battle` are Card
+- The landscape pair (layout v43, TODO 4.21b): `split` and `battle` are Card
   Conjurer masters in the bucket at 2100 × 1500 — the importer's
   `orientation: "landscape"` recipes (split turned a quarter turn clockwise
   with no resample, battle downscaled once). A recipe's `shift` moves whole

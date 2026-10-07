@@ -226,7 +226,7 @@ describe("card PDF — a landscape render is turned into the portrait slot (TODO
   });
 
   // Battle and split are Card Conjurer masters in the frames bucket since
-  // TODO 4.21b (layout v42): the bakes are served flat stand-in masters
+  // TODO 4.21b (layout v43): the bakes are served flat stand-in masters
   // (tests/stubs/stand-in-frames.ts) — the PDF's geometry doesn't read the
   // frame — and every other fetch is refused, so nothing leaves the box.
   describe("real landscape bakes (battle and split on stand-in masters — offline)", () => {

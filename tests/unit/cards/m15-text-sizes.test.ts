@@ -32,13 +32,13 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // in lib/cards/typography.ts. The rects stay where v24–v31 verified them; a
 // band whose text grew keeps its baseline through TextSlot.dy, and only the
 // Card Conjurer masters' type line moves onto the prints' baseline. The
-// battle joined with its Card Conjurer master (TODO 4.21b, layout v42) — the
+// battle joined with its Card Conjurer master (TODO 4.21b, layout v43) — the
 // family's one LANDSCAPE member, so a member's size is
 // displayPct(constant, its orientation). Split stays out with print sizes of
 // its own (the SPLIT_* constants), and so does every other frame: their
 // profiles are byte-identical to layout v31's. The same numbers on real
 // bakes: tests/unit/render/m15-text-baselines-bake.test.tsx, and the
-// landscape pair's in tests/unit/render/landscape-v42-bake.test.tsx.
+// landscape pair's in tests/unit/render/landscape-v43-bake.test.tsx.
 // ---------------------------------------------------------------------------
 
 const FAMILY = new Set<string>(M15_FAMILY_TEMPLATES);
@@ -299,7 +299,7 @@ describe("baselines (TextSlot.dy)", () => {
     // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
     // (−9.2 px and −4.9 px at HD).
     ["flip", -9.2 / 1500, -4.9 / 1500],
-    // The battle (layout v42, TODO 4.21b): a new master, set straight onto
+    // The battle (layout v43, TODO 4.21b): a new master, set straight onto
     // the nine MOM prints' baselines from its bars' own faces — the name 2
     // px below the pill-centred line (158.4 px on the prints), "Battle —
     // Siege" 2 px below the bar-centred one. Fractions of ITS 2100 px width.
@@ -455,7 +455,7 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   // Layout v32 re-bakes the family only (its template scope), so every
   // other frame must draw exactly as before. A change here needs its own
   // layout bump; then update the digest. Split and battle left the list
-  // with theirs (layout v42, TODO 4.21b: Card Conjurer masters and new
+  // with theirs (layout v43, TODO 4.21b: Card Conjurer masters and new
   // profiles — the battle in the family, split pinned by the test above and
   // tests/unit/cards/fixtures/profiles-base.json).
   const V31_SPLIT_DIGEST = "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d";
@@ -504,7 +504,7 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     };
   };
 
-  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling — split aside, which moved with its own bump (v42)", () => {
+  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling — split aside, which moved with its own bump (v43)", () => {
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && t !== "split");
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {

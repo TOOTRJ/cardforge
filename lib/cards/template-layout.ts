@@ -2635,7 +2635,7 @@ const MODERNLAND: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// The landscape layouts (TODO 4.21b, layout v42): battle and split on Card
+// The landscape layouts (TODO 4.21b, layout v43): battle and split on Card
 // Conjurer's masters (the frames bucket, scripts/lib/cc-frames.mjs), each
 // 2100 × 1500. Every rect below is % of the LANDSCAPE card; every px is HD
 // (2100 × 1500). Placement rule for both: a text or a value sits where the
@@ -3146,7 +3146,7 @@ const FLIP: FrameProfile = {
   },
 };
 
-// Split — the M15 split frame (LANDSCAPE, layout v42, TODO 4.21b): two
+// Split — the M15 split frame (LANDSCAPE, layout v43, TODO 4.21b): two
 // upright half-cards side by side, each a small card of its own (name +
 // cost → art → type → rules). The LEFT half is the front content; the RIGHT
 // half is the back-face content — a second face with rotation 0 and its OWN
@@ -4768,7 +4768,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
   alphatoken: ALPHATOKEN,
-  // CC's colourless battle frame is see-through (layout v42, TODO 4.21b;
+  // CC's colourless battle frame is see-through (layout v43, TODO 4.21b;
   // owner decision 2026-09-29; MOM #1 Invasion of Ravnica): its name pill,
   // type bar and text box are translucent (α 190–250) from the border down
   // to the bottom border at 1432 px. The art runs under the whole frame for

@@ -128,7 +128,7 @@ export const ADVENTURE_PANEL_PCT = 0.0414;
 export const ADVENTURE_PANEL_COST_PCT = 0.04;
 
 // ---------------------------------------------------------------------------
-// The split card's display sizes (TODO 4.21b, layout v42). Fractions of the
+// The split card's display sizes (TODO 4.21b, layout v43). Fractions of the
 // LANDSCAPE card's own width (2100 px at HD) — a split card is never
 // portrait. Split stays OUT of lib/cards/m15-family.ts: each half is a
 // small card of its own, and the prints set every line on it smaller than

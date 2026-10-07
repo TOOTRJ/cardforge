@@ -11,9 +11,9 @@ import { fitTitleBand } from "@/lib/cards/title-band";
 import { SPLIT_COST_DISC_PCT, SPLIT_TITLE_SIZE_PCT, SPLIT_TYPE_SIZE_PCT, TITLE_SIZE_PCT, TYPE_SIZE_PCT, displayPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
-// The live-preview half of TODO 4.21b (layout v42): split and battle on
+// The live-preview half of TODO 4.21b (layout v43): split and battle on
 // their Card Conjurer masters. The preview draws what the bake draws
-// (tests/unit/render/landscape-v42-bake.test.tsx holds the bake's pixels;
+// (tests/unit/render/landscape-v43-bake.test.tsx holds the bake's pixels;
 // tests/unit/render/render-parity.test.ts pins both renderers to the same
 // helper calls):
 //   • both halves of a split card are set alike — the right half, an
@@ -56,7 +56,7 @@ function split(left: { title: string; cost: string; type?: string }, right: { ti
   );
 }
 
-describe("CardPreview — the split card (layout v42)", () => {
+describe("CardPreview — the split card (layout v43)", () => {
   const profile = getFrameProfile("split");
   const second = profile.secondFace!;
 
@@ -185,7 +185,7 @@ describe("CardPreview — the split card (layout v42)", () => {
   });
 });
 
-describe("CardPreview — the battle (layout v42)", () => {
+describe("CardPreview — the battle (layout v43)", () => {
   const profile = getFrameProfile("battle");
 
   function battle(extra: Record<string, unknown> = {}) {

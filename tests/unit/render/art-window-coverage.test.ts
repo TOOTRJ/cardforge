@@ -617,7 +617,7 @@ describe("the art-window known failures", () => {
         // (The M15 family's windows — then MSE, now CC — were covered by
         // layout v35, 4.4 (2); flip, adventure and aftermath by their Card
         // Conjurer masters, layout v38, 4.21a; split and battle by theirs,
-        // layout v42, 4.21b.)
+        // layout v43, 4.21b.)
         "lotr",
         "lotrscroll",
         "saga",
@@ -656,7 +656,7 @@ describe("the art-window known failures", () => {
       expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
     }
     for (const template of ["m15token", "m15tokentext"]) expect(ART_WINDOW_KNOWN_FAILURES[template].keys, template).toEqual(["c"]);
-    // Layout v42 (TODO 4.21b) struck the landscape pair: split's two
+    // Layout v43 (TODO 4.21b) struck the landscape pair: split's two
     // windows and the battle's — with the see-through sliver beside its
     // shield, and the colourless master's whole translucent body — are
     // covered on every colour.

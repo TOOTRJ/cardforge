@@ -104,7 +104,7 @@ describe("the family's set-symbol boxes", () => {
       expect(p.symbolSizePct, template).toBe(p.orientation === "landscape" ? displayPct(box, "landscape") : box);
     }
     // The battle joined the family with its Card Conjurer master (layout
-    // v42): CC's 86 px box, on the landscape card.
+    // v43): CC's 86 px box, on the landscape card.
     const battle = getFrameProfile("battle");
     expect(battle.symbolSizePct! * 2100).toBeCloseTo(SET_SYMBOL_BOX_PCT * HD, 9);
     expect(battle.symbolSizePct).toBeLessThan(SET_SYMBOL_BOX_PCT);

@@ -19,7 +19,7 @@ describe("Card Conjurer frame profiles", () => {
   // capitals, −9.6 px from packFlip.js's box), aftermath's on AKH #210–214
   // / HOU #157's (the discs centred on row 159.4 where v38's bake sat on
   // 168: −8.6 px, layout v39). The landscape layouts (TODO 4.21b, layout
-  // v42) need NO lift: their title rects are the bars' own faces, and the
+  // v43) need NO lift: their title rects are the bars' own faces, and the
   // prints centre the discs on them — the battle's on 128.5–129.3 px of a
   // pill face centred on 128.75 (nine MOM prints), the split's on 156.6 of
   // a bar face centred on 157.0 (MH2 #123 / #60, TSR #161 / #186).

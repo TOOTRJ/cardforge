@@ -23,7 +23,7 @@ import type { FrameTemplate } from "@/types/card";
 // The profile tests read this list. Layout v32's template scope is a FROZEN
 // copy in lib/cards/layout-version.ts (a test keeps the two equal at v32):
 // a template that joins the family later brings its own bump (battle:
-// layout v42, with its Card Conjurer master) — or, a NEW template no card
+// layout v43, with its Card Conjurer master) — or, a NEW template no card
 // was ever baked on (4.49 (b)'s text-box tokens, 4.34's borderless land,
 // 4.48's full-art tokens), none.
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
-  // The battle (TODO 4.21b, CC's 'Battle' pack; layout v42): the family's
+  // The battle (TODO 4.21b, CC's 'Battle' pack; layout v43): the family's
   // sizes on a landscape card — it joined WITH its bump (0 stored public or
   // unlisted cards).
   "battle",

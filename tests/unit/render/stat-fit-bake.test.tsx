@@ -11,7 +11,7 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // REAL HD bakes. Every template here draws a git frame from public/frames
 // (read from disk), so the renders are deterministic and offline — but
 // flip and battle, whose Card Conjurer masters live in the frames bucket
-// (layouts v38 / v42): they are served a flat stand-in master and plates
+// (layouts v38 / v43): they are served a flat stand-in master and plates
 // (tests/stubs/stand-in-frames.ts). The M15 plate lives in the frames bucket
 // too; its fit is pinned in stat-fit.test.ts.
 // ---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ describe("long stats shrink to fit", () => {
   }, 60_000);
 
   it("Battle: a three-digit defense shrinks into the painted shield's black interior (1920–2007 px), and no badge is drawn", async () => {
-    // TODO 4.21b (layout v42): the defense is the value alone, in the
+    // TODO 4.21b (layout v43): the defense is the value alone, in the
     // shield Card Conjurer's master paints — the drawn disc and its outline
     // are gone. (The stand-in master is flat grey: the value is the only
     // mark the defense adds.)

@@ -9,7 +9,7 @@ import { bucketKeysOf, bucketMaster, haveBucketMasters, serveBucketMasters, type
 import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
-// Layout v42 (TODO 4.21b) on REAL bakes, at HD (2100 × 1500) and at the
+// Layout v43 (TODO 4.21b) on REAL bakes, at HD (2100 × 1500) and at the
 // 1050 px default: split and battle on their Card Conjurer masters, every
 // number measured on the prints (Scryfall PNGs turned clockwise at 2100 ×
 // 1500, each bar registered by correlation; lib/cards/template-layout.ts
@@ -193,7 +193,7 @@ function diffBox(a: Raw, b: Raw, within?: Box): Box | null {
 const tol = (preset: RenderPreset, at: number) => (preset === "hd" ? at : at + 1.5);
 const PRESETS = ["hd", "default"] as const;
 
-describe("layout v42 — the battle on real bakes (HD and the 1050 px default)", () => {
+describe("layout v43 — the battle on real bakes (HD and the 1050 px default)", () => {
   let frames: StandInFrames;
   beforeAll(async () => {
     toneArt = await flatArt([TONE, TONE, TONE]);
@@ -352,7 +352,7 @@ describe("layout v42 — the battle on real bakes (HD and the 1050 px default)",
   }, 120_000);
 });
 
-describe("layout v42 — split on real bakes (HD and the 1050 px default)", () => {
+describe("layout v43 — split on real bakes (HD and the 1050 px default)", () => {
   let frames: StandInFrames;
   beforeAll(async () => {
     frames = await serveStandInFrames([{ template: "split", keys: ["r"], tone: TONE }]);
@@ -564,7 +564,7 @@ describe("layout v42 — split on real bakes (HD and the 1050 px default)", () =
 const REAL_KEYS = [...bucketKeysOf("battle"), ...bucketKeysOf("split")];
 const haveReal = REAL_KEYS.length === 14 && haveBucketMasters(REAL_KEYS);
 
-describe.skipIf(!haveReal)("layout v42 — on the real Card Conjurer masters (set FRAMES_BUILD_DIR if skipped)", () => {
+describe.skipIf(!haveReal)("layout v43 — on the real Card Conjurer masters (set FRAMES_BUILD_DIR if skipped)", () => {
   let served: ServedBucketMasters;
   beforeAll(() => {
     served = serveBucketMasters(REAL_KEYS);

@@ -72,7 +72,7 @@ describe("the main box on every template", () => {
       // 2 px (the textless height never draws it).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ];
-    // The landscape pair (TODO 4.21b, layout v42): Card Conjurer's rules
+    // The landscape pair (TODO 4.21b, layout v43): Card Conjurer's rules
     // rects lie INSIDE the paper, where the prints start their lines.
     const LANDSCAPE = ["split", "battle"];
     const withPrintMargins = FRAME_TEMPLATE_VALUES.filter(
