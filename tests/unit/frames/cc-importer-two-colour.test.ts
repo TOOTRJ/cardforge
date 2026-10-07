@@ -69,7 +69,17 @@ describe("the untilted ramp", () => {
     // prints put them once each pixel is de-shaded (pair-ramp.mjs).
     // …and the borderless FLOATING crown's own split, 40→60 (4.6f, wave 2a:
     // FDN's crowned borderless pairs, de-shaded — wider than the band's).
-    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55], crownFloating: [40, 60] });
+    // …and the borderless land's own, 39→61, for its pinline AND its box
+    // (TODO 4.56: the prints split both where the pinline does, a little
+    // wider than the spells').
+    expect(PAIR_RAMPS).toEqual({
+      pinline: [40, 60],
+      frame: [44, 57],
+      rules: [45, 57],
+      crown: [45, 55],
+      crownFloating: [40, 60],
+      borderlessLand: [39, 61],
+    });
     expect(rampName([45, 57])).toBe("procedural:ramp(45→57 %W)");
     expect(() => rampMask(10, 1, [50, 50])).toThrow();
   });
@@ -259,10 +269,14 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
     // snow print exists) — tests/unit/frames/snow-pair-masters.test.ts.
     expect(builtColors(CC_TEMPLATES.m15snow)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
     expect(builtColors(CC_TEMPLATES.m15snowland)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+    // The borderless land builds its ten split pairs beside the monos (TODO
+    // 4.56; no hybrid land, no crowned twin) —
+    // tests/unit/frames/borderless-land-pair-masters.test.ts.
+    expect(builtColors(CC_TEMPLATES.m15borderlessland)).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
     // …and the double-faced spell faces since 5.1d (tests/unit/frames/
     // dfc-crowns-pairs.test.ts); the land pair none.
     for (const [template, def] of Object.entries(CC_TEMPLATES)) {
-      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
+      if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }
   });

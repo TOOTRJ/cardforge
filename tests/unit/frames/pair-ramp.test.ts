@@ -35,7 +35,17 @@ function solid(width: number, height: number, [r, g, b, a]: [number, number, num
 
 describe("the ramps", () => {
   it("are the design's, measured on the prints, and live in this ONE module (cc-frames re-exports none)", () => {
-    expect(PAIR_RAMPS).toEqual({ pinline: [40, 60], frame: [44, 57], rules: [45, 57], crown: [45, 55], crownFloating: [40, 60] });
+    // …and the borderless LAND's one ramp for its pinline and its box (TODO
+    // 4.56), measured on the 119 two-colour borderless lands that print the
+    // tinted look.
+    expect(PAIR_RAMPS).toEqual({
+      pinline: [40, 60],
+      frame: [44, 57],
+      rules: [45, 57],
+      crown: [45, 55],
+      crownFloating: [40, 60],
+      borderlessLand: [39, 61],
+    });
     // The pair masters (4.6b) and the pair crown bands (4.6a) read the same
     // helpers: no second name for them anywhere in the importer's library.
     for (const name of ["TWO_COLOR_RAMPS", "PAIR_RAMPS", "TWO_COLOR_PAIRS", "rampMask", "lerpLayers", "rampName", "blendPair"]) {
@@ -57,12 +67,20 @@ describe("the ramps", () => {
     // 46.4 / 49.4 / 53.6 (TLA hybrids). The first ramps (frame 40→60 = the
     // pinline's, text box 46→58, crown 43→55) miss the frame band by 3.1,
     // the text box by 1.3–1.5 and the hybrid crown by 2.2 here.
+    // The borderless land (TODO 4.56; each ring's and the box's own end
+    // colours taken as 0 and 1, 2026-10-06): the title and type rings 41.3 /
+    // 50.2 / 58.9 (420 rings of 110 prints), the box's text-free top band
+    // 40.9 / 49.8 / 59.0 (the median profile of 102) — one ramp for both. The
+    // spells' pinline ramp (40→60) misses the land's by 0.7–1.1 at each end,
+    // the bordered frames' box ramp (45→57) by 5.3 and 3.2.
     const prints: [keyof typeof PAIR_RAMPS, number[]][] = [
       ["pinline", [42.1, 50.1, 57.9]],
       ["frame", [45.1, 50.3, 55.6]],
       ["rules", [45.9, 50.6, 55.3]],
       ["crown", [45.5, 49.3, 53.6]],
       ["crown", [46.4, 49.4, 53.6]],
+      ["borderlessLand", [41.3, 50.2, 58.9]],
+      ["borderlessLand", [40.9, 49.8, 59.0]],
     ];
     for (const [region, measured] of prints) {
       const mask = rampMask(1500, 3, PAIR_RAMPS[region]);

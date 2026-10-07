@@ -269,11 +269,14 @@ describe("printingTreatmentOffer — PipGlyph's frame for the treatment, once ve
     expect(printingTreatmentOffer(mh3, new Set())).toBeNull();
     expect(printingTreatmentOffer(mh3, verified(["m15borderlessland", "u"]))).toBeNull();
     expect(printingTreatmentOffer(mh3, verified(["m15borderless", "r"], ["fullartland", "r"]))).toBeNull();
-    // Deserted Beach MID #281, two colours: the gold land, nearest until
-    // 4.6's split pinline — offered like a two-colour spell's gold frame.
+    // Deserted Beach MID #281, two colours: exact since 4.56 drew the pair
+    // masters (they ride the gold `m` tick) — offered once `m` is verified,
+    // never in another colour's.
     const mid = patchOf("mid-281");
-    expect(mid.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6f" });
+    expect(mid.frame_match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land" });
+    expect(mid.frame_template).toBe("m15land");
     expect(printingTreatmentOffer(mid, verified(["m15borderlessland", "m"]))?.template).toBe("m15borderlessland");
+    expect(printingTreatmentOffer(mid, verified(["m15borderlessland", "w"], ["m15borderlessland", "u"]))).toBeNull();
     // A basic keeps its full-art offers, never the nonbasic land's.
     const keys = verified(["m15borderlessland", "w"], ["fullartland", "w"]);
     expect(printingTreatmentOffer(patchOf("fra-382"), keys)?.template).toBe("fullartland");

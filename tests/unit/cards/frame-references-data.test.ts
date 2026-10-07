@@ -4,13 +4,16 @@ import referencesData from "@/lib/cards/frame-references.json";
 import {
   FRAME_COLOR_KEYS,
   FRAME_REFERENCES,
+  TWO_COLOR_PAIRS,
   findFrameReference,
+  framePairReferenceOptions,
   frameReferenceNote,
   frameReferenceOptions,
   referenceFace,
   referenceThumbUrl,
   referenceTierLabel,
 } from "@/lib/cards/frame-reference-registry";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { isDfcBackBody } from "@/lib/cards/dfc";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -46,6 +49,12 @@ const templateSchema = z
         FRAME_COLOR_KEYS.map((key) => [key, z.array(referenceSchema).min(1).nullable()]),
       ),
     ).strict(),
+    /** The printed references of the template's pair masters (TODO 4.56):
+     *  all ten pairs or none, each at least one printing. */
+    pairs: z
+      .object(Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, z.array(referenceSchema).min(1)])))
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -156,6 +165,37 @@ describe("frame-references.json", () => {
       }
     });
   }
+
+  it("pair references (TODO 4.56): only on a template that draws pairs — today the borderless land's, two prints per pair, a digital render first", () => {
+    const withPairs = FRAME_TEMPLATE_VALUES.filter((t) => (data[t] as { pairs?: unknown }).pairs !== undefined);
+    expect(withPairs).toEqual(["m15borderlessland"]);
+    for (const template of withPairs) expect(getFrameProfile(template).twoColorMasters ?? []).toContain("split");
+    const ids = new Set<string>();
+    for (const pair of TWO_COLOR_PAIRS) {
+      const list = framePairReferenceOptions("m15borderlessland", pair);
+      expect(list.map((ref) => ref.set), pair).toHaveLength(2);
+      // The first of each pair is an MKM surveil land (a WotC digital render,
+      // registered to the pixel); the second another tinted-look set's.
+      expect(list[0].set, pair).toBe("mkm");
+      expect(["mid", "otj", "dsk"], pair).toContain(list[1].set);
+      for (const ref of list) {
+        expect(ref.face, ref.name).toBeUndefined();
+        expect(ids.has(ref.scryfallId), ref.name).toBe(false);
+        ids.add(ref.scryfallId);
+        // Never one of a colour's own references, and never a set that
+        // prints a look the pair masters don't draw.
+        for (const key of FRAME_COLOR_KEYS) expect(findFrameReference("m15borderlessland", key, ref.scryfallId), ref.name).toBeNull();
+        expect(["woe", "acr", "fra", "unf", "spg", "ecl", "sos", "msh", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
+      }
+    }
+    expect(ids.size).toBe(20);
+    // The TODO's two headline prints are among them.
+    expect(framePairReferenceOptions("m15borderlessland", "wu").map((r) => `${r.set} ${r.name}`)).toEqual(["mkm Meticulous Archive", "mid Deserted Beach"]);
+    expect(framePairReferenceOptions("m15borderlessland", "ur").map((r) => `${r.set} ${r.name}`)).toEqual(["mkm Thundering Falls", "otj Spirebluff Canal"]);
+    // A template that lists none answers empty, never another's.
+    expect(framePairReferenceOptions("m15land", "wu")).toEqual([]);
+    expect(framePairReferenceOptions("nope", "wu")).toEqual([]);
+  });
 
   it("keeps the hand-researched M15 defaults first", () => {
     expect(FRAME_REFERENCES.m15.w?.name).toBe("Serra Angel");
@@ -299,7 +339,8 @@ describe("4.32 / 4.34 / 4.39 references", () => {
     expect(ids("m15borderlessland", "m")).toEqual(["cmm Command Tower", "msh Avengers Tower"]);
     for (const key of FRAME_COLOR_KEYS) {
       for (const ref of frameReferenceOptions("m15borderlessland", key)) {
-        // Never a set that prints the DARK type bar, never a two-colour print.
+        // Never a set that prints the DARK type bar, never a two-colour print
+        // (those are the pair masters' references: `pairs`, 4.56).
         expect(["woe", "acr", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
         expect(["Deserted Beach", "Spirebluff Canal"], ref.name).not.toContain(ref.name);
         // Never the see-through SLD prints the owner turned down (round 15),

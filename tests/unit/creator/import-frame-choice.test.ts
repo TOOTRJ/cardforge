@@ -222,13 +222,36 @@ describe("importFramePlan — the borderless land (4.34)", () => {
     expect(plan.preselected).toEqual({ template: "m15land" });
   });
 
-  it("a two-colour land (Deserted Beach MID #281): the gold Borderless Land offered as the nearest look (4.6's split pinline)", () => {
+  it("a two-colour land (Deserted Beach MID #281) is the exact Borderless Land since 4.56 drew its pair: the same question as a mono land's — the land frame preselected, Borderless Land listed", () => {
     const plan = importFramePlan(namedPatch("mid-281", LAND), LAND, "m15land");
     if (plan.mode !== "choose") throw new Error(plan.mode);
-    expect(plan.match).toMatchObject({ status: "nearest", template: "m15borderlessland" });
-    expect(plan.heading).toBe("PipGlyph can't match this printing's Borderless land exactly yet — pick one of these");
+    expect(plan.match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land" });
+    expect(plan.heading).toBe("PipGlyph has the Borderless land frame, but Scryfall's art won't fill it — pick one of these");
+    expect(plan.windowCroppedNote).toBe(WINDOW_CROPPED_NOTE);
+    expect(plan.colorKey).toBe("m");
+    expect(plan.preselected).toEqual({ template: "m15land" });
     expect(plan.options.map((o) => o.template)).toEqual(["m15land", "m15borderlessland"]);
     expect(plan.keepCurrent).toEqual({ template: "m15land", available: true, reason: null });
+    // Picked, Borderless Land is applied (the pair's gate is the gold `m`
+    // tick), and nothing is flagged as substituted there.
+    const patch = namedPatch("mid-281", LAND);
+    expect(appliedImportFrameChoice({ choice: { template: "m15borderlessland" }, patch, kind: "land", templateBefore: "m15land", verifiedKeys: LAND })).toBe("m15borderlessland");
+    expect(frameSubstitutionFor(patch.frame_match, "m15borderlessland")).toBeNull();
+    expect(frameSubstitutionFor(patch.frame_match, "m15land")).toMatchObject({ nearestOnOwnFrame: false, reason: WINDOW_CROPPED_NOTE.replace(/\.$/, "") });
+  });
+
+  it("…and a pinned two-colour print (the shadow box of SPG #109, the short box of UNF #277, WOE #303's dark bars) still says it can't be matched exactly", () => {
+    for (const [key, reason] of [
+      ["spg-109", "this printing's text box is see-through with a shadow behind the text, and PipGlyph's Borderless Land tints it"],
+      ["unf-277", "this printing has the short text box, and PipGlyph's has the regular one"],
+      ["woe-303", "this printing's type bar and text box are dark, and PipGlyph's Borderless Land tints them"],
+    ] as const) {
+      const plan = importFramePlan(namedPatch(key, LAND), LAND, "m15land");
+      if (plan.mode !== "choose") throw new Error(`${key}: ${plan.mode}`);
+      expect(plan.match, key).toMatchObject({ status: "nearest", template: "m15borderlessland", reason });
+      expect(plan.heading, key).toBe("PipGlyph can't match this printing's Borderless land exactly yet — pick one of these");
+      expect(plan.preselected, key).toEqual({ template: "m15land" });
+    }
   });
 });
 

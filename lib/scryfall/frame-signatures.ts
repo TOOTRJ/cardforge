@@ -243,14 +243,18 @@ export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = 
  *  every borderless nonbasic land the registry resolved `exact` (117
  *  printings, Scryfall 2026-09-29) was read against its print by eye (31
  *  are dark), plus the two-colour runs of the sets that print the dark look
- *  throughout (ACR, FRA #397–401, WOE). Not pinned: the crowned and
+ *  throughout (ACR, WOE: a grey title bar over a dark type bar and box —
+ *  re-read on 2026-10-06 for 4.56, type-bar luminance 16–70 against the
+ *  title bar's 103–157). FRA #397–401 left this list with 4.56: their type
+ *  bar is the title bar's grey and only the box is dark
+ *  (BORDERLESS_LAND_SHADOW_BOX_PINS). Not pinned: the crowned and
  *  nicknamed LTC / LTR / HOC lands, most of them dark too — their crown and
  *  nickname gaps already make them `nearest` (4.6 / 6.3 re-check them). */
 export const BORDERLESS_LAND_DARK_PINS: Readonly<Record<string, readonly string[]>> = {
   acr: ["111", "112", "114", "115", "116"],
   eoe: ["316"],
   fic: ["462"],
-  fra: ["379", "397", "398", "399", "400", "401"],
+  fra: ["379"],
   hob: ["207"],
   hoc: ["8", "97"],
   lci: ["410a", "410b", "410c", "410d", "410e", "410f"],
@@ -277,12 +281,46 @@ export const BORDERLESS_LAND_DARK_TYPE_BAR_PINS: Readonly<Record<string, readonl
 /** Borderless nonbasic lands that print the SHORT text box (4.37's short
  *  and mid boxes: the type bar at ~70 %H, not 56 %H) among the ones the
  *  registry resolved `exact` (checked by eye, 2026-09-29): the SNC triomes
- *  and SLD #469–472. The two-colour short-box lands (UNF's shocks, SLD
- *  #456–460) are `nearest` on their two-colour gap (4.56 pins them before
- *  it closes). */
+ *  and SLD #469–472 — and, since the two-colour gap closed (TODO 4.56,
+ *  read by eye and measured 2026-10-06: the type bar's top ring about 1459
+ *  of 2100 px down, the regular box's at 1175), the 25 two-colour ones:
+ *  Unfinity's shock lands (#277–286 and their galaxy-foil twins #528–537,
+ *  which print dark bars too) and the Secret Lair check lands SLD #456–460. */
 export const BORDERLESS_LAND_SHORT_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
   snc: ["291", "292", "293", "294", "295"],
-  sld: ["469", "470", "471", "472"],
+  sld: ["456", "457", "458", "459", "460", "469", "470", "471", "472"],
+  unf: [
+    "277", "278", "279", "280", "281", "282", "283", "284", "285", "286",
+    "528", "529", "530", "531", "532", "533", "534", "535", "536", "537",
+  ],
+};
+
+/** Borderless nonbasic lands that print a FOURTH look, 2025's: the title
+ *  and type bars of the land (grey on a two-colour land), the split pinline
+ *  — and a SEE-THROUGH text box with a dark shadow behind the text (a soft
+ *  glow in the frame's colours at its rim, a smoky centre), where 4.34's
+ *  master and 4.56's pair masters draw a flat tinted box. Found reading
+ *  the title, type and box bands of all 192 two-colour borderless nonbasic
+ *  lands side by side before the two-colour gap closed (TODO 4.56, Scryfall
+ *  2026-10-06): every two-colour run released from Tarkir: Dragonstorm's
+ *  Special Guests on — the SPG fetch lands #109–118, the ECL shock lands
+ *  #347–351, SOS #301–305, MSH #380–384, the Secret Lair SLD #2440 — and
+ *  FRA #397–401, pinned as "dark" until 4.56 (their type bar is the title
+ *  bar's grey: luminance 104–150 on the 31, where ACR and WOE's dark type
+ *  bars read 16–70). The box's centre reads half as bright as its edges on
+ *  them (median 0.5; luminance 12–45 on SPG, ECL, SOS and FRA) against as
+ *  bright (1.1; 48–128) on the 119 that print the flat tinted box. No
+ *  Scryfall field tells the looks apart (`inverted` on all of them). Two
+ *  MONO prints of the same box still resolve exact, the owner's call:
+ *  Multiversal Passage SPM #206 and Avengers Tower MSH #334, `m`'s second
+ *  reference (4.37). */
+export const BORDERLESS_LAND_SHADOW_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
+  ecl: ["347", "348", "349", "350", "351"],
+  fra: ["397", "398", "399", "400", "401"],
+  msh: ["380", "381", "382", "383", "384"],
+  sld: ["2440"],
+  sos: ["301", "302", "303", "304", "305"],
+  spg: ["109", "110", "111", "112", "113", "114", "115", "116", "117", "118"],
 };
 
 /** Posters Scryfall doesn't flag `poster`: The Lonely Mountain HOB #284 is
@@ -890,6 +928,7 @@ type GapKey =
   | "light-box"
   | "dark-type-and-box"
   | "dark-type-bar"
+  | "shadow-box"
   | "short-box"
   | "inverted"
   | "dark-bars"
@@ -916,7 +955,8 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // its band (wave 2b), m15snow and m15snowland the standard band (wave
   // 2c); devoid draws none by the owner's call (round 20: the one crowned
   // devoid printing, M3C #4, is another frame); every other frame's crown —
-  // adventure, saga, the borderless land — is still 4.6f's.
+  // adventure, saga, the borderless land (no crowned twin of its masters) —
+  // is still 4.6f's.
   crown: {
     match: { effectsAny: ["legendary"], effectsNone: ["showcase"] },
     reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
@@ -927,10 +967,10 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // m15borderlessartifact (split), wave 2c on m15snow and m15snowland
   // (split): there these gaps drop — and on m15devoid the gold-split gap
   // is no gap at all (GOLD_PAIR_TEMPLATES: its two-colour printings ARE the
-  // gold frame). What is left is the rest of wave 2 (4.6f: extended art,
-  // sagas / adventures, the borderless land's pairs 4.56) — and the tails
-  // it names (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003
-  // frame).
+  // gold frame); 4.56 draws the borderless land's (m15borderlessland: the
+  // grey bars, the pinline and box split). What is left is the rest of wave
+  // 2 (4.6f: extended art, sagas / adventures) — and the tails it names
+  // (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003 frame).
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
@@ -1061,6 +1101,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   "dark-type-bar": {
     match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_DARK_TYPE_BAR_PINS },
     reason: "this printing's type bar is dark, and PipGlyph's Borderless Land tints it",
+    blockedBy: "4.37",
+  },
+  "shadow-box": {
+    match: { kinds: ["land"], collectorIds: BORDERLESS_LAND_SHADOW_BOX_PINS },
+    reason: "this printing's text box is see-through with a shadow behind the text, and PipGlyph's Borderless Land tints it",
     blockedBy: "4.37",
   },
   "short-box": {
@@ -1562,14 +1607,21 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // verified in the card's colour (withVerification: `nearest`, "not yet
   // verified", until then), and like the spells' frame its art reaches the
   // card edge, so the import lands on the bordered land frame (1.18) with
-  // Borderless Land offered once verified. The two-colour lands — most of
-  // them: MID #281, OTJ #304, the RVR shocks, the MKM surveil lands — print
-  // a split pinline and box on grey bars, 4.6's pair masters: nearest on
-  // the gold `m` until then, like the two-colour spells. Three print
-  // variations are pinned `nearest` (Scryfall has no field for any):
-  // the spells' dark type bar and box (TDM, WOE, ACR, EOE, many SLD drops),
-  // a dark type bar alone over the tinted box (FRA #380–381, four SLD
-  // drops) and the short box (the SNC triomes) — 4.37's variants.
+  // Borderless Land offered once verified. The two-colour lands — MID #281,
+  // OTJ #304, the RVR shocks, the MKM surveil lands, the MH3 fetch lands:
+  // 119 of the 192 on Scryfall 2026-10-06 — print a split pinline and box
+  // on grey bars, which the frame draws since 4.56 (its pair masters, riding
+  // the `m` tick): their `two-colour` gap is no gap any more (gapDrawnBy),
+  // and they are exact like the mono lands, the pair and the switch on the
+  // import patch. Four print variations are pinned `nearest` (Scryfall has
+  // no field for any): the spells' dark type bar and box (TDM, WOE, ACR,
+  // EOE, many SLD drops), a dark type bar alone over the tinted box (FRA
+  // #380–381, four SLD drops), 2025's shadow box under the land's own bars
+  // (every two-colour run from the SPG fetch lands on: ECL, SOS, MSH, FRA
+  // #397–401) and the short box (the SNC triomes, UNF's shock lands, SLD
+  // #456–460) — 4.37's variants. The crowned and nicknamed ones (LTR #343 /
+  // #754, HOC #50 / #90, LTC's Bag End) keep their crown / nickname gap: no
+  // crowned twin of the land masters exists.
   ...withGaps(
     {
       key: "borderless/land",
@@ -1577,7 +1629,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"], kinds: ["land"] },
       outcome: { status: "exact", template: { family: "borderless" } },
     },
-    ["etched", "nickname", "crown", "nyx", "two-colour", "two-colour-hybrid", "short-box", "dark-type-and-box", "dark-type-bar", "light-box"],
+    ["etched", "nickname", "crown", "nyx", "two-colour", "two-colour-hybrid", "short-box", "dark-type-and-box", "dark-type-bar", "shadow-box", "light-box"],
   ),
   {
     key: "borderless/layout",

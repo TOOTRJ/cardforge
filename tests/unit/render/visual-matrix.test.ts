@@ -63,7 +63,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -243,9 +243,11 @@ describe("visual-regression matrix", () => {
       }
       expect(keys, c.id).toEqual(["finish", "template"]);
     }
-    // The split crown: both switches on, on every template that draws both.
+    // The split crown: both switches on, on every template that draws both
+    // (the borderless land draws its pairs and no crown, 4.56: none there).
     const both = crowned.filter((c) => paired.includes(c));
-    expect([...new Set(both.map((c) => c.template))].sort()).toEqual([...PAIR_TEMPLATES].sort());
+    expect([...new Set(both.map((c) => c.template))].sort()).toEqual(PAIR_TEMPLATES.filter((t) => frameAnatomyOf(t).crown).sort());
+    expect(PAIR_TEMPLATES.filter((t) => !frameAnatomyOf(t).crown)).toEqual(["m15borderlessland"]);
   });
 
   it("bakes the two-colour frame (TODO 4.6b) on every template that draws pairs, in each dress it draws", () => {
@@ -260,6 +262,21 @@ describe("visual-regression matrix", () => {
     expect(on.some((c) => c.preset === "hd")).toBe(true);
     // Every other case is a stored card: it never names the switch.
     for (const c of cases.filter((x) => !on.includes(x))) expect(c.row.frame_style, c.id).not.toHaveProperty("twoColor");
+    // The borderless land's pairs (TODO 4.56): its W|U card, the HD bake, a
+    // pair with black, the foil and the squared print — and the SAME land
+    // without the switch stays a stored card's case (the gold master).
+    const land = on.filter((c) => c.template === "m15borderlessland").map((c) => c.id).sort();
+    expect(land).toEqual([
+      "m15borderlessland/wu/land-long@pair-hd",
+      "m15borderlessland/wu/land-short@pair",
+      "m15borderlessland/wu/land-short@pair-br",
+      "m15borderlessland/wu/land-short@pair-foil",
+      "m15borderlessland/wu/land-short@pair-square",
+    ]);
+    const byId = new Map(cases.map((c) => [c.id, c]));
+    expect(byId.get("m15borderlessland/wu/land-short@pair-br")?.row.color_identity).toEqual(["black", "red"]);
+    expect(byId.get("m15borderlessland/wu/land-short")?.row.frame_style).toEqual({ template: "m15borderlessland", finish: "regular" });
+    expect(byId.get("m15borderlessland/wu/land-short")?.row.color_identity).toEqual(["white", "blue"]);
   });
 
   it("fingerprints what each case draws: the row, preset and corners — not the field order", () => {

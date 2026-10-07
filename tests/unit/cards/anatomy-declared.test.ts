@@ -36,7 +36,9 @@ describe("where the pieces are declared", () => {
     // band and the split pairs (wave 2c). (The snow pair and devoid carry
     // the collector line's slot since 4.9b; the borderless land and
     // extendedart have none; devoid draws neither crown nor pair — owner
-    // round 20: its two-colour printings are the gold frame.)
+    // round 20: its two-colour printings are the gold frame.) The
+    // borderless LAND draws its split pairs since 4.56 and still no crown
+    // (its masters have no crowned twin): it is not in the list below.
     // 5.1d: the double-faced bodies draw the crown cut round their well or
     // housing (a printed legendary face exists on each) — every transform
     // body but the ▼ land back, and the modal spell pair; the modal land
@@ -51,7 +53,13 @@ describe("where the pieces are declared", () => {
     // transform icon family, 5.0a, on no entry yet.)
     expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false });
     expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false });
+    // The borderless land (TODO 4.56): the split pair alone — no crown, no
+    // collector slot, no stamp notch — so a new card on it stores that one
+    // switch and nothing else.
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false });
+    expect(anatomyDefaults("m15borderlessland")).toEqual({ twoColor: true });
+    expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
+    expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false });
     expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false });
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false });
@@ -130,6 +138,16 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       collector: "2023",
       stamp: "auto",
     });
+    // The borderless land (4.56) keeps the two-colour switch alone — a NEW
+    // two-colour land on it draws the pair by default — and an explicit off
+    // stays off.
+    expect(newCardFrameStyle({ template: "m15borderlessland", finish: "regular", ...NEW_CARD_ANATOMY }, "land")).toEqual({
+      template: "m15borderlessland",
+      finish: "regular",
+      twoColor: true,
+    });
+    expect(newCardFrameStyle({ template: "m15borderlessland" }, "land")).toEqual({ template: "m15borderlessland", twoColor: true });
+    expect(newCardFrameStyle({ template: "m15borderlessland", twoColor: false }, "land")).toEqual({ template: "m15borderlessland", twoColor: false });
     // A token frame has the collector slot but no notch: the stamp's key
     // is dropped (4.9c — tokens print no stamp).
     expect(newCardFrameStyle({ template: "m15token", finish: "regular", ...NEW_CARD_ANATOMY }, "token")).toEqual({
@@ -175,6 +193,27 @@ describe("the two-colour master (frameMasterKey — both renderers)", () => {
 
   it("a template without pair masters stays gold", () => {
     expect(frameMasterKey(getFrameProfile("m15devoid"), ["white", "blue"], creature, { twoColor: true })).toBe("m");
+  });
+
+  it("the borderless land paints its split pair (TODO 4.56) — only with the switch on and a stored pair; a stored gold land keeps its master", () => {
+    const land = getFrameProfile("m15borderlessland");
+    const face = { cardType: "land", supertype: null, cost: null };
+    expect(frameMasterKey(land, ["white", "blue"], face, { twoColor: true })).toBe("wu");
+    // Any stored order, the AI's "multicolor" token ignored: printed order.
+    expect(frameMasterKey(land, ["green", "red", "multicolor"], face, { twoColor: true })).toBe("rg");
+    expect(frameColorKeysFor(land, ["black", "white"], face, { twoColor: true })).toEqual(["wb"]);
+    // The stored look: no key, an explicit off, a plain "multicolor" land
+    // (three colours or more), a mono land — the master each always drew.
+    expect(frameMasterKey(land, ["white", "blue"], face)).toBe("m");
+    expect(frameMasterKey(land, ["white", "blue"], face, {})).toBe("m");
+    expect(frameMasterKey(land, ["white", "blue"], face, { twoColor: false })).toBe("m");
+    expect(frameMasterKey(land, ["multicolor"], face, { twoColor: true })).toBe("m");
+    expect(frameMasterKey(land, ["white", "blue", "black"], face, { twoColor: true })).toBe("m");
+    expect(frameMasterKey(land, ["green"], face, { twoColor: true })).toBe("g");
+    // A land's dress is always the split (no hybrid land), and the crown
+    // switch never changes the master here (no crowned twin).
+    expect(frameMasterKey(land, ["white", "blue"], { ...face, cost: "{W/U}" }, { twoColor: true })).toBe("wu");
+    expect(frameMasterKey(land, ["white", "blue"], { ...face, supertype: "Legendary" }, { twoColor: true, crown: true })).toBe("wu");
   });
 
   it("the snow frames paint their split pair (4.6f, wave 2c); a hybrid cost falls back to it", () => {
@@ -248,6 +287,9 @@ describe("an import (importedAnatomy)", () => {
       colorIdentity: ["white", "blue"],
     });
     expect(importedAnatomy(facts, "m15snow").colorIdentity).toEqual(["white", "blue"]);
+    // The borderless land draws pairs since 4.56: an import landed on it
+    // (the chooser's Borderless Land) keeps the printing's pair.
+    expect(importedAnatomy(facts, "m15borderlessland").colorIdentity).toEqual(["white", "blue"]);
     expect(importedAnatomy(facts, "m15devoid").colorIdentity).toEqual(["multicolor"]);
     expect(importedAnatomy(facts, "tarkirdragon").colorIdentity).toEqual(["multicolor"]);
   });

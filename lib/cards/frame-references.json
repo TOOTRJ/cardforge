@@ -1607,7 +1607,7 @@
     }
   },
   "m15borderlessland": {
-    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — MH2 #325 is an offset scan (its whole card sits 4–11 px off, as SLD #300's does), kept as the second printing. w, u and g have ONE reference. White verifies against Monumental Henge MH3 #354 alone (owner round 16, 2026-09-29): Ancient Den SLD #300 — the offset scan, and Secret Lair's centred one-line print — is no longer a reference (it still imports as the exact borderless land). Owner round 15 (2026-09-29): Archway of Innovation and Shifting Woodland are the only mono-blue / mono-green borderless nonbasic lands that print the tinted look on a clean scan — Scryfall's other exact ones (Shelldock Isle SLD #230, Seat of the Synod SLD #301, Tree of Tales SLD #304) let the art through their bars (luminance σ 22–36 across the type bar, against 2–5 on MH3) and SLD #304 is a scaled scan; the rest print a crown, a nickname, dark bars or a dark type bar, or another frame (showcase, source material, a poster, a two-face layout). The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The TODO's two-colour references (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: 4.6's pair masters, not scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops, pinned nearest in the registry) — a dark type bar alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 / #7112 — the second skeptic pass moved u and g off Theorist's Sanctum and Roiling Canopy for it) and the short box (the SNC triomes) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
+    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — MH2 #325 is an offset scan (its whole card sits 4–11 px off, as SLD #300's does), kept as the second printing. w, u and g have ONE reference. White verifies against Monumental Henge MH3 #354 alone (owner round 16, 2026-09-29): Ancient Den SLD #300 — the offset scan, and Secret Lair's centred one-line print — is no longer a reference (it still imports as the exact borderless land). Owner round 15 (2026-09-29): Archway of Innovation and Shifting Woodland are the only mono-blue / mono-green borderless nonbasic lands that print the tinted look on a clean scan — Scryfall's other exact ones (Shelldock Isle SLD #230, Seat of the Synod SLD #301, Tree of Tales SLD #304) let the art through their bars (luminance σ 22–36 across the type bar, against 2–5 on MH3) and SLD #304 is a scaled scan; the rest print a crown, a nickname, dark bars or a dark type bar, or another frame (showcase, source material, a poster, a two-face layout). The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The two-colour lands (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: the pair masters (TODO 4.56), which ride the m tick and are judged against `pairs` below — two prints per pair, a WotC digital render first (MKM's surveil lands, all ten pairs) — never scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379, many 2024+ SLD drops, pinned nearest in the registry) — a dark type bar alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 / #7112 — the second skeptic pass moved u and g off Theorist's Sanctum and Roiling Canopy for it) 2025's see-through box with a shadow behind the text (every two-colour run from the SPG fetch lands on: ECL, SOS, MSH, FRA #397–401, SLD #2440) and the short box (the SNC triomes, UNF's shock lands, SLD #456–460) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
     "confirm": true,
     "colors": {
       "w": [
@@ -1677,6 +1677,128 @@
           "name": "Avengers Tower",
           "set": "msh",
           "scryfallId": "1292713f-1462-438f-a3a2-1f69ece99668"
+        }
+      ]
+    },
+    "pairs": {
+      "wu": [
+        {
+          "name": "Meticulous Archive",
+          "set": "mkm",
+          "scryfallId": "79d4ba4b-03f3-4e64-b4e7-8c025fc70178"
+        },
+        {
+          "name": "Deserted Beach",
+          "set": "mid",
+          "scryfallId": "c092d9c5-538f-4667-9070-bdce7f8b522a"
+        }
+      ],
+      "wb": [
+        {
+          "name": "Shadowy Backstreet",
+          "set": "mkm",
+          "scryfallId": "27eae4ce-e0b3-482b-9136-6fc17333877e"
+        },
+        {
+          "name": "Concealed Courtyard",
+          "set": "otj",
+          "scryfallId": "d7e85ace-7e2c-46f6-adb9-07f33f8e1750"
+        }
+      ],
+      "ub": [
+        {
+          "name": "Undercity Sewers",
+          "set": "mkm",
+          "scryfallId": "3239a1e5-a002-4389-b9a7-049b1d60e2ac"
+        },
+        {
+          "name": "Gloomlake Verge",
+          "set": "dsk",
+          "scryfallId": "b414e4bd-a443-4ab3-bee4-1ad1d039aa1a"
+        }
+      ],
+      "ur": [
+        {
+          "name": "Thundering Falls",
+          "set": "mkm",
+          "scryfallId": "da1792e4-2170-42ae-a335-fde6f5ef8932"
+        },
+        {
+          "name": "Spirebluff Canal",
+          "set": "otj",
+          "scryfallId": "9d83bdb3-1f04-4b99-a36b-312da0cbed50"
+        }
+      ],
+      "br": [
+        {
+          "name": "Raucous Theater",
+          "set": "mkm",
+          "scryfallId": "2faf0337-c7a3-45a0-bb14-c431526da2cd"
+        },
+        {
+          "name": "Blazemire Verge",
+          "set": "dsk",
+          "scryfallId": "73a926c5-ba2b-4ac5-9717-6c9181f9a827"
+        }
+      ],
+      "bg": [
+        {
+          "name": "Underground Mortuary",
+          "set": "mkm",
+          "scryfallId": "0d8938e4-bfa5-47e1-8c71-9c6583346300"
+        },
+        {
+          "name": "Blooming Marsh",
+          "set": "otj",
+          "scryfallId": "1cfb4a80-3319-41ad-9d97-a9a53c9f84fb"
+        }
+      ],
+      "rg": [
+        {
+          "name": "Commercial District",
+          "set": "mkm",
+          "scryfallId": "3a9889ab-3527-414e-9c30-539f0608bd2b"
+        },
+        {
+          "name": "Thornspire Verge",
+          "set": "dsk",
+          "scryfallId": "a817f77d-19ea-4342-b90f-d92f62543303"
+        }
+      ],
+      "rw": [
+        {
+          "name": "Elegant Parlor",
+          "set": "mkm",
+          "scryfallId": "1f0cef88-50bd-4baa-8d02-26ec4967a7be"
+        },
+        {
+          "name": "Inspiring Vantage",
+          "set": "otj",
+          "scryfallId": "551e216d-a82f-49a1-a3fd-8165715a05c4"
+        }
+      ],
+      "gw": [
+        {
+          "name": "Lush Portico",
+          "set": "mkm",
+          "scryfallId": "c3bd2920-9fbf-4853-ace3-66cd7015de32"
+        },
+        {
+          "name": "Hushwood Verge",
+          "set": "dsk",
+          "scryfallId": "2bc1b38f-11bf-4eb0-b333-4d605290e75b"
+        }
+      ],
+      "gu": [
+        {
+          "name": "Hedge Maze",
+          "set": "mkm",
+          "scryfallId": "ee215175-d48b-4630-a1b1-36e195db05dd"
+        },
+        {
+          "name": "Botanical Sanctum",
+          "set": "otj",
+          "scryfallId": "82670072-9851-48c7-a8f5-7842bff6c252"
         }
       ]
     }

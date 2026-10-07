@@ -151,19 +151,24 @@ const TEMPLATES = {
   },
   // The borderless nonbasic land (4.34). A land's frame colour follows the
   // mana it makes: c = colourless lands, m = three and more colours (two
-  // split the pinline and box, 4.6). No crown or nickname line until 4.6 /
-  // 6.3. Curate by eye: drop the prints of the spells' look — a DARK type
-  // bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC,
-  // many 2024+ SLD drops; the registry pins them, BORDERLESS_LAND_DARK_PINS),
-  // a dark type bar alone over the tinted box (FRA #380–381, a few SLD
-  // drops; BORDERLESS_LAND_DARK_TYPE_BAR_PINS) and the short box (the SNC
-  // triomes): the master tints the type bar and the box. Also drop scans
+  // split the pinline and box on grey bars: the pair masters, whose own
+  // references are the entry's `pairs` in frame-references.json — 4.56,
+  // curated by hand from the tinted-look sets, never found by this query).
+  // No crown or nickname line until 4.6 / 6.3. Curate by eye: drop the
+  // prints of the spells' look — a DARK type bar and text box under the
+  // colour's title bar (TDM, WOE, ACR, EOE, FIC, many 2024+ SLD drops; the
+  // registry pins them, BORDERLESS_LAND_DARK_PINS), a dark type bar alone
+  // over the tinted box (FRA #380–381, a few SLD drops;
+  // BORDERLESS_LAND_DARK_TYPE_BAR_PINS), the see-through box with a shadow
+  // behind the text (2025's runs: SPG #109–118, MSH, SOS, ECL;
+  // BORDERLESS_LAND_SHADOW_BOX_PINS) and the short box (the SNC triomes,
+  // UNF's shock lands): the master tints the type bar and the box. Also drop scans
   // whose bars let the art through (SLD #230 / #301 / #304, owner round 15:
   // u and g keep their one MH3 reference rather than take them). w keeps
   // Monumental Henge MH3 #354 alone too (owner round 16: not Ancient Den
   // SLD #300, an offset scan of Secret Lair's centred one-line print).
   m15borderlessland: {
-    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop a dark type bar, with or without a dark box (BORDERLESS_LAND_DARK_PINS, BORDERLESS_LAND_DARK_TYPE_BAR_PINS), and the short box.",
+    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop a dark type bar, with or without a dark box (BORDERLESS_LAND_DARK_PINS, BORDERLESS_LAND_DARK_TYPE_BAR_PINS), a see-through box with a shadow behind the text (BORDERLESS_LAND_SHADOW_BOX_PINS) and the short box.",
     q: (k) =>
       `border:borderless frame:2015 t:land -t:basic -is:showcase -frame:legendary -is:dfc -is:textless -is:flavorname -t:creature ${k === "m" ? "produces>=3 -produces:c" : `produces=${k}`}`,
   },
