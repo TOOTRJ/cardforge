@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FieldGroup, inputClass, textareaClass } from "@/components/creator/field-group";
+import { retiredFrameTemplate } from "@/lib/cards/card-display";
 import { submitFeedbackAction } from "@/lib/feedback/actions";
 import {
   FEEDBACK_CATEGORIES,
@@ -39,9 +40,11 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
   })();
   const initialTemplate = ((): string => {
     const t = params.get("template");
+    // An old link naming a retired frame (TODO 4.54) opens on the frame
+    // that replaced it.
     return (FRAME_TEMPLATE_VALUES as readonly string[]).includes(t ?? "")
       ? (t as string)
-      : "";
+      : (retiredFrameTemplate(t) ?? "");
   })();
 
   const [category, setCategory] = useState<FeedbackCategory>(initialCategory);

@@ -268,7 +268,7 @@ export async function runRebakeBatch(
 
       // Overlap guard, part 1: is the card (and its layout) still what we
       // rendered? A residual race remains until the write; part 2 catches it.
-      const template = normalizeFrameTemplate(templateOfFrameStyle(row.frame_style));
+      const template = normalizeFrameTemplate(templateOfFrameStyle(row.frame_style), row);
       const [{ data: fresh }, layoutNow] = await Promise.all([
         supabase.from("cards").select("updated_at, visibility, layout_version").eq("id", row.id).maybeSingle(),
         readOverrideStamp(supabase, template),

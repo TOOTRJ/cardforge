@@ -81,7 +81,7 @@ describe("newTokenFrame — the default switch (owner 2026-09-29: new tokens def
 
   it("knows the arch in every dress — where a token entering the kind on the M15 era lands", () => {
     for (const t of ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"]) expect(isArchTokenFrame(t), t).toBe(true);
-    for (const t of ["m20token", "m20tokentall", "alphatoken", "m15", "nyx", null, undefined]) expect(isArchTokenFrame(t), String(t)).toBe(false);
+    for (const t of ["m20token", "m20tokentall", "m15", "nyx", null, undefined]) expect(isArchTokenFrame(t), String(t)).toBe(false);
   });
 });
 
@@ -229,12 +229,11 @@ describe("the arch and the full-art family, side by side", () => {
 
   it("never reads two frames alike where the picker, the toasts or the admin checklist name them", () => {
     // Toasts and import notes (describeFrame): "M15 (2015) Token" and
-    // "Classic (1993) Token" — one name per template.
+    // "Classic (1993) Land" — one name per template.
     const described = FRAME_TEMPLATE_VALUES.map((t) => describeFrame(t));
     expect(new Set(described).size).toBe(described.length);
     expect(describeFrame("m20token")).toBe("M15 (2015) Token");
     expect(describeFrame("m15token")).toBe("M15 (2015) Token (2014–2019)");
-    expect(describeFrame("alphatoken")).toBe("Classic (1993) Token");
     // The picker's chips, the admin checklist and the ops tile's template
     // table list one era at a time (the sign-off's treatment table one
     // frame set): no two labels alike inside an era.

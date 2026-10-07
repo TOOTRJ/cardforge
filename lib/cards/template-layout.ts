@@ -2472,59 +2472,6 @@ const ALPHALAND: FrameProfile = {
   pt: { ...AGCLASSIC.pt!, inkByColorKey: ALPHA_LAND_INK },
 };
 
-// Alpha Token — the 1993 token frame (magic-agclassic-token.mse-style). Silver
-// stone border, a large white art window (cut to transparent), and a green
-// panel with a tan type box at the bottom. No title plate (the name sits in the
-// dark top border in light ink) and no cost. P/T is white text over the tan box
-// bottom-right; token abilities render over the lower art on a dark scrim.
-const ALPHATOKEN: FrameProfile = {
-  flavorDivider: false,
-  label: "Alpha Token",
-  brandMark: { rightPct: 3.5, bottomPct: 0.55 },
-  hideCost: true,
-  artSlot: { topPct: 9.0, leftPct: 10, widthPct: 80, heightPct: 52.5 },
-  title: {
-    rect: { topPct: 3.2, leftPct: 12, widthPct: 76, heightPct: 5.2 },
-    sizePct: 0.044,
-    colorHex: INK_LIGHT,
-    weight: 600,
-    align: "center",
-    font: "display",
-    shadowCss: OUTLINE_SHADOW,
-  },
-  type: {
-    rect: { topPct: 70.5, leftPct: 18, widthPct: 64, heightPct: 7 },
-    sizePct: 0.03,
-    colorHex: INK_DARK,
-    weight: 600,
-    align: "center",
-    font: "display",
-  },
-  rules: {
-    rect: { topPct: 49.0, leftPct: 12, widthPct: 76, heightPct: 11 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
-    colorHex: INK_LIGHT,
-    vAlign: "center",
-    font: "body",
-    backdropHex: "rgba(10,8,6,0.5)",
-  },
-  footer: {
-    rect: { topPct: 96.5, leftPct: 10, widthPct: 80, heightPct: 3 },
-    sizePct: 0.015,
-    colorHex: INK_LIGHT,
-    uppercase: true,
-    letterSpacingEm: 0.05,
-    font: "display",
-  },
-  pt: {
-    rect: { topPct: 82.5, leftPct: 75, widthPct: 19, heightPct: 6.5 },
-    sizePct: 0.04,
-    colorHex: "#ffffff",
-    weight: 700,
-    shadowCss: OUTLINE_SHADOW,
-  },
-};
-
 // ---------------------------------------------------------------------------
 // Retro (1997, magic-old.mse-style) — the pre-8th-Edition "old border": a tan
 // marble frame with the name + type printed directly on the border (no plates),
@@ -4911,7 +4858,6 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
-  alphatoken: ALPHATOKEN,
   // CC's colourless battle frame is see-through (layout v43, TODO 4.21b;
   // owner decision 2026-09-29; MOM #1 Invasion of Ravnica): its name pill,
   // type bar and text box are translucent (α 190–250) from the border down

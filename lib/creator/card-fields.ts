@@ -248,7 +248,9 @@ export function defaultValuesFor(
   const persistedFrame = (card.frame_style as FrameStyle | null) ?? {};
   const normalizedFrameStyle: FrameStyle = {
     finish: normalizeCardFinish(persistedFrame.finish),
-    template: normalizeFrameTemplate(persistedFrame.template),
+    // A retired template (TODO 4.54) opens on its replacement — with the
+    // text box when the card has text — and the next save stores that.
+    template: normalizeFrameTemplate(persistedFrame.template, card),
     // The anatomy switches exactly as stored: absent stays absent — a
     // stored card keeps its look until its owner switches a piece on.
     ...storedAnatomyOf(persistedFrame),

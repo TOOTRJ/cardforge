@@ -103,7 +103,6 @@ const DOCUMENTED_NULLS = new Set([
   // template Publish can't tick the combo (4.21a follow-up, 2026-10-02).
   "aftermath/m",
   "flip/c", "flip/m",
-  "alphatoken/w", "alphatoken/u", "alphatoken/b", "alphatoken/r", "alphatoken/g", "alphatoken/c", "alphatoken/m",
   "fullart/c",
   // Full-art basics (4.39): no multicolour basic, and the one left-disc
   // Wastes (FIN #309) is black-bordered — no borderless one (owner visual

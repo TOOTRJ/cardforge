@@ -13,20 +13,54 @@ import {
   DEFAULT_FRAME_TEMPLATE,
   FRAME_TEMPLATE_VALUES,
   RETIRED_CARD_FINISHES,
+  RETIRED_FRAME_TEMPLATES,
   type CardFinish,
   type CardType,
   type FrameTemplate,
 } from "@/types/card";
 
-// Coerce a persisted frame template to a known one. Older cards may carry the
-// retired "regular" placeholder (or an empty/unknown value); those resolve to
-// the default frame so the renderers never point at a deleted asset folder.
+/** The text a retired template's replacement depends on: a card or form
+ *  face (camelCase) or a stored row (snake_case). */
+export type FrameTextFace = {
+  rulesText?: string | null;
+  flavorText?: string | null;
+  rules_text?: string | null;
+  flavor_text?: string | null;
+};
+
+/**
+ * The frame a RETIRED template reads as (RETIRED_FRAME_TEMPLATES in
+ * types/card.ts; TODO 4.54), or null for any other value. With a `face`
+ * that carries rules or flavour text the answer is the frame with a text
+ * box; without one — or with no face to judge by (a URL parameter, a bare
+ * frame_style) — the bare frame.
+ */
+export function retiredFrameTemplate(
+  template: string | null | undefined,
+  face?: FrameTextFace | null,
+): FrameTemplate | null {
+  const retired = template ? RETIRED_FRAME_TEMPLATES.get(template) : undefined;
+  if (!retired) return null;
+  const hasText =
+    face != null &&
+    Boolean((face.rulesText ?? face.rules_text)?.trim() || (face.flavorText ?? face.flavor_text)?.trim());
+  return hasText ? retired.withText : retired.bare;
+}
+
+// Coerce a persisted frame template to a known one. A RETIRED template reads
+// as its replacement (retiredFrameTemplate — pass the card's text when it is
+// at hand, so a retired token frame with text lands on the text-box frame);
+// older cards may also carry the retired "regular" placeholder (or an
+// empty/unknown value): those resolve to the default frame, so the renderers
+// never point at a deleted asset folder.
 export function normalizeFrameTemplate(
   template: string | null | undefined,
+  face?: FrameTextFace | null,
 ): FrameTemplate {
-  return (FRAME_TEMPLATE_VALUES as readonly string[]).includes(template ?? "")
-    ? (template as FrameTemplate)
-    : DEFAULT_FRAME_TEMPLATE;
+  if ((FRAME_TEMPLATE_VALUES as readonly string[]).includes(template ?? "")) {
+    return template as FrameTemplate;
+  }
+  return retiredFrameTemplate(template, face) ?? DEFAULT_FRAME_TEMPLATE;
 }
 
 // Coerce a persisted finish to a current one: a retired value maps to the

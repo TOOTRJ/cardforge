@@ -140,8 +140,6 @@ const REFS = [
   { frame: "modern", url: named("Shivan Dragon", "8ed") },
   { frame: "modernland", url: named("Evolving Wilds", "dka") },
   { frame: "alphaland", url: search("set:lea t:forest") },
-  // alphatoken: no official 1993 token exists — rendered solo, judged vs MSE intent.
-  { frame: "alphatoken", url: null, sample: alphaTokenSample() },
   { frame: "battle", url: named("Invasion of Zendikar", "mom"), rotate: 90 },
   { frame: "saga", url: named("History of Benalia", "dom") },
   { frame: "adventure", url: named("Bonecrusher Giant", "eld") },
@@ -157,22 +155,6 @@ const REFS = [
   { frame: "tarkirdraconic", url: search("e:tdm frame:showcase t:dragon -is:digital") },
   { frame: "tarkirghostfire", url: named("Craterhoof Behemoth", "tdm") },
 ];
-
-function alphaTokenSample() {
-  return {
-    title: "Goblin",
-    cardType: "token",
-    subtypes: ["Goblin"],
-    rarity: "common",
-    colorIdentity: ["red"],
-    rulesText: "Haste",
-    power: "1",
-    toughness: "1",
-    artistCredit: "PipGlyph",
-    artUrl: null,
-    frameStyle: { template: "alphatoken", finish: "regular" },
-  };
-}
 
 // --- Render + composite ------------------------------------------------------
 

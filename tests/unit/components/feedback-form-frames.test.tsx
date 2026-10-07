@@ -5,9 +5,8 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The feedback form's "Which frame?" list (TODO 4.48a): frame labels are
-// era-relative and repeat across eras — "Token" is the M15 full-art design
-// (m20token) and Alpha's (alphatoken) since 4.48a, "Standard" and "Land"
-// repeat too — so the options sit under one group per era, as the frame
+// era-relative and repeat across eras — "Standard" and "Land" (and "Token",
+// until TODO 4.54 retired Alpha's) — so the options sit under one group per era, as the frame
 // picker lists them, and never read alike inside one.
 // ---------------------------------------------------------------------------
 
@@ -55,6 +54,7 @@ describe("the feedback form's frame list (TODO 4.48a)", () => {
     expect(select.querySelector('option[value="m20token"]')?.textContent).toBe("Token");
     expect(groupOf("m20token")).toBe("M15 (2015)");
     expect(groupOf("m15token")).toBe("M15 (2015)");
-    expect(groupOf("alphatoken")).toBe("Classic (1993)");
+    // The retired Alpha token (TODO 4.54) is no longer offered.
+    expect(select.querySelector('option[value="alphatoken"]')).toBeNull();
   });
 });

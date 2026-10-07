@@ -424,7 +424,7 @@ bake's transparent corner mask and the frame masters all read it.
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
   `scripts/lib/frame-corners.mjs`: retro, retroland, modern, modernland,
-  extendedart, fullart, m15textless, m15textlessland, alphatoken, and
+  extendedart, fullart, m15textless, m15textlessland, and
   expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
   adventure — its 1–2 px grey paper rim just inside the arc, added
   2026-09-28 — flip and aftermath left the list with 4.21a and saga with
@@ -633,6 +633,34 @@ frame change](#shipping-a-frame-change)).
 8. **Ship it** ([Shipping a frame change](#shipping-a-frame-change)) and
    **have it verified** ([Verifying a frame](#verifying-a-frame)).
    `supabase/seed.sql` follows production's ticks afterwards, never before.
+
+### Retiring a frame
+
+A template leaves `FRAME_TEMPLATE_VALUES` only after its replacement is in
+`RETIRED_FRAME_TEMPLATES` (`types/card.ts`). An UNKNOWN `frame_style.template`
+draws `DEFAULT_FRAME_TEMPLATE` — m15, the creature frame — so without the map
+a row, draft or remix payload that still names the old value would change
+kind on screen. The map is the read path, and the only one:
+`normalizeFrameTemplate(template, face)` / `retiredFrameTemplate`
+(`lib/cards/card-display.ts`; both renderers, the creator's load, the re-bake
+scope rules), the validator's `frame_style.template` preprocess
+(`lib/validation/card.ts`: an old payload parses instead of failing) and
+`staleTemplateFilter` (an override of the replacement marks the rows that
+draw on it). Nothing rewrites a stored row: its owner's next save stores the
+replacement, and its stored bake keeps the old look until it is re-baked.
+
+**`alphatoken`** (TODO 4.54, retired 2026-10-07; owner decision 2026-09-29):
+a 1993-style token frame of our own — no 1993-frame token was ever printed —
+with no reference, no tick and, counted on production the day it went, no
+card (public, unlisted or private). It reads as `m15token`, or
+`m15tokentext` when the card has rules or flavour text. No migration: no
+seed, CHECK, `frame_reviews` or `frame_profile_overrides` row named it on
+production; a row on a dev, preview or local database is covered by the
+map, and a `frame_reviews` / override row there is never read (both are
+looked up by a current template key). The registry's 1993 family now
+answers a token as `token/old-frame` does for 1997 and 2003 (nearest, the
+M15 token, 4.43). Its 17 Visual cases were removed without a bump (0 stored
+cards; a removal changes no case).
 
 ## Shipping a frame change
 
@@ -4673,7 +4701,7 @@ separate "Artifact Token" chip, and stored cards keep their template.
 
 The bump is card-scoped (`VERSION_SCOPES[34]`): every card on the two token
 frames, plus a token whose printed line changes on any other template
-(`tokenTypeLineChanged` — alphatoken, the showcases, flip's Roles; a
+(`tokenTypeLineChanged` — the since-retired alphatoken, the showcases, flip's Roles; a
 template list would AND those away). It is NOT verification-neutral: the
 m15token / m15tokenartifact ticks go stale (`VERIFICATION_TEMPLATE_SCOPES`;
 a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the

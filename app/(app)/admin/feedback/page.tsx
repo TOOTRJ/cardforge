@@ -138,8 +138,9 @@ export default async function AdminFeedbackPage({
                       className="font-mono text-primary-bright hover:underline"
                     >
                       {/* The template key beside the label: labels repeat
-                          across eras ("Token" = m20token and alphatoken,
-                          TODO 4.48a; "Standard", "Land"). */}
+                          across eras ("Standard", "Land"; TODO 4.48a). A
+                          retired key (alphatoken, TODO 4.54) on an old
+                          row has no label and prints as the key. */}
                       {FRAME_TEMPLATE_LABELS[item.frameTemplate as FrameTemplate]
                         ? `${FRAME_TEMPLATE_LABELS[item.frameTemplate as FrameTemplate]} · ${item.frameTemplate}`
                         : item.frameTemplate}

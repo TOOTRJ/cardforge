@@ -447,7 +447,7 @@ function CardImage({
   /** NEVER rendered — Satori's image preload list (see renderCardImage). */
   children?: React.ReactNode;
 }) {
-  const template = normalizeFrameTemplate(card.frameStyle?.template);
+  const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = layoutForFace(resolveFrameProfile(template, card.profileOverrides), card);
   const markLayout = brandMarkLayout(layout);
   // The colour-indicator dot's fills (TODO 5.1a) — none on every other body.
@@ -3570,7 +3570,7 @@ async function withRenderableImages(
  *  unless one is null (it renders those live: the downscaled bake no longer
  *  carries the pixels outside the arc). */
 export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
-  const template = normalizeFrameTemplate(card.frameStyle?.template);
+  const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const colors = card.colorIdentity as ColorIdentity[] | undefined;
   const split = frameSplitFor(layout, colors);
@@ -3647,7 +3647,7 @@ export function drawnStatSlots(
  * getPlateDataUrlForPath call sites in CardImage.
  */
 export function frameAssetPathsFor(card: CardPreviewData): string[] {
-  const template = normalizeFrameTemplate(card.frameStyle?.template);
+  const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const colorKey = pickFrameColorKey(
     card.colorIdentity as ColorIdentity[] | undefined,
@@ -3736,7 +3736,7 @@ export async function renderCardImage(
   // JSX below hit the cache (a miss renders a transparent pixel, logged).
   // A two-colour split frame paints two masters — warm both. A foil card
   // also needs its art's mask copies (foilMaskSource, sharp).
-  const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template);
+  const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template, card);
   const frameLayout = resolveFrameProfile(frameTemplate, card.profileOverrides);
   const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined, card, card.frameStyle);
   const [, , foilArt, foilSecondArt, secondArtSize] = await Promise.all([

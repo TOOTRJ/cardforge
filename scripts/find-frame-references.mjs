@@ -229,10 +229,6 @@ const TEMPLATES = {
           ? `frame:1993 t:land -t:basic id=c`
           : `frame:1993 t:basic ${identityColor(k)}`,
   },
-  alphatoken: {
-    note: "No 1993-frame tokens were printed.",
-    q: () => null,
-  },
   retro: {
     q: (k) => `frame:1997 -t:land -t:token -is:showcase (st:expansion or st:core) ${spellColor(k)}`,
   },

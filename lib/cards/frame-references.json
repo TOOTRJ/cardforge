@@ -3349,18 +3349,6 @@
       ]
     }
   },
-  "alphatoken": {
-    "note": "No 1993-frame tokens were printed; sample content only.",
-    "colors": {
-      "w": null,
-      "u": null,
-      "b": null,
-      "r": null,
-      "g": null,
-      "c": null,
-      "m": null
-    }
-  },
   "retro": {
     "colors": {
       "w": [
