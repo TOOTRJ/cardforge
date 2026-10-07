@@ -586,11 +586,12 @@ describe("keep-outs", () => {
     expect(statKeepOuts(bare, { defense: false })).toEqual([]);
     // The battle's defense shield is painted by its MASTER (paintedRect,
     // TODO 4.21b): the keep-out is the shield's own box — the pack's Defense
-    // mask, 164 × 166 px from 1881 / 1304 at HD — and it is there on EVERY
+    // mask set 12 px right (TODO 4.21d), 164 × 166 px from 1893 / 1304 at HD
+    // — and it is there on EVERY
     // battle, whatever the show flags say: the shield is on the card whether
     // or not a value is drawn in it.
     const painted = battle.defense!.paintedRect!;
-    expect(painted.leftPct * 21).toBeCloseTo(1881, 9);
+    expect(painted.leftPct * 21).toBeCloseTo(1893, 9);
     expect(painted.topPct * 15).toBeCloseTo(1304, 9);
     expect(painted.widthPct * 21).toBeCloseTo(164, 9);
     expect(painted.heightPct * 15).toBeCloseTo(166, 9);

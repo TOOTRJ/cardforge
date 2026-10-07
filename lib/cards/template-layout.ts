@@ -2693,11 +2693,12 @@ const MODERNLAND: FrameProfile = {
 // so the card reads right on the frame it is drawn on. Where Card
 // Conjurer's pack itself leaves the prints, the importer moves whole blocks
 // of the master onto them through its flat border (SPLIT_RECUT_PX,
-// BATTLE_LOWER_RECUT_PX — the px below are the PACK's, and ride those
-// moves as the tokens ride TOKEN_RECUT_PX); what a block move can't reach
-// (the battle's bars end 8–11 px short of the prints') the slot follows on
-// the master, not at the print's absolute column (docs/FRAMES.md "The
-// landscape layouts").
+// BATTLE_LOWER_RECUT_PX, BATTLE_TOP_RECUT_PX — the px below are the PACK's,
+// and ride those moves as the tokens ride TOKEN_RECUT_PX); what a block
+// move can't reach — the battle's bars ended 8–10 px short of the prints',
+// its shield 12 px left of theirs — the importer re-cuts (TODO 4.21d,
+// layout v45: BATTLE_RIGHT_RECUT_PX, which the slots ride the same way;
+// docs/FRAMES.md "The landscape layouts").
 // ---------------------------------------------------------------------------
 
 /** How far the importer moves Card Conjurer's two split halves onto the
@@ -2707,8 +2708,18 @@ const MODERNLAND: FrameProfile = {
  *  half moves 11 px and the right half 3. */
 export const SPLIT_RECUT_PX = { left: -11, right: -3 } as const;
 /** How far the importer moves the battle's lower block (type bar, text box,
- *  shield) DOWN onto the prints, HD px (BATTLE_LOWER_RECUT). */
+ *  shield) DOWN onto the prints, HD px (BATTLE_BLOCK_RECUT's second block). */
 export const BATTLE_LOWER_RECUT_PX = 4;
+/** How far the importer moves the battle's top block (the name pill, the
+ *  icon, the arc's upper curve) onto the prints, HD px (negative = up;
+ *  BATTLE_BLOCK_RECUT's first block — TODO 4.21d). */
+export const BATTLE_TOP_RECUT_PX = -2;
+/** How far the importer re-cuts the battle's right side onto the prints, HD
+ *  px to the right (TODO 4.21d; scripts/lib/cc-frames.mjs
+ *  BATTLE_RIGHT_RECUT's bands and BATTLE_SHIELD.dx — a unit test holds them
+ *  together): the name pill's paper is stretched 10 px, the type bar's and
+ *  the text box's 8, and the shield is set 12 px right, over the border. */
+export const BATTLE_RIGHT_RECUT_PX = { pill: 10, bars: 8, shield: 12 } as const;
 
 /** A portrait footer slot as a LANDSCAPE card carries it (TODO 4.21b; 3.8's
  *  slice for split and battle): the printed card is the portrait card turned
@@ -2733,19 +2744,24 @@ function footerTurnedWithCard(footer: TextSlot): TextSlot {
 // 'Battle' master (packBattle.js, 2814 × 2010 → 2100 × 1500 in one Lanczos
 // pass) replaces the MSE 'm15 mainframe battles' one, which had no border,
 // no siege arc, no battle icon and no defense shield (a transparent ring
-// round a drawn disc). On every colour the master is: the black border
+// round a drawn disc). On every colour the PACK is: the black border
 // (its inner edge the window's: 168–2039 × 61 px, the arc bulging left),
 // the battle icon's ring at x 220–362, the name pill's face 375–1967 ×
-// 76–181, and — in the PACK's rows, which the importer moves
-// BATTLE_LOWER_RECUT_PX (4 px) down onto the prints — the type bar's face
-// 242–1967 × 871–975, the text box's paper 253–1943 × 1006–1430, the
-// defense shield 1881–2045 × 1300–1466 (its black interior 1920–2007 on the
-// digits' rows) and the bottom border from 1442. Nine MOM prints set the
-// type bar 5.3–5.5 px, the box's top 4.6, its bottom 2.5 and the shield
-// 2.8–5.0 px lower than the pack: within 1.5 px of their mean after the
-// move (2.3 px of any one print). (Their name pill, type bar and box also
-// end 8–11 px further right and their shield sits 12 px right — the
-// pack's, kept: no flat zone crosses the bars.)
+// 76–181, the type bar's face 242–1967 × 871–975, the text box's paper
+// 253–1943 × 1006–1430, the defense shield 1881–2045 × 1300–1466 (its
+// black interior 1920–2007 on the digits' rows) and the bottom border from
+// 1442. Nine MOM prints set the type bar 5.3–5.5 px, the box's top 4.6, its
+// bottom 2.5 and the shield 2.8–5.0 px lower than the pack, the name pill
+// 1.4–2.5 px higher, the pill's right end 10.0 px, the type bar's 8.6 and
+// the box's 7.6 px further right and the shield 11.7 px right, over the
+// border. The importer re-cuts the master onto them (TODO 4.21b + 4.21d):
+// the lower block BATTLE_LOWER_RECUT_PX (4 px) down, the top block
+// BATTLE_TOP_RECUT_PX (2 px) up, the pill's paper stretched 10 px right,
+// the type bar's and the box's 8, the shield set 12 px right
+// (BATTLE_RIGHT_RECUT_PX) and the icon's rings redrawn at the prints'
+// radii — every one of those edges within 1.5 px of the prints' mean (the
+// right side within 0.7). The px below are the PACK's; each slot rides the
+// re-cut that moved its bar.
 //   • Art — ONE rect for every colour, from the border's inner edge to the
 //     bottom border (BATTLE_ART_RECT): on the master the full-art window is
 //     clear from 168 to 2039 px across and from 61 down to 1387, and again
@@ -2758,32 +2774,54 @@ function footerTurnedWithCard(footer: TextSlot): TextSlot {
 //     Ravnica): its pill, type bar and text box are translucent (α 190–250)
 //     down to the bottom border, so the PROFILES entry declares the same
 //     rect as its under-frame art (ONE picture: nothing to seam).
-//   • The name — the pill's face rows (76–181.5), from 392 px: the prints
-//     start it 20–23 px past the pill's left end, right of the icon (3.28:
-//     the MSE rect began 269 px in, under the icon). Its baseline is the
-//     prints' 158.4 px (nine prints, 157.4–159.3), 2 px below the row a
-//     centred 80 px line sets it on (dy: a whole px at HD and at 750, so
-//     the bake and the preview move it alike).
-//   • The cost — at the family's disc, right-aligned to 1942.3 px: the
-//     prints end their last disc 24 px before the pill's face ends (MOM #22
-//     / #147 / #149: 1952–1953 px on prints whose pill ends 10–11 px right of
-//     this master's), and centre the discs on the pill's face (128.5–129.3
-//     px; the rect's centre is 128.75: no costDy).
+//   • The name — the pill's face rows (the pack's 76–181.5, 2 px up with
+//     the top block), from 388 px: the prints start it 18–20 px past the
+//     pill's left end, right of the icon (3.28: the MSE rect began 269 px
+//     in, under the icon; 4.21d's skeptic pass: from 392 px the "I" of
+//     "Invasion" stood 398.2 px in where nine prints set it 391.0–394.2,
+//     and the word ended 2.5 px right of theirs — 4 px left centres ours
+//     on theirs, start −1.5 / end +1.5), 2 px below the row a centred 80 px
+//     line sets it on (dy: a whole px at HD and at 750, so the bake and the preview
+//     move it alike). It RIDES the top block (TODO 4.21d): on nine bakes of
+//     the prints' own names the letters' feet were on row 158 where the
+//     prints' are on 156–157 (v43 took 158.4 for theirs), and "Invasion of"
+//     as a whole lay 1.6 px below the prints' (a 2-D correlation of the
+//     region; its top the same 1.7) — 0.4 px above them after the move.
+//   • The cost — at the family's disc, right-aligned to the pack's 1942.3
+//     px + the pill's 10: the prints end their last disc 24 px before the
+//     pill's face ends (MOM #22 / #147 / #149: 1952–1953 px; ours 1952.3).
+//     Its ROWS do not ride the top block (costDy gives the 2 px back): the
+//     prints centre their discs 128.5–129.3 px down, 2 px below the middle
+//     of their pill's face — the same nine bakes' last disc lies 0.5 px
+//     below the prints' where it is and would lie 1.5 px above them had it
+//     moved with the name.
 //   • The type line — the type bar's face rows (the pack's 871–975.5),
 //     from 268 px (the prints' "Battle — Siege" starts 271.2–272.2), its
 //     baseline 76.9 px below the face's top as on the prints, 2 px below
 //     centred (dy).
-//   • The set symbol — CC's box (180 × 86 px, the family's), its right edge
-//     25 px before the type bar's face ends as on the prints (1942 px),
-//     centred on the bar's face (the pack's 925 px); a Keyrune glyph takes
-//     the family's ink fit.
+//   • The type line and the set symbol ride the type bar's 8 px: the line's
+//     rect ends at the pack's 1935 px + 8, the symbol's box — CC's (180 ×
+//     86 px, the family's), its right edge 25 px before the bar's face ends
+//     as on the prints — at the pack's 1942 + 8 = 1950 px, centred on the
+//     bar's face (the pack's 925 px); a Keyrune glyph takes the family's
+//     ink fit.
 //   • Rules — CC's box (the pack's 272–1933 × 1008–1422), the block centred
 //     in it as the prints centre theirs (their six-line blocks centre 209 px
 //     below the box's top ± 1), the lines from 273 px (the prints' 272–275),
 //     at the 9 pt ladder top (the prints' line pitch is 74–75 px on MOM
 //     #21, a 76 px text; #147 sets 72 px, #63 67, the fuller boxes 59–66).
+//     The box does NOT ride the text box's 8 px (TODO 4.21d): the prints'
+//     lines do run to about 1942 px, but they WRAP round the shield, where
+//     ours keep out of it by stepping the size down — with the pack's
+//     column nine bakes of the prints' texts set every one within 1.5 px
+//     of the print's own size (64 / 76 / 60 / 68 / 60 / 72 / 58 / 60 / 62
+//     against 65.4 / 75.8 / 61.3 / 67.5 / 61.5 / 71.9 / 59.3 / 61.3 /
+//     63.3); 8 px wider, four of them came out 2–6 px smaller (longer
+//     lines meet the shield). A wider column needs the shield as a rules
+//     FLOAT first (a follow-up).
 //   • Defense — in the shield the MASTER paints (`paintedRect`: the pack's
-//     Defense mask, the rules keep-out on every battle): the value in white
+//     Defense mask 12 px right, where the importer sets the shield — the
+//     rules keep-out on every battle): the value in white
 //     at 78 px, centred where the prints centre their digit in the shield
 //     (81 px right of its left point and 82 px below its top one; the digit
 //     57–58 px tall on nine prints, ours 56–59). The drawn disc and its
@@ -2792,17 +2830,29 @@ function footerTurnedWithCard(footer: TextSlot): TextSlot {
 //     left border (footerTurnedWithCard). The collector number, set and
 //     language beside it are TODO 4.9d's.
 //   • The brand mark — in the 54 px bottom border, its right end clear of
-//     the shield's left point (1881 px).
-export const BATTLE_ART_RECT: Rect = { topPct: 3.88, leftPct: 7.85, widthPct: 89.4, heightPct: 91.91 };
+//     the shield's left point (1893 px).
+/** The battle's art rect: the PACK's window 58.2–1436.85 px down (164.85–
+ *  2042.25 across), its top 2 px up with the top block (the window's upper
+ *  edge is the pill's lower rim and the border's inner edge, which the
+ *  block carries: the see-through frame starts at row 57 on the master). */
+export const BATTLE_ART_RECT: Rect = {
+  topPct: 3.88 + BATTLE_TOP_RECUT_PX / 15,
+  leftPct: 7.85,
+  widthPct: 89.4,
+  heightPct: 91.91 - BATTLE_TOP_RECUT_PX / 15,
+};
 /** A row of the battle PACK's lower block (the type bar, the text box, the
  *  shield, everything on them), where the master has it: % of the card's
  *  height. */
 const battleLowerPct = (packPx: number) => (packPx + BATTLE_LOWER_RECUT_PX) / 15;
+/** A column of the battle PACK's shield (and the value in it), where the
+ *  master has it: % of the card's width. */
+const battleShieldPct = (packPx: number) => (packPx + BATTLE_RIGHT_RECUT_PX.shield) / 21;
 /** The defense shield the battle master paints, in card percents: the
- *  pack's Defense mask at the master's size, moved with the lower block
- *  (scripts/lib/cc-frames.mjs BATTLE_SHIELD.box — a unit test keeps the two
- *  in step). */
-export const BATTLE_SHIELD_RECT: Rect = { topPct: battleLowerPct(1300), leftPct: 1881 / 21, widthPct: 164 / 21, heightPct: 166 / 15 };
+ *  pack's Defense mask at the master's size, moved with the lower block and
+ *  set 12 px right (scripts/lib/cc-frames.mjs BATTLE_SHIELD.box — a unit
+ *  test keeps the two in step). */
+export const BATTLE_SHIELD_RECT: Rect = { topPct: battleLowerPct(1300), leftPct: battleShieldPct(1881), widthPct: 164 / 21, heightPct: 166 / 15 };
 const LANDSCAPE_FOOTER: TextSlot = footerTurnedWithCard({
   rect: { topPct: 94.6, leftPct: 6.5, widthPct: 87, heightPct: 3.2 },
   sizePct: 0.019,
@@ -2815,17 +2865,21 @@ const BATTLE: FrameProfile = {
   label: "Battle (Siege)",
   // The bottom border is 54 px (1446–1500): the mark's 38 px of ink
   // (1454–1492) centred in it; right 11 % ends it at 1865 px, 16 px short of
-  // the shield's left point. (The MSE master had no border: 0.8 % sat the
-  // mark on the art's last rows.)
+  // the shield's left point as the pack had it — 28 px short of it now that
+  // the shield sits 12 px right (the mark stays put). (The MSE master had no
+  // border: 0.8 % sat the mark on the art's last rows.)
   brandMark: { rightPct: 11, bottomPct: 0.47 },
   orientation: "landscape",
   artSlot: BATTLE_ART_RECT,
   costSizePct: displayPct(COST_DISC_PCT, "landscape"),
+  // The discs stay on the prints' rows (centred 128.75 px down) while the
+  // name rides the top block 2 px up: a whole px at HD and at 750.
+  costDy: -BATTLE_TOP_RECUT_PX / 2100,
   symbolSizePct: displayPct(SET_SYMBOL_BOX_PCT, "landscape"),
   setSymbolFit: "ink",
-  symbolRect: { topPct: battleLowerPct(925 - 43), leftPct: (1942 - 180) / 21, widthPct: 180 / 21, heightPct: 86 / 15 },
+  symbolRect: { topPct: battleLowerPct(925 - 43), leftPct: (1942 + BATTLE_RIGHT_RECUT_PX.bars - 180) / 21, widthPct: 180 / 21, heightPct: 86 / 15 },
   title: {
-    rect: { topPct: 76 / 15, leftPct: 392 / 21, widthPct: (1942.3 - 392) / 21, heightPct: 105.5 / 15 },
+    rect: { topPct: (76 + BATTLE_TOP_RECUT_PX) / 15, leftPct: 388 / 21, widthPct: (1942.3 + BATTLE_RIGHT_RECUT_PX.pill - 388) / 21, heightPct: 105.5 / 15 },
     sizePct: displayPct(TITLE_SIZE_PCT, "landscape"),
     dy: 2 / 2100,
     fit: "measured",
@@ -2838,7 +2892,7 @@ const BATTLE: FrameProfile = {
     letterSpacingEm: 0.01,
   },
   type: {
-    rect: { topPct: battleLowerPct(871), leftPct: 268 / 21, widthPct: (1935 - 268) / 21, heightPct: 104.5 / 15 },
+    rect: { topPct: battleLowerPct(871), leftPct: 268 / 21, widthPct: (1935 + BATTLE_RIGHT_RECUT_PX.bars - 268) / 21, heightPct: 104.5 / 15 },
     sizePct: displayPct(TYPE_SIZE_PCT, "landscape"),
     dy: 2 / 2100,
     fit: "measured",
@@ -2858,10 +2912,10 @@ const BATTLE: FrameProfile = {
   footer: LANDSCAPE_FOOTER,
   footerTurn: 90,
   defense: {
-    rect: { topPct: battleLowerPct(1382.9 - 61.5), leftPct: (1962 - 43) / 21, widthPct: 86 / 21, heightPct: 123 / 15 },
+    rect: { topPct: battleLowerPct(1382.9 - 61.5), leftPct: battleShieldPct(1962 - 43), widthPct: 86 / 21, heightPct: 123 / 15 },
     paintedRect: BATTLE_SHIELD_RECT,
     // The shield's black interior on the digits' rows (the pack's 1350–1412).
-    inkSpanPct: { leftPct: 1920 / 21, rightPct: 2007 / 21 },
+    inkSpanPct: { leftPct: battleShieldPct(1920), rightPct: battleShieldPct(2007) },
     sizePct: 78 / 2100,
     colorHex: "#ffffff",
     weight: 700,

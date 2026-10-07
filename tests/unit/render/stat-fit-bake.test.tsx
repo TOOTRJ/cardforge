@@ -141,7 +141,7 @@ describe("long stats shrink to fit", () => {
     expect(box.x1).toBeLessThanOrEqual(273);
   }, 60_000);
 
-  it("Battle: a three-digit defense shrinks into the painted shield's black interior (1920–2007 px), and no badge is drawn", async () => {
+  it("Battle: a three-digit defense shrinks into the painted shield's black interior (1932–2019 px), and no badge is drawn", async () => {
     // TODO 4.21b (layout v43): the defense is the value alone, in the
     // shield Card Conjurer's master paints — the drawn disc and its outline
     // are gone. (The stand-in master is flat grey: the value is the only
@@ -151,7 +151,7 @@ describe("long stats shrink to fit", () => {
     const slot = getFrameProfile("battle").defense!;
     // Landscape: 2100 × 1500.
     const [spanL, spanR] = [(slot.inkSpanPct!.leftPct / 100) * 2100, (slot.inkSpanPct!.rightPct / 100) * 2100];
-    expect([Math.round(spanL), Math.round(spanR)]).toEqual([1920, 2007]);
+    expect([Math.round(spanL), Math.round(spanR)]).toEqual([1932, 2019]);
     const none = await bake(battle(null));
     const one = await bake(battle("5"));
     const three = await bake(battle("100"));
@@ -162,10 +162,11 @@ describe("long stats shrink to fit", () => {
     // …and shrinks no further than it must: it still spans the interior.
     expect(spanR - spanL).toBeLessThan(wide.x1 - wide.x0 + 12);
     // A printed battle's one digit: 78 px, centred where the prints centre
-    // theirs (1962 px across, 82 px below the shield's top point).
+    // theirs (the pack's 1962 px across + the shield's 12 px — TODO 4.21d —
+    // and 82 px below the shield's top point).
     const digit = diffBox(none, one)!;
     const shield = slot.paintedRect!;
-    expect(Math.abs((digit.x0 + digit.x1) / 2 - 1962)).toBeLessThan(3);
+    expect(Math.abs((digit.x0 + digit.x1) / 2 - 1974)).toBeLessThan(3);
     expect(Math.abs((digit.y0 + digit.y1) / 2 - ((shield.topPct / 100) * 1500 + 82))).toBeLessThan(3);
     expect(digit.y1 - digit.y0).toBeGreaterThan(52);
     expect(digit.y1 - digit.y0).toBeLessThan(62);

@@ -215,9 +215,10 @@ describe("CardPreview — the battle (layout v43)", () => {
     expect(prop(name.parentElement!, "font-size")).toBe(cqw(displayPct(TITLE_SIZE_PCT, "landscape")));
     expect(cqw(displayPct(TITLE_SIZE_PCT, "landscape"))).toBe("3.807cqw"); // 80 px of 2100, as on a portrait card's 1500
     expect(box(name.parentElement!)).toEqual(rectOf(profile.title.rect));
-    // From 392 px: past the pill's left end and the battle icon (TODO 3.28 —
-    // the MSE rect began 269 px in, under the icon's ring at 220–362 px).
-    expect(profile.title.rect.leftPct * 21).toBeCloseTo(392, 9);
+    // From 388 px: past the pill's left end and the battle icon (TODO 3.28 —
+    // the MSE rect began 269 px in, under the icon's ring at 220–362 px;
+    // 4.21d moved v43's 392 px 4 px left, onto the prints' own start).
+    expect(profile.title.rect.leftPct * 21).toBeCloseTo(388, 9);
     // The prints' baseline: 2 px below centred, at HD (TextSlot.dy).
     expect(prop(name, "transform")).toBe(`translateY(${cqw(2 / 2100)})`);
     expect(prop(name.parentElement!, "letter-spacing")).toBe("0.01em");
@@ -266,7 +267,9 @@ describe("CardPreview — the battle (layout v43)", () => {
     expect(profile.artSlot).toBe(BATTLE_ART_RECT);
     for (const colour of ["red", "colorless"] as const) {
       const { container } = render(battle({ colorIdentity: [colour], artUrl: ART }));
-      expect(slot(container), colour).toEqual(["7.85%", "3.88%", "89.4%", "91.91%"]);
+      // (The pack's 58.2 px top, 2 px up with the top block — TODO 4.21d.)
+      expect(slot(container), colour).toEqual(["7.85%", `${BATTLE_ART_RECT.topPct}%`, "89.4%", `${BATTLE_ART_RECT.heightPct}%`]);
+      expect(BATTLE_ART_RECT.topPct * 15).toBeCloseTo(56.2, 9);
       // No second, separately cropped layer to meet it in a seam.
       expect(container.querySelector('[data-testid="under-frame-art"]'), colour).toBeNull();
       cleanup();
