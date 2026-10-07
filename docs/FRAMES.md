@@ -139,7 +139,9 @@ into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
   the crowned twin of every master (CC's floating crown, `<key>-legendary`;
   [The borderless crown and pair pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a));
 - the borderless nonbasic land (4.34): m15borderlessland, a composite of
-  the same pack's pixels (below), on m15borderless's plates;
+  the same pack's pixels (below), on m15borderless's plates — and, since
+  4.56, its ten two-colour pair masters from the same function
+  ([The borderless land's pairs](#the-borderless-lands-pairs-456));
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
   black-bordered m15fullartland and the borderless fullartland (the same
   frame with its Border mask erased), each with CC's mana symbols at
@@ -211,7 +213,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   4 minutes for the M15 family; `--only` builds a subset.
 - **Pairs.** m15, m15artifact and m15land also build their two-colour pair
   masters (`<pair>.png`, and m15's hybrid `<pair>-h.png`; TODO 4.6b —
-  [The two-colour frames](#the-two-colour-frames-46b)).
+  [The two-colour frames](#the-two-colour-frames-46b)); so do the
+  borderless frames (wave 2a), the snow frames (wave 2c), the double-faced
+  spell faces (5.1d) and the borderless land (4.56).
 - **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Layers are composited
   exactly as Card Conjurer draws them: only each mask's alpha counts, in
   CC's draw order, at the pack's native size, then downscaled once. A
@@ -261,27 +265,31 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   flat pixel the importer asserts), replacing the dark box through CC's
   Rules mask; and the pinline through the pack's Pinline mask on top. `m`
   is the three-and-more-colour land (gold bars, box and pinline); a
-  two-colour land prints grey bars with a split pinline and box, which are
-  4.6's pair masters (the same function with a letter pair). About a
+  two-colour land prints grey bars with a split pinline and box — the ten
+  pair masters `<pair>.png`, the same function with a letter pair (4.56,
+  [The borderless land's pairs](#the-borderless-lands-pairs-456)). About a
   quarter of the borderless nonbasic lands print the spells' look instead —
   the colour's title bar over a dark type bar AND a dark box (TDM, WOE,
-  ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops) — a few a
-  dark type bar alone over the tinted box (FRA #380–381, SLD #250 /
-  #1989 / #2143 / #7112), and a few the short box (the SNC triomes): none
-  is drawn, no reference comes from them, and the registry pins them
-  `nearest` (4.37's variants; `BORDERLESS_LAND_DARK_PINS` /
-  `BORDERLESS_LAND_DARK_TYPE_BAR_PINS` / `BORDERLESS_LAND_SHORT_BOX_PINS`
-  in `lib/scryfall/frame-signatures.ts`, read by eye on every printing it
-  called `exact` — compare the title, type and box bands side by side: the
-  type bar is the easy one to miss). One rules line starts at the box's
+  ACR, EOE, FIC, FRA #379, many 2024+ SLD drops) — a few a dark type bar
+  alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 /
+  #7112), the two-colour runs of 2025 on a see-through box with a shadow
+  behind the text under the land's own bars (SPG #109–118, ECL #347–351,
+  SOS #301–305, MSH #380–384, SLD #2440, FRA #397–401), and some the short
+  box (the SNC triomes, UNF's shock lands, SLD #456–460): none is drawn, no
+  reference comes from them, and the registry pins them `nearest` (4.37's
+  variants; `BORDERLESS_LAND_DARK_PINS` /
+  `BORDERLESS_LAND_DARK_TYPE_BAR_PINS` / `BORDERLESS_LAND_SHADOW_BOX_PINS` /
+  `BORDERLESS_LAND_SHORT_BOX_PINS` in `lib/scryfall/frame-signatures.ts`,
+  read by eye on every printing it called `exact` — compare the title, type
+  and box bands side by side: the type bar is the easy one to miss, and the
+  shadow box only shows against a flat tinted one). One rules line starts at the box's
   left, as on M15: the only non-SLD borderless lands printing a single
   line (the ZNR / KHM pathways) do; only SLD #300–304 centre it. w, u and
   g keep ONE reference (MH3 #354 / #350 / #357): the other exact mono-u /
   mono-g prints are Secret Lair scans whose bars show the art through
   (owner round 15), and white dropped Ancient Den SLD #300, an offset scan
   of the centred one-line print (owner round 16; it still imports as the
-  exact borderless land). The two-colour pair masters are TODO 4.56 (with
-  4.6b).
+  exact borderless land).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame, the
   colourless creature tokens (both token frames) and the colourless
   planeswalker are see-through, like the printed cards. The profile's
@@ -345,7 +353,8 @@ profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
 followed the same path; a new template needs no sweep (no card sits on it),
 while fullartland's re-source was its own template-scoped v30 sweep. 4.34's
 borderless land is new too: no bump, no sweep, only its visual-regression
-cases added to the baseline. A new
+cases added to the baseline (its pair masters, 4.56, are an addition a card
+switches on: the same). A new
 template stays out of the picker until the owner verifies each colour
 ([Verifying a frame](#verifying-a-frame)); an import never lands on one (the
 creator only offers it, once verified). The compare page's alignment score
@@ -977,7 +986,9 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   (`tests/unit/cards/fixtures/reference-printings.json` — re-capture it
   when you add a reference). Never replace the DEFAULT reference of a combo
   production has verified; add an alternate and ask the owner to
-  re-verify.
+  re-verify. A template's `pairs` (4.56) lists the prints of its two-colour
+  pair masters: the same two rules, and no checklist row — a pair rides its
+  template's `m` tick.
 
 ## Additions vs corrections
 
@@ -1262,7 +1273,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   on a pair, or a plain `["multicolor"]` card whose cost spans two colours
   or has no coloured pip (`offersTwoColor` — never three colour words, never
   a Multicolor card whose cost spans one or three-plus), and for a LAND only
-  on a land frame (`twoColorFits`: m15land, `twoColorForLands`). A two-colour
+  on a land frame (`twoColorFits`: m15land, m15snowland and the borderless
+  land, `twoColorForLands`). A two-colour
   land stored with no template draws on m15, whose gold-split isn't a
   land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
   the save drops it and the renderers don't draw it (owner round 17).
@@ -1307,7 +1319,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   The split itself lives in ONE module, `scripts/lib/pair-ramp.mjs`, which
   both the pair masters and the pair crown bands read: the untilted
   `rampMask` (`PAIR_RAMPS`: pinline 40→60, a hybrid's outer frame 44→57,
-  text box 45→57, crown 45→55 %W)
+  text box 45→57, crown 45→55 %W, the floating crown 40→60, the borderless
+  land's pinline and box 39→61)
   and the premultiplied `lerpLayers` (`blendPair` = the two together).
 
 Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
@@ -1401,12 +1414,12 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
   (`two-colour-hybrid`). What no frame draws yet — sagas, adventures,
-  extended art (its crown band draws no pairs: wave 2b), the borderless
-  land — keeps the `two-colour` gaps, now pointing at 4.6f (the borderless
-  frames draw theirs since wave 2a, the snow frames since wave 2c, below;
-  devoid's two-colour printings ARE its gold frame, so the gap is no gap
-  there); an M20 token's gaps point at 4.48 (its own central rim split and
-  pill crown).
+  extended art (its crown band draws no pairs: wave 2b) — keeps the
+  `two-colour` gaps, now pointing at 4.6f (the borderless frames draw theirs
+  since wave 2a, the snow frames since wave 2c, the borderless land since
+  4.56, below; devoid's two-colour printings ARE its gold frame, so the gap
+  is no gap there); an M20 token's gaps point at 4.48 (its own central rim
+  split and pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
   the second's across 45→55 %W, the same `pair-ramp.mjs`), on every dress and
@@ -1524,6 +1537,109 @@ card on the two frames bakes byte-identical with the switches absent).
   `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin
   and the pair in the bake, the switches off byte-identical), the matrix's
   `m15borderless*` `@crown` / `@pair` cases.
+
+#### The borderless land's pairs (4.56)
+
+m15borderlessland draws a two-colour land the way the prints do — the
+colourless land's grey bars over a pinline AND a text box split between the
+two colours (Deserted Beach MID #281, Spirebluff Canal OTJ #304, the RVR
+shock lands, the MKM surveil lands) — from ten pair masters `<pair>.png`
+(`twoColorMasters: ["split"]`, `twoColorForLands`), through the same
+switch, hints, import rule and registry gap as m15land. Opt-in per card: a
+stored card on the frame's gold `m` master keeps it until its owner
+switches the two-colour frame on (the 21 production cards on the frame on
+2026-10-06 — six with a colour pair, none with the switch — bake
+byte-identical at 750 and HD before and after); a NEW two-colour borderless
+land starts on its pair, with the off switch. No bump, no sweep, no badge.
+
+- **The recipe** is the mono masters' function with a letter pair
+  (`borderlessLandLayers({ frame: "l", box: [x, y], pinline: [x, y] })`,
+  `scripts/lib/cc-frames.mjs`): the grey 'Land Frame', its title bar pasted
+  on the type row, the box structure re-tinted to each colour's own box tint
+  (the mono masters' tints, sampled at the same point) and the two lerped
+  across the ramp, then the two colours' frames lerped across the same ramp
+  through the pack's Pinline mask. Nothing is a new source: eleven files of
+  the pinned commit; the seven mono masters rebuild byte-identical and a
+  fresh cache reproduces the ten pairs byte for byte.
+- **One ramp, 39→61 %W** (`PAIR_RAMPS.borderlessLand`), for the pinline and
+  the box. Measured on the 110 prints of the tinted look that register
+  within 12 px (of 119), each ring's own left-end and right-end colours
+  taken as 0 and 1: the four rings cross 10 / 50 / 90 % at 41.3 / 50.2 /
+  58.9 %W (the median of 420 rings; their mean 41.2 / 50.0 / 58.8; the
+  2023+ digital renders alone 41.3 / 50.2 / 58.9) and the box's text-free
+  top band at 40.9 / 49.8 / 59.0 (the median profile of 102 boxes). The same reading of a 40→60 master gives 42.0 /
+  50.0 / 58.0 exactly, and of the borderless spells FDN #344 / #345 42.5 /
+  51.5 / 59.0 and 41.8 / 50.5 / 58.4 — so the land's split is a little
+  wider than the spells' pinline, and its box splits where its pinline
+  does, not on the bordered frames' narrower 45→57. The built masters read
+  41.2 / 50.0 / 58.8 on every ring and on the box. Per pair the prints'
+  middle crossing is 48.2–48.7 on W|B, U|B and U|R and 50.0–51.1 on the
+  other seven, with both ends within 1 %W of each other on all ten: a blend
+  that is not straight in sRGB, not a moved ramp — one symmetric ramp
+  serves all ten, as on every other pair master.
+- **The bars are the colourless land's grey**, never gold and never a
+  blend: on the prints the title bar reads α 0.71 (Card Conjurer's 0.70)
+  and, at CC's α, a tint of 148 / 142 / 136 (141 / 135 / 130 on the digital
+  renders) — the mono colourless borderless lands' 145 / 137 / 137, about
+  ten levels under Card Conjurer's 'Land Frame' 156 / 151 / 144 as the mono
+  `c` master is against its own prints, and nowhere near the gold land's
+  114 / 91 / 29.
+- **The box halves are the mono boxes'.** Where one set prints both, a
+  half reads what that colour's own borderless land does: over the same
+  art, the two-colour prints' white half predicts Monumental Henge MH3
+  #354's box within 3 levels (121 / 117 / 93 read, 121 / 117 / 95
+  predicted) and their red half Arena of Glory MH3 #351's within 10 (159 /
+  63 / 49 read, 151 / 64 / 59) — so the pairs take the mono masters' tints
+  through the same function. Those are Card Conjurer's, a little brighter
+  and more see-through than the prints: white reads α 0.84 at 124 / 120 /
+  108 on the prints (the master 0.75 at 166 / 155 / 133), blue 0.83 at 15 /
+  103 / 168 (0 / 117 / 190), black 0.73 at 50 / 49 / 48 (39 / 38 / 36), red
+  0.83 at 149 / 40 / 34 (130 / 22 / 14), green 0.79 at 40 / 84 / 66 (0 /
+  81 / 65). Re-toning the box is a CORRECTION of all seventeen masters
+  under a bump, never part of this addition.
+- **No gold or mismatched hairline.** Every pair's rings (≈ 91,000 px) are
+  the lerp of its two mono masters within 4 levels where neither colour is
+  black; with black, within 17 levels on at most 75 px at the bar caps (the
+  black frame's outline is dark grey where the others are black), no row or
+  column holding more than 16 of them; the box is the lerp of the two mono
+  boxes within 1 level (0.1 on average); at most 77 px of a master are
+  explained by neither. The grey frame is used whole, so Card Conjurer's
+  gold frame — whose type-bar and box rings sit one row higher than the
+  colour frames' (wave 2a's 1 px gold line) — is never in the stack.
+- **No crown, no stamp notch, no collector line**: the frame declares none.
+  A crowned or nicknamed two-colour print stays `nearest` on those gaps,
+  and a land prints no P/T.
+- **Which prints.** Of the 192 two-colour borderless nonbasic lands
+  (Scryfall 2026-10-06; 702 borderless nonbasic lands in all), 119 print
+  this look and resolve `exact` — MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI,
+  RVR, MKM, CLU, OTJ, DSK, DFT, MH3's five fetch lands (a fetch land prints
+  the two colours it searches for, m15land's rule) and 14 SLD:
+  `gapDrawnBy` drops the `two-colour` gap where the landing frame draws the
+  pair, no new gate. The other 73 stay `nearest`: 25 on the short box (UNF
+  #277–286 / #528–537, SLD #456–460), 10 on the dark type bar and box (ACR,
+  WOE), 31 on the see-through shadow box (SPG #109–118, ECL #347–351, SOS
+  #301–305, MSH #380–384, SLD #2440, FRA #397–401 — the 2025 look: the
+  land's own bars and split pinline over a box that only shades the art
+  behind the text; gap `shadow-box`, 4.37) and 7 on a crown or a nickname
+  bar (LTR #343 / #754, HOC #50 / #90; LTC #366 / #396 / #396z). The art
+  still lands an import on m15land (1.18), which draws its own pair;
+  choosing Borderless Land in the import's frame chooser keeps the pair and
+  the switch, and draws the pair master.
+- **References:** two prints per pair on the frame's entry
+  (`frame-references.json` `pairs`, `framePairReferenceOptions`) — the
+  pair's MKM surveil land, then Deserted Beach MID #281, an OTJ fast land
+  (Spirebluff Canal #304 among them) or a DSK verge; every one resolves
+  `exact` and registers to the frame within 2 px. The pairs ride the `m`
+  tick (V-A), so they feed no checklist row; the compare page's pair strip
+  is 4.6g.
+- **Tests:** `tests/unit/frames/borderless-land-pair-masters.test.ts` (the
+  recipe, the manifest, each master's pixels against its two mono masters,
+  the ramp's crossings), `tests/unit/render/borderless-land-pair-bake.test.tsx`
+  (real bakes: the pair in the bake, the switch off or absent
+  byte-identical, mono and three-colour lands untouched, the ramp at HD),
+  `tests/unit/scryfall/frame-signatures.test.ts` (the pins and where each
+  class of printing lands), the matrix's five
+  `m15borderlessland/wu/…@pair*` cases.
 
 #### The extended-art crown (4.6f, wave 2b)
 
