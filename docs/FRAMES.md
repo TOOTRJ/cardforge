@@ -1254,9 +1254,18 @@ of them, DOM → MH3):
   (50.03/11.19/42.4 × 72.68; the MSE slot started 26 px left of the
   prints'). The title bar, the type bar, the window and the rail's outline
   register with DOM #21 / #42 / #90 / #122 / #173 and MH2 #259 within the
-  scans' own tolerance (1.5 px on most lines, 3.5 px on all), and the
-  ribbon within 0.4 px of the prints' horizontally (the median of each
-  print's row bands): no re-cut.
+  scans' own tolerance (1.5 px on most lines, 3.5 px on all): no re-cut.
+  The ribbon (x 66–166 px with its gold outlines, full width from the fold
+  at ≈ 610 px down to 1663 px, then tapering) is the pack's own drawing: on
+  the DOM prints its body lies where the pack's does (the face's edge at
+  153–158 px against 156; DOM prints a fatter outline, ending 164–169 px
+  against 164.5), and THB, 40K, WOE, LTR / LTC, WHO and MH3 print it 3–6 px
+  further right (their outline ends 169.4–171.1 px). Its TIP is not the
+  prints': the pack's ends at 1748 px, 12 px above the rail's foot, where
+  the five DOM references end at ≈ 1722–1730 px and the later sets higher
+  still (≈ 1710 px on WOE #23, WHO #35, LTC #58, 40K #126; read off the
+  scans, ± 4 px) — left as the pack draws it (skeptic pass 2026-10-06: a
+  re-cut of the taper is the owner's call).
 - **The bars.** The cost discs at the CC-framed M15 height
   (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px) in a title
   band that ends at 92.2 %W (the last disc ends at 1383–1386 px on the
@@ -1276,13 +1285,29 @@ of them, DOM → MH3):
     403 / 465 / 527 px). The prints set it at the chapters' 64 px in an
     italic narrower than our MPlantin italic; at 62 px ours breaks into
     their four lines. A longer reminder steps down the rules ladder INSIDE
-    the box and never pushes the rows; past the 42 px floor it clips from
-    its tail, like every rules box (about 270 characters; the editor takes
-    400). Its emphasis is the text's own — a parenthesised reminder italic,
-    a keyword before it roman (DMU #85's "Read ahead (…)") — where v33 set
-    the whole block italic.
+    the box and never pushes the rows, and its lines keep out of the FOLD'S
+    CORNER (`intro.keepOuts`: the ribbon folds out of the frame's left edge
+    under the reminder, and on every master the fold's edge crosses the
+    box's bottom-left — x 133 at y 572, 138 at 580, 144 at 588, 151 at
+    596 px; a keep-out judged glyph by glyph, as for a stat badge, so a
+    reminder whose last line would start on the fold is a step smaller).
+    Only a reminder the box cannot hold at the 42 px floor (about 240
+    characters; the editor takes 400, and layout v41 drew every one in
+    full) OUTGROWS it (`SagaRail.introGrown`): it is set at the floor in
+    the chapters' column (203–728 px — clear of the fold and of the ribbon,
+    which the box's own width is not below the fold) from the rail's top,
+    with the rows' 14 px above and below, in a box as tall as its text
+    needs at both bake targets, and the rows start 24 px under it (the
+    fixed box's foot to the first divider) with the divider on their top
+    edge. It may take the rail down to one badge a row; only past that does
+    it clip, from its tail (a 3,000-character reminder; skeptic pass
+    2026-10-06 — as built it clipped past ≈ 270 characters, mid-line, with
+    the rows half empty). Its emphasis is the text's own — a parenthesised
+    reminder italic, a keyword before it roman (DMU #85's "Read ahead (…)")
+    — where v33 set the whole block italic.
   - *Where the rows start*: the first divider, 621 px (`rowsTopPct`; 619–621
-    on 50 of the 54 prints, mean 620.1 — the pack draws 608), or the rail's
+    on 50 of the 54 prints, mean 620.1 — the pack draws 608) — lower only
+    under a reminder that outgrew its box —, or the rail's
     own top at 237 px when the saga has NO reminder (owner 2026-09-29: no
     empty reminder band, no generated reminder — every stored production
     saga). Chapter I's badge then sits beside the frame's fold, above where

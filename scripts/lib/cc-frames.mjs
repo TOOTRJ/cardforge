@@ -1142,9 +1142,11 @@ const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners 
 // ---------------------------------------------------------------------------
 // The saga (TODO 4.21c = 3.7; design 2026-09-29 §3.4, owner decisions
 // 2026-09-29): Card Conjurer's 'Regular Frames' saga pack, native
-// 1500 × 2100, copied 1:1 — the chapter RIBBON is in each master (full width
-// x 76–166 from the fold under the reminder block to the foot, tapering
-// above and below), where the 375 px MSE cut (magic-m15-saga, in git until
+// 1500 × 2100, copied 1:1 — the chapter RIBBON is in each master (x 66–166
+// with its gold outlines, full width from the fold under the reminder block,
+// ≈ 610 px, down to 1663 px, then tapering to its tip at 1748 px — 18–26 px
+// lower than the DOM prints' tip, as the pack draws it), where the 375 px
+// MSE cut (magic-m15-saga, in git until
 // now) had a flat cream rail and a window that started 26 px left of the
 // prints'. Keys w u b r g m are the pack's `sagaFrame<K>.png`; `c` is its
 // 'Land Frame' (`l.png`) — the only printed colourless saga is a land, MH2
