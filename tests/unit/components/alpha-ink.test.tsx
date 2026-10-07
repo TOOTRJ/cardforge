@@ -117,7 +117,7 @@ describe("slotInk / footerInk", () => {
     expect(bandTextStyle({ ...band, inkByColorKey: undefined }, "b")).toEqual({});
   });
 
-  it("only the Alpha frame and its land twin carry an ink map — and the full-art token's white name pill", () => {
+  it("only the Alpha frame and its land twin carry an ink map — and the full-art token's white name pill, and the 2003 pair's footer", () => {
     // Every other template resolves to exactly the colour it had before.
     const keys = ["w", "u", "b", "r", "g", "c", "m"];
     // TODO 4.48: the full-art token prints its name white on every pill but
@@ -130,6 +130,18 @@ describe("slotInk / footerInk", () => {
         expect(bandTextStyle(p.title, "w").color, t).not.toBe(p.title.colorHex);
         for (const k of keys.filter((k) => k !== "w")) expect(bandTextStyle(p.title, k), `${t} ${k}`).toEqual({});
         expect(Boolean(p.pt?.inkByColorKey || p.footer?.inkByColorKey || p.type.inkByColorKey), t).toBe(false);
+        continue;
+      }
+      // TODO 4.23a: the 2003 frame's artist line prints white on the black
+      // frame and on every land — the footer alone (the pair's own tests:
+      // modern-footer-ink.test.tsx, here and under render/).
+      if (t === "modern" || t === "modernland") {
+        expect(Object.keys(p.footer!.inkByColorKey ?? {}).sort(), t).toEqual(t === "modern" ? ["b"] : [...keys].sort());
+        expect(Boolean(p.pt?.inkByColorKey || p.title.inkByColorKey || p.type.inkByColorKey), t).toBe(false);
+        for (const k of keys) {
+          const white = t === "modernland" || k === "b";
+          expect(footerInk(p.footer!, k), `${t} ${k}`).toEqual({ colorHex: white ? "#ffffff" : p.footer!.colorHex, shadowCss: undefined });
+        }
         continue;
       }
       const inked = Boolean(
