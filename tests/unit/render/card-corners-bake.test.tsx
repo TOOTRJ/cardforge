@@ -25,13 +25,15 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 //          or — where art or frame design runs into the corner — what was
 //          drawn (lib/frames/square-corners.ts).
 //
-// Bucket frames (m15, m15borderless, fullartland) are stand-ins from a
-// stubbed bucket, like edge-to-edge-bake.test.tsx: a Card Conjurer-style
+// Bucket frames (m15, m15borderless, fullartland, battle) are stand-ins from
+// a stubbed bucket, like edge-to-edge-bake.test.tsx: a Card Conjurer-style
 // master (opaque black, its corner cut transparent at 39 px — the pre-3.26
-// import — or at 64.5 px — 3.26's re-cut) and clear masters for the
-// art-to-edge frames. modern, battle (landscape), tarkirdragon (a ring) and
-// bloomburrow (design in its top corners) are git masters read from disk. The art is one flat colour, so anything else where the art
-// shows is something the renderer drew.
+// import — or at 64.5 px — 3.26's re-cut; the LANDSCAPE battle's 2100 × 1500
+// one cut at 64.5, as TODO 4.21b's importer cuts it) and clear masters for
+// the art-to-edge frames. modern, tarkirdragon (a ring) and bloomburrow
+// (design in its top corners) are git masters read from disk. The art is
+// one flat colour, so anything else where the art shows is something the
+// renderer drew.
 // ---------------------------------------------------------------------------
 
 const ORIGIN = "https://frames.test";
@@ -89,10 +91,22 @@ async function serveBucket(files: Record<string, Buffer>) {
 
 let ccCut39: Buffer;
 let ccCut645: Buffer;
+/** The battle's stand-in (TODO 4.21b: a Card Conjurer master in the bucket,
+ *  no longer a borderless MSE ring in git): opaque black on the LANDSCAPE
+ *  card, its corners cut at the one radius — 64.5 px on either orientation. */
+async function ccLandscapeMaster() {
+  const [w, h] = [HD.height, HD.width];
+  const data = Buffer.alloc(w * h * 4);
+  for (let i = 3; i < data.length; i += 4) data[i] = 255;
+  applyCardCornerMask(data, w, h, cardCornerRadiusPx(w, h));
+  return sharp(data, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
+}
+let ccLandscape: Buffer;
 async function bucketFiles(ccMasterBytes: Buffer): Promise<Record<string, Buffer>> {
   const clear = await png(150, 210, [0, 0, 0], 0);
   const plate = await png(240, 154, [128, 128, 128]);
   return {
+    "battle/r.png": ccLandscape,
     "m15/g.png": ccMasterBytes,
     "m15/pt/g.png": plate,
     "m15borderless/g.png": clear,
@@ -106,6 +120,7 @@ beforeAll(async () => {
   artUrl = `data:image/png;base64,${(await png(1200, 1680, ART)).toString("base64")}`;
   ccCut39 = await ccMaster(39);
   ccCut645 = await ccMaster(cardCornerRadiusPx(HD.width, HD.height));
+  ccLandscape = await ccLandscapeMaster();
   await serveBucket(await bucketFiles(ccCut39));
 });
 
@@ -329,11 +344,29 @@ describe("the bake's corner (TODO 3.26)", () => {
       for (const [x, y] of mirrors(0, 0)) expect(near(full.at(x, y), ART)).toBe(true);
     });
 
-    it("a ring (the landscape battle, tarkirdragon): the root's #101015 outside the arc — its see-through band's colour, no #000 cap", () => {
-      for (const t of ["battle", "tarkirdragon"] as const) {
-        const b = square.get(t)!;
-        for (const [x, y] of [...mirrors(0, 0), ...mirrors(8, 2)]) expect(b.at(x, y).slice(0, 3), `${t} ${x},${y}`).toEqual([...ROOT]);
-      }
+    it("a ring (tarkirdragon): the root's #101015 outside the arc — its see-through band's colour, no #000 cap", () => {
+      const b = square.get("tarkirdragon")!;
+      for (const [x, y] of [...mirrors(0, 0), ...mirrors(8, 2)]) expect(b.at(x, y).slice(0, 3), `${x},${y}`).toEqual([...ROOT]);
+    });
+
+    it("the landscape battle: the border black outside the arc, on the 2100 × 1500 card (it was a ring's #101015 on the MSE master)", () => {
+      // TODO 4.21b: Card Conjurer's battle master runs its black border to
+      // the corner, so lib/frames/square-corners.ts no longer lists it.
+      const b = square.get("battle")!;
+      expect([b.w, b.h]).toEqual([2100, 1500]);
+      let worst = 0;
+      for (const [cx, cy] of mirrors(0, 0))
+        for (let y = 0; y < BOX; y += 1)
+          for (let x = 0; x < BOX; x += 1) {
+            const p = b.at(cx < 0 ? -1 - x : x, cy < 0 ? -1 - y : y);
+            worst = Math.max(worst, p[0], p[1], p[2]);
+          }
+      // The master is cut on the very arc the fill follows: where their
+      // anti-aliased edges meet, the #101015 backdrop can tint a pixel by a
+      // few levels at most (the m15 master re-cut at 64.5 px does the same,
+      // below) — never the ring's 16–21.
+      expect(worst).toBeLessThanOrEqual(6);
+      for (const [x, y] of [...mirrors(0, 0), ...mirrors(8, 2)]) expect(b.at(x, y).slice(0, 3), `${x},${y}`).toEqual([0, 0, 0]);
     });
 
     it("Bloomburrow: its design runs into the top corners and stays; the bottom corners are the root", () => {

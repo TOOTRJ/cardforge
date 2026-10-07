@@ -2950,25 +2950,54 @@
     }
   },
   "split": {
-    "note": "Mono-colour split cards were never printed in the M15 frame.",
+    "note": "The M15 split frame as printed since 2018, its collector line down the card’s left border: mono-red MH2 #123 Fast // Furious (alternates WHO #77 Coward // Killer, TSR #156 Boom // Bust, #161 Dead // Gone, #186 Rough // Tumble) and mono-blue MH2 #60 Said // Done (TODO 4.21b). split/m’s reference is C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame’s 2016 arrangement (the collector line along the bottom border: both halves end about 100 px higher and the left one starts about 90 px further left at HD), so it shows the gold dress, not where the halves sit. No white, black or green split was printed in the M15 frame (black only as the UNK playtest card Fear // Loathing) and no colourless one: those four are built and never offered — split/c is Card Conjurer’s artifact frame, a render stand-in — and stay unverified until a print appears (owner decision 2026-09-29). A split whose halves differ in colour (GRN #224 Expansion // Explosion, hybrid // gold; DMR #209 Pain // Suffering, mono // mono) needs TODO 4.26 (per-part colour): it imports as the nearest frame, blocked by 4.26, and is never a reference here. J21 #730 Fast // Furious is an Arena render in Arena’s own layout, not a print.",
     "colors": {
       "w": null,
-      "u": null,
+      "u": [
+        {
+          "name": "Said // Done",
+          "set": "mh2",
+          "scryfallId": "43ab3ed2-2b50-4488-a21f-60965222970a",
+          "curated": true
+        }
+      ],
       "b": null,
-      "r": null,
+      "r": [
+        {
+          "name": "Fast // Furious",
+          "set": "mh2",
+          "scryfallId": "5b209759-6215-49e8-a6a0-a6c94040adb2",
+          "curated": true
+        },
+        {
+          "name": "Coward // Killer",
+          "set": "who",
+          "scryfallId": "9e389269-deef-4c48-b6d1-c505bf7cc6b3"
+        },
+        {
+          "name": "Boom // Bust",
+          "set": "tsr",
+          "scryfallId": "8ffdee1b-bb5d-44e6-a90d-6f9e9266d4fd"
+        },
+        {
+          "name": "Dead // Gone",
+          "set": "tsr",
+          "scryfallId": "45b090c7-f1ba-4656-8b51-915fc1876922"
+        },
+        {
+          "name": "Rough // Tumble",
+          "set": "tsr",
+          "scryfallId": "ea0cdb87-030a-4696-a16f-c971cdced3ca"
+        }
+      ],
       "g": null,
       "c": null,
       "m": [
         {
-          "name": "Expansion // Explosion",
-          "set": "grn",
-          "scryfallId": "e0644c92-4d67-475e-8c8e-0e2c493682fb",
+          "name": "Trial // Error",
+          "set": "c16",
+          "scryfallId": "383451e1-9b97-4c85-a044-7c68b61c8c65",
           "curated": true
-        },
-        {
-          "name": "Pain // Suffering",
-          "set": "dmr",
-          "scryfallId": "3d11164c-f27b-4cad-8620-d97ed384f0e6"
         }
       ]
     }

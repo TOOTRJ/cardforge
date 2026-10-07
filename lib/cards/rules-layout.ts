@@ -70,7 +70,6 @@ import {
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
-import { STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
 import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
 import {
   RULES_BOX_PAD_PX,
@@ -1061,25 +1060,20 @@ export function blockHeightPx(layout: RulesLayout, target: RulesTarget): number 
 // ---------------------------------------------------------------------------
 
 /**
- * Where a stat badge the card draws puts ink, in card percents: a plate
- * master's measured ink over the plate's box (lib/cards/plate-ink.ts — the
- * box itself for a plate the table doesn't know), the drawn badge inside its
- * rect (STAT_BADGE_INSET — the battle's defense disc), else the value's rect
- * (a value printed straight on the art or the frame).
+ * Where a stat badge the card draws puts ink, in card percents: the badge
+ * the frame MASTER paints (StatSlot.paintedRect — the battle's defense
+ * shield, TODO 4.21b), a plate master's measured ink over the plate's box
+ * (lib/cards/plate-ink.ts — the box itself for a plate the table doesn't
+ * know), else the value's rect (a value printed straight on the art or the
+ * frame). (The renderers drew a rounded badge of their own behind a
+ * plate-less value until the battle's disc, its one user, gave way to the
+ * painted shield: no profile declared one, and the override schema never
+ * could — the path is gone.)
  */
 export function statInkRect(slot: StatSlot): Rect {
+  if (slot.paintedRect) return slot.paintedRect;
   const plateBox = slot.plateRect ?? slot.rect;
   if (slot.plateAssetPathTemplate) return plateInkRect(slot.plateAssetPathTemplate, plateBox) ?? plateBox;
-  if (slot.badgeColorHex) {
-    const dx = (slot.rect.widthPct * STAT_BADGE_INSET.xPct) / 100;
-    const dy = (slot.rect.heightPct * STAT_BADGE_INSET.yPct) / 100;
-    return {
-      leftPct: slot.rect.leftPct + dx,
-      topPct: slot.rect.topPct + dy,
-      widthPct: slot.rect.widthPct - 2 * dx,
-      heightPct: slot.rect.heightPct - 2 * dy,
-    };
-  }
   return slot.rect;
 }
 
@@ -1088,16 +1082,19 @@ export function statInkRect(slot: StatSlot): Rect {
  * DRAWS them — each only when its show flag is set (the renderers' showPT /
  * showLoyalty / showDefense): the P/T plate, the loyalty shield (only when a
  * walker's text is drawn in the plain box — its ability rows keep clear of
- * it themselves) and the battle's defense badge. Each is where the badge
- * puts ink (statInkRect): a plate's measured ink, the drawn disc, or the
- * value's rect.
+ * it themselves) and the battle's defense shield. Each is where the badge
+ * puts ink (statInkRect): a plate's measured ink, or the value's rect. A
+ * badge the frame MASTER paints (StatSlot.paintedRect: the
+ * battle's shield, TODO 4.21b) is on every card on the frame, value or no
+ * value — it keeps the text out whatever its show flag says.
  */
 export function statKeepOuts(
   layout: Pick<FrameProfile, "pt" | "loyalty" | "defense">,
   show: { pt?: boolean; loyalty?: boolean; defense?: boolean },
 ): Rect[] {
-  const ink = (slot: StatSlot | undefined) => (slot ? statInkRect(slot) : null);
-  return [show.pt ? ink(layout.pt) : null, show.loyalty ? ink(layout.loyalty) : null, show.defense ? ink(layout.defense) : null].filter(
+  const ink = (slot: StatSlot | undefined, shown: boolean | undefined) =>
+    slot && (shown || slot.paintedRect) ? statInkRect(slot) : null;
+  return [ink(layout.pt, show.pt), ink(layout.loyalty, show.loyalty), ink(layout.defense, show.defense)].filter(
     (r): r is Rect => r !== null,
   );
 }

@@ -154,12 +154,46 @@ describe("fitStatSizePct", () => {
     expect(inkPx(modern, "100/100").right).toBeLessThanOrEqual(1373 + 1e-6);
   });
 
-  it("Battle defense fits the drawn badge, not the whole rect", () => {
-    for (const value of ["15", "100", "999"]) expect(fitStatSizePct(battle, value, "landscape"), value).toBe(battle.sizePct);
-    expect(fitStatSizePct(battle, "1000", "landscape")).toBeLessThan(battle.sizePct);
-    const badge = spanPx(battle, "landscape");
-    expect(badge.right - badge.left).toBeCloseTo((battle.rect.widthPct / 100) * 2100 * 0.76, 6);
-    expect(inkPx(battle, "1000", "landscape").right).toBeLessThanOrEqual(badge.right + 1e-6);
+  it("Battle defense fits the black interior of the shield its master paints, not the whole rect", () => {
+    // TODO 4.21b: the value sits in Card Conjurer's painted shield, whose
+    // black interior is 1920–2007 px on the digits' rows (87 px; the shield
+    // itself 164). Every printed battle's defense is one digit; a two-digit
+    // one still prints at the full 78 px, a three-digit one shrinks to the
+    // interior (the MSE profile's drawn disc was 128 px wide).
+    expect(battle.paintedRect).toBeDefined();
+    expect(battle).not.toHaveProperty("badgeColorHex");
+    expect(battle.sizePct * 2100).toBeCloseTo(78, 9);
+    for (const value of ["3", "4", "5", "6", "7", "15"]) expect(fitStatSizePct(battle, value, "landscape"), value).toBe(battle.sizePct);
+    // The widest two-digit values give up a few percent, never more.
+    for (const value of ["20", "88", "99"]) {
+      const size = fitStatSizePct(battle, value, "landscape");
+      expect(size, value).toBeLessThanOrEqual(battle.sizePct);
+      expect(size, value).toBeGreaterThan(battle.sizePct * 0.9);
+    }
+    const interior = spanPx(battle, "landscape");
+    expect(interior.left).toBeCloseTo(1920, 6);
+    expect(interior.right).toBeCloseTo(2007, 6);
+    // …inside the painted shield, and narrower than the value's own rect
+    // would be judged without it.
+    const shield = battle.paintedRect!;
+    expect(interior.left).toBeGreaterThan((shield.leftPct / 100) * 2100);
+    expect(interior.right).toBeLessThan(((shield.leftPct + shield.widthPct) / 100) * 2100);
+    // Three digits shrink to the interior…
+    for (const value of ["100", "111", "999"]) {
+      const size = fitStatSizePct(battle, value, "landscape");
+      expect(size, value).toBeLessThan(battle.sizePct * 0.9);
+      const ink = inkPx(battle, value, "landscape");
+      expect(ink.left, value).toBeGreaterThanOrEqual(interior.left - 1e-6);
+      expect(ink.right, value).toBeLessThanOrEqual(interior.right + 1e-6);
+    }
+    // …and four stop at the 5 pt floor, a few px onto the shield's silver
+    // rim but well inside the shield.
+    const floored = fitStatSizePct(battle, "1000", "landscape");
+    expect(floored * 2100).toBeCloseTo(41.7, 1);
+    expect(fitStatSizePct(battle, "10000", "landscape")).toBe(floored);
+    const wide = inkPx(battle, "1000", "landscape");
+    expect(wide.left).toBeGreaterThan((shield.leftPct / 100) * 2100);
+    expect(wide.right).toBeLessThan(((shield.leftPct + shield.widthPct) / 100) * 2100);
   });
 
   it("planeswalker loyalty fits the shield's dark face: three digits keep their size, four shrink", () => {

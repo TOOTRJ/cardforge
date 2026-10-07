@@ -10,15 +10,18 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // Stat shrink-to-fit (TODO 3.18) and the Draconic P/T plate (TODO 4.31) on
 // REAL HD bakes. Every template here draws a git frame from public/frames
 // (read from disk), so the renders are deterministic and offline — but
-// flip, whose Card Conjurer master lives in the frames bucket (layout v38):
-// it is served a flat stand-in master and plates
+// flip and battle, whose Card Conjurer masters live in the frames bucket
+// (layouts v38 / v43): they are served a flat stand-in master and plates
 // (tests/stubs/stand-in-frames.ts). The M15 plate lives in the frames bucket
 // too; its fit is pinned in stat-fit.test.ts.
 // ---------------------------------------------------------------------------
 
 let frames: StandInFrames;
 beforeAll(async () => {
-  frames = await serveStandInFrames([{ template: "flip", keys: ["r"] }]);
+  frames = await serveStandInFrames([
+    { template: "flip", keys: ["r"] },
+    { template: "battle", keys: ["r"] },
+  ]);
 }, 60_000);
 afterAll(() => frames.restore());
 
@@ -138,19 +141,46 @@ describe("long stats shrink to fit", () => {
     expect(box.x1).toBeLessThanOrEqual(273);
   }, 60_000);
 
-  it("Battle: a four-digit defense fits the drawn badge", async () => {
-    const battle = (defense: string) =>
+  it("Battle: a three-digit defense shrinks into the painted shield's black interior (1920–2007 px), and no badge is drawn", async () => {
+    // TODO 4.21b (layout v43): the defense is the value alone, in the
+    // shield Card Conjurer's master paints — the drawn disc and its outline
+    // are gone. (The stand-in master is flat grey: the value is the only
+    // mark the defense adds.)
+    const battle = (defense: string | null) =>
       card("battle", { cardType: "battle", subtypes: ["Siege"], power: null, toughness: null, defense });
-    const rect = getFrameProfile("battle").defense!.rect;
-    // Landscape: 2100 × 1500. The badge is the rect less 12 % each side.
-    const badgeL = ((rect.leftPct + rect.widthPct * 0.12) / 100) * 2100;
-    const badgeR = ((rect.leftPct + rect.widthPct * 0.88) / 100) * 2100;
-    const box = diffBox(await bake(battle("1")), await bake(battle("1000")))!;
-    // The ink may reach the badge's edge (one antialiased pixel either way).
-    expect(box.x0).toBeGreaterThanOrEqual(Math.floor(badgeL) - 1);
-    expect(box.x1).toBeLessThanOrEqual(Math.ceil(badgeR) + 1);
-    // …and shrinks no further than it must: it still spans the badge.
-    expect(badgeR - badgeL).toBeLessThan(box.x1 - box.x0 + 12);
+    const slot = getFrameProfile("battle").defense!;
+    // Landscape: 2100 × 1500.
+    const [spanL, spanR] = [(slot.inkSpanPct!.leftPct / 100) * 2100, (slot.inkSpanPct!.rightPct / 100) * 2100];
+    expect([Math.round(spanL), Math.round(spanR)]).toEqual([1920, 2007]);
+    const none = await bake(battle(null));
+    const one = await bake(battle("5"));
+    const three = await bake(battle("100"));
+    const wide = diffBox(none, three)!;
+    // The ink may reach the interior's edge (one antialiased pixel either way).
+    expect(wide.x0).toBeGreaterThanOrEqual(Math.floor(spanL) - 1);
+    expect(wide.x1).toBeLessThanOrEqual(Math.ceil(spanR) + 1);
+    // …and shrinks no further than it must: it still spans the interior.
+    expect(spanR - spanL).toBeLessThan(wide.x1 - wide.x0 + 12);
+    // A printed battle's one digit: 78 px, centred where the prints centre
+    // theirs (1962 px across, 82 px below the shield's top point).
+    const digit = diffBox(none, one)!;
+    const shield = slot.paintedRect!;
+    expect(Math.abs((digit.x0 + digit.x1) / 2 - 1962)).toBeLessThan(3);
+    expect(Math.abs((digit.y0 + digit.y1) / 2 - ((shield.topPct / 100) * 1500 + 82))).toBeLessThan(3);
+    expect(digit.y1 - digit.y0).toBeGreaterThan(52);
+    expect(digit.y1 - digit.y0).toBeLessThan(62);
+    // No drawn badge: the defense adds nothing but the digit's own ink — a
+    // box as narrow as the digit (the MSE profile's dark disc was 128 px
+    // wide and 101 tall), and every pixel it changes is LIGHTER than the
+    // stand-in master's grey (white ink; a disc or an outline would darken).
+    expect(digit.x1 - digit.x0).toBeLessThan(48);
+    let darker = 0;
+    for (let y = digit.y0; y < digit.y1; y += 1) {
+      for (let x = digit.x0; x < digit.x1; x += 1) {
+        if (lum(one, x, y) < lum(none, x, y) - 24) darker += 1;
+      }
+    }
+    expect(darker).toBe(0);
   }, 60_000);
 });
 

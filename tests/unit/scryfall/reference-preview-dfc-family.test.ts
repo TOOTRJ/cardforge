@@ -450,6 +450,7 @@ describe("the front payload carries the block lib/cards/faces.ts derives — not
 });
 
 describe("as it was — generated on the base (d9e877e6), only read since", () => {
+  const GRN_EXPANSION: Ref = { name: "Expansion // Explosion", set: "grn", scryfallId: "e0644c92-4d67-475e-8c8e-0e2c493682fb" };
   // The whole payload, byte for byte.
   const WHOLE: Array<[string, () => Ref, FrameTemplate, CardFace]> = [
     ["an arrows reference: INR #60's back on m15dfcback/u", () => refOf("m15dfcback", "u"), "m15dfcback", "back"],
@@ -464,7 +465,11 @@ describe("as it was — generated on the base (d9e877e6), only read since", () =
     // the back-face content — a card WITH a back face on a template that is
     // no double-faced body, the path every front now takes through
     // frontPreviewData.
-    ["a non-DFC template: GRN Expansion // Explosion on split/m (a second half, no flip)", () => refOf("split", "m"), "split", "front"],
+    // (GRN #224 by its own id: it was split/m's registry reference when the
+    // snapshot was generated and left the registry with TODO 4.21b — a
+    // hybrid // gold card is 4.26's — while its capture stays in the
+    // printings fixture. The payload is the same bytes.)
+    ["a non-DFC template: GRN Expansion // Explosion on split/m (a second half, no flip)", () => GRN_EXPANSION, "split", "front"],
     ["a non-DFC template: ELD Faerie Guidemother on adventure/w (the storybook page)", () => refOf("adventure", "w"), "adventure", "front"],
   ];
 

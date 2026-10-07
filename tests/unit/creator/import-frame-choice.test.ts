@@ -555,7 +555,10 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown", "vehicle"] }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["nyx", "crown"] }, "b")).toBe(false);
     // A frame whose border isn't true yet is a second gap (4.35 / A8).
-    expect(onlyUndrawnDetailsMissing({ ...base, template: "battle" }, "w")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "lotrscroll" }, "w")).toBe(false);
+    // The battle's border is true since TODO 4.21b (its Card Conjurer
+    // master has the printed black border): no second gap any more.
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "battle" }, "w")).toBe(true);
     expect(onlyUndrawnDetailsMissing({ ...base, template: "expeditionland" }, "g")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, template: "expeditionland" }, "r")).toBe(true);
     expect(onlyUndrawnDetailsMissing(undefined, "b")).toBe(false);

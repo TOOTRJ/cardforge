@@ -411,7 +411,8 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
  *  verifying one can never make it exact:
  *   • a transparent outer ring plus an inset art slot that bakes a flat
  *     #101015 "border" (TODO 4.35): bloomanime, tarkirghostfire,
- *     tarkirdragon, lotrscroll, battle;
+ *     tarkirdragon, lotrscroll (battle left the list with TODO 4.21b: its
+ *     Card Conjurer master has the printed black border);
  *   • a transparent outer band at the bottom and lower sides, found by 7.7's
  *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
  *     lotr, tarkirdraconic.
@@ -423,7 +424,6 @@ export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<Fram
   "tarkirghostfire",
   "tarkirdragon",
   "lotrscroll",
-  "battle",
   "avatar",
   "bloomburrow",
   "lotr",

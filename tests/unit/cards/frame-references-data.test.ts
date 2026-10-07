@@ -93,7 +93,10 @@ const DOCUMENTED_NULLS = new Set([
   "m20tokenartifacttall/g",
   "m20tokenartifacttall/m",
   "adventure/c",
-  "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
+  // The M15 split frame was printed in red (MH2 #123, TSR, WHO), blue (MH2
+  // #60) and gold // gold (C16 #239) only — TODO 4.21b; the other four are
+  // built and never offered (split/c is a render stand-in).
+  "split/w", "split/b", "split/g", "split/c",
   "aftermath/c",
   // No gold // gold aftermath exists (every two-colour one is mono // mono,
   // TODO 4.26's per-part colour): the HOU stand-ins were dropped so a
@@ -206,6 +209,30 @@ describe("frame-references.json", () => {
     expect(FRAME_REFERENCES.battle.w?.name).toMatch(/^Invasion of Gobakhan/);
   });
 
+  it("references split by the colours the M15 frame was printed in: red, blue and gold // gold (TODO 4.21b)", () => {
+    expect(FRAME_REFERENCES.split.r?.name).toBe("Fast // Furious");
+    expect(FRAME_REFERENCES.split.r?.set).toBe("mh2");
+    expect(FRAME_REFERENCES.split.u?.name).toBe("Said // Done");
+    expect(FRAME_REFERENCES.split.m?.name).toBe("Trial // Error");
+    // Red's alternates: the Doctor Who and Time Spiral Remastered prints.
+    expect(frameReferenceOptions("split", "r").map((ref) => `${ref.set} ${ref.name}`)).toEqual([
+      "mh2 Fast // Furious",
+      "who Coward // Killer",
+      "tsr Boom // Bust",
+      "tsr Dead // Gone",
+      "tsr Rough // Tumble",
+    ]);
+    for (const key of ["w", "b", "g", "c"] as const) expect(FRAME_REFERENCES.split[key], key).toBeNull();
+    // A split whose halves differ in colour is TODO 4.26's, never a
+    // reference: GRN #224 Expansion // Explosion (hybrid // gold) and DMR
+    // #209 Pain // Suffering (mono // mono) stood in on split/m before.
+    const ids = (["r", "u", "m"] as const).flatMap((key) => frameReferenceOptions("split", key).map((ref) => ref.scryfallId));
+    expect(ids).not.toContain("e0644c92-4d67-475e-8c8e-0e2c493682fb");
+    expect(ids).not.toContain("3d11164c-f27b-4cad-8620-d97ed384f0e6");
+    // …nor is the Arena-only render of Fast // Furious (J21 #730).
+    expect(ids).not.toContain("b601374d-c295-494c-881f-5c8ab7005ac2");
+  });
+
   it("defaults m15snow w/b/g to the snow printings production verified them against (1.4 A6)", () => {
     // frame_reviews.verified_reference_id on production, 2026-09-29.
     expect(FRAME_REFERENCES.m15snow.w).toMatchObject({
@@ -274,7 +301,11 @@ describe("registry helpers", () => {
   it("flags the families a human must confirm and explains the scan tiers", () => {
     expect(frameReferenceNote("bloomburrow").confirm).toBe(true);
     expect(frameReferenceNote("m15").confirm).toBe(false);
-    expect(frameReferenceNote("split").note).toMatch(/never printed/);
+    // Split's note says which colours the M15 frame was printed in, why
+    // split/m's reference shows the dress only, and what waits for 4.26.
+    expect(frameReferenceNote("split").note).toMatch(/No white, black or green split was printed in the M15 frame/);
+    expect(frameReferenceNote("split").note).toMatch(/C16 #239 Trial \/\/ Error/);
+    expect(frameReferenceNote("split").note).toMatch(/TODO 4\.26/);
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z" })).toBeNull();
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z", tier: 1 })).toMatch(/low-resolution/);
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z", tier: 2 })).toMatch(/foil/);

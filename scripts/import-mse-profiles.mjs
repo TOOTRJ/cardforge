@@ -35,11 +35,9 @@ const TEMPLATE_SOURCES = {
   m15snow: { dir: "magic-m15-snow.mse-style" },
   m15devoid: { dir: "magic-m15-devoid.mse-style" },
   m15pw: { dir: "magic-m15-planeswalker.mse-style", extras: ["loyalty", "loyalty box"] },
-  battle: { dir: "magic-m15-mainframe-battles.mse-style", extras: ["loyalty", "defense box"] },
   // (adventure, flip and aftermath are Card Conjurer masters since TODO
-  // 4.21a, saga since 4.21c — their geometry is the CC pack's and the
-  // prints', scripts/lib/cc-frames.mjs.)
-  split: { dir: "magic-m15-planeshifted-split.mse-style", extras: ["name 2", "type 2", "text 2", "casting cost 2"] },
+  // 4.21a, split and battle since 4.21b, saga since 4.21c — their geometry is
+  // the CC pack's, measured on the prints; scripts/lib/cc-frames.mjs.)
   agclassic: { dir: "magic-agclassic.mse-style" },
   alphaland: { dir: "magic-agclassic.mse-style", note: "land variant shares agclassic geometry" },
   alphatoken: { dir: "magic-agclassic-token.mse-style" },

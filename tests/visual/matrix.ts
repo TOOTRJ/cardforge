@@ -635,6 +635,9 @@ const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
   // The see-through flip/c (layout v38, TODO 4.21a): no under-frame layer
   // without art, the empty-art box in the window.
   ["flip", "c"],
+  // The see-through battle/c (layout v43, TODO 4.21b): the same — the
+  // empty-art box under its translucent pill, type bar and text box.
+  ["battle", "c"],
 ];
 /** The portrait layouts (TODO 4.21a, layout v38), pinned as they draw now
  *  — new cases, a regenerated baseline: a flip whose bottom half has NO P/T
@@ -715,6 +718,74 @@ const LAYOUT_CASES: readonly [FrameTemplate, CardKind, VisualColour, VisualShape
           "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nReturn target creature card from your graveyard to the battlefield. It gains haste until end of turn. Sacrifice it at the beginning of the next end step.",
         art_url: "ART2",
       },
+    },
+  ],
+  // The landscape layouts (TODO 4.21b, layout v43) — new cases:
+  //   • split: a long name at the fit's floor on BOTH halves beside a heavy
+  //     cost, dense rules down the ladder in both text boxes;
+  //   • battle: a long name beside a heavy cost, a three-digit defense
+  //     shrunk into the painted shield, dense rules wrapping round it;
+  //   • battle/c: the see-through frame with rules text to the box's bottom
+  //     (the art under the frame, one picture);
+  //   • a battle with NO defense: the shield is the master's, still there,
+  //     and the rules still keep out of it.
+  [
+    "split",
+    "split",
+    "r",
+    "long",
+    "@dense",
+    {
+      title: "Incongruous Reconsideration of Everything",
+      cost: "{4}{R}{R}{R}",
+      rules_text: DENSE_RULES,
+      back_face: {
+        title: "Interminable Deliberation of the Undecided",
+        cost: "{X}{2}{R}{R}{R}",
+        card_type: "sorcery",
+        subtypes: [],
+        rules_text: DENSE_RULES,
+        art_url: "ART2",
+      },
+    },
+  ],
+  [
+    "battle",
+    "battle",
+    "u",
+    "long",
+    "@dense",
+    {
+      title: "Invasion of the Innumerable Drowned Archipelagos",
+      cost: "{4}{U}{U}{U}",
+      defense: "100",
+      rules_text:
+        "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\n" +
+        DENSE_RULES,
+    },
+  ],
+  [
+    "battle",
+    "battle",
+    "c",
+    "long",
+    "@dense",
+    {
+      rules_text:
+        "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\n" +
+        DENSE_RULES,
+    },
+  ],
+  [
+    "battle",
+    "battle",
+    "g",
+    "short",
+    "@nodefense",
+    {
+      defense: null,
+      rules_text:
+        "When this Siege enters, search your library and/or graveyard for a creature card with mana value 3 or less and put it onto the battlefield. If you search your library this way, shuffle. Then each player draws a card.",
     },
   ],
 ];
@@ -1086,6 +1157,9 @@ const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["fullartland", "g"],
   ["m15borderless", "b"],
   ["battle", "r"],
+  // The other landscape frame (TODO 4.21b): its Card Conjurer master's
+  // black border runs to the corner too.
+  ["split", "r"],
 ];
 
 function caseId(template: string, colour: string, kind: string, shape: string, suffix = ""): string {

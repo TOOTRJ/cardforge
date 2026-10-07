@@ -29,7 +29,7 @@ import {
   measuredLinePx,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
-import { endAlignedStatKeepOut, fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { endAlignedStatKeepOut, fitStatSizePct, ptValue } from "@/lib/cards/stat-fit";
 import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import { orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import {
@@ -164,6 +164,7 @@ import {
   type SlotAlign,
   type StatSlot,
   artLayersFor,
+  unturnedRect,
   type FlipsideSlots,
   type TextSlot,
   type TypeLineSplit,
@@ -1369,6 +1370,8 @@ function CardImage({
               artist: card.artistCredit?.trim() ? `Art: ${card.artistCredit}` : "Art: Unknown",
               watermarkText,
               cardWidth: width,
+              turn: layout.footerTurn ?? 0,
+              aspect,
             })
           : null}
 
@@ -1528,19 +1531,29 @@ function FooterBake({
   artist,
   watermarkText,
   cardWidth,
+  turn = 0,
+  aspect,
 }: {
   slot: TextSlot;
   ink: { colorHex: string; shadowCss?: string };
   artist: string;
   watermarkText: string | null | undefined;
   cardWidth: number;
+  /** FrameProfile.footerTurn (TODO 4.21b): the line turned a quarter turn
+   *  clockwise down a landscape card's left border — `slot.rect` is then
+   *  the band it covers, drawn as its unturned box and turned in place
+   *  (unturnedRect, the preview's twin). */
+  turn?: 0 | 90;
+  /** Card height ÷ width (the turn's box swaps the band's px sides). */
+  aspect: number;
 }) {
   const fontPx = fpx(slot.sizePct, cardWidth);
   const copies = ink.shadowCss ? textShadowCopies(ink.shadowCss, fontPx) : null;
   const line = slotLine(slot.font, artist);
   const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;
   const box = (color: string, textShadow?: string) => ({
-    ...slotBox(slot.rect),
+    ...slotBox(turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect),
+    ...(turn ? { transform: `rotate(${turn}deg)`, transformOrigin: "50% 50%" } : {}),
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -2792,18 +2805,6 @@ function StatBake({
             objectFit: "fill",
           }}
         />
-      ) : slot.badgeColorHex ? (
-        <div
-          style={{
-            position: "absolute",
-            top: `${STAT_BADGE_INSET.yPct}%`,
-            left: `${STAT_BADGE_INSET.xPct}%`,
-            right: `${STAT_BADGE_INSET.xPct}%`,
-            bottom: `${STAT_BADGE_INSET.yPct}%`,
-            background: slot.badgeColorHex,
-            borderRadius: "42%",
-          }}
-        />
       ) : null}
       {plateFoil(slot.rect, { top: 0, left: 0, width: "100%", height: "100%" })}
       <span
@@ -3233,6 +3234,30 @@ function SecondFaceBake({
   // are; rounding a fitted size up drew a line wider than its fit.
   const linePx = (fitted: number, base: number) =>
     slot.fitLines ? measuredLinePx(fitted, base, cardWidth, orientation) : fpx(fitted, cardWidth);
+  // An UNTURNED second face whose slots are measured (split's right half,
+  // TODO 4.21b) draws its name and type bands exactly as the front draws
+  // its own (CardImage's title / type Band): fitTitleBand / fitTypeLineBand
+  // on its own slots, a shrunk line at measuredLinePx on its kept baseline
+  // (textDyBake), the pips at their own size — so both halves of a split
+  // card are set alike. It draws no set symbol (TODO 3.9): its type line's
+  // room is the band less the filler's gap. The preview's SecondFacePanel
+  // twin.
+  const measured = slot.rotation === 0 && slot.title.fit === "measured";
+  const faceTitleFit = measured
+    ? fitTitleBand({ title: slot.title, costSizePct: slot.costSizePct }, name, showCost ? back.cost : null, orientation)
+    : null;
+  const faceTitleSlot =
+    faceTitleFit && faceTitleFit.sizePct < slot.title.sizePct
+      ? { ...slot.title, sizePct: measuredLinePx(faceTitleFit.sizePct, slot.title.sizePct, cardWidth, orientation) / cardWidth }
+      : slot.title;
+  const faceTypeFit =
+    measured && slot.type.fit === "measured"
+      ? fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null, orientation })
+      : null;
+  const faceTypeSlot =
+    faceTypeFit && faceTypeFit.sizePct < slot.type.sizePct
+      ? { ...slot.type, sizePct: measuredLinePx(faceTypeFit.sizePct, slot.type.sizePct, cardWidth, orientation) / cardWidth }
+      : slot.type;
   return (
     <div
       style={{
@@ -3245,6 +3270,26 @@ function SecondFaceBake({
         zIndex: 20,
       }}
     >
+      {faceTitleFit ? (
+        <Band slot={faceTitleSlot} cardWidth={cardWidth}>
+          <span
+            style={{
+              ...ELLIPSIS,
+              ...textDyBake(slot.title, cardWidth, faceTitleSlot.sizePct),
+              maxWidth: Math.round(faceTitleFit.widthPct * cardWidth),
+            }}
+          >
+            {displayLine(faceTitleFit.text)}
+          </span>
+          {showCost && back.cost ? (
+            <CostGlyphs
+              cost={back.cost}
+              fontSize={fpx(slot.costSizePct ?? slot.title.sizePct, cardWidth)}
+              overrides={pipOverrides}
+            />
+          ) : null}
+        </Band>
+      ) : (
       <div
         style={{
           ...slotBox(slot.title.rect),
@@ -3255,7 +3300,8 @@ function SecondFaceBake({
           // the bar with — between a name and its cost only: with no cost
           // the preview draws the name alone, so the empty filler span must
           // not take a gap from it (a flip face, an aftermath half without
-          // a cost). Split keeps its gap-less band for now (TODO 4.21).
+          // a cost). (Split's right half is a measured face since TODO
+          // 4.21b: the Band above, with the front's own gap.)
           ...(slot.fitLines && showCost ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),
           transform: rot,
           transformOrigin: "50% 50%",
@@ -3277,6 +3323,21 @@ function SecondFaceBake({
           <span style={{ display: "flex" }} />
         )}
       </div>
+      )}
+      {faceTypeFit ? (
+        <Band slot={faceTypeSlot} cardWidth={cardWidth}>
+          <span
+            style={{
+              ...ELLIPSIS,
+              ...textDyBake(slot.type, cardWidth, faceTypeSlot.sizePct),
+              ...(faceTypeFit.widthPct != null ? { maxWidth: Math.round(faceTypeFit.widthPct * cardWidth) } : {}),
+            }}
+          >
+            {displayLine(faceTypeFit.text)}
+          </span>
+          <span style={{ display: "flex" }} />
+        </Band>
+      ) : (
       <div
         style={{
           ...slotBox(slot.type.rect),
@@ -3293,9 +3354,10 @@ function SecondFaceBake({
       >
         <span style={ELLIPSIS}>{displayLine(lineSizes.typeText)}</span>
       </div>
+      )}
       {/* The face's rules, drawn line by line in its own frame and turned in
           place with it (layout v33) — at the slot's own alignment (split's
-          right half is top-aligned like its left). */}
+          right half is centred in its box like its left). */}
       {hasRulesLines(rules)
         ? RulesBoxBake({
             layout: rules,

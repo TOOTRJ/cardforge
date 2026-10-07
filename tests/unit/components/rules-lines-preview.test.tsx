@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { mainRulesLayout, rulesDraw, secondFaceRulesLayout, type DrawnStats } from "@/lib/cards/rules-box";
-import { wordWidthPx, type RulesLayout } from "@/lib/cards/rules-layout";
+import { fitRulesLayout, wordWidthPx, type RulesLayout } from "@/lib/cards/rules-layout";
 import { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile } from "@/lib/cards/template-layout";
 import { PLACEHOLDER_FLAVOR_TEXT, PLACEHOLDER_RULES_TEXT, RULES_HD_WIDTH } from "@/lib/cards/typography";
 import type { FrameTemplate } from "@/types/card";
@@ -170,6 +170,23 @@ describe("CardPreview — rules lines", () => {
     expectDrawn(boxes(container)[0], layout, "battle");
   });
 
+  it("keeps a battle's text out of the shield its master paints even with no defense to draw, like the bake", () => {
+    // TODO 4.21b: the shield is part of the Card Conjurer master, so the
+    // lines wrap round it on every battle — the same layout the bake draws.
+    const battle = getFrameProfile("battle");
+    const text = "When this Siege enters, search your library for a card, reveal it, then shuffle and put that card on top. ".repeat(4);
+    const { container } = render(
+      <CardPreview title="Probe" cardType="battle" subtypes={["Siege"]} defense={null} rulesText={text} frameStyle={{ template: "battle" }} />,
+    );
+    const layout = mainRulesLayout({ layout: battle, rulesText: text, aspect: 5 / 7, show: { defense: false } });
+    expect(layout.input.keepOuts).toEqual([battle.defense!.paintedRect]);
+    expectDrawn(boxes(container)[0], layout, "battle");
+    // Without the keep-out the same text would be laid out differently
+    // (longer last lines, under the shield): the preview draws the kept-out one.
+    const bare = fitRulesLayout({ ...layout.input, keepOuts: [] });
+    expect(JSON.stringify(rulesDraw(bare, "hd").blocks)).not.toBe(JSON.stringify(rulesDraw(layout, "hd").blocks));
+  });
+
   it("keeps a plain-box walker's text out of its shield, like the bake", () => {
     const flavor = "A mind is a labyrinth, and I hold every key. ".repeat(9);
     const { container } = render(
@@ -195,7 +212,9 @@ describe("CardPreview — rules lines", () => {
     for (const [template, rotation, justify] of [
       ["aftermath", "rotate(90deg)", "center"],
       ["flip", "rotate(180deg)", "center"],
-      ["split", "", "flex-start"],
+      // Split's right half is centred in its box like its left (TODO
+      // 4.21b: the prints centre both).
+      ["split", "", "center"],
     ] as const) {
       const { container, unmount } = render(
         <CardPreview {...creature(template, "Destroy target artifact.")} cardType="instant" backFace={back} />,
@@ -211,7 +230,7 @@ describe("CardPreview — rules lines", () => {
     }
   });
 
-  it("pads both split halves past the frame's textbox border, as the bake does", () => {
+  it("draws both split halves' lines in their rules rects — the text columns themselves, no border to pad past — as the bake does", () => {
     const back = { title: "Ribbons", cost: "{X}{B}{B}", card_type: "sorcery" as const, rules_text: "Aftermath (Cast this spell only from your graveyard. Then exile it.)" };
     const front = "(from your graveyard) Cut deals 4 damage to target creature.";
     const { container } = render(<CardPreview {...creature("split", front)} cardType="sorcery" backFace={back} />);
@@ -223,9 +242,13 @@ describe("CardPreview — rules lines", () => {
     for (const [layout, first] of halves) {
       const box = boxes(container).find((b) => b.textContent?.startsWith(first))!;
       const d = rulesDraw(layout, "hd");
-      // The first v33 cut padded 9 / 18 px from a box that holds the border.
-      expect(d.pad.left, first).toBeGreaterThanOrEqual(SPLIT_TEXTBOX_BORDER_PX.left + 24);
-      expect(d.pad.right, first).toBeGreaterThanOrEqual(SPLIT_TEXTBOX_BORDER_PX.right + 16);
+      // TODO 4.21b: Card Conjurer's rules rects lie inside the paper (17 px
+      // from its sides), so the profile pads nothing; what padding there is
+      // is the layout's own room for a glyph's side ink (an italic "f"
+      // leading a reminder), a few px.
+      expect(SPLIT_TEXTBOX_BORDER_PX).toEqual({ left: 0, right: 0 });
+      expect(d.pad.left, first).toBeLessThanOrEqual(12);
+      expect(d.pad.right, first).toBeLessThanOrEqual(12);
       expect(css(box, "padding"), first).toBe(
         [d.pad.top, d.pad.right, d.pad.bottom, d.pad.left].map((px) => cqwOf(px, "split")).join(" "),
       );

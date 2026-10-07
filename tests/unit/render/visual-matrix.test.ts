@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -157,6 +157,7 @@ describe("visual-regression matrix", () => {
   it("bakes a card without art on the see-through masters and v35's art slots (the empty-art box; no under-frame layer)", () => {
     const noArt = cases.filter((c) => c.id.endsWith("@noart"));
     expect(noArt.map((c) => `${c.template}/${c.colour}`)).toEqual([
+      "battle/c",
       "flip/c",
       "fullart/g",
       "m15/c",

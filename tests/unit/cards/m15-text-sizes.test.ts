@@ -14,8 +14,13 @@ import {
   RULES_SIZE_PX,
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
+  SPLIT_COST_DISC_PCT,
+  SPLIT_SET_SYMBOL_BOX_PCT,
+  SPLIT_TITLE_SIZE_PCT,
+  SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
   TYPE_SIZE_PCT,
+  displayPct,
   ptToPct,
   rulesPxToPct,
 } from "@/lib/cards/typography";
@@ -26,13 +31,21 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // its name, type line, pips and set symbol at the ONE set of display sizes
 // in lib/cards/typography.ts. The rects stay where v24–v31 verified them; a
 // band whose text grew keeps its baseline through TextSlot.dy, and only the
-// Card Conjurer masters' type line moves onto the prints' baseline. Split and
-// battle stay out (TODO 4.21), and so does every other frame: their profiles
-// are byte-identical to layout v31's. The same numbers on real bakes:
-// tests/unit/render/m15-text-baselines-bake.test.tsx.
+// Card Conjurer masters' type line moves onto the prints' baseline. The
+// battle joined with its Card Conjurer master (TODO 4.21b, layout v43) — the
+// family's one LANDSCAPE member, so a member's size is
+// displayPct(constant, its orientation). Split stays out with print sizes of
+// its own (the SPLIT_* constants), and so does every other frame: their
+// profiles are byte-identical to layout v31's. The same numbers on real
+// bakes: tests/unit/render/m15-text-baselines-bake.test.tsx, and the
+// landscape pair's in tests/unit/render/landscape-v43-bake.test.tsx.
 // ---------------------------------------------------------------------------
 
 const FAMILY = new Set<string>(M15_FAMILY_TEMPLATES);
+/** A family constant (a fraction of a PORTRAIT card's width) as `t` carries
+ *  it: the same px on the page, × 5/7 on the landscape battle. */
+const sized = (t: FrameTemplate, pct: number) =>
+  getFrameProfile(t).orientation === "landscape" ? displayPct(pct, "landscape") : pct;
 const FULL_ART_BASICS = ["m15fullartland", "fullartland"] as const;
 /** The layout-v31 sizes each family band grew from (fractions of the width). */
 const V31 = {
@@ -54,18 +67,61 @@ describe("one M15-era display size (layout v32)", () => {
   it("prints every family frame's name and type line at TITLE_SIZE_PCT / TYPE_SIZE_PCT — both halves of a flip or aftermath", () => {
     // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
     // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
-    // planeswalkers and 4.52's emblem.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(44);
+    // planeswalkers, 4.52's emblem, 5.1a / 5.1b's nine double-faced bodies
+    // and 4.21b's battle.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(45);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
-      expect(p.title.sizePct, t).toBe(TITLE_SIZE_PCT);
-      expect(p.type.sizePct, t).toBe(TYPE_SIZE_PCT);
+      expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
+      expect(p.type.sizePct, t).toBe(sized(t, TYPE_SIZE_PCT));
       if (p.secondFace) {
-        expect(p.secondFace.title.sizePct, t).toBe(TITLE_SIZE_PCT);
-        expect(p.secondFace.type.sizePct, t).toBe(TYPE_SIZE_PCT);
+        expect(p.secondFace.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
+        expect(p.secondFace.type.sizePct, t).toBe(sized(t, TYPE_SIZE_PCT));
       }
     }
     expect(["flip", "aftermath"].every((t) => getFrameProfile(t).secondFace)).toBe(true);
+    // The battle (the one landscape member): 80 / 68 px on its 2100 px
+    // card, the portrait cards' px — not the bare constants, which would
+    // draw them 1.4× the size.
+    const battle = getFrameProfile("battle");
+    expect(battle.orientation).toBe("landscape");
+    expect(Math.round(battle.title.sizePct * 2100)).toBe(80);
+    expect(Math.round(battle.type.sizePct * 2100)).toBe(68);
+    expect(battle.title.sizePct).not.toBe(TITLE_SIZE_PCT);
+  });
+
+  it("keeps split out of the family at the prints' own sizes — 76 / 53 / 68 px and a 48 px symbol box, on BOTH halves", () => {
+    // TODO 4.21b: a split half prints every line smaller than a regular
+    // card (MH2 #123 / #60, TSR #161 / #186 against MH2 #50 / #118 on the
+    // same scans): the design's 80 px name came out 3–6 % wide on ten
+    // names, Card Conjurer's 60 px type line 13 % wide ("Sorcery" 201 px
+    // against the prints' 177–178).
+    expect(FAMILY.has("split")).toBe(false);
+    const split = getFrameProfile("split");
+    expect(split.orientation).toBe("landscape");
+    expect(SPLIT_TITLE_SIZE_PCT * 2100).toBeCloseTo(76, 9);
+    expect(SPLIT_TYPE_SIZE_PCT * 2100).toBeCloseTo(53, 9);
+    expect(SPLIT_COST_DISC_PCT * 2100).toBeCloseTo(68, 9);
+    expect(SPLIT_SET_SYMBOL_BOX_PCT * 2100).toBeCloseTo(48, 9);
+    for (const face of [split, split.secondFace!]) {
+      expect(face.title.sizePct).toBe(SPLIT_TITLE_SIZE_PCT);
+      expect(face.type.sizePct).toBe(SPLIT_TYPE_SIZE_PCT);
+      expect(face.costSizePct).toBe(SPLIT_COST_DISC_PCT);
+      // Both halves take their size, text and room from the measured fit.
+      expect(face.title.fit).toBe("measured");
+      expect(face.type.fit).toBe("measured");
+      // …on their bars' own rows: no dy, no costDy.
+      expect(face.title.dy).toBeUndefined();
+      expect(face.type.dy).toBeUndefined();
+    }
+    expect(split.costDy).toBeUndefined();
+    expect(split.symbolSizePct).toBe(SPLIT_SET_SYMBOL_BOX_PCT);
+    expect(split.setSymbolFit).toBe("ink-height");
+    // Smaller than the family's on every line.
+    expect(SPLIT_TITLE_SIZE_PCT).toBeLessThan(displayPct(TITLE_SIZE_PCT, "landscape"));
+    expect(SPLIT_TYPE_SIZE_PCT).toBeLessThan(displayPct(TYPE_SIZE_PCT, "landscape"));
+    expect(SPLIT_COST_DISC_PCT).toBeLessThan(displayPct(COST_DISC_PCT, "landscape"));
+    expect(SPLIT_SET_SYMBOL_BOX_PCT).toBeLessThan(displayPct(SET_SYMBOL_BOX_PCT, "landscape"));
   });
 
   it("prints the adventure panel at Card Conjurer's name2 / type2 / mana2 (62 / 62 / 60 px)", () => {
@@ -84,9 +140,12 @@ describe("one M15-era display size (layout v32)", () => {
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       if (p.hideCost) continue;
-      expect(p.costSizePct ?? p.title.sizePct, t).toBe(COST_DISC_PCT);
-      if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(COST_DISC_PCT);
+      expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, COST_DISC_PCT));
+      if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
     }
+    // The battle's: the family's 72.75 px disc on its landscape card (4.20
+    // had pinned 71 px on the MSE profile).
+    expect(getFrameProfile("battle").costSizePct! * 2100).toBeCloseTo(72.75, 9);
     // The planeswalker's disc no longer follows its (grown) name.
     expect(getFrameProfile("m15pw").costSizePct).toBe(COST_DISC_PCT);
   });
@@ -103,9 +162,13 @@ describe("one M15-era display size (layout v32)", () => {
     };
     expect(SET_SYMBOL_BOX_PCT_THIN_BAR).toBe(0.0533);
     for (const t of M15_FAMILY_TEMPLATES) {
-      const want = t in box ? box[t] : SET_SYMBOL_BOX_PCT;
+      const want = t in box ? box[t] : sized(t, SET_SYMBOL_BOX_PCT);
       expect(getFrameProfile(t).symbolSizePct, t).toBe(want);
     }
+    // The battle's: CC's 86 px box on the landscape card, with the family's
+    // ink fit.
+    expect(getFrameProfile("battle").symbolSizePct! * 2100).toBeCloseTo(SET_SYMBOL_BOX_PCT * 1500, 9);
+    expect(getFrameProfile("battle").setSymbolFit).toBe("ink");
     // CC's planeswalker / saga box is 0.0381 of the height — the pw symbolRect's.
     expect(0.0533 / 1.4).toBeCloseTo(0.0381, 4);
     expect(getFrameProfile("m15pw").symbolRect!.heightPct / 100).toBeCloseTo(0.038, 6);
@@ -239,6 +302,11 @@ describe("baselines (TextSlot.dy)", () => {
     // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
     // (−9.2 px and −4.9 px at HD).
     ["flip", -9.2 / 1500, -4.9 / 1500],
+    // The battle (layout v43, TODO 4.21b): a new master, set straight onto
+    // the nine MOM prints' baselines from its bars' own faces — the name 2
+    // px below the pill-centred line (158.4 px on the prints), "Battle —
+    // Siege" 2 px below the bar-centred one. Fractions of ITS 2100 px width.
+    ["battle", 2 / 2100, 2 / 2100],
     ["fullart", base.title, mse.type],
     ["m15textless", base.title, mse.type],
     ["m15textlessland", base.title, mse.type],
@@ -302,6 +370,13 @@ describe("baselines (TextSlot.dy)", () => {
     expect(at("m20token")).toEqual([-4, -6, -2, -3]);
     expect(at("m20tokentext")).toEqual([-4, -5, -2, -2]);
     expect(at("m20tokentall")).toEqual([-4, -6, -2, -3]);
+    // The battle, on its landscape widths (HD 2100 / default 1050): 2 px
+    // down at HD, 1 px at the default — whole px at both, so the bake and
+    // the preview (which translates by the exact dy) move the text alike.
+    const battle = getFrameProfile("battle");
+    expect([px(battle.title.dy, 2100), px(battle.type.dy, 2100), px(battle.title.dy, 1050), px(battle.type.dy, 1050)]).toEqual([2, 2, 1, 1]);
+    expect(battle.title.dy! * 2100).toBeCloseTo(2, 9);
+    expect(battle.type.dy! * 2100).toBeCloseTo(2, 9);
   });
 
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
@@ -366,27 +441,33 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
       p.adventure?.rules,
     ].filter((s): s is TextSlot => Boolean(s));
 
-  it("sets TextSlot.dy / fit only on family frames", () => {
+  it("sets TextSlot.dy only on family frames, and the measured fit on them and on split's two halves", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       if (FAMILY.has(t)) continue;
-      for (const slot of slots(getFrameProfile(t))) {
+      const p = getFrameProfile(t);
+      for (const slot of slots(p)) {
         expect(slot.dy, t).toBeUndefined();
-        expect(slot.fit, t).toBeUndefined();
+        // Split (TODO 4.21b) is the one frame outside the family whose
+        // names and type lines are measured — both halves, at its own
+        // sizes; its rules and footer are not display bands.
+        const measured = t === "split" && [p.title, p.type, p.secondFace?.title, p.secondFace?.type].includes(slot);
+        expect(slot.fit, t).toBe(measured ? "measured" : undefined);
       }
     }
   });
 
   // sha256 of JSON.stringify(getFrameProfile(t)) at layout v31 (df4f3d7).
   // Layout v32 re-bakes the family only (its template scope), so every
-  // other frame must draw exactly as before — split and battle included
-  // (their sizes ship with TODO 4.21). A change here needs its own layout
-  // bump; then update the digest.
+  // other frame must draw exactly as before. A change here needs its own
+  // layout bump; then update the digest. Split and battle left the list
+  // with theirs (layout v43, TODO 4.21b: Card Conjurer masters and new
+  // profiles — the battle in the family, split pinned by the test above and
+  // tests/unit/cards/fixtures/profiles-base.json).
+  const V31_SPLIT_DIGEST = "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d";
   const V31_DIGESTS: Record<string, string> = {
     agclassic: "a5da9f64d06ac75912fb88a93120f67bec0cfb3e6c68208f1948ec32a3a66fc9",
     alphaland: "587111b4d222186562d9bf060d2cd9980cd54b5d7c61a97e2f9c52a266456c8c",
     alphatoken: "54b3301696e3a7d772dcdc1a86241010a32395822b66e2d996bf86501f9e427e",
-    battle: "529a249c675f8ec5bbd89956ce433308844180e3c5c214e120fb74b9e300e609",
-    split: "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d",
     lotr: "2541c98b09237643cc6ef8d761fdff42f85ffc8d8dc842322e45915e8f62771b",
     lotrscroll: "45a76201319b406e6e6e3612ec875beeadf94315ee6f127af60b2cc0648e1882",
     avatar: "18b37fde1037dfccc0041e515a4f80246a9cbe0ed3e3277ca9a88014394a703a",
@@ -410,21 +491,15 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     [rulesPxToPct(RULES_SIZE_PX.standard), ptToPct(9)],
     [rulesPxToPct(RULES_SIZE_PX.reduced), ptToPct(8)],
     [rulesPxToPct(RULES_SIZE_PX.compact), ptToPct(7.5)],
-    [rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"), ptToPct(8, "landscape")],
   ]);
   const asAtV31 = (p: FrameProfile): FrameProfile => {
     const size = (slot: TextSlot): TextSlot => {
       const v31 = V31_RULES_SIZE.get(slot.sizePct);
       expect(v31, `rules size ${slot.sizePct}`).toBeDefined();
-      // v33 also pads split's two rules boxes past the textbox border they
-      // hold (the text moves, no slot does); no other frame outside the
-      // family carries a rules padding.
-      const { padPx, ...rest } = slot;
-      if (padPx) {
-        expect(p.label).toBe("Split");
-        expect(padPx).toEqual({ left: 57, right: 54, top: 18, bottom: 18 });
-      }
-      return { ...rest, sizePct: v31! };
+      // No frame in the list carries a rules padding (split's, v33's one,
+      // left with its Card Conjurer profile).
+      expect(slot.padPx, p.label).toBeUndefined();
+      return { ...slot, sizePct: v31! };
     };
     return {
       ...p,
@@ -434,12 +509,15 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     };
   };
 
-  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling (and split's rules padding)", () => {
-    const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t));
+  it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling — split aside, which moved with its own bump (v43)", () => {
+    const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && t !== "split");
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {
       const digest = createHash("sha256").update(JSON.stringify(asAtV31(getFrameProfile(t)))).digest("hex");
       expect(digest, t).toBe(V31_DIGESTS[t]);
     }
+    // Split is outside the family and no longer its v31 self.
+    expect(FAMILY.has("split")).toBe(false);
+    expect(createHash("sha256").update(JSON.stringify(getFrameProfile("split"))).digest("hex")).not.toBe(V31_SPLIT_DIGEST);
   });
 });

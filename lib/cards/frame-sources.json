@@ -93,6 +93,90 @@
       "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)"
     ]
   },
+  "battle": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packBattle.js 'Battle'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "2100x1500, corners rounded to 64.5px, webp q90",
+    "orientation": "landscape",
+    "transform": "downscale",
+    "shift": {
+      "axis": "y",
+      "blocks": [
+        {
+          "from": 0,
+          "to": 363,
+          "by": 0
+        },
+        {
+          "from": 842,
+          "to": 1468,
+          "by": 4
+        }
+      ],
+      "zones": [
+        "rows 363–841 (flat) → 483 px",
+        "rows 1468–1499 (flat) → 28 px"
+      ],
+      "why": "the pack's type bar, text box and shield sit 2.5–5.5 px above the nine MOM prints': rows 842–1467 move 4 px down (those edges within 1.5 px of the prints' mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
+      "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
+    },
+    "transforms": "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then the lower block (type bar, text box, shield) moved 4 px down onto the prints through the flat rows above and below it (shift: whole rows, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)",
+    "colors": {
+      "w": [
+        "img/frames/m15/battle/w.png"
+      ],
+      "u": [
+        "img/frames/m15/battle/u.png"
+      ],
+      "b": [
+        "img/frames/m15/battle/b.png"
+      ],
+      "r": [
+        "img/frames/m15/battle/r.png"
+      ],
+      "g": [
+        "img/frames/m15/battle/g.png"
+      ],
+      "c": [
+        "img/frames/m15/battle/c.png"
+      ],
+      "m": [
+        "img/frames/m15/battle/m.png"
+      ]
+    },
+    "paintedShield": {
+      "mask": "img/frames/m15/battle/maskDefense.png",
+      "box": {
+        "x": 1881,
+        "y": 1304,
+        "width": 164,
+        "height": 166
+      },
+      "published": false,
+      "use": "the shield is the master's own paint: the importer holds the pack's Defense mask to this box (HD px) and every master to solid paint under it; the profile draws the defense value inside it and keeps the rules text out of it"
+    },
+    "sourceFiles": [
+      "img/frames/m15/battle/b.png",
+      "img/frames/m15/battle/c.png",
+      "img/frames/m15/battle/g.png",
+      "img/frames/m15/battle/m.png",
+      "img/frames/m15/battle/maskDefense.png",
+      "img/frames/m15/battle/r.png",
+      "img/frames/m15/battle/u.png",
+      "img/frames/m15/battle/w.png"
+    ],
+    "notes": [
+      "source: CC 'Battle' (packBattle.js), 2814×2010: the black border with the siege arc, the battle icon in the name bar's left end, the name pill, the type bar, the text box and the defense shield — replaces the MSE 'm15 mainframe battles' master, which had no border, arc, icon or shield (a transparent ring: the art window was the whole card, and the defense sat on a drawn disc)",
+      "the lower block is moved onto the prints (BATTLE_LOWER_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them, so rows 842–1467 of the downscaled master move 4 px down through the flat rows above (the art window) and below (the bottom border) — byte for byte, to within 1.5 px of the prints' mean; the prints' name pill, type bar and text box also end 8–11 px further right and their shield sits 12 px right, which no flat zone can give (the bars' paper would have to stretch): left as the pack has it",
+      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "colourless = CC's see-through 'Colorless Frame' (battle/c.png), as MOM #1 Invasion of Ravnica prints: its name pill, type bar and text box are translucent down to the bottom border, so the BATTLE profile draws the art under the frame for 'c' in a LANDSCAPE under-frame rect that runs to the bottom border (underFrameArt; owner decision 2026-09-29) — the art-window check fails the import without it",
+      "the pack's Pinline / Title / Type / Rules / Defense / Border masks and its 'Holo Stamp' are not used and not published; its 'Artifact Frame' and 'Land Frame' are not built (no artifact or land battle was printed)",
+      "the grey reverse-P/T line the pack draws for the back face (its 'Reverse PT' text) and a legendary back face's crown are double-faced anatomy (TODO 5.5): not drawn"
+    ]
+  },
   "dfcicon": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -7215,6 +7299,96 @@
       "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
       "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
       "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
+    ]
+  },
+  "split": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packSplit.js 'Split'",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "2100x1500, corners rounded to 64.5px, webp q90",
+    "orientation": "landscape",
+    "transform": "rotate-cw",
+    "shift": {
+      "axis": "x",
+      "blocks": [
+        {
+          "from": 160,
+          "to": 1082,
+          "by": -11
+        },
+        {
+          "from": 1118,
+          "to": 2041,
+          "by": -3
+        }
+      ],
+      "zones": [
+        "columns 0–159 (flat) → 149 px",
+        "columns 1082–1117 (flat) → 44 px",
+        "columns 2041–2099 (flat) → 62 px"
+      ],
+      "why": "the pack's collector border is 160 px, the prints' 147–148: the left half moves 11 px left, the right half 3 px, onto MH2 #123 / #60 and TSR #161 / #186 (every edge within 3.6 px of the four prints' mean, 5.4 of any one; the pack's up to 14.3 / 16.4)",
+      "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
+    },
+    "transforms": "native 1500x2100 (the pack draws the card portrait, its text at −90°), turned a quarter turn CLOCKWISE to 2100x1500 — a pixel permutation, no resample: source (x, y) → (2099 − y, x); then the two halves moved onto the prints through the flat black border and spine (shift: the left half 11 px left, the right half 3 px — whole blocks, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)",
+    "colors": {
+      "w": [
+        "img/frames/m15/split/w.png"
+      ],
+      "u": [
+        "img/frames/m15/split/u.png"
+      ],
+      "b": [
+        "img/frames/m15/split/b.png"
+      ],
+      "r": [
+        "img/frames/m15/split/r.png"
+      ],
+      "g": [
+        "img/frames/m15/split/g.png"
+      ],
+      "c": [
+        "img/frames/m15/split/a.png"
+      ],
+      "m": [
+        "img/frames/m15/split/m.png"
+      ]
+    },
+    "halfMasks": {
+      "left": {
+        "src": "img/frames/m15/split/bottom.svg",
+        "covers": "x 0–1099 of the pack's turned 2100 px card, every row"
+      },
+      "right": {
+        "src": "img/frames/m15/split/top.svg",
+        "covers": "x 1100–2099, every row"
+      },
+      "packSeam": "x 1100 px (52.38 %W) after the clockwise turn, inside the pack's flat black spine",
+      "seam": "x 1093 px (52.05 %W) on the master, the middle of its spine after the halves moved",
+      "published": false,
+      "use": "importer inputs only (rasterised, turned and checked to be these plain rectangles): TODO 4.26's per-half colour is a hard seam between two masters at the master's seam, no mask asset"
+    },
+    "sourceFiles": [
+      "img/frames/m15/split/a.png",
+      "img/frames/m15/split/b.png",
+      "img/frames/m15/split/bottom.svg",
+      "img/frames/m15/split/g.png",
+      "img/frames/m15/split/m.png",
+      "img/frames/m15/split/r.png",
+      "img/frames/m15/split/top.svg",
+      "img/frames/m15/split/u.png",
+      "img/frames/m15/split/w.png"
+    ],
+    "notes": [
+      "source: CC 'Split' (packSplit.js): the two half-cards of the M15 split frame, each a coloured body round its name bar, art window, thin type bar and text box — replaces the MSE composite (build-split-frame.mjs: two 240×345 magic-m15-split-fusable half-frames on a black canvas), which drew no coloured body round either half, set the title bars 31 px above the prints' and both windows 37 px high (the left one 69 px left of the prints': 133–952 × 201–800 px against 202–1018 × 238–796)",
+      "the pack draws the card PORTRAIT with its text turned −90°: the importer turns each composite a quarter turn clockwise (a pixel permutation, no resample), so the text reads upright and the pack's 'Right' texts and art window are our right half, its 'Left' texts our left half",
+      "colourless = CC's 'Artifact Frame' (split/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless split was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "the two halves are moved onto the prints (SPLIT_HALF_RECUT): the pack's collector border is 160 px where MH2 #123 / #60 and TSR #161 / #186 print 147–148, so the left half moves 11 px left and the right half 3 px, through the flat black border and spine — every pixel of both halves is the pack's, byte for byte, and every edge of both lies within 3.6 px of the four prints' mean (5.4 px of any one print; the pack's up to 14.3 / 16.4)",
+      "the pack's 'Top Half' / 'Bottom Half' masks (top.svg, bottom.svg) are plain rectangles cutting the PORTRAIT card at y 1000: after the turn 'Bottom Half' is the LEFT half (x 0–1099) and 'Top Half' the RIGHT half (x 1100–2099), the seam at x 1100 (52.38 %W) inside the pack's spine — importer inputs, checked and recorded (halfMasks), never published; on the master, whose halves moved, the seam is the middle of its spine, x 1093: TODO 4.26's per-half colour is a hard seam between two masters there, no mask asset",
+      "gold (m) is the pack's 'Multicolored Frame' on BOTH halves (C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame's 2016 arrangement, its collector line along the bottom border); a mixed split (GRN's hybrid // gold, a mono // mono of two colours) needs TODO 4.26",
+      "the pack hides the set symbol (setSymbolBounds off the card) and has no fuse dress here (split/fuse/ is its own pack): neither is built"
     ]
   }
 }

@@ -86,10 +86,6 @@ const FALLBACK_GLYPH = [UNITS_PER_EM, 0, 0] as const;
 
 const glyph = (ch: string) => STAT_GLYPHS[ch] ?? FALLBACK_GLYPH;
 
-/** The drawn defense badge's inset inside its rect (the Battle disc), in
- *  percent of the rect — both renderers draw it from these numbers. */
-export const STAT_BADGE_INSET = { xPct: 12, yPct: 8 } as const;
-
 /** A value's laid-out width in em — the sum of its advance widths, the box
  *  Satori centres (and wraps, when it is wider than the rect). */
 export function statWidthEm(value: string): number {
@@ -122,12 +118,10 @@ export function statInkEm(value: string): { left: number; right: number } {
 }
 
 /** The x-range (fractions of the card's width) a slot's value may ink: the
- *  profile's measured `inkSpanPct`, else the value rect — or the drawn badge
- *  inside it. */
+ *  profile's measured `inkSpanPct`, else the value rect. */
 export function statInkSpan(slot: StatSlot): { left: number; right: number } {
   if (slot.inkSpanPct) return { left: slot.inkSpanPct.leftPct / 100, right: slot.inkSpanPct.rightPct / 100 };
-  const inset = !slot.plateAssetPathTemplate && slot.badgeColorHex ? (slot.rect.widthPct * STAT_BADGE_INSET.xPct) / 100 : 0;
-  return { left: (slot.rect.leftPct + inset) / 100, right: (slot.rect.leftPct + slot.rect.widthPct - inset) / 100 };
+  return { left: slot.rect.leftPct / 100, right: (slot.rect.leftPct + slot.rect.widthPct) / 100 };
 }
 
 /**
