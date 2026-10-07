@@ -1256,20 +1256,18 @@ edge's profile cross-correlated with the master's over a ±24 px search —
 one global fit hides a half that sits off on its own); every difference is
 print − ours, + = right or down.
 
-Owner decisions on it (all five round-33 sheets signed off; it merges as
-built):
-
-- owner round 33, 2026-10-06: split keeps the PRINTS' text sizes (name 76
-  px, type line 53, pips 68, the 48 px symbol box), not the design's.
-- owner round 33, 2026-10-06: the gold split (`split/m`) stays unticked
-  until per-part colour (TODO 4.26); the owner ticks red and blue only,
-  per colour.
-- owner round 33, 2026-10-06: centring a split half's short rules text is
-  a rules-layout follow-up (TODO 4.21e), before the first split tick.
-- owner round 33, 2026-10-06: the battle merges as built; its right side
-  is re-cut onto the prints in a follow-up (TODO 4.21d), before the first
-  battle tick.
-
+- **Owner decisions** (all five round-33 sheets signed off; it merges as
+  built).
+  - owner round 33, 2026-10-06: split keeps the PRINTS' text sizes (name
+    76 px, type line 53, pips 68, the 48 px symbol box), not the design's.
+  - owner round 33, 2026-10-06: the gold split (`split/m`) stays unticked
+    until per-part colour (TODO 4.26); the owner ticks red and blue only,
+    per colour.
+  - owner round 33, 2026-10-06: centring a split half's short rules text
+    is a rules-layout follow-up (TODO 4.21e), before the first split tick.
+  - owner round 33, 2026-10-06: the battle merges as built; its right side
+    is re-cut onto the prints in a follow-up (TODO 4.21d), before the first
+    battle tick.
 - **The two recipes.**
   - `split` — Card Conjurer's 'Split' pack (packSplit.js) is drawn PORTRAIT
     with its text at −90°. The importer composites it at the pack's native
@@ -1365,7 +1363,8 @@ built):
   px). No flat zone crosses the bars or the icon, so a block move can't
   reach either; widening the bars would mean repeating single texture
   columns along each and redrawing the shield over the border. Left as
-  the pack has it — the owner's call (the PR's open questions). Text is
+  the pack has it in this change — owner round 33: the right side and the
+  icon are re-cut in TODO 4.21d, before the first battle tick. Text is
   placed relative to the master's own bars (below), so a name or a cost is
   not 10 px off its bar. (The one edge the move takes OFF the prints is
   the bottom border's: the prints' text-box rim is about 2 px thinner than
@@ -1447,7 +1446,8 @@ built):
     theirs left (MH2 #60's three and five lines, GRN #224, and DMR #209's
     one- and two-line texts): no rule of length separates them, so ours is
     always left-aligned — a rule of the rules layout's own, not this
-    correction's (open question). The layout already carries an indent per
+    correction's (TODO 4.21e; owner round 33: before the first split
+    tick). The layout already carries an indent per
     line (a token's one centred line, `alignSingleLine`), so centring a
     short block is a predicate away once someone says which texts. The
     halves' missing 5 px also leave each text column about 10 px narrower
