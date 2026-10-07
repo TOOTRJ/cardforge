@@ -274,9 +274,13 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   layouts](#the-portrait-layouts-layout-v38)). A fourth kind needs no
   cross-fade: whole blocks moved through FLAT zones (`shiftBlocksRgba8`, a
   recipe's `shift` — it throws on a zone that isn't flat): the split's two
-  halves and the battle's lower block (`SPLIT_HALF_RECUT`,
-  `BATTLE_LOWER_RECUT`, layout v43 — [The landscape
-  layouts](#the-landscape-layouts-421b-layout-v43)).
+  halves and the battle's two blocks (`SPLIT_HALF_RECUT`,
+  `BATTLE_BLOCK_RECUT`, layout v43 — [The landscape
+  layouts](#the-landscape-layouts-421b-layout-v43)). A fifth stretches a
+  band SIDEWAYS through a cross-fade in a bar's own paper (`recutColumns`,
+  the battle's right ends — with its shield set aside through a mask and
+  its icon's rings redrawn, layout v44: [The battle re-cut onto the
+  prints](#the-battle-re-cut-onto-the-prints-421d-layout-v44)).
 - **The borderless land (4.34).** A borderless land prints its colour on
   the title bar, the type bar AND the text box, where a borderless spell
   tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
@@ -1320,13 +1324,17 @@ print − ours, + = right or down.
     and columns 1118–2040 (the right half) 3 px. The border becomes 149
     px, the spine 44 (1071–1114; the pack's 36), the right border 62
     (from 2038; the pack's 59).
-  - `BATTLE_LOWER_RECUT` — nine MOM battles print the type bar, the text
-    box and the shield 2.5–5.5 px lower than the pack: rows 842–1467 move
-    4 px down. The window's sides grow 4 rows and the bottom border is 54
-    px (from 1446; the pack's 58).
+  - `BATTLE_BLOCK_RECUT` (v43's `BATTLE_LOWER_RECUT`, with a second block
+    since layout v44) — nine MOM battles print the type bar, the text box
+    and the shield 2.5–5.5 px lower than the pack: rows 842–1467 move 4 px
+    down. The window's sides grow 4 rows and the bottom border is 54 px
+    (from 1446; the pack's 58). TODO 4.21d added the top block — rows
+    57–362, 2 px up — and re-cut what no block reaches: "The battle re-cut
+    onto the prints" below.
 
   A profile's numbers are written in the PACK's px and ride the moves
-  (`SPLIT_RECUT_PX`, `BATTLE_LOWER_RECUT_PX`, `splitLeftPct` /
+  (`SPLIT_RECUT_PX`, `BATTLE_LOWER_RECUT_PX`, `BATTLE_TOP_RECUT_PX`,
+  `BATTLE_RIGHT_RECUT_PX`, `splitLeftPct` /
   `splitRightPct` / `battleLowerPct` in `lib/cards/template-layout.ts` — as
   the tokens ride `TOKEN_RECUT_PX`); `tests/unit/frames/landscape-importer.test.ts`
   holds the recipe's and the profile's constants together. To take a move
@@ -1413,11 +1421,13 @@ print − ours, + = right or down.
   12 px right over the border, where the prints' sits — every right-side
   edge then lies within 1 px of the nine prints' mean (the pill +0.1, the
   type bar +0.7, the box −0.3, the shield −0.3); rows 57–362 two px up
-  through the flat top border (one more block for `BATTLE_LOWER_RECUT`:
+  through the flat top border (one more block for `BATTLE_BLOCK_RECUT`:
   the pill's top −0.5, its bottom +0.6); and the icon's three rings
   redrawn flat at the prints' radii, 1.4 px above the centre of their rim
   as the prints set them (the disc r 52.0, 0.5 px from the prints'
-  centre; its triangle kept — the prints' is the pack's size).
+  centre; its triangle kept — the prints' is the pack's size). **Built as
+  layout v44** — "The battle re-cut onto the prints" below; the table
+  above is the master as v43 shipped it.
 
 - **How text is placed on both.** Where the prints set a line RELATIVE TO
   ITS OWN BAR of the master: a baseline below its bar's face, a name's
@@ -1480,6 +1490,11 @@ print − ours, + = right or down.
     exactly as the front draws its own, in both renderers; a turned one
     (aftermath, flip) keeps the character estimate.
 - **Battle's slots** (`BATTLE`; the MOM Siege front, MOM #149):
+  - (The numbers in this list are layout v43's. Since v44 the art rect's
+    top is 56.2 px, the name sits 2 px higher, the cost ends at 1952.3 px, the type line's rect, the
+    symbol and the rules box end 8 px further right and the shield, its
+    value and its ink span sit 12 px right — "The battle re-cut onto the
+    prints" below.)
   - **Art — ONE rect for every colour** (`BATTLE_ART_RECT`,
     7.85/3.88/89.4 × 91.91: 164.9–2042.3 × 58.2–1436.9 px), from the
     border's inner edge to the bottom border. On the master the full-art
@@ -1617,6 +1632,137 @@ by 1.3 — which is older than this change and not its business.)
 A private card has no stored bake, so its My Cards tile is the live
 preview letterboxed in the 5:7 tile; a public one shows its baked
 thumbnail in the same box.
+
+### The battle re-cut onto the prints (4.21d, layout v44)
+
+Owner round 33 (2026-10-06): the battle merged as built (v43) and its right
+side is re-cut BEFORE the first battle tick. After v43's block move Card
+Conjurer's 'Battle' master still left the nine MOM prints (#1, #21, #22,
+#63, #115, #147, #149, #190, #230) by 8–12 px on its right side, 2 px at
+the name pill and 5 % at the icon's disc. The importer now re-cuts all
+three (`CC_TEMPLATES.battle`: `shift` + `printRecut`, in
+`scripts/lib/cc-frames.mjs`), in this order, on the 2100 × 1500 downscale
+and before the corner is cut. Every row and column is the MASTER's.
+
+1. **The top block, 2 px up** — `BATTLE_BLOCK_RECUT` gained a block: rows
+   57–362 (the pill, the icon, the arc's upper curve) move 2 px up through
+   the flat top border, byte for byte (`shiftBlocksRgba8`; rows 0–56 are
+   one row on all seven masters). The top border is 55 rows (the pack's
+   57), the window 485, the bottom border 28. 3 px up is worse (the
+   border's inner edge would leave the prints by 2.3 px).
+2. **The bars' right ends, stretched** — `BATTLE_RIGHT_RECUT.bands`,
+   `recutColumns` (`recutBand`'s seam turned a quarter turn): inside a
+   band's rows the columns from 1820 to `toX` land `by` px right, and over
+   the 24 columns from 1820 each row is a premultiplied cross-fade of
+   itself with itself `by` px back. The seam is opened inside each bar's
+   own mottled paper, where every line a row crosses is horizontal, so
+   nothing with an edge is blended; the clear window columns after `toX`
+   give up `by` columns, and the importer THROWS unless they are one
+   colour a row (`clearTo`).
+
+   | Band | Rows | `toX` | `by` |
+   |---|---|---|---|
+   | name pill | 0–599 | 1998 | 10 |
+   | type bar + text box (with its arrow notch) | 600–1299 | 2010 | 8 |
+   | the text box under the shield | 1300–1471 | 2030 | 8 |
+
+3. **The shield, 12 px right, over the border** — `BATTLE_SHIELD.dx`. The
+   pack's Defense mask (moved 4 px down with its block) is the shield's
+   exact outline. Its footprint (+1 px) is first repainted with what is
+   beside it (`eraseMaskFootprint`, `BATTLE_RIGHT_RECUT.erase`: the paper
+   mirrored from the left of each row; above row 1326 each column
+   continued from above; from x 1986 the box's rim and clear window of row
+   1295; the border black), the text box under it is stretched (band 3),
+   then the pack's own shield pixels, lifted through the mask, are drawn
+   12 px right — source-OVER (`setThroughMask`: the shield's alpha times
+   the mask's coverage). A plain replace would leave the shield's
+   anti-aliased edge see-through on top of the opaque border, which the
+   art-window check refuses. What shows of the repaint is a 4 px crescent
+   along the shield's left-facing edges. The recipe's box is 1893,1304
+   164 × 166 (`paintedShieldFindings` holds the mask to it and the master
+   to solid paint under it); its tips end at x 2056, short of the right
+   edge's 42 px band.
+4. **The icon's rings, redrawn** — `BATTLE_ICON_RECUT`, `redrawBattleIcon`.
+   The pack's dark disc is r 54.9 px and concentric in its rim; the prints'
+   is r 52.0 and sits 1.4 px above the rim's centre. Inside r 65 of the
+   rim's centre (290.5 / 129.5) every pixel is repainted by its distance
+   from 289.1 / 128.1: black to 52.0, white to 58.5, black to 62.3, then
+   the rim's own colour (sampled per angle 67 px from the rim's centre,
+   where every key is flat), 1 px linear edges; the pack's triangle
+   (inside r 40) is kept, 1 px left. **A redraw of flat geometry, not the
+   pack's pixels** — `frame-sources.json` says so (`printRecut.icon.how`).
+
+**Measured against the nine prints** (print − master, HD px, + = right /
+down; the builder's own regions and code — each edge's profile, the median
+over its rows, slid under the print's fixed window; the shield by its
+black interior on the rows clear of the digit; the icon by circle fits to
+radial half-level crossings. The 4.21b skeptic's numbers, measured on
+other rows by correlation and crossings, are in brackets):
+
+| Edge | v43 | v44 |
+|---|---|---|
+| Name pill, right end | +9.6 (7.5 … 12.1) [+10.0] | **−0.4** (−2.4 … +2.1) [+0.1] |
+| Type bar, right end | +8.7 (7.1 … 9.2) [+8.6] | **+0.7** (−0.9 … +1.2) [+0.7] |
+| Text box, right edge | +9.1, median +8.6 [+7.6 / +8.8] | **+1.1**, median +0.6 [−0.3] |
+| Shield, black interior's centre | +11.8 (left +10.9, right +12.6) [+11.7] | **−0.2** (left −1.1, right +0.6) [−0.3] |
+| Name pill, face top / bottom | −2.9 / −1.4 [−2.5 / −1.4] | **−0.9 / +0.6** [−0.5 / +0.6] |
+| Top border, inner edge (7 prints) | −1.3 [−0.7] | +0.7 [+1.3] |
+| Icon disc, centre x / y | +1.35 / +3.86 low (290.5 / 131.5; prints 289.15 / 127.64) | **0.05 / 0.46** (289.1 / 128.1) |
+| Icon disc, radius | 54.91 (prints 51.94, each 51.89–52.01) | **51.98** |
+| Icon white ring, outer radius | 60.86 (prints 58.41) | **58.38** |
+| Not moved: type bar top, bar bottom / box top, type bar left end, box left, box bottom | +0.9, −0.2, −1.4, −0.1, −1.4 | the same |
+
+The text box's prints are the least alike (MOM #115's edge reads 5 px
+right of the others'); +9 would put the bar at −0.3. **Left as the pack
+has it:** the bottom border's edge (the prints' box rim is 2 px thinner),
+the siege arc, and the name pill's left end (a plain concave arc on the
+pack, a bracket on the prints).
+
+**The profile rides it** (`BATTLE` in `lib/cards/template-layout.ts`;
+`BATTLE_TOP_RECUT_PX` −2, `BATTLE_RIGHT_RECUT_PX` { pill 10, bars 8,
+shield 12 } — `landscape-importer.test.ts` holds them to the recipe):
+
+- the art rect's top 58.2 → 56.2 px (the see-through frame starts at row
+  57 now; `battle/c` fails the art-window check without it — masters and
+  profile are ONE commit);
+- **the name 2 px up with its pill** (the title rect's top 76 → 74 px). On
+  nine bakes of the prints' own names the letters' feet were on row 158
+  where the prints' are on 156–157 (read pixel by pixel on MOM #22, #63 and
+  #149; v43 took 158.4 for the prints'), the ink's top 1.7 px low and
+  "Invasion of" as a whole 1.6 px low by a 2-D correlation — 0.4 px high
+  after the move;
+- **the cost keeps its rows** (`costDy` 2 / 2100 gives the 2 px back): the
+  prints centre their discs 128.5–129.3 px down, 2 px below the middle of
+  their pill's face. The same nine bakes' last disc lies 0.5 px below the
+  prints' where it is and would lie 1.5 px above had it moved with the name;
+- the cost's right end 1942.3 → 1952.3 px (the prints end their last disc
+  at 1952–1953);
+- the type line's rect to 1943 px and the set symbol's box to 1950 (each
+  8 px with the bar);
+- **the rules box keeps the pack's column** (272–1933 px). The prints'
+  lines run to about 1942 px, but they WRAP round the shield; ours keep
+  out of it by stepping the size down (a plain keep-out). With the pack's
+  column, nine bakes of the prints' own texts set every one within 1.5 px
+  of its print's size (line pitch ÷ 0.98: ours 64 / 76 / 60 / 68 / 60 / 72
+  / 58 / 60 / 62, the prints 65.4 / 75.8 / 61.3 / 67.5 / 61.5 / 71.9 /
+  59.3 / 61.3 / 63.3); 8 px wider, four came out 2–6 px smaller (MOM #149
+  54, #230 56). Widening it wants the shield as a rules FLOAT first
+  (`RulesLayoutInput.floats`, as the transform front's reverse P/T) — a
+  follow-up, the owner's call;
+- the shield's rect (the rules keep-out), the defense value and its ink
+  span 12 px right (the value centred 1974 px across);
+- the brand mark stays where it was (it ends 28 px short of the shield's
+  left point now).
+
+**Rollout.** Layout v44 (`BATTLE_RECUT_LAYOUT_VERSION` — ONE constant: it
+was built beside another bump, and whichever merges second takes the next
+number by changing it and `CARD_LAYOUT_VERSION`), template-scoped to
+`battle`, a "sweep" (a correction). Production, anonymous read 2026-10-07:
+0 public or unlisted battles. NOT verification-neutral — the masters and
+the right-side slots move — and no battle tick exists to stale: **the
+owner's first battle ticks follow this bump**, in the seven colours against
+the MOM references. 14 bucket objects (seven masters + WebP), reproducible
+from a fresh cache of the pinned Card Conjurer commit.
 
 ### The saga (4.21c)
 

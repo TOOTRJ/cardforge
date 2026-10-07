@@ -266,7 +266,9 @@ describe("CardPreview — the battle (layout v43)", () => {
     expect(profile.artSlot).toBe(BATTLE_ART_RECT);
     for (const colour of ["red", "colorless"] as const) {
       const { container } = render(battle({ colorIdentity: [colour], artUrl: ART }));
-      expect(slot(container), colour).toEqual(["7.85%", "3.88%", "89.4%", "91.91%"]);
+      // (The pack's 58.2 px top, 2 px up with the top block — TODO 4.21d.)
+      expect(slot(container), colour).toEqual(["7.85%", `${BATTLE_ART_RECT.topPct}%`, "89.4%", `${BATTLE_ART_RECT.heightPct}%`]);
+      expect(BATTLE_ART_RECT.topPct * 15).toBeCloseTo(56.2, 9);
       // No second, separately cropped layer to meet it in a seam.
       expect(container.querySelector('[data-testid="under-frame-art"]'), colour).toBeNull();
       cleanup();

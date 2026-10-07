@@ -106,9 +106,9 @@
       "axis": "y",
       "blocks": [
         {
-          "from": 0,
+          "from": 57,
           "to": 363,
-          "by": 0
+          "by": -2
         },
         {
           "from": 842,
@@ -117,13 +117,91 @@
         }
       ],
       "zones": [
-        "rows 363–841 (flat) → 483 px",
+        "rows 0–56 (flat) → 55 px",
+        "rows 363–841 (flat) → 485 px",
         "rows 1468–1499 (flat) → 28 px"
       ],
-      "why": "the pack's type bar, text box and shield sit 2.5–5.5 px above the nine MOM prints': rows 842–1467 move 4 px down (those edges within 1.5 px of the prints' mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
+      "why": "the pack's name pill and icon sit 1.4–2.5 px below the nine MOM prints' and its type bar, text box and shield 2.5–5.5 px above them: rows 57–362 move 2 px up (the pill's top and bottom within 0.6 px of the prints' mean) and rows 842–1467 move 4 px down (those edges within 1.5 px of the mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
       "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
     },
-    "transforms": "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then the lower block (type bar, text box, shield) moved 4 px down onto the prints through the flat rows above and below it (shift: whole rows, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)",
+    "printRecut": {
+      "order": "after the block moves, before the corner cut: the shield's footprint erased, the bands stretched, the shield set right, the icon's rings redrawn",
+      "columns": {
+        "fromX": 1820,
+        "blend": 24,
+        "bands": [
+          {
+            "name": "name pill",
+            "rows": [
+              0,
+              600
+            ],
+            "toX": 1998,
+            "by": 10,
+            "clearTo": 2012
+          },
+          {
+            "name": "type bar + text box",
+            "rows": [
+              600,
+              1300
+            ],
+            "toX": 2010,
+            "by": 8,
+            "clearTo": 2036
+          },
+          {
+            "name": "text box under the shield",
+            "rows": [
+              1300,
+              1472
+            ],
+            "toX": 2030,
+            "by": 8
+          }
+        ],
+        "how": "inside a band's rows the columns [fromX, toX) land `by` px right; over the `blend` columns from fromX each row is a premultiplied cross-fade of itself with itself `by` px back (the bar's own paper, where every line a row crosses is horizontal); the columns [toX, clearTo) are one colour a row (checked) and give up `by` columns",
+        "why": "nine MOM prints end the name pill 10.0 px, the type bar 8.6 px and the text box 7.6 px further right than the pack and set the shield 11.7 px right, over the border: the pill's paper is stretched 10 px, the type bar's and the text box's 8 px (a 24-column cross-fade inside each bar's own paper) and the shield, lifted through the pack's Defense mask, is set 12 px right — those edges within 0.7 px of the prints' mean"
+      },
+      "shield": {
+        "mask": "img/frames/m15/battle/maskDefense.png",
+        "dx": 12,
+        "erase": {
+          "grow": 1,
+          "borderX": 2037,
+          "boxEndX": 1986,
+          "refRow": 1295,
+          "tipToRow": 1326,
+          "sideToRow": 1425,
+          "bottomRow": 1448
+        },
+        "how": "the shield's footprint (the mask's every covered pixel, grown 1 px) is repainted with the paper, rim, window and border beside it, the text box under it is stretched, then the pack's own shield pixels — lifted through the mask — are drawn `dx` px right, source-over (premultiplied; the shield's alpha times the mask's coverage)"
+      },
+      "icon": {
+        "rim": {
+          "x": 290.5,
+          "y": 129.5
+        },
+        "centre": {
+          "x": 289.1,
+          "y": 128.1
+        },
+        "radii": {
+          "disc": 52,
+          "white": 58.5,
+          "ring": 62.3
+        },
+        "repaint": 65,
+        "rimSample": 67,
+        "triangle": {
+          "radius": 40,
+          "dx": -1
+        },
+        "how": "a REDRAW of flat geometry, not the pack's pixels: inside `repaint` px of the rim's centre the three rings are flat anti-aliased circles about `centre` (black, white, black; 1 px linear edges), the rim's own colour — sampled per angle `rimSample` px out — continued inward; the pack's triangle is kept, its pixels `triangle.dx` px along x",
+        "why": "the pack's icon disc is r 54.6 px and concentric in its rim; nine MOM prints draw it r 52.0, 1.4 px above the rim's centre: the three rings are redrawn as flat anti-aliased circles at the prints' radii (52.0 / 58.5 / 62.3) about the prints' centre, the rim's colour continued inward, the pack's triangle kept 1 px left"
+      }
+    },
+    "transforms": "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then two blocks moved onto the prints through the flat rows between them (shift: the name pill and icon 2 px up, the type bar, text box and shield 4 px down — whole rows, byte for byte); then the right side re-cut onto the prints (printRecut: the name pill's paper stretched 10 px right, the type bar's and text box's 8 px, the shield lifted through the pack's Defense mask and set 12 px right over the border, the icon's three rings redrawn at the prints' radii); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)",
     "colors": {
       "w": [
         "img/frames/m15/battle/w.png"
@@ -149,8 +227,9 @@
     },
     "paintedShield": {
       "mask": "img/frames/m15/battle/maskDefense.png",
+      "dx": 12,
       "box": {
-        "x": 1881,
+        "x": 1893,
         "y": 1304,
         "width": 164,
         "height": 166
@@ -170,8 +249,12 @@
     ],
     "notes": [
       "source: CC 'Battle' (packBattle.js), 2814×2010: the black border with the siege arc, the battle icon in the name bar's left end, the name pill, the type bar, the text box and the defense shield — replaces the MSE 'm15 mainframe battles' master, which had no border, arc, icon or shield (a transparent ring: the art window was the whole card, and the defense sat on a drawn disc)",
-      "the lower block is moved onto the prints (BATTLE_LOWER_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them, so rows 842–1467 of the downscaled master move 4 px down through the flat rows above (the art window) and below (the bottom border) — byte for byte, to within 1.5 px of the prints' mean; the prints' name pill, type bar and text box also end 8–11 px further right and their shield sits 12 px right, which no flat zone can give (the bars' paper would have to stretch): left as the pack has it",
-      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "two blocks are moved onto the prints (BATTLE_BLOCK_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them and the name pill 1.4–2.5 px higher, so rows 842–1467 of the downscaled master move 4 px down and rows 57–362 (the pill, the icon, the arc's upper curve) 2 px up, through the flat rows of the top border, the art window and the bottom border — byte for byte, to within 1.5 px of the prints' mean (the top border's inner edge goes from −0.7 to +1.3 px)",
+      "the right side is re-cut onto the prints (BATTLE_RIGHT_RECUT, TODO 4.21d; owner round 33, 2026-10-06): the prints end the name pill 10.0 px, the type bar 8.6 px and the text box 7.6 px further right than the pack, which no flat zone can give — each bar's paper is stretched instead (a 24-column premultiplied cross-fade of each row with itself, opened inside the bar's own mottled paper from column 1820: the pill +10 px, the type bar and the text box +8 px), the clear window columns after each bar giving up as many; those ends then lie +0.1 / +0.7 / −0.3 px from the nine prints' mean",
+      "the defense shield is the pack's own pixels, lifted through the pack's Defense mask and set 12 px right, over the right border, where the prints print theirs (the pack's stops at the border; +11.7 px by the black interior's centroid, −0.3 after): its old footprint is repainted with the paper, the box's rim, the window and the border beside it (a 4 px crescent of that fill shows along its left-facing edges) and the shield is drawn source-over, so the border under its anti-aliased edge stays opaque",
+      "the battle icon's rings are REDRAWN, not the pack's pixels (BATTLE_ICON_RECUT): the pack's dark disc is r 54.6 px, concentric in its rim; the prints' is r 52.0, 1.4 px above the rim's centre — inside r 65 of the rim's centre the black disc (r 52.0), the white ring (to 58.5) and the black ring (to 62.3) are flat anti-aliased circles about the prints' centre, the rim's own colour continued inward, the pack's triangle kept 1 px left; the rim's outer edge and everything outside it are the pack's",
+      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block and set 12 px right): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "left as the pack has it: the bottom border's edge (−3.1 px: the prints' box rim is 2 px thinner), the siege arc down the left, and the name pill's left end (a plain concave arc on the pack, a bracket on the prints)",
       "colourless = CC's see-through 'Colorless Frame' (battle/c.png), as MOM #1 Invasion of Ravnica prints: its name pill, type bar and text box are translucent down to the bottom border, so the BATTLE profile draws the art under the frame for 'c' in a LANDSCAPE under-frame rect that runs to the bottom border (underFrameArt; owner decision 2026-09-29) — the art-window check fails the import without it",
       "the pack's Pinline / Title / Type / Rules / Defense / Border masks and its 'Holo Stamp' are not used and not published; its 'Artifact Frame' and 'Land Frame' are not built (no artifact or land battle was printed)",
       "the grey reverse-P/T line the pack draws for the back face (its 'Reverse PT' text) and a legendary back face's crown are double-faced anatomy (TODO 5.5): not drawn"

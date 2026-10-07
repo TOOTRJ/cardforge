@@ -211,15 +211,19 @@ describe("layout v43 — the battle on real bakes (HD and the 1050 px default)",
 
   it.each(PRESETS)("starts the name right of the icon, 23 px into the pill, on the prints' baseline — at %s (TODO 3.28)", async (preset) => {
     const r = await bake(battleCard({ cost: null }), preset);
-    // The pill's face is 375–1967 × 76–181 px; the icon's ring ends at 362.
+    // The pill's face is 375–1977 × 74–179 px (the pack's 375–1967 × 76–181,
+    // re-cut onto the prints: TODO 4.21d); the icon's ring ends at 362.
     const ink = inkBox(r, hd(r, 300, 1960, 80, 180), isDark)!;
     // The nine MOM prints start their names 396–398 px in (the MSE profile's
     // rect began 269 px in: the first letters sat under the ornament).
     expect(ink.x0, `the name's first ink column ${ink.x0}`).toBeGreaterThanOrEqual(392);
     expect(ink.x0).toBeLessThanOrEqual(392 + tol(preset, 9));
-    // …and set their baseline on 158.4 px (157.4–159.3).
+    // …and set the letters' feet on rows 156–157 (TODO 4.21d, read pixel by
+    // pixel on MOM #22 / #63 / #149 and by the ink's last row on all nine;
+    // v43 took 158.4 and drew them on row 158): ours end on 156 since the
+    // name moved 2 px up with its pill.
     const baseline = baselineOf(r, hd(r, 392, 1100, 84, 180));
-    expect(Math.abs(baseline - 158.4), `the name's baseline ${baseline}`).toBeLessThanOrEqual(tol(preset, 1.5));
+    expect(Math.abs(baseline - 156.4), `the name's baseline ${baseline}`).toBeLessThanOrEqual(tol(preset, 1.5));
   }, 120_000);
 
   it.each(PRESETS)("tracks the name like M15's: 'Invasion of Tarkir' is the prints' 632 px wide — at %s", async (preset) => {
@@ -236,14 +240,16 @@ describe("layout v43 — the battle on real bakes (HD and the 1050 px default)",
     const r = await bake(battleCard(), preset);
     // The pips are the only marks right of the name.
     const pips = inkBox(r, hd(r, 1500, 2030, 70, 190), isMark)!;
-    // The prints' last disc ends 24 px before the pill's face (1967 px):
-    // 1942–1943 px on this master.
-    expect(Math.abs(pips.x1 - 1942.3), `the last disc ends at ${pips.x1}`).toBeLessThanOrEqual(tol(preset, 2));
+    // The prints' last disc ends 24 px before the pill's face — 1952–1953
+    // px on MOM #22 / #147 / #149, and 1952.3 on this master since its pill
+    // was stretched 10 px onto theirs (TODO 4.21d; the pack's 1942.3).
+    expect(Math.abs(pips.x1 - 1952.3), `the last disc ends at ${pips.x1}`).toBeLessThanOrEqual(tol(preset, 2));
     // Two discs at the family's 72.75 px (+ their drop shadow).
     expect(pips.x1 - pips.x0).toBeGreaterThan(150);
     expect(pips.x1 - pips.x0).toBeLessThan(166);
-    // Centred on the pill's face (rows 76–181: 128.75 px), as the prints'
-    // discs are (128.5–129.3) — the shadow hangs a few px below.
+    // Centred 128.75 px down, as the prints' discs are (128.5–129.3; 2 px
+    // below the middle of the pill's face — costDy keeps them there while
+    // the name rides the pill) — the shadow hangs a few px below.
     const centre = (pips.y0 + pips.y1) / 2;
     expect(Math.abs(centre - 128.75), `the discs' centre ${centre}`).toBeLessThanOrEqual(tol(preset, 3.5));
   }, 120_000);
@@ -645,7 +651,7 @@ describe.skipIf(!haveReal)("layout v43 — on the real Card Conjurer masters (se
     // the art under the frame — the column through the text box's left edge
     // and the row through its bottom are the art's own colour on both sides
     // of the box's outline, through the see-through body.
-    const sliver = px(cRed, 2030, 1410); // between the shield and the border
+    const sliver = px(cRed, 2035, 1410); // between the shield and the border (2034–2036 px since the shield sits 12 px right)
     expect(sliver[0]).toBeGreaterThan(150);
     expect(sliver[2]).toBeLessThan(80);
   }, 240_000);

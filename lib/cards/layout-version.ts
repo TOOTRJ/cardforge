@@ -946,7 +946,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              icon or shield. Nine MOM battles print the type bar, the
 //              text box and the shield 2.5–5.5 px lower than the pack, so
 //              the importer moves that block 4 px down through flat rows
-//              (BATTLE_LOWER_RECUT: within 1.5 px of their mean; the
+//              (BATTLE_BLOCK_RECUT, then named BATTLE_LOWER_RECUT: within 1.5 px of their mean; the
 //              prints' bars also end 8–11 px further right, which no block
 //              move reaches — kept as the pack has them). ONE art rect for every colour,
 //              from the border's inner edge to the bottom border (the
@@ -973,9 +973,43 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            verification-neutral: masters and every slot move — but no
 //            tick exists on either template to stale (0 of 7 each), so the
 //            first ticks are the owner's after the deploy.
+//   44     — the battle's right side, top block and icon re-cut onto the
+//            prints (TODO 4.21d; owner round 33, 2026-10-06: re-cut before
+//            the first battle tick). ITS number lives in
+//            BATTLE_RECUT_LAYOUT_VERSION below (another PR was built beside
+//            it: whichever merges second renumbers). After v43's block move
+//            Card Conjurer's 'Battle' master still left nine MOM prints
+//            (#1, #21, #22, #63, #115, #147, #149, #190, #230) by: the name
+//            pill's right end +10.0 px, the type bar's +8.6, the text box's
+//            right edge +7.6, the shield +11.7 (the prints' lies over the
+//            right border), the pill 2.5 / 1.4 px high, the icon's dark
+//            disc r 54.6 against 52.0 and 3.9 px low. The importer now
+//            (scripts/lib/cc-frames.mjs): moves the top block 2 px up
+//            through the flat top border (BATTLE_BLOCK_RECUT), stretches
+//            the pill's paper 10 px and the type bar's and text box's 8 px
+//            right (recutColumns: a 24-column cross-fade inside each bar's
+//            own paper), lifts the shield through the pack's Defense mask
+//            and sets it 12 px right, over the border, and redraws the
+//            icon's three rings at the prints' radii (BATTLE_RIGHT_RECUT,
+//            BATTLE_ICON_RECUT). Every one of those edges within 1 px of
+//            the nine prints' mean. The profile rides it: the name and the
+//            art rect's top 2 px up (the name's feet were on row 158 where
+//            the prints' are on 156–157; the cost stays on the prints'
+//            rows: costDy), the cost's end 10 px right, the type line's
+//            rect and the symbol 8 px, the shield's rect and the defense
+//            value 12 px. The rules box keeps the pack's column (the
+//            prints wrap their lines round the shield; ours keep out of it
+//            by size, and a wider column set four of nine references'
+//            texts 2–6 px smaller than their prints).
+//            Template-scoped (battle alone): every card on it. Public
+//            production (anonymous read, 2026-10-07): 0 public or unlisted
+//            battles. The visual matrix: only the battle cases change.
+//            "sweep" (a correction). NOT verification-neutral: the masters
+//            and every slot on the right move — no battle tick exists to
+//            stale (the first ticks wait for this bump).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 43;
+export const CARD_LAYOUT_VERSION = 44;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1037,6 +1071,15 @@ export const SAGA_RAIL_TEMPLATES: readonly string[] = ["saga"];
  *  masters, art slots and every text slot). Frozen like v38's: v43 is
  *  history once it ships (4.21c's saga brings its own bump). */
 export const V43_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "split"];
+/** The battle's re-cut onto the prints (TODO 4.21d): its masters' right
+ *  side, top block and icon, and the slots that ride them. ITS version
+ *  lives here alone — the scoped table and the rollout below key their
+ *  entries by this constant — because another bump was built beside it:
+ *  whichever of the two merges second takes the next number by changing
+ *  this constant (and CARD_LAYOUT_VERSION, when it becomes the latest).
+ *  Frozen like the lists above once it ships. */
+export const BATTLE_RECUT_LAYOUT_VERSION = 44;
+export const BATTLE_RECUT_TEMPLATES: readonly string[] = ["battle"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -1107,6 +1150,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // their masters, art slots and text slots; every card on the two. No
   // narrower verification scope: neither has a tick.
   43: V43_LANDSCAPE_LAYOUT_TEMPLATES,
+  // The battle re-cut onto the prints (4.21d): its masters and the slots on
+  // its right side and top block; every card on it. No narrower
+  // verification scope: the battle has no tick.
+  [BATTLE_RECUT_LAYOUT_VERSION]: BATTLE_RECUT_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1725,6 +1772,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
   [SAGA_RAIL_LAYOUT_VERSION]: "sweep", // the saga rebuilt from Card Conjurer (4.21c): the ribbon in the master, the printed rail — a correction after the owner's sheet, never a badge
   43: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
+  [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

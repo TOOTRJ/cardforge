@@ -366,9 +366,19 @@ Rules and gotchas:
   `orientation: "landscape"` recipes (split turned a quarter turn clockwise
   with no resample, battle downscaled once). A recipe's `shift` moves whole
   blocks onto the prints through FLAT zones only (`shiftBlocksRgba8` throws
-  otherwise; `SPLIT_HALF_RECUT`, `BATTLE_LOWER_RECUT`), and the profile
+  otherwise; `SPLIT_HALF_RECUT`, `BATTLE_BLOCK_RECUT`), and the profile
   writes its rects in the PACK's px and rides the moves (`SPLIT_RECUT_PX`,
   `BATTLE_LOWER_RECUT_PX`; a unit test holds recipe and profile together).
+  What no block reaches on the battle is re-cut after the shift (layout
+  v44, TODO 4.21d, the recipe's `printRecut`): the bars' paper stretched
+  right (`recutColumns`, `BATTLE_RIGHT_RECUT` — it throws unless the
+  window columns it covers are one colour a row), the shield set 12 px
+  right through the pack's Defense mask, source-over (`BATTLE_SHIELD.dx`),
+  the icon's rings REDRAWN at the prints' radii (`BATTLE_ICON_RECUT`:
+  flat geometry, said so in provenance); the slots ride
+  `BATTLE_TOP_RECUT_PX` / `BATTLE_RIGHT_RECUT_PX` — the name moves up
+  with its pill, the cost keeps the prints' rows (`costDy`). The bump is
+  `BATTLE_RECUT_LAYOUT_VERSION`.
   Battle is in the M15 family through `displayPct(…, "landscape")`; split
   is NOT — a half prints smaller (`SPLIT_*` in `lib/cards/typography.ts`,
   `setSymbolFit: "ink-height"`) — yet both its halves are `fit: "measured"`
