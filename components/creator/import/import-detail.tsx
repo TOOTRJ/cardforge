@@ -253,7 +253,8 @@ export function ImportDetail({
           value={frameChoice}
           onChange={onFrameChoiceChange}
           colorIdentity={patch.color_identity}
-          type={{ cardType: patch.card_type, supertype: patch.supertype }}
+          type={{ cardType: patch.card_type, supertype: patch.supertype, cost: patch.cost }}
+          printing={patch}
           disabled={locked || busy}
         />
       ) : null}
