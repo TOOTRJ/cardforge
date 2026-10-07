@@ -2098,6 +2098,9 @@ describe("v44 — the 2003 frame's artist line in the prints' ink (TODO 4.23a)",
         const tick = { verified: true, verifiedLayoutVersion, verifiedOverrideHash: "h" } as const;
         expect(verificationState(tick, t, "h", 44), `${t} v${verifiedLayoutVersion}`).toMatchObject({ verified: true, stale: false });
       }
+      // The legacy tick itself (no stamp, no hash: judged at v33).
+      const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null } as const;
+      expect(verificationState(legacy, t, "h", 44), `${t} legacy`).toMatchObject({ verified: true, stale: false, legacy: true });
     }
     // Only the footer's ink map is new on the two profiles: every rect and
     // size is where it was (the fixture test holds the rest).
