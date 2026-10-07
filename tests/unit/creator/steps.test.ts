@@ -104,6 +104,7 @@ describe("isAdventureFrame", () => {
 describe("hidesCost", () => {
   it("hides the cost on token frames, shows it on standard frames", () => {
     expect(hidesCost("m15token")).toBe(true);
+    // The retired Alpha token (TODO 4.54) reads as the M15 token.
     expect(hidesCost("alphatoken")).toBe(true);
     expect(hidesCost("m15")).toBe(false);
   });

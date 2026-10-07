@@ -398,7 +398,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
     className,
     staticInEditor = false,
   } = drawable;
-  const template = normalizeFrameTemplate(frameStyle?.template);
+  const template = normalizeFrameTemplate(frameStyle?.template, { rulesText, flavorText });
   const layout = resolveFrameProfile(template, profileOverrides);
   const finish: CardFinish = frameStyle?.finish ?? "regular";
   // The two faces of a double-faced card (TODO 5.1a, lib/cards/faces.ts):

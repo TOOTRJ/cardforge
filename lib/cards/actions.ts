@@ -44,6 +44,7 @@ import {
   revalidateCardPaths,
 } from "@/lib/cards/revalidate";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
+import { retiredFrameStyleRewrite, withRetiredFrameTemplate } from "@/lib/cards/card-display";
 import {
   applyFrameAnatomyPatch,
   newCardFrameStyle,
@@ -232,7 +233,9 @@ export async function createCardAction(
   payload: unknown,
   options: CreateCardOptions = {},
 ): Promise<CreateCardResult> {
-  const parsed = createCardSchema.safeParse(payload);
+  // A payload that still names a RETIRED template (TODO 4.54) saves on the
+  // frame its own text asks for, not just the bare one the schema reads.
+  const parsed = createCardSchema.safeParse(withRetiredFrameTemplate(payload));
   if (!parsed.success) {
     return {
       ok: false,
@@ -769,6 +772,21 @@ export async function updateCardAction(
     const storedStyle = existing.frame_style as FrameAnatomyStyle & { template?: string };
     const normalized = normalizeAnatomy(storedStyle, storedStyle.template, savedCardType);
     if (normalized !== storedStyle) update.frame_style = normalized as CardUpdate["frame_style"];
+  }
+  // A stored RETIRED template (TODO 4.54) is stored as the frame the row
+  // reads as, on any edit — an edit never sends its template, so nothing
+  // else would ever take the old value out of the row. Judged by the text
+  // the row holds after this edit; no verification gate (the card already
+  // draws on that frame, and must stay editable).
+  {
+    const rewritten = retiredFrameStyleRewrite(
+      (update.frame_style ?? existing.frame_style) as { template?: unknown } | null | undefined,
+      {
+        rules_text: update.rules_text !== undefined ? update.rules_text : existing.rules_text,
+        flavor_text: update.flavor_text !== undefined ? update.flavor_text : existing.flavor_text,
+      },
+    );
+    if (rewritten) update.frame_style = rewritten as CardUpdate["frame_style"];
   }
   if (data.visibility !== undefined) update.visibility = data.visibility;
   // The back face's gate (TODO 5.2, lib/cards/dfc-gate.ts), on the card as

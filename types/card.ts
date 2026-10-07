@@ -329,7 +329,6 @@ export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
 // "m15pw"     — M15 planeswalker frame (two art cut-outs + loyalty badge).
 // "agclassic" — 1993 Alpha/Beta frame.
 // "alphaland" — 1993 Alpha land frame (agclassic geometry, no cost).
-// "alphatoken"— 1993 Alpha token frame (silver border, tan type box, no cost).
 // "battle"    — M15 Battle/Siege frame — the only LANDSCAPE (7:5) frame.
 // "saga"      — M15 Saga frame (chapter rail on the left, art column on the right).
 // "adventure" — M15 Adventure (Eldraine) frame — a creature whose lower text area
@@ -424,7 +423,6 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15mdfclandback",
   "agclassic",
   "alphaland",
-  "alphatoken",
   "battle",
   "saga",
   "adventure",
@@ -471,6 +469,26 @@ export type FrameTemplate = (typeof FRAME_TEMPLATE_VALUES)[number];
 // The frame used when a card has no explicit template (new cards + legacy rows
 // that predate the picker, including the retired "regular" placeholder).
 export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
+
+// Retired frame templates → the frame a stored value READS as (TODO 4.54).
+// `alphatoken` (a 1993-style token frame of our own; no such token was ever
+// printed) left FRAME_TEMPLATE_VALUES on 2026-10-07 with 0 production cards
+// on it. A row, draft, remix payload, URL parameter or stored override that
+// still says it resolves to the M15 token — `bare` without rules or flavour
+// text, `withText` with either (the text box follows the text, as on every
+// token) — instead of falling to DEFAULT_FRAME_TEMPLATE, the creature frame.
+// Read path only: nothing writes a retired value, and nothing rewrites a
+// stored row until its owner saves it (the card actions then store the
+// replacement: withRetiredFrameTemplate / retiredFrameStyleRewrite).
+// Readers: normalizeFrameTemplate / retiredFrameTemplate
+// (lib/cards/card-display.ts), getFrameProfile (the bare frame, for a reader
+// handed the stored value raw), the validator's preprocess
+// (lib/validation/card.ts), staleTemplateFilter. docs/FRAMES.md "Retiring a
+// frame".
+export const RETIRED_FRAME_TEMPLATES: ReadonlyMap<
+  string,
+  { bare: FrameTemplate; withText: FrameTemplate }
+> = new Map([["alphatoken", { bare: "m15token", withText: "m15tokentext" }]]);
 
 // Display labels for the template picker. These are shown UNDER a frame-set
 // chip (Magic 2015 / Alpha), which supplies the family — so the labels are
@@ -520,7 +538,6 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
-  alphatoken: "Token",
   battle: "Battle (Siege)",
   saga: "Saga",
   adventure: "Adventure",
@@ -656,7 +673,6 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   nyx: "nyxset",
   agclassic: "alpha",
   alphaland: "alpha",
-  alphatoken: "alpha",
   retro: "retro",
   retroland: "retro",
   modern: "modern",
@@ -736,7 +752,6 @@ export const ERA_TYPE_FRAME: Partial<
     enchantment: "agclassic",
     spell: "agclassic",
     land: "alphaland",
-    token: "alphatoken",
   },
   retro: {
     creature: "retro",

@@ -338,7 +338,7 @@ export function facesOf(card: CardPreviewData): { front: CardPreviewData; back: 
 export function flippableBackOf(card: CardPreviewData): CardPreviewData | null {
   const back = backPreviewData(card);
   if (!back) return null;
-  const profile = getFrameProfile(normalizeFrameTemplate(card.frameStyle?.template));
+  const profile = getFrameProfile(normalizeFrameTemplate(card.frameStyle?.template, card));
   if (profile.adventure || profile.secondFace) return null;
   return back;
 }

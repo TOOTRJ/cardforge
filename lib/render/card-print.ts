@@ -147,7 +147,7 @@ async function artStep<T>(step: () => Promise<T>): Promise<T> {
 /** The declared edges of a card's frame (EDGE_CONTRACTS), all `border` for a
  *  template the table doesn't know. */
 export function printEdgesOf(card: CardPreviewData): EdgeContract {
-  return EDGE_CONTRACTS[normalizeFrameTemplate(card.frameStyle?.template)] ?? ALL_BORDER;
+  return EDGE_CONTRACTS[normalizeFrameTemplate(card.frameStyle?.template, card)] ?? ALL_BORDER;
 }
 
 /**
