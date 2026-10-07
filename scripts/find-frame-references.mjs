@@ -218,27 +218,41 @@ const TEMPLATES = {
     note: "Printed flip cards are 2003-frame (Kamigawa); our frame is the MSE modernisation — expect an era warning.",
     q: (k) => (k === "c" || k === "m" ? null : `is:flip ${spellColor(k)}`),
   },
+  // The 1993 and 1997 frames are referenced to BLACK-bordered printings
+  // (TODO 4.10.0): the white-bordered core sets and starters (ITP, RQS, 4ED,
+  // SUM; 6ED, 7ED) print another border, which is its own switch (4.30).
   agclassic: {
-    q: (k) => `frame:1993 -t:land -t:token ${spellColor(k)}`,
+    note: "Black-bordered printings only (LEA / LEB / ARN / LEG / ICE / ALL).",
+    q: (k) => `frame:1993 border:black -t:land -t:token ${spellColor(k)}`,
   },
   alphaland: {
+    note: "Black-bordered printings only.",
     q: (k) =>
       k === "m"
-        ? `frame:1993 t:land id>=2`
+        ? `frame:1993 border:black t:land id>=2`
         : k === "c"
-          ? `frame:1993 t:land -t:basic id=c`
-          : `frame:1993 t:basic ${identityColor(k)}`,
+          ? `frame:1993 border:black t:land -t:basic id=c`
+          : `frame:1993 border:black t:basic ${identityColor(k)}`,
   },
+  // The 1997 frame reproduces the ORIGINAL cards of 1996–2003 (owner round
+  // 36, 2026-10-07), in their later layout: the centred footer of Exodus
+  // (1998-06) on. The reprints on this frame since 2021 (TSR, MH2, DMR, INR,
+  // MH3…) carry lighter colours and are not its references (TODO 4.10e), and
+  // Time Spiral's timeshifted cards (2006) are alternates at most.
   retro: {
-    q: (k) => `frame:1997 -t:land -t:token -is:showcase (st:expansion or st:core) ${spellColor(k)}`,
+    note: "Black-bordered originals, Exodus (1998) → Scourge (2003).",
+    q: (k) =>
+      `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 -t:land -t:token -is:showcase (st:expansion or st:core) ${spellColor(k)}`,
   },
   retroland: {
+    note:
+      "Black-bordered originals, Exodus (1998) → Scourge (2003). m: a two-colour land prints a blend this frame does not draw yet (TODO 4.6h) — look, never verify.",
     q: (k) =>
       k === "m"
-        ? `frame:1997 t:land id>=2 -is:showcase`
+        ? `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 t:land id>=2 -is:showcase`
         : k === "c"
-          ? `frame:1997 t:land -t:basic id=c -is:showcase`
-          : `frame:1997 t:basic ${identityColor(k)}`,
+          ? `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 t:land -t:basic id=c -is:showcase`
+          : `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 t:basic ${identityColor(k)}`,
   },
   modern: {
     q: (k) => `frame:2003 -t:land -t:token -t:planeswalker -is:showcase (st:expansion or st:core) ${spellColor(k)}`,

@@ -2475,9 +2475,14 @@ const ALPHALAND: FrameProfile = {
 // ---------------------------------------------------------------------------
 // Retro (1997, magic-old.mse-style) — the pre-8th-Edition "old border": a tan
 // marble frame with the name + type printed directly on the border (no plates),
-// a white art window (cut to transparent), a cream text box, and dark-ink P/T
-// at the bottom-right. Structurally like AGCLASSIC but with the MSE magic-old
-// geometry. All text is dark ink on the light frame.
+// a white art window (cut to transparent), a cream text box, and the P/T at
+// the bottom-right. Structurally like AGCLASSIC but with the MSE magic-old
+// geometry. This PROFILE draws every line of text in dark ink; the prints do
+// not: on the 1997 frame the name, type line, P/T and artist line are white
+// with a hard black shadow on EVERY frame colour, white included (104 prints
+// read, Mirage 1996 → Scourge 2003, no exception — the era design of
+// 2026-10-06). TODO 4.10a corrects the ink, the footer and the sizes; nothing
+// is ticked or stored on this pair until then.
 // MSE magic-old spec (375×523): name 42,24 (23h); image 45,51 286×233;
 // type 39,291 (20h); text 43,318 289×143; pt 295,470 47×27.
 // ---------------------------------------------------------------------------
@@ -2517,8 +2522,9 @@ const RETRO: FrameProfile = {
     letterSpacingEm: 0.04,
     font: "display",
   },
-  // Real Mirage-era cards print P/T in dark ink on the tan strip (the MSE
-  // "white" note is its own outline treatment) — match the printed card.
+  // Dark ink today, which is NOT the printed look: 1997-frame cards print the
+  // P/T white with a black shadow (MSE's "white" note was right; an earlier
+  // comment here said the prints were dark). TODO 4.10a corrects it.
   // The strip is free on both sides of the value up to the frame's bevel
   // shading at ~1410 px, so the ink may run 1125–1410 px (`100/100` fits).
   pt: {

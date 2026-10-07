@@ -246,8 +246,11 @@ export type { CardCorners };
 const RARITY_SET_SYMBOL_COLOR: Record<Rarity, string> = RARITY_INK;
 
 // Rules/flavor body text uses MPlantin (the real MTG body face); titles, type
-// lines, footer, and stat values use CardDisplay (an OFL Beleren stand-in),
-// falling back to MPlantin. A TextSlot's `font` field selects which.
+// lines, footer, and stat values use CardDisplay — Beleren Bold itself
+// (public/fonts/Beleren-Bold.ttf; what the file is: lib/render/card-fonts.ts
+// and docs/FRAMES.md "Provenance and legal"), not a stand-in and not an
+// OFL face — falling back to MPlantin. A TextSlot's `font` field selects
+// which.
 const BODY_FONT = '"MPlantin"';
 const DISPLAY_FONT = '"CardDisplay", "MPlantin"';
 // The collector line's face (TODO 4.9b; registered after MPlantin and before

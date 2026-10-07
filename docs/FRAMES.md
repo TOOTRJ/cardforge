@@ -103,7 +103,8 @@ Where every frame came from, and the rules that follow from it:
   path. `scripts/audit-frame-sources.mjs` answers "which pack file was this
   frame built from?", and `docs/mse-profile-report.md` keeps the MSE
   baselines the profiles started from. The card faces' Beleren Bold comes
-  from the same non-commercial pack (`lib/render/card-fonts.ts`).
+  from the same non-commercial pack (`lib/render/card-fonts.ts`); what each
+  font file is, is the **Fonts** bullet below.
 - **Card Conjurer → the bucket only.** Every Card Conjurer-derived master is
   built from the Investigamer/cardconjurer fork at a pinned commit
   (`CC_COMMIT` in `scripts/lib/cc-frames.mjs`). Card Conjurer's site was shut
@@ -120,6 +121,52 @@ Where every frame came from, and the rules that follow from it:
   (`lib/cards/frame-references.json`) and the test fixtures store only
   printing data (names, sets, Scryfall ids). No scan is stored in git or
   the bucket.
+- **Fonts: what the files are.** Facts as read on 2026-10-06 (the era
+  design) and re-read from the committed files for TODO 4.10.0; no view on
+  what they allow is taken here. The owner decided on 2026-10-07 (round 36)
+  to leave the three card-face files where they are.
+  - `public/fonts/Beleren-Bold.ttf` (+ `.woff2`; "CardDisplay": names, type
+    lines, stats, the mark). Its own name table: family "Beleren", "Bold",
+    "Version P1.01", unique id "DelveFonts: Beleren Bold: 2013", copyright
+    "Copyright (c) 2013 Wizards of the Coast, a Hasbro Subsidiary. All
+    rights reserved.", trademark "Beleren is a trademark of Wizards of the
+    Coast.", manufacturer "Delve Fonts", designer "Delve Withrington"; no
+    licence string. sha256 `00d9238f…910d`, recorded as byte-identical to
+    the MSE Full-Magic-Pack's `Magic - Fonts/beleren-bold_P1.01.ttf`. **No
+    licence text accompanies it.** It is Beleren Bold itself: the comments
+    that called it "an OFL Beleren stand-in" dated from six days in June
+    2026 when the display face was Sorts Mill Goudy.
+  - `public/fonts/mplantin.ttf` (+ `.woff`, `.woff2`; rules text). Name
+    table: family "MPlantin", copyright field "Converted by ALLTYPE",
+    version "Converted from C:\1E\PLA.TF1 by ALLTYPE"; no licence string.
+    sha256 `ebfb5d57…2ab5`, byte-identical to
+    `node_modules/mana-font/fonts/mplantin.ttf` (mana-font 1.18.0), which is
+    the file the bake reads. The package's README licenses "the Mana font"
+    (SIL OFL 1.1) and its CSS, LESS and Sass files (MIT), and its
+    `package.json` says MIT; neither names `mplantin.ttf`. **No licence text
+    accompanies it.** The comment in `app/globals.css` that called it "SIL
+    OFL 1.1" was wrong.
+  - `public/fonts/mplantin-italic.ttf` (+ `.woff2`; flavour and reminder
+    text). Name table: family "MPlantin-Italic", copyright field "Converted
+    by ALLTYPE", version "Converted from C:\1E\PLAI.TF1 by ALLTYPE"; no
+    licence string. sha256 `e81d8360…3290`, recorded as byte-identical to
+    the MSE pack's `mplantinit.ttf`. **No licence text accompanies it.**
+  - With their licence beside them: `Montserrat-Medium.ttf` (the collector
+    line; SIL OFL 1.1, `public/fonts/Montserrat-OFL.txt`),
+    `NotoSans-Fallback.ttf` (SIL OFL 1.1, `NotoSans-OFL.txt`), and the site
+    chrome's Geist and Cinzel under `app/fonts/*` (each folder's `OFL.txt`).
+    `mana.ttf` is mana-font's own file (same bytes; the package's README:
+    SIL OFL 1.1) and Keyrune is read from its package, which ships its own
+    licence file.
+  - Where they go: the repo is public; the card faces are served to every
+    browser from `/fonts/*`, traced into every render function
+    (`next.config.ts`), and a subset of `mplantin.ttf` is embedded in an
+    exported deck PDF.
+  - **A new font** follows the rule below for a new frame source: where it
+    came from, what its own name table and any licence text say, and which
+    home that allows, recorded here BEFORE it ships. The old cards' own
+    typefaces (Magic Medieval, Matrix) and the 2016 Beleren build are not in
+    the repo and are not being added (owner 2026-10-07; TODO 4.8c, 4.8d).
 - **A new source** is recorded before its first frame ships: where it came
   from (repo and commit, or pack and style), what licence it carries, and
   which home that allows. A source with no licence the owner has cleared
