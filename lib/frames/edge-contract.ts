@@ -150,7 +150,6 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // MSE-derived, in git.
   agclassic: ALL_BORDER,
   alphaland: ALL_BORDER,
-  alphatoken: ALL_BORDER,
   retro: ALL_BORDER,
   retroland: ALL_BORDER,
   modern: ALL_BORDER,

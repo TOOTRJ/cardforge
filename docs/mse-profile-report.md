@@ -457,40 +457,6 @@ Generated 2026-07-02 by scripts/import-mse-profiles.mjs from /Users/redjester/Pr
 | footer.heightPct | 3 | 2.68 | -0.32 |  |
 | footer.sizePct | 0.016 | 0.0281 | 0.0121 |  |
 
-## alphatoken  `magic-agclassic-token.mse-style` (374×522)
-
-| field | current | MSE | Δ (MSE−cur) | notes |
-|---|---|---|---|---|
-| title.topPct | 3.2 | 3.45 | 0.25 |  |
-| title.leftPct | 12 | 5.35 | -6.65 |  |
-| title.widthPct | 76 | 89.3 | 13.30 |  |
-| title.heightPct | 5.2 | 4.41 | -0.79 |  |
-| title.sizePct | 0.044 | 0.0535 | 0.0095 |  |
-| artSlot.topPct | 9 | 8.81 | -0.19 |  |
-| artSlot.leftPct | 10 | 10.7 | 0.70 |  |
-| artSlot.widthPct | 80 | 78.61 | -1.39 |  |
-| artSlot.heightPct | 52.5 | 52.87 | 0.37 |  |
-| type.topPct | 70.5 | 62.64 | -7.86 |  |
-| type.leftPct | 18 | 14.71 | -3.29 |  |
-| type.widthPct | 64 | — | — |  |
-| type.heightPct | 7 | 3.26 | -3.74 |  |
-| type.sizePct | 0.03 | 0.0348 | 0.0048 |  |
-| rules.topPct | 49 | 67.82 | 18.82 |  |
-| rules.leftPct | 12 | 15.24 | 3.24 |  |
-| rules.widthPct | 76 | 69.52 | -6.48 |  |
-| rules.heightPct | 11 | 21.65 | 10.65 |  |
-| rules.sizePct | 0.03 | 0.0374 | 0.0074 |  |
-| pt.topPct | 82.5 | 91.19 | 8.69 |  |
-| pt.leftPct | 75 | — | — |  |
-| pt.widthPct | 19 | 14.97 | -4.03 |  |
-| pt.heightPct | 6.5 | 4.6 | -1.90 |  |
-| pt.sizePct | 0.04 | 0.0481 | 0.0081 |  |
-| footer.topPct | 96.5 | 91.09 | -5.41 |  |
-| footer.leftPct | 10 | 14.71 | 4.71 |  |
-| footer.widthPct | 80 | 59.36 | -20.64 |  |
-| footer.heightPct | 3 | 2.68 | -0.32 |  |
-| footer.sizePct | 0.015 | 0.0281 | 0.0131 |  |
-
 ## retro  `magic-old.mse-style` (375×523)
 
 | field | current | MSE | Δ (MSE−cur) | notes |

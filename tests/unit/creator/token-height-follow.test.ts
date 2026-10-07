@@ -58,7 +58,7 @@ describe("tokenFrameFor on the full-art design: the height the text asks for", (
   it("leaves every other frame and kind alone — the arch keeps round 11's box", () => {
     expect(tokenHeightFrameFor("token", "m15tokentext", { rulesText: LONG })).toBe("m15tokentext");
     expect(tokenHeightFrameFor("creature", "m20tokentall", { rulesText: null })).toBe("m20tokentall");
-    expect(tokenFrameFor("token", "alphatoken", { rulesText: LONG })).toBe("alphatoken");
+    expect(tokenFrameFor("token", "fullart", { rulesText: LONG })).toBe("fullart");
     expect(tokenFrameFor("token", "m15token", { supertype: "Creature", rulesText: LONG })).toBe("m15tokentext");
   });
 
@@ -74,7 +74,7 @@ describe("tokenFrameFor on the full-art design: the height the text asks for", (
     for (const t of ["m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall"] as FrameTemplate[]) {
       expect(isTokenHeightDress("token", t), t).toBe(true);
     }
-    for (const t of ["m20token", "m20tokenartifact", "m15token", "m15tokentext", "alphatoken"] as FrameTemplate[]) {
+    for (const t of ["m20token", "m20tokenartifact", "m15token", "m15tokentext", "fullart"] as FrameTemplate[]) {
       expect(isTokenHeightDress("token", t), t).toBe(false);
     }
     expect(isTokenHeightDress("creature", "m20tokentext")).toBe(false);

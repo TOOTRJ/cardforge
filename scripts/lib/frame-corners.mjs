@@ -9,7 +9,7 @@
 // the one card corner (lib/cards/card-corner.ts, 64.5 px) that paper showed
 // as a light crescent inside the cut on retro, retroland, aftermath, saga …
 // The flood-fill clear of scripts/round-frame-corners.mjs (dc65aa5) left an
-// anti-aliased fringe behind on flip and alphatoken, and every builder that
+// anti-aliased fringe behind on flip (and on the since-retired Alpha token), and every builder that
 // regenerated a master after it brought the white back.
 //
 // The normalise pass, per corner of an ALLOW-LISTED master:
@@ -78,7 +78,6 @@ export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
   fullart: "all",
   m15textless: "all",
   m15textlessland: "all",
-  alphatoken: "all",
   expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 

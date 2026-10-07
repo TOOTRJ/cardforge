@@ -503,7 +503,7 @@ const cardSpaceBox = (r: { topPct: number; leftPct: number; widthPct: number; he
     .join(" ");
 
 describe("foil backdrops — which frames have one", () => {
-  it("is exactly the eight templates whose foil bakes FoilBackdropSheen changes", () => {
+  it("is exactly the seven templates whose foil bakes FoilBackdropSheen changes", () => {
     // A frame that gains a rules backdrop changes its foil bakes, so it
     // needs a layout-version bump scoped to it — but for a NEW template no
     // card was ever baked on (4.33's borderless planeswalkers, which keep
@@ -515,7 +515,6 @@ describe("foil backdrops — which frames have one", () => {
       "m15tokenartifact",
       "m15borderlesspw",
       "m15borderlesspwtall",
-      "alphatoken",
       "bloomanime",
       "expeditionland",
     ]);
@@ -556,7 +555,6 @@ describe("foil finish — rules backdrops in the preview", () => {
       ["m15pw", "creature"],
       ["m15token", "token"],
       ["m15tokenartifact", "token"],
-      ["alphatoken", "token"],
       ["bloomanime", "creature"],
       ["expeditionland", "land"],
     ] as const) {

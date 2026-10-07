@@ -467,7 +467,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   const V31_DIGESTS: Record<string, string> = {
     agclassic: "a5da9f64d06ac75912fb88a93120f67bec0cfb3e6c68208f1948ec32a3a66fc9",
     alphaland: "587111b4d222186562d9bf060d2cd9980cd54b5d7c61a97e2f9c52a266456c8c",
-    alphatoken: "54b3301696e3a7d772dcdc1a86241010a32395822b66e2d996bf86501f9e427e",
     lotr: "2541c98b09237643cc6ef8d761fdff42f85ffc8d8dc842322e45915e8f62771b",
     lotrscroll: "45a76201319b406e6e6e3612ec875beeadf94315ee6f127af60b2cc0648e1882",
     avatar: "18b37fde1037dfccc0041e515a4f80246a9cbe0ed3e3277ca9a88014394a703a",

@@ -47,6 +47,16 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { isUuid } from "@/lib/ids";
+import { retiredFrameTemplate } from "@/lib/cards/card-display";
+
+/** The override row a face's bake reads, for the ETag: its stored template,
+ *  or — for a RETIRED one (TODO 4.54) — the frame it draws on, so a changed
+ *  override of that frame busts the 304 path for such a row too. (Every
+ *  other value keeps the key, and so the ETag, it always had.) */
+function overrideKeyOf(face: CardPreviewData): string {
+  const template = (face.frameStyle?.template as string | undefined) ?? "";
+  return retiredFrameTemplate(template, face) ?? template;
+}
 
 // ---------------------------------------------------------------------------
 // /api/cards/[id]/png — Download a rendered PNG (or JPEG) of a card
@@ -352,12 +362,10 @@ export async function GET(
         // deploy — fingerprint the active template's override (both faces'
         // for a both-faces download: the back's body is its own template).
         JSON.stringify(
-          profileOverrides[
-            (previewData.frameStyle?.template as string) ?? ""
-          ] ?? null,
+          profileOverrides[overrideKeyOf(previewData)] ?? null,
         ),
         ...(faces === "both" && backData
-          ? [JSON.stringify(profileOverrides[(backData.frameStyle?.template as string) ?? ""] ?? null)]
+          ? [JSON.stringify(profileOverrides[overrideKeyOf(backData)] ?? null)]
           : []),
       ].join("|"),
     )

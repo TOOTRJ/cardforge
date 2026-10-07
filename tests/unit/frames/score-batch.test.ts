@@ -71,11 +71,11 @@ describe("scope", () => {
 
 describe("planScoreBatch", () => {
   it("scores each combo against its own reference and skips the ones with no printing", () => {
-    // alphatoken has no registry printing at all; m15 has all seven.
+    // No white M15 split card was printed (split/w has no registry printing); m15 has all seven.
     const plan = planScoreBatch(
       [
         { template: "m15", colorKey: "w" },
-        { template: "alphatoken", colorKey: "w" },
+        { template: "split", colorKey: "w" },
         { template: "m15", colorKey: "w" }, // duplicate
       ],
       new Map(),
@@ -84,7 +84,7 @@ describe("planScoreBatch", () => {
       { template: "m15", colorKey: "w", referenceId: FRAME_REFERENCES.m15.w!.scryfallId },
     ]);
     expect(plan.skipped).toEqual([
-      expect.objectContaining({ template: "alphatoken", colorKey: "w", reason: expect.stringMatching(/No real printing/) }),
+      expect.objectContaining({ template: "split", colorKey: "w", reason: expect.stringMatching(/No real printing/) }),
     ]);
   });
 

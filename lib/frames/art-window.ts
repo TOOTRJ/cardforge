@@ -625,7 +625,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   extendedart: { keys: ["m"], todo: ["4.7"], why: "m: the window starts at 250 px, the slot at 249.9: 0.1 px of overscan, 1.05 needed (4.7: CC extended)", maxMissPx: 1.5 },
   modern: { keys: "all", todo: ["4.10"], why: "window bottom 1163–1164 px vs slot 1163.4: 0.4 px of overscan to 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   modernland: { keys: "all", todo: ["4.10"], why: "window bottom 1164 px vs slot 1163.4: 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
-  alphatoken: { keys: "all", todo: ["4.54"], why: "window 162–1339 × 187–1295 vs slot 150–1350 × 189–1291.5: 2 px top, 3.5 px bottom (4.54 retires it)", maxMissPx: 5 },
   // The emblem (found by v35's see-through slot rule when #421 merged main):
   // two owner decisions (2026-09-29) meet at the window's top — the slot is
   // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the

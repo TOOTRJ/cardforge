@@ -40,8 +40,9 @@ describe("standardFrameFor", () => {
   it("derives the type-specific Classic frame and gaps the missing types", () => {
     expect(standardFrameFor("classic", "creature")).toBe("agclassic");
     expect(standardFrameFor("classic", "land")).toBe("alphaland");
-    expect(standardFrameFor("classic", "token")).toBe("alphatoken");
-    // No planeswalker/battle in the 1993 border.
+    // No planeswalker/battle in the 1993 border — and no token: none was
+    // printed, and PipGlyph's own Alpha token is retired (TODO 4.54).
+    expect(standardFrameFor("classic", "token")).toBeNull();
     expect(standardFrameFor("classic", "planeswalker")).toBeNull();
     expect(standardFrameFor("classic", "battle")).toBeNull();
   });

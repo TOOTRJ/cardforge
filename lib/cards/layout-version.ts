@@ -1074,7 +1074,10 @@ export const V44_FOOTER_INK_TEMPLATES: readonly string[] = ["modern", "modernlan
  * every card). List EVERY template whose output changed — including the ones
  * that inherit a changed profile by spread (alphaland ← agclassic,
  * modernland ← modern). Template keys match `frame_style.template`
- * (types/card.ts FRAME_TEMPLATE_VALUES).
+ * (types/card.ts FRAME_TEMPLATE_VALUES). The retired "alphatoken" (TODO
+ * 4.54) stays in v25's list and v29's two as history, and is inert there: a
+ * row that still carries it is judged on the frame it now DRAWS
+ * (normalizeFrameTemplate → m15token / m15tokentext), never by that name.
  */
 const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v24: the Card Conjurer M15 swap + everything that draws the M15 P/T plate.
@@ -1356,7 +1359,7 @@ function v29TypeLine(face: { supertype?: unknown; card_type?: unknown; subtypes?
  */
 function v29Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   // Word spacing on every display-face footer. This also holds the
   // planeswalker rows + names (m15pw, modern), Alpha's ink and artifact card
   // (agclassic) and five of the six foil-backdrop templates.
@@ -1428,7 +1431,7 @@ function v33FaceContentPrints(faceContent: unknown): boolean {
  */
 function v33PrintsText(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V33_TEXTLESS_TEMPLATES.includes(template)) return false;
   if ([card.rules_text, card.flavor_text, card.face_content, card.back_face].some((v) => v === undefined)) return true;
   if (v33FaceContentPrints(card.face_content)) return true;
@@ -1494,7 +1497,7 @@ export function tokenTypeLineChanged(card: ScopeCard): boolean {
  */
 function v34Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V34_TOKEN_FRAME_TEMPLATES.includes(template)) return true;
   return tokenTypeLineChanged(card);
 }
@@ -1510,7 +1513,7 @@ function v34Changed(card: ScopeCard): boolean {
  */
 function v35Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V35_ART_SLOT_TEMPLATES.includes(template)) return true;
   if (!V35_SEE_THROUGH_C_TEMPLATES.includes(template)) return false;
   if (card.color_identity === undefined || card.art_url === undefined) return true;
@@ -1587,7 +1590,7 @@ function v36FaceContentHasPip(faceContent: unknown): boolean {
  */
 function v36Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V36_EVERY_CARD_TEMPLATES.includes(template)) return true;
   if (card.set_icon_code === undefined) return true;
   if (
@@ -1719,14 +1722,16 @@ function pendingVersions(
   const scopes = opts.scopes ?? VERSION_SCOPES;
   const current = opts.current ?? CARD_LAYOUT_VERSION;
   // Judge by the template the card is DRAWN on when we can tell: a known
-  // template, or a frame_style that was read ({} or a retired value draws
+  // template, a RETIRED one read as its replacement (retiredFrameTemplate,
+  // TODO 4.54 — with the card's text when the row carries it), or a
+  // frame_style that was read ({} or an unknown value draws
   // DEFAULT_FRAME_TEMPLATE — the rule lib/cards/frame-override-stale.ts
   // uses; 272 production cards carry frame_style = {}). A caller that didn't
   // supply frame_style can't tell → conservative (touched), as
   // lib/render/stored-render.ts documents.
   const drawn =
     template != null || (card !== undefined && card.frame_style !== undefined)
-      ? normalizeFrameTemplate(template)
+      ? normalizeFrameTemplate(template, card)
       : null;
   const pending: number[] = [];
   for (let version = layoutVersion + 1; version <= current; version += 1) {

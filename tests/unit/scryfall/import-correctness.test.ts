@@ -755,18 +755,20 @@ describe("the signature registry's landings (TODO 1.4)", () => {
     expect(borderlessTreasure.frame_match?.template).toBe("m15tokenartifacttext");
     // …a borderless vanilla token keeps the textless arch.
     expect(withText("wone-1", {}).frame_match?.template).toBe("m15token");
-    // An Alpha token (its own frame, unverified on production): the M15
-    // fallback follows the text — the box, then its textless dress while the
-    // box isn't verified in the colour.
+    // A 1993-frame token (none was printed; the Alpha token frame is
+    // retired, TODO 4.54) lands on the M15 token, and the frame follows the
+    // text — the box, then its textless dress while the box isn't verified
+    // in the colour.
     const alpha = withText("tzen-3", { frame: "1993", oracle_text: "Flying" });
-    expect(alpha.frame_template).toBe("alphatoken");
-    expect(landing(alpha)).toEqual({ template: "m15tokentext", colorKey: "w", status: "frame-switched" });
+    expect(alpha.frame_template).toBe("m15tokentext");
+    expect(alpha.frame_match).toMatchObject({ status: "nearest", template: "m15tokentext" });
+    expect(landing(alpha)).toEqual({ template: "m15tokentext", colorKey: "w", status: "exact" });
     const noBox = new Set([...PROD_VERIFIED].filter((key) => !/^m15token(artifact)?text\//.test(key)));
     expect(landing(alpha, noBox)).toEqual({ template: "m15token", colorKey: "w", status: "frame-switched" });
     expect(landing(withText("tzen-3", { frame: "1993" }))).toEqual({
       template: "m15token",
       colorKey: "w",
-      status: "frame-switched",
+      status: "exact",
     });
   });
 

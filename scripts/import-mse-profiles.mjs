@@ -40,7 +40,6 @@ const TEMPLATE_SOURCES = {
   // the CC pack's, measured on the prints; scripts/lib/cc-frames.mjs.)
   agclassic: { dir: "magic-agclassic.mse-style" },
   alphaland: { dir: "magic-agclassic.mse-style", note: "land variant shares agclassic geometry" },
-  alphatoken: { dir: "magic-agclassic-token.mse-style" },
   retro: { dir: "magic-old.mse-style" },
   retroland: { dir: "magic-old.mse-style", note: "land variant shares magic-old geometry" },
   modern: { dir: "magic-new.mse-style" },
