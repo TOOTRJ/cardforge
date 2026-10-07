@@ -4803,19 +4803,30 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // the pinline-only split (`<pair>.png`: the gold M frame, the pinline
   // lerped between the pair's frames — FRA #376 / #377, HOB #213, TLA #306,
   // BLC #86, MH2 #321, FRA #461). Declared on the two entries only, never on
-  // M15BORDERLESS, which the land dress spreads (its pairs are 4.56's) —
-  // opt-in per card, so no stored card changes. A hybrid cost prints the
-  // same split pinline over GREY bars (2X2 #374 / #385, SPG #142 / #144,
-  // ECL #292–296: Card Conjurer's 'Land Frame' bars for a hybrid pair), so
-  // m15borderless draws print's hybrid dress too (`<pair>-h.png`, the grey
-  // plate `pt/c` = the pack's colourless plate).
+  // M15BORDERLESS, which the land dress spreads (its pairs are its own:
+  // 4.56, below) — opt-in per card, so no stored card changes. A hybrid
+  // cost prints the same split pinline over GREY bars (2X2 #374 / #385, SPG
+  // #142 / #144, ECL #292–296: Card Conjurer's 'Land Frame' bars for a
+  // hybrid pair), so m15borderless draws print's hybrid dress too
+  // (`<pair>-h.png`, the grey plate `pt/c` = the pack's colourless plate).
   m15borderless: { ...M15BORDERLESS, crownMasters: true, twoColorMasters: ["split", "hybrid"] },
   // The artifact dress: the same crowned twins and split pairs (its
   // colourless twin wears CC's artifact crown on the artifact frame); a
   // hybrid artifact falls back to the split, like m15artifact. Its `m`
   // tick's references print this pinline split (frame-references.json).
   m15borderlessartifact: { ...M15BORDERLESSARTIFACT, crownMasters: true, twoColorMasters: ["split"] },
-  m15borderlessland: M15BORDERLESSLAND,
+  // The borderless land's two-colour dress (TODO 4.56): ten pair masters
+  // `<pair>.png` — the grey 'Land Frame' bars with the pinline AND the text
+  // box split between the two colours across one ramp (39→61 %W), as MID
+  // #281, OTJ #304, the RVR shocks and the MKM surveil lands print
+  // (scripts/lib/cc-frames.mjs borderlessLandLayers with a letter pair).
+  // Its pairs are a land's (twoColorForLands, like m15land), and the kind
+  // gate keeps every other kind off the frame. Opt-in per card: a stored
+  // two-colour land on this frame keeps the gold `m` master until its owner
+  // switches the two-colour frame on. No crown (the frame has no crowned
+  // twins: the crowned and nicknamed two-colour prints stay `nearest`), no
+  // stamp notch, no collector line here.
+  m15borderlessland: { ...M15BORDERLESSLAND, twoColorMasters: ["split"], twoColorForLands: true },
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
   // The transform bodies (TODO 5.1a): each declares its `dfc` on its own

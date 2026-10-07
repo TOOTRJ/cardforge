@@ -6,7 +6,8 @@ import type { ColorIdentity, FrameStyle } from "@/types/card";
 // to (the bake: tests/unit/render/two-colour-bake.test.tsx; the live preview:
 // tests/unit/components/two-colour-preview.test.tsx), each in regular, foil
 // and etched, on the REAL profiles (m15 split + hybrid, m15artifact and
-// m15land split). `master` is the frame master painted (template/key),
+// m15land split; the snow frames since 4.6f wave 2c; the borderless land
+// since 4.56). `master` is the frame master painted (template/key),
 // `plate` the P/T plate path (null: the card draws none).
 // ---------------------------------------------------------------------------
 
@@ -158,6 +159,47 @@ export const PAIR_CASES: readonly PairCase[] = [
     master: "m15devoid/m",
     plate: "/frames/m15devoid/pt/m.png",
   },
+  // TODO 4.56: the borderless land's split pairs — the grey land bars over
+  // a split pinline AND box (MID #281, OTJ #304, the MKM surveil lands). A
+  // land prints no P/T; the kind gate keeps every other kind off the frame,
+  // and a creature forced onto it paints m15borderless's gold plate (the
+  // file exists: never a missing key), as a pair does on m15land.
+  {
+    id: "borderless pair land (MID #281 style): the pair master, no plate",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: [],
+      colorIdentity: colours("white", "blue"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("m15borderlessland"),
+    },
+    master: "m15borderlessland/wu",
+    plate: null,
+  },
+  {
+    id: "borderless pair land stored second colour first with the AI's multicolor token: printed order (B|R)",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: ["Swamp", "Mountain"],
+      colorIdentity: colours("red", "black", "multicolor"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("m15borderlessland"),
+    },
+    master: "m15borderlessland/br",
+    plate: null,
+  },
+  {
+    id: "a creature forced onto the borderless land frame with a pair: the pair master (no hybrid land dress), the gold borderless plate",
+    card: { colorIdentity: colours("green", "white"), cost: null, frameStyle: on("m15borderlessland") },
+    master: "m15borderlessland/gw",
+    plate: "/frames/m15borderless/pt/m.png",
+  },
   // The look each card had before 4.6b stays wherever the switch isn't on,
   // the identity isn't a pair, or the frame has no pair masters.
   {
@@ -216,6 +258,24 @@ export const PAIR_CASES: readonly PairCase[] = [
     master: "m15land/m",
     plate: null,
   },
+  // …and on the borderless land (4.56): a stored pair with no key, the
+  // switch off, and a three-colour land keep the gold master — the 6 stored
+  // production pairs on the frame on 2026-10-06 among them.
+  ...(
+    [
+      ["a stored borderless land pair with no key: the gold land", { template: "m15borderlessland" }, colours("blue", "black")],
+      ["a borderless land pair switched off: the gold land", { template: "m15borderlessland", twoColor: false }, colours("white", "black")],
+      ["a three-colour borderless land with the switch on: the gold land", { template: "m15borderlessland", twoColor: true }, colours("white", "blue", "black")],
+      ["a plain multicolor borderless land with the switch on and no pair named: the gold land", { template: "m15borderlessland", twoColor: true }, colours("multicolor")],
+    ] as const
+  ).map(
+    ([id, frameStyle, colorIdentity]): PairCase => ({
+      id,
+      card: { cardType: "land", supertype: null, subtypes: [], colorIdentity, cost: null, power: null, toughness: null, frameStyle: frameStyle as FrameStyle },
+      master: "m15borderlessland/m",
+      plate: null,
+    }),
+  ),
 ];
 
 export const FINISHES = ["regular", "foil", "etched"] as const;

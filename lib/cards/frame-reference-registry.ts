@@ -19,6 +19,13 @@ import referencesData from "@/lib/cards/frame-references.json";
 // alternates the compare view can switch to (short vs long text, another
 // set), because one reference can't exercise every fit rule.
 //
+// A template whose two-colour pair masters have printed references of
+// their own lists them under `pairs` (TODO 4.56: the borderless land's ten
+// pairs, two prints each; TODO 4.6g moves the other templates' two-colour
+// references there and builds the compare page's pair strip on it). A pair
+// is NOT a combo: it rides its template's "m" tick, so `pairs` feeds no
+// checklist row and no score — framePairReferenceOptions only.
+//
 // Provenance: the M15-era defaults were researched by hand against the live
 // API (2026-07-01, `highres_scan` prints); everything else was found by
 // scripts/find-frame-references.mjs (2026-09-25) with a quality TIER:
@@ -110,6 +117,8 @@ type TemplateReferences = {
   note?: string;
   confirm?: boolean;
   colors: Record<string, FrameReference[] | null>;
+  /** The printed references of the template's pair masters, per pair. */
+  pairs?: Partial<Record<TwoColorPair, FrameReference[]>>;
 };
 
 const DATA = referencesData as Record<string, TemplateReferences>;
@@ -121,6 +130,12 @@ export function frameReferenceOptions(
   colorKey: string,
 ): FrameReference[] {
   return DATA[template]?.colors[colorKey] ?? [];
+}
+
+/** The printings a template's pair master `pair` is judged against (TODO
+ *  4.56), the best-registered first; empty when the template lists none. */
+export function framePairReferenceOptions(template: string, pair: TwoColorPair): FrameReference[] {
+  return DATA[template]?.pairs?.[pair] ?? [];
 }
 
 /** The registry default (first option) per template × colour. */

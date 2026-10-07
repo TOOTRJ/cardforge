@@ -579,10 +579,41 @@ const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM),
 //      pixels layers 2 and 3 replaced along its anti-aliased edge).
 // Two-colour lands (the most printed kind: MID #281, OTJ #304, the RVR
 // shocks, the MKM surveil lands) print the grey L bars with a SPLIT pinline
-// and a split box; their pair masters are 4.6's (borderlessLandLayers takes
-// the letters, so a pair adds the right-hand pinline and box through 4.6's
-// procedural ramp). Until then `m` is the three-and-more-colour land
-// (Command Tower CMM #659, SNC #291–295): gold bars, box and pinline.
+// and a split box: the ten pair masters `<pair>.png` (TODO 4.56) are the
+// SAME function with `{ frame: "l", box: [x, y], pinline: [x, y] }` — the
+// grey 'Land Frame' whole (its title bar, bottom bar and fins), its title
+// bar moved onto the type bar, the tinted box in the two colours' own box
+// tints (each colour's title-bar tint, as its mono master's box) and the
+// two colours' pinlines, each pair lerped across ONE untilted ramp,
+// PAIR_RAMPS.borderlessLand (39→61 %W, scripts/lib/pair-ramp.mjs), first
+// canonical colour on the left. Measured on the 119 two-colour borderless
+// lands that print this look (Scryfall 2026-10-06):
+//   • the bars are the colourless land's grey: inside-against-art
+//     regression (the art above and below the bar), α 0.71 on the title bar
+//     (CC's L bar: 179 / 255 = 0.70), its tint 141/135/130 on the 69 digital
+//     renders against 144/138/137 on the 13 colourless-land renders read the
+//     same way — never gold (m reads 114/91/29), never a colour;
+//   • each box half is that colour's mono box: MH3 #354's white box reads
+//     121/117/93 over 102/98/25, and the white half of the pairs predicts
+//     121/117/95 there (MH3 #351's red box 159/63/49, predicted 151/64/59);
+//     the regression (side strips against the art beside the box, corrected
+//     for its 0.89 under-read, found by covering the prints' own open art
+//     with a known α and tint) puts the printed boxes at α 0.73–0.84 with a
+//     duller tint than CC's
+//     (w 124/120/108 against 166/155/133, r 149/40/34 against 130/22/14):
+//     the mono masters' own difference from the prints, which the pairs
+//     keep on purpose (a pair's halves ARE its two mono boxes);
+//   • the split: 41.3 / 50.2 / 58.9 on the title and type rings (the
+//     median of 420 rings; their mean 41.2 / 50.0 / 58.8) and 40.9 / 49.8 /
+//     59.0 on the box's top band at 10 / 50 / 90 % — one ramp for
+//     both, a little wider than the spells' 40→60, and not the bordered
+//     frames' 45→57 for the box.
+// No hairline can show (the #449 lesson): CC's L frame draws every ring row
+// where the colour frames do, and the Pinline layer covers the L frame's own
+// brown-grey ring whole (tests/unit/frames/borderless-land-pair-masters
+// .test.ts holds each master to the two mono masters' lerp inside the ring
+// and the box, row by row). `m` stays the three-and-more-colour land
+// (Command Tower CMM #659): gold bars, box and pinline.
 const GENERIC_SHOWCASE = "img/frames/m15/genericShowcase";
 /** The pack's own Pinline mask (packBorderless.js lists it first). */
 const BORDERLESS_PINLINE_MASK = `${GENERIC_SHOWCASE}/m15GenericShowcaseMaskPinline.png`;
@@ -613,18 +644,38 @@ const borderlessLandLetter = (k) => (k === "c" ? "l" : k);
  * The borderless land master's layers, bottom → top (see above): `frame`
  * dresses the title bar, the type bar and the bottom bar, `box` tints the
  * text box, `pinline` colours the pinline — each a pack letter (w u b r g m
- * l). A mono-colour land passes one letter three times; 4.6's pair masters
- * pass the grey `l` bars and a letter pair for the box and pinline.
+ * l). A mono-colour land passes one letter three times; a pair master
+ * (TODO 4.56) passes the grey `l` bars and a letter PAIR `[left, right]` for
+ * the box and the pinline: the box structure re-tinted to each colour's
+ * title-bar tint and the two frames' pinlines, each lerped across
+ * PAIR_RAMPS.borderlessLand (39→61 %W, untilted, premultiplied).
  */
 export function borderlessLandLayers({ frame, box, pinline }) {
+  const tintOf = (letter) => ({ src: borderlessFrame(letter), ...BORDERLESS_TINT_POINT });
+  const ramp = [...PAIR_RAMPS.borderlessLand];
   return [
     layer(borderlessFrame(frame)),
     replacing(borderlessFrame(frame), REG_TYPE_MASK, { dy: BORDERLESS_TITLE_TO_TYPE_DY }),
     replacing(TINTED_BOX_STRUCTURE.src, REG_RULES_MASK, {
-      retint: { from: TINTED_BOX_STRUCTURE.from, tintOf: { src: borderlessFrame(box), ...BORDERLESS_TINT_POINT } },
+      retint: Array.isArray(box)
+        ? { from: TINTED_BOX_STRUCTURE.from, tintOf: tintOf(box[0]), tintOfRight: tintOf(box[1]), ramp }
+        : { from: TINTED_BOX_STRUCTURE.from, tintOf: tintOf(box) },
     }),
-    layer(borderlessFrame(pinline), BORDERLESS_PINLINE_MASK),
+    Array.isArray(pinline)
+      ? { src: borderlessFrame(pinline[0]), right: borderlessFrame(pinline[1]), ramp, mask: BORDERLESS_PINLINE_MASK }
+      : layer(borderlessFrame(pinline), BORDERLESS_PINLINE_MASK),
   ];
+}
+
+/** The ten borderless land pair masters (TODO 4.56): `{ wu: layers, … }`,
+ *  the first canonical colour on the left. */
+function borderlessLandPairs() {
+  return Object.fromEntries(
+    TWO_COLOR_PAIRS.map((pair) => {
+      const sides = pair.split("");
+      return [pair, borderlessLandLayers({ frame: "l", box: sides, pinline: sides })];
+    }),
+  );
 }
 
 // --- 4.6f (wave 2a): the borderless legendary crown and the two-colour
@@ -2372,18 +2423,23 @@ export const CC_TEMPLATES = {
     ],
   },
   // 4.34 — the borderless nonbasic land: the colour on the title bar, the
-  // type bar AND the text box (borderlessLandLayers).
+  // type bar AND the text box (borderlessLandLayers). 4.56 adds the ten
+  // two-colour pair masters from the same function (borderlessLandPairs).
   m15borderlessland: {
-    colors: perColor((k) => {
-      const letter = borderlessLandLetter(k);
-      return borderlessLandLayers({ frame: letter, box: letter, pinline: letter });
-    }),
+    colors: {
+      ...perColor((k) => {
+        const letter = borderlessLandLetter(k);
+        return borderlessLandLayers({ frame: letter, box: letter, pinline: letter });
+      }),
+      ...borderlessLandPairs(),
+    },
     pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the text-box structure of packGenericShowcase.js 'Borderless' (groupShowcase-5.js:48)",
-    transforms: `native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down ${BORDERLESS_TITLE_TO_TYPE_DY} px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (${BORDERLESS_TINT_POINT.x}, ${BORDERLESS_TINT_POINT.y})) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; corners rounded to the importer radius`,
+    transforms: `native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down ${BORDERLESS_TITLE_TO_TYPE_DY} px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (${BORDERLESS_TINT_POINT.x}, ${BORDERLESS_TINT_POINT.y})) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; a pair master draws the box and the pinline as its two colours' lerped across the untilted ${rampName(PAIR_RAMPS.borderlessLand)} (4.56); corners rounded to the importer radius`,
     notes: [
       "the print's land look (2026-09-29, 50+ borderless land printings): title bar, type bar and text box all wear the colour's title-bar tint; a borderless spell tints only its title bar (m15borderless)",
       "colourless = CC's 'Land Frame' (m15GenericShowcaseFrameL.png): grey bars and box, the land's brown-grey pinline (the prints' #a5988a on CMM #663 / FRA #379), never the see-through 'Colorless Frame'",
-      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — 4.6's pair masters (borderlessLandLayers with a letter pair)",
+      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — the pair masters below",
+      `two-colour pair masters <pair>.png (TODO 4.56): the same function with the grey 'Land Frame' L for the frame (its title bar, the type bar moved from it, the bottom bar and fins) and the pair's two letters for the box and the pinline — the box structure re-tinted to each colour's title-bar tint and the two colours' frames through the pack's Pinline mask, each pair blended across ONE UNTILTED ramp ${PAIR_RAMPS.borderlessLand[0]}→${PAIR_RAMPS.borderlessLand[1]} %W by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on the 119 two-colour borderless lands that print the tinted look (MID #281, OTJ #304, the RVR shocks, the MKM surveil lands, CLU …; Scryfall 2026-10-06): the rings read 41.3 / 50.2 / 58.9 %W and the box's top band 40.9 / 49.8 / 59.0 at 10 / 50 / 90 %, the bars the colourless land's grey`,
       "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)",
     ],
   },
@@ -3523,8 +3579,12 @@ export function toRgba8(acc) {
  *  through mask". */
 export function describeLayer(l) {
   const moved = l.dy ? ` moved down ${l.dy} px` : "";
+  // A pair's box (TODO 4.56): re-tinted twice, the two lerped across a ramp.
+  const tintAt = (t) => `${t.src} at (${t.x}, ${t.y})`;
   const tint = l.retint
-    ? ` re-tinted from ${l.retint.from.join(",")} to the tint of ${l.retint.tintOf.src} at (${l.retint.tintOf.x}, ${l.retint.tintOf.y})`
+    ? l.retint.tintOfRight
+      ? ` re-tinted from ${l.retint.from.join(",")} to the tints of (${tintAt(l.retint.tintOf)} | ${tintAt(l.retint.tintOfRight)} across ${rampName(l.retint.ramp)})`
+      : ` re-tinted from ${l.retint.from.join(",")} to the tint of ${tintAt(l.retint.tintOf)}`
     : "";
   const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
   const mask = masks ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${masks}` : "";
@@ -3633,6 +3693,7 @@ export function sourceFilesFor(def) {
         if (!mask.startsWith("procedural:")) files.add(mask);
       }
       if (l.retint) files.add(l.retint.tintOf.src);
+      if (l.retint?.tintOfRight) files.add(l.retint.tintOfRight.src);
     }
   }
   for (const f of def.finish ?? []) files.add(f.mask);

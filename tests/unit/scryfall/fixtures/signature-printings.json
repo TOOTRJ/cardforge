@@ -4207,5 +4207,361 @@
       }
     ],
     "released_at": "2021-02-05"
+  },
+  "mh3-353": {
+    "id": "7996ab8e-5fa4-4d39-8c7b-12e4258bf8a9",
+    "name": "Flooded Strand",
+    "layout": "normal",
+    "set": "mh3",
+    "set_name": "Modern Horizons 3",
+    "set_type": "draft_innovation",
+    "collector_number": "353",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Plains or Island card, put it onto the battlefield, then shuffle.",
+    "released_at": "2024-06-14"
+  },
+  "spg-109": {
+    "id": "2bd93079-b10e-4be3-9545-17fa3bc3bfd2",
+    "name": "Arid Mesa",
+    "layout": "normal",
+    "set": "spg",
+    "set_name": "Special Guests",
+    "set_type": "masterpiece",
+    "collector_number": "109",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Mountain or Plains card, put it onto the battlefield, then shuffle.",
+    "released_at": "2025-04-11"
+  },
+  "unf-277": {
+    "id": "029eaaa9-e45e-4c50-a03d-ad67e3dfcc3e",
+    "name": "Hallowed Fountain",
+    "layout": "normal",
+    "set": "unf",
+    "set_name": "Unfinity",
+    "set_type": "funny",
+    "collector_number": "277",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": true,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land — Plains Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {W} or {U}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
+    "released_at": "2022-10-07"
+  },
+  "sld-456": {
+    "id": "3ff751c7-34c9-498a-bd9f-c6b0c8a194f4",
+    "name": "Glacial Fortress",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "456",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control a Plains or an Island.\n{T}: Add {W} or {U}.",
+    "released_at": "2022-04-12"
+  },
+  "ecl-347": {
+    "id": "19cba6be-7291-4788-9241-87dad3b68363",
+    "name": "Hallowed Fountain // Hallowed Fountain",
+    "layout": "reversible_card",
+    "set": "ecl",
+    "set_name": "Lorwyn Eclipsed",
+    "set_type": "expansion",
+    "collector_number": "347",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "released_at": "2026-01-23",
+    "card_faces": [
+      {
+        "name": "Hallowed Fountain",
+        "mana_cost": "",
+        "type_line": "Land — Plains Island",
+        "colors": [],
+        "oracle_text": "({T}: Add {W} or {U}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped."
+      },
+      {
+        "name": "Hallowed Fountain",
+        "mana_cost": "",
+        "type_line": "Land — Plains Island",
+        "colors": [],
+        "oracle_text": "({T}: Add {W} or {U}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped."
+      }
+    ]
+  },
+  "fra-397": {
+    "id": "01bdab5b-c1a6-4459-8e93-37602c8548e2",
+    "name": "Deserted Beach",
+    "layout": "normal",
+    "set": "fra",
+    "set_name": "Reality Fracture",
+    "set_type": "expansion",
+    "collector_number": "397",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {W} or {U}.",
+    "released_at": "2026-10-02"
+  },
+  "sld-2440": {
+    "id": "91ede26e-8784-4631-b9e7-f8f97b2904ac",
+    "name": "Bountiful Promenade",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "2440",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you have two or more opponents.\n{T}: Add {G} or {W}.",
+    "released_at": "2026-08-10"
+  },
+  "acr-111": {
+    "id": "bd5b2ce3-3cf0-47dd-9b76-940ae7eb8498",
+    "name": "Sunbaked Canyon",
+    "layout": "normal",
+    "set": "acr",
+    "set_name": "Assassin's Creed",
+    "set_type": "draft_innovation",
+    "collector_number": "111",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "{T}, Pay 1 life: Add {R} or {W}.\n{1}, {T}, Sacrifice this land: Draw a card.",
+    "released_at": "2024-07-05"
+  },
+  "ltr-343": {
+    "id": "e9a087f9-57c3-4743-b03b-7bfd2b86eefd",
+    "name": "Mount Doom",
+    "layout": "normal",
+    "set": "ltr",
+    "set_name": "The Lord of the Rings: Tales of Middle-earth",
+    "set_type": "draft_innovation",
+    "collector_number": "343",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "R"
+    ],
+    "oracle_text": "{T}, Pay 1 life: Add {B} or {R}.\n{1}{B}{R}, {T}: Mount Doom deals 1 damage to each opponent.\n{5}{B}{R}, {T}, Sacrifice Mount Doom and a legendary artifact: Choose up to two creatures, then destroy the rest. Activate only as a sorcery.",
+    "released_at": "2023-06-23"
+  },
+  "ltc-366": {
+    "id": "a439ed1c-b599-4469-82d9-df812f6c5bbd",
+    "name": "Horizon Canopy",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "366",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "flavor_name": "Bag End",
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "W"
+    ],
+    "oracle_text": "{T}, Pay 1 life: Add {G} or {W}.\n{1}, {T}, Sacrifice this land: Draw a card.",
+    "released_at": "2023-06-23"
+  },
+  "mkm-328": {
+    "id": "79d4ba4b-03f3-4e64-b4e7-8c025fc70178",
+    "name": "Meticulous Archive",
+    "layout": "normal",
+    "set": "mkm",
+    "set_name": "Murders at Karlov Manor",
+    "set_type": "expansion",
+    "collector_number": "328",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Surveil"
+    ],
+    "type_line": "Land — Plains Island",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {W} or {U}.)\nThis land enters tapped.\nWhen this land enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+    "released_at": "2024-02-09"
   }
 }

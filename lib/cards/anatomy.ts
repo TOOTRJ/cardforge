@@ -34,8 +34,10 @@
 // the pairs). The crown band is declared on m15, m15artifact and m15land
 // (4.6a, template-layout.ts M15_CROWN); the pairs came with 4.6b; the
 // borderless frames draw the floating crown from their crowned twins and
-// the pinline-only pair (4.6f, wave 2a). A card draws a piece only with its
-// switch on, so a declaration changes no stored card.
+// the pinline-only pair (4.6f, wave 2a); the borderless LAND its own pairs —
+// grey bars, the pinline and the box split — and no crown (4.56). A card
+// draws a piece only with its switch on, so a declaration changes no stored
+// card.
 //
 // The colour PAIR is card data too (owner decision 2026-09-29): exactly two
 // WUBRG words in `color_identity`, in any order, the "multicolor" token
@@ -171,7 +173,8 @@ export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boole
 /**
  * True when a card of `cardType` can wear the two-colour frame on `profile`:
  * the profile has pair masters, and a LAND only where they are a land
- * frame's (FrameProfile.twoColorForLands: m15land). On m15 or m15artifact a
+ * frame's (FrameProfile.twoColorForLands: m15land, m15snowland and, since
+ * TODO 4.56, the borderless land m15borderlessland). On m15 or m15artifact a
  * two-colour land would wear a nonland frame's gold-split (Shadowwood Hollow
  * and Sunfade Citadel, lands stored with no template and drawn on m15) —
  * owner round 17, 2026-09-30: the switch is hidden there, never offered. The
