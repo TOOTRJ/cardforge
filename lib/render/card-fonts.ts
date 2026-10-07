@@ -37,8 +37,12 @@ const MANA_CSS_PATH = path.join(
   "mana.css",
 );
 
-// MPlantin is the body-text font on real MTG cards. It ships alongside the
-// Mana symbol font in the same npm package. We use it as the default font
+// MPlantin is the body-text font on real MTG cards. The file ships inside
+// the mana-font npm package beside the Mana symbol font; the package's
+// licence statement does not name it: its README licenses "the Mana font" (SIL OFL
+// 1.1) and its CSS (MIT). The file's own name table says only "Converted by
+// ALLTYPE" — no copyright line, no licence string — and no licence text
+// accompanies it (docs/FRAMES.md "Provenance and legal"). We use it as the default font
 // for the Satori bake so providing explicit `fonts: [...]` to ImageResponse
 // doesn't strand the regular body text (Satori has no auto-fallback once
 // you opt into custom fonts).
@@ -61,6 +65,10 @@ const KEYRUNE_FONT_PATH = path.join(
 // CardDisplay — the title/type/footer/stat face: Beleren Bold, the face real
 // cards use, vendored in public/fonts from the same non-commercial
 // Full-Magic-Pack the frame trade dress comes from (see 12_CREATION_AUDIT.md).
+// The file's own name table: "Beleren Bold", "Version P1.01", "Copyright (c)
+// 2013 Wizards of the Coast, a Hasbro Subsidiary. All rights reserved.",
+// "Beleren is a trademark of Wizards of the Coast."; no licence string, and
+// no licence text accompanies it (docs/FRAMES.md "Provenance and legal").
 // The family name + this path are the swap contract. Read with the same
 // process.cwd()+literal-segments pattern as the node_modules fonts so
 // @vercel/nft bundles it into the function.
@@ -71,7 +79,9 @@ const DISPLAY_FONT_PATH = path.join(
   "Beleren-Bold.ttf",
 );
 
-// MPlantin Italic — the real italic master for flavor/reminder text. Satori
+// MPlantin Italic — the real italic master for flavor/reminder text (from
+// the same Full-Magic-Pack; name table "Converted by ALLTYPE", no licence
+// string, no licence text beside it). Satori
 // has no synthetic italics, so without this the bake would render italic runs
 // upright (or the browser-synthesized oblique wouldn't match the PNG).
 const MPLANTIN_ITALIC_FONT_PATH = path.join(

@@ -1,7 +1,9 @@
-// MPlantin's metrics — the body face both renderers set rules text in
-// (public/fonts/mplantin.ttf + mplantin-italic.ttf, the committed masters:
-// the bake loads them through lib/render/card-fonts.ts, the preview their
-// same-metric web copies through globals.css). Plain tables, so the client
+// MPlantin's metrics — the body face both renderers set rules text in.
+// The bake loads the REGULAR from node_modules/mana-font/fonts/mplantin.ttf
+// and the italic from public/fonts/mplantin-italic.ttf (lib/render/
+// card-fonts.ts); public/fonts/mplantin.ttf is the same bytes as the
+// package's file (sha256 ebfb5d57…2ab5, mana-font 1.18.0), served to the
+// browser beside its woff / woff2 copies (globals.css). Plain tables, so the client
 // preview and the server bake measure with the SAME numbers and no font is
 // parsed at runtime. tests/unit/cards/rules-metrics.test.ts re-reads both
 // TTFs and keeps every table in step with them.
