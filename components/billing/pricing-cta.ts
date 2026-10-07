@@ -32,6 +32,10 @@ export function pricingCtaFor(viewer: BillingViewer, tier: PlanTier): PricingCta
     // A live subscription is managed (cancel, invoices, card) in the portal.
     // A comped or admin account is "paid" with nothing to manage there.
     if (viewer.hasLiveSubscription && viewer.hasBillingAccount) {
+      // Already cancelled: the plan is on its way to Free, so there is
+      // nothing to "manage" down to it — the billing page's plan card says
+      // when it ends and carries the Resume button.
+      if (viewer.subscriptionEnding) return { kind: "none" };
       return { kind: "portal", label: "Manage plan" };
     }
     return { kind: "none" };

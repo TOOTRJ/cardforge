@@ -85,6 +85,9 @@ export async function GET() {
     hasLiveSubscription:
       profile?.subscription_status === "active" ||
       profile?.subscription_status === "trialing",
+    subscriptionEnding:
+      (profile?.subscription_status === "active" || profile?.subscription_status === "trialing") &&
+      Boolean(profile?.cancel_at_period_end),
     isAdmin: profile?.is_admin ?? false,
   };
 

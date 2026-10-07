@@ -26,6 +26,9 @@ export type BillingViewer = {
   /** A subscription Stripe still bills (active/trialing). */
   hasLiveSubscription: boolean;
   subscriptionStatus: string | null;
+  /** The live subscription is set to stop (cancelled, not yet ended) — it
+   *  needs "Resume", and has nothing left to cancel or manage down to Free. */
+  subscriptionEnding?: boolean;
 };
 
 export const ANONYMOUS_BILLING_VIEWER: BillingViewer = {
@@ -53,16 +56,22 @@ export function billingViewerFromUser(user: HeaderUser | null): BillingViewer {
     hasBillingAccount: user.hasBillingAccount ?? false,
     hasLiveSubscription: user.hasLiveSubscription ?? false,
     subscriptionStatus: user.subscriptionStatus ?? null,
+    subscriptionEnding: user.subscriptionEnding ?? false,
   };
 }
 
 /** From the profile row + resolved entitlements (server side) — the same
  *  facts /api/me derives, so the two producers can never disagree. */
 export function billingViewerFromProfile(
-  profile: { subscription_status: string | null; stripe_customer_id: string | null } | null,
+  profile: {
+    subscription_status: string | null;
+    stripe_customer_id: string | null;
+    cancel_at_period_end?: boolean | null;
+  } | null,
   entitlements: Pick<Entitlements, "isPaid" | "effectiveTier">,
 ): BillingViewer {
   const status = profile?.subscription_status ?? null;
+  const hasLiveSubscription = status != null && LIVE_SUBSCRIPTION_STATUSES.has(status);
   return {
     loaded: true,
     isSignedIn: true,
@@ -70,7 +79,8 @@ export function billingViewerFromProfile(
     currentTier: entitlements.effectiveTier,
     hasSubscribed: status != null,
     hasBillingAccount: Boolean(profile?.stripe_customer_id),
-    hasLiveSubscription: status != null && LIVE_SUBSCRIPTION_STATUSES.has(status),
+    hasLiveSubscription,
     subscriptionStatus: status,
+    subscriptionEnding: hasLiveSubscription && Boolean(profile?.cancel_at_period_end),
   };
 }

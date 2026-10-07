@@ -9,6 +9,7 @@ import {
   type PlanTier,
 } from "@/lib/billing/plans";
 import { grantMonthlyCreditsForPeriod, grantTrialCreditsForPeriod } from "@/lib/billing/credit-refill";
+import { endsByPeriodEnd } from "@/lib/billing/subscription-ending";
 import { tierForPrice, tierForProduct, type PriceLike } from "./config";
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,9 @@ export type SubscriptionLike = {
   customer?: string | { id: string } | null;
   created?: number;
   cancel_at_period_end?: boolean;
+  /** A cancellation DATE: the Customer Portal and newer API versions set
+   *  this and may leave `cancel_at_period_end` false. */
+  cancel_at?: number | null;
   metadata?: Record<string, string> | null;
   trial_end?: number | null;
   /** Set once the subscription has ended (deleted events). */
@@ -289,7 +293,10 @@ export async function syncSubscriptionForUser(
       subscription_status: status,
       stripe_subscription_id: chosenDeleted ? null : chosen.id,
       current_period_end: periodEnd,
-      cancel_at_period_end: chosenDeleted ? false : Boolean(chosen.cancel_at_period_end),
+      // "Stops at the end of the stored period", however Stripe says it —
+      // the flag alone missed a `cancel_at` date, and Settings then told a
+      // customer who had cancelled that the plan renews.
+      cancel_at_period_end: chosenDeleted ? false : endsByPeriodEnd(chosen),
     })
     .eq("id", userId);
   // A failed profile write must surface: the webhook then 500s and Stripe

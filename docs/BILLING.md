@@ -10,7 +10,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Plan catalog (copy, prices, credits, caps) | `lib/billing/plans.ts` | Client-safe. Stripe price ids are NOT here. |
 | Stripe prices | **lookup keys** on the catalog (`plus_monthly`, `plus_annual`, `pro_monthly`, `pro_annual`, `pack_mini`, `pack_small`, `pack_large`; coupon `SUBSCRIBER_PACKS_20` for subscriber pack pricing) — `lib/stripe/prices.ts` resolves them at checkout; the `STRIPE_PRICE_*` env vars are an optional fallback | Since 2026-09-22 (PR #360): a stale env id had every live credit-pack checkout failing with `resource_missing` for weeks. `lib/stripe/config.ts` still maps a price back to a tier (env id → metadata → lookup key → product → amount) for the webhook. |
 | Storefront | `/pricing` (static, anonymous) + `/pricing-member` (dynamic, signed-in; `proxy.ts` rewrite) | Buttons come from `pricingCtaFor()` fed by a `BillingViewer` (`lib/billing/viewer.ts`). Paid accounts are redirected to the billing page. |
-| Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. |
+| Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. What the plan card says about the plan's future is ONE decision, `planStatusOf()` (`lib/billing/plan-status.ts`), drawn by `components/billing/plan-status.tsx` — see "A cancelled subscription" below. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
 | Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all nine. |
 | Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice; admins read, the webhook writes. |
@@ -351,6 +351,46 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
 - **Bots**: `/api/events` drops requests whose User-Agent `isbot` recognises,
   matching Vercel Analytics' policy.
 
+## A cancelled subscription (2026-10-07)
+
+A customer who cancels keeps the plan until the date it ends; until then the
+subscription is still `active` (or `trialing`). Stripe says "it will not
+renew" in three ways, and `subscriptionEndsAt()`
+(`lib/billing/subscription-ending.ts`) is the ONE reader of all of them:
+
+| Stripe says | Ends on |
+|---|---|
+| `cancel_at_period_end: true` | the period end (the trial end while `trialing`) |
+| `cancel_at: <timestamp>` — what the Customer Portal and newer API versions write; `cancel_at_period_end` can stay `false` | that date |
+| a subscription schedule with `end_behavior: "cancel"` | the schedule's last phase end |
+
+Until 2026-10-07 only the boolean was read, and the trial copy was decided
+before the cancellation was looked at: a subscriber who had cancelled in the
+portal was told "Renews on …", and a cancelled trial "then $6 on the card
+below".
+
+- **Billing page**: the live Stripe read (`SubscriptionSummary.endsAt`) decides,
+  so it is right on the next page load whatever the profile row says; the
+  profile's flag + `current_period_end` are the fallback when Stripe is
+  unreachable. Order (`planStatusOf`): delinquent → cancelled trial
+  (`trial_ending`: ends, no charge) → cancelled plan (`ending`: the date, the
+  perks kept until then) → running trial → scheduled downgrade
+  (`pending_change`, NOT a cancellation) → renews. A plan that is ending shows
+  the badge "Ending" / "Trial ending", **Resume {Plan}** (the portal's home —
+  Stripe has no deep link to "don't cancel") and no "Cancel plan".
+- **Profile row**: `profiles.cancel_at_period_end` is written by the sync as
+  `endsByPeriodEnd()` — true when the subscription stops at or before the
+  stored period end, however Stripe expresses it (a `cancel_at` in a LATER
+  period still renews first, so the flag stays false and the billing page
+  shows the exact date). No new column. Settings, `/api/me`
+  (`subscriptionEnding`) and the admin user panel read this flag.
+- **Plan grid**: `BillingViewer.subscriptionEnding` — the Free card offers
+  nothing to "manage" for a plan that is already ending (`pricingCtaFor`).
+- **Existing rows**: a subscription cancelled before this shipped keeps a
+  stale `false` flag until its next `customer.subscription.*` event or an
+  admin **Resync from Stripe** (`/admin/users` → the user). The billing page
+  does not depend on it.
+
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
 Two clock-bound sandbox customers, driven through the Stripe API:
@@ -373,6 +413,8 @@ free / status canceled.
 
 What this confirms about the app: the webhook's `subscription.updated`
 handling sees the new price on the same subscription (upgrade and downgrade),
-`cancel_at_period_end` flows through to the billing page's "ends on" copy,
+`cancel_at_period_end` flows through to the billing page's "ends on" copy
+(a `cancel_at`-only cancellation did not until 2026-10-07 — see "A cancelled
+subscription"),
 and a Plus → Pro switch is a $9 prorated charge — the copy on the billing
 page says exactly that.

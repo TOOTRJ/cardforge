@@ -55,7 +55,16 @@ describe("BillingPanel", () => {
 
   it("cancel scheduled: says when the plan ends", () => {
     render(<BillingPanel {...base} tier="plus" isPaid status="active" renewLabel="Oct 22, 2026" cancelAtPeriodEnd hasBillingAccount />);
-    expect(screen.getByText(/your plan ends on oct 22, 2026/i)).toBeTruthy();
+    expect(screen.getByText(/ends on oct 22, 2026 and won't renew/i)).toBeTruthy();
+    expect(screen.queryByText(/renews on/i)).toBeNull();
+    // Not "Active" (which read as "nothing happened"), and the portal button says what it is for.
+    expect(screen.getByText("Ending")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /resume subscription/i })).toBeTruthy();
+  });
+
+  it("cancelled trial: it ends and nothing is charged", () => {
+    render(<BillingPanel {...base} tier="plus" isPaid status="trialing" renewLabel="Oct 22, 2026" cancelAtPeriodEnd hasBillingAccount />);
+    expect(screen.getByText(/cancelled your trial: it ends on oct 22, 2026 and you won't be charged/i)).toBeTruthy();
   });
 
   it("past due: the status is honest, the portal button says 'Fix payment', plans stay reachable", () => {

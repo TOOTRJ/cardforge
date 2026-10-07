@@ -48,6 +48,9 @@ type HeaderUser = {
   /** A subscription Stripe is still billing (active or trialing) — the
    *  storefront offers "Switch to …", not a fresh subscription. */
   hasLiveSubscription?: boolean;
+  /** That subscription is set to stop at the end of its period (cancelled,
+   *  not yet ended) — the storefront offers nothing to "manage" down to Free. */
+  subscriptionEnding?: boolean;
   /** Shows the admin (moderation) entry in the user menu. */
   isAdmin?: boolean;
 };
