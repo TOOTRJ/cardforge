@@ -565,7 +565,13 @@ Rules and gotchas:
   global `loading.tsx` lives in `app/(app)/` for exactly this reason; the card
   route checks existence in its segment `layout.tsx` so its skeleton can still
   stream) and again in `generateMetadata` (detail queries are React `cache()`d,
-  so it costs nothing). Every public detail page sets a self-canonical,
+  so it costs nothing). Next draws that 404 INSIDE the route group's layout,
+  so every group has its own `not-found.tsx` — `NotFoundContent`, no shell;
+  only `app/not-found.tsx` (unmatched URLs, root layout alone) wraps it in
+  `AppShell`. A group without one falls back to the root file inside its own
+  layout: two headers, ribbons and footers, and two headers' worth of client
+  islands (`tests/unit/content/not-found-chrome.test.ts`). Every public
+  detail page sets a self-canonical,
   OG/Twitter, JSON-LD, and `robots: noindex` for anything unlisted or THIN (a
   handle-only profile, an empty deck). `app/sitemap.ts` lists only what is
   indexable (public cards, profiles with a public card, non-empty public
