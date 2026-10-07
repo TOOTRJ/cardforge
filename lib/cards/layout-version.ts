@@ -845,9 +845,76 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            getVerifiedFrameKeys reads `verified` alone) and FLAGGED "needs
 //            re-verification" on the admin checklist until it is ticked
 //            again; nothing is dropped.
+//   42     — the saga rebuilt from Card Conjurer (TODO 4.21c = 3.7; design
+//            2026-09-29 §3.4, owner decisions 2026-09-29, built 2026-10-06).
+//            A CORRECTION against the prints (Scryfall PNGs at 1500 × 2100:
+//            DOM #21 / #38 / #42 / #90 / #102 / #122 / #173, THB #53 / #160 /
+//            #170, 40K #126, LTC #58, WHO #99, LTR #174, MH2 #259 and 40
+//            more — the rail measured on 54):
+//            * the masters: CC's 'Regular Frames' saga pack 1:1 (w u b r g m
+//              = sagaFrame<K>; c = its Land Frame, MH2 #259) for the 375 px
+//              MSE cut — the chapter RIBBON is in the master now; the art
+//              slot is the masters' window + 0.1 % (50.03/11.19/42.4 ×
+//              72.68: the window is 752–1384 × 237–1758 px on every key; the
+//              MSE slot started 26 px left of the prints' window); the cost
+//              discs at the CC-framed M15 height (CC_M15_COST_DY: DOM #122's
+//              centre 151.5 px, 40K #126's 153), the title rect to 92.2 %W
+//              (the last disc ends 1383–1386); the type line's baseline on
+//              the prints' 1855.3 px (+9.3 px, TextSlot.dy) from 8.5 %W; the
+//              set symbol in CC's box (right 92.27 %W, centred 87.39 %H —
+//              the prints end 1380–1384, centred 1835–1836.5).
+//            * the rail (lib/cards/saga-rail.ts, one layout both renderers
+//              draw): the reminder block in its own fixed box (62 px on a
+//              62 px pitch: the prints' baselines 341 / 403 / 465 / 527; its
+//              emphasis the text's own, where v33 set the whole block
+//              italic; its lines out of the fold's corner; one the box
+//              cannot hold at the ladder's floor — past ≈ 240 characters —
+//              outgrows it: the floor size, the chapters' column, the rows
+//              under it, as v41 drew every reminder in full); the rows from
+//              the first divider at 621 px (the
+//              prints' 619–621 on 50 of 54 scans; CC draws 608), or from the
+//              rail's own top (237 px) when the saga has no reminder (owner
+//              decision 2026-09-29); the chapter text at 64 px on the rules
+//              ladder (v33: 43.5) in the column 203–728 px; rows sized by
+//              their content — never shorter than their stack of chapter
+//              badges — with the rail's leftover shared equally (the walker
+//              rows' arithmetic, lib/cards/loyalty-rows.ts contentRowsAt;
+//              v33 gave every chapter the same height); the pack's gold
+//              hexagon (118 × 132 px) once per chapter numeral, stacked 160
+//              px apart where the rows have room (DOM, THB, KHM, 40K, WOE,
+//              PIP) down to 138 px where they do not (LTC #58 138.3 / 138.6,
+//              WHO #99 138.0) — v33 drew ONE dark badge with the joined
+//              marker ("II,III,IV"); the numerals in MPlantin at 72 px (the
+//              prints' Plantin semibold is TODO 4.8); the pack's divider on
+//              every row's top edge but the first row of a saga with no
+//              reminder. Up to six badges stack in one row, as the prints do
+//              (LTR #174 six, WHO #99 five); the combined marker ("I–III")
+//              is drawn only where stacks cannot fit — alone (repeated
+//              numerals) or beside the text at the ladder's floor (before a
+//              chapter loses a line: v41 drew one marker a row) — or past
+//              six. The reminder is one paragraph, as v41 drew it.
+//            The walker rows moved onto the shared arithmetic and are
+//            byte-identical (tests/unit/cards/loyalty-rows-pinned.test.ts,
+//            tests/unit/render/pw-rows-pinned-bake.test.tsx).
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[42] = saga): every
+//            card on it, art or none. Public production (anonymous read,
+//            2026-10-06): 4 public sagas, one owner, none with a reminder
+//            (3 gold, 1 blue; I/II/III, I–IV twice, I / II,III,IV / V / VI)
+//            — re-baked by the sweep after the owner's before/after sheet
+//            (round 34); unlisted and private ones: owner SQL (the sweep
+//            re-bakes public and unlisted cards, a private one re-bakes on
+//            its next save). The visual
+//            matrix: only the saga cases change. "sweep" (a correction,
+//            FRAMES.md "Additions vs corrections"), never a badge. NOT
+//            verification-neutral: the masters, the art slot, the type line
+//            and the whole rail move — production's seven saga ticks are
+//            judged by this scope: KEPT (the creator goes on offering the
+//            saga) and FLAGGED "needs re-verification" until the owner
+//            ticks them again against the registry's references (saga/m is
+//            40K #126 now, with LTC #58).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 41;
+export const CARD_LAYOUT_VERSION = 42;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -897,6 +964,14 @@ export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m1
  *  verification scope too (every one of the four has references whose
  *  compare render changes), so there is no V41_VERIFICATION_TEMPLATES. */
 export const V41_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
+/** The saga's rebuild (TODO 4.21c): the masters from Card Conjurer and the
+ *  printed rail. ITS version lives here alone — the scoped table and the
+ *  rollout below key their entries by this constant — because 4.21b (split
+ *  and battle) was built beside it: whichever of the two merges second takes
+ *  the next number by changing this constant (and CARD_LAYOUT_VERSION, when
+ *  it becomes the latest). Frozen like the lists above once it ships. */
+export const SAGA_RAIL_LAYOUT_VERSION = 42;
+export const SAGA_RAIL_TEMPLATES: readonly string[] = ["saga"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -959,6 +1034,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // them is judged by this scope too (each has references whose compare
   // render gains the rider): kept, flagged for a re-check.
   41: V41_TEMPLATES,
+  // The saga rebuilt from Card Conjurer (4.21c): its masters, art slot,
+  // type line and the whole chapter rail; every card on it. A tick on it is
+  // judged by this scope too: kept, flagged for a re-check.
+  [SAGA_RAIL_LAYOUT_VERSION]: SAGA_RAIL_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1575,6 +1654,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
   40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
   41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
+  [SAGA_RAIL_LAYOUT_VERSION]: "sweep", // the saga rebuilt from Card Conjurer (4.21c): the ribbon in the master, the printed rail — a correction after the owner's sheet, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

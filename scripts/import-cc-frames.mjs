@@ -13,8 +13,10 @@
 // their artifact templates; the textless pair re-cut 5 px onto the prints),
 // 4.33's borderless planeswalkers (m15borderlesspw, m15borderlesspwtall),
 // 4.6a's legendary crown band (m15crown, an overlay the m15 / m15artifact
-// / m15land profiles draw over their masters), and 4.21a's portrait layouts
-// (flip with its two P/T plates cut per half, adventure, aftermath).
+// / m15land profiles draw over their masters), 4.21a's portrait layouts
+// (flip with its two P/T plates cut per half, adventure, aftermath) and
+// 4.21c's saga (the ribbon in the masters; its chapter badge and row divider
+// published beside them).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
@@ -394,6 +396,19 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     }
     console.log(`wrote ${template} plates (${Object.keys(boxes).map((n) => `pt/<colour>-${n}.png`).join(", ")})`);
   }
+  // A pack's own bitmaps published beside the masters (4.21c's saga: the
+  // chapter badge and the row divider), native size: <template>/<name>.png.
+  const pieces = def.pieces ? { ...def.pieces } : undefined;
+  if (pieces && !dryRun) {
+    for (const [name, src] of Object.entries(pieces)) await writePlate(src, path.join(outDir, template, `${name}.png`));
+    console.log(`wrote ${template} pieces (${Object.keys(pieces).map((n) => `${n}.png`).join(", ")})`);
+  }
+  // Masks a LATER recipe reads (the two-colour saga's pair masters, TODO
+  // 4.6f): fetched into the cache so the pinned commit's bytes are at hand,
+  // listed in provenance, never written to the build folder.
+  if (def.maskInputs && !dryRun) {
+    for (const src of Object.values(def.maskInputs)) await fetchCached(src);
+  }
   provenance[template] = {
     source: "cardconjurer",
     repo: CC_REPO,
@@ -409,6 +424,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
+    ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
+    ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),

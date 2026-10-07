@@ -216,9 +216,11 @@ describe("the even HD-px ladder", () => {
     expect(getFrameProfile("m15pw").rules.sizePct).toBe(rulesPxToPct(68));
     expect(getFrameProfile("m15pw").loyaltyRows!.maxSizePct).toBe(rulesPxToPct(64));
     expect(getFrameProfile("battle").rules.sizePct).toBe(rulesPxToPct(68, "landscape"));
-    // The saga's chapter rail keeps today's size (owner decision 2026-09-28:
-    // its geometry is TODO 4.21's).
-    expect(getFrameProfile("saga").chapters!.sizePct).toBe(0.029);
+    // The saga's chapter rail prints 7.5 pt (TODO 4.21c: 64 px on DOM's
+    // prints; v32–v41 kept 0.029 W = 44 px), its reminder block 62 px (our
+    // italic sets the prints' four lines there).
+    expect(getFrameProfile("saga").chapters!.sizePct).toBe(rulesPxToPct(64));
+    expect(getFrameProfile("saga").chapters!.intro.sizePct).toBe(rulesPxToPct(62));
   });
 });
 

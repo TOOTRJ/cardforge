@@ -200,7 +200,9 @@ describe("frame-references.json", () => {
   it("keeps the hand-researched M15 defaults first", () => {
     expect(FRAME_REFERENCES.m15.w?.name).toBe("Serra Angel");
     expect(FRAME_REFERENCES.m15.c?.name).toBe("Ulamog, the Ceaseless Hunger");
-    expect(FRAME_REFERENCES.saga.m?.name).toBe("The Kami War // O-Kagachi Made Manifest");
+    // The gold saga (TODO 4.21c): 40K #126, a three-colour print on the
+    // plain gold frame.
+    expect(FRAME_REFERENCES.saga.m?.name).toBe("The Horus Heresy");
     expect(FRAME_REFERENCES.battle.w?.name).toMatch(/^Invasion of Gobakhan/);
   });
 
@@ -506,5 +508,55 @@ describe("4.48 / 4.50 full-art token references", () => {
       }
       expect(frameReferenceNote(template).note).toMatch(/full-art/);
     }
+  });
+});
+
+// TODO 4.21c (design 2026-09-29, D3): the regular saga frame's references.
+// Gold is the two three-colour prints on the plain gold frame; the
+// colourless key is the land saga; nothing on another saga master is listed.
+describe("4.21c saga references", () => {
+  const ids = (key: string) => frameReferenceOptions("saga", key).map((r) => `${r.set} ${r.name}`);
+  const all = () => FRAME_COLOR_KEYS.flatMap((key) => frameReferenceOptions("saga", key));
+
+  it("gold: 40K #126 The Horus Heresy, then LTC #58 In the Darkness Bind Them", () => {
+    expect(ids("m")).toEqual(["40k The Horus Heresy", "ltc In the Darkness Bind Them"]);
+    expect(FRAME_REFERENCES.saga.m).toMatchObject({ scryfallId: "c9551a51-2bbd-425b-a634-185921a96865", curated: true });
+    expect(findFrameReference("saga", "m", "f7f7413b-0a65-4338-90eb-4b4c5462c21c")?.name).toBe("In the Darkness Bind Them");
+    // NEO's transforming saga (a DFC marker and an enchantment frame effect)
+    // and KHM's two-colour sagas (the two-colour frame, TODO 4.6f) are gone.
+    for (const id of ["36052532-5028-43a8-9fc4-56221ec867fd", "d7de696a-49c2-421d-a86c-bcffd68870c6", "0bf01666-0fbf-4b15-a33d-964165bbfafb"]) {
+      expect(findFrameReference("saga", "m", id), id).toBeNull();
+    }
+  });
+
+  it("colourless: the land saga MH2 #259 Urza's Saga alone", () => {
+    expect(ids("c")).toEqual(["mh2 Urza's Saga"]);
+    expect(FRAME_REFERENCES.saga.c).toMatchObject({ scryfallId: "c1e0f201-42cb-46a1-901a-65bb4fc18f6c", curated: true });
+  });
+
+  it("w u b r g keep their DOM defaults, each with a regular-frame alternate", () => {
+    expect(ids("w")).toEqual(["dom History of Benalia", "woe The Princess Takes Flight"]);
+    expect(ids("u")).toEqual(["dom The Antiquities War", "thb Medomai's Prophecy", "woe Gadwick's First Duel"]);
+    expect(ids("b")).toEqual(["dom The Eldest Reborn", "dom Rite of Belzenlok"]);
+    expect(ids("r")).toEqual(["dom The First Eruption", "thb The Triumph of Anax"]);
+    expect(ids("g")).toEqual(["dom The Mending of Dominaria", "woe Welcome to Sweettooth"]);
+    for (const key of ["w", "u", "b", "r", "g"] as const) expect(FRAME_REFERENCES.saga[key]?.curated, key).toBe(true);
+  });
+
+  it("lists no print on another saga master: no FIN Summon (a saga creature), no DMU read-ahead saga, no transforming saga", () => {
+    for (const ref of all()) {
+      expect(ref.name, ref.name).not.toMatch(/^Summon: /);
+      expect(ref.name, ref.name).not.toContain(" // ");
+      // FIN's Summons print a P/T box (TODO 4.5d / 4.7); DMU's read-ahead
+      // sagas a reminder box 97 px taller (chapters from 717 px, not 621);
+      // NEO's sagas transform (TODO 5.5).
+      expect(["fin", "dmu", "neo", "khm"], `${ref.set} ${ref.name}`).not.toContain(ref.set);
+      expect(ref.face, ref.name).toBeUndefined();
+    }
+    const note = frameReferenceNote("saga");
+    expect(note.confirm).toBe(false);
+    expect(note.note).toMatch(/40K #126 The Horus Heresy/);
+    expect(note.note).toMatch(/MH2 #259 Urza’s Saga/);
+    expect(note.note).toMatch(/read-ahead/);
   });
 });

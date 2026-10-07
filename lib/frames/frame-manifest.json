@@ -9969,6 +9969,132 @@
       "bytes": 26020,
       "width": 1500,
       "height": 2100
+    },
+    "saga/b.png": {
+      "hash": "10e954c2e22f",
+      "sha256": "10e954c2e22f093497817f07f943bcfd3ceb765d9c3cab270aa609d481ec6126",
+      "bytes": 2205374,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/b.webp": {
+      "hash": "fa242cffcc95",
+      "sha256": "fa242cffcc95eff9ed6d0c286546c910e253e11af6d7c23eaa12e8c1fb4c31be",
+      "bytes": 86030,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/c.png": {
+      "hash": "9c33b7018ca6",
+      "sha256": "9c33b7018ca6d4cc7ce9d77047f0dcd48504a9cc055c7cc346f3da20dcd2c6b8",
+      "bytes": 1503364,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/c.webp": {
+      "hash": "1e861304d611",
+      "sha256": "1e861304d611b6a535877d5be3248ce7b6bfdc82c14730f056571d7228f66cf8",
+      "bytes": 63684,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/chapter/badge.png": {
+      "hash": "2e008bec4c29",
+      "sha256": "2e008bec4c2922acb08b88c39a85c5531053c7f28feb343d69d0f871ceed5610",
+      "bytes": 17023,
+      "width": 118,
+      "height": 132
+    },
+    "saga/chapter/badge.webp": {
+      "hash": "64555c1d92bb",
+      "sha256": "64555c1d92bb261c1a3f431063d2650d771fcefd988fa688acb076ff7a5402ef",
+      "bytes": 2538,
+      "width": 118,
+      "height": 132
+    },
+    "saga/chapter/divider.png": {
+      "hash": "b27f386a6d97",
+      "sha256": "b27f386a6d9791f67fc5c3816083b4f0605abd5ed88f35636c4c169cb493b09a",
+      "bytes": 2143,
+      "width": 592,
+      "height": 9
+    },
+    "saga/chapter/divider.webp": {
+      "hash": "efef1b667475",
+      "sha256": "efef1b6674757fd5e5fa22dac17bf69c1b0932c89529cc95d22ae3e320970d88",
+      "bytes": 1200,
+      "width": 592,
+      "height": 9
+    },
+    "saga/g.png": {
+      "hash": "cc2c41df5bc5",
+      "sha256": "cc2c41df5bc5e9ec41e74c84a03c548c0c45779b85d6015b18f0b5566f3246f5",
+      "bytes": 2190795,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/g.webp": {
+      "hash": "887d9cfceab1",
+      "sha256": "887d9cfceab122636ea83f3e621d4127c79e61dd22847f0b3a27e3a4ec45c264",
+      "bytes": 88358,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/m.png": {
+      "hash": "03a9637c8f44",
+      "sha256": "03a9637c8f4411b0658b3d94a26ba44ecddaf8f54ac4c3844ff19ab65f642934",
+      "bytes": 2021121,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/m.webp": {
+      "hash": "a1619f1ced5f",
+      "sha256": "a1619f1ced5f566f1deb85692b5ad0c47c9a51acc4a321c053fbf0bb0f2d4d2b",
+      "bytes": 78186,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/r.png": {
+      "hash": "11daa4d6cbd9",
+      "sha256": "11daa4d6cbd90fa5fdffa0e74c63af31212afebbe9c4e3b473338a7fc42a9d5d",
+      "bytes": 2308113,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/r.webp": {
+      "hash": "ac185c7c874c",
+      "sha256": "ac185c7c874cc7368de82e5ae627143163ac33fc55ecc3a4aa102f40fdc5d858",
+      "bytes": 123800,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/u.png": {
+      "hash": "5fe1a4716e08",
+      "sha256": "5fe1a4716e0836192e4a58261c5a430cd2d62ce35c2cf969830b739c780435cf",
+      "bytes": 1317847,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/u.webp": {
+      "hash": "2933923f2bd6",
+      "sha256": "2933923f2bd6eea649f7ffbc845479ef046bcc5f4842964883c7bda873c7b255",
+      "bytes": 51794,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/w.png": {
+      "hash": "e9e5ce26dbd6",
+      "sha256": "e9e5ce26dbd691def9f2c312965f6c5290d29fb63f3fa18b4f1be583b11054b7",
+      "bytes": 1518199,
+      "width": 1500,
+      "height": 2100
+    },
+    "saga/w.webp": {
+      "hash": "d476a988b4f3",
+      "sha256": "d476a988b4f3a0233ca7ff979f811027ee7fe03ea9a8a4fec06f97c7a6460944",
+      "bytes": 53908,
+      "width": 1500,
+      "height": 2100
     }
   }
 }

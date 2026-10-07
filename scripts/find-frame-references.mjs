@@ -194,6 +194,8 @@ const TEMPLATES = {
     q: (k) => `t:battle ${spellColor(k)}`,
   },
   saga: {
+    confirm:
+      "Keep only prints on the regular saga frame (TODO 4.21c): not DMU's read-ahead sagas (their reminder box is 97 px taller), not a saga creature (FIN's Summons), and for m not a two-colour print (the pair frame, TODO 4.6f) — see frame-references.json's note.",
     q: (k) => `t:saga frame:2015 (st:expansion or st:core) is:booster -is:showcase -is:dfc -is:borderless -is:extended ${spellColor(k)}`,
   },
   adventure: {
