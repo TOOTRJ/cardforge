@@ -201,7 +201,7 @@ describe("POST /api/admin/frame-score-batch", () => {
     const events = await readEvents(
       await post({
         combos: [
-          { template: "alphatoken", colorKey: "w" },
+          { template: "split", colorKey: "w" },
           { template: "saga", colorKey: "w" },
         ],
       }),
@@ -209,7 +209,7 @@ describe("POST /api/admin/frame-score-batch", () => {
     expect(events[0]).toMatchObject({
       type: "start",
       combos: [{ template: "saga", colorKey: "w" }],
-      skipped: [{ template: "alphatoken", colorKey: "w", reason: expect.stringMatching(/No real printing/) }],
+      skipped: [{ template: "split", colorKey: "w", reason: expect.stringMatching(/No real printing/) }],
     });
     expect(state.score).toHaveBeenCalledTimes(1);
   });

@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { SET_SYMBOL_BOX_PCT } from "@/lib/cards/typography";
+import { displayLine } from "@/lib/cards/card-display";
+import { SET_SYMBOL_BOX_PCT, TITLE_SIZE_PCT } from "@/lib/cards/typography";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
@@ -229,5 +233,80 @@ describe("the emblem frame on real bakes (TODO 4.52)", () => {
     expect(pips, "no cost").toBeNull();
     const plate = inkBox(b, { x0: 1100 * s, x1: 1440 * s, y0: 1800 * s, y1: 1990 * s }, white);
     expect(plate, "no P/T plate").toBeNull();
+  }, 60_000);
+});
+
+// ---------------------------------------------------------------------------
+// A CENTRED display line sits where the browser centres it (alignedText in
+// lib/render/card-image.tsx): Satori sizes the text node from each glyph's
+// own advance but draws the run kerned, so without the bake's negative
+// margin a centred band centred a box wider than the ink and the line sat
+// HALF ITS KERNING left of the preview's (20 px on an HD "Astronomy Tower"
+// token name). The browser centres the KERNED advance box: the ink spans
+// lsb(first glyph) … advance − rsb(last glyph), on the band's centre. Pinned
+// on the git "alphatoken" frame until TODO 4.54 retired it; here on the
+// emblem's centred name (the token frames centre theirs the same way, on
+// the same slot fields). No code profile centres a TYPE line any more — the
+// retired frame's was the only one — so that half of alignedText (the room
+// left beside an inline set symbol) has no bake to pin until one does.
+// ---------------------------------------------------------------------------
+
+describe("a centred display line (bake): the emblem's name", () => {
+  const W = 1500;
+  const beleren = fontkit.create(readFileSync(join(process.cwd(), "public/fonts/Beleren-Bold.ttf")));
+  const TITLE = getFrameProfile("emblem").title;
+  const fontPx = TITLE_SIZE_PCT * W;
+  const scaled = (units: number) => (units * fontPx) / beleren.unitsPerEm;
+  const band = {
+    left: (TITLE.rect.leftPct / 100) * W,
+    right: ((TITLE.rect.leftPct + TITLE.rect.widthPct) / 100) * W,
+  };
+  const nameArea = { x0: 60, x1: 1440, y0: 100, y1: 240 };
+
+  /** What the font says of a line as it is drawn (displayLine, one kerned run). */
+  function metrics(text: string) {
+    const line = displayLine(text);
+    const glyphs = beleren.glyphsForString(line);
+    const kerned = scaled(beleren.layout(line, { liga: false }).advanceWidth);
+    const unkerned = scaled(glyphs.reduce((sum, g) => sum + g.advanceWidth, 0));
+    const lsb = scaled(glyphs[0].bbox.minX);
+    const last = glyphs[glyphs.length - 1];
+    const rsb = scaled(last.advanceWidth - last.bbox.maxX);
+    // The slot's tracking follows every glyph but the last one's ink.
+    const tracking = (glyphs.length - 1) * (TITLE.letterSpacingEm ?? 0) * fontPx;
+    return { kerned, unkerned, lsb, rsb, tracking };
+  }
+
+  it.each(["Astronomy Tower", "Voldemort’s Vengeful Spirit", "Avatar of Woe, Tyrant"])(
+    "%s: its ink is centred on the bar, kerned or not",
+    async (title) => {
+      expect(TITLE.align).toBe("center");
+      const m = metrics(title);
+      // The line fits the bar at the full size (no shrink, no "…")…
+      expect(m.kerned).toBeLessThan(band.right - band.left - 40);
+      // …and the measurement can tell the two centrings apart: the old one
+      // sat half the kerning left.
+      const halfKerning = (m.unkerned - m.kerned) / 2;
+      expect(halfKerning, title).toBeGreaterThan(5);
+      const b = await bake(emblem({ title }), "hd");
+      const name = inkBox(b, nameArea, white)!;
+      expect(name, "name drawn").not.toBeNull();
+      const expected = (band.left + band.right) / 2 + (m.lsb - m.rsb) / 2;
+      expect(Math.abs((name.x0 + name.x1) / 2 - expected), title).toBeLessThanOrEqual(2);
+      // The whole name is drawn, at the kerned width.
+      expect(Math.abs(name.x1 - name.x0 - (m.kerned + m.tracking - m.lsb - m.rsb)), title).toBeLessThanOrEqual(4);
+    },
+    60_000,
+  );
+
+  it("a name too long for the bar still ends inside it", async () => {
+    const b = await bake(emblem({ title: "Tobias Featherwhistle the Unconquerable, Keeper of the Western Watchtowers" }), "hd");
+    const name = inkBox(b, nameArea, white)!;
+    expect(name, "name drawn").not.toBeNull();
+    expect(name.x0).toBeGreaterThanOrEqual(band.left - 2);
+    expect(name.x1).toBeLessThanOrEqual(band.right + 2);
+    // It fills the bar (shrunk and cut, not dropped), still on its centre.
+    expect(name.x1 - name.x0).toBeGreaterThan((band.right - band.left) * 0.85);
+    expect(Math.abs((name.x0 + name.x1) / 2 - (band.left + band.right) / 2)).toBeLessThanOrEqual(8);
   }, 60_000);
 });

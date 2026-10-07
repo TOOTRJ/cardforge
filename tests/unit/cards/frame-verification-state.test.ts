@@ -197,7 +197,7 @@ describe("verificationState", () => {
       expect(verificationState(tick(34), template, "h", 34).stale, template).toBe(false);
     }
     // Every other template's tick — a legacy one or a v33 one — stays fresh:
-    // the token wording (alphatoken, the showcases, flip's Roles) moves no slot.
+    // the token wording (the showcases, flip's Roles) moves no slot.
     for (const template of FRAME_TEMPLATE_VALUES.filter((t) => t !== "m15token" && t !== "m15tokenartifact")) {
       expect(verificationState(legacy, template, "none", 34).stale, `${template} legacy`).toBe(false);
       expect(verificationState(tick(33), template, "h", 34).stale, `${template}@33`).toBe(false);

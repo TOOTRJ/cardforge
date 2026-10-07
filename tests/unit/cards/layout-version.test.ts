@@ -295,7 +295,7 @@ describe("v25 / v26 — the frame-review follow-ups (2026-09-25)", () => {
   it("v25 re-bakes only the follow-up templates; v26 only etched cards, on any template", async () => {
     const classifyForSweep = await sweepAt(28);
     for (const t of [
-      "agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland", "extendedart",
+      "agclassic", "alphaland", "retro", "retroland", "modern", "modernland", "extendedart",
       "battle", "split", "tarkirdragon",
     ]) {
       expect(classifyForSweep(row(t)), t).toBe("rebake");
@@ -366,7 +366,7 @@ describe("v27 / v28 — the owner's follow-up decisions (2026-09-25)", () => {
     for (const t of ["agclassic", "alphaland", "tarkirdragon", "tarkirghostfire", "m15pw"]) {
       expect(classifyForSweep(row({ template: t, finish: "regular" })), t).toBe("rebake");
     }
-    for (const t of ["alphatoken", "m15", "modern", "retro", "saga", "tarkirdraconic", "bloomanime"]) {
+    for (const t of ["m15", "modern", "retro", "saga", "tarkirdraconic", "bloomanime"]) {
       expect(classifyForSweep(row({ template: t, finish: "regular" })), t).toBe("stamp");
     }
     expect(classifyForSweep(row({ template: "m15", finish: "foil" }))).toBe("rebake");
@@ -457,13 +457,14 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // "other" templates.
   const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split"];
 
-  it("word spacing: every card on the 25 display-footer templates", async () => {
+  it("word spacing: every card on the 24 display-footer templates (25 with the retired Alpha token)", async () => {
     const classifyForSweep = await sweepAt(29);
     const displayFooter = FRAME_TEMPLATE_VALUES.filter(
       (t) => getFrameProfile(t).footer?.font === "display" && !POST_V29_TEMPLATES.includes(t) && !FOOTER_SINCE_V29.includes(t),
     );
-    // The frozen v29 list is these 25 (their footer prints "ART: …").
-    expect(displayFooter).toHaveLength(25);
+    // The frozen v29 list is these 24 (their footer prints "ART: …") and
+    // the since-retired alphatoken (TODO 4.54), inert there.
+    expect(displayFooter).toHaveLength(24);
     for (const t of displayFooter) {
       // Even a one-word name and type line: the footer's T + colon kerns.
       expect(classifyForSweep(at(t)), t).toBe("rebake");
@@ -556,7 +557,7 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
     // bloomanime is the one backdrop template outside the display-footer list.
     expect(classifyForSweep(foil("bloomanime"))).toBe("rebake");
     expect(classifyForSweep(at("bloomanime"))).toBe("stamp");
-    for (const t of ["m15pw", "m15token", "m15tokenartifact", "alphatoken", "expeditionland"]) {
+    for (const t of ["m15pw", "m15token", "m15tokenartifact", "expeditionland"]) {
       expect(classifyForSweep(foil(t)), t).toBe("rebake");
     }
     // A foil card on a template with no backdrop change.
@@ -1002,8 +1003,6 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
       expect(profile.symbolRect, t).toEqual({ topPct: 82.34 + (8 / 2100) * 100, leftPct: 80.13, widthPct: 12, heightPct: 4.1 });
       expect(profile.pt?.plateAssetPathTemplate, t).toMatch(/^\/frames\/m15(artifact)?\/pt\/\{color\}\.png$/);
     }
-    // alphatoken is not one of them: only its tokens' wording changes.
-    expect(getFrameProfile("alphatoken").symbolRect).toBeUndefined();
   });
 
   it("re-bakes EVERY card on the two token frames, and no non-token card on any other template", async () => {
@@ -1038,7 +1037,7 @@ describe("v34 — the token release: 4.49's token frame + 3b.15's wording (one b
     expect(classifyForSweep(at("m15token", { layout_version: 34 }))).toBe("current");
   });
 
-  it("re-bakes a token whose printed line changes on ANY template (alphatoken, a showcase, flip's Roles)", async () => {
+  it("re-bakes a token whose printed line changes on ANY template (a showcase, flip's Roles)", async () => {
     const classifyForSweep = await sweepAt(34);
     for (const t of ALL) {
       // "Basic Token — Wastes" → "Token Basic — Wastes".

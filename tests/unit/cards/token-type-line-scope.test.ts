@@ -73,7 +73,7 @@ describe("tokenTypeLineChanged — 3b.15's card scope", () => {
   });
 
   it("covers every token template, and a Treasure's stray P/T", () => {
-    for (const template of ["m15tokenartifact", "alphatoken", "fullart", "m15textless", "extendedart", "flip"]) {
+    for (const template of ["m15tokenartifact", "fullart", "m15textless", "extendedart", "flip"]) {
       expect(tokenTypeLineChanged(row(["Artifact", ["Treasure"], null, null], { frame_style: { template } }))).toBe(true);
     }
     expect(tokenTypeLineChanged(row(["Artifact", ["Treasure"], "1", "1"]))).toBe(true);

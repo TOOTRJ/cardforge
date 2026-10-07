@@ -443,8 +443,8 @@ export default async function AdminFrameComparePage({
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to all frames
         </Link>
         <PageHeader
-          // The template key beside the label (TODO 4.48a: "Token" is
-          // m20token and alphatoken).
+          // The template key beside the label (TODO 4.48a: labels repeat
+          // across eras — "Standard", "Land").
           eyebrow={`Admin · Frame compare · ${template}`}
           title={`${eraGroupFrameLabel(template)} · ${color.toUpperCase()}`}
           description={referenceLine}

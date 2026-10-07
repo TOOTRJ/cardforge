@@ -335,13 +335,6 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
     ["fullart/main", "m15textless/main", "m15textlessland/main"],
     ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up"],
   ],
-  [
-    ["alphatoken/main"],
-    [
-      "1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "flavor only",
-      "level up", "modal bullets", "pips + reminder",
-    ],
-  ],
 ];
 
 const expectedClips = () =>

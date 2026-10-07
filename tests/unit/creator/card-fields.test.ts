@@ -200,3 +200,14 @@ describe("the anatomy switches in the editor (TODO 4.6.0)", () => {
     expect(defaultValuesFor(null, []).frame_style).toMatchObject({ crown: true, twoColor: true });
   });
 });
+
+describe("a stored card on a retired template (TODO 4.54)", () => {
+  it("opens on the M15 token — with the text box when it has text — so the next save stores that", () => {
+    const withText = savedCard({ finish: "regular", template: "alphatoken" } as never);
+    expect(defaultValuesFor(withText, []).frame_style.template).toBe("m15tokentext");
+    const bare = { ...withText, rules_text: null, flavor_text: " " } as Card;
+    expect(defaultValuesFor(bare, []).frame_style.template).toBe("m15token");
+    expect(remixValuesFrom(withText, []).frame_style.template).toBe("m15tokentext");
+  });
+});
+

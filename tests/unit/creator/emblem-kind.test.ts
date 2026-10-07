@@ -119,8 +119,8 @@ describe("the emblem kind", () => {
       action: "apply",
       patch: { card_type: "token", template: "m15token" },
     });
-    // From the Classic era (alphatoken): no Classic emblem, so it asks.
-    expect(planKindChange("emblem", { cardType: "token", template: "alphatoken" })).toMatchObject({
+    // From another era (a showcase treatment): no emblem there, so it asks.
+    expect(planKindChange("emblem", { cardType: "token", template: "fullart" })).toMatchObject({
       action: "confirm",
       patch: { card_type: "emblem", template: "emblem" },
     });

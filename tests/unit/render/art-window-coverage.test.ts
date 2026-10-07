@@ -621,7 +621,6 @@ describe("the art-window known failures", () => {
         "lotr",
         "lotrscroll",
         // Found on 2026-09-29.
-        "alphatoken",
         "avatar",
         "bloomanime",
         "bloomburrow",

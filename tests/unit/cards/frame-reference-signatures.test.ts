@@ -228,15 +228,13 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });
 
-  it("names the template keys when the two frames share a label (\"Token\", TODO 4.48a)", () => {
-    // The full-art design (m20token) and Alpha's token (alphatoken) are both
-    // "Token" since 4.48a: a 1993-frame token pinned on the m20token row
-    // must not read "resolves it to the Token frame, not Token".
+  it("a 1993-frame token resolves to the M15 token, as nearest (TODO 4.54: the Alpha token is retired)", () => {
+    // No 1993-frame token was printed; a printing that claims the frame
+    // lands where the 1997 and 2003 tokens do (token/old-frame, 4.43).
     const soldier = card(idOf("m20token", "w", "Soldier"));
     const oldBorder = scryfallCardSchema.parse({ ...(printings[soldier.id] as object), frame: "1993" });
-    expect(frameMatchFromScryfall(oldBorder).template).toBe("alphatoken");
-    expect(validateReferenceForCombo(oldBorder, "m20token", "w").warnings.join(" ")).toMatch(
-      /resolves it to the Token \(alphatoken\) frame, not Token \(m20token\)\./,
-    );
+    const match = frameMatchFromScryfall(oldBorder);
+    expect(match.template).toBe("m15token");
+    expect(match.status).toBe("nearest");
   });
 });
