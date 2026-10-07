@@ -500,7 +500,12 @@ describe("the footer line is profile data (TODO 4.8.0)", () => {
 // ---------------------------------------------------------------------------
 
 describe("the symbol style is profile data (TODO 4.8.0)", () => {
-  const PIPS = { ...CREATURE, cost: "{3}{G}", rulesText: "{T}: Add {G}." } as CardPreviewData;
+  // The cost is {X}{G}, never a numeral: this file is inside Tailwind's source
+  // scan, and a numeric mana class written out here (the generic-mana pip's)
+  // is also Tailwind's margin-inline-start utility — the build would emit it
+  // and every such pip on the site would gain a margin
+  // (tests/unit/content/mana-class-collision.test.ts).
+  const PIPS = { ...CREATURE, cost: "{X}{G}", rulesText: "{T}: Add {G}." } as CardPreviewData;
   /** Each disc the bake draws: its hard shadow (or none). */
   const bakeDiscs = async (card: CardPreviewData) =>
     (await bakeNodes(card))
@@ -517,12 +522,12 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(getFrameProfile(template).symbolStyle, template).toBeUndefined();
       expect(symbolStyleOf(getFrameProfile(template)).id, template).toBe("modern");
     }
-    // {3}{G} in the cost, {T} and {G} in the rules: four discs, each with
+    // {X}{G} in the cost, {T} and {G} in the rules: four discs, each with
     // the bake's one-layer hard shadow at its own size.
     const discs = await bakeDiscs(PIPS);
     expect(discs).toHaveLength(4);
     for (const shadow of discs) expect(shadow).toMatch(/^-\d+px \d+px 0 #111$/);
-    expect(previewPips(preview(PIPS))).toEqual(["ms ms-cost ms-shadow ms-3", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
+    expect(previewPips(preview(PIPS))).toEqual(["ms ms-cost ms-shadow ms-x", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
   }, 60_000);
 
   it("a style with no shadow and another tap reaches every pip of the card in both renderers, and both shadow models", async () => {
@@ -543,7 +548,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(texts).toContain(getManaCodepoint("tap-4ed"));
       expect(texts).not.toContain(getManaCodepoint("tap"));
       // …and the preview the same classes, on the card's own pips.
-      expect(previewPips(preview(PIPS))).toEqual(["ms ms-cost ms-3", "ms ms-cost ms-g", "ms ms-cost ms-tap-4ed", "ms ms-cost ms-g"]);
+      expect(previewPips(preview(PIPS))).toEqual(["ms ms-cost ms-x", "ms ms-cost ms-g", "ms ms-cost ms-tap-4ed", "ms ms-cost ms-g"]);
       // The rules layout's inline pip keeps no shadow clear; the cost row is
       // shorter by the shadow's reach.
       const style = "test" as unknown as import("@/lib/cards/symbol-style").SymbolStyle;
@@ -552,7 +557,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(costRowWidthPct("{3}{G}", 0.04) - costRowWidthPct("{3}{G}", 0.04, styles.symbolStyle(style))).toBeCloseTo(0.1 * 0.04, 12);
       // Another frame's card is untouched.
       const other = { ...PIPS, frameStyle: { template: "modern", finish: "regular" } } as unknown as CardPreviewData;
-      expect(previewPips(preview(other))).toEqual(["ms ms-cost ms-shadow ms-3", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
+      expect(previewPips(preview(other))).toEqual(["ms ms-cost ms-shadow ms-x", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
     } finally {
       delete table.test;
     }

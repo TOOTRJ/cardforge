@@ -204,3 +204,35 @@ describe("a shrunk measured line keeps its baseline in its OWN face", () => {
     expect(slotTextDy({ ...slot, font: "body" }, shrunk)).toBe(0.001 + -((774 - 225) / 2 / 1000) * (shrunk - 0.05));
   });
 });
+
+describe("the new profile fields are code-owned: a stored override cannot set them (skeptic pass)", () => {
+  it("frame_profile_overrides' strict schema refuses a face, a prefix, a footer alignment and a symbol style — the row reads as no override", async () => {
+    const { parseFrameProfileOverride, resolveFrameProfile } = await import("@/lib/cards/profile-override");
+    const refused: unknown[] = [
+      { title: { font: "body" } },
+      { type: { font: "body" } },
+      { footer: { font: "body" } },
+      { footer: { prefix: "Illus. " } },
+      { footer: { align: "center" } },
+      { pt: { font: "body" } },
+      { loyalty: { font: "body" } },
+      { secondFace: { pt: { font: "body" } } },
+      { adventure: { title: { font: "body" } } },
+      { loyaltyRows: { badgeFont: "body" } },
+      { chapters: { badge: { numeralFont: "display" } } },
+      { symbolStyle: "modern" },
+      // A face that is not registered could never arrive this way either.
+      { title: { font: "matrix" } },
+    ];
+    for (const row of refused) expect(parseFrameProfileOverride(row), JSON.stringify(row)).toBeNull();
+    // What the schema does accept (geometry) leaves every face where it was.
+    const override = parseFrameProfileOverride({ title: { sizePct: 0.046 }, footer: { sizePct: 0.024, letterSpacingEm: 0.02 }, pt: { sizePct: 0.05 } });
+    expect(override).not.toBeNull();
+    const merged = resolveFrameProfile("m15", { m15: override! });
+    const base = getFrameProfile("m15");
+    for (const role of FACE_ROLES) expect(faceOf(merged, role).id, role).toBe(faceOf(base, role).id);
+    expect(merged.footer?.align).toBe(base.footer?.align);
+    expect(merged.footer?.prefix).toBeUndefined();
+    expect(merged.symbolStyle).toBeUndefined();
+  });
+});

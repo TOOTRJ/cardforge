@@ -4435,6 +4435,18 @@ bump; `tests/unit/render/profile-data-parity.test.tsx` gives a throwaway
 profile each of them and requires the same answer from the bake and the
 preview.
 
+**A pip's class is never written out as a literal.** mana-font's class for
+generic mana is `ms-` + the number, and Tailwind reads the same token as a
+`margin-inline-start` utility — which it emits for every candidate it finds
+in ANY file git does not ignore (tests, scripts and docs too). The app
+builds the class from the symbol, so the build has no such utility; one
+literal anywhere (the first draft of the parity test spelled the generic-3
+pip's class in an expectation) gives every such pip in the browser a 12 px
+left margin — preview only, so no bake-side check sees it. mana-font guards
+the 2 itself (`margin-left: inherit !important`); nothing guards the rest.
+`tests/unit/content/mana-class-collision.test.ts` fails on any such token
+in the tree: use `{X}` or a colour in a test's expectation.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
