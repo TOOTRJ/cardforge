@@ -19,8 +19,8 @@ import {
 //   * a character the face's first font maps to an EMPTY glyph vanishes —
 //     MPlantin does that to Č, °, ×, →, đ and ~180 more, so they drop out of
 //     rules text although MPlantin italic and Beleren have them;
-//   * italic runs (flavor text, reminder text, a saga's intro) never reach
-//     the Noto fallback, so "Ǵ" draws in rules text but not in flavor text;
+//   * italic runs (flavor text, reminder text) never reach the Noto
+//     fallback, so "Ǵ" draws in rules text but not in flavor text;
 //   * in names, type lines, the footer and stats a character only the Noto
 //     fallback has draws in some words and as a box in others — flagged, as
 //     one that "may not show".
@@ -33,8 +33,9 @@ import {
 /** Which bake face a field is drawn with: "display" (titles, type lines,
  *  footer, stats), "rules" (rules text — read through the shared tokenizer,
  *  so its reminder text and ability words are checked as italic and its
- *  {mana} tokens, which become pips, are skipped), "italic" (flavor text,
- *  a saga's intro) or "body" (plain MPlantin: a collector card's footer
+ *  {mana} tokens, which become pips, are skipped — a saga's reminder
+ *  block and chapters are rules text too, TODO 4.21c), "italic" (flavor
+ *  text) or "body" (plain MPlantin: a collector card's footer
  *  mark in the © slot — TODO 4.9b — read as it is, no tokenizer). */
 export type GlyphFace = "display" | "rules" | "italic" | "body";
 
@@ -198,7 +199,7 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
     { label: "Type line", face: "display", value: `${v.supertype} ${v.subtypes_text}` },
     { label: "Rules text", face: "rules", value: v.rules_text },
     ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, face: "rules" as const, value: row.text })),
-    { label: "Saga intro", face: "italic", value: v.saga_intro },
+    { label: "Saga intro", face: "rules", value: v.saga_intro },
     ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, face: "rules" as const, value: row.text })),
     { label: "Flavor text", face: "italic", value: v.flavor_text },
     { label: "Stats", face: "display", value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },

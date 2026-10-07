@@ -613,15 +613,15 @@ describe("the art-window known failures", () => {
   it("lists today's failures — the TODO's list, and what checking every colour of every master found", () => {
     expect(Object.keys(ART_WINDOW_KNOWN_FAILURES).sort()).toEqual(
       [
-        // 7.6's list (2026-09-25): split, lotr, battle, lotrscroll and the
-        // saga hairline. (The M15 family's windows — then MSE, now CC —
-        // were covered by layout v35, 4.4 (2); flip, adventure and
-        // aftermath by their Card Conjurer masters, layout v38, 4.21a.)
+        // 7.6's list (2026-09-25): split, lotr, battle and lotrscroll.
+        // (The M15 family's windows — then MSE, now CC — were covered by
+        // layout v35, 4.4 (2); flip, adventure and aftermath by their Card
+        // Conjurer masters, layout v38, 4.21a; the saga's hairline by its
+        // own, 4.21c.)
         "split",
         "lotr",
         "battle",
         "lotrscroll",
-        "saga",
         // Found on 2026-09-29.
         "alphatoken",
         "avatar",

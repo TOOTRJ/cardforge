@@ -133,6 +133,16 @@ describe("findUnrenderableText over the creator's fields", () => {
     );
   });
 
+  it("reads a saga's reminder block as rules text: roman words reach the fallback, its parenthesised reminder is italic (TODO 4.21c)", () => {
+    // The rail draws the block with the text's own emphasis (v33 set it
+    // italic throughout, where "Ǵ" never drew).
+    const intro = (saga_intro: string) =>
+      findUnrenderableText(cardGlyphFields({ ...BASE, artist_credit: "Volkan Baga", saga_intro })).filter((f) => f.label === "Saga intro");
+    expect(intro("Ǵoran's tale")).toEqual([]);
+    expect(intro("Read ahead (Ǵoran chooses a chapter.)")).toEqual([{ label: "Saga intro", characters: ["Ǵ"] }]);
+    expect(intro("(Add {R} after your draw step.)")).toEqual([]);
+  });
+
   it("survives missing row arrays (a partial reset never takes the form down)", () => {
     const values = { ...BASE, loyalty_abilities: undefined, saga_chapters: undefined };
     expect(() => cardGlyphFields(values)).not.toThrow();

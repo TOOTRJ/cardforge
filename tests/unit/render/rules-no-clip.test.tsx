@@ -23,6 +23,7 @@ import {
   type RulesLayout,
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
+import { sagaRail, sagaRailDrawing, type SagaRail } from "@/lib/cards/saga-rail";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import { RULES_HD_WIDTH, RULES_SIZE_PX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
@@ -51,6 +52,13 @@ import { RULES_MATRIX, plainText, type RulesCase } from "@/tests/unit/cards/fixt
 // The whole matrix at 750 px (the OG image, free live downloads), a subset at
 // HD. A layout the fit could only CLIP (past the 42 px floor) is an explicit
 // expectation below — its lines still draw at the floor, not smaller.
+//
+// The saga's rail (TODO 4.21c) is the same drawing: its reminder block and
+// each chapter are rules layouts in their own boxes (lib/cards/saga-rail.ts
+// sagaRailDrawing), drawn by RulesBoxBake — held to the same four rules at
+// both targets, each chapter inside ITS row, on the matrix's texts split
+// over chapters and on the rail's own shapes (no reminder, a long reminder,
+// a reminder that outgrows its box, stacks, six rows).
 // ---------------------------------------------------------------------------
 
 const SENTINEL = "#ff00ff";
@@ -388,6 +396,111 @@ describe("rules consumers — the HD bake (subset)", () => {
       const [hd, small] = [rulesDraw(c.layout, "hd"), rulesDraw(c.layout, "default")];
       expect(small.fontPx * 2, c.keys[0]).toBe(hd.fontPx);
       expect(small.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines))).toEqual(hd.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines)));
+    }
+  });
+});
+
+describe("the saga rail — its reminder block and every chapter row (TODO 4.21c)", () => {
+  const SLOT = getFrameProfile("saga").chapters!;
+  const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";
+  const NUMERALS = ["I", "II", "III", "IV", "V", "VI"];
+  /** A matrix text as a saga: its paragraphs dealt over (at most six)
+   *  chapters, under the standard reminder — or, for a flavor-only case,
+   *  the flavor as the reminder over one chapter. */
+  function sagaOf(text: RulesCase): SagaRail {
+    const paragraphs = (text.rules ?? "Draw a card.").split(/\n+/).filter((p) => p.trim());
+    const rows = paragraphs.slice(0, 6).map((p, i) => ({ marker: NUMERALS[i], text: i === 5 ? paragraphs.slice(5).join("\n") : p }));
+    return sagaRail(SLOT, text.rules ? REMINDER : text.flavor, rows);
+  }
+  const SHAPES: Record<string, SagaRail> = {
+    "no reminder": sagaRail(SLOT, null, [
+      { marker: "I", text: "Create a 2/2 white Knight creature token with vigilance." },
+      { marker: "II", text: "Knights you control get +2/+1 until end of turn." },
+    ]),
+    "a three-badge stack": sagaRail(SLOT, REMINDER, [
+      { marker: "I,II,III", text: "Create a 3/3 black Wraith creature token with menace. The Ring tempts you." },
+      { marker: "IV", text: "For each opponent, gain control of up to one target creature that player controls until end of turn. Untap those creatures. They gain haste until end of turn. The Ring tempts you." },
+    ]),
+    "six rows": sagaRail(
+      SLOT,
+      REMINDER,
+      NUMERALS.map((marker, i) => ({ marker, text: ["Draw a card.", "Add {G}{G}{G}.", "Éowyn's Élan — Put a −1/−1 counter on target creature.", "Scry 2.", "Create a Treasure token. (It's an artifact.)", "Destroy target artifact or enchantment."][i] })),
+    ),
+    "a long reminder": sagaRail(SLOT, `${REMINDER.slice(0, -1)} Whenever you cast your second spell each turn, put another lore counter on this Saga, then scry 1.)`, [
+      { marker: "I", text: "Draw a card." },
+      { marker: "II,III", text: "Each opponent discards a card." },
+    ]),
+    // 330 characters: past what the reminder's box holds at the floor — it
+    // is set in the chapters' column, as tall as its text, the rows under it.
+    "a reminder that outgrows its box": sagaRail(
+      SLOT,
+      `${REMINDER.slice(0, -1)} Whenever you cast your second spell each turn, put another lore counter on this Saga, then scry 1. If this Saga would leave the battlefield, exile it with three time counters on it instead. Skipped chapters don't trigger.)`,
+      [
+        { marker: "I,II", text: "Create a 2/2 white Knight creature token with vigilance." },
+        { marker: "III", text: "Knights you control get +2/+1 until end of turn." },
+      ],
+    ),
+    "a stored saga (no reminder, II–IV on one row, two paragraphs)": sagaRail(SLOT, null, [
+      { marker: "I", text: "Kashimo gets reach and double strike permanently give him 2 1/1 counters Kashimo also stuns for 3 turns now" },
+      { marker: "II,III,IV", text: "Give kashimo a 1/1 counter and give target creature 4 stun counters and 2 -1/-1 counters" },
+      { marker: "V", text: "Tap Kashimo" },
+      { marker: "VI", text: "opp picks 1 X 1/1 hexproof nurses\n/tap 1 creature a land remove buffs shuffle 3 cards from hand +1 field card into deck" },
+    ]),
+  };
+  const sagas = (): [string, SagaRail][] => [...RULES_MATRIX.map((text): [string, SagaRail] => [text.name, sagaOf(text)]), ...Object.entries(SHAPES)];
+
+  it("clips only the texts no rail can hold at the floor — and says so", () => {
+    const clipped = sagas().filter(([, rail]) => rail.clipped || rail.intro?.clipped || rail.rows.some((row) => row.text.clipped));
+    // 1,200 characters in one chapter. (A long reminder is not one of them:
+    // the 260-character one outgrows its box — the chapters' column, the
+    // ladder's floor, the rows under it — and so does the 330-character one.)
+    expect(clipped.map(([name]) => name).sort()).toEqual(["1200 chars"]);
+    for (const [name, rail] of clipped) {
+      if (rail.clipped) expect(rail.sizePx, name).toBe(RULES_SIZE_PX.floor);
+    }
+    const grown = sagas().filter(([, rail]) => rail.introGrown);
+    expect(grown.map(([name]) => name).sort()).toEqual(["a reminder that outgrows its box", "flavor only"]);
+    for (const [name, rail] of grown) {
+      expect(rail.intro!.sizePx, name).toBe(RULES_SIZE_PX.floor);
+      expect(rail.intro!.clipped, name).toBe(false);
+    }
+  });
+
+  for (const target of ["default", "hd"] as const) {
+    it(`draws every fitted rail inside its boxes, line for line (${target})`, async () => {
+      let boxes = 0;
+      for (const [name, rail] of sagas()) {
+        if (rail.clipped) continue;
+        const d = sagaRailDrawing(rail, target);
+        if (d.intro && !d.intro.clipped) {
+          await checkDrawn(d.intro, target, `saga · ${name} · reminder`);
+          boxes += 1;
+        }
+        let bottom = -Infinity;
+        for (const [i, row] of d.rows.entries()) {
+          if (row.text.blocks.every((b) => b.lines.length === 0)) continue;
+          const { placed } = await checkDrawn(row.text, target, `saga · ${name} · row ${i}`);
+          // …inside its OWN row: the box checkDrawn held the ink to is the
+          // row's whole-px box, below the row before it.
+          expect([placed.box.top, placed.box.top + placed.box.height]).toEqual([row.top, row.bottom]);
+          expect(row.top).toBeGreaterThanOrEqual(bottom);
+          bottom = row.bottom;
+          boxes += 1;
+        }
+      }
+      expect(boxes).toBeGreaterThan(40);
+    }, 180_000);
+  }
+
+  it("draws the same lines at both targets, the 750 font exactly half the HD one", () => {
+    for (const [name, rail] of sagas()) {
+      const [hd, small] = [sagaRailDrawing(rail, "hd"), sagaRailDrawing(rail, "default")];
+      const layouts = (d: typeof hd) => [...(d.intro ? [d.intro] : []), ...d.rows.map((row) => row.text)];
+      layouts(hd).forEach((layout, i) => {
+        const [a, b] = [rulesDraw(layout, "hd"), rulesDraw(layouts(small)[i], "default")];
+        expect(b.fontPx * 2, name).toBe(a.fontPx);
+        expect(b.blocks.map((x) => (x.kind === "blank" ? 0 : x.lines))).toEqual(a.blocks.map((x) => (x.kind === "blank" ? 0 : x.lines)));
+      });
     }
   });
 });

@@ -102,27 +102,6 @@ export function displayTextWidthEm(
   return chars.reduce((w, ch) => w + advanceEm(ch) + letterSpacingEm, 0);
 }
 
-/**
- * The EXACT width of one line of display-face text at a 1 em font size:
- * its advances in the font's own units, summed before any rounding — what
- * Satori lays a text node out at (ceiled to the px; it doesn't kern). The
- * saga's marker badge is sized by it, so its box is the px v32's bake gave
- * it ("II,III,IV" 116.96 px at 36 px, not the 117.07 the thousandth-rounded
- * advances add up to — a px wider box and a sub-pixel shift of the whole
- * badge, layout v33 review). Unlisted characters as displayTextWidthEm.
- */
-export function displayTextExactWidthEm(text: string): number {
-  let units = 0;
-  let em = 0;
-  for (const ch of text) {
-    if (/\p{M}/u.test(ch)) continue;
-    const u = advanceUnits(ch) ?? advanceUnits(ch.normalize("NFD").charAt(0));
-    if (u === undefined) em += UNKNOWN_ADVANCE_EM;
-    else units += u;
-  }
-  return units / UNITS_PER_EM + em;
-}
-
 // ---------------------------------------------------------------------------
 // displayTextEm — aftermath's sideways bars.
 // ---------------------------------------------------------------------------

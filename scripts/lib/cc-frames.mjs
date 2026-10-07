@@ -1140,6 +1140,58 @@ export const FLIP_LOWER_RECUT = {
 const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius";
 
 // ---------------------------------------------------------------------------
+// The saga (TODO 4.21c = 3.7; design 2026-09-29 §3.4, owner decisions
+// 2026-09-29): Card Conjurer's 'Regular Frames' saga pack, native
+// 1500 × 2100, copied 1:1 — the chapter RIBBON is in each master (x 66–166
+// with its gold outlines, full width from the fold under the reminder block,
+// ≈ 610 px, down to 1663 px, then tapering to its tip at 1748 px — 18–26 px
+// lower than the DOM prints' tip, as the pack draws it), where the 375 px
+// MSE cut (magic-m15-saga, in git until
+// now) had a flat cream rail and a window that started 26 px left of the
+// prints'. Keys w u b r g m are the pack's `sagaFrame<K>.png`; `c` is its
+// 'Land Frame' (`l.png`) — the only printed colourless saga is a land, MH2
+// #259 Urza's Saga (owner decision 2026-09-29); the pack's 'Artifact Frame'
+// (sagaFrameA) is not built (no profile key paints it). Against the prints
+// (Scryfall PNGs at 1500 × 2100; DOM #21 / #42 / #90 / #122 / #173, 40K
+// #126, LTC #58, MH2 #259) every bar, the window and the rail's outline
+// register within the scans' ±1–3 px: no re-cut.
+//
+// The rail's two bitmaps are the pack's own, drawn by versionSaga.js and by
+// both of our renderers: the chapter badge (`sagaChapter.png`, a 118 × 132
+// gold hexagon — the prints' measures 119–120 × 130–132) and the row divider
+// (`sagaDivider.png`, 592 × 9: a soft dark line over a white one, fading out
+// to the right, drawn 6 px tall), published at native size as
+// saga/chapter/badge.png and saga/chapter/divider.png (SAGA_CHAPTER_PIECES).
+//
+// The pack's nine masks (SAGA_MASK_INPUTS) are importer INPUTS for the
+// two-colour saga's pair masters (TODO 4.6f: `saga/<pair>.png` through
+// twoColorRecipe, the banner split by Banner / Banner (Right), the text box
+// by Text / Text (Right)): recorded here and in provenance, fetched into the
+// cache with the masters, and never published — no `saga/mask/*` object.
+// ---------------------------------------------------------------------------
+const SAGA = "img/frames/saga";
+/** packSagaRegular.js `masks`, by the pack's own names (design D2). */
+export const SAGA_MASK_INPUTS = Object.freeze({
+  Pinline: `${SAGA}/sagaMaskPinline.png`,
+  Title: `${REG}/m15MaskTitle.png`,
+  Type: `${SAGA}/sagaMaskType.png`,
+  Frame: `${SAGA}/sagaMaskFrame.png`,
+  Banner: `${SAGA}/sagaMaskBanner.png`,
+  "Banner (Right)": `${SAGA}/sagaMaskBannerRight.png`,
+  Text: `${SAGA}/sagaMaskText.png`,
+  "Text (Right)": `${SAGA}/sagaMaskTextRight.png`,
+  Border: `${SAGA}/sagaMaskBorder.png`,
+});
+/** The rail's bitmaps (versionSaga.js): published path under the template's
+ *  folder → the pack's file. The SAGA profile's `chapters.badge.assetPath` /
+ *  `chapters.divider.assetPath` name these objects (a unit test keeps them
+ *  in step). */
+export const SAGA_CHAPTER_PIECES = Object.freeze({
+  "chapter/badge": `${SAGA}/sagaChapter.png`,
+  "chapter/divider": `${SAGA}/sagaDivider.png`,
+});
+
+// ---------------------------------------------------------------------------
 // The transform bodies (TODO 5.1a; design 2026-10-02, design-next/5/final.md
 // §2.1 / §2.3, frames.md §1.1–1.4 / §3.6 / §4.4): Card Conjurer's 'Transform
 // (Front)', 'Transform (Back)' (the 2016–22 look, the icon well EMPTY at the
@@ -1695,8 +1747,8 @@ const DFC_PAIR_NOTE =
 
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, pack?, transforms?,
- * notes }.
+ * ptCut?, pieces?, maskInputs?, recut?, recutUp?, bridge?, tones?, excluded?,
+ * pack?, transforms?, notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
  * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
  * solid, the artifact name pill's slate made solid, owner decisions
@@ -1721,6 +1773,11 @@ const DFC_PAIR_NOTE =
  * silver, EMBLEM_SILVER_TONE; toneRegion for an outlined region — its name
  * pill, type pill and text box, EMBLEM_NAME_PILL_TONE, EMBLEM_TYPE_PILL_TONE,
  * EMBLEM_TEXT_BOX_TONE).
+ * `pieces` (4.21c's saga: its chapter badge and row divider) are a pack's
+ * own bitmaps written at native size to <template>/<name>.png; `maskInputs`
+ * are pack masks RECORDED for a later recipe (the two-colour saga's pair
+ * masters, TODO 4.6f) — fetched into the cache, listed in provenance, never
+ * written to the build folder.
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
@@ -2091,6 +2148,26 @@ export const CC_TEMPLATES = {
       "colourless = CC's 'Artifact Frame' (aftermath/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless aftermath was ever printed and the pack has no colourless frame; never offered (no reference, never ticked)",
       "gold (m) is built for the key but needs TODO 4.26: every printed two-colour aftermath is mono // mono (21 mixed, 6 same-colour), none gold // gold — flagged in the registry, never ticked until a print or 4.26",
       "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)",
+    ],
+  },
+  // 4.21c — the saga (DOM #21 History of Benalia and every 2015-frame saga
+  // print): the title bar, the chapter rail with its ribbon, the tall art
+  // column, the type bar.
+  saga: {
+    colors: {
+      ...perColor((k) => [layer(`${SAGA}/regular/sagaFrame${k.toUpperCase()}.png`)], WUBRGM),
+      c: [layer(`${SAGA}/regular/l.png`)],
+    },
+    pieces: SAGA_CHAPTER_PIECES,
+    maskInputs: SAGA_MASK_INPUTS,
+    pack: "packSagaRegular.js 'Regular Frames' (groupSaga-1.js; versionSaga.js draws the chapter badges and dividers)",
+    transforms: `${NATIVE_1500}; the chapter badge and the row divider published at native size (118x132, 592x9)`,
+    notes: [
+      "source: CC 'Regular Frames' saga pack (packSagaRegular.js): the M15 title bar, the chapter rail with the reminder block and the RIBBON the chapter badges sit on, the art column on the right, the type bar — replaces the 375 px MSE cut (magic-m15-saga.mse-style, import-mse-profiles.mjs), which had no ribbon and whose window started 26 px left of the prints'",
+      "colourless = CC's 'Land Frame' (saga/regular/l.png), the land saga (owner decision 2026-09-29): the only printed colourless saga is MH2 #259 Urza's Saga, an Enchantment Land; a colourless non-land saga wears it too (none was printed)",
+      "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
+      "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
+      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)",
     ],
   },
   // --- TODO 5.1a: the transform bodies (see the section above CC_TEMPLATES).
@@ -3142,6 +3219,10 @@ export function sourceFilesFor(def) {
   if (def.shield) files.add(def.shield.mask);
   for (const src of Object.values(def.ptCut?.image ?? {})) files.add(src);
   for (const mask of Object.values(def.ptCut?.masks ?? {})) files.add(mask);
+  // A pack's own bitmaps published beside the masters, and the masks kept
+  // for a later recipe (4.21c's saga).
+  for (const src of Object.values(def.pieces ?? {})) files.add(src);
+  for (const src of Object.values(def.maskInputs ?? {})) files.add(src);
   // A masked tone's mask (TODO 5.1a, the transform backs).
   for (const key of builtColors(def)) {
     for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);

@@ -231,7 +231,10 @@ describe("baselines (TextSlot.dy)", () => {
     // Aftermath (v38): a CC master; its text slots stay as print-matched in
     // 0.22 / v32 (baselines kept).
     ["aftermath", base.title, base.type],
-    ["saga", mse.title, mse.type],
+    // Saga (TODO 4.21c): a CC master. The name keeps its baseline (already
+    // the prints', 185 px); the type line moves onto the prints' — 9.3 px
+    // down at HD (DOM #21 / #42 / #90 / #122 / #173: 1854–1857 px).
+    ["saga", mse.title, (mse.type ?? 0) + 9.3 / 1500],
     // Flip (layout v38, TODO 4.21a): packFlip.js's bars, the name and type
     // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
     // (−9.2 px and −4.9 px at HD).
@@ -275,7 +278,9 @@ describe("baselines (TextSlot.dy)", () => {
     expect(at("m15")).toEqual([-2, -5, -1, -3]);
     expect(at("m15pw")).toEqual([0, -5, 0, -3]);
     expect(at("extendedart")).toEqual([-2, -1, -1, 0]);
-    expect(at("saga")).toEqual([-5, -5, -3, -3]);
+    // Saga (4.21c): the name kept, the type line 9.3 px lower onto the
+    // prints (−5.3 + 9.3 = +4 at HD, +2 at 750).
+    expect(at("saga")).toEqual([-5, 4, -3, 2]);
     // Flip (v38): onto the prints — −9.2 / −4.9 px at HD, half at 750.
     expect(at("flip")).toEqual([-9, -5, -5, -2]);
     // Adventure (v38): CC's type-line print offset, as m15.

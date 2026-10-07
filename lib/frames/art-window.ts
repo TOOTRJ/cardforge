@@ -601,12 +601,8 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "both windows start at 200–202 px, the slots at 220.5: a 1.2 % H strip on each half (4.21's interim fix: art top 14.7 → 13.4)",
     maxMissPx: 21.5,
   },
-  saga: {
-    keys: "all",
-    todo: ["4.21"],
-    why: "window ≈ 725–1382 × 234–1760 vs slot 751.5–1380 × 237.3–1759.8: 1.5 px at the divider, a hairline along the top to x 715, 1–4 px elsewhere",
-    maxMissPx: { w: 28.5, u: 26.5, b: 37.5, r: 26.5, g: 27.5, c: 27.5, m: 27.5 },
-  },
+  // (4.21c struck saga: its CC masters' window, 752–1384 × 237–1758 px on
+  // every colour, is covered with 1.45–2.27 px to spare.)
   battle: { keys: "all", todo: ["4.21"], why: "borderless PNG: the window runs into the transparent ring, the whole card (7.7; 4.21's interim: full-bleed artSlot)", maxMissPx: 642.5 },
   // Transparent rings and bands (7.7's known failures) the window leaks into,
   // and the showcase windows cut wider than their slots.
