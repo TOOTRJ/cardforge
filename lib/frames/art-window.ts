@@ -599,13 +599,9 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   // and battle, whose window (with the see-through sliver between its
   // shield and the border) is covered with 2.8–3.8 px to spare and whose
   // translucent rim — the whole body of the see-through colourless master,
-  // one picture under the frame — with 0.8–1.25 px; 4.21c takes the saga).
-  saga: {
-    keys: "all",
-    todo: ["4.21"],
-    why: "window ≈ 725–1382 × 234–1760 vs slot 751.5–1380 × 237.3–1759.8: 1.5 px at the divider, a hairline along the top to x 715, 1–4 px elsewhere",
-    maxMissPx: { w: 28.5, u: 26.5, b: 37.5, r: 26.5, g: 27.5, c: 27.5, m: 27.5 },
-  },
+  // one picture under the frame — with 0.8–1.25 px).
+  // (4.21c struck saga: its CC masters' window, 752–1384 × 237–1758 px on
+  // every colour, is covered with 1.45–2.27 px to spare.)
   // Transparent rings and bands (7.7's known failures) the window leaks into,
   // and the showcase windows cut wider than their slots.
   lotr: { keys: "all", todo: ["4.35", "4.11"], why: "the ring 9.8–90.5 × 11.24–55.62 % vs slot 14–86 × 13–58 % (4.35 A8 / 4.11 re-measure)", maxMissPx: 69 },

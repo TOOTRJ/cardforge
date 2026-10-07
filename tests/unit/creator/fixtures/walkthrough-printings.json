@@ -1,74 +1,42 @@
 {
-  "neo-227": {
-    "id": "36052532-5028-43a8-9fc4-56221ec867fd",
-    "oracle_id": "4d23b22b-31a5-4eec-b894-2dd5a7138c5a",
-    "name": "The Kami War // O-Kagachi Made Manifest",
-    "released_at": "2022-02-18",
-    "layout": "transform",
-    "set": "neo",
-    "set_name": "Kamigawa: Neon Dynasty",
-    "set_type": "expansion",
-    "collector_number": "227",
+  "40k-126": {
+    "id": "c9551a51-2bbd-425b-a634-185921a96865",
+    "oracle_id": "fc315174-d063-41dd-9379-11d95c5fd4ed",
+    "name": "The Horus Heresy",
+    "released_at": "2022-10-07",
+    "layout": "saga",
+    "set": "40k",
+    "set_name": "Warhammer 40,000 Commander",
+    "set_type": "commander",
+    "collector_number": "126",
     "lang": "en",
     "frame": "2015",
-    "frame_effects": [
-      "fandfc",
-      "enchantment"
-    ],
     "border_color": "black",
     "full_art": false,
     "textless": false,
-    "security_stamp": "oval",
-    "keywords": [
-      "Flying",
-      "Transform",
-      "Trample"
+    "promo_types": [
+      "universesbeyond"
     ],
-    "type_line": "Enchantment — Saga // Enchantment Creature — Dragon Spirit",
+    "security_stamp": "triangle",
+    "keywords": [],
+    "type_line": "Enchantment — Saga",
+    "mana_cost": "{3}{U}{B}{R}",
+    "colors": [
+      "B",
+      "R",
+      "U"
+    ],
     "color_identity": [
       "B",
-      "G",
       "R",
-      "U",
-      "W"
+      "U"
     ],
-    "rarity": "mythic",
-    "artist": "Kieran Yanner",
+    "rarity": "rare",
+    "artist": "Roman Tishenin",
     "finishes": [
-      "nonfoil",
-      "foil"
+      "nonfoil"
     ],
-    "scryfall_uri": "https://scryfall.com/card/neo/227/the-kami-war-o-kagachi-made-manifest",
-    "card_faces": [
-      {
-        "name": "The Kami War",
-        "mana_cost": "{1}{W}{U}{B}{R}{G}",
-        "type_line": "Enchantment — Saga",
-        "colors": [
-          "B",
-          "G",
-          "R",
-          "U",
-          "W"
-        ],
-        "artist": "Kieran Yanner"
-      },
-      {
-        "name": "O-Kagachi Made Manifest",
-        "mana_cost": "",
-        "type_line": "Enchantment Creature — Dragon Spirit",
-        "power": "6",
-        "toughness": "6",
-        "colors": [
-          "B",
-          "G",
-          "R",
-          "U",
-          "W"
-        ],
-        "artist": "Kieran Yanner"
-      }
-    ]
+    "scryfall_uri": "https://scryfall.com/card/40k/126/the-horus-heresy"
   },
   "mom-147": {
     "id": "407d6723-bf58-403e-b2ac-ba52c51d356f",

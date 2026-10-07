@@ -23,7 +23,7 @@
 //
 //   node scripts/round-frame-corners.mjs                  # normalise + rewrite
 //   node scripts/round-frame-corners.mjs --dry            # report only
-//   node scripts/round-frame-corners.mjs --only retro,saga
+//   node scripts/round-frame-corners.mjs --only retro,modern
 //   node scripts/round-frame-corners.mjs --report gate.json
 //   node scripts/round-frame-corners.mjs --dir <frames dir>   (default public/frames)
 //

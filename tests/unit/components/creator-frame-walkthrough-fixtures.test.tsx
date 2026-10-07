@@ -21,7 +21,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // Card step, without a "wrong colour" toast.
 //
 // Fixtures are real Scryfall payloads (/cards/:id, captured once on
-// 2026-09-28 for the references the import fixtures lack — TKLD #2 on
+// 2026-09-28 for the references the import fixtures lack — 40K #126 on
+// 2026-10-06 for TODO 4.21c's gold saga, TKLD #2 on
 // 2026-09-29, after TODO 4.49's token re-pin, and TDOM #2 / TXLN #7 (with
 // their rules text) for 4.49 (b)'s text-box tokens, the six full-art
 // token references of 4.48 / 4.50 (2026-09-29, with their text), M21
@@ -163,7 +164,10 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   // CM2 #71.
   ["flip", "g", "Budoka Gardener", "Dokai, Weaver of Life"],
   ["flip", "b", "Nezumi Graverobber", "Nighteyes the Desecrator"],
-  ["saga", "m", "The Kami War", "O-Kagachi Made Manifest"],
+  // The gold saga's reference since TODO 4.21c: 40K #126, a three-colour
+  // print on the plain gold frame (NEO's The Kami War is a transforming saga
+  // with an enchantment frame effect — 5.5's).
+  ["saga", "m", "The Horus Heresy", ""],
   ["saga", "c", "Urza's Saga", ""],
   // Skins and treatments whose registry default is in the import fixtures.
   ["m15artifact", "c", "Solemn Simulacrum", ""],

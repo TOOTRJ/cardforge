@@ -156,7 +156,6 @@ import {
   footerInk,
   textShadowCopies,
   loyaltyBadgeAssetFor,
-  SAGA_MARKER_POINTS,
   loyaltyBadgeShapeFor,
   slotInk,
   slotTextDy,
@@ -194,11 +193,12 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import {
-  layoutSagaRail,
-  sagaBadgeWidthPx,
-  sagaRailMetrics,
-  sagaRailPx,
-  type SagaRailLayout,
+  profileSagaRail,
+  sagaRailAssetPaths,
+  sagaRailDrawing,
+  sagaRailPieces,
+  type ChapterSlot,
+  type SagaRailDrawing,
 } from "@/lib/cards/saga-rail";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import type { CardPreviewData } from "@/components/cards/card-preview";
@@ -638,16 +638,20 @@ function CardImage({
   // of the loyalty shield when it would reach it — the preview's twin
   // (lib/cards/loyalty-rows.ts).
   const loyaltyLayout = layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect);
-  // Saga chapter rail content — same structured-first resolution — and its
-  // text laid out in lines at today's size (lib/cards/saga-rail.ts, the
-  // preview's twin).
-  const sagaContent = layout.chapters
+  // Saga chapter rail content — same structured-first resolution — and the
+  // printed rail laid out for it (lib/cards/saga-rail.ts sagaRail: the
+  // reminder block, the content-sized rows, the badge stacks), then its px
+  // at this bake's target — the preview's twin. Its badges and dividers are
+  // the pack's bitmaps: drawn with the frame, under the finishes (railPieces).
+  const sagaContent = layout.chapters && !textless
     ? resolveSagaChapters(card.faceContent, card.rulesText)
     : null;
-  const sagaRail =
-    layout.chapters && sagaContent
-      ? layoutSagaRail(layout.chapters, sagaContent.intro, sagaContent.chapters)
-      : null;
+  const sagaRailLayout = profileSagaRail(layout, sagaContent, aspect);
+  const sagaDrawing = sagaRailLayout ? sagaRailDrawing(sagaRailLayout, rulesTarget) : null;
+  const railPieces =
+    sagaDrawing && layout.chapters
+      ? sagaRailPieces(sagaDrawing, layout.chapters).map((piece) => ({ ...piece, href: getFrameOverlayDataUrl(piece.path) }))
+      : [];
   // The name's fit (the preview's twin, lib/cards/title-band.ts): before a
   // detached cost box (costRect) it stops before the pips, shrinking to fit
   // there when it is long; on a measured slot (the M15-era family, layout
@@ -910,6 +914,25 @@ function CardImage({
         ) : null,
       )}
 
+      {/* The saga rail's bitmaps (TODO 4.21c): the divider on each row's top
+          edge and the chapter badges, at the boxes lib/cards/saga-rail.ts
+          gives this target — printed frame, so right after the frame and
+          under both finishes; the numerals are ink (ChapterBake). The
+          preview's SagaRailPieces twin. Sibling <img>s, never a Fragment. */}
+      {railPieces.map((piece, i) =>
+        piece.href ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`rail-${i}`}
+            src={piece.href}
+            alt=""
+            width={Math.round((piece.rect.widthPct / 100) * width)}
+            height={Math.round((piece.rect.heightPct / 100) * height)}
+            style={{ ...slotBox(piece.rect), objectFit: "fill", zIndex: 5 }}
+          />
+        ) : null,
+      )}
+
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -927,7 +950,7 @@ function CardImage({
               ? { href: splitDataUrl, atPct: frameSplit.atPct }
               : null
           }
-          overlays={drawnOverlays(overlays)}
+          overlays={drawnOverlays([...overlays, ...railPieces])}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -957,7 +980,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={drawnOverlays(overlays)}
+          overlays={drawnOverlays([...overlays, ...railPieces])}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1213,12 +1236,13 @@ function CardImage({
       {textless
         ? null
         : layout.chapters
-        ? ChapterBake({
-            slot: layout.chapters,
-            rail: sagaRail!,
-            target: rulesTarget,
-            pipOverrides: card.pipOverrides,
-          })
+        ? sagaDrawing
+          ? ChapterBake({
+              slot: layout.chapters,
+              rail: sagaDrawing,
+              pipOverrides: card.pipOverrides,
+            })
+          : null
         : layout.loyaltyRows && loyaltyAbilities.length > 0
           ? LoyaltyRowsBake({
               slot: layout.rules,
@@ -2925,125 +2949,65 @@ function ColorIndicatorBake({ fills }: { fills: readonly string[] }) {
   );
 }
 
-// ChapterBake — Satori-side Saga chapter rail (mirrors ChapterRail in the
-// preview). An optional italic intro row (the saga's reminder text, printed
-// above chapter I on real cards), then equal-height rows of Roman-numeral
-// badge + ability text.
+// ChapterBake — the saga rail's INK (TODO 4.21c; mirrors ChapterRail in the
+// preview): the reminder block and each chapter's lines — rules layouts, drawn
+// by RulesBoxBake in the boxes lib/cards/saga-rail.ts gives this target —
+// and each badge's numeral, a one-line box the badge's width, centred, one em
+// tall, from the layout's top. The badges and dividers themselves are frame
+// pieces, drawn under the finishes (CardImage railPieces). Wrapped in a
+// full-size box so every absolutely-positioned piece resolves against the
+// card (a plain sibling of the other text layers; never a Fragment).
 function ChapterBake({
   slot,
   rail,
-  target,
   pipOverrides,
 }: {
-  slot: NonNullable<FrameProfile["chapters"]>;
-  /** The rail's text in lines (lib/cards/saga-rail.ts layoutSagaRail). */
-  rail: SagaRailLayout;
-  target: RulesTarget;
+  slot: ChapterSlot;
+  /** The rail at this bake's target (sagaRailDrawing). */
+  rail: SagaRailDrawing;
   pipOverrides?: PipOverrides | null;
 }) {
-  // Today's (v32) anatomy at this target, and the text's metrics: the
-  // intro's and the chapters' lines drawn by RulesLinesBake (real pips,
-  // reminder italics, U+2212 as a hyphen) at v32's sizes (owner decision
-  // 2026-09-28: correctness only — TODO 4.21 re-sources the rail).
-  const px = sagaRailPx(slot, target);
-  const metrics = sagaRailMetrics(rail, target);
-  const { chapters } = rail;
-  // Nothing leaves the rail: an intro too tall for it (a saga typed with no
-  // chapter markers is ALL intro) gives way and is clipped at the rail's
-  // foot instead of running over the type line and the border below (layout
-  // v33 review). An intro that fits keeps its height, so every other saga
-  // bakes as before.
   return (
-    <div
-      style={{
-        ...slotBox(slot.rect),
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        zIndex: 20,
-      }}
-    >
-      {rail.intro ? (
-        <div
-          style={{
-            display: "flex",
-            flexShrink: 1,
-            minHeight: 0,
-            overflow: "hidden",
-            padding: `${px.introPadY}px ${px.introPadX}px`,
-            borderBottom: `1px solid ${slot.dividerHex}`,
-            fontFamily: BODY_FONT,
-            color: slot.textColorHex,
-          }}
-        >
-          <RulesLinesBake blocks={rail.intro} metrics={metrics.intro} overrides={pipOverrides} />
-        </div>
-      ) : null}
-      {chapters.map((ch, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            flex: 1,
-            alignItems: "center",
-            padding: `${px.rowPadY}px ${px.rowPadX}px`,
-            overflow: "hidden",
-            borderBottom:
-              i < chapters.length - 1 ? `1px solid ${slot.dividerHex}` : "none",
-          }}
-        >
+    <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", zIndex: 20 }}>
+      {rail.intro && hasRulesLines(rail.intro)
+        ? RulesBoxBake({ layout: rail.intro, target: rail.target, colorHex: slot.textColorHex, font: "body", overrides: pipOverrides })
+        : null}
+      {rail.rows.map((row, i) =>
+        hasRulesLines(row.text) ? (
+          <RulesBoxBake
+            key={`text-${i}`}
+            layout={row.text}
+            target={rail.target}
+            colorHex={slot.textColorHex}
+            font="body"
+            overrides={pipOverrides}
+          />
+        ) : null,
+      )}
+      {rail.rows.flatMap((row, i) =>
+        row.badges.map((badge, j) => (
           <div
+            key={`numeral-${i}-${j}`}
             style={{
-              position: "relative",
+              position: "absolute",
+              left: badge.left,
+              top: badge.labelTop,
+              width: badge.width,
+              height: badge.fontPx,
               display: "flex",
-              flexShrink: 0,
               alignItems: "center",
               justifyContent: "center",
-              // The width the chapter's lines were broken beside (its
-              // numeral + padding, or the minimum) — v32's content width.
-              width: sagaBadgeWidthPx(ch.marker, px),
-              height: px.badgeHeight,
-              marginRight: px.badgeGap,
-            }}
-          >
-            {/* The printed saga milestone crest — same polygon as preview. */}
-            <svg
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              width="100%"
-              height="100%"
-              style={{ position: "absolute", top: 0, left: 0 }}
-            >
-              <polygon points={SAGA_MARKER_POINTS} fill={slot.markerFillHex} />
-            </svg>
-            <span
-              style={{
-                position: "relative",
-                display: "flex",
-                paddingBottom: px.markerLift,
-                color: slot.markerTextHex,
-                fontFamily: DISPLAY_FONT,
-                fontSize: px.markerText,
-                fontWeight: 700,
-              }}
-            >
-              {ch.marker}
-            </span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flex: 1,
-              minWidth: 0,
               fontFamily: BODY_FONT,
-              color: slot.textColorHex,
+              fontSize: badge.fontPx,
+              lineHeight: 1,
+              color: slot.badge.numeralColorHex,
+              whiteSpace: "nowrap",
             }}
           >
-            <RulesLinesBake blocks={ch.blocks} metrics={metrics.chapter} overrides={pipOverrides} />
+            {badge.label}
           </div>
-        </div>
-      ))}
+        )),
+      )}
     </div>
   );
 }
@@ -3715,6 +3679,11 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
     for (const ability of resolveLoyaltyRows(card.faceContent, card.rulesText)) {
       if (ability.cost) paths.push(loyaltyBadgeAssetFor(ability.cost));
     }
+  }
+  // The saga rail's chapter badge and row divider (TODO 4.21c) — bucket
+  // bitmaps CardImage reads synchronously, only when the rail draws them.
+  if (layout.chapters && !layout.textless) {
+    paths.push(...sagaRailAssetPaths(profileSagaRail(layout, resolveSagaChapters(card.faceContent, card.rulesText))));
   }
   // A basic land's symbol image in its slot (FrameProfile.basicSymbol with
   // an assetPathTemplate, TODO 3.24) — BasicSymbolBake reads it synchronously.

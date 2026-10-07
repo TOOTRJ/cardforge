@@ -328,21 +328,6 @@ export function breakRulesText(
   return breakParsed(parseText(rulesText, flavorText), sizePx, columns, lineHeight);
 }
 
-/**
- * breakRulesText for paragraphs already tokenized (tokenizeRulesText), for a
- * caller that sets their emphasis itself — the saga's intro is italic
- * throughout (lib/cards/saga-rail.ts). An empty paragraph is a blank block.
- */
-export function breakRulesParagraphs(
-  paragraphs: readonly (readonly RulesItem[])[],
-  sizePx: number,
-  columns: Readonly<Record<RulesTarget, number>>,
-  lineHeight: number = RULES_TEXT.lineHeight,
-): RulesBlock[] {
-  const rules = paragraphs.map((items) => (items.length === 0 ? null : groupTightRuns([...items])));
-  return breakParsed({ rules, flavor: [] }, sizePx, columns, lineHeight);
-}
-
 /** A card's text as runs, once for every ladder step: each rules paragraph's
  *  runs (null for a blank source line), then each flavor source line's. */
 type ParsedText = { rules: (RulesItem[][] | null)[]; flavor: RulesItem[][][] };

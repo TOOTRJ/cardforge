@@ -6,6 +6,8 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { PAIR_TEMPLATES, STAMP_ARCH_RULES, STAMP_PAIR_TEMPLATES, STAMP_TEMPLATES, VISUAL_COLOURS, caseInput, frameKeyOf, shardCases, visualCases } from "@/tests/visual/matrix";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { resolveSagaChapters } from "@/lib/cards/face-content";
+import { sagaRail } from "@/lib/cards/saga-rail";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 
 // ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|nodefense|dense|longpage|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -78,6 +80,78 @@ describe("visual-regression matrix", () => {
       expect(byId.get(id)?.row, id).toMatchObject({ card_type: "artifact", subtypes: ["Vehicle"], power: "3", toughness: "3" });
     }
     expect(byId.get("m15artifact/c/artifact-short@spacecraft")?.row).toMatchObject({ card_type: "artifact", subtypes: ["Spacecraft"] });
+  });
+
+  it("pins every row rule of the saga's printed rail on its own case (TODO 4.21c)", () => {
+    const slot = getFrameProfile("saga").chapters!;
+    const rails = new Map(
+      cases
+        .filter((c) => c.template === "saga")
+        .map((c) => [c.id, sagaRail(slot, ...((s) => [s.intro, s.chapters] as const)(resolveSagaChapters(c.row.face_content as never, c.row.rules_text)))] as const),
+    );
+    const rail = (id: string) => {
+      const r = rails.get(id);
+      expect(r, id).toBeDefined();
+      return r!;
+    };
+    const stacks = (id: string) => rail(id).rows.map((row) => row.labels.length);
+    // The plain cases: no reminder and three singles; a reminder and a
+    // two-badge stack — every colour of both, so all seven masters.
+    for (const colour of VISUAL_COLOURS) {
+      expect(rail(`saga/${colour}/saga-short`).intro, colour).toBeNull();
+      expect(stacks(`saga/${colour}/saga-short`), colour).toEqual([1, 1, 1]);
+      expect(rail(`saga/${colour}/saga-long`).intro, colour).not.toBeNull();
+      expect(stacks(`saga/${colour}/saga-long`), colour).toEqual([2, 1]);
+    }
+    // Stacks at the roomy pitch (the DOM prints' 160 px), a tighter one and
+    // the tightest (LTC #58's 138 px).
+    expect(stacks("saga/u/saga-long@stack3")).toEqual([3, 1]);
+    expect(rail("saga/u/saga-long@stack3")).toMatchObject({ sizePx: 64, pitchPx: 160, clipped: false, combinedFallback: false });
+    expect(stacks("saga/g/saga-long@stack5")).toEqual([1, 5]);
+    expect(rail("saga/g/saga-long@stack5")).toMatchObject({ sizePx: 64, pitchPx: 150, clipped: false });
+    expect(rail("saga/g/saga-long@stack5-tight")).toMatchObject({ sizePx: 62, pitchPx: 138, clipped: false });
+    expect(stacks("saga/r/saga-short@stack6")).toEqual([6]);
+    expect(rail("saga/r/saga-short@stack6")).toMatchObject({ sizePx: 64, pitchPx: 160, clipped: false, combinedFallback: false });
+    // A stored production saga's shape: no reminder, I / II,III,IV / V / VI,
+    // at the stored bake's size.
+    expect(stacks("saga/u/saga-short@prodshape")).toEqual([1, 3, 1, 1]);
+    expect(rail("saga/u/saga-short@prodshape").intro).toBeNull();
+    expect(cases.find((c) => c.id === "saga/u/saga-short@prodshape")?.preset).toBe("hd");
+    // Six rows from the rail's own top.
+    expect(stacks("saga/g/saga-short@six")).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(rail("saga/g/saga-short@six")).toMatchObject({ sizePx: 64, clipped: false });
+    expect(rail("saga/g/saga-short@six").rowsRect.topPct).toBe(slot.rect.topPct);
+    // Repeated numerals whose stacks can never fit: ONE badge per row.
+    expect(rail("saga/w/saga-short@combined").combinedFallback).toBe(true);
+    expect(rail("saga/w/saga-short@combined").rows.map((row) => row.labels)).toEqual([["I–VI"], ["I,III,V"], ["II,IV,VI"], ["VI"]]);
+    // A reminder past its box at 62 px steps down inside it; the rows stay.
+    const longIntro = rail("saga/b/saga-long@longintro");
+    expect(longIntro.intro?.sizePx).toBeLessThan(62);
+    expect(longIntro.intro?.clipped).toBe(false);
+    expect(longIntro).toMatchObject({ sizePx: 64, clipped: false });
+    expect(longIntro.rowsRect.topPct).toBe(slot.rowsTopPct);
+    expect(longIntro.introGrown).toBe(false);
+    // One its box can't hold at the ladder's floor outgrows it: the floor
+    // size, the chapters' column, the rows under it — nothing clipped.
+    const grownIntro = rail("saga/r/saga-long@grownintro");
+    expect(grownIntro).toMatchObject({ introGrown: true, sizePx: 64, clipped: false });
+    expect(grownIntro.intro).toMatchObject({ sizePx: 42, clipped: false });
+    expect(grownIntro.intro?.input.rect.leftPct).toBe(slot.rect.leftPct);
+    expect(grownIntro.rowsRect.topPct).toBeGreaterThan(slot.rowsTopPct);
+    expect(stacks("saga/r/saga-long@grownintro")).toEqual([2, 1]);
+    // The ladder's lower steps, then a rail past its floor.
+    expect(rail("saga/wub/saga-long@dense").sizePx).toBeLessThan(60);
+    expect(rail("saga/wub/saga-long@dense").clipped).toBe(false);
+    expect(stacks("saga/wub/saga-long@dense")).toEqual([1, 1, 2, 1]);
+    expect(rail("saga/wub/saga-long@pastfloor")).toMatchObject({ sizePx: 42, clipped: true });
+    // Legacy rules text: all reminder (no rows), and markers past VI.
+    expect(rail("saga/c/saga-short@introonly").rows).toEqual([]);
+    expect(rail("saga/c/saga-short@introonly").intro).not.toBeNull();
+    expect(rail("saga/b/saga-short@legacy8").rows.map((row) => row.labels)).toEqual([["I–VII"], ["VIII"]]);
+    // Both bake sizes of the stacked and the six-row rail.
+    for (const id of ["saga/u/saga-long@stack3-hd", "saga/g/saga-short@six-hd", "saga/g/saga-long@hd"]) {
+      expect(cases.find((c) => c.id === id)?.preset, id).toBe("hd");
+    }
   });
 
   it("bakes a card without art on the see-through masters and v35's art slots (the empty-art box; no under-frame layer)", () => {

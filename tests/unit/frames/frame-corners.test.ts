@@ -70,7 +70,6 @@ describe("the Phase B allow-list", () => {
         "modernland",
         "retro",
         "retroland",
-        "saga",
       ].sort(),
     );
     // expeditionland: only the keys the corner check flags — w u r c m, whose
@@ -78,9 +77,10 @@ describe("the Phase B allow-list", () => {
     // failures (a transparent edge band: no border to paint with).
     expect(CORNER_NORMALISE_TEMPLATES.expeditionland).toEqual(["w", "u", "r", "c", "m"]);
     // adventure (its 1–2 px grey paper rim, owner 2026-09-28), flip and
-    // aftermath left the list with TODO 4.21a: Card Conjurer masters in the
-    // frames bucket, cut at the one corner by the importer.
-    for (const t of ["adventure", "aftermath", "flip"]) expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
+    // aftermath left the list with TODO 4.21a, saga with 4.21c: Card
+    // Conjurer masters in the frames bucket, cut at the one corner by the
+    // importer.
+    for (const t of ["adventure", "aftermath", "flip", "saga"]) expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[], template).toContain(template);
       expect(NEVER_NORMALISE.test(template), template).toBe(false);
@@ -281,10 +281,10 @@ describe("the MSE builders run the pass", () => {
     retroland: "build-era-frames.mjs",
     modern: "build-era-frames.mjs",
     modernland: "build-era-frames.mjs",
-    saga: "convert-mse-frame.mjs",
     alphatoken: "convert-mse-frame.mjs",
-    // (aftermath, flip and adventure left the list with TODO 4.21a: Card
-    // Conjurer masters in the frames bucket, cut by the importer.)
+    // (aftermath, flip and adventure left the list with TODO 4.21a, saga
+    // with 4.21c: Card Conjurer masters in the frames bucket, cut by the
+    // importer.)
     extendedart: "build-variation-frames.mjs",
     fullart: "build-variation-frames.mjs",
     m15textless: "build-variation-frames.mjs",
@@ -323,8 +323,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 75 (10 templates × 7 colours, and expeditionland's 5)", () => {
-    expect(masters).toHaveLength(75);
+  it("covers all 68 (9 templates × 7 colours, and expeditionland's 5)", () => {
+    expect(masters).toHaveLength(68);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {

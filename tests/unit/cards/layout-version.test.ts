@@ -1819,6 +1819,93 @@ describe("v41 — the modal flipside strip rider (TODO 5.1c)", () => {
   });
 });
 
+// The saga's bump is addressed by its constant, never by its number: it was
+// built as 42 beside 4.21b's split and battle, and whichever merges second
+// takes the next number (lib/cards/layout-version.ts SAGA_RAIL_LAYOUT_VERSION).
+describe("the saga rebuilt from Card Conjurer (TODO 4.21c) — its bump", () => {
+  const png = "https://x/y.png";
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+
+  it("is ONE version in one constant: a sweep, never a badge, scoped to `saga` alone — every other card stamps", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const V = lv.SAGA_RAIL_LAYOUT_VERSION;
+    expect(Number.isInteger(V)).toBe(true);
+    expect(V).toBeGreaterThan(41);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    // Frozen as a literal, and nothing but the template list scopes it: a
+    // saga with no art, no text or no chapters re-bakes too (its master and
+    // its type line change).
+    expect([...lv.SAGA_RAIL_TEMPLATES]).toEqual(["saga"]);
+    expect(lv.VERSION_SCOPES[V]).toBeUndefined();
+    for (const t of ALL) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "saga");
+
+    /** A bake stamped just before the bump: only it can be pending. */
+    const at = (template: string, over: Record<string, unknown> = {}) => ({
+      ...UNTOUCHED_SINCE_V22,
+      layout_version: V - 1,
+      rendered_image_url: png,
+      frame_style: { template, finish: "regular" },
+      ...over,
+    });
+    const classifyForSweep = await sweepAt(V);
+    for (const t of ALL) {
+      const row = at(t);
+      expect(classifyForSweep(row), t).toBe(t === "saga" ? "rebake" : "stamp");
+      expect(lv.hasPendingCorrection(row, { current: V }), t).toBe(t === "saga");
+      // Never a badge: no owner is asked to accept a correction.
+      expect(lv.hasNewerLook({ ...row, visibility: "public" }, { current: V }), t).toBe(false);
+    }
+    // Every stored saga owes it, whatever it holds: production's four (no
+    // reminder, gold and blue), one with no art, one with no text, a foil.
+    for (const over of [
+      { art_url: null },
+      { rules_text: null, face_content: null },
+      { face_content: { saga: { intro: null, chapters: [{ marker: "I", text: "Draw a card." }] } } },
+      { frame_style: { template: "saga", finish: "foil" } },
+      { color_identity: ["blue"] },
+    ]) {
+      expect(classifyForSweep(at("saga", over)), JSON.stringify(over)).toBe("rebake");
+    }
+    expect(classifyForSweep(at("saga", { layout_version: V }))).toBe("current");
+    // A saga baked at production's v41 owes it as well.
+    expect(classifyForSweep(at("saga", { layout_version: 41 }))).toBe("rebake");
+    expect(classifyForSweep(at("m15pw", { layout_version: 41 }))).not.toBe("rebake");
+  });
+
+  it("is NOT verification-neutral: the masters, the art slot, the type line and the rail move — a saga tick made before it is kept and flagged, every other template's stays fresh", async () => {
+    const { SAGA_RAIL_LAYOUT_VERSION: V, VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    const { verificationState } = await import("@/lib/cards/frame-verification-state");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect([...VERIFICATION_SCOPED_VERSIONS[V]]).toEqual(["saga"]);
+    for (const t of ALL) {
+      const regular = { frame_style: { template: t, finish: "regular" } };
+      expect(isRenderStale(V - 1, t, VERIFICATION_SCOPED_VERSIONS, V, regular), t).toBe(t === "saga");
+    }
+    // Production's seven saga ticks were made at v33–v41.
+    const tick = { verified: true, verifiedLayoutVersion: 41, verifiedOverrideHash: "h" } as const;
+    const stale = verificationState(tick, "saga", "h", V);
+    // Flagged, never dropped: the row stays verified (what the creator's
+    // picker reads), with the reason the checklist prints.
+    expect(stale).toMatchObject({ verified: true, stale: true, legacy: false });
+    expect(stale.reasons).toEqual([`the renderer changed since layout v41 (now v${V})`]);
+    expect(verificationState({ ...tick, verifiedLayoutVersion: V }, "saga", "h", V).stale).toBe(false);
+    for (const t of ["m15", "m15pw", "adventure", "flip", "aftermath", "m15mdfcback"]) {
+      expect(verificationState(tick, t, "h", V).stale, t).toBe(false);
+    }
+    // What moved, on the profile: the art slot onto the CC masters' window,
+    // the type line's left edge, the rail's column.
+    const saga = getFrameProfile("saga");
+    expect(saga.artSlot).toEqual({ topPct: 11.19, leftPct: 50.03, widthPct: 42.4, heightPct: 72.68 });
+    expect(saga.type.rect.leftPct).toBe(8.5);
+    expect(saga.chapters?.rect).toEqual({ topPct: 11.29, leftPct: 13.53, widthPct: 35, heightPct: 72.47 });
+    expect(saga.chapters?.rowsTopPct).toBe(29.57);
+  });
+});
+
 describe("v43 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21b)", () => {
   const png = "https://x/y.png";
   /** A v42 bake: only v43 can be pending. */

@@ -34,8 +34,10 @@ import type { DfcIconFamily, FrameTemplate } from "@/types/card";
 // families no registry row has yet (as an admin's pinned printing would
 // bring them), 5.4's import captures (fixtures/dfc-import-printings.json:
 // EMN #63 moon / Emrakul, XLN #22 compass / land, BOT #1 `convertdfc`,
-// ORI #60 `originpwdfc`) and NEO #227, the registry's own fan printing (on
-// `saga`).
+// ORI #60 `originpwdfc`) and NEO #227, a fan printing — the registry's
+// saga/m reference until TODO 4.21c gave that row 40K #126 (the regular gold
+// saga frame); its capture stays in reference-printings.json and is read
+// here by id, as an admin's pinned printing.
 //
 // "As it was": the last block holds the payloads this must NOT move — an
 // `arrows` reference, a modal one and every non-DFC template — to a snapshot
@@ -144,6 +146,9 @@ const rows: Row[] = Object.entries(registry)
 
 const familyOf = (printing: Printing): DfcIconFamily => dfcIconFamilyFromEffects(printing.frame_effects);
 const faceType = (printing: Printing, face: 0 | 1) => parseTypeLine(printing.card_faces?.[face]?.type_line).card_type;
+/** NEO #227 The Kami War // O-Kagachi Made Manifest: the one `fandfc`
+ *  capture (no registry row lists it since TODO 4.21c). */
+const KAMI_WAR: Ref = { name: "The Kami War // O-Kagachi Made Manifest", set: "neo", scryfallId: "36052532-5028-43a8-9fc4-56221ec867fd" };
 const refOf = (template: string, colour: string, index = 0): Ref => {
   const ref = registry[template]?.colors[colour]?.[index];
   if (!ref) throw new Error(`no registry reference at ${template}/${colour}#${index}`);
@@ -274,7 +279,7 @@ describe("every family, as a pinned printing would bring it", () => {
     if (!printing) throw new Error(`no import fixture ${key}`);
     return printing;
   };
-  const kamiWar = registryPrintings[refOf("saga", "m").scryfallId];
+  const kamiWar = registryPrintings[KAMI_WAR.scryfallId];
 
   const CASES: Array<{
     label: string;
@@ -453,7 +458,7 @@ describe("as it was — generated on the base (d9e877e6), only read since", () =
     ["an arrows land back: FIN #31 on m15dfclandback/c", () => refOf("m15dfclandback", "c"), "m15dfclandback", "back"],
     ["a modal reference: STX #147's back on m15mdfcback/u", () => refOf("m15mdfcback", "u"), "m15mdfcback", "back"],
     ["a non-DFC template: Serra Angel on m15/w", () => refOf("m15", "w"), "m15", "front"],
-    ["a non-DFC template: NEO #227 (a fan printing) on saga/m", () => refOf("saga", "m"), "saga", "front"],
+    ["a non-DFC template: NEO #227 (a fan printing) on saga/m", () => KAMI_WAR, "saga", "front"],
     ["a non-DFC template: MID #169 (a sun / moon printing) on m15, front", () => refOf("m15dfcfront", "g", 1), "m15", "front"],
     ["a non-DFC template: MID #169 on m15, its legacy back", () => refOf("m15dfcfront", "g", 1), "m15", "back"],
     // Two-part layouts (the skeptic's): ONE picture whose second half is

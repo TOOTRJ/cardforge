@@ -2629,6 +2629,7 @@
     }
   },
   "saga": {
+    "note": "The regular 2015-frame saga (TODO 4.21c): the title bar, the chapter rail with its reminder block and ribbon, the art column, the type bar. Gold is referenced by the two three-colour prints on the plain gold frame, 40K #126 The Horus Heresy and LTC #58 In the Darkness Bind Them (which also prints a three-badge stack) — NEO The Kami War is a transforming saga with a DFC marker and an enchantment frame effect (TODO 5.5), and KHM’s two-colour sagas (Fall of the Impostor, Ascent of the Worthy) print the two-colour frame (TODO 4.6f’s pair masters). Colourless is the land saga, MH2 #259 Urza’s Saga — the only colourless saga printed on this frame. Not referenced here: FIN’s Summons (Enchantment Creature sagas with a P/T box, TODO 4.5d / 4.7) and DMU’s read-ahead sagas (their reminder box is 97 px taller at 1500 × 2100, so the chapters start at 717 px, not 621).",
     "colors": {
       "w": [
         {
@@ -2638,14 +2639,9 @@
           "curated": true
         },
         {
-          "name": "Summon: Choco/Mog",
-          "set": "fin",
-          "scryfallId": "00546117-018a-4286-bc20-b5446c5be56f"
-        },
-        {
-          "name": "Urza Assembles the Titans",
-          "set": "dmu",
-          "scryfallId": "10a544d7-ead7-42fd-a35a-c1b672771d5b"
+          "name": "The Princess Takes Flight",
+          "set": "woe",
+          "scryfallId": "dad7bd06-22e4-40f8-bda9-bcdbb2d8f632"
         }
       ],
       "u": [
@@ -2674,14 +2670,9 @@
           "curated": true
         },
         {
-          "name": "Summon: Anima",
-          "set": "fin",
-          "scryfallId": "aa4f6703-21f8-4c29-ad5a-5afb54188ade"
-        },
-        {
-          "name": "The Cruelty of Gix",
-          "set": "dmu",
-          "scryfallId": "3d6e5eb3-25ab-4e9e-96e8-655e0ce74675"
+          "name": "Rite of Belzenlok",
+          "set": "dom",
+          "scryfallId": "1ed7cca3-79be-44ca-bf10-2ae1c0835ed1"
         }
       ],
       "r": [
@@ -2692,14 +2683,9 @@
           "curated": true
         },
         {
-          "name": "Summon: G.F. Ifrit",
-          "set": "fin",
-          "scryfallId": "c6c73092-5195-4bdc-b039-a699f6e297b2"
-        },
-        {
-          "name": "Yotia Declares War",
-          "set": "dmu",
-          "scryfallId": "3bd9e99a-ae8c-4323-aa86-b19288c877d4"
+          "name": "The Triumph of Anax",
+          "set": "thb",
+          "scryfallId": "49b5b348-1415-4062-a2a7-017694424c05"
         }
       ],
       "g": [
@@ -2713,11 +2699,6 @@
           "name": "Welcome to Sweettooth",
           "set": "woe",
           "scryfallId": "8e629a31-2e06-4f95-9628-34670dcf68b9"
-        },
-        {
-          "name": "Summon: Fenrir",
-          "set": "fin",
-          "scryfallId": "93feb9d5-d004-4598-a448-b3488c869c05"
         }
       ],
       "c": [
@@ -2726,29 +2707,19 @@
           "set": "mh2",
           "scryfallId": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
           "curated": true
-        },
-        {
-          "name": "Summon: Bahamut",
-          "set": "fin",
-          "scryfallId": "95318d85-4a08-47ac-a43d-ea83c0bea81c"
         }
       ],
       "m": [
         {
-          "name": "The Kami War // O-Kagachi Made Manifest",
-          "set": "neo",
-          "scryfallId": "36052532-5028-43a8-9fc4-56221ec867fd",
+          "name": "The Horus Heresy",
+          "set": "40k",
+          "scryfallId": "c9551a51-2bbd-425b-a634-185921a96865",
           "curated": true
         },
         {
-          "name": "Fall of the Impostor",
-          "set": "khm",
-          "scryfallId": "d7de696a-49c2-421d-a86c-bcffd68870c6"
-        },
-        {
-          "name": "Ascent of the Worthy",
-          "set": "khm",
-          "scryfallId": "0bf01666-0fbf-4b15-a33d-964165bbfafb"
+          "name": "In the Darkness Bind Them",
+          "set": "ltc",
+          "scryfallId": "f7f7413b-0a65-4338-90eb-4b4c5462c21c"
         }
       ]
     }

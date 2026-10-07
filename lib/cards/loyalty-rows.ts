@@ -44,6 +44,16 @@
 //
 // Each badge stays vertically centred on its own row (both renderers use
 // `align-items: center`), and so does each ability's text block.
+//
+// The same content-sized rows carry a saga's chapters (TODO 4.21c,
+// lib/cards/saga-rail.ts): the row arithmetic is contentRowsAt below, fed a
+// RowAnatomy — the walker's here (its badge rail, its padding, ONE badge as
+// each row's minimum), the saga's there (the chapter text column, a row never
+// shorter than its stack of chapter badges). The walker's numbers are what
+// they were: tests/unit/cards/loyalty-rows-pinned.test.ts holds every row,
+// fraction and line of a set of walkers to the layout v41 produced, and
+// tests/unit/render/pw-rows-pinned-bake.test.tsx their bakes and foil stripes
+// byte for byte.
 
 import type { LoyaltyAbility } from "@/lib/cards/card-display";
 import {
@@ -55,7 +65,6 @@ import {
   rectPx,
   rulesLadderPx,
   type RulesLayout,
-  type RulesLayoutInput,
   type RulesMetrics,
   type RulesPlacement,
   type RulesTarget,
@@ -207,15 +216,129 @@ export function loyaltyRowEdgesPx(rowFractions: readonly number[], boxHeightPx: 
   return edges;
 }
 
-/** One ladder step's rows: each ability's text and natural height at both
+/**
+ * What a content-sized row is made of besides its text (TODO 4.21c): where
+ * the text column sits in the row's box, and the least height the row's
+ * badge — or stack of badges — needs.
+ */
+export type RowAnatomy = {
+  /** The text column's padding inside the row's box, HD px
+   *  (RulesLayoutInput.padPx): the rail before the text, the room after it,
+   *  and the row's own padding above and below its text block. */
+  padPx: { left: number; right: number; top: number; bottom: number };
+  /** Row `index`'s minimum height at `target`, whole px of that target: what
+   *  its badge(s) take, with whatever room the row keeps round them. */
+  minHeightPx: (index: number, target: RulesTarget) => number;
+};
+
+export type ContentRowsInput = {
+  /** Each row's text, top to bottom. */
+  texts: readonly string[];
+  /** The box the rows fill (card-relative percents). */
+  rect: Rect;
+  /** The ladder's ceiling (fraction of card width) — recorded on each row's
+   *  layout input; the size laid out is contentRowsAt's `sizePx`. */
+  baseSizePct: number;
+  lineHeight?: number;
+  /** Card height ÷ card width. */
+  aspect: number;
+  anatomy: RowAnatomy;
+};
+
+/** One ladder step's rows: each row's text and natural height at both
  *  targets, the rows' fractions, and whether every row holds its text. */
-type RowsAt = {
+export type ContentRowsAt = {
   sizePx: number;
+  /** The last row's extra right padding (a walker's shield inset), HD px. */
   insetHd: number;
   text: RulesLayout[];
+  /** Each row's natural height at each target, whole px. */
+  needs: Record<RulesTarget, number[]>;
+  /** The rows' shares of the box: its natural height (the larger of its two
+   *  targets') plus an equal share of what is left; past the box, the shares
+   *  as they are (or scaled alike into it, `scaleIntoBox`). Sums to 1 when
+   *  the rows fit. */
   rowFractions: number[];
+  /** Every row holds its text and its minimum, in the whole-px rows both
+   *  bakes draw, and no run is wider than its column. */
   fits: boolean;
 };
+
+/**
+ * The rows of `input` at ONE size (HD px): each text laid out in its row's
+ * column by the rules layout (layoutRulesAt — or `opts.text`, the same
+ * layouts kept from an earlier call at this size and inset), its natural
+ * height — the text block with the row's padding, or the row's minimum,
+ * whichever is taller, in whole px at each target — and the box shared out:
+ * natural heights first, the rest equally. The one row arithmetic the walker
+ * rows (layoutLoyaltyRows) and the saga rail (lib/cards/saga-rail.ts) share.
+ */
+export function contentRowsAt(
+  { texts, rect, baseSizePct, lineHeight = RULES_TEXT.lineHeight, aspect, anatomy }: ContentRowsInput,
+  sizePx: number,
+  opts: { lastRowInsetHd?: number; scaleIntoBox?: boolean; text?: readonly RulesLayout[] } = {},
+): ContentRowsAt {
+  const orientation = orientationFromAspect(aspect);
+  const count = texts.length;
+  const last = count - 1;
+  const lastInset = opts.lastRowInsetHd ?? 0;
+  const box = { hd: rectPx(rect, orientation, aspect, "hd"), default: rectPx(rect, orientation, aspect, "default") };
+  const pad = anatomy.padPx;
+  const text =
+    opts.text?.slice() ??
+    texts.map((rulesText, i) =>
+      layoutRulesAt(
+        {
+          rulesText,
+          flavorText: null,
+          rect,
+          aspect,
+          sizePct: baseSizePct,
+          lineHeight,
+          padPx: { left: pad.left, right: pad.right + (i === last ? lastInset : 0), top: pad.top, bottom: pad.bottom },
+          vAlign: "center",
+        },
+        sizePx,
+      ),
+    );
+  // Each row's natural height, in whole px of each target (the padding as
+  // the rules layout rounds it there).
+  const needs = {} as Record<RulesTarget, number[]>;
+  for (const t of RULES_TARGETS) {
+    const scale = RULES_TARGET_SCALE[t];
+    const padV = Math.round(pad.top * scale) + Math.round(pad.bottom * scale);
+    needs[t] = text.map((l, i) => Math.max(blockHeightPx(l, t) + padV, anatomy.minHeightPx(i, t)));
+  }
+  // A row's share: the larger of its two targets' needs, then an equal
+  // share of what is left. Past the floor, every row scales alike.
+  const share = text.map((_, i) => Math.max(...RULES_TARGETS.map((t) => needs[t][i] / box[t].height)));
+  const total = share.reduce((a, b) => a + b, 0);
+  const rowFractions =
+    total <= 1 ? share.map((s) => s + (1 - total) / count) : opts.scaleIntoBox ? share.map((s) => s / total) : share;
+  const overwide = text.some((l) => l.checks.hd.overwideRun || l.checks.default.overwideRun);
+  // Every row holds its text in the whole-px rows the bake draws.
+  const holds =
+    total <= 1 &&
+    RULES_TARGETS.every((t) => {
+      const edges = loyaltyRowEdgesPx(rowFractions, box[t].height);
+      return needs[t].every((need, i) => edges[i + 1] - edges[i] >= need);
+    });
+  return { sizePx, insetHd: lastInset, text, needs, rowFractions, fits: holds && !overwide };
+}
+
+/** The walker rows' anatomy (LOYALTY_ROW at LOYALTY_ROW_SIZE_PX): the badge
+ *  rail before the text, the row's padding, and ONE badge with that padding
+ *  as every row's minimum. */
+export function loyaltyRowAnatomy(): RowAnatomy {
+  const a = loyaltyRowPx();
+  return {
+    padPx: { left: a.rail, right: a.padX, top: a.padY, bottom: a.padY },
+    minHeightPx: (_index, target) => {
+      const at = loyaltyRowPx(target);
+      return at.badgeHeight + 2 * at.padY;
+    },
+  };
+}
 
 /**
  * Text size + row heights for a planeswalker's ability rows. Deterministic,
@@ -241,52 +364,22 @@ export function layoutLoyaltyRows({
   if (count === 0) {
     return { sizePx: ladder[0], sizePct: baseSizePct, rowFractions: [], lastRowInsetPct: 0, text: [], clipped: false };
   }
-  const last = count - 1;
   const insetPct = shieldInsetPct(rect, shield);
   const insetHd = Math.round(insetPct * RULES_HD_WIDTH[orientation]);
-  const box = { hd: rectPx(rect, orientation, aspect, "hd"), default: rectPx(rect, orientation, aspect, "default") };
-
-  /** An ability's text in its row at `sizePx`: the box's width less the
-   *  badge rail and the row's right padding (and the shield inset on the
-   *  narrowed last row), centred between the row's vertical padding. */
-  const rowInput = (text: string, sizePx: number, inset: number): RulesLayoutInput => {
-    const a = loyaltyRowPx();
-    return {
-      rulesText: text,
-      flavorText: null,
-      rect,
-      aspect,
-      sizePct: baseSizePct,
-      lineHeight,
-      padPx: { left: a.rail, right: a.padX + inset, top: a.padY, bottom: a.padY },
-      vAlign: "center",
-    };
+  type RowsAt = ContentRowsAt;
+  // The rows at one size: the walker's anatomy over the shared row
+  // arithmetic (contentRowsAt), the last row short of the shield by
+  // `lastInset` HD px.
+  const rows: ContentRowsInput = {
+    texts: abilities.map((ab) => ab.text),
+    rect,
+    baseSizePct,
+    lineHeight,
+    aspect,
+    anatomy: loyaltyRowAnatomy(),
   };
-
-  const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean): RowsAt => {
-    const text = abilities.map((ab, i) => layoutRulesAt(rowInput(ab.text, sizePx, i === last ? lastInset : 0), sizePx));
-    // Each row's natural height, in whole px of each target.
-    const needs = {} as Record<RulesTarget, number[]>;
-    for (const t of RULES_TARGETS) {
-      const a = loyaltyRowPx(t);
-      needs[t] = text.map((l) => Math.max(blockHeightPx(l, t), a.badgeHeight) + 2 * a.padY);
-    }
-    // A row's share: the larger of its two targets' needs, then an equal
-    // share of what is left. Past the floor, every row scales alike.
-    const share = text.map((_, i) => Math.max(...RULES_TARGETS.map((t) => needs[t][i] / box[t].height)));
-    const total = share.reduce((a, b) => a + b, 0);
-    const rowFractions =
-      total <= 1 ? share.map((s) => s + (1 - total) / count) : scaleIntoBox ? share.map((s) => s / total) : share;
-    const overwide = text.some((l) => l.checks.hd.overwideRun || l.checks.default.overwideRun);
-    // Every row holds its text in the whole-px rows the bake draws.
-    const holds =
-      total <= 1 &&
-      RULES_TARGETS.every((t) => {
-        const edges = loyaltyRowEdgesPx(rowFractions, box[t].height);
-        return needs[t].every((need, i) => edges[i + 1] - edges[i] >= need);
-      });
-    return { sizePx, insetHd: lastInset, text, rowFractions, fits: holds && !overwide };
-  };
+  const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean): RowsAt =>
+    contentRowsAt(rows, sizePx, { lastRowInsetHd: lastInset, scaleIntoBox });
 
   /** Whether any line of any row, where its row puts it at either target,
    *  has ink within the row's padding of the shield's box. */
