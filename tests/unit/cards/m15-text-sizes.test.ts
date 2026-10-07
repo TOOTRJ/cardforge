@@ -508,11 +508,26 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     };
   };
 
+  // Layout v44 (TODO 4.23a) gave the 2003 pair's footer an ink map (white on
+  // the black frame and on lands) and moved nothing: without it each of the
+  // two is still its v31 self, byte for byte.
+  const V44_FOOTER_INK = new Set<string>(["modern", "modernland"]);
+  const withoutV44FooterInk = (t: string, p: FrameProfile): FrameProfile => {
+    if (!V44_FOOTER_INK.has(t)) {
+      expect(p.footer?.inkByColorKey === undefined || t === "agclassic" || t === "alphaland", t).toBe(true);
+      return p;
+    }
+    expect(p.footer?.inkByColorKey, t).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { inkByColorKey, ...footer } = p.footer!;
+    return { ...p, footer };
+  };
+
   it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling — split aside, which moved with its own bump (v43)", () => {
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && t !== "split");
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {
-      const digest = createHash("sha256").update(JSON.stringify(asAtV31(getFrameProfile(t)))).digest("hex");
+      const digest = createHash("sha256").update(JSON.stringify(asAtV31(withoutV44FooterInk(t, getFrameProfile(t))))).digest("hex");
       expect(digest, t).toBe(V31_DIGESTS[t]);
     }
     // Split is outside the family and no longer its v31 self.

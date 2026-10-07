@@ -2008,6 +2008,112 @@ describe("v43 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21
   });
 });
 
+describe("v44 — the 2003 frame's artist line in the prints' ink (TODO 4.23a)", () => {
+  const png = "https://x/y.png";
+  /** A v43 bake: only v44 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: 43,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT_V44 = { current: 44 } as const;
+  const PAIR = ["modern", "modernland"];
+  /** One identity list per frame colour key. */
+  const IDENTITY: Record<string, string[]> = {
+    w: ["white"],
+    u: ["blue"],
+    b: ["black"],
+    r: ["red"],
+    g: ["green"],
+    c: ["colorless"],
+    m: ["white", "blue"],
+  };
+
+  it("is a sweep, never a badge, scoped to the 2003 pair — frozen as a literal — with a card predicate", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(44);
+    expect(lv.VERSION_ROLLOUT[44]).toBe("sweep");
+    expect(lv.rolloutPolicy(44)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, 44)).toBe(44);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.V44_FOOTER_INK_TEMPLATES].sort()).toEqual(PAIR);
+    expect(lv.VERSION_SCOPES[44]).toBeTypeOf("function");
+    // Without a card to judge by: conservative on the pair, nothing elsewhere.
+    for (const t of ALL) expect(isRenderStale(43, t, undefined, 44), t).toBe(PAIR.includes(t));
+  });
+
+  it("re-bakes a `modern` card on the black master and every `modernland` card; every other card is stamped", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(44);
+    for (const [key, color_identity] of Object.entries(IDENTITY)) {
+      const modern = at("modern", { color_identity });
+      expect(classifyForSweep(modern), `modern ${key}`).toBe(key === "b" ? "rebake" : "stamp");
+      expect(hasPendingCorrection(modern, AT_V44), `modern ${key}`).toBe(key === "b");
+      expect(isRenderStale(43, "modern", undefined, 44, modern), `modern ${key}`).toBe(key === "b");
+      const land = at("modernland", { color_identity, card_type: "land" });
+      expect(classifyForSweep(land), `modernland ${key}`).toBe("rebake");
+      expect(hasPendingCorrection(land, AT_V44), `modernland ${key}`).toBe(true);
+      // A correction: an owner never sees a badge for it.
+      for (const row of [modern, land]) expect(hasNewerLook({ ...row, visibility: "public" }, AT_V44)).toBe(false);
+    }
+    // Production's stored 2003 cards (2026-10-07: gold ×4, the artifact `c`
+    // ×2, green ×1) are stamped, never re-baked — with art or none, any finish.
+    for (const over of [
+      { color_identity: ["white", "blue"] },
+      { color_identity: ["black", "red"] },
+      { color_identity: ["colorless"], supertype: "Artifact" },
+      { color_identity: [] },
+      { color_identity: ["green"], art_url: null },
+      { color_identity: ["green"], frame_style: { template: "modern", finish: "foil" } },
+    ]) {
+      expect(classifyForSweep(at("modern", over)), JSON.stringify(over)).toBe("stamp");
+    }
+    // A black card on any finish is in scope; a row that can't be judged is too.
+    expect(classifyForSweep(at("modern", { color_identity: ["black"], frame_style: { template: "modern", finish: "etched" } }))).toBe("rebake");
+    expect(classifyForSweep(at("modern", { color_identity: undefined }))).toBe("rebake");
+    expect(classifyForSweep(at("modern", { color_identity: ["black"], frame_style: undefined }))).toBe("rebake");
+    // Every other template is stamped, black cards included.
+    for (const t of ALL.filter((t) => !PAIR.includes(t))) {
+      expect(classifyForSweep(at(t, { color_identity: ["black"] })), t).toBe("stamp");
+    }
+    expect(classifyForSweep(at("modern", { color_identity: ["black"], layout_version: 44 }))).toBe("current");
+    expect(classifyForSweep(at("modernland", { layout_version: 44 }))).toBe("current");
+  });
+
+  it("is verification-neutral: no slot moves, so the fourteen 2003 ticks stay fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    const { verificationState } = await import("@/lib/cards/frame-verification-state");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(44);
+    expect(VERIFICATION_SCOPED_VERSIONS[44]).toEqual([]);
+    for (const t of ALL) {
+      const black = { frame_style: { template: t, finish: "regular" }, color_identity: ["black"] };
+      expect(isRenderStale(43, t, VERIFICATION_SCOPED_VERSIONS, 44, black), t).toBe(false);
+    }
+    // Production's 2003 ticks: `modern`/w is a legacy tick, the rest were
+    // made at v33–v43.
+    for (const t of PAIR) {
+      for (const verifiedLayoutVersion of [33, 41, 43]) {
+        const tick = { verified: true, verifiedLayoutVersion, verifiedOverrideHash: "h" } as const;
+        expect(verificationState(tick, t, "h", 44), `${t} v${verifiedLayoutVersion}`).toMatchObject({ verified: true, stale: false });
+      }
+      // The legacy tick itself (no stamp, no hash: judged at v33).
+      const legacy = { verified: true, verifiedLayoutVersion: null, verifiedOverrideHash: null } as const;
+      expect(verificationState(legacy, t, "h", 44), `${t} legacy`).toMatchObject({ verified: true, stale: false, legacy: true });
+    }
+    // Only the footer's ink map is new on the two profiles: every rect and
+    // size is where it was (the fixture test holds the rest).
+    const modern = getFrameProfile("modern");
+    const land = getFrameProfile("modernland");
+    expect(land.footer!.rect).toEqual(modern.footer!.rect);
+    expect(land.footer!.sizePct).toBe(modern.footer!.sizePct);
+    expect(Object.keys(modern.footer!.inkByColorKey ?? {})).toEqual(["b"]);
+    expect(Object.keys(land.footer!.inkByColorKey ?? {}).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
+  });
+});
+
 // The battle's re-cut is addressed by its constant, never by its number: it
 // was built as 44 beside another bump (the 2003 footer ink, which merged
 // first) and took the next number, 45, by changing its constant
