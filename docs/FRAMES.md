@@ -1300,18 +1300,21 @@ of them, DOM → MH3):
     needs at both bake targets, and the rows start 24 px under it (the
     fixed box's foot to the first divider) with the divider on their top
     edge. It may take the rail down to one badge a row; only past that does
-    it clip, from its tail: a one-paragraph reminder past ≈ 900 characters
-    over one chapter, ≈ 810 over two, ≈ 730 over three, ≈ 450 over six
-    (fifteen lines). Inside the editor's 400 characters a one-paragraph
-    reminder reaches that only over SIX chapters, when its words are wide
-    enough for sixteen lines (about one random text in five; none of
-    20,000 over one to five chapters); line breaks cost a gap and a short
-    line each — five paragraphs clip over five or six chapters, not over
-    four (skeptic pass 2026-10-06 — as built it clipped past ≈ 270
-    characters, mid-line, with the rows half empty). Its emphasis is the
-    text's own — a parenthesised
+    it clip, from its tail: a reminder past ≈ 900 characters over one
+    chapter, ≈ 810 over two, ≈ 730 over three, ≈ 450 over six (fifteen
+    lines). Inside the editor's 400 characters a reminder reaches that only
+    over SIX chapters, when its words are wide enough for sixteen lines:
+    none of 20,000 random texts over one to five chapters; over six, none
+    of 3,000 texts of reminder prose, and of 3,000 of card words with pips
+    and numbers about one in five (25 ran to seventeen lines and lost ink;
+    a sixteenth line stands in the box's own padding). (Skeptic pass
+    2026-10-06 — as built it clipped past ≈ 270 characters, mid-line, with
+    the rows half empty.) Its emphasis is the text's own — a parenthesised
     reminder italic, a keyword before it roman (DMU #85's "Read ahead (…)")
-    — where v33 set the whole block italic.
+    — where v33 set the whole block italic. It is ONE paragraph: a line
+    break typed in it is a space, as every print sets it, as v41 drew it
+    and as legacy rules text reads (`parseSagaIntro`); only a chapter's
+    line breaks are paragraphs.
   - *Where the rows start*: the first divider, 621 px (`rowsTopPct`; 619–621
     on 50 of the 54 prints, mean 620.1 — the pack draws 608) — lower only
     under a reminder that outgrew its box —, or the rail's
@@ -1333,8 +1336,15 @@ of them, DOM → MH3):
     equally. (The prints set their rows by hand — DOM #21 gives chapter III
     more room than the I / II row above it — so a row's edges are ours, not
     a print's; of the simple rules, the equal share was the closest over 37
-    prints.) Past the floor the rows are scaled alike into the rail and a
-    row that cannot hold its text sets it from its top.
+    prints.) Past the floor — by then with one badge a row, the combined
+    marker below — the rows are scaled alike into the rail and a row that
+    cannot hold its text sets it from its top; but no row gives up its
+    badge (`rowFractionsPastFloor`: a row that scaling would squeeze under
+    it is held at it, the others share the rest), so the hexagons never
+    meet and never leave the rail. Six chapters of about 115 characters
+    under a reminder are already past the floor; as first built a one-line
+    chapter beside long ones was squeezed to half its badge (skeptic pass
+    2026-10-06).
   - *The badges*: the pack's gold hexagon (`saga/chapter/badge.png`,
     118 × 132 px from x 58; the prints' reads 119–120 × 130–132, centred on
     x 117), one per chapter numeral, stacked down the ribbon. A stack's
@@ -1348,11 +1358,20 @@ of them, DOM → MH3):
     (`SAGA_RAIL.maxStack`), as the prints do (LTR #174 six, WHO #99 five,
     WHO #86 four — the design's "four or more → the combined marker" took
     those for unprinted).
-  - *The combined marker*: stacks that could never fit (repeated numerals:
-    validation lets several rows name the same chapter) turn every
-    multi-badge row into ONE badge with a combined label ("I–III", or
-    "I,III,V" when the numerals are not a run), its size fitted to the
-    badge; a legacy marker past VI is fitted the same way.
+  - *The combined marker*: stacks that CANNOT FIT turn every multi-badge
+    row into ONE badge with a combined label ("I–III", or "I,III,V" when
+    the numerals are not a run), its size fitted to the badge; a legacy
+    marker past VI is fitted the same way. "Cannot fit" is: alone (repeated
+    numerals — validation lets several rows name the same chapter, so the
+    stacks' own heights can pass the rail), or beside the text — the rows
+    not fitting even at the ladder's floor with the stacks tight (skeptic
+    pass 2026-10-06, after the owner's decision 5 and for the owner to
+    confirm: v41 drew ONE marker a row, so a saga it baked whole —
+    chapter I of 300 characters beside II–VI under a reminder — baked as
+    first built with five hexagons and chapter I's last line cut; the
+    hexagons give way before a chapter loses a line, and the text then
+    takes the largest size that fits, 60 px there). Wherever the rows fit
+    with their stacks — down to the 42 px floor — they are stacked.
   - *Numerals and dividers*: the numerals are MPlantin at 72 px, their
     capitals centred on the badge (the prints set a bolder Plantin semibold
     — TODO 4.8). The pack's divider (`saga/chapter/divider.png`, 592 × 9,
@@ -1367,6 +1386,26 @@ of them, DOM → MH3):
   Banner (Right), Text, Text (Right), Border) are recorded on the recipe as
   `maskInputs` for the two-colour saga's pair masters (4.6f) and are never
   published.
+- **Owner decisions** (owner round 34, 2026-10-06 — the before/after
+  sheets' five sections signed off, every question answered AS BUILT):
+  1. a saga with no reminder starts its chapters at the rail's top;
+  2. a line break typed inside a chapter is a paragraph;
+  3. the chapter text takes the largest size that fits, even when that fills the rail;
+  4. the swap of the three DMU alternates stays (WOE #23, DOM #102, THB #160);
+  5. hexagons stack up to six — the combined marker only for repeats that cannot fit, or more than six;
+  6. the stack pitch runs from 160 px down to 138 px by room;
+  7. the reminder keeps the text's own emphasis.
+- **No saga v41 baked whole bakes clipped** (skeptic pass 2026-10-06): of
+  60,000 random sagas inside the editor's limits — one to six chapters,
+  stacks to six, reminders to 396 characters with and without line breaks,
+  legacy numerals to VIII — layout v41 baked 29,180 with every line of
+  their text, and this layout bakes every one of those whole too (as first
+  built it clipped 1,098 to 1,866 of the ≈ 10,000 in each set of 20,000:
+  the reminder past ≈ 270 characters); and it bakes whole another 7,786
+  to 7,850 of each 20,000 that v41 clipped. Four rules hold that together:
+  the reminder outgrows its box, it is one paragraph, the stacks give way
+  to the combined marker before a chapter's text clips, and past the floor
+  a row keeps its badge.
 - **What it does not do**: flavour text (no printed saga has any — a typed
   one is not drawn, as on main); a saga creature's P/T (4.5d); the crown and
   the pairs (4.6f); the holofoil stamp (4.9d); DMU's read-ahead frame, whose
