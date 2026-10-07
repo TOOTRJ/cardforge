@@ -215,9 +215,10 @@ describe("CardPreview — the battle (layout v43)", () => {
     expect(prop(name.parentElement!, "font-size")).toBe(cqw(displayPct(TITLE_SIZE_PCT, "landscape")));
     expect(cqw(displayPct(TITLE_SIZE_PCT, "landscape"))).toBe("3.807cqw"); // 80 px of 2100, as on a portrait card's 1500
     expect(box(name.parentElement!)).toEqual(rectOf(profile.title.rect));
-    // From 392 px: past the pill's left end and the battle icon (TODO 3.28 —
-    // the MSE rect began 269 px in, under the icon's ring at 220–362 px).
-    expect(profile.title.rect.leftPct * 21).toBeCloseTo(392, 9);
+    // From 388 px: past the pill's left end and the battle icon (TODO 3.28 —
+    // the MSE rect began 269 px in, under the icon's ring at 220–362 px;
+    // 4.21d moved v43's 392 px 4 px left, onto the prints' own start).
+    expect(profile.title.rect.leftPct * 21).toBeCloseTo(388, 9);
     // The prints' baseline: 2 px below centred, at HD (TextSlot.dy).
     expect(prop(name, "transform")).toBe(`translateY(${cqw(2 / 2100)})`);
     expect(prop(name.parentElement!, "letter-spacing")).toBe("0.01em");

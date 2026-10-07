@@ -997,7 +997,10 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            the prints' are on 156–157; the cost stays on the prints'
 //            rows: costDy), the cost's end 10 px right, the type line's
 //            rect and the symbol 8 px, the shield's rect and the defense
-//            value 12 px. The rules box keeps the pack's column (the
+//            value 12 px; the name starts 4 px further left (388 px: by
+//            direct reads on the nine prints v43's stood 5.5 px right at
+//            its first letter and 2.5 at the word's end — the skeptic
+//            pass's one change). The rules box keeps the pack's column (the
 //            prints wrap their lines round the shield; ours keep out of it
 //            by size, and a wider column set four of nine references'
 //            texts 2–6 px smaller than their prints).

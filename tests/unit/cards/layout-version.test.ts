@@ -1987,7 +1987,7 @@ describe("v43 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21
     // What moved, in HD px of the 2100 × 1500 card. The battle's name starts
     // right of its icon (the MSE rect began 269 px in, under it — TODO 3.28)…
     const battle = getFrameProfile("battle");
-    expect(battle.title.rect.leftPct * 21).toBeCloseTo(392, 9);
+    expect(battle.title.rect.leftPct * 21).toBeCloseTo(388, 9); // v43's 392, 4 px left onto the prints with the re-cut (TODO 4.21d)
     // (Its top rides the top block 2 px up since TODO 4.21d; the rest is v43's.)
     expect(battle.artSlot).toMatchObject({ leftPct: 7.85, widthPct: 89.4 });
     expect(battle.artSlot.topPct + battle.artSlot.heightPct).toBeCloseTo(3.88 + 91.91, 9);

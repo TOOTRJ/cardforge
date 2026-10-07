@@ -406,7 +406,8 @@ describe("the battle recipe (CC 'Battle')", () => {
     const p = getFrameProfile("battle");
     const right = (r: { leftPct: number; widthPct: number }) => (r.leftPct + r.widthPct) * 21;
     expect(right(p.title.rect)).toBeCloseTo(1942.3 + 10, 9);
-    expect(p.title.rect.leftPct * 21).toBeCloseTo(392, 9);
+    // The name's start is the prints' own (v43's 392 px stood it 4–5 px right of nine prints').
+    expect(p.title.rect.leftPct * 21).toBeCloseTo(388, 9);
     expect(right(p.type.rect)).toBeCloseTo(1935 + 8, 9);
     expect(p.type.rect.leftPct * 21).toBeCloseTo(268, 9);
     expect(right(p.symbolRect!)).toBeCloseTo(1942 + 8, 9);

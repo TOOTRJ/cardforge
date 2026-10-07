@@ -1759,8 +1759,25 @@ other rows by correlation and crossings, are in brackets):
 | Icon white ring, outer radius | 60.86 (prints 58.41) | **58.38** |
 | Not moved: type bar top, bar bottom / box top, type bar left end, box left, box bottom | +0.9, −0.2, −1.4, −0.1, −1.4 | the same |
 
-The text box's prints are the least alike (MOM #115's edge reads 5 px
-right of the others'); +9 would put the bar at −0.3. **Left as the pack
++9 would put the bar at −0.3 and the box at −1.3. (The builder's box
+detector read MOM #115's edge 5 px right of the others'; the skeptic's two —
+the paper's colour crossing on four row bands and a gradient correlation —
+read it +1.0 / +0.1, with the rest: no per-print or per-colour miss.)
+
+**Skeptic pass 2026-10-07** (other regions and methods, every colour;
+print − ours, + = right / down): pill end −0.2 (−0.9 … +0.5 on eight
+prints; the paper → outline crossing on the rows of the face's middle),
+type bar end +0.9 (+0.2 … +1.4, all nine), box edge −0.1 (−1.2 … +0.6, all
+nine, by correlation; −0.5 … +1.3 by crossing on u / b / r / g), shield
+−0.4 (−1.6 … +0.2: each row's first and last black pixel of the interior,
+rows 1350–1435), icon disc r 51.87 on every key against 52.03 ± 0.04,
+centre 289.1 / 128.1 against 289.14 / 127.65 (sd 0.46 / 0.30), white ring
+58.0–58.4 against 58.41. w, u, b, g, c and m land as red does. The 24
+cross-fade columns: no step in any bar's row-mean on any key (the largest
+column-to-column step is the pack's own, elsewhere in the bar); the paper's
+texture energy there is 0.74–0.97 of its neighbours' (a slight softening,
+not visible at 8×). The 14 objects rebuilt byte-identical from a fourth
+fresh cache. **Left as the pack
 has it:** the bottom border's edge (the prints' box rim is 2 px thinner),
 the siege arc, and the name pill's left end (a plain concave arc on the
 pack, a bracket on the prints).
@@ -1777,7 +1794,24 @@ shield 12 } — `landscape-importer.test.ts` holds them to the recipe):
   where the prints' are on 156–157 (read pixel by pixel on MOM #22, #63 and
   #149; v43 took 158.4 for the prints'), the ink's top 1.7 px low and
   "Invasion of" as a whole 1.6 px low by a 2-D correlation — 0.4 px high
-  after the move;
+  after the move (skeptic pass, half-level crossings under each letter on
+  all nine: the prints' feet at 155.8 px, 154.8–156.7; v43's bakes 157.5,
+  these 155.5; the "I" spans 99.6–157.1 on the prints, 99.5–157.6 on ours);
+- **the name 4 px left** (the title rect from 388 px, v43's 392 — the
+  skeptic pass's one change to the profile). By direct reads on nine
+  prints "Invasion" spans 392.6–685.2 px (its start 391.0–394.2); from 392
+  ours spanned 398.2–687.7, 5.5 px right at its start and 2.5 at its end
+  (the builder's 2-D correlation read 2.7 px right). From 388 it spans
+  394.2–683.7: −1.5 / +1.5 px, centred on the prints' (ours is 1 % narrower
+  at the same cap height);
+- **the type line is NOT moved**: "Battle — Siege" starts 273.4 px in
+  where the prints' starts 271.0–271.9 (2 px right) and ends 682.3 where
+  theirs ends 689.4–691.0 (8 px left) — at the same size ("Siege" and the
+  dash are the prints' widths to the px, 152 and 48) the prints' "Battle"
+  is 168 px wide against our 162 (their fount's own pair spacing) and
+  their word spaces a px wider. That is the 2-D correlation's "4 px left":
+  the line's middle, not its start. A family question (the type line
+  carries no tracking), left for the owner;
 - **the cost keeps its rows** (`costDy` 2 / 2100 gives the 2 px back): the
   prints centre their discs 128.5–129.3 px down, 2 px below the middle of
   their pill's face. The same nine bakes' last disc lies 0.5 px below the

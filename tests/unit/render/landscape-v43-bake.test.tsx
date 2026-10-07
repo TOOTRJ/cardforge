@@ -209,15 +209,18 @@ describe("layout v43 — the battle on real bakes (HD and the 1050 px default)",
     expect(frames.fetched).toContain("battle/r.png");
   }, 120_000);
 
-  it.each(PRESETS)("starts the name right of the icon, 23 px into the pill, on the prints' baseline — at %s (TODO 3.28)", async (preset) => {
+  it.each(PRESETS)("starts the name right of the icon, on the prints' own start and baseline — at %s (TODO 3.28)", async (preset) => {
     const r = await bake(battleCard({ cost: null }), preset);
     // The pill's face is 375–1977 × 74–179 px (the pack's 375–1967 × 76–181,
     // re-cut onto the prints: TODO 4.21d); the icon's ring ends at 362.
     const ink = inkBox(r, hd(r, 300, 1960, 80, 180), isDark)!;
-    // The nine MOM prints start their names 396–398 px in (the MSE profile's
-    // rect began 269 px in: the first letters sat under the ornament).
-    expect(ink.x0, `the name's first ink column ${ink.x0}`).toBeGreaterThanOrEqual(392);
-    expect(ink.x0).toBeLessThanOrEqual(392 + tol(preset, 9));
+    // The nine MOM prints start their names 391–394 px in, by the "I"'s
+    // half-level edge with its spur (TODO 4.21d's skeptic pass; v43 read
+    // 396–398 and drew ours from 392, which stood it at 398.2 — 4–5 px
+    // right of every print). (The MSE profile's rect began 269 px in: the
+    // first letters sat under the ornament.)
+    expect(ink.x0, `the name's first ink column ${ink.x0}`).toBeGreaterThanOrEqual(388);
+    expect(ink.x0).toBeLessThanOrEqual(388 + tol(preset, 9));
     // …and set the letters' feet on rows 156–157 (TODO 4.21d, read pixel by
     // pixel on MOM #22 / #63 / #149 and by the ink's last row on all nine;
     // v43 took 158.4 and drew them on row 158): ours end on 156 since the

@@ -2765,10 +2765,13 @@ function footerTurnedWithCard(footer: TextSlot): TextSlot {
 //     down to the bottom border, so the PROFILES entry declares the same
 //     rect as its under-frame art (ONE picture: nothing to seam).
 //   • The name — the pill's face rows (the pack's 76–181.5, 2 px up with
-//     the top block), from 392 px: the prints start it 20–23 px past the
+//     the top block), from 388 px: the prints start it 18–20 px past the
 //     pill's left end, right of the icon (3.28: the MSE rect began 269 px
-//     in, under the icon), 2 px below the row a centred 80 px line sets it
-//     on (dy: a whole px at HD and at 750, so the bake and the preview
+//     in, under the icon; 4.21d's skeptic pass: from 392 px the "I" of
+//     "Invasion" stood 398.2 px in where nine prints set it 391.0–394.2,
+//     and the word ended 2.5 px right of theirs — 4 px left centres ours
+//     on theirs, start −1.5 / end +1.5), 2 px below the row a centred 80 px
+//     line sets it on (dy: a whole px at HD and at 750, so the bake and the preview
 //     move it alike). It RIDES the top block (TODO 4.21d): on nine bakes of
 //     the prints' own names the letters' feet were on row 158 where the
 //     prints' are on 156–157 (v43 took 158.4 for theirs), and "Invasion of"
@@ -2866,7 +2869,7 @@ const BATTLE: FrameProfile = {
   setSymbolFit: "ink",
   symbolRect: { topPct: battleLowerPct(925 - 43), leftPct: (1942 + BATTLE_RIGHT_RECUT_PX.bars - 180) / 21, widthPct: 180 / 21, heightPct: 86 / 15 },
   title: {
-    rect: { topPct: (76 + BATTLE_TOP_RECUT_PX) / 15, leftPct: 392 / 21, widthPct: (1942.3 + BATTLE_RIGHT_RECUT_PX.pill - 392) / 21, heightPct: 105.5 / 15 },
+    rect: { topPct: (76 + BATTLE_TOP_RECUT_PX) / 15, leftPct: 388 / 21, widthPct: (1942.3 + BATTLE_RIGHT_RECUT_PX.pill - 388) / 21, heightPct: 105.5 / 15 },
     sizePct: displayPct(TITLE_SIZE_PCT, "landscape"),
     dy: 2 / 2100,
     fit: "measured",
