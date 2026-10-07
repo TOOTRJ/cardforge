@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CardRowForBake } from "@/lib/cards/bake-core";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { BASIC_LAND_NAME_BY_KEY } from "@/lib/cards/watermark";
 import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, type CardKind } from "@/lib/creator/card-kinds";
@@ -44,8 +45,10 @@ import { isDfcBackBody } from "@/lib/cards/dfc";
 //     key, plus HD, foil and etched on m15 (HD, foil and square on
 //     m15borderless); the two-colour pair (FrameStyle.twoColor) on every
 //     template that draws pairs, in each dress, and with both switches on
-//     (the split crown). The same cards without the switches are the plain
-//     cases — every stored card;
+//     (the split crown) where it draws a crown too — the borderless land's
+//     pairs (TODO 4.56) draw none: its W|U card, the HD bake, a pair with
+//     black, the foil and the squared print. The same cards without the
+//     switches are the plain cases — every stored card;
 //   * the collector line switched ON (TODO 4.9b "@collector…"): on every
 //     template with the slot (COLLECTOR_TEMPLATES) the long card in the
 //     2023 style ("M 0107" over "DMU • EN", the © slot's mark on line 2)
@@ -1237,8 +1240,9 @@ export function visualCases(): VisualCase[] {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, "wu", "short", { suffix: "@pair", row: pairStyle(template) });
     // A two-colour legend with both switches on: the split crown over its
-    // pair master (4.6a + 4.6b, one release).
-    add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
+    // pair master (4.6a + 4.6b, one release) — where the template draws a
+    // crown at all (the borderless land draws its pairs and none: 4.56).
+    if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
   // The borderless hybrid dress (grey bars, the split pinline) and its
@@ -1265,6 +1269,20 @@ export function visualCases(): VisualCase[] {
   // wave 2c: KHM #224's look), and the snow dual land.
   add("m15snow", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15snow", "regular", true) });
   add("m15snowland", "land", "wu", "short", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15snowland") });
+  // TODO 4.56: the borderless land's pair (the grey land bars, the pinline
+  // AND the box split) — the generic "@pair" above is its W|U card; here the
+  // long card at the stored bake's size, a pair with black on the left (its
+  // ring and box are the darkest of the ten), the foil (the sheen's mask
+  // reads the pair master; no etched: the art reaches the edge) and the
+  // squared print. The same land with the switch off is the plain
+  // "m15borderlessland/wu/…" case: the gold `m` master, as every stored one.
+  add("m15borderlessland", "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15borderlessland") });
+  add("m15borderlessland", "land", "wu", "short", {
+    suffix: "@pair-br",
+    row: { ...pairStyle("m15borderlessland"), color_identity: ["black", "red"] },
+  });
+  add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15borderlessland", "foil") });
+  add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle("m15borderlessland") });
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
@@ -1742,7 +1760,7 @@ const DFC_AURA_BACK: Partial<CardRowForBake> = {
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
-  "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland",
+  "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",

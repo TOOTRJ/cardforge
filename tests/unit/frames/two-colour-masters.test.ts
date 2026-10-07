@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
-import { CC_TEMPLATES, borderlessPairLayers, describeLayer, pairMasterLayers, snowPairLayers } from "@/scripts/lib/cc-frames.mjs";
+import {
+  CC_TEMPLATES,
+  borderlessLandLayers,
+  borderlessPairLayers,
+  describeLayer,
+  pairMasterLayers,
+  snowPairLayers,
+} from "@/scripts/lib/cc-frames.mjs";
 import {
   FRAME_MASTER_KEYS,
   TWO_COLOR_MASTER_KEYS,
@@ -34,13 +41,16 @@ const SNOW_KIND: Record<string, "snow" | "snowland"> = { m15snow: "snow", m15sno
 /** The templates whose pairs the Card Conjurer importer builds, and the
  *  recipe each reads: m15 / m15artifact / m15land through pairMasterLayers
  *  (4.6b), the borderless dresses through borderlessPairLayers (4.6f, wave
- *  2a), the snow pair through snowPairLayers (wave 2c). */
-const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland"] as const;
+ *  2a), the snow pair through snowPairLayers (wave 2c), the borderless land
+ *  through its own mono recipe with a letter pair (borderlessLandLayers,
+ *  TODO 4.56). */
+const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland"] as const;
 function recipeOf(template: string, key: string) {
   const [pair, hybrid] = key.split("-");
   const dress = hybrid ? "hybrid" : "split";
   if (KIND[template]) return pairMasterLayers(pair, dress, KIND[template]);
   if (SNOW_KIND[template]) return snowPairLayers(pair, dress, SNOW_KIND[template]);
+  if (template === "m15borderlessland") return borderlessLandLayers({ frame: "l", box: pair.split(""), pinline: pair.split("") });
   return borderlessPairLayers(pair, dress);
 }
 
@@ -56,9 +66,9 @@ describe("the declared pair masters", () => {
       FRAME_TEMPLATE_VALUES.map((t) => [t, declaredKeys(t).length] as const).filter(([, n]) => n > 0),
     );
     // …and 60 more in 5.1d: the double-faced spell faces' split, the modal
-    // front's hybrid too.
+    // front's hybrid too; and the borderless land's ten (TODO 4.56).
     expect(declared).toEqual({
-      m15: 20, m15land: 10, m15snowland: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10, m15snow: 10,
+      m15: 20, m15land: 10, m15snowland: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10, m15borderlessland: 10, m15snow: 10,
       m15dfcfront: 10, m15dfcback: 10, m15dfcbackleft: 10, m15mdfcfront: 20, m15mdfcback: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").

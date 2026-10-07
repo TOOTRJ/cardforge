@@ -266,8 +266,18 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         if (from.some((v, c) => v !== flat[c])) {
           throw new Error(`${l.src}: its flat box is ${flat.slice(0, 3)}, the recipe says ${from} (the source moved?)`);
         }
-        const tint = flatPixelAt(await rgba(await fetchCached(tintOf.src), W, H), W, H, tintOf);
-        data = retintStructure(data, from, tint.slice(0, 3));
+        const tintAt = async (t) => flatPixelAt(await rgba(await fetchCached(t.src), W, H), W, H, t).slice(0, 3);
+        // A pair's box (TODO 4.56): the structure re-tinted to each colour,
+        // the two blended across the pair's untilted ramp like any pair layer.
+        data = l.retint.tintOfRight
+          ? blendPair(
+              retintStructure(data, from, await tintAt(tintOf)),
+              retintStructure(data, from, await tintAt(l.retint.tintOfRight)),
+              W,
+              H,
+              l.retint.ramp,
+            )
+          : retintStructure(data, from, await tintAt(tintOf));
       }
       // 4.34's type bar: the title bar moved down onto it.
       if (l.dy) data = shiftRows(data, W, H, l.dy);

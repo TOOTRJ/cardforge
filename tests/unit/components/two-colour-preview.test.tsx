@@ -67,6 +67,11 @@ describe("the creator's frame tile shows the pair the card paints (FrameThumb)",
     expect(tile({ template: "m15snow", colorKey: "m", colorIdentity: [...wu], type: { cardType: "creature", cost: "{W/U}{W/U}" }, anatomy: { twoColor: true } })).toBe("wu");
     expect(tile({ template: "m15snowland", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null }, anatomy: { twoColor: true } })).toBe("wu");
     expect(tile({ template: "m15snow", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null }, anatomy: { twoColor: true } })).toBe("m");
+    // The borderless land draws its split pair since 4.56 — with the switch
+    // on; a stored pair with no key keeps the gold tile.
+    expect(tile({ template: "m15borderlessland", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null }, anatomy: { twoColor: true } })).toBe("wu");
+    expect(tile({ template: "m15borderlessland", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null } })).toBe("m");
+    expect(tile({ template: "m15borderlessland", colorKey: "m", colorIdentity: [...wu], type: { cardType: "land", cost: null }, anatomy: { twoColor: false } })).toBe("m");
     // Another colour's tile (the colour chips) is that colour, never the pair.
     expect(tile({ template: "m15", colorKey: "u", colorIdentity: [...wu], type: { cardType: "creature", cost: "{1}{W}{U}" }, anatomy: { twoColor: true } })).toBe("u");
   });

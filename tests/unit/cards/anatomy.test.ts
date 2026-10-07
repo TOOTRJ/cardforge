@@ -151,6 +151,18 @@ describe("the cards the two-colour frame is for (the creator's switch; 4.6 revie
     expect(offersTwoColor(["black", "green"], "{B}{G}", { template: "m15snow", cardType: "creature" })).toBe(true);
     expect(offersTwoColor(["black", "green"], null, { template: "m15snowland", cardType: "land" })).toBe(true);
     expect(offersTwoColor(["black", "green"], null, { template: "m15snow", cardType: "land" })).toBe(false);
+    // The borderless land offers it since 4.56 (its own land pairs): for a
+    // stored pair, the AI's pair + "multicolor", and a plain "multicolor"
+    // land, whose pair only the Two colours row can name — never for a mono
+    // or a three-colour land. The borderless SPELL frames still refuse a
+    // land (their pairs are a nonland's pinline split).
+    for (const colors of [["black", "green"], ["black", "green", "multicolor"], ["multicolor"]] as const) {
+      expect(offersTwoColor([...colors], null, { template: "m15borderlessland", cardType: "land" }), colors.join()).toBe(true);
+      expect(offersTwoColor([...colors], null, { template: "m15borderless", cardType: "land" }), colors.join()).toBe(false);
+    }
+    expect(offersTwoColor(["green"], null, { template: "m15borderlessland", cardType: "land" })).toBe(false);
+    expect(offersTwoColor(["white", "blue", "black"], null, { template: "m15borderlessland", cardType: "land" })).toBe(false);
+    expect(offersTwoColor(["colorless"], null, { template: "m15borderlessland", cardType: "land" })).toBe(false);
   });
 });
 
@@ -289,8 +301,11 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     ].includes(t),
   );
   /** …and the pair masters (extendedart draws none: a pair wears gold there;
-   *  the transform land front none: no two-colour land face in print). */
-  const PAIRED = CROWNED.filter((t): boolean => t !== "extendedart" && t !== "m15dfclandfront");
+   *  the transform land front none: no two-colour land face in print) — and
+   *  the borderless land's, which draws pairs and no crown (TODO 4.56). */
+  const PAIRED = FRAME_TEMPLATE_VALUES.filter(
+    (t): boolean => t === "m15borderlessland" || (CROWNED.includes(t) && t !== "extendedart" && t !== "m15dfclandfront"),
+  );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
@@ -308,6 +323,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15artifact: ["split"],
       m15borderless: ["split", "hybrid"],
       m15borderlessartifact: ["split"],
+      // The borderless land (4.56): the split of its pinline AND box over
+      // the grey land bars; a land has no hybrid dress.
+      m15borderlessland: ["split"],
       m15snow: ["split"],
       // The double-faced spell faces (5.1d): the split on every one — the
       // prints split a back's rings and box over its gold bars too — and the
@@ -332,9 +350,15 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (Beside the holofoil stamp's notch since 4.9c: STAMP_TEMPLATES below.)
     expect(getFrameProfile("m15snow").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
     expect(getFrameProfile("m15snowland").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
-    // Every profile that spreads M15 / M15LAND / M15BORDERLESS draws
-    // neither: m15borderlessland spreads M15BORDERLESS (its pairs are
-    // 4.56's), m15devoid (no crown and no pairs by the owner's round-20
+    // The borderless land spreads M15BORDERLESS and declares its OWN pairs
+    // on its entry (4.56) — the land's, like m15land's — with no crown
+    // (no crowned twin), no collector slot and no stamp notch.
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false });
+    expect(getFrameProfile("m15borderlessland").twoColorForLands).toBe(true);
+    expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
+    expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
+    // Every other profile that spreads M15 / M15LAND / M15BORDERLESS draws
+    // neither: m15devoid (no crown and no pairs by the owner's round-20
     // call: its two-colour printings ARE the gold frame) / the layouts /
     // the showcases spread M15 (the layouts' crowns and pairs are 4.6f's);
     // planeswalkers and tokens none here.
@@ -344,7 +368,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false });
-    for (const t of ["m15borderlessland", "adventure", "saga", "nyx", "fullart", "expeditionland"]) {
+    for (const t of ["adventure", "saga", "nyx", "fullart", "expeditionland"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
@@ -619,7 +643,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15snowland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15snowland", "m15borderlessland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

@@ -1725,7 +1725,7 @@
     "pack": "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the text-box structure of packGenericShowcase.js 'Borderless' (groupShowcase-5.js:48)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down 1081 px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (750, 160)) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; corners rounded to the importer radius",
+    "transforms": "native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down 1081 px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (750, 160)) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; a pair master draws the box and the pinline as its two colours' lerped across the untilted procedural:ramp(39→61 %W) (4.56); corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/m15/borderless/m15GenericShowcaseFrameW.png",
@@ -1768,6 +1768,66 @@
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
         "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tint of img/frames/m15/borderless/m15GenericShowcaseFrameM.png at (750, 160) replacing through img/frames/m15/regular/m15MaskRules.png",
         "img/frames/m15/borderless/m15GenericShowcaseFrameM.png through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "wu": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameW.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameU.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameW.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameB.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameW.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameU.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameB.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameB.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameU.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameR.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameU.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "br": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameB.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameR.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameR.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameB.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameG.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameB.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameR.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameG.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameG.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameR.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameW.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameR.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameG.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameW.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameW.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png",
+        "img/frames/m15/borderless/m15GenericShowcaseFrameL.png moved down 1081 px replacing through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/m15/genericShowcase/m15GenericShowcaseFrameL.png re-tinted from 154,154,154 to the tints of (img/frames/m15/borderless/m15GenericShowcaseFrameG.png at (750, 160) | img/frames/m15/borderless/m15GenericShowcaseFrameU.png at (750, 160) across procedural:ramp(39→61 %W)) replacing through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/borderless/m15GenericShowcaseFrameG.png | img/frames/m15/borderless/m15GenericShowcaseFrameU.png across procedural:ramp(39→61 %W)) through img/frames/m15/genericShowcase/m15GenericShowcaseMaskPinline.png"
       ]
     },
     "sourceFiles": [
@@ -1786,7 +1846,8 @@
     "notes": [
       "the print's land look (2026-09-29, 50+ borderless land printings): title bar, type bar and text box all wear the colour's title-bar tint; a borderless spell tints only its title bar (m15borderless)",
       "colourless = CC's 'Land Frame' (m15GenericShowcaseFrameL.png): grey bars and box, the land's brown-grey pinline (the prints' #a5988a on CMM #663 / FRA #379), never the see-through 'Colorless Frame'",
-      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — 4.6's pair masters (borderlessLandLayers with a letter pair)",
+      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — the pair masters below",
+      "two-colour pair masters <pair>.png (TODO 4.56): the same function with the grey 'Land Frame' L for the frame (its title bar, the type bar moved from it, the bottom bar and fins) and the pair's two letters for the box and the pinline — the box structure re-tinted to each colour's title-bar tint and the two colours' frames through the pack's Pinline mask, each pair blended across ONE UNTILTED ramp 39→61 %W by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on the 119 two-colour borderless lands that print the tinted look (MID #281, OTJ #304, the RVR shocks, the MKM surveil lands, CLU …; Scryfall 2026-10-06): the rings read 41.3 / 50.2 / 58.9 %W and the box's top band 40.9 / 49.8 / 59.0 at 10 / 50 / 90 %, the bars the colourless land's grey",
       "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)"
     ]
   },

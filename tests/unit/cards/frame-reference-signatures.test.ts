@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import referencesData from "@/lib/cards/frame-references.json";
 import printingsData from "./fixtures/reference-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
+import { frameMatchFromScryfall, frontFacePairFromScryfall, printsTwoColorFrame } from "@/lib/scryfall/import-mapper";
+import { TWO_COLOR_PAIRS, framePairReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
 import { bodyFor, dfcIconFamilyFromEffects, templateHasBackFace } from "@/lib/cards/dfc";
 import { parseTypeLine } from "@/lib/scryfall/import-mapper";
@@ -108,6 +109,35 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
         gaps: undefined,
       });
     }
+  });
+
+  it("every borderless land PAIR reference is the exact borderless land in that pair, with no print variation the pair masters don't draw (TODO 4.56)", () => {
+    // Two prints per pair, each a two-colour land the registry calls exact
+    // on m15borderlessland with no gap left — never a dark-bar, shadow-box,
+    // short-box, crowned or nicknamed print — and whose pair, in printed
+    // order, is the row's.
+    let checked = 0;
+    for (const pair of TWO_COLOR_PAIRS) {
+      for (const ref of framePairReferenceOptions("m15borderlessland", pair)) {
+        const raw = printings[ref.scryfallId];
+        expect(raw, `${pair} ${ref.name}: a captured printing`).toBeDefined();
+        const card = scryfallCardSchema.parse(raw);
+        expect({ name: card.name, set: card.set }, pair).toEqual({ name: ref.name, set: ref.set });
+        const match = frameMatchFromScryfall(card);
+        expect({ status: match.status, template: match.template, signature: match.signature, landOn: match.landOn, gaps: match.gaps }, `${pair} ${ref.name}`).toEqual({
+          status: "exact",
+          template: "m15borderlessland",
+          signature: "borderless/land",
+          landOn: "m15land",
+          gaps: undefined,
+        });
+        expect(frontFacePairFromScryfall(card), ref.name).toBe(pair);
+        expect(printsTwoColorFrame(card), ref.name).toBe(true);
+        expect(card.frame_effects ?? [], ref.name).not.toContain("legendary");
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(20);
   });
 
   it("Ancient Den SLD #300 still imports as the exact borderless land, though no longer a reference (owner round 16)", () => {
