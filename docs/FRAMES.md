@@ -1256,6 +1256,20 @@ edge's profile cross-correlated with the master's over a ±24 px search —
 one global fit hides a half that sits off on its own); every difference is
 print − ours, + = right or down.
 
+Owner decisions on it (all five round-33 sheets signed off; it merges as
+built):
+
+- owner round 33, 2026-10-06: split keeps the PRINTS' text sizes (name 76
+  px, type line 53, pips 68, the 48 px symbol box), not the design's.
+- owner round 33, 2026-10-06: the gold split (`split/m`) stays unticked
+  until per-part colour (TODO 4.26); the owner ticks red and blue only,
+  per colour.
+- owner round 33, 2026-10-06: centring a split half's short rules text is
+  a rules-layout follow-up (TODO 4.21e), before the first split tick.
+- owner round 33, 2026-10-06: the battle merges as built; its right side
+  is re-cut onto the prints in a follow-up (TODO 4.21d), before the first
+  battle tick.
+
 - **The two recipes.**
   - `split` — Card Conjurer's 'Split' pack (packSplit.js) is drawn PORTRAIT
     with its text at −90°. The importer composites it at the pack's native
@@ -1369,15 +1383,20 @@ print − ours, + = right or down.
   for byte; every zone a block moves through is one line repeated on all
   14 masters, so no seam exists to look for (pack and master agree pixel
   for pixel on both sides of every boundary). **The battle's right side
-  CAN be re-cut** the way the tokens and flip were — a prototype on
-  `battle/r` (scratchpad only, never published): the name pill's end 10
-  px right and the type bar's and text box's 8, each through a 24-column
+  CAN be re-cut** the way the tokens and flip were, and the top block and
+  the icon with it — prototyped on all seven keys (scratchpad only, never
+  published; the recipe is TODO 4.21d): the name pill's end 10 px right
+  and the type bar's and text box's 8, each through a 24-column
   cross-fade inside the bar's own paper (the lines it crosses there are
   horizontal), the shield lifted through the pack's Defense mask and set
   12 px right over the border, where the prints' sits — every right-side
   edge then lies within 1 px of the nine prints' mean (the pill +0.1, the
-  type bar +0.7, the box −0.3, the shield −0.3). The icon cannot be put
-  right alone: its rim is the pill's, and the whole pill sits 2–3 px low.
+  type bar +0.7, the box −0.3, the shield −0.3); rows 57–362 two px up
+  through the flat top border (one more block for `BATTLE_LOWER_RECUT`:
+  the pill's top −0.5, its bottom +0.6); and the icon's three rings
+  redrawn flat at the prints' radii, 1.4 px above the centre of their rim
+  as the prints set them (the disc r 52.0, 0.5 px from the prints'
+  centre; its triangle kept — the prints' is the pack's size).
 
 - **How text is placed on both.** Where the prints set a line RELATIVE TO
   ITS OWN BAR of the master: a baseline below its bar's face, a name's
@@ -1543,13 +1562,14 @@ Template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[42]`: every card on the
 two, art or none); production, anonymous read 2026-10-06: 0 public or
 unlisted cards on either (private cards and previews re-bake on their next
 save). NOT verification-neutral — masters and every slot move — but neither
-template has a tick to go stale, so the owner's first ticks come after the
-deploy: battle in its seven colours against its MOM prints, split/r and
-split/u against MH2 #123 and #60. Tick split PER COLOUR: a template's
-**Publish** ticks every colour that has a reference, and split/m's C16
-print is the 2016 arrangement with per-half pinlines — tick it only if the
-gold frame alone is enough, or leave it for 4.26. Neither is offered until
-then; an admin sees both with `?previewFrames=split,battle`.
+template has a tick to go stale. The owner's first ticks wait for the two
+follow-ups (owner round 33): battle in its seven colours against its MOM
+prints after TODO 4.21d, split/r and split/u against MH2 #123 and #60
+after 4.21e. Tick split PER COLOUR: a template's **Publish** ticks every
+colour that has a reference, and split/m — its C16 print is the 2016
+arrangement with per-half pinlines — stays unticked until 4.26. Neither
+is offered until then; an admin sees both with
+`?previewFrames=split,battle`.
 
 The browser half (the design's stepper check; a dev server on the shared
 dev database, the admin walk-through `/create?previewFrames=split,battle&kind=…&template=…&color=…&seed=sample`
