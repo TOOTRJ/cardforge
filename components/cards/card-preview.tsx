@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { RotateCw } from "lucide-react";
 import { cn, clamp } from "@/lib/utils";
@@ -91,6 +91,7 @@ import type { RulesItem } from "@/lib/cards/rules-text";
 import {
   buildTypeLine,
   displayLine,
+  footerArtistLine,
   hasRulesBoxText,
   normalizeFrameTemplate,
   showsDefense,
@@ -100,6 +101,8 @@ import {
   splitTypeLine,
   type LoyaltyAbility,
 } from "@/lib/cards/card-display";
+import { symbolStyle, symbolStyleOf, styledSuffix, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
 import {
   resolveLoyaltyRows,
   resolveSagaChapters,
@@ -278,28 +281,27 @@ type CardPreviewProps = CardPreviewData & {
   flipOnClick?: boolean;
 };
 
-// MPlantin is the real MTG card font, loaded as a web font in globals.css. The
-// Satori bake renders every piece of card text in MPlantin, so the preview uses
-// it for ALL card text too (title, type, rules, footer, stats) — keeping the
-// editor preview and the exported PNG pixel-identical. The serifs are fallbacks
-// for the brief moment before the web font loads.
-const CARD_FONT = '"MPlantin", Georgia, "Times New Roman", serif';
+// Which face a text is set in is decided by ONE resolver both renderers read
+// (lib/cards/type-faces.ts, TODO 4.8.0): slotFace(slot) for a slot that
+// carries `font`, faceOf(profile, role) for a role without one, BRAND_FACE
+// for the pipglyph.com mark — each face's `previewFamily` is the bake's
+// chain plus the browser's serifs for the moment before the web font loads
+// (the faces are declared in globals.css). No site here names a display
+// family itself, so the preview and the PNG cannot disagree about a slot.
+// Rules / flavor / walker-row / saga text is the body face — MPlantin, the
+// one lib/cards/rules-layout.ts lays every line out in.
+const CARD_FONT = TYPE_FACES.body.previewFamily;
 
-// Display face for titles, type lines, footer, and stat values — Beleren
-// Bold itself (CardDisplay, declared in globals.css; not a stand-in and not
-// an OFL face — docs/FRAMES.md "Provenance and legal"), falling back to
-// MPlantin then serifs before it loads. A slot's `font` field selects display
-// vs the MPlantin body font; the Satori bake reads the same `font` field, so
-// preview and PNG stay identical.
-const DISPLAY_FONT = '"CardDisplay", "MPlantin", Georgia, "Times New Roman", serif';
+// The frame's symbol style (FrameProfile.symbolStyle, TODO 4.8.0 —
+// lib/cards/symbol-style.ts), resolved ONCE per face by CardFace and read by
+// every pip the card draws: the cost rows (ManaCostGlyphs' `symbols` prop —
+// a prop of the CARD's uses only), the inline pips (RulesPip) and the fits
+// that measure a cost row. The bake hands the same spec down as a prop.
+const SymbolStyleContext = createContext<SymbolStyleSpec>(symbolStyle(undefined));
 
 // The collector line's face (TODO 4.9b; the "CollectorLine" @font-face in
 // globals.css — the same subset TTF the bake registers).
 const COLLECTOR_FONT = '"CollectorLine", "MPlantin", Georgia, "Times New Roman", serif';
-
-function fontFor(font: TextSlot["font"]): string {
-  return font === "display" ? DISPLAY_FONT : CARD_FONT;
-}
 
 /** A collector run's face as the preview sets it — the bake's
  *  collectorFaceBake twin (lib/render/card-image.tsx). */
@@ -307,8 +309,8 @@ function collectorFaceStyle(face: "collector" | "display" | "body"): { fontFamil
   return face === "collector"
     ? { fontFamily: COLLECTOR_FONT, fontWeight: 500 }
     : face === "display"
-      ? { fontFamily: DISPLAY_FONT, fontWeight: 600 }
-      : { fontFamily: CARD_FONT, fontWeight: 400 };
+      ? { fontFamily: TYPE_FACES.display.previewFamily, fontWeight: 600 }
+      : { fontFamily: TYPE_FACES.body.previewFamily, fontWeight: 400 };
 }
 
 type FaceData = {
@@ -810,6 +812,9 @@ function CardFace({
   // Alpha's colourless artifact paints the artifact card "a", and a stored
   // pair with the two-colour frame on its pair master (frameMasterKey, the
   // bake's twin).
+  // The frame's symbol style — one resolution per face, handed to every pip
+  // this face draws (SymbolStyleContext; the bake's `symbols`).
+  const symbols = symbolStyleOf(layout);
   const colorKey = pickFrameColorKey(colorIdentity);
   const masterKey = frameMasterKey(layout, colorIdentity, face, anatomy);
   // The two-colour look (TODO 4.6b) picks the stat plate (plateKeyFor: a
@@ -1113,6 +1118,7 @@ function CardFace({
   const underArtRect = artLayers.under;
 
   return (
+    <SymbolStyleContext.Provider value={symbols}>
     <div className="absolute inset-0">
       {underArtRect && face.artUrl ? (
         <div
@@ -1339,6 +1345,7 @@ function CardFace({
             cost={face.cost}
             fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
             overrides={pipOverrides}
+            symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
           />
         ) : null}
@@ -1357,6 +1364,7 @@ function CardFace({
             cost={face.cost}
             fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
             overrides={pipOverrides}
+            symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
           />
         </div>
@@ -1628,9 +1636,11 @@ function CardFace({
             zIndex: 20,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            // The slot's alignment (TODO 4.8.0; the bake's FooterBake twin):
+            // unset = the line at the start, a custom mark at the end.
+            justifyContent: layout.footer.align === "center" ? "center" : layout.footer.align === "end" ? "flex-end" : "space-between",
             gap: "2cqw",
-            fontFamily: fontFor(layout.footer.font),
+            fontFamily: footerFace(layout.footer).previewFamily,
             fontSize: cqw(layout.footer.sizePct),
             color: footerInkResolved.colorHex,
             ...(footerInkResolved.shadowCss
@@ -1641,16 +1651,13 @@ function CardFace({
           }}
         >
           <span style={ELLIPSIS}>
-            {slotLine(
-              layout.footer.font,
-              face.artistCredit?.trim() ? `Art: ${face.artistCredit}` : "Art: Unknown",
-            )}
+            {slotLine(footerFace(layout.footer).id, footerArtistLine(layout.footer, face.artistCredit))}
           </span>
           {/* Footer-right: the owner's custom mark, or nothing — mirrors the
               bake (lib/render/card-image.tsx, layout v19). */}
-          {footerWatermark ? (
+          {footerWatermark && layout.footer.align !== "center" && layout.footer.align !== "end" ? (
             <span style={{ flexShrink: 0 }}>
-              {slotLine(layout.footer.font, footerWatermark)}
+              {slotLine(footerFace(layout.footer).id, footerWatermark)}
             </span>
           ) : null}
         </div>
@@ -1677,7 +1684,8 @@ function CardFace({
             // sits ~0.3% of the card height (6 px at 1500 wide) above the
             // bake. With it the two agree within ~1 px at 1500 wide.
             lineHeight: "normal",
-            fontFamily: DISPLAY_FONT,
+            // Always the brand's face, whatever the frame's (faceOf "mark").
+            fontFamily: faceOf(layout, "mark").previewFamily,
             // cqw() takes a FRACTION of the card width (0.026 = 2.6%).
             fontSize: cqw(0.026 * markLayout.scale),
             fontWeight: 600,
@@ -1703,6 +1711,7 @@ function CardFace({
         </div>
       ) : null}
     </div>
+    </SymbolStyleContext.Provider>
   );
 }
 
@@ -1736,7 +1745,7 @@ function BandSlot({
               ? "flex-end"
               : "space-between",
         gap: "2cqw",
-        fontFamily: fontFor(slot.font),
+        fontFamily: slotFace(slot).previewFamily,
         fontSize: cqw(slot.sizePct),
         fontWeight: slot.weight ?? 600,
         fontStyle: italic || slot.italic ? "italic" : "normal",
@@ -1843,7 +1852,7 @@ function BrandMarkInCollectorSlot({ anchor }: { anchor: CollectorMarkAnchor }) {
         right: `${100 - anchor.rightPct}%`,
         top: `${anchor.topPct}%`,
         lineHeight: anchor.lineHeight,
-        fontFamily: DISPLAY_FONT,
+        fontFamily: BRAND_FACE.previewFamily,
         fontSize: cqw(anchor.sizePct),
         fontWeight: 600,
         letterSpacing: "0.02em",
@@ -2020,7 +2029,8 @@ function FlipsideOverlay({
   orientation: CardOrientation;
   overrides: PipOverrides | null;
 }) {
-  const strip = flipsideStrip(slots, other, "hd");
+  const symbols = useContext(SymbolStyleContext);
+  const strip = flipsideStrip(slots, other, "hd", symbols.id);
   if (!strip) return null;
   return (
     <>
@@ -2033,7 +2043,7 @@ function FlipsideOverlay({
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-start",
-            fontFamily: fontFor(slots.word.font),
+            fontFamily: slotFace(slots.word).previewFamily,
             fontSize: cqw(slots.word.sizePct),
             fontWeight: slots.word.weight ?? 700,
             color: slots.word.colorHex,
@@ -2061,7 +2071,8 @@ function FlipsideLineOverlay({ slot, line, orientation, overrides }: { slot: Tex
         flexWrap: "nowrap",
         alignItems: "center",
         justifyContent: "flex-end",
-        fontFamily: fontFor(slot.font),
+        // The strip's cost / mana line is rules text: the body face.
+        fontFamily: CARD_FONT,
         fontSize: hd(m.fontPx),
         color: slot.colorHex,
       }}
@@ -2240,7 +2251,7 @@ function StatOverlay({
       <span
         className="relative"
         style={{
-          fontFamily: DISPLAY_FONT,
+          fontFamily: slotFace(slot).previewFamily,
           fontSize: cqw(sizePct),
           // One line, centred, always — the bake's StatBake twin: a value
           // wider than its rect (its face may be wider) overflows it evenly
@@ -2335,7 +2346,7 @@ function ChapterRail({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontFamily: CARD_FONT,
+              fontFamily: faceOf({ chapters: slot }, "numeral").previewFamily,
               fontSize: hdCqw(badge.fontPx),
               lineHeight: 1,
               color: slot.badge.numeralColorHex,
@@ -2408,8 +2419,9 @@ function AdventurePanel({
   // A measured panel (the M15-era family, layout v32) fits its name before
   // its inline cost and its type line to its bar — the bake's twins
   // (AdventureBake); the pips keep their size. Otherwise the slots' sizes.
+  const symbols = useContext(SymbolStyleContext);
   const titleFit = fitTitleBand(
-    { title: slot.title, costSizePct: slot.costSizePct },
+    { title: slot.title, costSizePct: slot.costSizePct, symbolStyle: symbols.id },
     name,
     showCost ? data.cost : null,
   );
@@ -2440,6 +2452,7 @@ function AdventurePanel({
             cost={data.cost}
             fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
             overrides={pipOverrides}
+            symbols={symbols}
           />
         ) : null}
       </BandSlot>
@@ -2505,12 +2518,14 @@ function SecondFacePanel({
   // Same math as SecondFaceBake: a `fitLines` face's name bar (name + cost)
   // and type line shrink to fit their bars (aftermath's short sideways ones,
   // flip's upside-down ones), down to the card's own 5 pt floor.
+  const symbols = useContext(SymbolStyleContext);
   const lineSizes = secondFaceLineSizes({
     slot,
     name,
     typeLine,
     cost: showCost ? data.cost : null,
     orientation: orientationFromAspect(aspect),
+    symbols: symbols.id,
   });
   // A `fitLines` face's shrunk lines at the stored HD bake's whole px, as the
   // bake sets them (measuredLinePx); a face without it as before.
@@ -2526,7 +2541,7 @@ function SecondFacePanel({
   const orientation = orientationFromAspect(aspect);
   const measured = slot.rotation === 0 && slot.title.fit === "measured";
   const faceTitleFit = measured
-    ? fitTitleBand({ title: slot.title, costSizePct: slot.costSizePct }, name, showCost ? data.cost : null, orientation)
+    ? fitTitleBand({ title: slot.title, costSizePct: slot.costSizePct, symbolStyle: symbols.id }, name, showCost ? data.cost : null, orientation)
     : null;
   const faceTitleSizePct = faceTitleFit
     ? measuredLinePreviewPct(faceTitleFit.sizePct, slot.title.sizePct, orientation)
@@ -2554,6 +2569,7 @@ function SecondFacePanel({
               cost={data.cost}
               fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
               overrides={pipOverrides}
+            symbols={symbols}
             />
           ) : null}
         </BandSlot>
@@ -2568,7 +2584,7 @@ function SecondFacePanel({
           alignItems: "center",
           justifyContent: showCost ? "space-between" : "flex-start",
           gap: cqw(NAME_COST_GAP_PCT),
-          fontFamily: DISPLAY_FONT,
+          fontFamily: slotFace(slot.title).previewFamily,
           fontSize: cqw(linePct(lineSizes.titleSizePct, slot.title.sizePct)),
           fontWeight: slot.title.weight ?? 600,
           color: slot.title.colorHex,
@@ -2582,6 +2598,7 @@ function SecondFacePanel({
             cost={data.cost}
             fontSize={pipFont(lineSizes.costSizePct)}
             overrides={pipOverrides}
+            symbols={symbols}
           />
         ) : null}
       </div>
@@ -2608,7 +2625,7 @@ function SecondFacePanel({
           transformOrigin: "center",
           display: "flex",
           alignItems: "center",
-          fontFamily: DISPLAY_FONT,
+          fontFamily: slotFace(slot.type).previewFamily,
           fontSize: cqw(linePct(lineSizes.typeSizePct, slot.type.sizePct)),
           fontWeight: slot.type.weight ?? 600,
           color: slot.type.colorHex,
@@ -2669,7 +2686,7 @@ function SecondFacePanel({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: DISPLAY_FONT,
+            fontFamily: slotFace(slot.pt).previewFamily,
             // Shrinks to fit, on one line, like the front's StatOverlay (TODO 3.18).
             fontSize: cqw(
               fitStatSizePct(
@@ -2937,6 +2954,7 @@ function RulesPip({
   gapBefore: string | null;
   overrides: PipOverrides | null;
 }) {
+  const symbols = useContext(SymbolStyleContext);
   const overrideSrc = pipOverrideForSuffix(suffix, overrides);
   return (
     <span
@@ -2950,9 +2968,13 @@ function RulesPip({
       }}
     >
       {overrideSrc ? (
-        <PipOverrideImg src={overrideSrc} style={{ fontSize, flexShrink: 0 }} />
+        <PipOverrideImg src={overrideSrc} style={{ fontSize, flexShrink: 0 }} symbols={symbols} />
       ) : (
-        <i aria-hidden className={cn("ms ms-cost ms-shadow", `ms-${suffix}`)} style={{ fontSize, flexShrink: 0 }} />
+        <i
+          aria-hidden
+          className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+          style={{ fontSize, flexShrink: 0 }}
+        />
       )}
     </span>
   );
@@ -3257,7 +3279,7 @@ function LoyaltyRows({
               style={{
                 position: "relative",
                 color: rows.badgeTextHex,
-                fontFamily: DISPLAY_FONT,
+                fontFamily: faceOf({ loyaltyRows: rows }, "badge").previewFamily,
                 fontSize: hdCqw(a.badgeText),
                 fontWeight: 700,
                 // Optically center inside the shield's flat region.

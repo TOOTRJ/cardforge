@@ -70,6 +70,7 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { walkerSizePct } from "@/lib/cards/rules-box";
+import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
 import { RULES_HD_WIDTH, RULES_TEXT, orientationFromAspect, rulesPxToPct } from "@/lib/cards/typography";
 
@@ -179,6 +180,8 @@ export type LoyaltyRowsInput = {
   /** The starting-loyalty shield's box (loyaltyShieldRect) — the last row's
    *  text wraps before it. */
   shield?: Rect | null;
+  /** The frame's symbol style (the inline pip's shadow); "modern" unset. */
+  symbolStyle?: SymbolStyle;
 };
 
 /** The box the frame's starting-loyalty shield is drawn in: its plate's
@@ -243,6 +246,8 @@ export type ContentRowsInput = {
   /** Card height ÷ card width. */
   aspect: number;
   anatomy: RowAnatomy;
+  /** The frame's symbol style (the inline pip's shadow); "modern" unset. */
+  symbolStyle?: SymbolStyle;
 };
 
 /** One ladder step's rows: each row's text and natural height at both
@@ -274,7 +279,7 @@ export type ContentRowsAt = {
  * rows (layoutLoyaltyRows) and the saga rail (lib/cards/saga-rail.ts) share.
  */
 export function contentRowsAt(
-  { texts, rect, baseSizePct, lineHeight = RULES_TEXT.lineHeight, aspect, anatomy }: ContentRowsInput,
+  { texts, rect, baseSizePct, lineHeight = RULES_TEXT.lineHeight, aspect, anatomy, symbolStyle }: ContentRowsInput,
   sizePx: number,
   opts: { lastRowInsetHd?: number; scaleIntoBox?: boolean; text?: readonly RulesLayout[] } = {},
 ): ContentRowsAt {
@@ -297,6 +302,7 @@ export function contentRowsAt(
           lineHeight,
           padPx: { left: pad.left, right: pad.right + (i === last ? lastInset : 0), top: pad.top, bottom: pad.bottom },
           vAlign: "center",
+          ...(symbolStyle ? { symbolStyle } : {}),
         },
         sizePx,
       ),
@@ -357,6 +363,7 @@ export function layoutLoyaltyRows({
   lineHeight = RULES_TEXT.lineHeight,
   aspect,
   shield = null,
+  symbolStyle,
 }: LoyaltyRowsInput): LoyaltyRowsLayout {
   const orientation = orientationFromAspect(aspect);
   const ladder = rulesLadderPx(baseSizePct, orientation);
@@ -377,6 +384,7 @@ export function layoutLoyaltyRows({
     lineHeight,
     aspect,
     anatomy: loyaltyRowAnatomy(),
+    ...(symbolStyle ? { symbolStyle } : {}),
   };
   const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean): RowsAt =>
     contentRowsAt(rows, sizePx, { lastRowInsetHd: lastInset, scaleIntoBox });
@@ -427,7 +435,7 @@ export function layoutLoyaltyRows({
  * draw).
  */
 export function layoutProfileLoyaltyRows(
-  layout: Pick<FrameProfile, "rules" | "loyalty" | "loyaltyRows">,
+  layout: Pick<FrameProfile, "rules" | "loyalty" | "loyaltyRows" | "symbolStyle">,
   abilities: readonly LoyaltyAbility[],
   aspect: number,
 ): LoyaltyRowsLayout {
@@ -438,6 +446,7 @@ export function layoutProfileLoyaltyRows(
     lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect,
     shield: loyaltyShieldRect(layout),
+    ...(layout.symbolStyle ? { symbolStyle: layout.symbolStyle } : {}),
   });
 }
 

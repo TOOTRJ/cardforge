@@ -1,7 +1,8 @@
 import "server-only";
 
 import fontkit from "@pdf-lib/fontkit";
-import { DISPLAY_FONT_BYTES } from "@/lib/render/card-fonts";
+import type { SlotFace } from "@/lib/cards/type-faces";
+import { faceFontBytes } from "@/lib/render/card-fonts";
 
 // ---------------------------------------------------------------------------
 // How Satori sets one run of text — the width its layout gives the text node
@@ -19,19 +20,31 @@ import { DISPLAY_FONT_BYTES } from "@/lib/render/card-fonts";
 
 type Font = ReturnType<typeof fontkit.create>;
 
-let display: Font | null = null;
+const parsed = new Map<SlotFace, Font>();
+
+function fontOf(face: SlotFace): Font {
+  let font = parsed.get(face);
+  if (!font) {
+    font = fontkit.create(faceFontBytes(face));
+    parsed.set(face, font);
+  }
+  return font;
+}
 
 /**
- * One single-line CardDisplay run at `fontPx`, in px: `box` is the width
- * Satori's layout gives it, `ink` the advance it draws. `text` must be what
- * Satori sets — after displayLine and any uppercase transform.
+ * One single-line run at `fontPx`, in px, set in `face` (the slot's —
+ * lib/cards/type-faces.ts slotFace; CardDisplay when the caller names
+ * none): `box` is the width Satori's layout gives it, `ink` the advance it
+ * draws. `text` must be what Satori sets — after displayLine and any
+ * uppercase transform. (MPlantin kerns nothing: its box is its ink.)
  */
 export function displayRunPx(
   text: string,
   fontPx: number,
   letterSpacingPx = 0,
+  face: SlotFace = "display",
 ): { box: number; ink: number } {
-  display ??= fontkit.create(DISPLAY_FONT_BYTES);
+  const display = fontOf(face);
   const scale = fontPx / display.unitsPerEm;
   const glyphs = display.glyphsForString(text);
   // Both sides add the tracking after every glyph, so it never moves the

@@ -85,7 +85,10 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
+import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
+import { faceOf } from "@/lib/cards/type-faces";
+import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import { RULES_HD_WIDTH } from "@/lib/cards/typography";
 
 export type ChapterSlot = NonNullable<FrameProfile["chapters"]>;
@@ -272,6 +275,7 @@ function grownSagaIntro(
   aspect: number,
   foot: number,
   rowCount: number,
+  symbolStyle?: SymbolStyle,
 ): { layout: RulesLayout; rowsTopPct: number } {
   const ladder = rulesLadderPx(slot.intro.sizePct, "portrait");
   const floor = ladder[ladder.length - 1];
@@ -288,6 +292,7 @@ function grownSagaIntro(
     ...(slot.intro.lineHeight !== undefined ? { lineHeight: slot.intro.lineHeight } : {}),
     padPx: { x: SAGA_RAIL.textPadXPx, y: pad },
     vAlign: "start",
+    ...(symbolStyle ? { symbolStyle } : {}),
   });
   // The most it may take, on the even grid: the rail less the gap and one
   // badge (+ 2 px) a row — never less than the fixed box.
@@ -322,7 +327,14 @@ function grownSagaIntro(
  * construction. Each chapter's text keeps its line breaks as paragraphs;
  * the reminder's are spaces.
  */
-export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, chapters: readonly SagaChapter[], aspect: number = 7 / 5): SagaRail {
+export function sagaRail(
+  slot: ChapterSlot,
+  intro: string | null | undefined,
+  chapters: readonly SagaChapter[],
+  aspect: number = 7 / 5,
+  /** The frame's symbol style (the inline pip's shadow); "modern" unset. */
+  symbolStyle?: SymbolStyle,
+): SagaRail {
   // The reminder block is ONE paragraph: a line break typed in it is a
   // space — as every print sets it, as layout v41 drew it and as legacy
   // rules text already reads (parseSagaIntro joins its lines).
@@ -345,6 +357,7 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
         ...(slot.intro.lineHeight !== undefined ? { lineHeight: slot.intro.lineHeight } : {}),
         padPx: SAGA_RAIL.introPadPx,
         vAlign: "center",
+        ...(symbolStyle ? { symbolStyle } : {}),
         ...(chapters.length > 0 && slot.intro.keepOuts?.length ? { keepOuts: slot.intro.keepOuts } : {}),
       })
     : null;
@@ -353,7 +366,7 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
   // run wider than the box is no reason to: it clips at the box's side, as
   // in every rules box.)
   const outgrows = introFit !== null && RULES_TARGETS.some((t) => introFit.checks[t].overflowPx > 0 || introFit.checks[t].keepOutHit);
-  const grown = introText && outgrows && chapters.length > 0 ? grownSagaIntro(slot, introText, aspect, foot, chapters.length) : null;
+  const grown = introText && outgrows && chapters.length > 0 ? grownSagaIntro(slot, introText, aspect, foot, chapters.length, symbolStyle) : null;
   const introLayout = grown ? grown.layout : introFit ? fromTopWhenOverflowing(introFit) : null;
   const rowsTop = grown ? grown.rowsTopPct : introText ? slot.rowsTopPct : slot.rect.topPct;
   const rowsRect: Rect = { leftPct: slot.rect.leftPct, widthPct: slot.rect.widthPct, topPct: rowsTop, heightPct: foot - rowsTop };
@@ -374,6 +387,7 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
       padPx: { left: SAGA_RAIL.textPadXPx, right: SAGA_RAIL.textPadXPx, top: SAGA_RAIL.rowPadYPx, bottom: SAGA_RAIL.rowPadYPx },
       minHeightPx: (i, target) => stackExtentPx(slot, aspect, target, badges[i], pitchHd),
     },
+    ...(symbolStyle ? { symbolStyle } : {}),
   });
 
   // Down the ladder: the first size whose rows fit with the stacks tight,
@@ -455,11 +469,11 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
 
 /** sagaRail for a card on `layout` (null on a frame without a rail). */
 export function profileSagaRail(
-  layout: Pick<FrameProfile, "chapters">,
+  layout: Pick<FrameProfile, "chapters" | "symbolStyle">,
   content: { intro: string | null; chapters: readonly SagaChapter[] } | null,
   aspect: number = 7 / 5,
 ): SagaRail | null {
-  return layout.chapters && content ? sagaRail(layout.chapters, content.intro, content.chapters, aspect) : null;
+  return layout.chapters && content ? sagaRail(layout.chapters, content.intro, content.chapters, aspect, layout.symbolStyle) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -510,7 +524,10 @@ export type SagaRailDrawing = {
 export function sagaLabelSizePx(slot: ChapterSlot, label: string): number {
   const numeral = 2 * Math.round((slot.badge.numeralSizePct * RULES_HD_WIDTH.portrait) / 2);
   const face = (slot.badge.widthPct / 100) * RULES_HD_WIDTH.portrait - 2 * SAGA_RAIL.labelInsetPx;
-  const width = rulesTextWidthEm(label, false);
+  // Measured in the numerals' own face (TODO 4.8.0): MPlantin unless the
+  // profile names another (ChapterSlot.badge.numeralFont).
+  const numeralFace = faceOf({ chapters: slot }, "numeral");
+  const width = numeralFace.id === "body" ? rulesTextWidthEm(label, false) : displayTextWidthEm(label, { face: numeralFace.metricsId });
   const fitted = width > 0 ? 2 * Math.floor(face / width / 2) : numeral;
   return Math.max(SAGA_RAIL.labelMinPx, Math.min(numeral, fitted));
 }

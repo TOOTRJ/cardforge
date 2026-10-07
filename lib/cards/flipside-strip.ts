@@ -17,6 +17,7 @@
 import type { DfcOtherFace } from "@/lib/cards/faces";
 import { breakRulesText, metricsFor, runWidthPx, type RulesMetrics, type RulesTarget } from "@/lib/cards/rules-layout";
 import type { RulesItem } from "@/lib/cards/rules-text";
+import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FlipsideSlots } from "@/lib/cards/template-layout";
 import { MDFC_STRIP_LINE_PX, RULES_TEXT } from "@/lib/cards/typography";
 
@@ -50,6 +51,8 @@ export function flipsideStrip(
   slots: FlipsideSlots | null | undefined,
   other: DfcOtherFace | null | undefined,
   target: RulesTarget,
+  /** The frame's symbol style (the inline pip's shadow); "modern" unset. */
+  symbolStyle?: SymbolStyle,
 ): FlipsideStrip | null {
   if (!slots || !other) return null;
   const word = other.typeWord?.trim() || null;
@@ -57,7 +60,7 @@ export function flipsideStrip(
   if (!word && !text) return null;
   let line: FlipsideLine | null = null;
   if (text) {
-    const metrics = metricsFor(MDFC_STRIP_LINE_PX, RULES_TEXT.lineHeight, target);
+    const metrics = metricsFor(MDFC_STRIP_LINE_PX, RULES_TEXT.lineHeight, target, symbolStyle);
     const runs = flipsideLineRuns(text);
     const widthPx = runs.reduce((w, run, i) => w + (i > 0 ? metrics.wordGapPx : 0) + runWidthPx(run, metrics), 0);
     line = { runs, metrics, widthPx };

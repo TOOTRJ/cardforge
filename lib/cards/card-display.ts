@@ -348,6 +348,21 @@ export function slotLine(font: "display" | "body" | undefined, text: string): st
   return font === "display" ? displayLine(text) : text;
 }
 
+/** What a footer's artist line starts with unless its profile says
+ *  otherwise (TextSlot.prefix, TODO 4.8.0). */
+export const FOOTER_PREFIX = "Art: ";
+
+/** A footer's artist line as BOTH renderers print it: the profile's prefix
+ *  (FOOTER_PREFIX when it names none — "Illus. " on the 1993–2003 prints,
+ *  4.10a–c) and the credit, or "Unknown" for a card without one. */
+export function footerArtistLine(
+  footer: { prefix?: string } | null | undefined,
+  artistCredit: string | null | undefined,
+): string {
+  const prefix = footer?.prefix ?? FOOTER_PREFIX;
+  return artistCredit?.trim() ? `${prefix}${artistCredit}` : `${prefix}Unknown`;
+}
+
 // ---------------------------------------------------------------------------
 // Mana cost as words — the plain-text twin of the pips a crawler can't read
 // from the rendered card. "{2}{U}{U}" → "2 generic, 2 blue"; hybrid,

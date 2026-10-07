@@ -70,6 +70,7 @@ import {
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
+import { discShadowPx, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
 import {
   RULES_BOX_PAD_PX,
@@ -100,11 +101,12 @@ export function rulesTargetFor(cardWidth: number, orientation: CardOrientation):
   return cardWidth >= RULES_HD_WIDTH[orientation] ? "hd" : "default";
 }
 
-/** The bake's hard shadow under an inline pip (lib/render/card-image.tsx
- *  ManaGem): max(1, round(disc × this)) down, and max(1, round(disc × 0.06))
- *  to the left (the preview's .ms-shadow: 0.07 / 0.06 of 1.3 em). */
-const PIP_SHADOW_DOWN = 0.07;
-const PIP_SHADOW_LEFT = 0.06;
+// The bake's hard shadow under an inline pip (lib/render/card-image.tsx
+// ManaGem) is the frame's SYMBOL STYLE's (lib/cards/symbol-style.ts, TODO
+// 4.8.0): on "modern", max(1, round(disc × 0.07)) down and max(1, round(disc
+// × 0.06)) to the left (the preview's .ms-shadow: 0.07 / 0.06 of 1.3 em).
+// metricsFor reads it through discShadowPx, so a style with another shadow
+// (or none) moves the ink the layout keeps clear with it.
 
 /** One size's rules metrics at one target, in that target's whole px (the
  *  font excepted: an odd HD size is a half px at 750 — the ladder is even). */
@@ -161,7 +163,9 @@ export function metricsFor(
   sizePx: number,
   lineHeight: number = RULES_TEXT.lineHeight,
   target: RulesTarget = "hd",
+  symbols?: SymbolStyle,
 ): RulesMetrics {
+  const pipShadow = (discPx: number) => discShadowPx(symbolStyle(symbols), discPx);
   const scale = RULES_TARGET_SCALE[target];
   const fontPx = sizePx * scale;
   const linePx = Math.round(fontPx * lineHeight);
@@ -179,8 +183,8 @@ export function metricsFor(
     pipPx,
     pipGapPx: Math.max(1, Math.round(fontPx * RULES_TEXT.pipGapEm)),
     pipTopPx: Math.round(regularBaseline - RULES_TEXT.pipCentreEm * fontPx - pipPx / 2),
-    pipShadowPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_DOWN)),
-    pipShadowLeftPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_LEFT)),
+    pipShadowPx: pipShadow(pipPx).down,
+    pipShadowLeftPx: pipShadow(pipPx).left,
     paragraphGapPx: targetPx(RULES_TEXT.paragraphGapPx, scale),
     flavorGapPx: targetPx(RULES_TEXT.flavorGapPx, scale),
     flavorGapNoBarPx: targetPx(RULES_TEXT.flavorGapNoBarPx, scale),
@@ -430,6 +434,10 @@ export type RulesLayoutInput = {
    *  (TODO 4.49 (b)). Each target indents it by its own whole px
    *  (singleLineIndentPx), and the keep-outs are judged where it lands. */
   alignSingleLine?: "center";
+  /** The frame's symbol style (FrameProfile.symbolStyle, TODO 4.8.0): the
+   *  inline pip's shadow, which the layout keeps inside the box and out of
+   *  the keep-outs. Unset = "modern". */
+  symbolStyle?: SymbolStyle;
   /** Whether a flavor block after rules text gets the 1 px bar (M15-era
    *  frames) or the no-bar gap. Default true. */
   divider?: boolean;
@@ -660,7 +668,7 @@ function placeBlocks(
 ): RulesPlacement {
   const orientation = orientationFromAspect(input.aspect);
   const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
-  const base = metricsFor(sizePx, lineHeight, target);
+  const base = metricsFor(sizePx, lineHeight, target, input.symbolStyle);
   // A squeezed paragraph gap (fitRulesLayout, paragraphGapMinPx): whole px
   // at each target, like every gap.
   const m =
@@ -919,7 +927,10 @@ function sameLineColumns(a: LineColumns | undefined, b: LineColumns): boolean {
 function layoutParsedAt(input: RulesLayoutInput, sizePx: number, parsed: ParsedText): RulesLayout {
   const orientation = orientationFromAspect(input.aspect);
   const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
-  const metrics = { hd: metricsFor(sizePx, lineHeight, "hd"), default: metricsFor(sizePx, lineHeight, "default") };
+  const metrics = {
+    hd: metricsFor(sizePx, lineHeight, "hd", input.symbolStyle),
+    default: metricsFor(sizePx, lineHeight, "default", input.symbolStyle),
+  };
   const pad = padFor(input, sizePx);
   const pads = { hd: targetPad(pad, RULES_TARGET_SCALE.hd), default: targetPad(pad, RULES_TARGET_SCALE.default) };
   // The side headroom depends on which words start and end the lines, and

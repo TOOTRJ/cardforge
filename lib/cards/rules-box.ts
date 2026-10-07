@@ -145,6 +145,8 @@ function fitSlot(
       ...(slot.alignSingleLine ? { alignSingleLine: slot.alignSingleLine } : {}),
       ...(slot.paragraphGapMinPx !== undefined ? { paragraphGapMinPx: slot.paragraphGapMinPx } : {}),
       divider: layout.flavorDivider !== false,
+      // The frame's symbol style: the inline pip's shadow (TODO 4.8.0).
+      ...(layout.symbolStyle ? { symbolStyle: layout.symbolStyle } : {}),
       keepOuts: rulesKeepOuts(drawnStatInk(layout, show, aspect), slot.rect, defaults.rotation, aspect),
       ...(drawnFloats(show).length ? { floats: rulesKeepOuts(drawnFloats(show), slot.rect, defaults.rotation, aspect) } : {}),
     }),

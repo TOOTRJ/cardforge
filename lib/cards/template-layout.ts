@@ -80,6 +80,8 @@ import {
   rulesPxToPct,
 } from "@/lib/cards/typography";
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
+import type { SymbolStyle } from "@/lib/cards/symbol-style";
+import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
  *  full outer rect (corner to corner, the area the frame PNG fills) is the
@@ -108,8 +110,24 @@ export type TextSlot = {
   uppercase?: boolean;
   letterSpacingEm?: number;
   lineHeight?: number;
-  /** "display" → heading font (title/type); "body" → MTG body font (rules). */
-  font?: "display" | "body";
+  /** The face the slot's text is set in: "display" → CardDisplay (Beleren
+   *  Bold: names, type lines, the footer), "body" → MPlantin (rules; and
+   *  what the 1997 prints set their type and artist lines in). Every
+   *  shipped slot names one; unset = "display" on a name, type line or strip
+   *  word, "body" on a footer; a RULES box is always the body face (its
+   *  lines are broken on MPlantin's advances). Read by BOTH renderers and every
+   *  fit through lib/cards/type-faces.ts slotFace (TODO 4.8.0) — never by a
+   *  renderer's own literal. Code-owned: not part of the override schema. */
+  font?: SlotFace;
+  /** FOOTER only (TODO 4.8.0): what the artist line starts with — "Art: "
+   *  when unset (FOOTER_PREFIX; the 1993–2003 prints say "Illus. "). Both
+   *  renderers build the line with lib/cards/card-display.ts
+   *  footerArtistLine. The footer's `align` is read too: unset / "start" =
+   *  the line at the rect's start and a clean download's custom mark at its
+   *  end (every profile today); "center" = the line centred in the rect
+   *  (the 1997 prints from Exodus on) — a custom mark then has no place on
+   *  this line. Code-owned: not part of the override schema. */
+  prefix?: string;
   /** CSS text-shadow for text sitting directly on the frame (e.g. agclassic
    *  P/T, planeswalker loyalty). */
   shadowCss?: string;
@@ -217,6 +235,12 @@ export type StatSlot = {
   sizePct: number;
   colorHex: string;
   weight?: number;
+  /** The face the value is set in — TextSlot.font's twin (TODO 4.8.0):
+   *  unset = "display". The stat fit measures the value in this face
+   *  (lib/cards/stat-fit.ts) and both renderers draw it in it
+   *  (lib/cards/type-faces.ts slotFace). Code-owned: not part of the
+   *  override schema. */
+  font?: SlotFace;
   /** Horizontal alignment of the value in `rect`. Default "center" (every
    *  plate and badge); "end" for a value set against a rect's right edge —
    *  the transform front's reverse P/T in its grey tab (TODO 5.1a). */
@@ -506,6 +530,15 @@ export type FlipsideSlots = {
 
 export type FrameProfile = {
   label: string;
+  /** How the frame's era drew its mana symbols — the cost discs, their
+   *  shadow, the inline pips and {T} (TODO 4.8.0 / 4.24; lib/cards/
+   *  symbol-style.ts). Unset = "modern", the only style there is today:
+   *  M15's discs, hard offset shadow and tap. Profile data and a
+   *  CORRECTION when a frame changes it — never a per-card switch (era
+   *  design D8). Both renderers and both shadow models (the rules layout's
+   *  inline pip, the cost row's) read it through symbolStyleOf. Code-owned:
+   *  not part of the override schema. */
+  symbolStyle?: SymbolStyle;
   /** Printed anatomy drawn over the frame master — see FrameOverlaySlot.
    *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
    *  stored card. Code-owned. */
@@ -696,6 +729,9 @@ export type FrameProfile = {
      *  rules slot's size is then what any OTHER card on the frame gets. */
     maxSizePct?: number;
     badgeTextHex: string;
+    /** The face the loyalty-cost badges' numerals are set in (TODO 4.8.0;
+     *  lib/cards/type-faces.ts faceOf "badge"). Unset = "display". */
+    badgeFont?: SlotFace;
     /** Alternating row backdrops (odd/even), translucent over the art. */
     stripeAHex: string;
     stripeBHex: string;
@@ -744,6 +780,11 @@ export type FrameProfile = {
       /** The numeral's size (fraction of card width) and ink. */
       numeralSizePct: number;
       numeralColorHex: string;
+      /** The face the chapter numerals are set in (TODO 4.8.0;
+       *  lib/cards/type-faces.ts faceOf "numeral"). Unset = "body", the
+       *  prints' MPlantin (the numeral's vertical centring is the bitmap
+       *  badge's own, lib/cards/saga-rail.ts). */
+      numeralFont?: SlotFace;
     };
     /** The row divider — the pack's bitmap, drawn centred on each row's top
      *  edge (a first row at the rail's own top has none). */
@@ -1182,20 +1223,21 @@ const ALPHA_BAND_INK: InkByColorKey = {
 // ---------------------------------------------------------------------------
 
 /** Beleren Bold's baseline below the centre of its line box, per em:
- *  (hhea ascender 1917 − descender 552) ÷ 2 ÷ 2048 units. Both renderers
- *  centre a band's single line box (line-height normal = the hhea box,
- *  1.2056 em) in its rect, so a band whose font grows by Δ (a fraction of
- *  the card's width) lowers its baseline by this × Δ.
- *  tests/unit/cards/m15-text-sizes.test.ts re-reads the TTF. */
-export const DISPLAY_BASELINE_BELOW_CENTRE_EM = (1917 - 552) / 2 / 2048;
+ *  (hhea ascender 1917 − descender 552) ÷ 2 ÷ 2048 units — the display
+ *  face's own, from the generated table (lib/cards/type-faces.ts, TODO
+ *  4.8.0). Both renderers centre a band's single line box (line-height
+ *  normal = the hhea box, 1.2056 em) in its rect, so a band whose font
+ *  grows by Δ (a fraction of the card's width) lowers its baseline by
+ *  this × Δ. tests/unit/cards/m15-text-sizes.test.ts re-reads the TTF. */
+export const DISPLAY_BASELINE_BELOW_CENTRE_EM = TYPE_FACES.display.baselineBelowCentreEm;
 
 /** The TextSlot.dy that keeps a centred band's baseline where it printed at
  *  `fromPct` once its size is `toPct` (both fractions of the card's width,
  *  the unit of dy): the text moves up by the baseline's drop. Exact in the
  *  preview; the bake rounds it to whole pixels (≤ 1 px from the old
  *  baseline at 750 and 1500 px, measured on bakes of every family slot). */
-function keepBaseline(fromPct: number, toPct: number): number {
-  return -DISPLAY_BASELINE_BELOW_CENTRE_EM * (toPct - fromPct);
+function keepBaseline(fromPct: number, toPct: number, font?: SlotFace): number {
+  return -typeFace(font).baselineBelowCentreEm * (toPct - fromPct);
 }
 
 /**
@@ -1208,10 +1250,11 @@ function keepBaseline(fromPct: number, toPct: number): number {
  * climb ≈ 0.33 px per px it lost: Vinnie 'Goldfang' Lupo at 46 px sat 11 px
  * above every full-size name). The bake passes its whole-px size.
  */
-export function slotTextDy(slot: Pick<TextSlot, "dy" | "fit" | "sizePct">, drawnSizePct: number): number {
+export function slotTextDy(slot: Pick<TextSlot, "dy" | "fit" | "sizePct" | "font">, drawnSizePct: number): number {
   const dy = slot.dy ?? 0;
   if (slot.fit !== "measured" || !(drawnSizePct < slot.sizePct)) return dy;
-  return dy + keepBaseline(slot.sizePct, drawnSizePct);
+  // The baseline is the slot's own face's (TODO 4.8.0).
+  return dy + keepBaseline(slot.sizePct, drawnSizePct, slot.font);
 }
 
 /** The M15 name: 0.05 → TITLE_SIZE_PCT, baseline kept — it already sits on
