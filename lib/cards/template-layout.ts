@@ -668,10 +668,13 @@ export type FrameProfile = {
     /** The chapter text's line pitch (× the size); RULES_TEXT's when unset. */
     lineHeight?: number;
     textColorHex: string;
-    /** The reminder block above chapter I: its box (fixed — a long reminder
-     *  steps down the ladder inside it, it never pushes the rows), its
-     *  ceiling and its line pitch. */
-    intro: { rect: Rect; sizePct: number; lineHeight?: number };
+    /** The reminder block above chapter I: its box (a long reminder steps
+     *  down the ladder inside it; only one the box can't hold at the
+     *  ladder's floor outgrows it — saga-rail.ts), its ceiling and its line
+     *  pitch. `keepOuts` (card percents) are the parts of that box the frame
+     *  paints: no line's ink may enter them, judged glyph by glyph like a
+     *  stat badge's (RulesLayoutInput.keepOuts). */
+    intro: { rect: Rect; sizePct: number; lineHeight?: number; keepOuts?: readonly Rect[] };
     /** Where the rows start UNDER a reminder block (card %H): the first
      *  divider. Without one they start at `rect`'s top. */
     rowsTopPct: number;
@@ -2665,6 +2668,14 @@ export const SAGA_BADGE_PITCH_PX = { min: 138, max: 160 } as const;
 /** The chapter numeral's size, HD px (MPlantin; the prints' Plantin semibold
  *  is TODO 4.8). */
 export const SAGA_NUMERAL_SIZE_PX = 72;
+/** The fold's corner inside the saga's reminder box, HD px: [the paper's
+ *  first column, from row, to row] — the curve's steps (see SAGA.chapters
+ *  .intro.keepOuts). */
+const SAGA_FOLD_CORNER_PX: readonly (readonly [right: number, top: number, bottom: number])[] = [
+  [138, 572, 580],
+  [144, 580, 588],
+  [152, 588, 597],
+];
 /** The saga type line's print offset, a fraction of the card's width
  *  (TextSlot.dy): 9.3 px down at HD (see SAGA.type). */
 const SAGA_TYPE_PRINT_DY = 9.3 / 1500;
@@ -2767,6 +2778,14 @@ const SAGA: FrameProfile = {
       // prints' four lines, where 64 px took five.
       sizePct: rulesPxToPct(62),
       lineHeight: 1,
+      // The fold's corner. The ribbon folds out of the frame's left edge
+      // under the reminder, and its edge bulges into the box's bottom-left
+      // corner: on every master the paper starts at x 133 at y 572, 138 at
+      // 580, 144 at 588 and 151 at 596 px (169 at the first divider). A
+      // reminder that fills its box (six lines or more: 120 characters and
+      // up) would start its last line ON the fold — three steps of the
+      // curve the lines keep out of.
+      keepOuts: SAGA_FOLD_CORNER_PX.map(([right, top, bottom]) => ({ leftPct: 0, widthPct: right / 15, topPct: top / 21, heightPct: (bottom - top) / 21 })),
     },
     // 621 px: the divider under the reminder block on every print measured
     // (619–621 on 50 of the 54 prints measured, DOM → MH3 — 613.6–622.8 over

@@ -12,14 +12,23 @@
 //     chapter I (the frame paints that box: its outline ends at the fold the
 //     ribbon starts from), laid out by the rules layout (lib/cards/
 //     rules-layout.ts) on its own ladder: a long reminder steps down inside
-//     its box, it never pushes the rows. Its emphasis is the text's own, as
+//     its box and never pushes the rows, and its lines keep out of the
+//     fold's corner (`intro.keepOuts`). Its emphasis is the text's own, as
 //     the prints set it: the parenthesised reminder italic, a keyword before
 //     it roman (DMU #85's "Read ahead (Choose a chapter…)") — v33 set the
 //     whole block italic.
+//     Only a reminder the box cannot hold even at the ladder's floor (about
+//     240 characters; the editor takes 400, and layout v41 drew every one
+//     in full) OUTGROWS it: set at the floor in the chapters' column — clear
+//     of the fold and of the ribbon, which the box's own width is not below
+//     the fold — from the rail's top, as tall as its text, and the rows
+//     start under it. It never clips while the rows can still give way (to
+//     one badge a row).
 //   * WHERE THE ROWS START — under the reminder block (`rowsTopPct`, the
-//     first divider), or from the rail's own top when the saga has no
-//     reminder (owner decision 2026-09-29: no empty reminder band, no
-//     generated reminder — all four stored production sagas).
+//     first divider — or under a reminder that outgrew its box), or from the
+//     rail's own top when the saga has no reminder (owner decision
+//     2026-09-29: no empty reminder band, no generated reminder — all four
+//     stored production sagas).
 //   * THE ROWS — one per chapter, content-sized by the walker rows'
 //     arithmetic (lib/cards/loyalty-rows.ts contentRowsAt): a row's natural
 //     height is its text block with the row's padding, or its stack of
@@ -59,9 +68,11 @@ import {
   RULES_TARGET_SCALE,
   blockHeightPx,
   fitRulesLayout,
+  layoutRulesAt,
   rectPx,
   rulesLadderPx,
   type RulesLayout,
+  type RulesLayoutInput,
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
@@ -160,6 +171,10 @@ export type SagaRail = {
   pitchPx: number;
   /** The reminder block, or null when the saga has none. */
   intro: RulesLayout | null;
+  /** The reminder outgrew its fixed box: it is set at the ladder's floor in
+   *  the chapters' column, as tall as its text, and the rows start under it
+   *  (grownSagaIntro). */
+  introGrown: boolean;
   rows: SagaRailRow[];
   /** The box the rows fill: the text column from where the rows start to
    *  the rail's foot. */
@@ -193,6 +208,67 @@ function pitchRangePx(slot: ChapterSlot, aspect: number): { min: number; max: nu
 }
 
 /**
+ * A reminder its fixed box cannot hold at the ladder's floor, set where it
+ * has room: at the floor size in the chapters' column (clear of the fold
+ * and the ribbon), from the rail's top, with the rows' own padding above and
+ * below — in a box just as tall as its text needs at BOTH bake targets (on
+ * whole even HD px, so the 750 px bake's box is whole too), and the rows
+ * start the frame's gap below it (the fixed box's foot → the first divider).
+ * It may take the rail down to ONE badge a row (the rows' least: every
+ * stack a combined marker — and 2 px a row, so the rows' whole-px edges
+ * still hold their badges at both targets); only past that does it clip,
+ * from its tail.
+ */
+function grownSagaIntro(
+  slot: ChapterSlot,
+  text: string,
+  aspect: number,
+  foot: number,
+  rowCount: number,
+): { layout: RulesLayout; rowsTopPct: number } {
+  const ladder = rulesLadderPx(slot.intro.sizePct, "portrait");
+  const floor = ladder[ladder.length - 1];
+  const cardHeight = Math.round(RULES_HD_WIDTH.portrait * aspect);
+  const top = slot.intro.rect.topPct;
+  const gapPct = slot.rowsTopPct - (top + slot.intro.rect.heightPct);
+  const pct = (px: number) => (px / cardHeight) * 100;
+  const pad = SAGA_RAIL.rowPadYPx;
+  const input = (heightPct: number): RulesLayoutInput => ({
+    rulesText: text,
+    rect: { leftPct: slot.rect.leftPct, widthPct: slot.rect.widthPct, topPct: top, heightPct },
+    aspect,
+    sizePct: slot.intro.sizePct,
+    ...(slot.intro.lineHeight !== undefined ? { lineHeight: slot.intro.lineHeight } : {}),
+    padPx: { x: SAGA_RAIL.textPadXPx, y: pad },
+    vAlign: "start",
+  });
+  // The most it may take, on the even grid: the rail less the gap and one
+  // badge (+ 2 px) a row — never less than the fixed box.
+  const rowsLeast = rowCount * (badgeHeightPx(slot, aspect, "hd") + 2);
+  const maxPx = 2 * Math.floor(Math.max((slot.intro.rect.heightPct / 100) * cardHeight, ((foot - top - gapPct) / 100) * cardHeight - rowsLeast) / 2);
+  const holds = (l: RulesLayout) => RULES_TARGETS.every((t) => l.checks[t].overflowPx <= 0);
+  let layout = layoutRulesAt(input(pct(maxPx)), floor);
+  if (holds(layout)) {
+    // What its lines need (the column is the same whatever the height, so
+    // the lines are these): the taller of the two targets' blocks with the
+    // padding as each rounds it, then up — a step or two for the box's own
+    // whole-px edges — until both targets hold it.
+    const need = Math.max(
+      ...RULES_TARGETS.map((t) => (blockHeightPx(layout, t) + 2 * Math.round(pad * RULES_TARGET_SCALE[t])) / RULES_TARGET_SCALE[t]),
+    );
+    for (let px = Math.min(maxPx, 2 * Math.ceil(need / 2)), tries = 0; px <= maxPx && tries < 8; px += 2, tries += 1) {
+      const at = layoutRulesAt(input(pct(px)), floor);
+      if (holds(at)) {
+        layout = at;
+        break;
+      }
+    }
+  }
+  const box = layout.input.rect;
+  return { layout: fromTopWhenOverflowing(layout), rowsTopPct: Math.max(slot.rowsTopPct, box.topPct + box.heightPct + gapPct) };
+}
+
+/**
  * The rail of one saga: its reminder block, its rows and their badges, at
  * the one text size and stack pitch at which everything fits (see the
  * header). Deterministic, so the preview and the bake draw the same rail by
@@ -202,33 +278,39 @@ function pitchRangePx(slot: ChapterSlot, aspect: number): { min: number; max: nu
 export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, chapters: readonly SagaChapter[], aspect: number = 7 / 5): SagaRail {
   const introText = intro?.trim() ? intro.trim() : null;
   const foot = slot.rect.topPct + slot.rect.heightPct;
-  const rowsTop = introText ? slot.rowsTopPct : slot.rect.topPct;
-  const rowsRect: Rect = { leftPct: slot.rect.leftPct, widthPct: slot.rect.widthPct, topPct: rowsTop, heightPct: foot - rowsTop };
   const ladder = rulesLadderPx(slot.sizePct, "portrait");
   const pitch = pitchRangePx(slot, aspect);
 
-  // The reminder block: its own box and ladder. A saga typed with no
-  // chapter markers is ALL reminder — it takes the whole rail, in the
-  // chapters' column (the reminder box's own width would run its lines over
-  // the ribbon below the fold), and clips at the rail's foot from its first
-  // line if it is longer than that.
-  const introLayout = introText
-    ? fromTopWhenOverflowing(
-        fitRulesLayout({
-          rulesText: introText,
-          rect: chapters.length > 0 ? slot.intro.rect : { leftPct: slot.rect.leftPct, widthPct: slot.rect.widthPct, topPct: slot.intro.rect.topPct, heightPct: foot - slot.intro.rect.topPct },
-          aspect,
-          sizePct: slot.intro.sizePct,
-          ...(slot.intro.lineHeight !== undefined ? { lineHeight: slot.intro.lineHeight } : {}),
-          padPx: SAGA_RAIL.introPadPx,
-          vAlign: "center",
-        }),
-      )
+  // The reminder block: its own box and ladder, its lines out of the fold's
+  // corner. A saga typed with no chapter markers is ALL reminder — it takes
+  // the whole rail, in the chapters' column (the reminder box's own width
+  // would run its lines over the ribbon below the fold), and clips at the
+  // rail's foot from its first line if it is longer than that.
+  const introFit = introText
+    ? fitRulesLayout({
+        rulesText: introText,
+        rect: chapters.length > 0 ? slot.intro.rect : { leftPct: slot.rect.leftPct, widthPct: slot.rect.widthPct, topPct: slot.intro.rect.topPct, heightPct: foot - slot.intro.rect.topPct },
+        aspect,
+        sizePct: slot.intro.sizePct,
+        ...(slot.intro.lineHeight !== undefined ? { lineHeight: slot.intro.lineHeight } : {}),
+        padPx: SAGA_RAIL.introPadPx,
+        vAlign: "center",
+        ...(chapters.length > 0 && slot.intro.keepOuts?.length ? { keepOuts: slot.intro.keepOuts } : {}),
+      })
     : null;
+  // …and one its box cannot hold at the floor — too tall for it, or on the
+  // fold — outgrows it: the rows start under it (grownSagaIntro). (A single
+  // run wider than the box is no reason to: it clips at the box's side, as
+  // in every rules box.)
+  const outgrows = introFit !== null && RULES_TARGETS.some((t) => introFit.checks[t].overflowPx > 0 || introFit.checks[t].keepOutHit);
+  const grown = introText && outgrows && chapters.length > 0 ? grownSagaIntro(slot, introText, aspect, foot, chapters.length) : null;
+  const introLayout = grown ? grown.layout : introFit ? fromTopWhenOverflowing(introFit) : null;
+  const rowsTop = grown ? grown.rowsTopPct : introText ? slot.rowsTopPct : slot.rect.topPct;
+  const rowsRect: Rect = { leftPct: slot.rect.leftPct, widthPct: slot.rect.widthPct, topPct: rowsTop, heightPct: foot - rowsTop };
 
   const numerals = chapters.map((ch) => sagaNumerals(ch.marker));
   if (chapters.length === 0) {
-    return { slot, aspect, sizePx: ladder[0], pitchPx: pitch.max, intro: introLayout, rows: [], rowsRect, rowFractions: [], clipped: false, combinedFallback: false };
+    return { slot, aspect, sizePx: ladder[0], pitchPx: pitch.max, intro: introLayout, introGrown: false, rows: [], rowsRect, rowFractions: [], clipped: false, combinedFallback: false };
   }
 
   // How many badges each row stacks: its numerals, or ONE combined marker —
@@ -288,6 +370,7 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
     sizePx: fitted.rows.sizePx,
     pitchPx: fitted.pitchHd,
     intro: introLayout,
+    introGrown: grown !== null,
     rows: chapters.map((ch, i) => {
       const combined = numerals[i].length > 1 && counts[i] === 1;
       return {

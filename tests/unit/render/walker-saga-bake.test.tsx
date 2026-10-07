@@ -5,7 +5,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { parseChapters, parseLoyaltyAbilities, parseSagaIntro } from "@/lib/cards/card-display";
 import { layoutProfileLoyaltyRows, loyaltyRowLines, loyaltyRowsDrawing } from "@/lib/cards/loyalty-rows";
 import { RULES_TARGET_SCALE, linePositions, rectPx, type RulesTarget } from "@/lib/cards/rules-layout";
-import { SAGA_RAIL, sagaRail, sagaRailDrawing } from "@/lib/cards/saga-rail";
+import { sagaRail, sagaRailDrawing } from "@/lib/cards/saga-rail";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { RENDER_PRESETS, frameAssetPathsFor } from "@/lib/render/card-image";
 
@@ -85,6 +85,9 @@ const SAGAS: Record<string, string> = {
   // The stored production saga's shape: no reminder, a II–IV stack.
   "no reminder, a three-badge stack": "I — Kashimo gets reach and double strike permanently give him 2 1/1 counters Kashimo also stuns for 3 turns now\nII, III, IV — Give target creature 4 stun counters and 2 −1/−1 counters (They're gone next turn.)\nV — Tap Kashimo.\nVI — Exile this card.",
   "six rows": `${REMINDER.replace("III", "VI")}\nI — Draw a card.\nII — Create a 2/2 white Knight creature token with vigilance.\nIII — Draw two cards.\nIV — Add {R}{R}{R}.\nV — Knights you control get +2/+1 until end of turn.\nVI — Destroy target artifact or enchantment.`,
+  // 300 characters of reminder: more than its box holds at the ladder's
+  // floor — it is set in the chapters' column, the rows start under it.
+  "a reminder that outgrows its box": `${REMINDER.slice(0, -1)} Whenever you cast your second spell each turn, put another lore counter on this Saga. If it would leave the battlefield, exile it with three time counters on it instead. Skipped chapters don't trigger.)\nI — Draw a card.\nII, III — Each opponent discards a card.`,
 };
 /** The stand-in badge and divider: flat colours a scan can tell from the
  *  white master, the dark ink and each other. */
@@ -356,6 +359,19 @@ describe("walker rows and the saga rail — real bakes at 750 and HD", () => {
           for (let y = box.bottom; y < d.rows[0].top - 2; y += 1) {
             for (let x = box.left; x < box.right; x += 1) expect(lum(raw, x, y) < 70, `${name}: ink under the reminder at ${x},${y}`).toBe(false);
           }
+          // One that outgrew its box is drawn in the chapters' column, past
+          // where the fixed box ends — and nothing left of that column down
+          // to the first row (the fold, then the ribbon, on a real master).
+          expect(rail.introGrown, name).toBe(name === "a reminder that outgrows its box");
+          if (rail.introGrown) {
+            const fixed = rectPx(slot.intro.rect, "portrait", 7 / 5, target);
+            expect([box.left, box.right], name).toEqual([column.left, column.right]);
+            expect(inked.at(-1)!, name).toBeGreaterThan(fixed.bottom);
+            expect(d.rows[0].top, name).toBeGreaterThan(rectPx({ ...slot.rect, topPct: slot.rowsTopPct }, "portrait", 7 / 5, target).top);
+            for (let y = box.top; y < d.rows[0].top - 2; y += 1) {
+              for (let x = fixed.left; x < column.left - 2; x += 1) expect(lum(raw, x, y) < 70, `${name}: ink left of the chapters' column at ${x},${y}`).toBe(false);
+            }
+          }
         }
         if (name === "DOM #122") {
           // The standard reminder: the prints' baselines, 341 px at HD.
@@ -420,8 +436,9 @@ describe("walker rows and the saga rail — real bakes at 750 and HD", () => {
             expect(b.top, label).toBeGreaterThanOrEqual(row.top);
             expect(b.top + b.height, label).toBeLessThanOrEqual(row.bottom);
             // The numeral: dark ink inside the badge, centred across it, its
-            // capitals centred a px below the badge's centre (the layout's
-            // labelTop; MPlantin's capitals are 0.682 em).
+            // capitals centred ONE HD px below the badge's centre (the
+            // layout's labelTop; MPlantin's capitals are 0.682 em) — the
+            // number itself, not the layout's constant.
             let [x0, x1, y0, y1] = [Infinity, -Infinity, Infinity, -Infinity];
             for (let y = b.top; y < b.top + b.height; y += 1) {
               for (let x = b.left; x < b.left + b.width; x += 1) {
@@ -431,7 +448,7 @@ describe("walker rows and the saga rail — real bakes at 750 and HD", () => {
             }
             expect(x0, `${label}: "${b.label}" drawn`).toBeLessThan(Infinity);
             expect(Math.abs((x0 + x1 + 1) / 2 - (b.left + b.width / 2)), `${label}: "${b.label}" centred across`).toBeLessThanOrEqual(2.5 * scale + 0.5);
-            const capCentre = b.top + b.height / 2 + SAGA_RAIL.numeralDyPx * scale;
+            const capCentre = b.top + b.height / 2 + 1 * scale;
             expect(Math.abs((y0 + y1 + 1) / 2 - capCentre), `${label}: "${b.label}" centred down`).toBeLessThanOrEqual(2 * scale + 1);
             expect(y1 - y0 + 1, `${label}: "${b.label}" capitals`).toBeGreaterThanOrEqual(Math.floor(0.66 * b.fontPx));
             expect(y1 - y0 + 1, `${label}: "${b.label}" capitals`).toBeLessThanOrEqual(Math.ceil(0.72 * b.fontPx) + 1);

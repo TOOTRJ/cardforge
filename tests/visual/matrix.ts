@@ -29,12 +29,12 @@ import { isDfcBackBody } from "@/lib/cards/dfc";
 //     under-frame art is drawn only under art, and layout v35's art slots —
 //     the empty box is drawn in the slot);
 //   * the saga's printed rail (TODO 4.21c "@stack3", "@prodshape", "@six",
-//     "@stack5", "@stack5-tight", "@stack6", "@combined", "@longintro", "@dense",
-//     "@pastfloor", "@introonly", "@legacy8"): every row rule of
-//     lib/cards/saga-rail.ts on a real bake — badge stacks at the roomy and
-//     at a tighter pitch, a saga with no reminder, six rows, the combined
-//     marker, a reminder past its box, the ladder's lower steps and a rail
-//     past its floor;
+//     "@stack5", "@stack5-tight", "@stack6", "@combined", "@longintro",
+//     "@grownintro", "@dense", "@pastfloor", "@introonly", "@legacy8"): every
+//     row rule of lib/cards/saga-rail.ts on a real bake — badge stacks at the
+//     roomy and at a tighter pitch, a saga with no reminder, six rows, the
+//     combined marker, a reminder that steps down inside its box and one
+//     that outgrows it, the ladder's lower steps and a rail past its floor;
 //   * the kind anatomy a card TYPE prints on a body (TODO 4.5.0): a saga
 //     creature ("@creature"), a Vehicle and a Spacecraft ("@vehicle",
 //     "@spacecraft") — their P/T as it draws today;
@@ -735,6 +735,9 @@ const LAYOUT_CASES: readonly [FrameTemplate, CardKind, VisualColour, VisualShape
  *     multi-badge row draws ONE badge with the combined label;
  *   • "@longintro": a read-ahead reminder, longer than its box holds at
  *     62 px — it steps down inside the box and never pushes the rows;
+ *   • "@grownintro": a 300-character reminder, more than its box holds at
+ *     the ladder's floor — set at the floor in the chapters' column, as
+ *     tall as its text, the rows (a two-badge stack and a single) under it;
  *   • "@dense": four chapters (one a two-badge stack) under a reminder —
  *     the text at the ladder's lower steps, the stack tight;
  *   • "@pastfloor": six long chapters under a reminder, more than the rail
@@ -925,6 +928,24 @@ const SAGA_RAIL_CASES: readonly [VisualColour, VisualShape, string, Partial<Card
             { numerals: [1], text: "You may sacrifice a creature. If you do, each opponent discards a card." },
             { numerals: [2], text: "Return target creature card from your graveyard to your hand." },
             { numerals: [3], text: "Target opponent may sacrifice a nonland, nontoken permanent. If they don't, they lose 2 life and you draw a card." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "r",
+    "long",
+    "@grownintro",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro:
+            "(As this Saga enters and after your draw step, add a lore counter. Whenever you cast your second spell each turn, put another lore counter on this Saga. If it would leave the battlefield, exile it with three time counters on it instead. Skipped chapters don't trigger. Sacrifice after III.)",
+          chapters: [
+            { numerals: [1, 2], text: "This Saga deals 2 damage to any target." },
+            { numerals: [3], text: "Creatures you control get +2/+0 and gain haste until end of turn." },
           ],
         },
       },

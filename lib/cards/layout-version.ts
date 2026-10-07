@@ -867,7 +867,11 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              draw): the reminder block in its own fixed box (62 px on a
 //              62 px pitch: the prints' baselines 341 / 403 / 465 / 527; its
 //              emphasis the text's own, where v33 set the whole block
-//              italic); the rows from the first divider at 621 px (the
+//              italic; its lines out of the fold's corner; one the box
+//              cannot hold at the ladder's floor — past ≈ 240 characters —
+//              outgrows it: the floor size, the chapters' column, the rows
+//              under it, as v41 drew every reminder in full); the rows from
+//              the first divider at 621 px (the
 //              prints' 619–621 on 50 of 54 scans; CC draws 608), or from the
 //              rail's own top (237 px) when the saga has no reminder (owner
 //              decision 2026-09-29); the chapter text at 64 px on the rules

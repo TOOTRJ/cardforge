@@ -58,7 +58,7 @@ import { RULES_MATRIX, plainText, type RulesCase } from "@/tests/unit/cards/fixt
 // sagaRailDrawing), drawn by RulesBoxBake — held to the same four rules at
 // both targets, each chapter inside ITS row, on the matrix's texts split
 // over chapters and on the rail's own shapes (no reminder, a long reminder,
-// stacks, six rows).
+// a reminder that outgrows its box, stacks, six rows).
 // ---------------------------------------------------------------------------
 
 const SENTINEL = "#ff00ff";
@@ -430,6 +430,16 @@ describe("the saga rail — its reminder block and every chapter row (TODO 4.21c
       { marker: "I", text: "Draw a card." },
       { marker: "II,III", text: "Each opponent discards a card." },
     ]),
+    // 330 characters: past what the reminder's box holds at the floor — it
+    // is set in the chapters' column, as tall as its text, the rows under it.
+    "a reminder that outgrows its box": sagaRail(
+      SLOT,
+      `${REMINDER.slice(0, -1)} Whenever you cast your second spell each turn, put another lore counter on this Saga, then scry 1. If this Saga would leave the battlefield, exile it with three time counters on it instead. Skipped chapters don't trigger.)`,
+      [
+        { marker: "I,II", text: "Create a 2/2 white Knight creature token with vigilance." },
+        { marker: "III", text: "Knights you control get +2/+1 until end of turn." },
+      ],
+    ),
     "a stored saga (no reminder, II–IV on one row, two paragraphs)": sagaRail(SLOT, null, [
       { marker: "I", text: "Kashimo gets reach and double strike permanently give him 2 1/1 counters Kashimo also stuns for 3 turns now" },
       { marker: "II,III,IV", text: "Give kashimo a 1/1 counter and give target creature 4 stun counters and 2 -1/-1 counters" },
@@ -441,13 +451,18 @@ describe("the saga rail — its reminder block and every chapter row (TODO 4.21c
 
   it("clips only the texts no rail can hold at the floor — and says so", () => {
     const clipped = sagas().filter(([, rail]) => rail.clipped || rail.intro?.clipped || rail.rows.some((row) => row.text.clipped));
-    // 1,200 characters in one chapter; and a 260-character reminder — its
-    // box is the frame's (360 px: eight 42 px lines), it never grows into
-    // the rows.
-    expect(clipped.map(([name]) => name).sort()).toEqual(["1200 chars", "flavor only"].sort());
+    // 1,200 characters in one chapter. (A long reminder is not one of them:
+    // the 260-character one outgrows its box — the chapters' column, the
+    // ladder's floor, the rows under it — and so does the 330-character one.)
+    expect(clipped.map(([name]) => name).sort()).toEqual(["1200 chars"]);
     for (const [name, rail] of clipped) {
       if (rail.clipped) expect(rail.sizePx, name).toBe(RULES_SIZE_PX.floor);
-      if (rail.intro?.clipped) expect(rail.intro.sizePx, name).toBe(RULES_SIZE_PX.floor);
+    }
+    const grown = sagas().filter(([, rail]) => rail.introGrown);
+    expect(grown.map(([name]) => name).sort()).toEqual(["a reminder that outgrows its box", "flavor only"]);
+    for (const [name, rail] of grown) {
+      expect(rail.intro!.sizePx, name).toBe(RULES_SIZE_PX.floor);
+      expect(rail.intro!.clipped, name).toBe(false);
     }
   });
 

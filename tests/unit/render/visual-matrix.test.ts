@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -130,6 +130,15 @@ describe("visual-regression matrix", () => {
     expect(longIntro.intro?.clipped).toBe(false);
     expect(longIntro).toMatchObject({ sizePx: 64, clipped: false });
     expect(longIntro.rowsRect.topPct).toBe(slot.rowsTopPct);
+    expect(longIntro.introGrown).toBe(false);
+    // One its box can't hold at the ladder's floor outgrows it: the floor
+    // size, the chapters' column, the rows under it — nothing clipped.
+    const grownIntro = rail("saga/r/saga-long@grownintro");
+    expect(grownIntro).toMatchObject({ introGrown: true, sizePx: 64, clipped: false });
+    expect(grownIntro.intro).toMatchObject({ sizePx: 42, clipped: false });
+    expect(grownIntro.intro?.input.rect.leftPct).toBe(slot.rect.leftPct);
+    expect(grownIntro.rowsRect.topPct).toBeGreaterThan(slot.rowsTopPct);
+    expect(stacks("saga/r/saga-long@grownintro")).toEqual([2, 1]);
     // The ladder's lower steps, then a rail past its floor.
     expect(rail("saga/wub/saga-long@dense").sizePx).toBeLessThan(60);
     expect(rail("saga/wub/saga-long@dense").clipped).toBe(false);

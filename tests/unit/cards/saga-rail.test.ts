@@ -4,6 +4,7 @@ import {
   RULES_TARGETS,
   RULES_TARGET_SCALE,
   blockHeightPx,
+  inkEntersRect,
   layoutRulesAt,
   linePositions,
   rectPx,
@@ -35,7 +36,7 @@ import { RULES_SIZE_PX, rulesPxToPct } from "@/lib/cards/typography";
 // position at both bake targets — from the geometry on FrameProfile.chapters,
 // measured on the prints (Scryfall PNGs at 1500 × 2100) and on Card
 // Conjurer's saga pack. Real-pixel checks: tests/unit/render/
-// saga-rail-bake.test.tsx; the preview's twin: tests/unit/components/
+// walker-saga-bake.test.tsx; the preview's twin: tests/unit/components/
 // saga-rail-preview.test.tsx; the walker rows it shares its row arithmetic
 // with, pinned: tests/unit/cards/loyalty-rows-pinned.test.ts.
 // ---------------------------------------------------------------------------
@@ -66,6 +67,10 @@ const DOM_122 = `${REMINDER}\nI — This Saga deals 1 damage to each creature wi
 const LTC_58 = `${REMINDER.replace("III", "IV")}\nI, II, III — Create a 3/3 black Wraith creature token with menace. The Ring tempts you.\nIV — For each opponent, gain control of up to one target creature that player controls until end of turn. Untap those creatures. They gain haste until end of turn. The Ring tempts you.`;
 const WHO_99 = `${REMINDER.replace("III", "VI")}\nI — Create a Treasure token.\nII, III, IV, V, VI — Create a token that's a copy of target non-Saga token you control.`;
 const LTR_174 = `${REMINDER.replace("III", "VI")}\nI, II, III, IV, V, VI — Note a creature type that hasn't been noted for this Saga. When you next cast a creature spell of that type this turn, that creature enters with an additional +1/+1 counter on it.`;
+/** A reminder of exactly `chars` characters (the editor takes 400). */
+const LONG_REMINDER =
+  "(As this Saga enters and after your draw step, add a lore counter. Whenever you cast a historic spell, you may put an additional lore counter on this Saga. If this Saga would leave the battlefield, exile it with three time counters on it instead and it gains suspend. Skipped chapters do not trigger. Players can't remove lore counters from it during their own turn unless a spell or ability says so. Sacrifice after III.)";
+const reminderOf = (chars: number) => `${LONG_REMINDER.slice(0, chars - 1).trimEnd()})`;
 const LONG =
   "Search your library for any number of creature cards with total mana value 10 or less, put them onto the battlefield, then shuffle. They gain haste until end of turn. At the beginning of the next end step, return them to their owners' hands, then each opponent loses 2 life for each creature returned this way.";
 
@@ -183,12 +188,127 @@ describe("the reminder block", () => {
     expect(long.rows.map((row) => linesOf(row.text))).toEqual(short.rows.map((row) => linesOf(row.text)));
   });
 
-  it("clips a reminder its box can't hold at the floor from its first line", () => {
-    const r = rail(`(${"Whenever a creature enters, put a lore counter on this Saga and scry 1. ".repeat(8)})\nI — Draw a card.`);
+  it("keeps the reminder's lines out of the fold's corner — the frame paints the box's bottom-left", () => {
+    // The fold's edge inside the box, HD px: x 133 at y 572, 138 at 580, 144
+    // at 588, 151 at 596 — three steps of the curve.
+    expect(SLOT.intro.keepOuts!.map((k) => rectPx(k, "portrait", ASPECT, "hd")).map((k) => [k.left, k.right, k.top, k.bottom])).toEqual([
+      [0, 138, 572, 580],
+      [0, 144, 580, 588],
+      [0, 152, 588, 597],
+    ]);
+    const bare = { ...SLOT, intro: { ...SLOT.intro, keepOuts: undefined } };
+    const onFold = (r: SagaRail) => RULES_TARGETS.some((t) => SLOT.intro.keepOuts!.some((k) => inkEntersRect(r.intro!, k, t)));
+    let moved = 0;
+    for (let chars = 90; chars <= 240; chars += 10) {
+      const rules = parseChapters(DOM_21);
+      const [free, kept] = [sagaRail(bare, reminderOf(chars), rules), sagaRail(SLOT, reminderOf(chars), rules)];
+      // In its fixed box, never on the fold — where the box alone would
+      // have put a last line on it, the reminder is a step smaller.
+      expect(kept.introGrown, `${chars}`).toBe(false);
+      expect(kept.intro!.input.rect, `${chars}`).toEqual(SLOT.intro.rect);
+      expect(kept.intro!.clipped, `${chars}`).toBe(false);
+      expect(onFold(kept), `${chars}`).toBe(false);
+      expect(kept.intro!.sizePx, `${chars}`).toBeLessThanOrEqual(free.intro!.sizePx);
+      if (onFold(free)) {
+        expect(kept.intro!.sizePx, `${chars}`).toBeLessThan(free.intro!.sizePx);
+        moved += 1;
+      } else {
+        expect(kept.intro!.sizePx, `${chars}`).toBe(free.intro!.sizePx);
+      }
+    }
+    expect(moved).toBeGreaterThan(3);
+    // The standard reminder and a read-ahead one never came near it.
+    expect(rail(DOM_21).intro!.sizePx).toBe(62);
+    expect(sagaRail(bare, parseSagaIntro(DOM_21), parseChapters(DOM_21)).intro!.sizePx).toBe(62);
+  });
+
+  it("lets a reminder its box can't hold at the floor OUTGROW it: the floor size, the chapters' column, the rows under it", () => {
+    // 300 characters — the editor takes 400, and layout v41 drew every one
+    // in full (its intro took the height it needed).
+    const r = sagaRail(SLOT, reminderOf(300), parseChapters(DOM_21));
+    expect(r.introGrown).toBe(true);
+    expect(r.intro!.sizePx).toBe(RULES_SIZE_PX.floor);
+    expect(r.intro!.clipped).toBe(false);
+    expect(r.intro!.input.vAlign).toBe("start");
+    for (const t of RULES_TARGETS) expect(r.intro!.checks[t].overflowPx, t).toBeLessThanOrEqual(0);
+    // The chapters' column (203–728 px: clear of the fold and of the
+    // ribbon), from the rail's top, on whole even px…
+    const box = rectPx(r.intro!.input.rect, "portrait", ASPECT, "hd");
+    expect([box.left, box.right, box.top]).toEqual([203, 728, 237]);
+    expect(box.height % 2).toBe(0);
+    expect(box.bottom).toBeGreaterThan(597);
+    // …just as tall as its lines with the rows' padding above and below.
+    const placed = linePositions(r.intro!, "hd");
+    const last = placed.lines.at(-1)!;
+    expect(placed.lines[0].top).toBe(237 + SAGA_RAIL.rowPadYPx);
+    expect(placed.metrics.fontPx).toBe(42);
+    expect(box.bottom - (last.top + last.height)).toBeGreaterThanOrEqual(SAGA_RAIL.rowPadYPx);
+    expect(box.bottom - (last.top + last.height)).toBeLessThanOrEqual(SAGA_RAIL.rowPadYPx + 3);
+    // The rows start the frame's gap under it — the fixed box's foot to the
+    // first divider, 24 px — at both targets, a divider on the first.
+    const rows = rectPx(r.rowsRect, "portrait", ASPECT, "hd");
+    expect(rows.top - box.bottom).toBe(24);
+    expect(rows.top).toBeGreaterThan(621);
+    expect(rows.bottom).toBe(1759);
+    const small = { box: rectPx(r.intro!.input.rect, "portrait", ASPECT, "default"), rows: rectPx(r.rowsRect, "portrait", ASPECT, "default") };
+    expect(small.rows.top - small.box.bottom).toBe(12);
+    for (const t of RULES_TARGETS) {
+      const d = sagaRailDrawing(r, t);
+      expect(d.rows[0].divider, t).not.toBeNull();
+      expect(d.rows[0].top, t).toBe(rectPx(r.rowsRect, "portrait", ASPECT, t).top);
+    }
+    // The rows fit themselves in what is left: same lines as under the
+    // standard reminder, their shares of a shorter box.
+    expect(r.clipped).toBe(false);
+    expect(r.rowFractions.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
+    expect(r.rows.map((row) => linesOf(row.text))).toEqual(rail(DOM_21).rows.map((row) => linesOf(row.text)));
+  });
+
+  it("never clips a reminder the editor takes (400 characters), whatever the rows — it grows, the rows give way", () => {
+    const six = chapters(["I", "II", "III", "IV", "V", "VI"].map((n) => [n, "Create a 2/2 white Knight creature token with vigilance."]));
+    for (const rows of [parseChapters(DOM_21), parseChapters(LTC_58), six]) {
+      for (let chars = 90; chars <= 400; chars += 10) {
+        const r = sagaRail(SLOT, reminderOf(chars), rows);
+        const label = `${chars} characters over ${rows.length} rows`;
+        expect(r.intro!.clipped, label).toBe(false);
+        for (const t of RULES_TARGETS) expect(r.intro!.checks[t].fits, `${label} (${t})`).toBe(true);
+        expect(r.introGrown, label).toBe(chars >= 250);
+        expect(r.intro!.input.rect.leftPct, label).toBe(r.introGrown ? SLOT.rect.leftPct : SLOT.intro.rect.leftPct);
+        // The rows still hold their badges, in a box that ends at the foot.
+        const d = sagaRailDrawing(r, "hd");
+        expect(d.rows.at(-1)!.bottom, label).toBe(1759);
+        for (const row of d.rows) {
+          expect(row.badges[0].top, label).toBeGreaterThanOrEqual(row.top);
+          expect(row.badges.at(-1)!.top + 132, label).toBeLessThanOrEqual(row.bottom);
+        }
+      }
+    }
+    // Four hundred characters over three short chapters: nothing clips.
+    const full = sagaRail(SLOT, reminderOf(400), parseChapters(DOM_122));
+    expect([full.introGrown, full.intro!.clipped, full.clipped]).toEqual([true, false, false]);
+  });
+
+  it("does not outgrow its box for a run wider than it — that clips at the box's side, as in every rules box", () => {
+    const r = sagaRail(SLOT, `(${"W".repeat(60)})`, parseChapters(DOM_21));
+    expect(r.intro!.clipped).toBe(true);
+    expect(RULES_TARGETS.every((t) => r.intro!.checks[t].overwideRun && r.intro!.checks[t].overflowPx <= 0)).toBe(true);
+    expect(r.introGrown).toBe(false);
+    expect(r.intro!.input.rect).toEqual(SLOT.intro.rect);
+    expect(rectPx(r.rowsRect, "portrait", ASPECT, "hd").top).toBe(621);
+  });
+
+  it("clips only a reminder no rail can hold — from its tail, the rows down to one badge each", () => {
+    const r = rail(`(${"Whenever a creature enters, put a lore counter on this Saga and scry 1. ".repeat(40)})\nI — Draw a card.\nII — Draw a card.`);
+    expect(r.introGrown).toBe(true);
     expect(r.intro!.sizePx).toBe(RULES_SIZE_PX.floor);
     expect(r.intro!.clipped).toBe(true);
     expect(r.intro!.input.vAlign).toBe("start");
-    expect(r.rows).toHaveLength(1);
+    // The rows keep a badge (and 2 px) each: 268 px of the rail.
+    const rows = rectPx(r.rowsRect, "portrait", ASPECT, "hd");
+    expect(rows.bottom - rows.top).toBeGreaterThanOrEqual(2 * 134);
+    expect(rows.bottom - rows.top).toBeLessThan(2 * 134 + 4);
+    expect(r.clipped).toBe(false);
+    for (const row of sagaRailDrawing(r, "hd").rows) expect(row.bottom - row.top).toBeGreaterThanOrEqual(132);
   });
 
   it("takes the whole rail when the saga is ALL reminder (no chapter markers)", () => {
@@ -197,7 +317,7 @@ describe("the reminder block", () => {
     const box = rectPx(r.intro!.input.rect, "portrait", ASPECT, "hd");
     expect([box.top, box.bottom]).toEqual([237, 1759]);
     // …in the chapters' column (203–728 px), clear of the ribbon the frame
-    // paints below the fold (x 76–166): the reminder box's own width starts
+    // paints below the fold (x 66–166): the reminder box's own width starts
     // at 132 px.
     expect([box.left, box.right]).toEqual([203, 728]);
     expect(r.intro!.input.rect.leftPct).toBe(SLOT.rect.leftPct);
@@ -375,6 +495,23 @@ describe("the badge stacks", () => {
       expect(r.combinedFallback, `${parts}`).toBe(false);
       expect(r.clipped, `${parts}`).toBe(false);
       expect(r.rows.every((row) => !row.combined), `${parts}`).toBe(true);
+    }
+  });
+});
+
+describe("the numerals", () => {
+  it("centres a numeral's capitals a px below its badge's centre: its line box 36 px under the badge's top at HD, 18 at 750", () => {
+    // 72 px MPlantin: the capitals' centre is 0.4335 em down a one-em line
+    // box (31.2 px); the badge's centre + 1 px is 67 px down the badge.
+    for (const rules of [DOM_21, LTC_58, LTR_174]) {
+      for (const badge of sagaRailDrawing(rail(rules), "hd").rows.flatMap((row) => row.badges)) {
+        expect(badge.fontPx).toBe(72);
+        expect(badge.labelTop - badge.top).toBe(36);
+      }
+      for (const badge of sagaRailDrawing(rail(rules), "default").rows.flatMap((row) => row.badges)) {
+        expect(badge.fontPx).toBe(36);
+        expect(badge.labelTop - badge.top).toBe(18);
+      }
     }
   });
 });
