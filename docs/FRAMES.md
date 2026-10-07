@@ -1338,7 +1338,8 @@ print − ours, + = right or down.
   | Type bar, left / right end | +1.9 / +9.2 | +1.7 / +9.4 |
   | Text box, left / right | +0.5 / +8.3 | +0.5 / +8.3 |
   | Shield, left point | +11.8 | +11.7 |
-  | Battle icon's dark disc: centre x / y, radius | +0.9 / −3.4, −2.9 | the same (above the moved block) |
+  | Bottom border, top edge (under the text box) | +0.9 | −3.1 |
+  | Battle icon's dark disc: centre x / y, radius | −0.9 / −3.4, −2.9 | the same (above the moved block) |
 
   The rows are within 1.5 px of the prints' mean after the move (2.3 px of
   any one). **Not closed:** the prints' name pill, type bar and text box
@@ -1352,7 +1353,31 @@ print − ours, + = right or down.
   columns along each and redrawing the shield over the border. Left as
   the pack has it — the owner's call (the PR's open questions). Text is
   placed relative to the master's own bars (below), so a name or a cost is
-  not 10 px off its bar.
+  not 10 px off its bar. (The one edge the move takes OFF the prints is
+  the bottom border's: the prints' text-box rim is about 2 px thinner than
+  the pack's, so with the box on the prints the border starts 3 px below
+  theirs.)
+
+  **Skeptic pass (2026-10-06).** Both tables re-measured on other rows
+  and columns, two ways (half-level crossings and profile correlation, the
+  master blurred to the scan's sharpness): the battle's numbers within
+  about 1 px (right ends +10.0 / +8.6 / +7.6…+8.8, the shield's black
+  interior +11.7 by its centroid, the icon's disc r 54.6 against the
+  prints' 52.0, 3.9 px lower), the split's within 1–3 px by where an edge
+  is read (the prints' bodies 4–5.5 px wider than the pack's). A fresh
+  importer run from the pinned commit gives the 28 published objects byte
+  for byte; every zone a block moves through is one line repeated on all
+  14 masters, so no seam exists to look for (pack and master agree pixel
+  for pixel on both sides of every boundary). **The battle's right side
+  CAN be re-cut** the way the tokens and flip were — a prototype on
+  `battle/r` (scratchpad only, never published): the name pill's end 10
+  px right and the type bar's and text box's 8, each through a 24-column
+  cross-fade inside the bar's own paper (the lines it crosses there are
+  horizontal), the shield lifted through the pack's Defense mask and set
+  12 px right over the border, where the prints' sits — every right-side
+  edge then lies within 1 px of the nine prints' mean (the pill +0.1, the
+  type bar +0.7, the box −0.3, the shield −0.3). The icon cannot be put
+  right alone: its rim is the pill's, and the whole pill sits 2–3 px low.
 
 - **How text is placed on both.** Where the prints set a line RELATIVE TO
   ITS OWN BAR of the master: a baseline below its bar's face, a name's
@@ -1397,10 +1422,18 @@ print − ours, + = right or down.
     width and held 33 / 38 px of border), the block centred as the prints
     centre theirs (ink centred on 1178.5 px ± 2), at the 9 pt ladder top
     (`RULES_SIZE_PX.standard`: TSR #161 and #186 set two and three lines
-    at 76 px, a 74–75 px pitch). The prints also CENTRE a short text's
-    lines (Fast // Furious, Rough // Tumble) and left-align a longer one
-    (Said // Done); ours is always left-aligned — a rule of the rules
-    layout's own, not this correction's (open question).
+    at 76 px, a 74–75 px pitch; MH2 #123's halves 70–71, a smaller text
+    than its length needs). Some prints also CENTRE a text's lines (MH2
+    #123, TSR #156 / #161 / #186, C16 #239 — one to four lines), others set
+    theirs left (MH2 #60's three and five lines, GRN #224, and DMR #209's
+    one- and two-line texts): no rule of length separates them, so ours is
+    always left-aligned — a rule of the rules layout's own, not this
+    correction's (open question). The layout already carries an indent per
+    line (a token's one centred line, `alignSingleLine`), so centring a
+    short block is a predicate away once someone says which texts. The
+    halves' missing 5 px also leave each text column about 10 px narrower
+    than the prints' (780 px against a 790 px printed line on TSR #186:
+    "Tumble deals 6 damage" breaks one word earlier in ours).
   - **Both halves are `fit: "measured"`.** An unturned second face draws
     its name and type line through `fitTitleBand` / `fitTypeLineBand`
     exactly as the front draws its own, in both renderers; a turned one
@@ -1530,6 +1563,15 @@ creator's 384 px column Chrome
 sets a line's box in whole CSS px (font ascent and descent rounded, the
 half-leading floored), which moves small text up to about 1.5 CSS px on
 every template (m15's rules 1.1); that is the browser's, not a slot's.
+(Skeptic pass, the real `CardPreview` at 384 px against the HD render: a
+name sits 0.8 CSS px high on m15, 0.5 on battle and 1.2–1.5 on split —
+Chrome's baseline against the font's unrounded metrics is 1.2 / 0.8 / 1.0
+px high — and the type lines 0.7–0.8 on all three. No profile number
+closes it: a slot's `dy` moves both renderers alike. The preview's cost
+discs are also 5 % smaller than the render's on every template, m15
+included (69 px against 73 at HD) — mana-font's `.ms-cost` is `font-size:
+.95em; width: 1.3em`, a disc of 1.235 em of the wrapper `pipFont` sizes
+by 1.3 — which is older than this change and not its business.)
 A private card has no stored bake, so its My Cards tile is the live
 preview letterboxed in the 5:7 tile; a public one shows its baked
 thumbnail in the same box.
@@ -3780,7 +3822,14 @@ kind)` (`lib/cards/profile-override.ts`) lists the loyalty shield, the
 defense and the chapter rail for their own kind only, and a score passes
 its reference printing's kind (`lib/frames/score-combo.ts`), so a creature
 printing is never scored against a walker's shield. The layout editor lists
-every slot.
+every slot, and offers each the fields the override schema reads at its
+PATH (`fieldsForSlot`, `isStatSlotPath`): a rect for an art window, a size
+and the value's offsets for a stat slot, a size alone for the saga's
+chapter rail, a size, line height and tracking for a text slot — never by
+the keys a profile's slot happens to carry (a P/T with no plate, the
+battle's defense in its painted shield and the chapter rail were offered a
+text slot's fields, and a draft that touched one could not be saved; a test
+writes every offered field on every template and parses it).
 
 ### Adding a body
 
@@ -4028,9 +4077,11 @@ What a frame gives it:
   `PLATE_INK`, and the bucket plates' manifest hashes (the script prints
   them too) into the test's `MEASURED_ON` — that pin is what fails when a
   promoted plate replaces one the table was measured on. A value printed on
-  the art (no plate) keeps its rect clear, a drawn badge its disc, and a
-  badge the MASTER paints its box, whether the card has a value or not
-  (`StatSlot.paintedRect`: the battle's defense shield, v42).
+  the art (no plate) keeps its rect clear, and a badge the MASTER paints
+  its box, whether the card has a value or not (`StatSlot.paintedRect`:
+  the battle's defense shield, v42). The renderers draw no badge of their
+  own: the rounded disc behind a plate-less value went with the battle's,
+  its one user (no override could ever declare one).
 
 ## Tokens
 

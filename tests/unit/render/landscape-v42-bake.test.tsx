@@ -1,6 +1,8 @@
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { buildTypeLine } from "@/lib/cards/card-display";
+import { fitTypeLineBand } from "@/lib/cards/render-tiers";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { bucketKeysOf, bucketMaster, haveBucketMasters, serveBucketMasters, type ServedBucketMasters } from "@/tests/stubs/bucket-masters";
@@ -299,6 +301,20 @@ describe("layout v42 — the battle on real bakes (HD and the 1050 px default)",
     }
   }, 240_000);
 
+  it.each(PRESETS)("centres a short rules text in the text box, as the prints centre theirs — at %s", async (preset) => {
+    // One line in the 414 px box: its ink sits on the box's middle, not under
+    // the type bar (the MSE profile set the block from the box's top).
+    const r = await bake(battleCard({ rulesText: "Draw a card, then discard a card." }), preset);
+    const k = r.w / HD_W;
+    const box = ofRect(r, battle.rules.rect);
+    const text = inkBox(r, box, isDark)!;
+    expect(text).not.toBeNull();
+    const centre = (text.y0 + text.y1) / 2;
+    expect(Math.abs(centre - (box.y0 + box.y1) / 2 / k), `the line's centre ${centre}`).toBeLessThanOrEqual(tol(preset, 8));
+    // …and it starts at the box's left edge (the prints' lines start 272–275 px in).
+    expect(Math.abs(text.x0 - 273), `the line starts ${text.x0}`).toBeLessThanOrEqual(tol(preset, 4));
+  }, 120_000);
+
   it.each(PRESETS)("turns the artist credit down the left border: a tall line 97 px from the top, centred 78 px in — at %s", async (preset) => {
     const credited = await bake(battleCard({ artistCredit: "Darren Tan" }), preset);
     // The credit is the only light ink left of the art (x < 160 px).
@@ -426,6 +442,63 @@ describe("layout v42 — split on real bakes (HD and the 1050 px default)", () =
       expect(name.x1).toBeLessThan(costLeft);
     }
   }, 120_000);
+
+  it.each(PRESETS)("fits a long type line on EITHER half to its own bar: shrunk as the shared fit says, never clipped at full size — at %s", async (preset) => {
+    // The right half is an unturned second face: its type line goes through
+    // fitTypeLineBand as the front's does (no set symbol to make room for —
+    // TODO 3.9 — so its room is the whole band less the band's gap).
+    const subtypes = ["Arcane", "Trap", "Adventure"];
+    const text = buildTypeLine({ cardType: "sorcery", supertype: null, subtypes });
+    const slot = split.secondFace!.type;
+    const fit = fitTypeLineBand({ layout: { type: slot }, text, symbolWidthPct: null, orientation: "landscape" });
+    // The line is wider than its bar at 53 px, and fits it whole a little smaller.
+    expect(fit.sizePct / slot.sizePct).toBeLessThan(0.95);
+    expect(fit.sizePct / slot.sizePct).toBeGreaterThan(0.85);
+    expect(fit.text).toBe(text);
+    const short = await bake(splitCard(), preset);
+    const long = await bake(splitCard({ subtypes }, { subtypes }), preset);
+    const k = short.w / HD_W;
+    /** The first word's ink width (HD px): the columns from the first inked
+     *  one to the first gap of 8 HD px — "Sorcery", before its space. */
+    const firstWord = (r: Raw, cols: readonly [number, number]): number => {
+      const box = hd(r, cols[0], cols[1], TYPE_ROWS[0], TYPE_ROWS[1]);
+      let start = -1;
+      let last = -1;
+      for (let x = Math.ceil(box.x0); x < Math.floor(box.x1); x += 1) {
+        let ink = false;
+        // (Any ink, a thin stroke's antialiased edge included: at the 1050 px
+        // bake a y's tail never reaches isDark, and the word would end early.)
+        for (let y = Math.ceil(box.y0); y < Math.floor(box.y1) && !ink; y += 1) ink = sum(px(r, x, y)) < 3 * TONE - 90;
+        if (ink) {
+          if (start < 0) start = x;
+          last = x;
+        } else if (start >= 0 && x - last >= 8 * k) break;
+      }
+      expect(start, "the line has ink").toBeGreaterThanOrEqual(0);
+      return (last + 1 - start) / k;
+    };
+    const full = { left: firstWord(short, LEFT), right: firstWord(short, RIGHT) };
+    // "Sorcery" at 53 px: the prints' 177 px (the test above), a few px of
+    // antialiasing wider by this looser reading.
+    for (const w of [full.left, full.right]) expect(Math.abs(w - 179), `'Sorcery' is ${w} px wide`).toBeLessThanOrEqual(6);
+    const shrunk = { left: firstWord(long, LEFT) / full.left, right: firstWord(long, RIGHT) / full.right };
+    // The right half's line is drawn at the shared fit's size…
+    expect(Math.abs(shrunk.right - fit.sizePct / slot.sizePct), `the right half's letters are ${shrunk.right.toFixed(3)} of full size, the fit says ${(fit.sizePct / slot.sizePct).toFixed(3)}`).toBeLessThanOrEqual(preset === "hd" ? 0.025 : 0.045);
+    // …the left half's a little smaller still (its set symbol takes room)…
+    expect(shrunk.left).toBeLessThan(shrunk.right);
+    expect(shrunk.left).toBeGreaterThan(0.78);
+    // …and each line is whole inside its own slot: from the slot's left edge,
+    // never past its right one, with its last word drawn (the right half's
+    // line is as wide as the fit measured it, less its headroom).
+    for (const [half, cols, s] of [["left", LEFT, split.type], ["right", RIGHT, slot]] as const) {
+      const line = inkBox(long, hd(long, cols[0], cols[1] - (half === "left" ? 80 : 0), TYPE_ROWS[0], TYPE_ROWS[1]), isDark)!;
+      const rect = ofRect(long, s.rect);
+      expect(line.x0 - rect.x0 / k, `${half}: the line starts ${line.x0}`).toBeGreaterThanOrEqual(-1);
+      expect(line.x1, `${half}: the line ends ${line.x1}`).toBeLessThanOrEqual(rect.x1 / k + tol(preset, 1));
+    }
+    const right = inkBox(long, hd(long, RIGHT[0], RIGHT[1], TYPE_ROWS[0], TYPE_ROWS[1]), isDark)!;
+    expect(right.x1 - right.x0, `the right half's line is ${right.x1 - right.x0} px wide`).toBeGreaterThan((fit.widthPct ?? 0) * HD_W * 0.93);
+  }, 240_000);
 
   it.each(PRESETS)("draws the set symbol on the left half's type bar only, its ink 48 px tall whatever the glyph — at %s", async (preset) => {
     const plain = await bake(splitCard(), preset);

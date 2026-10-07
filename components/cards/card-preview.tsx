@@ -59,7 +59,7 @@ import {
   measuredLinePreviewPct,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
-import { endAlignedStatKeepOut, fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { endAlignedStatKeepOut, fitStatSizePct, ptValue } from "@/lib/cards/stat-fit";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
@@ -2124,8 +2124,9 @@ function ColorIndicatorOverlay({ fills }: { fills: readonly string[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// StatOverlay — P/T, loyalty, or defense. Renders the optional plate PNG or a
-// drawn badge behind the value, then the value centered on top.
+// StatOverlay — P/T, loyalty, or defense. Renders the optional plate PNG
+// behind the value, then the value centered on top (the battle's defense
+// has no plate: its shield is the frame master's own paint).
 // ---------------------------------------------------------------------------
 
 function StatOverlay({
@@ -2223,17 +2224,6 @@ function StatOverlay({
             className="absolute inset-0 h-full w-full object-fill"
           />
         </picture>
-      ) : slot.badgeColorHex ? (
-        <div
-          aria-hidden
-          className="absolute"
-          style={{
-            inset: `${STAT_BADGE_INSET.yPct}% ${STAT_BADGE_INSET.xPct}%`,
-            background: slot.badgeColorHex,
-            borderRadius: "42%",
-            boxShadow: "0 0.4cqw 1cqw rgba(0,0,0,0.45)",
-          }}
-        />
       ) : null}
       {plateFoil(slot.rect, { top: 0, left: 0, width: "100%", height: "100%" })}
       <span

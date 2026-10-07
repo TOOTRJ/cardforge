@@ -574,16 +574,14 @@ describe("keep-outs", () => {
     const [shield] = statKeepOuts(m15pw, { loyalty: true });
     expect(shield.leftPct).toBeGreaterThan(m15pw.loyalty!.plateRect!.leftPct);
     expect(shield.topPct).toBeGreaterThan(m15pw.loyalty!.plateRect!.topPct);
-    // A DRAWN badge (StatSlot.badgeColorHex), inset in its rect
-    // (STAT_BADGE_INSET) — only while the card draws it. (No profile sets
-    // one since TODO 4.21b: the battle's disc was its one user.)
+    // A value with no plate and no painted badge (a P/T printed straight on
+    // the art or the frame): its own rect, only while the card draws it.
+    // (The renderers' own drawn badge is gone with TODO 4.21b: the battle's
+    // disc was its one user, and no override could ever declare one.)
     const d: Rect = { topPct: 87.3, leftPct: 89.9, widthPct: 8, heightPct: 11 };
-    const drawn = { defense: { rect: d, sizePct: 0.034, colorHex: "#ffffff", badgeColorHex: "#141008" } };
-    const [disc] = statKeepOuts(drawn, { defense: true });
-    expect(disc.leftPct).toBeCloseTo(d.leftPct + d.widthPct * 0.12, 9);
-    expect(disc.topPct).toBeCloseTo(d.topPct + d.heightPct * 0.08, 9);
-    expect(disc.widthPct).toBeCloseTo(d.widthPct * 0.76, 9);
-    expect(statKeepOuts(drawn, { defense: false })).toEqual([]);
+    const bare = { defense: { rect: d, sizePct: 0.034, colorHex: "#ffffff" } };
+    expect(statKeepOuts(bare, { defense: true })).toEqual([d]);
+    expect(statKeepOuts(bare, { defense: false })).toEqual([]);
     // The battle's defense shield is painted by its MASTER (paintedRect,
     // TODO 4.21b): the keep-out is the shield's own box — the pack's Defense
     // mask, 164 × 166 px from 1881 / 1304 at HD — and it is there on EVERY

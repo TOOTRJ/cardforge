@@ -161,7 +161,7 @@ describe("fitStatSizePct", () => {
     // one still prints at the full 78 px, a three-digit one shrinks to the
     // interior (the MSE profile's drawn disc was 128 px wide).
     expect(battle.paintedRect).toBeDefined();
-    expect(battle.badgeColorHex).toBeUndefined();
+    expect(battle).not.toHaveProperty("badgeColorHex");
     expect(battle.sizePct * 2100).toBeCloseTo(78, 9);
     for (const value of ["3", "4", "5", "6", "7", "15"]) expect(fitStatSizePct(battle, value, "landscape"), value).toBe(battle.sizePct);
     // The widest two-digit values give up a few percent, never more.

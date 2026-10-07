@@ -1904,7 +1904,7 @@ describe("v42 — the landscape layouts re-sourced from Card Conjurer (TODO 4.21
     expect(battle.artSlot).toEqual({ topPct: 3.88, leftPct: 7.85, widthPct: 89.4, heightPct: 91.91 });
     // …its defense is the value alone in the shield the master paints…
     expect(battle.defense?.paintedRect).toBeDefined();
-    expect(battle.defense?.badgeColorHex).toBeUndefined();
+    expect(battle.defense).not.toHaveProperty("badgeColorHex");
     expect(battle.defense?.shadowCss).toBeUndefined();
     // …and both carry the artist credit turned down the left border.
     for (const t of PAIR) {

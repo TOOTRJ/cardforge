@@ -213,9 +213,9 @@ export type SlotPath =
  *  (statSlotOverrideSchema: a rect, a size and the value's offsets — never a
  *  text slot's line height or tracking, which its strict schema refuses).
  *  The layout editor offers a slot's fields by THIS, not by which keys the
- *  profile's slot happens to carry: a stat slot needs no plate, drawn badge
- *  or value offset (the battle's defense sits in the shield its master
- *  paints, TODO 4.21b; a P/T printed on the art). */
+ *  profile's slot happens to carry: a stat slot needs no plate or value
+ *  offset (the battle's defense sits in the shield its master paints, TODO
+ *  4.21b; a P/T printed on the art). */
 const STAT_SLOT_PATHS: ReadonlySet<SlotPath> = new Set<SlotPath>(["pt", "loyalty", "defense", "secondFace.pt"]);
 export function isStatSlotPath(path: SlotPath): boolean {
   return STAT_SLOT_PATHS.has(path);

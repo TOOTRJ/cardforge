@@ -29,7 +29,7 @@ import {
   measuredLinePx,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
-import { endAlignedStatKeepOut, fitStatSizePct, ptValue, STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { endAlignedStatKeepOut, fitStatSizePct, ptValue } from "@/lib/cards/stat-fit";
 import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import { orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import {
@@ -2779,18 +2779,6 @@ function StatBake({
             width: "100%",
             height: "100%",
             objectFit: "fill",
-          }}
-        />
-      ) : slot.badgeColorHex ? (
-        <div
-          style={{
-            position: "absolute",
-            top: `${STAT_BADGE_INSET.yPct}%`,
-            left: `${STAT_BADGE_INSET.xPct}%`,
-            right: `${STAT_BADGE_INSET.xPct}%`,
-            bottom: `${STAT_BADGE_INSET.yPct}%`,
-            background: slot.badgeColorHex,
-            borderRadius: "42%",
           }}
         />
       ) : null}

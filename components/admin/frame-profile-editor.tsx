@@ -79,8 +79,14 @@ const STAT_FIELDS: EditorField[] = [
   { field: "valueDyEm", kind: "scalar", step: 0.02 },
 ];
 
-/** The editable fields for a slot path on this profile. */
-function fieldsForSlot(
+/** The saga's chapter rail: the override schema reads a rect and a size
+ *  there, never a text slot's line height or tracking. */
+const SIZE_FIELDS: EditorField[] = [{ field: "sizePct", kind: "scalar", step: 0.001 }];
+
+/** The editable fields for a slot path on this profile. Exported for its
+ *  test: every field offered here must be one the override schema accepts
+ *  for that path (lib/cards/profile-override.ts), or Save refuses the draft. */
+export function fieldsForSlot(
   profile: FrameProfile,
   path: SlotPath,
 ): EditorField[] {
@@ -88,15 +94,13 @@ function fieldsForSlot(
   const node = getNodeAtPath(profile, path);
   if (!node || typeof node !== "object") return RECT_FIELDS;
   const slot = node as Record<string, unknown>;
-  // A stat slot by its PATH (the override schema's own split): the battle's
-  // defense, in the shield its master paints, carries no plate, badge or
-  // value offset, and a text slot's fields would be refused on save.
-  const extra =
-    isStatSlotPath(path) || "valueDyEm" in slot || "plateAssetPathTemplate" in slot || "badgeColorHex" in slot
-      ? STAT_FIELDS
-      : "sizePct" in slot
-        ? TEXT_FIELDS
-        : [];
+  // By the slot's PATH, as the override schema reads it — never by the keys
+  // the profile's slot happens to carry: a stat slot needs no plate or
+  // value offset (the battle's defense sits in the shield its master paints;
+  // a P/T printed on the art), and the saga's chapter rail takes a size
+  // only. A text slot's line height or tracking on either is refused by the
+  // strict schema, and with it the whole Save.
+  const extra = isStatSlotPath(path) ? STAT_FIELDS : path === "chapters" ? SIZE_FIELDS : "sizePct" in slot ? TEXT_FIELDS : [];
   return [...RECT_FIELDS, ...extra];
 }
 

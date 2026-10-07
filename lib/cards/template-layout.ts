@@ -210,7 +210,8 @@ export type TypeLineSplit = {
 };
 
 /** A stat value (P/T, loyalty, defense) drawn onto the frame, optionally with a
- *  color-keyed plate PNG or a drawn badge behind it. */
+ *  color-keyed plate PNG behind it — or in a badge the frame master paints
+ *  (`paintedRect`). */
 export type StatSlot = {
   rect: Rect;
   sizePct: number;
@@ -223,11 +224,6 @@ export type StatSlot = {
   /** Plate PNG template, {color} → frame color key. Renders behind the value
    *  (M15 P/T plate). */
   plateAssetPathTemplate?: string;
-  /** Drawn rounded badge behind the value when there's no plate PNG. No
-   *  profile sets one since TODO 4.21b: the Battle frame's defense disc,
-   *  its one user, gave way to the shield the battle master paints
-   *  (`paintedRect`). */
-  badgeColorHex?: string;
   shadowCss?: string;
   /** Per-frame-master ink — see InkByColorKey (resolved by slotInk). */
   inkByColorKey?: InkByColorKey;
@@ -249,16 +245,15 @@ export type StatSlot = {
    *  to its bevel, a strip up to its pinstripe. It may be wider or narrower
    *  than `rect` (the value stays centred in `rect` and never wraps), and
    *  lopsided about the value's centre. A value whose ink would run past it
-   *  shrinks (lib/cards/stat-fit.ts). Without it the ink may fill `rect`
-   *  (or a drawn badge). */
+   *  shrinks (lib/cards/stat-fit.ts). Without it the ink may fill `rect`. */
   inkSpanPct?: { leftPct: number; rightPct: number };
   /** The frame MASTER paints this stat's badge itself (TODO 4.21b: the
    *  battle's defense shield, part of Card Conjurer's master): the badge's
    *  ink box in card percents. The value is drawn in `rect` with no plate
-   *  and no drawn badge, and the rules lines keep out of this box on EVERY
-   *  card on the frame — the shield is on the master whether or not a value
-   *  is drawn (lib/cards/rules-layout.ts statKeepOuts). Code-owned: not part
-   *  of the override schema. */
+   *  (the renderers draw no badge of their own), and the rules lines keep
+   *  out of this box on EVERY card on the frame — the shield is on the
+   *  master whether or not a value is drawn (lib/cards/rules-layout.ts
+   *  statKeepOuts). Code-owned: not part of the override schema. */
   paintedRect?: Rect;
 };
 
@@ -3194,10 +3189,11 @@ const FLIP: FrameProfile = {
 //     the paper: GRN #224, WHO #77, MH2 #60), the block centred as the
 //     prints centre theirs (ink centred on 1178.5 px ± 2), at the 9 pt
 //     ladder top (TSR #161 and #186 set two and three lines at 76 px, a
-//     74–75 px pitch; MH2's halves 69–74). The prints also CENTRE a short
-//     text's lines (Fast // Furious, Rough // Tumble) and left-align a
-//     longer one (Said // Done): ours is always left-aligned — a rules
-//     layout rule of its own, not this correction's.
+//     74–75 px pitch; MH2's halves 69–74). Some prints also CENTRE a
+//     text's lines (MH2 #123, TSR #156 / #161 / #186, C16 #239), others
+//     set theirs left (MH2 #60, GRN #224, DMR #209's one- and two-line
+//     texts): ours is always left-aligned — a rules layout rule of its
+//     own, not this correction's.
 //   • Both halves are set ALIKE: the right half's title and type slots are
 //     `fit: "measured"` too, which an unturned second face draws exactly as
 //     the front draws its own (both renderers).
