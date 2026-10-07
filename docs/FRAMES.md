@@ -1574,9 +1574,30 @@ land starts on its pair, with the off switch. No bump, no sweep, no badge.
   does, not on the bordered frames' narrower 45→57. The built masters read
   41.2 / 50.0 / 58.8 on every ring and on the box. Per pair the prints'
   middle crossing is 48.2–48.7 on W|B, U|B and U|R and 50.0–51.1 on the
-  other seven, with both ends within 1 %W of each other on all ten: a blend
-  that is not straight in sRGB, not a moved ramp — one symmetric ramp
-  serves all ten, as on every other pair master.
+  other seven: a blend that is not straight in sRGB, not a moved ramp — one
+  symmetric ramp serves all ten, as on every other pair master.
+  **Re-measured by the skeptic (2026-10-07)** on its own regions, a
+  least-squares ramp fitted to every ring (Scryfall's digital renders from
+  LCI on are 256-colour images: a threshold reads the palette's steps, a
+  fit does not): 71 digital renders, 284 rings, 39.05 → 61.05 %W — width
+  22.0, interquartile 21.7–22.2, every set from CMM to DFT within
+  21.8–22.3; 252 of the 284 fit 39→61 better than 40→60; the same fit
+  returns 39.0 → 61.0 on the built masters, 40.0 → 60.0 on a 40→60 control
+  and a width of 19.0 %W (17.4–20.9) on the type rings of FDN's nine
+  borderless SPELLS (#343–351; the two uncrowned ones, #344 / #345, read
+  19.9–21.1 on all four rings), so the land's wider split is no noise. The
+  70 boxes' median profile fits 38.5 → 61.05 (rms 0.011 against 39→61,
+  0.023 against 40→60, 0.095 against the bordered box's 45→57). The three
+  pairs that cross left of centre are no moved ramp: on all ten the
+  gradient STARTS and ENDS in the same place (its 3 % point at 38.7–39.8
+  %W, its 97 % point at 60.0–61.2), the three
+  channels of ONE ring cross up to 3 %W apart (U|R: red at 47.3, blue at
+  50.2 — no shifted mask does that), and read in linear light the centres
+  scatter over 8 %W with which side is the darker colour (45.9–54.0) where
+  sRGB keeps all ten within 2.8: the prints blend close to an sRGB lerp,
+  bent a little by their colour pipeline. (Scans of physical cards — MID,
+  VOW, 2X2, DMU — read the same start and end, 39.2 / 61.0, with a steeper
+  middle: width 19.7–20.7 fitted.)
 - **The bars are the colourless land's grey**, never gold and never a
   blend: on the prints the title bar reads α 0.71 (Card Conjurer's 0.70)
   and, at CC's α, a tint of 148 / 142 / 136 (141 / 135 / 130 on the digital
@@ -1596,19 +1617,40 @@ land starts on its pair, with the off switch. No bump, no sweep, no badge.
   103 / 168 (0 / 117 / 190), black 0.73 at 50 / 49 / 48 (39 / 38 / 36), red
   0.83 at 149 / 40 / 34 (130 / 22 / 14), green 0.79 at 40 / 84 / 66 (0 /
   81 / 65). Re-toning the box is a CORRECTION of all seventeen masters
-  under a bump, never part of this addition.
+  under a bump, never part of this addition. (The skeptic's read, on other
+  regions with its own calibration, 95 digital renders: white 0.83 at 119 /
+  116 / 102, blue 0.85 at 5 / 101 / 160, black 0.73 at 41 / 40 / 38, red
+  0.82 at 147 / 38 / 28, green 0.83 at 34 / 79 / 59; colourless 0.76 at
+  140 / 137 / 129 and gold 0.79 at 136 / 121 / 81 against the masters' 156 /
+  151 / 144 and 173 / 136 / 52. Over the prints' own art that is a built
+  white half 20–32 levels brighter than the printed one, a gold box 27
+  brighter in red and 22 lower in blue, a red half 18 darker in red, a
+  green one 24 lower in red, a colourless one 11 brighter; blue within 13,
+  black within 2. Where the ramp is 0 or 1 a pair's box IS its mono
+  master's, pixel for pixel — 0 of 296,201 differ on either half of all
+  ten.)
 - **No gold or mismatched hairline.** Every pair's rings (≈ 91,000 px) are
   the lerp of its two mono masters within 4 levels where neither colour is
   black; with black, within 17 levels on at most 75 px at the bar caps (the
   black frame's outline is dark grey where the others are black), no row or
   column holding more than 16 of them; the box is the lerp of the two mono
   boxes within 1 level (0.1 on average); at most 77 px of a master are
-  explained by neither. The grey frame is used whole, so Card Conjurer's
+  explained by neither (recomputed by the skeptic: the same numbers on
+  that ring; counting every opaque pixel that differs between the masters,
+  the outline's anti-aliased edge included, 106 px at most over 8 levels,
+  26 in one column at a bar cap, never two in a row, 17 the worst — and
+  each is a mix of the grey master and the lerp, none a third colour). The
+  grey frame is used whole, so Card Conjurer's
   gold frame — whose type-bar and box rings sit one row higher than the
   colour frames' (wave 2a's 1 px gold line) — is never in the stack.
-- **No crown, no stamp notch, no collector line**: the frame declares none.
-  A crowned or nicknamed two-colour print stays `nearest` on those gaps,
-  and a land prints no P/T.
+- **No crown, no stamp notch, no collector line**: the frame declares none
+  (and the creator offers none there: the two-colour switch alone).
+  A crowned or nicknamed two-colour print stays `nearest` on those gaps.
+  No printed land carries P/T; a custom land with a Vehicle or Spacecraft
+  subtype prints its P/T on m15borderless's plate in its colour key — the
+  gold `m` for a pair, over the grey bars (`plateKeyFor`, as m15land's
+  pairs do; the grey plate the hybrid dress takes would match them — an
+  open detail, no print to follow).
 - **Which prints.** Of the 192 two-colour borderless nonbasic lands
   (Scryfall 2026-10-06; 702 borderless nonbasic lands in all), 119 print
   this look and resolve `exact` — MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI,
@@ -1624,12 +1666,27 @@ land starts on its pair, with the off switch. No bump, no sweep, no badge.
   bar (LTR #343 / #754, HOC #50 / #90; LTC #366 / #396 / #396z). The art
   still lands an import on m15land (1.18), which draws its own pair;
   choosing Borderless Land in the import's frame chooser keeps the pair and
-  the switch, and draws the pair master.
+  the switch, and draws the pair master — and the chooser's tiles show it:
+  a tile paints what the import stores on that frame (`ImportFrameChooser`
+  `printing`, `importedAnatomy`), where a two-colour printing's tiles were
+  the gold master on every pair frame since 4.6b, whichever was picked
+  (skeptic pass). Nothing but the pin lists keeps the other 73 `nearest`
+  now that the gap is closed, so the census is a fixture:
+  `tests/unit/scryfall/fixtures/borderless-land-census.json` holds all 192
+  and the 46 other pinned printings as Scryfall listed them on 2026-10-07,
+  each with the look read on its scan, and
+  `borderless-land-census.test.ts` holds the registry and the four lists
+  to it both ways (ten of the 31 shadow-box pins — MSH's and SOS's — could
+  be deleted with every test green before it).
 - **References:** two prints per pair on the frame's entry
   (`frame-references.json` `pairs`, `framePairReferenceOptions`) — the
   pair's MKM surveil land, then Deserted Beach MID #281, an OTJ fast land
   (Spirebluff Canal #304 among them) or a DSK verge; every one resolves
-  `exact` and registers to the frame within 2 px. The pairs ride the `m`
+  `exact`. The nineteen digital renders register to the frame within 2 px
+  (the DSK verges within 4); Deserted Beach MID #281, the item's own
+  headline print, is a scan of a physical card whose frame sits 6–20 px
+  left of the master's and whose split reads 39.6 / 47.0 / 56.0 — judge its
+  bars and box, not where its split falls. The pairs ride the `m`
   tick (V-A), so they feed no checklist row; the compare page's pair strip
   is 4.6g.
 - **Tests:** `tests/unit/frames/borderless-land-pair-masters.test.ts` (the
@@ -1638,7 +1695,11 @@ land starts on its pair, with the off switch. No bump, no sweep, no badge.
   (real bakes: the pair in the bake, the switch off or absent
   byte-identical, mono and three-colour lands untouched, the ramp at HD),
   `tests/unit/scryfall/frame-signatures.test.ts` (the pins and where each
-  class of printing lands), the matrix's five
+  class of printing lands), `tests/unit/scryfall/borderless-land-census.test.ts`
+  (every one of the 192 and every pin),
+  `tests/unit/components/creator-import-borderless-land-pair.test.tsx` (the
+  real chooser and creator form: the pick keeps the pair, the tiles show
+  it, no `m` tick → not offered), the matrix's five
   `m15borderlessland/wu/…@pair*` cases.
 
 #### The extended-art crown (4.6f, wave 2b)

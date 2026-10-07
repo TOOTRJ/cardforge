@@ -311,9 +311,14 @@ export const BORDERLESS_LAND_SHORT_BOX_PINS: Readonly<Record<string, readonly st
  *  them (median 0.5; luminance 12–45 on SPG, ECL, SOS and FRA) against as
  *  bright (1.1; 48–128) on the 119 that print the flat tinted box. No
  *  Scryfall field tells the looks apart (`inverted` on all of them). Two
- *  MONO prints of the same box still resolve exact, the owner's call:
+ *  prints on a SINGLE master — both five-colour lands on the gold `m` —
+ *  wear the same box and still resolve exact, the owner's call:
  *  Multiversal Passage SPM #206 and Avengers Tower MSH #334, `m`'s second
- *  reference (4.37). */
+ *  reference (4.37; the only exact ones among the 87 printings on this
+ *  rule released since 2025-04 beside FIN #355, which prints the flat
+ *  box). The four lists are held to a census fixture
+ *  (tests/unit/scryfall/borderless-land-census.test.ts): a pin added or
+ *  removed here changes it. */
 export const BORDERLESS_LAND_SHADOW_BOX_PINS: Readonly<Record<string, readonly string[]>> = {
   ecl: ["347", "348", "349", "350", "351"],
   fra: ["397", "398", "399", "400", "401"],
