@@ -517,7 +517,13 @@ Rules and gotchas:
   social/feedback/message kinds, `notifyUser()` in `lib/admin/user-actions.ts`
   for credit grants, comp plans and card-limit overrides. New kinds go in the
   type CHECK + `lib/notifications/describe.ts` (the ONE copy source for bell,
-  page and toast).
+  page and toast). ONE stream per user per tab: every mounted `RealtimeAlerts`
+  queues through `lib/notifications/stream-claim.ts` and only the holder
+  subscribes — the browser client hands back the channel a topic already has,
+  so a second `.on("postgres_changes")` throws once the first has subscribed
+  (and binds twice, toasting twice, before that). Nothing in that effect may
+  throw (it reaches the root error boundary and replaces the page): a stream
+  that can't be set up or joined polls instead.
 - AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
