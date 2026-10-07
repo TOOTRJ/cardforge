@@ -105,9 +105,10 @@ export function toRanges(codepoints) {
  *   rules   — MPlantin regular first, then the Noto fallback's requestable
  *             characters for what no registered font maps (real bakes draw
  *             "Ǵoran" in rules text from Noto).
- *   italic  — MPlantin italic first (flavor text, reminder text, a saga's
- *             intro), with NO Noto fallback: real bakes leave Noto-only
- *             characters blank in italic runs ("“Ǵoran…”" → "“ oran…").
+ *   italic  — MPlantin italic first (flavor text and reminder text — a
+ *             saga's parenthesised reminder included), with NO Noto
+ *             fallback: real bakes leave Noto-only characters blank in
+ *             italic runs ("“Ǵoran…”" → "“ oran…").
  */
 export function computeCoverage(root, googleRanges) {
   const at = (file) => path.join(root, file);
@@ -155,9 +156,9 @@ export function renderCoverageModule({ display, rules, italic }) {
 // What a card bake draws WITH INK, per text face, in satori's font order
 // (scripts/lib/glyph-coverage.mjs): DISPLAY = titles, type lines, the footer
 // and stats (Beleren Bold, then MPlantin); RULES = rules text (MPlantin, then
-// the bundled Noto Sans fallback); ITALIC = flavor text, reminder text and a
-// saga's intro (MPlantin italic, no Noto). A number is one code point, a pair
-// an inclusive range. Client-safe (no fs).
+// the bundled Noto Sans fallback); ITALIC = flavor text and reminder text, a
+// saga's included (MPlantin italic, no Noto). A number is one code point, a
+// pair an inclusive range. Client-safe (no fs).
 
 export type CodepointRanges = ReadonlyArray<number | readonly [number, number]>;
 
