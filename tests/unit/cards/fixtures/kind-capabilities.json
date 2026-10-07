@@ -64,7 +64,8 @@
   { "template": "m15mdfcfront", "change": "new-template", "capabilities": ["pt", "dfcFront"], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal double-faced FRONT body (CC 'Modal Regular'): M15's P/T plate and a double-faced front (FrameProfile.dfc role front: the housing, the flipside strip, a back face of its own). An addition: no stored card sits on it." },
   { "template": "m15mdfcback", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal BACK body (CC 'Modal Regular' backs): the dark plates' P/T and its own cost; never a card's own template (templateRefusesKind refuses every kind on a back body), so it gives no kind anything beyond the P/T it draws for the back face. An addition." },
   { "template": "m15mdfclandfront", "change": "new-template", "capabilities": ["dfcFront"], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal land FRONT body (a PipGlyph recipe: the colour's modal front over the 2015 land tint): a double-faced front with no cost and no P/T (a land face prints none). An addition: no stored card sits on it." },
-  { "template": "m15mdfclandback", "change": "new-template", "capabilities": [], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal land BACK body (the colour's modal back over the 2015 land tint): no cost, no P/T, no indicator; never a card's own template. An addition." }
+  { "template": "m15mdfclandback", "change": "new-template", "capabilities": [], "reason": "TODO 5.1b (design 2026-10-02): a NEW template — the modal land BACK body (the colour's modal back over the 2015 land tint): no cost, no P/T, no indicator; never a card's own template. An addition." },
+  { "template": "alphatoken", "change": "removed-template", "reason": "TODO 4.54 (owner decision 2026-09-29; production count 2026-10-07: 0 cards, public, unlisted or private): the Alpha token frame is retired — a PipGlyph invention, no 1993-frame token was ever printed. A stored value reads as m15token (m15tokentext with rules or flavour text) through RETIRED_FRAME_TEMPLATES; both draw the P/T it had." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -101,7 +102,6 @@
   "m15mdfclandback": [],
   "agclassic": ["pt"],
   "alphaland": ["pt"],
-  "alphatoken": ["pt"],
   "battle": ["defense", "landscape"],
   "saga": ["chapters"],
   "adventure": ["pt", "adventure"],

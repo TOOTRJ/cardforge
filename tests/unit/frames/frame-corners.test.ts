@@ -60,7 +60,6 @@ describe("the Phase B allow-list", () => {
   it("is the owner's list: the MSE masters with paper corners, never a showcase family", () => {
     expect(Object.keys(CORNER_NORMALISE_TEMPLATES).sort()).toEqual(
       [
-        "alphatoken",
         "expeditionland",
         "extendedart",
         "fullart",
@@ -281,7 +280,6 @@ describe("the MSE builders run the pass", () => {
     retroland: "build-era-frames.mjs",
     modern: "build-era-frames.mjs",
     modernland: "build-era-frames.mjs",
-    alphatoken: "convert-mse-frame.mjs",
     // (aftermath, flip and adventure left the list with TODO 4.21a, saga
     // with 4.21c: Card Conjurer masters in the frames bucket, cut by the
     // importer.)
@@ -323,8 +321,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 68 (9 templates × 7 colours, and expeditionland's 5)", () => {
-    expect(masters).toHaveLength(68);
+  it("covers all 61 (8 templates × 7 colours, and expeditionland's 5)", () => {
+    expect(masters).toHaveLength(61);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {
@@ -332,7 +330,7 @@ describe("the allow-listed git masters are already normalised", () => {
       const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       const report = normaliseCardCorners(Uint8Array.from(data), info.width, info.height);
       expect(report.map((c) => c.alreadyNormalised)).toEqual([true, true, true, true]);
-      expect(lightInsideCorners(data, info.width, info.height)).toBeLessThanOrEqual(26); // alphatoken's silver bevel deep in the box
+      expect(lightInsideCorners(data, info.width, info.height)).toBeLessThanOrEqual(26); // (the bound the retired Alpha token's silver bevel set)
     });
   }
 });

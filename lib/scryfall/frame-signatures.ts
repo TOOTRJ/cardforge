@@ -818,9 +818,12 @@ const FAMILIES: Record<
     pick: ({ facts }) => eraPick(facts, "retro", "retroland"),
   },
   alpha: {
-    produces: ["saga", "adventure", "split", "aftermath", "flip", "alphaland", "alphatoken", "m15pw", "battle", "agclassic"],
-    pick: ({ facts }) =>
-      facts.kind === "token" ? "alphatoken" : eraPick(facts, "agclassic", "alphaland"),
+    // No 1993-frame token was ever printed, and PipGlyph's own "alphatoken"
+    // was retired (TODO 4.54): a token is `token/old-frame`'s, on the M15
+    // family, before this family is asked — eraPick's token answer is the
+    // same frame.
+    produces: ["saga", "adventure", "split", "aftermath", "flip", "alphaland", "m15token", "m15pw", "battle", "agclassic"],
+    pick: ({ facts }) => eraPick(facts, "agclassic", "alphaland"),
   },
   textless: {
     produces: ["m15textlessland", "m15textless"],
@@ -1703,7 +1706,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   {
     key: "token/old-frame",
     exactLabel: ({ frame }) => `${frame} frame token`,
-    match: { frames: ["1997", "2003"], kinds: ["token"] },
+    // 1993 too since TODO 4.54 retired "alphatoken" (no such print exists:
+    // only a hand-built or mislabelled printing reaches it).
+    match: { frames: ["1993", "1997", "2003"], kinds: ["token"] },
     outcome: {
       status: "nearest",
       template: { family: "m15" },

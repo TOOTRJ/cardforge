@@ -213,8 +213,7 @@ describe("the frame follows the type", () => {
     expect(typeWordFrameFor("token", "m15tokenartifact", "")).toBe("m15token");
     // Enchantment stays on the plain frame until 4.51's Nyx dress.
     expect(typeWordFrameFor("token", "m15token", "Enchantment Creature")).toBe("m15token");
-    // Other frames are left alone: Alpha's token, the showcase treatments.
-    expect(typeWordFrameFor("token", "alphatoken", "Artifact")).toBe("alphatoken");
+    // Other frames are left alone: the showcase treatments.
     expect(typeWordFrameFor("token", "fullart", "Artifact")).toBe("fullart");
     // …and every other kind.
     expect(typeWordFrameFor("creature", "m15", "Artifact")).toBe("m15");

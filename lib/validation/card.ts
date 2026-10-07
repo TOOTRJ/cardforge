@@ -19,6 +19,7 @@ import {
   FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
   RETIRED_CARD_FINISHES,
+  RETIRED_FRAME_TEMPLATES,
   VISIBILITY_VALUES,
 } from "@/types/card";
 
@@ -266,6 +267,24 @@ const cardFinishSchema = z.preprocess(
   z.enum(CARD_FINISH_VALUES),
 );
 
+// A retired template (RETIRED_FRAME_TEMPLATES, TODO 4.54) reads as the frame
+// that replaced it, so an old draft, a stale tab or a remix of an unmigrated
+// row never fails to parse — and never falls to the default creature frame.
+// The field alone can't see the card's text, so this is the BARE frame —
+// the last line of defence, not the save path: createCardAction rewrites a
+// payload that names a retired value to the frame its own text asks for
+// BEFORE it parses (withRetiredFrameTemplate, lib/cards/card-display.ts),
+// and the creator's own load (lib/creator/card-fields.ts) has already picked
+// the text-box frame for a stored card with text. What still lands here is
+// an update patch that names the retired value itself (never sent by the
+// creator) — and the bare token frame still prints its text, on its scrim.
+// Anything else unknown is still refused.
+const frameTemplateSchema = z.preprocess(
+  (value) =>
+    typeof value === "string" ? (RETIRED_FRAME_TEMPLATES.get(value)?.bare ?? value) : value,
+  z.enum(FRAME_TEMPLATE_VALUES),
+);
+
 // The per-card anatomy switches (lib/cards/anatomy.ts; TODO 4.6.0): the
 // legendary crown and the two-colour frame are ADDITIONS, opt-in per card
 // (owner rule 2026-09-29). Booleans only; absent = off. No DB CHECK exists on
@@ -273,7 +292,7 @@ const cardFinishSchema = z.preprocess(
 const frameStyleBaseSchema = z
   .object({
     finish: cardFinishSchema.optional(),
-    template: z.enum(FRAME_TEMPLATE_VALUES).optional(),
+    template: frameTemplateSchema.optional(),
     crown: z.boolean().optional(),
     twoColor: z.boolean().optional(),
     // The collector line's switches (TODO 4.9b, lib/cards/collector-line.ts):

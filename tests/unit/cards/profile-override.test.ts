@@ -175,9 +175,10 @@ describe("stat slots, by path (isStatSlotPath)", () => {
     }
     expect(missed).toContain("battle/defense");
     expect(missed).toContain("retro/pt");
-    // Eleven in all: the battle's defense and ten P/T slots with no plate
-    // (the Alpha frames, retro, the showcases that print it on the art).
-    expect(missed).toHaveLength(11);
+    // Ten in all: the battle's defense and nine P/T slots with no plate
+    // (the Alpha frames, retro, the showcases that print it on the art; the
+    // retired Alpha token's was the eleventh, TODO 4.54).
+    expect(missed).toHaveLength(10);
     // The editor reads the path: each of them is offered the stat fields.
     for (const id of missed) {
       const [template, path] = id.split("/") as [string, "pt" | "defense"];

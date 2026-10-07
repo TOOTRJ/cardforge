@@ -234,10 +234,6 @@ const TEMPLATES = {
           ? `frame:1993 border:black t:land -t:basic id=c`
           : `frame:1993 border:black t:basic ${identityColor(k)}`,
   },
-  alphatoken: {
-    note: "No 1993-frame tokens were printed.",
-    q: () => null,
-  },
   // The 1997 frame reproduces the ORIGINAL cards of 1996–2003 (owner round
   // 36, 2026-10-07), in their later layout: the centred footer of Exodus
   // (1998-06) on. The reprints on this frame since 2021 (TSR, MH2, DMR, INR,
