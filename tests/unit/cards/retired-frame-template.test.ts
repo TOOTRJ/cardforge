@@ -6,6 +6,15 @@ import { normalizeFrameTemplate, retiredFrameTemplate } from "@/lib/cards/card-d
 import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
 import { classifyForSweep, isRenderStale } from "@/lib/cards/layout-version";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { frameAnatomyOf, normalizeAnatomy } from "@/lib/cards/anatomy";
+import { isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { dfcBodyOf, isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
+import { cardPageName } from "@/lib/cards/emblem";
+import { frameGateError } from "@/lib/cards/frame-availability";
+import { frameKindGateError, frameKindUpdateGateError } from "@/lib/cards/frame-kind-gate";
+import { resolveFrameProfile } from "@/lib/cards/profile-override";
+import { kindFromCard, templateRefusesKind } from "@/lib/creator/card-kinds";
+import { hidesCost } from "@/lib/creator/steps";
 import { createCardSchema, frameStyleSchema } from "@/lib/validation/card";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
 import {
@@ -188,5 +197,55 @@ describe("a stored row that still names it", () => {
     expect(m15.expression).not.toContain("template.eq.alphatoken");
     // Every other template is untouched.
     expect(staleTemplateFilter("saga")).toEqual({ kind: "eq", template: "saga" });
+  });
+});
+
+// Readers that are handed the STORED value as it is and judge the frame from
+// it — none may fall to the creature frame for a retired value. (Before the
+// profile lookup read the map, getFrameProfile("alphatoken") was m15's: the
+// anatomy rules then kept a crown and a stamp for a token row.)
+describe("a reader handed the stored value raw", () => {
+  const token = { cardType: "token", supertype: "Creature", subtypes: ["Goblin"], title: "Goblin", rulesText: null };
+
+  it("the profile lookup answers the M15 token's, never m15's", () => {
+    expect(getFrameProfile("alphatoken")).toBe(getFrameProfile("m15token"));
+    expect(getFrameProfile("alphatoken")).not.toBe(getFrameProfile("m15"));
+    // An unknown or legacy value is still the default frame's.
+    for (const value of ["regular", "nope", "", undefined]) expect(getFrameProfile(value), String(value)).toBe(getFrameProfile("m15"));
+    // An override stored under the retired key is not the replacement's.
+    expect(resolveFrameProfile("m15token", { alphatoken: { title: { rect: { topPct: 9 } } } })).toEqual(resolveFrameProfile("m15token", {}));
+  });
+
+  it("the anatomy rules judge it as the token frame", () => {
+    expect(frameAnatomyOf("alphatoken")).toEqual(frameAnatomyOf("m15token"));
+    expect(frameAnatomyOf("alphatoken")).not.toEqual(frameAnatomyOf("m15"));
+    const style = { template: "alphatoken", crown: true, stamp: "oval", twoColor: true } as never;
+    expect(normalizeAnatomy(style, "alphatoken", "token")).toEqual(
+      normalizeAnatomy({ ...(style as object), template: "alphatoken" } as never, "m15token", "token"),
+    );
+  });
+
+  it("is a token frame to the kind rules and both save gates", () => {
+    expect(kindFromCard("token", "alphatoken")).toBe("token");
+    expect(kindFromCard(null, "alphatoken")).toBe(kindFromCard(null, "m15token"));
+    expect(templateRefusesKind(normalizeFrameTemplate("alphatoken"), "token")).toBe(false);
+    expect(frameKindGateError("alphatoken", token)).toBeNull();
+    expect(frameKindGateError("alphatoken", { ...token, cardType: "creature" })).toBe(frameKindGateError("m15token", { ...token, cardType: "creature" }));
+    expect(frameKindUpdateGateError({ existingTemplate: "alphatoken", nextTemplate: undefined, existing: token, next: { ...token, title: "Goblin Scout" } })).toBeNull();
+    // The verification gate asks for the M15 token's tick — not m15's.
+    expect(frameGateError("alphatoken", ["red"], new Set(["m15token/r"]))).toBeNull();
+    expect(frameGateError("alphatoken", ["red"], new Set(["m15/r"]))).not.toBeNull();
+    expect(frameGateError("alphatoken", ["red"], new Set(["alphatoken/r"]))).not.toBeNull();
+  });
+
+  it("is portrait, hides its cost, has no second face and is nobody's back body", () => {
+    expect(isLandscapeFrame({ template: "alphatoken" })).toBe(false);
+    expect(hidesCost("alphatoken")).toBe(true);
+    expect(dfcBodyOf("alphatoken")).toBeNull();
+    expect(templateHasBackFace("alphatoken")).toBe(false);
+    expect(isDfcBackBody("alphatoken")).toBe(false);
+    expect(cardPageName("Goblin", "token", { frameTemplate: "alphatoken", backTitle: "Other" })).toBe(
+      cardPageName("Goblin", "token", { frameTemplate: "m15token", backTitle: "Other" }),
+    );
   });
 });

@@ -63,6 +63,45 @@ export function normalizeFrameTemplate(
   return retiredFrameTemplate(template, face) ?? DEFAULT_FRAME_TEMPLATE;
 }
 
+/**
+ * A SAVE payload that still names a retired template, with the template
+ * replaced by the frame the payload's own text asks for (TODO 4.54's
+ * acceptance: "save on the token frame their text asks for") — run on the
+ * raw payload BEFORE it is parsed: the validator's preprocess sees only the
+ * field, so on its own it stores the bare frame. Anything else — a current
+ * template, no frame_style, a non-object — is returned as it came.
+ */
+export function withRetiredFrameTemplate(payload: unknown): unknown {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const frameStyle = (payload as { frame_style?: unknown }).frame_style;
+  if (frameStyle === null || typeof frameStyle !== "object" || Array.isArray(frameStyle)) return payload;
+  const template = (frameStyle as { template?: unknown }).template;
+  if (typeof template !== "string") return payload;
+  const text = payload as { rules_text?: unknown; flavor_text?: unknown };
+  const replacement = retiredFrameTemplate(template, {
+    rules_text: typeof text.rules_text === "string" ? text.rules_text : null,
+    flavor_text: typeof text.flavor_text === "string" ? text.flavor_text : null,
+  });
+  if (!replacement) return payload;
+  return { ...payload, frame_style: { ...frameStyle, template: replacement } };
+}
+
+/**
+ * The frame_style an EDIT stores for a row whose stored template is retired
+ * (TODO 4.54), or null when it is not: the same style on the frame the row
+ * reads as, judged by the text the row will HOLD after the edit. An edit
+ * never sends its template (lib/creator/revise.ts), so without this a
+ * retired value would stay in the row for good.
+ */
+export function retiredFrameStyleRewrite<T extends { template?: unknown }>(
+  frameStyle: T | null | undefined,
+  savedText: FrameTextFace,
+): (Omit<T, "template"> & { template: FrameTemplate }) | null {
+  const template = frameStyle?.template;
+  const replacement = typeof template === "string" ? retiredFrameTemplate(template, savedText) : null;
+  return replacement && frameStyle ? { ...frameStyle, template: replacement } : null;
+}
+
 // Coerce a persisted finish to a current one: a retired value maps to the
 // finish that draws the same pixels (RETIRED_CARD_FINISHES in types/card.ts),
 // and a missing or unknown value is "regular", so the creator never shows or

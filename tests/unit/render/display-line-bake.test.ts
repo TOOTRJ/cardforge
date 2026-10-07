@@ -129,10 +129,12 @@ describe("display-font word spacing (bake)", () => {
 // Centred lines (a token's and an emblem's name: Satori sizes the text node
 // from each glyph's own advance but draws the run kerned, so the bake pads a
 // centred line to its KERNED width — alignedText in lib/render/card-image.tsx)
-// were pinned here on the git "alphatoken" frame until TODO 4.54 retired it,
-// and with it the only centred TYPE line. The centred templates left
-// (m15token…, m20token…, emblem) have bucket masters, so their probes live
-// with those frames' stubbed-bucket bakes: tests/unit/render/emblem-bake
-// .test.tsx ("the name white and centred on the bar") and
-// tests/unit/render/m20-token-bake.test.tsx.
+// were pinned here on the git "alphatoken" frame until TODO 4.54 retired it.
+// The centred templates left (m15token…, m20token…, emblem) have bucket
+// masters, so the probes moved to a stubbed-bucket bake: "a centred display
+// line (bake): the emblem's name" in tests/unit/render/emblem-bake.test.tsx
+// (kerning-heavy names within 2 px of the font's own centre, and a name too
+// long for the bar). The retired frame's centred TYPE line was the only one:
+// that half of alignedText has no profile to bake until one centres its
+// type line again.
 // ---------------------------------------------------------------------------

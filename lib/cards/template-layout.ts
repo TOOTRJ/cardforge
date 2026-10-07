@@ -60,7 +60,7 @@ import {
   type HoloStampArt,
 } from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
-import type { FrameTemplate } from "@/types/card";
+import { RETIRED_FRAME_TEMPLATES, type FrameTemplate } from "@/types/card";
 import {
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
@@ -4921,8 +4921,15 @@ export function getFrameProfile(
 ): FrameProfile {
   // The registry's m15 entry, not the bare M15 base: legacy templates draw
   // the m15 frame, so they need its CC cost lift and see-through colourless.
+  // A RETIRED template (types/card.ts RETIRED_FRAME_TEMPLATES, TODO 4.54)
+  // is its replacement's bare frame, never m15: a reader handed the stored
+  // value as it is (the anatomy rules, the kind gate) must not judge a
+  // retired token frame as the creature frame.
   if (!template) return PROFILES.m15;
-  return PROFILES[template as FrameTemplate] ?? PROFILES.m15;
+  return (
+    PROFILES[template as FrameTemplate] ??
+    PROFILES[RETIRED_FRAME_TEMPLATES.get(template)?.bare ?? "m15"]
+  );
 }
 
 /** The under-frame art rect for a profile + frame colour key, or null. */

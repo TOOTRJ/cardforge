@@ -478,9 +478,13 @@ export const DEFAULT_FRAME_TEMPLATE: FrameTemplate = "m15";
 // text, `withText` with either (the text box follows the text, as on every
 // token) — instead of falling to DEFAULT_FRAME_TEMPLATE, the creature frame.
 // Read path only: nothing writes a retired value, and nothing rewrites a
-// stored row until its owner saves it. Readers: normalizeFrameTemplate /
-// retiredFrameTemplate (lib/cards/card-display.ts), the validator's
-// preprocess (lib/validation/card.ts), staleTemplateFilter.
+// stored row until its owner saves it (the card actions then store the
+// replacement: withRetiredFrameTemplate / retiredFrameStyleRewrite).
+// Readers: normalizeFrameTemplate / retiredFrameTemplate
+// (lib/cards/card-display.ts), getFrameProfile (the bare frame, for a reader
+// handed the stored value raw), the validator's preprocess
+// (lib/validation/card.ts), staleTemplateFilter. docs/FRAMES.md "Retiring a
+// frame".
 export const RETIRED_FRAME_TEMPLATES: ReadonlyMap<
   string,
   { bare: FrameTemplate; withText: FrameTemplate }

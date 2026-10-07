@@ -249,7 +249,9 @@ export function defaultValuesFor(
   const normalizedFrameStyle: FrameStyle = {
     finish: normalizeCardFinish(persistedFrame.finish),
     // A retired template (TODO 4.54) opens on its replacement — with the
-    // text box when the card has text — and the next save stores that.
+    // text box when the card has text. A remix saves that; an edit never
+    // sends its template, so updateCardAction stores the replacement itself
+    // (retiredFrameStyleRewrite).
     template: normalizeFrameTemplate(persistedFrame.template, card),
     // The anatomy switches exactly as stored: absent stays absent — a
     // stored card keeps its look until its owner switches a piece on.

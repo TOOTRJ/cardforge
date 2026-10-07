@@ -688,13 +688,32 @@ A template leaves `FRAME_TEMPLATE_VALUES` only after its replacement is in
 draws `DEFAULT_FRAME_TEMPLATE` — m15, the creature frame — so without the map
 a row, draft or remix payload that still names the old value would change
 kind on screen. The map is the read path, and the only one:
-`normalizeFrameTemplate(template, face)` / `retiredFrameTemplate`
-(`lib/cards/card-display.ts`; both renderers, the creator's load, the re-bake
-scope rules), the validator's `frame_style.template` preprocess
-(`lib/validation/card.ts`: an old payload parses instead of failing) and
-`staleTemplateFilter` (an override of the replacement marks the rows that
-draw on it). Nothing rewrites a stored row: its owner's next save stores the
-replacement, and its stored bake keeps the old look until it is re-baked.
+
+- `normalizeFrameTemplate(template, face)` / `retiredFrameTemplate`
+  (`lib/cards/card-display.ts`): both renderers, the print paths, the
+  creator's load for an edit and a remix, the re-bake scope rules. Pass the
+  card's text where the reader has it — a replacement may depend on it.
+- `getFrameProfile` (`lib/cards/template-layout.ts`): a reader handed the
+  stored value as it is (the anatomy rules, the kind rules) gets the
+  replacement's bare profile, never m15's.
+- the validator's `frame_style.template` preprocess
+  (`lib/validation/card.ts`): an old payload parses instead of failing.
+- `staleTemplateFilter`: an override of the replacement marks the rows that
+  draw on it; the PNG download's ETag reads the replacement's override too.
+
+The stored value leaves a row on its owner's next save, by the card
+actions (`lib/cards/actions.ts`): `createCardAction` runs
+`withRetiredFrameTemplate` on the payload before it is parsed (a remix, a
+crafted or stale payload: the frame the payload's own text asks for, then
+that frame's verification gate), and `updateCardAction` — an edit never
+sends its template — writes `retiredFrameStyleRewrite` of the stored style,
+judged by the text the row holds after the edit, with no verification gate
+(the card already draws there). Nothing else rewrites a stored row, and its
+stored bake keeps the old look until it is re-baked.
+`tests/unit/cards/retired-frame-template.test.ts`, `retired-frame-save
+.test.ts` and `tests/unit/render/retired-frame-bake.test.tsx` hold each
+reader; a new retired value needs no new code, only its map entry and its
+rows there.
 
 **`alphatoken`** (TODO 4.54, retired 2026-10-07; owner decision 2026-09-29):
 a 1993-style token frame of our own — no 1993-frame token was ever printed —

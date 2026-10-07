@@ -270,11 +270,15 @@ const cardFinishSchema = z.preprocess(
 // A retired template (RETIRED_FRAME_TEMPLATES, TODO 4.54) reads as the frame
 // that replaced it, so an old draft, a stale tab or a remix of an unmigrated
 // row never fails to parse — and never falls to the default creature frame.
-// The field alone can't see the card's text, so this is the BARE frame: the
-// creator's own load (lib/creator/card-fields.ts) has already picked the
-// text-box frame for a stored card with text, so only a payload that names
-// the retired value itself lands here — and the bare token frame still
-// prints its text, on its scrim. Anything else unknown is still refused.
+// The field alone can't see the card's text, so this is the BARE frame —
+// the last line of defence, not the save path: createCardAction rewrites a
+// payload that names a retired value to the frame its own text asks for
+// BEFORE it parses (withRetiredFrameTemplate, lib/cards/card-display.ts),
+// and the creator's own load (lib/creator/card-fields.ts) has already picked
+// the text-box frame for a stored card with text. What still lands here is
+// an update patch that names the retired value itself (never sent by the
+// creator) — and the bare token frame still prints its text, on its scrim.
+// Anything else unknown is still refused.
 const frameTemplateSchema = z.preprocess(
   (value) =>
     typeof value === "string" ? (RETIRED_FRAME_TEMPLATES.get(value)?.bare ?? value) : value,
