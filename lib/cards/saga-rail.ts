@@ -16,7 +16,8 @@
 //     fold's corner (`intro.keepOuts`). Its emphasis is the text's own, as
 //     the prints set it: the parenthesised reminder italic, a keyword before
 //     it roman (DMU #85's "Read ahead (Choose a chapter…)") — v33 set the
-//     whole block italic.
+//     whole block italic. It is ONE paragraph: a line break typed in it is
+//     a space (the prints', v41's and legacy rules text's way).
 //     Only a reminder the box cannot hold even at the ladder's floor (about
 //     240 characters; the editor takes 400, and layout v41 drew every one
 //     in full) OUTGROWS it: set at the floor in the chapters' column — clear
@@ -35,19 +36,27 @@
 //     chapter badges, whichever is taller, in whole px at BOTH bake targets;
 //     what the rail has left is shared equally. The text is ONE size for the
 //     whole rail — the largest step of the rules ladder at which every row
-//     fits.
+//     fits. Rows that do not fit even at the floor — by then with one badge
+//     each (the combined marker, below) — are scaled alike into the rail,
+//     each text set from its row's top (the tail clips); a row never gives
+//     up its badge, so in every state the hexagons stay in their rows: they
+//     never meet and never leave the rail.
 //   * THE BADGE STACKS — one hexagon per chapter numeral, stacked down the
 //     ribbon. The prints set a stack's pitch 160 px where there is room
 //     (DOM, THB, KHM, 40K, WOE, PIP) and ≈ 138 px where there is not (LTR,
 //     LTC, WHO, MH3 — WHO #99 stacks five, LTR #174 six): the pitch is the
 //     roomiest whole step from 160 down to 138 at which the rows fit at the
 //     text's size, and the text steps down only after the stacks are tight.
-//   * THE COMBINED MARKER — a stack that can never fit (repeated numerals:
-//     validation allows a numeral on several rows, so the stacks' own
-//     heights can pass the rail) turns every multi-badge row into ONE badge
-//     with a combined label ("I–III", or "I,III,V" when the numerals are not
-//     a run); a row with more numerals than a stack may hold (SAGA_RAIL
-//     .maxStack) takes it alone.
+//   * THE COMBINED MARKER — stacks that CANNOT FIT turn every multi-badge
+//     row into ONE badge with a combined label ("I–III", or "I,III,V" when
+//     the numerals are not a run): alone (repeated numerals — validation
+//     allows a numeral on several rows, so the stacks' own heights can pass
+//     the rail), or beside the text (the rows not fitting even at the
+//     ladder's floor with the stacks tight: the hexagons give way before a
+//     chapter loses a line — layout v41 drew ONE marker a row, so a saga it
+//     baked whole would otherwise bake clipped). Wherever the rows fit with
+//     their stacks, they are stacked. A row with more numerals than a stack
+//     may hold (SAGA_RAIL.maxStack) takes the combined marker alone.
 //   * EVERY POSITION — the rows' whole-px edges, the divider on each row's
 //     top edge, each badge's box, each numeral's line box — per target
 //     (sagaRailDrawing): the HD bake's, which the preview draws in cqw, and
@@ -181,11 +190,12 @@ export type SagaRail = {
   rowsRect: Rect;
   /** Each row's share of that box, top to bottom. */
   rowFractions: number[];
-  /** The rows don't fit even at the ladder's floor with tight stacks: the
-   *  floor's rows, scaled alike into the box (a row may clip its text). */
+  /** The rows don't fit even at the ladder's floor with one badge a row:
+   *  the floor's rows, scaled alike into the box (a row may clip its text),
+   *  none under its badge (rowFractionsPastFloor). */
   clipped: boolean;
-  /** The stacks alone could not fit the rail: every multi-badge row draws
-   *  the combined marker. */
+  /** The stacks could not fit the rail — alone, or beside the text at the
+   *  ladder's floor: every multi-badge row draws the combined marker. */
   combinedFallback: boolean;
 };
 
@@ -197,6 +207,43 @@ function badgeHeightPx(slot: ChapterSlot, aspect: number, target: RulesTarget): 
 function stackExtentPx(slot: ChapterSlot, aspect: number, target: RulesTarget, count: number, pitchHd: number): number {
   if (count <= 0) return 0;
   return badgeHeightPx(slot, aspect, target) + (count - 1) * pitchHd * RULES_TARGET_SCALE[target];
+}
+
+/**
+ * The shares of rows their box cannot hold even at the ladder's floor.
+ * `scaled` is every row scaled alike into the box (contentRowsAt's
+ * `scaleIntoBox`) — which would squeeze a short chapter beside long ones
+ * under its own badge: its hexagon then met its neighbour's, or left the
+ * rail over the frame. So a row that would fall under its badge (`stackPx`
+ * — one badge a row by then) is HELD at it, and one px for the whole-px
+ * edges of both targets, and the others are scaled into what is left, until
+ * none does: where no row is that short, the shares are `scaled` untouched.
+ * Only a box too short for the badges alone shares itself by their heights.
+ */
+function rowFractionsPastFloor(
+  scaled: readonly number[],
+  stackPx: (row: number, target: RulesTarget) => number,
+  box: Record<RulesTarget, { height: number }>,
+): number[] {
+  const least = scaled.map((_, i) => Math.max(...RULES_TARGETS.map((t) => (stackPx(i, t) + 1) / box[t].height)));
+  const leastSum = least.reduce((a, b) => a + b, 0);
+  if (leastSum >= 1) return least.map((share) => share / leastSum);
+  const held = scaled.map(() => false);
+  let fractions = scaled.slice();
+  // Each pass holds at least one more row, and the rows still free always
+  // have more than their stacks to share (the held ones took less than 1).
+  for (let pass = 0; pass < scaled.length; pass += 1) {
+    const short = fractions.map((share, i) => !held[i] && share < least[i]);
+    if (!short.some(Boolean)) break;
+    short.forEach((isShort, i) => {
+      if (isShort) held[i] = true;
+    });
+    const heldSum = least.reduce((sum, share, i) => sum + (held[i] ? share : 0), 0);
+    const freeSum = scaled.reduce((sum, share, i) => sum + (held[i] ? 0 : share), 0);
+    if (freeSum <= 0) return least.map((share) => share / leastSum);
+    fractions = scaled.map((share, i) => (held[i] ? least[i] : (share * (1 - heldSum)) / freeSum));
+  }
+  return fractions;
 }
 
 /** The pitch range in HD px: the profile's, on the even grid. */
@@ -272,11 +319,14 @@ function grownSagaIntro(
  * The rail of one saga: its reminder block, its rows and their badges, at
  * the one text size and stack pitch at which everything fits (see the
  * header). Deterministic, so the preview and the bake draw the same rail by
- * construction. `intro` and each chapter's text keep their line breaks as
- * paragraphs.
+ * construction. Each chapter's text keeps its line breaks as paragraphs;
+ * the reminder's are spaces.
  */
 export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, chapters: readonly SagaChapter[], aspect: number = 7 / 5): SagaRail {
-  const introText = intro?.trim() ? intro.trim() : null;
+  // The reminder block is ONE paragraph: a line break typed in it is a
+  // space — as every print sets it, as layout v41 drew it and as legacy
+  // rules text already reads (parseSagaIntro joins its lines).
+  const introText = intro?.replace(/\s+/g, " ").trim() || null;
   const foot = slot.rect.topPct + slot.rect.heightPct;
   const ladder = rulesLadderPx(slot.sizePct, "portrait");
   const pitch = pitchRangePx(slot, aspect);
@@ -313,19 +363,8 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
     return { slot, aspect, sizePx: ladder[0], pitchPx: pitch.max, intro: introLayout, introGrown: false, rows: [], rowsRect, rowFractions: [], clipped: false, combinedFallback: false };
   }
 
-  // How many badges each row stacks: its numerals, or ONE combined marker —
-  // for a row past the stack's limit always, and for every multi-badge row
-  // when the tight stacks alone are taller than the rows' box at either
-  // target (repeated numerals).
   const box = { hd: rectPx(rowsRect, "portrait", aspect, "hd"), default: rectPx(rowsRect, "portrait", aspect, "default") };
-  const stacked = numerals.map((n) => (n.length > SAGA_RAIL.maxStack ? 1 : n.length));
-  const combinedFallback = RULES_TARGETS.some(
-    (t) => stacked.reduce((sum, count) => sum + stackExtentPx(slot, aspect, t, count, pitch.min), 0) > box[t].height,
-  );
-  const counts = combinedFallback ? stacked.map((count) => Math.min(count, 1)) : stacked;
-  const stacks = counts.some((count) => count > 1);
-
-  const input = (pitchHd: number): ContentRowsInput => ({
+  const input = (badges: readonly number[], pitchHd: number): ContentRowsInput => ({
     texts: chapters.map((ch) => ch.text),
     rect: rowsRect,
     baseSizePct: slot.sizePct,
@@ -333,34 +372,60 @@ export function sagaRail(slot: ChapterSlot, intro: string | null | undefined, ch
     aspect,
     anatomy: {
       padPx: { left: SAGA_RAIL.textPadXPx, right: SAGA_RAIL.textPadXPx, top: SAGA_RAIL.rowPadYPx, bottom: SAGA_RAIL.rowPadYPx },
-      minHeightPx: (i, target) => stackExtentPx(slot, aspect, target, counts[i], pitchHd),
+      minHeightPx: (i, target) => stackExtentPx(slot, aspect, target, badges[i], pitchHd),
     },
   });
 
   // Down the ladder: the first size whose rows fit with the stacks tight,
   // then the roomiest pitch that still fits at that size. With no stack the
-  // pitch moves nothing.
-  let chosen: { rows: ContentRowsAt; pitchHd: number; clipped: boolean } | null = null;
-  for (const sizePx of ladder) {
-    const tight = contentRowsAt(input(pitch.min), sizePx);
-    if (!tight.fits) continue;
-    chosen = { rows: tight, pitchHd: stacks ? pitch.min : pitch.max, clipped: false };
-    if (stacks) {
-      for (let p = pitch.max; p > pitch.min; p -= SAGA_RAIL.pitchStepPx) {
-        const roomy = contentRowsAt(input(p), sizePx, { text: tight.text });
-        if (roomy.fits) {
-          chosen = { rows: roomy, pitchHd: p, clipped: false };
-          break;
+  // pitch moves nothing. Null when the rows do not fit even at the floor.
+  const fitRows = (badges: readonly number[]): { rows: ContentRowsAt; pitchHd: number } | null => {
+    const stacks = badges.some((count) => count > 1);
+    for (const sizePx of ladder) {
+      const tight = contentRowsAt(input(badges, pitch.min), sizePx);
+      if (!tight.fits) continue;
+      if (stacks) {
+        for (let p = pitch.max; p > pitch.min; p -= SAGA_RAIL.pitchStepPx) {
+          const roomy = contentRowsAt(input(badges, p), sizePx, { text: tight.text });
+          if (roomy.fits) return { rows: roomy, pitchHd: p };
         }
       }
+      return { rows: tight, pitchHd: stacks ? pitch.min : pitch.max };
     }
-    break;
+    return null;
+  };
+
+  // How many badges each row stacks: its numerals — a row past the stack's
+  // limit ONE combined marker, always. And every multi-badge row takes the
+  // combined marker when the stacks CANNOT FIT: alone (the tight stacks
+  // taller than the rows' box at either target — repeated numerals), or
+  // beside the text (the rows not fitting even at the ladder's floor with
+  // the stacks tight) — the hexagons give way before a chapter loses a line
+  // of its text. Wherever the rows fit with their stacks, they are stacked.
+  const stacked = numerals.map((n) => (n.length > SAGA_RAIL.maxStack ? 1 : n.length));
+  const tooTall = RULES_TARGETS.some(
+    (t) => stacked.reduce((sum, count) => sum + stackExtentPx(slot, aspect, t, count, pitch.min), 0) > box[t].height,
+  );
+  let counts: readonly number[] = stacked;
+  let fit = tooTall ? null : fitRows(stacked);
+  const combinedFallback = tooTall || (fit === null && stacked.some((count) => count > 1));
+  if (combinedFallback) {
+    counts = stacked.map((count) => Math.min(count, 1));
+    fit = fitRows(counts);
   }
-  if (!chosen) {
-    // Nothing fits even at the floor: the floor's rows with tight stacks,
-    // scaled alike into the box.
+
+  let chosen: { rows: ContentRowsAt; pitchHd: number; clipped: boolean };
+  if (fit) {
+    chosen = { ...fit, clipped: false };
+  } else {
+    // Nothing fits even at the floor (by now with one badge a row): the
+    // floor's rows, scaled alike into the box — but a row never gives up
+    // its badge (rowFractionsPastFloor).
     const floor = ladder[ladder.length - 1];
-    chosen = { rows: contentRowsAt(input(pitch.min), floor, { scaleIntoBox: true }), pitchHd: pitch.min, clipped: true };
+    const badges = counts;
+    const scaled = contentRowsAt(input(badges, pitch.min), floor, { scaleIntoBox: true });
+    const rowFractions = rowFractionsPastFloor(scaled.rowFractions, (i, t) => stackExtentPx(slot, aspect, t, badges[i], pitch.min), box);
+    chosen = { rows: { ...scaled, rowFractions }, pitchHd: pitch.min, clipped: true };
   }
 
   const fitted = chosen;
@@ -493,8 +558,10 @@ export function sagaRailDrawing(rail: SagaRail, target: RulesTarget): SagaRailDr
     const count = row.labels.length;
     const extent = count > 0 ? badgeHeight + (count - 1) * pitch : 0;
     const centred = Math.round((top + bottom - extent) / 2);
-    // Lifted onto the text's leading, but never out of the row; a stack
-    // taller than its row (a rail past its floor) stays centred.
+    // Lifted onto the text's leading, but never out of the row. (A row is
+    // shorter than its badge only in a rail with more badges than it can
+    // hold — nine chapters under a reminder; the badge then stays centred
+    // on it. Everywhere else rowFractionsPastFloor keeps the row its badge.)
     const stackTop = extent <= bottom - top ? Math.min(Math.max(centred - lift, top), bottom - extent) : centred;
     // A row past the ladder's floor (rail.clipped) that can't hold its text
     // sets it from the row's TOP: the clip then takes the tail, never the

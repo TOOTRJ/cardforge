@@ -293,9 +293,8 @@ describe("the reminder block", () => {
     // 1522 — so the reminder's box ends at 929 px: fifteen lines at the
     // floor (42 px on a 42 px pitch, the rows' 14 px above and below). This
     // text fills them at about 450 characters (over ONE chapter it runs to
-    // about 900). Inside the editor's 400 a one-paragraph reminder reaches
-    // that only over six chapters, with words wide enough for sixteen
-    // lines; one with line breaks sooner (below).
+    // about 900). Inside the editor's 400 a reminder reaches that only over
+    // six chapters, with words wide enough for sixteen lines.
     const six = chapters(["I", "II", "III", "IV", "V", "VI"].map((n) => [n, "Draw a card."]));
     const boxOf = (r: SagaRail) => rectPx(r.intro!.input.rect, "portrait", ASPECT, "hd");
     const longerOf = (chars: number) => `${LONG_REMINDER.repeat(2).slice(0, chars - 1).trimEnd()})`;
@@ -312,15 +311,26 @@ describe("the reminder block", () => {
     for (const row of sagaRailDrawing(over, "hd").rows) expect(row.bottom - row.top).toBeGreaterThanOrEqual(134);
     // The same 460 characters over one chapter: in full.
     expect(sagaRail(SLOT, longerOf(460), chapters([["I", "Draw a card."]])).intro!.clipped).toBe(false);
-    // Paragraphs cost their gaps and their short last lines: 400 characters
-    // in five of them fit over four chapters, not over six — and never push
-    // a row under its badge.
-    const paragraphs = reminderOf(400).replace(/\. /g, ".\n");
-    expect(paragraphs.split("\n")).toHaveLength(5);
-    expect(sagaRail(SLOT, paragraphs, six.slice(0, 4)).intro!.clipped).toBe(false);
-    const tight = sagaRail(SLOT, paragraphs, six);
-    expect([tight.introGrown, tight.intro!.clipped]).toEqual([true, true]);
-    for (const row of sagaRailDrawing(tight, "hd").rows) expect(row.bottom - row.top).toBeGreaterThanOrEqual(134);
+  });
+
+  it("sets the reminder as ONE paragraph: a line break typed in it is a space", () => {
+    // As every print sets it, as layout v41 drew it, and as legacy rules
+    // text reads (parseSagaIntro joins its lines). Five paragraphs of the
+    // editor's 400 characters would take three more lines and four gaps —
+    // more than six chapters leave; a chapter's own line breaks stay
+    // paragraphs (below).
+    const six = chapters(["I", "II", "III", "IV", "V", "VI"].map((n) => [n, "Draw a card."]));
+    const broken = reminderOf(400).replace(/\. /g, ".\n\n");
+    expect(broken.split("\n\n")).toHaveLength(5);
+    for (const rows of [parseChapters(DOM_21), six]) {
+      const [typed, flat] = [sagaRail(SLOT, broken, rows), sagaRail(SLOT, reminderOf(400), rows)];
+      expect(typed.intro!.blocks).toHaveLength(1);
+      expect(linesOf(typed.intro!)).toEqual(linesOf(flat.intro!));
+      expect(typed.intro!.input.rect).toEqual(flat.intro!.input.rect);
+      expect([typed.introGrown, typed.intro!.clipped, typed.clipped]).toEqual([true, false, false]);
+    }
+    const readAhead = sagaRail(SLOT, "Read ahead\n(Choose a chapter and start with that many lore counters.)", parseChapters(DOM_21));
+    expect(linesOf(readAhead.intro!).join(" ")).toBe("Read ahead (Choose a chapter and start with that many lore counters.)");
   });
 
   it("does not outgrow its box for a run wider than it — that clips at the box's side, as in every rules box", () => {
@@ -580,6 +590,43 @@ describe("the combined marker", () => {
     expect(open.rows.map((row) => row.labels.length)).toEqual([3, 3, 3]);
   });
 
+  it("takes them before a chapter loses a line: stacks that fit the rail, but not beside the text at the ladder's floor", () => {
+    // WHO #99's shape under a reminder — chapter I, then II to VI in one
+    // row: five hexagons are 684 px of the 1138. Chapter I steps down the
+    // ladder beside them (62 px at 120 characters, the floor at 265)…
+    const beside = (chars: number, intro: string | null = REMINDER) => sagaRail(SLOT, intro, chapters([["I", LONG.slice(0, chars)], ["II, III, IV, V, VI", "Draw a card."]]));
+    expect(beside(120)).toMatchObject({ sizePx: 62, clipped: false, combinedFallback: false });
+    const floor = beside(265);
+    expect(floor).toMatchObject({ sizePx: RULES_SIZE_PX.floor, clipped: false, combinedFallback: false });
+    expect(floor.rows[1].labels).toEqual(["II", "III", "IV", "V", "VI"]);
+    // …and past that the stack gives way, not the text: ONE badge, every
+    // line of chapter I, at the largest size that then fits.
+    const r = beside(300);
+    expect(r).toMatchObject({ sizePx: 60, clipped: false, combinedFallback: true });
+    expect(r.rows.map((row) => [row.labels, row.combined])).toEqual([[["I"], false], [["II–VI"], true]]);
+    for (const t of RULES_TARGETS) {
+      const d = sagaRailDrawing(r, t);
+      expect(d.rows.map((row) => row.badges.length)).toEqual([1, 1]);
+      d.rows.forEach((row, i) => {
+        expect(row.text.clipped, `${t} row ${i}`).toBe(false);
+        expect(row.bottom - row.top, `${t} row ${i}`).toBeGreaterThanOrEqual(natural(r, i, t));
+      });
+    }
+    // With no reminder the same saga has the room: stacked.
+    expect(beside(300, null)).toMatchObject({ sizePx: 52, clipped: false, combinedFallback: false });
+    // Two stacks and two chapters between them (legacy numerals past VI).
+    const two = sagaRail(SLOT, REMINDER, chapters([["I, II, III", "Draw a card."], ["IV", LONG.slice(0, 103)], ["V, VI, VII", "Scry 1."], ["VIII", "Draw two cards."]]));
+    expect(two).toMatchObject({ clipped: false, combinedFallback: true });
+    expect(two.rows.map((row) => row.labels)).toEqual([["I–III"], ["IV"], ["V–VII"], ["VIII"]]);
+  });
+
+  it("is what a rail past its floor draws: by then every row has one badge", () => {
+    const long = `${LONG} ${LONG}`;
+    const r = sagaRail(SLOT, REMINDER, chapters([["I, II, III", "Draw a card."], ["IV", long], ["V", long], ["VI", "Scry 1."]]));
+    expect(r).toMatchObject({ sizePx: RULES_SIZE_PX.floor, clipped: true, combinedFallback: true });
+    expect(r.rows.map((row) => row.labels)).toEqual([["I–III"], ["IV"], ["V"], ["VI"]]);
+  });
+
   it("takes a row with more numerals than a stack holds, alone (a legacy marker past VI)", () => {
     const r = rail(`${REMINDER}\nI, II, III, IV, V, VI, VII — Scry 1.\nVIII — You win.\nII, III — Draw.`);
     expect(r.combinedFallback).toBe(false);
@@ -712,6 +759,103 @@ describe("a rail past its floor", () => {
       for (const row of d.rows) {
         expect(row.text.input.vAlign).toBe("start");
         expect(row.badges[0].top).toBeGreaterThanOrEqual(row.top - 1);
+      }
+    }
+  });
+
+  it("scales rows that all stand taller than their badges alike — by what each needs", () => {
+    // Six chapters of six to nine lines at the floor: more than a rail and
+    // a half's worth, and still every scaled row is taller than its badge.
+    const r = sagaRail(SLOT, REMINDER, chapters(["I", "II", "III", "IV", "V", "VI"].map((n, i) => [n, LONG.slice(0, 180 + 20 * i)])));
+    expect([r.clipped, r.sizePx]).toEqual([true, RULES_SIZE_PX.floor]);
+    const heights = { hd: rectPx(r.rowsRect, "portrait", ASPECT, "hd").height, default: rectPx(r.rowsRect, "portrait", ASPECT, "default").height };
+    const need = r.rows.map((_, i) => Math.max(...RULES_TARGETS.map((t) => natural(r, i, t) / heights[t])));
+    const total = need.reduce((a, b) => a + b, 0);
+    expect(total).toBeGreaterThan(1.5);
+    r.rowFractions.forEach((share, i) => expect(share, `row ${i}`).toBeCloseTo(need[i] / total, 9));
+    expect(new Set(r.rowFractions.map((share) => share.toFixed(6))).size).toBeGreaterThan(3);
+    for (const row of sagaRailDrawing(r, "hd").rows) expect(row.bottom - row.top).toBeGreaterThan(132 + 1);
+  });
+
+  it("holds a row at its badge, however long its neighbours: the hexagons never meet and never leave the rail", () => {
+    // Scaled alike, a one-line chapter beside 600-character ones was
+    // squeezed to half its badge: hexagon II lay over hexagon III, the last
+    // one hung below the rail's foot, a short stack reached into the
+    // reminder. Such a row keeps its badge; the long rows share the rest.
+    const long = `${LONG} ${LONG}`;
+    const shapes: [name: string, intro: string | null, rows: [string, string][]][] = [
+      ["short rows between long ones", null, [["I", long], ["II", "Draw a card."], ["III", "Scry 1."], ["IV", long], ["V", long], ["VI", "Draw a card."]]],
+      ["the same under a reminder", REMINDER, [["I", long], ["II", "Draw a card."], ["III", "Scry 1."], ["IV", long], ["V", long], ["VI", "Draw a card."]]],
+      ["a short row first and last", null, [["I", "Draw a card."], ["II", long], ["III", long], ["IV", long], ["V", "Scry 1."]]],
+      // (Its stack gave way first — the combined marker; the text still
+      // does not fit.)
+      ["a short stack's row under the reminder", REMINDER, [["I, II, III", "Draw a card."], ["IV", long], ["V", long], ["VI", "Scry 1."]]],
+      ["every row but one short", REMINDER, [["I", "Draw a card."], ["II", `${long} ${long} ${long}`], ["III", "Scry 1."], ["IV", "Scry 2."], ["V", "Scry 3."]]],
+      // A middling row (five lines: 233 px) stands above its badge when all
+      // are scaled alike (149 px), and falls under it once the short rows
+      // are held (113 px): it is held on the second pass.
+      [
+        "a middling row beside a long one and four short",
+        REMINDER,
+        [
+          ["I", long],
+          ["II", "Each player sacrifices a creature. Then each player who controls no creatures draws two cards and loses 2 life, then scries 1."],
+          ["III", "Scry 1."],
+          ["IV", "Scry 2."],
+          ["V", "Scry 3."],
+          ["VI", "Draw a card."],
+        ],
+      ],
+    ];
+    for (const [name, intro, rows] of shapes) {
+      const r = sagaRail(SLOT, intro, chapters(rows));
+      expect([r.clipped, r.sizePx], name).toEqual([true, RULES_SIZE_PX.floor]);
+      expect(r.rows.every((row) => row.labels.length === 1), name).toBe(true);
+      expect(r.rowFractions.reduce((a, b) => a + b, 0), name).toBeCloseTo(1, 9);
+      for (const t of RULES_TARGETS) {
+        const scale = RULES_TARGET_SCALE[t];
+        const badge = Math.round((SLOT.badge.heightPct / 100) * Math.round(1500 * scale * ASPECT));
+        const box = rectPx(r.rowsRect, "portrait", ASPECT, t);
+        const d = sagaRailDrawing(r, t);
+        let above = box.top;
+        d.rows.forEach((row, i) => {
+          const label = `${name}, row ${i} (${t})`;
+          const stack = badge + (row.badges.length - 1) * r.pitchPx * scale;
+          expect(row.bottom - row.top, label).toBeGreaterThanOrEqual(stack);
+          // Its badges inside the row, under the row above's.
+          expect(row.badges[0].top, label).toBeGreaterThanOrEqual(Math.max(row.top, above));
+          above = row.badges.at(-1)!.top + badge;
+          expect(above, label).toBeLessThanOrEqual(row.bottom);
+          // A row that holds its text is as it would be; one that cannot
+          // sets it from its top.
+          const fitsText = blockHeightPx(row.text, t) + 2 * Math.round(SAGA_RAIL.rowPadYPx * scale) <= row.bottom - row.top;
+          expect(row.text.input.vAlign, label).toBe(fitsText ? "center" : "start");
+        });
+        expect(d.rows[0].top, name).toBe(box.top);
+        expect(d.rows.at(-1)!.bottom, name).toBe(box.bottom);
+      }
+      // The short rows are held at their stacks (and a px); the long ones
+      // took what was left, in proportion to their needs.
+      const heights = rectPx(r.rowsRect, "portrait", ASPECT, "hd").height;
+      const hd = sagaRailDrawing(r, "hd").rows.map((row) => row.bottom - row.top);
+      rows.forEach(([, text], i) => {
+        if (text.length < 20) expect(hd[i], `${name}, row ${i}`).toBeLessThanOrEqual(132 + 3);
+      });
+      expect(hd.reduce((a, b) => a + b, 0), name).toBe(heights);
+    }
+  });
+
+  it("shares a box too short for the stacks alone by their heights", () => {
+    // Only a reminder at its cap leaves so little: one badge and 2 px a row.
+    const r = sagaRail(SLOT, `(${"Whenever a creature enters, put a lore counter on this Saga and scry 1. ".repeat(40)})`, chapters([["I", LONG], ["II", "Draw a card."], ["III", LONG]]));
+    expect([r.introGrown, r.clipped, r.combinedFallback]).toEqual([true, true, false]);
+    for (const t of RULES_TARGETS) {
+      const badge = Math.round((SLOT.badge.heightPct / 100) * Math.round(1500 * RULES_TARGET_SCALE[t] * ASPECT));
+      for (const row of sagaRailDrawing(r, t).rows) {
+        expect(row.bottom - row.top, t).toBeGreaterThanOrEqual(badge);
+        expect(row.bottom - row.top, t).toBeLessThanOrEqual(badge + 3);
+        expect(row.badges[0].top, t).toBeGreaterThanOrEqual(row.top);
+        expect(row.badges[0].top + badge, t).toBeLessThanOrEqual(row.bottom);
       }
     }
   });

@@ -889,8 +889,10 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //              every row's top edge but the first row of a saga with no
 //              reminder. Up to six badges stack in one row, as the prints do
 //              (LTR #174 six, WHO #99 five); the combined marker ("I–III")
-//              is drawn only where stacks can never fit (repeated numerals)
-//              or past six.
+//              is drawn only where stacks cannot fit — alone (repeated
+//              numerals) or beside the text at the ladder's floor (before a
+//              chapter loses a line: v41 drew one marker a row) — or past
+//              six. The reminder is one paragraph, as v41 drew it.
 //            The walker rows moved onto the shared arithmetic and are
 //            byte-identical (tests/unit/cards/loyalty-rows-pinned.test.ts,
 //            tests/unit/render/pw-rows-pinned-bake.test.tsx).

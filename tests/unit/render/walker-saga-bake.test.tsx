@@ -494,6 +494,42 @@ describe("walker rows and the saga rail — real bakes at 750 and HD", () => {
     }
   }, 120_000);
 
+  it("keeps the hexagons of a rail past its floor inside it — one-line chapters beside 600-character ones", async () => {
+    // Scaled alike with its neighbours, a one-line first or last chapter
+    // was squeezed to half its badge: the hexagon hung 30 px over the frame
+    // above the rail, or below its foot. The rows keep their badges
+    // (saga-rail.ts rowFractionsPastFloor): outside the rail the card is a
+    // short saga's, and no two hexagons share a pixel row.
+    const dense = "Whenever a creature you control dies, each opponent loses 1 life and you gain 1 life. ".repeat(14).slice(0, 590);
+    const squeezed = ["I — Draw a card.", ...["II", "III", "IV", "V"].map((n) => `${n} — ${dense}`), "VI — Scry 1."].join("\n");
+    const rail = sagaRail(SAGA.chapters!, null, parseChapters(squeezed));
+    expect([rail.clipped, rail.rows.length]).toEqual([true, 6]);
+    for (const { target, preset } of TARGETS) {
+      const scale = RULES_TARGET_SCALE[target];
+      const railBox = rectPx(SAGA.chapters!.rect, "portrait", 7 / 5, target);
+      const short = await saga("I — Draw a card.", preset);
+      const long = await saga(squeezed, preset);
+      const height = short.data.length / 3 / short.width;
+      const differs = (x: number, y: number) => {
+        const k = (y * long.width + x) * 3;
+        return long.data[k] !== short.data[k] || long.data[k + 1] !== short.data[k + 1] || long.data[k + 2] !== short.data[k + 2];
+      };
+      let outside = 0;
+      for (let y = 0; y < height; y += 1) {
+        if (y >= railBox.top - 1 && y <= railBox.bottom + 1) continue;
+        for (let x = 0; x < railBox.right + 20 * scale; x += 1) if (differs(x, y)) outside += 1;
+      }
+      expect(outside, preset).toBe(0);
+      const d = sagaRailDrawing(rail, target);
+      const badges = d.rows.flatMap((row) => row.badges);
+      expect(badges).toHaveLength(6);
+      badges.forEach((badge, i) => {
+        expect(badge.top, `${preset} badge ${i}`).toBeGreaterThanOrEqual(i === 0 ? railBox.top : badges[i - 1].top + badges[i - 1].height);
+        expect(badge.top + badge.height, `${preset} badge ${i}`).toBeLessThanOrEqual(railBox.bottom);
+      });
+    }
+  }, 120_000);
+
   it("draws U+2212 exactly as the hyphen MPlantin has, in a chapter and in an ability", async () => {
     const chapter = (dash: string) => saga(`I — Put a ${dash}1/${dash}1 counter on target creature.\nII — Draw a card.`, "default");
     expect((await chapter("−")).sha).toBe((await chapter("-")).sha);
