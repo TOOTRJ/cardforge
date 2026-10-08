@@ -3478,7 +3478,7 @@
     }
   },
   "retroland": {
-    "note": "m: no printing read. A two-colour land on the 1997 frame prints a BLEND of its two colours in the text box (from Sixth Edition, 1999), which this frame does not draw yet (TODO 4.6h), and no three-colour 1997-frame land was read; m is a render stand-in and is not ticked (TODO 4.10a). Seaside Haven (W/U) and Hinterland Harbor (a 2023 reprint) are kept to look at, not to verify against. The reference is the 1996-2003 printing (owner 2026-10-07): the INR basics are 2025 reprints in the reprints' lighter colours, the Mirage basics print the left-aligned footer of 1996-98.",
+    "note": "m: a render stand-in, never ticked (TODO 4.10a): the plain land with a gold text box, which no printing read wears — the three-colour lairs of Planeshift 2001 (Crosis's Catacombs, kept to look at) print the plain land's orange box. A two-colour land that taps for both colours prints a BLEND of them in its text box and the box's ring from Sixth Edition 1999 on: the pair masters of TODO 4.6h, a card's own switch — Hinterland Harbor (a 2023 reprint) is one, kept to look at, not to verify against. The two-colour lands of 1997–98 and the ones coloured only by their abilities (Seaside Haven ONS #323) print the plain land: key c. The reference is the 1996-2003 printing (owner 2026-10-07): the INR basics are 2025 reprints in the reprints' lighter colours, the Mirage basics print the left-aligned footer of 1996-98.",
     "colors": {
       "w": [
         {
@@ -3584,9 +3584,9 @@
       ],
       "m": [
         {
-          "name": "Seaside Haven",
-          "set": "ons",
-          "scryfallId": "9c940a6b-3c5e-4ce2-92b6-63e2cb575c15"
+          "name": "Crosis's Catacombs",
+          "set": "pls",
+          "scryfallId": "7caad74f-c0d0-4eca-94be-b89a2c9a3980"
         },
         {
           "name": "Hinterland Harbor",

@@ -2635,6 +2635,86 @@ bakes at 750 and HD — and the published symbols),
 `tests/unit/frames/alpha-1993-importer.test.ts` (the recipe, provenance) and
 the preview twin under `components/`.
 
+### Two colours on the old frames (4.6h)
+
+An ADDITION ([above](#additions-vs-corrections)): the card's own
+`frame_style.twoColor` switch, as on m15 — new two-colour cards start with it
+on, a stored card keeps plain gold until its owner switches it on, an import
+follows the printing. No layout bump, no sweep, no badge.
+
+**What the prints do** (181 scans read on 2026-10-08; each print pixel's
+share between OUR two single-colour masters of the frame, a ramp fitted by
+least squares):
+
+| Look | Prints | What splits | Where |
+|---|---|---|---|
+| 2003 gold card, two colours (Ravnica 2005 → Journey into Nyx 2014) | 52 | the pinline and the text box; the frame body, the bars and the P/T box stay gold | box: a soft blend 25→73 %W on every pair. Pinline: the same soft blend (25→71) on wu wb ub ur br rg gu, a narrow straight one (42→59) on bg (8 of 8), gw (6 of 7) and rw (6 of 8) |
+| 2003 two-colour land (Eighth Edition 2003 → Theros 2013) | 36 | the pinline and the text box, over the PLAIN land's body and grey bars | one straight ramp, 42→59 %W |
+| 1997 two-colour land (Sixth Edition 1999 → Onslaught 2002) | 36 | the text box and the box's ring, over the plain land — its gold outer and art rings too | one straight ramp, 40→60 %W |
+
+What prints NO two-colour look, and so is not built:
+
+- **1997 gold spells** — one gold frame whatever the colours (12 of 12,
+  Mirage 1996 → Odyssey 2001). `retro` declares no pairs, and the registry
+  no longer calls a two-colour 1997 gold printing a gap (`GOLD_PAIR_TEMPLATES`).
+- **1997 lands of 1997–98** (Fifth Edition, Tempest, Anthologies: 11 of 11)
+  and the ones coloured only by their abilities (Judgment, Onslaught: 5 of
+  5) — the plain land's orange box. They import as the plain land
+  (`landFrameColors`).
+- **The 2003 frame before Ravnica** — its one two-colour gold card, Iname as
+  One (SOK #151, June 2005), is plain gold. It imports on the gold master
+  with no switch (`TWO_COLOUR_2003_GOLD_FROM`).
+- **2003 hybrid cards** — the frame BODY is split, the bars and the P/T box
+  are grey (10 of 10). Another look, not drawn: the `two-colour-hybrid` gap
+  stays. An all-hybrid cost with the switch on gets the gold card's split,
+  with the creator's one-line note, as on m15artifact.
+
+**The masters are synthesised.** Card Conjurer's packs hold no two-colour
+file for either era (the 8th pack: fifteen single masters and five masks;
+the Seventh pack: fourteen, and a "Dual Land" mask of nested rectangles that
+no print wears). A pair master is made of the template's OWN finished
+masters — the pack's drawings after their re-cut and tones, never a scan
+(`oldFramePairLayers`, `scripts/import-cc-frames.mjs` `pairOfFinishedMasters`):
+the base whole (`modern/m`; the plain land `c`), and inside the split
+regions the pair's two colour masters blended left to right by a
+premultiplied lerp (`scripts/lib/pair-ramp.mjs`; a ramp may now be
+`[from, to, "smooth"]`, a smoothstep). The regions are the pack's own Rules
+and Pinline masks moved with the cut (2003) and the drawing's own box and
+ring (1997). A 1997 pair's two sides are built on the PLAIN land's cut: the
+basics' boxes sit up to 2.5 px off it, the dual prints' box within 1 px of
+it. `tests/unit/frames/old-frame-pair-masters.test.ts` recombines every 2003
+pair from the published files to the byte.
+
+**Code.** `twoColorMasters: ["split"]` on the `modern`, `modernland` and
+`retroland` PROFILES entries (`twoColorForLands` on the two lands), with the
+pair keys' ink through `withPairInk` (a pair prints its base master's ink:
+the gold frame's dark footer and mark, the land's white, the 1997 white with
+its shadow). The P/T plate is the gold `m` plate (`plateKeyFor`). Both
+renderers, the creator's switch and its copy, the save and the remix are
+4.6b's, untouched.
+
+**Import** (`printsTwoColorFrame`): the 2003 frame — a land always, a gold
+card from Ravnica on (or from a promo set, whose Scryfall date is a
+placeholder), never a hybrid card; the 1997 frame — a land that taps for
+both colours, printed from 1999 on (`TWO_COLOUR_1997_LAND_FROM`), or an
+Onslaught fetch land.
+
+**Verification.** A pair rides its template's `m` tick (owner decision
+2026-09-29, V-A), after the owner signs the PR's pair sheets — nothing new to
+tick, and no tick goes stale. The creator's gate reads the colour key, and a
+pair's is `m`: `modern/m` and `modernland/m` are ticked on production, so
+their pairs are offered as soon as the masters are promoted. `retroland/m`
+is a render stand-in that has never been ticked (the plain land with a gold
+box, which no printing read wears), so a `retroland` pair can be picked only
+once the owner ticks `retroland/m` — which also offers the stand-in to a
+three-colour land. The owner decides on the pair sheet.
+
+**Proof that nothing stored changes.** The replay of 124 visible production
+cards (all 8 on `modern`; production holds none on the other three) is
+byte-identical at 750 and HD, base against head; with the switch forced on,
+the 8 stay identical (their colour is stored `multicolor`, no pair); the
+visual matrix: 1,451 unchanged, 0 changed, 15 new.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -2661,8 +2741,10 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   card printed without it (M15–RIX, List reprints) and for a Legendary
   showcase, and absent for a nonlegendary printing, a showcase one included
   (owner 2026-09-30); `printed_two_color` is `true` (with
-  its pair) for a 2015-frame printing of exactly two colours, else absent —
-  never `false`. A switch the printing doesn't name takes the new-card
+  its pair) for a 2015-frame printing of exactly two colours — and, since
+  4.6h, for an old-frame printing that prints them
+  ([above](#two-colours-on-the-old-frames-46h)) — else absent, never
+  `false`. A switch the printing doesn't name takes the new-card
   default (the save's stamp; the creator's form, `importedFormAnatomy`), so a
   card made Legendary or given a pair later starts on, like any new card.
   A stored card shows each switch OFF with a one-line
@@ -2673,8 +2755,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   on a pair, or a plain `["multicolor"]` card whose cost spans two colours
   or has no coloured pip (`offersTwoColor` — never three colour words, never
   a Multicolor card whose cost spans one or three-plus), and for a LAND only
-  on a land frame (`twoColorFits`: m15land, m15snowland and the borderless
-  land, `twoColorForLands`). A two-colour
+  on a land frame (`twoColorFits`: m15land, m15snowland, the borderless
+  land and, since 4.6h, modernland and retroland — `twoColorForLands`). A two-colour
   land stored with no template draws on m15, whose gold-split isn't a
   land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
   the save drops it and the renderers don't draw it (owner round 17).

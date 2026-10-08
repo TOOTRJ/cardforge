@@ -1012,9 +1012,16 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // (split): there these gaps drop — and on m15devoid the gold-split gap
   // is no gap at all (GOLD_PAIR_TEMPLATES: its two-colour printings ARE the
   // gold frame); 4.56 draws the borderless land's (m15borderlessland: the
-  // grey bars, the pinline and box split). What is left is the rest of wave
-  // 2 (4.6f: extended art, sagas / adventures) — and the tails it names
-  // (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003 frame).
+  // grey bars, the pinline and box split); 4.6h draws the old frames'
+  // (modern: the 2003 gold card of Ravnica 2005 on; modernland and
+  // retroland: the two-colour lands of 2003 and of 1999 on — a printing
+  // from before its look began imports without the switch, or as the plain
+  // land: lib/scryfall/import-mapper.ts printsTwoColorFrame /
+  // landFrameColors) and `retro`'s gold-split is no gap at all (the 1997
+  // frame printed one gold card: GOLD_PAIR_TEMPLATES). What is left is the
+  // rest of wave 2 (4.6f: extended art, sagas / adventures) — and the tails
+  // it names (the hybrid artifact dress 4.6e, token pairs 4.48, the 2003
+  // frame's HYBRID cards, whose print splits the frame body).
   "two-colour": {
     match: { colorCount: { min: 2, max: 2 }, hybridCost: false },
     reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
@@ -2553,8 +2560,15 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
  * hybrid dress, so `two-colour-hybrid` stays a gap; MH3 #342 is a
  * borderless `inverted` showcase, not the devoid frame at all (the
  * borderless rules take it).
+ * The 1997 frame (`retro`; TODO 4.6h, measured 2026-10-08): its two-colour
+ * gold cards print ONE gold frame — no pinline exists to split, and the
+ * text box and its ring read the same at both ends as our gold master's do
+ * (12 of 12: MIR #280, VIS #137, TMP #273, INV #226 / #264 / #282, PLS
+ * #106 / #116, APC #114 / #121 / #126, ODY #290; left against right 10.5
+ * in the box where the master's own shading gives 17.5). The frame's
+ * two-colour LANDS are `retroland`'s pair masters, never this set.
  */
-const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15devoid"]);
+const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15devoid", "retro"]);
 
 /** True when `template` draws the anatomy a gap names — its PROFILES entry
  *  declares the crown overlay or the two-colour dress (lib/cards/anatomy.ts,

@@ -43,7 +43,7 @@ import {
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { describeFrame, finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
-import { qualifiesForCrown, twoColorPairOf, type TwoColorPair } from "@/lib/cards/anatomy";
+import { qualifiesForCrown, twoColorDressOf, twoColorPairOf, type TwoColorPair } from "@/lib/cards/anatomy";
 import { supertypeHasWord } from "@/lib/cards/card-display";
 import {
   FULL_ART_BASIC_2022_SETS,
@@ -1416,7 +1416,10 @@ export function backFrameColorsFromScryfall(card: ScryfallCard): ColorIdentity[]
  *     (Flooded Strand KTK #233 white and blue; landFrameColorRule).
  *   • 1993 and 1997 frames: the identity only — those frames print an
  *     any-colour land on the plain land frame (City of Brass ARN / 7ED,
- *     Rainbow Vale FEM, Path of Ancestry and Command Tower BRC).
+ *     Rainbow Vale FEM, Path of Ancestry and Command Tower BRC). On the
+ *     1997 frame a TWO-colour land wears its colours only where the prints
+ *     do (TODO 4.6h): it taps for both and was printed from 1999 on, or it
+ *     is an Onslaught fetch land; any other prints the plain land.
  *   • The lands the data can't predict, by Oracle name (the signature
  *     registry's LAND_FRAME_OVERRIDES, lib/scryfall/frame-signatures.ts); a
  *     "colorless" override wins in every era, as it always did.
@@ -1424,13 +1427,36 @@ export function backFrameColorsFromScryfall(card: ScryfallCard): ColorIdentity[]
 function landFrameColors(card: ScryfallCard): string[] {
   const rule = landFrameColorRule(card);
   if (Array.isArray(rule) && rule.length === 0) return [];
-  const identityEra = IDENTITY_DRESSED_LAND_ERAS.has((card.frame ?? "").trim());
+  const frame = (card.frame ?? "").trim();
+  const identityEra = IDENTITY_DRESSED_LAND_ERAS.has(frame);
   if (identityEra || rule === "identity") {
-    return wubrgLetters(card.color_identity ?? []);
+    const identity = wubrgLetters(card.color_identity ?? []);
+    // The 1997 frame's two-colour lands (TODO 4.6h): only a land that TAPS
+    // for both colours, printed from 1999 on, wears them (the blended box of
+    // Sixth Edition 1999 → Torment 2002). Every other two-colour land of
+    // the frame prints the plain land's orange box — Fifth Edition, Tempest
+    // and Anthologies (1997–98), and the lands whose colours are only in
+    // their abilities (JUD #142 / #143, ONS #314 / #323 / #325).
+    if (frame === "1997") {
+      // …and the Onslaught fetch lands (2002; no mana, no identity) print
+      // the two basic land types they fetch the same way (5 of 5).
+      const released = (card.released_at ?? "").trim();
+      if (Array.isArray(rule) && rule.length === 2 && (released === "" || released >= TWO_COLOUR_1997_LAND_FROM)) return [...rule];
+      if (identity.length === 2 && !printsTwoColour1997Land(card, identity)) return [];
+    }
+    return identity;
   }
   if (rule !== null) return [...rule];
   if (card.produced_mana == null) return wubrgLetters(card.color_identity ?? []);
   return wubrgLetters(card.produced_mana);
+}
+
+/** True when a 1997-frame land of two identity colours prints them (see
+ *  landFrameColors). */
+function printsTwoColour1997Land(card: ScryfallCard, identity: readonly string[]): boolean {
+  const produced = wubrgLetters(card.produced_mana ?? []);
+  const released = (card.released_at ?? "").trim();
+  return identity.every((letter) => produced.includes(letter)) && (released === "" || released >= TWO_COLOUR_1997_LAND_FROM);
 }
 
 // Border eras whose lands are dressed by their identity, never by the mana
@@ -1483,11 +1509,44 @@ export function printsStandardCrown(
   return effects.includes("legendary") && !effects.includes("showcase") && !isShowcaseSignature(match.signature);
 }
 
+/** The first day a two-colour GOLD card of the 2003 frame printed its two
+ *  colours (TODO 4.6h): Ravnica, October 2005 — and Salvat's 2005 reprints
+ *  of its cards, which Scryfall dates 2005-08-22. Before it the frame's one
+ *  two-colour gold card, Iname as One (SOK #151, June 2005), printed plain
+ *  gold. The 2005 promos carry Scryfall's placeholder date 2005-01-01
+ *  (PAL05 #8 Skyknight Legionnaire prints the split), so a promo set counts
+ *  whatever its date. */
+export const TWO_COLOUR_2003_GOLD_FROM = "2005-08-01";
+/** The first day a two-colour LAND of the 1997 frame printed its two
+ *  colours (TODO 4.6h): Sixth Edition, April 1999 (36 of 36 measured from
+ *  then to Onslaught 2002, Battle Royale and Deckmasters included). Fifth
+ *  Edition and Tempest 1997 and Anthologies 1998 print the plain land's
+ *  orange box (11 of 11). */
+export const TWO_COLOUR_1997_LAND_FROM = "1999-01-01";
+
 /** Whether a printing's own frame is two-coloured (see
- *  ScryfallImportPatch.printed_two_color): the 2015 frame, and a front face
- *  of exactly two colours. */
+ *  ScryfallImportPatch.printed_two_color), for a front face of exactly two
+ *  colours:
+ *   • the 2015 frame — always;
+ *   • the 2003 frame (TODO 4.6h) — a land always (Eighth Edition 2003 on:
+ *     its colours are the mana it produces), a gold card from Ravnica on
+ *     (TWO_COLOUR_2003_GOLD_FROM), never a HYBRID card (its print splits
+ *     the frame body: another look, not drawn);
+ *   • the 1997 frame — a land only (the frame's gold cards print one
+ *     gold), and only one landFrameColors dresses as a pair (it taps for
+ *     both colours and was printed from 1999 on). */
 export function printsTwoColorFrame(card: ScryfallCard): boolean {
-  return (card.frame ?? "").trim() === "2015" && frontFacePairFromScryfall(card) !== null;
+  if (frontFacePairFromScryfall(card) === null) return false;
+  const frame = (card.frame ?? "").trim();
+  if (frame === "2015") return true;
+  const land = typeLineWords(frontTypeLine(card)).words.some((w) => w.cardType === "land");
+  if (frame === "1997") return land;
+  if (frame !== "2003") return false;
+  if (land) return true;
+  const cost = card.card_faces?.[0]?.mana_cost ?? card.mana_cost ?? null;
+  if (twoColorDressOf(cost, "nonland") === "hybrid") return false;
+  const released = (card.released_at ?? "").trim();
+  return (card.set_type ?? "").trim().toLowerCase() === "promo" || released === "" || released >= TWO_COLOUR_2003_GOLD_FROM;
 }
 
 /**
