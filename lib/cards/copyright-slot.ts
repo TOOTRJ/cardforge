@@ -1,5 +1,6 @@
 // ---------------------------------------------------------------------------
-// The © slot of a centred two-line footer (TODO 4.10a, layout v46; era
+// The © slot of a two-line footer (TODO 4.10a, layout v46 — centred, the
+// 1997 frame; TODO 4.10b — set from its left end, the 2003 frame; era
 // design 2026-10-06, decision D2) — what FrameProfile.copyrightSlot draws,
 // decided ONCE for both renderers and the print path (which renders through
 // the bake). Client-safe.
@@ -103,7 +104,8 @@ export function copyrightSlotLayout(
       kind: "brand",
       anchor: {
         line: 2,
-        rightPct: slot.centerPct + widthPct / 2,
+        // Centred on the slot, or (the 2003 frame) starting at its left end.
+        rightPct: slot.startPct !== undefined ? slot.startPct + widthPct : slot.centerPct + widthPct / 2,
         baselinePct: slot.baselinePct,
         topPct: slot.baselinePct - emToHeightPct(slot.sizePct, BRAND_FACE.ascentEm),
         sizePct: slot.sizePct,
@@ -124,7 +126,7 @@ export function copyrightSlotLayout(
     kind: "text",
     text,
     face,
-    xPct: slot.centerPct - widthPct / 2,
+    xPct: slot.startPct !== undefined ? slot.startPct : slot.centerPct - widthPct / 2,
     topPct: slot.baselinePct - emToHeightPct(slot.sizePct, face.ascentEm),
     baselinePct: slot.baselinePct,
     sizePct: slot.sizePct,

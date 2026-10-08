@@ -57,7 +57,11 @@ describe("cardGlyphFields reads each field's face from its frame", () => {
       const want =
         template === "retro" || template === "retroland"
           ? { ...SINGLE, "Type line": "body", Artist: "body", "Footer mark": "body" }
-          : SINGLE;
+          : // The 2003 pair's © slot text is MPlantin too (TODO 4.10b); its
+            // artist stays the display face.
+            template === "modern" || template === "modernland"
+            ? { ...SINGLE, "Footer mark": "body" }
+            : SINGLE;
       expect(faces({ ...VALUES, frame_style: template ? { template } : null }), String(template)).toMatchObject(want);
     }
   });

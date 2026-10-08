@@ -565,6 +565,25 @@ Rules and gotchas:
   dropped. A frame's era symbols are `symbolStyle` (`"1997"`: flat discs,
   `tap-4ed`), a correction, never a per-card switch. `docs/FRAMES.md` "The
   1997 frame".
+- The 2003 frame (`modern`, `modernland`; TODO 4.10b, layout v47) is the
+  frame's LATER drawing, CHK 2004 → JOU 2014 (8ED → 5DN draw the title bar
+  6–8 px differently: no second master, no import gap). Masters: the frames
+  bucket — Card Conjurer's 8th drawing re-cut with ONE piecewise-linear cut
+  for all fourteen and toned through the pack's own five masks
+  (`scripts/lib/eighth-2003.mjs`, DATA: no scan is read by a build), its
+  P/T plates on a gain per colour at the printed box (`pt.plateRect`); `c`
+  is the artifact frame, `m` the three-colour look (two-colour gold is
+  4.6h). Text: dark, no shadow, `MODERN_*` sizes (EVEN at HD — an odd size
+  rounds wide at 750 px); the P/T is CENTRED on the plate's face as printed
+  (never the 1997 frame's `align: "end"`). The footer is two left-aligned
+  lines: the brush (`FrameProfile.footerBrush`, our own path in
+  `lib/cards/footer-brush.ts`) and the bare credit over a `copyrightSlot`
+  with `startPct` — a profile with a © slot never prints the custom footer
+  text on line 1; the footer's ink map (white on the black frame and on
+  lands, v44) covers the brush and the slot. `symbolStyle: "2003"` shadows
+  the COST discs straight down and leaves rules pips flat
+  (`inlineSymbolStyle`: an inline pip never reads a style's shadow
+  directly). `docs/FRAMES.md` "The 2003 frame".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

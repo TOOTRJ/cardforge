@@ -226,9 +226,9 @@ describe("the 1997 footer — the centred two lines of Exodus 1998 on", () => {
     expect(cut.widthPct).toBeGreaterThan(retro.copyrightSlot!.maxWidthPct * 100 - 4);
   });
 
-  it("no other profile has the slot: their mark stays on the border and their footer keeps its own custom text", () => {
+  it("no other profile has the slot — but the 2003 pair (TODO 4.10b): their mark stays on the border and their footer keeps its own custom text", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      const has = template === "retro" || template === "retroland";
+      const has = ["retro", "retroland", "modern", "modernland"].includes(template);
       expect(Boolean(getFrameProfile(template).copyrightSlot), template).toBe(has);
       if (!has) expect(copyrightSlotLayout(getFrameProfile(template), "w", { kind: "display" }), template).toBeNull();
     }

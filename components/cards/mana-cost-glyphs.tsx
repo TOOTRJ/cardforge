@@ -275,6 +275,9 @@ export function ManaCostGlyphs({
             key={`g-${i}`}
             aria-hidden
             className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+            // A style whose shadow no mana-font class draws (the 2003
+            // frame's, straight down) sets it on the glyph itself.
+            style={!symbols.previewShadowClass && symbols.previewShadowCss ? { boxShadow: symbols.previewShadowCss } : undefined}
           />
         );
       })}

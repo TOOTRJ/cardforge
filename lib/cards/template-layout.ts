@@ -74,6 +74,12 @@ import {
   SPLIT_TITLE_SIZE_PCT,
   SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
+  MODERN_ARTIST_SIZE_PCT,
+  MODERN_COPYRIGHT_SIZE_PCT,
+  MODERN_COST_DISC_PCT,
+  MODERN_PT_SIZE_PCT,
+  MODERN_TITLE_SIZE_PCT,
+  MODERN_TYPE_SIZE_PCT,
   RETRO_ARTIST_SIZE_PCT,
   RETRO_COPYRIGHT_SIZE_PCT,
   RETRO_COST_DISC_PCT,
@@ -663,6 +669,12 @@ export type FrameProfile = {
    *  centred footer has no place for the custom text (TextSlot.prefix).
    *  Code-owned (the override schema refuses it). */
   copyrightSlot?: CopyrightSlot;
+  /** The paintbrush the 2003 prints set before the artist (TODO 4.10b;
+   *  lib/cards/footer-brush.ts): its ink box in card percents, drawn by both
+   *  renderers in the footer's ink on that master whenever the footer
+   *  prints (never beside a collector line). Code-owned (the override
+   *  schema refuses it). */
+  footerBrush?: { rect: Rect };
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -1011,10 +1023,16 @@ export type CollectorSlot = {
   markLine?: 2;
 };
 
-/** A centred footer's second line (FrameProfile.copyrightSlot). */
+/** A two-line footer's second line (FrameProfile.copyrightSlot): centred
+ *  under a centred artist line (the 1997 frame) or set from its left end
+ *  under the artist's brush (`startPct`, the 2003 frame). */
 export type CopyrightSlot = {
-  /** The line's centre, % of the card's width. */
+  /** The line's centre, % of the card's width (unused with `startPct`). */
   centerPct: number;
+  /** The line's LEFT end, % of the card's width (TODO 4.10b: the 2003
+   *  prints start their © line under the brush): the mark's star and a
+   *  clean download's footer text start here, and `centerPct` is not read. */
+  startPct?: number;
   /** Its baseline, % of the card's height. */
   baselinePct: number;
   /** The size of a clean download's footer text, a fraction of the card's
@@ -2719,98 +2737,170 @@ const RETROLAND: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// Modern border (2003, magic-new.mse-style) — the 8th-Edition–M14 frame: a
-// light beveled border with a title bar, a type bar, and a separate beveled
-// P/T box bottom-right (a real plate PNG, like M15). Names/type use the squared
-// display face (Beleren stands in for Matrix, which it was designed to evoke).
-// MSE magic-new spec (375×523): name 30 (23h); image 32,62 311×228;
-// type 298 (20h); text 31,328 311×142; pt box 284,466 60×28 (+plate overlay).
+// Modern border (2003) — the frame of Eighth Edition 2003 → Journey into Nyx
+// 2014 as its LATER drawing printed it (Champions of Kamigawa 2004 on; TODO
+// 4.10b; owner 2026-10-07: the artwork swapped in the same sweep as the text
+// fix). A light beveled frame with a title bar, a type bar and a separate
+// beveled P/T box bottom-right (a real plate PNG, like M15).
+//
+// MASTERS: the frames bucket. Card Conjurer's 8th drawing re-cut onto the
+// prints with one piecewise-linear map per axis and toned region by region
+// through the pack's own masks (scripts/lib/eighth-2003.mjs; docs/FRAMES.md
+// "The 2003 frame"). Every px below is the 1500 × 2100 master's; every text
+// measure is the prints' (lib/cards/typography.ts MODERN_*; 79 prints).
+//
+// INK: name, type line and P/T are black with NO shadow on every colour
+// (the bars and the plate are light even on the black frame). The footer —
+// the brush, the artist and the line under it — is black on white, blue,
+// red, green, gold and the artifact frame and WHITE on the black frame and
+// on every land (4.23a's map, layout v44).
+//
+// FOOTER (era design D2): the prints' two left-aligned lines — the brush
+// and the artist over the © line. The brush is our own path
+// (`footerBrush`, lib/cards/footer-brush.ts: the MSE masters had one
+// painted in, Card Conjurer's have none); PipGlyph prints no Wizards line:
+// the slot under it (`copyrightSlot`, set from its left end) holds the
+// pipglyph.com mark on display (off the border on this pair) and a clean
+// download's footer text.
+//
+// SYMBOLS (4.24): `symbolStyle: "2003"` — 68 px cost discs with a black
+// shadow straight down, flat pips in the rules text, the modern tap.
+//
+// Names, type lines, P/T and the artist are Beleren Bold: the prints' Matrix
+// Bold is not in the repo and is not being added (owner 2026-10-07).
 // ---------------------------------------------------------------------------
-/** The 2003 frame's artist line where the prints set it in WHITE (TODO
- *  4.23a, layout v44): on the black frame and on every land. Eighth Edition
- *  → Journey into Nyx print the footer black on white, blue, red, green,
- *  gold and the artifact frame, and white on black (M12 #81: #fcfdf8) and
- *  on lands (M12 #224: #f9fcf9) — Card Conjurer's pack8th.js encodes the
- *  same rule. INK_DARK on those masters measured 1.1 : 1 (`modern`/b) and
- *  2.2–2.3 : 1 (the one brown band every `modernland` key shares); white
- *  is 16.2 : 1 and 8.1–8.5 : 1. No shadow: the prints have none. */
+// Placement constants tuned on real bakes against the prints' rows (the
+// retro-style `dy`: the text alone moves, its band stays the bar's face).
+const MODERN_TYPE_DY = 2 / 1500;
+const MODERN_FOOTER_TOP_PCT = 91.33;
+const MODERN_PT_TOP_PCT = 89.52;
+/** The plate's box: the pack draws its 322 × 176 image at 1084–1406 ×
+ *  1847–2023 px, where its outline covers 1114–1373 × 1875–1990.5; moved and
+ *  scaled (× 1.0127 / × 1.005) onto the printed outline. */
+const MODERN_PLATE_RECT: Rect = { topPct: (1852.9 / 2100) * 100, leftPct: (1082.2 / 1500) * 100, widthPct: (326.1 / 1500) * 100, heightPct: (177.1 / 2100) * 100 };
+/** The 2003 frame's footer where the prints set it in WHITE (TODO 4.23a,
+ *  layout v44): on the black frame and on every land. Eighth Edition →
+ *  Journey into Nyx print the footer black on white, blue, red, green, gold
+ *  and the artifact frame, and white on black (M12 #81: #fcfdf8) and on
+ *  lands (M12 #224: #f9fcf9) — Card Conjurer's pack8th.js encodes the same
+ *  rule. No shadow: the prints have none. */
 const MODERN_FOOTER_WHITE = "#ffffff";
+const MODERN_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
 /** `modernland`'s footer ink: one brown land frame under the artist line on
  *  all seven colour keys, so all seven print white. */
 const MODERN_LAND_FOOTER_INK: InkByColorKey = Object.fromEntries(
-  (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [k, { colorHex: MODERN_FOOTER_WHITE }]),
+  MODERN_KEYS.map((k) => [k, { colorHex: MODERN_FOOTER_WHITE }]),
 );
+/** The © slot (4.10b): from 128 px (under the brush), baseline 2015 px, in
+ *  the footer's printed ink — dark on every `modern` master but the black
+ *  one. Where the line is dark the mark takes that ink, flat (the brand's
+ *  single-ink treatment); a clean download's footer text runs to 1095 px,
+ *  short of the P/T box (1112 px). */
+const MODERN_COPYRIGHT: CopyrightSlot = {
+  centerPct: 50,
+  startPct: (128 / 1500) * 100,
+  baselinePct: (2015 / 2100) * 100,
+  sizePct: MODERN_COPYRIGHT_SIZE_PCT,
+  font: "body",
+  colorHex: INK_DARK,
+  inkByColorKey: { b: { colorHex: MODERN_FOOTER_WHITE } },
+  darkMarkKeys: ["w", "u", "r", "g", "c", "m"],
+  maxWidthPct: 967 / 1500,
+};
 const MODERN: FrameProfile = {
   flavorDivider: false,
   label: "Modern border (2003)",
-  // Frame edge at 96.71%H (10E / RAV scans: 96.6%): the default mark
-  // straddled it; 0.8 centres the ink in the black border (owner review).
-  brandMark: { rightPct: 3.5, bottomPct: 0.8 },
-  costSizePct: 0.04,
-  // Title, footer and P/T positions plus the detached cost / set-symbol
-  // boxes were tuned in the compare tool against the M12 Serra Angel scan
-  // (production override 2026-07-27, folded 2026-09-25).
-  costRect: { topPct: 5.6, leftPct: 52.3, widthPct: 39, heightPct: 4.4 },
-  symbolRect: { topPct: 56.95, leftPct: 78.2, widthPct: 12, heightPct: 3.9 },
-  artSlot: { topPct: 11.6, leftPct: 8.3, widthPct: 83.2, heightPct: 43.8 },
+  symbolStyle: "2003",
+  costSizePct: MODERN_COST_DISC_PCT,
+  // The cost row: its last disc ends at 1368 px, the discs centred on row
+  // 173 (M12 #1: 140–206 px, their shadow to 212).
+  costRect: { topPct: 5.93, leftPct: 52.2, widthPct: 39, heightPct: 4.62 },
+  // The set symbol: its right end at 1366 px, centred on the type bar's
+  // face (row 1240).
+  symbolRect: { topPct: 57.1, leftPct: 79.07, widthPct: 12, heightPct: 3.9 },
+  // The masters' window is 130–1370 × 252–1161 px (the artifact frame's and
+  // the gold land's a pixel or two larger: 129–1371 × 249–1163), covered
+  // with ≥ 0.05 % of the card to spare: 127.5–1372.5 × 247.5–1164.5 px.
+  artSlot: { topPct: 11.786, leftPct: 8.5, widthPct: 83, heightPct: 43.667 },
+  // The name: starts at 133 px, baseline 198.5 px (the band is the title
+  // bar's face, 121–218 px; `dy` lowers the text alone). Before the detached
+  // cost it shrinks to fit (fitTitleBand).
   title: {
-    rect: { topPct: 6, leftPct: 8.9, widthPct: 78, heightPct: 4.4 },
-    sizePct: 0.044,
+    rect: { topPct: 5.762, leftPct: 8.733, widthPct: 82.533, heightPct: 4.62 },
+    sizePct: MODERN_TITLE_SIZE_PCT,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    fit: "measured",
   },
+  // The type line: starts at 151 px, baseline 1264 px; the band is the type
+  // bar's face (1196–1284 px) up to the set symbol's box.
   type: {
-    // Nudged down ~2px (center 58.55% → 58.9%) to true-center on the 2003
-    // type bar — it read high.
-    rect: { topPct: 56.95, leftPct: 9, widthPct: 74, heightPct: 3.9 },
-    sizePct: 0.0347,
+    rect: { topPct: 56.952, leftPct: 9.933, widthPct: 68.133, heightPct: 4.19 },
+    sizePct: MODERN_TYPE_SIZE_PCT,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    fit: "measured",
+    dy: MODERN_TYPE_DY,
   },
+  // The text box's face is 130–1370 × 1314–1904 px; the prints start their
+  // lines at 153 px (79 prints, sd 2.3) and keep the same margin on the
+  // right. 144–1356 × 1318–1900 with the default 9 / 18 px padding sets the
+  // text in 153–1347 px.
   rules: {
-    rect: { topPct: 62.5, leftPct: 8.3, widthPct: 83, heightPct: 27 },
+    rect: { topPct: 62.762, leftPct: 9.6, widthPct: 80.8, heightPct: 27.714 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
   },
+  // Line 1: the artist, mixed case, from 235 px (after the brush), baseline
+  // 1967 px; its box ends before the P/T box (1112 px), so a long credit
+  // takes its "…" there.
   footer: {
-    rect: { topPct: 92.2, leftPct: 15.5, widthPct: 58, heightPct: 2.6 },
-    sizePct: 0.015,
+    rect: { topPct: MODERN_FOOTER_TOP_PCT, leftPct: 15.533, widthPct: 57.733, heightPct: 3 },
+    sizePct: MODERN_ARTIST_SIZE_PCT,
     colorHex: INK_DARK,
     // White on the black frame, as the prints (4.23a). `c` stays dark: on
     // `modern` it is the artifact frame, whose print is black.
     inkByColorKey: { b: { colorHex: MODERN_FOOTER_WHITE } },
-    uppercase: true,
-    letterSpacingEm: 0.04,
+    prefix: "",
     font: "display",
   },
-  // The 2003 P/T box is a separate beveled plate (magic-new {color}pt.jpg),
-  // upscaled to /frames/modern/pt/{color}.png. Drawn behind the dark value.
-  // The plate fills the rect, but its light face on the digits' rows is
-  // 1143–1373 px on every colour: a longer value shrinks to that rather than
-  // print over the bevel.
+  // The brush before the artist: 118–227 × 1946–1969 px on every print.
+  footerBrush: { rect: { topPct: (1946 / 2100) * 100, leftPct: (118 / 1500) * 100, widthPct: (109 / 1500) * 100, heightPct: (23 / 2100) * 100 } },
+  copyrightSlot: MODERN_COPYRIGHT,
+  // The P/T box is a separate beveled plate (the pack's own, 322 × 176),
+  // drawn at `plateRect` so its outline lands on the printed box
+  // (1112.5–1374.8 × 1880.8–1996.9 px; the MSE plate was drawn 17 px too
+  // flat). The prints CENTRE every value on 1258 px — the plate's face,
+  // right of the outline's centre by its left bulge — at ONE size, digits
+  // 1901–1959 px: M12 #1 5/5 1203–1312, CON #121 10/10 1168–1349, WWK #57
+  // 13/13 1170–1349, RTR #140 15/15 1177–1343, RAV #191 9/14 1181–1332.
+  // The face on the digits' rows is 1134–1367 px: a longer value shrinks to
+  // that rather than print over the bevel.
   pt: {
-    rect: { topPct: 88.4, leftPct: 73.3, widthPct: 21, heightPct: 6.8 },
-    inkSpanPct: { leftPct: 76.2, rightPct: 91.53 },
-    sizePct: 0.044,
+    rect: { topPct: MODERN_PT_TOP_PCT, leftPct: 77.267, widthPct: 13.333, heightPct: 4.762 },
+    plateRect: MODERN_PLATE_RECT,
+    inkSpanPct: { leftPct: 75.6, rightPct: 91.13 },
+    sizePct: MODERN_PT_SIZE_PCT,
     colorHex: INK_DARK,
     weight: 700,
     plateAssetPathTemplate: "/frames/modern/pt/{color}.png",
   },
 };
 
-// Modern land — the 2003 nonbasic land frame (magic-new land variants): same
-// geometry, no mana cost.
+// Modern land — the 2003 land frame: the same geometry, no mana cost. `c` is
+// the plain land, w–g the basics' coloured frames, `m` the gold land. One
+// brown land frame under every key's footer: the footer and the © slot are
+// white on all seven (4.23a).
 const MODERNLAND: FrameProfile = {
   ...MODERN,
   label: "Modern Land",
   hideCost: true,
-  // The land frame is the same brown under the artist line on every colour
-  // key: the footer prints white on all seven (4.23a).
   footer: { ...MODERN.footer!, inkByColorKey: MODERN_LAND_FOOTER_INK },
+  copyrightSlot: { ...MODERN_COPYRIGHT, colorHex: MODERN_FOOTER_WHITE, inkByColorKey: undefined, darkMarkKeys: undefined },
 };
 
 // ---------------------------------------------------------------------------

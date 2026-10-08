@@ -35,7 +35,7 @@ function card(artUrl: string): CardPreviewData {
     artistCredit: "Probe",
     artUrl,
     artPosition: { focalX: 0.4, focalY: 0.55, scale: 1.3 },
-    frameStyle: { template: "modern", finish: "regular" },
+    frameStyle: { template: "tarkirdragon", finish: "regular" },
     setIconUrl: null,
     setIconCode: null,
     backFace: null,

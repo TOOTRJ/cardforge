@@ -91,9 +91,10 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 Where every frame came from, and the rules that follow from it:
 
 - **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha
-  and 2003 eras — the 1997 frame left for Card Conjurer's drawing with TODO
+  era — the 1997 frame left for Card Conjurer's drawing with TODO
   4.10a, its gold master cut from the MSE conversion kept as
-  `scripts/frame-inputs/retro-m-mse.png` — the showcase families, the variation treatments, the
+  `scripts/frame-inputs/retro-m-mse.png`, and the 2003 frame with TODO
+  4.10b — the showcase families, the variation treatments, the
   textless and expedition frames, and the planeswalker loyalty badges;
   adventure, flip and aftermath left for Card Conjurer's masters with TODO
   4.21a, split and battle with 4.21b, saga with 4.21c) are converted from
@@ -177,7 +178,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 42 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 44 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -225,6 +226,11 @@ into `.frames-build/` — 42 templates today (`CC_TEMPLATES` in
   region onto the original cards of 1996–2003, gold from the MSE artwork
   cut with the same edge map (see
   [The 1997 frame](#the-1997-frame-410a-layout-v46));
+- the 2003 frame from '8th Edition' (4.10b, layout v47): `modern` and
+  `modernland` — the pack's drawing RE-CUT with one piecewise-linear map per
+  axis and TONED through its own five masks onto the prints of 2004–2014,
+  with the pack's P/T plates under `modern/pt/` (see
+  [The 2003 frame](#the-2003-frame-410b-layout-v47));
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
   in every colour key (an emblem is colourless), its name pill, silver, type
   pill and text box toned onto the prints and its spark's centre ray bridged
@@ -481,8 +487,8 @@ bake's transparent corner mask and the frame masters all read it.
   scripts/round-frame-corners.mjs` repaints that paper, its grey
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
-  `scripts/lib/frame-corners.mjs`: modern, modernland (retro and retroland
-  left it with TODO 4.10a: the importer cuts their corner),
+  `scripts/lib/frame-corners.mjs`: (retro and retroland left it with TODO
+  4.10a, modern and modernland with 4.10b: the importer cuts their corner)
   extendedart, fullart, m15textless, m15textlessland, and
   expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
   adventure — its 1–2 px grey paper rim just inside the arc, added
@@ -2132,8 +2138,11 @@ stamped without a re-bake, and a replay of their rows (their own art, HD and
 cases change (`modern`/b ×3, `modernland` ×17) and no other. Verification-
 neutral (`VERIFICATION_NEUTRAL_VERSIONS`): no slot moves, so the fourteen 2003
 ticks stay fresh on the owner's round-37 sheet; 4.10b re-opens them once.
-Tests: `tests/unit/render/modern-footer-ink.test.tsx` (contrast on the
-masters, real bakes at 750 and HD) and its preview twin under `components/`.
+Tests: since 4.10b the rule is held by the 2003 frame's own tests
+(`tests/unit/cards/modern-2003-profile.test.ts`,
+`tests/unit/render/modern-2003-bake.test.tsx` and its preview twin), which
+replaced v44's `modern-footer-ink` pair when the masters moved to the
+bucket.
 
 ### The 1997 frame (4.10a, layout v46)
 
@@ -2261,6 +2270,162 @@ Tests: `tests/unit/frames/print-cut.test.ts` (the two steps),
 bump, imports), `tests/unit/render/retro-1997-bake.test.tsx` (baselines,
 shadows, discs, the slot and the print path on real bakes) and its preview
 twin under `components/`.
+
+### The 2003 frame (4.10b, layout v47)
+
+Era step E5 (design 2026-10-06; owner 2026-10-07: the artwork is SWAPPED in
+the same sweep as the text fix — one re-bake, one round of re-ticks, never
+twice). `modern` and `modernland` as the frame's LATER drawing printed them,
+Champions of Kamigawa 2004 → Journey into Nyx 2014. A correction of a LIVE
+pair: 14 ticked combos and 8 stored cards on production (anonymous read
+2026-10-07: gold × 5, the artifact `c` × 2, green × 1). HD px throughout; ΔE
+is CIE76 against the median over a master's prints of each print's band
+colour.
+
+**The first year is another drawing.** Eighth Edition 2003 → Fifth Dawn
+2004 draw the title bar and the left inner edges 6–8 px differently; from
+Champions of Kamigawa on the frame is one drawing (33 of the 36 sets
+measured). There is no second master and no import gap for the first year:
+a black-bordered 2003 printing is `exact` whatever its date.
+
+**Proof 2, the dry run** (before the build; the numbers below are the
+published masters', which are the dry run's pixel for pixel). Card
+Conjurer's '8th Edition' drawing is sharp — its outer edge 1.7–2.2 px wide,
+a scan's 2.6, the MSE conversion's 6.2–6.8 — but about 1 % SMALL (frame box
+1344.8 × 1946.0 px against the prints' 1358 × 1958: 5.1–6.1 px RMS over
+fifteen structural edges on every key), and in colour it is a draw with the
+MSE art: both sit 10–25 luma above the prints on most bands.
+
+**Masters** (the frames bucket; `scripts/lib/eighth-2003.mjs` on the 1997
+frame's steps in `scripts/lib/print-cut.mjs`, built by
+`scripts/import-cc-frames.mjs`):
+
+- **Re-cut, ONE cut for all fourteen** (`EIGHTH_CUT`; the 2003 prints' edges
+  do not differ by colour, unlike the 1997 text boxes). One scale per axis
+  between the outer frame's edges (× 1.0098 wide, × 1.0061 tall — the black
+  border outside is never stretched) leaves 1.1–1.8 px, and what stays off
+  is the same on every key by two independent reads: the type bar's top
+  line 3–4 px high (the pack's bar is that much taller than the prints'),
+  the text box's top line 2 px high, its bottom line 2 px low, its right
+  line 2 px right. Those are anchors of the piecewise-linear map (seven on
+  the rows, three on the text-box rows' columns). Catmull-Rom,
+  premultiplied, ONE resample: the outer edge is 1.7–2.5 px wide after it
+  (as drawn 1.7–2.2) and the 2 px lines are as drawn at 4×.
+- **Regions = the pack's own masks.** Frame, Title, Type, Rules and Pinline
+  are this drawing's regions (on the Seventh pack they were not); each is
+  moved with the same map and the pinline is taken out of the other four
+  (`eighthRegions`).
+- **Every key is toned** (`EIGHTH_TONES`, 70 regions, read off the prints
+  once: no scan is read by a build). By the rule "worse than MSE by a
+  visible margin" seven keys needed it, but toning seven onto the prints
+  beside seven left 10–25 luma light would set two looks side by side. A
+  region the prints set DARKER takes the offset `(in − from) × k + to` (`k`
+  = the prints' texture contrast over the drawing's, held to 0.7–1.2); one
+  they set LIGHTER takes the plain gain `to ÷ from` while it is under × 1.35
+  — an offset would lift the drawing's black lines to grey.
+- **Keys.** `modern` w u b r g m and `c` = the pack's ARTIFACT frame, as
+  before (its own `c.png` is the translucent Eldrazi frame: TODO 4.10d);
+  `m` is the look of a THREE-colour card (a two-colour gold card wears
+  two-colour pinlines: TODO 4.6h). `modernland` `c` = the plain land, w–g
+  the basics' coloured frames, `m` the gold land of three- and five-colour
+  lands. No key stays on MSE; `public/frames/{modern,modernland}/` is gone
+  and both left Phase B's allow-list and `build-era-frames.mjs`.
+- **P/T plates**: the pack's eight (322 × 176) under `modern/pt/`, each on a
+  per-channel gain onto its prints' plate face (`EIGHTH_PLATE_TONES`: gold
+  read 30 luma light as drawn, blue 20 light, red 16 dark; the rest within
+  ΔE 3), drawn at `MODERN.pt.plateRect` so the outline lands on the printed
+  box 1112.5–1374.8 × 1880.8–1996.9 px within a pixel (the MSE plate was
+  drawn 253.5 × 99: 17 px too flat). `modernland` draws the same set.
+
+Measured on the published masters (prints: CHK 2004 → JOU 2014,
+black-bordered; edge = print minus master over fifteen structural edges by
+correlation, worst edge in brackets; line = an independent read of the
+dark lines' centres, no correlation):
+
+| master | prints | edge RMS: as drawn → new | line read | colour, six bands, mean / worst ΔE: as drawn → new | MSE (before) |
+|---|---|---|---|---|---|
+| `modern`/w | 34 | 5.6 → **0.7** (1.3) | 1.1 | 8.1 / 10.0 → **1.2 / 1.9** | 6.2 / 7.1 |
+| `modern`/u | 11 | 5.8 → **0.6** (1.3) | 1.2 | 7.7 / 9.0 → **1.8 / 3.9** | 8.0 / 9.4 |
+| `modern`/b | 10 | 5.1 → **1.2** (2.8) | 1.6 | 6.5 / 9.6 → **4.8 / 10.0** | 6.0 / 8.7 |
+| `modern`/r | 11 | 5.5 → **0.6** (1.2) | 1.2 | 10.9 / 16.8 → **2.0 / 4.3** | 6.6 / 7.8 |
+| `modern`/g | 11 | 5.7 → **0.7** (1.7) | 1.2 | 8.8 / 15.5 → **2.5 / 5.3** | 9.1 / 11.6 |
+| `modern`/m (gold) | 8 three-colour | 5.8 → **1.0** (2.6) | 2.2 | 10.7 / 17.7 → **1.7 / 3.7** | 10.1 / 14.4 |
+| `modern`/c (artifact) | 10 | 5.8 → **0.8** (1.8) | 1.9 | 4.3 / 9.7 → **3.4 / 6.4** | 8.5 / 13.0 |
+| `modernland`/c | 13 | 5.7 → **0.7** (1.2) | 1.7 | 2.9 / 6.6 → **1.8 / 2.7** | 8.3 / 10.8 |
+| `modernland`/w | 8 basics | 5.3 → **1.0** (1.9) | 1.5 | 6.4 / 9.1 → **2.3 / 3.9** | 7.6 / 10.7 |
+| `modernland`/u | 8 basics | 5.6 → **1.0** (2.1) | 1.3 | 6.8 / 12.2 → **2.6 / 5.7** | 7.5 / 10.4 |
+| `modernland`/b | 8 basics | 6.0 → **1.0** (2.0) | 1.3 | 4.4 / 7.7 → **1.9 / 3.9** | 8.9 / 11.0 |
+| `modernland`/r | 8 basics | 6.1 → **1.0** (2.4) | 1.1 | 5.6 / 6.6 → **1.8 / 5.2** | 8.4 / 10.2 |
+| `modernland`/g | 8 basics | 5.6 → **0.8** (1.8) | 1.1 | 3.4 / 6.9 → **2.6 / 5.4** | 8.7 / 11.6 |
+| `modernland`/m | 9 | 5.7 → **1.0** (1.9) | 2.0 | 10.6 / 17.2 → **2.4 / 3.9** | 8.7 / 12.9 |
+
+(The correlation false-locks on the black frame's right-hand edges against
+the black border and on red's art-R: those four reads are left out; the
+line read covers them.) Known drawing caveats: the pack's WHITE body is a
+blocky mottling where the prints have marble veins (faint at card size,
+visible at 2×) and its keylines are flat where the prints shade them; the
+BLACK frame's body is left as drawn (its sides and bottom strip read 10–20
+luma under the prints' grey stone — its mean over the whole body is the
+prints'); every key has clean digital bevels, not the prints' soft ones.
+
+**Profile** (`MODERN`, `MODERNLAND`; sizes are `MODERN_*` in
+`lib/cards/typography.ts`, EVEN at HD so the 750 px bake draws exactly half;
+no font file was added — owner 2026-10-07: the prints' Matrix Bold is not in
+the repo, Beleren Bold stands in at print-matched sizes). Read on 79 prints
+of white, blue, red, green, artifact and gold:
+
+| slot | face, HD px | ink | on the prints |
+|---|---|---|---|
+| name | Beleren 80, measured (before the detached cost) | dark `#17120c`, no shadow | capitals 55–56 px, baseline 198.5, starts at 133; M12 #1 "Aegis Angel" 405 px wide (Beleren's at 79) |
+| cost | 68 px discs, a black shadow 6 px straight down (`symbolStyle: "2003"`) | — | discs 66–68 px on row 173, ending at 1368, 74 apart; flat pips in the rules text; the modern tap |
+| type line | Beleren 66, measured | dark | capitals 46 px, baseline 1264, starts at 151 |
+| rules | MPlantin 76 (the shared ladder) | dark | the column 153–1347 px inside the box's face 130–1370 × 1314–1904 |
+| P/T | Beleren 80, CENTRED on 1258 px | dark | digits 58–59 px on 1959; every value centred on 1257–1260 at one size — 62 one-digit values (sd 1.9 px), CON #121 10/10 1168–1349, WWK #57 13/13 1170–1349, RTR #140 15/15 1177–1343, RAV #191 9/14 1181–1332 |
+| footer line 1 | the brush (`footerBrush`: our own path, 118–227 × 1946–1969 px) + the artist, Beleren 50, mixed case, from 235 px | dark; WHITE on `modern`/b and all seven `modernland` keys (v44's map) | capitals 33 px, baseline 1967 |
+| footer line 2, the © slot | the mark at a 32 px em · a clean download's footer text, MPlantin 32, from 128 px | the line's ink | baseline 2015, starts at 128 |
+
+**The P/T is centred, not end-aligned.** The 1997 prints end every value at
+one px and grow to the left; the 2003 prints centre every value on the
+plate's FACE — 1258 px, 14 px right of the outline's centre (the plate
+bulges left) — and set two digits a side at the full size. So `MODERN.pt`
+has no `align`; a value keeps 80 px up to `99/99` and shrinks onto the face
+(1134–1367 px) past it.
+
+**The footer.** The MSE masters had the brush PAINTED IN (dark: on the black
+frame and on lands only the brush showed); Card Conjurer's have none.
+`FrameProfile.footerBrush` is its ink box, drawn by both renderers from
+`lib/cards/footer-brush.ts` in the footer's ink on that master. The line
+has no prefix (`prefix: ""`), no capitals and no tracking. The © slot
+(`copyrightSlot.startPct`: set from its LEFT end, under the brush) holds the
+pipglyph.com mark on display — dark and flat on every `modern` master but
+the black one, the standard white there and on lands (D2) — and a paid
+clean download's footer text; a profile with a © slot never prints that
+text at the end of line 1.
+
+**Rollout.** `"sweep"`, template-scoped to the pair
+(`MODERN_2003_LAYOUT_VERSION`, the ONE constant `CARD_LAYOUT_VERSION`
+reads), no card predicate: every stored card on the pair re-bakes once (the
+automatic re-bake, after the deploy). NOT verification-neutral: the fourteen
+ticks are flagged "needs re-verification" — they stay verified and offered
+— and the owner re-ticks them once. Their references: the gold defaults
+flipped to THREE-colour prints (`modern`/m Sprouting Thrinax ALA,
+`modernland`/m Seaside Citadel C13 — the master is that look), `modernland`/c
+to the black-bordered Swarmyard TSP, and `modernland`/b's white-bordered
+Ninth Edition alternate became M14's Swamp; a default may change here
+because the bump re-opens every tick on the pair anyway. Before the merge
+the owner signs the before / after of the stored cards and of all fourteen
+combos (round 41) and runs `frames:promote`. Of the 8 stored cards (2026-
+10-07): every name keeps the full 80 px, four type lines shrink (to 51–62
+px, none cut), no rules text clips (one steps from 44 to 42 px, the
+ladder's floor), every P/T keeps 80 px (a 7/99 among them).
+
+Tests: `tests/unit/frames/modern-2003-importer.test.ts` (the cut, the
+regions, the tone rule, provenance, the published masters),
+`tests/unit/cards/modern-2003-profile.test.ts` (sizes, ink, the footer, the
+© slot, the P/T, the symbol style, the bump, references),
+`tests/unit/render/modern-2003-bake.test.tsx` (baselines, the brush, the
+shadow, the slot and the print path on real bakes at 750 and HD) and its
+preview twin under `components/`.
 
 ### Printed pieces a card switches on
 
@@ -4768,19 +4933,28 @@ frame's era decides are DATA on its profile; no renderer names them.
   unset, `footerArtistLine` in `lib/cards/card-display.ts`) and the
   footer's own `align`: unset = the line at the rect's start and a clean
   download's custom mark at its end; `"center"` = the line centred, no
-  custom mark on it.
+  custom mark on it. The 2003 frame's is `""`: the bare credit after its
+  brush — `FrameProfile.footerBrush`, the brush's ink box, drawn by both
+  renderers from `lib/cards/footer-brush.ts` in the footer's ink (TODO
+  4.10b).
 - **The © slot** — `FrameProfile.copyrightSlot`
-  (`lib/cards/copyright-slot.ts`, TODO 4.10a): a centred footer's second
-  line. On display it holds the pipglyph.com mark (which then leaves the
-  border: `brandMark` is not read), on a paid clean download the card's
-  footer text, or nothing. A profile with a centred footer and NO slot
-  drops a paid viewer's footer text: declare both together.
+  (`lib/cards/copyright-slot.ts`, TODO 4.10a): a two-line footer's second
+  line — centred under a centred artist line (the 1997 frame) or set from
+  its left end (`startPct`: the 2003 frame, TODO 4.10b). On display it
+  holds the pipglyph.com mark (which then leaves the border: `brandMark`
+  is not read), on a paid clean download the card's footer text, or
+  nothing. A profile with a centred footer and NO slot drops a paid
+  viewer's footer text: declare both together; a profile WITH a slot never
+  prints that text at the end of line 1.
 - **The symbol style** — `FrameProfile.symbolStyle`
   (`lib/cards/symbol-style.ts`): `"modern"` (M15's discs, their hard offset
-  shadow, the modern tap — every profile that names none) and `"1997"`
-  (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`). Both renderers and both shadow
-  models (the rules layout's inline pip, the cost row) read the resolved
-  spec. A style is a CORRECTION of a frame, never a per-card switch.
+  shadow, the modern tap — every profile that names none), `"1997"`
+  (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`) and `"2003"`
+  (a COST disc with a black shadow straight down, flat pips in the rules
+  text, the modern tap: `modern`, `modernland`). Both renderers and both
+  shadow models (the rules layout's inline pip, the cost row) read the
+  resolved spec — an inline pip through `inlineSymbolStyle`, which drops
+  the shadow where a style shadows the cost row alone. A style is a CORRECTION of a frame, never a per-card switch.
 
 Adding a face, a prefix or a style is a profile change with its own layout
 bump; `tests/unit/render/profile-data-parity.test.tsx` gives a throwaway

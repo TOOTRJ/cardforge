@@ -211,6 +211,53 @@ export const RETRO_COPYRIGHT_SIZE_PCT = 33 / 1500;
  *  "1997", lib/cards/symbol-style.ts). */
 export const RETRO_COST_DISC_PCT = 73 / 1500;
 
+// ---------------------------------------------------------------------------
+// The 2003 frame's sizes (TODO 4.10b; `modern`, `modernland`) — per-era
+// constants like the 1997 frame's above (era design D7): print-matched for
+// the faces the repo has (the prints set names, type lines, P/T and artist
+// lines in Matrix Bold; ours is Beleren Bold — no font file was added, owner
+// 2026-10-07). HD px, measured on 79 black-bordered prints of the frame's
+// later drawing (CHK 2004 → JOU 2014; white, blue, red, green, artifact,
+// gold), and EVEN wherever the print allows it, so the 750 px bake draws
+// exactly half:
+//   • the name — capitals 55–56 px tall, baseline 198.5 px, starting at
+//     133 px; M12 #1 "Aegis Angel" is 405 px wide, Beleren's at 79 px:
+//     80 px (capitals 56);
+//   • the type line — capitals 46 px, baseline 1264 px, starting at 151 px;
+//     "Creature — Angel" 510 px wide: Beleren at 66 px;
+//   • the P/T — digits 58–59 px tall, baseline 1959 px, CENTRED on 1258 px
+//     at one size whatever the value (10/10, 13/13, 15/15, 9/14 measured);
+//     by width Beleren reads 73–85 px over six values: 80 px;
+//   • the artist line — capitals 33 px, baseline 1967 px, starting at
+//     235 px after the brush (118–227 × 1946–1969 px); Beleren overlaps the
+//     printed ink best at 50 px (the design's overlay);
+//   • the line under it (the prints' © line, our © slot) — MPlantin, digits
+//     22.5 px tall, baseline 2015 px, starting at 128 px: 32 px;
+//   • the cost — discs 66–68 px across, 74 px apart, centred on row 173,
+//     the last one ending at 1368 px, each with a black shadow 6 px
+//     straight down (symbol style "2003").
+// ---------------------------------------------------------------------------
+
+/** The 2003 frame's name — 80 px at HD (Beleren Bold). */
+export const MODERN_TITLE_SIZE_PCT = 80 / 1500;
+
+/** The 2003 frame's type line — 66 px at HD (Beleren Bold). */
+export const MODERN_TYPE_SIZE_PCT = 66 / 1500;
+
+/** The 2003 frame's P/T — 80 px at HD (Beleren Bold). */
+export const MODERN_PT_SIZE_PCT = 80 / 1500;
+
+/** The 2003 frame's artist line — 50 px at HD (Beleren Bold). */
+export const MODERN_ARTIST_SIZE_PCT = 50 / 1500;
+
+/** The 2003 frame's © slot: a clean download's footer text — 32 px at HD
+ *  (MPlantin), and the pipglyph.com mark at the same em. */
+export const MODERN_COPYRIGHT_SIZE_PCT = 32 / 1500;
+
+/** The 2003 frame's mana-cost disc — 68 px at HD, with a shadow straight
+ *  down (symbol style "2003", lib/cards/symbol-style.ts). */
+export const MODERN_COST_DISC_PCT = 68 / 1500;
+
 /** A display size given as a fraction of a PORTRAIT card's width, as a
  *  fraction of the width of a card in `orientation`: the same absolute size
  *  on the physical card (× 5/7 on a landscape card, whose width is the

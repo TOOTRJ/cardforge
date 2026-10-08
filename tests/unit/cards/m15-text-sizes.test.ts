@@ -442,7 +442,10 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     ].filter((s): s is TextSlot => Boolean(s));
 
   const RETRO_1997 = new Set<string>(["retro", "retroland"]);
-  it("sets TextSlot.dy only on family frames, and the measured fit on them, on split's two halves and on the 1997 pair's name and type line", () => {
+  // The 2003 pair (TODO 4.10b): measured name and type line; only the type
+  // line needs a nudge onto its printed baseline.
+  const MODERN_2003 = new Set<string>(["modern", "modernland"]);
+  it("sets TextSlot.dy only on family frames, and the measured fit on them, on split's two halves and on the 1997 and 2003 pairs' name and type line", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       if (FAMILY.has(t)) continue;
       const p = getFrameProfile(t);
@@ -450,6 +453,12 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
         if (RETRO_1997.has(t) && (slot === p.title || slot === p.type)) {
           expect(slot.fit, t).toBe("measured");
           expect(slot.dy, t).toBeGreaterThan(0);
+          continue;
+        }
+        if (MODERN_2003.has(t) && (slot === p.title || slot === p.type)) {
+          expect(slot.fit, t).toBe("measured");
+          if (slot === p.type) expect(slot.dy, t).toBeGreaterThan(0);
+          else expect(slot.dy, t).toBeUndefined();
           continue;
         }
         expect(slot.dy, t).toBeUndefined();
@@ -481,8 +490,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     tarkirdraconic: "50b8b1038a077ea11b977b57e330f17ba97cef36ff660f9bca457784f4b04ecc",
     tarkirghostfire: "06c8b3c2433722bd026f6858eddb845b737d1b122aa5cb24cb73a9a8cdc4ddac",
     tarkirdragon: "02795eab0669bceb9882301ae017cbd5cf9289362c80b00c5067786a743189fd",
-    modern: "06e6cd0351408015bfd7715f945c03f50e8fe9fef36915df006fae8e0c5f56e7",
-    modernland: "84c510944cc37e2f818cf127ea36b36d01c12613714b1c741a0cc7bca5d49777",
   };
 
   // Layout v33 (TODO 3.29) gave every profile's rules box a named HD-px
@@ -515,7 +522,9 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   // Layout v44 (TODO 4.23a) gave the 2003 pair's footer an ink map (white on
   // the black frame and on lands) and moved nothing: without it each of the
   // two is still its v31 self, byte for byte.
-  const V44_FOOTER_INK = new Set<string>(["modern", "modernland"]);
+  // (Since TODO 4.10b the pair is no longer in the v31 digests at all: its
+  // own bump rebuilt both profiles — tests/unit/cards/modern-2003-profile.test.ts.)
+  const V44_FOOTER_INK = new Set<string>([]);
   const withoutV44FooterInk = (t: string, p: FrameProfile): FrameProfile => {
     if (!V44_FOOTER_INK.has(t)) {
       expect(p.footer?.inkByColorKey === undefined || t === "agclassic" || t === "alphaland", t).toBe(true);
@@ -530,7 +539,9 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling — split aside, which moved with its own bump (v43)", () => {
     // (The 1997 pair left its v31 self with its own bump too: TODO 4.10a,
     // layout v46 — tests/unit/cards/retro-1997-profile.test.ts.)
-    const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && t !== "split" && t !== "retro" && t !== "retroland");
+    // …and the 2003 pair with TODO 4.10b.
+    const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland"]);
+    const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && !REBUILT.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {
       const digest = createHash("sha256").update(JSON.stringify(asAtV31(withoutV44FooterInk(t, getFrameProfile(t))))).digest("hex");

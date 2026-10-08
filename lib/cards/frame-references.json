@@ -3672,16 +3672,6 @@
       ],
       "m": [
         {
-          "name": "Horizon Chimera",
-          "set": "ths",
-          "scryfallId": "73b0e296-d556-4e76-bb2e-5a640e070bb5"
-        },
-        {
-          "name": "Whispering Madness",
-          "set": "gtc",
-          "scryfallId": "64e4b0cc-e611-4a4b-8392-b37bfc3a77e1"
-        },
-        {
           "name": "Sprouting Thrinax",
           "set": "ala",
           "scryfallId": "8950df86-1e27-4b6b-8b5c-25298a3bda85"
@@ -3690,6 +3680,16 @@
           "name": "Rhox War Monk",
           "set": "ala",
           "scryfallId": "19fb67e1-b791-4246-aebc-49fcf0f92c6c"
+        },
+        {
+          "name": "Horizon Chimera",
+          "set": "ths",
+          "scryfallId": "73b0e296-d556-4e76-bb2e-5a640e070bb5"
+        },
+        {
+          "name": "Whispering Madness",
+          "set": "gtc",
+          "scryfallId": "64e4b0cc-e611-4a4b-8392-b37bfc3a77e1"
         }
       ]
     }
@@ -3728,8 +3728,8 @@
         },
         {
           "name": "Swamp",
-          "set": "9ed",
-          "scryfallId": "4fc9d935-2a33-4928-b4b2-25c48544bf24"
+          "set": "m14",
+          "scryfallId": "4510090f-b42d-4df1-af71-64a77dfbc1b2"
         }
       ],
       "r": [
@@ -3758,26 +3758,26 @@
       ],
       "c": [
         {
-          "name": "Urza's Power Plant",
-          "set": "9ed",
-          "scryfallId": "3115c04a-ac26-4361-aecd-c6fb5f03a96f"
-        },
-        {
           "name": "Swarmyard",
           "set": "tsp",
           "scryfallId": "25bfe849-a508-4fa8-8999-909fe8ec34fa"
+        },
+        {
+          "name": "Urza's Power Plant",
+          "set": "9ed",
+          "scryfallId": "3115c04a-ac26-4361-aecd-c6fb5f03a96f"
         }
       ],
       "m": [
         {
-          "name": "Caves of Koilos",
-          "set": "md1",
-          "scryfallId": "68ed4c64-8998-4686-b5d4-e9735e0c1a76"
-        },
-        {
           "name": "Seaside Citadel",
           "set": "c13",
           "scryfallId": "d3bc73ed-812f-4cf1-b32e-38cc06a55ae5"
+        },
+        {
+          "name": "Caves of Koilos",
+          "set": "md1",
+          "scryfallId": "68ed4c64-8998-4686-b5d4-e9735e0c1a76"
         }
       ]
     }

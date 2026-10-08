@@ -211,7 +211,7 @@ const CREATURE = {
   power: "6",
   toughness: "4",
   artistCredit: "Ada Lovelace",
-  frameStyle: { template: "modern", finish: "regular" },
+  frameStyle: { template: "agclassic", finish: "regular" },
 } as unknown as CardPreviewData;
 const CREATURE_TEXT = {
   name: displayLine("Probe Wurm"),
@@ -258,7 +258,7 @@ describe("a slot's face is the same in the bake and the preview (TODO 4.8.0)", (
   }, 60_000);
 
   it("a type line a profile sets in the BODY face is MPlantin in BOTH renderers — and nothing else moves", async () => {
-    withPatch((profile, template) => (template === "modern" ? { ...profile, type: { ...profile.type, font: "body" } } : profile));
+    withPatch((profile, template) => (template === "agclassic" ? { ...profile, type: { ...profile.type, font: "body" } } : profile));
     const seen = await both(CREATURE, CREATURE_TEXT);
     // The test that would have caught the old disagreement: the bake's Band
     // drew the display face here while the preview's BandSlot read the slot.
@@ -276,7 +276,7 @@ describe("a slot's face is the same in the bake and the preview (TODO 4.8.0)", (
 
   it("the name, the P/T and the footer follow their own slots the same way; the mark stays the brand's face", async () => {
     withPatch((profile, template) =>
-      template === "modern"
+      template === "agclassic"
         ? {
             ...profile,
             title: { ...profile.title, font: "body" },
@@ -452,7 +452,7 @@ describe("a slot's face is the same in the bake and the preview (TODO 4.8.0)", (
 describe("the footer line is profile data (TODO 4.8.0)", () => {
   const MARK_TEXT = "Probe Press";
   const footerOf = (patch: Partial<NonNullable<FrameProfile["footer"]>>): Patch => (profile, template) =>
-    template === "modern" && profile.footer ? { ...profile, footer: { ...profile.footer, ...patch } } : profile;
+    template === "agclassic" && profile.footer ? { ...profile, footer: { ...profile.footer, ...patch } } : profile;
 
   it("as shipped: \"Art: \" + the credit at the rect's start, a clean download's custom mark at its end — in both renderers", async () => {
     const texts = { artist: displayLine("Art: Ada Lovelace"), custom: displayLine(MARK_TEXT) };
@@ -520,9 +520,12 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     const { FRAME_TEMPLATE_VALUES } = await import("@/types/card");
     // …but the 1997 pair, which names its own since TODO 4.10a (flat discs,
     // the 1997 tap: tests/unit/render/retro-1997-bake.test.tsx).
+    // …and the 2003 pair since TODO 4.10b (a cost shadow straight down,
+    // flat inline pips: tests/unit/render/modern-2003-bake.test.tsx).
     const RETRO_1997 = ["retro", "retroland"];
+    const MODERN_2003 = ["modern", "modernland"];
     for (const template of FRAME_TEMPLATE_VALUES) {
-      const own = RETRO_1997.includes(template) ? "1997" : undefined;
+      const own = RETRO_1997.includes(template) ? "1997" : MODERN_2003.includes(template) ? "2003" : undefined;
       expect(getFrameProfile(template).symbolStyle, template).toBe(own);
       expect(symbolStyleOf(getFrameProfile(template)).id, template).toBe(own ?? "modern");
     }
@@ -542,9 +545,9 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     // A THROWAWAY style on a frame that draws "modern": what 4.10a's "1997"
     // is on the 1997 pair — no disc shadow, the Fourth Edition tap.
     const table = styles.SYMBOL_STYLES as unknown as Record<string, unknown>;
-    table.test = { id: "test", discShadow: null, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0, tapSuffix: "tap-4ed" };
+    table.test = { id: "test", discShadow: null, inlineShadow: false, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0, tapSuffix: "tap-4ed" };
     try {
-      withPatch((profile, template) => (template === "modern" ? ({ ...profile, symbolStyle: "test" } as unknown as FrameProfile) : profile));
+      withPatch((profile, template) => (template === "agclassic" ? ({ ...profile, symbolStyle: "test" } as unknown as FrameProfile) : profile));
       const discs = await bakeDiscs(PIPS);
       expect(discs).toEqual([null, null, null, null]);
       // The bake draws the style's tap glyph…
@@ -560,7 +563,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(metricsFor(64, undefined, "hd")).toMatchObject({ pipShadowPx: 4, pipShadowLeftPx: 3 });
       expect(costRowWidthPct("{3}{G}", 0.04) - costRowWidthPct("{3}{G}", 0.04, styles.symbolStyle(style))).toBeCloseTo(0.1 * 0.04, 12);
       // Another frame's card is untouched.
-      const other = { ...PIPS, frameStyle: { template: "agclassic", finish: "regular" } } as unknown as CardPreviewData;
+      const other = { ...PIPS, frameStyle: { template: "tarkirdragon", finish: "regular" } } as unknown as CardPreviewData;
       expect(previewPips(preview(other))).toEqual(["ms ms-cost ms-shadow ms-x", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
     } finally {
       delete table.test;

@@ -1067,17 +1067,58 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            masters and every slot move — no tick exists on the pair to
 //            stale (first ticks follow the merge; `retroland`/m is a
 //            stand-in and is not ticked).
+//   47     — the 2003 frame, the ONE sweep (TODO 4.10b; era design
+//            2026-10-06 step E5, owner 2026-10-07: the artwork swapped in
+//            the same sweep as the text fix). ITS number lives in
+//            MODERN_2003_LAYOUT_VERSION below — the ONE constant;
+//            CARD_LAYOUT_VERSION reads it while it is the latest. `modern`
+//            and `modernland` drew MSE masters from 375 px JPEGs (edges
+//            6–7 px soft), a P/T plate 17 px too flat, names / type lines /
+//            P/T 14–18 % small, an artist line under half the printed
+//            size in capitals, 60 px pips with M15's shadow and the mark
+//            on the border. Now: the MASTERS are Card Conjurer's 8th
+//            drawing re-cut with one piecewise-linear map per axis (0.6–
+//            1.2 px RMS on every key) and toned region by region onto the
+//            2004–2014 prints (mean ΔE 1.2–4.8, was 6.0–10.1), the P/T
+//            plates the pack's own at the printed box (scripts/lib/
+//            eighth-2003.mjs; the frames bucket). The PROFILE: name 80 px,
+//            type line 66, P/T 80 (centred on the plate's face, as the
+//            prints set every value), `fit: "measured"`; the footer as the
+//            prints' two left-aligned lines — the brush (our own path,
+//            FrameProfile.footerBrush) and the artist at 50 px, mixed case,
+//            over the © slot (the pipglyph.com mark on display, off the
+//            border; a clean download's footer text), in v44's ink per
+//            master; `symbolStyle: "2003"` — 68 px cost discs with a black
+//            shadow straight down, flat pips in the rules text; the art
+//            slot on the new window, the rules box on the printed column.
+//            A CORRECTION ("sweep"), never a badge. Template-scoped
+//            (modern, modernland): every card on the pair. Public
+//            production (anonymous read, 2026-10-07): 7 cards on `modern`
+//            (gold ×4, the artifact `c` ×2, green ×1), none on
+//            `modernland` — each re-bakes once; the owner signed their
+//            before / after (round 41). The visual matrix: only the modern
+//            / modernland cases change. NOT verification-neutral: masters
+//            and every slot move — the fourteen ticks on the pair are
+//            flagged "needs re-verification" (they stay verified and
+//            offered) and the owner re-ticks them once.
 // ---------------------------------------------------------------------------
+
+/** The 2003 frame's one sweep (TODO 4.10b): the masters of `modern` and
+ *  `modernland` and every slot on them. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped tables and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. Frozen
+ *  like the lists below once it ships. */
+export const MODERN_2003_LAYOUT_VERSION = 47;
+export const MODERN_2003_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
 /** The 1997 frame rebuilt on the original cards (TODO 4.10a): the masters
  *  of `retro` and `retroland` and every slot on them. ITS version lives
  *  here alone — CARD_LAYOUT_VERSION, the scoped tables and the rollout below
- *  read this constant — so a bump that merges first moves it in one place.
- *  Frozen like the lists below once it ships. */
+ *  read this constant. Frozen like the lists below: v46 is history. */
 export const RETRO_1997_LAYOUT_VERSION = 46;
 export const RETRO_1997_TEMPLATES: readonly string[] = ["retro", "retroland"];
 
-export const CARD_LAYOUT_VERSION = RETRO_1997_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = MODERN_2003_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1236,6 +1277,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // every slot; every card on it (none stored). No narrower verification
   // scope: neither template has a tick.
   [RETRO_1997_LAYOUT_VERSION]: RETRO_1997_TEMPLATES,
+  // The 2003 frame's one sweep (4.10b): the pair's masters and every slot;
+  // every card on it (7 stored on `modern`). No narrower verification
+  // scope: all fourteen ticks on the pair go stale and are re-made once.
+  [MODERN_2003_LAYOUT_VERSION]: MODERN_2003_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1885,6 +1930,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   43: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
   44: "sweep", // the 2003 artist line white on the black frame and on lands (4.23a) — a legibility correction against the prints on combos no stored card uses, never a badge
   [RETRO_1997_LAYOUT_VERSION]: "sweep", // the 1997 frame on the original cards (4.10a): masters, ink, footer, sizes, symbols — a correction on a pair no stored card uses, never a badge
+  [MODERN_2003_LAYOUT_VERSION]: "sweep", // the 2003 frame's one sweep (4.10b): masters, P/T box, sizes, footer, symbols — a correction of a live pair against its prints after the owner's before / after sign-off, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 

@@ -9,7 +9,7 @@ import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
 // Display-font word spacing (TODO 4.31), pinned on REAL bakes of the git
-// "modern" frame (read from disk: deterministic, offline). Satori used to place
+// "agclassic" frame (read from disk: deterministic, offline). Satori used to place
 // every word after a space at the preceding characters' UNKERNED advances and
 // draw it kerned, so each gap grew by the kerning inside the words before it —
 // "Jester's Mask" by Beleren's J·e, s·t, t·e, e·r and '·s pairs (−558/2048 em,
@@ -20,7 +20,7 @@ import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 // ---------------------------------------------------------------------------
 
 const W = RENDER_PRESETS.hd.width;
-const TITLE = getFrameProfile("modern").title;
+const TITLE = getFrameProfile("agclassic").title;
 const FONT_PX = Math.round(TITLE.sizePct * W);
 
 const beleren = fontkit.create(readFileSync(join(process.cwd(), "public/fonts/Beleren-Bold.ttf")));
@@ -33,7 +33,7 @@ const unkerned = (text: string) =>
 
 function card(
   title: string,
-  template = "modern",
+  template = "agclassic",
   type: Pick<CardPreviewData, "supertype" | "subtypes"> = { supertype: null, subtypes: ["Dragon"] },
 ): CardPreviewData {
   return {
