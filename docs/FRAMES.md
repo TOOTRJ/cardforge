@@ -3262,10 +3262,11 @@ and the one switch a NEW card starts OFF on.
   already drew for a token's one centred line). The centre is the middle of
   the box less its padding, not of the column the side headroom leaves, so
   an italic line's overhang never pulls the block off the paper's centre; a
-  line that fills the column stays inside it. The size, every line break,
+  line that fills the column stays inside it. At one size the line breaks,
   every vertical position, the flavour bar (still the column's width) and
   the block's vertical alignment are exactly the left-aligned layout's —
-  the lines only move sideways. Centring reminder text and flavour with the
+  the lines only move sideways. The SIZE is the left-aligned one unless a
+  drawn badge decides otherwise (next point). Centring reminder text and flavour with the
   rules is OUR reading of "centred" (one block, one alignment): the prints
   give no example either way, because they only centre texts that have
   neither.
@@ -3276,8 +3277,19 @@ and the one switch a NEW card starts OFF on.
   longer held by it. On a float's rows (the transform front's reverse P/T)
   the line is centred on the box but never past the float's left edge
   (`floatColumnsFor` measures the column from the box's edge, not from the
-  indented line). In the text matrix (`rules-no-clip`, every template ×
-  16 texts) no text that fits left-aligned clips centred.
+  indented line), nor with its last glyph's ink in it (a line held back
+  sits flush against the digits, so the room it is given ends that ink
+  short of them). In the text matrix (`rules-no-clip`, every template ×
+  16 texts) no text that fits left-aligned clips centred. **That is the
+  matrix, not a rule** (skeptic pass 2026-10-07, 9,516 fuzzed boxes on
+  every frame with the choice): where a badge is drawn, a long text is set
+  one to five ladder steps SMALLER centred than left in about 5 % of the
+  boxes (its last lines land on the P/T plate, the stamp's arch or the
+  battle's shield, which a left-aligned short last line never reaches;
+  now and then a step larger), and about 0.7 % — texts already near the
+  42 px floor — fit left and clip centred; the creator's preview shows
+  both at once, and Left takes them back. Holding such a line short of
+  the badge instead (as a float's rows do) is an owner call, not built.
 - **Tokens.** The text-box tokens' and the emblem's automatic ONE centred
   line (`alignSingleLine`, 4.49 (b)) is unchanged with the switch left;
   Centred centres the whole block, however many lines.

@@ -182,3 +182,42 @@ describe("a centred M15 card — rules, reminder and flavor, on real bakes", () 
     expectCentred(centred, layout, target, "m15", absent, mainRulesLayout({ layout: m15, ...TEXT, aspect: 7 / 5, show: {} }));
   }, 60_000);
 });
+
+describe("a centred card's PRINT export (lib/render/card-print.ts) — the same lines as the bake", () => {
+  let frames: StandInFrames;
+  beforeAll(async () => {
+    frames = await serveStandInFrames([{ template: "m15", keys: ["r"], tone: TONE }]);
+  }, 60_000);
+  afterAll(() => frames.restore());
+  const m15 = getFrameProfile("m15");
+  const TEXT = { rulesText: "Flying (This creature can’t be blocked except by creatures with flying or reach.)\nWhen this creature enters, draw a card.", flavorText: "Up, and away." };
+
+  it("600 ppi (the PDF's and the print PNG's render): every line's ink where the HD bake draws it; 800 ppi: the same lines, 4/3 the size", async () => {
+    const { renderCardPrint } = await import("@/lib/render/card-print");
+    const raw = async (bytes: Buffer): Promise<Raw> => {
+      const { data, info } = await sharp(bytes).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      return { data, w: info.width, h: info.height };
+    };
+    const c = card("m15", "center", TEXT);
+    const [hd, p600, p800, left600] = await Promise.all([
+      bake(c, "hd"),
+      renderCardPrint(c, { ppi: 600, bleed: false, brandMark: false, watermarkText: null }).then(raw),
+      renderCardPrint(c, { ppi: 800, bleed: false, brandMark: false, watermarkText: null }).then(raw),
+      renderCardPrint(card("m15", undefined, TEXT), { ppi: 600, bleed: false, brandMark: false, watermarkText: null }).then(raw),
+    ]);
+    expect([p600.w, p600.h]).toEqual([1500, 2100]);
+    expect([p800.w, p800.h]).toEqual([2000, 2800]);
+    expect(p600.data.equals(left600.data)).toBe(false);
+    const placed = linePositions(mainRulesLayout({ layout: m15, ...TEXT, aspect: 7 / 5, show: {}, rulesAlign: "center" }), "hd");
+    const span: [number, number] = [placed.box.left - 8, placed.box.left + placed.box.width + 8];
+    expect(placed.lines.some((l) => l.indent > 0)).toBe(true);
+    for (const l of placed.lines) {
+      const onBake = inkEnds(hd, l, ...span)!;
+      expect(inkEnds(p600, l, ...span), `600 ppi line ${l.block}/${l.line}`).toEqual(onBake);
+      const k = 4 / 3;
+      const big = inkEnds(p800, { left: l.left * k, top: l.top * k, width: l.width * k, height: l.height * k }, span[0] * k, span[1] * k)!;
+      expect(Math.abs(big.left - onBake.left * k), `800 ppi line ${l.block}/${l.line} left`).toBeLessThanOrEqual(2);
+      expect(Math.abs(big.right - onBake.right * k), `800 ppi line ${l.block}/${l.line} right`).toBeLessThanOrEqual(2);
+    }
+  }, 120_000);
+});

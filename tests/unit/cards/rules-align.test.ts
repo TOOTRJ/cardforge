@@ -24,6 +24,7 @@ import {
   centredLineIndentPx,
   fitRulesLayout,
   linePositions,
+  rectPx,
   type RulesLayout,
   type RulesLayoutInput,
 } from "@/lib/cards/rules-layout";
@@ -113,6 +114,19 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rulesAlignSwitch === false)).toEqual([]);
     expect(profileOffersRulesAlign({ ...getFrameProfile("m15"), rulesAlignSwitch: false })).toBe(false);
     for (const t of FRAME_TEMPLATE_VALUES) expect(frameAnatomyOf(t).rulesAlign, t).toBe(profileOffersRulesAlign(getFrameProfile(t)));
+  });
+
+  it("names every frame WITHOUT the choice — a new template is offered it by default, so adding one stops here", () => {
+    // The capability is ON unless the profile says otherwise
+    // (profileOffersRulesAlign). That is safe to DRAW — only the plain rules
+    // boxes read it (lib/cards/rules-box.ts fitSlot), never a row editor —
+    // but a frame that sets its text in rows beside badges (a class, a
+    // leveler, a prototype…) must not show a control that does nothing or
+    // centre text against its badges. Adding a template changes this count:
+    // decide then — `rulesAlignSwitch: false`, or one more frame with it.
+    const without = FRAME_TEMPLATE_VALUES.filter((t) => !profileOffersRulesAlign(getFrameProfile(t)));
+    expect(without).toEqual(["m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga"]);
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(54);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {
@@ -292,6 +306,34 @@ describe("keep-outs and floats are judged where each centred line lands", () => 
       // A line below the float is on the box's centre.
       const last = placed.lines[placed.lines.length - 1];
       expect(Math.abs(last.left + last.width / 2 - boxCentre(centred, target))).toBeLessThanOrEqual(0.5);
+    }
+  });
+
+  it("a centred line held back by a float keeps its INK out of it: the last glyph's overhang is part of the line there", () => {
+    // Every line ends in a regular "r", whose ink reaches past its advance.
+    // A line the float holds back is set flush against it, so the advance
+    // box alone would leave that ink inside the float — a keep-out hit at
+    // every size (skeptic pass 2026-10-07: 14 of 102 fuzzed reverse-P/T
+    // texts stepped down for it, up to five steps).
+    const float: Rect = { leftPct: rect.leftPct + rect.widthPct * 0.6, widthPct: rect.widthPct * 0.4, topPct: rect.topPct, heightPct: 12 };
+    const text = "her offer for her other offer for her offer for her other offer for her offer for her other offer for her";
+    const left = fitRulesLayout({ ...base, rulesText: text, floats: [float], vAlign: "start" });
+    const centred = fitRulesLayout({ ...base, rulesText: text, floats: [float], vAlign: "start", align: "center" });
+    expect(left.clipped).toBe(false);
+    expect(centred.clipped).toBe(false);
+    expect(centred.sizePx).toBe(left.sizePx);
+    expect(centred.blocks).toEqual(left.blocks);
+    for (const target of RULES_TARGETS) {
+      const placed = linePositions(centred, target);
+      const f = rectPx(float, "portrait", 7 / 5, target);
+      const held = placed.lines.filter((l) => l.top < f.bottom && l.top + l.height > f.top);
+      expect(held.length, target).toBeGreaterThan(1);
+      for (const l of held) {
+        expect(l.inkRight, target).toBeGreaterThan(l.left + l.width);
+        expect(l.inkRight, target).toBeLessThanOrEqual(f.left);
+      }
+      // …and at least one of them is held back (not on the box's centre).
+      expect(held.some((l) => l.left + l.width / 2 < boxCentre(centred, target) - 1), target).toBe(true);
     }
   });
 

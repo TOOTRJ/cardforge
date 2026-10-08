@@ -744,14 +744,18 @@ function placeBlocks(
   // A centred line whose rows meet a FLOAT (the transform front's reverse
   // P/T) is centred on the box like every other, but never past the float:
   // its room ends at the float's left edge, as the column it broke against
-  // does (floatColumnsFor). A float leaving less than the line is ignored
-  // here — the keep-out check then steps the size down.
+  // does (floatColumnsFor) — less the ink its last glyph puts past its
+  // advance (`inkPastEnd`, lineSideInk: a regular "r", an italic "l"). A
+  // line held back sits FLUSH against the float, and the float is judged on
+  // ink like a keep-out: without that allowance every such line was a hit
+  // and the size stepped down for nothing. A float leaving less than the
+  // line is ignored here — the keep-out check then steps the size down.
   const floatRects =
     blockCentre !== null ? (input.floats ?? []).map((f) => rectPx(f, orientation, input.aspect, target)) : [];
-  const lineColumn = (lineTop: number): number => {
+  const lineColumn = (lineTop: number, inkPastEnd: number): number => {
     let column = interior.width;
     for (const f of floatRects) {
-      if (lineTop < f.bottom && lineTop + m.linePx > f.top) column = Math.min(column, f.left - interior.left);
+      if (lineTop < f.bottom && lineTop + m.linePx > f.top) column = Math.min(column, f.left - interior.left - inkPastEnd);
     }
     return column;
   };
@@ -771,7 +775,7 @@ function placeBlocks(
       const sideInk = lineSideInk(line, m);
       const indent =
         blockCentre !== null
-          ? centredLineIndentPx(lineColumn(y), line.widthPx[target], blockCentre)
+          ? centredLineIndentPx(lineColumn(y, sideInk.right), line.widthPx[target], blockCentre)
           : centred
             ? singleLineIndentPx(interior.width, line.widthPx[target])
             : 0;
