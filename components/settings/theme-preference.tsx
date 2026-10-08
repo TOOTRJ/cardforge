@@ -3,6 +3,7 @@
 import { useSyncExternalStore, useTransition } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import {
+  applyThemeToDocument,
   readThemeCookieClient,
   writeThemeCookieClient,
   type Theme,
@@ -38,20 +39,6 @@ function notifyThemeChanged(): void {
 
 function serverThemeSnapshot(): Theme {
   return "dark";
-}
-
-function applyThemeToDocument(theme: Theme) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  if (theme === "system") {
-    const prefersLight =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: light)").matches;
-    root.dataset.theme = prefersLight ? "light" : "dark";
-  } else {
-    root.dataset.theme = theme;
-  }
 }
 
 const OPTIONS: { value: Theme; label: string; icon: typeof Moon }[] = [

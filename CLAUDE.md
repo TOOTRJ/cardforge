@@ -645,6 +645,20 @@ Rules and gotchas:
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
   (`max(updated_at, rendered_at)`), never `updated_at` alone.
+- Theme: the `cardforge-theme` cookie (dark / light / system; none = dark).
+  The root layout reads NO cookies (every route stays static/ISR-eligible):
+  server HTML is always `data-theme="dark"` and the `<head>` no-flash script
+  corrects it before paint. An inline `<script>` in a layout only runs in
+  HTML the SERVER sent: a document React renders in the browser — every
+  `notFound()` above the Suspense boundaries (Next answers an empty
+  `<html id="__next_error__">` shell), an error thrown there, a root
+  hydration React gives up on — gets the layout's "dark" and a script that
+  is never executed, so `<ThemeRestore>` (`components/layout/theme-restore.tsx`;
+  a LAYOUT effect: same commit, before paint) re-applies the saved theme.
+  ONE resolution in two forms, `noFlashScript()` and `resolveSavedTheme()`
+  (`lib/theme-shared.ts`), held together case for case by
+  `tests/unit/lib/theme-resolution.test.ts` — never read the cookie or
+  `prefers-color-scheme` anywhere else.
 - Fonts are SELF-HOSTED as OFL variable woff2 files under `app/fonts/*` with
   their licences: Geist Sans/Mono subset to latin + latin-ext
   (`scripts/subset-geist.mjs` regenerates them from the `geist` package),
