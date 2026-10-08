@@ -19,6 +19,10 @@
 //     a pasted selection round-trips anywhere.
 //   • A trailing line break needs a second, "filler" <br> to render as an
 //     empty line (browser quirk); the filler is skipped when serialising.
+//   • Every line break of ours carries `data-br`. A browser adds a <br> of
+//     its own to keep a line open once its last character is deleted; that
+//     one is unmarked, and at the end of the box it IS the filler — counted
+//     as a break it gave the text a line nobody typed.
 //   • `value` changes from outside (AI patch, import, reset) re-render the
 //     DOM; while focused the caret is restored at the same text offset.
 // ---------------------------------------------------------------------------
@@ -64,6 +68,7 @@ type PipTextEditorProps = {
 
 const PIP_ATTR = "data-pip";
 const FILLER_ATTR = "data-filler";
+const BREAK_ATTR = "data-br";
 const CODE_PATTERN = /\{([^{}\s]{1,5})\}/g;
 
 // ---------------------------------------------------------------------------
@@ -86,6 +91,13 @@ function makePipNode(code: string, suffix: string): HTMLSpanElement {
   glyph.style.verticalAlign = "-0.08em";
   span.appendChild(glyph);
   return span;
+}
+
+/** A line break the editor made (see the header: the browser's are bare). */
+function makeBreak(): HTMLBRElement {
+  const br = document.createElement("br");
+  br.setAttribute(BREAK_ATTR, "");
+  return br;
 }
 
 function isFiller(node: Node | null | undefined): node is HTMLBRElement {
@@ -139,7 +151,7 @@ function renderValue(root: HTMLElement, value: string) {
     }
     const lines = run.value.split("\n");
     lines.forEach((line, i) => {
-      if (i > 0) root.appendChild(document.createElement("br"));
+      if (i > 0) root.appendChild(makeBreak());
       if (line) root.appendChild(document.createTextNode(line));
     });
   }
@@ -148,7 +160,19 @@ function renderValue(root: HTMLElement, value: string) {
 
 /** Keep exactly one filler <br>, and only right after a trailing plain <br>. */
 function ensureFiller(root: HTMLElement) {
+  // The browser's own placeholder for an emptied last line: the filler.
+  const tail = root.lastChild;
+  if (isPlainBr(tail) && !tail.hasAttribute(BREAK_ATTR)) tail.setAttribute(FILLER_ATTR, "");
   Array.from(root.childNodes).forEach((child) => {
+    // Range.insertNode at the end of a text node SPLITS it and leaves an
+    // empty text node behind the inserted <br>. That node hid the trailing
+    // break from the check below — no filler, so the new line never opened
+    // and the next characters were typed in front of the break (the first
+    // Enter at the end of a text looked dropped).
+    if (child.nodeType === Node.TEXT_NODE && !child.nodeValue) {
+      child.remove();
+      return;
+    }
     if (isFiller(child) && (child !== root.lastChild || !isPlainBr(child.previousSibling))) {
       child.remove();
     }
@@ -289,7 +313,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       if (!root) return;
       // A fully emptied box is left holding a lone <br> by some browsers —
       // clear it so the placeholder shows and the value is truly "".
-      if (root.childNodes.length === 1 && root.firstChild && (root.firstChild as Element).tagName === "BR") {
+      if (root.childNodes.length === 1 && isPlainBr(root.firstChild) && !root.firstChild.hasAttribute(BREAK_ATTR)) {
         root.replaceChildren();
       }
       const offset = caretOffset(root);
@@ -344,7 +368,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       (text: string) => {
         const nodes: Node[] = [];
         text.split("\n").forEach((line, i) => {
-          if (i > 0) nodes.push(document.createElement("br"));
+          if (i > 0) nodes.push(makeBreak());
           if (line) nodes.push(document.createTextNode(line));
         });
         insertNodes(nodes);
@@ -377,7 +401,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       const onBeforeInput = (event: InputEvent) => {
         if (event.inputType === "insertParagraph" || event.inputType === "insertLineBreak") {
           event.preventDefault();
-          insertNodes([document.createElement("br")]);
+          insertNodes([makeBreak()]);
         } else if (event.inputType === "insertText" && event.data?.includes("\n")) {
           event.preventDefault();
           insertPlainText(event.data);
@@ -426,7 +450,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
             event.preventDefault();
-            insertNodes([document.createElement("br")]);
+            insertNodes([makeBreak()]);
           }
         }}
         onPaste={(event) => {

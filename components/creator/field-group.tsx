@@ -76,6 +76,9 @@ export function MoreOptions({
   );
 }
 
+/** Elements whose own click does something a FieldGroup must not cancel. */
+const NATIVE_CLICK_TARGETS = "a, button, input, select, textarea, summary";
+
 export function FieldGroup({
   label,
   helper,
@@ -91,13 +94,17 @@ export function FieldGroup({
     <label
       className="flex flex-col gap-1.5"
       onClick={(event) => {
-        // A <label> forwards a click to its first labelable descendant — and
-        // a BUTTON is labelable. For groups that wrap a toolbar or chip row,
-        // clicking the caption or helper text used to press the first
-        // button (change the card type, add a mana pip…). Only forward to
-        // real form controls; inputs keep the click-to-focus behaviour.
+        // A <label> forwards a click on ANY of its non-interactive content
+        // to its first labelable descendant — and a BUTTON is labelable.
+        // For groups that wrap a toolbar or chip row, clicking the caption,
+        // the helper text, a gap between two buttons or the rules-text box
+        // (a contenteditable, which is not a form control) used to press
+        // the first button: change the card type, drop a {W} into the empty
+        // rules box… Only forward to real form controls; inputs keep the
+        // click-to-focus behaviour, and a click ON a control is left alone
+        // (cancelling it would undo a checkbox tick or a <summary> toggle).
         const target = event.target as HTMLElement;
-        if (!target.closest("[data-fieldgroup-text]")) return;
+        if (target.closest(NATIVE_CLICK_TARGETS)) return;
         const first = event.currentTarget.querySelector(
           "input, textarea, select, button, [role='radio'], [role='switch']",
         );
