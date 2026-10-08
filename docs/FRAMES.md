@@ -2184,8 +2184,12 @@ MSE has the colours on a blur. So:
   MSE conversion — `scripts/frame-inputs/retro-m-mse.png`, the one
   MSE-derived importer input, in git — is cut with the same edge map
   (`retroGoldCut`), so its window and frame box are the other seven's, and
-  not toned. One home per template: gold is published to the bucket like
-  the rest.
+  not toned. Its window was cut out of a white rectangle on a 375 px JPEG,
+  which left the last five px of the art ring fading grey → white — a ragged
+  white hairline between the art and the ring on every bake, on `main` too;
+  `clearWindowHalo` gives those px the ring's own colour (alpha untouched,
+  so the window is the same window). One home per template: gold is
+  published to the bucket like the rest.
 - **`retroland`.** `c` = the plain land (`l.png`, the orange box of Fifth
   Edition 1997 on); `w`–`g` = the pack's coloured land boxes, toned onto the
   seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY,
@@ -2222,7 +2226,7 @@ brushwork), green's plank has no grain, black's parchment keeps a burnt rim.
 | cost | flat discs 73 (`symbolStyle: "1997"`) | — | row 137, ends at 1383, 80.5 apart |
 | type line | MPlantin 67, measured | white + shadow + 4.5 / + 3.3 | baseline 1229, starts at 162 |
 | rules | MPlantin 76 (the shared ladder) | dark | one box for all keys: 192–1308 × 1288–1828 |
-| P/T | Beleren 86 | white + shadow + 6.7 / + 5.7 | baseline 1963, centred on 1309 |
+| P/T | Beleren 86, set against its right edge (`align: "end"`, `endKerned`) | white + shadow + 6.7 / + 5.7 | baseline 1963, the ink ending at 1364–1370 on every value: one digit a side covers 1253–1367, two digits grow to the LEFT at the same size (NEM #116 10/10 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368) |
 | footer line 1 | `Illus. <artist>`, MPlantin 58, centred, mixed case | white + shadow + 3.5 / + 3.5 | baseline 1933, centred on 748 |
 | footer line 2, the © slot | the mark at a 33 px em · a clean download's footer text, MPlantin 33 | black on the white frame, white elsewhere; no shadow | baseline 1976, centred on 748 |
 
@@ -2242,10 +2246,14 @@ Production, anonymous read 2026-10-07: no public or unlisted card on either
 template, and no tick — nothing is re-baked or re-ticked. Not
 verification-neutral. First ticks follow the merge: `retro` w u b r g c m
 (`c` against an artifact) and `retroland` w u b r g c — thirteen;
-`retroland`/m is not ticked. Imports: an original and a Time Spiral
-timeshifted printing (2006, the old colours) are `exact`; a printing on the
-frame released from 2021 is `nearest` (the `reprint-colours` gap,
-`RETRO_REPRINT_COLOURS_FROM`; TODO 4.10e is that look as its own skin).
+`retroland`/m is not ticked. Imports: an original is `exact`; a Time Spiral
+timeshifted printing (2006) is `nearest` — the `timeshifted-frame` gap,
+`RETRO_TIMESHIFTED_FROM`: a redrawn old frame (21 prints, three per key,
+against these masters: the art window's top 9–11 px lower and the text box's
+bottom 5–14 px higher on every key, blue ΔE 13, red and gold 7; white, black
+and green keep the old colours) — and a printing on the frame released from
+2021 is `nearest` too (the `reprint-colours` gap,
+`RETRO_REPRINT_COLOURS_FROM`; TODO 4.10e is those looks as their own skins).
 
 Tests: `tests/unit/frames/print-cut.test.ts` (the two steps),
 `retro-1997-importer.test.ts` (recipes, provenance, the published masters),

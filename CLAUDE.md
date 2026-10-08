@@ -546,8 +546,9 @@ Rules and gotchas:
   glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
   shrinks.
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
-  ORIGINAL cards of 1996–2003, never the 2021+ reprints (imports of those
-  are `nearest`: the `reprint-colours` gap). Masters: the frames bucket —
+  ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
+  2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`
+  and `reprint-colours` gaps). Masters: the frames bucket —
   Card Conjurer's Seventh drawing re-cut edge by edge PER KEY and toned
   region by region (`scripts/lib/print-cut.mjs`, the numbers in
   `scripts/lib/seventh-1997.mjs` as DATA: no scan is read by a build), gold
@@ -555,7 +556,9 @@ Rules and gotchas:
   edge map. Text: white with a hard shadow as PER-KEY ink (`inkByColorKey`,
   never a band's `shadowCss`: it would emboss the pips), sizes from
   `RETRO_*` in `lib/cards/typography.ts`, the type line and the artist line
-  in MPlantin — no font file is added for an era. A CENTRED footer declares
+  in MPlantin — no font file is added for an era; the P/T is set against its
+  RIGHT edge as printed (`align: "end"` + `endKerned`: two digits grow to
+  the left at full size), never centred. A CENTRED footer declares
   `FrameProfile.copyrightSlot` (`lib/cards/copyright-slot.ts`): the mark
   sits there on display (not on the border) and a paid clean download
   prints the card's `footer_text` there — without the slot that text is

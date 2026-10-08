@@ -148,6 +148,7 @@ import {
   describePrintRecipe,
   recutPiecewise,
   seventhRegions,
+  clearWindowHalo,
   squareCornersOnBlack,
   toneRegions,
   rectPx,
@@ -365,6 +366,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       if (W !== OUT_W || H !== OUT_H) throw new Error(`${template}/${key}: a print recipe's px are the ${OUT_W}×${OUT_H} master's, the source is ${W}×${H}`);
       const maps = cutMaps(printRecipe.cut, W, H);
       printed = recutPiecewise(printRecipe.squareCorners ? squareCornersOnBlack(recut, W, H) : recut, maps);
+      // A JPEG source's white-window fade on the art ring (the MSE gold).
+      if (printRecipe.windowHalo) printed = clearWindowHalo(printed, W, H, { reach: printRecipe.windowHalo });
       if (printRecipe.tones) {
         let rings = null;
         if (printRecipe.rings) {

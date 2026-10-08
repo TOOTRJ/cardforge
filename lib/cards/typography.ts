@@ -180,8 +180,9 @@ export const SPLIT_SET_SYMBOL_BOX_PCT = 48 / 2100;
 //     (caps 50 px against the print's 58: a wider, lower face);
 //   • the type line — MPlantin at 67 px (x-height 29 px, baseline 1229 px);
 //   • the P/T — a Plantin heavier than MPlantin at 92 px (digits 58–63 px
-//     tall, baseline 1963 px, centred on 1309 px = 87.3 %W); Beleren Bold's
-//     digits are that tall at 86 px;
+//     tall, baseline 1963 px, every value's ink ENDING at 1364–1370 px: a
+//     one-digit pair is centred on 1309 px, a two-digit one grows to the
+//     left at the same size); Beleren Bold's digits are that tall at 86 px;
 //   • the artist line — MPlantin at 58 px (x-height 25 px, baseline 1933 px,
 //     centred on 748 px), from Exodus 1998 on;
 //   • the line under it (the prints' © line, our © slot) — MPlantin at 33 px

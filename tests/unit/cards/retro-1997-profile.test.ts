@@ -19,7 +19,7 @@ import {
   rulesPxToPct,
 } from "@/lib/cards/typography";
 import type { ScryfallCard } from "@/lib/scryfall/client";
-import { RETRO_REPRINT_COLOURS_FROM } from "@/lib/scryfall/frame-signatures";
+import { RETRO_REPRINT_COLOURS_FROM, RETRO_TIMESHIFTED_FROM } from "@/lib/scryfall/frame-signatures";
 import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -307,14 +307,30 @@ describe("imports — the 1997 frame is the ORIGINAL printing (era design D14)",
       ...over,
     }) as ScryfallCard;
 
-  it("an original (1996–2003) and a Time Spiral timeshifted card (2006, the old colours) are exact on the retro family", () => {
-    for (const released_at of ["1996-10-08", "2002-10-07", "2003-05-26", "2006-10-06"]) {
+  it("an original (1996–2003) is exact on the retro family", () => {
+    for (const released_at of ["1996-10-08", "2002-10-07", "2003-05-26", "2005-12-31"]) {
       expect(frameMatchFromScryfall(printing({ released_at })), released_at).toMatchObject({ status: "exact", template: "retro", signature: "era/1997" });
     }
     expect(frameMatchFromScryfall(printing({ released_at: "2002-10-07", type_line: "Land", mana_cost: "", colors: [] }))).toMatchObject({
       status: "exact",
       template: "retroland",
     });
+  });
+
+  it("a Time Spiral timeshifted card (2006) is NEAREST — a redrawn old frame: its art window sits 10 px lower, its blue is another blue", () => {
+    expect(RETRO_TIMESHIFTED_FROM).toBe("2006-01-01");
+    for (const released_at of ["2006-10-06", "2020-12-31"]) {
+      expect(frameMatchFromScryfall(printing({ released_at })), released_at).toMatchObject({
+        status: "nearest",
+        template: "retro",
+        signature: "era/1997+timeshifted-frame",
+        blockedBy: "4.10e",
+        reason: "PipGlyph's 1997 frame is the original 1996–2003 printing; the timeshifted frame is a later redrawing (its art sits lower, its blue differs)",
+        gaps: ["timeshifted-frame"],
+      });
+    }
+    // A 2021+ reprint names its own gap, never this one.
+    expect(frameMatchFromScryfall(printing({ released_at: "2021-03-19" })).gaps).toEqual(["reprint-colours"]);
   });
 
   it("a 2021+ reprint on the frame is NEAREST — its frame is lighter than ours — blocked by 4.10e", () => {
@@ -333,8 +349,9 @@ describe("imports — the 1997 frame is the ORIGINAL printing (era design D14)",
         gaps: ["reprint-colours"],
       });
     }
-    // The day before the constant, and a printing with no date: not a reprint.
-    expect(frameMatchFromScryfall(printing({ released_at: "2020-12-31" })).status).toBe("exact");
+    // The day before the constant is not this gap's, and a printing with
+    // no date is neither's.
+    expect(frameMatchFromScryfall(printing({ released_at: "2020-12-31" })).gaps).toEqual(["timeshifted-frame"]);
     expect(frameMatchFromScryfall(printing({})).status).toBe("exact");
     // Another gap names itself first; the reprint gap rides along.
     expect(frameMatchFromScryfall(printing({ released_at: "2023-01-13", border_color: "white" }))).toMatchObject({

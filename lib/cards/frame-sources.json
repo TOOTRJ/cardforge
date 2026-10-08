@@ -7954,7 +7954,8 @@
             "xLower": "0.990–1.021"
           }
         },
-        "corners": "the source's cut corners flattened onto black before the re-cut"
+        "corners": "the source's cut corners flattened onto black before the re-cut",
+        "windowHalo": "the last 6 px of the art ring take the ring's colour 7 px out (the white window's fade on the JPEG source); alpha untouched"
       }
     },
     "sourceFiles": [

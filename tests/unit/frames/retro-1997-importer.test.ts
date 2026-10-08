@@ -127,8 +127,10 @@ describe("the 1997 recipes", () => {
     const moves = (["outer-L", "outer-R", "art-L", "art-R", "outer-T", "outer-B", "art-T", "art-B"] as const).map((e) => PRINT_EDGES_1997[e] - MSE_GOLD_EDGES[e]);
     expect(Math.max(...moves) - Math.min(...moves)).toBeGreaterThan(8);
     // Not toned (MSE's gold is the prints' colour); its cut corners are
-    // flattened before the move.
-    expect(seventhPrintRecipe("retro", "m")).toEqual({ cut, squareCorners: true });
+    // flattened before the move, and the white window's fade on the art
+    // ring's last px is cleared after it.
+    expect(seventhPrintRecipe("retro", "m")).toEqual({ cut, squareCorners: true, windowHalo: 6 });
+    expect(describePrintRecipe(seventhPrintRecipe("retro", "m"))).toHaveProperty("windowHalo");
     expect(describePrintRecipe(seventhPrintRecipe("retro", "m"))).not.toHaveProperty("tones");
   });
 

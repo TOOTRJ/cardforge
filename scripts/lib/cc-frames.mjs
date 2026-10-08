@@ -22,7 +22,7 @@ import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "
 
 // The piecewise-linear re-cut and the region tone with an offset (TODO
 // 4.10a): scripts/lib/print-cut.mjs, re-exported for the importer and tests.
-export { cutMaps, piecewiseMap, recutPiecewise, recutPlane, regionGain, squareCornersOnBlack, stretchRange, toneRegions } from "./print-cut.mjs";
+export { clearWindowHalo, cutMaps, piecewiseMap, recutPiecewise, recutPlane, regionGain, squareCornersOnBlack, stretchRange, toneRegions } from "./print-cut.mjs";
 export { seventhRegions } from "./seventh-1997.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
@@ -2601,6 +2601,10 @@ const SEVENTH = "img/frames/seventh/regular";
  *  the checkout; it is MSE-derived, so it may live in git). */
 export const REPO_SOURCE_PREFIX = "repo:";
 export const RETRO_GOLD_MSE = `${REPO_SOURCE_PREFIX}scripts/frame-inputs/retro-m-mse.png`;
+/** How far into the MSE gold's art ring the white window's fade reaches
+ *  (grey 85 → 112 → 153 → 208 → 236 on the last five px; the ring's own
+ *  inner shadow is 30–45): cleared by clearWindowHalo. */
+export const RETRO_GOLD_WINDOW_HALO_PX = 6;
 /** The pack's Pinline mask: a land's coloured rings (NOT the bevels). */
 const SEVENTH_RINGS_MASK = `${SEVENTH}/pinline.svg`;
 
@@ -2618,7 +2622,9 @@ export function seventhPrintRecipe(template, key) {
   const recipe = SEVENTH_RECIPE_OF[template]?.[key];
   if (recipe === undefined) throw new Error(`seventhPrintRecipe: ${template}/${key} is no 1997 master`);
   // The MSE master's corners are already cut: flattened onto black first.
-  if (recipe === null) return { cut: retroGoldCut(), squareCorners: true };
+  // …and its art window was cut out of a white rectangle on a 375 px JPEG:
+  // the grey → white fade that leaves on the ring's last px is cleared.
+  if (recipe === null) return { cut: retroGoldCut(), squareCorners: true, windowHalo: RETRO_GOLD_WINDOW_HALO_PX };
   return {
     cut: seventhCut(recipe),
     tones: SEVENTH_TONES[recipe],
@@ -2640,6 +2646,7 @@ export function describePrintRecipe(recipe) {
     },
     ...(recipe.tones ? { tones: describeRegionTones(recipe.tones) } : {}),
     ...(recipe.squareCorners ? { corners: "the source's cut corners flattened onto black before the re-cut" } : {}),
+    ...(recipe.windowHalo ? { windowHalo: `the last ${recipe.windowHalo} px of the art ring take the ring's colour ${recipe.windowHalo + 1} px out (the white window's fade on the JPEG source); alpha untouched` } : {}),
     ...(recipe.byColour ? { textBox: "cut by colour (no drawn outline), no trim ring" } : {}),
     ...(recipe.rings ? { rings: `${recipe.rings} = region "pin"` } : {}),
   };

@@ -251,6 +251,15 @@ export type StatSlot = {
    *  plate and badge); "end" for a value set against a rect's right edge —
    *  the transform front's reverse P/T in its grey tab (TODO 5.1a). */
   align?: SlotAlign;
+  /** With `align: "end"`: the value's KERNED run ends on the rect's right
+   *  edge in the bake too. Satori lays a run out in a box the sum of its
+   *  advances wide and draws it kerned from the left, so a pair that pulls in
+   *  (`4/4`: − 11 px at 86 px) would end that far short of the edge the
+   *  browser sets it against; the bake moves its box by the run's kerning
+   *  (lib/cards/stat-fit.ts statKernEm). The 1997 frame's P/T (TODO 4.10a:
+   *  the prints end every value at one px). Not set on the transform front's
+   *  reverse P/T (5.1a), whose bakes keep Satori's own box. Code-owned. */
+  endKerned?: true;
   /** Plate PNG template, {color} → frame color key. Renders behind the value
    *  (M15 P/T plate). */
   plateAssetPathTemplate?: string;
@@ -2675,13 +2684,21 @@ const RETRO: FrameProfile = {
     font: "body",
   },
   copyrightSlot: RETRO_COPYRIGHT,
-  // White with the heavier shadow, centred on 1309 px (87.3 %W), baseline
-  // 1963 px. The corner is free from the artist line's box (1160 px) to the
-  // frame's outer bevel (1413 px): a value whose ink would pass either
-  // shrinks (it stays centred, so the right side binds: "10/10" sets at
-  // about four fifths).
+  // White with the heavier shadow, baseline 1963 px, set against a fixed
+  // RIGHT edge as the prints set it: every value's ink ends at 1364–1370 px
+  // — a one-digit pair covers 1253–1367 (centre 1309, 54 prints), and a
+  // two-digit one grows to the LEFT at the same size (NEM #116 10/10
+  // 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368, P02 #35
+  // 11/11: digits 59–61 px tall on all four). The rect's right edge is the
+  // digits' ink end plus Beleren's right bearing (3.9 px at 86). The corner
+  // is free from the artist line's box (1160 px): a value whose ink would
+  // pass it shrinks ("10/10", wider in Beleren than in the prints' face, to
+  // 97 %; "100/100" to two thirds). The hard shadow (+ 6.7 px) stays 39 px
+  // short of the outer bevel (1413 px).
   pt: {
-    rect: { topPct: 89.31, leftPct: 80.37, widthPct: 14, heightPct: 5.6 },
+    rect: { topPct: 89.31, leftPct: 77.36, widthPct: 14, heightPct: 5.6 },
+    align: "end",
+    endKerned: true,
     inkSpanPct: { leftPct: 77.47, rightPct: 94.2 },
     sizePct: RETRO_PT_SIZE_PCT,
     colorHex: RETRO_WHITE,

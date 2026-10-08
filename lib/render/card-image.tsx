@@ -29,7 +29,7 @@ import {
   measuredLinePx,
   secondFaceLineSizes,
 } from "@/lib/cards/render-tiers";
-import { endAlignedStatKeepOut, fitStatSizePct, ptValue } from "@/lib/cards/stat-fit";
+import { endAlignedStatKeepOut, fitStatSizePct, ptValue, statKernEm } from "@/lib/cards/stat-fit";
 import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import { orientationFromAspect, type CardOrientation } from "@/lib/cards/typography";
 import {
@@ -2922,6 +2922,11 @@ function StatBake({
           // its slash (`X/X+1`) or ran off to the right only (`40/40`).
           whiteSpace: "nowrap",
           flexShrink: 0,
+          // An end-aligned value whose KERNED run ends on the rect's edge
+          // (StatSlot.endKerned, the 1997 P/T): Satori's box is the advance
+          // sum, so it is moved by the run's kerning — the browser's box is
+          // the kerned run already.
+          ...(slot.align === "end" && slot.endKerned ? { marginRight: statKernEm(value, slot.font) * size } : {}),
           // Same nudge as the preview's translate(${valueDxEm}em, ${valueDyEm}em);
           // computed in px here since Satori doesn't resolve em in transforms.
           ...(slot.valueDxEm || slot.valueDyEm

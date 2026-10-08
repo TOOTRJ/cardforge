@@ -12,8 +12,9 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // 750 px default: every text measure against the ORIGINAL prints (54 prints
 // of blue, red, green, artifact, black and land read for baselines and
 // centres; lib/cards/typography.ts RETRO_*):
-//   • name baseline 163 px, type line 1229 px, P/T 1963 px centred on
-//     1309 px, artist line 1933 px centred on 748 px, the © slot 1976 px;
+//   • name baseline 163 px, type line 1229 px, P/T 1963 px ending at
+//     1367 px (two-digit values grow to the left, as printed), artist line
+//     1933 px centred on 748 px, the © slot 1976 px;
 //   • white ink with a hard black shadow — right / down + 5 / + 3 (name),
 //     + 4.5 / + 3.3 (type line), + 3.5 / + 3.5 (artist), + 6.7 / + 5.7 (P/T);
 //   • flat 73 px cost discs (no shadow), the 1997 tap in the rules text;
@@ -125,7 +126,7 @@ describe("the 1997 frame — text on the prints' baselines, in the prints' ink",
   for (const preset of ["hd", "default"] as const) {
     // A whole px of the 750 bake is two of HD.
     const tol = preset === "hd" ? 1.5 : 3.5;
-    it(`${preset}: name 163 px, type line 1229 px, P/T 1963 px on 1309 px, artist line 1933 px on 748 px (baselines; "Exmn" has no descender — Beleren's H does — and no ascender past its capital)`, async () => {
+    it(`${preset}: name 163 px, type line 1229 px, P/T 1963 px ending at 1367 px, artist line 1933 px on 748 px (baselines; "Exmn" has no descender — Beleren's H does — and no ascender past its capital)`, async () => {
       const r = await bake(card(), preset);
       const name = inkBox(r, NAME, isWhite)!;
       const type = inkBox(r, TYPE, isWhite)!;
@@ -142,9 +143,10 @@ describe("the 1997 frame — text on the prints' baselines, in the prints' ink",
       expect(Math.abs(name.y1 - name.y0 - 50)).toBeLessThanOrEqual(tol);
       expect(Math.abs(type.y1 - type.y0 - 46)).toBeLessThanOrEqual(tol);
       // …68 px from the slash's top to its foot at 86 px (the digits are
-      // 60), centred on 1309 px.
+      // 60), its ink ending where every print's does: 1367 px (1364–1370
+      // on 54 one-digit and 4 two-digit prints).
       expect(Math.abs(pt.y1 - pt.y0 - 68)).toBeLessThanOrEqual(tol + 1);
-      expect(Math.abs((pt.x0 + pt.x1) / 2 - 1309)).toBeLessThanOrEqual(3);
+      expect(Math.abs(pt.x1 - 1367), `pt ${JSON.stringify(pt)}`).toBeLessThanOrEqual(tol + 0.5);
       // The artist line is centred on the card's 748 px (the acceptance:
       // within 2 px).
       expect(Math.abs((artist.x0 + artist.x1) / 2 - 748)).toBeLessThanOrEqual(2);

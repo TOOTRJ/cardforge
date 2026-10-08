@@ -1322,6 +1322,7 @@ function CardFace({
       {layout.reversePt && dfc?.otherFace.printsPt ? (
         <StatOverlay
           slot={layout.reversePt}
+          testId="reverse-pt"
           value={ptValue(dfc.otherFace.power, dfc.otherFace.toughness)}
           colorKey={plateKey}
           masterKey={masterKey}
@@ -2210,9 +2211,13 @@ function StatOverlay({
   masterKey,
   orientation,
   foil = null,
+  testId,
 }: {
   slot: StatSlot;
   value: string;
+  /** A test hook for one stat among several (the reverse P/T) — never keyed
+   *  on `slot.align`: the 1997 frame's own P/T is end-aligned too. */
+  testId?: string;
   /** The card's colour key — picks the plate. */
   colorKey: string;
   /** The frame master the value prints on (frameMasterKey) — picks the ink. */
@@ -2274,7 +2279,7 @@ function StatOverlay({
   return (
     <div
       className="pointer-events-none absolute flex items-center"
-      data-testid={slot.align === "end" ? "reverse-pt" : undefined}
+      data-testid={testId}
       // Above the text layers (z20/21): printed cards draw the P/T plate and
       // the starting-loyalty shield OVER the text box edge, never under it.
       // Centred, or set against an edge (StatSlot.align — the transform

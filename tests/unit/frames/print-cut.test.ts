@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   blurPlane,
+  clearWindowHalo,
   cutMaps,
   describeRegionTones,
   lumaPlane,
@@ -157,6 +158,36 @@ describe("recutPiecewise — a drawing moved edge by edge", () => {
     // Nothing outside the corner squares is touched.
     expect(px(flat, 30, 20)).toEqual([16, 16, 16, 255]);
     expect(px(rounded, 0, 0)[3]).toBe(0); // a new buffer
+  });
+
+  it("clears a JPEG source's white-window fade from the art ring: the ring's last px take the colour further out, alpha untouched", () => {
+    // A 30 × 16 window at (15, 12) in a gold ring whose last 3 px fade to
+    // white (the MSE gold), a half-covered edge pixel on its left edge and
+    // one ragged opaque pixel inside its top row.
+    const inWin = (x: number, y: number) => x >= 15 && x < 45 && y >= 12 && y < 28;
+    const dist = (x: number, y: number) => Math.max(15 - x, x - 44, 12 - y, y - 27);
+    const src = rgba((x, y) => {
+      if (x === 30 && y === 12) return [250, 250, 250, 255];
+      if (x === 15 && y === 20) return [240, 240, 240, 128];
+      if (inWin(x, y)) return [0, 0, 0, 0];
+      const d = dist(x, y);
+      return d <= 3 ? [250 - d * 30, 250 - d * 30, 250 - d * 30, 255] : [120, 100, 20, 255];
+    });
+    const out = clearWindowHalo(src, W, H, { reach: 3, seedX: 30, seedY: 20 });
+    // The faded px beside every edge, and both corners' squares, are the ring.
+    for (const [x, y] of [[14, 20], [12, 20], [45, 20], [47, 20], [30, 11], [30, 9], [30, 28], [30, 30], [13, 10], [46, 29]]) {
+      expect(px(out, x, y), `${x},${y}`).toEqual([120, 100, 20, 255]);
+    }
+    // The half-covered edge pixel and the ragged one keep their ALPHA and
+    // lose the white.
+    expect(px(out, 15, 20)).toEqual([120, 100, 20, 128]);
+    expect(px(out, 30, 12)).toEqual([120, 100, 20, 255]);
+    // The window is the same window; nothing further out is touched.
+    for (let i = 0; i < W * H; i += 1) expect(out[i * 4 + 3]).toBe(src[i * 4 + 3]);
+    expect(px(out, 10, 20)).toEqual(px(src, 10, 20));
+    expect(px(src, 14, 20)).toEqual([220, 220, 220, 255]); // a new buffer
+    // A seed that is not in a window is refused.
+    expect(() => clearWindowHalo(src, W, H, { reach: 3, seedX: 2, seedY: 2 })).toThrow(/not inside a window/);
   });
 });
 

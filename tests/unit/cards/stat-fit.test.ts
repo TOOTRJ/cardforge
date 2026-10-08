@@ -144,10 +144,48 @@ describe("fitStatSizePct", () => {
 
   it("Ghostfire: values on its wide ribbon keep their size; the 1997 frame's 86 px P/T keeps one digit a side and shrinks two", () => {
     for (const value of ["20/20", "40/40", "50/50", "99/99"]) expect(keeps(pt("tarkirghostfire"), value), value).toBe(true);
-    // TODO 4.10a: the prints' size (86 px, was 63) in the frame's corner,
-    // centred on 1310.5 px between the artist line's box and the bevel.
-    for (const value of ["1/1", "5/5", "8/8", "*/*"]) expect(keeps(pt("retro"), value), value).toBe(true);
-    for (const value of ["10/10", "100/100", "*+1/*+1"]) expect(fitStatSizePct(pt("retro"), value), value).toBeLessThan(pt("retro").sizePct);
+    // TODO 4.10a: the prints' size (86 px, was 63), set against a fixed
+    // right edge as the prints set it — a two-digit value grows to the LEFT
+    // at the same size (MIR #315 12/12, LGN #130 13/13: digits 59–61 px, the
+    // one-digit height) until the artist line's box.
+    const retro = pt("retro");
+    expect(retro.align).toBe("end");
+    for (const value of ["1/1", "5/5", "8/8", "*/*", "X/X", "-1/-1", "12/12", "13/13", "11/11"]) expect(keeps(retro, value), value).toBe(true);
+    // Beleren's 0 is wider than the prints': 10/10 gives up 3 %, 20/20 a tenth.
+    expect(fitStatSizePct(retro, "10/10") / retro.sizePct).toBeGreaterThan(0.96);
+    expect(fitStatSizePct(retro, "10/10")).toBeLessThan(retro.sizePct);
+    expect(fitStatSizePct(retro, "20/20") / retro.sizePct).toBeGreaterThan(0.88);
+    for (const value of ["100/100", "*+1/*+1"]) expect(fitStatSizePct(retro, value), value).toBeLessThan(retro.sizePct * 0.8);
+  });
+
+  it("an END-aligned value is fitted from its rect's right edge: the ink ends a bearing short of it and never passes the span's left", () => {
+    const retro = pt("retro");
+    const edge = ((retro.rect.leftPct + retro.rect.widthPct) / 100) * HD;
+    const span = spanPx(retro);
+    for (const value of ["3/3", "10/10", "13/13", "100/100", "*+1/*+1", "1000/1000"]) {
+      const size = fitStatSizePct(retro, value) * HD;
+      const chars = Array.from(value);
+      const [, lsb] = STAT_GLYPHS[chars[0]];
+      const [, , rsb] = STAT_GLYPHS[chars[chars.length - 1]];
+      let kern = 0;
+      chars.forEach((ch, i) => {
+        if (i > 0) kern += STAT_KERNING[chars[i - 1] + ch] ?? 0;
+      });
+      const em = (units: number) => (units / 2048) * size;
+      // Satori's box is the advance sum, the browser's the kerned run: the
+      // further of the two on each side.
+      const left = edge - em(Math.max(0, kern)) - statWidthEm(value) * size + em(lsb);
+      const right = edge + em(Math.max(0, kern)) - em(rsb);
+      expect(left, value).toBeGreaterThanOrEqual(span.left - 1e-6);
+      expect(right, value).toBeLessThanOrEqual(span.right + 1e-6);
+    }
+    // The digits' ink ends where the prints' does: 1364–1370 px.
+    expect(edge - (STAT_GLYPHS["3"][2] / 2048) * retro.sizePct * HD).toBeGreaterThan(1364);
+    expect(edge - (STAT_GLYPHS["3"][2] / 2048) * retro.sizePct * HD).toBeLessThan(1370);
+    // The transform front's reverse P/T — end-aligned in a slot with no
+    // measured span — keeps its size, a trailing asterisk's overhang included.
+    const reverse = getFrameProfile("m15dfcfront").reversePt!;
+    for (const value of ["3/3", "13/13", "*/*", "1+*/1+*", "100/100"]) expect(fitStatSizePct(reverse, value), value).toBe(reverse.sizePct);
   });
 
   it("Modern: 100/100 would print over the plate's bevel and shrinks onto its face", () => {
@@ -276,9 +314,11 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     const span = spanPx(slot);
     expect(span.left).toBeCloseTo(left, 0);
     expect(span.right).toBeCloseTo(right, 0);
-    const centre = ((slot.rect.leftPct + slot.rect.widthPct / 2) / 100) * HD;
-    expect(centre).toBeGreaterThan(span.left);
-    expect(centre).toBeLessThan(span.right);
+    // The point the value is set about — the rect's centre, or its right
+    // edge for an end-aligned one (the 1997 P/T) — lies on the face.
+    const anchor = ((slot.rect.leftPct + slot.rect.widthPct / (slot.align === "end" ? 1 : 2)) / 100) * HD;
+    expect(anchor).toBeGreaterThan(span.left);
+    expect(anchor).toBeLessThan(span.right);
   });
 
   it("a second face's span lies inside its rect (a fitted value never overflows it, which only StatBake centres)", () => {

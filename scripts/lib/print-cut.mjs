@@ -207,6 +207,73 @@ export function squareCornersOnBlack(buf, width, height, reach = 96) {
   return out;
 }
 
+/**
+ * Clear the pale halo a JPEG-sourced master carries round its art window
+ * (TODO 4.10a, the MSE gold: its window was cut out of a WHITE rectangle on
+ * a 375 px JPEG, so the last `reach` px of the art ring fade grey → white —
+ * a ragged white hairline between the art and the ring on every bake). Each
+ * pixel of the ring within `reach` px of the window takes the colour of the
+ * ring pixel `reach + 1` px out, straight out from the window's edge (the
+ * corner squares take the corner's); ALPHA IS NOT TOUCHED, so the window —
+ * and with it the art-window contract — is exactly the same. The window is
+ * read off the buffer: the rectangle of clear pixels round the point
+ * (`seedX`, `seedY`). Returns a new Buffer.
+ */
+export function clearWindowHalo(buf, width, height, { reach = 6, seedX = Math.round(width / 2), seedY = Math.round(height / 3), clear = 8 } = {}) {
+  const alpha = (x, y) => buf[(y * width + x) * 4 + 3];
+  if (alpha(seedX, seedY) > clear) throw new Error(`clearWindowHalo: (${seedX}, ${seedY}) is not inside a window`);
+  const median = (values) => values.sort((a, b) => a - b)[values.length >> 1];
+  // The window's edges: the median over nine probe lines of where the clear
+  // run through the seed ends (a ragged edge pixel moves one probe, not the
+  // median).
+  const run = (x, y, dx, dy) => {
+    let cx = x;
+    let cy = y;
+    while (cx + dx >= 0 && cx + dx < width && cy + dy >= 0 && cy + dy < height && alpha(cx + dx, cy + dy) <= clear) {
+      cx += dx;
+      cy += dy;
+    }
+    return dx !== 0 ? cx : cy;
+  };
+  const offsets = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
+  const spanX = Math.floor((run(seedX, seedY, 1, 0) - run(seedX, seedY, -1, 0)) / 10);
+  const spanY = Math.floor((run(seedX, seedY, 0, 1) - run(seedX, seedY, 0, -1)) / 10);
+  const left = median(offsets.map((k) => run(seedX, seedY + k * spanY, -1, 0)));
+  const right = median(offsets.map((k) => run(seedX, seedY + k * spanY, 1, 0)));
+  const top = median(offsets.map((k) => run(seedX + k * spanX, seedY, 0, -1)));
+  const bottom = median(offsets.map((k) => run(seedX + k * spanX, seedY, 0, 1)));
+  const out = Buffer.from(buf);
+  const x0 = left - reach;
+  const x1 = right + reach;
+  const y0 = top - reach;
+  const y1 = bottom + reach;
+  if (x0 < 1 || y0 < 1 || x1 > width - 2 || y1 > height - 2) throw new Error("clearWindowHalo: the window is too near the card's edge");
+  for (let y = y0; y <= y1; y += 1) {
+    for (let x = x0; x <= x1; x += 1) {
+      const o = (y * width + x) * 4;
+      if (buf[o + 3] === 0) continue;
+      // Inside the window's rows AND columns: only a ragged edge pixel, which
+      // belongs to the nearest side's band.
+      let sx = x < left ? x0 - 1 : x > right ? x1 + 1 : x;
+      let sy = y < top ? y0 - 1 : y > bottom ? y1 + 1 : y;
+      if (sx === x && sy === y) {
+        const d = [x - left, right - x, y - top, bottom - y];
+        const near = d.indexOf(Math.min(...d));
+        if (d[near] > reach) continue;
+        if (near === 0) sx = x0 - 1;
+        else if (near === 1) sx = x1 + 1;
+        else if (near === 2) sy = y0 - 1;
+        else sy = y1 + 1;
+      }
+      const s = (sy * width + sx) * 4;
+      out[o] = buf[s];
+      out[o + 1] = buf[s + 1];
+      out[o + 2] = buf[s + 2];
+    }
+  }
+  return out;
+}
+
 /** Re-cut one float plane (a region's coverage, 0 … 1) through `maps`;
  *  clamped to 0 … 1. */
 export function recutPlane(plane, maps) {
