@@ -86,7 +86,7 @@ function expectDrawn(box: HTMLElement, layout: RulesLayout, template: FrameTempl
       Array.from(run.children).forEach((item, ii) => {
         expect(css(item, "flex-shrink")).toBe("0");
         const word = model[li].runs[ri][ii];
-        const pip = item.querySelector("i.ms-cost");
+        const pip = item.querySelector("[data-pip]");
         if (pip) {
           // A pip in a wrapper with no margin of its own (a pip gap is its
           // padding): mana-font's `.ms-2 { margin-left: inherit !important }`

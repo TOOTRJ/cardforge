@@ -149,7 +149,7 @@ describe("CardPreview — the saga's printed rail", () => {
 
   it("draws DOM #122's 'Add {R}{R}.' as two red pips and U+2212 as the hyphen the bake draws", () => {
     const html = saga(DOM_122);
-    expect(html.match(/class="ms ms-cost ms-shadow ms-r"/g)).toHaveLength(2);
+    expect(html.match(/data-pip="r"/g)).toHaveLength(2);
     expect(html).not.toContain("{R}");
     const minus = saga("I — Put a −1/−1 counter on target creature.\nII — Draw a card.");
     expect(minus).toContain(">-1/-1<");

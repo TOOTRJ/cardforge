@@ -8,6 +8,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { ROSE_STAR_PATH } from "@/lib/brand/geometry";
 import {
   CardPip,
+  cardPipDraws,
   ManaCostGlyphs,
 } from "@/components/cards/mana-cost-glyphs";
 import {
@@ -3051,6 +3052,10 @@ function RulesPip({
   // A pip in the rules text: the style's shadow only where an inline pip
   // carries one (inlineSymbolStyle — the bake's RulesItemBake twin).
   const symbols = inlineSymbolStyle(useContext(SymbolStyleContext));
+  const overrideSrc = pipOverrideForSuffix(suffix, overrides);
+  // A symbol the font has no glyph for: the bake draws no disc and keeps
+  // neither its room nor its gap (ManaGem) — nor does this.
+  if (!cardPipDraws(suffix, symbols, overrideSrc)) return null;
   return (
     <span
       style={{
@@ -3063,12 +3068,7 @@ function RulesPip({
         ...(gapBefore ? { paddingLeft: gapBefore } : {}),
       }}
     >
-      <CardPip
-        suffix={suffix}
-        discPx={discPx}
-        symbols={symbols}
-        overrideSrc={pipOverrideForSuffix(suffix, overrides)}
-      />
+      <CardPip suffix={suffix} discPx={discPx} symbols={symbols} overrideSrc={overrideSrc} />
     </span>
   );
 }

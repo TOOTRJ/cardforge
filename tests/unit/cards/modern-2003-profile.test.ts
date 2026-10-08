@@ -258,7 +258,8 @@ describe('symbolStyle "2003" — a cost shadow down and a little to the left, fl
     expect(style.previewShadowClass).toBeNull();
     expect(style.previewShadowCss).toBeNull();
     const em = manaGlyphPx(66);
-    expect(previewDiscShadowCss(style, 66, em)).toBe(`${(-2 / em).toFixed(4)}em ${(6 / em).toFixed(4)}em 0 #000`);
+    // …in the colour the stored PNG holds (bakedShadowHex: pure black stays black).
+    expect(previewDiscShadowCss(style, 66, em)).toBe(`${(-2 / em).toFixed(4)}em ${(6 / em).toFixed(4)}em 0 #000000`);
     // Along the row it reaches 2 px past the first disc — less than M15's
     // shadow: the name's room is the discs, their gaps and that sliver.
     expect(style.costRowShadowDiscs * 66).toBeCloseTo(2, 9);

@@ -118,7 +118,8 @@ describe("CardPreview — the emblem frame (TODO 4.52)", () => {
 
   it("draws no cost and no P/T, whatever the card holds", () => {
     const { html } = preview({ cost: "{2}{U}{U}", power: "2" });
-    expect(html).not.toMatch(/ms-cost/);
+    // (a card's pip: `data-pip`; `ms-cost` is the pickers' class)
+    expect(html).not.toMatch(/data-pip|ms-cost/);
     expect(html).not.toContain("/pt/");
   });
 

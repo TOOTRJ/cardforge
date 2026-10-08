@@ -4,7 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { copyrightSlotLayout } from "@/lib/cards/copyright-slot";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
-import { manaGlyphPx } from "@/lib/cards/symbol-style";
+import { bakedShadowHex, manaGlyphPx } from "@/lib/cards/symbol-style";
 import { footerInk, getFrameProfile } from "@/lib/cards/template-layout";
 import { TYPE_FACES } from "@/lib/cards/type-faces";
 import type { ColorIdentity } from "@/types/card";
@@ -61,7 +61,9 @@ function renderOn(template: "modern" | "modernland", key: string, over: Partial<
     pt: spans.find((s) => s.textContent === "2/2") as HTMLElement | undefined,
     mark: container.querySelector<HTMLElement>("[data-brand-mark]"),
     slotText: container.querySelector<HTMLElement>('[data-copyright-slot="text"]'),
-    pips: [...container.querySelectorAll<HTMLElement>(".ms.ms-cost")],
+    // CardPip marks each pip of the card with `data-pip` (its mana-font
+    // suffix); a card's pip takes `ms ms-<suffix>` only, never a cost class.
+    pips: [...container.querySelectorAll<HTMLElement>("[data-pip]")],
   };
 }
 
@@ -140,12 +142,16 @@ describe("CardPreview — the 2003 footer (the same footerInk and © slot as the
 describe('CardPreview — symbolStyle "2003"', () => {
   it("the cost discs carry the shadow (down, a little to the left) on the glyph itself (no mana-font shadow class); the rules pips are flat; {T} is the modern arrow", () => {
     const { pips } = renderOn("modern", "r");
-    expect(pips.map((el) => el.className)).toEqual(["ms ms-cost ms-x", "ms ms-cost ms-r", "ms ms-cost ms-tap", "ms ms-cost ms-r"]);
+    expect(pips.map((el) => el.getAttribute("data-pip"))).toEqual(["x", "r", "tap", "r"]);
+    expect(pips.map((el) => el.className)).toEqual(["ms ms-x", "ms ms-r", "ms ms-tap", "ms ms-r"]);
     // The two cost pips…
     // (The bake's one layer in em of the pip's glyph — previewDiscShadowCss:
-    // 6 px under a 66 px disc and 2 px to its left, in em of its glyph.)
+    // 6 px under a 66 px disc and 2 px to its left, in em of its glyph, in
+    // the colour the stored PNG holds — bakedShadowHex: pure black stays
+    // pure black.)
     const em = manaGlyphPx(66);
-    for (const pip of pips.slice(0, 2)) expect(pip.style.boxShadow.replace(/\s+/g, " ")).toBe(`${(-2 / em).toFixed(4)}em ${(6 / em).toFixed(4)}em 0 #000`);
+    expect(bakedShadowHex("#000")).toBe("#000000");
+    for (const pip of pips.slice(0, 2)) expect(pip.style.boxShadow.replace(/\s+/g, " ")).toBe(`${(-2 / em).toFixed(4)}em ${(6 / em).toFixed(4)}em 0 #000000`);
     // …and the two in the rules text.
     for (const pip of pips.slice(2)) expect(pip.style.boxShadow).toBe("");
   });
