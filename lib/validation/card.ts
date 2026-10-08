@@ -16,6 +16,7 @@ import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
   DFC_ICON_FAMILY_VALUES,
+  RULES_ALIGN_VALUES,
   FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
   RETIRED_CARD_FINISHES,
@@ -309,6 +310,10 @@ const frameStyleBaseSchema = z
     // not a transform front body (normalizeAnatomy) — none exists until
     // 5.1a, so no stored card can carry it yet.
     dfcIcon: z.enum(DFC_ICON_FAMILY_VALUES).optional(),
+    // The rules text's alignment (TODO 4.21e, FrameProfile.rulesAlignSwitch):
+    // the form's "left" or "center". The save stores "center" only, and only
+    // on a template that offers the choice (normalizeAnatomy).
+    rulesAlign: z.enum(RULES_ALIGN_VALUES).optional(),
   })
   .strict();
 
@@ -341,6 +346,9 @@ export const frameAnatomyPatchSchema = z
     // "off" (a transform card always wears one); the save drops it off any
     // template that is not a transform front body.
     dfcIcon: z.enum(DFC_ICON_FAMILY_VALUES).optional(),
+    // The rules text's alignment (TODO 4.21e): "center", or "left" to take
+    // a stored "center" off.
+    rulesAlign: z.enum(RULES_ALIGN_VALUES).optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Marketing auth chrome (perf PR D).
@@ -13,6 +13,8 @@ import { test, expect } from "@playwright/test";
 const hasCredentials =
   !!process.env.SUPABASE_E2E_USER_EMAIL &&
   !!process.env.SUPABASE_E2E_USER_PASSWORD;
+// A missing card is only a 404 where there is a database to miss it in.
+const hasDatabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 test.describe("marketing header — anonymous", () => {
   test("shows the sign-in CTA and no account menu", async ({ page }) => {
@@ -45,6 +47,96 @@ test.describe("saved theme on a static page", () => {
     ]);
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "light");
+  });
+});
+
+// The other kind of document. A notFound() thrown above every Suspense
+// boundary (the SEO contract: a missing card is a real HTTP 404) is answered
+// with Next's empty error shell, and the BROWSER renders the whole document,
+// root layout included. React creates the <head> script there but never runs
+// it, and writes <html data-theme="dark"> from the layout's props — so a
+// light-theme visitor got a dark 404, and dark pages after it until a full
+// reload. ThemeRestore (components/layout/theme-restore.tsx) puts the saved
+// theme back in the commit that draws the page.
+test.describe("saved theme on a 404 the browser renders", () => {
+  test.skip(!hasDatabase, "needs the local Supabase stack (.env.e2e)");
+
+  const MISSING_CARD = "/card/nobody-here/no-such-card";
+
+  type Frame = { theme: string | null; drawn: boolean };
+  const framesOf = (page: Page) =>
+    page.evaluate(() => (window as unknown as { __frames: Frame[] }).__frames);
+
+  test.beforeEach(async ({ page }) => {
+    // Every frame the browser is about to paint: the theme, and whether the
+    // page has drawn its content yet (the shell before it is blank).
+    await page.addInitScript(() => {
+      const frames: { theme: string | null; drawn: boolean }[] = [];
+      (window as unknown as { __frames: typeof frames }).__frames = frames;
+      const tick = () => {
+        frames.push({
+          theme: document.documentElement?.getAttribute("data-theme") ?? null,
+          drawn: document.querySelector("h1") !== null,
+        });
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  });
+
+  test("a missing card is light from its first frame, and so is the page after it", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await context.addCookies([
+      { name: "cardforge-theme", value: "light", url: baseURL! },
+    ]);
+    const response = await page.goto(MISSING_CARD);
+    expect(response?.status()).toBe(404);
+    // The premise: this HTML carries no theme and nothing that could set one.
+    expect(await response!.text()).toContain('<html id="__next_error__">');
+
+    const html = page.locator("html");
+    await expect(page.getByRole("heading", { name: /^404/ })).toBeVisible();
+    await expect(html).toHaveAttribute("data-theme", "light");
+    const frames = await framesOf(page);
+    expect(frames.some((frame) => frame.drawn)).toBe(true);
+    expect(frames.filter((frame) => frame.drawn && frame.theme !== "light")).toEqual([]);
+
+    // A soft navigation keeps <html>: nothing would set the theme again.
+    await page.evaluate(() => {
+      (window as unknown as { __sameDocument: boolean }).__sameDocument = true;
+    });
+    await page.getByRole("link", { name: "Browse gallery", exact: true }).click();
+    await page.waitForURL("**/gallery");
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __sameDocument?: boolean }).__sameDocument,
+      ),
+    ).toBe(true);
+    await expect(html).toHaveAttribute("data-theme", "light");
+  });
+
+  test("with no saved theme it stays dark on a light OS; \"system\" follows the OS", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto(MISSING_CARD);
+    const html = page.locator("html");
+    await expect(page.getByRole("heading", { name: /^404/ })).toBeVisible();
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    expect((await framesOf(page)).filter((frame) => frame.drawn && frame.theme !== "dark")).toEqual([]);
+
+    await context.addCookies([
+      { name: "cardforge-theme", value: "system", url: baseURL! },
+    ]);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /^404/ })).toBeVisible();
+    await expect(html).toHaveAttribute("data-theme", "light");
+    expect((await framesOf(page)).filter((frame) => frame.drawn && frame.theme !== "light")).toEqual([]);
   });
 });
 

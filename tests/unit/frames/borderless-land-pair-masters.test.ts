@@ -150,7 +150,7 @@ describe("declared and published", () => {
     expect(twoColorFits(profile, "land")).toBe(true);
     expect(profile.crownMasters).toBeUndefined();
     expect(profile.overlays).toBeUndefined();
-    expect(frameAnatomyOf(TEMPLATE)).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false });
+    expect(frameAnatomyOf(TEMPLATE)).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
     // The spells' frame it spreads keeps its own dresses, and its pairs stay
     // a nonland's.
     expect(getFrameProfile("m15borderless").twoColorMasters).toEqual(["split", "hybrid"]);
