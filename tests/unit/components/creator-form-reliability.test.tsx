@@ -2185,6 +2185,13 @@ describe("6.11 print typography on blur", () => {
     expect(titleInput().value).toBe("Urza's Wyrm");
   });
 
+  it("edit: a stored trailing space the owner deletes is not an edit of the text — nothing converts", async () => {
+    renderForm({ mode: "edit", card: savedCard({ title: "Urza's Wyrm " }) });
+    await typeTitle("Urza's Wyrm");
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza's Wyrm");
+  });
+
   it("remix: the new card starts on the printed characters", async () => {
     renderForm({ mode: "remix", card: savedCard({ title: "Urza's Wyrm", rules_text: "It can't block." }) });
     expect(titleInput().value).toBe("Urza’s Wyrm (remix)");

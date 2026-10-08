@@ -325,6 +325,22 @@ function serializedRows(face: FaceContentText): string | null {
   return null;
 }
 
+/** A text as the editor and the schema hand it back: no carriage returns (a
+ *  form control's value has none) and trimmed (every text schema trims). */
+function asResent(text: string): string {
+  return text.replace(/\r/g, "").trim();
+}
+
+/** Whether `next` is the stored text `stored`, resent: equal once both are
+ *  read as the editor hands a text back. A row written outside the form (a
+ *  seed, an old import) may hold a trailing space or a Windows line ending
+ *  the form cannot send back — that difference is not an edit, and must not
+ *  convert the field. Shared by the server's edit rule and the editor's
+ *  blur. */
+export function sameStoredText(next: string, stored: string | null | undefined): boolean {
+  return next === (stored ?? "") || asResent(next) === asResent(stored ?? "");
+}
+
 /** Whether a field's text is converted: always on a new card; on an edit
  *  only when the save changes it (`stored` is what the row holds). */
 type Changed = (next: string, stored: string | null | undefined) => boolean;
@@ -338,8 +354,8 @@ function faceText<T extends FaceText>(face: T, stored: StoredTypographyText | nu
     out.supertype = printTypography(out.supertype, "type");
   }
   if (out.subtypes) {
-    const kept = new Set(stored?.subtypes ?? []);
-    out.subtypes = out.subtypes.map((subtype) => (changed(subtype, kept.has(subtype) ? subtype : null) ? printTypography(subtype, "type") : subtype));
+    const kept = new Set((stored?.subtypes ?? []).map(asResent));
+    out.subtypes = out.subtypes.map((subtype) => (changed(subtype, kept.has(asResent(subtype)) ? subtype : null) ? printTypography(subtype, "type") : subtype));
   }
   if (typeof out.flavor_text === "string" && changed(out.flavor_text, stored?.flavor_text)) {
     out.flavor_text = printTypography(out.flavor_text, "flavor");
@@ -356,14 +372,15 @@ function faceText<T extends FaceText>(face: T, stored: StoredTypographyText | nu
 function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
   const texts = new Set<string>();
   const face = (stored?.face_content ?? null) as FaceContentText | null;
-  for (const row of face?.loyalty?.abilities ?? []) if (typeof row?.text === "string") texts.add(row.text);
-  for (const row of face?.saga?.chapters ?? []) if (typeof row?.text === "string") texts.add(row.text);
-  if (typeof face?.saga?.intro === "string") texts.add(face.saga.intro);
+  for (const row of face?.loyalty?.abilities ?? []) if (typeof row?.text === "string") texts.add(asResent(row.text));
+  for (const row of face?.saga?.chapters ?? []) if (typeof row?.text === "string") texts.add(asResent(row.text));
+  if (typeof face?.saga?.intro === "string") texts.add(asResent(face.saga.intro));
   if (stored?.rules_text) {
-    for (const row of loyaltyFromRulesText(stored.rules_text)) texts.add(row.text);
-    const saga = sagaFromRulesText(stored.rules_text);
-    for (const row of saga.chapters) texts.add(row.text);
-    if (saga.intro) texts.add(saga.intro);
+    const text = stored.rules_text.replace(/\r/g, "");
+    for (const row of loyaltyFromRulesText(text)) texts.add(asResent(row.text));
+    const saga = sagaFromRulesText(text);
+    for (const row of saga.chapters) texts.add(asResent(row.text));
+    if (saga.intro) texts.add(asResent(saga.intro));
   }
   return texts;
 }
@@ -377,7 +394,7 @@ function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyTex
   let face = rawFace;
   if (rawFace) {
     const keptRows = storedRowTexts(stored);
-    const row = (text: string, max: number) => (changed(text, keptRows.has(text) ? text : null) ? within(text, "rules", max) : text);
+    const row = (text: string, max: number) => (changed(text, keptRows.has(asResent(text)) ? text : null) ? within(text, "rules", max) : text);
     face = {
       ...rawFace,
       ...(rawFace.loyalty
@@ -425,7 +442,10 @@ export function withPrintTypography<T extends TypographyPayload>(data: T): T {
 /** An EDIT's patch over the stored row: only the fields whose text the save
  *  CHANGES are converted — a field sent back as it is stored (the creator
  *  resends every revisable field) keeps its stored characters, straight
- *  quotes included. A changed field is converted whole. */
+ *  quotes included. A changed field is converted whole. "As it is stored" is
+ *  read as the form resends a text (sameStoredText): a stored trailing space
+ *  or Windows line ending is not an edit. The value WRITTEN is the incoming
+ *  one, as the schema left it — nothing here rewrites a kept field. */
 export function withPrintTypographyUpdate<T extends TypographyPayload>(data: T, stored: StoredTypographyText): T {
-  return apply(data, stored, (next, kept) => next !== (kept ?? ""));
+  return apply(data, stored, (next, kept) => !sameStoredText(next, kept));
 }

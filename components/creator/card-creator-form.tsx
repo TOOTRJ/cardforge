@@ -126,6 +126,7 @@ import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import {
   printTypography,
   printTypographyPatch,
+  sameStoredText,
   typographyFieldOf,
 } from "@/lib/validation/print-typography";
 import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
@@ -3788,6 +3789,12 @@ export function CardCreatorForm({
     if (isEdit && !getFieldState(path).isDirty) return;
     const value = getValues(path) as unknown;
     if (typeof value !== "string") return;
+    // …and "differs" is read as the server reads it: a stored trailing space
+    // or Windows line ending a form control cannot hold is not an edit.
+    if (isEdit) {
+      const stored = name.split(".").reduce<unknown>((at, key) => (at && typeof at === "object" ? (at as Record<string, unknown>)[key] : undefined), defaults);
+      if (typeof stored === "string" && sameStoredText(value, stored)) return;
+    }
     const next = printTypography(value, field);
     if (next !== value) setValue(path, next as never, { shouldDirty: true });
   };

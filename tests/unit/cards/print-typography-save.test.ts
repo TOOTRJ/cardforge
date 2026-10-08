@@ -272,6 +272,65 @@ describe("updateCardAction — only what the save changes", () => {
     expect(written(stub, "update")?.back_face).toMatchObject({ ...back, flavor_text: "“Gone,” it said." });
   });
 
+  // A row written outside the form (a seed, an old import, a paste) can hold
+  // what a form control never sends back: a trailing space, a Windows line
+  // ending. The editor resends the text without them — that is not an edit.
+  it("stored with stray whitespace and CRLF, resent as the form reads it: kept, not converted", async () => {
+    const STRAY = {
+      title: "Kesh's Stand ",
+      supertype: " Legendary",
+      subtypes: ["Urza's "],
+      rules_text: "It can't block.\r\nIt's \"sworn.\"\r\n",
+      flavor_text: "  \"Hold.\"\r\n-Kesh  ",
+    };
+    state.existing = stored(STRAY);
+    const stub = db();
+    const resent = {
+      title: "Kesh's Stand",
+      supertype: "Legendary",
+      subtypes: ["Urza's"],
+      rules_text: "It can't block.\nIt's \"sworn.\"",
+      flavor_text: "\"Hold.\"\n-Kesh",
+    };
+    const result = await updateCardAction(CARD, { ...resent, rarity: "rare" });
+    expect(result).toMatchObject({ ok: true });
+    const row = written(stub, "update") ?? {};
+    // Whatever is written is the resent text, straight quotes and all —
+    // never a converted one.
+    for (const [key, value] of Object.entries(resent)) if (key in row) expect(row[key], key).toEqual(value);
+    expect(JSON.stringify(row)).not.toMatch(/[’‘“”—•]/);
+  });
+
+  it("…sent back with its CRLF and spaces (a crafted payload): the schema's trim, nothing more", async () => {
+    state.existing = stored({ ...OLD, rules_text: "It can't block.\r\nIt's sworn.", flavor_text: "\"Hold.\"\r\n-Kesh" });
+    const stub = db();
+    await updateCardAction(CARD, { rules_text: "It can't block.\r\nIt's sworn.  ", flavor_text: "\"Hold.\"\r\n-Kesh" });
+    const row = written(stub, "update") ?? {};
+    expect(row.rules_text).toBe("It can't block.\r\nIt's sworn.");
+    expect(row.flavor_text).toBe("\"Hold.\"\r\n-Kesh");
+  });
+
+  it("…and a real edit of such a field still converts it whole", async () => {
+    state.existing = stored({ ...OLD, rules_text: "It can't block.\r\n" });
+    const stub = db();
+    await updateCardAction(CARD, { rules_text: "It can't block. It's sworn." });
+    expect(written(stub, "update")?.rules_text).toBe("It can’t block. It’s sworn.");
+  });
+
+  it("a walker whose stored rows hold CRLF and a trailing space: rows resent clean are kept", async () => {
+    const storedRows = [
+      { cost: "+1", text: "It can't block. " },
+      { cost: "-3", text: 'Creatures you control have "haste."' },
+    ];
+    state.existing = walker({ rules_text: "+1: It can't block. \r\n-3: Creatures you control have \"haste.\"", face_content: { v: 1, loyalty: { abilities: storedRows } } });
+    const stub = db();
+    const rows = [{ cost: "+1", text: "It can't block." }, storedRows[1]];
+    await updateCardAction(CARD, { rarity: "rare", rules_text: `+1: It can't block.\n-3: ${storedRows[1].text}`, face_content: { v: 1, loyalty: { abilities: rows } } });
+    const row = written(stub, "update") as { rules_text: string; face_content: { loyalty: { abilities: unknown[] } } };
+    expect(row.face_content.loyalty.abilities).toEqual(rows);
+    expect(row.rules_text).toBe(`+1: It can't block.\n-3: ${storedRows[1].text}`);
+  });
+
   it("a save that names no text field writes none (the AI jobs' art + publish update)", async () => {
     state.existing = stored(OLD);
     const stub = db();
