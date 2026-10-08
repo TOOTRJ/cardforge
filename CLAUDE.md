@@ -652,7 +652,12 @@ Rules and gotchas:
   in every face that draws that field (a test reads the font files) — so no
   U+2212: MPlantin's is an EMPTY glyph, rules text sets it as a hyphen. A new
   text field of the card is added to `typographyFieldOf` and the server
-  helpers together.
+  helpers together. Stored text now holds ’ “ ” — where people TYPE ' " -:
+  anything that matches a typed string against a title or a name folds both
+  sides with `typedForMatching()` (My Cards' search, the deck's card picker,
+  the deck copy-limit names) — the gallery's SQL title search folds the same
+  six characters (migration 0136; a test holds the two tables together).
+  Never compare a query with a stored title character for character.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
