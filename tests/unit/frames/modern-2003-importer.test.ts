@@ -40,7 +40,7 @@ const luma = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 type Def = { colors: Record<string, { src: string }[]>; printRecipe: (k: string) => unknown; plates?: Record<string, string>; plateGains?: Record<string, number[]>; notes: string[] };
 const defs = CC_TEMPLATES as unknown as Record<string, Def>;
 
-describe("the 2003 recipes", () => {
+describe("the 2003 recipes", { timeout: 30_000 }, () => {
   it("builds seven keys per template from the pack's fourteen masters: `c` = the artifact frame / the plain land, `m` = the gold frame / the gold land", () => {
     expect(EIGHTH_MASTER_OF.modern).toEqual({ w: "w", u: "u", b: "b", r: "r", g: "g", c: "a", m: "m" });
     expect(EIGHTH_MASTER_OF.modernland).toEqual({ w: "wl", u: "ul", b: "bl", r: "rl", g: "gl", c: "l", m: "ml" });
@@ -124,7 +124,8 @@ describe("the 2003 recipes", () => {
     expect(at("title", 700, 236)).toBe(0);
     expect(at("title", 700, 200)).toBe(255);
     expect(() => eighthRegions({ ...planes, pin: undefined } as never, eighthMaps())).toThrow(/no 1500x2100 plane for pin/);
-  });
+    // (Five 1500 × 2100 planes through the resample: generous for CI's V8 coverage.)
+  }, 60_000);
 
   it("tones every region of every master by the rule: prints darker → offset with the texture's contrast (0.7–1.2); prints lighter → the gain while under × 1.35, else the offset", () => {
     expect(Object.keys(tones).sort()).toEqual([...MASTERS].sort());
