@@ -258,6 +258,7 @@ async function scheduleDowngrade(
 ): Promise<BillingActionResult> {
   // Releasing first also drops a schedule that ends in a cancellation.
   await releasePendingChange(stripe, live);
+  let resumedFirst = false;
   if (live.cancel_at_period_end || typeof live.cancel_at === "number") {
     const resumed = await clearCancellation(stripe, { ...live, schedule: null });
     if (subscriptionEndsAt(resumed) != null) {
@@ -268,30 +269,53 @@ async function scheduleDowngrade(
         error: "This plan is set to end and couldn't be resumed here. Resume it on the billing page first, then pick the new plan.",
       };
     }
+    resumedFirst = true;
   }
-  const schedule = await stripe.subscriptionSchedules.create({ from_subscription: live.id });
-  const current = schedule.phases[0];
-  if (!current) return { ok: false, error: "Couldn't read your current plan." };
-  await stripe.subscriptionSchedules.update(schedule.id, {
-    end_behavior: "release",
-    phases: [
-      {
-        start_date: current.start_date,
-        end_date: current.end_date,
-        items: current.items.map((item) => ({
-          price: typeof item.price === "string" ? item.price : item.price.id,
-          quantity: item.quantity ?? 1,
-        })),
-      },
-      {
-        items: [{ price: target.priceId, quantity: 1 }],
-        // One billing interval of the new price; `release` then hands the
-        // subscription back, renewing on that price.
-        duration: { interval: target.period === "annual" ? "year" : "month", interval_count: 1 },
-        proration_behavior: "none",
-      },
-    ],
-  });
+  try {
+    const schedule = await stripe.subscriptionSchedules.create({ from_subscription: live.id });
+    const current = schedule.phases[0];
+    if (!current) {
+      if (!resumedFirst) return { ok: false, error: "Couldn't read your current plan." };
+      throw new Error(`Schedule ${schedule.id} has no current phase.`);
+    }
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      end_behavior: "release",
+      phases: [
+        {
+          start_date: current.start_date,
+          end_date: current.end_date,
+          items: current.items.map((item) => ({
+            price: typeof item.price === "string" ? item.price : item.price.id,
+            quantity: item.quantity ?? 1,
+          })),
+        },
+        {
+          items: [{ price: target.priceId, quantity: 1 }],
+          // One billing interval of the new price; `release` then hands the
+          // subscription back, renewing on that price.
+          duration: { interval: target.period === "annual" ? "year" : "month", interval_count: 1 },
+          proration_behavior: "none",
+        },
+      ],
+    });
+  } catch (error) {
+    if (!resumedFirst) throw error;
+    // The cancellation is already cleared and the new price is NOT
+    // scheduled: the plan now renews on its CURRENT price. A generic
+    // "couldn't start checkout" here would leave a customer who had
+    // cancelled believing nothing changed — say exactly what did.
+    console.error(
+      `[stripe] Subscription ${live.id} was un-cancelled for a downgrade that then failed to schedule:`,
+      error instanceof Error ? error.message : error,
+    );
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/settings");
+    return {
+      ok: false,
+      error:
+        "Your plan was resumed and now renews as usual, but the switch to the new plan couldn't be scheduled. Pick the new plan again on the billing page — or, to stop the plan after all, cancel it again from there.",
+    };
+  }
   return { ok: true, url: `${base}/dashboard/billing?billing=scheduled` };
 }
 
@@ -351,7 +375,7 @@ export async function createCheckoutSessionAction(
           return { ok: false, error: "You're already on that plan." };
         }
         if (live.status === "trialing" && (await subscriptionHasPaymentMethod(live, stripe))) {
-          return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
+          return await createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         if (live.status === "active") {
           const currentTier = await resolveSubscriptionTier(live, stripe);
@@ -360,7 +384,7 @@ export async function createCheckoutSessionAction(
           if (isPlanDowngrade({ tier: currentTier, interval: currentInterval }, target)) {
             // On a plan that is set to end, scheduleDowngrade resumes it
             // first (flag or date) and refuses if that fails.
-            return scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
+            return await scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
           }
           // An upgrade replaces any pending downgrade (the portal refuses to
           // update a subscription a schedule manages, and the old downgrade
@@ -370,7 +394,7 @@ export async function createCheckoutSessionAction(
           // …. By confirming, your updated subscription will be renewed" —
           // read in the sandbox 2026-10-07), so no resume is needed first.
           await releasePendingChange(stripe, live);
-          return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
+          return await createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
         supersedes = live.id;
         const remaining =
@@ -678,8 +702,18 @@ export async function resumeSubscriptionAction(
     const sub = await readOwnSubscription(stripe, profile);
     if (!sub) return { ok: false, error: "There's no plan to resume." };
     if (!isLiveStatus(sub.status)) {
-      // Already over: nothing to un-cancel — a new plan is a new checkout.
-      return { ok: false, error: "This plan has already ended. Pick a plan to start a new one." };
+      if (sub.status === "canceled" || sub.status === "incomplete_expired") {
+        // Already over: nothing to un-cancel — a new plan is a new checkout.
+        return { ok: false, error: "This plan has already ended. Pick a plan to start a new one." };
+      }
+      // past_due / unpaid / incomplete / paused: it has NOT ended, and a
+      // second subscription would bill twice — the portal is where the
+      // payment gets fixed (the same door the checkout action uses).
+      return {
+        ok: false,
+        error: "This plan can't be resumed here while its payment needs attention. Opening the billing portal.",
+        fallback: "portal",
+      };
     }
     const wasEnding = subscriptionEndsAt(sub) != null;
     const resumed = wasEnding ? await clearCancellation(stripe, sub) : sub;

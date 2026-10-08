@@ -506,6 +506,31 @@ describe("createCheckoutSessionAction", () => {
     expect(s.scheduleCreate).not.toHaveBeenCalled();
   });
 
+  it("a downgrade that un-cancels and THEN fails to schedule says the plan now renews — never a generic error over a silent resume", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: 1792722400,
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    s.subscriptionsUpdate.mockImplementation(async () => ({ ...s.live, cancel_at: null }));
+    s.scheduleCreate.mockRejectedValueOnce(new Error("stripe down"));
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toMatch(/was resumed and now renews as usual/);
+    expect(result.ok === false && result.error).toMatch(/couldn't be scheduled/);
+    // The pages that named the cancellation are refreshed: it is gone.
+    expect(s.revalidated).toEqual(expect.arrayContaining(["/dashboard", "/settings"]));
+    // A plan that was NOT cancelled keeps the ordinary error path.
+    s.live = { ...s.live, cancel_at: null };
+    s.scheduleCreate.mockRejectedValueOnce(new Error("stripe down"));
+    // (And it is ANSWERED, not thrown: `return scheduleDowngrade(…)` without
+    // an await used to let the rejection past the action's catch, unlogged.)
+    const plain = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(plain).toEqual({ ok: false, error: "Stripe checkout failed. Please try again." });
+  });
+
   it("an UPGRADE on a plan that is set to end goes to the portal's confirm page untouched — Stripe renews it on confirm", async () => {
     // Read on the sandbox's confirm page (2026-10-07): "Your subscription is
     // currently scheduled to cancel on …. By confirming, your updated
@@ -858,6 +883,15 @@ describe("resumeSubscriptionAction — one-click Resume", () => {
     const result = await resumeSubscriptionAction();
     expect(result).toEqual({ ok: false, error: "This plan has already ended. Pick a plan to start a new one." });
     expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("a PAST-DUE subscription has not ended: no \"pick a new plan\" (that would bill twice) — the portal fixes the payment", async () => {
+    stripeHolds({ id: "sub_live", status: "past_due", customer: "cus_1", cancel_at: PERIOD_END, items: { data: [item()] } });
+    const result = await resumeSubscriptionAction();
+    expect(result).toMatchObject({ ok: false, fallback: "portal" });
+    expect(result.ok === false && result.error).not.toMatch(/already ended/);
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+    expect(s.funnelInserts).toEqual([]);
   });
 
   it("Stripe refusing, or leaving the plan set to end, falls back to the portal — and nothing is recorded as resumed", async () => {

@@ -44,6 +44,23 @@ const base = {
   subscription_canceled_at: null,
 };
 
+describe("listAdminUsers — a row synced before 0135 (the flag alone)", () => {
+  it("shows the cancellation, dated by the stored period end, before any resync", async () => {
+    // What production holds for a subscriber who cancelled before this
+    // deploy: #482's sync stored the flag; the two 0135 columns are NULL.
+    rows.data = [{ ...base, cancel_at_period_end: true }];
+    const page = await listAdminUsers(parseUserListParams({}));
+    const [row] = page!.rows;
+    expect(row.planEnding).toEqual({
+      kind: "plan",
+      endsAt: "2026-10-23T02:31:04.000Z",
+      billedBeforeAt: null,
+      canceledAt: null,
+    });
+    expect(planEndingAdminLabel(row.planEnding!)).toBe("cancelled, ends Oct 23, 2026");
+  });
+});
+
 describe("listAdminUsers — pending cancellations", () => {
   it("marks the cancelled-but-active subscriber, and only them", async () => {
     rows.data = [
