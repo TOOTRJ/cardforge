@@ -270,6 +270,85 @@ describe.each(Object.keys(SYMBOL_STYLES) as SymbolStyle[])('symbol style "%s": t
 });
 
 // ---------------------------------------------------------------------------
+// Style "2003" by its own numbers (TODO 4.10b: `modern`, `modernland`). The
+// loop above holds the preview to the bake for every style; this says what
+// both must BE on the 2003 pair, so neither can drift with the other: a
+// 66 px cost disc with ONE shadow layer 6 px down and 2 px to the LEFT in
+// pure black — the left component too, in both renderers and in the PNG —
+// and FLAT pips in the rules text (inlineSymbolStyle).
+// ---------------------------------------------------------------------------
+
+describe('symbol style "2003": the cost row\'s shadow (down and a little left) and flat inline pips, in both renderers', () => {
+  const COST = braces(["X", "2", "G", "U/W", "G/P"]);
+  const RULES = braces(["T", "1", "G", "Q", "R/G", "2/W", "B/P"]);
+
+  // A land frame draws no cost row: its pips are the rules text's alone.
+  it.each([
+    ["modern", COST],
+    ["modernland", []],
+  ] as const)("%s names the style; its discs are the same in the bake and the preview", async (template, cost: readonly string[]) => {
+    const { getFrameProfile } = await import("@/lib/cards/template-layout");
+    const { symbolStyleOf, inlineSymbolStyle, discShadowCss } = await import("@/lib/cards/symbol-style");
+    const spec = symbolStyleOf(getFrameProfile(template));
+    expect(spec.id).toBe("2003");
+    expect(discShadowCss(spec, 66)).toBe("-2px 6px 0 #000");
+    expect(inlineSymbolStyle(spec).discShadow).toBeNull();
+
+    const data = card(template, cost.join(""), `${RULES.join(", ")}: Draw a card.`);
+    const [bake, preview] = [await bakeDiscs(data), await previewDiscs(data)];
+    expect(bake).toHaveLength(cost.length + RULES.length);
+    expect(preview).toHaveLength(cost.length + RULES.length);
+    bake.forEach((disc, i) => expectSameDisc(preview[i], disc, `2003 ${template} pip ${i}`));
+
+    // The cost row: every disc 66 px, the shadow's LEFT and DOWN components
+    // and its colour, as the bake writes them and as the preview lands them.
+    for (let i = 0; i < cost.length; i += 1) {
+      expect(bake[i].size, `cost ${cost[i]}`).toBe(66);
+      expect(bake[i].shadow, `bake cost ${cost[i]}`).toEqual([-2, 6, "#000"]);
+      expect(preview[i].shadow![0], `preview cost ${cost[i]}: left`).toBeCloseTo(-2, 1);
+      expect(preview[i].shadow![1], `preview cost ${cost[i]}: down`).toBeCloseTo(6, 1);
+      expect(preview[i].shadow![2], `preview cost ${cost[i]}: colour`).toBe("#000000");
+    }
+    // The rules text: flat, whatever the symbol's class.
+    for (let i = cost.length; i < bake.length; i += 1) {
+      expect(bake[i].shadow, `bake rules ${RULES[i - cost.length]}`).toBeNull();
+      expect(preview[i].shadow, `preview rules ${RULES[i - cost.length]}`).toBeNull();
+    }
+  }, 60_000);
+
+  it("the PNG holds the left component: black beside the disc's left edge, none beside its right", async () => {
+    const { renderCardImage } = await import("@/lib/render/card-image");
+    const { MANA_GEM_BG } = await import("@/lib/cards/mana-gem");
+    const response = await renderCardImage(card("modern", "{G}", "Trample"), "hd", { brandMark: true });
+    const { data: px, info } = await sharp(Buffer.from(await response.arrayBuffer())).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const rgb = (x: number, y: number) => [0, 1, 2].map((c) => px[(y * info.width + x) * 3 + c]);
+    const hex = (x: number, y: number) => `#${rgb(x, y).map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+    const box = { minX: Infinity, maxX: -1, minY: Infinity, maxY: -1 };
+    for (let y = 0; y < info.height; y += 1) {
+      for (let x = 0; x < info.width; x += 1) {
+        if (hex(x, y) !== MANA_GEM_BG.g) continue;
+        box.minX = Math.min(box.minX, x);
+        box.maxX = Math.max(box.maxX, x);
+        box.minY = Math.min(box.minY, y);
+        box.maxY = Math.max(box.maxY, y);
+      }
+    }
+    expect(box.maxX - box.minX + 1, "the {G} disc").toBeGreaterThanOrEqual(64);
+    expect(box.maxX - box.minX + 1, "the {G} disc").toBeLessThanOrEqual(66);
+    // Half the shadow's drop under the disc's middle row, the shadow's own
+    // widest rows: it reaches 2 px past the disc on the left only.
+    const y = Math.round((box.minY + box.maxY) / 2) + 3;
+    const edgeLeft = Math.round((box.minX + box.maxX) / 2 - 33);
+    const edgeRight = Math.round((box.minX + box.maxX) / 2 + 33);
+    const darkest = (xs: number[]) => Math.min(...xs.map((x) => Math.max(...rgb(x, y))));
+    expect(darkest([edgeLeft - 2, edgeLeft - 1, edgeLeft]), "black left of the disc").toBeLessThan(0x20);
+    for (const x of [edgeRight + 1, edgeRight + 2, edgeRight + 3]) expect(Math.max(...rgb(x, y)), `no shadow right of the disc, x ${x}`).toBeGreaterThan(0x60);
+    // …and under it, in the colour the preview asks for.
+    expect(hex(Math.round((box.minX + box.maxX) / 2) - 2, box.maxY + 5)).toBe("#000000");
+  }, 60_000);
+});
+
+// ---------------------------------------------------------------------------
 // bakedShadowHex against the PNG itself. The comparisons above hold the
 // preview's shadow colour to bakedShadowHex(the bake's CSS colour) — which
 // says nothing if the model is wrong. So: a real HD bake, the shadow's own

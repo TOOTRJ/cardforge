@@ -282,15 +282,17 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 
   it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
-    expect(artWindowVerdict("modern", "w", miss(1.65))).toEqual({ fails: [], fixed: false });
-    expect(artWindowVerdict("modern", "w", miss(2.5)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.10\): misses by 2\.5 px > 2: /)]);
+    // (m15textless, bound 4.5 px — the 2003 pair, this test's first example,
+    // left the table with TODO 4.10b.)
+    expect(artWindowVerdict("m15textless", "w", miss(3.5))).toEqual({ fails: [], fixed: false });
+    expect(artWindowVerdict("m15textless", "w", miss(5)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.35\): misses by 5 px > 4\.5: /)]);
     // Per-key bounds: expeditionland b/g's missing ring, u/r's 2.5 px apex.
     expect(artWindowVerdict("expeditionland", "b", miss(300)).fails).toEqual([]);
     expect(artWindowVerdict("expeditionland", "u", miss(300)).fails).toHaveLength(1);
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
-    expect(artWindowVerdict("modern", "w", [])).toEqual({ fails: [], fixed: true });
+    expect(artWindowVerdict("m15textless", "w", [])).toEqual({ fails: [], fixed: true });
   });
 });
 
@@ -637,8 +639,6 @@ describe("the art-window known failures", () => {
         // The emblem's slot (Scryfall's art_crop box) against its bridged
         // ray's tip: 0.6 px of overscan (4.52; merged with v35's rule).
         "emblem",
-        "modern",
-        "modernland",
         "tarkirdraconic",
         "tarkirghostfire",
       ].sort(),

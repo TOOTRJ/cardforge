@@ -78,7 +78,9 @@ describe("CardPreview — set symbol size", () => {
 
   it("keeps a frame outside the family at type.sizePct × 1.1 for every source", () => {
     const box = cqw(getFrameProfile("modern").type.sizePct * 1.1);
-    expect(box).toBe("3.817cqw");
+    // 66 px × 1.1 at HD since TODO 4.10b set the 2003 type line at its
+    // printed size (it was 52 px: 3.817cqw).
+    expect(box).toBe("4.840cqw");
     expect(styleOf(markup("modern", {}), /svg[^>]*aria-label="PipGlyph set"/)).toContain(`width:${box};height:${box}`);
     expect(styleOf(markup("modern", { setIconCode: "dom" }), /i[^>]*ss-dom/)).toContain(`font-size:${box};`);
   });

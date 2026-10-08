@@ -58,6 +58,17 @@ const MOVED_AFTER_FOLD: Record<string, (p: FrameProfile) => FrameProfile> = {
     costRect: { ...p.costRect!, leftPct: 51.2 },
     symbolRect: { ...p.symbolRect!, leftPct: 79 },
   }),
+  // TODO 4.10b (layout v47): the 2003 frame was rebuilt on Card Conjurer's
+  // masters and re-measured on the prints — every rect the old override
+  // tuned (against the M12 Serra Angel scan, on the MSE master) moved.
+  modern: (p) => ({
+    ...p,
+    pt: { ...p.pt!, rect: { ...p.pt!.rect, topPct: 88.4 } },
+    title: { ...p.title, rect: { ...p.title.rect, topPct: 6, leftPct: 8.9 } },
+    footer: { ...p.footer!, rect: { ...p.footer!.rect, topPct: 92.2, leftPct: 15.5 } },
+    costRect: { topPct: 5.6, leftPct: 52.3, widthPct: 39, heightPct: 4.4 },
+    symbolRect: { topPct: 56.95, leftPct: 78.2, widthPct: 12, heightPct: 3.9 },
+  }),
 };
 
 describe("folded production overrides (migration 0114)", () => {

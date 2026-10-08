@@ -14,26 +14,32 @@
 //     (lib/cards/rules-layout.ts metricsFor) and the cost row's
 //     (lib/cards/render-tiers.ts costRowWidthPct).
 //
-// Two styles exist: "modern" — M15's discs, their hard offset shadow and the
-// modern tap, what every profile resolves to unless it names another — and
-// "1997" (TODO 4.10a: flat discs, the 1997 tap; `retro`, `retroland`). The
-// other era items (4.10b "2003", 4.10c "original") add a value HERE and name
-// it on their profiles; a renderer never learns a
-// style's name. A style is a CORRECTION of a frame, never a per-card switch.
+// Three styles exist: "modern" — M15's discs, their hard offset shadow and
+// the modern tap, what every profile resolves to unless it names another —
+// "1997" (TODO 4.10a: flat discs, the 1997 tap; `retro`, `retroland`) and
+// "2003" (TODO 4.10b: a COST disc with a black shadow down and a little to
+// the left, flat pips in the rules text, the modern tap; `modern`,
+// `modernland`). The last
+// era item (4.10c "original") adds a value HERE and names it on its
+// profiles; a renderer never learns a style's name. A style is a CORRECTION of a frame, never a per-card switch.
 // Client-safe, no imports.
 // ---------------------------------------------------------------------------
 
 /** FrameProfile.symbolStyle's values. */
-export type SymbolStyle = "modern" | "1997";
+export type SymbolStyle = "modern" | "1997" | "2003";
 
 export const DEFAULT_SYMBOL_STYLE: SymbolStyle = "modern";
 
 export type SymbolStyleSpec = {
   id: SymbolStyle;
   /** The disc's hard shadow, as fractions of the disc's diameter (each at
-   *  least 1 px in the bake): `left` of it and `down` from it, in `colorHex`.
-   *  null = the style draws none. */
+   *  least 1 px in the bake; a `left` of 0 is none to the left): `left` of
+   *  it and `down` from it, in `colorHex`. null = the style draws none. */
   discShadow: { left: number; down: number; colorHex: string } | null;
+  /** A pip set in the RULES text carries the disc's shadow too ("modern");
+   *  false = the shadow is the COST row's alone and an inline pip is flat
+   *  (the 2003 prints). Read through inlineSymbolStyle. */
+  inlineShadow: boolean;
   /** The mana-font class a shadowed pip carries in the browser OUTSIDE a
    *  card (`.ms-shadow`: the pickers, deck lists, articles); null with no
    *  shadow. Its own `box-shadow` is mana-font's — two layers in em of the
@@ -56,6 +62,7 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
   modern: {
     id: "modern",
     discShadow: { left: 0.06, down: 0.07, colorHex: "#111" },
+    inlineShadow: true,
     previewShadowClass: "ms-shadow",
     previewShadowCss: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
     costRowShadowDiscs: 0.1,
@@ -71,11 +78,34 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
   "1997": {
     id: "1997",
     discShadow: null,
+    inlineShadow: false,
     previewShadowClass: null,
     previewShadowCss: null,
     costRowShadowDiscs: 0,
     tapSuffix: "tap-4ed",
   },
+  // The 2003 frame (TODO 4.10b / 4.24; `modern`, `modernland`): the prints'
+  // cost discs (66 px, the profile's costSizePct) carry a BLACK shadow 6 px
+  // down and 2 px to the LEFT — a crescent from nine o'clock round the
+  // bottom to four, nothing on the right (84 prints, CHK 2004 → JOU 2014:
+  // discs on rows 140–206, the shadow ending on row 212 and reaching
+  // 1302 px beside the last disc; its black is 6.3 px deep under the disc
+  // and 1–2 px wide beside it) — while a pip in the rules text is flat; {T}
+  // is the modern arrow (from Mirrodin 2003 on) and the five colour symbols
+  // are the font's. No mana-font class draws this shadow: a card's pip takes
+  // it from `discShadow` in both renderers (the preview through
+  // previewDiscShadowCss). Along the row it reaches 2 px past the first
+  // disc (costRowShadowDiscs).
+  "2003": {
+    id: "2003",
+    discShadow: { left: 2 / 66, down: 6 / 66, colorHex: "#000" },
+    inlineShadow: false,
+    previewShadowClass: null,
+    previewShadowCss: null,
+    costRowShadowDiscs: 2 / 66,
+    tapSuffix: "tap",
+  },
+
 };
 
 /** A one-colour symbol's font size as a fraction of its disc's diameter —
@@ -100,22 +130,29 @@ export function symbolStyleOf(profile: { symbolStyle?: SymbolStyle } | null | un
   return symbolStyle(profile?.symbolStyle);
 }
 
+/** The style of a pip set in the RULES text: `spec` itself where an inline
+ *  pip carries the disc's shadow, else the same style with no shadow (the
+ *  2003 prints shadow the cost row only). The rules layout's shadow model
+ *  and both renderers' inline pips read the style through this. */
+export function inlineSymbolStyle(spec: SymbolStyleSpec): SymbolStyleSpec {
+  if (spec.inlineShadow || !spec.discShadow) return spec;
+  return { ...spec, discShadow: null, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0 };
+}
+
 /** The disc shadow's reach in whole px for a disc `discPx` wide — what the
- *  bake draws and the rules layout keeps clear: at least 1 px each way, 0
- *  for a style with no shadow. */
+ *  bake draws and the rules layout keeps clear: at least 1 px each way a
+ *  style reaches (a `left` of 0 stays 0), 0 for a style with no shadow. */
 export function discShadowPx(spec: SymbolStyleSpec, discPx: number): { left: number; down: number } {
   if (!spec.discShadow) return { left: 0, down: 0 };
-  return {
-    left: Math.max(1, Math.round(discPx * spec.discShadow.left)),
-    down: Math.max(1, Math.round(discPx * spec.discShadow.down)),
-  };
+  const px = (share: number) => (share > 0 ? Math.max(1, Math.round(discPx * share)) : 0);
+  return { left: px(spec.discShadow.left), down: px(spec.discShadow.down) };
 }
 
 /** The bake's `box-shadow` for a disc `discPx` wide; undefined with none. */
 export function discShadowCss(spec: SymbolStyleSpec, discPx: number): string | undefined {
   if (!spec.discShadow) return undefined;
   const { left, down } = discShadowPx(spec, discPx);
-  return `${-left}px ${down}px 0 ${spec.discShadow.colorHex}`;
+  return `${left ? -left : 0}px ${down}px 0 ${spec.discShadow.colorHex}`;
 }
 
 /** The colour a `colorHex` box-shadow HAS in the stored PNG. Satori draws a
@@ -154,7 +191,7 @@ export function previewDiscShadowCss(
 ): string | undefined {
   if (!spec.discShadow) return undefined;
   const { left, down } = discShadowPx(spec, discPx);
-  return `${(-left / emPx).toFixed(4)}em ${(down / emPx).toFixed(4)}em 0 ${bakedShadowHex(spec.discShadow.colorHex)}`;
+  return `${((left ? -left : 0) / emPx).toFixed(4)}em ${(down / emPx).toFixed(4)}em 0 ${bakedShadowHex(spec.discShadow.colorHex)}`;
 }
 
 /** The mana-font suffix a symbol draws in `spec`: the style's own tap for

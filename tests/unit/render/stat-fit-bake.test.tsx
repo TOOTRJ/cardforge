@@ -21,6 +21,8 @@ beforeAll(async () => {
   frames = await serveStandInFrames([
     { template: "flip", keys: ["r"] },
     { template: "battle", keys: ["r"] },
+    // The 2003 frame (TODO 4.10b): Card Conjurer's 8th, in the bucket too.
+    { template: "modern", keys: ["r"] },
   ]);
 }, 60_000);
 afterAll(() => frames.restore());
@@ -105,11 +107,11 @@ describe("long stats shrink to fit", () => {
     expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
   }, 60_000);
 
-  it("Modern: 100/100 stays on the plate's light face (1143–1373 px), off the bevel", async () => {
+  it("Modern: 100/100 stays on the plate's light face (1134–1367 px since TODO 4.10b), off the bevel", async () => {
     const small = await bake(card("modern", { power: "1", toughness: "1" }));
     const box = diffBox(small, await bake(card("modern", { power: "100", toughness: "100" })))!;
-    expect(box.x0).toBeGreaterThanOrEqual(1143);
-    expect(box.x1).toBeLessThanOrEqual(1373);
+    expect(box.x0).toBeGreaterThanOrEqual(1134);
+    expect(box.x1).toBeLessThanOrEqual(1367);
   }, 60_000);
 
   it("Retro (4.10a): a value is set against the prints' right edge — two digits grow to the LEFT at full size, *+1/*+1 shrinks short of the artist line's box, ONE line", async () => {

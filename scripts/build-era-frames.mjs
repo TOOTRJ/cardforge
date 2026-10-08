@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
-// build-era-frames.mjs — convert the older-border standard frames (2003
-// modern, Future Sight; the 1997 frame until TODO 4.10a) from the Full-Magic-Pack MSE styles into the app's
+// build-era-frames.mjs — convert the older-border standard frames (Future
+// Sight; the 1997 frame until TODO 4.10a, the 2003 frame until 4.10b) from the Full-Magic-Pack MSE styles into the app's
 // 1500×2100 per-color frame PNGs, flood-filling the art window to transparent.
 //
 // Same flood-fill engine as scripts/convert-mse-frame.mjs, but driven by a
@@ -20,7 +20,7 @@ import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
 // Phase B (TODO 3.26): normalise the card corners before the write, so a
-// rebuild can't bring the white paper back (modern is allow-listed).
+// rebuild can't bring the white paper back (an allow-listed template).
 import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const PACK_ROOT = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
@@ -36,26 +36,10 @@ const NEAR_WHITE = 232;
 // builder used to write (magic-old.mse-style/mcard.jpg → 1500×2100, window
 // cut, corners normalised), kept as scripts/frame-inputs/retro-m-mse.png.
 
-// 2003 modern (magic-new): white art window (the standard frame's window is the
-// light card stock), artifact frame for colorless, gold for multicolor.
-const newMap = {
-  w: "wcard.jpg",
-  u: "ucard.jpg",
-  b: "bcard.jpg",
-  r: "rcard.jpg",
-  g: "gcard.jpg",
-  c: "acard.jpg",
-  m: "mcard.jpg",
-};
-const newLandMap = {
-  w: "wlcard.jpg",
-  u: "ulcard.jpg",
-  b: "blcard.jpg",
-  r: "rlcard.jpg",
-  g: "glcard.jpg",
-  c: "clcard.jpg",
-  m: "mlcard.jpg",
-};
+// The 2003 frame (`modern`, `modernland`) left this builder with TODO 4.10b:
+// its masters and P/T plates are built by scripts/import-cc-frames.mjs into
+// the frames bucket (Card Conjurer's 8th drawing re-cut and toned onto the
+// 2004–2014 prints).
 
 // Future Sight (magic-future): the standard frames are JPGs; the textbox /
 // typeline / P/T overlays ship as pre-cut PNGs (handled separately if needed).
@@ -70,20 +54,6 @@ const futureMap = {
 };
 
 const FRAMES = {
-  modern: {
-    out: "public/frames/modern",
-    pack: `${PACK_ROOT}/magic-new.mse-style`,
-    map: newMap,
-    fill: "white",
-    seeds: [[0.5, 0.3]],
-  },
-  modernland: {
-    out: "public/frames/modernland",
-    pack: `${PACK_ROOT}/magic-new.mse-style`,
-    map: newLandMap,
-    fill: "white",
-    seeds: [[0.5, 0.3]],
-  },
   // Future Sight (NOT yet shipped): the base {color}card.jpg is the colored
   // background + name bar + vertical mana strip; the silver frame structure,
   // type bar, textbox, and P/T box ship as SEPARATE positioned overlay PNGs

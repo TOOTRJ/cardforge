@@ -134,7 +134,9 @@ describe("faceOf — every shipped profile resolves to what it drew", () => {
       expect(profile.loyaltyRows?.badgeFont, template).toBeUndefined();
       expect(profile.chapters?.badge.numeralFont, template).toBeUndefined();
       const retro = RETRO_1997.includes(template);
-      expect(profile.footer?.prefix, template).toBe(retro ? "Illus. " : undefined);
+      // The 2003 pair prints the bare credit after its brush (TODO 4.10b).
+      const modern = template === "modern" || template === "modernland";
+      expect(profile.footer?.prefix, template).toBe(retro ? "Illus. " : modern ? "" : undefined);
       expect(profile.footer?.align, template).toBe(retro ? "center" : undefined);
     }
   });

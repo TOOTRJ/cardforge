@@ -110,7 +110,8 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
-import { symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
 import {
   resolveLoyaltyRows,
@@ -1677,12 +1678,28 @@ function CardFace({
           </span>
           {/* Footer-right: the owner's custom mark, or nothing — mirrors the
               bake (lib/render/card-image.tsx, layout v19). */}
-          {footerWatermark && layout.footer.align !== "center" && layout.footer.align !== "end" ? (
+          {footerWatermark && layout.footer.align !== "center" && layout.footer.align !== "end" && !layout.copyrightSlot ? (
             <span style={{ flexShrink: 0 }}>
               {slotLine(footerFace(layout.footer).id, footerWatermark)}
             </span>
           ) : null}
         </div>
+      ) : null}
+
+      {/* The paintbrush before the artist (FrameProfile.footerBrush, TODO
+          4.10b: the 2003 frame) — our own path at the profile's rect, in
+          the footer's ink on this master; the bake's twin. */}
+      {!collector && layout.footer && layout.footerBrush && footerInkResolved ? (
+        <svg
+          aria-hidden
+          data-footer-brush
+          className="pointer-events-none absolute z-20"
+          viewBox={FOOTER_BRUSH_VIEWBOX}
+          preserveAspectRatio="none"
+          style={rectStyle(layout.footerBrush.rect)}
+        >
+          <path d={FOOTER_BRUSH_PATH} fill={footerInkResolved.colorHex} fillRule="evenodd" />
+        </svg>
       ) : null}
 
       {/* Brand mark — pipglyph.com, bottom-right, mirroring the bake's
@@ -3032,7 +3049,9 @@ function RulesPip({
   gapBefore: string | null;
   overrides: PipOverrides | null;
 }) {
-  const symbols = useContext(SymbolStyleContext);
+  // A pip in the rules text: the style's shadow only where an inline pip
+  // carries one (inlineSymbolStyle — the bake's RulesItemBake twin).
+  const symbols = inlineSymbolStyle(useContext(SymbolStyleContext));
   const overrideSrc = pipOverrideForSuffix(suffix, overrides);
   // A symbol the font has no glyph for: the bake draws no disc and keeps
   // neither its room nor its gap (ManaGem) — nor does this.

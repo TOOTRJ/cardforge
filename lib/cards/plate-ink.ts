@@ -46,8 +46,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // the same mask.
   "/frames/m15borderlesspw/loyalty/{color}.png": { left: 0.025, top: 0.0389, right: 0.975, bottom: 0.9611 },
   "/frames/m15borderlesspwtall/loyalty/{color}.png": { left: 0.025, top: 0.0389, right: 0.975, bottom: 0.9611 },
-  // Git plates: MSE's 2003 box and the Tarkir showcases' plates / ribbon.
-  "/frames/modern/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The 2003 frame's plates (TODO 4.10b): Card Conjurer's 8th pt/<K>.png
+  // (322 × 176), drawn at MODERN.pt.plateRect — the body with its outline,
+  // none of the soft shadow under and beside it.
+  "/frames/modern/pt/{color}.png": { left: 0.0621, top: 0.0681, right: 0.9535, bottom: 0.9035 },
+  // Git plates: the Tarkir showcases' plates / ribbon.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0.0036, top: 0.0067, right: 0.9964, bottom: 0.9933 },
   "/frames/tarkirdraconic/pt/{color}.png": { left: 0.0054, top: 0.0106, right: 0.9973, bottom: 0.9841 },
   "/frames/tarkirghostfire/pt/{color}.png": { left: 0.0051, top: 0.0048, right: 0.9949, bottom: 0.9952 },

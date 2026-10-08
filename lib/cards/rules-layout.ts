@@ -70,7 +70,7 @@ import {
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
-import { discShadowPx, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
+import { discShadowPx, inlineSymbolStyle, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
 import {
   RULES_BOX_PAD_PX,
@@ -165,7 +165,9 @@ export function metricsFor(
   target: RulesTarget = "hd",
   symbols?: SymbolStyle,
 ): RulesMetrics {
-  const pipShadow = (discPx: number) => discShadowPx(symbolStyle(symbols), discPx);
+  // An INLINE pip's shadow: the style's, or none where it shadows the cost
+  // row only (inlineSymbolStyle; the 2003 frame, TODO 4.10b).
+  const pipShadow = (discPx: number) => discShadowPx(inlineSymbolStyle(symbolStyle(symbols)), discPx);
   const scale = RULES_TARGET_SCALE[target];
   const fontPx = sizePx * scale;
   const linePx = Math.round(fontPx * lineHeight);

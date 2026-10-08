@@ -89,7 +89,7 @@ const lum = (r: Raw, x: number, y: number) => {
 };
 
 describe("etched finish (v26)", () => {
-  it.each<FrameTemplate>(["modern"])("%s: texture on the frame only — no left-edge strip, border and art untouched", async (template) => {
+  it.each<FrameTemplate>(["agclassic"])("%s: texture on the frame only — no left-edge strip, border and art untouched", async (template) => {
     const [regular, etched] = [await bake(card(template)), await bake(card(template, { frameStyle: { template, finish: "etched" } }))];
     // Black border = pixels that are black in the regular bake. The texture
     // is masked by the frame's luminance, so near-black frame pixels may move
@@ -131,12 +131,14 @@ describe("pipglyph.com mark sits inside the black border (v25)", () => {
   // (Retro and retroland left this list with TODO 4.10a: their mark sits in
   // the footer's © slot, on the frame — tests/unit/render/retro-1997-bake
   // .test.tsx.)
-  it.each<FrameTemplate>(["agclassic", "alphaland", "modern", "modernland"])(
+  // (Modern and modernland left it with TODO 4.10b, the same way —
+  // tests/unit/render/modern-2003-bake.test.tsx.)
+  it.each<FrameTemplate>(["agclassic", "alphaland"])(
     "%s",
     async (template) => {
       // No P/T: extendedart draws the M15 plate, which lives in the frames
       // bucket (not on disk). The mark's placement doesn't depend on it.
-      const land = template === "alphaland" || template === "modernland";
+      const land = template === "alphaland";
       const data = card(template, { cardType: land ? "land" : "instant", cost: land ? null : "{2}{W}", power: null, toughness: null });
       const [off, on] = [await bake(data, false), await bake(data, true)];
       const box = diffBox(off, on);

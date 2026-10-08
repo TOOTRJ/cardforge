@@ -193,6 +193,9 @@ describe("Card Conjurer recipe", () => {
       "m20tokenartifacttext",
       "m20tokentall",
       "m20tokentext",
+      // The 2003 frame (TODO 4.10b; tests/unit/frames/modern-2003-importer.test.ts).
+      "modern",
+      "modernland",
       // The 1997 frame (TODO 4.10a; tests/unit/frames/retro-1997-importer.test.ts).
       "retro",
       "retroland",

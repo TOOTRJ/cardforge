@@ -192,7 +192,7 @@ describe("fitStatSizePct", () => {
     const modern = pt("modern");
     expect(keeps(modern, "99/99")).toBe(true);
     expect(fitStatSizePct(modern, "100/100")).toBeLessThan(modern.sizePct);
-    expect(inkPx(modern, "100/100").right).toBeLessThanOrEqual(1373 + 1e-6);
+    expect(inkPx(modern, "100/100").right).toBeLessThanOrEqual(1367 + 1e-6);
   });
 
   it("Battle defense fits the black interior of the shield its master paints, not the whole rect", () => {
@@ -300,7 +300,9 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     ["m15pw", "loyalty", 1239, 1389],
     // The 1997 frame (TODO 4.10a): from the artist line's box to the outer bevel.
     ["retro", "pt", 1162, 1413],
-    ["modern", "pt", 1143, 1373],
+    // The 2003 frame (TODO 4.10b): Card Conjurer's plate at the printed box,
+    // its light face on the digits' rows.
+    ["modern", "pt", 1134, 1367],
     // Flip (layout v38, TODO 4.21a): each Card Conjurer plate's light face on
     // the digits' rows, measured on every colour's cut plate.
     ["flip", "pt", 1215, 1395],

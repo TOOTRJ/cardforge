@@ -96,8 +96,9 @@ import {
   type BasicSymbolPlan,
 } from "@/lib/cards/basic-symbol";
 import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
-import { discShadowCss, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { discShadowCss, inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { manaGemSpec, type ManaGemHalf } from "@/lib/cards/mana-gem";
+import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
@@ -1382,12 +1383,34 @@ function CardImage({
               slot: layout.footer,
               ink: footerInkResolved,
               artist: footerArtistLine(layout.footer, card.artistCredit),
-              watermarkText,
+              // A profile with a © slot prints the custom text THERE (line
+              // 2), never at this line's end.
+              watermarkText: layout.copyrightSlot ? null : watermarkText,
               cardWidth: width,
               turn: layout.footerTurn ?? 0,
               aspect,
             })
           : null}
+
+      {/* The paintbrush before the artist (FrameProfile.footerBrush, TODO
+          4.10b: the 2003 frame) — our own path at the profile's rect, in
+          the footer's ink on this master; the preview's twin. */}
+      {!collector && layout.footer && layout.footerBrush && footerInkResolved ? (
+        <svg
+          width={(layout.footerBrush.rect.widthPct / 100) * width}
+          height={(layout.footerBrush.rect.heightPct / 100) * height}
+          viewBox={FOOTER_BRUSH_VIEWBOX}
+          preserveAspectRatio="none"
+          style={{
+            position: "absolute",
+            left: (layout.footerBrush.rect.leftPct / 100) * width,
+            top: (layout.footerBrush.rect.topPct / 100) * height,
+            zIndex: 20,
+          }}
+        >
+          <path d={FOOTER_BRUSH_PATH} fill={footerInkResolved.colorHex} fillRule="evenodd" />
+        </svg>
+      ) : null}
 
       {/* Showcase tints the title italic via the Band `italic` prop above. */}
       {isShowcase ? null : null}
@@ -2172,7 +2195,7 @@ function RulesItemBake({
   top,
   gapBefore,
   overrides,
-  symbols,
+  symbols: cardSymbols,
 }: {
   item: RulesItem;
   glyph: number;
@@ -2183,6 +2206,9 @@ function RulesItemBake({
   /** The frame's symbol style (lib/cards/symbol-style.ts). */
   symbols: SymbolStyleSpec;
 }) {
+  // A pip in the rules text: the style's shadow only where an inline pip
+  // carries one (inlineSymbolStyle — the 2003 prints shadow the cost alone).
+  const symbols = inlineSymbolStyle(cardSymbols);
   if (item.t === "m") {
     const place: React.CSSProperties = {
       alignSelf: "flex-start",

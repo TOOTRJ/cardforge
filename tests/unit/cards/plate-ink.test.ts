@@ -37,6 +37,7 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/m15borderlessartifact/pt/{color}.png": { w: "27f7c5b0b36d", u: "f5cfb86d08b1", b: "8aa1a934257b", r: "c04b88ddea3b", g: "22975809834a", c: "153362ead210", m: "d7d60b3cbd8e" },
   "/frames/m15borderlesspw/loyalty/{color}.png": { w: "6af778da942a", u: "459f4b37f038", b: "5b45548e3899", r: "46f6a9e599dc", g: "d027941c7fd9", c: "ed5490591be4", m: "0d308c509dbb" },
   "/frames/m15borderlesspwtall/loyalty/{color}.png": { w: "bf0ed1b51e08", u: "be312d933019", b: "d8c4a3ac7a57", r: "9ef2fcdad11f", g: "c13aed5d332d", c: "44a3d3324658", m: "4ac3957dae04" },
+  "/frames/modern/pt/{color}.png": { w: "0d2d382cd479", u: "025d9e131762", b: "a3f190659779", r: "262ca503885b", g: "4a0bbfa954d7", c: "5a54fa0ecc1e", m: "af991e2d5393" },
   "/frames/m15devoid/pt/{color}.png": { w: "aa94a0984a71", u: "aa94a0984a71", b: "aa94a0984a71", r: "aa94a0984a71", g: "aa94a0984a71", c: "aa94a0984a71", m: "aa94a0984a71" },
   "/frames/flip/pt/{color}-bottom.png": { w: "1774f78970a8", u: "9ae9a1185ad1", b: "463d9961e020", r: "d050c1c55882", g: "7b56a8950185", c: "253677e53a9b", m: "cae2827446a0" },
   "/frames/flip/pt/{color}-top.png": { w: "76ac787ef466", u: "4f99d8cbb7a2", b: "b5e9f2081d99", r: "eb90c5a3bb5f", g: "fd89b29e7229", c: "74c0d4223b14", m: "9ecd8cae94aa" },

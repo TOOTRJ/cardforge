@@ -17,13 +17,15 @@
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
 import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName, rampShare } from "./pair-ramp.mjs";
-import { describeRegionTones, stretchRange } from "./print-cut.mjs";
+import { describeRegionTones, regionGain, stretchRange } from "./print-cut.mjs";
 import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
+import { EIGHTH_MASTER_OF, EIGHTH_PLATE_TONES, eighthPrintRecipe } from "./eighth-2003.mjs";
 
 // The piecewise-linear re-cut and the region tone with an offset (TODO
 // 4.10a): scripts/lib/print-cut.mjs, re-exported for the importer and tests.
 export { clearWindowHalo, cutMaps, piecewiseMap, recutPiecewise, recutPlane, regionGain, squareCornersOnBlack, stretchRange, toneRegions } from "./print-cut.mjs";
 export { seventhRegions } from "./seventh-1997.mjs";
+export { eighthRegions } from "./eighth-2003.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
@@ -2649,6 +2651,7 @@ export function describePrintRecipe(recipe) {
     ...(recipe.windowHalo ? { windowHalo: `the last ${recipe.windowHalo} px of the art ring take the ring's colour ${recipe.windowHalo + 1} px out (the white window's fade on the JPEG source); alpha untouched` } : {}),
     ...(recipe.byColour ? { textBox: "cut by colour (no drawn outline), no trim ring" } : {}),
     ...(recipe.rings ? { rings: `${recipe.rings} = region "pin"` } : {}),
+    ...(recipe.regionMasks ? { regions: Object.fromEntries(Object.entries(recipe.regionMasks).map(([name, rel]) => [name, `${rel} (moved with the cut)`])) } : {}),
   };
 }
 
@@ -2658,6 +2661,36 @@ const SEVENTH_NOTES = [
   "the ORIGINAL cards (Mirage 1996 → Scourge 2003), not the 2021+ reprints whose colours the pack carries (owner 2026-10-07); every constant read off the prints once: outer frame and art window on 21 white prints, each colour's text box and tones on the per-pixel median of its prints (9 sets; white 21; the basic lands 7) — no scan is read by the build",
   "known drawing caveats the owner accepted (round 38): blue is a flat-shaded redraw (hard-edged shapes where the print has brushwork), green's plank has no grain, black's parchment keeps a burnt rim",
 ];
+
+// ---------------------------------------------------------------------------
+// TODO 4.10b: the 2003 frame — `modern`, `modernland` — on the prints of the
+// frame's LATER drawing (Champions of Kamigawa 2004 → Journey into Nyx
+// 2014; Eighth Edition → Fifth Dawn draw the title bar and the left inner
+// edges 6–8 px differently: no second master). Card Conjurer's "8th Edition"
+// drawing (pack8th.js) is sharp (outer edge 1.7–2.2 px wide, the MSE
+// conversion's 6.2–6.8) but about 1 % small and, like the MSE art, 10–25
+// luma light on most bands — so every master is RE-CUT with ONE piecewise-
+// linear map per axis (the 2003 prints' edges do not differ by colour) and
+// TONED through the pack's own five masks onto its prints' medians: the
+// steps are scripts/lib/print-cut.mjs, the numbers scripts/lib/eighth-2003.mjs.
+// A LIVE pair (owner 2026-10-07: the artwork swapped in the same sweep as
+// the text fix).
+// ---------------------------------------------------------------------------
+const EIGHTH = "img/frames/8th";
+const EIGHTH_TRANSFORM =
+  "native 1500x2100; re-cut onto the 2004–2014 prints (printRecipe.cut: one piecewise-linear map per axis through [source px, print px] anchors — the outer frame, the type bar's top and bottom lines, the text box's top, bottom and right lines; Catmull-Rom, premultiplied, one resample), then toned region by region (printRecipe.tones: (in − from) × k + to per channel where the prints are darker, × to ÷ from where they are lighter; the regions are the pack's Frame / Title / Type / Rules / Pinline masks moved with the same map, the pinline taken out of the other four); corners rounded to the importer radius";
+const EIGHTH_NOTES = [
+  "the frame's LATER drawing (CHK 2004 → JOU 2014, black-bordered); every constant read off the prints once (proof 2, 2026-10-07): the edges on 34 white prints and confirmed per key, the tones on the per-pixel median of each master's prints — no scan is read by the build",
+  "known drawing caveats (proof 2): the pack's white body is a blocky mottling where the prints have marble veins and its keylines are flat; the black frame's body is left as drawn (its sides read 10–20 luma under the prints' grey stone); every key has clean digital bevels, not the prints' soft ones",
+];
+/** The pack's P/T plates (322 × 176) per colour key: `c` is the ARTIFACT
+ *  plate, as the master is. */
+const EIGHTH_PT = Object.freeze(Object.fromEntries(COLORS.map((k) => [k, `${EIGHTH}/pt/${EIGHTH_MASTER_OF.modern[k]}.png`])));
+/** Each plate's per-channel gain onto its prints' plate (EIGHTH_PLATE_TONES;
+ *  the importer's `plateGains`: colour key → [r, g, b]). */
+const EIGHTH_PT_GAINS = Object.freeze(
+  Object.fromEntries(COLORS.map((k) => [k, Object.freeze(regionGain(EIGHTH_PLATE_TONES[EIGHTH_MASTER_OF.modern[k]]).map((g) => Math.round(g * 1000) / 1000))])),
+);
 
 export const CC_TEMPLATES = {
   m15: {
@@ -3216,6 +3249,30 @@ export const CC_TEMPLATES = {
       ...SEVENTH_NOTES,
       "c = the plain land l.png (the orange box of Fifth Edition 1997 on); w–g = the pack's coloured land boxes (wl … gl: the land frame, the box and its rings in the colour), toned onto the seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY, ONS); the rings (the pack's Pinline mask) are their own region",
       "m = a render STAND-IN, never ticked: the plain land with the pack's gold text box laid in through its Rules mask, the box toned onto the gold prints' box. No three-colour 1997 land was measured; two-colour lands print a blend (TODO 4.6h)",
+    ],
+  },
+  // --- TODO 4.10b: the 2003 frame (see the section above CC_TEMPLATES).
+  modern: {
+    colors: perColor((k) => [layer(`${EIGHTH}/${EIGHTH_MASTER_OF.modern[k]}.png`)]),
+    printRecipe: (key) => eighthPrintRecipe("modern", key),
+    plates: EIGHTH_PT,
+    plateGains: EIGHTH_PT_GAINS,
+    pack: "pack8th.js '8th Edition' (w u b r g m, a) + its P/T plates",
+    transforms: EIGHTH_TRANSFORM,
+    notes: [
+      ...EIGHTH_NOTES,
+      "c = the pack's ARTIFACT frame a.png, as before (the pack's c.png is the translucent Eldrazi frame: TODO 4.10d); m = the pack's gold, the look of a THREE-colour card (a two-colour gold card wears two-colour pinlines: TODO 4.6h)",
+      "P/T plates = the pack's own (322 × 176, native size), each multiplied by a per-channel gain onto its prints' plate face (plateGains: gold × 0.90 / 0.84 / 0.64, blue × 0.86 / 0.91 / 0.94, red × 1.08 / 1.09 / 1.15, the rest within 5 %), drawn at the printed box through the profile's plateRect; c takes the artifact plate; `modernland` draws this set",
+    ],
+  },
+  modernland: {
+    colors: perColor((k) => [layer(`${EIGHTH}/${EIGHTH_MASTER_OF.modernland[k]}.png`)]),
+    printRecipe: (key) => eighthPrintRecipe("modernland", key),
+    pack: "pack8th.js '8th Edition' lands (l, wl ul bl rl gl, ml)",
+    transforms: EIGHTH_TRANSFORM,
+    notes: [
+      ...EIGHTH_NOTES,
+      "c = the plain land l.png, toned on 13 lands with no colour of their own; w–g = the pack's coloured land frames (wl … gl), toned on the eight basics of each colour (CHK RAV TSP LRW ALA ISD RTR THS); m = the pack's gold land ml.png, toned on 9 three- and five-colour lands (two-colour lands print a blend: TODO 4.6h)",
     ],
   },
 };
@@ -4200,8 +4257,10 @@ export function sourceFilesFor(def) {
   // rings mask (TODO 4.10a, the 1997 lands).
   for (const key of builtColors(def)) {
     for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);
-    const rings = def.printRecipe?.(key).rings;
-    if (rings) files.add(rings);
+    const printRecipe = def.printRecipe?.(key);
+    if (printRecipe?.rings) files.add(printRecipe.rings);
+    // …and its region masks (TODO 4.10b, the 2003 frame).
+    for (const mask of Object.values(printRecipe?.regionMasks ?? {})) files.add(mask);
   }
   return [...files].sort();
 }

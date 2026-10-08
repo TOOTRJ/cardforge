@@ -148,7 +148,7 @@ describe("art-source — inlines every raster the way the browser shows it", () 
 });
 
 // ---------------------------------------------------------------------------
-// Real bakes (git frame `modern`, offline). The art window of an orientation
+// Real bakes (git frame `tarkirdragon`, offline). The art window of an orientation
 // 3/6/8 bake must match the pre-rotated control to within JPEG noise, with an
 // off-centre focal point and a zoom — and must NOT match the sideways draw.
 // ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ function card(artUrl: string, finish = "regular"): CardPreviewData {
     artUrl,
     // Set in the creator against the UPRIGHT image.
     artPosition: { focalX: 0.35, focalY: 0.6, scale: 1.2 },
-    frameStyle: { template: "modern", finish },
+    frameStyle: { template: "tarkirdragon", finish },
     setIconUrl: null,
     setIconCode: null,
     backFace: null,
@@ -194,7 +194,7 @@ async function bakeRaw(data: CardPreviewData): Promise<Buffer> {
 
 /** Mean per-channel difference over the art window (1 % inset). */
 function artWindowDelta(a: Buffer, b: Buffer): number {
-  const r = getFrameProfile("modern").artSlot;
+  const r = getFrameProfile("tarkirdragon").artSlot;
   const x0 = Math.ceil(((r.leftPct + 1) / 100) * W);
   const x1 = Math.floor(((r.leftPct + r.widthPct - 1) / 100) * W);
   const y0 = Math.ceil(((r.topPct + 1) / 100) * H);

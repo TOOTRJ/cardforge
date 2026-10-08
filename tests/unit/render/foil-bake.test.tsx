@@ -112,8 +112,8 @@ describe("foil finish — real bakes", () => {
     // Off-centre focal point + zoom: the mask must reproduce object-fit:
     // cover + object-position + transform: scale exactly.
     const over = { artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
-    const [regular, foil] = [await bakeWith(mod, card("modern", "regular", over)), await bakeWith(mod, card("modern", "foil", over))];
-    const p = getFrameProfile("modern");
+    const [regular, foil] = [await bakeWith(mod, card("agclassic", "regular", over)), await bakeWith(mod, card("agclassic", "foil", over))];
+    const p = getFrameProfile("agclassic");
 
     // Black border: untouched (luminance mask ≈ 0 there).
     expect(meanDelta(regular, foil, { x0: 0, y0: 150, x1: 8, y1: 900 })).toBe(0);
@@ -147,7 +147,7 @@ describe("foil finish — real bakes", () => {
     }
     expect(Math.abs(sheenEdge - artEdge)).toBeLessThanOrEqual(3);
 
-    // Frame + text box (the modern white frame is pale): sheened.
+    // Frame + text box (the Alpha white frame is pale): sheened.
     expect(meanDelta(regular, foil, box(p.title.rect))).toBeGreaterThan(4);
     const rules = box(p.rules.rect);
     expect(meanDelta(regular, foil, { ...rules, y0: Math.round((rules.y0 + rules.y1) / 2) })).toBeGreaterThan(6);
@@ -181,10 +181,10 @@ describe("foil finish — real bakes", () => {
     const art = await splitArt();
     const over = { artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
     const bakes = async (mod: typeof real) => ({
-      regular: await bakeWith(mod, card("modern", "regular", over)),
-      etched: await bakeWith(mod, card("modern", "etched", over)),
-      showcase: await bakeWith(mod, card("modern", "showcase", over)),
-      foil: await bakeWith(mod, card("modern", "foil", over)),
+      regular: await bakeWith(mod, card("agclassic", "regular", over)),
+      etched: await bakeWith(mod, card("agclassic", "etched", over)),
+      showcase: await bakeWith(mod, card("agclassic", "showcase", over)),
+      foil: await bakeWith(mod, card("agclassic", "foil", over)),
     });
     const withFoil = await bakes(real);
 
