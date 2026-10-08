@@ -25,7 +25,7 @@ import {
   TRIAL_DAYS,
   type PaidTier,
 } from "@/lib/billing/plans";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { LocalDate } from "@/components/ui/local-date";
 
 export type UpgradeReason =
   | "credits"
@@ -237,7 +237,12 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
                 <span className="truncate text-xs text-muted">
                   {viewer.currentTier === plan.tier && viewer.hasLiveSubscription && viewer.subscriptionEnding
                     ? viewer.subscriptionEndsAt
-                      ? `Your current plan — cancelled, ends ${formatCalendarDate(viewer.subscriptionEndsAt)}`
+                      ? (
+                        <>
+                          {"Your current plan — cancelled, ends "}
+                          <LocalDate iso={viewer.subscriptionEndsAt} />
+                        </>
+                      )
                       : "Your current plan — cancelled, ends with the period you paid for"
                     : plan.tagline}
                 </span>

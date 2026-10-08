@@ -9,7 +9,7 @@ import {
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { SIGNUP_CREDITS, formatCredits, isLowCredits, planForTier } from "@/lib/billing/plans";
 import { getEntitlements } from "@/lib/billing/entitlements";
-import { planBadgeLabel } from "@/components/dashboard/plan-ending-notice";
+import { PlanBadgeLabel } from "@/components/dashboard/plan-ending-notice";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -55,7 +55,11 @@ export async function CreditsSummaryCard() {
         </div>
         <Badge variant={isPaid ? "primary" : "outline"}>
           {/* A cancelled plan says when it ends, right where it is named. */}
-          {planBadgeLabel(tierLabel, entitlements.planEnding, planForTier(entitlements.tier).name)}
+          <PlanBadgeLabel
+            planName={tierLabel}
+            ending={entitlements.planEnding}
+            subscriptionPlanName={planForTier(entitlements.tier).name}
+          />
         </Badge>
       </header>
 

@@ -57,7 +57,7 @@ describe("listAdminUsers — a row synced before 0135 (the flag alone)", () => {
       billedBeforeAt: null,
       canceledAt: null,
     });
-    expect(planEndingAdminLabel(row.planEnding!)).toBe("cancelled, ends Oct 23, 2026");
+    expect(planEndingAdminLabel(row.planEnding!)).toBe("cancelled, ends Oct 23, 2026 UTC");
   });
 });
 
@@ -74,7 +74,7 @@ describe("listAdminUsers — pending cancellations", () => {
     expect((rows.args as { p_flag: string }).p_flag).toBe("ending");
     const [ending, renewing, ended, old] = page!.rows;
     expect(ending.planEnding).toMatchObject({ kind: "plan", endsAt: "2026-10-23T02:31:04.000Z" });
-    expect(planEndingAdminLabel(ending.planEnding!)).toBe("cancelled, ends Oct 23, 2026");
+    expect(planEndingAdminLabel(ending.planEnding!)).toBe("cancelled, ends Oct 23, 2026 UTC");
     expect(renewing.planEnding).toBeNull();
     expect(ended.planEnding).toBeNull();
     expect(old.planEnding).toBeNull();

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { textContent } from "../helpers/text-content";
 import type { ReactNode } from "react";
 
 // ---------------------------------------------------------------------------
@@ -165,7 +166,7 @@ describe("Resume — confirm, then one click", () => {
     fireEvent.click(screen.getByRole("button", { name: "Resume Pro" }));
     await waitFor(() =>
       expect(
-        screen.getByText("Your Pro plan will renew on October 23, 2026 at $15 / month. Nothing is charged today."),
+        screen.getByText(textContent("Your Pro plan will renew on October 23, 2026 at $15 / month. Nothing is charged today.")),
       ).toBeTruthy(),
     );
     expect(s.resume).not.toHaveBeenCalled();
@@ -190,7 +191,7 @@ describe("Resume — confirm, then one click", () => {
     s.resume.mockResolvedValue({ ok: false, error: "Couldn't resume the plan here.", fallback: "portal" });
     render(<ResumePlanButton planName="Pro" surface="settings" />);
     fireEvent.click(screen.getByRole("button", { name: "Resume Pro" }));
-    await waitFor(() => expect(screen.getByText(/will renew on October 23, 2026/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(textContent(/will renew on October 23, 2026/))).toBeTruthy());
     const buttons = screen.getAllByRole("button", { name: "Resume Pro" });
     fireEvent.click(buttons[buttons.length - 1]);
     await waitFor(() => expect(s.navigateTo).toHaveBeenCalledWith("https://portal.test/s"));

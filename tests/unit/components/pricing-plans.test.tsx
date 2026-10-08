@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { textContent } from "../helpers/text-content";
 import type { ReactNode } from "react";
 
 // ---------------------------------------------------------------------------
@@ -215,7 +216,7 @@ describe("PricingPlans", () => {
         }}
       />,
     );
-    expect(screen.getByText("Your current plan · ends October 23, 2026")).toBeTruthy();
+    expect(screen.getByText(textContent("Your current plan · ends October 23, 2026"))).toBeTruthy();
     // Two Resume buttons: the Pro card's and the Free card's (which showed
     // NO button before, and "Manage plan" before #482).
     const resumes = screen.getAllByRole("button", { name: "Resume Pro" });
@@ -224,7 +225,7 @@ describe("PricingPlans", () => {
     expect(button(/switch to plus/i)).toBeTruthy();
     // The Free card's button resumes in-app, behind the confirm step.
     fireEvent.click(resumes[0]!);
-    await waitFor(() => expect(screen.getByText(/will renew on October 23, 2026 at \$15 \/ month/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(textContent(/will renew on October 23, 2026 at \$15 \/ month/))).toBeTruthy());
     const confirm = screen.getAllByRole("button", { name: "Resume Pro" }).at(-1)!;
     fireEvent.click(confirm);
     await waitFor(() => expect(s.resume).toHaveBeenCalledWith({ surface: "billing" }));

@@ -1,4 +1,4 @@
-import { formatCalendarDate } from "@/lib/format/dates";
+import { dateTextToString, formatUtcDate, type DateText } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
 // "This account's plan has been cancelled and ends on <date>" — read from the
@@ -75,33 +75,39 @@ export function planEndingOf(profile: PlanEndingProfile | null | undefined): Pla
 
 /**
  * The sentence every signed-in summary shows — the same wording family as
- * the billing page's plan card.
+ * the billing page's plan card. Parts, so the page prints its dates in the
+ * viewer's time zone (`<LocalDateText>`); `planEndingSentence` is the same
+ * copy as a UTC string for a reader with no browser.
  */
-export function planEndingSentence(ending: PlanEnding, planName: string): string {
-  const date = formatCalendarDate(ending.endsAt);
+export function planEndingText(ending: PlanEnding, planName: string): DateText {
+  const date = { date: ending.endsAt };
   if (ending.kind === "trial") {
-    return `You cancelled your ${planName} free trial. It ends on ${date} and you won't be charged. You keep ${planName} until then.`;
+    return [`You cancelled your ${planName} free trial. It ends on `, date, ` and you won't be charged. You keep ${planName} until then.`];
   }
   if (ending.billedBeforeAt) {
-    return `Your ${planName} plan is set to end on ${date}. It is still billed as usual until then — next on ${formatCalendarDate(ending.billedBeforeAt)}.`;
+    return [`Your ${planName} plan is set to end on `, date, ". It is still billed as usual until then — next on ", { date: ending.billedBeforeAt }, "."];
   }
-  return `Your ${planName} plan was cancelled and ends on ${date}. You keep ${planName} until then.`;
+  return [`Your ${planName} plan was cancelled and ends on `, date, `. You keep ${planName} until then.`];
+}
+
+export function planEndingSentence(ending: PlanEnding, planName: string): string {
+  return dateTextToString(planEndingText(ending, planName), "UTC");
 }
 
 /** The short form for a badge or a menu row: "ends Oct 23, 2026". */
-export function planEndingShort(ending: Pick<PlanEnding, "kind" | "endsAt">): string {
-  const date = new Date(ending.endsAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  return `${ending.kind === "trial" ? "trial ends" : "ends"} ${date}`;
+export function planEndingShortText(ending: Pick<PlanEnding, "kind" | "endsAt">): DateText {
+  return [ending.kind === "trial" ? "trial ends " : "ends ", { date: ending.endsAt, format: "short" }];
 }
 
-/** The admin directory's plan label: "cancelled, ends Oct 23, 2026". */
+export function planEndingShort(ending: Pick<PlanEnding, "kind" | "endsAt">): string {
+  return dateTextToString(planEndingShortText(ending), "UTC");
+}
+
+/** The admin directory's plan label: "cancelled, ends Oct 23, 2026 UTC" —
+ *  an admin page is read from any zone about a user in another, so its
+ *  dates stay UTC and say so. */
 export function planEndingAdminLabel(ending: PlanEnding): string {
-  const short = planEndingShort(ending).replace(/^trial ends /, "ends ");
+  const short = `ends ${formatUtcDate(ending.endsAt)}`;
   if (ending.kind === "trial") return `trial cancelled, ${short}`;
   return ending.billedBeforeAt ? `cancelled, ${short} (billed first)` : `cancelled, ${short}`;
 }

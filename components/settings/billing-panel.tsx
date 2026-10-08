@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 import { ResumePlanButton } from "@/components/billing/resume-plan-button";
-import { planEndingSentence, type PlanEnding } from "@/lib/billing/plan-ending";
+import { LocalDateText } from "@/components/ui/local-date";
+import { planEndingText, type PlanEnding } from "@/lib/billing/plan-ending";
 import {
   formatCredits,
   planForTier,
@@ -16,9 +17,10 @@ type BillingPanelProps = {
   isPaid: boolean;
   status: string | null;
   credits: number;
-  /** Pre-formatted renewal/cancel date (formatted server-side to avoid a
-   *  hydration mismatch). Null when there's no active subscription. */
-  renewLabel: string | null;
+  /** The renewal/cancel date, ready to print — the page passes a
+   *  `<LocalDate>` (the viewer's own calendar day; a server-formatted string
+   *  was the UTC day). Null when there's no active subscription. */
+  renewLabel: React.ReactNode;
   cancelAtPeriodEnd: boolean;
   /** The live plan is cancelled and ends on a date — the profile's stored
    *  state (lib/billing/plan-ending.ts), the same source as the dashboard
@@ -88,7 +90,7 @@ export function BillingPanel({
         </p>
       ) : isPaid && planEnding ? (
         <p className="text-xs leading-5 text-muted" data-testid="settings-plan-ending">
-          {planEndingSentence(planEnding, plan.name)}
+          <LocalDateText parts={planEndingText(planEnding, plan.name)} />
           {planEnding.billedBeforeAt ? "" : " Nothing more is charged."}
           {` Changed your mind? Resume ${plan.name} below.`}
         </p>
@@ -96,11 +98,17 @@ export function BillingPanel({
         <p className="text-xs leading-5 text-muted">
           {cancelAtPeriodEnd
             ? status === "trialing"
-              ? `You cancelled your trial: it ends on ${renewLabel} and you won't be charged.`
-              : `You cancelled this plan: it ends on ${renewLabel} and won't renew. You keep your perks until then.`
+              ? "You cancelled your trial: it ends on "
+              : "You cancelled this plan: it ends on "
             : status === "trialing"
-              ? `Your free trial ends on ${renewLabel}.`
-              : `Renews on ${renewLabel}.`}
+              ? "Your free trial ends on "
+              : "Renews on "}
+          {renewLabel}
+          {cancelAtPeriodEnd
+            ? status === "trialing"
+              ? " and you won't be charged."
+              : " and won't renew. You keep your perks until then."
+            : "."}
         </p>
       ) : null}
 

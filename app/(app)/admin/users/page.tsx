@@ -29,6 +29,7 @@ import { getFunnelSummary } from "@/lib/admin/funnel-queries";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
+import { formatUtcDateTime } from "@/lib/format/dates";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import {
@@ -490,14 +491,14 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
               <Stat label="Status" value={user.subscription_status ?? "—"} />
               <Stat
                 label="Period ends"
-                value={user.current_period_end ? new Date(user.current_period_end).toLocaleString() : "—"}
+                value={user.current_period_end ? formatUtcDateTime(user.current_period_end) : "—"}
               />
               <Stat label="Credits" value={String(user.credits)} />
               <Stat
                 label="Comp"
                 value={
                   compTier
-                    ? `${compTier}${user.comp_expires_at ? ` until ${new Date(user.comp_expires_at).toLocaleString()}` : " (no expiry)"}`
+                    ? `${compTier}${user.comp_expires_at ? ` until ${formatUtcDateTime(user.comp_expires_at)}` : " (no expiry)"}`
                     : "—"
                 }
               />

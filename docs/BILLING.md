@@ -552,6 +552,61 @@ creation flag for the one trial grant, which keys on the SYNCED state
 (a late `created` event for a trial that has converted grants the month's
 allotment, idempotently, not a second trial tranche).
 
+### Follow-up 2 (2026-10-07): billing dates in the viewer's time zone
+
+Every billing date was formatted in UTC, so a subscriber west of Greenwich
+whose period ends in the early UTC hours was shown the NEXT calendar day: a
+plan ending `2026-11-08T02:31:04Z` read "November 8" in the app and
+"November 7" in Stripe's portal (which prints the browser's day) for anyone
+in the Americas.
+
+`<LocalDate iso>` (`components/ui/local-date.tsx`, a client component) is
+now how a subscriber-facing billing date is printed: the server — and the
+first client render, which must match it — prints the UTC date inside
+`<time dateTime=…>`; once hydrated the same shape is printed in the
+browser's zone (`useSyncExternalStore`, so no hydration mismatch;
+`suppressHydrationWarning` on the element as a belt). The format options are
+`DATE_FORMATS` in `lib/format/dates.ts` — the one source — so only the day
+can change, never the form. A sentence with dates in it is kept as parts
+(`DateText`: `planEndingText`, `planEndingShortText`, `planBadgeText`,
+`resumeConfirmText`) and printed by `<LocalDateText>`; the same parts make
+the UTC string (`planEndingSentence`, `resumeConfirmCopy`, …) for a reader
+with no browser. `useLocalDateText` is the string form for a label that
+cannot hold elements (the account menu row).
+
+| Surface | Dates |
+|---|---|
+| Billing page (`PlanStatusLine`) | plan ends on · renews on · still billed next on · trial ends on · scheduled change on · comp "until" |
+| Billing page, invoices | each invoice's date |
+| Resume confirm (`ResumePlanButton`) | "will renew on …" / "trial will carry on until …" |
+| Dashboard notice + the credits / saved-cards badges | the sentence; "Pro plan · ends …" |
+| Settings (`BillingPanel`) | the cancelled-plan sentence; "Renews on" / "trial ends on" (the page passes a `<LocalDate>`; it was a server-formatted string) |
+| Plan grid (`PlanCard`) | "Your current plan · ends …" |
+| Upgrade modal | "Your current plan — cancelled, ends …" |
+| Account menu | "Billing · Pro ends …" |
+
+`tests/unit/billing/billing-dates-local.test.ts` holds that list: each file
+prints through the component and formats no date on the spot — a new
+surface with a billing date is added there.
+
+**Admin pages stay UTC and say so** (an admin reads about a user in another
+zone): `formatUtcDate` / `formatUtcDateTime` — the directory badge
+("cancelled, ends Oct 23, 2026 UTC"), the detail rows (Plan ends, Cancelled
+on, Billed again before it ends, Period ends, Comp until), the Resync toast,
+the Revenue panel's payment dates and the Funnel panel's trial start dates.
+"Period ends" and "Comp until" were printed with a bare `toLocaleString()` —
+the server's zone, unsaid.
+
+**Server-built strings cannot know the viewer's zone** and stay UTC:
+
+| String | Zone | Can it contradict the page? |
+|---|---|---|
+| Trial-ending email (`trialEndingEmail`) | UTC date in the subject / heading; the sentence that states the charge now adds the time and the zone: "ends on **November 8, 2026** (2:31 AM UTC)" | It could: the email is the reminder before a charge, and "November 8" was the day AFTER the one the billing page shows in the Americas. With the time and "UTC" beside it, it no longer reads as the reader's own day. |
+| Win-back email (`trialWinbackEmail`: "subscribe before …") | UTC, now explicit (it was the server's zone) | By a few hours at the very end of a 30-day window; left as it is. |
+| Notifications (`lib/notifications/describe.ts`: `trial_ending` "ends on …", `comp_plan` "until …", `trial_lapsed` "by …") | `formatShortDate`: the zone of whoever runs it — the viewer's in the bell and the toast (client-rendered, so they AGREE with the page), the server's (UTC) in the server render of `/notifications` and in the weekly digest email | The `/notifications` server render can show the UTC day for a moment before hydration; not changed here (it is every notification date, not a billing surface) — see the PR's open questions. |
+| Toasts (`?billing=…` return toasts, the Resume / downgrade results) | none of them carries a date | — |
+| Admin Resync toast | UTC, labelled | — |
+
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
 Two clock-bound sandbox customers, driven through the Stripe API:

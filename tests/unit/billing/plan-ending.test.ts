@@ -97,9 +97,9 @@ describe("the copy — one wording family with the billing page", () => {
   it("short and admin labels", () => {
     expect(planEndingShort(plan)).toBe("ends Oct 23, 2026");
     expect(planEndingShort(trial)).toBe("trial ends Oct 23, 2026");
-    expect(planEndingAdminLabel(plan)).toBe("cancelled, ends Oct 23, 2026");
-    expect(planEndingAdminLabel(trial)).toBe("trial cancelled, ends Oct 23, 2026");
-    expect(planEndingAdminLabel(later)).toBe("cancelled, ends Dec 7, 2026 (billed first)");
+    expect(planEndingAdminLabel(plan)).toBe("cancelled, ends Oct 23, 2026 UTC");
+    expect(planEndingAdminLabel(trial)).toBe("trial cancelled, ends Oct 23, 2026 UTC");
+    expect(planEndingAdminLabel(later)).toBe("cancelled, ends Dec 7, 2026 UTC (billed first)");
   });
 });
 
