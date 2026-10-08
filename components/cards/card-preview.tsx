@@ -1053,6 +1053,10 @@ function CardFace({
     !(layout.loyaltyRows && (loyaltyAbilities.length > 0 || (usesLoyaltyRows && staticInEditor)));
   // (Memoised: a long text's fit takes a millisecond or two, and a face
   // re-renders on every flip and hover.)
+  // The card's text alignment (FrameStyle.rulesAlign, TODO 4.21e) — the
+  // bake's twin: every rules box of the card alike, applied by the layout
+  // only on a frame that offers the choice (rulesAlignOf).
+  const rulesAlign = anatomy?.rulesAlign;
   const rulesLayout = useMemo(
     () =>
       drawsRulesBox
@@ -1062,9 +1066,10 @@ function CardFace({
             flavorText: rulesPlaceholder ? PLACEHOLDER_FLAVOR_TEXT : face.flavorText,
             aspect,
             show: drawnStats,
+            rulesAlign,
           })
         : null,
-    [drawsRulesBox, layout, rulesPlaceholder, face.rulesText, face.flavorText, aspect, drawnStats],
+    [drawsRulesBox, layout, rulesPlaceholder, face.rulesText, face.flavorText, aspect, drawnStats, rulesAlign],
   );
   // The adventure page's and a second face's rules — the same layout. The
   // editor's empty adventure page shows a hint, laid out like flavor text.
@@ -1080,18 +1085,19 @@ function CardFace({
             flavorText: adventurePlaceholder ? ADVENTURE_RULES_HINT : null,
             aspect,
             show: drawnStats,
+            rulesAlign,
           })
         : null,
-    [layout, hasAdventure, adventurePlaceholder, adventureText, aspect, drawnStats],
+    [layout, hasAdventure, adventurePlaceholder, adventureText, aspect, drawnStats, rulesAlign],
   );
   const hasSecondFace = Boolean(secondFace);
   const secondFaceText = secondFace?.rulesText;
   const secondFaceRules = useMemo(
     () =>
       layout.secondFace && hasSecondFace
-        ? secondFaceRulesLayout({ layout, rulesText: secondFaceText, aspect, show: drawnStats })
+        ? secondFaceRulesLayout({ layout, rulesText: secondFaceText, aspect, show: drawnStats, rulesAlign })
         : null,
-    [layout, hasSecondFace, secondFaceText, aspect, drawnStats],
+    [layout, hasSecondFace, secondFaceText, aspect, drawnStats, rulesAlign],
   );
   // The type line, and its two halves on a split type line (TextSlot.split,
   // TODO 3.24) — one size for both, the bake's twin.

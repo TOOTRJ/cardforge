@@ -434,6 +434,22 @@ export type RulesLayoutInput = {
    *  (TODO 4.49 (b)). Each target indents it by its own whole px
    *  (singleLineIndentPx), and the keep-outs are judged where it lands. */
   alignSingleLine?: "center";
+  /** "center": EVERY line of the block — rules, reminder and flavor alike —
+   *  is set centred on the box's own centre line (TODO 4.21e: a split
+   *  half's short text as MH2 #123, TSR #156 / #161 / #186 and C16 #239 /
+   *  #240 print it — each line's centre on the paper's centre). The box's
+   *  centre is the middle of the box less its padding, NOT of the column
+   *  the side headroom leaves (sideInsets): a line that starts with an
+   *  italic "f" must not pull every other line 1 px off the paper's
+   *  centre. Each target indents each line by its own whole px
+   *  (centredLineIndentPx); the size (fitRulesLayout fits the left-aligned
+   *  twin first), the breaks and every vertical position are exactly the
+   *  left-aligned layout's — the lines only move sideways — and a line
+   *  whose centred place would land on a keep-out or a float is held short
+   *  of it (heldLineIndentPx), never a size step. Unset: every
+   *  line starts at the left. Card data (FrameStyle.rulesAlign), offered
+   *  only where the profile declares FrameProfile.rulesAlignSwitch. */
+  align?: "center";
   /** The frame's symbol style (FrameProfile.symbolStyle, TODO 4.8.0): the
    *  inline pip's shadow, which the layout keeps inside the box and out of
    *  the keep-outs. Unset = "modern". */
@@ -521,7 +537,8 @@ export type RulesLinePlacement = {
   block: number;
   line: number;
   /** How far the line starts right of the interior's left edge, whole
-   *  target px: 0, or a centred single line's indent (singleLineIndentPx). */
+   *  target px: 0, a centred single line's indent (singleLineIndentPx), or
+   *  a centred block's line's (RulesLayoutInput.align, centredLineIndentPx). */
   indent: number;
   /** The line box, card-absolute target px (top may be fractional: a
    *  centred block's offset is not rounded here; Yoga rounds each box). */
@@ -659,6 +676,63 @@ export function singleLineIndentPx(interiorWidth: number, lineWidth: number): nu
   return Math.max(0, Math.floor((interiorWidth - lineWidth) / 2));
 }
 
+/**
+ * A centred block's line indent at a target (RulesLayoutInput.align, TODO
+ * 4.21e): the whole px that puts the line's centre nearest `centre` — the
+ * box's centre line, measured from the interior's left edge — held inside
+ * the interior (a line as wide as the column starts at its left; an
+ * overwide run too, as it always has). Both renderers draw it as the line's
+ * left margin.
+ */
+export function centredLineIndentPx(interiorWidth: number, lineWidth: number, centre: number): number {
+  const room = interiorWidth - lineWidth;
+  if (room <= 0) return 0;
+  return Math.min(Math.floor(room), Math.max(0, Math.round(centre - lineWidth / 2)));
+}
+
+/** The air a centred line HELD short of a keep-out keeps from it, HD px,
+ *  where the room allows (heldLineIndentPx): a third of the smallest rules
+ *  size's em — a line set against a plate must not touch it. */
+export const HELD_LINE_AIR_PX = 14;
+
+/**
+ * Where a centred line is set when its centred place puts ink in a drawn
+ * keep-out (TODO 4.21e, owner 2026-10-07: held short, never a size step):
+ * the whole-px indent in 0 … `max` NEAREST `want` (the centred indent; the
+ * smaller on a tie) at which none of the line's ink `boxes` (card px, at
+ * indent 0) enters any of `keepOuts` — first keeping `air` px beside them,
+ * then, where no place has that much room, touching none. `want` itself when
+ * it is already clear (the line is not moved), and when no indent clears
+ * them (the left-aligned line at indent 0 hits too: the layout is clipped
+ * at that size, as its left-aligned twin is).
+ */
+export function heldLineIndentPx(
+  want: number,
+  max: number,
+  boxes: readonly { left: number; right: number; top: number; bottom: number }[],
+  keepOuts: readonly { left: number; right: number; top: number; bottom: number }[],
+  air: number,
+): number {
+  // Each glyph × keep-out that share rows forbids the open interval of
+  // indents at which they overlap.
+  const forbidden: [number, number][] = [];
+  for (const k of keepOuts) {
+    for (const g of boxes) {
+      if (!(g.bottom > k.top && g.top < k.bottom)) continue;
+      forbidden.push([k.left - g.right, k.right - g.left]);
+    }
+  }
+  const clear = (indent: number, pad: number) => !forbidden.some(([a, b]) => indent > a - pad && indent < b + pad);
+  if (forbidden.length === 0 || clear(want, 0)) return want;
+  for (const pad of air > 0 ? [air, 0] : [0]) {
+    for (let d = 0; d <= Math.max(want, max); d += 1) {
+      if (want - d >= 0 && want - d <= max && clear(want - d, pad)) return want - d;
+      if (want + d <= max && want + d >= 0 && clear(want + d, pad)) return want + d;
+    }
+  }
+  return want;
+}
+
 function placeBlocks(
   blocks: readonly RulesBlock[],
   sizePx: number,
@@ -708,6 +782,42 @@ function placeBlocks(
   let bar: RulesPlacement["bar"] = null;
   let y = top + insetTop;
   const centred = input.alignSingleLine === "center" && isSingleRulesLine(blocks);
+  // A centred BLOCK (TODO 4.21e): the box's centre line — the middle of the
+  // box less its padding — from the interior's left edge.
+  const blockCentre =
+    input.align === "center" ? (box.width - p.left - p.right) / 2 - side.left : null;
+  // A centred line whose rows meet a FLOAT (the transform front's reverse
+  // P/T) is centred on the box like every other, but never past the float:
+  // its room ends at the float's left edge, as the column it broke against
+  // does (floatColumnsFor) — less the ink its last glyph puts past its
+  // advance (`inkPastEnd`, lineSideInk: a regular "r", an italic "l"). A
+  // line held back sits FLUSH against the float, and the float is judged on
+  // ink like a keep-out: without that allowance every such line was a hit
+  // and the size stepped down for nothing. A float leaving less than the
+  // line is ignored here — the keep-out check then steps the size down.
+  const floatRects =
+    blockCentre !== null ? (input.floats ?? []).map((f) => rectPx(f, orientation, input.aspect, target)) : [];
+  const lineColumn = (lineTop: number, inkPastEnd: number): number => {
+    let column = interior.width;
+    for (const f of floatRects) {
+      if (lineTop < f.bottom && lineTop + m.linePx > f.top) column = Math.min(column, f.left - interior.left - inkPastEnd);
+    }
+    return column;
+  };
+  // A centred line that would LAND ON a drawn keep-out — the P/T plate, the
+  // stamp's arch, the battle's shield, the modal strip, a float's digits —
+  // is HELD SHORT of it (owner 2026-10-07): set at the whole-px indent
+  // nearest its centred one at which no glyph of it enters any keep-out
+  // (heldLineIndentPx), with HELD_LINE_AIR_PX of air where the room allows.
+  // The left-aligned line's own place (indent 0) is always a candidate, so
+  // a centred text fits at every size its left-aligned twin fits — never
+  // smaller, never clipped where Left is not. A line that meets no keep-out
+  // where it is centred is not touched.
+  const heldRects =
+    blockCentre !== null
+      ? [...(input.keepOuts ?? []), ...(input.floats ?? [])].map((r) => rectPx(r, orientation, input.aspect, target))
+      : [];
+  const heldAir = Math.round(HELD_LINE_AIR_PX * m.scale);
   blocks.forEach((b, bi) => {
     const gap = gapBefore(blocks, bi, m, divider);
     if (b.kind === "flavor" && bi > 0 && divider) {
@@ -722,7 +832,26 @@ function placeBlocks(
     b.lines.forEach((line, li) => {
       const ink = lineInk(line, m);
       const sideInk = lineSideInk(line, m);
-      const indent = centred ? singleLineIndentPx(interior.width, line.widthPx[target]) : 0;
+      let indent =
+        blockCentre !== null
+          ? centredLineIndentPx(lineColumn(y, sideInk.right), line.widthPx[target], blockCentre)
+          : centred
+            ? singleLineIndentPx(interior.width, line.widthPx[target])
+            : 0;
+      if (blockCentre !== null && heldRects.length > 0) {
+        const inkTop = y + ink.top;
+        const inkBottom = y + ink.bottom;
+        const met = heldRects.filter((k) => inkBottom > k.top && inkTop < k.bottom);
+        if (met.length > 0) {
+          indent = heldLineIndentPx(
+            indent,
+            Math.max(0, Math.floor(interior.width - line.widthPx[target])),
+            lineInkBoxes(line, m).map((g) => ({ left: interior.left + g.left, right: interior.left + g.right, top: y + g.top, bottom: y + g.bottom })),
+            met,
+            heldAir,
+          );
+        }
+      }
       const left = interior.left + indent;
       lines.push({
         block: bi,
@@ -905,7 +1034,9 @@ function floatColumnsFor(
       let column = columns[t];
       for (const f of rects) {
         if (!(l.top < f.bottom && l.top + l.height > f.top)) continue;
-        column = Math.min(column, f.left - l.left);
+        // From the column's own left edge — a centred line's indent
+        // (RulesLayoutInput.align) is not part of its column.
+        column = Math.min(column, f.left - (l.left - l.indent));
       }
       if (column >= columns[t] || column < columns[t] * FLOAT_MIN_COLUMN) return;
       out.set(i, { ...(out.get(i) ?? columns), [t]: column });
@@ -1009,6 +1140,18 @@ export function rulesLadderPx(sizePct: number, orientation: CardOrientation = "p
 export function fitRulesLayout(input: RulesLayoutInput): RulesLayout {
   const ladder = rulesLadderPx(input.sizePct, orientationFromAspect(input.aspect));
   const parsed = parseText(input.rulesText, input.flavorText);
+  if (input.align === "center") {
+    // A centred block is set at EXACTLY the size (and squeezed paragraph
+    // gap) its left-aligned twin fits at (owner 2026-10-07: Centred never
+    // sets a text smaller than Left, and never clips one Left fits). The
+    // lines are the twin's — an indent moves no break — and a line whose
+    // centred place meets a drawn badge is held short of it (placeBlocks,
+    // heldLineIndentPx), where the twin's own place is always free: so the
+    // twin's size fits centred too.
+    const left = fitRulesLayout({ ...input, align: undefined });
+    const gap = left.input.paragraphGapPx;
+    return layoutParsedAt(gap !== undefined && input.paragraphGapPx === undefined ? { ...input, paragraphGapPx: gap } : input, left.sizePx, parsed);
+  }
   let layout = layoutParsedAt(input, ladder[0], parsed);
   for (const sizePx of ladder.slice(1)) {
     if (!layout.clipped) return layout;

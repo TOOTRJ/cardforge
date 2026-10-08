@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br))?(-crown(-hd)?)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|vehicle|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br))?(-crown(-hd)?)?|centred(-hd)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -316,8 +316,16 @@ describe("visual-regression matrix", () => {
         expect(keys, c.id).toEqual(["dfcIcon", "finish", "template"]);
         continue;
       }
+      // The text alignment's cases (TODO 4.21e) name "center" — and are the
+      // ONLY cases that do: every other case is a stored card's shape.
+      if (c.id.includes("@centred")) {
+        expect((c.row.frame_style as { rulesAlign?: string }).rulesAlign, c.id).toBe("center");
+        expect(keys, c.id).toEqual(["finish", "rulesAlign", "template"]);
+        continue;
+      }
       expect(keys, c.id).toEqual(["finish", "template"]);
     }
+    expect(cases.filter((c) => "rulesAlign" in (c.row.frame_style as object)).every((c) => c.id.includes("@centred"))).toBe(true);
     // The split crown: both switches on, on every template that draws both
     // (the borderless land draws its pairs and no crown, 4.56: none there).
     const both = crowned.filter((c) => paired.includes(c));

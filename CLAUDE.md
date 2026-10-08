@@ -565,6 +565,25 @@ Rules and gotchas:
   dropped. A frame's era symbols are `symbolStyle` (`"1997"`: flat discs,
   `tap-4ed`), a correction, never a per-card switch. `docs/FRAMES.md` "The
   1997 frame".
+- Text alignment (TODO 4.21e): `frame_style.rulesAlign` (`"center"` or
+  absent = left; the form and an edit's patch also say `"left"`, never
+  stored) — a card's own choice on EVERY frame with plain rules boxes
+  (`profileOffersRulesAlign`: not `textless`, the saga's `chapters`, a
+  walker frame's `loyaltyRows`; a profile opts out with `rulesAlignSwitch:
+  false`). A NEW card starts LEFT, an import stays left (owner 2026-10-07)
+  — the one anatomy key no default stamps. Centred = every line of every
+  rules box of the card (rules, reminder, flavour; halves and faces alike)
+  on its box's centre: `RulesLayoutInput.align`, a whole-px indent per line
+  per target, at EXACTLY the size, breaks and vertical positions of the
+  left-aligned layout (`fitRulesLayout` fits the left twin first). A line
+  whose centred place would land on a drawn keep-out or float (plate,
+  stamp arch, shield, strip, reverse P/T) is HELD SHORT of it
+  (`heldLineIndentPx`: the nearest clear indent, `HELD_LINE_AIR_PX` of air
+  where there is room) — never a size step: Centred never sets a text
+  smaller than Left and never clips one Left fits (owner 2026-10-07).
+  Both renderers pass the card's value through `rulesAlignOf` and only
+  draw the indents. A new template offers
+  it by default — `rules-align.test.ts` names the six that don't. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
@@ -663,6 +682,20 @@ Rules and gotchas:
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
   (`max(updated_at, rendered_at)`), never `updated_at` alone.
+- Theme: the `cardforge-theme` cookie (dark / light / system; none = dark).
+  The root layout reads NO cookies (every route stays static/ISR-eligible):
+  server HTML is always `data-theme="dark"` and the `<head>` no-flash script
+  corrects it before paint. An inline `<script>` in a layout only runs in
+  HTML the SERVER sent: a document React renders in the browser — every
+  `notFound()` above the Suspense boundaries (Next answers an empty
+  `<html id="__next_error__">` shell), an error thrown there, a root
+  hydration React gives up on — gets the layout's "dark" and a script that
+  is never executed, so `<ThemeRestore>` (`components/layout/theme-restore.tsx`;
+  a LAYOUT effect: same commit, before paint) re-applies the saved theme.
+  ONE resolution in two forms, `noFlashScript()` and `resolveSavedTheme()`
+  (`lib/theme-shared.ts`), held together case for case by
+  `tests/unit/lib/theme-resolution.test.ts` — never read the cookie or
+  `prefers-color-scheme` anywhere else.
 - Fonts are SELF-HOSTED as OFL variable woff2 files under `app/fonts/*` with
   their licences: Geist Sans/Mono subset to latin + latin-ext
   (`scripts/subset-geist.mjs` regenerates them from the `geist` package),

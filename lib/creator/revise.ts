@@ -173,6 +173,11 @@ export function frameAnatomyPatchFor(
   // the patch when that body isn't verified in the back's colour.
   const family = values.frame_style.dfcIcon;
   if (isDfcIconFamily(family) && family !== storedStyle.dfcIcon) patch.dfcIcon = family;
+  // The rules text's alignment (TODO 4.21e): the stored key is "center" or
+  // absent, so the form's value is compared as centred-or-not — "left" is
+  // sent only to take a stored "center" off.
+  const centred = values.frame_style.rulesAlign === "center";
+  if (centred !== (storedStyle.rulesAlign === "center")) patch.rulesAlign = centred ? "center" : "left";
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;
