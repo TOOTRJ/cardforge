@@ -56,6 +56,12 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
   },
 };
 
+/** A one-colour symbol's font size as a fraction of its disc's diameter —
+ *  mana-font's `.ms-cost` at a cost's size (a 0.95 em glyph, a 1.3 em disc).
+ *  The bake's ManaGem draws it; the preview's cost row sets the same glyph in
+ *  the same disc (components/cards/mana-cost-glyphs.tsx). */
+export const MANA_GLYPH_OF_DISC = 0.73;
+
 /** The style named `style`; "modern" when it names none. */
 export function symbolStyle(style: SymbolStyle | undefined): SymbolStyleSpec {
   return SYMBOL_STYLES[style ?? DEFAULT_SYMBOL_STYLE];
