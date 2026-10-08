@@ -335,6 +335,19 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
     ["fullart/main", "m15textless/main", "m15textlessland/main"],
     ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up"],
   ],
+  // "typed, as printed" (TODO 6.11): five paragraphs — an ability word, a
+  // modal list with its bullets, quoted abilities — over a quoted flavor
+  // line and its attribution. The short boxes that can't hold the level-up
+  // card's paragraphs can't hold these; every full-size box draws them.
+  [
+    [
+      "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
+      "expeditionland/main", "flip/main", "flip/second face", "fullart/main", "lotrscroll/main", "m15textless/main",
+      "m15textlessland/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
+      "m20tokenartifacttext/main", "m20tokentext/main", "split/main",
+    ],
+    ["typed, as printed"],
+  ],
 ];
 
 const expectedClips = () =>
@@ -377,7 +390,7 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
 
 describe("rules consumers — the HD bake (subset)", () => {
   const TEMPLATES: FrameTemplate[] = ["m15", "m15pw", "m15token", "adventure", "flip", "split", "aftermath", "battle", "retro", "m15borderless"];
-  const TEXTS = RULES_MATRIX.filter((t) => ["400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "minus sign", "flavor + attribution"].includes(t.name));
+  const TEXTS = RULES_MATRIX.filter((t) => ["400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "minus sign", "flavor + attribution", "typed, as printed"].includes(t.name));
   const cases = matrix(TEXTS, TEMPLATES);
 
   it("draws inside its box, clear of every keep-out, line for line", async () => {
@@ -451,7 +464,7 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
 
   it("the HD bake (subset): inside its box, clear of every keep-out, the same lines at both targets", async () => {
     const TEMPLATES: FrameTemplate[] = ["m15", "m15token", "m15tokentext", "adventure", "flip", "split", "aftermath", "battle", "retro", "emblem", "m15dfcfront", "m15mdfcback"];
-    const TEXTS = RULES_MATRIX.filter((t) => ["one line", "short + flavor", "400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "flavor + attribution", "modal bullets"].includes(t.name));
+    const TEXTS = RULES_MATRIX.filter((t) => ["one line", "short + flavor", "400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "flavor + attribution", "modal bullets", "typed, as printed"].includes(t.name));
     for (const c of matrix(TEXTS, TEMPLATES, "center")) {
       const [hd, small] = [rulesDraw(c.layout, "hd"), rulesDraw(c.layout, "default")];
       expect(small.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines))).toEqual(hd.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines)));

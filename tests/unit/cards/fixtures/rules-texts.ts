@@ -1,6 +1,19 @@
 // Rules / flavor texts the v33 rules tests share (layout v33, TODO 3.29): two
 // print references and the no-clip text matrix. Plain data.
 
+import { printTypography } from "@/lib/validation/print-typography";
+
+/** What a maker types on a plain keyboard, as the save stores it (TODO 6.11,
+ *  lib/validation/print-typography.ts): curly quotes round a quoted ability
+ *  with pips, apostrophes after a pip and before a year, the ability word's
+ *  and the modal list's em dashes, bullets, a hyphenated -1/-1 beside them —
+ *  and a quoted flavor line with its attribution. */
+export const TYPED_RULES = printTypography(
+  `Landfall - This creature can't be blocked this turn. It's a '90s trick: "{T}: Add {G}."\nChoose one -\n- Target creature gets -1/-1.\n* Its controller's creatures gain "{1}: Deal X-1 damage."\nRaid--Draw a card.`,
+  "rules",
+);
+export const TYPED_FLAVOR = printTypography(`"It's the 'landing' that kills--not the fall."\n-Kesh, '99`, "flavor");
+
 /** EOE #30 — a full M15 box on print (59.85 px). */
 export const EOE_30 =
   "When this creature enters, put a +1/+1 counter on target creature you control.\nWhenever a nontoken creature you control with a +1/+1 counter on it dies, create a 1/1 white Human Soldier creature token.\nWarp {1}{W} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)";
@@ -51,6 +64,7 @@ export const RULES_MATRIX: readonly RulesCase[] = [
     flavor: null,
   },
   { name: "minus sign", rules: "−1: Target creature gets −2/−2 until end of turn.\n−7: You get an emblem.", flavor: null },
+  { name: "typed, as printed", rules: TYPED_RULES, flavor: TYPED_FLAVOR },
   { name: "flavor only", rules: null, flavor: plainText(260) },
   { name: "EOE #30", rules: EOE_30, flavor: null },
   { name: "TLA #112", rules: TLA_112, flavor: null },
