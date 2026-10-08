@@ -81,8 +81,9 @@ describe("a numeric mana class is never written out in the repo", () => {
   });
 
   it("the previews build the class from the symbol, never from a literal", () => {
-    for (const file of ["components/cards/mana-cost-glyphs.tsx", "components/cards/card-preview.tsx"]) {
-      expect(readFileSync(path.join(ROOT, file), "utf8"), file).toMatch(/`ms-\$\{/);
-    }
+    // Every pip the previews draw is built in mana-cost-glyphs.tsx (a card's
+    // through its CardPip); card-preview.tsx writes no mana class itself.
+    expect(readFileSync(path.join(ROOT, "components/cards/mana-cost-glyphs.tsx"), "utf8")).toMatch(/`ms-\$\{/);
+    expect(readFileSync(path.join(ROOT, "components/cards/card-preview.tsx"), "utf8")).not.toMatch(/\bms ms-cost\b/);
   });
 });

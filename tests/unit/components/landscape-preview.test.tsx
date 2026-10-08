@@ -4,7 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
-import { fitTypeLineBand, measuredLinePreviewPct } from "@/lib/cards/render-tiers";
+import { costRowHdPx, fitTypeLineBand, measuredLinePreviewPct } from "@/lib/cards/render-tiers";
 import { fitStatSizePct } from "@/lib/cards/stat-fit";
 import { BATTLE_ART_RECT, SPLIT_HALF_DX_PCT, getFrameProfile, unturnedRect, type Rect } from "@/lib/cards/template-layout";
 import { fitTitleBand } from "@/lib/cards/title-band";
@@ -118,7 +118,8 @@ describe("CardPreview — the split card (layout v43)", () => {
       // (mana-font draws a disc at 1.3 em).
       const pips = el.parentElement!.lastElementChild!;
       expect(pips.getAttribute("aria-label")).toBe(`Cost ${COST}`);
-      expect(prop(pips, "font-size")).toBe(cqw(SPLIT_COST_DISC_PCT / 1.3));
+      // The row's font size is the disc itself, at the HD bake's whole px.
+      expect(prop(pips, "font-size")).toBe(`${((costRowHdPx(SPLIT_COST_DISC_PCT, "landscape").discPx * 100) / 2100).toFixed(4)}cqw`);
     }
     // A name that fits shrinks no further than it must: a medium one is
     // whole, between the floor and the profile's size.

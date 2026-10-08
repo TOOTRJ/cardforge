@@ -7,8 +7,8 @@ import { cn, clamp } from "@/lib/utils";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { ROSE_STAR_PATH } from "@/lib/brand/geometry";
 import {
+  CardPip,
   ManaCostGlyphs,
-  PipOverrideImg,
 } from "@/components/cards/mana-cost-glyphs";
 import {
   pipOverrideForSuffix,
@@ -53,6 +53,7 @@ import {
 } from "@/lib/cards/saga-rail";
 import {
   NAME_COST_GAP_PCT,
+  costRowHdPx,
   fitSplitTypeSizePct,
   fitTypeLineBand,
   inlineSymbolPullPct,
@@ -108,7 +109,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
-import { symbolStyle, symbolStyleOf, styledSuffix, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
 import {
   resolveLoyaltyRows,
@@ -1363,7 +1364,7 @@ function CardFace({
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
             cost={face.cost}
-            fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
+            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect))}
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
@@ -1382,7 +1383,7 @@ function CardFace({
         >
           <ManaCostGlyphs
             cost={face.cost}
-            fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
+            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect))}
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
@@ -2152,7 +2153,8 @@ function FlipsideLineOverlay({ slot, line, orientation, overrides }: { slot: Tex
               <RulesPip
                 key={i}
                 suffix={item.suffix}
-                fontSize={hd(m.pipPx / MS_COST_DISC_EM)}
+                disc={hd(m.pipPx)}
+                discPx={m.pipPx}
                 top={hd(m.pipTopPx)}
                 gapBefore={i > 0 && run[i - 1].t === "m" ? hd(m.pipGapPx) : null}
                 overrides={overrides}
@@ -2513,7 +2515,7 @@ function AdventurePanel({
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+            disc={costDisc(slot.costSizePct ?? slot.title.sizePct)}
             overrides={pipOverrides}
             symbols={symbols}
           />
@@ -2630,7 +2632,7 @@ function SecondFacePanel({
           {showCost ? (
             <ManaCostGlyphs
               cost={data.cost}
-              fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+              disc={costDisc(slot.costSizePct ?? slot.title.sizePct, orientation)}
               overrides={pipOverrides}
             symbols={symbols}
             />
@@ -2659,7 +2661,7 @@ function SecondFacePanel({
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={pipFont(lineSizes.costSizePct)}
+            disc={costDisc(lineSizes.costSizePct, orientation)}
             overrides={pipOverrides}
             symbols={symbols}
           />
@@ -2821,12 +2823,19 @@ function textDy(slot: TextSlot, drawnSizePct = slot.sizePct): CSSProperties {
   return dy ? { transform: `translateY(${cqw(dy)})` } : {};
 }
 
-// mana-font's `.ms-cost` disc renders at 1.3em for a given font-size; profiles
-// specify the DISC diameter, so the CSS font-size is the diameter ÷ 1.3. The
-// bake's ManaGem draws the disc at the diameter directly — same visual size.
-const MS_COST_DISC_EM = 1.3;
-function pipFont(discPct: number): string {
-  return cqw(discPct / MS_COST_DISC_EM);
+// A cost row's disc and pip gap (ManaCostGlyphs' `disc`): the stored HD
+// bake's whole px in cqw (costRowHdPx — CostGlyphs' disc and gap at that
+// width), so the row is the PNG's at every preview size. The stylesheet's
+// `.ms-cost { font-size: 0.95em }` made a disc sized through its PARENT's
+// font 5 % smaller than the bake's, and an em gap on that parent narrower
+// still: a six-pip cost began ~30 HD px right of the PNG's (found
+// 2026-10-07, in every frame).
+function costDisc(
+  discPct: number,
+  orientation: CardOrientation = "portrait",
+): { size: string; gap: string; px: number } {
+  const { discPx, gapPx } = costRowHdPx(discPct, orientation);
+  return { size: hdCqw(discPx, orientation), gap: hdCqw(gapPx, orientation), px: discPx };
 }
 
 function vJustify(align: SlotAlign): string {
@@ -2949,8 +2958,7 @@ function RulesLines({
 
 // One item of a RulesLines run: a word at the line box's height (italic for
 // any emphasis) in its ceiled box, or an inline pip whose disc is
-// metrics.pipPx (mana-font draws its disc at 1.3 em of the font size, hence
-// the division).
+// metrics.pipPx (RulesPip draws it as the bake's ManaGem, CardPip).
 function RulesLineItem({
   item,
   metrics: m,
@@ -2970,7 +2978,8 @@ function RulesLineItem({
     return (
       <RulesPip
         suffix={item.suffix}
-        fontSize={hdCqw(m.pipPx / MS_COST_DISC_EM, orientation)}
+        disc={hdCqw(m.pipPx, orientation)}
+        discPx={m.pipPx}
         top={hdCqw(m.pipTopPx, orientation)}
         gapBefore={pipGapBefore ? hdCqw(m.pipGapPx, orientation) : null}
         overrides={overrides}
@@ -2994,9 +3003,10 @@ function RulesLineItem({
   );
 }
 
-// One inline pip of a rules line: the layout's disc (mana-font draws it at
-// 1.3 em of the pip's font size), a hairline after an adjacent pip. The pip
-// sits in a wrapper that carries that gap as PADDING and has no margin of its
+// One inline pip of a rules line: the layout's disc, drawn as the bake's
+// ManaGem (CardPip: the glyph and the shadow at the stored bake's px), a
+// hairline after an adjacent pip. The pip sits in a wrapper whose font size
+// is the disc, that carries that gap as PADDING and has no margin of its
 // own: mana-font styles `.ms-2 { margin-left: inherit !important }`, so a
 // {2} disc whose parent was a run with a word gap took that gap again and
 // pushed the rest of its line a word gap right of the bake (layout v33
@@ -3004,13 +3014,17 @@ function RulesLineItem({
 // such rule.
 function RulesPip({
   suffix,
-  fontSize,
+  disc,
+  discPx,
   top,
   gapBefore,
   overrides,
 }: {
   suffix: string;
-  fontSize: string;
+  /** The disc's diameter (RulesMetrics.pipPx, in cqw). */
+  disc: string;
+  /** That disc in the HD bake's px. */
+  discPx: number;
   /** The disc's top in its line box (RulesMetrics.pipTopPx, in cqw): the
    *  run is the line box tall, so the wrapper sits at exactly that top. */
   top: string;
@@ -3018,7 +3032,6 @@ function RulesPip({
   overrides: PipOverrides | null;
 }) {
   const symbols = useContext(SymbolStyleContext);
-  const overrideSrc = pipOverrideForSuffix(suffix, overrides);
   return (
     <span
       style={{
@@ -3027,18 +3040,16 @@ function RulesPip({
         alignSelf: "flex-start",
         marginTop: top,
         flexShrink: 0,
+        fontSize: disc,
         ...(gapBefore ? { paddingLeft: gapBefore } : {}),
       }}
     >
-      {overrideSrc ? (
-        <PipOverrideImg src={overrideSrc} style={{ fontSize, flexShrink: 0 }} symbols={symbols} />
-      ) : (
-        <i
-          aria-hidden
-          className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
-          style={{ fontSize, flexShrink: 0 }}
-        />
-      )}
+      <CardPip
+        suffix={suffix}
+        discPx={discPx}
+        symbols={symbols}
+        overrideSrc={pipOverrideForSuffix(suffix, overrides)}
+      />
     </span>
   );
 }
@@ -3152,8 +3163,8 @@ function RulesBoxLine({
   hd: (px: number) => string;
   overrides: PipOverrides | null;
 }) {
-  // mana-font draws its disc at 1.3 em of the pip's font size.
-  const pipFontSize = hd(d.pipPx / MS_COST_DISC_EM);
+  // The layout's disc; RulesPip sets the glyph and the shadow in it (CardPip).
+  const pipDisc = hd(d.pipPx);
   return (
     <div
       data-testid="rules-line"
@@ -3183,7 +3194,8 @@ function RulesBoxLine({
                 <RulesPip
                   key={i}
                   suffix={item.suffix}
-                  fontSize={pipFontSize}
+                  disc={pipDisc}
+                  discPx={d.pipPx}
                   top={hd(d.pipTopPx)}
                   gapBefore={i > 0 && run[i - 1].t === "m" ? hd(d.pipGapPx) : null}
                   overrides={overrides}
