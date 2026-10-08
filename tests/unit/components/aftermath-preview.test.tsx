@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { measuredLinePreviewPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
+import { costRowHdPx, measuredLinePreviewPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
 import { RULES_SIZE_PX, rulesPxToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
@@ -172,8 +172,8 @@ describe("CardPreview — aftermath's second half", () => {
     expect(want.costSizePct / want.titleSizePct).toBeCloseTo(second.costSizePct! / second.title.sizePct, 10);
     const pips = body.querySelector(`[aria-label="Cost ${cost}"]`)!;
     expect(turned(pips)).toBe(true);
-    // mana-font draws a 1.3em disc, so the font size is the disc ÷ 1.3.
-    expect(fontSize(pips)).toBe(`${((want.costSizePct / 1.3) * 100).toFixed(3)}cqw`);
+    // The row's font size is the disc itself, at the HD bake's whole px.
+    expect(fontSize(pips)).toBe(`${((costRowHdPx(want.costSizePct).discPx * 100) / 1500).toFixed(4)}cqw`);
     const band = pips.parentElement!;
     expect(fontSize(band)).toBe(`${(measuredLinePreviewPct(want.titleSizePct, second.title.sizePct) * 100).toFixed(3)}cqw`);
     expect(band.getAttribute("style")).toMatch(/gap:2\.000cqw/);

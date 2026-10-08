@@ -1,6 +1,13 @@
 import { cn } from "@/lib/utils";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
-import { styledSuffix, symbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { hybridHalves } from "@/lib/cards/rules-text";
+import {
+  manaGlyphPx,
+  previewDiscShadowCss,
+  styledSuffix,
+  symbolStyle,
+  type SymbolStyleSpec,
+} from "@/lib/cards/symbol-style";
 
 // ---------------------------------------------------------------------------
 // ManaCostGlyphs — render `{2}{R}{G/W}{R/P}{T}{S}` etc. using the open-source
@@ -25,11 +32,13 @@ type GlyphSize = "sm" | "md" | "lg";
 type ManaCostGlyphsProps = {
   cost: string | null | undefined;
   size?: GlyphSize;
-  /** Explicit font-size override. Pass a container-relative value (e.g. a
-   *  `cqw` string) so the pips scale with the card instead of staying a fixed
-   *  pixel size. When set, it wins over `size`; the gap + text fallback scale
-   *  with it via em units. Used by CardPreview; the form pickers keep `size`. */
-  fontSize?: number | string;
+  /** A CARD's cost row (CardPreview only; the pickers keep `size`): each
+   *  disc's DIAMETER and the gap between pips, as container-relative CSS
+   *  lengths (`cqw`) — the bake's disc and gap, so the row scales with the
+   *  card and is the stored PNG's — and that disc in the stored HD bake's
+   *  whole `px` (the glyph and the shadow are rounded there, CardPip). When
+   *  set, it wins over `size`. */
+  disc?: { size: string; gap: string; px: number };
   /** The card OWNER's custom pip icons. Pure color pips ({W}…{C}) with an
    *  entry render the uploaded image instead of the mana-font glyph; all
    *  other tokens (and all callers that omit this) keep the standard look. */
@@ -177,22 +186,96 @@ export function tokenSuffix(token: Token): string | null {
 // Renderer
 // ---------------------------------------------------------------------------
 
+// mana-font's `.ms-cost` box: a disc 1.3 em of the pip's own font size, its
+// line box 1.35 em.
+const MS_DISC_EM = 1.3;
+const MS_LINE_EM = 1.35;
+
+// One pip of a CARD (CardPreview only: the cost rows, the rules text, the
+// flipside strip, the saga rail), inside a parent whose font size is the
+// disc's diameter (1 em = one disc) — the bake's ManaGem at the stored HD
+// bake's whole px for a disc `discPx` wide:
+//
+//   - a one-colour symbol at manaGlyphPx of the disc, in a box exactly one
+//     disc. mana-font sizes the disc FROM the glyph's font (1.3 em), so a pip
+//     sized by its disc drew the glyph at 1 ÷ 1.3 = 0.769 of it, the bake
+//     0.73; the glyph keeps the bake's size and the box is set around it,
+//     the line box in mana-font's own proportion. Satori centres the
+//     glyph's em box in the disc; Chromium rounds the font's ascent and
+//     floors the half-leading, which sets a glyph in a line box exactly one
+//     disc tall ~2 % of the disc HIGH of the bake on average. mana-font's
+//     1.35 em line in a 1.3 em disc halves that (measured against the bake
+//     at ten preview widths, 2026-10-07; either way it is within a px);
+//   - a split disc in mana-font's own box at disc ÷ 1.3;
+//   - the disc's shadow as the bake's ONE layer (previewDiscShadowCss), over
+//     the `.ms-shadow` class's two in em of the pip's font; mana-font's
+//     untap disc is dark, so its shadow stays white.
+export function CardPip({
+  suffix,
+  discPx,
+  symbols,
+  overrideSrc = null,
+}: {
+  /** The symbol's mana-font suffix, before the style's own {T}. */
+  suffix: string;
+  discPx: number;
+  symbols: SymbolStyleSpec;
+  /** The card owner's image for this pip, when they set one. */
+  overrideSrc?: string | null;
+}) {
+  const split = overrideSrc != null || hybridHalves(suffix) != null;
+  const glyphPx = split ? discPx / MS_DISC_EM : manaGlyphPx(discPx);
+  const boxShadow = previewDiscShadowCss(symbols, discPx, glyphPx, suffix === "untap" ? "#fff" : undefined);
+  const fontSize = `${(glyphPx / discPx).toFixed(4)}em`;
+  if (overrideSrc != null) {
+    return (
+      <PipOverrideImg
+        src={overrideSrc}
+        symbols={symbols}
+        style={{ fontSize, flexShrink: 0 }}
+        boxShadow={boxShadow ?? null}
+      />
+    );
+  }
+  const box = `${(discPx / glyphPx).toFixed(4)}em`;
+  return (
+    <i
+      aria-hidden
+      className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+      style={{
+        fontSize,
+        ...(split
+          ? {}
+          : { width: box, height: box, lineHeight: `${((MS_LINE_EM / MS_DISC_EM) * (discPx / glyphPx)).toFixed(4)}em` }),
+        flexShrink: 0,
+        ...(boxShadow ? { boxShadow } : {}),
+      }}
+    />
+  );
+}
+
 // A custom pip image drawn in the exact box mana-font gives `.ms-cost`:
-// a 1.3em disc at the given font size (0.95em for costs; rules text passes
-// its own scale) with the hard offset `.ms-shadow` pair — so override pips
-// line up pixel-for-pixel with standard ones beside them.
+// a 1.3em disc at the given font size (0.95em for the pickers' costs; a
+// card's pips pass their own scale, CardPip) with the hard offset
+// `.ms-shadow` pair — or, on a card, the bake's one layer (`boxShadow`) — so
+// override pips line up pixel-for-pixel with standard ones beside them.
 export function PipOverrideImg({
   src,
   fontSizeEm = 0.95,
   style,
   symbols = symbolStyle(undefined),
+  boxShadow,
 }: {
   src: string;
   fontSizeEm?: number;
   style?: React.CSSProperties;
   /** The frame's symbol style (the disc's shadow); "modern" when omitted. */
   symbols?: SymbolStyleSpec;
+  /** A CARD's pip: the bake's shadow in place of the style's mana-font pair
+   *  (null = none). */
+  boxShadow?: string | null;
 }) {
+  const shadow = boxShadow === undefined ? symbols.previewShadowCss : boxShadow;
   return (
     <span
       aria-hidden
@@ -208,8 +291,9 @@ export function PipOverrideImg({
           height: "1.3em",
           borderRadius: "50%",
           objectFit: "cover",
-          // mana-font's `.ms-cost.ms-shadow` pair, where the style has a shadow.
-          ...(symbols.previewShadowCss ? { boxShadow: symbols.previewShadowCss } : {}),
+          // mana-font's `.ms-cost.ms-shadow` pair (a card: the bake's one
+          // layer), where the style has a shadow.
+          ...(shadow ? { boxShadow: shadow } : {}),
         }}
       />
     </span>
@@ -219,7 +303,7 @@ export function PipOverrideImg({
 export function ManaCostGlyphs({
   cost,
   size = "md",
-  fontSize,
+  disc,
   overrides,
   offsetY,
   symbols = symbolStyle(undefined),
@@ -229,16 +313,14 @@ export function ManaCostGlyphs({
   const tokens = tokenize(cost.trim());
   if (tokens.length === 0) return null;
 
-  // A custom fontSize (e.g. a `cqw` value) scales the glyphs with the card; the
-  // gap then needs to scale too, so use an em gap instead of the fixed token.
-  const scaled = fontSize != null;
-  const resolvedFontSize = scaled ? fontSize : SIZE_PX[size];
+  // A card's row: the font size IS the disc's diameter, the gap the bake's.
+  const scaled = disc != null;
 
   return (
     <span
       className={cn(
         "inline-flex items-center",
-        scaled ? "gap-[0.12em]" : GAP_CLASS[size],
+        scaled ? null : GAP_CLASS[size],
         className,
       )}
       // A rendered mana cost is a composite pictograph — role="img" makes
@@ -247,7 +329,7 @@ export function ManaCostGlyphs({
       role="img"
       aria-label={`Cost ${cost}`}
       style={{
-        fontSize: resolvedFontSize,
+        ...(disc ? { fontSize: disc.size, columnGap: disc.gap } : { fontSize: SIZE_PX[size] }),
         ...(offsetY ? { transform: `translateY(${offsetY})` } : {}),
       }}
     >
@@ -256,17 +338,22 @@ export function ManaCostGlyphs({
           return (
             <span
               key={`t-${i}`}
-              className="text-[0.72em] uppercase tracking-wider text-muted"
+              // The bake's 0.6 × disc caps on a card; the pickers' as before.
+              className={cn(scaled ? "text-[0.6em]" : "text-[0.72em]", "uppercase tracking-wider text-muted")}
             >
               {token.value}
             </span>
           );
         }
         const overrideSrc = pipOverrideForToken(token, overrides);
+        const suffix = tokenSuffix(token);
+        if (disc) {
+          if (!overrideSrc && !suffix) return null;
+          return <CardPip key={`g-${i}`} suffix={suffix ?? ""} discPx={disc.px} symbols={symbols} overrideSrc={overrideSrc} />;
+        }
         if (overrideSrc) {
           return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
         }
-        const suffix = tokenSuffix(token);
         if (!suffix) return null;
         // ms-cost gives the circular gem background, ms-shadow adds depth.
         // Both come from mana-font's stylesheet.
@@ -275,9 +362,6 @@ export function ManaCostGlyphs({
             key={`g-${i}`}
             aria-hidden
             className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
-            // A style whose shadow no mana-font class draws (the 2003
-            // frame's, straight down) sets it on the glyph itself.
-            style={!symbols.previewShadowClass && symbols.previewShadowCss ? { boxShadow: symbols.previewShadowCss } : undefined}
           />
         );
       })}

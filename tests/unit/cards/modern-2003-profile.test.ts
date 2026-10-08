@@ -9,7 +9,7 @@ import { PLATE_INK, plateInkRect } from "@/lib/cards/plate-ink";
 import { costRowWidthPct } from "@/lib/cards/render-tiers";
 import { metricsFor } from "@/lib/cards/rules-layout";
 import { fitStatSizePct } from "@/lib/cards/stat-fit";
-import { SYMBOL_STYLES, discShadowCss, discShadowPx, inlineSymbolStyle, styledSuffix, symbolStyle, symbolStyleOf } from "@/lib/cards/symbol-style";
+import { SYMBOL_STYLES, discShadowCss, discShadowPx, inlineSymbolStyle, manaGlyphPx, previewDiscShadowCss, styledSuffix, symbolStyle, symbolStyleOf } from "@/lib/cards/symbol-style";
 import { footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { TYPE_FACES, faceOf } from "@/lib/cards/type-faces";
@@ -249,11 +249,13 @@ describe('symbolStyle "2003" — a cost shadow straight down, flat inline pips, 
     expect(discShadowPx(style, 68)).toEqual({ left: 0, down: 6 });
     expect(discShadowPx(style, 34)).toEqual({ left: 0, down: 3 });
     expect(discShadowCss(style, 68)).toBe("0px 6px 0 #000");
-    // The preview: no mana-font class draws this shadow, so the glyph
-    // carries it — 6 ÷ 68 of the disc, which is 1.3 em of the glyph.
+    // The preview: no mana-font class draws this shadow (outside a card the
+    // style has none); a CARD's pip takes the bake's one layer from
+    // `discShadow`, in em of its glyph (previewDiscShadowCss): 6 px under a
+    // 68 px disc whose glyph is 50 px.
     expect(style.previewShadowClass).toBeNull();
-    expect(style.previewShadowCss).toBe("0 0.1147em 0 #000");
-    expect(0.1147 / 1.3).toBeCloseTo(6 / 68, 3);
+    expect(style.previewShadowCss).toBeNull();
+    expect(previewDiscShadowCss(style, 68, manaGlyphPx(68))).toBe("0.0000em 0.1200em 0 #000");
     // It reaches no further than the disc along the row: the name's room is
     // the discs and their gaps.
     expect(costRowWidthPct("{3}{G}", MODERN_COST_DISC_PCT, style)).toBeLessThan(costRowWidthPct("{3}{G}", MODERN_COST_DISC_PCT, symbolStyle(undefined)));

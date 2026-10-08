@@ -141,7 +141,9 @@ describe('CardPreview — symbolStyle "2003"', () => {
     const { pips } = renderOn("modern", "r");
     expect(pips.map((el) => el.className)).toEqual(["ms ms-cost ms-x", "ms ms-cost ms-r", "ms ms-cost ms-tap", "ms ms-cost ms-r"]);
     // The two cost pips…
-    for (const pip of pips.slice(0, 2)) expect(pip.style.boxShadow.replace(/\s+/g, " ")).toMatch(/0(px)? 0\.1147em 0(px)? (#000|rgb\(0, 0, 0\)|#000000)|(#000|rgb\(0, 0, 0\)) 0(px)? 0\.1147em 0(px)?/);
+    // (The bake's one layer in em of the pip's glyph — previewDiscShadowCss:
+    // 6 px under a 68 px disc whose glyph is 50 px, nothing to the left.)
+    for (const pip of pips.slice(0, 2)) expect(pip.style.boxShadow.replace(/\s+/g, " ")).toBe("0.0000em 0.1200em 0 #000");
     // …and the two in the rules text.
     for (const pip of pips.slice(2)) expect(pip.style.boxShadow).toBe("");
   });

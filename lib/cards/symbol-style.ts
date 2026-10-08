@@ -37,14 +37,15 @@ export type SymbolStyleSpec = {
    *  false = the shadow is the COST row's alone and an inline pip is flat
    *  (the 2003 prints). Read through inlineSymbolStyle. */
   inlineShadow: boolean;
-  /** The mana-font class that draws the same shadow in the preview
-   *  (`.ms-shadow`: 0.06 / 0.07 of the disc's 1.3 em); null with no shadow. */
+  /** The mana-font class a shadowed pip carries in the browser
+   *  (`.ms-shadow`); null with no shadow. Its own `box-shadow` is mana-font's
+   *  — two layers in em of the PIP's font, 0.044–0.046 of the disc — and
+   *  draws only where no card is (the pickers, deck lists, articles): a
+   *  CARD's pip sets the bake's over it (previewDiscShadowCss). */
   previewShadowClass: string | null;
-  /** The shadow as a `box-shadow` in em of the PIP'S OWN font size (its disc
-   *  is 1.3 em): the class's own value, for an owner's custom pip IMAGE
-   *  (which has no mana-font class to carry it) — and, for a style whose
-   *  shadow no mana-font class draws (`previewShadowClass` null), what the
-   *  preview sets on the glyph itself. null with no shadow. */
+  /** That class's own `box-shadow`, for an owner's custom pip IMAGE outside
+   *  a card (which has no mana-font class to carry it); null with no
+   *  shadow. */
   previewShadowCss: string | null;
   /** How far the shadow reaches past a COST ROW's ends, in discs — what the
    *  name's room is measured against (costRowWidthPct). */
@@ -85,19 +86,31 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
   // 6 px straight down — nothing to the left (M12 #1: discs 140–206 px, the
   // shadow to 212) — while a pip in the rules text is flat; {T} is the
   // modern arrow (from Mirrodin 2003 on) and the five colour symbols are the
-  // font's. The shadow is 6 ÷ 68 of the disc: 0.1147 em of the glyph's own
-  // font size in the preview (the disc is 1.3 em). It reaches no further
-  // than the disc along the row.
+  // font's. No mana-font class draws this shadow: a card's pip takes it from
+  // `discShadow` in both renderers (the preview through
+  // previewDiscShadowCss). It reaches no further than the disc along the row.
   "2003": {
     id: "2003",
     discShadow: { left: 0, down: 6 / 68, colorHex: "#000" },
     inlineShadow: false,
     previewShadowClass: null,
-    previewShadowCss: "0 0.1147em 0 #000",
+    previewShadowCss: null,
     costRowShadowDiscs: 0,
     tapSuffix: "tap",
   },
 };
+
+/** A one-colour symbol's font size as a fraction of its disc's diameter —
+ *  mana-font's `.ms-cost` at a cost's size (a 0.95 em glyph, a 1.3 em disc).
+ *  The bake's ManaGem draws it; the preview's cost row sets the same glyph in
+ *  the same disc (components/cards/mana-cost-glyphs.tsx). */
+export const MANA_GLYPH_OF_DISC = 0.73;
+
+/** That symbol's font size in whole px for a disc `discPx` wide — what the
+ *  bake's ManaGem sets, and the preview at the stored bake's px. */
+export function manaGlyphPx(discPx: number): number {
+  return Math.round(discPx * MANA_GLYPH_OF_DISC);
+}
 
 /** The style named `style`; "modern" when it names none. */
 export function symbolStyle(style: SymbolStyle | undefined): SymbolStyleSpec {
@@ -132,6 +145,23 @@ export function discShadowCss(spec: SymbolStyleSpec, discPx: number): string | u
   if (!spec.discShadow) return undefined;
   const { left, down } = discShadowPx(spec, discPx);
   return `${left ? -left : 0}px ${down}px 0 ${spec.discShadow.colorHex}`;
+}
+
+/** The bake's disc shadow for the PREVIEW's pip of a card: discShadowCss's
+ *  ONE layer at the stored bake's whole px for a disc `discPx` wide, written
+ *  in em of an element whose font size is `emPx` of those px — so it scales
+ *  with the card and is the stored PNG's at every preview size. `colorHex`
+ *  replaces the style's ink (mana-font's untap disc is dark, its shadow
+ *  white). undefined with no shadow. */
+export function previewDiscShadowCss(
+  spec: SymbolStyleSpec,
+  discPx: number,
+  emPx: number,
+  colorHex?: string,
+): string | undefined {
+  if (!spec.discShadow) return undefined;
+  const { left, down } = discShadowPx(spec, discPx);
+  return `${((left ? -left : 0) / emPx).toFixed(4)}em ${(down / emPx).toFixed(4)}em 0 ${colorHex ?? spec.discShadow.colorHex}`;
 }
 
 /** The mana-font suffix a symbol draws in `spec`: the style's own tap for
