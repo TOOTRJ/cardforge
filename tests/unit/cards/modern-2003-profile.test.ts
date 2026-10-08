@@ -307,10 +307,16 @@ describe("the 2003 slots on the new masters", () => {
     }
   });
 
-  it("the cost row ends at 1370 px on row 173, and the land draws none", () => {
+  it("the cost row ends at 1370 px with its discs on rows 140–205, and the land draws none", () => {
     const c = modern.costRect!;
     expect(px(c.leftPct + c.widthPct)).toBeCloseTo(1370, 0);
-    expect(px(c.topPct + c.heightPct / 2, HD_H)).toBeCloseTo(173, 0);
+    // The rect's middle is 172.4 px: the layout sets the 66 px disc from
+    // 139.4 px, drawn on rows 140–205 (the prints' 139.7–206.7; the real
+    // bake is read in tests/unit/render/modern-2003-bake.test.tsx).
+    const mid = px(c.topPct + c.heightPct / 2, HD_H);
+    expect(mid).toBeGreaterThan(172);
+    expect(mid).toBeLessThan(173);
+    expect(Math.round(mid - 33)).toBe(139);
     expect(land.hideCost).toBe(true);
     expect(modern.hideCost).toBeUndefined();
   });

@@ -2826,8 +2826,8 @@ const MODERN: FrameProfile = {
   label: "Modern border (2003)",
   symbolStyle: "2003",
   costSizePct: MODERN_COST_DISC_PCT,
-  // The cost row: its last disc ends at 1370 px, the discs centred on row
-  // 173 (84 prints, CHK 2004 → JOU 2014, by a circle fitted to the shadow's
+  // The cost row: its last disc ends at 1370 px, the discs on rows 140–205
+  // (the rect's middle is 172.4 px; 84 prints, CHK 2004 → JOU 2014, by a circle fitted to the shadow's
   // outer arc — black against the bar on every colour: radius 33.4 px,
   // lowest point row 211.9, left-most 1302.0 px; the disc's own edges, where
   // it stands clear of its bar: rows 139.7–206.7, ending at 1369.9 px,
