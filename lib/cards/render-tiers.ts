@@ -399,7 +399,7 @@ function costRowTerms(
       perDisc += displayTextEm(token.value.toUpperCase()) * 0.6;
       fixedPct += token.value.length * 3 * HALF_PX_PCT;
     } else {
-      // PROTOTYPE (symbol round): a Phyrexian pip's larger disc.
+      // A pip's own disc: 1, or a Phyrexian symbol's larger one (v49).
       perDisc += pipScale(tokenSuffix(token) ?? "");
     }
   }

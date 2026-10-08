@@ -71,7 +71,7 @@ export function GlyphCoverageNotice({
 
 // ---------------------------------------------------------------------------
 // UndrawableSymbolNotice — the same notice for `{…}` symbols: a mana cost or a
-// rules text may hold a symbol the card has no pip for ({21}, {W/U/P}…), and
+// rules text may hold a symbol the card has no pip for ({21}, {C/P}…), and
 // both the preview and the image leave it out without a trace. Warn-only —
 // stored cards hold such symbols already. The check is
 // lib/validation/card-glyphs.ts findUndrawableSymbols, which asks the

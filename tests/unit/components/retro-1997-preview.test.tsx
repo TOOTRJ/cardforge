@@ -172,12 +172,14 @@ describe('CardPreview — symbolStyle "1997"', () => {
     const { pips } = renderOn("retro", "r");
     expect(pips).toEqual(["x flat", "r flat", "tap-4ed flat", "r flat"]);
     cleanup();
-    // The same card on the Alpha frame keeps M15's shadowed discs and tap
-    // (the 2003 frame, this test's first twin, has its own style since TODO
-    // 4.10b: tests/unit/components/modern-2003-preview.test.tsx).
+    // The same card on the Alpha frame keeps M15's shadowed COST discs and
+    // tap — its rules pips are flat too since layout v49 (the M15-era prints
+    // shadow the cost alone). (The 2003 frame, this test's first twin, has
+    // its own style since TODO 4.10b:
+    // tests/unit/components/modern-2003-preview.test.tsx.)
     const { container } = render(
       <CardPreview title="Probe" cost="{X}{R}" cardType="creature" colorIdentity={["red"]} rulesText="{T}: Add {R}." frameStyle={{ template: "agclassic" }} />,
     );
-    expect(pipsOf(container)).toEqual(["x shadow", "r shadow", "tap shadow", "r shadow"]);
+    expect(pipsOf(container)).toEqual(["x shadow", "r shadow", "tap flat", "r flat"]);
   });
 });

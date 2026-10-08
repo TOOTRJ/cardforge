@@ -1101,6 +1101,67 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            and every slot move — the fourteen ticks on the pair are
 //            flagged "needs re-verification" (they stay verified and
 //            offered) and the owner re-ticks them once.
+//   48     — RESERVED for the 1993 frame on its prints (TODO 4.10c, PR
+//            #493), which merges before v49 ships; until it does the
+//            version is scoped to no template
+//            (RESERVED_ALPHA_1993_LAYOUT_VERSION) so no stored card owes it.
+//   49     — the symbols as printed (TODO 6.16b; owner round 43,
+//            2026-10-08). ITS number lives in SYMBOLS_PRINT_LAYOUT_VERSION
+//            below. Six corrections of a card's mana symbols against real
+//            prints (Scryfall PNGs, 2006 → 2025; the numbers are data in
+//            lib/cards/mana-gem.ts, the measurements in docs/FRAMES.md
+//            "Symbols as printed"):
+//              1. a pip in the RULES text is flat on the M15-era
+//                 ("modern") style — the prints shadow the cost row alone
+//                 (0.003 ± 0.010 of the disc under 31 text pips, 0.079
+//                 under the same cards' cost discs); it carried the cost's
+//                 shadow. "1997" and "2003" were flat already.
+//              2. a Phyrexian symbol ({W/P}) sits on a disc ×1.2 of a plain
+//                 pip's (print 1.175 ± 0.020 in a cost, 1.21 ± 0.08 in
+//                 text) at 0.91 of that disc (print 0.90–0.91); it was a
+//                 plain disc with the symbol 0.70 of it. The rules layout
+//                 measures the larger disc (pipWidthPx / pipTopOf) and the
+//                 cost row its room (costRowTerms).
+//              3. the two-colour Phyrexian symbol ({G/U/P}) is DRAWN: the
+//                 tokenizer's three-part form, the hybrid's split disc on
+//                 the ×1.2 size with a Phyrexian symbol in each half. It
+//                 drew nothing (no disc, no room).
+//              4. untap ({Q}): a white arrow 0.63 of a near-black disc
+//                 (#211f23); it was a dark arrow on the grey disc.
+//              5. snow ({S}): a white flake with a thin dark outline, 0.92
+//                 of its grey disc, as ONE inline SVG; it was mana-font's
+//                 dark line drawing at 0.70.
+//              6. energy ({E}): the bare symbol, no disc and no shadow,
+//                 0.90 of a text pip's disc in a pip's own cell; it sat on
+//                 a grey disc at 0.63.
+//            #2–#6 are ONE look on every symbol style: each symbol was
+//            first printed on the 2003 or the M15 frame in the drawing it
+//            keeps (SHM 2008, NPH 2011, CSP 2006, KLD 2016, NEO 2022) and
+//            the 1997 / 1993 frames never printed one — they take the
+//            nearest printed look. NOT in it: the hybrid / twobrid disc
+//            size, the plain cost disc.
+//            A CORRECTION ("sweep"), never a badge, after the owner's
+//            round-43 sheets. Card-scoped on ANY template (v49Changed): a
+//            redrawn symbol wherever a pip is read, an inline pip in
+//            printed text on a template that shadowed it, or a modal
+//            double-faced body (its strip's pips); every other card is
+//            stamped. Public production (anonymous read, 2026-10-08, 863
+//            cards, all at v47; replayed art-less at HD on the base and on
+//            this commit): 357 are in scope and re-bake once — 354 change
+//            pixels (350 by the flat pip alone; 4 carry a redrawn symbol:
+//            three a {Q}, one a Phyrexian {W/P}), 3 re-bake to the same
+//            pixels (their only pip is in a text the frame does not draw)
+//            — and 506 are stamped, each byte-identical on both commits;
+//            of 129 unlisted, 51 re-bake (49 change). No stored card
+//            changes its rules size or a line break — the one with a
+//            Phyrexian pip included. The visual matrix: 677 of 1451 cases
+//            change (671 by the flat pip, the 6 "edge" cards by {Q} /
+//            {B/P}), none outside the scope; one moves a line break — the
+//            saga set past the floor, whose chapter column was inset 3 px
+//            for the shadow of a pip that starts a line and no longer is
+//            (sideInsetNeeded) — and none changes size or its clipped
+//            state. Verification-neutral (no slot, master, size or plate
+//            moves).
 // ---------------------------------------------------------------------------
 
 /** The 2003 frame's one sweep (TODO 4.10b): the masters of `modern` and
@@ -1118,7 +1179,17 @@ export const MODERN_2003_TEMPLATES: readonly string[] = ["modern", "modernland"]
 export const RETRO_1997_LAYOUT_VERSION = 46;
 export const RETRO_1997_TEMPLATES: readonly string[] = ["retro", "retroland"];
 
-export const CARD_LAYOUT_VERSION = MODERN_2003_LAYOUT_VERSION;
+/** Five symbols on the prints' drawings and flat rules-text pips (TODO
+ *  6.16b, owner round 43): ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the card scope and the rollout below read this
+ *  constant. v48 is the 1993 frame's (TODO 4.10c, PR #493). */
+export const SYMBOLS_PRINT_LAYOUT_VERSION = 49;
+/** v48, held for the 1993 frame (PR #493) until it merges: scoped to no
+ *  template, so no stored card owes it. #493 replaces this entry with its
+ *  own constant and templates. */
+export const RESERVED_ALPHA_1993_LAYOUT_VERSION = 48;
+
+export const CARD_LAYOUT_VERSION = SYMBOLS_PRINT_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1281,6 +1352,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // every card on it (8 stored on `modern`). No narrower verification
   // scope: all fourteen ticks on the pair go stale and are re-made once.
   [MODERN_2003_LAYOUT_VERSION]: MODERN_2003_TEMPLATES,
+  // Reserved for the 1993 frame (PR #493): no template until it merges.
+  [RESERVED_ALPHA_1993_LAYOUT_VERSION]: [],
+  // (v49 is not here: any template — a card scope, v49Changed.)
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1406,10 +1480,15 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * master or plate moves, so no alignment score a tick stored would change.
  * Production's fourteen 2003 ticks stay fresh; the owner signs the ink off
  * on the round-37 sheet (black frame, land), and 4.10b re-opens them once.
+ * v49 is (owner round 43): no slot, master, size or plate moves — a pip
+ * in the rules text loses its shadow and five symbols change their drawing
+ * inside the pip's own cell (as v36's inline pips); a Phyrexian symbol's
+ * larger disc moves text only on a card that carries one. The owner signed
+ * the symbols off on the round-43 sheets.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44, 49];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1454,6 +1533,8 @@ export type ScopeCard = {
   flavor_text?: string | null;
   /** The raw `face_content` jsonb (loyalty abilities, saga chapters). */
   face_content?: unknown;
+  /** v49: the mana cost (a redrawn symbol in it). */
+  cost?: string | null;
 };
 
 // v29 — the templates on which EVERY card's bake changed: their footer is
@@ -1760,6 +1841,83 @@ function v36Changed(card: ScopeCard): boolean {
   );
 }
 
+/** v49 — the symbols whose drawing changed wherever a card draws them (a
+ *  cost or a text, any template, any style): {Q}, {S}, {E}, a Phyrexian
+ *  symbol ({W/P}) and the two-colour Phyrexian one ({G/U/P}, drawn for the
+ *  first time). Case and inner spaces as the tokenizer reads them. */
+const V49_REDRAWN_SYMBOL = /\{\s*(?:[QSE]|[WUBRG]\/P|[WUBRG]\/[WUBRG]\/P)\s*\}/i;
+
+/** Whether a text holds one of v49's redrawn symbols. */
+export function v49HasRedrawnSymbol(value: unknown): boolean {
+  return typeof value === "string" && V49_REDRAWN_SYMBOL.test(value);
+}
+
+/** v49 — the templates whose symbol style already set a rules-text pip flat
+ *  ("1997", "2003"): an inline pip on them is the same pixels. Every other
+ *  template drew M15's shadow under it at v47. Frozen: v49 is history. */
+export const V49_FLAT_INLINE_TEMPLATES: readonly string[] = ["retro", "retroland", "modern", "modernland"];
+
+/** v49 — the modal double-faced bodies: each face's flipside strip sets the
+ *  OTHER face's cost or mana line as rules-text pips. */
+export const V49_FLIPSIDE_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
+
+/** Every text of a `face_content` jsonb a walker's rows or a saga's rail
+ *  may draw. */
+function v49FaceContentTexts(faceContent: unknown): unknown[] {
+  if (!faceContent || typeof faceContent !== "object") return [];
+  const { loyalty, saga } = faceContent as { loyalty?: unknown; saga?: unknown };
+  const out: unknown[] = [];
+  const abilities = loyalty && typeof loyalty === "object" ? (loyalty as { abilities?: unknown }).abilities : undefined;
+  if (Array.isArray(abilities)) for (const a of abilities) if (a && typeof a === "object") out.push((a as { text?: unknown }).text);
+  if (saga && typeof saga === "object") {
+    const { intro, chapters } = saga as { intro?: unknown; chapters?: unknown };
+    out.push(intro);
+    if (Array.isArray(chapters)) for (const ch of chapters) if (ch && typeof ch === "object") out.push((ch as { text?: unknown }).text);
+  }
+  return out;
+}
+
+/**
+ * Whether layout v49 (the symbols as printed) changed a card's bake:
+ *
+ *   - a redrawn symbol (V49_REDRAWN_SYMBOL) anywhere a pip is read — the
+ *     cost, the rules text, a walker's rows, a saga's intro and chapters, a
+ *     second face's cost and rules text — on ANY template;
+ *   - or an inline pip in PRINTED text on a template that shadowed it
+ *     (every template but V49_FLAT_INLINE_TEMPLATES): the rules text unless
+ *     it is a basic land's (never drawn), a walker's rows, a saga's rail, a
+ *     second face's rules text;
+ *   - or a modal double-faced body (its strip's pips).
+ *
+ * Read wider than what is drawn where telling costs more than a re-bake
+ * (a redrawn symbol in a text the frame does not print re-bakes to the
+ * same pixels). Templates are judged as drawn (a {} frame_style is m15).
+ * Any column it needs that the row doesn't carry → affected.
+ */
+function v49Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  if ([card.cost, card.rules_text, card.face_content, card.back_face].some((v) => v === undefined)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  const rowTexts = v49FaceContentTexts(card.face_content);
+  if ([card.cost, card.rules_text, back?.cost, back?.rules_text, ...rowTexts].some(v49HasRedrawnSymbol)) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
+  if (V49_FLIPSIDE_TEMPLATES.includes(template)) return true;
+  if (V49_FLAT_INLINE_TEMPLATES.includes(template)) return false;
+  if (rowTexts.some(v36HasPip) || v36HasPip(back?.rules_text)) return true;
+  if (!v36HasPip(card.rules_text)) return false;
+  if ([card.card_type, card.supertype, card.subtypes, card.title].some((v) => v === undefined)) return true;
+  // The renderers' isBasicLand (lib/cards/watermark.ts): its text is never drawn.
+  return (
+    basicLandManaKey({
+      cardType: card.card_type,
+      supertype: card.supertype,
+      subtypes: card.subtypes,
+      title: card.title,
+      rulesText: card.rules_text,
+    }) === null
+  );
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -1804,6 +1962,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v44 — the 2003 footer ink: every `modernland` card and a `modern` card
   // on the black master — v44Changed.
   44: v44Changed,
+  // v49 — the symbols as printed: a redrawn symbol anywhere, or an inline
+  // pip that lost M15's shadow — v49Changed.
+  [SYMBOLS_PRINT_LAYOUT_VERSION]: v49Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -1931,6 +2092,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   44: "sweep", // the 2003 artist line white on the black frame and on lands (4.23a) — a legibility correction against the prints on combos no stored card uses, never a badge
   [RETRO_1997_LAYOUT_VERSION]: "sweep", // the 1997 frame on the original cards (4.10a): masters, ink, footer, sizes, symbols — a correction on a pair no stored card uses, never a badge
   [MODERN_2003_LAYOUT_VERSION]: "sweep", // the 2003 frame's one sweep (4.10b): masters, P/T box, sizes, footer, symbols — a correction of a live pair against its prints after the owner's before / after sign-off, never a badge
+  [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 

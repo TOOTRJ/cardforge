@@ -28,6 +28,9 @@ function writtenFormsOf(suffix: string): string[] {
   const forms = [`{${upper}}`, `{${suffix}}`];
   // Hybrid, twobrid and Phyrexian symbols are written with a slash.
   if (/^[wubrg2][wubrgp]$/.test(suffix)) forms.push(`{${upper[0]}/${upper[1]}}`);
+  // The two-colour Phyrexian symbol is written in three parts ({G/U/P}) and
+  // only so: "{GUP}" is not a symbol.
+  if (/^[wubrg]{2}p$/.test(suffix)) return [`{${upper[0]}/${upper[1]}/P}`, `{${suffix[0]}/${suffix[1]}/p}`];
   return forms;
 }
 
@@ -60,6 +63,13 @@ describe("undrawableSymbols — every symbol the font has draws, so none is name
 
   it("an ordinary cost and rules text name nothing", () => {
     expect(undrawableSymbols("{2}{W/U}{2/G}{B/P}{X}{S}{C}{20}")).toEqual([]);
+    // The hybrid Phyrexian symbol draws since layout v49 (Tamiyo, Ajani):
+    // either colour order, in every style, in a cost and in rules text.
+    for (const style of STYLES) {
+      expect(undrawableSymbols("{2}{G}{G/U/P}{U}", { symbols: style }), style.id).toEqual([]);
+      expect(undrawableSymbols("Compleated ({G/W/P} can be paid with {G}, {W}, or 2 life.) {w/g/p}", { symbols: style }), style.id).toEqual([]);
+      expect(drawsManaGem(tokenSuffix(tokenize("{G/W/P}")[0])!, style), style.id).toBe(true);
+    }
     expect(undrawableSymbols("{T}, {Q}, Pay {E}{E}: Add {C}. ({G/W} can be paid with either {G} or {W}.)")).toEqual([]);
     expect(undrawableSymbols("")).toEqual([]);
     expect(undrawableSymbols(null)).toEqual([]);
@@ -73,8 +83,9 @@ describe("undrawableSymbols — what the card leaves out is named", () => {
     "{99}",
     "{C/P}", // colourless Phyrexian
     "{1/2}", // a half
-    "{W/U/P}", // hybrid Phyrexian (Tamiyo, Ajani)
-    "{G/W/P}",
+    "{W/W/P}", // not a hybrid Phyrexian symbol: one colour twice
+    "{C/W/P}", // nor with the colourless or a generic half
+    "{2/W/P}",
     "{3/W}", // a twobrid that isn't 2
     "{C/W}", // colourless hybrid, as written
     "{A}", // acorn
@@ -99,13 +110,13 @@ describe("undrawableSymbols — what the card leaves out is named", () => {
   });
 
   it("names each once, upper-cased, in order of first appearance", () => {
-    expect(undrawableSymbols("{21}{w/u/p}{21}{ W/U/P }{G}{1/2}")).toEqual(["{21}", "{W/U/P}", "{1/2}"]);
+    expect(undrawableSymbols("{21}{c/p}{21}{ C/P }{G}{1/2}{W/U/P}")).toEqual(["{21}", "{C/P}", "{1/2}"]);
   });
 
   it("agrees with the rules tokenizer: one name per kind of pip the renderers drop", () => {
     const modern = symbolStyle(undefined);
     const texts = [
-      "{T}, Pay {21}: Add {C/P}. ({W/U/P} can be paid with {W}, {U}, or 2 life.)",
+      "{T}, Pay {21}: Add {C/P}. ({W/U/P} can be paid with {W}, {U}, or 2 life; {W/W/P} is no symbol.)",
       "Landfall — Whenever a land enters, add {1/2}{G}.\n{3/W}{3/W}: Draw a card.",
       "Flying\n{2}{U}: Scry 1.",
     ];
@@ -122,7 +133,7 @@ describe("undrawableSymbols — what the card leaves out is named", () => {
 
   it("an owner's custom pip images change nothing: they exist only for symbols the font has", () => {
     const overrides = { W: "https://example.test/w.png", C: "https://example.test/c.png" };
-    expect(undrawableSymbols("{W}{C}{W/U/P}{C/P}", { overrides })).toEqual(["{W/U/P}", "{C/P}"]);
+    expect(undrawableSymbols("{W}{C}{W/U/P}{C/P}{3/W}", { overrides })).toEqual(["{C/P}", "{3/W}"]);
     expect(undrawableSymbols("{W}{C}", { overrides })).toEqual([]);
   });
 });
@@ -133,7 +144,7 @@ describe("the fields the check reads", () => {
     cost: "{21}{G}",
     supertype: "",
     subtypes_text: "",
-    rules_text: "{T}: Add {W/U/P}.",
+    rules_text: "{T}: Add {W/U/P} or {W/W/P}.",
     flavor_text: "A {21} in flavor text prints as typed.",
     power: "",
     toughness: "",
@@ -162,7 +173,7 @@ describe("the fields the check reads", () => {
   it("costs and rules-style texts, labelled; flavor text is not read (no renderer parses symbols there)", () => {
     expect(findUndrawableSymbols(cardSymbolFields(VALUES))).toEqual([
       { label: "Mana cost", symbols: ["{21}"] },
-      { label: "Rules text", symbols: ["{W/U/P}"] },
+      { label: "Rules text", symbols: ["{W/W/P}"] },
       { label: "Loyalty ability 1", symbols: ["{C/P}"] },
       { label: "Saga intro", symbols: ["{1/2}"] },
       { label: "Chapter 2", symbols: ["{3/W}"] },
@@ -178,12 +189,12 @@ describe("the fields the check reads", () => {
     ]);
   });
 
-  // An imported Ajani, Sleeper Agent (and every saved walker or saga) holds
-  // the serialized text in rules_text AND in its rows; the card draws the
-  // rows. The creator has no rules field on those kinds, so a line read from
+  // An imported walker (and every saved walker or saga) holds the
+  // serialized text in rules_text AND in its rows; the card draws the rows.
+  // The creator has no rules field on those kinds, so a line read from
   // rules_text could never be cleared by the maker.
   it("a walker frame with a filled row reads the rows, never the rules text it doesn't draw", () => {
-    const walker: GlyphCheckValues = {
+    const ajani: GlyphCheckValues = {
       ...VALUES,
       cost: "{1}{G}{G/W/P}{W}",
       rules_text: "Compleated ({G/W/P} can be paid with {G}, {W}, or 2 life.)\n+1: Draw a card.",
@@ -192,9 +203,19 @@ describe("the fields the check reads", () => {
       saga_chapters: [],
       frame_style: { template: "m15pw" },
     };
+    // Ajani, Sleeper Agent as imported: its {G/W/P} draws (layout v49), so
+    // the notice names nothing.
+    expect(findUndrawableSymbols(cardSymbolFields(ajani))).toEqual([]);
+    // The mechanism, with a symbol that still can't be drawn.
+    const walker: GlyphCheckValues = {
+      ...ajani,
+      cost: "{1}{G}{21}{W}",
+      rules_text: "Compleated ({21} can be paid with {G}, {W}, or 2 life.)\n+1: Draw a card.",
+      loyalty_abilities: [{ text: "Compleated ({21} can be paid with {G}, {W}, or 2 life.)" }, { text: "Draw a card." }],
+    };
     expect(findUndrawableSymbols(cardSymbolFields(walker))).toEqual([
-      { label: "Mana cost", symbols: ["{G/W/P}"] },
-      { label: "Loyalty ability 1", symbols: ["{G/W/P}"] },
+      { label: "Mana cost", symbols: ["{21}"] },
+      { label: "Loyalty ability 1", symbols: ["{21}"] },
     ]);
     // The maker takes the symbol out of the row: only the cost is left.
     const edited = { ...walker, loyalty_abilities: [{ text: "Compleated" }, { text: "Draw a card." }] };
@@ -237,7 +258,7 @@ describe("the fields the check reads", () => {
 describe("the warning's sentence", () => {
   it("names the symbols in plain words", () => {
     expect(undrawableSymbolsMessage(["{21}"])).toBe("{21} can't be drawn and will be left off the card");
-    expect(undrawableSymbolsMessage(["{21}", "{W/U/P}"])).toBe("{21} and {W/U/P} can't be drawn and will be left off the card");
+    expect(undrawableSymbolsMessage(["{21}", "{C/P}"])).toBe("{21} and {C/P} can't be drawn and will be left off the card");
     expect(listSymbols(["{21}", "{C/P}", "{1/2}"])).toBe("{21}, {C/P} and {1/2}");
     expect(listSymbols(["{A}", "{B/C}", "{D}", "{E/F}", "{G/H}", "{I}", "{J}", "{K}"])).toBe(
       "{A}, {B/C}, {D}, {E/F}, {G/H}, {I} and 2 more",

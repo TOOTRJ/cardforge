@@ -1,8 +1,11 @@
-// PROTOTYPE (symbol round, 2026-10-08): the white parts of the snow symbol —
-// mana-font 1.18's `s-mtga` glyph (U+E996; the font is SIL OFL 1.1) as one
-// SVG path in a 1000-unit em, y down, the baseline at the font's ascender —
-// so the bake can stroke it (Satori has no text stroke). Six petals and the
-// six-armed star; lib/cards/mana-gem.ts says how a card draws them.
+// The white parts of the snow symbol {S} — mana-font 1.18's `s-mtga` glyph
+// (U+E996) as ONE SVG path in a 1000-unit em, y down, the baseline at the
+// font's ascender: six petals and the six-armed star. DATA derived from
+// mana-font (https://github.com/andrewgioia/mana), whose font is licensed
+// under the SIL Open Font License 1.1 — the same licence covers this
+// outline; no font file is added. A card strokes and fills it
+// (lib/cards/mana-gem.ts snowFlakeSpec: Satori has no text stroke, and the
+// browser draws the same SVG, so both renderers set the same shape).
 // Client-safe, no imports.
 
 /** The path's own box in those units: left, top, right, bottom. */

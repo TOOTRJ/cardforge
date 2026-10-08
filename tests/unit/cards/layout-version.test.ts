@@ -2212,3 +2212,172 @@ describe("the battle re-cut onto the prints (TODO 4.21d) — its bump", () => {
     expect(battle.artSlot.topPct * 15).toBeCloseTo(56.2, 9);
   });
 });
+
+describe("v49 — the symbols as printed: five redrawn symbols and flat rules-text pips (TODO 6.16b)", () => {
+  const png = "https://x/y.png";
+  const V = 49;
+  /** A v48 bake: only v49 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    card_type: "creature",
+    title: "Probe",
+    cost: "{2}{G}{G}",
+    ...over,
+  });
+  const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
+  const AT = { current: V } as const;
+  const FLAT = ["retro", "retroland", "modern", "modernland"];
+  const MODAL = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
+  const REDRAWN = ["{Q}", "{S}", "{E}", "{W/P}", "{u/p}", "{G/U/P}", "{ g/w/p }", "{b/P}"];
+  const PLAIN = ["{T}", "{2}", "{G}", "{X}", "{C}", "{W/U}", "{2/W}", "{20}"];
+
+  it("is a sweep, never a badge, on ANY template — a card scope alone", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.SYMBOLS_PRINT_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    // No template list: without a card to judge by, every template is touched.
+    for (const t of ALL) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(true);
+  });
+
+  it("the frozen lists are the profiles': the templates that already set a text pip flat, and the modal bodies", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect([...lv.V49_FLAT_INLINE_TEMPLATES].sort()).toEqual([...FLAT].sort());
+    expect([...lv.V49_FLIPSIDE_TEMPLATES].sort()).toEqual([...MODAL].sort());
+    // At the base of this bump a template drew M15's style — a shadow under
+    // every text pip — unless it named a style of its own, and each of
+    // those ("1997", "2003") was flat already.
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => ["1997", "2003"].includes(getFrameProfile(t).symbolStyle ?? "")).sort()).toEqual([...FLAT].sort());
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside).sort()).toEqual([...MODAL].sort());
+  });
+
+  it("the redrawn-symbol test is the renderers' own answer: exactly the symbols whose pip changed", async () => {
+    const { v49HasRedrawnSymbol } = await import("@/lib/cards/layout-version");
+    const { tokenize, tokenSuffix } = await import("@/components/cards/mana-cost-glyphs");
+    const { manaGemSpec, pipScale } = await import("@/lib/cards/mana-gem");
+    const { symbolStyle, manaGlyphPx } = await import("@/lib/cards/symbol-style");
+    /** The pip is anything but the plain one: a v47 disc with the font's glyph at mana-font's share, or a plain hybrid. */
+    const changed = (text: string) => {
+      const suffix = tokenSuffix(tokenize(text)[0])!;
+      const gem = manaGemSpec(suffix, 60, symbolStyle("modern"));
+      if (pipScale(suffix) !== 1) return true;
+      if (gem.kind === "split") return false;
+      return gem.bg === null || gem.flake !== undefined || gem.ink !== "#150d08" || gem.glyphPx !== manaGlyphPx(60);
+    };
+    for (const text of REDRAWN) {
+      expect(v49HasRedrawnSymbol(text), text).toBe(true);
+      expect(changed(text), text).toBe(true);
+      expect(v49HasRedrawnSymbol(`Pay ${text}: Draw a card.`), text).toBe(true);
+    }
+    for (const text of [...PLAIN, "{C/P}", "{2/W/P}", "{21}", "{1/2}", "{CHAOS}", "Q", "{QQ}", "", "No symbols."]) {
+      expect(v49HasRedrawnSymbol(text), text).toBe(false);
+    }
+    // Wider than the drawing in one harmless case: "{W/W/P}" (one colour
+    // twice) is no symbol and draws nothing — a card holding it re-bakes to
+    // the same pixels.
+    expect(v49HasRedrawnSymbol("{W/W/P}")).toBe(true);
+    for (const text of PLAIN) expect(changed(text), text).toBe(false);
+    for (const value of [null, undefined, 7, {}]) expect(v49HasRedrawnSymbol(value)).toBe(false);
+  });
+
+  it("a redrawn symbol re-bakes the card on any template — in the cost, the text, the rows, the rail or the second face", async () => {
+    const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(V);
+    for (const t of ["m15", "lotr", "retro", "modern", "modernland", "m15pw", "saga", "m15token", "agclassic"]) {
+      for (const symbol of REDRAWN) {
+        const rows = [
+          at(t, { cost: `{2}${symbol}` }),
+          at(t, { rules_text: `${symbol}: Draw a card.` }),
+          at(t, { back_face: { cost: symbol } }),
+          at(t, { back_face: { rules_text: `Pay ${symbol}.` } }),
+          at(t, { face_content: { loyalty: { abilities: [{ cost: "+1", text: "Draw a card." }, { cost: "-2", text: `Add ${symbol}.` }] } } }),
+          at(t, { face_content: { saga: { intro: `(${symbol})`, chapters: [] } } }),
+          at(t, { face_content: { saga: { intro: "", chapters: [{ numerals: [1], text: `Add ${symbol}.` }] } } }),
+        ];
+        for (const row of rows) {
+          expect(classifyForSweep(row), `${t} ${symbol}`).toBe("rebake");
+          expect(hasPendingCorrection(row, AT), `${t} ${symbol}`).toBe(true);
+          expect(hasNewerLook({ ...row, visibility: "public" }, AT), `${t} ${symbol}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("an inline pip re-bakes the card where it was shadowed, and is stamped on the templates that set it flat already", async () => {
+    const classifyForSweep = await sweepAt(V);
+    const texts = [
+      { rules_text: "{T}: Add {G}." },
+      { rules_text: "Flying\n{2}{W/U}: Scry 1." },
+      { back_face: { rules_text: "{X}: Draw a card." } },
+      { face_content: { loyalty: { abilities: [{ cost: "+1", text: "Add {B}{B}." }] } } },
+      { face_content: { saga: { intro: "", chapters: [{ numerals: [1], text: "Add {G}." }] } } },
+    ];
+    for (const t of ALL) {
+      for (const over of texts) {
+        const want = FLAT.includes(t) && !MODAL.includes(t) ? "stamp" : "rebake";
+        expect(classifyForSweep(at(t, over)), `${t} ${JSON.stringify(over)}`).toBe(want);
+      }
+    }
+  });
+
+  it("a card with no pip in its text is stamped: a cost of plain symbols changes nothing (the cost row keeps its shadow)", async () => {
+    const { hasPendingCorrection } = await import("@/lib/cards/layout-version");
+    const classifyForSweep = await sweepAt(V);
+    for (const t of ALL.filter((t) => !MODAL.includes(t))) {
+      for (const over of [
+        {},
+        { cost: "{X}{2}{W/U}{2/G}{C}{G}", rules_text: "Trample, haste" },
+        { cost: null, rules_text: null },
+        { rules_text: "Flying\nWhen this creature enters, draw a card.", flavor_text: "A {Q} in flavor text prints as typed." },
+        { back_face: { title: "Back", cost: "{1}{G}", rules_text: "Reach" } },
+        { face_content: { loyalty: { abilities: [{ cost: "+1", text: "Draw a card." }] } } },
+      ]) {
+        const row = at(t, over);
+        expect(classifyForSweep(row), `${t} ${JSON.stringify(over)}`).toBe("stamp");
+        expect(hasPendingCorrection(row, AT), t).toBe(false);
+      }
+    }
+    // A basic land's text is never drawn (the renderers' isBasicLand)…
+    const forest = { card_type: "land", supertype: "Basic", subtypes: ["Forest"], title: "Forest", cost: null, rules_text: "{T}: Add {G}." };
+    expect(classifyForSweep(at("m15land", forest))).toBe("stamp");
+    // …a nonbasic land's is.
+    expect(classifyForSweep(at("m15land", { ...forest, supertype: null, subtypes: [], title: "Thicket" }))).toBe("rebake");
+    // Already at v49.
+    expect(classifyForSweep(at("m15", { rules_text: "{T}: Add {G}.", layout_version: V }))).toBe("current");
+  });
+
+  it("every card on a modal double-faced body re-bakes (its strip sets the other face's cost as text pips)", async () => {
+    const classifyForSweep = await sweepAt(V);
+    for (const t of MODAL) expect(classifyForSweep(at(t, { rules_text: "Reach" })), t).toBe("rebake");
+  });
+
+  it("a row that can't be judged is affected", async () => {
+    const classifyForSweep = await sweepAt(V);
+    for (const column of ["frame_style", "cost", "rules_text", "face_content", "back_face"]) {
+      expect(classifyForSweep(at("m15", { [column]: undefined })), column).toBe("rebake");
+    }
+    // The basic-land columns only matter once the text has a pip.
+    expect(classifyForSweep(at("m15", { rules_text: "{T}: Add {G}.", subtypes: undefined }))).toBe("rebake");
+    expect(classifyForSweep(at("m15", { rules_text: "Reach", subtypes: undefined }))).toBe("stamp");
+  });
+
+  it("is verification-neutral: no slot moves, so every tick stays fresh", async () => {
+    const { VERIFICATION_NEUTRAL_VERSIONS, VERIFICATION_SCOPED_VERSIONS } = await import("@/lib/cards/layout-version");
+    const { verificationState } = await import("@/lib/cards/frame-verification-state");
+    expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    for (const t of ALL) {
+      const card = { frame_style: { template: t, finish: "regular" }, cost: "{G/P}", rules_text: "{Q}: Add {S}{E}." };
+      expect(isRenderStale(V - 1, t, VERIFICATION_SCOPED_VERSIONS, V, card), t).toBe(false);
+      const tick = { verified: true, verifiedLayoutVersion: V - 1, verifiedOverrideHash: "h" } as const;
+      expect(verificationState(tick, t, "h", V), t).toMatchObject({ verified: true, stale: false });
+    }
+  });
+});

@@ -70,7 +70,7 @@ import {
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
-import { scaledDiscPx } from "@/lib/cards/mana-gem";
+import { pipDiscPx, pipRisePx } from "@/lib/cards/mana-gem";
 import { discShadowPx, inlineSymbolStyle, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
 import {
@@ -225,14 +225,16 @@ export function wordWidthPx(item: Extract<RulesItem, { t: "w" }>, m: Pick<RulesM
   return Math.ceil(rulesTextWidthEm(item.v, Boolean(item.em)) * m.fontPx - 1e-6);
 }
 
-/** PROTOTYPE (symbol round): a pip's own disc — a Phyrexian one is larger
- *  than `m.pipPx` (lib/cards/mana-gem.ts pipScale), about the same centre. */
+/** A pip's own disc in `m`'s whole px: `m.pipPx`, or a Phyrexian symbol's
+ *  larger one (lib/cards/mana-gem.ts pipDiscPx, layout v49) — what both
+ *  renderers draw and every width, ink box and keep-out here measures. */
 export function pipWidthPx(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx">): number {
-  return scaledDiscPx(item.suffix, m.pipPx);
+  return pipDiscPx(item.suffix, m.pipPx);
 }
-/** That disc's top in its line box. */
-function pipTopOf(item: Extract<RulesItem, { t: "m" }>, m: RulesMetrics): number {
-  return m.pipTopPx - Math.floor((pipWidthPx(item, m) - m.pipPx) / 2);
+/** That disc's top in its line box: `m.pipTopPx`, less a larger disc's
+ *  rise (it keeps a plain pip's centre). */
+export function pipTopOf(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx" | "pipTopPx">): number {
+  return m.pipTopPx - pipRisePx(item.suffix, m.pipPx);
 }
 
 /** A run's width as `m`'s target draws it: each word its box (wordWidthPx),

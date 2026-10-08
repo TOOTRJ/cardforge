@@ -115,10 +115,19 @@ describe("the preview's cost row is the stored bake's", () => {
     for (const pip of [hybrid, twobrid]) {
       // In the row's own em (1 em = the disc): no font size of its own.
       expect(css(pip, "font-size")).toBe("");
-      expect(css(pip, "width")).toBe("1em");
-      expect(css(pip, "height")).toBe("1em");
+      expect(num(css(pip, "width"), "em")).toBe(1);
+      expect(num(css(pip, "height"), "em")).toBe(1);
       expect(css(pip, "flex-shrink")).toBe("0");
     }
+    // A two-colour Phyrexian disc is the split disc on the larger size
+    // (layout v49): 88 px where a plain disc is 73, centred in the row.
+    const phy = costRow(render(<CardPreview {...card("m15", "{2}{G/U/P}{G/P}")} />));
+    const [, split, solid] = Array.from(phy.children);
+    expect(css(split, "font-size")).toBe("");
+    expect(num(css(split, "width"), "em") * 73).toBeCloseTo(88, 1);
+    expect(num(css(split, "height"), "em") * 73).toBeCloseTo(88, 1);
+    expect(num(css(solid, "width"), "em") * num(css(solid, "font-size"), "em") * 73).toBeCloseTo(88, 1);
+    expect(phy.className).toContain("items-center");
     expect(num(css(mono, "font-size"), "em") * 73).toBeCloseTo(manaGlyphPx(73), 2);
   });
 
