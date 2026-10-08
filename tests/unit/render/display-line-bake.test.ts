@@ -38,7 +38,9 @@ function card(
 ): CardPreviewData {
   return {
     title,
-    cost: "{3}{R}{R}",
+    // Generic only: Alpha's colour symbols are frames-bucket images (TODO
+    // 4.10c), and this suite bakes offline.
+    cost: "{5}",
     cardType: "creature",
     ...type,
     rarity: "rare",

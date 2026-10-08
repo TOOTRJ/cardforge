@@ -2,13 +2,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 import { bandTextStyle, footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
+import { serveStandInSymbols, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
 // ---------------------------------------------------------------------------
 // Frame-review follow-ups (layout v25/v26, owner review 2026-09-25), pinned on
@@ -17,6 +18,15 @@ import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render
 // offline. Rendered at the "default" preset (750 × 1050) unless a block
 // says otherwise.
 // ---------------------------------------------------------------------------
+
+// (Since TODO 4.10c the 1993 pair's five COLOUR symbols are frames-bucket
+// images — the one thing here that is not on disk: flat stand-in discs are
+// served for them, so a `{W}` in a cost bakes offline.)
+let symbols: StandInFrames;
+beforeAll(async () => {
+  symbols = await serveStandInSymbols();
+});
+afterAll(() => symbols.restore());
 
 const W = RENDER_PRESETS.default.width;
 const H = RENDER_PRESETS.default.height;
@@ -374,12 +384,14 @@ describe("Alpha ink: silver lettering on every frame but white", () => {
   }, 120_000);
 });
 
-describe("Alpha name, pips and type line (owner review round 4)", () => {
+describe("Alpha name, pips and type line (owner review round 4; sizes and rows from the prints since TODO 4.10c)", () => {
   // Baked at the "hd" preset (1500 × 2100) so every number is an HD px and a
-  // 1–2 px move is visible (the default preset halves it). The art window's
-  // edge is ~178 px (the owner's pick, "B2"); round 3 put the name at ~114 px
-  // and the type line at ~157, with 48 px caps and 63 px pip discs centred
-  // ~5 px above the caps.
+  // 1–2 px move is visible (the default preset halves it). Round 4 started
+  // the name and the type line on the art window's edge (~178 px, the
+  // owner's pick "B2"); round 44 (2026-10-08) put both back on the prints'
+  // starts (ink at 109 and 155 px). Round 4's 41 px caps and 54 px discs
+  // gave way to the prints' with layout v48: a 72 px name on the baseline
+  // 171.5 px, 72 px discs on row 142.5 ending at 1365 px.
   const hd = (data: CardPreviewData) => bake(data, false, "hd");
   /** diffBox limited to rows y0–y1. */
   function bandBox(a: Raw, b: Raw, y0: number, y1: number) {
@@ -398,7 +410,7 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
   const TITLE_ROWS: [number, number] = [80, 215];
   const TYPE_ROWS: [number, number] = [1150, 1262];
 
-  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start on one left margin, the art window's edge", async (template) => {
+  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start where the prints start them (owner round 44; round 4's shared 178 px margin is retired)", async (template) => {
     const land = template === "alphaland";
     const base = {
       title: "Dawn Treader",
@@ -411,7 +423,7 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
     } as Partial<CardPreviewData>;
     const full = await hd(card(template, base));
     // A blank title bakes as "Untitled Card", so the name box is the union of
-    // both names' ink: one left margin, caps + the d/l/t ascenders, no
+    // both names' ink: one start, caps + the d/l/t ascenders, no
     // descenders.
     const noName = await hd(card(template, { ...base, title: " " }));
     const noType = await hd(card(template, { ...base, cardType: null, supertype: null, subtypes: [" "] }));
@@ -419,31 +431,34 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
     const type = bandBox(full, noType, ...TYPE_ROWS)!;
     expect(name).not.toBeNull();
     expect(type).not.toBeNull();
-    // Both start at the art window's edge (~178–181 px) — round 3 had the
-    // name at ~114 and the type line at 156–158.
-    for (const [what, box] of [["name", name], ["type", type]] as const) {
-      expect(box.x0, what).toBeGreaterThanOrEqual(176);
-      expect(box.x0, what).toBeLessThanOrEqual(184);
-    }
-    expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(3);
-    // 41 px caps: the two names' ink measures ~45 px with the ascenders and
-    // anti-aliasing (round 3's 48 px caps: ~54), centred at ~141 px.
+    // The prints' first ink columns (48 / 36 white Alpha and Beta prints):
+    // the name at 109.0 ± 2.9 px (ours 107–112 by its first letter — "D"
+    // and "U" ink 6–8 px into Beleren's advance), the type line at
+    // 155.1 ± 0.9 on lines starting with I, S or E (MPlantin's "L" here
+    // inks 3 px nearer its pen: 151). Round 4 had both on the art window's
+    // edge (~178–181 px).
+    expect(name.x0, "name").toBeGreaterThanOrEqual(106);
+    expect(name.x0, "name").toBeLessThanOrEqual(113);
+    expect(type.x0, "type").toBeGreaterThanOrEqual(150);
+    expect(type.x0, "type").toBeLessThanOrEqual(157);
+    // 51 px caps (Beleren at 72 px): the two names' ink measures ~56 px with
+    // the ascenders and anti-aliasing, ending on the prints' baseline.
     const inkH = name.y1 - name.y0 + 1;
-    expect(inkH).toBeGreaterThan(40);
-    expect(inkH).toBeLessThan(50);
-    expect(Math.abs((name.y0 + name.y1 + 1) / 2 - 141)).toBeLessThan(4);
+    expect(inkH).toBeGreaterThan(51);
+    expect(inkH).toBeLessThan(61);
+    expect(Math.abs(name.y1 + 1 - 171.5)).toBeLessThanOrEqual(2.5);
   }, 60_000);
 
-  it("agclassic: smaller pips, still ending at ~1362 px and centred on the name's caps", async () => {
+  it("agclassic: the prints' 72 px discs, ending at ~1365 px on row 142.5", async () => {
     const base = { title: "Dawn Treader", cost: "{6}", power: null, toughness: null } as Partial<CardPreviewData>;
     const full = await hd(card("agclassic", base));
     const pipsOnly = await hd(card("agclassic", { ...base, title: " " }));
     const blank = await hd(card("agclassic", { ...base, title: " ", cost: null }));
     const name = bandBox(full, pipsOnly, ...TITLE_ROWS)!;
     const pip = bandBox(pipsOnly, blank, ...TITLE_ROWS)!;
-    expect(Math.abs(pip.x1 + 1 - 1362)).toBeLessThanOrEqual(4);
-    // The RENDERED disc, not the profile's number: its hard shadow falls
-    // down-left, so the top and right edges are clean. The rows whose ink
+    expect(Math.abs(pip.x1 + 1 - 1365)).toBeLessThanOrEqual(3);
+    // The RENDERED disc, not the profile's number (flat since 4.10c: no
+    // shadow, so every edge is clean). The rows whose ink
     // reaches one px in from the right edge straddle the disc's centre, and
     // top → centre is the radius.
     const rows: number[] = [];
@@ -451,13 +466,16 @@ describe("Alpha name, pips and type line (owner review round 4)", () => {
     expect(rows.length).toBeGreaterThan(2);
     const pipMid = (rows[0] + rows[rows.length - 1] + 1) / 2;
     const d = 2 * (pipMid - pip.y0);
-    // 54 px discs (round 3: 63).
-    expect(d).toBeGreaterThan(50);
-    expect(d).toBeLessThan(58);
-    // Centred on the name's caps: round 3's lift (costDy −0.004) would sit
-    // today's discs ~4 px high.
-    const capMid = (name.y0 + name.y1 + 1) / 2;
-    expect(Math.abs(pipMid - capMid)).toBeLessThanOrEqual(2);
+    // 72 px discs (round 4: 54; round 3: 63), and the whole disc is all the
+    // pip draws.
+    expect(d).toBeGreaterThan(69);
+    expect(d).toBeLessThan(75);
+    expect(pip.y1 - pip.y0 + 1).toBeGreaterThanOrEqual(71);
+    expect(pip.y1 - pip.y0 + 1).toBeLessThanOrEqual(73);
+    // On the prints' row — 4 px above the middle of the name's capitals,
+    // as the prints set them (the name's baseline is 171.5 px).
+    expect(Math.abs(pipMid - 142.5)).toBeLessThanOrEqual(2);
+    expect(name.y1 + 1).toBeGreaterThan(pip.y0 + 36);
   }, 60_000);
 });
 

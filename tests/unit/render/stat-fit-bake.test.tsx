@@ -95,7 +95,7 @@ const lum = (r: Raw, x: number, y: number) => {
 };
 
 describe("long stats shrink to fit", () => {
-  it("Alpha: *+1/*+1 ends inside the pinstripe, centred where 10/10 is", async () => {
+  it("Alpha: *+1/*+1 ends inside the pinstripe, on the right end 10/10 is set against (TODO 4.10c)", async () => {
     const colorIdentity: CardPreviewData["colorIdentity"] = ["white"];
     const none = await bake(card("agclassic", { colorIdentity, power: null, toughness: null }));
     const long = diffBox(none, await bake(card("agclassic", { colorIdentity, power: "*+1", toughness: "*+1" })))!;
@@ -103,8 +103,14 @@ describe("long stats shrink to fit", () => {
     // The strip's pinstripe is a dark line from ~1405 px (alphaland) / ~1410
     // (agclassic); the value used to run to ~1430, into the black border.
     expect(long.x1).toBeLessThanOrEqual(1404);
-    expect(long.x0).toBeGreaterThanOrEqual(1236);
-    expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
+    // The strip is free from the credit's box (1160 px) since the prints'
+    // sizes; both values end where the prints end every P/T (one digit's
+    // ink 1378 px, a two-digit one's up to 1392), the long one shrunk.
+    expect(long.x0).toBeGreaterThanOrEqual(1158);
+    expect(Math.abs(long.x1 - short.x1)).toBeLessThanOrEqual(8);
+    expect(short.x1).toBeGreaterThanOrEqual(1372);
+    expect(short.x1).toBeLessThanOrEqual(1392);
+    expect(long.y1 - long.y0).toBeLessThan(short.y1 - short.y0);
   }, 60_000);
 
   it("Modern: 100/100 stays on the plate's light face (1134–1367 px since TODO 4.10b), off the bevel", async () => {

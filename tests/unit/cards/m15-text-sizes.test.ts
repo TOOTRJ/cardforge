@@ -445,12 +445,20 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   // The 2003 pair (TODO 4.10b): measured name and type line; only the type
   // line needs a nudge onto its printed baseline.
   const MODERN_2003 = new Set<string>(["modern", "modernland"]);
+  const ALPHA_1993 = new Set<string>(["agclassic", "alphaland"]);
   it("sets TextSlot.dy only on family frames, and the measured fit on them, on split's two halves and on the 1997 and 2003 pairs' name and type line", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       if (FAMILY.has(t)) continue;
       const p = getFrameProfile(t);
       for (const slot of slots(p)) {
         if (RETRO_1997.has(t) && (slot === p.title || slot === p.type)) {
+          expect(slot.fit, t).toBe("measured");
+          expect(slot.dy, t).toBeGreaterThan(0);
+          continue;
+        }
+        // The 1993 pair (TODO 4.10c): measured name and type line, each
+        // lowered onto its printed baseline.
+        if (ALPHA_1993.has(t) && (slot === p.title || slot === p.type)) {
           expect(slot.fit, t).toBe("measured");
           expect(slot.dy, t).toBeGreaterThan(0);
           continue;
@@ -480,8 +488,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   // tests/unit/cards/fixtures/profiles-base.json).
   const V31_SPLIT_DIGEST = "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d";
   const V31_DIGESTS: Record<string, string> = {
-    agclassic: "a5da9f64d06ac75912fb88a93120f67bec0cfb3e6c68208f1948ec32a3a66fc9",
-    alphaland: "587111b4d222186562d9bf060d2cd9980cd54b5d7c61a97e2f9c52a266456c8c",
     lotr: "2541c98b09237643cc6ef8d761fdff42f85ffc8d8dc842322e45915e8f62771b",
     lotrscroll: "45a76201319b406e6e6e3612ec875beeadf94315ee6f127af60b2cc0648e1882",
     avatar: "18b37fde1037dfccc0041e515a4f80246a9cbe0ed3e3277ca9a88014394a703a",
@@ -527,7 +533,7 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   const V44_FOOTER_INK = new Set<string>([]);
   const withoutV44FooterInk = (t: string, p: FrameProfile): FrameProfile => {
     if (!V44_FOOTER_INK.has(t)) {
-      expect(p.footer?.inkByColorKey === undefined || t === "agclassic" || t === "alphaland", t).toBe(true);
+      expect(p.footer?.inkByColorKey, t).toBeUndefined();
       return p;
     }
     expect(p.footer?.inkByColorKey, t).toBeDefined();
@@ -540,7 +546,9 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     // (The 1997 pair left its v31 self with its own bump too: TODO 4.10a,
     // layout v46 — tests/unit/cards/retro-1997-profile.test.ts.)
     // …and the 2003 pair with TODO 4.10b.
-    const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland"]);
+    // …and the 1993 pair with TODO 4.10c (layout v48 —
+    // tests/unit/cards/alpha-1993-profile.test.ts).
+    const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland", "agclassic", "alphaland"]);
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && !REBUILT.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {

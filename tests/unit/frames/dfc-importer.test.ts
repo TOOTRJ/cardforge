@@ -193,7 +193,9 @@ describe("the transform bodies' recipes (TODO 5.1a)", () => {
   });
 
   it("the rider set: the 12 glyphs a printing wears, lowercase, at 220 px — the profile's slot keys and the glyph map's", () => {
-    expect(Object.keys(CC_RIDERS)).toEqual(["dfcicon"]);
+    // (`manaoriginal`, the 1993 frame's five colour symbols, is the other
+    // rasterised set — TODO 4.10c, tests/unit/frames/alpha-1993-importer.test.ts.)
+    expect(Object.keys(CC_RIDERS).sort()).toEqual(["dfcicon", "manaoriginal"]);
     expect(CC_RIDERS.dfcicon.size).toBe(DFC_ICON_SIZE);
     expect(DFC_ICON_SIZE).toBe(220);
     expect(Object.keys(DFC_ICON_FILES)).toEqual([...DFC_ICON_GLYPH_KEYS]);

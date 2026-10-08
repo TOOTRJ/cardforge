@@ -61,7 +61,11 @@ describe("cardGlyphFields reads each field's face from its frame", () => {
             // artist stays the display face.
             template === "modern" || template === "modernland"
             ? { ...SINGLE, "Footer mark": "body" }
-            : SINGLE;
+            : // The 1993 pair (TODO 4.10c): the type line, the P/T, the
+              // `Illus.` credit and its © slot's footer text are MPlantin.
+              template === "agclassic" || template === "alphaland"
+              ? { ...SINGLE, "Type line": "body", Stats: "body", Artist: "body", "Footer mark": "body" }
+              : SINGLE;
       expect(faces({ ...VALUES, frame_style: template ? { template } : null }), String(template)).toMatchObject(want);
     }
   });
