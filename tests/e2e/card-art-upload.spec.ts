@@ -42,6 +42,15 @@ test.describe("card art upload (TODO 6.10)", () => {
       .setInputFiles({ name: "print-art.png", mimeType: "image/png", buffer: art });
     await expect(page.getByText("Artwork uploaded.")).toBeVisible({ timeout: 60_000 });
 
+    // The positioner's surface is the card's art window (TODO 3b.13): a new
+    // card is on M15, whose window is 1271 × 931 on the HD card — not the
+    // fixed 5:4 box it used to be.
+    const surface = page.locator("[data-art-uploader]").first();
+    await expect(surface).toHaveAttribute("data-art-window-aspect", "1.3657");
+    const box = await surface.evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));
+    expect(box.w / box.h).toBeGreaterThan(1.355);
+    expect(box.w / box.h).toBeLessThan(1.375);
+
     // The preview now shows the stored object: card-art/{user}/{uuid}.png.
     const src = await page.getByAltText("Card artwork preview").getAttribute("src");
     const match = /\/storage\/v1\/object\/public\/card-art\/([0-9a-f-]{36})\/([0-9a-f-]{36}\.png)$/.exec(src ?? "");

@@ -16,9 +16,19 @@ import {
   Move,
   Trash2,
   Upload,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  SOFT_PRINT_PPI,
+  artPrintPpi,
+  focalTravel,
+  positionerSurfaceStyle,
+  recommendedArtSize,
+  type ArtWindow,
+} from "@/lib/cards/art-positioner-window";
 import { uploadCardArtFile } from "@/lib/cards/art-upload-client";
 import { CARD_ART_MAX_LABEL, CARD_ART_MIME_TYPES, cardArtFileProblem } from "@/lib/cards/art-upload-limits";
 import { cn, clamp } from "@/lib/utils";
@@ -31,16 +41,27 @@ import type { ArtPosition } from "@/types/card";
 // user can drop a file onto it, click to open the file picker, paste an
 // image from the clipboard (while the page is focused), or grab the
 // already-uploaded artwork and drag to PAN it under the crop. Shift + mouse
-// wheel adjusts zoom; arrow keys nudge for keyboard users. Positioning is
-// drag-first — there are no sliders. The dragged pixel tracks the cursor 1:1
-// because focalX/Y map to object-position, whose screen sensitivity is
-// exactly (boxSize − displayedSize); we divide the drag delta by that overflow.
+// wheel adjusts zoom; arrow keys nudge for keyboard users, and the zoom
+// buttons under the surface do the same for touch. Positioning is drag-first
+// — there are no sliders.
+//
+// The surface IS the card's art window (TODO 3b.13): with art loaded it has
+// the aspect of the box the renderers crop this face's art to (`artWindow`,
+// lib/cards/art-positioner-window.ts — the frame's own slot, a second
+// face's, a double-faced back's), and the picture is laid in it with the
+// renderers' own CSS. So what shows here is the crop the preview draws and
+// the bake stores, and it follows a frame change. The dragged pixel tracks
+// the cursor 1:1 because one unit of focal moves the picture by exactly
+// (box − covered·zoom) px (focalTravel); we divide the drag by that.
 // ---------------------------------------------------------------------------
 
+// The renderers' own clamps (card-preview.tsx / card-image.tsx: 0.5 – 4).
 const MIN_SCALE = 0.5;
-const MAX_SCALE = 3;
+const MAX_SCALE = 4;
+const ZOOM_STEP = 0.05;
 const ACCEPTED_TYPES = CARD_ART_MIME_TYPES.join(",");
-const ASPECT_RATIO_CLASS = "aspect-[5/4]";
+// The EMPTY dropzone: a file target, not a crop — a comfortable fixed box.
+const EMPTY_ASPECT_RATIO_CLASS = "aspect-[5/4]";
 // Pointer must travel this far before a press becomes a pan — so a plain
 // click (or a tap) never nudges the framing.
 const DRAG_THRESHOLD_PX = 3;
@@ -49,6 +70,10 @@ type ArtUploaderProps = {
   userId: string | null;
   artUrl: string | null | undefined;
   artPosition: ArtPosition;
+  /** The box this face's art is cropped to on the card (TODO 3b.13;
+   *  artPositionerWindows in lib/cards/art-positioner-window.ts). The
+   *  positioning surface takes its aspect. */
+  artWindow: Pick<ArtWindow, "aspect" | "width" | "height" | "rotation">;
   onArtChange: (next: { artUrl: string | null; artPosition: ArtPosition }) => void;
   /** When several uploaders are mounted at once (front art + an inline second
    *  face), a page-level paste must land in exactly one of them. A hovered or
@@ -65,6 +90,7 @@ export function ArtUploader({
   userId,
   artUrl,
   artPosition,
+  artWindow,
   onArtChange,
   primaryPasteTarget = true,
   className,
@@ -72,22 +98,24 @@ export function ArtUploader({
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dropzoneRef = useRef<HTMLDivElement | null>(null);
-  // Snapshot of an in-progress pan: the pointer + focal origin and the
-  // overflow (displayed − box) captured on pointer-down, plus whether the
-  // press has crossed the drag threshold yet.
+  // Snapshot of an in-progress pan: the pointer + focal origin and the px
+  // the picture travels per unit of focal (focalTravel) captured on
+  // pointer-down, plus whether the press has crossed the drag threshold yet.
   const panRef = useRef<{
     pointerX: number;
     pointerY: number;
     focalX: number;
     focalY: number;
-    overflowX: number;
-    overflowY: number;
+    travelX: number;
+    travelY: number;
     active: boolean;
   } | null>(null);
   // The loaded image's natural pixel size — needed to compute how far the art
   // overflows the crop box (and thus the drag→focal conversion). Null until the
   // <img> fires onLoad; reset when the art changes.
   const naturalSizeRef = useRef<{ w: number; h: number } | null>(null);
+  // The same size as state, tagged with its picture, for the sharpness note.
+  const [loadedSize, setLoadedSize] = useState<{ src: string; width: number; height: number } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDraggingArt, setIsDraggingArt] = useState(false);
@@ -268,20 +296,15 @@ export function ArtUploader({
     [artUrl, artPosition, onArtChange],
   );
 
-  // How far the displayed art overflows the crop box, per axis, in CSS px.
-  // The art is object-fit:cover (so it's first scaled to cover the box), then
-  // CSS-scaled by `scale`. object-position can only shift the art across this
-  // overflow, so it's exactly the pixel range one axis of focal (0→1) spans.
-  const overflowFor = (rect: DOMRect) => {
+  // How far a grabbed point of the picture moves, per axis, for one unit of
+  // focal — in CSS px of the surface (lib/cards/art-positioner-window.ts).
+  // Signed: a picture zoomed out smaller than the window moves WITH the
+  // focal, and the drag still follows the finger.
+  const travelFor = (el: HTMLElement) => {
     const nat = naturalSizeRef.current;
-    if (!nat || nat.w <= 0 || nat.h <= 0) return { x: 0, y: 0 };
-    const coverScale = Math.max(rect.width / nat.w, rect.height / nat.h);
-    const displayedW = nat.w * coverScale * scale;
-    const displayedH = nat.h * coverScale * scale;
-    return {
-      x: Math.max(0, displayedW - rect.width),
-      y: Math.max(0, displayedH - rect.height),
-    };
+    if (!nat) return { x: 0, y: 0 };
+    // The content box: what the <img> fills (clientWidth excludes borders).
+    return focalTravel({ width: el.clientWidth, height: el.clientHeight }, { width: nat.w, height: nat.h }, scale);
   };
 
   const handleArtPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -289,15 +312,14 @@ export function ArtUploader({
     // Skip secondary buttons so right-click context menu still works and
     // middle-click doesn't accidentally enter pan mode.
     if (event.button !== 0) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const overflow = overflowFor(rect);
+    const travel = travelFor(event.currentTarget);
     panRef.current = {
       pointerX: event.clientX,
       pointerY: event.clientY,
       focalX,
       focalY,
-      overflowX: overflow.x,
-      overflowY: overflow.y,
+      travelX: travel.x,
+      travelY: travel.y,
       active: false,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -315,15 +337,16 @@ export function ArtUploader({
       setIsDraggingArt(true);
     }
     // Grab-and-drag: moving the pointer right pulls the art right, revealing
-    // its left side — i.e. focalX decreases. Dividing by the overflow makes
-    // the dragged pixel track the cursor 1:1 at any zoom.
+    // its left side — i.e. focalX decreases (the travel is negative for a
+    // picture larger than its window). Dividing by the travel makes the
+    // dragged pixel track the cursor 1:1 at any zoom.
     const nextFocalX =
-      pan.overflowX > 0
-        ? clamp(pan.focalX - dx / pan.overflowX, 0, 1)
+      pan.travelX !== 0
+        ? clamp(pan.focalX + dx / pan.travelX, 0, 1)
         : pan.focalX;
     const nextFocalY =
-      pan.overflowY > 0
-        ? clamp(pan.focalY - dy / pan.overflowY, 0, 1)
+      pan.travelY !== 0
+        ? clamp(pan.focalY + dy / pan.travelY, 0, 1)
         : pan.focalY;
     updatePosition({ focalX: nextFocalX, focalY: nextFocalY });
   };
@@ -349,10 +372,13 @@ export function ArtUploader({
     // page scroll while the cursor crossed the preview.
     if (!event.shiftKey) return;
     event.preventDefault();
-    const direction = event.deltaY > 0 ? -1 : 1;
-    const step = 0.05;
-    const next = clamp(scale + direction * step, MIN_SCALE, MAX_SCALE);
-    updatePosition({ scale: next });
+    zoomBy(event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP);
+  };
+
+  // Rounded so repeated steps never drift off the 5 % grid (0.1 + 0.2).
+  const zoomBy = (delta: number) => {
+    const next = clamp(Math.round((scale + delta) * 100) / 100, MIN_SCALE, MAX_SCALE);
+    if (next !== scale) updatePosition({ scale: next });
   };
 
   // ---- Misc handlers -----------------------------------------------------
@@ -404,12 +430,12 @@ export function ArtUploader({
       case "+":
       case "=":
         event.preventDefault();
-        updatePosition({ scale: clamp(scale + 0.05, MIN_SCALE, MAX_SCALE) });
+        zoomBy(ZOOM_STEP);
         return;
       case "-":
       case "_":
         event.preventDefault();
-        updatePosition({ scale: clamp(scale - 0.05, MIN_SCALE, MAX_SCALE) });
+        zoomBy(-ZOOM_STEP);
         return;
       case "r":
       case "R":
@@ -421,6 +447,15 @@ export function ArtUploader({
         return;
     }
   };
+
+  const best = recommendedArtSize(artWindow);
+  // Loaded: the surface is the art window. The window's edge is an OUTLINE,
+  // never a border — a border would shrink the box the picture fills and
+  // its aspect with it (2 px a side is 1.5 % on a saga's narrow window).
+  const surfaceStyle = artUrl ? positionerSurfaceStyle(artWindow.aspect) : undefined;
+  // How sharp this picture prints in this window at this zoom.
+  const natural = artUrl && loadedSize?.src === artUrl ? loadedSize : null;
+  const ppi = artPrintPpi(artWindow, natural, scale);
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -476,14 +511,23 @@ export function ArtUploader({
             : "Drop an image here or click to upload"
         }
         tabIndex={0}
+        data-art-window-aspect={artUrl ? artWindow.aspect.toFixed(4) : undefined}
+        style={surfaceStyle}
         className={cn(
-          "group relative overflow-hidden rounded-lg border-2 border-dashed bg-elevated/40 transition-colors",
-          ASPECT_RATIO_CLASS,
+          "group relative overflow-hidden bg-elevated/40 transition-colors",
+          artUrl
+            ? // touch-none: a finger on the picture pans it. Without it the
+              // browser takes the drag as a page scroll after a few px and
+              // cancels the pointer (the page scrolls from anywhere else).
+              "mx-auto max-w-full touch-none rounded-sm outline-solid outline-1 outline-border-strong"
+            : cn("rounded-lg border-2 border-dashed", EMPTY_ASPECT_RATIO_CLASS),
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isDragOver
-            ? "border-primary/80 bg-primary/10"
+            ? artUrl
+              ? "outline-primary/80"
+              : "border-primary/80 bg-primary/10"
             : artUrl
-              ? "border-border/60 border-solid"
+              ? ""
               : "border-border hover:border-border-strong",
           artUrl && !isDraggingArt ? "cursor-grab" : "",
           isDraggingArt ? "cursor-grabbing" : "",
@@ -505,6 +549,11 @@ export function ArtUploader({
                   w: event.currentTarget.naturalWidth,
                   h: event.currentTarget.naturalHeight,
                 };
+                setLoadedSize({
+                  src: artUrl,
+                  width: event.currentTarget.naturalWidth,
+                  height: event.currentTarget.naturalHeight,
+                });
               }}
               className="pointer-events-none h-full w-full select-none object-cover"
               style={{
@@ -525,7 +574,7 @@ export function ArtUploader({
             </div>
           </>
         ) : (
-          <EmptyDropzoneInner uploading={uploading} dragOver={isDragOver} />
+          <EmptyDropzoneInner uploading={uploading} dragOver={isDragOver} best={best} />
         )}
       </div>
 
@@ -548,6 +597,34 @@ export function ArtUploader({
         {actionSlot}
         {artUrl ? (
           <>
+            <div className="inline-flex items-center gap-1" role="group" aria-label="Zoom">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label="Zoom out"
+                onClick={() => zoomBy(-ZOOM_STEP)}
+                disabled={uploading || scale <= MIN_SCALE}
+              >
+                <ZoomOut className="h-4 w-4" aria-hidden />
+              </Button>
+              <span
+                className="min-w-10 text-center text-xs tabular-nums text-muted"
+                data-testid="art-zoom-readout"
+              >
+                {Math.round(scale * 100)}%
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label="Zoom in"
+                onClick={() => zoomBy(ZOOM_STEP)}
+                disabled={uploading || scale >= MAX_SCALE}
+              >
+                <ZoomIn className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
             <Button
               type="button"
               variant="ghost"
@@ -572,8 +649,21 @@ export function ArtUploader({
       </div>
       {artUrl ? (
         <p className="text-[11px] leading-5 text-subtle">
-          Drag the art to position it, Shift-scroll to zoom. Arrow keys nudge for
-          fine control.
+          This is the card&apos;s art window: what you see here is the crop the
+          card gets. Drag the art to position it, Shift-scroll or the zoom
+          buttons to zoom. Arrow keys nudge for fine control.
+          {artWindow.rotation % 180 !== 0
+            ? " Shown upright — the card turns this half on its side."
+            : artWindow.rotation
+              ? " Shown upright — the card turns this half upside down."
+              : ""}{" "}
+          Sharpest at {best.width} × {best.height} px or larger.
+        </p>
+      ) : null}
+      {natural && ppi !== null && ppi < SOFT_PRINT_PPI ? (
+        <p className="text-[11px] leading-5 text-accent" data-testid="art-soft-note">
+          This picture is {natural.width} × {natural.height} px: about {ppi} ppi in this
+          window at this zoom. It may look soft in print (300 ppi is sharp).
         </p>
       ) : null}
       {!userId ? (
@@ -590,9 +680,11 @@ export function ArtUploader({
 function EmptyDropzoneInner({
   uploading,
   dragOver,
+  best,
 }: {
   uploading: boolean;
   dragOver: boolean;
+  best: { width: number; height: number };
 }) {
   return (
     <div className="pointer-events-none flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
@@ -625,10 +717,9 @@ function EmptyDropzoneInner({
             Ctrl V
           </kbd>
         </p>
-        {/* The M15 art window on the print-quality export (1500×2100) is
-            ~1266×924 px — recommend a touch above it. */}
-        <p className="text-[11px] text-subtle">
-          Best results: 1300 × 950 px or larger
+        {/* This frame's art window on the HD card (1500 × 2100). */}
+        <p className="text-[11px] text-subtle" data-testid="art-best-size">
+          Best results: {best.width} × {best.height} px or larger
         </p>
       </div>
     </div>
