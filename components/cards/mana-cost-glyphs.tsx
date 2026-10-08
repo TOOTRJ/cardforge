@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
 import { SNOW_FLAKE_MITRE, drawsManaGem, manaGemSpec } from "@/lib/cards/mana-gem";
+import { frameUrl } from "@/lib/frames/frame-url";
 import {
   previewDiscShadowCss,
   styledSuffix,
@@ -260,6 +261,21 @@ export function CardPip({
   }
   if (!drawsManaGem(suffix, symbols)) return null;
   const gem = manaGemSpec(suffix, pipPx, symbols);
+  if (gem.kind === "image") {
+    // A style's own symbol image (the 1993 frame's five colour symbols):
+    // the whole pip in the disc's box, as the bake's ManaGem draws it — the
+    // element an owner's custom pip uses.
+    const emPx = pipPx / MS_DISC_EM;
+    return (
+      <PipOverrideImg
+        src={frameUrl(gem.path)}
+        symbols={symbols}
+        pip={gem.suffix}
+        style={{ fontSize: emOf(emPx, pipPx), flexShrink: 0 }}
+        boxShadow={previewDiscShadowCss(symbols, pipPx, emPx) ?? null}
+      />
+    );
+  }
   // The gem's own disc, in em of the parent (1 em = a plain disc).
   const disc = emOf(gem.discPx, pipPx);
   if (gem.kind === "split") {
@@ -368,8 +384,12 @@ export function PipOverrideImg({
   style,
   symbols = symbolStyle(undefined),
   boxShadow,
+  pip,
 }: {
   src: string;
+  /** A style's own symbol image: the suffix it draws (`data-pip`, as a
+   *  glyph pip carries). */
+  pip?: string;
   fontSizeEm?: number;
   style?: React.CSSProperties;
   /** The frame's symbol style (the disc's shadow); "modern" when omitted. */
@@ -382,6 +402,7 @@ export function PipOverrideImg({
   return (
     <span
       aria-hidden
+      {...(pip ? { "data-pip": pip } : {})}
       style={{ fontSize: `${fontSizeEm}em`, ...style }}
       className="inline-flex"
     >

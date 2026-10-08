@@ -833,8 +833,8 @@ for (const [folder, def] of Object.entries(CC_RIDERS)) {
       continue;
     }
     const data = await rgba(await fetchCached(src), def.size, def.size);
-    // The disc's corners must be clear and its glyph white: a rider that
-    // fills its square would overdraw the well's ring.
+    // The disc's corners must be clear: a rider that fills its square would
+    // overdraw the well's ring (and a mana symbol its neighbours).
     const corner = data[3];
     if (corner !== 0) throw new Error(`${folder}/${key}: the rider's corner is not clear (α ${corner})`);
     fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -850,7 +850,7 @@ for (const [folder, def] of Object.entries(CC_RIDERS)) {
     pack: def.pack,
     converter: "scripts/import-cc-frames.mjs",
     kind: "rider",
-    output: `${def.size}x${def.size} rider glyphs (a black disc, the glyph in white), webp q${WEBP.quality}`,
+    output: `${def.output ?? `${def.size}x${def.size} rider glyphs (a black disc, the glyph in white)`}, webp q${WEBP.quality}`,
     colors: recipe,
     sourceFiles: [...Object.values(def.files)].sort(),
     notes: def.notes,

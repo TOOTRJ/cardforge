@@ -76,7 +76,9 @@ afterEach(() => {
 function card(patch: Partial<CardPreviewData>): CardPreviewData {
   return {
     title: "Kiba and Akamaru",
-    cost: "{2}{G}{G}{W}{W}",
+    // Generic only: Alpha's colour symbols are frames-bucket images (TODO
+    // 4.10c), and this suite refuses every render-time fetch.
+    cost: "{6}",
     cardType: "creature",
     supertype: null,
     subtypes: ["Wurm"],
@@ -113,7 +115,10 @@ async function bake(data: CardPreviewData, as: typeof mode): Promise<Buffer> {
 // does the fallback font change the pixels at all? (Beleren draws its own
 // missing-glyph box mid-word, so the artist line looks the same either way.)
 const PRODUCTION_SHAPES: Array<[string, Partial<CardPreviewData>, boolean]> = [
-  ["artist line with ǵ (upper-cased to Ǵ in the footer)", { artistCredit: "Volkan Baǵa" }, false],
+  // (The production card had the ǵ in its artist line, which every frame
+  // upper-cased in Beleren then; Alpha's credit is mixed-case MPlantin since
+  // TODO 4.10c, so the same Ǵ is asked for through the Beleren NAME here.)
+  ["a Beleren line with Ǵ (the upper-cased artist line of the production card)", { title: "Volkan BaǴa" }, false],
   [
     "flavor text opening with a zero-width space",
     { flavorText: "​\"Some roots grow deep in the earth; others grow deep in the heart.\"" },

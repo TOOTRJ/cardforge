@@ -12,7 +12,7 @@ import { tokenSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
 import { pipScale } from "@/lib/cards/mana-gem";
 import { displayTextEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
 import { setSymbolBoxPct } from "@/lib/cards/set-symbol-size";
-import { symbolStyle, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { costPipGap, costPipGapPx, DEFAULT_COST_GAP_DISCS, symbolStyle, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, TextSlot } from "@/lib/cards/template-layout";
 import { slotFace, type SlotFace } from "@/lib/cards/type-faces";
 import { RULES_TEXT, ptToPct, type CardOrientation } from "@/lib/cards/typography";
@@ -349,7 +349,7 @@ export function measuredLinePreviewPct(
 /** The gap between cost pips, as a fraction of the disc: the bake's
  *  CostGlyphs draws exactly this, and the preview draws the stored bake's
  *  (costRowHdPx). */
-export const COST_PIP_GAP = 0.12;
+export const COST_PIP_GAP = DEFAULT_COST_GAP_DISCS;
 
 /** A cost row's disc and the gap between its pips in the stored HD bake's
  *  whole px — what CostGlyphs draws at that width (the disc at fpx of its
@@ -358,10 +358,12 @@ export const COST_PIP_GAP = 0.12;
 export function costRowHdPx(
   discPct: number,
   orientation: CardOrientation = "portrait",
+  /** The frame's symbol style (its pip gap); "modern" when omitted. */
+  symbols: SymbolStyleSpec = symbolStyle(undefined),
 ): { discPx: number; gapPx: number; cardWidthPx: number } {
   const cardWidthPx = STORED_BAKE_WIDTH[orientation];
   const discPx = Math.round(discPct * cardWidthPx);
-  return { discPx, gapPx: Math.max(1, Math.round(discPx * COST_PIP_GAP)), cardWidthPx };
+  return { discPx, gapPx: costPipGapPx(symbols, discPx), cardWidthPx };
 }
 /** The gap between a second face's name and its cost, as a fraction of the
  *  card's width (the preview's 2cqw; the bake draws it for `fitLines` faces
@@ -390,7 +392,7 @@ function costRowTerms(
 ): { perDisc: number; fixedPct: number } {
   const tokens = tokenize((cost ?? "").trim());
   if (tokens.length === 0) return { perDisc: 0, fixedPct: 0 };
-  let perDisc = (tokens.length - 1) * COST_PIP_GAP + symbols.costRowShadowDiscs;
+  let perDisc = (tokens.length - 1) * costPipGap(symbols) + symbols.costRowShadowDiscs;
   let fixedPct = (2 * tokens.length - 1) * HALF_PX_PCT;
   for (const token of tokens) {
     if (token.kind === "text") {

@@ -42,7 +42,23 @@ vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
   return {
     ...real,
     getFrameProfile: (template?: Parameters<typeof real.getFrameProfile>[0]) => {
-      const profile = real.getFrameProfile(template);
+      const shipped = real.getFrameProfile(template);
+      // The FIXTURE frame is a profile that names nothing: Alpha as it stood
+      // before TODO 4.10c gave it the prints' faces, credit, © slot and
+      // symbol style (its own tests: tests/unit/render/alpha-1993-bake). Each
+      // test below then sets ONE field on it.
+      const profile =
+        template === "agclassic"
+          ? ({
+              ...shipped,
+              symbolStyle: undefined,
+              copyrightSlot: undefined,
+              title: { ...shipped.title, fit: undefined, dy: undefined },
+              type: { ...shipped.type, font: "display", fit: undefined, dy: undefined },
+              footer: { ...shipped.footer!, font: "display", prefix: undefined, noArtist: undefined, uppercase: true },
+              pt: { ...shipped.pt!, font: undefined, align: undefined, endKerned: undefined, weight: 700 },
+            } as typeof shipped)
+          : shipped;
       return fixture.patch ? (fixture.patch(profile as never, template) as FrameProfile) : profile;
     },
   };
@@ -480,6 +496,23 @@ describe("the footer line is profile data (TODO 4.8.0)", () => {
     expect([anonymous.illus.bake === null, anonymous.illus.preview === null]).toEqual([false, false]);
   }, 60_000);
 
+  it("`noArtist: \"omit\"` — a card with no artist prints NO credit line in either renderer; one with an artist prints it as before (TODO 4.10c)", async () => {
+    withPatch(footerOf({ prefix: "Illus. ", noArtist: "omit" }));
+    for (const none of [null, "", "  "]) {
+      const anonymous = await both({ ...CREATURE, artistCredit: none } as CardPreviewData, {
+        unknown: displayLine("Illus. Unknown"),
+        bare: displayLine("Illus."),
+        art: displayLine("Art: Unknown"),
+      });
+      for (const role of ["unknown", "bare", "art"]) {
+        expect([role, anonymous[role].bake, anonymous[role].preview]).toEqual([role, null, null]);
+      }
+    }
+    const credited = await both(CREATURE, { illus: displayLine("Illus. Ada Lovelace") });
+    expect(credited.illus.bake).not.toBeNull();
+    expect(credited.illus.preview).not.toBeNull();
+  }, 60_000);
+
   it("a centred footer centres its line in both renderers and draws no custom mark on it", async () => {
     withPatch(footerOf({ align: "center" }));
     const texts = { artist: displayLine("Art: Ada Lovelace"), custom: displayLine(MARK_TEXT) };
@@ -518,7 +551,9 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     [...html.matchAll(/data-pip="([^"]*)"[^>]*style="([^"]*)"/g)].map((m) => `${m[1]} ${/box-shadow:/.test(m[2]) ? "shadow" : "flat"}`);
 
   it("\"modern\" — every profile's style — is today's discs: the hard offset shadow under the COST, flat pips in the rules text (layout v49) and the modern tap, in both renderers", async () => {
-    const { getFrameProfile } = await import("@/lib/cards/template-layout");
+    // (The SHIPPED profiles: this file's getFrameProfile hands the fixture
+    // frame out plain.)
+    const { getFrameProfile } = await vi.importActual<typeof import("@/lib/cards/template-layout")>("@/lib/cards/template-layout");
     const { symbolStyleOf } = await import("@/lib/cards/symbol-style");
     const { FRAME_TEMPLATE_VALUES } = await import("@/types/card");
     // …but the 1997 pair, which names its own since TODO 4.10a (flat discs,
@@ -527,8 +562,11 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     // flat inline pips: tests/unit/render/modern-2003-bake.test.tsx).
     const RETRO_1997 = ["retro", "retroland"];
     const MODERN_2003 = ["modern", "modernland"];
+    // …and the 1993 pair since TODO 4.10c (flat discs, the 1993 drawings,
+    // the tilted-T tap: tests/unit/render/alpha-1993-bake.test.tsx).
+    const ALPHA_1993 = ["agclassic", "alphaland"];
     for (const template of FRAME_TEMPLATE_VALUES) {
-      const own = RETRO_1997.includes(template) ? "1997" : MODERN_2003.includes(template) ? "2003" : undefined;
+      const own = RETRO_1997.includes(template) ? "1997" : MODERN_2003.includes(template) ? "2003" : ALPHA_1993.includes(template) ? "original" : undefined;
       expect(getFrameProfile(template).symbolStyle, template).toBe(own);
       expect(symbolStyleOf(getFrameProfile(template)).id, template).toBe(own ?? "modern");
     }
@@ -550,7 +588,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     // A THROWAWAY style on a frame that draws "modern": what 4.10a's "1997"
     // is on the 1997 pair — no disc shadow, the Fourth Edition tap.
     const table = styles.SYMBOL_STYLES as unknown as Record<string, unknown>;
-    table.test = { id: "test", discShadow: null, inlineShadow: false, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0, tapSuffix: "tap-4ed" };
+    table.test = { id: "test", discShadow: null, inlineShadow: false, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0, costGapDiscs: 0.12, symbolImages: null, tapSuffix: "tap-4ed" };
     try {
       withPatch((profile, template) => (template === "agclassic" ? ({ ...profile, symbolStyle: "test" } as unknown as FrameProfile) : profile));
       const discs = await bakeDiscs(PIPS);

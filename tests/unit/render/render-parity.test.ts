@@ -149,11 +149,17 @@ describe("display-font lines", () => {
     // (footerArtistLine: the profile's prefix — "Art: " unless it says
     // otherwise, TODO 4.8.0 — and the credit), set through slotLine in the
     // footer's own face (footerFace).
-    expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerArtistLine(layout.footer, face.artistCredit))}");
+    // The line is null on a footer that omits a card's missing credit
+    // (TextSlot.noArtist, TODO 4.10c): then neither renderer draws a footer.
+    expect(PREVIEW).toContain("const footerArtist = footerArtistLine(layout.footer, face.artistCredit);");
+    expect(PREVIEW).toContain("{!collector && layout.footer && footerInkResolved && footerArtist !== null ? (");
+    expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerArtist)}");
     expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerWatermark)}");
     // The bake's footer (FooterBake, which also draws the outline copies)
     // takes the same artist line and custom mark through slotLine.
-    expect(BAKE).toContain("artist: footerArtistLine(layout.footer, card.artistCredit),");
+    expect(BAKE).toContain("const footerArtist = footerArtistLine(layout.footer, card.artistCredit);");
+    expect(BAKE).toContain(": layout.footer && footerInkResolved && footerArtist !== null");
+    expect(BAKE).toContain("artist: footerArtist,");
     expect(BAKE).toContain("const face = footerFace(slot);");
     expect(BAKE).toContain("const line = slotLine(face.id, artist);");
     expect(BAKE).toContain("const mark = watermarkText && !aligned ? slotLine(face.id, watermarkText) : null;");

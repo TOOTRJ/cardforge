@@ -21,7 +21,6 @@ import { squareCornerFills } from "@/lib/frames/square-corners";
 import type { CardCorners } from "@/lib/cards/output-corners";
 import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
 import {
-  COST_PIP_GAP,
   NAME_COST_GAP_PCT,
   fitSplitTypeSizePct,
   fitTypeLineBand,
@@ -96,8 +95,8 @@ import {
   type BasicSymbolPlan,
 } from "@/lib/cards/basic-symbol";
 import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
-import { discShadowCss, inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
-import { SNOW_FLAKE_MITRE, manaGemSpec, pipRisePx, type ManaGemHalf, type SnowFlakeSpec } from "@/lib/cards/mana-gem";
+import { costPipGapPx, discShadowCss, inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { SNOW_FLAKE_MITRE, manaGemSpec, pipRisePx, symbolImagePathsIn, type ManaGemHalf, type SnowFlakeSpec } from "@/lib/cards/mana-gem";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
@@ -129,6 +128,7 @@ import {
   getFrameAssetDataUrl,
   getFrameDataUrl,
   getFrameOverlayDataUrl,
+  TRANSPARENT_PIXEL,
   getPlateDataUrlForPath,
   plateAssetPath,
   preloadFrame,
@@ -499,6 +499,9 @@ function CardImage({
   // Per-frame-master footer ink — the same footerInk() the preview resolves
   // (outlined when the profile prints it on the art, footerOnArt).
   const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey, layout) : null;
+  // The artist line, or null: a footer that omits the credit of a card with
+  // no artist (TextSlot.noArtist, the 1993 frame) draws no footer line.
+  const footerArtist = footerArtistLine(layout.footer, card.artistCredit);
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the preview's bandTextStyle() twins.
   const titleInk = bandTextStyle(layout.title, masterKey);
@@ -1378,11 +1381,11 @@ function CardImage({
             cardWidth: width,
             cardHeight: height,
           })
-        : layout.footer && footerInkResolved
+        : layout.footer && footerInkResolved && footerArtist !== null
           ? FooterBake({
               slot: layout.footer,
               ink: footerInkResolved,
-              artist: footerArtistLine(layout.footer, card.artistCredit),
+              artist: footerArtist,
               // A profile with a © slot prints the custom text THERE (line
               // 2), never at this line's end.
               watermarkText: layout.copyrightSlot ? null : watermarkText,
@@ -2074,6 +2077,23 @@ function ManaGem({
     );
   }
 
+  if (gem.kind === "image") {
+    // A style's own symbol IMAGE (the 1993 frame's five colour symbols,
+    // TODO 4.10c): the whole pip, in the disc's box — the same element an
+    // owner's custom pip draws. frameAssetPathsFor warmed it; a bucket
+    // image that failed to load threw there (FrameAssetUnavailableError).
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={getFrameOverlayDataUrl(gem.path) ?? TRANSPARENT_PIXEL}
+        alt=""
+        width={size}
+        height={size}
+        style={{ width: size, height: size, borderRadius: size, objectFit: "cover", ...shadow, ...style }}
+      />
+    );
+  }
+
   const cp = getManaCodepoint(gem.suffix);
   if (!cp) return null;
   return (
@@ -2153,10 +2173,10 @@ function CostGlyphs({
         display: "flex",
         alignItems: "center",
         ...(dy ? { transform: `translate(0px, ${dy}px)` } : {}),
-        // Mirrors the preview's 0.12em pip gap (scales with the disc size
-        // instead of a fixed 2px that vanished at HD resolution); a fitted
+        // The style's pip gap (COST_PIP_GAP of the disc on every style but
+        // "original", whose prints set the discs further apart); a fitted
         // bar measures a cost with the same gap (costRowWidthPct).
-        gap: Math.max(1, Math.round(fontSize * COST_PIP_GAP)),
+        gap: costPipGapPx(symbols, fontSize),
       }}
     >
       {tokens.map((token, i) => {
@@ -3857,6 +3877,16 @@ export function frameAssetPathsFor(card: CardPreviewData): string[] {
         },
         card.watermark,
       ),
+    ),
+  );
+  // A symbol style's own pip IMAGES (TODO 4.10c: the 1993 frame's five
+  // colour symbols) — ManaGem reads them synchronously, so every one the
+  // card's text names is warmed: its cost, its rules text, its second
+  // face's and anything a structured face holds.
+  paths.push(
+    ...symbolImagePathsIn(
+      [card.cost, card.rulesText, card.backFace ? JSON.stringify(card.backFace) : null, card.faceContent ? JSON.stringify(card.faceContent) : null],
+      symbolStyleOf(layout),
     ),
   );
   return Array.from(new Set(paths));

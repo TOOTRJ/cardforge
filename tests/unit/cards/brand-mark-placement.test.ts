@@ -12,10 +12,10 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // frame edge on these). Everything else keeps the M15 default, so their
 // stored bakes stay byte-identical.
 const THIN_BORDER: Record<string, { rightPct: number; bottomPct: number }> = {
-  // The Alpha masters re-cut to the print (100 px of black below the frame,
-  // not 60): the mark's ink centred in that band.
-  agclassic: { rightPct: 3.5, bottomPct: 1.5 },
-  alphaland: { rightPct: 3.5, bottomPct: 1.5 },
+  // (agclassic and alphaland left this table with TODO 4.10c: their mark is
+  // drawn through the © slot on the same black band, ending on the same
+  // 3.5 % — tests/unit/cards/alpha-1993-profile.test.ts — and `brandMark`
+  // is not read.)
   // (retro and retroland left this table with TODO 4.10a: their mark sits in
   // the centred footer's © slot — FrameProfile.copyrightSlot,
   // tests/unit/cards/copyright-slot.test.ts — and `brandMark` is not read.)

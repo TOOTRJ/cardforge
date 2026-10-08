@@ -946,6 +946,7 @@ type GapKey =
   | "colourshifted"
   | "timeshifted-frame"
   | "reprint-colours"
+  | "two-line-footer"
   | "nickname"
   | "nyx-dress"
   | "nyx"
@@ -977,6 +978,14 @@ export const RETRO_REPRINT_COLOURS_FROM = "2021-01-01";
  *  (the "timeshifted-frame" gap): 2006 — Time Spiral's timeshifted sheet was
  *  released on 2006-10-06; the last original, Scourge, on 2003-05-26. */
 export const RETRO_TIMESHIFTED_FROM = "2006-01-01";
+
+/** The first day a printing on the 1993 frame counts as its LATER printing
+ *  (the "two-line-footer" gap), INCLUSIVE — and it must stay Scryfall's own
+ *  date for Fallen Empires, `released_at` 1994-11-01 (the set reached the
+ *  shops on 1994-11-15, but an import reads Scryfall's field): a later day
+ *  here would land every Fallen Empires printing as `exact`. The last set
+ *  with the one-line credit, The Dark, is Scryfall's 1994-08-01. */
+export const ALPHA_TWO_LINE_FOOTER_FROM = "1994-11-01";
 
 const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = {
   // The legendary crown and the two-colour dresses (TODO 4.6a / 4.6b): a gap
@@ -1113,6 +1122,19 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     match: { frames: ["1997"], releasedFrom: RETRO_REPRINT_COLOURS_FROM },
     reason: "PipGlyph's 1997 frame is the original 1996–2003 printing; this reprint's frame is lighter",
     blockedBy: "4.10e",
+  },
+  // The 1993 frame is the printing of Alpha → The Dark (TODO 4.10c, proof
+  // 3): ONE line in the strip — `Illus. © <artist>` at 70 px beside the P/T
+  // — the 1993 symbol drawings and no tap symbol before Revised's tilted T.
+  // From Fallen Empires (1994-11) the strip holds two lines, a smaller
+  // credit over a Wizards © line (FEM, 4ED, ICE, CHR, HML, ALL read), and
+  // from Fourth Edition (1995-04) the sun is today's and {T} the turned
+  // arrow. Those printings — and every later one on the frame — land on it
+  // as its NEAREST and say why.
+  "two-line-footer": {
+    match: { frames: ["1993"], releasedFrom: ALPHA_TWO_LINE_FOOTER_FROM },
+    reason: "PipGlyph's 1993 frame is the 1993–94 printing (Alpha to The Dark); from Fallen Empires on the frame prints a smaller credit over a second line, and from Fourth Edition today's symbols",
+    blockedBy: "4.10h",
   },
   nickname: {
     match: { flavorName: true },
@@ -2251,7 +2273,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { frames: ["1993"] },
       outcome: { status: "exact", template: { family: "alpha" } },
     },
-    ["border", "marks"],
+    ["border", "marks", "two-line-footer"],
   ),
   {
     key: "era/1997/planeswalker",

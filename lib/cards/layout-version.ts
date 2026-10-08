@@ -1101,10 +1101,38 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            and every slot move — the fourteen ticks on the pair are
 //            flagged "needs re-verification" (they stay verified and
 //            offered) and the owner re-ticks them once.
-//   48     — RESERVED for the 1993 frame on its prints (TODO 4.10c, PR
-//            #493), which merges before v49 ships; until it does the
-//            version is scoped to no template
-//            (RESERVED_ALPHA_1993_LAYOUT_VERSION) so no stored card owes it.
+//   48     — the 1993 frame on its prints (TODO 4.10c; era design
+//            2026-10-06 step E6). ITS number lives in
+//            ALPHA_1993_LAYOUT_VERSION below — the ONE constant;
+//            CARD_LAYOUT_VERSION reads it while it is the latest.
+//            `agclassic` and `alphaland` set every line small and in
+//            Beleren (a 59 px name that never shrank — the renderer's
+//            ellipsis cut it —, a 45 px type line estimated at 0.56 em a
+//            character, a 60 px P/T, the credit as `ART: NAME` in 24 px
+//            capitals), 54 px pips with M15's shadow and today's symbols.
+//            Now, measured on 118 Alpha / Beta prints (proof 3): name
+//            Beleren 72 px and type line MPlantin 70 px, both
+//            `fit: "measured"`, on the prints' baselines (171.5 / 1227.4
+//            px); the printed credit `Illus. <artist>` in MPlantin 70 px,
+//            mixed case, and the P/T in MPlantin 84 px set against its
+//            right end, both on the strip's one line (baseline 1949 px), in
+//            the 2026-09-25 embossed ink; `symbolStyle: "original"` — flat
+//            72 px cost discs 84 px apart on row 142.5, the five colour
+//            symbols as 1993 drew them (frames-bucket images,
+//            `manaoriginal/*`), the tilted-T tap; a clean download's
+//            footer text on the black border where the mark sits
+//            (FrameProfile.copyrightSlot with `endPct`; it was set at the
+//            end of the credit line). Masters, art slot, rules box, ink
+//            colours and the left margins of the name and the type line
+//            (the owner's round 4) do not move. A CORRECTION ("sweep"),
+//            never a badge. Template-scoped (agclassic, alphaland): every
+//            card on the pair. Public production (anonymous read,
+//            2026-10-08): 4 cards on `agclassic` (white, red, the artifact
+//            `a` and a colourless foil on `c`), none on `alphaland` — each
+//            re-bakes once, after the owner's before / after sheet. The
+//            visual matrix: only the agclassic / alphaland cases change.
+//            NOT verification-neutral: every text slot moves — no tick
+//            exists on the pair to stale (first ticks follow the merge).
 //   49     — the symbols as printed (TODO 6.16b; owner round 43,
 //            2026-10-08). ITS number lives in SYMBOLS_PRINT_LAYOUT_VERSION
 //            below. Six corrections of a card's mana symbols against real
@@ -1146,16 +1174,17 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            printed text on a template that shadowed it, or a modal
 //            double-faced body (its strip's pips); every other card is
 //            stamped. Public production (anonymous read, 2026-10-08, 863
-//            cards, all at v47; replayed art-less at HD on the base and on
-//            this commit): 357 are in scope and re-bake once — 354 change
-//            pixels (350 by the flat pip alone; 4 carry a redrawn symbol:
+//            cards; replayed art-less at HD on v48's main and on this
+//            commit): 356 are in scope and re-bake once — 353 change
+//            pixels (349 by the flat pip alone; 4 carry a redrawn symbol:
 //            three a {Q}, one a Phyrexian {W/P}), 3 re-bake to the same
 //            pixels (their only pip is in a text the frame does not draw)
-//            — and 506 are stamped, each byte-identical on both commits;
-//            of 129 unlisted, 51 re-bake (49 change). No stored card
-//            changes its rules size or a line break — the one with a
-//            Phyrexian pip included. The visual matrix: 677 of 1451 cases
-//            change (671 by the flat pip, the 6 "edge" cards by {Q} /
+//            — and 507 are stamped, each byte-identical on both commits
+//            (the 4 on `agclassic` among them: v48 is theirs); of 129
+//            unlisted, 51 re-bake (49 change). No stored card changes its
+//            rules size or a line break — the one with a Phyrexian pip
+//            included. The visual matrix: 656 of 1451 cases change (650 by
+//            the flat pip, the 6 "edge" cards by {Q} /
 //            {B/P}), none outside the scope; one moves a line break — the
 //            saga set past the floor, whose chapter column was inset 3 px
 //            for the shadow of a pip that starts a line and no longer is
@@ -1164,11 +1193,18 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            moves).
 // ---------------------------------------------------------------------------
 
-/** The 2003 frame's one sweep (TODO 4.10b): the masters of `modern` and
- *  `modernland` and every slot on them. ITS version lives here alone —
+/** The 1993 frame on its prints (TODO 4.10c): every text slot and the
+ *  symbols of `agclassic` and `alphaland`. ITS version lives here alone —
  *  CARD_LAYOUT_VERSION, the scoped tables and the rollout below read this
  *  constant — so a bump that merges first moves it in one place. Frozen
  *  like the lists below once it ships. */
+export const ALPHA_1993_LAYOUT_VERSION = 48;
+export const ALPHA_1993_TEMPLATES: readonly string[] = ["agclassic", "alphaland"];
+
+/** The 2003 frame's one sweep (TODO 4.10b): the masters of `modern` and
+ *  `modernland` and every slot on them. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped tables and the rollout below read this
+ *  constant. Frozen like the lists below: v47 is history. */
 export const MODERN_2003_LAYOUT_VERSION = 47;
 export const MODERN_2003_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
@@ -1182,12 +1218,8 @@ export const RETRO_1997_TEMPLATES: readonly string[] = ["retro", "retroland"];
 /** Five symbols on the prints' drawings and flat rules-text pips (TODO
  *  6.16b, owner round 43): ITS version lives here alone —
  *  CARD_LAYOUT_VERSION, the card scope and the rollout below read this
- *  constant. v48 is the 1993 frame's (TODO 4.10c, PR #493). */
+ *  constant. */
 export const SYMBOLS_PRINT_LAYOUT_VERSION = 49;
-/** v48, held for the 1993 frame (PR #493) until it merges: scoped to no
- *  template, so no stored card owes it. #493 replaces this entry with its
- *  own constant and templates. */
-export const RESERVED_ALPHA_1993_LAYOUT_VERSION = 48;
 
 export const CARD_LAYOUT_VERSION = SYMBOLS_PRINT_LAYOUT_VERSION;
 
@@ -1352,8 +1384,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // every card on it (8 stored on `modern`). No narrower verification
   // scope: all fourteen ticks on the pair go stale and are re-made once.
   [MODERN_2003_LAYOUT_VERSION]: MODERN_2003_TEMPLATES,
-  // Reserved for the 1993 frame (PR #493): no template until it merges.
-  [RESERVED_ALPHA_1993_LAYOUT_VERSION]: [],
+  // The 1993 frame on its prints (4.10c): every text slot and the symbols
+  // of the pair; every card on it (4 stored on `agclassic`). No narrower
+  // verification scope: neither template has a tick.
+  [ALPHA_1993_LAYOUT_VERSION]: ALPHA_1993_TEMPLATES,
   // (v49 is not here: any template — a card scope, v49Changed.)
 };
 
@@ -1853,9 +1887,10 @@ export function v49HasRedrawnSymbol(value: unknown): boolean {
 }
 
 /** v49 — the templates whose symbol style already set a rules-text pip flat
- *  ("1997", "2003"): an inline pip on them is the same pixels. Every other
- *  template drew M15's shadow under it at v47. Frozen: v49 is history. */
-export const V49_FLAT_INLINE_TEMPLATES: readonly string[] = ["retro", "retroland", "modern", "modernland"];
+ *  ("1997", "2003", and "original" since v48): an inline pip on them is the
+ *  same pixels. Every other template drew M15's shadow under it at v48.
+ *  Frozen: v49 is history. */
+export const V49_FLAT_INLINE_TEMPLATES: readonly string[] = ["retro", "retroland", "modern", "modernland", "agclassic", "alphaland"];
 
 /** v49 — the modal double-faced bodies: each face's flipside strip sets the
  *  OTHER face's cost or mana line as rules-text pips. */
@@ -2092,6 +2127,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   44: "sweep", // the 2003 artist line white on the black frame and on lands (4.23a) — a legibility correction against the prints on combos no stored card uses, never a badge
   [RETRO_1997_LAYOUT_VERSION]: "sweep", // the 1997 frame on the original cards (4.10a): masters, ink, footer, sizes, symbols — a correction on a pair no stored card uses, never a badge
   [MODERN_2003_LAYOUT_VERSION]: "sweep", // the 2003 frame's one sweep (4.10b): masters, P/T box, sizes, footer, symbols — a correction of a live pair against its prints after the owner's before / after sign-off, never a badge
+  [ALPHA_1993_LAYOUT_VERSION]: "sweep", // the 1993 frame on its prints (4.10c): sizes, faces, the `Illus.` credit, the P/T, the original symbols — a correction of a pair against Alpha / Beta after the owner's before / after sheet (4 stored cards), never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };

@@ -160,7 +160,7 @@ describe("CardPreview — the 1997 footer and its © slot", () => {
 
   it("another frame is untouched: its mark on the border, its custom text beside the artist", () => {
     const { container } = render(
-      <CardPreview title="Probe" cost="{1}{W}" cardType="creature" colorIdentity={["white"]} artistCredit="Ada" frameStyle={{ template: "agclassic" }} brandMark={false} footerWatermark="Press" />,
+      <CardPreview title="Probe" cost="{1}{W}" cardType="creature" colorIdentity={["white"]} artistCredit="Ada" frameStyle={{ template: "m15" }} brandMark={false} footerWatermark="Press" />,
     );
     expect(container.querySelector('[data-copyright-slot="text"]')).toBeNull();
     expect(text(container.querySelector('[data-testid="card-footer"]')!)).toContain("Press");
@@ -172,13 +172,14 @@ describe('CardPreview — symbolStyle "1997"', () => {
     const { pips } = renderOn("retro", "r");
     expect(pips).toEqual(["x flat", "r flat", "tap-4ed flat", "r flat"]);
     cleanup();
-    // The same card on the Alpha frame keeps M15's shadowed COST discs and
-    // tap — its rules pips are flat too since layout v49 (the M15-era prints
-    // shadow the cost alone). (The 2003 frame, this test's first twin, has
-    // its own style since TODO 4.10b:
-    // tests/unit/components/modern-2003-preview.test.tsx.)
+    // The same card on the Dragon Wing frame keeps M15's shadowed COST
+    // discs and tap — its rules pips are flat too since layout v49 (the
+    // M15-era prints shadow the cost alone). (The 2003 frame, this test's
+    // first twin, has its own style since TODO 4.10b and the Alpha frame,
+    // its second, since TODO 4.10c:
+    // tests/unit/components/modern-2003-preview.test.tsx, alpha-1993-preview).
     const { container } = render(
-      <CardPreview title="Probe" cost="{X}{R}" cardType="creature" colorIdentity={["red"]} rulesText="{T}: Add {R}." frameStyle={{ template: "agclassic" }} />,
+      <CardPreview title="Probe" cost="{X}{R}" cardType="creature" colorIdentity={["red"]} rulesText="{T}: Add {R}." frameStyle={{ template: "tarkirdragon" }} />,
     );
     expect(pipsOf(container)).toEqual(["x shadow", "r shadow", "tap flat", "r flat"]);
   });

@@ -66,7 +66,8 @@ function renderAlpha(template: "agclassic" | "alphaland", key: string) {
   const pt = spans.find((s) => s.textContent === "4/4") as HTMLElement;
   // The display lines' words are joined by no-break spaces (displayLine).
   const text = (s: Element) => s.textContent?.replace(/\s+/g, " ") ?? "";
-  const footer = spans.find((s) => text(s) === "Art: Douglas Schuler")?.parentElement as HTMLElement;
+  // The printed credit since TODO 4.10c (it was "Art: …" in capitals).
+  const footer = spans.find((s) => text(s) === "Illus. Douglas Schuler")?.parentElement as HTMLElement;
   const name = spans.find((s) => text(s) === "Ink Probe") as HTMLElement;
   const type = spans.find((s) => text(s).endsWith("Creature — Vampire")) as HTMLElement;
   const cost = container.querySelector('[aria-label="Cost {3}{B}"]') as HTMLElement | null;

@@ -459,7 +459,8 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
   // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
   // `Illus.` line in MPlantin.
-  const BODY_FOOTER_SINCE_V46 = ["retro", "retroland"];
+  // (The 1993 pair's likewise since TODO 4.10c, layout v48.)
+  const BODY_FOOTER_SINCE_V46 = ["retro", "retroland", "agclassic", "alphaland"];
 
   it("word spacing: every card on the 24 display-footer templates (25 with the retired Alpha token)", async () => {
     const classifyForSweep = await sweepAt(29);
@@ -2216,7 +2217,7 @@ describe("the battle re-cut onto the prints (TODO 4.21d) — its bump", () => {
 describe("v49 — the symbols as printed: five redrawn symbols and flat rules-text pips (TODO 6.16b)", () => {
   const png = "https://x/y.png";
   const V = 49;
-  /** A v48 bake: only v49 can be pending. */
+  /** A v48 bake (the 1993 frame's bump is behind it): only v49 can be pending. */
   const at = (template: string, over: Record<string, unknown> = {}) => ({
     ...UNTOUCHED_SINCE_V22,
     layout_version: V - 1,
@@ -2229,7 +2230,7 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
   });
   const ALL = [...new Set([...FRAME_TEMPLATE_VALUES, ...POST_V29_TEMPLATES])];
   const AT = { current: V } as const;
-  const FLAT = ["retro", "retroland", "modern", "modernland"];
+  const FLAT = ["retro", "retroland", "modern", "modernland", "agclassic", "alphaland"];
   const MODAL = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
   const REDRAWN = ["{Q}", "{S}", "{E}", "{W/P}", "{u/p}", "{G/U/P}", "{ g/w/p }", "{b/P}"];
   const PLAIN = ["{T}", "{2}", "{G}", "{X}", "{C}", "{W/U}", "{2/W}", "{20}"];
@@ -2251,10 +2252,11 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
     const lv = await import("@/lib/cards/layout-version");
     expect([...lv.V49_FLAT_INLINE_TEMPLATES].sort()).toEqual([...FLAT].sort());
     expect([...lv.V49_FLIPSIDE_TEMPLATES].sort()).toEqual([...MODAL].sort());
-    // At the base of this bump a template drew M15's style — a shadow under
-    // every text pip — unless it named a style of its own, and each of
-    // those ("1997", "2003") was flat already.
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => ["1997", "2003"].includes(getFrameProfile(t).symbolStyle ?? "")).sort()).toEqual([...FLAT].sort());
+    // At the base of this bump (v48) a template drew M15's style — a shadow
+    // under every text pip — unless it named a style of its own, and each
+    // of those ("1997", "2003", "original") was flat already.
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => ["1997", "2003", "original"].includes(getFrameProfile(t).symbolStyle ?? "")).sort()).toEqual([...FLAT].sort());
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).symbolStyle !== undefined).sort()).toEqual([...FLAT].sort());
     expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside).sort()).toEqual([...MODAL].sort());
   });
 
@@ -2268,7 +2270,7 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
       const suffix = tokenSuffix(tokenize(text)[0])!;
       const gem = manaGemSpec(suffix, 60, symbolStyle("modern"));
       if (pipScale(suffix) !== 1) return true;
-      if (gem.kind === "split") return false;
+      if (gem.kind !== "solid") return false;
       return gem.bg === null || gem.flake !== undefined || gem.ink !== "#150d08" || gem.glyphPx !== manaGlyphPx(60);
     };
     for (const text of REDRAWN) {
@@ -2290,7 +2292,7 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
   it("a redrawn symbol re-bakes the card on any template — in the cost, the text, the rows, the rail or the second face", async () => {
     const { hasNewerLook, hasPendingCorrection } = await import("@/lib/cards/layout-version");
     const classifyForSweep = await sweepAt(V);
-    for (const t of ["m15", "lotr", "retro", "modern", "modernland", "m15pw", "saga", "m15token", "agclassic"]) {
+    for (const t of ["m15", "lotr", "retro", "modern", "modernland", "m15pw", "saga", "m15token", "agclassic", "alphaland"]) {
       for (const symbol of REDRAWN) {
         const rows = [
           at(t, { cost: `{2}${symbol}` }),

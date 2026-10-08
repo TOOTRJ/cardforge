@@ -14,22 +14,42 @@
 //     (lib/cards/rules-layout.ts metricsFor) and the cost row's
 //     (lib/cards/render-tiers.ts costRowWidthPct).
 //
-// Three styles exist: "modern" — M15's discs, their hard offset shadow under
+// Four styles exist: "modern" — M15's discs, their hard offset shadow under
 // the COST (flat pips in the rules text, layout v49) and the modern tap,
 // what every profile resolves to unless it names another —
 // "1997" (TODO 4.10a: flat discs, the 1997 tap; `retro`, `retroland`) and
 // "2003" (TODO 4.10b: a COST disc with a black shadow down and a little to
 // the left, flat pips in the rules text, the modern tap; `modern`,
-// `modernland`). The last
-// era item (4.10c "original") adds a value HERE and names it on its
-// profiles; a renderer never learns a style's name. A style is a CORRECTION of a frame, never a per-card switch.
+// `modernland`) — and "original" (TODO 4.10c: the 1993 frame's flat discs,
+// the five colour symbols as Alpha drew them — bucket images, not the
+// font's — a wider pip gap and the tilted-T tap; `agclassic`, `alphaland`).
+// A new style adds a value HERE and names it on its profiles; a renderer
+// never learns a style's name. A style is a CORRECTION of a frame, never a per-card switch.
 // Client-safe, no imports.
 // ---------------------------------------------------------------------------
 
 /** FrameProfile.symbolStyle's values. */
-export type SymbolStyle = "modern" | "1997" | "2003";
+export type SymbolStyle = "modern" | "1997" | "2003" | "original";
 
 export const DEFAULT_SYMBOL_STYLE: SymbolStyle = "modern";
+
+/** The gap between two cost pips on every style that names no other, in
+ *  discs (render-tiers' COST_PIP_GAP is this number). */
+export const DEFAULT_COST_GAP_DISCS = 0.12;
+
+/** The 1993 frame's cost disc and the gap between two, HD px (proof 3; the
+ *  profile's costSizePct is the disc — lib/cards/typography.ts
+ *  ALPHA_COST_DISC_PCT). */
+export const ORIGINAL_DISC_PX = 72;
+export const ORIGINAL_COST_GAP_PX = 12;
+
+/** The five colour symbols the "original" style draws as images. */
+export const ORIGINAL_SYMBOL_LETTERS = ["w", "u", "b", "r", "g"] as const;
+/** The bucket folder they live in, and one symbol's public path. */
+export const ORIGINAL_SYMBOL_FOLDER = "manaoriginal";
+export function originalSymbolPath(letter: string): string {
+  return `/frames/${ORIGINAL_SYMBOL_FOLDER}/${letter}.png`;
+}
 
 export type SymbolStyleSpec = {
   id: SymbolStyle;
@@ -39,7 +59,7 @@ export type SymbolStyleSpec = {
   discShadow: { left: number; down: number; colorHex: string } | null;
   /** A pip set in the RULES text carries the disc's shadow too; false = the
    *  shadow is the COST row's alone and an inline pip is flat — every style
-   *  today (the 2003 prints, and "modern" since layout v49). Read through
+   *  today (the 1993, 1997 and 2003 prints, and "modern" since layout v49). Read through
    *  inlineSymbolStyle. */
   inlineShadow: boolean;
   /** The mana-font class a shadowed pip carries in the browser OUTSIDE a
@@ -55,6 +75,17 @@ export type SymbolStyleSpec = {
   /** How far the shadow reaches past a COST ROW's ends, in discs — what the
    *  name's room is measured against (costRowWidthPct). */
   costRowShadowDiscs: number;
+  /** The gap between two COST pips, in discs — COST_PIP_GAP (0.12,
+   *  lib/cards/render-tiers.ts) on every style but one whose prints set
+   *  their discs further apart ("original"). Read through costPipGap by the
+   *  bake's CostGlyphs, the preview's cost row and the name's room. */
+  costGapDiscs: number;
+  /** The five colour symbols as IMAGES (a whole pip — disc and drawing — per
+   *  one-letter suffix: public paths the frames bucket resolves,
+   *  lib/frames/frame-url.ts), for an era whose drawings the font lacks;
+   *  null = the font's glyph on the disc. lib/cards/mana-gem.ts turns one
+   *  into a pip's `image` spec; an owner's own pip image still wins. */
+  symbolImages: Readonly<Record<string, string>> | null;
   /** The mana-font suffix {T} draws (`ms-tap`; the 1997 prints' is
    *  `tap-4ed`, the original's `tap-3ed`). */
   tapSuffix: string;
@@ -72,6 +103,8 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     previewShadowClass: "ms-shadow",
     previewShadowCss: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
     costRowShadowDiscs: 0.1,
+    costGapDiscs: DEFAULT_COST_GAP_DISCS,
+    symbolImages: null,
     tapSuffix: "tap",
   },
   // The 1997 frame (TODO 4.10a / 4.24; `retro`, `retroland`): the prints'
@@ -88,6 +121,8 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     previewShadowClass: null,
     previewShadowCss: null,
     costRowShadowDiscs: 0,
+    costGapDiscs: DEFAULT_COST_GAP_DISCS,
+    symbolImages: null,
     tapSuffix: "tap-4ed",
   },
   // The 2003 frame (TODO 4.10b / 4.24; `modern`, `modernland`): the prints'
@@ -109,9 +144,38 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     previewShadowClass: null,
     previewShadowCss: null,
     costRowShadowDiscs: 2 / 66,
+    costGapDiscs: DEFAULT_COST_GAP_DISCS,
+    symbolImages: null,
     tapSuffix: "tap",
   },
-
+  // The 1993 frame (TODO 4.10c / 4.24; `agclassic`, `alphaland`), measured
+  // on 102 Alpha / Beta prints with a cost (proof 3, 2026-10-08; a circle
+  // fitted to each disc's outer edge): FLAT discs — the ground just under a
+  // disc is as light as the ground above it (+ 1.7 ± 7 luma over 166 discs;
+  // a shadow would read − 40 or more) — ORIGINAL_DISC_PX across, their
+  // centres 83.2 ± 1.3 px apart: a gap of 12 px a disc, a third wider than
+  // the 0.12 every later frame keeps. The five colour symbols are the
+  // drawings of 1993 (the sun with a ring and twelve short rays; the drop,
+  // skull, flame and tree drawn to fill the disc) on their own pale discs:
+  // nine sets print that sun, Alpha 1993 → Fallen Empires 1994, and Fourth
+  // Edition 1995 already prints today's. mana-font has only the sun
+  // (`w-original`), so all five are ONE set — Card Conjurer's
+  // `img/manaSymbols/old/old{w,u,b,r,g}.svg`, rasterised into the frames
+  // bucket (`manaoriginal/<letter>.png`; never git) — drawn as images.
+  // {T}: Alpha, Beta, Unlimited, Arabian Nights and Antiquities spell the
+  // word "Tap"; the first symbol is Revised's tilted T (1994; Legends, The
+  // Dark and Fallen Empires print it too) — mana-font's `tap-3ed`.
+  original: {
+    id: "original",
+    discShadow: null,
+    inlineShadow: false,
+    previewShadowClass: null,
+    previewShadowCss: null,
+    costRowShadowDiscs: 0,
+    costGapDiscs: ORIGINAL_COST_GAP_PX / ORIGINAL_DISC_PX,
+    symbolImages: Object.fromEntries(ORIGINAL_SYMBOL_LETTERS.map((c) => [c, originalSymbolPath(c)])),
+    tapSuffix: "tap-3ed",
+  },
 };
 
 /** A one-colour symbol's font size as a fraction of its disc's diameter —
@@ -198,6 +262,23 @@ export function previewDiscShadowCss(
   if (!spec.discShadow) return undefined;
   const { left, down } = discShadowPx(spec, discPx);
   return `${((left ? -left : 0) / emPx).toFixed(4)}em ${(down / emPx).toFixed(4)}em 0 ${bakedShadowHex(spec.discShadow.colorHex)}`;
+}
+
+/** The gap between two cost pips in `spec`, in discs. */
+export function costPipGap(spec: SymbolStyleSpec): number {
+  return spec.costGapDiscs;
+}
+
+/** The whole-px gap the bake's CostGlyphs draws between discs `discPx`
+ *  wide (at least 1 px) — the preview draws the stored bake's. */
+export function costPipGapPx(spec: SymbolStyleSpec, discPx: number): number {
+  return Math.max(1, Math.round(discPx * spec.costGapDiscs));
+}
+
+/** The image `spec` draws for the symbol `suffix` (a whole pip), or null:
+ *  the font's glyph on the disc. */
+export function symbolImagePath(spec: SymbolStyleSpec, suffix: string): string | null {
+  return spec.symbolImages?.[suffix.toLowerCase()] ?? null;
 }
 
 /** The mana-font suffix a symbol draws in `spec`: the style's own tap for

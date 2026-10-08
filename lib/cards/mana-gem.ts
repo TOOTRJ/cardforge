@@ -21,7 +21,7 @@
 
 import { hybridHalves, inlineManaTintKey } from "@/lib/cards/rules-text";
 import { SNOW_FLAKE_BOX, SNOW_FLAKE_PATH } from "@/lib/cards/snow-flake-path";
-import { manaGlyphPx, styledSuffix, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { manaGlyphPx, styledSuffix, symbolImagePath, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 
 /** The disc's colour per tint key — mana-font's `.ms-cost` backgrounds. */
 export const MANA_GEM_BG: Readonly<Record<string, string>> = {
@@ -45,7 +45,9 @@ export const MANA_SYMBOL_INK = "#150d08";
 // (untap: Shadowmoor 2008; Phyrexian: New Phyrexia 2011; snow: Coldsnap
 // 2006; energy: Kaladesh 2016; two-colour Phyrexian: Kamigawa: Neon Dynasty
 // 2022), and the 1997 and 1993 frames never printed one — a card on those
-// takes the nearest printed look, the same one.
+// takes the nearest printed look, the same one (the "original" style's
+// five colour IMAGES are its own; these five symbols are the font's there
+// too).
 // ---------------------------------------------------------------------------
 
 /** {Q}: a near-black disc and a white arrow 0.63 of the disc tall (9 prints,
@@ -159,6 +161,19 @@ export const SNOW_FLAKE_MITRE = 2.5;
 
 export type ManaGemSpec =
   | {
+      /** A whole pip as ONE image — the disc and its drawing (a style's
+       *  `symbolImages`: the 1993 frame's five colour symbols, TODO 4.10c).
+       *  Drawn in the disc's box, round, like an owner's custom pip. */
+      kind: "image";
+      suffix: string;
+      /** The pip's diameter, whole px: always a plain pip's. */
+      discPx: number;
+      /** The image's public path (the frames bucket resolves it: the bake
+       *  through getFrameAssetDataUrl after frameAssetPathsFor warmed it,
+       *  the preview through frameUrl). */
+      path: string;
+    }
+  | {
       kind: "solid";
       /** The mana-font suffix drawn — the style's own {T} already applied. */
       suffix: string;
@@ -217,6 +232,10 @@ function snowFlakeSpec(discPx: number): SnowFlakeSpec {
  *  always is. */
 export function manaGemSpec(symbol: string, pipPx: number, symbols: SymbolStyleSpec): ManaGemSpec {
   const suffix = styledSuffix(symbols, symbol);
+  // A style's own image for the symbol (the 1993 frame's five colours): a
+  // whole pip, always a plain pip's disc.
+  const imagePath = symbolImagePath(symbols, suffix);
+  if (imagePath) return { kind: "image", suffix, discPx: pipPx, path: imagePath };
   const discPx = pipDiscPx(suffix, pipPx);
   const halves = hybridHalves(suffix);
   if (halves) {
@@ -306,5 +325,23 @@ export function manaGlyphSuffixes(): string[] {
  *  disc always, a one-colour pip only with a glyph. */
 export function drawsManaGem(symbol: string, symbols: SymbolStyleSpec): boolean {
   const suffix = styledSuffix(symbols, symbol);
-  return hybridHalves(suffix) != null || hasManaGlyph(suffix);
+  return symbolImagePath(symbols, suffix) != null || hybridHalves(suffix) != null || hasManaGlyph(suffix);
+}
+
+/** The symbol images a card's text asks `symbols` for — the public paths of
+ *  every pip in `texts` (mana costs and rules text, braces or not) the
+ *  style draws as an image. The bake warms exactly these
+ *  (lib/render/card-image.tsx frameAssetPathsFor): an image it reads
+ *  synchronously and has not warmed draws as a transparent pixel. */
+export function symbolImagePathsIn(texts: readonly (string | null | undefined)[], symbols: SymbolStyleSpec): string[] {
+  if (!symbols.symbolImages) return [];
+  const found = new Set<string>();
+  for (const text of texts) {
+    if (!text) continue;
+    for (const match of text.matchAll(/\{([^{}]+)\}/g)) {
+      const path = symbolImagePath(symbols, match[1].trim());
+      if (path) found.add(path);
+    }
+  }
+  return [...found];
 }

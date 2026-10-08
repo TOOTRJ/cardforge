@@ -91,6 +91,9 @@ type Disc = {
   /** [left, down, colour] of the shadow, px; null with none. */
   shadow: [number, number, string] | null;
   glyphs: Array<{ glyph: string; fontPx: number; color: string; top?: number; left?: number }>;
+  /** A style's own symbol IMAGE — the whole pip, no fill and no glyph of
+   *  ours (TODO 4.10c: the 1993 frame's five colour symbols). */
+  image?: true;
 };
 
 type BakeNode = { type: string; props: Record<string, unknown>; textContent?: string; left?: number; top?: number };
@@ -117,6 +120,9 @@ async function bakeDiscs(card: CardPreviewData): Promise<Array<Disc & { x: numbe
     } else if (node.type === "path" && discs.length > 0 && discs[discs.length - 1].flake && discs[discs.length - 1].flake!.paths.length < 2 && node.props.strokeMiterlimit !== undefined) {
       const p = node.props as Record<string, string | number>;
       discs[discs.length - 1].flake!.paths.push({ d: String(p.d), fill: String(p.fill), stroke: String(p.stroke), strokeWidth: Number(p.strokeWidth), join: String(p.strokeLinejoin), mitre: Number(p.strokeMiterlimit) });
+    } else if (node.type === "img" && typeof style.width === "number" && style.borderRadius === style.width && style.height === style.width) {
+      const shadow = typeof style.boxShadow === "string" ? /^(-?\d+)px (\d+)px 0 (#[0-9a-f]+)$/i.exec(style.boxShadow) : null;
+      discs.push({ size: style.width, x: node.left ?? 0, y: node.top ?? 0, background: "", ...(typeof style.marginTop === "number" ? { lineTop: style.marginTop } : {}), shadow: shadow ? [Number(shadow[1]), Number(shadow[2]), shadow[3]] : null, glyphs: [], image: true });
     } else if (typeof style.width === "number" && style.borderRadius === style.width && style.height === style.width && style.objectFit === undefined) {
       const shadow = typeof style.boxShadow === "string" ? /^(-?\d+)px (\d+)px 0 (#[0-9a-f]+)$/i.exec(style.boxShadow) : null;
       if (style.boxShadow !== undefined) expect(shadow, String(style.boxShadow)).not.toBeNull();
@@ -178,6 +184,19 @@ async function previewDiscs(card: CardPreviewData): Promise<Disc[]> {
       expect(blur).toBe("0");
       return [unit(x, "em") * emPx, unit(y, "em") * emPx, color];
     };
+    const image = pip.querySelector("img");
+    if (image) {
+      // A style's own symbol image: the span's em × the image's 1.3 em box
+      // is one (plain) disc, round, and the shadow (if any) is the image's.
+      const emPx = unit(css(pip, "font-size"), "em") * pipPx;
+      expect(unit(css(image, "width"), "em") * emPx).toBeCloseTo(pipPx, 1);
+      expect(unit(css(image, "height"), "em") * emPx).toBeCloseTo(pipPx, 1);
+      expect(css(image, "border-radius")).toBe("50%");
+      expect(image.getAttribute("src")).toMatch(/\/manaoriginal\/[wubrg](\.[0-9a-f]{12})?\.png$/);
+      const value = css(image, "box-shadow");
+      expect(value).toBe("");
+      return { size: pipPx, background: "", ...lineTop, shadow: null, glyphs: [], image: true as const };
+    }
     if (pip.tagName === "SPAN") {
       // In the row's own em: the disc's width says its size.
       const size = unit(css(pip, "width"), "em") * pipPx;
@@ -247,6 +266,7 @@ async function previewDiscs(card: CardPreviewData): Promise<Disc[]> {
 
 function expectSameDisc(preview: Disc, bake: Disc, label: string) {
   expect(preview.size, `${label}: disc`).toBeCloseTo(bake.size, 1);
+  expect(Boolean(preview.image), `${label}: an image pip in both`).toBe(Boolean(bake.image));
   expect(preview.background?.toLowerCase() ?? null, `${label}: fill`).toBe(bake.background?.toLowerCase() ?? null);
   if (bake.lineTop !== undefined) expect(preview.lineTop, `${label}: top in the line`).toBeCloseTo(bake.lineTop, 1);
   else expect(preview.lineTop, `${label}: a cost pip`).toBeUndefined();
