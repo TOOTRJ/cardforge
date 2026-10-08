@@ -23,6 +23,16 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // transparent art window and a grey loyalty plate — while the rows, badges,
 // stripes and geometry are the real M15PW profile's (as pw-rows-bake.test.tsx
 // does). Offline and deterministic: the hash is of the decoded RGBA pixels.
+//
+// Layout v49 (the symbols as printed, owner round 43) changed the two
+// walkers whose rows hold a mana symbol — and only those: a pip in the rules
+// text lost M15's shadow, and {S} became the prints' white flake. Their
+// eight bakes are pinned again under `v49` in the fixture (written by this
+// file with PIN_PW_BAKES=write-v49, on the v49 commit) and must DIFFER from
+// the v41 ones; the other twenty are still v41's, byte for byte. And the
+// change is proven to be the shadow alone where no redrawn symbol is
+// involved: "past the floor" ({2}{B}) baked with the inline shadow switched
+// back on is v41's hash again.
 // ---------------------------------------------------------------------------
 
 const FIXTURE = join(process.cwd(), "tests/unit/render/fixtures/pw-rows-v41-bakes.json");
@@ -150,7 +160,12 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
   }
 
   const WRITE = process.env.PIN_PW_BAKES === "write";
-  const fixture = existsSync(FIXTURE) ? (JSON.parse(readFileSync(FIXTURE, "utf8")) as { base: string; bakes: Record<string, string> }) : null;
+  const WRITE_V49 = process.env.PIN_PW_BAKES === "write-v49";
+  const fixture = existsSync(FIXTURE)
+    ? (JSON.parse(readFileSync(FIXTURE, "utf8")) as { base: string; bakes: Record<string, string>; v49?: Record<string, string> })
+    : null;
+  /** The walkers whose rows draw a pip: what layout v49 changed. */
+  const hasPip = (rules: string) => /\{[^}]+\}/.test(rules);
 
   for (const [name, rules] of Object.entries(WALKERS)) {
     for (const preset of PRESETS) {
@@ -159,16 +174,48 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
         it(`${id}: the same pixels`, async () => {
           const hash = await bakeHash(rules, preset, finish);
           baked[id] = hash;
-          if (WRITE) return;
+          if (WRITE || WRITE_V49) return;
           expect(fixture, "tests/unit/render/fixtures/pw-rows-v41-bakes.json is missing").not.toBeNull();
+          if (hasPip(rules)) {
+            // v49: its rows' pips are flat (and {S} the white flake).
+            expect(hash, `${id}: v49 changed this walker's pips`).not.toBe(fixture!.bakes[id]);
+            expect(hash, `${id}: a walker bake changed since layout v49`).toBe(fixture!.v49?.[id]);
+            return;
+          }
           expect(hash, `${id}: a walker bake changed — the rows' generalisation (or anything else) moved a pixel on m15pw`).toBe(fixture!.bakes[id]);
         }, 60_000);
       }
     }
   }
 
+  it("v49 moved nothing but the inline shadow where no symbol was redrawn: with it switched back on, \"past the floor\" is v41's pixels", async () => {
+    if (WRITE || WRITE_V49) return;
+    const { SYMBOL_STYLES } = await import("@/lib/cards/symbol-style");
+    const modern = SYMBOL_STYLES.modern as { inlineShadow: boolean };
+    expect(modern.inlineShadow).toBe(false);
+    modern.inlineShadow = true;
+    try {
+      for (const preset of PRESETS) {
+        for (const finish of FINISHES) {
+          const id = `past the floor | ${preset} | ${finish}`;
+          expect(await bakeHash(WALKERS["past the floor"], preset, finish), id).toBe(fixture!.bakes[id]);
+        }
+      }
+    } finally {
+      modern.inlineShadow = false;
+    }
+  }, 120_000);
+
   it("covers every walker, both targets and both finishes — and the foil bakes differ from the regular ones", () => {
     const ids = Object.keys(WALKERS).flatMap((name) => PRESETS.flatMap((preset) => FINISHES.map((finish) => `${name} | ${preset} | ${finish}`)));
+    const pipIds = ids.filter((id) => hasPip(WALKERS[id.split(" | ")[0]]));
+    if (WRITE_V49) {
+      writeFileSync(
+        FIXTURE,
+        `${JSON.stringify({ ...fixture, v49Comment: "the walkers whose rows draw a mana symbol, as layout v49 bakes them (flat rules-text pips, the white snow flake); written with PIN_PW_BAKES=write-v49 on the v49 commit, never since", v49: Object.fromEntries(pipIds.map((id) => [id, baked[id]])) }, null, 1)}\n`,
+      );
+      return;
+    }
     if (WRITE) {
       writeFileSync(
         FIXTURE,
@@ -177,6 +224,9 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
       return;
     }
     expect(Object.keys(fixture!.bakes).sort()).toEqual([...ids].sort());
+    // v49's re-pinned set is exactly the two walkers with pips in their rows.
+    expect(Object.keys(fixture!.v49 ?? {}).sort()).toEqual([...pipIds].sort());
+    expect(pipIds.map((id) => id.split(" | ")[0]).filter((name, i, all) => all.indexOf(name) === i)).toEqual(["pips + reminder", "past the floor"]);
     // The foil's sheen reached the bake (a foil bake identical to its regular
     // one would pin nothing about the stripes).
     for (const name of Object.keys(WALKERS)) {

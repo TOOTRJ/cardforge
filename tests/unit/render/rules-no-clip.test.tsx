@@ -377,7 +377,9 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
 
 describe("rules consumers — the HD bake (subset)", () => {
   const TEMPLATES: FrameTemplate[] = ["m15", "m15pw", "m15token", "adventure", "flip", "split", "aftermath", "battle", "retro", "m15borderless"];
-  const TEXTS = RULES_MATRIX.filter((t) => ["400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "minus sign", "flavor + attribution"].includes(t.name));
+  // "symbols as printed" (layout v49): the Phyrexian pip's larger disc is drawn
+  // at the stored bake's own px too — not only at 750.
+  const TEXTS = RULES_MATRIX.filter((t) => ["400 chars", "pips + reminder", "symbols as printed", "accented first line", "blank lines", "EOE #30", "minus sign", "flavor + attribution"].includes(t.name));
   const cases = matrix(TEXTS, TEMPLATES);
 
   it("draws inside its box, clear of every keep-out, line for line", async () => {

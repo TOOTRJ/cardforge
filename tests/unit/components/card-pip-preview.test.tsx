@@ -160,12 +160,37 @@ describe("the preview's disc shadow is the bake's", () => {
     for (const pip of pips) expectBakeShadow(pip, discPx);
   });
 
-  it("the rules pips: the same layer at their own disc — the untap's too (the bake's is dark, not mana-font's white)", () => {
+  it("the rules pips are FLAT (layout v49: the M15-era prints shadow the cost alone) — every symbol class, the untap too", () => {
     const body = render(<CardPreview {...card("m15")} />);
-    const discPx = rulesDiscPx(body, "m15");
     const pips = rulesPips(body);
     expect(pips.map((p) => p.getAttribute("data-pip"))).toEqual(["tap", "2", "g", "wu", "untap"]);
-    for (const pip of pips) expectBakeShadow(pip, discPx);
+    for (const pip of pips) {
+      expect(css(pip, "box-shadow"), pip.getAttribute("data-pip") ?? "").toBe("");
+      expect(pip.className).not.toContain("ms-shadow");
+    }
+    // …while the same card's cost row keeps its one layer.
+    const { discPx } = costRowHdPx(COST_DISC_PCT);
+    for (const pip of costPips(body)) expectBakeShadow(pip, discPx);
+    // The untap symbol is the prints': a white arrow on a near-black disc.
+    const untap = pips[4];
+    expect([css(untap, "background-color"), css(untap, "color")]).toEqual(["#211f23", "#ffffff"]);
+    expect([css(pips[0], "background-color"), css(pips[0], "color")]).toEqual(["#beb9b2", "#150d08"]);
+  });
+
+  it("a larger disc carries its own size's shadow: a Phyrexian cost pip 88 px, 5 left and 6 down", () => {
+    const body = render(<ManaCostGlyphs cost="{2}{G/P}{G/U/P}" disc={{ size: "4.8667cqw", gap: "0.6cqw", px: 73 }} />);
+    const [plain, phyrexian, split] = Array.from(body.querySelectorAll("[data-pip]"));
+    expect(shadowLayers(css(plain, "box-shadow")).map((l) => [l.x * pipFontPx(plain, 73), l.y * pipFontPx(plain, 73)].map(Math.round))).toEqual([[-4, 5]]);
+    expect(shadowLayers(css(phyrexian, "box-shadow")).map((l) => [l.x * pipFontPx(phyrexian, 73), l.y * pipFontPx(phyrexian, 73)].map(Math.round))).toEqual([[-5, 6]]);
+    // A split disc's shadow is in the row's em (1 em = a plain disc).
+    expect(shadowLayers(css(split, "box-shadow")).map((l) => [l.x * 73, l.y * 73].map(Math.round))).toEqual([[-5, 6]]);
+    // The discs: 73, 88 and 88 px.
+    expect(em(css(plain, "width")) * pipFontPx(plain, 73)).toBeCloseTo(73, 1);
+    expect(em(css(phyrexian, "width")) * pipFontPx(phyrexian, 73)).toBeCloseTo(88, 1);
+    expect(em(css(split, "width")) * 73).toBeCloseTo(88, 1);
+    // The energy symbol has no disc to shadow.
+    const energy = render(<ManaCostGlyphs cost="{E}" disc={{ size: "4.8667cqw", gap: "0.6cqw", px: 73 }} />).querySelector("[data-pip]")!;
+    expect([css(energy, "box-shadow"), css(energy, "background-color")]).toEqual(["", ""]);
   });
 
   it("an owner's pip image carries it too", () => {
@@ -221,15 +246,18 @@ describe("a rules pip's glyph is the bake's share of its disc", () => {
         if (pip.getAttribute("data-pip") === "wu") {
           const gem = manaGemSpec("wu", discPx, symbolStyle(profile.symbolStyle));
           if (gem.kind !== "split") throw new Error("a hybrid is a split disc");
-          expect(css(pip, "width")).toBe("1em");
-          expect(css(pip, "height")).toBe("1em");
+          // A hybrid's disc is a plain pip's: one em of the row.
+          expect(em(css(pip, "width"))).toBe(1);
+          expect(em(css(pip, "height"))).toBe(1);
           const halves = Array.from(pip.children);
           expect(halves.map((h) => h.className)).toEqual(["ms ms-w", "ms ms-u"]);
           for (const half of halves) expect(pipFontPx(half, discPx)).toBeCloseTo(gem.halfPx, 1);
           continue;
         }
         const fontPx = pipFontPx(pip, discPx);
-        expect(fontPx).toBeCloseTo(manaGlyphPx(discPx), 1);
+        // The untap arrow is 0.9 of its disc (layout v49), every other
+        // symbol here mana-font's share.
+        expect(fontPx).toBeCloseTo(pip.getAttribute("data-pip") === "untap" ? Math.round(discPx * 0.9) : manaGlyphPx(discPx), 1);
         // Its box exactly one disc, whatever the glyph's size.
         expect(em(css(pip, "width")) * fontPx).toBeCloseTo(discPx, 1);
         expect(em(css(pip, "height")) * fontPx).toBeCloseTo(discPx, 1);
