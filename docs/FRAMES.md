@@ -4787,6 +4787,33 @@ bump; `tests/unit/render/profile-data-parity.test.tsx` gives a throwaway
 profile each of them and requires the same answer from the bake and the
 preview.
 
+**A card's pip is ONE description, drawn twice** (preview-symbol parity,
+2026-10-07; preview only, no layout bump). `lib/cards/mana-gem.ts`
+`manaGemSpec()` holds what the bake has always drawn — the disc's colour per
+tint, the `#150d08` ink, the glyph at `manaGlyphPx`, a hybrid / twobrid
+disc's 135° fill and its two half-symbols' size and corners — and both the
+bake's `ManaGem` and the preview's `CardPip` read it; neither keeps a table
+of its own. A number there is a stored-bake number: changing one is a layout
+bump. `CardPip` takes mana-font's `ms ms-<suffix>` for the font and the
+glyph ONLY and is marked `data-pip="<suffix>"` (tests and tools select a
+card's pips by that); it never takes mana-font's cost or shadow class, whose
+own look is not the stored card's (a black untap disc, a ×1.2 Phyrexian
+symbol, a white snow symbol, lighter split colours at other offsets, `#111`
+ink) and cannot be overridden from an element's style. Those classes stay on
+every pip OUTSIDE a card (pickers, toolbar, deck lists, articles, the
+dashboard), which keep mana-font's look. A symbol mana-font has no glyph for
+(`{C/P}`, `{W/U/P}`, `{21}`, `{1/2}`…) draws NOTHING in either renderer — no
+disc, no room, no gap: `hasManaGlyph()` is the browser's copy of the bake's
+codepoint map (`lib/render/card-fonts.ts` is server-only), held to the
+installed `mana.css` by `tests/unit/cards/mana-gem.test.ts` — a mana-font
+upgrade that adds or drops a reachable glyph fails there until the list
+follows. The creator does not warn about such a symbol yet. The shadow's
+colour in the preview is the one the PNG holds, not the style's CSS colour
+(`bakedShadowHex()`: sharp's librsvg runs the shadow's filter in 8-bit
+linearRGB, `#111` lands on `#0d0d0d`); `mana-gem-parity.test.tsx` reads it
+out of a real bake. A new symbol style puts its pip data in the spec /
+`mana-gem.ts` and both renderers follow.
+
 **A pip's class is never written out as a literal.** mana-font's class for
 generic mana is `ms-` + the number, and Tailwind reads the same token as a
 `margin-inline-start` utility — which it emits for every candidate it finds

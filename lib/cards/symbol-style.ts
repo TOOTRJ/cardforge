@@ -119,11 +119,17 @@ export function discShadowCss(spec: SymbolStyleSpec, discPx: number): string | u
 }
 
 /** The colour a `colorHex` box-shadow HAS in the stored PNG. Satori draws a
- *  box-shadow through an SVG filter, and resvg runs filters in linearRGB at
- *  8 bits a channel: each channel goes sRGB → linear → a whole 0–255 step →
- *  sRGB. Near black that step is coarse — "modern"'s #111 lands on #0d0d0d
- *  in every stored bake (measured on HD bakes, 2026-10-07) — so the preview
- *  asks the browser for the landed colour. Takes #rgb or #rrggbb. */
+ *  box-shadow through an SVG filter, and the rasteriser (sharp's librsvg,
+ *  lib/render/satori-png.ts) runs filters in linearRGB at 8 bits a channel:
+ *  each channel goes sRGB → linear → a whole 0–255 step → sRGB. Near black
+ *  that step is coarse — "modern"'s #111 lands on #0d0d0d in every stored
+ *  bake — so the preview asks the browser for the landed colour. The model
+ *  is general, not fitted to #111: 17 colours (blacks, greys, saturated,
+ *  near-white) each landed on its prediction at the HD and the 750 px bake
+ *  (2026-10-07), and tests/unit/render/mana-gem-parity.test.tsx reads the
+ *  shadow's colour out of a real bake's PNG for every style that has one —
+ *  a rasteriser that stops rounding this way fails there. Opaque colours
+ *  only (#rgb or #rrggbb): a translucent shadow is not modelled. */
 export function bakedShadowHex(colorHex: string): string {
   const hex = colorHex.replace("#", "");
   const full = hex.length === 3 ? hex.replace(/./g, (c) => c + c) : hex;

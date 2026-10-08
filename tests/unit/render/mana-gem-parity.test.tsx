@@ -3,7 +3,7 @@ import { Window } from "happy-dom";
 import sharp from "sharp";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
-import { bakedShadowHex, SYMBOL_STYLES, type SymbolStyle } from "@/lib/cards/symbol-style";
+import { bakedShadowHex, discShadowPx, SYMBOL_STYLES, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { RULES_HD_WIDTH } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
@@ -267,4 +267,72 @@ describe.each(Object.keys(SYMBOL_STYLES) as SymbolStyle[])('symbol style "%s": t
     expect(preview).toHaveLength(4);
     preview.forEach((disc, i) => expectSameDisc(disc, bake[i], `${style} beside a glyphless symbol, pip ${i}`));
   }, 60_000);
+});
+
+// ---------------------------------------------------------------------------
+// bakedShadowHex against the PNG itself. The comparisons above hold the
+// preview's shadow colour to bakedShadowHex(the bake's CSS colour) — which
+// says nothing if the model is wrong. So: a real HD bake, the shadow's own
+// pixel read out of the PNG (the disc's bottom, moved by the shadow's
+// offset: inside the shadow, outside the disc), for every style that draws
+// a shadow and for colours no style uses yet (a new style's colour is
+// modelled before it ships). A rasteriser that stops rounding through 8-bit
+// linearRGB fails here, not in a stored card.
+// ---------------------------------------------------------------------------
+
+/** The colour of the cost pip's shadow in a real HD bake of `data` (a {G}
+ *  cost): the green disc found by its own colour, then the pixel under its
+ *  bottom centre moved by the shadow's offset — inside the shadow, outside
+ *  the disc. (Satori's node boxes are before the cost row's transform, so
+ *  the disc is found in the pixels.) */
+async function shadowPixel(data: CardPreviewData, spec: SymbolStyleSpec): Promise<string> {
+  const { renderCardImage } = await import("@/lib/render/card-image");
+  const { MANA_GEM_BG } = await import("@/lib/cards/mana-gem");
+  const response = await renderCardImage(data, "hd", { brandMark: true });
+  const { data: px, info } = await sharp(Buffer.from(await response.arrayBuffer())).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const at = (x: number, y: number) => `#${[0, 1, 2].map((c) => px[(y * info.width + x) * 3 + c].toString(16).padStart(2, "0")).join("")}`;
+  const box = { minX: Infinity, maxX: -1, maxY: -1 };
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (at(x, y) !== MANA_GEM_BG.g) continue;
+      box.minX = Math.min(box.minX, x);
+      box.maxX = Math.max(box.maxX, x);
+      box.maxY = Math.max(box.maxY, y);
+    }
+  }
+  expect(box.maxY, "the {G} disc in the bake").toBeGreaterThan(0);
+  const { left, down } = discShadowPx(spec, box.maxX - box.minX + 1);
+  expect(down).toBeGreaterThanOrEqual(3);
+  return at(Math.round((box.minX + box.maxX) / 2) - left, box.maxY + down - 1);
+}
+
+describe("the shadow colour the preview asks for is the one in the PNG", () => {
+  const shadowed = (Object.keys(SYMBOL_STYLES) as SymbolStyle[]).filter((style) => SYMBOL_STYLES[style].discShadow);
+
+  it.each(shadowed)('style "%s": bakedShadowHex is the baked pixel', async (style) => {
+    const template = await templateOf(style);
+    if (!template) return;
+    const spec = SYMBOL_STYLES[style];
+    expect(await shadowPixel(card(template, "{G}", "Trample"), spec)).toBe(bakedShadowHex(spec.discShadow!.colorHex));
+  }, 60_000);
+
+  it("…and for colours no style uses yet (the model is not fitted to one colour)", async () => {
+    const spec = SYMBOL_STYLES.modern as { discShadow: { left: number; down: number; colorHex: string } };
+    const own = spec.discShadow.colorHex;
+    try {
+      for (const [colorHex, landed] of [
+        ["#333", "#323232"],
+        ["#7f1d1d", "#7f1c1c"],
+        ["#191970", "#161670"],
+        ["#2a4b6c", "#2a4b6c"],
+        ["#fff", "#ffffff"],
+      ]) {
+        spec.discShadow.colorHex = colorHex;
+        expect(bakedShadowHex(colorHex), colorHex).toBe(landed);
+        expect(await shadowPixel(card("m15", "{G}", "Trample"), SYMBOL_STYLES.modern), colorHex).toBe(landed);
+      }
+    } finally {
+      spec.discShadow.colorHex = own;
+    }
+  }, 120_000);
 });
