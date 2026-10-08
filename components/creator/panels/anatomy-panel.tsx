@@ -40,8 +40,10 @@ import type { CardType, ColorIdentity, FrameStyle } from "@/types/card";
 
 /** The keys this panel can show as a switch: the booleans and the collector
  *  line's two keys. The transform icon FAMILY (`dfcIcon`, TODO 5.0a) is a
- *  chip row of the Card step, not a switch (5.2), so it has no copy here. */
-export type SwitchKey = Exclude<FrameAnatomyKey, "dfcIcon">;
+ *  chip row of the Card step, not a switch (5.2), so it has no copy here;
+ *  nor has the text alignment (`rulesAlign`, TODO 4.21e), a Left / Centred
+ *  choice of the Text step (text-panel.tsx). */
+export type SwitchKey = Exclude<FrameAnatomyKey, "dfcIcon" | "rulesAlign">;
 
 /** The one-line hint a stored card shows beside a switch its owner has never
  *  set (owner decision 2026-09-29: the switch and a /news post, never a

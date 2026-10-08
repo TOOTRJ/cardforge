@@ -434,6 +434,20 @@ export type RulesLayoutInput = {
    *  (TODO 4.49 (b)). Each target indents it by its own whole px
    *  (singleLineIndentPx), and the keep-outs are judged where it lands. */
   alignSingleLine?: "center";
+  /** "center": EVERY line of the block — rules, reminder and flavor alike —
+   *  is set centred on the box's own centre line (TODO 4.21e: a split
+   *  half's short text as MH2 #123, TSR #156 / #161 / #186 and C16 #239 /
+   *  #240 print it — each line's centre on the paper's centre). The box's
+   *  centre is the middle of the box less its padding, NOT of the column
+   *  the side headroom leaves (sideInsets): a line that starts with an
+   *  italic "f" must not pull every other line 1 px off the paper's
+   *  centre. Each target indents each line by its own whole px
+   *  (centredLineIndentPx), the keep-outs are judged where each line lands,
+   *  and the breaks, the size and every vertical position are exactly the
+   *  left-aligned layout's — the lines only move sideways. Unset: every
+   *  line starts at the left. Card data (FrameStyle.rulesAlign), offered
+   *  only where the profile declares FrameProfile.rulesAlignSwitch. */
+  align?: "center";
   /** The frame's symbol style (FrameProfile.symbolStyle, TODO 4.8.0): the
    *  inline pip's shadow, which the layout keeps inside the box and out of
    *  the keep-outs. Unset = "modern". */
@@ -521,7 +535,8 @@ export type RulesLinePlacement = {
   block: number;
   line: number;
   /** How far the line starts right of the interior's left edge, whole
-   *  target px: 0, or a centred single line's indent (singleLineIndentPx). */
+   *  target px: 0, a centred single line's indent (singleLineIndentPx), or
+   *  a centred block's line's (RulesLayoutInput.align, centredLineIndentPx). */
   indent: number;
   /** The line box, card-absolute target px (top may be fractional: a
    *  centred block's offset is not rounded here; Yoga rounds each box). */
@@ -659,6 +674,20 @@ export function singleLineIndentPx(interiorWidth: number, lineWidth: number): nu
   return Math.max(0, Math.floor((interiorWidth - lineWidth) / 2));
 }
 
+/**
+ * A centred block's line indent at a target (RulesLayoutInput.align, TODO
+ * 4.21e): the whole px that puts the line's centre nearest `centre` — the
+ * box's centre line, measured from the interior's left edge — held inside
+ * the interior (a line as wide as the column starts at its left; an
+ * overwide run too, as it always has). Both renderers draw it as the line's
+ * left margin.
+ */
+export function centredLineIndentPx(interiorWidth: number, lineWidth: number, centre: number): number {
+  const room = interiorWidth - lineWidth;
+  if (room <= 0) return 0;
+  return Math.min(Math.floor(room), Math.max(0, Math.round(centre - lineWidth / 2)));
+}
+
 function placeBlocks(
   blocks: readonly RulesBlock[],
   sizePx: number,
@@ -708,6 +737,24 @@ function placeBlocks(
   let bar: RulesPlacement["bar"] = null;
   let y = top + insetTop;
   const centred = input.alignSingleLine === "center" && isSingleRulesLine(blocks);
+  // A centred BLOCK (TODO 4.21e): the box's centre line — the middle of the
+  // box less its padding — from the interior's left edge.
+  const blockCentre =
+    input.align === "center" ? (box.width - p.left - p.right) / 2 - side.left : null;
+  // A centred line whose rows meet a FLOAT (the transform front's reverse
+  // P/T) is centred on the box like every other, but never past the float:
+  // its room ends at the float's left edge, as the column it broke against
+  // does (floatColumnsFor). A float leaving less than the line is ignored
+  // here — the keep-out check then steps the size down.
+  const floatRects =
+    blockCentre !== null ? (input.floats ?? []).map((f) => rectPx(f, orientation, input.aspect, target)) : [];
+  const lineColumn = (lineTop: number): number => {
+    let column = interior.width;
+    for (const f of floatRects) {
+      if (lineTop < f.bottom && lineTop + m.linePx > f.top) column = Math.min(column, f.left - interior.left);
+    }
+    return column;
+  };
   blocks.forEach((b, bi) => {
     const gap = gapBefore(blocks, bi, m, divider);
     if (b.kind === "flavor" && bi > 0 && divider) {
@@ -722,7 +769,12 @@ function placeBlocks(
     b.lines.forEach((line, li) => {
       const ink = lineInk(line, m);
       const sideInk = lineSideInk(line, m);
-      const indent = centred ? singleLineIndentPx(interior.width, line.widthPx[target]) : 0;
+      const indent =
+        blockCentre !== null
+          ? centredLineIndentPx(lineColumn(y), line.widthPx[target], blockCentre)
+          : centred
+            ? singleLineIndentPx(interior.width, line.widthPx[target])
+            : 0;
       const left = interior.left + indent;
       lines.push({
         block: bi,
@@ -905,7 +957,9 @@ function floatColumnsFor(
       let column = columns[t];
       for (const f of rects) {
         if (!(l.top < f.bottom && l.top + l.height > f.top)) continue;
-        column = Math.min(column, f.left - l.left);
+        // From the column's own left edge — a centred line's indent
+        // (RulesLayoutInput.align) is not part of its column.
+        column = Math.min(column, f.left - (l.left - l.indent));
       }
       if (column >= columns[t] || column < columns[t] * FLOAT_MIN_COLUMN) return;
       out.set(i, { ...(out.get(i) ?? columns), [t]: column });

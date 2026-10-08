@@ -1608,6 +1608,36 @@ export function visualCases(): VisualCase[] {
       },
     },
   });
+  // TODO 4.21e: the card's text alignment (frame_style.rulesAlign — an
+  // ADDITION, opt-in per card; no stored card has the key, so these are NEW
+  // cases and every case above stays byte-identical): every line of the
+  // card's rules boxes centred — one frame per family the switch reaches,
+  // both halves / faces where the frame has two boxes, short and long, and
+  // the stored bake's size. The frame's own first kind, in a colour it has.
+  const centredStyle = (template: FrameTemplate) => ({
+    frame_style: { template, finish: "regular", rulesAlign: "center" } as CardRowForBake["frame_style"],
+  });
+  const CENTRED: readonly [FrameTemplate, VisualColour][] = [
+    ["m15", "w"],
+    ["m15land", "g"],
+    ["split", "r"],
+    ["aftermath", "b"],
+    ["flip", "u"],
+    ["adventure", "g"],
+    ["battle", "r"],
+    ["emblem", "c"],
+    ["m15tokentext", "w"],
+    ["m15dfcfront", "u"],
+    ["retro", "r"],
+  ];
+  for (const [template, colour] of CENTRED) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    const dfcRow = getFrameProfile(template).dfc ? dfcBodyRow("m15dfcback", colour, "short") : {};
+    add(template, primary, colour, "short", { suffix: "@centred", row: { ...dfcRow, ...centredStyle(template) } });
+    if (!getFrameProfile(template).dfc) add(template, primary, colour, "long", { suffix: "@centred", row: centredStyle(template) });
+  }
+  add("split", "split", "r", "short", { suffix: "@centred-hd", preset: "hd", row: centredStyle("split") });
+  add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }

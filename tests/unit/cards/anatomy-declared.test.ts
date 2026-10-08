@@ -51,7 +51,7 @@ describe("where the pieces are declared", () => {
     // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —
     // the snow pair included; never extendedart or the borderless land. The
     // transform icon family, 5.0a, on no entry yet.)
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false });
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
     expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
     // The borderless land (TODO 4.56): the split pair alone — no crown, no
     // collector slot, no stamp notch — so a new card on it stores that one

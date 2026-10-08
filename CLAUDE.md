@@ -565,6 +565,19 @@ Rules and gotchas:
   dropped. A frame's era symbols are `symbolStyle` (`"1997"`: flat discs,
   `tap-4ed`), a correction, never a per-card switch. `docs/FRAMES.md` "The
   1997 frame".
+- Text alignment (TODO 4.21e): `frame_style.rulesAlign` (`"center"` or
+  absent = left; the form and an edit's patch also say `"left"`, never
+  stored) — a card's own choice on EVERY frame with plain rules boxes
+  (`profileOffersRulesAlign`: not `textless`, the saga's `chapters`, a
+  walker frame's `loyaltyRows`; a profile opts out with `rulesAlignSwitch:
+  false`). A NEW card starts LEFT, an import stays left (owner 2026-10-07)
+  — the one anatomy key no default stamps. Centred = every line of every
+  rules box of the card (rules, reminder, flavour; halves and faces alike)
+  on its box's centre: `RulesLayoutInput.align`, a whole-px indent per line
+  per target, the size / breaks / vertical positions exactly the
+  left-aligned layout's; keep-outs judged where each line lands. Both
+  renderers pass the card's value through `rulesAlignOf` and only draw the
+  indents. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

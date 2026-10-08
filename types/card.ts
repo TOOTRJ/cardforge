@@ -827,6 +827,11 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
 };
 
 
+/** A card's rules-text alignment as the creator's form holds it (TODO
+ *  4.21e); a stored frame_style names "center" only. */
+export const RULES_ALIGN_VALUES = ["left", "center"] as const;
+export type RulesAlign = (typeof RULES_ALIGN_VALUES)[number];
+
 export type FrameStyle = {
   /** Premium treatment layered on the base frame (foil / etched / showcase). */
   finish?: CardFinish;
@@ -883,6 +888,17 @@ export type FrameStyle = {
    *  stored card can carry it until those bodies exist. Absent on a
    *  transform card = `arrows` (owner decision Q5, 2026-10-02). */
   dfcIcon?: DfcIconFamily;
+  /** The rules text's alignment (TODO 4.21e): an ADDITION, opt-in per card,
+   *  on every kind of card (owner 2026-10-07). "center" sets every line of
+   *  the card's plain rules boxes — rules, reminder and flavour; every face
+   *  and half alike — centred on its box, as MH2 #123 and TSR #186 print
+   *  their halves; absent = left, today's look (the stored key is "center"
+   *  or absent — the owner's "Left" removes it). A NEW card starts left, an
+   *  import stays left. Drawn on every template with plain rules boxes
+   *  (lib/cards/template-layout.ts profileOffersRulesAlign: not the saga's
+   *  chapter rows, a walker frame's ability rows or a textless frame); the
+   *  save drops it anywhere else (lib/cards/anatomy.ts normalizeAnatomy). */
+  rulesAlign?: RulesAlign;
 };
 
 // ---------------------------------------------------------------------------

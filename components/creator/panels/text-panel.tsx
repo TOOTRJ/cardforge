@@ -18,14 +18,29 @@ import {
   FieldGroup,
   textareaClass,
 } from "@/components/creator/field-group";
+import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import type { FormValues } from "@/lib/creator/form-types";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import type { RulesAlign } from "@/types/card";
 
 /** Said on the Text step when the frame is textless (FrameProfile.textless,
  *  TODO 3.24): the card keeps its text and prints it on any other frame. */
 export const TEXTLESS_FRAME_NOTE =
   "This frame prints no rules text — it's kept and shows on other frames.";
+
+/** The text alignment choice (TODO 4.21e, FrameStyle.rulesAlign): shown on
+ *  every frame that sets its text in plain rules boxes (lib/cards/
+ *  template-layout.ts profileOffersRulesAlign — not a textless frame; a
+ *  walker's rows and a saga's chapters have their own editors). A new card
+ *  starts on Left; an absent key is Left. */
+export const RULES_ALIGN_OPTIONS: ChipOption<RulesAlign>[] = [
+  { value: "left", label: "Left" },
+  { value: "center", label: "Centred" },
+];
+export const RULES_ALIGN_HELP =
+  "Centred sets every line in the middle of its text box, as some printed cards set a short text. It applies to every text box of the card.";
 
 type TextPanelProps = {
   rulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
@@ -37,10 +52,14 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
   const {
     control,
     register,
+    setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
   const { field, fieldState } = useController({ control, name: "rules_text" });
   const template = useWatch({ control, name: "frame_style.template" });
+  const rulesAlign = useWatch({ control, name: "frame_style.rulesAlign" });
+  // The frame offers the choice (its CODE profile, like every switch).
+  const offersAlign = frameAnatomyOf(normalizeFrameTemplate(template)).rulesAlign;
   // Code-owned, never overridden by the admin layout editor.
   const textless = Boolean(getFrameProfile(normalizeFrameTemplate(template)).textless);
 
@@ -79,6 +98,25 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
           />
         </div>
       </FieldGroup>
+
+      {offersAlign ? (
+        // A group, not a FieldGroup: that is a <label>, which would name
+        // both chips with its caption.
+        <div role="group" aria-labelledby="rules-align-heading" className="flex flex-col gap-1.5" data-testid="rules-align">
+          <span id="rules-align-heading" className="text-xs font-semibold uppercase tracking-wider text-subtle">
+            Text alignment
+          </span>
+          <ChipGroup
+            ariaLabel="Text alignment"
+            layout="wrap"
+            size="sm"
+            value={rulesAlign === "center" ? "center" : "left"}
+            onChange={(next) => setValue("frame_style.rulesAlign", next, { shouldDirty: true })}
+            options={RULES_ALIGN_OPTIONS}
+          />
+          <p className="text-xs leading-5 text-muted">{RULES_ALIGN_HELP}</p>
+        </div>
+      ) : null}
 
       <FieldGroup
         label="Flavor text"

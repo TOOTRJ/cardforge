@@ -708,17 +708,21 @@ function CardImage({
   // on a textless frame, a basic land, the saga rail or ability rows.
   const drawsRulesBox =
     !textless && !isBasicLand && !layout.chapters && !(layout.loyaltyRows && loyaltyAbilities.length > 0);
+  // The card's text alignment (FrameStyle.rulesAlign, TODO 4.21e): every
+  // rules box of the card alike; the layout applies it only on a frame that
+  // offers the choice (lib/cards/rules-box.ts rulesAlignOf).
+  const rulesAlign = card.frameStyle?.rulesAlign;
   const rulesLayout = drawsRulesBox
-    ? mainRulesLayout({ layout, rulesText: card.rulesText, flavorText: card.flavorText, aspect, show: drawnStats })
+    ? mainRulesLayout({ layout, rulesText: card.rulesText, flavorText: card.flavorText, aspect, show: drawnStats, rulesAlign })
     : null;
   // The adventure page's and a second face's rules — the same layout.
   const adventureRules =
     layout.adventure && card.backFace
-      ? adventureRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats })
+      ? adventureRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats, rulesAlign })
       : null;
   const secondFaceRules =
     layout.secondFace && card.backFace
-      ? secondFaceRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats })
+      ? secondFaceRulesLayout({ layout, rulesText: card.backFace.rules_text, aspect, show: drawnStats, rulesAlign })
       : null;
 
   // Where the art is painted on this master (artLayersFor — the preview's

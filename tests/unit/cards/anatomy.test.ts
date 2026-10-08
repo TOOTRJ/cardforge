@@ -312,7 +312,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     expect(crowned).toEqual(CROWNED);
     // The extended-art frame draws its floating crown as a band (wave 2b)
     // and no pair masters.
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false });
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
     const paired = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );

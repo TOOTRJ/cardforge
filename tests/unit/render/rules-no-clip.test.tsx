@@ -24,7 +24,7 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { sagaRail, sagaRailDrawing, type SagaRail } from "@/lib/cards/saga-rail";
-import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
+import { getFrameProfile, profileOffersRulesAlign, type FrameProfile } from "@/lib/cards/template-layout";
 import { RULES_HD_WIDTH, RULES_SIZE_PX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import { RULES_MATRIX, plainText, type RulesCase } from "@/tests/unit/cards/fixtures/rules-texts";
@@ -228,7 +228,7 @@ const aspectOf = (p: FrameProfile) => (p.orientation === "landscape" ? 5 / 7 : 7
 /** Each template's consumers of one text, as the renderers build them for a
  *  creature (a battle on the battle frame) — so every drawn stat badge is a
  *  keep-out — plus the walker drawn in the plain box. */
-function consumersOf(template: FrameTemplate, text: RulesCase): Consumer[] {
+function consumersOf(template: FrameTemplate, text: RulesCase, rulesAlign?: "center"): Consumer[] {
   const layout = getFrameProfile(template);
   const aspect = aspectOf(layout);
   const show: DrawnStats = {
@@ -240,7 +240,7 @@ function consumersOf(template: FrameTemplate, text: RulesCase): Consumer[] {
   // The saga's rail replaces its box; a walker with abilities draws rows; a
   // textless frame (the full-art token's textless height) draws no box.
   if (!layout.chapters && !layout.textless) {
-    out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show }) });
+    out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
   }
   if (layout.loyalty) {
     // A planeswalker with no abilities: its text in the plain box, clear of
@@ -248,23 +248,23 @@ function consumersOf(template: FrameTemplate, text: RulesCase): Consumer[] {
     const flavor = [text.rules, text.flavor].filter(Boolean).join("\n");
     out.push({
       key: `${template}/walker`,
-      layout: mainRulesLayout({ layout, rulesText: null, flavorText: flavor, aspect, show: { loyalty: true } }),
+      layout: mainRulesLayout({ layout, rulesText: null, flavorText: flavor, aspect, show: { loyalty: true }, rulesAlign }),
     });
   }
-  const adventure = adventureRulesLayout({ layout, rulesText: text.rules ?? text.flavor, aspect, show });
+  const adventure = adventureRulesLayout({ layout, rulesText: text.rules ?? text.flavor, aspect, show, rulesAlign });
   if (adventure) out.push({ key: `${template}/adventure`, layout: adventure });
-  const second = secondFaceRulesLayout({ layout, rulesText: text.rules ?? text.flavor, aspect, show });
+  const second = secondFaceRulesLayout({ layout, rulesText: text.rules ?? text.flavor, aspect, show, rulesAlign });
   if (second) out.push({ key: `${template}/second face`, layout: second });
   return out;
 }
 
 /** One layout per distinct input: sibling templates that share a rules box
  *  (m15 and its skins) are baked once. */
-function matrix(texts: readonly RulesCase[], templates: readonly FrameTemplate[]) {
+function matrix(texts: readonly RulesCase[], templates: readonly FrameTemplate[], rulesAlign?: "center") {
   const seen = new Map<string, { keys: string[]; layout: RulesLayout; text: RulesCase }>();
   for (const template of templates) {
     for (const text of texts) {
-      for (const c of consumersOf(template, text)) {
+      for (const c of consumersOf(template, text, rulesAlign)) {
         const sig = JSON.stringify([c.layout.input, c.layout.sizePx]);
         const hit = seen.get(sig);
         if (hit) hit.keys.push(`${c.key} · ${text.name}`);
@@ -394,6 +394,63 @@ describe("rules consumers — the HD bake (subset)", () => {
       expect(small.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines))).toEqual(hd.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines)));
     }
   });
+});
+
+// ---------------------------------------------------------------------------
+// The card's text alignment (TODO 4.21e, FrameStyle.rulesAlign): the whole
+// matrix again with every consumer's lines CENTRED, held to the same four
+// rules — a centred line is still inside its box, clear of every keep-out
+// where it now lands, and the layout's line.
+// ---------------------------------------------------------------------------
+/** Matrix texts that fit their box left-aligned and clip centred (a line
+ *  that cleared a drawn badge at the left landing on it at every size):
+ *  none. */
+const CENTRED_ONLY_CLIPS: string[] = [];
+
+describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-out ink, the layout's lines", () => {
+  const cases = matrix(RULES_MATRIX, FRAME_TEMPLATE_VALUES, "center");
+  const left = matrix(RULES_MATRIX, FRAME_TEMPLATE_VALUES);
+
+  it("centres every consumer of a frame that offers the choice, and no other", () => {
+    for (const c of cases) {
+      const template = c.keys[0].split("/")[0] as FrameTemplate;
+      expect(c.layout.input.align, c.keys[0]).toBe(profileOffersRulesAlign(getFrameProfile(template)) ? "center" : undefined);
+    }
+    expect(cases.filter((c) => c.layout.input.align === "center").length).toBeGreaterThan(300);
+  });
+
+  it("clips exactly the texts the left-aligned layout clips, at the floor — plus those a keep-out now meets", () => {
+    const leftClips = new Set(left.filter((c) => c.layout.clipped).flatMap((c) => c.keys));
+    const clipped = cases.filter((c) => c.layout.clipped);
+    for (const c of clipped) expect(c.layout.sizePx, c.keys[0]).toBe(RULES_SIZE_PX.floor);
+    const only = clipped.flatMap((c) => c.keys).filter((k) => !leftClips.has(k)).sort();
+    expect(only, "centred-only clips").toEqual(CENTRED_ONLY_CLIPS);
+    // …and no matrix text that clips left-aligned fits centred.
+    const centredClips = new Set(clipped.flatMap((c) => c.keys));
+    expect([...leftClips].filter((k) => !centredClips.has(k)).sort()).toEqual([]);
+  });
+
+  it("draws every other layout inside its box, clear of every keep-out, line for line (750 px)", async () => {
+    let n = 0;
+    for (const c of cases) {
+      if (c.layout.clipped || c.layout.input.align !== "center") continue;
+      const { placed } = await checkDrawn(c.layout, "default", `centred ${c.keys[0]}`);
+      // …and the lines are where the layout centred them: some line moved.
+      if (placed.lines.some((l) => placed.interior.width - l.width > 8)) expect(placed.lines.some((l) => l.indent > 0), c.keys[0]).toBe(true);
+      n += 1;
+    }
+    expect(n).toBeGreaterThan(100);
+  }, 240_000);
+
+  it("the HD bake (subset): inside its box, clear of every keep-out, the same lines at both targets", async () => {
+    const TEMPLATES: FrameTemplate[] = ["m15", "m15token", "m15tokentext", "adventure", "flip", "split", "aftermath", "battle", "retro", "emblem", "m15dfcfront", "m15mdfcback"];
+    const TEXTS = RULES_MATRIX.filter((t) => ["one line", "short + flavor", "400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "flavor + attribution", "modal bullets"].includes(t.name));
+    for (const c of matrix(TEXTS, TEMPLATES, "center")) {
+      const [hd, small] = [rulesDraw(c.layout, "hd"), rulesDraw(c.layout, "default")];
+      expect(small.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines))).toEqual(hd.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines)));
+      if (!c.layout.clipped) await checkDrawn(c.layout, "hd", `centred ${c.keys[0]}`);
+    }
+  }, 240_000);
 });
 
 describe("the saga rail — its reminder block and every chapter row (TODO 4.21c)", () => {

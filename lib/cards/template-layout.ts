@@ -646,6 +646,19 @@ export type FrameProfile = {
    *  footer in unturnedRect(rect, …) and turn it in place. Code-owned: not
    *  part of the override schema. */
   footerTurn?: 90;
+  /** The card's TEXT ALIGNMENT choice (TODO 4.21e; owner 2026-10-07: every
+   *  kind of card may choose it): a frame whose text is set in plain rules
+   *  boxes offers it by default — the boxes are set left, or, when the
+   *  card's own switch says so (FrameStyle.rulesAlign === "center"), every
+   *  line centred on its box (lib/cards/rules-layout.ts RulesLayoutInput
+   *  .align). `false` opts a frame OUT. profileOffersRulesAlign is the one
+   *  reading: a frame that prints no rules text (`textless`), sets it in a
+   *  saga's chapter rows (`chapters`) or in a walker's ability rows
+   *  (`loyaltyRows` — the text sits beside its badges) never offers it.
+   *  An ADDITION, opt-in per card: no stored card changes, and a card on a
+   *  frame without the choice never keeps the key (normalizeAnatomy).
+   *  Code-owned: not part of the override schema. */
+  rulesAlignSwitch?: false;
   /** The printed collector line's slot (TODO 4.9b) — the two lines in the
    *  bottom border a card switches on (FrameStyle.collector, opt-in per
    *  card: declaring it changes no stored card). When the line is drawn it
@@ -3526,8 +3539,8 @@ const FLIP: FrameProfile = {
 //     74–75 px pitch; MH2's halves 69–74). Some prints also CENTRE a
 //     text's lines (MH2 #123, TSR #156 / #161 / #186, C16 #239), others
 //     set theirs left (MH2 #60, GRN #224, DMR #209's one- and two-line
-//     texts): ours is always left-aligned — a rules layout rule of its
-//     own, not this correction's.
+//     texts): ours is left-aligned unless the CARD says centred
+//     (FrameStyle.rulesAlign, TODO 4.21e — both halves alike).
 //   • Both halves are set ALIKE: the right half's title and type slots are
 //     `fit: "measured"` too, which an unturned second face draws exactly as
 //     the front draws its own (both renderers).
@@ -5164,6 +5177,22 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
  *  (e.g. the retired "regular" placeholder on older saved cards). */
+/**
+ * Whether a frame offers the card's text alignment choice (TODO 4.21e,
+ * FrameStyle.rulesAlign): every frame whose text is set in plain rules
+ * boxes — the main box, an adventure page, a second face's box, a
+ * double-faced body — unless it opts out (`rulesAlignSwitch: false`). Never
+ * a textless frame, the saga (chapter rows) or a frame with walker ability
+ * rows: there the text sits beside its badges, and the prints never centre
+ * it. The ONE test the creator's control, the save (normalizeAnatomy) and
+ * both renderers' layouts (lib/cards/rules-box.ts rulesAlignOf) read.
+ */
+export function profileOffersRulesAlign(
+  profile: Pick<FrameProfile, "rulesAlignSwitch" | "textless" | "chapters" | "loyaltyRows">,
+): boolean {
+  return profile.rulesAlignSwitch !== false && !profile.textless && !profile.chapters && !profile.loyaltyRows;
+}
+
 export function getFrameProfile(
   template: FrameTemplate | string | undefined,
 ): FrameProfile {
