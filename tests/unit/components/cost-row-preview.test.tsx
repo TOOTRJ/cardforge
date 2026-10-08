@@ -6,8 +6,8 @@ import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
-import { COST_PIP_GAP, costRowHdPx } from "@/lib/cards/render-tiers";
-import { MANA_GLYPH_OF_DISC, manaGlyphPx } from "@/lib/cards/symbol-style";
+import { costRowHdPx } from "@/lib/cards/render-tiers";
+import { costPipGapPx, MANA_GLYPH_OF_DISC, manaGlyphPx, symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { COST_DISC_PCT, RULES_HD_WIDTH } from "@/lib/cards/typography";
 import type { FrameTemplate } from "@/types/card";
@@ -69,7 +69,9 @@ function baked(template: FrameTemplate) {
   const orientation = profile.orientation === "landscape" ? "landscape" : "portrait";
   const width = RULES_HD_WIDTH[orientation];
   const discPx = Math.round((profile.costSizePct ?? profile.title.sizePct) * width);
-  return { width, discPx, gapPx: Math.max(1, Math.round(discPx * COST_PIP_GAP)) };
+  // The gap is the symbol style's (COST_PIP_GAP of the disc on every style
+  // but "original", TODO 4.10c: the 1993 prints set their discs 12 px apart).
+  return { width, discPx, gapPx: costPipGapPx(symbolStyleOf(profile), discPx) };
 }
 
 describe("the preview's cost row is the stored bake's", () => {
@@ -97,6 +99,16 @@ describe("the preview's cost row is the stored bake's", () => {
       const pips = Array.from(row.children);
       expect(pips).toHaveLength(6);
       for (const pip of pips) {
+        // A style's own symbol IMAGE (Alpha's {G}, TODO 4.10c): the whole
+        // pip, one disc across — no glyph to size.
+        const image = pip.querySelector("img");
+        if (image) {
+          const em = num(css(pip, "font-size"), "em");
+          expect(em * num(css(image, "width"), "em")).toBeCloseTo(1, 3);
+          expect(em * num(css(image, "height"), "em")).toBeCloseTo(1, 3);
+          expect(css(pip, "flex-shrink")).toBe("0");
+          continue;
+        }
         // The glyph at the bake's whole px (MANA_GLYPH_OF_DISC of the disc,
         // rounded as ManaGem rounds it), its box one disc.
         const glyphEm = num(css(pip, "font-size"), "em");

@@ -226,6 +226,11 @@ into `.frames-build/` — 44 templates today (`CC_TEMPLATES` in
   region onto the original cards of 1996–2003, gold from the MSE artwork
   cut with the same edge map (see
   [The 1997 frame](#the-1997-frame-410a-layout-v46));
+- the 1993 frame's five colour symbols (4.10c, layout v48): `manaoriginal`
+  — the creator's old mana-symbol set, one SVG per colour holding the whole
+  pip, rasterised at 216 px (a `CC_RIDERS` set, like the transform icons;
+  see [The 1993 frame](#the-1993-frame-410c-layout-v48)). The frame's
+  MASTERS stay the MSE artwork in git;
 - the 2003 frame from '8th Edition' (4.10b, layout v47): `modern` and
   `modernland` — the pack's drawing RE-CUT with one piecewise-linear map per
   axis and TONED through its own five masks onto the prints of 2004–2014,
@@ -2445,6 +2450,190 @@ regions, the tone rule, provenance, the published masters),
 `tests/unit/render/modern-2003-bake.test.tsx` (baselines, the brush, the
 shadow, the slot and the print path on real bakes at 750 and HD) and its
 preview twin under `components/`.
+
+### The 1993 frame (4.10c, layout v48)
+
+Era step E6 (design 2026-10-06; proof 3, 2026-10-08): `agclassic` and
+`alphaland` at the sizes, faces and rows of the ALPHA and BETA prints. A
+correction of the text and the symbols only — the masters (MSE's
+magic-agclassic, in git), the art slot, the rules box and the 2026-09-25 ink
+do not move. HD px throughout.
+
+**Proof 3** measured what the design had not: 118 black-bordered Alpha and
+Beta scans (and 105 of twelve later sets on the frame, for the symbols, the
+tap and the footer), each registered on the master by its own top and right
+frame edges (the prints' frame box: 79.6–1422.8 × 88.3–1999.4 px, ± 1–2).
+Lettering by the era design's overlay (the printed ink against the same
+string in a candidate face, unstretched); cost discs by a circle fitted to
+each disc's outer edge — the tool reads our own flat 72 px disc as
+71.6–72.5 px. Every printed line is EMBOSSED, a dark body under a light
+upper-left edge; "dark layer" is the dark ink, the only part the white frame
+shows.
+
+| slot | face, HD px | on the prints (median ± sd, n) | print − ours |
+|---|---|---|---|
+| name | Beleren 72, measured | Goudy Medieval ≈ 84: capitals 57.5, x-height 33.5, baseline 171.5 (20 white prints); Beleren overlaps that ink best at 73.7 ± 4.3; first ink column 109.0 ± 2.9 (48) | baseline − 0.4; start + 1.5 ± 3.8 (round 44) |
+| cost | flat discs 72, a 12 px gap (`symbolStyle: "original"`) | 72.6 ± 1.0 across (166 discs), row 142.5 ± 1.3, 83.2 ± 1.3 apart, the last ending at 1364.9 ± 1.0; no shadow | diameter + 0.2…0.6, row + 0.1, end 0.0, pitch − 0.8 |
+| type line | MPlantin 70, measured | MPlantin 70.0 ± 0.2 (16; overlap error 0.43, Beleren 0.61), baseline 1227.4 ± 0.7; first ink column 155.1 ± 0.9 (36) | size 0.0, baseline − 0.4; start + 1.1 ± 0.9 (round 44) |
+| rules | MPlantin 76 (the shared ladder) | not measured | — |
+| credit | `Illus. <artist>`, MPlantin 70, mixed case; nothing for a card with no artist | `Illus. © <artist>`, MPlantin 69.2 ± 0.3 (16), dark layer on 1950.4 ± 0.9 from 153.8 ± 2.2 | size − 0.8, pen + 1.0, baseline + 1.3 (flat ink) / − 1.1 (the dark edge) |
+| P/T | MPlantin 84, set against its right end (`align: "end"`, `endKerned`) | MPlantin 84.5 ± 0.4 (16; error 0.31, Beleren 0.49), dark layer on 1950.7 ± 1.1; one digit a side covers 1270–1378 px, and DRK #30 10/10, ICE #89 11/11, ALL #112 10/4 grow to the LEFT (ink ending 1383–1392) | size + 0.5, baseline + 1.5 / − 1.4, right end + 3.5 |
+| the © slot | the mark at its standard em (39 px) · a clean download's footer text, MPlantin 39, silver | no second line before Fallen Empires | — |
+
+- **One line of emboss.** Ours is the face plus `ALPHA_EMBOSS`'s dark edge
+  0.035 em down and right (2.45 px at 70, 2.94 at 84). The name and the type
+  line — flat dark on five keys of seven — sit ON the dark layer. The credit
+  and the P/T — embossed on six of seven — sit HALF that edge above and left
+  of it: the white frame's flat ink is then 1.2–1.5 px short of the print's
+  and the other keys' dark edge 1.2–1.5 px past it.
+- **Where the name and the type line start** (owner, round 44,
+  2026-10-08 — round 4's shared 178 px margin, the art window's edge, is
+  retired): where the prints start them. The name's first ink column is
+  109.0 ± 2.9 px on 48 white prints, the type line's 155.1 ± 0.9 on 36; the
+  slots' left edges are the PEN positions that put our ink there —
+  `ALPHA_TITLE_LEFT_PX` = 104 (Beleren inks 3–7 px into its first letter's
+  advance) and `ALPHA_TYPE_LEFT_PX` = 150 (MPlantin's I, S, E: 4 px). Both
+  bands keep their right ends (1365, the last disc's; 1314, the set
+  symbol's), so the measured fits have 74 and 28 px more room. Read with
+  the second read's tool on the same 48 / 36 prints: name print − ours
+  + 1.5 ± 3.8 px by the median, − 0.1 by the mean (ours 108.0 ± 1.2), type
+  line + 1.1 ± 0.9 (ours 154.0). The name's spread (− 5.8…+ 5.1) is the
+  two faces' first letters, not the slot: a printed B, D or H starts at
+  104–106 px where Beleren's starts at 110 (− 4…− 5), a printed C, G or W
+  at 109–113 where ours starts at 106–108 (+ 2…+ 4). Both pens are EVEN:
+  the 750 px bake rounds a band's left and width to whole px each, and an
+  odd pen set what hangs on the band's right end — the cost row, the set
+  symbol — one 750 px pixel to the right (105 and 151 are 1 px nearer the
+  prints at HD). For the same reason the name band ends on 90.999 %, not
+  91: on the four stored cards the cost row and the set symbol are the
+  pixels they were before the move, at HD and at 750 px. On every master
+  the bevel is over by 92 px (`agclassic`, eight keys) or 96 px
+  (`alphaland`, seven: its coloured line covers 87–91): the name's ink
+  starts 11–15 px inside it and the type line's 55–60 px. The credit starts
+  where the prints' does.
+- **No artist, no credit** (owner, round 44): a card with no artist prints
+  NO credit line on this pair — `footer.noArtist: "omit"`
+  (`footerArtistLine` returns null and neither renderer draws the footer;
+  the strip is the master's own pixels). Every other frame still prints its
+  prefix and "Unknown". Three of the four stored cards are such cards. Only
+  for a footer whose clean-download text has its own `copyrightSlot` (a
+  test holds that), since a footer that carried it would lose it with the
+  line.
+- **The credit** is the printed one, without its ©: Alpha → Antiquities
+  print `Illus. © <artist>`, Legends and The Dark `Illus. © 1994 <artist>`,
+  Fallen Empires on `Illus. <artist>` over a Wizards line. PipGlyph prints
+  neither a Wizards line nor a © of its own making.
+- **The © slot is the border.** A 1993 card has one line in its strip, so
+  `copyrightSlot` (with `endPct`: the line ENDS there) is the black band
+  under the frame, ending where the border mark has always ended (3.5 % in):
+  the mark on display — at HD (every stored bake) its pixels in that band
+  are main's, byte for byte; the 750 px render sets it ONE pixel lower (the
+  slot anchors the mark's baseline, `brandMark` anchored its bottom, and
+  19.5 px rounds to 20) — and a paid clean download's footer text in
+  MPlantin, in the strip's silver. That text is exact at HD; at 750 px the
+  bake's whole-px font (20 for 19.5) sets it 2.5 % wide from its left end,
+  so it ends past the slot's end — 5 px on a 16-letter text, 8 px on one
+  cut at the slot's full width (12 px at most), still 14 px inside the card
+  — the same rounding the mark has on every frame. On main that text was set at the END of the credit line, in the
+  credit's face; at 70 px it would run into the P/T.
+- **The symbols** (`symbolStyle: "original"`, 4.24): the five colour symbols
+  are the 1993 DRAWINGS — the ringed twelve-ray sun; the drop, skull, flame
+  and tree drawn to fill their pale discs — as IMAGES, Card Conjurer's
+  `img/manaSymbols/old/old{w,u,b,r,g}.svg` rasterised at 216 px into the
+  frames bucket (`manaoriginal/<letter>.png`; `CC_RIDERS.manaoriginal`,
+  provenance in `lib/cards/frame-sources.json`; never git). mana-font has
+  only the sun. `SymbolStyleSpec.symbolImages` names them,
+  `manaGemSpec()` returns `{ kind: "image", path }` and both renderers draw
+  the whole pip in the disc's box — the element an owner's custom pip uses,
+  and an owner's own pip still wins. The bake reads them synchronously:
+  `frameAssetPathsFor()` warms exactly the ones the card's text names
+  (`symbolImagePathsIn`: cost, rules text, second face, structured face) —
+  one missing from the bucket fails the bake, as a master does. Generic
+  numbers, hybrids, `{C}`, `{X}` and `{T}` stay the font's glyph on our
+  disc; `{T}` is the tilted T (mana-font `tap-3ed`). Discs are flat in the
+  cost and in the rules text, and the gap between two cost discs is the
+  style's (`costGapDiscs`: 12 px here, 0.12 of the disc on every other
+  style — `costPipGapPx`, read by the bake's cost row, the preview's and the
+  name's room).
+- **Which sets print what** (by eye on 14 sets): the old sun on LEA, LEB,
+  2ED, ARN, ATQ, 3ED, LEG, DRK, FEM — Fourth Edition 1995 prints today's;
+  the drop, skull, flame and tree are today's shapes throughout (Alpha, Beta
+  and Unlimited a rougher skull). `{T}`: LEA, LEB, 2ED, ARN and ATQ spell
+  the word "Tap"; the tilted T is Revised's (3ED, LEG, DRK, FEM); the turned
+  arrow from Fourth Edition. Inline mana in the rules text of 1993–94 is the
+  bare drawing with no disc — not built (the inline disc stays 0.785 em).
+
+- **The set symbol keeps its old size** (owner, round 44): the pair pins
+  `symbolSizePct` to `ALPHA_SET_SYMBOL_BOX_PCT`, 49.5 px — what the 45 px
+  type line × 1.1 gave it before v48 — so it does not follow the 70 px type
+  line (unpinned, the box was 77 px and the default mark 75 × 75 in the
+  83 px type band). Alpha and Beta print no set symbol; no print decides
+  it. The default mark (all four stored cards) is 50 × 50 px on columns
+  1264–1314, rows 1174–1224 (centred on 1199, the band's middle): on the
+  four stored cards those pixels are main's, byte for byte, at HD and at
+  750 px.
+
+**A second read** (the skeptic's pass on PR #493, 2026-10-08: 128 Alpha /
+Beta prints the build did not use, moved onto our bake by their own frame
+edges; the same tool on the print and on our bake of the same card):
+
+| what | prints | ours | print − ours |
+|---|---|---|---|
+| cost disc (a circle fit by the ring's strongest colour step, 147 discs on 80 cards) | 72.0 ± 0.6 | 72.0 | + 0.2 ± 0.6 |
+| discs' centre row, below the frame's top edge | 54.0 ± 0.9 | 54.2 | − 0.2 ± 0.9 |
+| last disc's centre, left of the frame's right edge | 92.0 ± 1.5 | 92.2 | − 0.1 ± 1.5 |
+| pitch | 82.9 ± 1.2 (66 pairs; two equal colour symbols 82.8 ± 0.2) | 84.0 | − 1.1 a step: the third disc from the right sits 2.3 px left of the print's, the fourth 3.4 (83 would break "the 750 px bake is half": its gap is 5.5 px) |
+| shadow: luma under the disc less luma above it | + 2.1 ± 8.6 (149 discs; main's shadowed discs − 16) | flat | — |
+| the five drawings, as a share of their disc (10–22 discs each) | W 88 × 90 %, U 43 × 82 %, B 88 × 88 %, R 78 × 85 %, G 87 × 88 % | 90 × 92, 45 × 85, 89 × 89, 79 × 86, 86 × 89 % | within 3 % of the disc; centred within 1 px |
+| name, first ink column (48 white prints) | 109.0 ± 2.9 | 182–186 (round 44: 108.0 ± 1.2) | − 73, the round-4 margin (round 44: + 1.5 ± 3.8) |
+| name, ink width, the same string | — | — | the print's is 7.9 ± 4.6 % wider (Beleren would need ≈ 78 px) |
+| name, capitals / x-height / baseline (26 names with no descender) | 58.1 / 35.0 / 172.6 ± 1.3 | 52 / 36 / 172.0 | + 6 (≈ 80 px by the capitals) / − 1 (≈ 70 px by the x-height) / + 0.1 |
+| type line, the same printed string (36: `Instant`, `Sorcery`, `Enchantment`, `Enchant Creature`) | starts 155.1 ± 0.9, bottom 1228.5 ± 1.0 | 183.0 / 1228.0 (round 44: starts 154.0) | − 27.6, the round-4 margin (round 44: + 1.1 ± 0.9) / + 0.5; width print / ours 1.010 ± 0.008 |
+| `Illus.` (48 white prints) | 49.0 px tall, starts 158.1 ± 0.9, bottom 1951.6 ± 0.7 | 49.0 / 156.0 / 1950.0 | height 0.0, start + 2.1, **2.0 ± 0.8 px lower in print** |
+| P/T, one digit a side (6 white prints) | ink 1270.4–1374.1, bottom 1951.7 ± 0.7 | 1270.0–1373.0, 1949.0 | left + 0.3, right + 1.6 ± 0.7, **2.4 ± 0.4 px lower in print**, 1.9 % larger |
+
+So the cost row holds within a pixel but for its pitch, and the white
+frame's flat credit and P/T sit about 2 px above the print's (the list
+above says 1.2–1.5); on the red and green frames our silver face reads
+about 2 px BELOW the print's light face — the two halves of the same
+half-emboss compromise, each nearer 2 px than 1.5. Beleren at 72 px is the
+print's name by its x-height, 8 % narrow by its width and 6 px short in its
+capitals. By eye: on the red and green frames the prints set the NAME and
+the TYPE LINE in the embossed LIGHT ink (LEA #154, #199; ours: flat dark,
+the 2026-09-25 ink decision — not this step's); inline in the rules text
+the prints of 1994 set the colour symbols and the numerals bare and only
+the tilted T on a grey disc (3ED #211, FEM #26); printed generic numerals
+are heavier and taller in their disc than the font's, and the printed red
+and green discs are paler than Card Conjurer's.
+
+**Rollout.** `"sweep"`, template-scoped to the pair
+(`ALPHA_1993_LAYOUT_VERSION`, the ONE constant `CARD_LAYOUT_VERSION` reads),
+no card predicate. Production, anonymous read 2026-10-08: 4 public cards on
+`agclassic` (white, red, the artifact `a`, a colourless foil on `c`), none
+on `alphaland` — each re-bakes once (the automatic re-bake, after the
+deploy), after the owner's before / after sheet and `frames:promote` (ten
+objects: the five PNGs and their WebP siblings). Not verification-neutral;
+no tick exists on the pair — first ticks follow the merge. Imports: a
+black-bordered printing of 1993–94 (LEA, LEB, ARN, ATQ, LEG, DRK) is
+`exact`; a white-bordered one names the `border` gap (4.30); a printing
+released from Fallen Empires on is `nearest` — the `two-line-footer` gap,
+`ALPHA_TWO_LINE_FOOTER_FROM` = 1994-11-01, TODO 4.10h (a smaller credit over
+a second line, and from Fourth Edition today's sun and the turned-arrow
+tap).
+
+Not done here: the generic numeral's printed look (a Plantin numeral on a
+halftone disc), the rules text's printed size, the 1993–94 inline symbols without discs (the owner
+keeps the discs, round 44), the print's © in the credit (the owner: none), the Alpha
+bevel lighting (4.31), Card Conjurer's Legends multicolour for `m`, the
+white border (4.30).
+
+Tests: `tests/unit/cards/alpha-1993-profile.test.ts` (sizes, faces, the
+credit, the P/T, the © slot, the symbol style, the bump, imports),
+`tests/unit/render/alpha-1993-bake.test.tsx` (baselines, the emboss, the
+cost row, image pips and their warm-up, an owner's pip, the slot — on real
+bakes at 750 and HD — and the published symbols),
+`tests/unit/frames/alpha-1993-importer.test.ts` (the recipe, provenance) and
+the preview twin under `components/`.
 
 ### Printed pieces a card switches on
 
@@ -5081,7 +5270,8 @@ frame's era decides are DATA on its profile; no renderer names them.
   its left end (`startPct`: the 2003 frame, TODO 4.10b). On display it
   holds the pipglyph.com mark (which then leaves the border: `brandMark`
   is not read), on a paid clean download the card's footer text, or
-  nothing. A profile with a centred footer and NO slot drops a paid
+  nothing. The 1993 pair's slot IS the border (`endPct`: the line ends
+  where the border mark ended, TODO 4.10c): its strip has one line. A profile with a centred footer and NO slot drops a paid
   viewer's footer text: declare both together; a profile WITH a slot never
   prints that text at the end of line 1.
 - **The symbol style** — `FrameProfile.symbolStyle`
@@ -5089,7 +5279,10 @@ frame's era decides are DATA on its profile; no renderer names them.
   shadow, the modern tap — every profile that names none), `"1997"`
   (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`) and `"2003"`
   (a COST disc with a black shadow down and a little to the left, flat pips in the rules
-  text, the modern tap: `modern`, `modernland`). Both renderers and both
+  text, the modern tap: `modern`, `modernland`) and `"original"` (flat discs
+  12 px apart, the five colour symbols as the 1993 drawings — frames-bucket
+  IMAGES through `symbolImages` — and mana-font's `tap-3ed`: `agclassic`,
+  `alphaland`). Both renderers and both
   shadow models (the rules layout's inline pip, the cost row) read the
   resolved spec — an inline pip through `inlineSymbolStyle`, which drops
   the shadow where a style shadows the cost row alone. A style is a CORRECTION of a frame, never a per-card switch.

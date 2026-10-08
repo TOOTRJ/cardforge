@@ -84,10 +84,10 @@ describe("Card Conjurer frame profiles", () => {
   });
 
   it("leaves the MSE-framed templates' cost where it was", () => {
-    // The re-cut Alpha masters carry their own, smaller lift — the pip discs
-    // centred on the name's caps (~140 px, owner review round 4), not the CC
-    // title bar's.
-    const OWN_LIFT: Record<string, number> = { agclassic: -0.0013, alphaland: -0.0013 };
+    // The Alpha pair carries its own nudge — the pip discs on the prints'
+    // row (142.5 px, TODO 4.10c: a pixel under the band's middle), not the
+    // CC title bar's lift.
+    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500 };
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (ccTemplates.has(template)) continue;
       expect(getFrameProfile(template).costDy, template).toBe(OWN_LIFT[template]);

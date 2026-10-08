@@ -234,7 +234,8 @@ on conflict (id) do nothing;
 --     the borderless frames with no key, before those drew the floating
 --     crown and the pinline split; Hrafn, Frostfall Deeps and Rimewood
 --     Clearing (…050–…052) wave 2c's, on the snow frames; …058–…060 are
---     4.10a's, on the 1997 frame.
+--     4.10a's, on the 1997 frame; …061–…063 4.10b's, on the 2003 frame;
+--     …064–…066 4.10c's, on the 1993 frame.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -374,7 +375,27 @@ Whenever Thornscale Behemoth attacks, it gets +2/+2 until end of turn.', '10', '
   ('c0000000-0000-4000-a000-000000000063'::uuid, 'Hollowmere Crossing', 'hollowmere-crossing', null, array['colorless'], null, 'land', array[]::text[], 'uncommon',
      E'{T}: Add {C}.
 {2}, {T}: Target creature can''t be blocked this turn.', null, null, 12,
-     '{"template":"modernland","finish":"regular"}'::jsonb, 1)
+     '{"template":"modernland","finish":"regular"}'::jsonb, 1),
+  -- TODO 4.10c (layout v48): the 1993 frame on its prints — the name at
+  -- 72 px, the type line, the `Illus.` credit and the P/T in MPlantin at the
+  -- prints' sizes, flat 72 px discs with the 1993 symbol drawings (frames-
+  -- bucket images) and the tilted-T tap. A white creature ({W} in its cost
+  -- and its text, {T}, a two-digit toughness), a colourless ARTIFACT (`c`
+  -- paints the brown artifact card) and a basic land on `alphaland`.
+  -- Neither template is ticked until the owner verifies it after the merge:
+  -- these rows are for looking at (an admin edits them with
+  -- `?previewFrames=agclassic,alphaland`). Ids …064–…066.
+  ('c0000000-0000-4000-a000-000000000064'::uuid, 'Whitewall Sentinel', 'whitewall-sentinel', '{2}{W}{W}', array['white'], null, 'creature', array['Wall'], 'uncommon',
+     E'Defender
+{W}, {T}: Prevent the next 1 damage that would be dealt to any target this turn.', '0', '10', 2,
+     '{"template":"agclassic","finish":"regular"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000065'::uuid, 'Ironroot Engine', 'ironroot-engine', '{4}', array['colorless'], null, 'artifact', array[]::text[], 'rare',
+     E'{T}: Add {G} or {R}.
+{4}, {T}: Ironroot Engine deals 2 damage to any target.', null, null, 11,
+     '{"template":"agclassic","finish":"regular"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000066'::uuid, 'Mistvale Island', 'mistvale-island', null, array['blue'], 'Basic', 'land', array['Island'], 'common',
+     E'{T}: Add {U}.', null, null, 13,
+     '{"template":"alphaland","finish":"regular"}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

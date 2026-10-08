@@ -7308,6 +7308,44 @@
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
     ]
   },
+  "manaoriginal": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "img/manaSymbols/old (the set CC's creator loads for its Alpha / Beta / Unlimited and Legends packs: manaSymbols 'old' in creator-23.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "rider",
+    "output": "216x216 mana symbols (a whole pip each: the disc in its own colour and the 1993 drawing in black; clear outside the disc), webp q90",
+    "colors": {
+      "w": [
+        "img/manaSymbols/old/oldw.svg rasterised at 216×216"
+      ],
+      "u": [
+        "img/manaSymbols/old/oldu.svg rasterised at 216×216"
+      ],
+      "b": [
+        "img/manaSymbols/old/oldb.svg rasterised at 216×216"
+      ],
+      "r": [
+        "img/manaSymbols/old/oldr.svg rasterised at 216×216"
+      ],
+      "g": [
+        "img/manaSymbols/old/oldg.svg rasterised at 216×216"
+      ]
+    },
+    "sourceFiles": [
+      "img/manaSymbols/old/oldb.svg",
+      "img/manaSymbols/old/oldg.svg",
+      "img/manaSymbols/old/oldr.svg",
+      "img/manaSymbols/old/oldu.svg",
+      "img/manaSymbols/old/oldw.svg"
+    ],
+    "notes": [
+      "the 1993 frame's five colour symbols (TODO 4.10c / 4.24; symbol style \"original\" on agclassic and alphaland): mana-font has only the old sun (`w-original`), so all five come from this ONE set and are drawn as images in the cost row and the rules text, through the path an owner's custom pip uses — never a font glyph on our own disc",
+      "proof 3 (2026-10-08, Scryfall scans of 14 sets on the 1993 frame): the ringed twelve-ray sun is printed by nine sets, Alpha 1993 → Fallen Empires 1994 (LEA LEB 2ED ARN ATQ 3ED LEG DRK FEM); Fourth Edition 1995, Ice Age, Chronicles, Homelands and Alliances print today's sun. The drop, skull, flame and tree are today's shapes drawn to fill the disc; Alpha / Beta / Unlimited print a rougher skull than this file's",
+      "each SVG is rasterised at 216 px (sharp, density 300, Lanczos): three times the HD bake's 72 px cost disc, so neither bake upsamples; generic and hybrid symbols, {C}, {X} and {T} stay the font's (the era's {T} is mana-font `tap-3ed`, Revised's tilted T)"
+    ]
+  },
   "modern": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

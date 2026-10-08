@@ -33,7 +33,10 @@ const green = (r: number, g: number, b: number) => Math.abs(r - 0x93) < 28 && Ma
 
 // Git-framed templates with a full 9 pt box (the M15 masters live in the
 // bucket): the pip's place in its line is the layout's on every template.
-const TEMPLATES = ["agclassic", "tarkirdragon"] as const;
+// (Alpha left this list with TODO 4.10c: its colour pips are the 1993
+// drawings — bucket images, not a font glyph on the disc this test reads;
+// tests/unit/render/alpha-1993-bake.test.tsx holds its pips.)
+const TEMPLATES = ["tarkirdraconic", "tarkirdragon"] as const;
 
 describe("inline pips centred on the capitals on real bakes (3.31)", () => {
   for (const template of TEMPLATES) {

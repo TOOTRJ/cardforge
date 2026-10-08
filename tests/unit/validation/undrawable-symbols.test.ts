@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
-import { drawsManaGem, manaGlyphSuffixes } from "@/lib/cards/mana-gem";
+import { drawsManaGem, manaGemSpec, manaGlyphSuffixes } from "@/lib/cards/mana-gem";
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import { SYMBOL_STYLES, symbolStyle } from "@/lib/cards/symbol-style";
 import {
   cardSymbolFields,
+  cardSymbolStyle,
   findUndrawableSymbols,
   listSymbols,
   undrawableSymbols,
@@ -49,6 +50,39 @@ describe("undrawableSymbols — every symbol the font has draws, so none is name
         }
       }
     }
+  });
+
+  it("the styles read are ALL of them — the 1993 frame's \"original\" (TODO 4.10c) with the three before it", () => {
+    expect(STYLES.map((style) => style.id).sort()).toEqual(["1997", "2003", "modern", "original"]);
+  });
+
+  it("\"original\": a symbol the style draws as an IMAGE is drawable — with the font's glyph or without one — and never named", () => {
+    const original = SYMBOL_STYLES.original;
+    const letters = Object.keys(original.symbolImages ?? {});
+    expect(letters.sort()).toEqual(["b", "g", "r", "u", "w"]);
+    for (const letter of letters) {
+      expect(manaGemSpec(letter, 72, original).kind, letter).toBe("image");
+      for (const written of [`{${letter.toUpperCase()}}`, `{${letter}}`]) {
+        expect(undrawableSymbols(written, { symbols: original }), written).toEqual([]);
+        expect(undrawableSymbols(`{T}, ${written}: Add ${written}${written}.`, { symbols: original })).toEqual([]);
+      }
+    }
+    // The gate is the image, not the font: a style that draws an image for
+    // a suffix mana-font has no glyph for still draws it, so nothing warns.
+    expect(drawsManaGem("zz", original)).toBe(false);
+    expect(undrawableSymbols("{ZZ}", { symbols: original })).toEqual(["{ZZ}"]);
+    const withImage = { ...original, symbolImages: { ...original.symbolImages!, zz: "/frames/probe/zz.png" } };
+    expect(drawsManaGem("zz", withImage)).toBe(true);
+    expect(undrawableSymbols("{ZZ}", { symbols: withImage })).toEqual([]);
+    // …and the 1993 frame's cards read that style (a card on the pair).
+    expect(cardSymbolStyle({ frame_style: { template: "agclassic" } }).id).toBe("original");
+    expect(cardSymbolStyle({ frame_style: { template: "alphaland" } }).id).toBe("original");
+    const symbols = cardSymbolStyle({ frame_style: { template: "agclassic" } });
+    const fields = [
+      { label: "Mana cost", value: "{X}{2}{W}{U}{B}{R}{G}" },
+      { label: "Rules text", value: "{T}, {W/U}: Add {R}{G}. {Q}: Add {C}." },
+    ];
+    expect(findUndrawableSymbols(fields, { symbols })).toEqual([]);
   });
 
   it("{T} draws in every style (each style's own tap is in the font)", () => {

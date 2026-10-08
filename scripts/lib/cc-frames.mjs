@@ -4861,7 +4861,28 @@ export const CC_OVERLAY_BANDS = {
 // ---------------------------------------------------------------------------
 
 /** The rider sets the importer builds, by bucket folder. */
+/** The 1993 frame's five colour symbols (TODO 4.10c / 4.24, symbol style
+ *  "original" — lib/cards/symbol-style.ts): Card Conjurer's old set, one
+ *  600 × 600 SVG per colour holding the WHOLE pip (its pale disc and the
+ *  1993 drawing). Rasterised at 216 px — three times the 72 px cost disc of
+ *  the HD bake, so no bake upsamples one. The folder and the letters are
+ *  the style's (ORIGINAL_SYMBOL_FOLDER, ORIGINAL_SYMBOL_LETTERS; a unit test
+ *  holds them together). */
+export const MANA_ORIGINAL_SIZE = 216;
+export const MANA_ORIGINAL_FILES = Object.fromEntries(["w", "u", "b", "r", "g"].map((c) => [c, `img/manaSymbols/old/old${c}.svg`]));
+
 export const CC_RIDERS = {
+  manaoriginal: {
+    pack: "img/manaSymbols/old (the set CC's creator loads for its Alpha / Beta / Unlimited and Legends packs: manaSymbols 'old' in creator-23.js)",
+    size: MANA_ORIGINAL_SIZE,
+    files: MANA_ORIGINAL_FILES,
+    output: `${MANA_ORIGINAL_SIZE}x${MANA_ORIGINAL_SIZE} mana symbols (a whole pip each: the disc in its own colour and the 1993 drawing in black; clear outside the disc)`,
+    notes: [
+      "the 1993 frame's five colour symbols (TODO 4.10c / 4.24; symbol style \"original\" on agclassic and alphaland): mana-font has only the old sun (`w-original`), so all five come from this ONE set and are drawn as images in the cost row and the rules text, through the path an owner's custom pip uses — never a font glyph on our own disc",
+      "proof 3 (2026-10-08, Scryfall scans of 14 sets on the 1993 frame): the ringed twelve-ray sun is printed by nine sets, Alpha 1993 → Fallen Empires 1994 (LEA LEB 2ED ARN ATQ 3ED LEG DRK FEM); Fourth Edition 1995, Ice Age, Chronicles, Homelands and Alliances print today's sun. The drop, skull, flame and tree are today's shapes drawn to fill the disc; Alpha / Beta / Unlimited print a rougher skull than this file's",
+      "each SVG is rasterised at 216 px (sharp, density 300, Lanczos): three times the HD bake's 72 px cost disc, so neither bake upsamples; generic and hybrid symbols, {C}, {X} and {T} stay the font's (the era's {T} is mana-font `tap-3ed`, Revised's tilted T)",
+    ],
+  },
   dfcicon: {
     pack: "packM15TransformTypes.js 'Transform Icons' (groupDFC.js) — the 12 of CC's 14 icon files that a printing wears",
     size: DFC_ICON_SIZE,

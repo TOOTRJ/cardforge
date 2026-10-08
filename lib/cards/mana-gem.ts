@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------------------
 
 import { hybridHalves, inlineManaTintKey } from "@/lib/cards/rules-text";
-import { manaGlyphPx, styledSuffix, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { manaGlyphPx, styledSuffix, symbolImagePath, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 
 /** The disc's colour per tint key — mana-font's `.ms-cost` backgrounds. */
 export const MANA_GEM_BG: Readonly<Record<string, string>> = {
@@ -56,6 +56,17 @@ export type ManaGemHalf = {
 
 export type ManaGemSpec =
   | {
+      /** A whole pip as ONE image — the disc and its drawing (a style's
+       *  `symbolImages`: the 1993 frame's five colour symbols, TODO 4.10c).
+       *  Drawn in the disc's box, round, like an owner's custom pip. */
+      kind: "image";
+      suffix: string;
+      /** The image's public path (the frames bucket resolves it: the bake
+       *  through getFrameAssetDataUrl after frameAssetPathsFor warmed it,
+       *  the preview through frameUrl). */
+      path: string;
+    }
+  | {
       kind: "solid";
       /** The mana-font suffix drawn — the style's own {T} already applied. */
       suffix: string;
@@ -83,6 +94,8 @@ export type ManaGemSpec =
  *  pip without one is not drawn at all, a split disc always is. */
 export function manaGemSpec(symbol: string, discPx: number, symbols: SymbolStyleSpec): ManaGemSpec {
   const suffix = styledSuffix(symbols, symbol);
+  const imagePath = symbolImagePath(symbols, suffix);
+  if (imagePath) return { kind: "image", suffix, path: imagePath };
   const halves = hybridHalves(suffix);
   if (halves) {
     const topBg = MANA_GEM_BG[halves.top] ?? MANA_GEM_BG.c;
@@ -163,5 +176,23 @@ export function manaGlyphSuffixes(): string[] {
  *  disc always, a one-colour pip only with a glyph. */
 export function drawsManaGem(symbol: string, symbols: SymbolStyleSpec): boolean {
   const suffix = styledSuffix(symbols, symbol);
-  return hybridHalves(suffix) != null || hasManaGlyph(suffix);
+  return symbolImagePath(symbols, suffix) != null || hybridHalves(suffix) != null || hasManaGlyph(suffix);
+}
+
+/** The symbol images a card's text asks `symbols` for — the public paths of
+ *  every pip in `texts` (mana costs and rules text, braces or not) the
+ *  style draws as an image. The bake warms exactly these
+ *  (lib/render/card-image.tsx frameAssetPathsFor): an image it reads
+ *  synchronously and has not warmed draws as a transparent pixel. */
+export function symbolImagePathsIn(texts: readonly (string | null | undefined)[], symbols: SymbolStyleSpec): string[] {
+  if (!symbols.symbolImages) return [];
+  const found = new Set<string>();
+  for (const text of texts) {
+    if (!text) continue;
+    for (const match of text.matchAll(/\{([^{}]+)\}/g)) {
+      const path = symbolImagePath(symbols, match[1].trim());
+      if (path) found.add(path);
+    }
+  }
+  return [...found];
 }
