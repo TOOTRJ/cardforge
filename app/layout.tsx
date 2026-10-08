@@ -9,6 +9,7 @@ import { ShareParamCleanup } from "@/components/seo/share-param-cleanup";
 import { serializeJsonLd } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
+import { ThemeRestore } from "@/components/layout/theme-restore";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
@@ -204,7 +205,11 @@ export default function RootLayout({
   // <head> reads the theme cookie + prefers-color-scheme and corrects
   // the attribute before the stylesheet evaluates, so light-theme users
   // never see a dark flash. React doesn't manage `data-theme`, and
-  // suppressHydrationWarning covers the attribute swap.
+  // suppressHydrationWarning covers the attribute swap. Where React renders
+  // the document in the BROWSER instead (a notFound() above the Suspense
+  // boundaries answers Next's empty error shell), that script never runs
+  // and <html> gets the "dark" below: <ThemeRestore> re-applies the saved
+  // theme there, still without a cookie read on the server.
   return (
     <html
       lang="en"
@@ -222,6 +227,9 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{ __html: noFlashScript() }}
         />
+        {/* The same resolution for a document the browser rendered, where
+            React never executes the script above. Renders nothing. */}
+        <ThemeRestore />
       </head>
       <body className="min-h-full">
         <JsonLd />
