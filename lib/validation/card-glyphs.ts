@@ -168,7 +168,7 @@ export type GlyphCheckValues = {
   footer_text: string;
   loyalty_abilities?: ReadonlyArray<{ text: string }>;
   saga_intro: string;
-  saga_chapters?: ReadonlyArray<{ text: string }>;
+  saga_chapters?: ReadonlyArray<{ text: string; numerals?: readonly number[] }>;
   /** The frame style's template and collector switch (TODO 4.9b): on a
    *  collector card the footer mark prints in the body face, as typed. */
   frame_style?: { template?: string | null; collector?: unknown } | null;
@@ -321,14 +321,29 @@ export function findUndrawableSymbols(
 
 /** Every field of the card whose `{…}` tokens are drawn as pips, labelled as
  *  the creator labels it: the costs and the rules-style texts (rules,
- *  loyalty rows, the saga's intro and chapters, the second face). */
+ *  loyalty rows, the saga's intro and chapters, the second face).
+ *
+ *  Only what the card DRAWS: a planeswalker frame with a filled loyalty row
+ *  and a saga frame with a filled chapter draw their rows, never
+ *  `rules_text` (both renderers) — and the form still holds one there, with
+ *  no field to edit it in: the serialized copy an import or a saved card
+ *  came with. Reading it would name a symbol twice, and keep naming it once
+ *  the maker has taken it out of the row. With no filled row the renderers
+ *  parse `rules_text` instead, so it is read. */
 export function cardSymbolFields(v: GlyphCheckValues): SymbolCheckField[] {
+  const profile = getFrameProfile(normalizeFrameTemplate(v.frame_style?.template ?? undefined));
+  const abilities = v.loyalty_abilities ?? [];
+  const chapters = v.saga_chapters ?? [];
+  const rowsDrawn =
+    (Boolean(profile.loyaltyRows) && abilities.some((row) => row.text.trim())) ||
+    (Boolean(profile.chapters) &&
+      chapters.some((row) => row.text.trim() && (row.numerals === undefined || row.numerals.length > 0)));
   const fields: SymbolCheckField[] = [
     { label: "Mana cost", value: v.cost },
-    { label: "Rules text", value: v.rules_text },
-    ...(v.loyalty_abilities ?? []).map((row, i) => ({ label: `Loyalty ability ${i + 1}`, value: row.text })),
+    ...(rowsDrawn ? [] : [{ label: "Rules text", value: v.rules_text }]),
+    ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, value: row.text })),
     { label: "Saga intro", value: v.saga_intro },
-    ...(v.saga_chapters ?? []).map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text })),
+    ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text })),
   ];
   if (v.has_back_face) {
     fields.push(

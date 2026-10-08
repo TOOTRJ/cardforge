@@ -178,6 +178,53 @@ describe("the fields the check reads", () => {
     ]);
   });
 
+  // An imported Ajani, Sleeper Agent (and every saved walker or saga) holds
+  // the serialized text in rules_text AND in its rows; the card draws the
+  // rows. The creator has no rules field on those kinds, so a line read from
+  // rules_text could never be cleared by the maker.
+  it("a walker frame with a filled row reads the rows, never the rules text it doesn't draw", () => {
+    const walker: GlyphCheckValues = {
+      ...VALUES,
+      cost: "{1}{G}{G/W/P}{W}",
+      rules_text: "Compleated ({G/W/P} can be paid with {G}, {W}, or 2 life.)\n+1: Draw a card.",
+      loyalty_abilities: [{ text: "Compleated ({G/W/P} can be paid with {G}, {W}, or 2 life.)" }, { text: "Draw a card." }],
+      saga_intro: "",
+      saga_chapters: [],
+      frame_style: { template: "m15pw" },
+    };
+    expect(findUndrawableSymbols(cardSymbolFields(walker))).toEqual([
+      { label: "Mana cost", symbols: ["{G/W/P}"] },
+      { label: "Loyalty ability 1", symbols: ["{G/W/P}"] },
+    ]);
+    // The maker takes the symbol out of the row: only the cost is left.
+    const edited = { ...walker, loyalty_abilities: [{ text: "Compleated" }, { text: "Draw a card." }] };
+    expect(findUndrawableSymbols(cardSymbolFields(edited)).map((f) => f.label)).toEqual(["Mana cost"]);
+    // No filled row: the renderers parse rules_text into the rows, so it is read.
+    const unparsed = { ...walker, loyalty_abilities: [{ text: "  " }] };
+    expect(findUndrawableSymbols(cardSymbolFields(unparsed)).map((f) => f.label)).toEqual(["Mana cost", "Rules text"]);
+    // The same rows on a frame without loyalty rows don't hide the rules text.
+    const creature = { ...walker, frame_style: { template: "m15" } };
+    expect(findUndrawableSymbols(cardSymbolFields(creature)).map((f) => f.label)).toContain("Rules text");
+  });
+
+  it("a saga frame with a filled chapter reads the chapters, never the rules text", () => {
+    const saga: GlyphCheckValues = {
+      ...VALUES,
+      cost: "{2}{G}",
+      rules_text: "I — Add {3/W}.",
+      loyalty_abilities: [],
+      saga_intro: "",
+      saga_chapters: [{ text: "Add {3/W}.", numerals: [1] }],
+      frame_style: { template: "saga" },
+    };
+    expect(findUndrawableSymbols(cardSymbolFields(saga))).toEqual([{ label: "Chapter 1", symbols: ["{3/W}"] }]);
+    const fixed = { ...saga, saga_chapters: [{ text: "Add {G}.", numerals: [1] }] };
+    expect(findUndrawableSymbols(cardSymbolFields(fixed))).toEqual([]);
+    // A row with no chapter number isn't a chapter: the card still parses rules_text.
+    const unnumbered = { ...saga, saga_chapters: [{ text: "Add {G}.", numerals: [] }] };
+    expect(findUndrawableSymbols(cardSymbolFields(unnumbered)).map((f) => f.label)).toEqual(["Rules text"]);
+  });
+
   it("a form slice without the costs or the row arrays still checks", () => {
     const { cost: _cost, loyalty_abilities: _rows, saga_chapters: _chapters, ...rest } = VALUES;
     void _cost;

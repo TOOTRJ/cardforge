@@ -5127,7 +5127,10 @@ owner's custom pip image first as both renderers do (today only `{W}`…`{C}`,
 which the font has, so an override changes no answer) — and
 `UndrawableSymbolNotice` names them per field beside the missing-character
 notice ("Mana cost: {21} and {W/U/P} can't be drawn and will be left off the
-card."); flavor text is not read, no renderer parses symbols there. The AI
+card."); flavor text is not read, no renderer parses symbols there, and
+neither is the `rules_text` of a planeswalker or saga frame with a filled
+row — the card draws the rows, and the form's serialized copy (an import, a
+saved card) has no field to edit it in (`cardSymbolFields`). The AI
 lint refuses one in a cost or rules text through the same helper (the
 judge's pass, then `withDrawableSymbols`: `{W/U/P}` → `{W/U}`, a generic
 past the font's last → the largest that draws), and a Scryfall import of a
