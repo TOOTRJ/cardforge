@@ -788,7 +788,7 @@ describe("resumeSubscriptionAction — one-click Resume", () => {
     expect(s.syncSubscription).toHaveBeenCalledTimes(1);
     const [, , userId, options] = s.syncSubscription.mock.calls[0];
     expect(userId).toBe(USER);
-    expect(options).toMatchObject({ customerId: "cus_1", eventSub: { id: "sub_live", cancel_at: null } });
+    expect(options).toMatchObject({ customerId: "cus_1", currentSub: { id: "sub_live", cancel_at: null } });
     expect(s.revalidated).toEqual(expect.arrayContaining(["/dashboard", "/settings"]));
     // Funnel: a money step, allow-listed name and props.
     expect(s.funnelInserts).toEqual([

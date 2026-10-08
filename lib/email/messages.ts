@@ -1,4 +1,5 @@
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { formatDateIn, formatUtcTime } from "@/lib/format/dates";
 import {
   emailLink,
   emailNote,
@@ -140,11 +141,13 @@ export function trialEndingEmail(
     recipient,
     "You're receiving this because your PipGlyph free trial is about to end.",
   );
-  const date = new Date(input.trialEndsAt).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  // An email cannot know its reader's time zone: the date is UTC (it was
+  // the server's zone, unsaid), and the sentence that states the charge
+  // carries the exact time and says "UTC" — in the Americas a trial ending
+  // in the early UTC hours ends on the EVENING BEFORE that date, which is
+  // the day the billing page shows.
+  const date = formatDateIn(input.trialEndsAt, "long", "UTC");
+  const at = ` (${formatUtcTime(input.trialEndsAt)})`;
   const plan = escapeHtml(input.plan);
   const price = input.priceLabel ? escapeHtml(input.priceLabel) : null;
   const cta = { label: "Open billing", url: `${site}/dashboard/billing` };
@@ -153,11 +156,11 @@ export function trialEndingEmail(
     : `Your PipGlyph ${input.plan} trial ends ${date} — add a card to keep it`;
   const paragraphs = input.hasPaymentMethod
     ? [
-        `Your free ${plan} trial ends on <strong>${date}</strong>. From then on your card is charged ${price ?? "the plan price"} and everything stays exactly as it is: your credits refill every month, downloads stay clean and hi-res, and your cards stay where they are.`,
+        `Your free ${plan} trial ends on <strong>${date}</strong>${at}. From then on your card is charged ${price ?? "the plan price"} and everything stays exactly as it is: your credits refill every month, downloads stay clean and hi-res, and your cards stay where they are.`,
         "Want to change plans or cancel first? Both take one click on the billing page — cancel any time before the date and you won't be charged.",
       ]
     : [
-        `Your free ${plan} trial ends on <strong>${date}</strong>. There's no card on your account yet, so the plan will simply end then — nothing is charged.`,
+        `Your free ${plan} trial ends on <strong>${date}</strong>${at}. There's no card on your account yet, so the plan will simply end then — nothing is charged.`,
         `To keep ${plan}${price ? ` (${price})` : ""}, add a card before the date. Either way, every card you've made stays yours.`,
       ];
   return {
@@ -307,11 +310,7 @@ export function trialWinbackEmail(
     recipient,
     "You're receiving this because your PipGlyph free trial ended.",
   );
-  const date = new Date(input.expiresAt).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const date = formatDateIn(input.expiresAt, "long", "UTC");
   const plan = escapeHtml(input.plan);
   const cta = { label: `Come back to ${input.plan}`, url: `${site}/dashboard/billing#plans` };
   const offer = input.discountedPriceLabel

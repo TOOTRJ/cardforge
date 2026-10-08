@@ -590,7 +590,9 @@ Rules and gotchas:
   its ref hands the credit back to the user a day later.
 - Shared helpers — never re-implement: `isUuid`/`randomId` (`lib/ids.ts`),
   `rateLimitedResponse` + `cronRouteGuard` (`lib/api/*`), date strings
-  (`lib/format/dates.ts`), `lookupUsername`/`revalidateProfilePage`
+  (`lib/format/dates.ts`; a BILLING date a subscriber sees is `<LocalDate>` /
+  `<LocalDateText>`, `components/ui/local-date.tsx` — the viewer's own day, as
+  Stripe's portal shows it; an admin page prints `formatUtcDate`, labelled), `lookupUsername`/`revalidateProfilePage`
   (`lib/profile/username.ts`) + `getCurrentUsername()` for handles,
   `narrowCard` (`lib/cards/narrow.ts`), `useSearchParamPatch` for browse
   filters (always resets `page`), `RARITY_LABELS`/`COLOR_IDENTITY_LABELS`/
@@ -730,7 +732,12 @@ Rules and gotchas:
   notification + email per user per 30 days, skipped once the plan/pack was
   bought — every Checkout session carries `purchase_kind`/`tier`/`period`
   metadata for it. Every event must be subscribed on every webhook
-  endpoint (live + sandbox). FREE DOES NOT REFILL (owner decision
+  endpoint (live + sandbox). Events arrive in ANY order and more than once:
+  `syncSubscriptionForUser` writes Stripe's CURRENT state (the event's
+  subscription re-read by id + the customer's list), never the event's
+  snapshot — pass a webhook object as `eventSub`, an object you just read or
+  wrote as `currentSub`; only `deleted` is taken from the event
+  (`docs/BILLING.md` "a late event"). FREE DOES NOT REFILL (owner decision
   2026-09-24): `SIGNUP_CREDITS` (5, the `profiles.credits` default) once,
   `MONTHLY_CREDITS.free` = 0, `refillTierFor` → null for free — copy says
   "5 to start", never "a month". Three packs (`PACK_ORDER` mini/small/large,

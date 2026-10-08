@@ -11,7 +11,7 @@ import { RealtimeAlerts } from "@/components/notifications/realtime-alerts";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { planForTier, type PlanTier } from "@/lib/billing/plans";
-import { planEndingShort } from "@/lib/billing/plan-ending";
+import { planEndingShortText } from "@/lib/billing/plan-ending";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -72,10 +72,13 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
   // A cancelled plan that is still running: the avatar menu says when it ends.
   const planEndingNote =
     billingOn && user?.subscriptionEnding && user.subscriptionEndsAt && user.tier && user.tier !== "free"
-      ? `${planForTier(user.tier).name} ${planEndingShort({
-          kind: user.subscriptionEndingKind ?? "plan",
-          endsAt: user.subscriptionEndsAt,
-        })}`
+      ? [
+          `${planForTier(user.tier).name} `,
+          ...planEndingShortText({
+            kind: user.subscriptionEndingKind ?? "plan",
+            endsAt: user.subscriptionEndsAt,
+          }),
+        ]
       : null;
   // Pricing is for accounts that can buy a plan: billing on AND not already
   // paid (a Plus/Pro/comped/admin account manages its plan — and buys credit

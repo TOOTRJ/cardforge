@@ -30,7 +30,7 @@ import {
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
 import { isStripeConfigured } from "@/lib/stripe/client";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { LocalDate } from "@/components/ui/local-date";
 
 export const metadata: Metadata = {
   title: "Billing & subscription",
@@ -298,7 +298,7 @@ export default async function BillingPage() {
                 <li key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
                   <span className="flex items-center gap-2 text-foreground">
                     <Receipt className="h-4 w-4 text-subtle" aria-hidden />
-                    {formatCalendarDate(invoice.created)}
+                    <LocalDate iso={invoice.created} />
                     {invoice.number ? <span className="font-mono text-xs text-subtle">{invoice.number}</span> : null}
                   </span>
                   <span className="flex items-center gap-3">

@@ -31,8 +31,8 @@ describe("cancellationStats — the detail panel's rows", () => {
     });
     expect(cancellationStats(ending, "active")).toEqual({
       state: "cancelled — still active until it ends",
-      endsAt: "October 23, 2026",
-      canceledAt: "October 7, 2026",
+      endsAt: "October 23, 2026 UTC",
+      canceledAt: "October 7, 2026 UTC",
       billedFirst: "no — ends with the paid period",
     });
   });
@@ -43,8 +43,8 @@ describe("cancellationStats — the detail panel's rows", () => {
       subscription_ends_at: "2026-12-07T02:31:04.000Z",
     });
     expect(cancellationStats(ending, "active")).toMatchObject({
-      endsAt: "December 7, 2026",
-      billedFirst: "yes — renews October 23, 2026, then ends later",
+      endsAt: "December 7, 2026 UTC",
+      billedFirst: "yes — renews October 23, 2026 UTC, then ends later",
       canceledAt: "not recorded (resync fills it)",
     });
   });

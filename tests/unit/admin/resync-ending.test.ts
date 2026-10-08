@@ -146,15 +146,15 @@ describe("admin Resync on a portal-cancelled (cancel_at only) subscription", () 
     // What the admin page draws from that row.
     const ending = planEndingOf(s.row);
     expect(ending).not.toBeNull();
-    expect(planEndingAdminLabel(ending!)).toBe("cancelled, ends Nov 8, 2026");
+    expect(planEndingAdminLabel(ending!)).toBe("cancelled, ends Nov 8, 2026 UTC");
     expect(cancellationStats(ending, "active")).toEqual({
       state: "cancelled — still active until it ends",
-      endsAt: "November 8, 2026",
-      canceledAt: "October 8, 2026",
+      endsAt: "November 8, 2026 UTC",
+      canceledAt: "October 8, 2026 UTC",
       billedFirst: "no — ends with the paid period",
     });
     // …and the toast says so too.
-    expect(result.ok && resyncToast(result)).toBe("Synced: pro · active · cancelled, ends Nov 8, 2026");
+    expect(result.ok && resyncToast(result)).toBe("Synced: pro · active · cancelled, ends Nov 8, 2026 UTC");
   });
 
   it("the customer's subscription list comes back EMPTY (a drifted customer link): the stored subscription is synced instead of nothing", async () => {
@@ -186,8 +186,8 @@ describe("admin Resync on a portal-cancelled (cancel_at only) subscription", () 
     await adminResyncSubscriptionAction({ userId: TARGET });
     expect(s.row).toMatchObject({ cancel_at_period_end: false, subscription_ends_at: new Date(later * 1000).toISOString() });
     const ending = planEndingOf(s.row);
-    expect(planEndingAdminLabel(ending!)).toBe("cancelled, ends Dec 8, 2026 (billed first)");
-    expect(cancellationStats(ending, "active").billedFirst).toBe("yes — renews November 8, 2026, then ends later");
+    expect(planEndingAdminLabel(ending!)).toBe("cancelled, ends Dec 8, 2026 UTC (billed first)");
+    expect(cancellationStats(ending, "active").billedFirst).toBe("yes — renews November 8, 2026 UTC, then ends later");
   });
 
   it("a schedule that ends in a cancellation (no cancel fields on the subscription) is read and stored", async () => {
@@ -244,6 +244,6 @@ describe("admin Resync on a portal-cancelled (cancel_at only) subscription", () 
     expect(s.writes[0]).not.toHaveProperty("subscription_ends_at");
     expect(s.row).toMatchObject({ cancel_at_period_end: true });
     // The fallback reading still dates it by the period end.
-    expect(planEndingAdminLabel(planEndingOf(s.row)!)).toBe("cancelled, ends Nov 8, 2026");
+    expect(planEndingAdminLabel(planEndingOf(s.row)!)).toBe("cancelled, ends Nov 8, 2026 UTC");
   });
 });

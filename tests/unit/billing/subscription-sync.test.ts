@@ -306,6 +306,319 @@ describe("syncSubscriptionForUser", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Event order (2026-10-07). Stripe neither delivers events in the order it
+// generates them nor delivers each once — https://docs.stripe.com/webhooks
+// #event-ordering — so an event names the subscription and Stripe's CURRENT
+// state is what gets written. `makeLiveStripe` is Stripe "now": what a list
+// and a retrieve answer, whatever snapshot the event carries.
+// ---------------------------------------------------------------------------
+
+function makeLiveStripe(opts: {
+  /** What `subscriptions.list` answers (null = the call fails). */
+  list: SubscriptionLike[] | null;
+  /** What `subscriptions.retrieve` answers by id (absent = the call fails). */
+  byId?: Record<string, SubscriptionLike>;
+}) {
+  const retrieved: string[] = [];
+  const stripe = {
+    subscriptions: {
+      list: async () => {
+        if (opts.list === null) throw new Error("no api");
+        return { data: opts.list };
+      },
+      retrieve: async (id: string) => {
+        retrieved.push(id);
+        const found = opts.byId?.[id];
+        if (!found) throw new Error("no such subscription");
+        return found;
+      },
+    },
+    products: { retrieve: async () => { throw new Error("no such product") } },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { stripe: stripe as any, retrieved };
+}
+/** Stripe "now" holding exactly these subscriptions, in both reads. */
+const stripeNow = (...subs: SubscriptionLike[]) =>
+  makeLiveStripe({ list: subs, byId: Object.fromEntries(subs.map((s) => [s.id, s])) });
+
+describe("syncSubscriptionForUser — event order", () => {
+  const PLUS = { id: "price_plus" };
+  const ENDS = new Date(PERIOD_END * 1000).toISOString();
+  const cancelledSnap = () =>
+    sub("sub_1", "active", PLUS, { cancel_at: PERIOD_END, canceled_at: PERIOD_END - 86400 });
+  const renewingSnap = () => sub("sub_1", "active", PLUS, { cancel_at: null, canceled_at: null });
+  const paid = { subscription_tier: "plus", subscription_status: "active", stripe_subscription_id: "sub_1" };
+
+  it("cancel then resume, delivered IN order: ending, then renews", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    // 1. the cancellation's event, while Stripe says cancelled
+    await syncSubscriptionForUser(admin, stripeNow(cancelledSnap()).stripe, "user-1", { eventSub: cancelledSnap() });
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: true, subscription_ends_at: ENDS });
+    // 2. the resume's event, while Stripe says renewing
+    await syncSubscriptionForUser(admin, stripeNow(renewingSnap()).stripe, "user-1", { eventSub: renewingSnap() });
+    expect(updates[1]).toMatchObject({ cancel_at_period_end: false, subscription_ends_at: null, subscription_canceled_at: null });
+  });
+
+  it("cancel then resume, delivered OUT of order: the late cancellation event does not store 'ending'", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    // Stripe has been "renewing" since the resume; both events arrive after it.
+    const now = () => stripeNow(renewingSnap()).stripe;
+    await syncSubscriptionForUser(admin, now(), "user-1", { eventSub: renewingSnap() });
+    await syncSubscriptionForUser(admin, now(), "user-1", { eventSub: cancelledSnap() });
+    for (const write of updates) {
+      expect(write).toMatchObject({
+        subscription_status: "active",
+        cancel_at_period_end: false,
+        subscription_ends_at: null,
+        subscription_canceled_at: null,
+      });
+    }
+    expect(updates).toHaveLength(2);
+  });
+
+  it("a RETRY of the old cancellation event, long after the resume, changes nothing", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    const { stripe, retrieved } = stripeNow(renewingSnap());
+    const result = await syncSubscriptionForUser(admin, stripe, "user-1", { eventSub: cancelledSnap() });
+    expect(retrieved).toEqual(["sub_1"]); // the object was fetched, not trusted from the event
+    expect(result.endsAt).toBeNull();
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: false, subscription_ends_at: null });
+  });
+
+  it("the read by id beats a LIST that still shows the old state", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    const stripe = makeLiveStripe({ list: [cancelledSnap()], byId: { sub_1: renewingSnap() } }).stripe;
+    await syncSubscriptionForUser(admin, stripe, "user-1", { eventSub: cancelledSnap() });
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: false, subscription_ends_at: null });
+  });
+
+  it("the reverse race: a late RESUME-era event after a new cancellation stores 'ending'", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    await syncSubscriptionForUser(admin, stripeNow(cancelledSnap()).stripe, "user-1", { eventSub: renewingSnap() });
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: true, subscription_ends_at: ENDS });
+  });
+
+  it("deleted: the event wins even when Stripe's reads still show the subscription live", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    const live = renewingSnap();
+    const result = await syncSubscriptionForUser(admin, stripeNow(live).stripe, "user-1", {
+      eventSub: { ...live, status: "canceled" },
+      eventDeleted: true,
+    });
+    expect(result).toMatchObject({ tier: "free", status: "canceled", subscriptionId: null });
+    expect(updates[0]).toMatchObject({
+      subscription_tier: "free",
+      subscription_status: "canceled",
+      stripe_subscription_id: null,
+      current_period_end: null,
+      subscription_ends_at: null,
+    });
+  });
+
+  it("an old `updated` event arriving AFTER the deletion does not bring the plan back", async () => {
+    // On main the event's "active" snapshot was merged over the list and the
+    // profile went back to a live Plus plan — for good, a dead subscription
+    // sends no further event.
+    const { admin, updates } = makeAdmin({ subscription_tier: "free", subscription_status: "canceled", stripe_subscription_id: null });
+    const gone = sub("sub_1", "canceled", PLUS);
+    const result = await syncSubscriptionForUser(admin, stripeNow(gone).stripe, "user-1", { eventSub: cancelledSnap() });
+    expect(result).toMatchObject({ tier: "free", status: "canceled", subscriptionId: null });
+    expect(updates[0]).toMatchObject({
+      subscription_tier: "free",
+      subscription_status: "canceled",
+      stripe_subscription_id: null,
+    });
+  });
+
+  it("…and that late event never demotes a customer whose OTHER subscription is live", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_pro" });
+    const gone = sub("sub_1", "canceled", PLUS, { created: 1 });
+    const pro = sub("sub_pro", "active", { id: "price_pro" }, { created: 2 });
+    const result = await syncSubscriptionForUser(admin, stripeNow(gone, pro).stripe, "user-1", { eventSub: cancelledSnap() });
+    expect(result).toMatchObject({ tier: "pro", subscriptionId: "sub_pro", source: "primary" });
+    expect(updates[0]).toMatchObject({ subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_pro" });
+  });
+
+  it("a late event for the PRIMARY subscription cannot hand the profile to a lower one", async () => {
+    // Old snapshot: the Pro was past_due. Now: it is active again.
+    const { admin, updates } = makeAdmin({ subscription_tier: "pro", subscription_status: "active" });
+    const plus = sub("sub_plus", "active", PLUS, { created: 1 });
+    const pro = sub("sub_pro", "active", { id: "price_pro" }, { created: 2 });
+    await syncSubscriptionForUser(admin, stripeNow(plus, pro).stripe, "user-1", {
+      eventSub: { ...pro, status: "past_due" },
+    });
+    expect(updates[0]).toMatchObject({ subscription_tier: "pro", stripe_subscription_id: "sub_pro" });
+  });
+
+  it("created: a subscription the list does not show yet is read by id", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "free", subscription_status: null });
+    const created = sub("sub_new", "active", { id: "price_pro" });
+    const stripe = makeLiveStripe({ list: [], byId: { sub_new: created } }).stripe;
+    const result = await syncSubscriptionForUser(admin, stripe, "user-1", { eventSub: created });
+    expect(result).toMatchObject({ tier: "pro", status: "active", subscriptionId: "sub_new", source: "primary" });
+    expect(updates[0]).toMatchObject({ subscription_tier: "pro", stripe_subscription_id: "sub_new" });
+  });
+
+  it("created: when neither read knows it yet, the event's snapshot still starts the plan (never a silent no-op)", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "free", subscription_status: null });
+    const created = sub("sub_new", "trialing", PLUS, { trial_end: PERIOD_END });
+    const stripe = makeLiveStripe({ list: [] }).stripe;
+    const result = await syncSubscriptionForUser(admin, stripe, "user-1", { eventSub: created });
+    expect(result).toMatchObject({ tier: "plus", status: "trialing", subscriptionId: "sub_new" });
+    expect(updates[0]).toMatchObject({ subscription_tier: "plus", subscription_status: "trialing" });
+  });
+
+  it("trial: a late `created` (trialing) event after the trial converted writes active, and grants the month — not a second trial tranche", async () => {
+    const { admin, updates, rpcs } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
+    const converted = sub("sub_1", "active", PLUS, { trial_end: PERIOD_END - 30 * 86400 });
+    const result = await syncSubscriptionForUser(admin, stripeNow(converted).stripe, "user-1", {
+      eventSub: { ...converted, status: "trialing" },
+    });
+    expect(updates[0]).toMatchObject({ subscription_status: "active" });
+    await grantCreditsForSync(result, admin, { isCreationEvent: true });
+    expect(rpcs).toHaveLength(1);
+    expect(rpcs[0].args).toMatchObject({ p_amount: MONTHLY_CREDITS.plus, p_reason: "subscription_refill" });
+  });
+
+  it("trial: a late `updated` event from before the trial was cancelled stores the cancellation (ends at the trial end)", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "trialing" });
+    const trialEnd = PERIOD_END - 5 * 86400;
+    const cancelledTrial = sub("sub_1", "trialing", PLUS, { cancel_at_period_end: true, trial_end: trialEnd });
+    await syncSubscriptionForUser(admin, stripeNow(cancelledTrial).stripe, "user-1", {
+      eventSub: { ...cancelledTrial, cancel_at_period_end: false },
+    });
+    expect(updates[0]).toMatchObject({
+      subscription_status: "trialing",
+      subscription_ends_at: new Date(trialEnd * 1000).toISOString(),
+    });
+  });
+
+  it("2026-09 protection: a transient EMPTY list never demotes — the event's subscription is still synced, and with none nothing is written", async () => {
+    const withEvent = makeAdmin(paid);
+    const result = await syncSubscriptionForUser(withEvent.admin, makeLiveStripe({ list: [] }).stripe, "user-1", {
+      eventSub: renewingSnap(),
+    });
+    expect(result).toMatchObject({ tier: "plus", status: "active" });
+    expect(withEvent.updates[0]).toMatchObject({ subscription_tier: "plus", subscription_status: "active" });
+
+    const bare = makeAdmin({ ...paid, stripe_customer_id: "cus_1" });
+    const untouched = await syncSubscriptionForUser(bare.admin, makeLiveStripe({ list: [] }).stripe, "user-1");
+    expect(untouched).toMatchObject({ source: "none", tier: "plus", status: "active" });
+    expect(bare.updates).toHaveLength(0);
+  });
+
+  it("2026-09 protection: with the LIST unreadable, a read that says canceled is not a deletion — nothing is written as free", async () => {
+    // Nobody knows whether another subscription is live: only the `deleted`
+    // event itself may write free.
+    const { admin, updates } = makeAdmin({ subscription_tier: "pro", subscription_status: "active" });
+    const gone = sub("sub_1", "canceled", PLUS);
+    const stripe = makeLiveStripe({ list: null, byId: { sub_1: gone } }).stripe;
+    const result = await syncSubscriptionForUser(admin, stripe, "user-1", { eventSub: cancelledSnap() });
+    expect(result.tier).not.toBe("free");
+    expect(updates[0]).toMatchObject({ subscription_status: "canceled", stripe_subscription_id: "sub_1" });
+    expect(updates[0].subscription_tier).not.toBe("free");
+  });
+
+  it("LIST unreadable: an event for a SECONDARY subscription that is not live never touches a profile living on another one", async () => {
+    // The superseded trial's `deleted` event (or any late event for a plan
+    // that ended long ago) meeting a transient list failure: on main — and
+    // before this guard — it wrote free / canceled over the paid plan.
+    const livePro = { subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_pro" };
+    const trial = sub("sub_trial", "canceled", PLUS);
+
+    // deleted event, retrieve readable
+    const a = makeAdmin(livePro);
+    const deleted = await syncSubscriptionForUser(
+      a.admin,
+      makeLiveStripe({ list: null, byId: { sub_trial: trial } }).stripe,
+      "user-1",
+      { eventSub: trial, eventDeleted: true },
+    );
+    expect(a.updates).toHaveLength(0);
+    expect(deleted).toMatchObject({ tier: "pro", status: "active", source: "none", subscriptionId: null });
+
+    // deleted event, nothing readable at all
+    const b = makeAdmin(livePro);
+    await syncSubscriptionForUser(b.admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      eventSub: { ...trial, status: "trialing" },
+      eventDeleted: true,
+    });
+    expect(b.updates).toHaveLength(0);
+
+    // a late `updated` whose re-read says canceled / past_due
+    for (const status of ["canceled", "past_due", "unpaid", "incomplete_expired", "paused"]) {
+      const c = makeAdmin(livePro);
+      const now = sub("sub_trial", status, PLUS);
+      await syncSubscriptionForUser(
+        c.admin,
+        makeLiveStripe({ list: null, byId: { sub_trial: now } }).stripe,
+        "user-1",
+        { eventSub: sub("sub_trial", "trialing", PLUS) },
+      );
+      expect(c.updates).toHaveLength(0);
+    }
+  });
+
+  it("LIST unreadable: the guard is only for ANOTHER live subscription — the stored one's own end, a live secondary and a lapsed profile still sync", async () => {
+    // The profile's own subscription is deleted: free.
+    const own = makeAdmin(paid);
+    await syncSubscriptionForUser(own.admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      eventSub: sub("sub_1", "canceled", PLUS),
+      eventDeleted: true,
+    });
+    expect(own.updates[0]).toMatchObject({ subscription_tier: "free", stripe_subscription_id: null });
+
+    // A LIVE subscription the profile does not point at yet (the paid plan
+    // bought over a trial): written.
+    const upgrade = makeAdmin({ subscription_tier: "plus", subscription_status: "trialing", stripe_subscription_id: "sub_trial" });
+    const pro = sub("sub_pro", "active", { id: "price_pro" });
+    await syncSubscriptionForUser(
+      upgrade.admin,
+      makeLiveStripe({ list: null, byId: { sub_pro: pro } }).stripe,
+      "user-1",
+      { eventSub: pro },
+    );
+    expect(upgrade.updates[0]).toMatchObject({ subscription_tier: "pro", stripe_subscription_id: "sub_pro" });
+
+    // The profile is not live (past_due on another id): the event is written as before.
+    const lapsed = makeAdmin({ subscription_tier: "plus", subscription_status: "past_due", stripe_subscription_id: "sub_old" });
+    await syncSubscriptionForUser(lapsed.admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      eventSub: sub("sub_1", "canceled", PLUS),
+      eventDeleted: true,
+    });
+    expect(lapsed.updates[0]).toMatchObject({ subscription_tier: "free", subscription_status: "canceled" });
+  });
+
+  it("an unmapped price on the re-read subscription still never demotes", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "pro", subscription_status: "active" });
+    const mystery = sub("sub_1", "active", { id: "price_mystery", unit_amount: 999, recurring: { interval: "month" } });
+    const result = await syncSubscriptionForUser(admin, stripeNow(mystery).stripe, "user-1", { eventSub: renewingSnap() });
+    expect(result).toMatchObject({ tier: "pro", unresolvedPrice: true });
+    expect(updates[0]).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
+  });
+
+  it("currentSub (the caller's own fresh read or write) is taken as it is and not read again", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    // The list still shows the cancellation the caller has just cleared.
+    const { stripe, retrieved } = makeLiveStripe({ list: [cancelledSnap()], byId: { sub_1: cancelledSnap() } });
+    await syncSubscriptionForUser(admin, stripe, "user-1", { currentSub: renewingSnap(), customerId: "cus_1" });
+    expect(retrieved).toEqual([]);
+    expect(updates[0]).toMatchObject({ cancel_at_period_end: false, subscription_ends_at: null });
+  });
+
+  it("currentSub read as canceled with eventDeleted (the admin resync) writes free even when the list fails", async () => {
+    const { admin, updates } = makeAdmin(paid);
+    const gone = sub("sub_1", "canceled", PLUS);
+    await syncSubscriptionForUser(admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      currentSub: gone,
+      eventDeleted: true,
+    });
+    expect(updates[0]).toMatchObject({ subscription_tier: "free", subscription_status: "canceled", stripe_subscription_id: null });
+  });
+});
+
 describe("grantCreditsForSync", () => {
   it("grants the synced tier's month, skips trials that aren't being created, skips lapsed", async () => {
     const { admin, rpcs } = makeAdmin();

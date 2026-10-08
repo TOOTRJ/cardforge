@@ -2,7 +2,7 @@ import { Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { LocalDate } from "@/components/ui/local-date";
 import type { BillingPeriod, PlanDisplay, PlanTier } from "@/lib/billing/plans";
 
 type PlanCardProps = {
@@ -99,9 +99,14 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta, currentEn
         {isCurrent && currentEndsAt != null ? (
           <div className="flex flex-col gap-2">
             <Badge variant="outline" className="flex w-full justify-center py-2 text-center text-sm">
-              {currentEndsAt
-                ? `Your current plan · ends ${formatCalendarDate(currentEndsAt)}`
-                : "Your current plan · cancelled"}
+              {currentEndsAt ? (
+                <span>
+                  {"Your current plan · ends "}
+                  <LocalDate iso={currentEndsAt} />
+                </span>
+              ) : (
+                "Your current plan · cancelled"
+              )}
             </Badge>
             {cta}
           </div>

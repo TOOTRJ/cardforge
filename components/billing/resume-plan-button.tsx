@@ -18,7 +18,8 @@ import {
   resumeSubscriptionAction,
   type ResumePreview,
 } from "@/lib/stripe/actions";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { dateTextToString, type DateText } from "@/lib/format/dates";
+import { LocalDateText } from "@/components/ui/local-date";
 import { navigateTo } from "@/lib/routing/navigate";
 
 // ---------------------------------------------------------------------------
@@ -32,20 +33,26 @@ import { navigateTo } from "@/lib/routing/navigate";
 // it has its own "Renew plan" button.
 // ---------------------------------------------------------------------------
 
-/** What the confirm step says — exported so it is unit-tested as a table. */
-export function resumeConfirmCopy(planName: string, preview: ResumePreview | null): string {
+/** What the confirm step says, as parts: the dialog prints the date in the
+ *  viewer's time zone (`<LocalDateText>`). */
+export function resumeConfirmText(planName: string, preview: ResumePreview | null): DateText {
   if (!preview || !preview.ok) {
-    return `Your ${planName} plan will carry on and renew as usual, at the price you already pay. Nothing is charged today.`;
+    return [`Your ${planName} plan will carry on and renew as usual, at the price you already pay. Nothing is charged today.`];
   }
   const price = preview.priceLine ? ` at ${preview.priceLine}` : "";
   if (preview.trial) {
     return preview.nextBillAt
-      ? `Your ${preview.planName} free trial will carry on until ${formatCalendarDate(preview.nextBillAt)}; then ${preview.planName} starts${price} on the card you added. Nothing is charged today.`
-      : `Your ${preview.planName} free trial will carry on, then ${preview.planName} starts${price}. Nothing is charged today.`;
+      ? [`Your ${preview.planName} free trial will carry on until `, { date: preview.nextBillAt }, `; then ${preview.planName} starts${price} on the card you added. Nothing is charged today.`]
+      : [`Your ${preview.planName} free trial will carry on, then ${preview.planName} starts${price}. Nothing is charged today.`];
   }
   return preview.nextBillAt
-    ? `Your ${preview.planName} plan will renew on ${formatCalendarDate(preview.nextBillAt)}${price}. Nothing is charged today.`
-    : `Your ${preview.planName} plan will renew as usual${price}. Nothing is charged today.`;
+    ? [`Your ${preview.planName} plan will renew on `, { date: preview.nextBillAt }, `${price}. Nothing is charged today.`]
+    : [`Your ${preview.planName} plan will renew as usual${price}. Nothing is charged today.`];
+}
+
+/** The same copy as a UTC string — exported so it is unit-tested as a table. */
+export function resumeConfirmCopy(planName: string, preview: ResumePreview | null): string {
+  return dateTextToString(resumeConfirmText(planName, preview), "UTC");
 }
 
 export function ResumePlanButton({
@@ -110,7 +117,11 @@ export function ResumePlanButton({
           <DialogHeader>
             <DialogTitle>Resume {name}?</DialogTitle>
             <DialogDescription className="text-sm leading-6">
-              {loading ? "Checking your plan with Stripe…" : resumeConfirmCopy(planName, preview)}
+              {loading ? (
+                "Checking your plan with Stripe…"
+              ) : (
+                <LocalDateText parts={resumeConfirmText(planName, preview)} />
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

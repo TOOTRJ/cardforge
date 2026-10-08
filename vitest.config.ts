@@ -19,6 +19,10 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
+    // One time zone on every machine: a date test must not pass in CI (UTC)
+    // and fail on a laptop. A test about the VIEWER's zone sets its own
+    // (tests/unit/components/local-date.test.tsx).
+    env: { TZ: "UTC" },
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     // Playwright tests live alongside but are NOT vitest-runnable; the
     // e2e runner picks them up via its own glob.
