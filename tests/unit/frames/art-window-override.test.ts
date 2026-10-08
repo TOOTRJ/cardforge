@@ -158,13 +158,14 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
   });
 
   it("holds a known failure to its bound, as CI does: no worse is saved, worse is refused", async () => {
-    // modern (TODO 4.10): window bottom 1164 vs its slot's 1163.4 — known,
-    // bound 2 px (the slot is 124.5–1372.5 × 243.6–1163.4).
-    const modernWindow: Box = [126, 1371, 245, 1164];
-    const load: MasterLoader = async () => master(modernWindow);
-    expect(await artSlotOverrideRefusal("modern", { artSlot: { topPct: 11.6 } }, load)).toBeNull();
-    expect(await artSlotOverrideRefusal("modern", { artSlot: { heightPct: 43 } }, load)).toMatch(
-      /modern\/w frame's art window uncovered .*worse than its known failure \(4\.10\): misses by 18\.45 px > 2/,
+    // m15textless (TODO 4.35): window 118–1379 × 239–1935 vs its slot's
+    // 115.5–1375.5 × 237.3–1932 — known, bound 4.5 px. (The 2003 pair, this
+    // test's first example, left the table with TODO 4.10b.)
+    const textlessWindow: Box = [118, 1379, 239, 1935];
+    const load: MasterLoader = async () => master(textlessWindow);
+    expect(await artSlotOverrideRefusal("m15textless", { artSlot: { topPct: 11.3 } }, load)).toBeNull();
+    expect(await artSlotOverrideRefusal("m15textless", { artSlot: { heightPct: 79.7 } }, load)).toMatch(
+      /m15textless\/w frame's art window uncovered .*worse than its known failure \(4\.35\): misses by [\d.]+ px > 4\.5/,
     );
   });
 

@@ -148,6 +148,7 @@ import {
   describePrintRecipe,
   recutPiecewise,
   seventhRegions,
+  eighthRegions,
   clearWindowHalo,
   squareCornersOnBlack,
   toneRegions,
@@ -245,10 +246,19 @@ async function writeCutout(bytes, box, pngFile) {
   await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
 }
 
-async function writePlate(src, pngFile) {
+async function writePlate(src, pngFile, gain = null) {
   fs.mkdirSync(path.dirname(pngFile), { recursive: true });
   // Plates keep their native size; the renderer scales them into the slot.
-  const image = sharp(await fetchCached(src));
+  let image = sharp(await fetchCached(src));
+  // A plate toned onto its prints' (TODO 4.10b: the 2003 plates): a
+  // per-channel gain on the raw pixels, alpha untouched.
+  if (gain) {
+    const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    for (let p = 0; p < info.width * info.height; p += 1) {
+      for (let c = 0; c < 3; c += 1) data[p * 4 + c] = Math.min(255, Math.round(data[p * 4 + c] * gain[c]));
+    }
+    image = sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } });
+  }
   await image.clone().png({ compressionLevel: 9 }).toFile(pngFile);
   await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
 }
@@ -375,7 +385,23 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
           rings = new Float32Array(W * H);
           for (let p = 0; p < W * H; p += 1) rings[p] = mask[p * 4 + 3] / 255;
         }
-        printed = toneRegions(printed, W, H, seventhRegions(printed, maps, { byColour: printRecipe.byColour, rings }), printRecipe.tones);
+        // The regions: a pack whose masks ARE its drawing's regions names
+        // them (the 2003 frame, TODO 4.10b); else the Seventh drawing's own
+        // lines (4.10a).
+        let regions;
+        if (printRecipe.regionMasks) {
+          const planes = {};
+          for (const [name, rel] of Object.entries(printRecipe.regionMasks)) {
+            const mask = await rgba(await fetchCached(rel), W, H);
+            const plane = new Float32Array(W * H);
+            for (let p = 0; p < W * H; p += 1) plane[p] = mask[p * 4 + 3] / 255;
+            planes[name] = plane;
+          }
+          regions = eighthRegions(planes, maps);
+        } else {
+          regions = seventhRegions(printed, maps, { byColour: printRecipe.byColour, rings });
+        }
+        printed = toneRegions(printed, W, H, regions, printRecipe.tones);
       }
     }
     // A ray's top closed over by the frame (the emblem's spark, 4.52).
@@ -487,7 +513,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   }
   const plates = def.plates ? { ...def.plates } : undefined;
   if (plates && !dryRun) {
-    for (const key of COLORS) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`));
+    for (const key of COLORS) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`), def.plateGains?.[key] ?? null);
     console.log(`wrote ${template} plates`);
   }
   const symbols = def.symbols ? { ...def.symbols } : undefined;
@@ -547,6 +573,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.finish ? { finish: def.finish.map(describeFinish) } : {}),
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
+    ...(def.plateGains ? { plateGains: def.plateGains } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),

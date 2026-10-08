@@ -68,11 +68,10 @@ import {
  * list with TODO 4.21a: their masters are Card Conjurer's in the frames
  * bucket, cut at the one corner by the importer. Saga left it with 4.21c, the
  * same way — and retro and retroland with 4.10a: the 1997 masters are the
- * importer's too, the MSE gold among them.)
+ * importer's too, the MSE gold among them; modern and modernland with 4.10b:
+ * Card Conjurer's 8th, re-cut and toned by the importer.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  modern: "all",
-  modernland: "all",
   extendedart: "all",
   fullart: "all",
   m15textless: "all",
