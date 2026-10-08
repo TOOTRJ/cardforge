@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { COST_PIP_GAP, costRowHdPx } from "@/lib/cards/render-tiers";
-import { MANA_GLYPH_OF_DISC } from "@/lib/cards/symbol-style";
+import { MANA_GLYPH_OF_DISC, manaGlyphPx } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { COST_DISC_PCT, RULES_HD_WIDTH } from "@/lib/cards/typography";
 import type { FrameTemplate } from "@/types/card";
@@ -97,9 +97,11 @@ describe("the preview's cost row is the stored bake's", () => {
       const pips = Array.from(row.children);
       expect(pips).toHaveLength(6);
       for (const pip of pips) {
-        // The glyph at the bake's share of the disc, its box one disc.
+        // The glyph at the bake's whole px (MANA_GLYPH_OF_DISC of the disc,
+        // rounded as ManaGem rounds it), its box one disc.
         const glyphEm = num(css(pip, "font-size"), "em");
-        expect(glyphEm).toBeCloseTo(MANA_GLYPH_OF_DISC, 4);
+        expect(glyphEm * discPx).toBeCloseTo(manaGlyphPx(discPx), 2);
+        expect(Math.abs(glyphEm - MANA_GLYPH_OF_DISC)).toBeLessThan(0.5 / discPx + 1e-4);
         expect(glyphEm * num(css(pip, "width"), "em")).toBeCloseTo(1, 3);
         expect(glyphEm * num(css(pip, "height"), "em")).toBeCloseTo(1, 3);
         expect(css(pip, "flex-shrink")).toBe("0");
@@ -115,13 +117,13 @@ describe("the preview's cost row is the stored bake's", () => {
       expect(num(css(pip, "font-size"), "em") * 1.3).toBeCloseTo(1, 3);
       expect(css(pip, "width")).toBe("");
     }
-    expect(num(css(mono, "font-size"), "em")).toBeCloseTo(MANA_GLYPH_OF_DISC, 4);
+    expect(num(css(mono, "font-size"), "em") * 73).toBeCloseTo(manaGlyphPx(73), 2);
   });
 
   it("an owner's pip image is one disc wide too, and the pickers' rows are as they were", () => {
     const src = "https://pips.example/g.png";
     const row = costRow(
-      render(<ManaCostGlyphs cost="{G}{2}" disc={{ size: "4.8667cqw", gap: "0.6cqw" }} overrides={{ G: src }} />),
+      render(<ManaCostGlyphs cost="{G}{2}" disc={{ size: "4.8667cqw", gap: "0.6cqw", px: 73 }} overrides={{ G: src }} />),
     );
     expect(css(row, "font-size")).toBe("4.8667cqw");
     expect(css(row, "column-gap")).toBe("0.6cqw");

@@ -1,6 +1,13 @@
 import { cn } from "@/lib/utils";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
-import { MANA_GLYPH_OF_DISC, styledSuffix, symbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { hybridHalves } from "@/lib/cards/rules-text";
+import {
+  manaGlyphPx,
+  previewDiscShadowCss,
+  styledSuffix,
+  symbolStyle,
+  type SymbolStyleSpec,
+} from "@/lib/cards/symbol-style";
 
 // ---------------------------------------------------------------------------
 // ManaCostGlyphs — render `{2}{R}{G/W}{R/P}{T}{S}` etc. using the open-source
@@ -28,8 +35,10 @@ type ManaCostGlyphsProps = {
   /** A CARD's cost row (CardPreview only; the pickers keep `size`): each
    *  disc's DIAMETER and the gap between pips, as container-relative CSS
    *  lengths (`cqw`) — the bake's disc and gap, so the row scales with the
-   *  card and is the stored PNG's. When set, it wins over `size`. */
-  disc?: { size: string; gap: string };
+   *  card and is the stored PNG's — and that disc in the stored HD bake's
+   *  whole `px` (the glyph and the shadow are rounded there, CardPip). When
+   *  set, it wins over `size`. */
+  disc?: { size: string; gap: string; px: number };
   /** The card OWNER's custom pip icons. Pure color pips ({W}…{C}) with an
    *  entry render the uploaded image instead of the mana-font glyph; all
    *  other tokens (and all callers that omit this) keep the standard look. */
@@ -182,42 +191,91 @@ export function tokenSuffix(token: Token): string | null {
 const MS_DISC_EM = 1.3;
 const MS_LINE_EM = 1.35;
 
-// One pip of a CARD's cost row, whose font size is the disc's diameter
-// (1 em = one disc): the bake's ManaGem — a disc exactly that wide, a
-// one-colour symbol at MANA_GLYPH_OF_DISC of it. mana-font sizes the disc
-// from the glyph's font (1.3 em of `.ms-cost`'s own 0.95 em), which left it
-// 5 % short of the bake's; so the glyph keeps its size and the box is set
-// around it, the line box in mana-font's own proportion. A split disc keeps
-// mana-font's box at disc ÷ 1.3 — the proportions the bake's halves follow.
-const COST_DISC_STYLE: React.CSSProperties = {
-  fontSize: `${MANA_GLYPH_OF_DISC}em`,
-  width: `${(1 / MANA_GLYPH_OF_DISC).toFixed(4)}em`,
-  height: `${(1 / MANA_GLYPH_OF_DISC).toFixed(4)}em`,
-  lineHeight: `${(MS_LINE_EM / MS_DISC_EM / MANA_GLYPH_OF_DISC).toFixed(4)}em`,
-  flexShrink: 0,
-};
-const COST_SPLIT_DISC_STYLE: React.CSSProperties = {
-  fontSize: `${(1 / MS_DISC_EM).toFixed(4)}em`,
-  flexShrink: 0,
-};
+// One pip of a CARD (CardPreview only: the cost rows, the rules text, the
+// flipside strip, the saga rail), inside a parent whose font size is the
+// disc's diameter (1 em = one disc) — the bake's ManaGem at the stored HD
+// bake's whole px for a disc `discPx` wide:
+//
+//   - a one-colour symbol at manaGlyphPx of the disc, in a box exactly one
+//     disc. mana-font sizes the disc FROM the glyph's font (1.3 em), so a pip
+//     sized by its disc drew the glyph at 1 ÷ 1.3 = 0.769 of it, the bake
+//     0.73; the glyph keeps the bake's size and the box is set around it,
+//     the line box in mana-font's own proportion. Satori centres the
+//     glyph's em box in the disc; Chromium rounds the font's ascent and
+//     floors the half-leading, which sets a glyph in a line box exactly one
+//     disc tall ~2 % of the disc HIGH of the bake on average. mana-font's
+//     1.35 em line in a 1.3 em disc halves that (measured against the bake
+//     at ten preview widths, 2026-10-07; either way it is within a px);
+//   - a split disc in mana-font's own box at disc ÷ 1.3;
+//   - the disc's shadow as the bake's ONE layer (previewDiscShadowCss), over
+//     the `.ms-shadow` class's two in em of the pip's font; mana-font's
+//     untap disc is dark, so its shadow stays white.
+export function CardPip({
+  suffix,
+  discPx,
+  symbols,
+  overrideSrc = null,
+}: {
+  /** The symbol's mana-font suffix, before the style's own {T}. */
+  suffix: string;
+  discPx: number;
+  symbols: SymbolStyleSpec;
+  /** The card owner's image for this pip, when they set one. */
+  overrideSrc?: string | null;
+}) {
+  const split = overrideSrc != null || hybridHalves(suffix) != null;
+  const glyphPx = split ? discPx / MS_DISC_EM : manaGlyphPx(discPx);
+  const boxShadow = previewDiscShadowCss(symbols, discPx, glyphPx, suffix === "untap" ? "#fff" : undefined);
+  const fontSize = `${(glyphPx / discPx).toFixed(4)}em`;
+  if (overrideSrc != null) {
+    return (
+      <PipOverrideImg
+        src={overrideSrc}
+        symbols={symbols}
+        style={{ fontSize, flexShrink: 0 }}
+        boxShadow={boxShadow ?? null}
+      />
+    );
+  }
+  const box = `${(discPx / glyphPx).toFixed(4)}em`;
+  return (
+    <i
+      aria-hidden
+      className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+      style={{
+        fontSize,
+        ...(split
+          ? {}
+          : { width: box, height: box, lineHeight: `${((MS_LINE_EM / MS_DISC_EM) * (discPx / glyphPx)).toFixed(4)}em` }),
+        flexShrink: 0,
+        ...(boxShadow ? { boxShadow } : {}),
+      }}
+    />
+  );
+}
 
 // A custom pip image drawn in the exact box mana-font gives `.ms-cost`:
 // a 1.3em disc at the given font size (0.95em for the pickers' costs; a
-// card's cost row and rules text pass their own scale) with the hard offset
-// `.ms-shadow` pair — so override pips line up pixel-for-pixel with standard
-// ones beside them.
+// card's pips pass their own scale, CardPip) with the hard offset
+// `.ms-shadow` pair — or, on a card, the bake's one layer (`boxShadow`) — so
+// override pips line up pixel-for-pixel with standard ones beside them.
 export function PipOverrideImg({
   src,
   fontSizeEm = 0.95,
   style,
   symbols = symbolStyle(undefined),
+  boxShadow,
 }: {
   src: string;
   fontSizeEm?: number;
   style?: React.CSSProperties;
   /** The frame's symbol style (the disc's shadow); "modern" when omitted. */
   symbols?: SymbolStyleSpec;
+  /** A CARD's pip: the bake's shadow in place of the style's mana-font pair
+   *  (null = none). */
+  boxShadow?: string | null;
 }) {
+  const shadow = boxShadow === undefined ? symbols.previewShadowCss : boxShadow;
   return (
     <span
       aria-hidden
@@ -233,8 +291,9 @@ export function PipOverrideImg({
           height: "1.3em",
           borderRadius: "50%",
           objectFit: "cover",
-          // mana-font's `.ms-cost.ms-shadow` pair, where the style has a shadow.
-          ...(symbols.previewShadowCss ? { boxShadow: symbols.previewShadowCss } : {}),
+          // mana-font's `.ms-cost.ms-shadow` pair (a card: the bake's one
+          // layer), where the style has a shadow.
+          ...(shadow ? { boxShadow: shadow } : {}),
         }}
       />
     </span>
@@ -287,17 +346,14 @@ export function ManaCostGlyphs({
           );
         }
         const overrideSrc = pipOverrideForToken(token, overrides);
-        if (overrideSrc) {
-          return (
-            <PipOverrideImg
-              key={`g-${i}`}
-              src={overrideSrc}
-              symbols={symbols}
-              {...(scaled ? { fontSizeEm: 1 / MS_DISC_EM, style: { flexShrink: 0 } } : {})}
-            />
-          );
-        }
         const suffix = tokenSuffix(token);
+        if (disc) {
+          if (!overrideSrc && !suffix) return null;
+          return <CardPip key={`g-${i}`} suffix={suffix ?? ""} discPx={disc.px} symbols={symbols} overrideSrc={overrideSrc} />;
+        }
+        if (overrideSrc) {
+          return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
+        }
         if (!suffix) return null;
         // ms-cost gives the circular gem background, ms-shadow adds depth.
         // Both come from mana-font's stylesheet.
@@ -306,7 +362,6 @@ export function ManaCostGlyphs({
             key={`g-${i}`}
             aria-hidden
             className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
-            style={scaled ? (token.kind === "hybrid" ? COST_SPLIT_DISC_STYLE : COST_DISC_STYLE) : undefined}
           />
         );
       })}
