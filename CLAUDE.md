@@ -402,7 +402,13 @@ Rules and gotchas:
   preview word at its ceiled `wordWidthPx`) — never a box that wraps. An
   inline pip is a 0.785 em disc centred 0.334 em above the baseline (on the
   capitals, v36), drawn at the layout's `pipTopPx` in a run the line box tall
-  — never centred by flexbox.
+  — never centred by flexbox — and FLAT on every symbol style (v49: the
+  shadow is the cost row's alone); a Phyrexian symbol's disc is ×1.2 on the
+  same centre, in text and cost (`pipScale` in `lib/cards/mana-gem.ts`, the
+  ONE answer the layout's `pipWidthPx` / `pipTopOf`, `costRowTerms` and both
+  renderers read). WHAT a pip is — the prints' untap, Phyrexian, two-colour
+  Phyrexian, snow (an SVG flake) and disc-less energy since v49 — is
+  `manaGemSpec` alone (`docs/FRAMES.md` "Symbols as printed").
   `TextSlot.padPx` pads past any textbox border the rect holds (split).
   Keep-outs = the stat badges the card DRAWS (`statKeepOuts`; plate ink in
   `lib/cards/plate-ink.ts` — a new or replaced plate needs

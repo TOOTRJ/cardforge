@@ -70,6 +70,7 @@ import {
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
+import { pipDiscPx, pipRisePx } from "@/lib/cards/mana-gem";
 import { discShadowPx, inlineSymbolStyle, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
 import {
@@ -224,13 +225,25 @@ export function wordWidthPx(item: Extract<RulesItem, { t: "w" }>, m: Pick<RulesM
   return Math.ceil(rulesTextWidthEm(item.v, Boolean(item.em)) * m.fontPx - 1e-6);
 }
 
+/** A pip's own disc in `m`'s whole px: `m.pipPx`, or a Phyrexian symbol's
+ *  larger one (lib/cards/mana-gem.ts pipDiscPx, layout v49) — what both
+ *  renderers draw and every width, ink box and keep-out here measures. */
+export function pipWidthPx(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx">): number {
+  return pipDiscPx(item.suffix, m.pipPx);
+}
+/** That disc's top in its line box: `m.pipTopPx`, less a larger disc's
+ *  rise (it keeps a plain pip's centre). */
+export function pipTopOf(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx" | "pipTopPx">): number {
+  return m.pipTopPx - pipRisePx(item.suffix, m.pipPx);
+}
+
 /** A run's width as `m`'s target draws it: each word its box (wordWidthPx),
  *  each pip a whole-px disc, adjacent pips a hairline apart. */
 export function runWidthPx(run: readonly RulesItem[], m: RulesMetrics): number {
   let w = 0;
   run.forEach((item, i) => {
     if (item.t === "m") {
-      w += m.pipPx + (i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0);
+      w += pipWidthPx(item, m) + (i > 0 && run[i - 1].t === "m" ? m.pipGapPx : 0);
     } else {
       w += wordWidthPx(item, m);
     }
@@ -589,8 +602,8 @@ function lineInk(line: RulesLine, m: RulesMetrics): { top: number; bottom: numbe
   for (const run of line.runs) {
     for (const item of run) {
       if (item.t === "m") {
-        top = Math.min(top, m.pipTopPx);
-        bottom = Math.max(bottom, m.pipTopPx + m.pipPx + m.pipShadowPx);
+        top = Math.min(top, pipTopOf(item, m));
+        bottom = Math.max(bottom, pipTopOf(item, m) + pipWidthPx(item, m) + m.pipShadowPx);
       } else {
         const ink = rulesTextInkEm(item.v);
         const baseline = item.em ? m.baselinePx.italic : m.baselinePx.regular;
@@ -918,12 +931,12 @@ function lineInkBoxes(line: RulesLine, m: RulesMetrics): InkBox[] {
         boxes.push(
           clamp({
             left: x - m.pipShadowLeftPx,
-            right: x + m.pipPx,
-            top: m.pipTopPx,
-            bottom: m.pipTopPx + m.pipPx + m.pipShadowPx,
+            right: x + pipWidthPx(item, m),
+            top: pipTopOf(item, m),
+            bottom: pipTopOf(item, m) + pipWidthPx(item, m) + m.pipShadowPx,
           }),
         );
-        x += m.pipPx;
+        x += pipWidthPx(item, m);
         return;
       }
       const italic = Boolean(item.em);
