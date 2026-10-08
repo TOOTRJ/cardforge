@@ -550,7 +550,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
   const previewPips = (html: string) =>
     [...html.matchAll(/data-pip="([^"]*)"[^>]*style="([^"]*)"/g)].map((m) => `${m[1]} ${/box-shadow:/.test(m[2]) ? "shadow" : "flat"}`);
 
-  it("\"modern\" — every profile's style — is today's discs: the hard offset shadow and the modern tap, in both renderers", async () => {
+  it("\"modern\" — every profile's style — is today's discs: the hard offset shadow under the COST, flat pips in the rules text (layout v49) and the modern tap, in both renderers", async () => {
     // (The SHIPPED profiles: this file's getFrameProfile hands the fixture
     // frame out plain.)
     const { getFrameProfile } = await vi.importActual<typeof import("@/lib/cards/template-layout")>("@/lib/cards/template-layout");
@@ -570,12 +570,14 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(getFrameProfile(template).symbolStyle, template).toBe(own);
       expect(symbolStyleOf(getFrameProfile(template)).id, template).toBe(own ?? "modern");
     }
-    // {X}{G} in the cost, {T} and {G} in the rules: four discs, each with
-    // the bake's one-layer hard shadow at its own size.
+    // {X}{G} in the cost, {T} and {G} in the rules: four discs — the cost's
+    // two with the bake's one-layer hard shadow at their own size, the
+    // rules text's two flat (the M15-era prints shadow the cost alone).
     const discs = await bakeDiscs(PIPS);
     expect(discs).toHaveLength(4);
-    for (const shadow of discs) expect(shadow).toMatch(/^-\d+px \d+px 0 #111$/);
-    expect(previewPips(preview(PIPS))).toEqual(["x shadow", "g shadow", "tap shadow", "g shadow"]);
+    for (const shadow of discs.slice(0, 2)) expect(shadow).toMatch(/^-\d+px \d+px 0 #111$/);
+    expect(discs.slice(2)).toEqual([null, null]);
+    expect(previewPips(preview(PIPS))).toEqual(["x shadow", "g shadow", "tap flat", "g flat"]);
   }, 60_000);
 
   it("a style with no shadow and another tap reaches every pip of the card in both renderers, and both shadow models", async () => {
@@ -601,11 +603,13 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       // shorter by the shadow's reach.
       const style = "test" as unknown as import("@/lib/cards/symbol-style").SymbolStyle;
       expect(metricsFor(64, undefined, "hd", style)).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });
-      expect(metricsFor(64, undefined, "hd")).toMatchObject({ pipShadowPx: 4, pipShadowLeftPx: 3 });
+      // "modern" keeps none clear either since layout v49 (it kept 4 px
+      // down and 3 left); its COST row still measures its shadow, below.
+      expect(metricsFor(64, undefined, "hd")).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });
       expect(costRowWidthPct("{3}{G}", 0.04) - costRowWidthPct("{3}{G}", 0.04, styles.symbolStyle(style))).toBeCloseTo(0.1 * 0.04, 12);
       // Another frame's card is untouched.
       const other = { ...PIPS, frameStyle: { template: "tarkirdragon", finish: "regular" } } as unknown as CardPreviewData;
-      expect(previewPips(preview(other))).toEqual(["x shadow", "g shadow", "tap shadow", "g shadow"]);
+      expect(previewPips(preview(other))).toEqual(["x shadow", "g shadow", "tap flat", "g flat"]);
     } finally {
       delete table.test;
     }

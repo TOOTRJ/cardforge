@@ -66,7 +66,7 @@ describe("GlyphCoverageNotice", () => {
 describe("UndrawableSymbolNotice", () => {
   it("renders nothing when every symbol draws", () => {
     const { container } = render(
-      <UndrawableSymbolNotice values={{ ...VALUES, cost: "{2}{W/U}{G/P}", rules_text: "{T}: Add {G}." }} />,
+      <UndrawableSymbolNotice values={{ ...VALUES, cost: "{2}{W/U}{G/P}{G/W/P}", rules_text: "{T}: Add {G}. ({G/W/P} can be paid with {G}, {W}, or 2 life.)" }} />,
     );
     expect(container.innerHTML).toBe("");
   });
@@ -76,7 +76,7 @@ describe("UndrawableSymbolNotice", () => {
       <UndrawableSymbolNotice
         values={{
           ...VALUES,
-          cost: "{21}{W/U/P}{G}",
+          cost: "{21}{W/U/P}{W/W/P}{G}",
           rules_text: "{T}, Pay {C/P}: Draw a card.",
           flavor_text: "{1/2} in flavor text prints as typed.",
         }}
@@ -85,7 +85,9 @@ describe("UndrawableSymbolNotice", () => {
     const notice = screen.getByTestId("undrawable-symbol-notice");
     expect(notice.getAttribute("role")).toBe("status");
     expect(notice.textContent).toContain("Some symbols can't be drawn on the card");
-    expect(notice.textContent).toContain("Mana cost: {21} and {W/U/P} can't be drawn and will be left off the card.");
+    // {W/U/P} draws (layout v49) and is not named; {W/W/P} is no symbol.
+    expect(notice.textContent).toContain("Mana cost: {21} and {W/W/P} can't be drawn and will be left off the card.");
+    expect(notice.textContent).not.toContain("{W/U/P}");
     expect(notice.textContent).toContain("Rules text: {C/P} can't be drawn and will be left off the card.");
     expect(notice.textContent).not.toContain("{1/2}");
     expect(notice.textContent).not.toContain("{G}");

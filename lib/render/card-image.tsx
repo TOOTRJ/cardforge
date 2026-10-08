@@ -96,7 +96,7 @@ import {
 } from "@/lib/cards/basic-symbol";
 import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
 import { costPipGapPx, discShadowCss, inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
-import { manaGemSpec, symbolImagePathsIn, type ManaGemHalf } from "@/lib/cards/mana-gem";
+import { SNOW_FLAKE_MITRE, manaGemSpec, pipRisePx, symbolImagePathsIn, type ManaGemHalf, type SnowFlakeSpec } from "@/lib/cards/mana-gem";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
@@ -2016,21 +2016,25 @@ function KeylinedKeyruneGlyph({
 // for draws nothing.
 function ManaGem({
   suffix: symbol,
-  size,
+  size: pipSize,
   style,
   symbols,
 }: {
   suffix: string;
+  /** A PLAIN pip's disc here; the gem's own disc is the spec's `discPx`
+   *  (a Phyrexian symbol's is larger — the cost row centres it, the rules
+   *  text places it: RulesItemBake). */
   size: number;
   style?: Record<string, unknown>;
   /** The frame's symbol style: the disc's shadow and the {T} it draws. */
   symbols: SymbolStyleSpec;
 }) {
-  const gem = manaGemSpec(symbol, size, symbols);
+  const gem = manaGemSpec(symbol, pipSize, symbols);
+  const size = gem.discPx;
   // The style's hard offset shadow ("modern": 0.06 of the disc left, 0.07
   // down, each at least 1 px, #111); no property at all for a style
-  // without one.
-  const shadowCss = discShadowCss(symbols, size);
+  // without one, nor for a symbol with no disc ({E}).
+  const shadowCss = gem.kind === "solid" && gem.bg === null ? undefined : discShadowCss(symbols, size);
   const shadow = shadowCss ? { boxShadow: shadowCss } : {};
 
   if (gem.kind === "split") {
@@ -2101,24 +2105,42 @@ function ManaGem({
         width: size,
         height: size,
         borderRadius: size,
-        background: gem.bg,
+        // No disc at all for a bare symbol ({E}).
+        ...(gem.bg === null ? {} : { background: gem.bg }),
         ...shadow,
         ...style,
       }}
     >
-      <span
-        style={{
-          display: "flex",
-          // mana-font: 0.95em glyph in a 1.3em disc.
-          fontFamily: '"Mana"',
-          fontSize: gem.glyphPx,
-          lineHeight: 1,
-          color: gem.ink,
-        }}
-      >
-        {cp}
-      </span>
+      {gem.flake ? (
+        <SnowFlake flake={gem.flake} ink={gem.ink} />
+      ) : (
+        <span
+          style={{
+            display: "flex",
+            // mana-font: 0.95em glyph in a 1.3em disc.
+            fontFamily: '"Mana"',
+            fontSize: gem.glyphPx,
+            lineHeight: 1,
+            color: gem.ink,
+          }}
+        >
+          {cp}
+        </span>
+      )}
     </span>
+  );
+}
+
+// The prints' snow flake (layout v49): lib/cards/mana-gem.ts's SnowFlakeSpec
+// as an inline SVG — the font's white parts outlined in the ink and filled
+// white (Satori has no text stroke). The preview's CardPip draws the same
+// element from the same spec.
+function SnowFlake({ flake, ink }: { flake: SnowFlakeSpec; ink: string }) {
+  return (
+    <svg width={flake.sizePx} height={flake.sizePx} viewBox={flake.viewBox} xmlns="http://www.w3.org/2000/svg">
+      <path d={flake.d} fill={ink} stroke={ink} strokeWidth={flake.outlineWidth} strokeLinejoin="miter" strokeMiterlimit={SNOW_FLAKE_MITRE} />
+      <path d={flake.d} fill={flake.fill} stroke={flake.fill} strokeWidth={flake.fillWidth} strokeLinejoin="miter" strokeMiterlimit={SNOW_FLAKE_MITRE} />
+    </svg>
   );
 }
 
@@ -2230,12 +2252,15 @@ function RulesItemBake({
   // carries one (inlineSymbolStyle — the 2003 prints shadow the cost alone).
   const symbols = inlineSymbolStyle(cardSymbols);
   if (item.t === "m") {
+    const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
     const place: React.CSSProperties = {
       alignSelf: "flex-start",
-      marginTop: top,
+      // A larger disc (a Phyrexian symbol) keeps a plain pip's centre: it
+      // starts the layout's pipRisePx above `top`. An owner's image is a
+      // plain pip.
+      marginTop: top - (overrideSrc ? 0 : pipRisePx(item.suffix, glyph)),
       ...(gapBefore ? { marginLeft: gapBefore } : {}),
     };
-    const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);
     if (overrideSrc) {
       // Same box + hard shadow as the ManaGem disc it replaces.
       const shadow = discShadowCss(symbols, glyph);

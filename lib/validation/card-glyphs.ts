@@ -260,7 +260,8 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
 // A `{…}` token in a mana cost or in rules text is a PIP, and a pip the mana
 // font has no glyph for is left out of the preview and of the stored image
 // alike: no disc, no room (lib/cards/mana-gem.ts — {21}, {C/P}, {1/2},
-// {3/W}, the hybrid Phyrexian {W/U/P}, {A}, {CHAOS}…). The character check
+// {3/W}, {A}, {CHAOS}…; the hybrid Phyrexian {W/U/P} draws since layout
+// v49). The character check
 // above skips those tokens, so this one names them. WHICH symbols draw is
 // never listed here: every token is read by the renderers' own tokenizer
 // (tokenize / tokenSuffix) and asked of their own gate (drawsManaGem), after
@@ -361,7 +362,7 @@ export function cardSymbolStyle(v: Pick<GlyphCheckValues, "frame_style">): Symbo
 
 const MAX_SYMBOLS_NAMED = 6;
 
-/** "{21}", "{21} and {W/U/P}", "{21}, {C/P} and {1/2}" — at most six named,
+/** "{21}", "{21} and {C/P}", "{21}, {C/P} and {1/2}" — at most six named,
  *  then "and 2 more". */
 export function listSymbols(symbols: readonly string[]): string {
   const named = symbols.slice(0, MAX_SYMBOLS_NAMED);
@@ -371,7 +372,7 @@ export function listSymbols(symbols: readonly string[]): string {
   return `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}`;
 }
 
-/** The warning's one sentence: "{21} and {W/U/P} can't be drawn and will be
+/** The warning's one sentence: "{21} and {C/P} can't be drawn and will be
  *  left off the card". */
 export function undrawableSymbolsMessage(symbols: readonly string[]): string {
   return `${listSymbols(symbols)} can't be drawn and will be left off the card`;

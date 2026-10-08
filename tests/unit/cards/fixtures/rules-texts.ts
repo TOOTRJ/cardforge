@@ -49,6 +49,15 @@ export const RULES_MATRIX: readonly RulesCase[] = [
       "{T}: Add {G}{G}. ({T}: Add {C}.)\nWard {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\n{2}{W/U}{W/U}, {Q}: Scry 2.",
     flavor: null,
   },
+  {
+    // Layout v49's drawings: Phyrexian pips on their larger disc — in a row,
+    // on consecutive lines, at a line's start and end —, the two-colour
+    // one, the untap, snow and (disc-less) energy symbols.
+    name: "symbols as printed",
+    rules:
+      "{W/P}{U/P}{B/P}: Draw a card. ({W/P} can be paid with either {W} or 2 life.)\n{R/P}{G/U/P}, {Q}: Add {S}{E}{E} and {G/W/P}.\n{R/P}{R/P}{R/P}{R/P}: Untap it. {G/P}",
+    flavor: null,
+  },
   { name: "flavor + attribution", rules: "Lifelink", flavor: "\"The light does not ask whether you are ready.\"\n—Serra, founder of the realm" },
   { name: "blank lines", rules: "Flying\n\nWhen this creature enters, draw a card.\n\nScry 2.", flavor: null },
   { name: "modal bullets", rules: "Choose one —\n• Destroy target artifact.\n• Destroy target enchantment.\n• Target player draws two cards.", flavor: null },
