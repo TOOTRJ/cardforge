@@ -478,6 +478,24 @@ describe("landscape renders", () => {
   });
 });
 
+describe("a centred footer's © slot (TODO 4.10a)", () => {
+  it("is laid out by ONE shared function in both renderers, and takes the border mark's place", () => {
+    // The same call but for each renderer's name of the footer text.
+    expect(BAKE).toContain('copyrightSlotLayout(layout, masterKey, brandMark ? { kind: "display" } : { kind: "download", footerText: watermarkText })');
+    expect(PREVIEW).toContain('copyrightSlotLayout(layout, masterKey, brandMark ? { kind: "display" } : { kind: "download", footerText: footerWatermark })');
+    for (const src of [BAKE, PREVIEW]) {
+      // Never beside a collector line; the border mark only without a slot.
+      expect(src).toMatch(/const copyright = collector\s+\? null\s+: copyrightSlotLayout\(/);
+      expect(src).toContain('brandMark && collector?.mark.kind !== "brand" && !copyright');
+      expect(src).toContain('copyright?.kind === "brand"');
+      expect(src).toContain('copyright?.kind === "text"');
+      // The mark's two inks come from the shared module, not a literal.
+      expect(src).toContain("BRAND_MARK_LIGHT_SHADOW");
+      expect(src).toContain('ink.kind === "flat" ? ink.colorHex : BRAND_MARK_LIGHT_INK');
+    }
+  });
+});
+
 describe("edge-to-edge and full-art pieces (TODO 3.23 / 3.24)", () => {
   it("resolve from the same shared helpers in both renderers", () => {
     // The basic-land symbol slot, the footer on the art and the split type

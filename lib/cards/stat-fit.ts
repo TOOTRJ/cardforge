@@ -74,6 +74,19 @@ export function statWidthEm(value: string, font?: SlotFace): number {
   return units / face.unitsPerEm;
 }
 
+/** The kerning both renderers apply inside a value's run, in em of its
+ *  size (negative when its pairs pull in) — in the face named `font`. The
+ *  bake moves an `endKerned` slot's box by it (StatSlot.endKerned). */
+export function statKernEm(value: string, font?: SlotFace): number {
+  const face = metricsOf(font);
+  const chars = Array.from(value);
+  let kern = 0;
+  chars.forEach((ch, i) => {
+    if (i > 0) kern += face.statKerning[chars[i - 1] + ch] ?? 0;
+  });
+  return kern / face.unitsPerEm;
+}
+
 /**
  * How far a value's ink reaches left and right of the centre of the box it
  * is centred in, in em — the further of the two renderers on each side.
@@ -119,6 +132,7 @@ export function fitStatSizePct(
   orientation: CardOrientation = "portrait",
   upsideDown = false,
 ): number {
+  if (slot.align === "end" && !upsideDown) return fitEndAlignedStatSizePct(slot, value, orientation);
   const ink = statInkEm(value, slot.font);
   const [inkLeft, inkRight] = upsideDown ? [ink.right, ink.left] : [ink.left, ink.right];
   const span = statInkSpan(slot);
@@ -130,6 +144,46 @@ export function fitStatSizePct(
   const reachRight = inkRight + dx;
   const roomLeft = centre - span.left;
   const roomRight = span.right - centre;
+  const fits = (size: number) => size * reachLeft <= roomLeft && size * reachRight <= roomRight;
+  if (fits(slot.sizePct)) return slot.sizePct;
+  let largest = slot.sizePct;
+  if (reachLeft > 0) largest = Math.min(largest, roomLeft / reachLeft);
+  if (reachRight > 0) largest = Math.min(largest, roomRight / reachRight);
+  const floor = ptToPct(RULES_TEXT.hardFloorPt, orientation);
+  return Math.min(slot.sizePct, Math.max(floor, largest));
+}
+
+/**
+ * fitStatSizePct for a value set against its rect's RIGHT edge
+ * (StatSlot.align "end": the 1997 frame's P/T, TODO 4.10a — the prints end
+ * every value at the same px and let a two-digit one grow to the left; the
+ * transform front's reverse P/T). The value's box ends at the rect's right
+ * edge in both renderers — Satori's is the advance sum A with the kerned run
+ * K inked from its left, the browser's is K — so the ink reaches
+ * max(A, K) − lsb to the left of that edge and max(K − A, 0) − rsb past it.
+ * The left limit is the slot's span (`inkSpanPct`, else the rect); the right
+ * one binds only where a profile measured a span (a plate-less slot without
+ * one has no face to run off: the reverse P/T keeps its size).
+ */
+function fitEndAlignedStatSizePct(slot: StatSlot, value: string, orientation: CardOrientation): number {
+  const face = metricsOf(slot.font);
+  const chars = Array.from(value);
+  if (chars.length === 0) return slot.sizePct;
+  let advance = 0;
+  let kern = 0;
+  chars.forEach((ch, i) => {
+    advance += glyph(ch, face)[0];
+    if (i > 0) kern += face.statKerning[chars[i - 1] + ch] ?? 0;
+  });
+  const lsb = glyph(chars[0], face)[1];
+  const rsb = glyph(chars[chars.length - 1], face)[2];
+  const dx = slot.valueDxEm ?? 0;
+  const reachLeft = (Math.max(advance, advance + kern) - lsb) / face.unitsPerEm - dx;
+  const reachRight = (Math.max(kern, 0) - rsb) / face.unitsPerEm + dx;
+  const span = statInkSpan(slot);
+  const edge = (slot.rect.leftPct + slot.rect.widthPct) / 100;
+  const roomLeft = edge - span.left;
+  const roomRight = slot.inkSpanPct ? span.right - edge : Number.POSITIVE_INFINITY;
   const fits = (size: number) => size * reachLeft <= roomLeft && size * reachRight <= roomRight;
   if (fits(slot.sizePct)) return slot.sizePct;
   let largest = slot.sizePct;

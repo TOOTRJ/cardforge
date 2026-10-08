@@ -63,6 +63,7 @@ import {
   toneRegion,
   toneSilver,
   stripRiderKeys,
+  RETRO_GOLD_MSE,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
@@ -192,6 +193,9 @@ describe("Card Conjurer recipe", () => {
       "m20tokenartifacttext",
       "m20tokentall",
       "m20tokentext",
+      // The 1997 frame (TODO 4.10a; tests/unit/frames/retro-1997-importer.test.ts).
+      "retro",
+      "retroland",
       // The saga (TODO 4.21c; its own describe below).
       "saga",
       "split",
@@ -210,6 +214,9 @@ describe("Card Conjurer recipe", () => {
       expect(covered, template).toEqual([...plain, ...crowned].sort());
       for (const file of sourceFilesFor(def as never)) {
         // CC's img/black.png is the erased strip under the floating crown (4.6f).
+        // …and the one source that is this repo's own file: the MSE gold the
+        // 1997 gold frame is cut from (TODO 4.10a).
+        if (file === RETRO_GOLD_MSE) continue;
         expect(file, `${template}: ${file}`).toMatch(/^img\/(frames\/[\w/]+|black)\.(png|svg)$/);
       }
     }

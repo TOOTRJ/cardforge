@@ -147,7 +147,10 @@ describe("slotInk / footerInk", () => {
       const inked = Boolean(
         p.pt?.inkByColorKey || p.footer?.inkByColorKey || p.title.inkByColorKey || p.type.inkByColorKey,
       );
-      expect(inked, t).toBe(t === "agclassic" || t === "alphaland");
+      // The 1997 pair (TODO 4.10a): white ink with the prints' hard shadow on
+      // every key, as per-key entries — tests/unit/cards/retro-1997-profile
+      // .test.ts holds them.
+      expect(inked, t).toBe(t === "agclassic" || t === "alphaland" || t === "retro" || t === "retroland");
       if (!inked) {
         for (const k of keys) {
           if (p.pt) expect(slotInk(p.pt, k)).toEqual({ colorHex: p.pt.colorHex, shadowCss: p.pt.shadowCss });
