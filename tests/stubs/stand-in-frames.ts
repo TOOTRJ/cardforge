@@ -152,3 +152,25 @@ export async function serveStandInFrames(specs: readonly StandInSpec[]): Promise
     files,
   };
 }
+
+/** Stand-ins for the five colour-symbol IMAGES of the "original" symbol
+ *  style (TODO 4.10c: `agclassic`, `alphaland` — the real ones are Card
+ *  Conjurer's, in the frames bucket): a flat square per colour, which the
+ *  renderers round into a disc. */
+export const ORIGINAL_SYMBOL_STAND_INS: Record<string, StandInPlate> = {
+  "/frames/manaoriginal/w.png": { rgb: [248, 246, 216], width: 216, height: 216 },
+  "/frames/manaoriginal/u.png": { rgb: [193, 215, 233], width: 216, height: 216 },
+  "/frames/manaoriginal/b.png": { rgb: [186, 177, 171], width: 216, height: 216 },
+  "/frames/manaoriginal/r.png": { rgb: [228, 153, 119], width: 216, height: 216 },
+  "/frames/manaoriginal/g.png": { rgb: [163, 192, 149], width: 216, height: 216 },
+};
+
+/**
+ * Serve ONLY those five from a stubbed bucket, for a suite that bakes the
+ * 1993 pair from its git masters (read from disk, as before) with colour
+ * pips: without them the bake throws FrameAssetUnavailableError, as it must
+ * in production. Call in beforeAll; `restore` in afterAll.
+ */
+export function serveStandInSymbols(): Promise<StandInFrames> {
+  return serveStandInFrames([{ template: "agclassic", keys: [], pieces: ORIGINAL_SYMBOL_STAND_INS }]);
+}

@@ -1366,7 +1366,7 @@ function CardFace({
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
             cost={face.cost}
-            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect))}
+            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect), symbols)}
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
@@ -1385,7 +1385,7 @@ function CardFace({
         >
           <ManaCostGlyphs
             cost={face.cost}
-            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect))}
+            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect), symbols)}
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
@@ -2851,8 +2851,10 @@ function textDy(slot: TextSlot, drawnSizePct = slot.sizePct): CSSProperties {
 function costDisc(
   discPct: number,
   orientation: CardOrientation = "portrait",
+  /** The frame's symbol style (its pip gap); "modern" when omitted. */
+  symbols?: SymbolStyleSpec,
 ): { size: string; gap: string; px: number } {
-  const { discPx, gapPx } = costRowHdPx(discPct, orientation);
+  const { discPx, gapPx } = costRowHdPx(discPct, orientation, symbols);
   return { size: hdCqw(discPx, orientation), gap: hdCqw(gapPx, orientation), px: discPx };
 }
 

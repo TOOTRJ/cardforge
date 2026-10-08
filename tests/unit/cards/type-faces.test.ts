@@ -95,6 +95,9 @@ describe("the faces", () => {
 /** The 1997 frame (TODO 4.10a): the first profiles to name a body-face type
  *  line, a prefix and a centred footer. */
 const RETRO_1997: readonly string[] = ["retro", "retroland"];
+/** The 1993 frame (TODO 4.10c): a body-face type line, credit AND P/T — the
+ *  first profiles to name a face on a stat. */
+const ALPHA_1993: readonly string[] = ["agclassic", "alphaland"];
 
 describe("faceOf — every shipped profile resolves to what it drew", () => {
   it("each role on each template: the face its renderers' literals named", () => {
@@ -106,37 +109,41 @@ describe("faceOf — every shipped profile resolves to what it drew", () => {
         // The 1997 pair sets its type line and artist line in MPlantin, their
         // printed face (TODO 4.10a).
         const retroBody = RETRO_1997.includes(template) && (role === "typeLine" || role === "footer");
-        const want = retroBody || (role === "footer" && !profile.footer) ? "body" : BEFORE[role];
+        // …and the 1993 pair those two and its P/T (TODO 4.10c).
+        const alphaBody = ALPHA_1993.includes(template) && (role === "typeLine" || role === "footer" || role === "stat");
+        const want = retroBody || alphaBody || (role === "footer" && !profile.footer) ? "body" : BEFORE[role];
         expect(faceOf(profile, role).id, `${template} ${role}`).toBe(want);
         checked += 1;
       }
       // …and every stat slot a role does not name.
       for (const slot of [profile.pt, profile.loyalty, profile.defense, profile.reversePt, profile.secondFace?.pt]) {
-        if (slot) expect(slotFace(slot).id, `${template} stat`).toBe("display");
+        if (slot) expect(slotFace(slot).id, `${template} stat`).toBe(ALPHA_1993.includes(template) ? "body" : "display");
       }
       for (const slot of [profile.adventure?.title, profile.adventure?.type]) {
         if (slot) expect(slotFace(slot).id, `${template} adventure`).toBe("display");
       }
       // The faces a render registers for it: the display face — and the
       // body face where the profile has a chapter rail (its numerals).
-      expect(facesOf(profile), template).toEqual(profile.chapters || RETRO_1997.includes(template) ? ["display", "body"] : ["display"]);
+      const body = profile.chapters || RETRO_1997.includes(template) || ALPHA_1993.includes(template);
+      expect(facesOf(profile), template).toEqual(body ? ["display", "body"] : ["display"]);
     }
     expect(checked).toBe(FRAME_TEMPLATE_VALUES.length * FACE_ROLES.length);
     expect(FACE_ROLES).toHaveLength(Object.keys(BEFORE).length);
   });
 
-  it("no shipped profile names a face on a stat, a badge or a numeral (the fields are new)", () => {
+  it("no shipped profile names a face on a badge or a numeral, and only the 1993 pair on a stat — its P/T, MPlantin as printed (TODO 4.10c)", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(template);
       for (const slot of [profile.pt, profile.loyalty, profile.defense, profile.reversePt, profile.secondFace?.pt]) {
-        expect(slot?.font, template).toBeUndefined();
+        expect(slot?.font, template).toBe(ALPHA_1993.includes(template) && slot === profile.pt ? "body" : undefined);
       }
       expect(profile.loyaltyRows?.badgeFont, template).toBeUndefined();
       expect(profile.chapters?.badge.numeralFont, template).toBeUndefined();
       const retro = RETRO_1997.includes(template);
       // The 2003 pair prints the bare credit after its brush (TODO 4.10b).
       const modern = template === "modern" || template === "modernland";
-      expect(profile.footer?.prefix, template).toBe(retro ? "Illus. " : modern ? "" : undefined);
+      const illus = retro || ALPHA_1993.includes(template);
+      expect(profile.footer?.prefix, template).toBe(illus ? "Illus. " : modern ? "" : undefined);
       expect(profile.footer?.align, template).toBe(retro ? "center" : undefined);
     }
   });

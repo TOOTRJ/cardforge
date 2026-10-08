@@ -62,7 +62,13 @@ describe("the stored bake's pip, as data", () => {
       const gem = manaGemSpec("tap", 73, spec);
       expect(gem.suffix).toBe(spec.tapSuffix);
       expect(hasManaGlyph(spec.tapSuffix), spec.id).toBe(true);
-      expect(manaGemSpec("g", 73, spec)).toEqual(manaGemSpec("g", 73, modern));
+      // A colour symbol is the font's glyph on the disc — but in a style
+      // with its own drawings (TODO 4.10c: "original"), where it is that
+      // style's image of the whole pip.
+      const image = spec.symbolImages?.g;
+      expect(manaGemSpec("g", 73, spec)).toEqual(image ? { kind: "image", suffix: "g", path: image } : manaGemSpec("g", 73, modern));
+      // Generic, hybrid and utility symbols are the font's in every style.
+      for (const other of ["3", "x", "c", "wu", "2w", "s"]) expect(manaGemSpec(other, 73, spec)).toEqual(manaGemSpec(other, 73, modern));
     }
   });
 });

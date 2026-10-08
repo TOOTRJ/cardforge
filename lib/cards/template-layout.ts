@@ -74,6 +74,12 @@ import {
   SPLIT_TITLE_SIZE_PCT,
   SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
+  ALPHA_ARTIST_SIZE_PCT,
+  ALPHA_COPYRIGHT_SIZE_PCT,
+  ALPHA_COST_DISC_PCT,
+  ALPHA_PT_SIZE_PCT,
+  ALPHA_TITLE_SIZE_PCT,
+  ALPHA_TYPE_SIZE_PCT,
   MODERN_ARTIST_SIZE_PCT,
   MODERN_COPYRIGHT_SIZE_PCT,
   MODERN_COST_DISC_PCT,
@@ -1046,6 +1052,11 @@ export type CopyrightSlot = {
    *  prints start their © line under the brush): the mark's star and a
    *  clean download's footer text start here, and `centerPct` is not read. */
   startPct?: number;
+  /** The line's RIGHT end, % of the card's width (TODO 4.10c: the 1993
+   *  frame's slot is the black border under the frame, where the mark has
+   *  always sat at the right): the mark and a clean download's footer text
+   *  END here, and neither `centerPct` nor `startPct` is read. */
+  endPct?: number;
   /** Its baseline, % of the card's height. */
   baselinePct: number;
   /** The size of a clean download's footer text, a fraction of the card's
@@ -1291,6 +1302,14 @@ const ALPHA_BAND_INK: InkByColorKey = {
   b: ALPHA_INK.b,
   a: ALPHA_INK.a,
 };
+/** The 1993 frame's text offsets (TODO 4.10c), HD px — each line lowered
+ *  from its band's middle onto the prints' baseline (measured on real bakes
+ *  with the tool that read the prints: tests/unit/render/alpha-1993-bake). */
+const ALPHA_TITLE_DY_PX = 6;
+const ALPHA_TYPE_DY_PX = 9;
+/** The credit's and the P/T's boxes, % of the card's height. */
+const ALPHA_FOOTER_TOP_PCT = 89.886;
+const ALPHA_PT_TOP_PCT = 88.969;
 
 // ---------------------------------------------------------------------------
 // M15-era display sizes (TODO 4.20, layout v32). Every frame in
@@ -1527,60 +1546,97 @@ const M15SNOWLAND: FrameProfile = {
   },
 };
 
-// AgClassic — the 1993 Alpha/Beta frame. MSE's magic-agclassic art, re-cut
-// to the printed card's proportions and lines (scripts/build-alpha-frames.mjs;
-// HD px on 1500 × 2100, measured on 19 LEA/LEB scans): black border 80 px at
-// the sides, 89 above and 100 below the frame (its pinstripe = the outer
-// ~10 px, one dark line); title band 100–198; art opening 178–1319 ×
+// AgClassic — the 1993 Alpha/Beta frame (TODO 4.10c, layout v48: sizes,
+// footer and symbols on the prints; proof 3, 118 LEA / LEB scans). MSE's
+// magic-agclassic art, re-cut to the printed card's proportions and lines
+// (scripts/build-alpha-frames.mjs; HD px on 1500 × 2100): black border
+// 80 px at the sides, 89 above and 100 below the frame (its pinstripe = the
+// outer ~10 px, one dark line); title band 100–198; art opening 178–1319 ×
 // 219–1138; type band 1164–1247; text box 186–1318 × 1247–1855 (one outline,
 // then a bevel to the textured area 201–1300 × 1265–1835); P/T strip
-// 1855–1991. Rules are dark ink; the "Illus." line and the P/T share one line
-// in the strip, silver on every frame colour but white (ALPHA_INK); the name
-// and type line are dark but on the black frame and the artifact card
-// (ALPHA_BAND_INK). A colourless ARTIFACT paints the brown artifact card
-// (a.png, from MSE's acard.jpg) — every colourless card Alpha printed is one
-// (Sol Ring, Juggernaut) — and any other colourless card the grey c.png
-// (ccard.jpg).
+// 1855–1991. Masters and ink are the 2026-09-25 decisions, untouched.
+//
+// INK: rules are dark; the `Illus.` credit and the P/T share one line in the
+// strip, embossed silver on every frame colour but white (ALPHA_INK); the
+// name and type line are dark but on the black frame and the artifact card
+// (ALPHA_BAND_INK). The prints emboss every line — a dark body under a light
+// upper-left edge; ours is the face plus ALPHA_EMBOSS's dark edge 0.035 em
+// down and right. The name and the type line (flat dark on five keys of
+// seven) sit ON the prints' dark layer; the credit and the P/T (embossed on
+// six of seven) sit half that edge up and left of it, so the white frame's
+// flat ink and the other keys' dark edge are each within 1.5 px of it.
+//
+// SIZES (lib/cards/typography.ts ALPHA_*): name Beleren 72 px, type line
+// MPlantin 70, credit MPlantin 70, P/T MPlantin 84 set against its right
+// end, cost discs 72 px — all `fit: "measured"` where a line can run long.
+// The LEFT margins of the name and the type line stay the owner's (round 4,
+// "B2": the art window's edge, 178 px; the prints start the name at ~110 px
+// and the type line at 154).
+//
+// FOOTER: the printed credit, `Illus. <artist>`, mixed case (the prints say
+// `Illus. © <artist>`; PipGlyph prints no © of its own making). The 1993
+// card has ONE line in the strip, so the © slot (`copyrightSlot`) is the
+// black border under the frame, ending where the mark has always sat: the
+// pipglyph.com mark on display, a clean download's footer text there — on
+// main that text was set at the END of the credit line, in its face.
+//
+// SYMBOLS (4.24): `symbolStyle: "original"` — flat 72 px discs 84 px apart,
+// the five colour symbols as 1993 drew them (frames-bucket images), the
+// tilted-T tap.
+//
+// A colourless ARTIFACT paints the brown artifact card (a.png, from MSE's
+// acard.jpg) — every colourless card Alpha printed is one (Sol Ring,
+// Juggernaut) — and any other colourless card the grey c.png (ccard.jpg).
+/** The 1993 frame's © slot: the black border under the frame. */
+const ALPHA_COPYRIGHT: CopyrightSlot = {
+  centerPct: 50,
+  // The mark's right end where the border mark sat (3.5 % in from the edge).
+  endPct: 96.5,
+  // On the 100 px black band under the frame (rows 2000–2100): the mark's
+  // text on the row the border mark printed it on.
+  baselinePct: (2059 / 2100) * 100,
+  sizePct: ALPHA_COPYRIGHT_SIZE_PCT,
+  font: "body",
+  // A clean download's footer text: the strip's silver, on black.
+  colorHex: ALPHA_SILVER_MID,
+  maxWidthPct: 0.62,
+};
 const AGCLASSIC: FrameProfile = {
   flavorDivider: false,
   label: "Alpha (1993)",
   artifactMasterKeys: { c: "a" },
-  // The mark's ink centred in the 100 px black band below the frame.
-  brandMark: { rightPct: 3.5, bottomPct: 1.5 },
-  // Owner review, round 4: name and pips 15 % smaller than round 3 (54 px
-  // discs, were 63; the print's are ~69 px but pale and thin-lined).
-  costSizePct: 0.0357,
-  // Pip discs centred on the name's caps (~140 px; 2 px above the rect's
-  // middle at HD).
-  costDy: -0.0013,
+  symbolStyle: "original",
+  costSizePct: ALPHA_COST_DISC_PCT,
+  // The discs' row on the prints (142.5 px): a pixel under the band's middle.
+  costDy: 1 / 1500,
   // Covers the 178–1319 × 219–1138 opening with ~6 px under the bevel.
   artSlot: { topPct: 10.15, leftPct: 11.45, widthPct: 76.9, heightPct: 44.3 },
-  // Round 4 (owner's pick "B2"): the name starts on the type line's left
-  // margin, the art window's edge (~178 px; it started at ~114), with Beleren
-  // caps ~41 px (were 48; the print's lighter face has ~57 px caps but a
-  // ~34 px x-height, ours ~30). Caps centred at ~141 px. The rect still ends
-  // where the cost pips end (~1362 px, 90.8 %W), so a long name ellipsises
-  // before them.
+  // The band: from the owner's left margin (178 px) to the last cost disc's
+  // end (1365 px on the prints), centred on the discs' row (142.5 px). The
+  // name's baseline is the prints' 171.5 px: `dy` lowers the text alone.
   title: {
-    rect: { topPct: 4.36, leftPct: 11.87, widthPct: 78.93, heightPct: 4.8 },
-    sizePct: 0.0391,
+    rect: { topPct: 4.386, leftPct: 11.87, widthPct: 79.13, heightPct: 4.8 },
+    sizePct: ALPHA_TITLE_SIZE_PCT,
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    fit: "measured",
+    dy: ALPHA_TITLE_DY_PX / 1500,
     // Embossed silver where the dark ink all but vanishes (the black frame,
     // the artifact card).
     inkByColorKey: ALPHA_BAND_INK,
   },
-  // Starts on the name's left margin (~178 px, the art window's edge — the
-  // owner moved it in from the print's ~157) with caps centred at ~1198 px
-  // (the type band's middle); the set symbol ends ~4 px inside the text
-  // box's outline (1314 vs 1318).
+  // MPlantin, the printed face: baseline 1227.4 px on the prints, starting
+  // on the name's left margin (the owner's; the prints' 154 px). The band is
+  // the type band's middle for the set symbol, which ends ~4 px inside the
+  // text box's outline (1314 vs 1318); `dy` lowers the text alone.
   type: {
     rect: { topPct: 55.1, leftPct: 11.87, widthPct: 75.73, heightPct: 4.0 },
-    sizePct: 0.03,
+    sizePct: ALPHA_TYPE_SIZE_PCT,
     colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
+    font: "body",
+    fit: "measured",
+    dy: ALPHA_TYPE_DY_PX / 1500,
     inkByColorKey: ALPHA_BAND_INK,
   },
   // Inside the textured area with ~30 px at the sides, ~20 above, ~12 below.
@@ -1591,29 +1647,35 @@ const AGCLASSIC: FrameProfile = {
     vAlign: "start",
     font: "body",
   },
-  // Artist line and P/T share one line in the strip under the text box, like
-  // the printed "Illus. ©" line: caps centred at ~1920 px, starting ~157 px.
+  // The credit and the P/T share one line in the strip under the text box:
+  // `Illus. <artist>` from 152.5 px, baseline 1949 px; its box ends before
+  // the widest P/T's ink (1150 px), so a long credit takes its "…" there.
   footer: {
-    rect: { topPct: 89.9, leftPct: 10.4, widthPct: 52, heightPct: 3.0 },
-    sizePct: 0.016,
+    rect: { topPct: ALPHA_FOOTER_TOP_PCT, leftPct: 10.09, widthPct: 66.58, heightPct: 4.0 },
+    sizePct: ALPHA_ARTIST_SIZE_PCT,
     colorHex: INK_DARK,
-    uppercase: true,
-    letterSpacingEm: 0.05,
-    font: "display",
+    prefix: "Illus. ",
+    font: "body",
     inkByColorKey: ALPHA_INK,
   },
-  // Official 1993 cards print P/T on the frame strip BELOW the text box, not
-  // on a plate: digits centred at ~1921 px (0.45 of the 1855–2000 strip,
-  // pinstripe included) and ~88 %W, under the text box's right corner.
-  // The rect runs on to 1432 px, past the pinstripe's dark line (~1405 on
-  // alphaland, ~1410 here), so a long value (`*+1/*+1`) shrinks to the
-  // 1236–1404 px it can use centred on 1320 (TODO 4.31); `90/90` fits.
+  copyrightSlot: ALPHA_COPYRIGHT,
+  // The 1993 cards print the P/T on the strip BELOW the text box, not on a
+  // plate, in the credit's Plantin, set against a fixed RIGHT end: a
+  // one-digit pair's ink covers 1270–1378 px (16 white prints) and a
+  // two-digit one grows to the LEFT at the same size (DRK #30 10/10, ICE
+  // #89 11/11, ALL #112 10/4 end their ink at 1383–1392 px). The rect's
+  // right edge is the pen's end (1380.6 px: MPlantin's digits are 0.552 em
+  // wide with a 0.065 em bearing). The strip is free from the credit's box
+  // (1150 px) to the pinstripe's dark line (~1405 px): a value whose ink
+  // would pass 1160 px shrinks.
   pt: {
-    rect: { topPct: 88.74, leftPct: 80.5, widthPct: 15, heightPct: 5.6 },
-    inkSpanPct: { leftPct: 82.4, rightPct: 93.6 },
-    sizePct: 0.04,
+    rect: { topPct: ALPHA_PT_TOP_PCT, leftPct: 78.04, widthPct: 14, heightPct: 5.5 },
+    align: "end",
+    endKerned: true,
+    inkSpanPct: { leftPct: 77.33, rightPct: 93.6 },
+    sizePct: ALPHA_PT_SIZE_PCT,
     colorHex: INK_DARK,
-    weight: 700,
+    font: "body",
     inkByColorKey: ALPHA_INK,
   },
 };
@@ -2588,11 +2650,14 @@ const ALPHALAND: FrameProfile = {
   artifactMasterKeys: undefined,
   // The land's brown is neither the black frame nor the artifact card.
   title: { ...AGCLASSIC.title, inkByColorKey: undefined },
-  // 5 px lower than agclassic's, clear of the wider art border (caps centred
-  // at ~1204 px, as "Land" prints on the basics).
+  // The band 5 px lower than agclassic's, clear of the wider art border (the
+  // set symbol with it); "Land" prints on the basics a pixel under the
+  // other cards' type line (baseline 1228 px), so the text's `dy` gives
+  // back four of the five.
   type: {
     ...AGCLASSIC.type,
     rect: { ...AGCLASSIC.type.rect, topPct: 55.35 },
+    dy: (ALPHA_TYPE_DY_PX - 4) / 1500,
     inkByColorKey: undefined,
   },
   footer: { ...AGCLASSIC.footer!, inkByColorKey: ALPHA_LAND_INK },

@@ -226,6 +226,11 @@ into `.frames-build/` — 44 templates today (`CC_TEMPLATES` in
   region onto the original cards of 1996–2003, gold from the MSE artwork
   cut with the same edge map (see
   [The 1997 frame](#the-1997-frame-410a-layout-v46));
+- the 1993 frame's five colour symbols (4.10c, layout v48): `manaoriginal`
+  — the creator's old mana-symbol set, one SVG per colour holding the whole
+  pip, rasterised at 216 px (a `CC_RIDERS` set, like the transform icons;
+  see [The 1993 frame](#the-1993-frame-410c-layout-v48)). The frame's
+  MASTERS stay the MSE artwork in git;
 - the 2003 frame from '8th Edition' (4.10b, layout v47): `modern` and
   `modernland` — the pack's drawing RE-CUT with one piecewise-linear map per
   axis and TONED through its own five masks onto the prints of 2004–2014,
@@ -2445,6 +2450,110 @@ regions, the tone rule, provenance, the published masters),
 `tests/unit/render/modern-2003-bake.test.tsx` (baselines, the brush, the
 shadow, the slot and the print path on real bakes at 750 and HD) and its
 preview twin under `components/`.
+
+### The 1993 frame (4.10c, layout v48)
+
+Era step E6 (design 2026-10-06; proof 3, 2026-10-08): `agclassic` and
+`alphaland` at the sizes, faces and rows of the ALPHA and BETA prints. A
+correction of the text and the symbols only — the masters (MSE's
+magic-agclassic, in git), the art slot, the rules box and the 2026-09-25 ink
+do not move. HD px throughout.
+
+**Proof 3** measured what the design had not: 118 black-bordered Alpha and
+Beta scans (and 105 of twelve later sets on the frame, for the symbols, the
+tap and the footer), each registered on the master by its own top and right
+frame edges (the prints' frame box: 79.6–1422.8 × 88.3–1999.4 px, ± 1–2).
+Lettering by the era design's overlay (the printed ink against the same
+string in a candidate face, unstretched); cost discs by a circle fitted to
+each disc's outer edge — the tool reads our own flat 72 px disc as
+71.6–72.5 px. Every printed line is EMBOSSED, a dark body under a light
+upper-left edge; "dark layer" is the dark ink, the only part the white frame
+shows.
+
+| slot | face, HD px | on the prints (median ± sd, n) | print − ours |
+|---|---|---|---|
+| name | Beleren 72, measured | Goudy Medieval ≈ 84: capitals 57.5, x-height 33.5, baseline 171.5 (20 white prints); Beleren overlaps that ink best at 73.7 ± 4.3 | baseline − 0.4; starts at the owner's 178 px margin (the prints: ~110) |
+| cost | flat discs 72, a 12 px gap (`symbolStyle: "original"`) | 72.6 ± 1.0 across (166 discs), row 142.5 ± 1.3, 83.2 ± 1.3 apart, the last ending at 1364.9 ± 1.0; no shadow | diameter + 0.2…0.6, row + 0.1, end 0.0, pitch − 0.8 |
+| type line | MPlantin 70, measured | MPlantin 70.0 ± 0.2 (16; overlap error 0.43, Beleren 0.61), baseline 1227.4 ± 0.7 | size 0.0, baseline − 0.4; starts at 178 px (the prints: 154) |
+| rules | MPlantin 76 (the shared ladder) | not measured | — |
+| credit | `Illus. <artist>`, MPlantin 70, mixed case | `Illus. © <artist>`, MPlantin 69.2 ± 0.3 (16), dark layer on 1950.4 ± 0.9 from 153.8 ± 2.2 | size − 0.8, pen + 1.0, baseline + 1.3 (flat ink) / − 1.1 (the dark edge) |
+| P/T | MPlantin 84, set against its right end (`align: "end"`, `endKerned`) | MPlantin 84.5 ± 0.4 (16; error 0.31, Beleren 0.49), dark layer on 1950.7 ± 1.1; one digit a side covers 1270–1378 px, and DRK #30 10/10, ICE #89 11/11, ALL #112 10/4 grow to the LEFT (ink ending 1383–1392) | size + 0.5, baseline + 1.5 / − 1.4, right end + 3.5 |
+| the © slot | the mark at its standard em (39 px) · a clean download's footer text, MPlantin 39, silver | no second line before Fallen Empires | — |
+
+- **One line of emboss.** Ours is the face plus `ALPHA_EMBOSS`'s dark edge
+  0.035 em down and right (2.45 px at 70, 2.94 at 84). The name and the type
+  line — flat dark on five keys of seven — sit ON the dark layer. The credit
+  and the P/T — embossed on six of seven — sit HALF that edge above and left
+  of it: the white frame's flat ink is then 1.2–1.5 px short of the print's
+  and the other keys' dark edge 1.2–1.5 px past it.
+- **Left margins.** The name and the type line keep the owner's round-4
+  margin, the art window's edge (178 px); the prints start the name at
+  ~110 px and the type line at 154. The credit starts where the prints' does.
+- **The credit** is the printed one, without its ©: Alpha → Antiquities
+  print `Illus. © <artist>`, Legends and The Dark `Illus. © 1994 <artist>`,
+  Fallen Empires on `Illus. <artist>` over a Wizards line. PipGlyph prints
+  neither a Wizards line nor a © of its own making.
+- **The © slot is the border.** A 1993 card has one line in its strip, so
+  `copyrightSlot` (with `endPct`: the line ENDS there) is the black band
+  under the frame, ending where the border mark has always ended (3.5 % in):
+  the mark on display — its pixels in that band are main's, byte for byte —
+  and a paid clean download's footer text in MPlantin, in the strip's
+  silver. On main that text was set at the END of the credit line, in the
+  credit's face; at 70 px it would run into the P/T.
+- **The symbols** (`symbolStyle: "original"`, 4.24): the five colour symbols
+  are the 1993 DRAWINGS — the ringed twelve-ray sun; the drop, skull, flame
+  and tree drawn to fill their pale discs — as IMAGES, Card Conjurer's
+  `img/manaSymbols/old/old{w,u,b,r,g}.svg` rasterised at 216 px into the
+  frames bucket (`manaoriginal/<letter>.png`; `CC_RIDERS.manaoriginal`,
+  provenance in `lib/cards/frame-sources.json`; never git). mana-font has
+  only the sun. `SymbolStyleSpec.symbolImages` names them,
+  `manaGemSpec()` returns `{ kind: "image", path }` and both renderers draw
+  the whole pip in the disc's box — the element an owner's custom pip uses,
+  and an owner's own pip still wins. The bake reads them synchronously:
+  `frameAssetPathsFor()` warms exactly the ones the card's text names
+  (`symbolImagePathsIn`: cost, rules text, second face, structured face) —
+  one missing from the bucket fails the bake, as a master does. Generic
+  numbers, hybrids, `{C}`, `{X}` and `{T}` stay the font's glyph on our
+  disc; `{T}` is the tilted T (mana-font `tap-3ed`). Discs are flat in the
+  cost and in the rules text, and the gap between two cost discs is the
+  style's (`costGapDiscs`: 12 px here, 0.12 of the disc on every other
+  style — `costPipGapPx`, read by the bake's cost row, the preview's and the
+  name's room).
+- **Which sets print what** (by eye on 14 sets): the old sun on LEA, LEB,
+  2ED, ARN, ATQ, 3ED, LEG, DRK, FEM — Fourth Edition 1995 prints today's;
+  the drop, skull, flame and tree are today's shapes throughout (Alpha, Beta
+  and Unlimited a rougher skull). `{T}`: LEA, LEB, 2ED, ARN and ATQ spell
+  the word "Tap"; the tilted T is Revised's (3ED, LEG, DRK, FEM); the turned
+  arrow from Fourth Edition. Inline mana in the rules text of 1993–94 is the
+  bare drawing with no disc — not built (the inline disc stays 0.785 em).
+
+**Rollout.** `"sweep"`, template-scoped to the pair
+(`ALPHA_1993_LAYOUT_VERSION`, the ONE constant `CARD_LAYOUT_VERSION` reads),
+no card predicate. Production, anonymous read 2026-10-08: 4 public cards on
+`agclassic` (white, red, the artifact `a`, a colourless foil on `c`), none
+on `alphaland` — each re-bakes once (the automatic re-bake, after the
+deploy), after the owner's before / after sheet and `frames:promote` (ten
+objects: the five PNGs and their WebP siblings). Not verification-neutral;
+no tick exists on the pair — first ticks follow the merge. Imports: a
+black-bordered printing of 1993–94 (LEA, LEB, ARN, ATQ, LEG, DRK) is
+`exact`; a white-bordered one names the `border` gap (4.30); a printing
+released from Fallen Empires on is `nearest` — the `two-line-footer` gap,
+`ALPHA_TWO_LINE_FOOTER_FROM` = 1994-11-01, TODO 4.10h (a smaller credit over
+a second line, and from Fourth Edition today's sun and the turned-arrow
+tap).
+
+Not done here: the generic numeral's printed look (a Plantin numeral on a
+halftone disc), the rules text's printed size, the 1993–94 inline symbols without discs, the Alpha
+bevel lighting (4.31), Card Conjurer's Legends multicolour for `m`, the
+white border (4.30).
+
+Tests: `tests/unit/cards/alpha-1993-profile.test.ts` (sizes, faces, the
+credit, the P/T, the © slot, the symbol style, the bump, imports),
+`tests/unit/render/alpha-1993-bake.test.tsx` (baselines, the emboss, the
+cost row, image pips and their warm-up, an owner's pip, the slot — on real
+bakes at 750 and HD — and the published symbols),
+`tests/unit/frames/alpha-1993-importer.test.ts` (the recipe, provenance) and
+the preview twin under `components/`.
 
 ### Printed pieces a card switches on
 
@@ -5081,7 +5190,8 @@ frame's era decides are DATA on its profile; no renderer names them.
   its left end (`startPct`: the 2003 frame, TODO 4.10b). On display it
   holds the pipglyph.com mark (which then leaves the border: `brandMark`
   is not read), on a paid clean download the card's footer text, or
-  nothing. A profile with a centred footer and NO slot drops a paid
+  nothing. The 1993 pair's slot IS the border (`endPct`: the line ends
+  where the border mark ended, TODO 4.10c): its strip has one line. A profile with a centred footer and NO slot drops a paid
   viewer's footer text: declare both together; a profile WITH a slot never
   prints that text at the end of line 1.
 - **The symbol style** — `FrameProfile.symbolStyle`
@@ -5089,7 +5199,10 @@ frame's era decides are DATA on its profile; no renderer names them.
   shadow, the modern tap — every profile that names none), `"1997"`
   (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`) and `"2003"`
   (a COST disc with a black shadow down and a little to the left, flat pips in the rules
-  text, the modern tap: `modern`, `modernland`). Both renderers and both
+  text, the modern tap: `modern`, `modernland`) and `"original"` (flat discs
+  12 px apart, the five colour symbols as the 1993 drawings — frames-bucket
+  IMAGES through `symbolImages` — and mana-font's `tap-3ed`: `agclassic`,
+  `alphaland`). Both renderers and both
   shadow models (the rules layout's inline pip, the cost row) read the
   resolved spec — an inline pip through `inlineSymbolStyle`, which drops
   the shadow where a style shadows the cost row alone. A style is a CORRECTION of a frame, never a per-card switch.

@@ -584,6 +584,25 @@ Rules and gotchas:
   the COST discs (66 px; 6 px down, 2 px left) and leaves rules pips flat
   (`inlineSymbolStyle`: an inline pip never reads a style's shadow
   directly). `docs/FRAMES.md` "The 2003 frame".
+- The 1993 frame (`agclassic`, `alphaland`; TODO 4.10c, layout v48) is the
+  ALPHA / BETA printing (proof 3: 118 scans), text and symbols only — its
+  MSE masters stay in git, untouched. Sizes are `ALPHA_*` in
+  `lib/cards/typography.ts`: the name in Beleren, the type line, the credit
+  and the P/T in MPlantin (their printed face; no font file is added), the
+  P/T set against its RIGHT end as 1997's. The credit is the printed
+  `Illus. <artist>` — never a © of our making, never a Wizards line — on ONE
+  line with the P/T, so the © slot is the black border under the frame
+  (`copyrightSlot.endPct`: the mark where it always sat, a clean download's
+  `footer_text` there). `symbolStyle: "original"`: flat discs with their own
+  gap (`costGapDiscs`), and the five COLOUR symbols as the 1993 drawings —
+  frames-bucket IMAGES (`manaoriginal/*`, Card Conjurer's: never git), a
+  whole pip each (`symbolImages` → `manaGemSpec` `kind: "image"`), which
+  `frameAssetPathsFor()` warms through `symbolImagePathsIn()` (an unwarmed
+  one bakes as a transparent pixel; a missing one fails the bake); an
+  owner's custom pip still wins. A test that bakes the pair offline with a
+  colour pip serves `serveStandInSymbols()`. Imports from Fallen Empires on
+  are `nearest` (the `two-line-footer` gap). `docs/FRAMES.md` "The 1993
+  frame".
 - Text alignment (TODO 4.21e): `frame_style.rulesAlign` (`"center"` or
   absent = left; the form and an edit's patch also say `"left"`, never
   stored) — a card's own choice on EVERY frame with plain rules boxes

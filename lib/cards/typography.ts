@@ -263,6 +263,57 @@ export const MODERN_COPYRIGHT_SIZE_PCT = 32 / 1500;
  *  the left (symbol style "2003", lib/cards/symbol-style.ts). */
 export const MODERN_COST_DISC_PCT = 66 / 1500;
 
+// ---------------------------------------------------------------------------
+// The 1993 frame's sizes (TODO 4.10c, layout v48: `agclassic`, `alphaland`)
+// — per-era constants like the two above, print-matched for the faces the
+// repo has (no font file was added: the prints set names in Goudy Medieval,
+// ours is Beleren Bold; the type line, the credit and the P/T are a Plantin,
+// ours MPlantin). HD px on 118 black-bordered Alpha and Beta prints
+// (Scryfall scans registered on the frame's top and right edges; proof 3,
+// 2026-10-08), EVEN, so the 750 px bake draws exactly half. "Dark layer" =
+// the print's dark ink: the lettering is embossed, a dark body under a
+// light upper-left edge — on the white frame only the dark body shows.
+//   • the name — Goudy Medieval at 84 px: capitals 57.5 px (rows 114–171.5
+//     ± 1.0 on 20 white-frame prints), x-height 33.5 px, baseline 171.5 px.
+//     Beleren Bold overlaps that ink best at 73.7 ± 4.3 px (12 prints; the
+//     1997 frame's same 84 px Medieval took 71): 72 px (capitals 51);
+//   • the type line — MPlantin at 70.0 ± 0.2 px (16 white prints, overlap
+//     error 0.43; Beleren 0.61), baseline 1227.4 ± 0.7 px;
+//   • the credit — `Illus. © <artist>` in MPlantin at 69.2 ± 0.3 px (16
+//     white prints; 69.4–69.7 on red, green, artifact and land), baseline
+//     1950.4 ± 0.9 px, starting at 153.8 ± 2.2 px: 70 px;
+//   • the P/T — MPlantin at 84.5 ± 0.4 px (16 white prints, overlap error
+//     0.31; Beleren Bold 0.49 at 78 px), baseline 1950.7 ± 1.1 px, set
+//     against its RIGHT end: a one-digit pair's ink covers 1270–1378 px
+//     and DRK #30 10/10, ICE #89 11/11, ALL #112 10/4 grow to the left
+//     (ink ending 1383–1392 px): 84 px;
+//   • the cost — flat discs 72.6 ± 1.0 px across (166 discs by a circle
+//     fitted to the outer edge; generic 72.1, colour 73.1), centred on row
+//     142.5 ± 1.3, 83.2 ± 1.3 px apart, the last one ending at 1364.9 ±
+//     1.0 px: 72 px with a 12 px gap (symbol style "original").
+// ---------------------------------------------------------------------------
+
+/** The 1993 frame's name — 72 px at HD (Beleren Bold). */
+export const ALPHA_TITLE_SIZE_PCT = 72 / 1500;
+
+/** The 1993 frame's type line — 70 px at HD (MPlantin). */
+export const ALPHA_TYPE_SIZE_PCT = 70 / 1500;
+
+/** The 1993 frame's P/T — 84 px at HD (MPlantin). */
+export const ALPHA_PT_SIZE_PCT = 84 / 1500;
+
+/** The 1993 frame's `Illus.` credit — 70 px at HD (MPlantin). */
+export const ALPHA_ARTIST_SIZE_PCT = 70 / 1500;
+
+/** The 1993 frame's © slot, on the black border under the frame: the
+ *  pipglyph.com mark at its standard em (39 px at HD) and a clean
+ *  download's footer text at the same size (MPlantin). */
+export const ALPHA_COPYRIGHT_SIZE_PCT = 39 / 1500;
+
+/** The 1993 frame's mana-cost disc — 72 px at HD (36 at the 750 px bake),
+ *  flat, 84 px apart (symbol style "original", lib/cards/symbol-style.ts). */
+export const ALPHA_COST_DISC_PCT = 72 / 1500;
+
 /** A display size given as a fraction of a PORTRAIT card's width, as a
  *  fraction of the width of a card in `orientation`: the same absolute size
  *  on the physical card (× 5/7 on a landscape card, whose width is the

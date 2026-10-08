@@ -270,7 +270,8 @@ describe("footerArtistLine — the artist line both renderers print (TODO 4.8.0)
     // bare credit after a brush (TODO 4.10b).
     for (const template of FRAME_TEMPLATE_VALUES) {
       const footer = getFrameProfile(template).footer;
-      const illus = template === "retro" || template === "retroland";
+      // …and the 1993 pair's, the same printed word (TODO 4.10c).
+      const illus = ["retro", "retroland", "agclassic", "alphaland"].includes(template);
       const bare = template === "modern" || template === "modernland";
       expect(footerArtistLine(footer, "Ada"), template).toBe(illus ? "Illus. Ada" : bare ? "Ada" : "Art: Ada");
     }

@@ -111,7 +111,9 @@ describe("foil finish — real bakes", () => {
     const art = await splitArt();
     // Off-centre focal point + zoom: the mask must reproduce object-fit:
     // cover + object-position + transform: scale exactly.
-    const over = { artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
+    // (A generic cost: Alpha's colour symbols are frames-bucket images
+    // since TODO 4.10c, and this bake reads its frame from disk.)
+    const over = { cost: "{3}", artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
     const [regular, foil] = [await bakeWith(mod, card("agclassic", "regular", over)), await bakeWith(mod, card("agclassic", "foil", over))];
     const p = getFrameProfile("agclassic");
 
@@ -179,7 +181,7 @@ describe("foil finish — real bakes", () => {
   it("is purely additive: every other finish never touches it, and foil minus the sheen IS the regular bake", async () => {
     const real = await import("@/lib/render/card-image");
     const art = await splitArt();
-    const over = { artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
+    const over = { cost: "{3}", artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
     const bakes = async (mod: typeof real) => ({
       regular: await bakeWith(mod, card("agclassic", "regular", over)),
       etched: await bakeWith(mod, card("agclassic", "etched", over)),

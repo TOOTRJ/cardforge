@@ -295,8 +295,10 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     // Card Conjurer's borderless plate (4.32), 274 × 140 at 1146/1861 px.
     ["m15borderless", "pt", 1188, 1394],
     ["m15borderlessartifact", "pt", 1188, 1394],
-    ["agclassic", "pt", 1236, 1404],
-    ["alphaland", "pt", 1236, 1404],
+    // The 1993 frame (TODO 4.10c): the strip from the credit's box to the
+    // pinstripe's dark line.
+    ["agclassic", "pt", 1160, 1404],
+    ["alphaland", "pt", 1160, 1404],
     ["m15pw", "loyalty", 1239, 1389],
     // The 1997 frame (TODO 4.10a): from the artist line's box to the outer bevel.
     ["retro", "pt", 1162, 1413],

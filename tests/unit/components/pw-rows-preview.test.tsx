@@ -246,9 +246,10 @@ describe("CardPreview — the name before a detached cost", () => {
           <CardPreview title="Serra Angel" cost="{3}{W}{W}" cardType="creature" colorIdentity={["white"]} frameStyle={{ template }} />,
         ).container.querySelector('span[title="Serra Angel"]') as HTMLElement
       ).style.maxWidth;
-    // (modern's detached cost fits its name; agclassic's inline one is the
-    // old path. The 1997 frame is measured since TODO 4.10a.)
-    expect(serra("agclassic")).toBe("");
+    // (modern's detached cost fits its name; The Lord of the Rings' inline
+    // one is the old path. The 1997 frame is measured since TODO 4.10a, the
+    // 1993 frame since TODO 4.10c.)
+    expect(serra("lotr")).toBe("");
     cleanup();
     expect(serra("m15")).toBe(cqw(fitTitleBand(getFrameProfile("m15"), "Serra Angel", "{3}{W}{W}")!.widthPct));
     cleanup();

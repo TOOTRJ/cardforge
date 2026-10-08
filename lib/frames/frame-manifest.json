@@ -10068,6 +10068,76 @@
       "width": 1500,
       "height": 2100
     },
+    "manaoriginal/b.png": {
+      "hash": "97edfc0aedb9",
+      "sha256": "97edfc0aedb9e1b920ac88b465d926634991c124342fae953e331bc388f93df8",
+      "bytes": 9653,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/b.webp": {
+      "hash": "d6c4cd2c067c",
+      "sha256": "d6c4cd2c067c645b1f97f93d1053fdd21c6ab1d15abfc64dbdefb95e545686fc",
+      "bytes": 6286,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/g.png": {
+      "hash": "1b7fff2fc329",
+      "sha256": "1b7fff2fc329e3df5f12227daed0be068b9cca244401c5e1c26525f5035149c5",
+      "bytes": 9755,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/g.webp": {
+      "hash": "a2b6a880b087",
+      "sha256": "a2b6a880b087a714e4c0a11e95e44ae17ec73f9796fe0c77453eef1cbb36b90f",
+      "bytes": 8260,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/r.png": {
+      "hash": "4592ea49e040",
+      "sha256": "4592ea49e04023be4c3d292c28cbd00921b6d8eec4a07b8a09a363140f78edc4",
+      "bytes": 10542,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/r.webp": {
+      "hash": "53c0802ebe54",
+      "sha256": "53c0802ebe542856f965080709159239313457df46a5691bb7e6cef3d970e450",
+      "bytes": 9534,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/u.png": {
+      "hash": "b0caaa95eadb",
+      "sha256": "b0caaa95eadb06ab16f0b4dc9c2e80d642a9c3df0d9d1e9ebd657c602f325c8b",
+      "bytes": 7319,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/u.webp": {
+      "hash": "012ba3eafa10",
+      "sha256": "012ba3eafa1014a60ea85c5c16dca80d24b4131ee13c8045b88645689207b6a7",
+      "bytes": 5582,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/w.png": {
+      "hash": "34fe891e5fe8",
+      "sha256": "34fe891e5fe839d03c43715fb439014b65e711219092bd5c740612613fbd6d21",
+      "bytes": 10450,
+      "width": 216,
+      "height": 216
+    },
+    "manaoriginal/w.webp": {
+      "hash": "dc7e72302965",
+      "sha256": "dc7e7230296594c41c0c510763f972a5f1a92f756f979f46d556738175a74f08",
+      "bytes": 8440,
+      "width": 216,
+      "height": 216
+    },
     "modern/b.png": {
       "hash": "2bee1003e4fa",
       "sha256": "2bee1003e4fad797deb19f9efd0531dd76ddc3fe71e2aa91cbc23ffbd89fc45a",

@@ -459,7 +459,8 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
   // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
   // `Illus.` line in MPlantin.
-  const BODY_FOOTER_SINCE_V46 = ["retro", "retroland"];
+  // (The 1993 pair's likewise since TODO 4.10c, layout v48.)
+  const BODY_FOOTER_SINCE_V46 = ["retro", "retroland", "agclassic", "alphaland"];
 
   it("word spacing: every card on the 24 display-footer templates (25 with the retired Alpha token)", async () => {
     const classifyForSweep = await sweepAt(29);

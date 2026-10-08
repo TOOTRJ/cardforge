@@ -142,7 +142,8 @@ async function bakeHash(data: CardPreviewData): Promise<string> {
 }
 
 describe("0119 changes no pixels", () => {
-  for (const template of ["tarkirdragon", "agclassic"] as const) {
+  // (lotr since TODO 4.10c: Alpha's colour pips are frames-bucket images.)
+  for (const template of ["tarkirdragon", "lotr"] as const) {
     it(`${template}: a borderless-finish bake is byte-identical to a regular one`, async () => {
       const [borderless, regular, foil] = [
         await bakeHash(card(template, "borderless")),
