@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   PRINT_TYPOGRAPHY_CHARACTERS,
+  TYPED_FORMS,
   printTypography,
   printTypographyPatch,
+  typedForMatching,
   typographyFieldOf,
   withPrintTypography,
   withPrintTypographyUpdate,
@@ -144,6 +147,109 @@ describe("printTypography — what it never touches", () => {
       expect(out).toContain("...");
       expect(out).not.toMatch(/[…−–]/);
     }
+  });
+});
+
+describe("printTypography — found by the skeptic pass (fuzz + 11,000 printed flavor texts)", () => {
+  it("a quote after a dash that ends the line or stands before a space CLOSES — cut-off speech", () => {
+    // Printed: “Surely it won’t notice if I take—” (it opened: I—“).
+    expect(printTypography(`"I got it! I got it! I--"`, "flavor")).toBe("“I got it! I got it! I—”");
+    expect(printTypography(`"So shouldn't we—"\n"No."`, "flavor")).toBe("“So shouldn’t we—”\n“No.”");
+    expect(printTypography(`"a—" he said`, "flavor")).toBe("“a—” he said");
+    expect(printTypography(`'wait--' she began`, "flavor")).toBe("‘wait—’ she began");
+    expect(printTypography(`""`, "rules")).toBe("“”");
+    // …and still opens before a word, after a dash or a bracket.
+    expect(printTypography(`he said—"no"`, "flavor")).toBe("he said—“no”");
+    expect(printTypography(`("quoted")`, "rules")).toBe("(“quoted”)");
+  });
+
+  it("a quote typed LAST after a space is an opening one (the maker is about to click a symbol in)", () => {
+    expect(printTypography(`It gains "`, "rules")).toBe("It gains “");
+    expect(printTypography(`It gains “{T}: Add {G}."`, "rules")).toBe("It gains “{T}: Add {G}.”");
+  });
+
+  it("hyphens beside another dash are left alone: one answer, whatever the pass", () => {
+    for (const field of FIELDS) {
+      for (const sample of ["a - - b", "a — - b", "a - — b", "1 - - https://x.y", "a - -- b", "x - -"]) {
+        const once = printTypography(sample, field);
+        expect(printTypography(once, field), `${field}: ${JSON.stringify(sample)}`).toBe(once);
+      }
+    }
+    expect(printTypography("a - - b", "name")).toBe("a - - b");
+  });
+
+  it("a pasted Windows line ending is kept and never read as the line's last character", () => {
+    expect(printTypography("Choose one -\r\n- A\r\nRaid--\r\n", "rules")).toBe("Choose one —\r\n• A\r\nRaid —\r\n");
+    expect(printTypography(`"q"\r\n-Kesh\r\n`, "flavor")).toBe("“q”\r\n—Kesh\r\n");
+  });
+
+  it("is idempotent over generated text (a fixed seed, every field)", () => {
+    const atoms = ["'", '"', "-", "--", "---", " - ", "*", "- ", " ", "\n", "\r\n", "\t", "(", ")", "[", "{T}", "{", "}", "—", "–", "’", "‘", "“", "”", "•", "a", "s", "1", "90s", "X", ":", ".", "-1/-1", "https://x.y/a'b--d", "til", "é", "日本"];
+    let seed = 20261008;
+    const next = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let i = 0; i < 4000; i += 1) {
+      let sample = "";
+      for (let k = 1 + Math.floor(next() * 10); k > 0; k -= 1) sample += atoms[Math.floor(next() * atoms.length)];
+      for (const field of FIELDS) {
+        const once = printTypography(sample, field);
+        expect(printTypography(once, field), `${field}: ${JSON.stringify(sample)}`).toBe(once);
+        expect(once.split("\n").length).toBe(sample.split("\n").length);
+      }
+    }
+  });
+
+  it("reads a long text in linear time (a paste is converted on blur, before any length check)", () => {
+    const pasted = `${" ".repeat(60_000)}x${"'".repeat(60_000)} ${"a--".repeat(20_000)}`;
+    const started = performance.now();
+    for (const field of FIELDS) printTypography(pasted, field);
+    // Quadratic readings of this took 10–40 s; linear ones a few ms.
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
+});
+
+describe("typedForMatching — a search reads typed and printed characters as the same", () => {
+  it("folds the printed quotes and dashes to the keyboard's, and nothing else", () => {
+    expect(typedForMatching("Kesh’s “Last” Stand — ’99 ‘x’ a–b • {T}")).toBe(`Kesh's "Last" Stand - '99 'x' a-b • {T}`);
+    expect(typedForMatching("Urza's Saga")).toBe("Urza's Saga");
+  });
+
+  it("a title stored either way is found by a query typed either way", () => {
+    const found = (title: string, query: string) => typedForMatching(title.toLowerCase()).includes(typedForMatching(query.toLowerCase()));
+    for (const title of ["Urza's Saga", printTypography("Urza's Saga", "name")]) {
+      for (const query of ["urza's sa", "urza’s sa", "URZA'S"]) expect(found(title, query), `${title} / ${query}`).toBe(true);
+    }
+    expect(found(printTypography("Wait--What", "name"), "wait-what")).toBe(true);
+    expect(found(printTypography(`Kesh's "Last" Stand - '99`, "name"), `"last" stand - '99`)).toBe(true);
+  });
+
+  it("covers every quote and dash the conversion can store", () => {
+    const stored = new Set(Object.values(PRINT_TYPOGRAPHY_CHARACTERS).flat());
+    stored.delete("•"); // a list bullet: nobody searches a title for one
+    for (const ch of stored) expect(TYPED_FORMS[ch], ch).toBeDefined();
+  });
+
+  it("is the fold migration 0136 gives the gallery's title search", () => {
+    const sql = readFileSync(path.join(process.cwd(), "supabase/migrations/0136_gallery_search_print_typography.sql"), "utf8")
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n");
+    const folds = [...sql.matchAll(/'([’‘“”—–]+)', '((?:''|[^'])+)'\)/g)].map((m) => [m[1], m[2].replace(/''/g, "'")] as const);
+    // The query's pattern and both title comparisons.
+    expect(folds).toHaveLength(3);
+    for (const [from, to] of folds) {
+      expect([...from].length).toBe([...to].length);
+      expect(Object.fromEntries([...from].map((ch, i) => [ch, [...to][i]]))).toEqual({ ...TYPED_FORMS });
+    }
+    // The body is otherwise 0091's, the latest definition before it.
+    const fn = (file: string) => {
+      const text = readFileSync(path.join(process.cwd(), "supabase/migrations", file), "utf8");
+      const from = text.indexOf("create or replace function public.list_gallery_cards(");
+      return text.slice(from, text.indexOf("$$;", from));
+    };
+    const unfolded = fn("0136_gallery_search_print_typography.sql")
+      .replace(/translate\(\s*(replace\(replace\(replace\(btrim\(p_search\)[^\n]*?'\\_'\)),\s*'[^']+', '(?:''|[^'])+'\)/, "$1")
+      .replace(/translate\(c\.title, '[^']+', '(?:''|[^'])+'\)/g, "c.title");
+    expect(unfolded).toBe(fn("0091_hide_admin_cards_from_rows.sql"));
   });
 });
 

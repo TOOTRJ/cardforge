@@ -35,7 +35,7 @@
 // Pure; shared client + server.
 // ---------------------------------------------------------------------------
 
-import { serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
+import { loyaltyFromRulesText, sagaFromRulesText, serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
 
 /** How a field is read: a card name, a type-line part (supertype, subtype),
  *  rules-style text (rules, a loyalty row, a saga's intro and chapters) or
@@ -60,12 +60,58 @@ const PROTECTED = /\{[^{}\n]*\}|(?:https?:\/\/|www\.)\S+/gi;
 const ELISIONS = /^(?:tis|twas|twere|twill|til|em|n)(?![\p{L}\p{N}])/iu;
 
 /** After these a quote OPENS: the start, whitespace, an opening bracket, a
- *  dash, or another opening quote. */
-function opensAfter(prev: string | undefined): boolean {
-  return prev === undefined || /[\s([{—–‘“]/.test(prev);
+ *  dash, or another opening quote — unless nothing follows it there: after a
+ *  dash, a bracket or an opening quote, a quote that ends the line or stands
+ *  before a space CLOSES (“So shouldn’t we—” is cut-off speech, as cards
+ *  print it; `""` is an empty pair). After a space or at the start it still
+ *  opens, so a quote typed last — the maker about to click a symbol in —
+ *  is an opening one. */
+function opensAfter(prev: string | undefined, next: string | undefined): boolean {
+  if (prev === undefined || /\s/.test(prev)) return true;
+  if (!/[([{—–‘“]/.test(prev)) return false;
+  return next !== undefined && !/\s/.test(next);
 }
 
-function convertLine(line: string, field: TypographyField): string {
+/** Two hyphens (never part of a longer rule of them) → an em dash, with the
+ *  spaces and tabs round them: kept as typed, or — in rules text — made one
+ *  space each side (none at the start or the end of the line). One pass over
+ *  the line: a regex with a leading `[ \t]*` re-reads a long run of spaces
+ *  from every position in it. */
+function doubleHyphens(text: string, spaced: boolean): string {
+  const runs = /-{2,}/g;
+  const isGap = (ch: string | undefined) => ch === " " || ch === "\t";
+  let out = "";
+  let done = 0;
+  // Whether anything but space stands before the dash on its line.
+  let inked = false;
+  for (let run = runs.exec(text); run; run = runs.exec(text)) {
+    const from = run.index;
+    const to = from + run[0].length;
+    if (run[0].length !== 2) continue;
+    let before = from;
+    while (before > done && isGap(text[before - 1])) before -= 1;
+    let after = to;
+    while (after < text.length && isGap(text[after])) after += 1;
+    const lead = text.slice(done, before);
+    out += lead;
+    if (spaced) {
+      inked ||= /\S/.test(lead);
+      out += `${inked ? " " : ""}—${after === text.length ? "" : " "}`;
+      inked = true;
+    } else {
+      out += `${text.slice(before, from)}—${text.slice(to, after)}`;
+    }
+    done = after;
+    runs.lastIndex = after;
+  }
+  return out + text.slice(done);
+}
+
+function convertLine(rawLine: string, field: TypographyField): string {
+  // A pasted Windows line ending stays where it is and is never read as the
+  // line's last character ("Choose one -\r").
+  const carriage = rawLine.endsWith("\r") ? "\r" : "";
+  const line = carriage ? rawLine.slice(0, -1) : rawLine;
   // The protected spans are lifted out, the line's plain text converted with
   // a private-use placeholder standing where each was (so "{T}'s" still
   // reads as a letter-like thing before the apostrophe), then put back.
@@ -82,46 +128,46 @@ function convertLine(line: string, field: TypographyField): string {
     text = text.replace(/^(\s*)[*-](\s+)(?=\S)(?!(?:\d+|X)\s*:)/i, "$1•$2");
   } else if (field === "flavor") {
     // An attribution: "-Serra" / "-- Serra" → "—Serra", as cards print it.
-    text = text.replace(/^(\s*)--?[ \t]*(?=[^\s\d-])/, "$1—");
+    // (Not before another dash: "- —x" read again would lose its hyphen.)
+    text = text.replace(/^(\s*)--?[ \t]*(?=[^\s\d—–-])/, "$1—");
   }
 
   // --- Dashes ---
   // Two hyphens (never part of a longer rule of them): an em dash. Rules
   // text sets its dashes spaced ("Landfall — Whenever"); a name or a flavor
   // line keeps the spacing it was typed with ("wait—what").
-  text = text.replace(/([ \t]*)(-{2,})([ \t]*)/g, (match, before: string, hyphens: string, after: string, offset: number, whole: string) => {
-    if (hyphens.length !== 2) return match;
-    if (field !== "rules") return `${before}—${after}`;
-    const start = whole.slice(0, offset).trim() === "";
-    const end = offset + match.length === whole.length;
-    return `${start ? "" : " "}—${end ? "" : " "}`;
-  });
+  text = doubleHyphens(text, field === "rules");
   // A spaced hyphen between two words, or closing a line ("Choose one -").
-  // Never before a number: "5 - 2" is a subtraction.
-  text = text.replace(/(\S) - (?=[^\s\d])/g, "$1 — ").replace(/(\S) -$/, "$1 —");
+  // Never before a number: "5 - 2" is a subtraction. Never beside another
+  // dash or hyphen ("a - - b" stays: reading it one dash at a time would
+  // give a different answer on a second pass).
+  text = text.replace(/([^\s—–-]) - (?=[^\s\d—–-])/g, "$1 — ").replace(/([^\s—–-]) -$/, "$1 —");
 
   // --- Quotes ---
   if (text.includes('"') || text.includes("'")) {
-    let out = "";
+    const out: string[] = [];
+    let prev: string | undefined;
     for (let i = 0; i < text.length; i += 1) {
       const ch = text[i];
-      const prev = out[out.length - 1];
+      const following = text[i + 1];
+      let set = ch;
       if (ch === '"') {
-        out += opensAfter(prev) ? "“" : "”";
+        set = opensAfter(prev, following) ? "“" : "”";
       } else if (ch === "'") {
-        const rest = text.slice(i + 1);
-        // '90s, 'tis: an apostrophe although it opens the word.
+        // '90s, 'tis: an apostrophe although it opens the word. (The longest
+        // elision is five letters; the slice keeps a long text linear.)
+        const rest = text.slice(i + 1, i + 8);
         const elision = /^\d/.test(rest) || ELISIONS.test(rest);
-        out += opensAfter(prev) && !elision ? "‘" : "’";
-      } else {
-        out += ch;
+        set = opensAfter(prev, following) && !elision ? "‘" : "’";
       }
+      out.push(set);
+      prev = set;
     }
-    text = out;
+    text = out.join("");
   }
 
   let next = 0;
-  return text.replace(//g, () => kept[next++] ?? "");
+  return text.replace(//g, () => kept[next++] ?? "") + carriage;
 }
 
 /** `text` as a printed card sets it. Line breaks, leading and trailing
@@ -143,6 +189,30 @@ export function printTypography(text: string, field: TypographyField): string {
 function within(text: string, field: TypographyField, max: number): string {
   const converted = printTypography(text, field);
   return converted.length > max && converted.length > text.length ? text : converted;
+}
+
+// ---------------------------------------------------------------------------
+// Matching — a search reads typed and printed characters as the same
+// ---------------------------------------------------------------------------
+
+/** The printed quotes and dashes and what a keyboard types for each. The
+ *  gallery's SQL search folds the same six the same way (migration 0136's
+ *  translate(); a unit test holds the two together). */
+export const TYPED_FORMS: Readonly<Record<string, string>> = {
+  "’": "'",
+  "‘": "'",
+  "“": '"',
+  "”": '"',
+  "—": "-",
+  "–": "-",
+};
+
+/** `text` with its printed quotes and dashes as typed ones — for MATCHING
+ *  only (a search box against a title), on BOTH sides of the comparison:
+ *  cards saved since TODO 6.11 hold “Urza’s”, older ones and every keyboard
+ *  hold "Urza's". Never stored, never drawn. */
+export function typedForMatching(text: string): string {
+  return text.replace(/[’‘“”—–]/g, (ch) => TYPED_FORMS[ch] ?? ch);
 }
 
 // ---------------------------------------------------------------------------
@@ -277,12 +347,24 @@ function faceText<T extends FaceText>(face: T, stored: StoredTypographyText | nu
   return out;
 }
 
-function storedRowTexts(stored: unknown): Set<string> {
+/** The row texts a stored card holds: its structured rows — and, for a
+ *  walker or a saga saved before the structured editor (rules_text alone,
+ *  no face_content), the rows the editor PARSES out of that text when it
+ *  opens the card (lib/creator/card-fields.ts structuredRowsFrom) and sends
+ *  back on every save. Without them such a card's every row would count as
+ *  changed, and be converted by a save that edited none of them. */
+function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
   const texts = new Set<string>();
-  const face = (stored ?? null) as FaceContentText | null;
+  const face = (stored?.face_content ?? null) as FaceContentText | null;
   for (const row of face?.loyalty?.abilities ?? []) if (typeof row?.text === "string") texts.add(row.text);
   for (const row of face?.saga?.chapters ?? []) if (typeof row?.text === "string") texts.add(row.text);
   if (typeof face?.saga?.intro === "string") texts.add(face.saga.intro);
+  if (stored?.rules_text) {
+    for (const row of loyaltyFromRulesText(stored.rules_text)) texts.add(row.text);
+    const saga = sagaFromRulesText(stored.rules_text);
+    for (const row of saga.chapters) texts.add(row.text);
+    if (saga.intro) texts.add(saga.intro);
+  }
   return texts;
 }
 
@@ -294,7 +376,7 @@ function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyTex
   const rawFace = out.face_content ?? null;
   let face = rawFace;
   if (rawFace) {
-    const keptRows = storedRowTexts(stored?.face_content);
+    const keptRows = storedRowTexts(stored);
     const row = (text: string, max: number) => (changed(text, keptRows.has(text) ? text : null) ? within(text, "rules", max) : text);
     face = {
       ...rawFace,

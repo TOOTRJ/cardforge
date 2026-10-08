@@ -198,6 +198,88 @@ describe("updateCardAction — only what the save changes", () => {
     expect(row?.flavor_text).toBe(OLD.flavor_text);
   });
 
+  // What the editor sends for a walker / a saga: its rows (parsed from the
+  // stored rules_text when the card holds no face_content — lib/creator/
+  // card-fields.ts structuredRowsFrom) and their serialized copy.
+  const walker = (over: Record<string, unknown>) =>
+    stored({ card_type: "planeswalker", loyalty: "4", frame_style: { template: "m15pw", finish: "regular" }, ...over });
+  const WALKER_ROWS = [
+    { cost: "+1", text: "It can't block." },
+    { cost: "-3", text: 'Creatures you control have "{T}: Draw a card."' },
+  ];
+  const WALKER_TEXT = "+1: It can't block.\n-3: Creatures you control have \"{T}: Draw a card.\"";
+
+  it("a walker saved before the structured rows (rules_text, no face_content): a save that edits no row converts none", async () => {
+    state.existing = walker({ rules_text: WALKER_TEXT, face_content: null });
+    const stub = db();
+    const result = await updateCardAction(CARD, {
+      rarity: "rare",
+      rules_text: WALKER_TEXT,
+      face_content: { v: 1, loyalty: { abilities: WALKER_ROWS } },
+    });
+    expect(result).toMatchObject({ ok: true });
+    const row = written(stub, "update") as { rules_text: string; face_content: { loyalty: { abilities: unknown[] } } };
+    expect(row.face_content.loyalty.abilities).toEqual(WALKER_ROWS);
+    expect(row.rules_text).toBe(WALKER_TEXT);
+  });
+
+  it("…whose stored text prints its costs with U+2212: the copy is re-serialized, its rows still as stored", async () => {
+    state.existing = walker({ rules_text: WALKER_TEXT.replace("-3:", "−3:"), face_content: null });
+    const stub = db();
+    await updateCardAction(CARD, { rules_text: WALKER_TEXT, face_content: { v: 1, loyalty: { abilities: WALKER_ROWS } } });
+    const row = written(stub, "update") as { rules_text: string; face_content: { loyalty: { abilities: unknown[] } } };
+    expect(row.face_content.loyalty.abilities).toEqual(WALKER_ROWS);
+    expect(row.rules_text).toBe(WALKER_TEXT);
+  });
+
+  it("a walker with ONE row edited: that row whole, the other as stored — in the copy too", async () => {
+    state.existing = walker({ rules_text: WALKER_TEXT, face_content: { v: 1, loyalty: { abilities: WALKER_ROWS } } });
+    const stub = db();
+    const edited = [{ cost: "+1", text: "It can't block. It's sworn." }, WALKER_ROWS[1]];
+    await updateCardAction(CARD, {
+      rules_text: `+1: It can't block. It's sworn.\n-3: ${WALKER_ROWS[1].text}`,
+      face_content: { v: 1, loyalty: { abilities: edited } },
+    });
+    const row = written(stub, "update") as { rules_text: string; face_content: { loyalty: { abilities: unknown[] } } };
+    expect(row.face_content.loyalty.abilities).toEqual([{ cost: "+1", text: "It can’t block. It’s sworn." }, WALKER_ROWS[1]]);
+    expect(row.rules_text).toBe(`+1: It can’t block. It’s sworn.\n-3: ${WALKER_ROWS[1].text}`);
+  });
+
+  it("a saga saved before the structured rows: intro and chapters as stored", async () => {
+    const intro = "(As this Saga enters, add a lore counter. It's sacrificed after II.)";
+    const chapters = [
+      { numerals: [1], text: "It can't block." },
+      { numerals: [2], text: 'Create a token with "{T}: Add {G}."' },
+    ];
+    const text = `${intro}\nI — It can't block.\nII — Create a token with "{T}: Add {G}."`;
+    state.existing = stored({ card_type: "enchantment", subtypes: ["Saga"], frame_style: { template: "saga", finish: "regular" }, rules_text: text, face_content: null });
+    const stub = db();
+    const result = await updateCardAction(CARD, { rarity: "rare", rules_text: text, face_content: { v: 1, saga: { intro, chapters } } });
+    expect(result).toMatchObject({ ok: true });
+    const row = written(stub, "update") as { rules_text: string; face_content: { saga: { intro: string; chapters: unknown[] } } };
+    expect(row.face_content.saga).toEqual({ intro, chapters });
+    expect(row.rules_text).toBe(text);
+  });
+
+  it("the second face: resent as stored it is kept; one field of it edited, that field alone", async () => {
+    const back = { title: "Kesh's Shade", card_type: "creature", subtypes: ["Urza's"], rules_text: "It can't block.", flavor_text: '"Gone."' };
+    state.existing = stored({ ...OLD, back_face: back, frame_style: { template: "flip", finish: "regular" } });
+    let stub = db();
+    await updateCardAction(CARD, { rarity: "rare", back_face: back });
+    expect(written(stub, "update")?.back_face).toMatchObject(back);
+    stub = db();
+    await updateCardAction(CARD, { back_face: { ...back, flavor_text: '"Gone," it said.' } });
+    expect(written(stub, "update")?.back_face).toMatchObject({ ...back, flavor_text: "“Gone,” it said." });
+  });
+
+  it("a save that names no text field writes none (the AI jobs' art + publish update)", async () => {
+    state.existing = stored(OLD);
+    const stub = db();
+    await updateCardAction(CARD, { art_url: "https://example.com/art2.png", visibility: "public" });
+    const row = written(stub, "update") ?? {};
+    for (const key of ["title", "rules_text", "flavor_text", "supertype", "subtypes", "back_face", "face_content"]) expect(key in row, key).toBe(false);
+  });
+
   it("a field typed over a stored null is converted", async () => {
     state.existing = stored({ ...OLD, flavor_text: null });
     const stub = db();
