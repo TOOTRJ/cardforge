@@ -258,6 +258,45 @@ describe("syncSubscriptionForUser", () => {
     expect(updates[0]).toMatchObject({ cancel_at_period_end: false });
   });
 
+  it("stores WHEN a cancelled plan stops and when it was cancelled (0135) — the pages that read only the profile need the date", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
+    const cancelled = sub("sub_1", "active", { id: "price_plus" }, { cancel_at: PERIOD_END, canceled_at: PERIOD_END - 86400 });
+    const result = await syncSubscriptionForUser(admin, makeStripe([cancelled]), "user-1", { eventSub: cancelled });
+    expect(updates[0]).toMatchObject({
+      cancel_at_period_end: true,
+      subscription_ends_at: new Date(PERIOD_END * 1000).toISOString(),
+      subscription_canceled_at: new Date((PERIOD_END - 86400) * 1000).toISOString(),
+    });
+    expect(result.endsAt).toBe(new Date(PERIOD_END * 1000).toISOString());
+  });
+
+  it("a later-period cancellation keeps the flag false but stores its date; a renewing plan stores nulls", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "active" });
+    const later = sub("sub_1", "active", { id: "price_plus" }, { cancel_at: PERIOD_END + 45 * 86400 });
+    await syncSubscriptionForUser(admin, makeStripe([later]), "user-1", { eventSub: later });
+    expect(updates[0]).toMatchObject({
+      cancel_at_period_end: false,
+      subscription_ends_at: new Date((PERIOD_END + 45 * 86400) * 1000).toISOString(),
+    });
+    // A stale canceled_at on a plan that renews is not a cancellation.
+    const renewing = sub("sub_1", "active", { id: "price_plus" }, { cancel_at: null, canceled_at: 123 });
+    await syncSubscriptionForUser(admin, makeStripe([renewing]), "user-1", { eventSub: renewing });
+    expect(updates[1]).toMatchObject({ cancel_at_period_end: false, subscription_ends_at: null, subscription_canceled_at: null });
+  });
+
+  it("a cancelled TRIAL's date is the trial end; a deleted or past-due subscription stores no pending cancellation", async () => {
+    const { admin, updates } = makeAdmin({ subscription_tier: "plus", subscription_status: "trialing" });
+    const trial = sub("sub_1", "trialing", { id: "price_plus" }, { cancel_at_period_end: true, trial_end: PERIOD_END - 5 * 86400 });
+    await syncSubscriptionForUser(admin, makeStripe([trial]), "user-1", { eventSub: trial });
+    expect(updates[0]).toMatchObject({ subscription_ends_at: new Date((PERIOD_END - 5 * 86400) * 1000).toISOString() });
+    const gone = sub("sub_1", "canceled", { id: "price_plus" }, { cancel_at: PERIOD_END });
+    await syncSubscriptionForUser(admin, makeStripe([gone]), "user-1", { eventSub: gone, eventDeleted: true });
+    expect(updates[1]).toMatchObject({ subscription_status: "canceled", subscription_ends_at: null, subscription_canceled_at: null });
+    const pastDue = sub("sub_1", "past_due", { id: "price_plus" }, { cancel_at: PERIOD_END });
+    await syncSubscriptionForUser(admin, makeStripe([pastDue]), "user-1", { eventSub: pastDue });
+    expect(updates[2]).toMatchObject({ subscription_status: "past_due", subscription_ends_at: null });
+  });
+
   it("a resync with no event picks the live primary from Stripe", async () => {
     const { admin, updates } = makeAdmin({ subscription_tier: "free", subscription_status: "active", stripe_customer_id: "cus_1" });
     const pro = sub("sub_pro", "active", { id: "price_pro" });

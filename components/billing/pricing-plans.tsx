@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { PlanCard } from "./plan-card";
 import { CheckoutButton } from "./checkout-button";
 import { ManageBillingButton } from "./manage-billing-button";
+import { ResumePlanButton } from "./resume-plan-button";
 import { pricingCtaFor } from "./pricing-cta";
 import { useBillingViewer } from "./use-billing-viewer";
 import type { BillingViewer } from "@/lib/billing/viewer";
@@ -71,6 +72,18 @@ export function PricingPlans({
             {cta.label}
           </CheckoutButton>
         );
+      case "resume":
+        return (
+          <ResumePlanButton
+            planName={cta.planName}
+            surface={surface}
+            variant={tier === "free" ? "outline" : "primary"}
+            size="md"
+            className="w-full"
+          >
+            {cta.label}
+          </ResumePlanButton>
+        );
       default:
         return null;
     }
@@ -117,6 +130,9 @@ export function PricingPlans({
             plan={plan}
             period={period}
             currentTier={viewer.currentTier}
+            currentEndsAt={
+              viewer.subscriptionEnding && viewer.hasLiveSubscription ? (viewer.subscriptionEndsAt ?? "") : null
+            }
             cta={ctaFor(plan.tier, plan.featured)}
           />
         ))}

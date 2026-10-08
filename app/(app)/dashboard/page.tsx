@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { RenderUpdateAll } from "@/components/cards/render-update";
 import { hasNewerLook } from "@/lib/cards/layout-version";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
+import { PlanEndingNoticeCard } from "@/components/dashboard/plan-ending-notice";
 import { CreditsSummaryCard } from "@/components/dashboard/credits-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -141,6 +142,10 @@ export default async function DashboardPage() {
           </Button>
         </SurfaceCard>
       ) : null}
+
+      {/* A cancelled plan that is still running: the page says "Pro" below —
+          this says it was cancelled, when it ends, and offers Resume. */}
+      <PlanEndingNoticeCard />
 
       {/* Admins: frame verification, the automatic re-bake and frame-request
           demand at a glance (TODO 7.4). The loader re-checks is_admin before

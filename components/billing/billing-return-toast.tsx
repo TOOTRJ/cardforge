@@ -36,6 +36,11 @@ export function BillingReturnToast() {
         "Your plan change is scheduled for the end of your billing period — nothing changes until then.",
       );
       timers.push(setTimeout(() => router.refresh(), 800));
+    } else if (billing === "resumed") {
+      toast.success("Your plan is resumed — it renews as usual, and nothing was charged today.");
+      timers.push(setTimeout(() => router.refresh(), 800));
+      // The webhook's own sync lands a beat later; pick it up too.
+      timers.push(setTimeout(() => router.refresh(), 4000));
     } else if (billing === "kept") {
       toast.success("Scheduled plan change cancelled — you're staying on your current plan.");
       timers.push(setTimeout(() => router.refresh(), 800));

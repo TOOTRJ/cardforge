@@ -103,4 +103,14 @@ describe("UpgradeModal — out of credits", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
     expect(screen.queryByRole("button", { name: /buy 10 credits/i })).toBeNull();
   });
+
+  it("a subscriber whose plan is cancelled: the modal says so on their plan's row, with the date, and offers Resume", async () => {
+    s.me = { ...proSubscriber, subscriptionEnding: true, subscriptionEndsAt: "2026-10-23T02:31:04.000Z" };
+    render(<UpgradeModal open reason="credits" onOpenChange={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Resume Pro" })).toBeTruthy());
+    expect(screen.getByText("Your current plan — cancelled, ends October 23, 2026")).toBeTruthy();
+    expect(screen.queryByText("Your current plan")).toBeNull();
+    // The other plan still switches.
+    expect(screen.getByRole("button", { name: /switch to plus/i })).toBeTruthy();
+  });
 });

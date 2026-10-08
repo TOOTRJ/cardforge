@@ -52,7 +52,12 @@ export type PlanStatusInput = {
     pendingChange: PendingChangeSummary | null;
   } | null;
   /** The profile row's copy — the fallback when Stripe can't be read. */
-  profile: { currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean };
+  profile: {
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    /** `profiles.subscription_ends_at` (0135) — the exact date, when synced. */
+    endsAt?: string | null;
+  };
 };
 
 const OVER_STATUSES: ReadonlySet<string> = new Set(["canceled", "incomplete_expired"]);
@@ -71,9 +76,7 @@ export function planStatusOf(input: PlanStatusInput): PlanStatus {
     // is the fallback, dated by the period end it stores.
     const endsAt = sub
       ? sub.endsAt ?? (sub.cancelAtPeriodEnd ? periodEnd : null)
-      : profile.cancelAtPeriodEnd
-        ? periodEnd
-        : null;
+      : (profile.endsAt ?? (profile.cancelAtPeriodEnd ? periodEnd : null));
     if (endsAt) {
       // The next charge: a trial converts at its end, a plan renews at its
       // period end. An end date beyond it is NOT "nothing more is charged".

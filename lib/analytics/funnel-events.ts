@@ -31,6 +31,9 @@ export const SERVER_FUNNEL_EVENTS = [
   "subscription_started",
   "subscription_changed",
   "subscription_cancelled",
+  // An in-app "Resume <Plan>" on a plan that was set to end
+  // (resumeSubscriptionAction) — a cancellation that did not happen.
+  "subscription_resumed",
   "payment_received",
   "payment_failed",
   "pack_purchased",

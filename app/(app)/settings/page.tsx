@@ -25,6 +25,7 @@ import { SecurityPanel } from "@/components/settings/security-panel";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { planEndingOf } from "@/lib/billing/plan-ending";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
@@ -248,6 +249,7 @@ export default async function SettingsPage({
               credits={entitlements.credits}
               renewLabel={renewLabel}
               cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}
+              planEnding={planEndingOf(profile)}
               hasBillingAccount={Boolean(profile?.stripe_customer_id)}
             />
           </SurfaceCard>

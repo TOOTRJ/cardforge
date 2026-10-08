@@ -1,5 +1,6 @@
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 import { KeepPlanButton } from "@/components/billing/keep-plan-button";
+import { ResumePlanButton } from "@/components/billing/resume-plan-button";
 import { SIGNUP_CREDITS, planForTier } from "@/lib/billing/plans";
 import { isEndingStatus, type PlanStatus } from "@/lib/billing/plan-status";
 import { formatMoney } from "@/lib/format/money";
@@ -163,13 +164,9 @@ export function PlanActions({
           Fix payment
         </ManageBillingButton>
       ) : null}
-      {/* Stripe's portal un-cancels in one click ("Renew plan" / "Don't
-          cancel plan"); there is no deep link to it, so it opens at home. */}
-      {live && ending ? (
-        <ManageBillingButton variant="primary" size="sm">
-          Resume {planName}
-        </ManageBillingButton>
-      ) : null}
+      {/* Un-cancels in the app, behind a confirm step that states the renewal
+          date and price; the Customer Portal is only the fallback. */}
+      {live && ending ? <ResumePlanButton planName={planName} surface="billing" /> : null}
       {live ? (
         <ManageBillingButton flow="payment_method_update" size="sm">
           Update payment method

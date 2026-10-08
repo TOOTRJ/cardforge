@@ -14,6 +14,8 @@ import type { BillingViewer } from "@/lib/billing/viewer";
 //   signup   → link to /signup (anonymous storefront)
 //   portal   → open the Stripe Customer Portal (manage / fix payment)
 //   checkout → start or switch a subscription (server re-validates)
+//   resume   → un-cancel a plan that is set to end (ResumePlanButton: an
+//              in-app confirm, then resumeSubscriptionAction)
 //   none     → nothing to offer (the card's "Your current plan" badge, or a
 //              free account looking at the free card)
 // ---------------------------------------------------------------------------
@@ -22,19 +24,37 @@ export type PricingCta =
   | { kind: "signup"; label: string }
   | { kind: "portal"; label: string }
   | { kind: "checkout"; label: string }
+  | { kind: "resume"; label: string; planName: string }
   | { kind: "none" };
 
 const PAID_NAME: Record<Exclude<PlanTier, "free">, string> = { plus: "Plus", pro: "Pro" };
 
 export function pricingCtaFor(viewer: BillingViewer, tier: PlanTier): PricingCta {
+  // A plan that is cancelled and still running: the way to stay is Resume —
+  // on the card of the plan itself (instead of a bare "Your current plan")
+  // and on the Free card, where "Manage plan" would have nothing to manage.
+  // The other paid card keeps "Switch to …" (the server resumes or renews as
+  // part of the switch).
+  const endingPlan =
+    viewer.isSignedIn &&
+    viewer.subscriptionEnding &&
+    viewer.hasLiveSubscription &&
+    viewer.hasBillingAccount &&
+    viewer.currentTier != null &&
+    viewer.currentTier !== "free"
+      ? PAID_NAME[viewer.currentTier]
+      : null;
+  if (endingPlan && (tier === "free" || tier === viewer.currentTier)) {
+    return { kind: "resume", label: `Resume ${endingPlan}`, planName: endingPlan };
+  }
   if (tier === "free") {
     if (!viewer.isSignedIn) return { kind: "signup", label: "Get started free" };
     // A live subscription is managed (cancel, invoices, card) in the portal.
     // A comped or admin account is "paid" with nothing to manage there.
     if (viewer.hasLiveSubscription && viewer.hasBillingAccount) {
-      // Already cancelled: the plan is on its way to Free, so there is
-      // nothing to "manage" down to it — the billing page's plan card says
-      // when it ends and carries the Resume button.
+      // Already cancelled with no paid tier to name (a comp outranks the
+      // subscription): nothing to "manage" down to Free — the billing page's
+      // plan card says when it ends and carries the Resume button.
       if (viewer.subscriptionEnding) return { kind: "none" };
       return { kind: "portal", label: "Manage plan" };
     }
