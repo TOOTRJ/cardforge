@@ -34,7 +34,7 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import type { RulesItem } from "@/lib/cards/rules-text";
-import type { FrameProfile, Rect, SlotAlign, TextSlot } from "@/lib/cards/template-layout";
+import { profileOffersRulesAlign, type FrameProfile, type Rect, type SlotAlign, type TextSlot } from "@/lib/cards/template-layout";
 import { RULES_BOX_PAD_PX } from "@/lib/cards/typography";
 
 /** The adventure page's padding, HD px: the old 0.6 % / 1.0 % of the card. */
@@ -125,11 +125,28 @@ type BoxInput = {
   /** Card height ÷ width: 7/5 portrait, 5/7 landscape. */
   aspect: number;
   show: DrawnStats;
+  /** The card's text-alignment switch (FrameStyle.rulesAlign, TODO 4.21e):
+   *  "center" sets every line of every plain rules box of the card centred
+   *  — the main box, an adventure page, a second face — on a frame that
+   *  offers the choice (profileOffersRulesAlign; rulesAlignOf), and nowhere
+   *  else, whatever the card says. */
+  rulesAlign?: unknown;
 };
+
+/** The alignment a card's rules boxes are set with on `layout` (TODO
+ *  4.21e): "center" only when the card's switch says so AND the frame
+ *  offers the choice — the ONE test both renderers' layouts pass through
+ *  (fitSlot), so a stray key on a saga or a walker never moves a line. */
+export function rulesAlignOf(
+  layout: Parameters<typeof profileOffersRulesAlign>[0],
+  rulesAlign: unknown,
+): "center" | undefined {
+  return rulesAlign === "center" && profileOffersRulesAlign(layout) ? "center" : undefined;
+}
 
 function fitSlot(
   slot: TextSlot,
-  { layout, rulesText, flavorText, aspect, show }: BoxInput,
+  { layout, rulesText, flavorText, aspect, show, rulesAlign }: BoxInput,
   defaults: { pad: { x: number; y: number }; rotation: number; sizePct?: number },
 ): RulesLayout {
   return fromTopWhenOverflowing(
@@ -143,6 +160,7 @@ function fitSlot(
       padPx: slot.padPx ?? defaults.pad,
       vAlign: slot.vAlign ?? "start",
       ...(slot.alignSingleLine ? { alignSingleLine: slot.alignSingleLine } : {}),
+      ...(rulesAlignOf(layout, rulesAlign) ? { align: "center" as const } : {}),
       ...(slot.paragraphGapMinPx !== undefined ? { paragraphGapMinPx: slot.paragraphGapMinPx } : {}),
       divider: layout.flavorDivider !== false,
       // The frame's symbol style: the inline pip's shadow (TODO 4.8.0).
@@ -223,8 +241,9 @@ export type RulesDrawBlock =
       /** Each line's runs. */
       lines: RulesItem[][][];
       /** Each line's indent from the column's left edge (px at the
-       *  target): 0, or a centred single line's (TextSlot.alignSingleLine,
-       *  TODO 4.49 (b)). Both renderers draw a non-zero one as the line's
+       *  target): 0, a centred single line's (TextSlot.alignSingleLine,
+       *  TODO 4.49 (b)) or a centred block's line's (FrameStyle.rulesAlign,
+       *  TODO 4.21e). Both renderers draw a non-zero one as the line's
        *  left margin. */
       indents: number[];
     }

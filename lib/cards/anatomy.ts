@@ -6,7 +6,11 @@
 // (`stamp`: "auto" — the oval on a rare or mythic — "oval" / "triangle",
 // "none"; lib/cards/holo-stamp.ts) and, since TODO 5.0a, a transform card's
 // icon FAMILY (`dfcIcon`: which glyph pair it wears and, with it, which back
-// body — lib/cards/dfc.ts; drawn by nothing until 5.1a's bodies exist).
+// body — lib/cards/dfc.ts; drawn by nothing until 5.1a's bodies exist) and,
+// since TODO 4.21e, the rules text's ALIGNMENT (`rulesAlign`: "center" or
+// absent — every line of the card's rules boxes centred, on any frame with
+// plain rules boxes (owner 2026-10-07: every kind of card may choose it; the
+// one switch a new card starts OFF on — left).
 //
 // THE OWNER RULE (2026-09-29, docs/FRAMES.md "Additions vs corrections"):
 // these are ADDITIONS, so each is OPT-IN PER CARD, stored as card data in
@@ -66,12 +70,21 @@ import { TWO_COLOR_PAIRS, type TwoColorPair } from "@/lib/cards/frame-reference-
 import { legendaryMasterKey } from "@/lib/cards/master-key";
 import {
   getFrameProfile,
+  profileOffersRulesAlign,
   type FrameOverlaySlot,
   type FrameProfile,
   type Rect,
   type TwoColorDress,
 } from "@/lib/cards/template-layout";
-import { DFC_ICON_FAMILY_VALUES, type ColorIdentity, type DfcIconFamily, type FrameStyle, type FrameTemplate } from "@/types/card";
+import {
+  DFC_ICON_FAMILY_VALUES,
+  RULES_ALIGN_VALUES,
+  type ColorIdentity,
+  type DfcIconFamily,
+  type FrameStyle,
+  type FrameTemplate,
+  type RulesAlign,
+} from "@/types/card";
 import { dfcIconGlyph, type DfcIconRole } from "@/lib/cards/dfc-icons";
 
 /** The transform family a card wears when it names none (lib/cards/dfc.ts
@@ -87,8 +100,10 @@ export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
  *  "off", `star` is `true` or absent (lib/cards/collector-line.ts) — the
  *  holofoil stamp's (4.9c: "auto" / "oval" / "triangle" / "none",
  *  lib/cards/holo-stamp.ts) and the transform icon family (5.0a) —
- *  `dfcIcon` holds one of DFC_ICON_FAMILY_VALUES or is absent. */
-export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon"] as const;
+ *  `dfcIcon` holds one of DFC_ICON_FAMILY_VALUES or is absent — and the
+ *  rules text's alignment (4.21e) — `rulesAlign` is "center" or absent in a
+ *  stored style ("left" only in the creator's form and an edit's patch). */
+export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
 export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
 
@@ -96,16 +111,30 @@ export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
  *  pair masters for, the collector line (FrameProfile.collector — the ★
  *  rides on it), the holofoil stamp (a `holoStamp` overlay: the notch) and
  *  the transform icon family (a transform FRONT body, FrameProfile.dfc —
- *  the back body follows the family). */
+ *  the back body follows the family) — and whether it offers the text
+ *  alignment choice (profileOffersRulesAlign, 4.21e). */
 export type FrameAnatomy = {
   crown: boolean;
   twoColor: readonly TwoColorDress[];
   collector: boolean;
   stamp: boolean;
   dfcIcon: boolean;
+  rulesAlign: boolean;
 };
 
-type AnatomyProfile = Pick<FrameProfile, "overlays" | "twoColorMasters" | "twoColorForLands" | "crownMasters" | "collector" | "dfc">
+type AnatomyProfile = Pick<
+  FrameProfile,
+  | "overlays"
+  | "twoColorMasters"
+  | "twoColorForLands"
+  | "crownMasters"
+  | "collector"
+  | "dfc"
+  | "rulesAlignSwitch"
+  | "textless"
+  | "chapters"
+  | "loyaltyRows"
+>;
 
 /** The switches a NEW card starts with (the creator's create and remix
  *  forms): every piece on — the collector line in the style printed today
@@ -126,6 +155,11 @@ export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown"
     stamp: "auto",
   });
 
+/** A text alignment the creator's form or an edit's patch may hold. */
+export function isRulesAlign(value: unknown): value is RulesAlign {
+  return typeof value === "string" && (RULES_ALIGN_VALUES as readonly string[]).includes(value);
+}
+
 function isDfcIconFamily(value: unknown): value is DfcIconFamily {
   return typeof value === "string" && (DFC_ICON_FAMILY_VALUES as readonly string[]).includes(value);
 }
@@ -142,6 +176,9 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
     // back body too, lib/cards/dfc.ts bodyFor); a modal card's housing has
     // no family, and a back body reads the card's key through the front.
     dfcIcon: profile.dfc?.role === "front" && profile.dfc.layout === "transform",
+    // The text alignment choice (4.21e): every frame with plain rules
+    // boxes, unless it opts out (profileOffersRulesAlign).
+    rulesAlign: profileOffersRulesAlign(profile),
   };
 }
 
@@ -165,6 +202,8 @@ export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boole
       return anatomy.stamp;
     case "dfcIcon":
       return anatomy.dfcIcon;
+    case "rulesAlign":
+      return anatomy.rulesAlign;
     default:
       return anatomy.collector;
   }
@@ -209,6 +248,7 @@ export function anatomyOn(
   if (key === "collector") return isCollectorStyle(style?.collector);
   if (key === "stamp") return isHoloStampSwitch(style?.stamp) && style?.stamp !== "none";
   if (key === "dfcIcon") return isDfcIconFamily(style?.dfcIcon);
+  if (key === "rulesAlign") return style?.rulesAlign === "center";
   return style?.[key] === true;
 }
 
@@ -221,7 +261,9 @@ export function anatomyOn(
  *  body, the one template that draws it — the icon family's default,
  *  `arrows` (today's ▲ / ▼, owner decision Q5, TODO 5.2: so a transform card
  *  saved by any path names its family and the back body it derives); a
- *  template that draws none drops the key at the save (normalizeAnatomy). */
+ *  template that draws none drops the key at the save (normalizeAnatomy).
+ *  NEVER the text alignment (4.21e, owner 2026-10-07: "New cards start
+ *  left. Imports stay left.") — absent is left, so nothing is stamped. */
 export function anatomyDefaults(
   template: FrameTemplate | string | null | undefined,
 ): FrameAnatomyStyle {
@@ -244,6 +286,9 @@ export function anatomyDefaults(
  * whose pairs aren't a land frame's (twoColorFits: m15, m15artifact — owner
  * round 17, 2026-09-30), whatever the payload says. A switch the template
  * draws is kept either way — `false` is its owner's explicit "off".
+ * The text alignment (4.21e) is stored as "center" or not at all: the
+ * form's "left" — and anything else — is dropped on every template, so a
+ * stored frame_style never names the default.
  * Everything else is kept as it is. Returns the input itself when nothing is
  * dropped.
  */
@@ -256,7 +301,12 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
   const anatomy = frameAnatomyOfProfile(profile);
   let out = frameStyle;
   for (const key of FRAME_ANATOMY_KEYS) {
-    const drawn = key === "twoColor" ? twoColorFits(profile, cardType) : anatomyDrawn(anatomy, key);
+    const drawn =
+      key === "twoColor"
+        ? twoColorFits(profile, cardType)
+        : key === "rulesAlign"
+          ? anatomy.rulesAlign && frameStyle.rulesAlign === "center"
+          : anatomyDrawn(anatomy, key);
     if (key in frameStyle && !drawn) {
       if (out === frameStyle) out = { ...frameStyle };
       delete out[key];
@@ -301,6 +351,7 @@ export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   if (stored.star === true) out.star = true;
   if (isHoloStampSwitch(stored.stamp)) out.stamp = stored.stamp;
   if (isDfcIconFamily(stored.dfcIcon)) out.dfcIcon = stored.dfcIcon;
+  if (stored.rulesAlign === "center") out.rulesAlign = "center";
   return out;
 }
 
@@ -717,6 +768,10 @@ export type FrameAnatomyPatch = {
   /** The transform icon family (TODO 5.0a): one of the families; the save
    *  drops it on any template that is not a transform front body. */
   dfcIcon?: DfcIconFamily;
+  /** The rules text's alignment (TODO 4.21e): "center" sets it, "left"
+   *  takes a stored "center" off (the stored key is "center" or absent);
+   *  the save drops it on a template without the choice. */
+  rulesAlign?: RulesAlign;
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -763,6 +818,8 @@ export function applyFrameAnatomyPatch(
   }
   if (patch.star === true) merged.star = true;
   else if (patch.star === false) delete merged.star;
+  if (patch.rulesAlign === "center") merged.rulesAlign = "center";
+  else if (patch.rulesAlign === "left") delete merged.rulesAlign;
   const frameStyle = normalizeAnatomy(merged as FrameAnatomyStyle, template, stored.cardType) as Record<
     string,
     unknown
@@ -875,6 +932,9 @@ export function importedAnatomy(
  * there. Saved (newCardFrameStyle) it is exactly what the AI deck remix of
  * the same printing stores, which sends the printing's switches alone and
  * gets the default stamped (tests/unit/cards/anatomy-import-default.test.ts).
+ * No text alignment: an import stays left (owner 2026-10-07), so the form's
+ * key is cleared with the rest (the creator sets every FRAME_ANATOMY_KEYS
+ * key from this).
  */
 export function importedFormAnatomy(
   style: FrameAnatomyStyle,

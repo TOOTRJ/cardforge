@@ -1393,6 +1393,8 @@ print − ours, + = right or down.
     per colour.
   - owner round 33, 2026-10-06: centring a split half's short rules text
     is a rules-layout follow-up (TODO 4.21e), before the first split tick.
+    (Built 2026-10-07 as the card's own Left / Centred choice, on every
+    kind of card: [The text alignment](#the-text-alignment-421e).)
   - owner round 33, 2026-10-06: the battle merges as built; its right side
     is re-cut onto the prints in a follow-up (TODO 4.21d), before the first
     battle tick.
@@ -1579,11 +1581,8 @@ print − ours, + = right or down.
     #123, TSR #156 / #161 / #186, C16 #239 — one to four lines), others set
     theirs left (MH2 #60's three and five lines, GRN #224, and DMR #209's
     one- and two-line texts): no rule of length separates them, so ours is
-    always left-aligned — a rule of the rules layout's own, not this
-    correction's (TODO 4.21e; owner round 33: before the first split
-    tick). The layout already carries an indent per
-    line (a token's one centred line, `alignSingleLine`), so centring a
-    short block is a predicate away once someone says which texts. The
+    left-aligned unless the CARD says centred (`frame_style.rulesAlign`,
+    TODO 4.21e — [The text alignment](#the-text-alignment-421e)). The
     halves' missing 5 px also leave each text column about 10 px narrower
     than the prints' (780 px against a 790 px printed line on TSR #186:
     "Tumble deals 6 damage" breaks one word earlier in ours).
@@ -3206,6 +3205,125 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   quantising the advances too would move the chunk after a lower-case run
   by ≈ 1 px per five letters on every collector card — a correction for the
   first collector-scoped sweep.
+
+### The text alignment (4.21e)
+
+TODO 4.21e; owner 2026-10-07: "every kind of card can choose centring …
+it starts on left, not centred". A card may set its rules text **Left** (the
+look every card has had) or **Centred**. It is an addition (above): card
+data, opt-in per card, no sweep, no badge, no `CARD_LAYOUT_VERSION` bump —
+and the one switch a NEW card starts OFF on.
+
+- **The prints.** Short texts are printed both ways, and no rule of length
+  separates them. Split, read on Scryfall PNGs turned to 2100 × 1500:
+  centred — MH2 #123, TSR #156 / #161 / #186, C16 #239 / #240 (one to four
+  lines a half); left — MH2 #60, GRN #224, DMR #209 (a one-line half
+  included), UMA #225. On the centred prints every line's ink is centred on
+  the paper's centre (TSR: 607–610 px on the left half, 1572.5–1576 on the
+  right; our boxes' centres are 607 and 1573) and the block is centred
+  vertically, as ours already was. A plain card does it too: M20 #33
+  (Planar Cleansing, one rules line, no flavour) is centred; XLN #180
+  (a keyword with reminder and flavour) and M19 #9 (bullets and flavour)
+  are left. **No print read here centres a text that has reminder text, a
+  second paragraph or flavour** — those are set left.
+- **The value.** `frame_style.rulesAlign`: `"center"` or absent (absent =
+  left). ONE value for the card: every plain rules box of it is set alike
+  — both halves of a split card (the six centred prints centre both), an
+  aftermath's or flip's second face, the adventure page, both faces of a
+  double-faced card (the back body reads the card's switches,
+  `lib/cards/faces.ts`). The form and an edit's patch also say `"left"`;
+  the save never stores it (`normalizeAnatomy`), so a stored `frame_style`
+  never names the default. It is one of `FRAME_ANATOMY_KEYS`, validated by
+  `frameStyleBaseSchema` / `frameAnatomyPatchSchema`
+  (`RULES_ALIGN_VALUES`); no CHECK constrains `frame_style`.
+- **Who sets it.** A new card starts left (no default ever stamps the key:
+  not `NEW_CARD_ANATOMY`, not `anatomyDefaults`); an import stays left
+  (`importedFormAnatomy` clears the form's key); a remix keeps its
+  parent's (`storedAnatomyOf`); an edit sends `frame_anatomy.rulesAlign`
+  only when it changed — `"left"` takes a stored `"center"` off
+  (`frameAnatomyPatchFor`, `applyFrameAnatomyPatch`).
+- **Which frames.** Every frame that sets its text in plain rules boxes,
+  by default — capability data on the profile, read in ONE place:
+  `profileOffersRulesAlign` (`lib/cards/template-layout.ts`). A profile
+  opts out with `rulesAlignSwitch: false` (none does). It is never offered
+  — and a stored key is dropped at the save and ignored at render
+  (`rulesAlignOf`, `lib/cards/rules-box.ts`) — on a `textless` frame, on
+  the saga (`chapters`: the text sits in rows beside its hexagons) and on
+  the planeswalker frames (`loyaltyRows`: rows beside the loyalty badges;
+  a walker with no abilities, or another card type on a walker frame, is
+  drawn in the plain box and stays left too — one rule a frame). The modal
+  flipside strip, names, type lines and footers are not rules text and are
+  untouched.
+- **What "centred" is.** `RulesLayoutInput.align: "center"`
+  (`lib/cards/rules-layout.ts`): EVERY line of the block — rules, reminder
+  text, every paragraph, flavour and its attribution — is set with its
+  centre on the box's centre line, by a whole px of indent at each target
+  (`centredLineIndentPx`; `RulesLinePlacement.indent`, which both renderers
+  already drew for a token's one centred line). The centre is the middle of
+  the box less its padding, not of the column the side headroom leaves, so
+  an italic line's overhang never pulls the block off the paper's centre; a
+  line that fills the column stays inside it. At one size the line breaks,
+  every vertical position, the flavour bar (still the column's width) and
+  the block's vertical alignment are exactly the left-aligned layout's —
+  the lines only move sideways. The SIZE is the left-aligned one, always
+  (next point). Centring reminder text and flavour with the
+  rules is OUR reading of "centred" (one block, one alignment): the prints
+  give no example either way, because they only centre texts that have
+  neither.
+- **Centred beside a badge** (owner 2026-10-07, after the skeptic pass's
+  fuzz). A centred text is set at EXACTLY the size its left-aligned twin
+  fits at (`fitRulesLayout`: the twin is fitted first, its size and any
+  squeezed paragraph gap are the centred layout's), with the twin's lines.
+  A line whose centred place would put ink in a drawn keep-out — the P/T
+  plate, the holofoil stamp's arch, the battle's shield, the modal strip,
+  a float's digits — is **held short of it**: set at the whole-px indent
+  nearest its centred one at which no glyph of it enters any keep-out
+  (`heldLineIndentPx`, judged glyph by glyph like the keep-out check),
+  with `HELD_LINE_AIR_PX` (14 HD px) of air beside the badge where the
+  room allows, else set against it. The left-aligned line's own place is
+  always a candidate, so: **Centred never sets a text smaller than Left,
+  and never clips a text Left fits.** A line that meets no keep-out where
+  it is centred is not touched — it stays on the box's centre to the half
+  px. On a float's rows (the transform front's reverse P/T) the line was
+  already held at the float's left edge, its last glyph's ink included
+  (`floatColumnsFor` measures the column from the box's edge, not from the
+  indented line). A line no indent clears (the left-aligned one hits too)
+  keeps its centred place and the text is clipped exactly as Left is.
+  Measured on 9,516 fuzzed boxes (every frame with the choice, every badge
+  drawn, 36,657 HD lines): 0 size differences, 0 texts that fit left and
+  clip centred (12 that clip left at the floor fit centred: a modal face's
+  last line held to the right of the strip); 500 lines held by a badge —
+  median 84 px off the centre, at most 286 — and 212 on a float's rows
+  (median 48, at most 110). Before this rule a badge stepped a centred
+  text down like any keep-out (about 5 % of those boxes one to five steps
+  smaller, 0.7 % clipped only when centred).
+- **Tokens.** The text-box tokens' and the emblem's automatic ONE centred
+  line (`alignSingleLine`, 4.49 (b)) is unchanged with the switch left;
+  Centred centres the whole block, however many lines.
+- **Split's text column stays.** Each half's rules rect is 780 px wide
+  (the paper is 814); the centred prints' widest lines are 749–791 px. No
+  width reproduces the prints' breaks, because they are not greedy on one
+  column: TSR #186 sets "Tumble deals 6 damage" (791 px) but breaks
+  "to each creature / with flying." where "with" fits; TSR #161 breaks
+  before "its", TSR #156 before "you", where the word fits either column;
+  MH2 #123 is set smaller (72 px). Measured with the layout itself on the
+  19 reference halves: 12 break as printed at 780 px, 12 at +3 px a side,
+  13 at +5, 11 at +8 and +10 (wider gains "Tumble deals 6 damage" and
+  loses TSR #161's and DMR #209's left halves). So the rect is not
+  widened, left-aligned split cards do not move, and there is no bump.
+- **The creator.** The Text step (`TextPanel`) shows "Text alignment:
+  Left / Centred" (a labelled radio group, `ChipGroup`) wherever
+  `frameAnatomyOf(template).rulesAlign` — creating, remixing and editing;
+  the live preview follows. A basic land (the icon step), a walker's
+  ability rows and a saga's chapters have their own editors and no
+  control.
+- **Tests.** `tests/unit/cards/rules-align.test.ts` (the layout on every
+  family, the save, the schemas, the edit patch),
+  `tests/unit/render/rules-align-bake.test.tsx` (real bakes: each line's
+  ink moved by exactly its indent), `tests/unit/components/
+  rules-align-preview.test.tsx` (the preview's margins are the layout's
+  px), `rules-align-control.test.tsx`, the centred half of
+  `rules-no-clip`, and the visual gate's `@centred` cases.
 
 ### Double-faced cards (TODO 5; the 5.0a plumbing)
 
