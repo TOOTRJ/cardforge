@@ -92,6 +92,10 @@ describe("the faces", () => {
   });
 });
 
+/** The 1997 frame (TODO 4.10a): the first profiles to name a body-face type
+ *  line, a prefix and a centred footer. */
+const RETRO_1997: readonly string[] = ["retro", "retroland"];
+
 describe("faceOf — every shipped profile resolves to what it drew", () => {
   it("each role on each template: the face its renderers' literals named", () => {
     let checked = 0;
@@ -99,7 +103,10 @@ describe("faceOf — every shipped profile resolves to what it drew", () => {
       const profile = getFrameProfile(template);
       for (const role of FACE_ROLES) {
         // (A profile with no footer draws none; the role's own default.)
-        const want = role === "footer" && !profile.footer ? "body" : BEFORE[role];
+        // The 1997 pair sets its type line and artist line in MPlantin, their
+        // printed face (TODO 4.10a).
+        const retroBody = RETRO_1997.includes(template) && (role === "typeLine" || role === "footer");
+        const want = retroBody || (role === "footer" && !profile.footer) ? "body" : BEFORE[role];
         expect(faceOf(profile, role).id, `${template} ${role}`).toBe(want);
         checked += 1;
       }
@@ -112,7 +119,7 @@ describe("faceOf — every shipped profile resolves to what it drew", () => {
       }
       // The faces a render registers for it: the display face — and the
       // body face where the profile has a chapter rail (its numerals).
-      expect(facesOf(profile), template).toEqual(profile.chapters ? ["display", "body"] : ["display"]);
+      expect(facesOf(profile), template).toEqual(profile.chapters || RETRO_1997.includes(template) ? ["display", "body"] : ["display"]);
     }
     expect(checked).toBe(FRAME_TEMPLATE_VALUES.length * FACE_ROLES.length);
     expect(FACE_ROLES).toHaveLength(Object.keys(BEFORE).length);
@@ -126,8 +133,9 @@ describe("faceOf — every shipped profile resolves to what it drew", () => {
       }
       expect(profile.loyaltyRows?.badgeFont, template).toBeUndefined();
       expect(profile.chapters?.badge.numeralFont, template).toBeUndefined();
-      expect(profile.footer?.prefix, template).toBeUndefined();
-      expect(profile.footer?.align, template).toBeUndefined();
+      const retro = RETRO_1997.includes(template);
+      expect(profile.footer?.prefix, template).toBe(retro ? "Illus. " : undefined);
+      expect(profile.footer?.align, template).toBe(retro ? "center" : undefined);
     }
   });
 });

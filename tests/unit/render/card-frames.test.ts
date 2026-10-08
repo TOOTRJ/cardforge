@@ -38,9 +38,9 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     vi.stubGlobal("fetch", fetchSpy);
     // (The M15 family left git for the frames bucket in v24 — these are
     // masters that are still committed.)
-    await preloadFrame("retro", "w");
+    await preloadFrame("modern", "w");
     await preloadFrameAssets(["/frames/modern/pt/w.png"]);
-    expect(getFrameDataUrl("retro", "w").startsWith("data:image/png;base64,")).toBe(true);
+    expect(getFrameDataUrl("modern", "w").startsWith("data:image/png;base64,")).toBe(true);
     expect(getPlateDataUrlForPath("/frames/modern/pt/{color}.png", "w")).toMatch(/^data:image\/png;base64,/);
     expect(fetchSpy).not.toHaveBeenCalled();
   });

@@ -112,18 +112,19 @@ describe("long stats shrink to fit", () => {
     expect(box.x1).toBeLessThanOrEqual(1373);
   }, 60_000);
 
-  it("Retro: *+1/*+1 fits the strip at full size — on ONE line, centred, though wider than its rect", async () => {
+  it("Retro (4.10a): *+1/*+1 shrinks into the frame's corner — ONE line, centred, between the artist line's box and the bevel", async () => {
     const none = await bake(card("retro", { power: null, toughness: null }));
     const long = diffBox(none, await bake(card("retro", { power: "*+1", toughness: "*+1" })))!;
     const short = diffBox(none, await bake(card("retro", { power: "4", toughness: "4" })))!;
-    const rect = getFrameProfile("retro").pt!.rect;
-    // Wider than the 210 px rect (it used to wrap after the slash, two lines).
-    expect(long.x1 - long.x0).toBeGreaterThan((rect.widthPct / 100) * 1500);
-    expect(long.y1 - long.y0).toBeLessThan((short.y1 - short.y0) * 1.3);
-    // Centred like the preview's span, not run off the rect's right edge.
-    expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
-    expect(long.x0).toBeGreaterThanOrEqual(1125);
-    expect(long.x1).toBeLessThanOrEqual(1410);
+    // One line (it used to wrap after the slash), no taller than the short
+    // value: it shrank.
+    expect(long.y1 - long.y0).toBeLessThanOrEqual(short.y1 - short.y0);
+    // Centred like the preview's span (the hard shadow rides both; the
+    // asterisks' side bearings put the ink's middle a few px off the box's).
+    expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(8);
+    // Inside the ink span, the drop shadow (≤ 7 px right) included.
+    expect(long.x0).toBeGreaterThanOrEqual(1162);
+    expect(long.x1).toBeLessThanOrEqual(1413 + 7);
   }, 60_000);
 
   it("Flip: the upside-down second face shrinks 100/100 into its plate's face (93–272 px)", async () => {

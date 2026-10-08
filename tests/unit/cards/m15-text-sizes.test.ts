@@ -441,11 +441,17 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
       p.adventure?.rules,
     ].filter((s): s is TextSlot => Boolean(s));
 
-  it("sets TextSlot.dy only on family frames, and the measured fit on them and on split's two halves", () => {
+  const RETRO_1997 = new Set<string>(["retro", "retroland"]);
+  it("sets TextSlot.dy only on family frames, and the measured fit on them, on split's two halves and on the 1997 pair's name and type line", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       if (FAMILY.has(t)) continue;
       const p = getFrameProfile(t);
       for (const slot of slots(p)) {
+        if (RETRO_1997.has(t) && (slot === p.title || slot === p.type)) {
+          expect(slot.fit, t).toBe("measured");
+          expect(slot.dy, t).toBeGreaterThan(0);
+          continue;
+        }
         expect(slot.dy, t).toBeUndefined();
         // Split (TODO 4.21b) is the one frame outside the family whose
         // names and type lines are measured — both halves, at its own
@@ -475,8 +481,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     tarkirdraconic: "50b8b1038a077ea11b977b57e330f17ba97cef36ff660f9bca457784f4b04ecc",
     tarkirghostfire: "06c8b3c2433722bd026f6858eddb845b737d1b122aa5cb24cb73a9a8cdc4ddac",
     tarkirdragon: "02795eab0669bceb9882301ae017cbd5cf9289362c80b00c5067786a743189fd",
-    retro: "764ab0efea4f4d679221f7f57ec3e0d7b036d0b29d5147d369ca31aa04009736",
-    retroland: "73fecd74789647af365d2afb33f7ddce0dd2c6958a4a1d97b0e03e595c5e5c5e",
     modern: "06e6cd0351408015bfd7715f945c03f50e8fe9fef36915df006fae8e0c5f56e7",
     modernland: "84c510944cc37e2f818cf127ea36b36d01c12613714b1c741a0cc7bca5d49777",
   };
@@ -524,7 +528,9 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   };
 
   it("leaves every frame outside the family byte-identical to layout v31 but for its v33 rules ceiling — split aside, which moved with its own bump (v43)", () => {
-    const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && t !== "split");
+    // (The 1997 pair left its v31 self with its own bump too: TODO 4.10a,
+    // layout v46 — tests/unit/cards/retro-1997-profile.test.ts.)
+    const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && t !== "split" && t !== "retro" && t !== "retroland");
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
     for (const t of outside) {
       const digest = createHash("sha256").update(JSON.stringify(asAtV31(withoutV44FooterInk(t, getFrameProfile(t))))).digest("hex");

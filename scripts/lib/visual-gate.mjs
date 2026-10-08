@@ -35,10 +35,19 @@
 export const BASELINE_PATH = "tests/visual/baseline.json";
 export const LAYOUT_VERSION_PATH = "lib/cards/layout-version.ts";
 
-/** `export const CARD_LAYOUT_VERSION = 34;` → 34 (null when absent). */
+/** `export const CARD_LAYOUT_VERSION = 34;` → 34 (null when absent) — or,
+ *  where the latest bump keeps its number in ONE constant of its own
+ *  (`export const CARD_LAYOUT_VERSION = RETRO_1997_LAYOUT_VERSION;`, TODO
+ *  4.10a), that constant's number (`export const RETRO_1997_LAYOUT_VERSION =
+ *  46;`); null when it names a constant the file does not define as a
+ *  number. */
 export function parseLayoutVersion(source) {
-  const m = /export const CARD_LAYOUT_VERSION\s*=\s*(\d+)\s*;/.exec(source ?? "");
-  return m ? Number(m[1]) : null;
+  const text = source ?? "";
+  const m = /export const CARD_LAYOUT_VERSION\s*=\s*(\d+|[A-Z][A-Z0-9_]*)\s*;/.exec(text);
+  if (!m) return null;
+  if (/^\d+$/.test(m[1])) return Number(m[1]);
+  const named = new RegExp(`export const ${m[1]}\\s*=\\s*(\\d+)\\s*;`).exec(text);
+  return named ? Number(named[1]) : null;
 }
 
 /** "3/4" → { index: 3, count: 4 }; throws on anything else. */

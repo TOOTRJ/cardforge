@@ -17,6 +17,13 @@
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
 import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName, rampShare } from "./pair-ramp.mjs";
+import { describeRegionTones, stretchRange } from "./print-cut.mjs";
+import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
+
+// The piecewise-linear re-cut and the region tone with an offset (TODO
+// 4.10a): scripts/lib/print-cut.mjs, re-exported for the importer and tests.
+export { cutMaps, piecewiseMap, recutPiecewise, recutPlane, regionGain, squareCornersOnBlack, stretchRange, toneRegions } from "./print-cut.mjs";
+export { seventhRegions } from "./seventh-1997.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
@@ -2571,6 +2578,80 @@ const DFC_PAIR_NOTE =
  * pixels (recorded in provenance). `notes` records every substitution, so
  * provenance says why a colour is not a 1:1 Card Conjurer file.
  */
+// ---------------------------------------------------------------------------
+// TODO 4.10a (layout v46): the 1997 frame — `retro`, `retroland` — on the
+// ORIGINAL cards of 1996–2003 (owner 2026-10-07, round 38). Seven keys are
+// Card Conjurer's "Seventh Edition" drawing (packSeventh.js: sharp 2 px
+// lines, one geometry for every colour), which as drawn carries the 2021+
+// REPRINTS' colours (white frame 215 luma against the originals' 157) on a
+// frame 5 px off centre with a text box 8–9 px short — so each master is
+// RE-CUT edge by edge onto the prints (a piecewise-linear map per axis; the
+// text box's anchors are per colour, the prints' boxes differ) and TONED
+// region by region onto the prints' medians (mean and contrast in the frame
+// body and the text box, a per-channel gain per bevel side): the steps are
+// scripts/lib/print-cut.mjs, the numbers scripts/lib/seventh-1997.mjs.
+// GOLD keeps today's MSE artwork (Card Conjurer's gold failed the eye: less
+// detail than MSE's, twice the prints' contrast, violet bevels), cut edge by
+// edge with the same map so its window and frame box are the other seven's;
+// it is not toned (MSE's gold is the prints' colour, ΔE 2.6).
+// ---------------------------------------------------------------------------
+const SEVENTH = "img/frames/seventh/regular";
+/** A source that is a file of THIS repo, not of Card Conjurer's: the MSE
+ *  gold master the 1997 gold frame is cut from (the importer reads it from
+ *  the checkout; it is MSE-derived, so it may live in git). */
+export const REPO_SOURCE_PREFIX = "repo:";
+export const RETRO_GOLD_MSE = `${REPO_SOURCE_PREFIX}scripts/frame-inputs/retro-m-mse.png`;
+/** The pack's Pinline mask: a land's coloured rings (NOT the bevels). */
+const SEVENTH_RINGS_MASK = `${SEVENTH}/pinline.svg`;
+
+/** Which Seventh recipe (a key of SEVENTH_TONES / SEVENTH_TEXT_BOX) builds
+ *  a template's colour key; null = the MSE gold. */
+export const SEVENTH_RECIPE_OF = Object.freeze({
+  retro: Object.freeze({ w: "w", u: "u", b: "b", r: "r", g: "g", c: "a", m: null }),
+  retroland: Object.freeze({ w: "wl", u: "ul", b: "bl", r: "rl", g: "gl", c: "l", m: "ml" }),
+});
+
+/** A 1997 master's print recipe (the importer's `printRecipe`): the re-cut,
+ *  and — but for the MSE gold — the region tones, whether the text box is
+ *  cut by colour and the mask of a land's rings. */
+export function seventhPrintRecipe(template, key) {
+  const recipe = SEVENTH_RECIPE_OF[template]?.[key];
+  if (recipe === undefined) throw new Error(`seventhPrintRecipe: ${template}/${key} is no 1997 master`);
+  // The MSE master's corners are already cut: flattened onto black first.
+  if (recipe === null) return { cut: retroGoldCut(), squareCorners: true };
+  return {
+    cut: seventhCut(recipe),
+    tones: SEVENTH_TONES[recipe],
+    byColour: SEVENTH_BOX_BY_COLOUR.includes(recipe),
+    ...(template === "retroland" ? { rings: SEVENTH_RINGS_MASK } : {}),
+  };
+}
+
+/** How provenance records a print recipe. */
+export function describePrintRecipe(recipe) {
+  const range = (anchors) => {
+    const { min, max } = stretchRange(anchors);
+    return `${min.toFixed(3)}–${max.toFixed(3)}`;
+  };
+  return {
+    cut: {
+      ...recipe.cut,
+      localStretch: { y: range(recipe.cut.y), xUpper: range(recipe.cut.xUpper), xLower: range(recipe.cut.xLower) },
+    },
+    ...(recipe.tones ? { tones: describeRegionTones(recipe.tones) } : {}),
+    ...(recipe.squareCorners ? { corners: "the source's cut corners flattened onto black before the re-cut" } : {}),
+    ...(recipe.byColour ? { textBox: "cut by colour (no drawn outline), no trim ring" } : {}),
+    ...(recipe.rings ? { rings: `${recipe.rings} = region "pin"` } : {}),
+  };
+}
+
+const SEVENTH_TRANSFORM =
+  "native 1500x2100; re-cut onto the 1996–2003 prints edge by edge (printRecipe.cut: one piecewise-linear map per axis through [source px, print px] anchors — outer frame, art window, text box; the art rows' and the text-box rows' column maps lerped across the type band; Catmull-Rom, premultiplied, one resample), then toned region by region (printRecipe.tones: (in − from) × k + to per channel in the frame body and the text box, × to ÷ from per side of the outer bevel, the art bevel and the text box's trim; regions cut from the drawing's own lines and moved with the same map); corners rounded to the importer radius";
+const SEVENTH_NOTES = [
+  "the ORIGINAL cards (Mirage 1996 → Scourge 2003), not the 2021+ reprints whose colours the pack carries (owner 2026-10-07); every constant read off the prints once: outer frame and art window on 21 white prints, each colour's text box and tones on the per-pixel median of its prints (9 sets; white 21; the basic lands 7) — no scan is read by the build",
+  "known drawing caveats the owner accepted (round 38): blue is a flat-shaded redraw (hard-edged shapes where the print has brushwork), green's plank has no grain, black's parchment keeps a burnt rim",
+];
+
 export const CC_TEMPLATES = {
   m15: {
     colors: {
@@ -3098,6 +3179,37 @@ export const CC_TEMPLATES = {
     transforms: `${MODAL_LAND_TRANSFORM(false)}; ${mdfcBackToneTransform(MDFC_LAND_BACK_TONES)}`,
     strip: MDFC_STRIP_CUTS.m15mdfclandback,
     notes: [...MDFC_LAND_NOTES(false), MDFC_STRIP_NOTE],
+  },
+  // --- TODO 4.10a: the 1997 frame (see the section above CC_TEMPLATES).
+  retro: {
+    colors: {
+      ...perColor((k) => [layer(`${SEVENTH}/${k}.png`)], ["w", "u", "b", "r", "g"]),
+      c: [layer(`${SEVENTH}/a.png`)],
+      m: [layer(RETRO_GOLD_MSE)],
+    },
+    printRecipe: (key) => seventhPrintRecipe("retro", key),
+    pack: "packSeventh.js 'Seventh Edition' (w u b r g, a) + MSE magic-old mcard.jpg (m)",
+    transforms: SEVENTH_TRANSFORM,
+    notes: [
+      ...SEVENTH_NOTES,
+      "c = the pack's ARTIFACT frame a.png, as before (the 1997 frame printed no colourless non-artifact before 2021; the pack's c.png is MH3's 2024 frame)",
+      "m = today's MSE gold (scripts/frame-inputs/retro-m-mse.png, the former public/frames/retro/m.png: magic-old mcard.jpg at 1500×2100, window cut, corners normalised), re-cut with the same edge map and NOT toned — Card Conjurer's gold failed proof 1 by eye; its art ring stays the MSE drawing's (up to 4.8 px wider than the gold prints')",
+    ],
+  },
+  retroland: {
+    colors: {
+      c: [layer(`${SEVENTH}/l.png`)],
+      ...perColor((k) => [layer(`${SEVENTH}/${k}l.png`)], ["w", "u", "b", "r", "g"]),
+      m: [layer(`${SEVENTH}/l.png`), replacing(`${SEVENTH}/m.png`, `${SEVENTH}/rules.svg`)],
+    },
+    printRecipe: (key) => seventhPrintRecipe("retroland", key),
+    pack: "packSeventh.js 'Seventh Edition' lands (l, wl ul bl rl gl)",
+    transforms: SEVENTH_TRANSFORM,
+    notes: [
+      ...SEVENTH_NOTES,
+      "c = the plain land l.png (the orange box of Fifth Edition 1997 on); w–g = the pack's coloured land boxes (wl … gl: the land frame, the box and its rings in the colour), toned onto the seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY, ONS); the rings (the pack's Pinline mask) are their own region",
+      "m = a render STAND-IN, never ticked: the plain land with the pack's gold text box laid in through its Rules mask, the box toned onto the gold prints' box. No three-colour 1997 land was measured; two-colour lands print a blend (TODO 4.6h)",
+    ],
   },
 };
 
@@ -4077,9 +4189,12 @@ export function sourceFilesFor(def) {
   // for a later recipe (4.21c's saga).
   for (const src of Object.values(def.pieces ?? {})) files.add(src);
   for (const src of Object.values(def.maskInputs ?? {})) files.add(src);
-  // A masked tone's mask (TODO 5.1a, the transform backs).
+  // A masked tone's mask (TODO 5.1a, the transform backs); a print recipe's
+  // rings mask (TODO 4.10a, the 1997 lands).
   for (const key of builtColors(def)) {
     for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);
+    const rings = def.printRecipe?.(key).rings;
+    if (rings) files.add(rings);
   }
   return [...files].sort();
 }

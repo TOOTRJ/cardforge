@@ -78,6 +78,11 @@ describe("parsing", () => {
     expect(parseLayoutVersion("// x\nexport const CARD_LAYOUT_VERSION = 34;\n")).toBe(34);
     expect(parseLayoutVersion("export const CARD_LAYOUT_VERSION = 135 ;")).toBe(135);
     expect(parseLayoutVersion("export const ROUND_BAKE_LAYOUT_VERSION = 31;")).toBeNull();
+    // The latest bump's number may live in ONE constant of its own (TODO
+    // 4.10a): the gate reads through it.
+    expect(parseLayoutVersion("export const RETRO_1997_LAYOUT_VERSION = 46;\nexport const CARD_LAYOUT_VERSION = RETRO_1997_LAYOUT_VERSION;\n")).toBe(46);
+    expect(parseLayoutVersion("export const CARD_LAYOUT_VERSION = MISSING_VERSION;")).toBeNull();
+    expect(parseLayoutVersion("export const OTHER = 9;\nexport const CARD_LAYOUT_VERSION = OTHER + 1;")).toBeNull();
   });
 
   it("parses i/n shards and refuses nonsense", () => {

@@ -194,6 +194,13 @@ import {
   type SagaRailDrawing,
 } from "@/lib/cards/saga-rail";
 import { fitTitleBand } from "@/lib/cards/title-band";
+import {
+  BRAND_MARK_LIGHT_INK,
+  BRAND_MARK_LIGHT_SHADOW,
+  copyrightSlotLayout,
+  type CopyrightMarkInk,
+  type CopyrightSlotLayout,
+} from "@/lib/cards/copyright-slot";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -589,6 +596,12 @@ function CardImage({
     },
     brandMark ? { kind: "display" } : { kind: "download", footerText: watermarkText },
   );
+  // A centred footer's © slot (TODO 4.10a; lib/cards/copyright-slot.ts, the
+  // preview's twin): the mark on display, a clean download's footer text —
+  // never beside a collector line, which has its own.
+  const copyright = collector
+    ? null
+    : copyrightSlotLayout(layout, masterKey, brandMark ? { kind: "display" } : { kind: "download", footerText: watermarkText });
 
   const focalX = clamp(card.artPosition?.focalX ?? 0.5, 0, 1) * 100;
   const focalY = clamp(card.artPosition?.focalY ?? 0.5, 0, 1) * 100;
@@ -1387,7 +1400,14 @@ function CardImage({
       {brandMark && collector?.mark.kind === "brand"
         ? BrandMarkInCollectorSlotBake({ anchor: collector.mark.anchor, cardWidth: width, cardHeight: height })
         : null}
-      {brandMark && collector?.mark.kind !== "brand" ? (
+      {/* A centred footer's © slot (TODO 4.10a: the 1997 frame): the mark
+          on display — in place of the border mark below — and a clean
+          download's footer text; the preview's CopyrightSlotMark twin. */}
+      {copyright?.kind === "brand"
+        ? BrandMarkInCollectorSlotBake({ anchor: copyright.anchor, cardWidth: width, cardHeight: height, ink: copyright.ink })
+        : null}
+      {copyright?.kind === "text" ? CopyrightTextBake({ layout: copyright, cardWidth: width, cardHeight: height }) : null}
+      {brandMark && collector?.mark.kind !== "brand" && !copyright ? (
         <div
           style={{
             position: "absolute",
@@ -1697,13 +1717,18 @@ function BrandMarkInCollectorSlotBake({
   anchor,
   cardWidth,
   cardHeight,
+  ink = { kind: "light" },
 }: {
   anchor: CollectorMarkAnchor;
   cardWidth: number;
   cardHeight: number;
+  /** A centred footer's © slot (TODO 4.10a) may ask for the line's printed
+   *  ink, flat (lib/cards/copyright-slot.ts); the collector slot never does. */
+  ink?: CopyrightMarkInk;
 }) {
   const fontPx = fpx(anchor.sizePct, cardWidth);
   const scale = anchor.sizePct / 0.026;
+  const color = ink.kind === "flat" ? ink.colorHex : BRAND_MARK_LIGHT_INK;
   return (
     <div
       style={{
@@ -1718,8 +1743,8 @@ function BrandMarkInCollectorSlotBake({
         lineHeight: anchor.lineHeight,
         fontWeight: 600,
         letterSpacing: "0.02em",
-        color: "rgba(255,255,255,0.82)",
-        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+        color,
+        ...(ink.kind === "light" ? { textShadow: BRAND_MARK_LIGHT_SHADOW } : {}),
       }}
     >
       <svg
@@ -1728,10 +1753,43 @@ function BrandMarkInCollectorSlotBake({
         viewBox="0 0 32 32"
         style={{ marginRight: Math.round(fpx(0.008 * scale, cardWidth)) }}
       >
-        <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
+        <path d={ROSE_STAR_PATH} fill={color} />
       </svg>
       pipglyph.com
     </div>
+  );
+}
+
+/** A centred footer's © slot on a clean download (TODO 4.10a): the card's
+ *  footer text at the layout's pen x, its line box's top the baseline less
+ *  the face's ascent at the whole-px size, in the line's printed ink — the
+ *  preview's CopyrightSlotText twin (the collector line's run, one face). */
+function CopyrightTextBake({
+  layout,
+  cardWidth,
+  cardHeight,
+}: {
+  layout: Extract<CopyrightSlotLayout, { kind: "text" }>;
+  cardWidth: number;
+  cardHeight: number;
+}) {
+  const fontPx = fpx(layout.sizePct, cardWidth);
+  return (
+    <span
+      style={{
+        position: "absolute",
+        left: (layout.xPct / 100) * cardWidth,
+        top: (layout.baselinePct / 100) * cardHeight - layout.face.ascentEm * fontPx,
+        zIndex: 20,
+        fontFamily: layout.face.bakeFamily,
+        fontSize: fontPx,
+        lineHeight: layout.lineHeight,
+        color: layout.colorHex,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {layout.text}
+    </span>
   );
 }
 

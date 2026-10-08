@@ -74,6 +74,12 @@ import {
   SPLIT_TITLE_SIZE_PCT,
   SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
+  RETRO_ARTIST_SIZE_PCT,
+  RETRO_COPYRIGHT_SIZE_PCT,
+  RETRO_COST_DISC_PCT,
+  RETRO_PT_SIZE_PCT,
+  RETRO_TITLE_SIZE_PCT,
+  RETRO_TYPE_SIZE_PCT,
   RULES_SIZE_PX,
   TYPE_SIZE_PCT,
   displayPct,
@@ -638,6 +644,16 @@ export type FrameProfile = {
    *  on PROFILES entries (COLLECTOR_TEMPLATES), never on a base another
    *  profile spreads; code-owned (the override schema refuses it). */
   collector?: CollectorSlot;
+  /** The footer's SECOND line — the © slot of a frame whose prints set a
+   *  centred two-line footer (TODO 4.10a: the 1997 frame; era design D2, the
+   *  collector line's precedent). PipGlyph prints no Wizards © line, so the
+   *  slot carries: on DISPLAY surfaces the pipglyph.com mark — which then
+   *  leaves the border (`brandMark` is not read) — and on a paid viewer's
+   *  clean download the card's footer text, or nothing. Both renderers and
+   *  the print path draw it from lib/cards/copyright-slot.ts. Without it a
+   *  centred footer has no place for the custom text (TextSlot.prefix).
+   *  Code-owned (the override schema refuses it). */
+  copyrightSlot?: CopyrightSlot;
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -984,6 +1000,34 @@ export type CollectorSlot = {
    *  slot is on line 2 only when the renderer draws a stat plate (a P/T, the
    *  loyalty shield, the defense badge) and on line 1 without one. */
   markLine?: 2;
+};
+
+/** A centred footer's second line (FrameProfile.copyrightSlot). */
+export type CopyrightSlot = {
+  /** The line's centre, % of the card's width. */
+  centerPct: number;
+  /** Its baseline, % of the card's height. */
+  baselinePct: number;
+  /** The size of a clean download's footer text, a fraction of the card's
+   *  width — and the em the brand mark is scaled to (its text; the star and
+   *  the gap in proportion). */
+  sizePct: number;
+  /** The face the footer text is set in ("body" when unset). The mark is
+   *  always the brand's. */
+  font?: SlotFace;
+  /** The line's PRINTED ink: the footer text's colour, and — where it is
+   *  dark (`markInk: "line"` on that master) — the mark's. */
+  colorHex: string;
+  inkByColorKey?: InkByColorKey;
+  /** The masters on which the mark takes the line's ink as ONE flat colour
+   *  with no shadow (the brand's single-ink treatment): where the print's
+   *  second line is dark and the white mark would not read (the 1997 white
+   *  frame). On every other master the mark is its standard white with its
+   *  own soft shadow. */
+  darkMarkKeys?: readonly FrameMasterKey[];
+  /** The widest the footer text is drawn, a fraction of the card's width:
+   *  a longer one is cut with ONE "…". */
+  maxWidthPct: number;
 };
 
 /** Default placement: inside the M15 black border (≈73 px of black above the
@@ -2516,75 +2560,145 @@ const ALPHALAND: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// Retro (1997, magic-old.mse-style) — the pre-8th-Edition "old border": a tan
-// marble frame with the name + type printed directly on the border (no plates),
-// a white art window (cut to transparent), a cream text box, and the P/T at
-// the bottom-right. Structurally like AGCLASSIC but with the MSE magic-old
-// geometry. This PROFILE draws every line of text in dark ink; the prints do
-// not: on the 1997 frame the name, type line, P/T and artist line are white
-// with a hard black shadow on EVERY frame colour, white included (104 prints
-// read, Mirage 1996 → Scourge 2003, no exception — the era design of
-// 2026-10-06). TODO 4.10a corrects the ink, the footer and the sizes; nothing
-// is ticked or stored on this pair until then.
-// MSE magic-old spec (375×523): name 42,24 (23h); image 45,51 286×233;
-// type 39,291 (20h); text 43,318 289×143; pt 295,470 47×27.
+// Retro (1997) — the pre-8th-Edition "old border" as the ORIGINAL cards
+// printed it, Mirage 1996 → Scourge 2003 (TODO 4.10a, layout v46; owner
+// 2026-10-07: the originals, not the 2021+ reprints). The name and type line
+// sit directly on the frame (no plates), the P/T in the frame's bottom-right
+// corner, a centred two-line footer under the text box.
+//
+// MASTERS: the frames bucket. Seven keys are Card Conjurer's Seventh drawing
+// re-cut edge by edge and toned region by region onto the prints, gold is
+// the MSE artwork cut with the same edge map (scripts/lib/seventh-1997.mjs;
+// docs/FRAMES.md "The 1997 frame"). Every px below is the 1500 × 2100
+// master's; every text measure is the prints' (lib/cards/typography.ts
+// RETRO_*; 54 prints for baselines and centres).
+//
+// INK (104 prints, no exception): name, type line, P/T and artist line are
+// WHITE (≈ #f0f3ef) with a hard black drop shadow on EVERY frame colour,
+// white included — right / down at HD: name + 5 / + 3 px, type line
+// + 4.5 / + 3.3, artist line + 3.5 / + 3.5, P/T about twice the name's
+// (+ 6.7 / + 5.7). The shadows are per-key ink entries, never the band's own
+// `shadowCss`: a band-level shadow would emboss the pips beside the name.
+//
+// FOOTER (era design D1 / D2): the centred layout of Exodus 1998 on —
+// `Illus. <artist>` in MPlantin over the © slot (`copyrightSlot`), whose
+// printed ink is black on the white frame and white on every other from
+// Mercadian Masques 1999. PipGlyph prints no Wizards line: the slot holds
+// the pipglyph.com mark on display (off the border on this pair) and a
+// clean download's footer text.
+//
+// SYMBOLS (4.24): `symbolStyle: "1997"` — flat 73 px discs, the 1997 tap.
 // ---------------------------------------------------------------------------
+/** The 1997 prints' white ink and its drop shadow's black. */
+const RETRO_WHITE = "#f0f3ef";
+const RETRO_SHADOW_HEX = "#181311";
+const RETRO_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
+/** White ink with a hard shadow `dxPx` right and `dyPx` down at `sizePx`
+ *  (HD px), in em so both renderers scale it — one entry per master. */
+function retroInk(sizePx: number, dxPx: number, dyPx: number): InkByColorKey {
+  const em = (px: number) => Number((px / sizePx).toFixed(4));
+  const shadowCss = `${em(dxPx)}em ${em(dyPx)}em 0 ${RETRO_SHADOW_HEX}`;
+  return Object.fromEntries(RETRO_KEYS.map((k) => [k, { colorHex: RETRO_WHITE, shadowCss }]));
+}
+/** The 1997 masters' art window (4.10a): 175–1326 × 208–1136 px on every key
+ *  of both templates (the re-cut puts the pack's one window on the prints';
+ *  the MSE gold's is cut onto the same edges), covered with ≥ 0.05 % of the
+ *  card to spare: 174–1328 × 206.6–1137.8 px. */
+const RETRO_ART_SLOT: Rect = { topPct: 9.84, leftPct: 11.6, widthPct: 76.934, heightPct: 44.34 };
+/** The © slot: centred on the artist line's centre (748 px), baseline at
+ *  1976 px; black on the white frame, white elsewhere (the late prints'
+ *  rule, Mercadian Masques 1999 on). */
+const RETRO_COPYRIGHT: CopyrightSlot = {
+  centerPct: 49.87,
+  baselinePct: (1976 / 2100) * 100,
+  sizePct: RETRO_COPYRIGHT_SIZE_PCT,
+  font: "body",
+  colorHex: RETRO_WHITE,
+  inkByColorKey: { w: { colorHex: INK_DARK } },
+  darkMarkKeys: ["w"],
+  maxWidthPct: 0.5,
+};
 const RETRO: FrameProfile = {
   flavorDivider: false,
   label: "Retro (1997)",
-  // Frame edge at 96.38%H: the default mark touched it.
-  brandMark: { rightPct: 3.5, bottomPct: 0.95 },
-  costSizePct: 0.04,
-  artSlot: { topPct: 9.6, leftPct: 11.7, widthPct: 76.6, heightPct: 44.8 },
+  symbolStyle: "1997",
+  costSizePct: RETRO_COST_DISC_PCT,
+  artSlot: RETRO_ART_SLOT,
+  // The band: from the name's start (166 px on the prints) to the last cost
+  // disc's end (1383 px), centred on the discs' row (137 px). The name's
+  // baseline is the prints' 163 px: `dy` lowers the text alone.
   title: {
-    rect: { topPct: 4.2, leftPct: 11, widthPct: 78, heightPct: 4.6 },
-    sizePct: 0.044,
-    colorHex: INK_DARK,
+    rect: { topPct: 4.224, leftPct: 10.87, widthPct: 81.33, heightPct: 4.6 },
+    sizePct: RETRO_TITLE_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    inkByColorKey: retroInk(71, 5, 3),
     weight: 600,
     font: "display",
+    fit: "measured",
+    dy: 3.4 / 1500,
   },
+  // MPlantin, the printed face: baseline 1229 px, starting at 162 px; the
+  // band is centred between the art ring and the text box (1204.5 px) for
+  // the set symbol, the text lowered onto its baseline by `dy`.
   type: {
-    rect: { topPct: 55.4, leftPct: 10.4, widthPct: 74, heightPct: 3.9 },
-    sizePct: 0.03,
-    colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
+    rect: { topPct: 55.5, leftPct: 10.53, widthPct: 79.47, heightPct: 3.714 },
+    sizePct: RETRO_TYPE_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    inkByColorKey: retroInk(67, 4.5, 3.3),
+    font: "body",
+    fit: "measured",
+    dy: 6.1 / 1500,
   },
+  // ONE rules box for seven masters whose printed text boxes differ (the
+  // re-cut is per key): it fits the smallest — inside the trim ring of every
+  // outlined box (175–1325 × 1276–1846 px across both templates), clear of
+  // green's ragged plank and black's burnt rim. 183–1317 × 1270–1846 with
+  // the default 9 / 18 px padding sets the text in 192–1308 px, the pack's
+  // own text column.
   rules: {
-    rect: { topPct: 60.6, leftPct: 11.5, widthPct: 77, heightPct: 27.2 },
+    rect: { topPct: 60.476, leftPct: 12.2, widthPct: 75.6, heightPct: 27.43 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
   },
+  // Line 1: "Illus. <artist>", centred on 748 px, baseline 1933 px; its box
+  // ends before the widest P/T's ink (1160 px), so a long credit takes its
+  // "…" there.
   footer: {
-    rect: { topPct: 95.3, leftPct: 11, widthPct: 78, heightPct: 2.6 },
-    sizePct: 0.015,
-    colorHex: "#efe9dd",
-    uppercase: true,
-    letterSpacingEm: 0.04,
-    font: "display",
+    rect: { topPct: 89.69, leftPct: 22.4, widthPct: 54.93, heightPct: 3.2 },
+    sizePct: RETRO_ARTIST_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    inkByColorKey: retroInk(58, 3.5, 3.5),
+    align: "center",
+    prefix: "Illus. ",
+    font: "body",
   },
-  // Dark ink today, which is NOT the printed look: 1997-frame cards print the
-  // P/T white with a black shadow (MSE's "white" note was right; an earlier
-  // comment here said the prints were dark). TODO 4.10a corrects it.
-  // The strip is free on both sides of the value up to the frame's bevel
-  // shading at ~1410 px, so the ink may run 1125–1410 px (`100/100` fits).
+  copyrightSlot: RETRO_COPYRIGHT,
+  // White with the heavier shadow, centred on 1309 px (87.3 %W), baseline
+  // 1963 px. The corner is free from the artist line's box (1160 px) to the
+  // frame's outer bevel (1413 px): a value whose ink would pass either
+  // shrinks (it stays centred, so the right side binds: "10/10" sets at
+  // about four fifths).
   pt: {
-    rect: { topPct: 89.5, leftPct: 77.5, widthPct: 14, heightPct: 5.6 },
-    inkSpanPct: { leftPct: 75, rightPct: 94 },
-    sizePct: 0.042,
-    colorHex: INK_DARK,
+    rect: { topPct: 89.31, leftPct: 80.37, widthPct: 14, heightPct: 5.6 },
+    inkSpanPct: { leftPct: 77.47, rightPct: 94.2 },
+    sizePct: RETRO_PT_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    shadowCss: `${(6.7 / 86).toFixed(4)}em ${(5.7 / 86).toFixed(4)}em 0 ${RETRO_SHADOW_HEX}`,
     weight: 700,
   },
 };
 
-// Retro land — the 1997 nonbasic land frame (magic-old-unland): same geometry,
-// no mana cost.
+// Retro land — the 1997 land frame: the same geometry, no mana cost. `c` is
+// the plain land (the orange box of Fifth Edition 1997 on), w–g the basics'
+// coloured boxes, `m` a stand-in that is never ticked (4.6h). One brown land
+// frame under every key's footer: the © slot is white on all seven.
 const RETROLAND: FrameProfile = {
   ...RETRO,
   label: "Retro Land",
   hideCost: true,
+  copyrightSlot: { ...RETRO_COPYRIGHT, inkByColorKey: undefined, darkMarkKeys: undefined },
 };
 
 // ---------------------------------------------------------------------------

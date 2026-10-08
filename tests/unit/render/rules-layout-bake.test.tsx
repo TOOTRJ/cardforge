@@ -57,7 +57,7 @@ const CASES: Case[] = [
   },
   {
     name: "Retro, flavor with no bar",
-    template: "retro",
+    template: "modern",
     card: { cardType: "creature", power: "2", toughness: "2", rulesText: "Flying\n{T}: Target creature gains flying until end of turn.", flavorText: "The sky is no limit." },
     show: { pt: true },
   },

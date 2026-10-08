@@ -16,8 +16,9 @@ const THIN_BORDER: Record<string, { rightPct: number; bottomPct: number }> = {
   // not 60): the mark's ink centred in that band.
   agclassic: { rightPct: 3.5, bottomPct: 1.5 },
   alphaland: { rightPct: 3.5, bottomPct: 1.5 },
-  retro: { rightPct: 3.5, bottomPct: 0.95 },
-  retroland: { rightPct: 3.5, bottomPct: 0.95 },
+  // (retro and retroland left this table with TODO 4.10a: their mark sits in
+  // the centred footer's © slot — FrameProfile.copyrightSlot,
+  // tests/unit/cards/copyright-slot.test.ts — and `brandMark` is not read.)
   modern: { rightPct: 3.5, bottomPct: 0.8 },
   modernland: { rightPct: 3.5, bottomPct: 0.8 },
   extendedart: { rightPct: 3.5, bottomPct: 0.8 },

@@ -166,6 +166,50 @@ export const SPLIT_COST_DISC_PCT = 68 / 2100;
  *  fills its height (see above). */
 export const SPLIT_SET_SYMBOL_BOX_PCT = 48 / 2100;
 
+// ---------------------------------------------------------------------------
+// The 1997 frame's sizes (TODO 4.10a, layout v46: `retro`, `retroland`).
+// Fractions of a portrait card's width; HD px = × 1500. Print-matched for the
+// faces the site sets them in (owner 2026-10-07: no new typeface — names stay
+// in Beleren, the type line and the artist line are MPlantin, their printed
+// face). Measured on the ORIGINAL cards, Mirage 1996 → Scourge 2003 (the era
+// design's overlay fits, 7–13 prints per slot; baselines and centres
+// re-measured for 4.10a on 54 prints of blue, red, green, artifact, black
+// and land):
+//   • the name — the prints' MagicMedieval is set at 84 px (x-height 32 px,
+//     baseline at 163 px); Beleren Bold overlaps that ink best at 71 px
+//     (caps 50 px against the print's 58: a wider, lower face);
+//   • the type line — MPlantin at 67 px (x-height 29 px, baseline 1229 px);
+//   • the P/T — a Plantin heavier than MPlantin at 92 px (digits 58–63 px
+//     tall, baseline 1963 px, centred on 1309 px = 87.3 %W); Beleren Bold's
+//     digits are that tall at 86 px;
+//   • the artist line — MPlantin at 58 px (x-height 25 px, baseline 1933 px,
+//     centred on 748 px), from Exodus 1998 on;
+//   • the line under it (the prints' © line, our © slot) — MPlantin at 33 px
+//     (capitals 21 px, baseline 1976 px);
+//   • the cost — flat discs 72–74 px across, 80–81 px apart, centred on
+//     row 137, the last one ending at 1383 px.
+// ---------------------------------------------------------------------------
+
+/** The 1997 frame's name — 71 px at HD (Beleren Bold). */
+export const RETRO_TITLE_SIZE_PCT = 71 / 1500;
+
+/** The 1997 frame's type line — 67 px at HD (MPlantin). */
+export const RETRO_TYPE_SIZE_PCT = 67 / 1500;
+
+/** The 1997 frame's P/T — 86 px at HD (Beleren Bold). */
+export const RETRO_PT_SIZE_PCT = 86 / 1500;
+
+/** The 1997 frame's artist line — 58 px at HD (MPlantin). */
+export const RETRO_ARTIST_SIZE_PCT = 58 / 1500;
+
+/** The 1997 frame's © slot: a clean download's footer text — 33 px at HD
+ *  (MPlantin), and the pipglyph.com mark at the same em. */
+export const RETRO_COPYRIGHT_SIZE_PCT = 33 / 1500;
+
+/** The 1997 frame's mana-cost disc — 73 px at HD, flat (symbol style
+ *  "1997", lib/cards/symbol-style.ts). */
+export const RETRO_COST_DISC_PCT = 73 / 1500;
+
 /** A display size given as a fraction of a PORTRAIT card's width, as a
  *  fraction of the width of a card in `orientation`: the same absolute size
  *  on the physical card (× 5/7 on a landscape card, whose width is the

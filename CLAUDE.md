@@ -545,6 +545,23 @@ Rules and gotchas:
   arch is a
   glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
   shrinks.
+- The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
+  ORIGINAL cards of 1996–2003, never the 2021+ reprints (imports of those
+  are `nearest`: the `reprint-colours` gap). Masters: the frames bucket —
+  Card Conjurer's Seventh drawing re-cut edge by edge PER KEY and toned
+  region by region (`scripts/lib/print-cut.mjs`, the numbers in
+  `scripts/lib/seventh-1997.mjs` as DATA: no scan is read by a build), gold
+  from the MSE file `scripts/frame-inputs/retro-m-mse.png` cut with the same
+  edge map. Text: white with a hard shadow as PER-KEY ink (`inkByColorKey`,
+  never a band's `shadowCss`: it would emboss the pips), sizes from
+  `RETRO_*` in `lib/cards/typography.ts`, the type line and the artist line
+  in MPlantin — no font file is added for an era. A CENTRED footer declares
+  `FrameProfile.copyrightSlot` (`lib/cards/copyright-slot.ts`): the mark
+  sits there on display (not on the border) and a paid clean download
+  prints the card's `footer_text` there — without the slot that text is
+  dropped. A frame's era symbols are `symbolStyle` (`"1997"`: flat discs,
+  `tap-4ed`), a correction, never a per-card switch. `docs/FRAMES.md` "The
+  1997 frame".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

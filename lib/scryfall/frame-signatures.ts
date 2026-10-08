@@ -488,6 +488,9 @@ type Match = {
   textless?: boolean;
   /** The printing wears the design M20 introduced (isM20DesignPrinting). */
   m20Design?: boolean;
+  /** `released_at` is this day or later ("2021-01-01"); a printing with no
+   *  date never matches. */
+  releasedFrom?: string;
   /** `type_line` is exactly "Card" (a double-faced substitute). */
   typeLineCard?: true;
   singleBasic?: boolean;
@@ -653,6 +656,10 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.fullArt !== undefined && ctx.fullArt !== match.fullArt) return false;
   if (match.textless !== undefined && (card.textless === true) !== match.textless) return false;
   if (match.m20Design !== undefined && ctx.m20Design !== match.m20Design) return false;
+  if (match.releasedFrom !== undefined) {
+    const released = (card.released_at ?? "").trim();
+    if (released === "" || released < match.releasedFrom) return false;
+  }
   if (match.typeLineCard && (card.type_line ?? "").trim() !== "Card") return false;
   if (match.singleBasic !== undefined && facts.singleBasic !== match.singleBasic) return false;
   if (match.flavorName && !card.flavor_name) return false;
@@ -930,6 +937,7 @@ type GapKey =
   | "border"
   | "marks"
   | "colourshifted"
+  | "reprint-colours"
   | "nickname"
   | "nyx-dress"
   | "nyx"
@@ -950,6 +958,12 @@ const BORDER_WORD: Record<string, string> = {
   gold: "gold",
   yellow: "yellow",
 };
+
+/** The first day a printing on the 1997 frame counts as a REPRINT in the
+ *  reprints' colours (the "reprint-colours" gap): 2021 — Time Spiral
+ *  Remastered was released on 2021-03-19; nothing on the frame was printed
+ *  between Time Spiral (2006) and it but for promos in the old colours. */
+export const RETRO_REPRINT_COLOURS_FROM = "2021-01-01";
 
 const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = {
   // The legendary crown and the two-colour dresses (TODO 4.6a / 4.6b): a gap
@@ -1064,6 +1078,18 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     match: { effectsAny: ["colorshifted"] },
     reason: "PipGlyph doesn't have the colour-shifted frame",
     blockedBy: "4.11",
+  },
+  // The 1997 frame is the ORIGINAL cards' (TODO 4.10a; owner 2026-10-07, era
+  // design D14): from Time Spiral Remastered (2021-03) on, the printings on
+  // it carry lighter colours (a white frame at 208 luma against the
+  // originals' 157; red, green, artifact and land likewise) on a frame box
+  // 3–6 px wider — sixteen white reprints of eight sets, 2021 → 2025. Time
+  // Spiral's timeshifted cards (2006) still print the originals' colours and
+  // stay exact.
+  "reprint-colours": {
+    match: { frames: ["1997"], releasedFrom: RETRO_REPRINT_COLOURS_FROM },
+    reason: "PipGlyph's 1997 frame is the original 1996–2003 printing; this reprint's frame is lighter",
+    blockedBy: "4.10e",
   },
   nickname: {
     match: { flavorName: true },
@@ -2222,7 +2248,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { frames: ["1997"] },
       outcome: { status: "exact", template: { family: "retro" } },
     },
-    OLD_ERA_GAPS,
+    [...OLD_ERA_GAPS, "reprint-colours"],
   ),
   {
     key: "era/2003/planeswalker",

@@ -67,8 +67,6 @@ describe("the Phase B allow-list", () => {
         "m15textlessland",
         "modern",
         "modernland",
-        "retro",
-        "retroland",
       ].sort(),
     );
     // expeditionland: only the keys the corner check flags — w u r c m, whose
@@ -79,7 +77,9 @@ describe("the Phase B allow-list", () => {
     // aftermath left the list with TODO 4.21a, saga with 4.21c: Card
     // Conjurer masters in the frames bucket, cut at the one corner by the
     // importer.
-    for (const t of ["adventure", "aftermath", "flip", "saga"]) expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
+    // retro and retroland left it with TODO 4.10a: the 1997 masters are the
+    // importer's (the frames bucket), the MSE gold among them.
+    for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland"]) expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[], template).toContain(template);
       expect(NEVER_NORMALISE.test(template), template).toBe(false);
@@ -100,7 +100,8 @@ describe("the Phase B allow-list", () => {
       expect(shouldNormalise(t, "w"), t).toBe(false);
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }
-    expect(shouldNormalise("retro", "w")).toBe(true);
+    expect(shouldNormalise("retro", "w")).toBe(false);
+    expect(shouldNormalise("modern", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "b")).toBe(false);
     expect(shouldNormalise("expeditionland", "g")).toBe(false);
@@ -181,9 +182,9 @@ describe("normaliseCardCorners", () => {
     for (let i = 0; i < 120; i += 1) for (let d = -2; d <= 2; d += 1) leak.set([255, 255, 255], at(i, Math.max(0, i + d)));
     const report = normaliseCardCorners(Uint8Array.from(leak), W, H);
     expect(report[0].skipped).toMatch(/leak/);
-    expect(() => normaliseMasterCorners("retro", "w", leak, W, H)).toThrow(/^retro\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
+    expect(() => normaliseMasterCorners("modern", "w", leak, W, H)).toThrow(/^modern\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
     const white = new Uint8Array(W * H * 4).fill(255);
-    expect(() => normaliseMasterCorners("retro", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
+    expect(() => normaliseMasterCorners("modern", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
     // Off the allow-list the hook does nothing.
     const bloom = mseMaster();
     const copy = Uint8Array.from(bloom);
@@ -263,11 +264,11 @@ describe("normaliseCardCorners", () => {
     // contract (a border is opaque) refuses the normalised master.
     for (let y = 0; y < 8; y += 1) for (let x = 400; x < 420; x += 1) m[at(x, y) + 3] = 0;
     const withSpot = Uint8Array.from(m);
-    expect(() => normaliseMasterCorners("retro", "w", m, W, H)).toThrow(/^retro\/w: corner normalise refused — .*top/);
+    expect(() => normaliseMasterCorners("modern", "w", m, W, H)).toThrow(/^modern\/w: corner normalise refused — .*top/);
     expect(Buffer.from(m).equals(Buffer.from(withSpot))).toBe(true);
     // A clean one passes, and the report comes back.
-    expect(normaliseMasterCorners("retro", "w", copy, W, H)).toHaveLength(4);
-    expect(normalisedMasterFailures("retro", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
+    expect(normaliseMasterCorners("modern", "w", copy, W, H)).toHaveLength(4);
+    expect(normalisedMasterFailures("modern", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
   });
 });
 
@@ -276,8 +277,7 @@ describe("normaliseCardCorners", () => {
 // back once because dc65aa5's clear was a one-off over the files).
 describe("the MSE builders run the pass", () => {
   const BUILDER_OF: Record<string, string> = {
-    retro: "build-era-frames.mjs",
-    retroland: "build-era-frames.mjs",
+    // (retro and retroland left the list with TODO 4.10a: the importer's.)
     modern: "build-era-frames.mjs",
     modernland: "build-era-frames.mjs",
     // (aftermath, flip and adventure left the list with TODO 4.21a, saga
@@ -321,8 +321,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 61 (8 templates × 7 colours, and expeditionland's 5)", () => {
-    expect(masters).toHaveLength(61);
+  it("covers all 47 (6 templates × 7 colours, and expeditionland's 5)", () => {
+    expect(masters).toHaveLength(47);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {

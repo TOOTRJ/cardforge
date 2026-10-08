@@ -142,9 +142,12 @@ describe("fitStatSizePct", () => {
     expect(fitStatSizePct(dragon, "20/20")).toBeLessThan(dragon.sizePct);
   });
 
-  it("Ghostfire and Retro: values on their wide ribbon / strip keep their size", () => {
+  it("Ghostfire: values on its wide ribbon keep their size; the 1997 frame's 86 px P/T keeps one digit a side and shrinks two", () => {
     for (const value of ["20/20", "40/40", "50/50", "99/99"]) expect(keeps(pt("tarkirghostfire"), value), value).toBe(true);
-    for (const value of ["100/100", "*+1/*+1"]) expect(keeps(pt("retro"), value), value).toBe(true);
+    // TODO 4.10a: the prints' size (86 px, was 63) in the frame's corner,
+    // centred on 1310.5 px between the artist line's box and the bevel.
+    for (const value of ["1/1", "5/5", "8/8", "*/*"]) expect(keeps(pt("retro"), value), value).toBe(true);
+    for (const value of ["10/10", "100/100", "*+1/*+1"]) expect(fitStatSizePct(pt("retro"), value), value).toBeLessThan(pt("retro").sizePct);
   });
 
   it("Modern: 100/100 would print over the plate's bevel and shrinks onto its face", () => {
@@ -257,7 +260,8 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     ["agclassic", "pt", 1236, 1404],
     ["alphaland", "pt", 1236, 1404],
     ["m15pw", "loyalty", 1239, 1389],
-    ["retro", "pt", 1125, 1410],
+    // The 1997 frame (TODO 4.10a): from the artist line's box to the outer bevel.
+    ["retro", "pt", 1162, 1413],
     ["modern", "pt", 1143, 1373],
     // Flip (layout v38, TODO 4.21a): each Card Conjurer plate's light face on
     // the digits' rows, measured on every colour's cut plate.
@@ -360,8 +364,10 @@ describe("statsShrink / statLayoutChanged — the card-row scope", () => {
     const wraps = row({ power: "X", toughness: "X+1" });
     expect(statsShrink(wraps)).toBe(false);
     expect(statLayoutChanged(wraps)).toBe(true);
+    // (The 1997 frame's strip kept this value whole until TODO 4.10a set its
+    // P/T at the prints' 86 px: it shrinks there now.)
     const retro = row({ power: "*+1", toughness: "*+1", frame_style: { template: "retro" } });
-    expect(statsShrink(retro)).toBe(false);
+    expect(statsShrink(retro)).toBe(true);
     expect(statLayoutChanged(retro)).toBe(true);
     // No break: ran off the rect's right edge only.
     expect(statsShrink(row({ power: "40", toughness: "40" }))).toBe(false);

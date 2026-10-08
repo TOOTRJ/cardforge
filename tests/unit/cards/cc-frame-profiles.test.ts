@@ -30,6 +30,9 @@ describe("Card Conjurer frame profiles", () => {
     aftermath: -8.6 / 1500,
     battle: 2 / 2100,
     split: undefined,
+    // The 1997 frame (TODO 4.10a): the title band is centred on the prints'
+    // own disc row (137 px), so the cost needs no lift.
+    retro: undefined,
   };
 
   it("lifts the inline mana cost ~0.55 % of the card height on every CC frame that shows one", () => {

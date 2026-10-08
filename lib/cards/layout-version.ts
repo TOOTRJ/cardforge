@@ -1036,9 +1036,48 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            "sweep" (a correction). NOT verification-neutral: the masters
 //            and every slot on the right move — no battle tick exists to
 //            stale (the first ticks wait for this bump).
+//   46     — the 1997 frame on the ORIGINAL cards (TODO 4.10a; era design
+//            2026-10-06 step E4, owner round 38 of 2026-10-07). ITS number
+//            lives in RETRO_1997_LAYOUT_VERSION below — the ONE constant;
+//            CARD_LAYOUT_VERSION reads it while it is the latest. `retro`
+//            and `retroland` drew MSE masters from 375 px JPEGs (edges
+//            5.8 px soft, 3.5 px off the prints' shape), every line of text
+//            in dark ink and M15's shadowed pips. Now: the MASTERS are Card
+//            Conjurer's Seventh drawing re-cut edge by edge (a piecewise-
+//            linear map per axis, the text box per colour) and toned region
+//            by region (mean and contrast) onto the 1996–2003 prints — seven
+//            keys of `retro`, all seven of `retroland`; gold keeps the MSE
+//            artwork, cut with the same edge map (scripts/lib/print-cut.mjs,
+//            seventh-1997.mjs; the frames bucket). The PROFILE: name, type
+//            line, P/T and artist line white with the prints' hard black
+//            shadow on every key; the type line and the artist line in
+//            MPlantin (their printed face), names and P/T in Beleren, at the
+//            prints' sizes (71 / 67 / 86 / 58 px), `fit: "measured"`; the
+//            centred `Illus. <artist>` footer over the © slot
+//            (FrameProfile.copyrightSlot: the pipglyph.com mark on display,
+//            off the border; a clean download's footer text);
+//            `symbolStyle: "1997"` — flat 73 px discs, the 1997 tap; the art
+//            slot on the new window, one rules box fitted to the smallest
+//            text box. A CORRECTION ("sweep"), never a badge.
+//            Template-scoped (retro, retroland): every card on the pair.
+//            Public production (anonymous read, 2026-10-07): 0 public or
+//            unlisted cards on either — the sweep re-bakes nothing; the
+//            bump is the visual gate's record. The visual matrix: only the
+//            retro / retroland cases change. NOT verification-neutral:
+//            masters and every slot move — no tick exists on the pair to
+//            stale (first ticks follow the merge; `retroland`/m is a
+//            stand-in and is not ticked).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 45;
+/** The 1997 frame rebuilt on the original cards (TODO 4.10a): the masters
+ *  of `retro` and `retroland` and every slot on them. ITS version lives
+ *  here alone — CARD_LAYOUT_VERSION, the scoped tables and the rollout below
+ *  read this constant — so a bump that merges first moves it in one place.
+ *  Frozen like the lists below once it ships. */
+export const RETRO_1997_LAYOUT_VERSION = 46;
+export const RETRO_1997_TEMPLATES: readonly string[] = ["retro", "retroland"];
+
+export const CARD_LAYOUT_VERSION = RETRO_1997_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1193,6 +1232,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // its right side and top block; every card on it. No narrower
   // verification scope: the battle has no tick.
   [BATTLE_RECUT_LAYOUT_VERSION]: BATTLE_RECUT_TEMPLATES,
+  // The 1997 frame on the original cards (4.10a): the pair's masters and
+  // every slot; every card on it (none stored). No narrower verification
+  // scope: neither template has a tick.
+  [RETRO_1997_LAYOUT_VERSION]: RETRO_1997_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1841,6 +1884,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [SAGA_RAIL_LAYOUT_VERSION]: "sweep", // the saga rebuilt from Card Conjurer (4.21c): the ribbon in the master, the printed rail — a correction after the owner's sheet, never a badge
   43: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
   44: "sweep", // the 2003 artist line white on the black frame and on lands (4.23a) — a legibility correction against the prints on combos no stored card uses, never a badge
+  [RETRO_1997_LAYOUT_VERSION]: "sweep", // the 1997 frame on the original cards (4.10a): masters, ink, footer, sizes, symbols — a correction on a pair no stored card uses, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 

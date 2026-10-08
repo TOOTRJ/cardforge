@@ -67,11 +67,10 @@ import {
  * (adventure, with its 1–2 px grey paper rim, flip and aftermath left the
  * list with TODO 4.21a: their masters are Card Conjurer's in the frames
  * bucket, cut at the one corner by the importer. Saga left it with 4.21c, the
- * same way.)
+ * same way — and retro and retroland with 4.10a: the 1997 masters are the
+ * importer's too, the MSE gold among them.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  retro: "all",
-  retroland: "all",
   modern: "all",
   modernland: "all",
   extendedart: "all",
