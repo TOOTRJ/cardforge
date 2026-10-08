@@ -2952,8 +2952,7 @@ function RulesLines({
 
 // One item of a RulesLines run: a word at the line box's height (italic for
 // any emphasis) in its ceiled box, or an inline pip whose disc is
-// metrics.pipPx (mana-font draws its disc at 1.3 em of the font size, hence
-// the division).
+// metrics.pipPx (RulesPip draws it as the bake's ManaGem, CardPip).
 function RulesLineItem({
   item,
   metrics: m,
@@ -3158,7 +3157,7 @@ function RulesBoxLine({
   hd: (px: number) => string;
   overrides: PipOverrides | null;
 }) {
-  // mana-font draws its disc at 1.3 em of the pip's font size.
+  // The layout's disc; RulesPip sets the glyph and the shadow in it (CardPip).
   const pipDisc = hd(d.pipPx);
   return (
     <div
