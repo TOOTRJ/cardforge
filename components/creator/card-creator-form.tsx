@@ -252,6 +252,7 @@ import {
   importedAnatomy,
   importedFormAnatomy,
 } from "@/lib/cards/anatomy";
+import { artPositionerWindows } from "@/lib/cards/art-positioner-window";
 import {
   AnatomyPanel,
   useTwoColorPairFollow,
@@ -3144,6 +3145,12 @@ export function CardCreatorForm({
     flipOnClick: true,
   };
 
+  // The art windows the positioners show (TODO 3b.13): the boxes the two
+  // renderers crop each face's art to on the frame, colour and faces the
+  // preview above draws — read from the same props, so a frame, colour or
+  // back-type change moves the positioner with the preview.
+  const artWindows = artPositionerWindows(previewProps);
+
   // ---- Render pieces shared by both layouts ----
   // The step panels, the once-mounted dialogs and the action bar are the
   // same in the shipped stepper and in the lab's canvas layout; only the
@@ -3298,6 +3305,7 @@ export function CardCreatorForm({
                 />
                 <ArtPanel
                   userId={userId}
+                  artWindow={artWindows.front}
                   importedArtOrigin={importedArtOrigin}
                   onImportedArtOrigin={setImportedArtOrigin}
                   onBackFaceArt={() => setPreviewFace("back")}
@@ -3313,6 +3321,8 @@ export function CardCreatorForm({
                     hasInlineBackFace(watched.frame_style?.template) ? (
                       <LayoutPanel
                         userId={userId}
+                        // Flip shares the front's art window (no second one).
+                        artWindow={artWindows.second ?? artWindows.front}
                         hasBackFace={watched.has_back_face}
                         isAdventureFrame={isAdventureFrame}
                         backRulesTextRef={backRulesTextRef}
@@ -3344,6 +3354,8 @@ export function CardCreatorForm({
                 {dfcLayout ? (
                   <DfcFacePanel
                     userId={userId}
+                    // A back with no body yet draws on the front's frame.
+                    artWindow={artWindows.back ?? artWindows.front}
                     layout={dfcLayout}
                     backBody={dfcBackBody}
                     frontColorIdentity={watched.color_identity}

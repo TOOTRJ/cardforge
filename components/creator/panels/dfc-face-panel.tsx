@@ -48,6 +48,7 @@ import { DfcIconFamilySection } from "@/components/creator/panels/dfc-setup-sect
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { statVisibility } from "@/lib/creator/steps";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
+import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { DFC_FACE_TYPES, colorlessFaceAllowed, type DfcIconFamily, type DfcLayout } from "@/lib/cards/dfc";
 import { DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import {
@@ -63,6 +64,9 @@ const BACK_TYPE_OPTIONS: ChipOption<CardType>[] = CARD_TYPE_OPTIONS.filter((opti
 
 type DfcFacePanelProps = {
   userId: string | null;
+  /** The back face's art window on its own body and colour (TODO 3b.13):
+   *  the positioner's surface. */
+  artWindow: ArtWindow;
   layout: DfcLayout;
   /** The back BODY the form's back type and the card's family derive
    *  (lib/cards/dfc.ts bodyFor) — what the colour chips dress; null while
@@ -97,6 +101,7 @@ function backFaceErrorMessage(errors: unknown, key: string): string | undefined 
 
 export function DfcFacePanel({
   userId,
+  artWindow,
   layout,
   backBody,
   frontColorIdentity,
@@ -373,6 +378,7 @@ export function DfcFacePanel({
                   userId={userId}
                   artUrl={artUrlField.value}
                   artPosition={artPosField.value}
+                  artWindow={artWindow}
                   primaryPasteTarget={false}
                   actionSlot={
                     // A real printing's art on this face only (TODO 1.15).
