@@ -4,6 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import { CardPreview } from "@/components/cards/card-preview";
 import { copyrightSlotLayout } from "@/lib/cards/copyright-slot";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
+import { manaGlyphPx } from "@/lib/cards/symbol-style";
 import { footerInk, getFrameProfile } from "@/lib/cards/template-layout";
 import { TYPE_FACES } from "@/lib/cards/type-faces";
 import type { ColorIdentity } from "@/types/card";
@@ -14,7 +15,7 @@ import type { ColorIdentity } from "@/types/card";
 // shadow, the footer white on the black frame and on lands (4.23a's map),
 // the brush before a mixed-case artist, the © slot from its left end (the
 // mark on display, the footer text on a subscriber's clean preview), cost
-// discs with the shadow straight down and flat pips in the rules text. The
+// discs with the shadow down and a little to the left and flat pips in the rules text. The
 // bake half: tests/unit/render/modern-2003-bake.test.tsx; in Chromium at 750
 // and HD: the PR's parity run.
 // ---------------------------------------------------------------------------
@@ -137,13 +138,14 @@ describe("CardPreview — the 2003 footer (the same footerInk and © slot as the
 });
 
 describe('CardPreview — symbolStyle "2003"', () => {
-  it("the cost discs carry the shadow straight down on the glyph itself (no mana-font shadow class); the rules pips are flat; {T} is the modern arrow", () => {
+  it("the cost discs carry the shadow (down, a little to the left) on the glyph itself (no mana-font shadow class); the rules pips are flat; {T} is the modern arrow", () => {
     const { pips } = renderOn("modern", "r");
     expect(pips.map((el) => el.className)).toEqual(["ms ms-cost ms-x", "ms ms-cost ms-r", "ms ms-cost ms-tap", "ms ms-cost ms-r"]);
     // The two cost pips…
     // (The bake's one layer in em of the pip's glyph — previewDiscShadowCss:
-    // 6 px under a 68 px disc whose glyph is 50 px, nothing to the left.)
-    for (const pip of pips.slice(0, 2)) expect(pip.style.boxShadow.replace(/\s+/g, " ")).toBe("0.0000em 0.1200em 0 #000");
+    // 6 px under a 66 px disc and 2 px to its left, in em of its glyph.)
+    const em = manaGlyphPx(66);
+    for (const pip of pips.slice(0, 2)) expect(pip.style.boxShadow.replace(/\s+/g, " ")).toBe(`${(-2 / em).toFixed(4)}em ${(6 / em).toFixed(4)}em 0 #000`);
     // …and the two in the rules text.
     for (const pip of pips.slice(2)) expect(pip.style.boxShadow).toBe("");
   });

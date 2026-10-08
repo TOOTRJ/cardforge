@@ -17,8 +17,8 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 //     (118–227 × 1946–1969 px), the © slot on 2015 px from 128 px;
 //   • dark ink with NO shadow on the name, the type line and the P/T; the
 //     footer dark too, and WHITE on the black frame and on lands (4.23a);
-//   • 68 px cost discs ending at 1368 px on row 173, each with a black
-//     shadow 6 px straight down; flat pips in the rules text;
+//   • 66 px cost discs ending at 1370 px on row 173, each with a black
+//     shadow 6 px down and 2 px to the left; flat pips in the rules text;
 //   • the © slot: the pipglyph.com mark on display, the card's footer text
 //     on a clean download — never at the end of the artist line.
 // The first block bakes on a flat stand-in master (tests/stubs/stand-in-
@@ -251,28 +251,32 @@ describe("the 2003 frame — text on the prints' baselines, in the prints' ink",
     for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(footerInk(landProfile.footer!, key, landProfile).colorHex, key).toBe("#ffffff");
   }, 120_000);
 
-  it("the cost: 68 px discs ending at 1368 px on row 173, each with a black shadow 6 px STRAIGHT DOWN — nothing to its left", async () => {
+  it("the cost: 66 px discs ending at 1370 px on rows 140–206, each with a black shadow 6 px down and 2 px to the LEFT, none on the right", async () => {
     const r = await bake(card({ title: "H" }), "hd");
     const red = (c: number[]) => c[0] > 180 && c[0] - c[2] > 40;
     const discs = inkBox(r, [1150, 120, 1420, 230], red)!;
-    expect(Math.abs(discs.x1 - 1368)).toBeLessThanOrEqual(2);
-    expect(Math.abs(discs.y1 - discs.y0 - 68)).toBeLessThanOrEqual(1);
+    expect(Math.abs(discs.x1 - 1370)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(discs.y1 - discs.y0 - 66)).toBeLessThanOrEqual(1);
     expect(Math.abs((discs.y0 + discs.y1) / 2 - 173)).toBeLessThanOrEqual(1.5);
-    // Two red discs and the 8 px between them.
-    expect(Math.abs(discs.x1 - discs.x0 - (68 * 2 + 8))).toBeLessThanOrEqual(2);
-    // The shadow: black, under the disc by 6 px, no further.
+    // Two red discs and the 8 px between them: the prints' 74 px pitch.
+    expect(Math.abs(discs.x1 - discs.x0 - (66 * 2 + 8))).toBeLessThanOrEqual(2);
+    // The shadow: black, under the disc by 6 px, no further — it ends on
+    // the prints' row 212.
     const black = (c: number[]) => sum(c) < 40;
     // (Read under the two red discs: the generic one left of them has its own.)
-    const shadow = inkBox(r, [discs.x0 - 4, discs.y1 - 20, discs.x1 + 12, discs.y1 + 14], black)!;
+    const shadow = inkBox(r, [discs.x0 - 6, discs.y1 - 20, discs.x1 + 12, discs.y1 + 14], black)!;
     expect(shadow).not.toBeNull();
     expect(Math.abs(shadow.y1 - (discs.y1 + 6))).toBeLessThanOrEqual(1);
-    // Straight down: it reaches no further left or right than the discs.
-    expect(shadow.x0).toBeGreaterThanOrEqual(discs.x0 - 1);
-    expect(shadow.x1).toBeLessThanOrEqual(discs.x1 + 1);
-    // …and "modern" would hang a crescent LEFT of the first disc: nothing
-    // dark there, at the disc's own rows.
+    expect(Math.abs(shadow.y1 - 212)).toBeLessThanOrEqual(1.5);
+    // Down and 2 px LEFT: nothing right of the last disc…
+    expect(shadow.x1).toBeLessThanOrEqual(discs.x1 - 1);
+    // …and a sliver beside each disc at its own rows, 2 px wide — not
+    // M15's crescent (4 px at this size).
     const first = inkBox(r, [1100, 120, discs.x0 - 30, 230], (c) => Math.abs(c[0] - TONE) > 30 && sum(c) > 150)!;
-    expect(inkBox(r, [first.x0 - 12, first.y0 + 10, first.x0 - 1, first.y1 - 10], black)).toBeNull();
+    const sliver = inkBox(r, [first.x0 - 12, first.y0 + 24, first.x0 + 1, first.y1 - 24], black)!;
+    expect(sliver).not.toBeNull();
+    expect(sliver.x1 - sliver.x0).toBeGreaterThanOrEqual(1);
+    expect(sliver.x1 - sliver.x0).toBeLessThanOrEqual(3);
   }, 60_000);
 
   it("a pip in the rules text is FLAT (the 2003 prints shadow the cost alone), and {T} is the modern arrow", async () => {
@@ -375,7 +379,7 @@ describe("the 2003 frame — text on the prints' baselines, in the prints' ink",
     const red = inkBox(long, [900, 120, 1420, 230], (c) => c[0] > 180 && c[0] - c[2] > 40)!;
     // Shrunk (capitals under 56 px) and ending before the first disc.
     expect(name.y1 - name.y0).toBeLessThan(54);
-    expect(name.x1).toBeLessThan(red.x0 - 68);
+    expect(name.x1).toBeLessThan(red.x0 - 66);
   }, 60_000);
 });
 

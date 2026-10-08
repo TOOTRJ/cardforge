@@ -2763,8 +2763,9 @@ const RETROLAND: FrameProfile = {
 // pipglyph.com mark on display (off the border on this pair) and a clean
 // download's footer text.
 //
-// SYMBOLS (4.24): `symbolStyle: "2003"` — 68 px cost discs with a black
-// shadow straight down, flat pips in the rules text, the modern tap.
+// SYMBOLS (4.24): `symbolStyle: "2003"` — 66 px cost discs with a black
+// shadow 6 px down and 2 px to the left, flat pips in the rules text, the
+// modern tap.
 //
 // Names, type lines, P/T and the artist are Beleren Bold: the prints' Matrix
 // Bold is not in the repo and is not being added (owner 2026-10-07).
@@ -2812,9 +2813,14 @@ const MODERN: FrameProfile = {
   label: "Modern border (2003)",
   symbolStyle: "2003",
   costSizePct: MODERN_COST_DISC_PCT,
-  // The cost row: its last disc ends at 1368 px, the discs centred on row
-  // 173 (M12 #1: 140–206 px, their shadow to 212).
-  costRect: { topPct: 5.93, leftPct: 52.2, widthPct: 39, heightPct: 4.62 },
+  // The cost row: its last disc ends at 1370 px, the discs centred on row
+  // 173 (84 prints, CHK 2004 → JOU 2014, by a circle fitted to the shadow's
+  // outer arc — black against the bar on every colour: radius 33.4 px,
+  // lowest point row 211.9, left-most 1302.0 px; the disc's own edges, where
+  // it stands clear of its bar: rows 139.7–206.7, ending at 1369.9 px,
+  // centre 172.8 ± 1.4 — 6.5 px below the middle of the bar's face, ours
+  // 6.8).
+  costRect: { topPct: 5.9, leftPct: 52.333, widthPct: 39, heightPct: 4.62 },
   // The set symbol: its right end at 1366 px, centred on the type bar's
   // face (row 1240).
   symbolRect: { topPct: 57.1, leftPct: 79.07, widthPct: 12, heightPct: 3.9 },

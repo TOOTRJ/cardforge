@@ -7354,11 +7354,11 @@
    },
    "costRect": {
     "heightPct": 4.62,
-    "leftPct": 52.2,
+    "leftPct": 52.333,
     "topPct": 5.93,
     "widthPct": 39
    },
-   "costSizePct": 0.04533333333333334,
+   "costSizePct": 0.044,
    "flavorDivider": false,
    "footer": {
     "colorHex": "#17120c",
@@ -7473,11 +7473,11 @@
    },
    "costRect": {
     "heightPct": 4.62,
-    "leftPct": 52.2,
+    "leftPct": 52.333,
     "topPct": 5.93,
     "widthPct": 39
    },
-   "costSizePct": 0.04533333333333334,
+   "costSizePct": 0.044,
    "flavorDivider": false,
    "footer": {
     "colorHex": "#17120c",

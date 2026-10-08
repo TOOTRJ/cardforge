@@ -6,7 +6,7 @@ import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brus
 import referencesJson from "@/lib/cards/frame-references.json";
 import { isRenderStale } from "@/lib/cards/layout-version";
 import { PLATE_INK, plateInkRect } from "@/lib/cards/plate-ink";
-import { costRowWidthPct } from "@/lib/cards/render-tiers";
+import { COST_PIP_GAP, costRowWidthPct } from "@/lib/cards/render-tiers";
 import { metricsFor } from "@/lib/cards/rules-layout";
 import { fitStatSizePct } from "@/lib/cards/stat-fit";
 import { SYMBOL_STYLES, discShadowCss, discShadowPx, inlineSymbolStyle, manaGlyphPx, previewDiscShadowCss, styledSuffix, symbolStyle, symbolStyleOf } from "@/lib/cards/symbol-style";
@@ -34,7 +34,7 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // Kamigawa 2004 → Journey into Nyx 2014 — print-sized dark lettering with no
 // shadow, the P/T centred on the plate's face at the printed box, the two
 // left-aligned footer lines (the brush and the artist over the © slot),
-// 68 px cost discs with a shadow straight down. Every number is the prints'
+// 66 px cost discs with a shadow down and a little to the left. Every number is the prints'
 // (lib/cards/typography.ts MODERN_*; lib/cards/template-layout.ts MODERN).
 // The bakes: tests/unit/render/modern-2003-bake.test.tsx.
 // ---------------------------------------------------------------------------
@@ -48,14 +48,14 @@ const HD_H = 2100;
 const px = (pct: number, of = HD_W) => (pct / 100) * of;
 
 describe("the 2003 sizes — the prints', as per-era constants, EVEN at HD", () => {
-  it("name 80, type line 66, P/T 80, artist 50, © slot 32, cost disc 68 px — each a whole px at the 750 px bake too", () => {
+  it("name 80, type line 66, P/T 80, artist 50, © slot 32, cost disc 66 px — each a whole px at the 750 px bake too", () => {
     const sizes: [string, number, number][] = [
       ["name", MODERN_TITLE_SIZE_PCT, 80],
       ["type line", MODERN_TYPE_SIZE_PCT, 66],
       ["P/T", MODERN_PT_SIZE_PCT, 80],
       ["artist", MODERN_ARTIST_SIZE_PCT, 50],
       ["© slot", MODERN_COPYRIGHT_SIZE_PCT, 32],
-      ["cost disc", MODERN_COST_DISC_PCT, 68],
+      ["cost disc", MODERN_COST_DISC_PCT, 66],
     ];
     for (const [label, pct, hd] of sizes) {
       expect(pct * HD_W, label).toBeCloseTo(hd, 9);
@@ -235,7 +235,7 @@ describe("the 2003 P/T — centred on the plate's face, the plate at the printed
   });
 });
 
-describe('symbolStyle "2003" — a cost shadow straight down, flat inline pips, the modern tap', () => {
+describe('symbolStyle "2003" — a cost shadow down and a little to the left, flat inline pips, the modern tap', () => {
   it("is the pair's style and nobody else's", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       const own = t === "modern" || t === "modernland";
@@ -244,21 +244,27 @@ describe('symbolStyle "2003" — a cost shadow straight down, flat inline pips, 
     expect(symbolStyleOf(modern)).toBe(SYMBOL_STYLES["2003"]);
   });
 
-  it("the COST disc: black, 6 px straight down at 68 px (3 at 34), nothing to the left — in the bake and the preview", () => {
+  it("the COST disc: black, 6 px down and 2 px to the LEFT at 66 px (3 and 1 at 33), as the prints' crescent — in the bake and the preview", () => {
     const style = SYMBOL_STYLES["2003"];
-    expect(discShadowPx(style, 68)).toEqual({ left: 0, down: 6 });
-    expect(discShadowPx(style, 34)).toEqual({ left: 0, down: 3 });
-    expect(discShadowCss(style, 68)).toBe("0px 6px 0 #000");
+    expect(discShadowPx(style, 66)).toEqual({ left: 2, down: 6 });
+    expect(discShadowPx(style, 33)).toEqual({ left: 1, down: 3 });
+    expect(discShadowCss(style, 66)).toBe("-2px 6px 0 #000");
+    // Steeper than M15's (6 % left, 7 % down): the 2003 crescent hangs
+    // under the disc, a sliver beside it.
+    expect(style.discShadow!.left / style.discShadow!.down).toBeLessThan(0.5);
     // The preview: no mana-font class draws this shadow (outside a card the
     // style has none); a CARD's pip takes the bake's one layer from
-    // `discShadow`, in em of its glyph (previewDiscShadowCss): 6 px under a
-    // 68 px disc whose glyph is 50 px.
+    // `discShadow`, in em of its glyph (previewDiscShadowCss).
     expect(style.previewShadowClass).toBeNull();
     expect(style.previewShadowCss).toBeNull();
-    expect(previewDiscShadowCss(style, 68, manaGlyphPx(68))).toBe("0.0000em 0.1200em 0 #000");
-    // It reaches no further than the disc along the row: the name's room is
-    // the discs and their gaps.
+    const em = manaGlyphPx(66);
+    expect(previewDiscShadowCss(style, 66, em)).toBe(`${(-2 / em).toFixed(4)}em ${(6 / em).toFixed(4)}em 0 #000`);
+    // Along the row it reaches 2 px past the first disc — less than M15's
+    // shadow: the name's room is the discs, their gaps and that sliver.
+    expect(style.costRowShadowDiscs * 66).toBeCloseTo(2, 9);
     expect(costRowWidthPct("{3}{G}", MODERN_COST_DISC_PCT, style)).toBeLessThan(costRowWidthPct("{3}{G}", MODERN_COST_DISC_PCT, symbolStyle(undefined)));
+    // The prints' pitch: 74 px from disc to disc.
+    expect(Math.round(MODERN_COST_DISC_PCT * 1500 * (1 + COST_PIP_GAP))).toBe(74);
     expect(styledSuffix(style, "tap")).toBe("tap");
   });
 
@@ -301,9 +307,9 @@ describe("the 2003 slots on the new masters", () => {
     }
   });
 
-  it("the cost row ends at 1368 px on row 173, and the land draws none", () => {
+  it("the cost row ends at 1370 px on row 173, and the land draws none", () => {
     const c = modern.costRect!;
-    expect(px(c.leftPct + c.widthPct)).toBeCloseTo(1368, 0);
+    expect(px(c.leftPct + c.widthPct)).toBeCloseTo(1370, 0);
     expect(px(c.topPct + c.heightPct / 2, HD_H)).toBeCloseTo(173, 0);
     expect(land.hideCost).toBe(true);
     expect(modern.hideCost).toBeUndefined();

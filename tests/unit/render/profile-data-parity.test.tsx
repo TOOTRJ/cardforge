@@ -520,7 +520,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     const { FRAME_TEMPLATE_VALUES } = await import("@/types/card");
     // …but the 1997 pair, which names its own since TODO 4.10a (flat discs,
     // the 1997 tap: tests/unit/render/retro-1997-bake.test.tsx).
-    // …and the 2003 pair since TODO 4.10b (a cost shadow straight down,
+    // …and the 2003 pair since TODO 4.10b (a cost shadow down and a little left,
     // flat inline pips: tests/unit/render/modern-2003-bake.test.tsx).
     const RETRO_1997 = ["retro", "retroland"];
     const MODERN_2003 = ["modern", "modernland"];

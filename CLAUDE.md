@@ -581,7 +581,7 @@ Rules and gotchas:
   with `startPct` — a profile with a © slot never prints the custom footer
   text on line 1; the footer's ink map (white on the black frame and on
   lands, v44) covers the brush and the slot. `symbolStyle: "2003"` shadows
-  the COST discs straight down and leaves rules pips flat
+  the COST discs (66 px; 6 px down, 2 px left) and leaves rules pips flat
   (`inlineSymbolStyle`: an inline pip never reads a style's shadow
   directly). `docs/FRAMES.md` "The 2003 frame".
 - Notifications are push, not pull: `notifications` is on the

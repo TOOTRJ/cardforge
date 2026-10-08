@@ -483,7 +483,7 @@ describe("a long name shrinks to fit before a detached cost (owner decision, TOD
 
   it("stops at the 5 pt floor; past it the name is cut, with a whole '…' that fits (14-symbol cost)", () => {
     const cost = "{W}".repeat(14);
-    // (The 2003 frame left this loop with TODO 4.10b: its 68 px discs leave
+    // (The 2003 frame left this loop with TODO 4.10b: its 66 px discs leave
     // fourteen of them no room for a name at all, and its name is fitted by
     // fitTitleBand — tests/unit/cards/modern-2003-profile.test.ts.)
     for (const p of [LEGACY_PW]) {

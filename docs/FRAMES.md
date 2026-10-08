@@ -2377,7 +2377,7 @@ of white, blue, red, green, artifact and gold:
 | slot | face, HD px | ink | on the prints |
 |---|---|---|---|
 | name | Beleren 80, measured (before the detached cost) | dark `#17120c`, no shadow | capitals 55–56 px, baseline 198.5, starts at 133; M12 #1 "Aegis Angel" 405 px wide (Beleren's at 79) |
-| cost | 68 px discs, a black shadow 6 px straight down (`symbolStyle: "2003"`) | — | discs 66–68 px on row 173, ending at 1368, 74 apart; flat pips in the rules text; the modern tap |
+| cost | 66 px discs on rows 140–206 ending at 1370, a black shadow 6 px down and 2 px to the left (`symbolStyle: "2003"`) | — | discs 66.8 px on rows 139.7–206.7 (centre 172.8 ± 1.4), ending at 1369.9, 74 apart, the shadow a crescent from nine o'clock to four ending on row 211.9 and reaching 1302 px; flat pips in the rules text; the modern tap |
 | type line | Beleren 66, measured | dark | capitals 46 px, baseline 1264, starts at 151 |
 | rules | MPlantin 76 (the shared ladder) | dark | the column 153–1347 px inside the box's face 130–1370 × 1314–1904 |
 | P/T | Beleren 80, CENTRED on 1258 px | dark | digits 58–59 px on 1959; every value centred on 1257–1260 at one size — 83 one-digit values (sd 1.9 px), CON #121 10/10 1168–1349, WWK #57 13/13 1170–1349, RTR #140 15/15 1177–1343, RAV #191 9/14 1181–1332 |
@@ -4950,7 +4950,7 @@ frame's era decides are DATA on its profile; no renderer names them.
   (`lib/cards/symbol-style.ts`): `"modern"` (M15's discs, their hard offset
   shadow, the modern tap — every profile that names none), `"1997"`
   (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`) and `"2003"`
-  (a COST disc with a black shadow straight down, flat pips in the rules
+  (a COST disc with a black shadow down and a little to the left, flat pips in the rules
   text, the modern tap: `modern`, `modernland`). Both renderers and both
   shadow models (the rules layout's inline pip, the cost row) read the
   resolved spec — an inline pip through `inlineSymbolStyle`, which drops

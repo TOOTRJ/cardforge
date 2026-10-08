@@ -1088,13 +1088,13 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            FrameProfile.footerBrush) and the artist at 50 px, mixed case,
 //            over the © slot (the pipglyph.com mark on display, off the
 //            border; a clean download's footer text), in v44's ink per
-//            master; `symbolStyle: "2003"` — 68 px cost discs with a black
-//            shadow straight down, flat pips in the rules text; the art
+//            master; `symbolStyle: "2003"` — 66 px cost discs with a black
+//            shadow 6 px down and 2 px left, flat pips in the rules text; the art
 //            slot on the new window, the rules box on the printed column.
 //            A CORRECTION ("sweep"), never a badge. Template-scoped
 //            (modern, modernland): every card on the pair. Public
-//            production (anonymous read, 2026-10-07): 7 cards on `modern`
-//            (gold ×4, the artifact `c` ×2, green ×1), none on
+//            production (anonymous read, 2026-10-07): 8 cards on `modern`
+//            (gold ×5, the artifact `c` ×2, green ×1), none on
 //            `modernland` — each re-bakes once; the owner signed their
 //            before / after (round 41). The visual matrix: only the modern
 //            / modernland cases change. NOT verification-neutral: masters
@@ -1278,7 +1278,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // scope: neither template has a tick.
   [RETRO_1997_LAYOUT_VERSION]: RETRO_1997_TEMPLATES,
   // The 2003 frame's one sweep (4.10b): the pair's masters and every slot;
-  // every card on it (7 stored on `modern`). No narrower verification
+  // every card on it (8 stored on `modern`). No narrower verification
   // scope: all fourteen ticks on the pair go stale and are re-made once.
   [MODERN_2003_LAYOUT_VERSION]: MODERN_2003_TEMPLATES,
 };

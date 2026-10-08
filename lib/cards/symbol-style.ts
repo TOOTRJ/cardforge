@@ -15,8 +15,9 @@
 // Three styles exist: "modern" — M15's discs, their hard offset shadow and
 // the modern tap, what every profile resolves to unless it names another —
 // "1997" (TODO 4.10a: flat discs, the 1997 tap; `retro`, `retroland`) and
-// "2003" (TODO 4.10b: a COST disc with a black shadow straight down, flat
-// pips in the rules text, the modern tap; `modern`, `modernland`). The last
+// "2003" (TODO 4.10b: a COST disc with a black shadow down and a little to
+// the left, flat pips in the rules text, the modern tap; `modern`,
+// `modernland`). The last
 // era item (4.10c "original") adds a value HERE and names it on its
 // profiles; a renderer never learns a style's name. A style is a CORRECTION of a frame, never a per-card switch.
 // Client-safe, no imports.
@@ -82,22 +83,27 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     tapSuffix: "tap-4ed",
   },
   // The 2003 frame (TODO 4.10b / 4.24; `modern`, `modernland`): the prints'
-  // cost discs (66–68 px, the profile's costSizePct) carry a BLACK shadow
-  // 6 px straight down — nothing to the left (M12 #1: discs 140–206 px, the
-  // shadow to 212) — while a pip in the rules text is flat; {T} is the
-  // modern arrow (from Mirrodin 2003 on) and the five colour symbols are the
-  // font's. No mana-font class draws this shadow: a card's pip takes it from
-  // `discShadow` in both renderers (the preview through
-  // previewDiscShadowCss). It reaches no further than the disc along the row.
+  // cost discs (66 px, the profile's costSizePct) carry a BLACK shadow 6 px
+  // down and 2 px to the LEFT — a crescent from nine o'clock round the
+  // bottom to four, nothing on the right (84 prints, CHK 2004 → JOU 2014:
+  // discs on rows 140–206, the shadow ending on row 212 and reaching
+  // 1302 px beside the last disc; its black is 6.3 px deep under the disc
+  // and 1–2 px wide beside it) — while a pip in the rules text is flat; {T}
+  // is the modern arrow (from Mirrodin 2003 on) and the five colour symbols
+  // are the font's. No mana-font class draws this shadow: a card's pip takes
+  // it from `discShadow` in both renderers (the preview through
+  // previewDiscShadowCss). Along the row it reaches 2 px past the first
+  // disc (costRowShadowDiscs).
   "2003": {
     id: "2003",
-    discShadow: { left: 0, down: 6 / 68, colorHex: "#000" },
+    discShadow: { left: 2 / 66, down: 6 / 66, colorHex: "#000" },
     inlineShadow: false,
     previewShadowClass: null,
     previewShadowCss: null,
-    costRowShadowDiscs: 0,
+    costRowShadowDiscs: 2 / 66,
     tapSuffix: "tap",
   },
+
 };
 
 /** A one-colour symbol's font size as a fraction of its disc's diameter —

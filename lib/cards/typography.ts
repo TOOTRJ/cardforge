@@ -233,9 +233,13 @@ export const RETRO_COST_DISC_PCT = 73 / 1500;
 //     printed ink best at 50 px (the design's overlay);
 //   • the line under it (the prints' © line, our © slot) — MPlantin, digits
 //     22.5 px tall, baseline 2015 px, starting at 128 px: 32 px;
-//   • the cost — discs 66–68 px across, 74 px apart, centred on row 173,
-//     the last one ending at 1368 px, each with a black shadow 6 px
-//     straight down (symbol style "2003").
+//   • the cost — discs 66.8 px across (84 more prints, CHK 2004 → JOU
+//     2014, by a circle fitted to the shadow's outer arc: radius 33.4 ± 0.5
+//     px on every colour), 74 px apart, rows 140–206 (centre 172.8 ± 1.4
+//     px), the last one ending at 1370 px, each with a black shadow 6 px
+//     down and 1–2 px to the LEFT — a crescent from nine o'clock round to
+//     four, none on the right, ending on row 212 (symbol style "2003").
+//     66 px keeps the 750 px bake at exactly half and the pitch at 74.
 // ---------------------------------------------------------------------------
 
 /** The 2003 frame's name — 80 px at HD (Beleren Bold). */
@@ -254,9 +258,10 @@ export const MODERN_ARTIST_SIZE_PCT = 50 / 1500;
  *  (MPlantin), and the pipglyph.com mark at the same em. */
 export const MODERN_COPYRIGHT_SIZE_PCT = 32 / 1500;
 
-/** The 2003 frame's mana-cost disc — 68 px at HD, with a shadow straight
- *  down (symbol style "2003", lib/cards/symbol-style.ts). */
-export const MODERN_COST_DISC_PCT = 68 / 1500;
+/** The 2003 frame's mana-cost disc — 66 px at HD (33 at the 750 px bake;
+ *  × 1.12 is the prints' 74 px pitch), with a shadow down and a little to
+ *  the left (symbol style "2003", lib/cards/symbol-style.ts). */
+export const MODERN_COST_DISC_PCT = 66 / 1500;
 
 /** A display size given as a fraction of a PORTRAIT card's width, as a
  *  fraction of the width of a card in `orientation`: the same absolute size
