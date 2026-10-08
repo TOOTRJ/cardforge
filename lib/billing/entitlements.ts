@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CARD_CAPACITY, TIER_RANK, type PlanTier } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { planEndingOf, type PlanEnding } from "@/lib/billing/plan-ending";
 
 // The single server-side source of truth for what a user is allowed to do.
 // Reads the (React-cached) profile, which the Stripe webhook keeps in sync.
@@ -26,6 +27,9 @@ export type Entitlements = {
   cardCapacity: number;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  /** The live subscription is cancelled and ends on a date (the profile's
+   *  stored state, lib/billing/plan-ending.ts) — null when it renews. */
+  planEnding: PlanEnding | null;
 };
 
 type Perks = Pick<
@@ -88,6 +92,7 @@ const UNLOCKED: Entitlements = {
   cardCapacity: -1,
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
+  planEnding: null,
 };
 
 /** The billing-relevant slice of a profile row — shared by the viewer path
@@ -154,6 +159,7 @@ export async function getEntitlements(): Promise<Entitlements> {
     credits: profile?.credits ?? 0,
     currentPeriodEnd: profile?.current_period_end ?? null,
     cancelAtPeriodEnd: profile?.cancel_at_period_end ?? false,
+    planEnding: planEndingOf(profile),
     ...perks,
   };
 }

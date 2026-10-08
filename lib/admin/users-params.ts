@@ -12,7 +12,7 @@ export const USER_STATUS_FILTERS = [
   "canceled",
   "none",
 ] as const;
-export const USER_FLAG_FILTERS = ["", "paid", "comped", "admins", "mismatch"] as const;
+export const USER_FLAG_FILTERS = ["", "paid", "ending", "comped", "admins", "mismatch"] as const;
 export const USER_SORTS = ["newest", "oldest", "active", "cards", "credits"] as const;
 /** The list opens on recently active users (owner decision, 2026-09-15). */
 export const DEFAULT_USER_SORT: (typeof USER_SORTS)[number] = "active";
@@ -30,6 +30,8 @@ export type UserListParams = {
 export const FLAG_LABELS: Record<(typeof USER_FLAG_FILTERS)[number], string> = {
   "": "Everyone",
   paid: "Paying",
+  // A live subscription that is cancelled and still running (0135).
+  ending: "Cancelled, still active",
   comped: "Comped",
   admins: "Admins",
   mismatch: "Tier mismatch",

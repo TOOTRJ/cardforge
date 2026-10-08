@@ -686,7 +686,21 @@ Rules and gotchas:
   portal's `cancel_at` date, a schedule ending in "cancel") and the plan
   card's copy + buttons come from `planStatusOf()`
   (`lib/billing/plan-status.ts`: ending is decided BEFORE trial / renews;
-  "Resume", never "Cancel plan") — never read the boolean alone. Stripe's
+  "Resume", never "Cancel plan") — never read the boolean alone. Every
+  OTHER page that names the plan (dashboard notice + badges, Settings, the
+  avatar menu, the upgrade modal, the plan grid, `/admin/users` list +
+  detail) says "cancelled, ends <date>" from the PROFILE through ONE reader,
+  `planEndingOf()` (`lib/billing/plan-ending.ts`: `subscription_ends_at` /
+  `subscription_canceled_at`, migration 0135, written by the sync; the flag
+  + period end only as the pre-0135 fallback) — a new surface that prints a
+  tier uses it. "Resume {Plan}" is IN-APP (`ResumePlanButton` → confirm with
+  the date + price from `getResumePreviewAction` → `resumeSubscriptionAction`,
+  funnel `subscription_resumed`, portal only as `fallback: "portal"`);
+  un-cancelling goes through `clearCancellation` (`cancel_at: ""` for the
+  portal's dated shape, `cancel_at_period_end: false` for the flag — NEVER
+  both in one call, Stripe refuses it), which `scheduleDowngrade` runs first
+  too; an upgrade on an ending plan goes to the portal confirm untouched
+  (Stripe renews it on confirm). Stripe's
   `trial_will_end` becomes ONE `trial_ending` notification + "account" email
   per subscription (migration 0109; honest about whether a card is on file).
   `invoice.paid` writes ONE `billing_payments` row per invoice (0110; the

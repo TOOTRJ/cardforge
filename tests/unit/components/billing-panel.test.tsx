@@ -16,7 +16,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock("@/lib/stripe/actions", () => ({ createPortalSessionAction: vi.fn() }));
+vi.mock("@/lib/stripe/actions", () => ({
+  createPortalSessionAction: vi.fn(),
+  resumeSubscriptionAction: vi.fn(),
+  getResumePreviewAction: vi.fn(),
+}));
 vi.mock("@/lib/routing/navigate", () => ({ navigateTo: vi.fn() }));
 
 import { BillingPanel } from "@/components/settings/billing-panel";
@@ -59,7 +63,78 @@ describe("BillingPanel", () => {
     expect(screen.queryByText(/renews on/i)).toBeNull();
     // Not "Active" (which read as "nothing happened"), and the portal button says what it is for.
     expect(screen.getByText("Ending")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /resume subscription/i })).toBeTruthy();
+    // Resume is in-app now (a confirm step, then one click); the portal
+    // button beside it no longer pretends to be the resume.
+    expect(screen.getByRole("button", { name: "Resume Plus" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Billing portal" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /manage subscription|resume subscription/i })).toBeNull();
+  });
+
+  it("the stored end date (0135) is what Settings says — same sentence as the dashboard notice", () => {
+    render(
+      <BillingPanel
+        {...base}
+        tier="pro"
+        isPaid
+        status="active"
+        renewLabel="October 23, 2026"
+        hasBillingAccount
+        planEnding={{ kind: "plan", endsAt: "2026-10-23T02:31:04.000Z", billedBeforeAt: null, canceledAt: null }}
+      />,
+    );
+    expect(screen.getByTestId("settings-plan-ending").textContent).toBe(
+      "Your Pro plan was cancelled and ends on October 23, 2026. You keep Pro until then. Nothing more is charged. Changed your mind? Resume Pro below.",
+    );
+    expect(screen.getByText("Ending")).toBeTruthy();
+    expect(screen.queryByText(/renews on/i)).toBeNull();
+    expect(screen.getByRole("button", { name: "Resume Pro" })).toBeTruthy();
+  });
+
+  it("a cancellation dated AFTER the next renewal (flag false) no longer reads 'Renews on': it ends, and is billed first", () => {
+    render(
+      <BillingPanel
+        {...base}
+        tier="pro"
+        isPaid
+        status="active"
+        renewLabel="October 23, 2026"
+        hasBillingAccount
+        planEnding={{
+          kind: "plan",
+          endsAt: "2026-12-07T02:31:04.000Z",
+          billedBeforeAt: "2026-10-23T02:31:04.000Z",
+          canceledAt: null,
+        }}
+      />,
+    );
+    const text = screen.getByTestId("settings-plan-ending").textContent ?? "";
+    expect(text).toContain("set to end on December 7, 2026");
+    expect(text).toContain("next on October 23, 2026");
+    expect(text).not.toContain("Nothing more is charged");
+    expect(screen.queryByText(/^renews on/i)).toBeNull();
+  });
+
+  it("a cancelled trial (stored date): the trial ends, nothing is charged, 'Trial ending'", () => {
+    render(
+      <BillingPanel
+        {...base}
+        tier="plus"
+        isPaid
+        status="trialing"
+        renewLabel="October 23, 2026"
+        hasBillingAccount
+        planEnding={{ kind: "trial", endsAt: "2026-10-23T02:31:04.000Z", billedBeforeAt: null, canceledAt: null }}
+      />,
+    );
+    expect(screen.getByTestId("settings-plan-ending").textContent).toContain(
+      "You cancelled your Plus free trial. It ends on October 23, 2026 and you won't be charged.",
+    );
+    expect(screen.getByText("Trial ending")).toBeTruthy();
+  });
+
+  it("a renewing plan has no Resume button", () => {
+    render(<BillingPanel {...base} tier="pro" isPaid status="active" renewLabel="Oct 22, 2026" hasBillingAccount />);
+    expect(screen.queryByRole("button", { name: /resume/i })).toBeNull();
   });
 
   it("cancelled trial: it ends and nothing is charged", () => {

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
@@ -13,16 +14,21 @@ import {
   type BillingPeriod,
   type PackKey,
   type PaidTier,
+  planForTier,
 } from "@/lib/billing/plans";
+import { formatMoney } from "@/lib/format/money";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
 import { getStripe, isStripeConfigured } from "./client";
 import { packLookupKey, resolvePriceId, tierLookupKey } from "./prices";
 import {
+  customerIdOf,
   findDelinquentSubscription,
   findLiveSubscription,
+  isLiveStatus,
   resolveSubscriptionTier,
   subscriptionHasPaymentMethod,
+  syncSubscriptionForUser,
 } from "./subscription-sync";
 import type Stripe from "stripe";
 
@@ -60,7 +66,9 @@ export type CheckoutInput =
 
 export type BillingActionResult =
   | { ok: true; url: string }
-  | { ok: false; error: string };
+  /** `fallback: "portal"`: the in-app step failed where Stripe's own page can
+   *  still do it — the button opens the Customer Portal. */
+  | { ok: false; error: string; fallback?: "portal" };
 
 // Ensure the current user has a Stripe customer, creating + persisting one on
 // first use. stripe_customer_id MUST be written with the service role: it's a
@@ -194,14 +202,53 @@ async function releasePendingChange(stripe: Stripe, sub: Stripe.Subscription): P
 }
 
 /**
+ * Un-cancel a subscription that is set to stop — every way Stripe says so
+ * (lib/billing/subscription-ending.ts), with the parameters the sandbox
+ * confirmed on 2026-10-07 for a flexible-billing subscription:
+ *
+ *   - `cancel_at` set, flag false (the Customer Portal's shape): clear it
+ *     with `cancel_at: ""`. (`cancel_at_period_end: false` also clears a
+ *     `cancel_at` that EQUALS the period end; "" clears any date.)
+ *   - `cancel_at_period_end: true` (the classic shape): `false`.
+ *   - Stripe REFUSES both in one call ("Received both cancel_at_period_end
+ *     and cancel_at parameters. Please pass in only one."), so the flag goes
+ *     first and a date that survives it is cleared by a second call.
+ *   - a schedule whose `end_behavior` is "cancel" (needs `schedule`
+ *     expanded): switched to "release", so the subscription outlives its
+ *     last phase. NOT sandbox-verified — the connector has no schedule
+ *     writes; the app never creates such a schedule itself.
+ *
+ * Returns the subscription as Stripe has it afterwards; the caller checks
+ * that it no longer ends.
+ */
+async function clearCancellation(stripe: Stripe, sub: Stripe.Subscription): Promise<Stripe.Subscription> {
+  let current = sub;
+  if (current.cancel_at_period_end) {
+    current = await stripe.subscriptions.update(current.id, { cancel_at_period_end: false });
+  }
+  if (typeof current.cancel_at === "number") {
+    current = await stripe.subscriptions.update(current.id, { cancel_at: "" });
+  }
+  const schedule = sub.schedule;
+  if (schedule && typeof schedule !== "string" && schedule.end_behavior === "cancel") {
+    await stripe.subscriptionSchedules.update(schedule.id, { end_behavior: "release" });
+    current = await stripe.subscriptions.retrieve(current.id, { expand: ["schedule"] });
+  }
+  return current;
+}
+
+/**
  * Schedule a downgrade for the end of the current period: a subscription
  * schedule takes the subscription over, keeps the current phase exactly as
  * it is (same price, same end date), adds ONE phase on the new price, and
  * then releases the subscription — which carries on renewing on that price.
  * Nothing is charged or credited now; the webhook's subscription.updated at
  * the phase change resyncs the profile. A pending change is replaced, never
- * stacked, and a plan set to cancel is un-cancelled first: the click asked
- * for "Plus after this period", not "nothing after this period".
+ * stacked, and a plan set to cancel is un-cancelled first — by the flag OR
+ * by date (the portal's `cancel_at`), through clearCancellation: the click
+ * asked for "Plus after this period", not "nothing after this period". The
+ * subscription the schedule is then built from is an ordinary renewing one,
+ * the shape this function has always handled.
  */
 async function scheduleDowngrade(
   stripe: Stripe,
@@ -209,9 +256,18 @@ async function scheduleDowngrade(
   target: { priceId: string; period: BillingPeriod },
   base: string,
 ): Promise<BillingActionResult> {
+  // Releasing first also drops a schedule that ends in a cancellation.
   await releasePendingChange(stripe, live);
-  if (live.cancel_at_period_end) {
-    await stripe.subscriptions.update(live.id, { cancel_at_period_end: false });
+  if (live.cancel_at_period_end || typeof live.cancel_at === "number") {
+    const resumed = await clearCancellation(stripe, { ...live, schedule: null });
+    if (subscriptionEndsAt(resumed) != null) {
+      // Never stack a schedule on a subscription that still ends: the new
+      // price would never start. Nothing was scheduled; say what to do.
+      return {
+        ok: false,
+        error: "This plan is set to end and couldn't be resumed here. Resume it on the billing page first, then pick the new plan.",
+      };
+    }
   }
   const schedule = await stripe.subscriptionSchedules.create({ from_subscription: live.id });
   const current = schedule.phases[0];
@@ -302,21 +358,17 @@ export async function createCheckoutSessionAction(
           const currentInterval = live.items.data[0]?.price?.recurring?.interval ?? null;
           const target = { tier: input.tier, period: input.period ?? "monthly" };
           if (isPlanDowngrade({ tier: currentTier, interval: currentInterval }, target)) {
-            // Cancelled by DATE (the portal's shape, `cancel_at`): the
-            // un-cancel in scheduleDowngrade only knows the flag, and a
-            // schedule on top of a dated cancellation is unverified — the
-            // plan would still end. Ask for the resume first; no write.
-            if (!live.cancel_at_period_end && subscriptionEndsAt(live) != null) {
-              return {
-                ok: false,
-                error: "This plan is set to end. Resume it first (Resume on the billing page), then pick the new plan.",
-              };
-            }
+            // On a plan that is set to end, scheduleDowngrade resumes it
+            // first (flag or date) and refuses if that fails.
             return scheduleDowngrade(stripe, live, { priceId, period: target.period }, base);
           }
           // An upgrade replaces any pending downgrade (the portal refuses to
           // update a subscription a schedule manages, and the old downgrade
-          // must not sneak back in at period end).
+          // must not sneak back in at period end). On a plan that is set to
+          // end, the portal's confirm page says so itself and renews it on
+          // confirm ("Your subscription is currently scheduled to cancel on
+          // …. By confirming, your updated subscription will be renewed" —
+          // read in the sandbox 2026-10-07), so no resume is needed first.
           await releasePendingChange(stripe, live);
           return createPlanSwitchSession(stripe, customer.customerId, live, priceId, base);
         }
@@ -532,6 +584,158 @@ export async function cancelScheduledPlanChangeAction(): Promise<BillingActionRe
       error instanceof Error ? error.message : error,
     );
     return { ok: false, error: "Couldn't cancel the plan change. Try again." };
+  }
+}
+
+const RESUME_SURFACES: ReadonlySet<string> = new Set(["billing", "dashboard", "settings", "pricing", "modal"]);
+
+function priceLineOf(sub: Stripe.Subscription): string | null {
+  const price = sub.items.data[0]?.price;
+  const interval = price?.recurring?.interval;
+  if (price?.unit_amount == null || !interval) return null;
+  return `${formatMoney(price.unit_amount, price.currency)} / ${interval}`;
+}
+
+/** The profile's own live subscription, read from Stripe — never an id from
+ *  the client, and never one that belongs to another customer. */
+async function readOwnSubscription(
+  stripe: Stripe,
+  profile: { stripe_subscription_id?: string | null; stripe_customer_id?: string | null },
+): Promise<Stripe.Subscription | null> {
+  if (!profile.stripe_subscription_id || !profile.stripe_customer_id) return null;
+  const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, { expand: ["schedule"] });
+  if (customerIdOf(sub.customer) !== profile.stripe_customer_id) return null;
+  return sub;
+}
+
+/** What "Resume" will do, for the confirm step: the plan, the price and the
+ *  date it next bills — read from Stripe, so the dialog never guesses a
+ *  price from the plan table (an annual plan, a grandfathered price). */
+export type ResumePreview =
+  | {
+      ok: true;
+      planName: string;
+      /** A cancelled trial resumes as a trial that converts at its end. */
+      trial: boolean;
+      /** ISO date of the next charge once resumed. */
+      nextBillAt: string | null;
+      /** "$15 / month". */
+      priceLine: string | null;
+    }
+  | { ok: false; error: string };
+
+export async function getResumePreviewAction(): Promise<ResumePreview> {
+  if (!isStripeConfigured()) return { ok: false, error: "Billing isn't available right now." };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please sign in to manage billing." };
+  const profile = await getCurrentProfile();
+  try {
+    const stripe = getStripe();
+    const sub = profile ? await readOwnSubscription(stripe, profile) : null;
+    if (!sub || !isLiveStatus(sub.status)) {
+      return { ok: false, error: "There's no plan to resume." };
+    }
+    const tier = (await resolveSubscriptionTier(sub, stripe)) ?? profile?.subscription_tier ?? "plus";
+    const trial = sub.status === "trialing" && typeof sub.trial_end === "number";
+    const nextBill = trial ? sub.trial_end : (sub.items.data[0]?.current_period_end ?? null);
+    return {
+      ok: true,
+      planName: planForTier(tier === "pro" ? "pro" : "plus").name,
+      trial,
+      nextBillAt: typeof nextBill === "number" ? new Date(nextBill * 1000).toISOString() : null,
+      priceLine: priceLineOf(sub),
+    };
+  } catch (error) {
+    console.error("[stripe] Resume preview failed:", error instanceof Error ? error.message : error);
+    return { ok: false, error: "Couldn't read your plan from Stripe." };
+  }
+}
+
+/**
+ * "Resume <Plan>": un-cancel the subscription in one click, without the
+ * Customer Portal. The subscription is the profile's own (never an id from
+ * the client); nothing is charged — the plan simply renews on its usual date
+ * again. The profile is resynced here, so the page that follows already says
+ * "Renews on" without waiting for the webhook. When the in-app step fails
+ * the result carries `fallback: "portal"`: Stripe's portal has its own
+ * "Renew plan" button.
+ */
+export async function resumeSubscriptionAction(
+  input: { surface?: string } = {},
+): Promise<BillingActionResult> {
+  if (!isStripeConfigured()) {
+    return { ok: false, error: "Billing isn't available right now." };
+  }
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please sign in to manage billing." };
+  const profile = await getCurrentProfile();
+  if (!profile?.stripe_subscription_id || !profile.stripe_customer_id) {
+    return { ok: false, error: "There's no plan to resume." };
+  }
+  const done: BillingActionResult = { ok: true, url: `${getSiteBaseUrl()}/dashboard/billing?billing=resumed` };
+  try {
+    const stripe = getStripe();
+    const sub = await readOwnSubscription(stripe, profile);
+    if (!sub) return { ok: false, error: "There's no plan to resume." };
+    if (!isLiveStatus(sub.status)) {
+      // Already over: nothing to un-cancel — a new plan is a new checkout.
+      return { ok: false, error: "This plan has already ended. Pick a plan to start a new one." };
+    }
+    const wasEnding = subscriptionEndsAt(sub) != null;
+    const resumed = wasEnding ? await clearCancellation(stripe, sub) : sub;
+    if (subscriptionEndsAt(resumed) != null) {
+      console.error(`[stripe] Resume left subscription ${sub.id} still set to end (user ${user.id}).`);
+      return {
+        ok: false,
+        error: "Couldn't resume the plan here. Opening the billing portal — use Renew plan there.",
+        fallback: "portal",
+      };
+    }
+    if (isAdminConfigured()) {
+      const admin = createAdminClient();
+      // Best effort: Stripe is already right, and the webhook's
+      // subscription.updated event writes the same row a moment later.
+      try {
+        await syncSubscriptionForUser(admin, stripe, user.id, {
+          eventSub: resumed,
+          customerId: profile.stripe_customer_id,
+        });
+      } catch (error) {
+        console.error(
+          "[stripe] Profile resync after resume failed (the webhook will repeat it):",
+          error instanceof Error ? error.message : error,
+        );
+      }
+      // Funnel: a resume is a money step (a cancellation that didn't happen).
+      // Not recorded for a click on a plan that was not ending any more.
+      if (wasEnding) {
+        await recordFunnelEvent(admin, {
+          event: "subscription_resumed",
+          userId: user.id,
+          props: {
+            tier: (await resolveSubscriptionTier(resumed, stripe)) ?? undefined,
+            interval: resumed.items.data[0]?.price?.recurring?.interval ?? undefined,
+            trial: resumed.status === "trialing",
+            subscriptionId: resumed.id,
+            surface: input.surface && RESUME_SURFACES.has(input.surface) ? input.surface : undefined,
+          },
+        });
+      }
+    }
+    console.info(`[stripe] Subscription ${sub.id} resumed in-app by user ${user.id}.`);
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/settings");
+    return done;
+  } catch (error) {
+    console.error(
+      "[stripe] Resuming the subscription failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return {
+      ok: false,
+      error: "Couldn't resume the plan here. Opening the billing portal — use Renew plan there.",
+      fallback: "portal",
+    };
   }
 }
 

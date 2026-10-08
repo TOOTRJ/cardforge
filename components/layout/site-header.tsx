@@ -10,7 +10,8 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { RealtimeAlerts } from "@/components/notifications/realtime-alerts";
 import { siteConfig } from "@/lib/site-config";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { type PlanTier } from "@/lib/billing/plans";
+import { planForTier, type PlanTier } from "@/lib/billing/plans";
+import { planEndingShort } from "@/lib/billing/plan-ending";
 import { cn } from "@/lib/utils";
 
 type HeaderUser = {
@@ -51,6 +52,10 @@ type HeaderUser = {
   /** That subscription is set to stop at the end of its period (cancelled,
    *  not yet ended) — the storefront offers nothing to "manage" down to Free. */
   subscriptionEnding?: boolean;
+  /** ISO date it stops, and whether it is a cancelled trial — the avatar
+   *  menu's "Pro · ends Oct 23, 2026" row (lib/billing/plan-ending.ts). */
+  subscriptionEndsAt?: string | null;
+  subscriptionEndingKind?: "plan" | "trial" | null;
   /** Shows the admin (moderation) entry in the user menu. */
   isAdmin?: boolean;
 };
@@ -64,6 +69,14 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
   const isAuthed = Boolean(user);
   const billingOn = isBillingEnabled();
   const unread = user?.unreadNotifications ?? 0;
+  // A cancelled plan that is still running: the avatar menu says when it ends.
+  const planEndingNote =
+    billingOn && user?.subscriptionEnding && user.subscriptionEndsAt && user.tier && user.tier !== "free"
+      ? `${planForTier(user.tier).name} ${planEndingShort({
+          kind: user.subscriptionEndingKind ?? "plan",
+          endsAt: user.subscriptionEndsAt,
+        })}`
+      : null;
   // Pricing is for accounts that can buy a plan: billing on AND not already
   // paid (a Plus/Pro/comped/admin account manages its plan — and buys credit
   // packs — on /dashboard/billing instead; /pricing redirects them there).
@@ -136,6 +149,7 @@ export function SiteHeader({ user, className }: SiteHeaderProps) {
                 isAdmin={user?.isAdmin ?? false}
                 hasMessages={user?.hasMessages ?? false}
                 unreadMessages={user?.unreadMessages ?? 0}
+                planEndingNote={planEndingNote}
               />
             </>
           ) : (

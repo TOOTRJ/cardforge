@@ -33,6 +33,13 @@ blanket `grant all on all tables in schema public` — that silently undoes the
 deliberate lockdowns (0073 job RPCs, 0074 profile billing columns, 0088
 notifications, 0095 email tables).
 
+A function whose RETURN TYPE changes must be dropped and re-created, and a
+dropped function loses its ACL: restate the `revoke` + `grant` right after
+(`0135` is the pattern — `get_my_billing()` and `admin_list_users(…)`). A new
+private `profiles` column needs NO grant (0074's column-level SELECT simply
+doesn't list it) but must be added to `protect_billing_columns` if users may
+not write it, and to `get_my_billing()` if its owner should read it.
+
 ## Storage: users have no write policy
 
 Since `0126` no API role holds an insert, update or delete policy on

@@ -7,6 +7,7 @@ import {
   type UserListParams,
 } from "@/lib/admin/users-params";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { planEndingOf, type PlanEnding } from "@/lib/billing/plan-ending";
 
 // ---------------------------------------------------------------------------
 // /admin/users reads — the directory page and the per-user detail. Both
@@ -32,6 +33,10 @@ export type AdminUserRow = {
   lastActiveAt: string | null;
   /** status active/trialing but tier free — the 2026-09-14 incident shape. */
   tierMismatch: boolean;
+  /** The live plan is cancelled and ends on a date — the same reading the
+   *  user's own dashboard shows (lib/billing/plan-ending.ts). Null when it
+   *  renews, or once it has ended (status `canceled`). */
+  planEnding: PlanEnding | null;
 };
 
 export type AdminUserPage = {
@@ -89,6 +94,7 @@ export async function listAdminUsers(params: UserListParams): Promise<AdminUserP
     tierMismatch:
       row.subscription_tier === "free" &&
       (row.subscription_status === "active" || row.subscription_status === "trialing"),
+    planEnding: planEndingOf(row),
   }));
   return {
     rows,
