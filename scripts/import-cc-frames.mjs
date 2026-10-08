@@ -143,6 +143,14 @@ import {
   placeOnCanvas,
   recutBand,
   recutBlockUp,
+  REPO_SOURCE_PREFIX,
+  cutMaps,
+  describePrintRecipe,
+  recutPiecewise,
+  seventhRegions,
+  clearWindowHalo,
+  squareCornersOnBlack,
+  toneRegions,
   rectPx,
   retintStructure,
   roundCornersRgba8,
@@ -197,6 +205,13 @@ if (only) {
 }
 
 async function fetchCached(rel) {
+  // A file of this repo (TODO 4.10a: the MSE gold the 1997 gold is cut
+  // from), read from the checkout — never fetched, never cached.
+  if (rel.startsWith(REPO_SOURCE_PREFIX)) {
+    const local = path.resolve(rel.slice(REPO_SOURCE_PREFIX.length));
+    if (!fs.existsSync(local)) throw new Error(`${rel}: not in this checkout`);
+    return local;
+  }
   const file = path.join(cacheDir, rel);
   if (fs.existsSync(file) && fs.statSync(file).size > 0) return file;
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -343,8 +358,28 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       : def.recutUp
         ? recutBlockUp(composite, W, H, def.recutUp)
         : composite;
+    // A drawing moved onto the prints edge by edge and toned region by
+    // region (TODO 4.10a: the 1997 frame) — scripts/lib/print-cut.mjs.
+    const printRecipe = def.printRecipe?.(key);
+    let printed = recut;
+    if (printRecipe) {
+      if (W !== OUT_W || H !== OUT_H) throw new Error(`${template}/${key}: a print recipe's px are the ${OUT_W}×${OUT_H} master's, the source is ${W}×${H}`);
+      const maps = cutMaps(printRecipe.cut, W, H);
+      printed = recutPiecewise(printRecipe.squareCorners ? squareCornersOnBlack(recut, W, H) : recut, maps);
+      // A JPEG source's white-window fade on the art ring (the MSE gold).
+      if (printRecipe.windowHalo) printed = clearWindowHalo(printed, W, H, { reach: printRecipe.windowHalo });
+      if (printRecipe.tones) {
+        let rings = null;
+        if (printRecipe.rings) {
+          const mask = await rgba(await fetchCached(printRecipe.rings), W, H);
+          rings = new Float32Array(W * H);
+          for (let p = 0; p < W * H; p += 1) rings[p] = mask[p * 4 + 3] / 255;
+        }
+        printed = toneRegions(printed, W, H, seventhRegions(printed, maps, { byColour: printRecipe.byColour, rings }), printRecipe.tones);
+      }
+    }
     // A ray's top closed over by the frame (the emblem's spark, 4.52).
-    const bridged = def.bridge ? bridgeRayTip(recut, W, H, def.bridge) : recut;
+    const bridged = def.bridge ? bridgeRayTip(printed, W, H, def.bridge) : printed;
     // Toned regions, onto the prints' tone (the emblem's silver, name pill,
     // type pill and text box, 4.52; the transform backs' bars and box through
     // the pack's masks, per key — 5.1a), in order.
@@ -517,6 +552,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
     ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
     ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
+    ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),

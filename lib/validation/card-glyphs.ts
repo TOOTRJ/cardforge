@@ -1,3 +1,4 @@
+import { copyrightFace } from "@/lib/cards/copyright-slot";
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
@@ -205,6 +206,11 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
   // (A profile without a footer draws no artist line; the check keeps the
   // display face it always used.)
   const footer: GlyphFace = profile.footer ? glyphFace("footer") : "display";
+  // The check has always judged the artist and the footer mark as capitals
+  // too (most footers upper-case their line); only a centred two-line footer
+  // that sets mixed case (the 1997 frame's `Illus.` line, TODO 4.10a) is
+  // judged as typed.
+  const footerUpper = !(profile.copyrightSlot && !profile.footer?.uppercase);
   const fields: GlyphCheckField[] = [
     { label: "Name", face: glyphFace("name"), value: v.title },
     { label: "Type line", face: glyphFace("typeLine"), value: `${v.supertype} ${v.subtypes_text}` },
@@ -216,10 +222,16 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
     { label: "Stats", face: glyphFace("stat"), value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
     // (On a collector card the artist is the collector line's own display
     // small caps, whatever the footer slot says.)
-    { label: "Artist", face: collector ? "display" : footer, value: v.artist_credit, uppercase: true },
+    // The footer upper-cases its line only where its slot says so (the 1997
+    // frame's `Illus.` line is mixed case, TODO 4.10a) — a collector card's
+    // artist is capitals whatever the slot says.
+    { label: "Artist", face: collector ? "display" : footer, value: v.artist_credit, uppercase: collector || footerUpper },
     collector
       ? { label: "Footer mark", face: "body", value: v.footer_text }
-      : { label: "Footer mark", face: footer, value: v.footer_text, uppercase: true },
+      : profile.copyrightSlot
+        ? // A centred footer's © slot (4.10a): as typed, in the slot's face.
+          { label: "Footer mark", face: copyrightFace(profile.copyrightSlot).id === "body" ? "body" : "display", value: v.footer_text }
+        : { label: "Footer mark", face: footer, value: v.footer_text, uppercase: footerUpper },
   ];
   if (v.has_back_face) {
     const b = v.back_face;

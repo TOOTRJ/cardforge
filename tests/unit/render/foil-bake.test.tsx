@@ -181,10 +181,10 @@ describe("foil finish — real bakes", () => {
     const art = await splitArt();
     const over = { artUrl: art, artPosition: { focalX: 0.3, focalY: 0.5, scale: 1.25 } };
     const bakes = async (mod: typeof real) => ({
-      regular: await bakeWith(mod, card("retro", "regular", over)),
-      etched: await bakeWith(mod, card("retro", "etched", over)),
-      showcase: await bakeWith(mod, card("retro", "showcase", over)),
-      foil: await bakeWith(mod, card("retro", "foil", over)),
+      regular: await bakeWith(mod, card("modern", "regular", over)),
+      etched: await bakeWith(mod, card("modern", "etched", over)),
+      showcase: await bakeWith(mod, card("modern", "showcase", over)),
+      foil: await bakeWith(mod, card("modern", "foil", over)),
     });
     const withFoil = await bakes(real);
 

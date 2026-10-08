@@ -112,18 +112,32 @@ describe("long stats shrink to fit", () => {
     expect(box.x1).toBeLessThanOrEqual(1373);
   }, 60_000);
 
-  it("Retro: *+1/*+1 fits the strip at full size — on ONE line, centred, though wider than its rect", async () => {
+  it("Retro (4.10a): a value is set against the prints' right edge — two digits grow to the LEFT at full size, *+1/*+1 shrinks short of the artist line's box, ONE line", async () => {
     const none = await bake(card("retro", { power: null, toughness: null }));
-    const long = diffBox(none, await bake(card("retro", { power: "*+1", toughness: "*+1" })))!;
-    const short = diffBox(none, await bake(card("retro", { power: "4", toughness: "4" })))!;
-    const rect = getFrameProfile("retro").pt!.rect;
-    // Wider than the 210 px rect (it used to wrap after the slash, two lines).
-    expect(long.x1 - long.x0).toBeGreaterThan((rect.widthPct / 100) * 1500);
-    expect(long.y1 - long.y0).toBeLessThan((short.y1 - short.y0) * 1.3);
-    // Centred like the preview's span, not run off the rect's right edge.
-    expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
-    expect(long.x0).toBeGreaterThanOrEqual(1125);
-    expect(long.x1).toBeLessThanOrEqual(1410);
+    const box = async (power: string, toughness: string) => diffBox(none, await bake(card("retro", { power, toughness })))!;
+    const short = await box("4", "4");
+    const twelve = await box("12", "12");
+    const ten = await box("10", "10");
+    const long = await box("*+1", "*+1");
+    // The prints end every value's ink at 1364–1370 px (NEM #116 10/10
+    // 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368); the
+    // hard shadow rides up to 6.7 px further where the diff reads it.
+    for (const [label, b] of [["4/4", short], ["12/12", twelve], ["10/10", ten]] as const) {
+      expect(b.x1, `${label} ${JSON.stringify(b)}`).toBeGreaterThanOrEqual(1363);
+      expect(b.x1, `${label} ${JSON.stringify(b)}`).toBeLessThanOrEqual(1376);
+    }
+    // 12/12 at the full size (as tall as 4/4), from about 1170 px.
+    expect(twelve.y1 - twelve.y0).toBe(short.y1 - short.y0);
+    expect(twelve.x0).toBeGreaterThanOrEqual(1162);
+    expect(twelve.x0).toBeLessThan(1185);
+    // 10/10 — wider in Beleren than in the prints' face — within 5 % of it.
+    expect(ten.x0).toBeGreaterThanOrEqual(1161);
+    expect((ten.y1 - ten.y0) / (short.y1 - short.y0)).toBeGreaterThan(0.94);
+    // The long one: one line (it used to wrap after the slash), shrunk, and
+    // short of the artist line's box (1160 px) and of the bevel (1413 px).
+    expect(long.y1 - long.y0).toBeLessThanOrEqual(short.y1 - short.y0);
+    expect(long.x0).toBeGreaterThanOrEqual(1161);
+    expect(long.x1).toBeLessThanOrEqual(1380);
   }, 60_000);
 
   it("Flip: the upside-down second face shrinks 100/100 into its plate's face (93–272 px)", async () => {

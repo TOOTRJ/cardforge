@@ -90,8 +90,10 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 
 Where every frame came from, and the rules that follow from it:
 
-- **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha,
-  1997 and 2003 eras, the showcase families, the variation treatments, the
+- **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha
+  and 2003 eras — the 1997 frame left for Card Conjurer's drawing with TODO
+  4.10a, its gold master cut from the MSE conversion kept as
+  `scripts/frame-inputs/retro-m-mse.png` — the showcase families, the variation treatments, the
   textless and expedition frames, and the planeswalker loyalty badges;
   adventure, flip and aftermath left for Card Conjurer's masters with TODO
   4.21a, split and battle with 4.21b, saga with 4.21c) are converted from
@@ -175,7 +177,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 40 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 42 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -218,6 +220,11 @@ into `.frames-build/` — 40 templates today (`CC_TEMPLATES` in
   luminance — `PW_GOLD_FACE`, fitted to the 13 exact prints;
   `tests/unit/frames/gold-walker-faces.test.ts` holds a built master to
   their range, `tests/unit/frames/fixtures/gold-walker-prints.json`);
+- the 1997 frame from 'Seventh Edition' (4.10a, layout v46): `retro` and
+  `retroland` — the pack's drawing RE-CUT edge by edge and TONED region by
+  region onto the original cards of 1996–2003, gold from the MSE artwork
+  cut with the same edge map (see
+  [The 1997 frame](#the-1997-frame-410a-layout-v46));
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
   in every colour key (an emblem is colourless), its name pill, silver, type
   pill and text box toned onto the prints and its spark's centre ray bridged
@@ -474,7 +481,8 @@ bake's transparent corner mask and the frame masters all read it.
   scripts/round-frame-corners.mjs` repaints that paper, its grey
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
-  `scripts/lib/frame-corners.mjs`: retro, retroland, modern, modernland,
+  `scripts/lib/frame-corners.mjs`: modern, modernland (retro and retroland
+  left it with TODO 4.10a: the importer cuts their corner),
   extendedart, fullart, m15textless, m15textlessland, and
   expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
   adventure — its 1–2 px grey paper rim just inside the arc, added
@@ -2126,6 +2134,133 @@ neutral (`VERIFICATION_NEUTRAL_VERSIONS`): no slot moves, so the fourteen 2003
 ticks stay fresh on the owner's round-37 sheet; 4.10b re-opens them once.
 Tests: `tests/unit/render/modern-footer-ink.test.tsx` (contrast on the
 masters, real bakes at 750 and HD) and its preview twin under `components/`.
+
+### The 1997 frame (4.10a, layout v46)
+
+Era step E4 (design 2026-10-06; owner round 38, 2026-10-07): `retro` and
+`retroland` as the ORIGINAL cards printed them, Mirage 1996 → Scourge 2003 —
+not the 2021+ reprints. A correction, made before anything is stored or
+ticked on the pair. HD px throughout; ΔE is CIE76 against the per-pixel
+median of a key's prints.
+
+**Masters** (the frames bucket; `scripts/lib/print-cut.mjs`,
+`scripts/lib/seventh-1997.mjs`, built by `scripts/import-cc-frames.mjs`).
+Neither source was right as it stood: Card Conjurer's 'Seventh Edition'
+drawing is sharp (its outer edge 1 px wide, a scan's 2.4, the MSE
+conversion's 5.8) but carries the reprints' colours (white frame 215 luma,
+the originals 157) on a frame 5 px off centre with a text box 8–9 px short;
+MSE has the colours on a blur. So:
+
+- **Re-cut, per key.** The prints' outer frame and art window are the same on
+  every colour; their text boxes are not (against white's: blue's top 6.6 px
+  lower, red's bottom 6.5 px higher, green's plank 24 px narrower, the
+  land's 10 px shorter). One scale per axis cannot place six edges that are
+  each off by their own amount, so the importer has a new step,
+  `recutPiecewise`: one piecewise-linear map per axis through `[source px,
+  print px]` anchors (outer frame, art window, text box), the art rows' and
+  the text-box rows' column maps lerped across the type band; Catmull-Rom,
+  premultiplied, one resample; local stretch 0.89–1.15. The anchors:
+  `SEVENTH_EDGES` → `PRINT_EDGES_1997` (21 white prints) + the key's
+  `SEVENTH_TEXT_BOX`.
+- **Regions from the drawing's own lines, not the pack's masks.** Its Pinline
+  mask is the land's coloured rings (not the bevels); its Trim mask starts
+  2 px outside the text box's line, and toned through it that sliver reads as
+  a pale halo. `seventhRegions`: frame body, text box and the four sides
+  each of the outer bevel, the art bevel and the box's trim, cut as
+  rectangles in the drawing's px and moved with the same map. Green's plank
+  and black's parchment have no drawn outline: their box is cut by colour.
+  A land's rings are their own region.
+- **Toned with an offset.** `toneMasked` / `toneRegion` multiply; the black
+  frame would need × 1.23 / 1.77 / 1.43, which doubles its grain and turns
+  the highlights mint. `toneRegions`: in the body and the text box
+  `(in − from) × k + to` per channel (`from` the region's mean in the
+  drawing, `to` the prints', `k` the prints' texture contrast over the
+  drawing's, 0.56–1.08); a per-channel gain `to ÷ from` per bevel side. The
+  constants are DATA (`SEVENTH_TONES`, about 50 per key, read off the prints
+  once and recorded in `lib/cards/frame-sources.json`); no scan is read by
+  the build.
+- **Gold is the MSE artwork.** Card Conjurer's gold failed the eye (less
+  fine detail than MSE's, twice the prints' contrast, violet bevels). The
+  MSE conversion — `scripts/frame-inputs/retro-m-mse.png`, the one
+  MSE-derived importer input, in git — is cut with the same edge map
+  (`retroGoldCut`), so its window and frame box are the other seven's, and
+  not toned. Its window was cut out of a white rectangle on a 375 px JPEG,
+  which left the last five px of the art ring fading grey → white — a ragged
+  white hairline between the art and the ring on every bake, on `main` too;
+  `clearWindowHalo` gives those px the ring's own colour (alpha untouched,
+  so the window is the same window). One home per template: gold is
+  published to the bucket like the rest.
+- **`retroland`.** `c` = the plain land (`l.png`, the orange box of Fifth
+  Edition 1997 on); `w`–`g` = the pack's coloured land boxes, toned onto the
+  seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY,
+  ONS), their rings and trim by an offset (a gain on a channel near 0
+  multiplies its noise); `m` = a render STAND-IN, the plain land with the
+  pack's gold box laid in through its Rules mask — no three-colour 1997 land
+  was measured, two-colour ones print a blend (4.6h) — which is never ticked.
+
+Measured on the published masters (print minus master; edge = the RMS of
+twelve structural edges by correlation over the key's prints):
+
+| master | edge RMS | colour, six bands: mean / worst ΔE | before (MSE) |
+|---|---|---|---|
+| `retro`/w | 0.9 px (21 prints) | 1.5 / 5.2 | 2.6 / 3.3 |
+| `retro`/u | 0.7 px (9) | 2.1 / 5.2 | 4.4 / 6.9 |
+| `retro`/b | 3.4 px (9; the parchment's bottom reads − 9 px by correlation and 2 px by its extent) | 1.2 / 2.6 | 6.9 / 9.0 |
+| `retro`/r | 1.1 px (9) | 1.1 / 2.5 | 8.1 / 9.4 |
+| `retro`/g | 1.0 px on its drawn lines (the plank's ragged edge defeats the correlation) | 1.4 / 2.1 | 5.8 / 7.3 |
+| `retro`/c (artifact) | 0.9 px (9) | 1.7 / 3.2 | 8.3 / 11.0 |
+| `retro`/m (MSE) | 2.1 px (8); its art ring stays the MSE drawing's, up to 4.8 px off the gold prints' | 3.1 / 5.2 | 3.1 / 5.2 |
+| `retroland`/c | 0.6 px (9) | 1.0 / 1.3 | 5.0 / 11.3 |
+| `retroland`/w u b r g | 1.0 / 0.7 / 0.8 / 1.3 / 0.6 px (7 basics each) | 0.6–0.8 / ≤ 1.4 | 4.4–4.8 / ≤ 6.0 |
+
+The owner accepted three drawing caveats on the prototype sheet: Card
+Conjurer's blue is a flat-shaded redraw (hard shapes where the print has
+brushwork), green's plank has no grain, black's parchment keeps a burnt rim.
+
+**Profile** (`RETRO`, `RETROLAND`; sizes are `RETRO_*` in
+`lib/cards/typography.ts`; no font file was added — owner 2026-10-07):
+
+| slot | face, HD px | ink | on the prints |
+|---|---|---|---|
+| name | Beleren 71, measured | white `#f0f3ef` + shadow + 5 / + 3 | baseline 163, starts at 166 |
+| cost | flat discs 73 (`symbolStyle: "1997"`) | — | row 137, ends at 1383, 80.5 apart |
+| type line | MPlantin 67, measured | white + shadow + 4.5 / + 3.3 | baseline 1229, starts at 162 |
+| rules | MPlantin 76 (the shared ladder) | dark | one box for all keys: 192–1308 × 1288–1828 |
+| P/T | Beleren 86, set against its right edge (`align: "end"`, `endKerned`) | white + shadow + 6.7 / + 5.7 | baseline 1963, the ink ending at 1364–1370 on every value: one digit a side covers 1253–1367, two digits grow to the LEFT at the same size (NEM #116 10/10 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368) |
+| footer line 1 | `Illus. <artist>`, MPlantin 58, centred, mixed case | white + shadow + 3.5 / + 3.5 | baseline 1933, centred on 748 |
+| footer line 2, the © slot | the mark at a 33 px em · a clean download's footer text, MPlantin 33 | black on the white frame, white elsewhere; no shadow | baseline 1976, centred on 748 |
+
+The shadows are per-key ink entries (`inkByColorKey`), never a band's own
+`shadowCss`: that would emboss the pips. The type line and the artist line
+are MPlantin because it is their printed face; names and the P/T stay
+Beleren (the prints' Magic Medieval and heavier Plantin are not in the repo
+and are not being added). The footer is the centred layout of Exodus 1998 on
+(D1); the mark sits in the © slot in the line's printed ink — flat dark on
+the white frame, its standard white elsewhere (D2) — and no Wizards line is
+printed. `{T}` is the 1997 symbol (mana-font `tap-4ed`); the five colour
+symbols are the font's, as printed.
+
+**Rollout.** `"sweep"`, template-scoped to the pair
+(`RETRO_1997_LAYOUT_VERSION`, the ONE constant `CARD_LAYOUT_VERSION` reads).
+Production, anonymous read 2026-10-07: no public or unlisted card on either
+template, and no tick — nothing is re-baked or re-ticked. Not
+verification-neutral. First ticks follow the merge: `retro` w u b r g c m
+(`c` against an artifact) and `retroland` w u b r g c — thirteen;
+`retroland`/m is not ticked. Imports: an original is `exact`; a Time Spiral
+timeshifted printing (2006) is `nearest` — the `timeshifted-frame` gap,
+`RETRO_TIMESHIFTED_FROM`: a redrawn old frame (21 prints, three per key,
+against these masters: the art window's top 9–11 px lower and the text box's
+bottom 5–14 px higher on every key, blue ΔE 13, red and gold 7; white, black
+and green keep the old colours) — and a printing on the frame released from
+2021 is `nearest` too (the `reprint-colours` gap,
+`RETRO_REPRINT_COLOURS_FROM`; TODO 4.10e is those looks as their own skins).
+
+Tests: `tests/unit/frames/print-cut.test.ts` (the two steps),
+`retro-1997-importer.test.ts` (recipes, provenance, the published masters),
+`tests/unit/cards/retro-1997-profile.test.ts` (sizes, ink, the © slot, the
+bump, imports), `tests/unit/render/retro-1997-bake.test.tsx` (baselines,
+shadows, discs, the slot and the print path on real bakes) and its preview
+twin under `components/`.
 
 ### Printed pieces a card switches on
 
@@ -4633,10 +4768,17 @@ frame's era decides are DATA on its profile; no renderer names them.
   unset, `footerArtistLine` in `lib/cards/card-display.ts`) and the
   footer's own `align`: unset = the line at the rect's start and a clean
   download's custom mark at its end; `"center"` = the line centred, no
-  custom mark on it (the © slot it belongs to is 4.10a's).
+  custom mark on it.
+- **The © slot** — `FrameProfile.copyrightSlot`
+  (`lib/cards/copyright-slot.ts`, TODO 4.10a): a centred footer's second
+  line. On display it holds the pipglyph.com mark (which then leaves the
+  border: `brandMark` is not read), on a paid clean download the card's
+  footer text, or nothing. A profile with a centred footer and NO slot
+  drops a paid viewer's footer text: declare both together.
 - **The symbol style** — `FrameProfile.symbolStyle`
-  (`lib/cards/symbol-style.ts`); one value today, `"modern"`: M15's discs,
-  their hard offset shadow, the modern tap. Both renderers and both shadow
+  (`lib/cards/symbol-style.ts`): `"modern"` (M15's discs, their hard offset
+  shadow, the modern tap — every profile that names none) and `"1997"`
+  (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`). Both renderers and both shadow
   models (the rules layout's inline pip, the cost row) read the resolved
   spec. A style is a CORRECTION of a frame, never a per-card switch.
 

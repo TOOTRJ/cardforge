@@ -456,11 +456,18 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // frozen list never held them, so its word-spacing track judges them as
   // "other" templates.
   const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split"];
+  // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
+  // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
+  // `Illus.` line in MPlantin.
+  const BODY_FOOTER_SINCE_V46 = ["retro", "retroland"];
 
   it("word spacing: every card on the 24 display-footer templates (25 with the retired Alpha token)", async () => {
     const classifyForSweep = await sweepAt(29);
     const displayFooter = FRAME_TEMPLATE_VALUES.filter(
-      (t) => getFrameProfile(t).footer?.font === "display" && !POST_V29_TEMPLATES.includes(t) && !FOOTER_SINCE_V29.includes(t),
+      (t) =>
+        (getFrameProfile(t).footer?.font === "display" || BODY_FOOTER_SINCE_V46.includes(t)) &&
+        !POST_V29_TEMPLATES.includes(t) &&
+        !FOOTER_SINCE_V29.includes(t),
     );
     // The frozen v29 list is these 24 (their footer prints "ART: …") and
     // the since-retired alphatoken (TODO 4.54), inert there.
@@ -484,7 +491,10 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   it("word spacing on the other 12 templates: only a name or type line with a space in it", async () => {
     const classifyForSweep = await sweepAt(29);
     const others = FRAME_TEMPLATE_VALUES.filter(
-      (t) => (getFrameProfile(t).footer?.font !== "display" || FOOTER_SINCE_V29.includes(t)) && !POST_V29_TEMPLATES.includes(t),
+      (t) =>
+        (getFrameProfile(t).footer?.font !== "display" || FOOTER_SINCE_V29.includes(t)) &&
+        !BODY_FOOTER_SINCE_V46.includes(t) &&
+        !POST_V29_TEMPLATES.includes(t),
     );
     expect([...others].sort()).toEqual(
       ["aftermath", "avatar", "battle", "bloomanime", "bloomburrow", "flip", "lotr", "lotrscroll", "split",
